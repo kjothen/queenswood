@@ -7,10 +7,8 @@ XDG_CONFIG_HOME := env_var_or_default('XDG_CONFIG_HOME', env_var('HOME') + '/.co
 @list:
     just --list
 
-# Install clojure and related tools
-@install-clojure:
-    brew install clojure/tools/clojure
-
+# Configure clojure and related tools
+@configure-clojure:
     rm -rf '{{XDG_CONFIG_HOME}}/clojure'
     git clone git@github.com:practicalli/clojure-deps-edn.git '{{XDG_CONFIG_HOME}}/clojure'
 
@@ -26,9 +24,10 @@ XDG_CONFIG_HOME := env_var_or_default('XDG_CONFIG_HOME', env_var('HOME') + '/.co
     clj -M:poly shell
 
 # Build all polylith projects as uberjars
-@build:
-    cd projects/message-reader && clojure -X:build uber :snapshot true && cd ../../
-    cd projects/symmetric-key-vault && clojure -X:build uber :snapshot true && cd ../../
+@build snapshot="true":
+    cd components/event && clojure -X:build avro
+    cd projects/message-reader && clojure -X:build uber :snapshot {{ snapshot }}
+    cd projects/symmetric-key-vault && clojure -X:build uber :snapshot {{ snapshot }}
 
 # Run all polylith project tests
 @test:

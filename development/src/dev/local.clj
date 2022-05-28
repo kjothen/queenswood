@@ -1,5 +1,4 @@
-(ns dev.local
-  (:require [com.repldriven.mono.log.interface :as log]))
+(ns dev.local)
 
 (comment
   ;; open a debug portal

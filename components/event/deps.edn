@@ -1,0 +1,10 @@
+{:paths ["src" "resources"]
+ :deps {}
+ :aliases {:build {:deps       {base/build {:local/root "../../bases/build"}}
+                   :extra-deps {org.apache.avro/avro-tools {:mvn/version "1.11.0"}}
+                   :ns-default com.repldriven.mono.build.build
+                   :exec-args  {:avro-tools-version "1.11.0"
+                                :src "resources/schema"
+                                :target "generated"}}
+           :test {:extra-paths ["test"]
+                  :extra-deps {}}}}
