@@ -1,0 +1,6 @@
+{:paths ["src" "resources"]
+ :deps {ring/ring-jetty-adapter {:mvn/version "1.9.5"},
+        ring/ring-json {:mvn/version "0.5.1"}
+        ring-logger-timbre/ring-logger-timbre {:mvn/version "0.7.6"}}
+ :aliases {:test {:extra-paths ["test" "test-resources"]
+                  :extra-deps {}}}}

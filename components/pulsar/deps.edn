@@ -1,0 +1,10 @@
+{:aliases {:test {:extra-deps {},
+                  :extra-paths ["test" "test-resources"]}},
+ :deps {clj-test-containers/clj-test-containers {:mvn/version "0.5.0"},
+        org.apache.pulsar/pulsar-client {:mvn/version "2.9.2"},
+        org.apache.pulsar/pulsar-client-admin {:mvn/version "2.9.2"},
+        org.apache.pulsar/pulsar-common {:mvn/version "2.9.2"},
+        org.clojure/java.data {:mvn/version "1.0.95"}
+        org.testcontainers/pulsar {:mvn/version "1.16.3"},
+        org.testcontainers/testcontainers {:mvn/version "1.16.3"}},
+ :paths ["src" "resources"]}

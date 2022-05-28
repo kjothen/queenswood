@@ -1,0 +1,41 @@
+**/classes
+**/target
+**/.artifacts
+**/.cpcache
+**/.DS_Store
+**/.gradle
+
+# User-specific stuff
+.idea/**/workspace.xml
+.idea/**/tasks.xml
+.idea/**/usage.statistics.xml
+.idea/**/shelf
+.idea/**/statistic.xml
+.idea/dictionaries/**
+.idea/libraries/**
+
+# File-based project format
+*.iws
+*.ipr
+
+# Cursive Clojure plugin
+.idea/replstate.xml
+*.iml
+
+# Clojure tools
+.calva
+**/.calva-repl
+.clj-kondo
+.eastwood
+.lsp
+.nrepl-port
+.portal
+.rebel_readline_history
+
+# logs
+*.log
+/log
+
+# tmp dbs
+*.mv.db
+*.trace.db

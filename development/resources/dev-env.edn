@@ -1,0 +1,15 @@
+{:system
+ {:symmetric-key-api
+  {:ring-jetty-adapter
+   {:port  #profile {:default #port 8080
+                     :dev     #port 0
+                     :test    #port 0}
+    :join? #profile {:default true
+                     :dev     false
+                     :test    false}}}
+  :pulsar-reader
+  {:pulsar {:docker-image-name "apachepulsar/pulsar:latest"
+            :named-exposed-ports {:broker 6650 :broker-http 8080}}
+   :service-url #profile {:default "pulsar://localhost:6650"}
+   :reader      #profile {:default {"topicNames"     ["persistent://tenant/namespace/identity"]
+                                    "startMessageId" #pulsar-message-id :earliest}}}}}

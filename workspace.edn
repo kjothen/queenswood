@@ -1,0 +1,11 @@
+{:top-namespace "com.repldriven.mono"
+ :interface-ns "interface"
+ :default-profile-name "default"
+ :compact-views #{}
+ :vcs {:name "git"
+       :auto-add true}
+ :tag-patterns {:stable "stable-*"
+                :release "v[0-9]*"}
+ :projects {"development" {:alias "dev"}
+            "message-reader" {:alias "msg"}
+            "symmetric-key-vault" {:alias "key"}}}

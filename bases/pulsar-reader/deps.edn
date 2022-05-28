@@ -1,0 +1,5 @@
+{:paths   ["src" "resources"]
+ :deps    {com.damballa/abracad    {:mvn/version "0.4.13"}
+           org.clojure/core.async  {:mvn/version "1.5.648"}}
+ :aliases {:test {:extra-paths ["test" "test-resources"]
+                  :extra-deps  {}}}}

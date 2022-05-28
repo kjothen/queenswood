@@ -1,0 +1,11 @@
+{:files {:ignore #{"target"}},
+ :rules
+ {:indentation
+  {:indents
+   {#"^:?import$" [[:block 0]],
+    #"^:?require$" [[:block 0]],
+    #"^:?use$" [[:block 0]],
+    #"^[^ \[]" [[:inner 0]]}},
+  :namespaces {:enabled? false},
+  :vars {:enabled? false},
+  :blank-lines {:max-consecutive 1, :padding-lines 1}}}

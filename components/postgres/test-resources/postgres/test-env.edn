@@ -1,0 +1,8 @@
+{:system {:postgres {:container {:docker-image-name "postgres:14.2"
+                                 :exposed-port 5432}
+                     :mapped-port #system :required-component
+                     :datasource {:host "localhost"
+                                  :port [#system :ref [:postgres :mapped-port]]
+                                  :user "test"
+                                  :password "test"
+                                  :dbtype "postgres"}}}}

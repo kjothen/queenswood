@@ -1,0 +1,8 @@
+{:system {:pulsar {:container {:docker-image-name "kezhenxu94/pulsar:latest"
+                               :exposed-ports [6650 8080]}
+                   :service-http-url {:exposed-port 8080}
+                   :admin #system :required-component,
+                   :service-url {:exposed-port 6650}
+                   :client #system :required-component,
+                   :reader {"startMessageId" #pulsar-message-id :earliest,
+                            "topicNames" ["persistent://tenant/namespace/identity"]}}}}

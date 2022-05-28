@@ -1,0 +1,19 @@
+{:paths   ["resources"]
+ :deps    {component/cli               {:local/root "../../components/cli"}
+           component/env               {:local/root "../../components/env"}
+           component/log               {:local/root "../../components/log"}
+           component/pubsub            {:local/root "../../components/pubsub"}
+           component/pulsar            {:local/root "../../components/pulsar"}
+           component/spec              {:local/root "../../components/spec"}
+           component/system            {:local/root "../../components/system"}
+           base/pulsar-reader          {:local/root "../../bases/pulsar-reader"}
+           org.clojure/clojure         {:mvn/version "1.11.1"}}
+
+ :aliases {:build {:deps       {base/build {:local/root "../../bases/build"}}
+                   :ns-default com.repldriven.mono.build.build
+                   :exec-args  {:major-minor-version "0.0"
+                                :main                com.repldriven.mono.pulsar-reader.main
+                                :lib                 'com.repldriven.mono/message-reader}}
+           :test  {:extra-paths []
+                   :extra-deps  {org.clojure/test.check    {:mvn/version "1.1.1"}}
+                   :exec-fn     cognitect.test-runner.api/test}}}
