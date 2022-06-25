@@ -3,7 +3,7 @@
             [next.jdbc]))
 
 (def datasource
-  {:start (fn [{:keys [spec]} _ _]
-            (next.jdbc/get-datasource spec))
+  {:start (fn [conf _ _]
+            (next.jdbc/get-datasource conf))
    :stop  (fn [_ _ _])
-   :conf  {:spec system/required-component}})
+   :conf  system/required-component})

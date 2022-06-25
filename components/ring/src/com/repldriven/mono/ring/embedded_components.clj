@@ -6,7 +6,9 @@
 (def default-jetty-adapter-options {:join? false})
 
 (def jetty-adapter
-  "Component definition for a [ring jetty adapter](https://ring-clojure.github.io/ring/ring.adapter.jetty.html) in a [donut.system](https://github.com/donut-power/system)"
+  "Component definition for a
+  [ring jetty adapter](https://ring-clojure.github.io/ring/ring.adapter.jetty.html)
+  in a [donut.system](https://github.com/donut-power/system)"
   {:start (fn [{:keys [handler options]} instance _]
             (or instance (jetty/run-jetty handler options)))
    :stop  (fn [_ ^Server instance _]

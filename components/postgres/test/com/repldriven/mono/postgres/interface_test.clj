@@ -30,3 +30,12 @@
               (system/stop running-system))))
         (catch Exception e
           (assert false (format "Unable to start system, %s" e)))))))
+
+(comment
+  (require '[clojure.pprint :as pprint])
+  (env/set-env! (io/resource "postgres/test-env.edn") :test)
+  (def system-config (SUT/create-system (get-in @env/env [:system :postgres])))
+  (pprint/pprint system-config)
+  (def running-system (system/start system-config))
+  (system/stop running-system)
+  )

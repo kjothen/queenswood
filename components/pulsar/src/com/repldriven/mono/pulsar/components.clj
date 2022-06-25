@@ -67,7 +67,8 @@
                (.close instance)
                (catch PulsarClientException e
                  (log/error (format "Failed to close pulsar reader, %s" e)))))),
-   :conf {:client system/required-component, :config system/required-component}})
+   :conf {:client system/required-component,
+          :config system/required-component}})
 
 (def consumer
   {:start (fn [{:keys [^PulsarClient client config]} instance _]

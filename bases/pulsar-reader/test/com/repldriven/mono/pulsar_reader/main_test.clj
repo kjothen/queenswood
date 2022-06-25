@@ -22,7 +22,7 @@
           (Thread/sleep 5000) ; admin tenant api does not work until clusters are up...
           (try
             (let [^PulsarAdmin admin (system/instance booted-system [:pulsar :admin])
-                  topic-names (get-in @env/env [:system :pulsar :reader "topicNames"])]
+                  topic-names (get-in @env/env [:system :pulsar :reader :config "topicNames"])]
               (doseq [topic-name topic-names] (pulsar/ensure-topic admin topic-name))
               (try
                 (let [_ (SUT/start! booted-system)]

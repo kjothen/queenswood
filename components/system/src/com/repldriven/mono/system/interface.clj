@@ -53,3 +53,7 @@
 (defn resume
   [system]
   (donut/resume system))
+
+(defn merge-component-config
+  [component config]
+  (donut/merge-component-config component config))

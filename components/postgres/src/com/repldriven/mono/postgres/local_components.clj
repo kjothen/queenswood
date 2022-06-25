@@ -21,13 +21,3 @@
             (tc/stop! instance))
    :conf  {:docker-image-name default-docker-image-name
            :exposed-port      default-exposed-port}})
-
-(def container-mapped-port
-  {:start (fn [{:keys [exposed-port container]} instance _]
-            (or instance
-              (let [port (get-in container [:mapped-ports exposed-port])]
-                (log/info "Mapped postgres port:" port)
-                port)))
-   :stop  (fn [_ _ _])
-   :conf  {:container system/required-component
-           :exposed-port system/required-component}})

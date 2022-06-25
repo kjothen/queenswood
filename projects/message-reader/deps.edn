@@ -1,6 +1,7 @@
 {:paths   ["resources"]
  :deps    {component/cli               {:local/root "../../components/cli"}
            component/env               {:local/root "../../components/env"}
+           component/local-system      {:local/root "../../components/local-system"}
            component/log               {:local/root "../../components/log"}
            component/pubsub            {:local/root "../../components/pubsub"}
            component/pulsar            {:local/root "../../components/pulsar"}

@@ -1,8 +1,12 @@
 {:system {:pulsar {:container {:docker-image-name "kezhenxu94/pulsar:latest"
                                :exposed-ports [6650 8080]}
-                   :service-http-url {:exposed-port 8080}
-                   :admin #system :required-component,
-                   :service-url {:exposed-port 6650}
-                   :client #system :required-component,
-                   :reader {"startMessageId" #pulsar-message-id :earliest,
-                            "topicNames" ["persistent://tenant/namespace/identity"]}}}}
+                   :container-mapped-ports {:container [#system :ref [:pulsar :container]]}
+                   :container-service-http-url {:container-mapped-ports [#system :ref [:pulsar :container-mapped-ports]]
+                                                :exposed-port 8080}
+                   :container-service-url {:container-mapped-ports [#system :ref [:pulsar :container-mapped-ports]]
+                                           :exposed-port 6650}
+                   :admin {:service-http-url [#system :ref [:pulsar :container-service-http-url]]},
+                   :client {:service-url [#system :ref [:pulsar :container-service-url]]},
+                   :reader {:client [#system :ref [:pulsar :client]]
+                            :config {"startMessageId" #pulsar-message-id :earliest,
+                                     "topicNames" ["persistent://tenant/namespace/identity"]}}}}}

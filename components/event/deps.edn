@@ -1,5 +1,9 @@
 {:paths ["src" "resources"]
- :deps {}
+ :deps {cddr/edn-avro {:mvn/version "1.1.0"}
+        deercreeklabs/lancaster {:mvn/version "0.9.17"}
+        tick/tick {:mvn/version "0.5.0-RC5"}
+        nomnom/abracad {:mvn/version "0.5.2"}
+        clj-ulid/clj-ulid {:mvn/version "0.1.0-SNAPSHOT"}}
  :aliases {:build {:deps       {base/build {:local/root "../../bases/build"}}
                    :extra-deps {org.apache.avro/avro-tools {:mvn/version "1.11.0"}}
                    :ns-default com.repldriven.mono.build.build

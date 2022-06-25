@@ -44,3 +44,13 @@
 (defn resume
   [system]
   (ds/resume system))
+
+(defn- deep-merge
+  [& values]
+  (if (every? map? values)
+    (apply merge-with deep-merge values)
+    (last values)))
+    
+(defn merge-component-config
+  [component config]
+  (update component :conf (fn [conf] (deep-merge conf config))))
