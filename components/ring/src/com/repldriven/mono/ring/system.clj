@@ -2,19 +2,8 @@
   (:require [com.repldriven.mono.ring.embedded-components :as embedded-components]
             [com.repldriven.mono.system.interface :as system]))
 
-(defn- deep-merge
-  [& values]
-  (if (every? map? values)
-    (apply merge-with deep-merge values)
-    (last values)))
-
-(defn jetty-adapter-component
-  [config]
-  (update-in embedded-components/jetty-adapter [:conf :options]
-    (fn [options] (deep-merge options (get-in config [:jetty-adapter :options])))))
-
-(defn create
-  [config]
-  {system/defs
-   {:ring
-    {:jetty-adapter (jetty-adapter-component config)}}})
+(defmulti component (fn [k _] k))
+(defmethod component :default [_ v] v)
+(defmethod component :jetty-adapter [_ v] (system/merge-component-config embedded-components/jetty-adapter v))
+(defn create-component [m k v] (assoc m k (component k v)))
+(defn create [config] {system/defs {:ring (reduce-kv create-component {} config)}})

@@ -2,7 +2,8 @@
   (:require [clojure.java.data :as j]
             [clojure.java.data.builder :as builder]
             [com.repldriven.mono.log.interface :as log]
-            [com.repldriven.mono.system.interface :as system])
+            [com.repldriven.mono.system.interface :as system]
+            [com.repldriven.mono.pulsar.admin :as admin])
   (:import [java.util Map]
            [org.apache.pulsar.client.api ClientBuilder Consumer MessageId PulsarClient PulsarClientException Reader]
            [org.apache.pulsar.client.admin PulsarAdmin PulsarAdminBuilder PulsarAdminException]))
@@ -10,14 +11,14 @@
 (def admin
   {:start (fn [{:keys [service-http-url]} instance _]
             (or instance
-              (try
-                (log/info "Opening pulsar admin connection:" service-http-url)
-                (builder/to-java PulsarAdmin
-                  (PulsarAdmin/builder)
-                  {:serviceHttpUrl service-http-url}
-                  {:builder-class PulsarAdminBuilder})
-                (catch PulsarAdminException e
-                  (log/error (format "Failed to open pulsar admin connection, %s" e)))))),
+                (try
+                  (log/info "Opening pulsar admin connection:" service-http-url)
+                  (builder/to-java PulsarAdmin
+                                   (PulsarAdmin/builder)
+                                   {:serviceHttpUrl service-http-url}
+                                   {:builder-class PulsarAdminBuilder})
+                  (catch PulsarAdminException e
+                    (log/error (format "Failed to open pulsar admin connection, %s" e)))))),
    :stop (fn [_ ^PulsarAdmin instance _]
            (when (some? instance)
              (try
@@ -46,6 +47,18 @@
                (catch PulsarClientException e
                  (log/error (format "Failed to close pulsar client connection, %s" e)))))),
    :conf {:service-url system/required-component}})
+
+(def topic-creator
+  {:start (fn [{:keys [admin topics-and-opts]} instance _]
+            (or instance
+                (try
+                  (log/info "Creating pulsar topics:" topics-and-opts)
+                  (run! (fn [[topic opts]] (admin/ensure-topic topic opts)) topics-and-opts)
+                  (catch PulsarAdminException e
+                    (log/error (format "Failed to create pulsar topics, %s" e)))))),
+   :stop (fn [_ _ _]),
+   :config {:admin system/required-component
+           :topics-and-opts system/required-component}})
 
 (def reader
   {:start (fn [{:keys [^PulsarClient client config]} instance _]

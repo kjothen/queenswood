@@ -1,9 +1,28 @@
 (ns com.repldriven.mono.system.donut
-  (:require [com.repldriven.mono.log.interface :as log]
+  (:require [clojure.walk :as walk]
+            [com.repldriven.mono.log.interface :as log]
             [donut.system :as ds]))
 
 (def defs ::ds/defs)
 (def required-component ::ds/required-component)
+
+;; (defn- in?
+;;   [coll x]
+;;   (some #(= x %) coll))
+
+;; (defn- nsmap->nsmap
+;;   [m from-ns to-ns]
+;;   (walk/postwalk
+;;    (fn [x] (if (and (keyword? x) (= from-ns (namespace x)))
+;;              (keyword to-ns (name x))
+;;              x))
+;;    m))
+
+;; (defn- renamespace-config
+;;   [config-name]
+;;   (let [result (nsmap->nsmap config-name mono-system-ns donut-system-ns)]
+;;     (pprint/pprint result)
+;;     result))
 
 (defn ref
   [kws]
@@ -50,7 +69,7 @@
   (if (every? map? values)
     (apply merge-with deep-merge values)
     (last values)))
-    
+
 (defn merge-component-config
   [component config]
   (update component :conf (fn [conf] (deep-merge conf config))))

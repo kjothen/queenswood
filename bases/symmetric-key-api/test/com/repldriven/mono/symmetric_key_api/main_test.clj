@@ -10,7 +10,7 @@
   (env/set-env! (io/resource "symmetric-key-api/test-env.edn") :test)
   (f))
 
-(use-fixtures :once env-fixture)
+(use-fixtures :each env-fixture)
 
 (deftest development-test
   (testing "Developers should be able to start and stop the system from the REPL"

@@ -14,6 +14,7 @@
                      components/symmetric-key {:local/root "components/symmetric-key"},
                      components/spec {:local/root "components/spec"},
                      components/system {:local/root "components/system"},
+                     bases/blocking-command-api {:local/root "bases/blocking-command-api"},
                      bases/build {:local/root "bases/build"},
                      bases/pulsar-reader {:local/root "bases/pulsar-reader"},
                      bases/symmetric-key-api {:local/root "bases/symmetric-key-api"}},
@@ -35,6 +36,7 @@
                        "components/spec/test"
                        "components/symmetric-key/test"
                        "components/system/test"
+                       "bases/blocking-command-api/test" "bases/blocking-command-api/test-resources"
                        "bases/pulsar-reader/test" "bases/pulsar-reader/test-resources"
                        "bases/symmetric-key-api/test" "bases/symmetric-key-api/test-resources"]}},
  :mvn/repos {"maven" {:url "https://packages.confluent.io/maven"}}}

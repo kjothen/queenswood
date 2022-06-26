@@ -1,6 +1,5 @@
 {:system
- {:ring
-  {:jetty-adapter
-   {:handler #system :required-component
-    :options {:port #profile {:default #port 0}
-              :join? #profile {:default false}}}}}}
+ {:ring {:jetty-adapter
+         {:handler #system :required-component
+          :options {:port #profile {:default #port 0}
+                    :join? #profile {:default false}}}}}}
