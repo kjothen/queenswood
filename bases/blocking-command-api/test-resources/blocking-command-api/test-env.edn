@@ -11,11 +11,11 @@
                    :admin {:service-http-url [#system :ref [:pulsar :container-service-http-url]]},
                    :client {:service-url [#system :ref [:pulsar :container-service-url]]},
                    :topics {:admin [#system :ref [:pulsar :admin]]
-                            :names ["persistent://tenant/namespace/command"]}
-                   :reader {:ensure-topics [#system :ref [:pulsar :topics]]
+                            :topics-and-opts [{:topic "persistent://tenant/namespace/identity"}]}
+                   :reader {:_topics [#system :ref [:pulsar :topics]]
                             :client [#system :ref [:pulsar :client]]
-                            :config {"startMessageId" #pulsar-message-id :earliest,
-                                     "topicNames" ["persistent://tenant/namespace/command"]}}}
+                            :conf {"startMessageId" #pulsar-message-id :earliest,
+                                   "topicNames" ["persistent://tenant/namespace/identity"]}}}
           :mqtt {:container {:docker-image-name "hivemq/hivemq-ce:latest"
                              :exposed-port 1883}
                  :container-mapped-ports {:container [#system :ref [:mqtt :container]]}

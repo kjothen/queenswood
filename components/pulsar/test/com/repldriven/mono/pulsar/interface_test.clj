@@ -18,22 +18,12 @@
   (testing "Developers should be able to start and stop a pulsar system from the REPL"
     (let [system-config (SUT/create-system (get-in @env/env [:system :pulsar]))]
       (try
-        (let [booted-system (system/start system-config nil #{[:pulsar :admin]})]
-          (Thread/sleep 5000) ; admin tenant api does not work until clusters are up...
+        (let [running-system (system/start system-config)]
           (try
-            (let [^PulsarAdmin admin (system/instance booted-system [:pulsar :admin])
-                  topic-names (get-in @env/env [:system :pulsar :reader :config "topicNames"])]
-              (doseq [topic-name topic-names] (SUT/ensure-topic admin topic-name))
-              (try
-                (let [running-system (system/start booted-system)]
-                  (Thread/sleep 1000)
-                  (system/stop running-system)
-                  (is (= 1 1)))
-                (catch Exception e
-                  (assert false (format "Unable to fully start SUT, %s" e)))))
+            (is (some? (system/instance running-system [:pulsar :reader])))
             (catch Exception e
-              (assert false (format "Unable to operate SUT, %s" e)))
+              (assert false (format "Unable to get pulsar reader, %s" e)))
             (finally
-              (system/stop booted-system))))
+              (system/stop running-system))))
         (catch Exception e
-          (assert false (format "Unable to boot SUT, %s" e)))))))
+          (assert false (format "Unable to start system, %s" e)))))))

@@ -1,4 +1,5 @@
 (ns com.repldriven.mono.system.interface
+  (:refer-clojure :exclude [ref])
   (:require [com.repldriven.mono.system.donut :as donut]
             [com.repldriven.mono.system.env-reader :as env-reader]
             [com.repldriven.mono.env.interface :as env]))
@@ -10,9 +11,7 @@
 (def defs donut/defs)
 (def required-component donut/required-component)
 
-(defn ref
-  [kws]
-  (donut/ref kws))
+(defn ref [kws] (donut/ref kws))
 
 (defn start
   ([config-name]

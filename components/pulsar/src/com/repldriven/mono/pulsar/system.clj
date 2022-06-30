@@ -14,7 +14,7 @@
 
 (defmethod component :admin [_ v] (system/merge-component-config components/admin v))
 (defmethod component :client [_ v] (system/merge-component-config components/client v))
-(defmethod component :topic-creator [_ v] (system/merge-component-config components/topic-creator v))
+(defmethod component :topics [_ v] (system/merge-component-config components/topics v))
 (defmethod component :reader [_ v] (system/merge-component-config components/reader v))
 
 (defn create-component [m k v] (assoc m k (component k v)))

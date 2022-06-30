@@ -14,9 +14,10 @@
 (use-fixtures :once env-fixture)
 
 (comment
-  (require '[clojure.pprint :as pprint])
   (env/set-env! (io/resource "blocking-command-api/test-env.edn") :test)
   (def system-config (SUT/create (:system @env/env)))
-  (pprint/pprint system-config)
+  (tap> system-config)
   (def running-system (system/start system-config))
+  (tap> running-system)
+  (system/stop running-system)
   )

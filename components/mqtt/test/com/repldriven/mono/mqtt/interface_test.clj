@@ -32,13 +32,12 @@
          (assert false (format "Unable to boot SUT, %s" e))))))
 
 (comment
-  (require '[clojure.pprint :as pprint])
   (env/set-env! (io/resource "mqtt/test-env.edn") :test)
   (def system-config (SUT/create-system (get-in @env/env [:system :mqtt])))
-  (pprint/pprint system-config)
+  (tap> system-config)
   (def running-system (system/start system-config))
   (def client (system/instance running-system [:mqtt :client]))
-  (pprint/pprint client)
+  (tap> client)
   (SUT/subscribe client {"Hello" 0} (fn [^String topic _ ^bytes payload]
                                       (println (String. payload "UTF-8"))))
   (SUT/publish client "Hello" "World")

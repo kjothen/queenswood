@@ -6,7 +6,6 @@
   (def p (p/open {:launcher :vs-code}))
   (add-tap #'p/submit) ; Add portal as a tap> target
   (tap> "Opened tap")
-
   (p/close)
   )
 

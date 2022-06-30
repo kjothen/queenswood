@@ -36,5 +36,5 @@
           domain-name (.getDomain topic-name)
           topic-names (.getList topics fully-qualified-namespace-name domain-name)]
       (when-not (contains? (set topic-names) fully-qualified-topic-name)
-        (do (log/info "Creating topic: " fully-qualified-topic-name)
-            (.createPartitionedTopic topics fully-qualified-topic-name partitions))))))
+        (log/info "Creating topic: " fully-qualified-topic-name)
+        (.createPartitionedTopic topics fully-qualified-topic-name partitions)))))

@@ -7,9 +7,18 @@
     :join? #profile {:default true
                      :dev     false
                      :test    false}}}
-  :pulsar-reader
-  {:pulsar {:docker-image-name "apachepulsar/pulsar:latest"
-            :named-exposed-ports {:broker 6650 :broker-http 8080}}
-   :service-url #profile {:default "pulsar://localhost:6650"}
-   :reader      #profile {:default {"topicNames"     ["persistent://tenant/namespace/identity"]
-                                    "startMessageId" #pulsar-message-id :earliest}}}}}
+  :pulsar {:container {:docker-image-name "kezhenxu94/pulsar:latest"
+                       :exposed-ports [6650 8080]}
+           :container-mapped-ports {:container [#system :ref [:pulsar :container]]}
+           :container-service-http-url {:container-mapped-ports [#system :ref [:pulsar :container-mapped-ports]]
+                                        :exposed-port 8080}
+           :container-service-url {:container-mapped-ports [#system :ref [:pulsar :container-mapped-ports]]
+                                   :exposed-port 6650}
+           :admin {:service-http-url [#system :ref [:pulsar :container-service-http-url]]},
+           :client {:service-url [#system :ref [:pulsar :container-service-url]]},
+           :topics {:admin [#system :ref [:pulsar :admin]]
+                    :topics-and-opts [{:topic "persistent://tenant/namespace/identity"}]}
+           :reader {:_topics [#system :ref [:pulsar :topics]]
+                    :client [#system :ref [:pulsar :client]]
+                    :conf {"startMessageId" #pulsar-message-id :earliest,
+                           "topicNames" ["persistent://tenant/namespace/identity"]}}}}}

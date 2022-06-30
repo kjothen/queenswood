@@ -3,20 +3,20 @@
             [com.repldriven.mono.system.interface :as system]))
 
 (def mapped-ports
-  {:start (fn [{:keys [container]} instance _]
-            (or instance
-                (let [ports (:mapped-ports container)]
-                  (log/info "Container mapped ports:" ports)
-                  ports)))
-   :stop  (fn [_ _ _])
-   :conf  {:container system/required-component}})
+  {:system/start (fn [{:keys [config instance]}]
+                   (or instance
+                       (let [{:keys [container]} config
+                             ports (:mapped-ports container)]
+                         (log/info "Container mapped ports:" ports)
+                         ports)))
+   :system/config  {:container system/required-component}})
 
 (def mapped-exposed-port
-  {:start (fn [{:keys [exposed-port container]} instance _]
-            (or instance
-              (let [port (get-in container [:mapped-ports exposed-port])]
-                (log/info "Container mapped exposed port:" port)
-                port)))
-   :stop  (fn [_ _ _])
-   :conf  {:container system/required-component
-           :exposed-port system/required-component}})
+  {:system/start (fn [{:keys [config instance]}]
+                   (or instance
+                       (let [{:keys [exposed-port container]} config
+                             port (get-in container [:mapped-ports exposed-port])]
+                         (log/info "Container mapped exposed port:" port)
+                         port)))
+   :system/config  {:container system/required-component
+                    :exposed-port system/required-component}})

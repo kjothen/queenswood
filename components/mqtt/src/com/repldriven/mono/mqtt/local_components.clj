@@ -8,30 +8,31 @@
            (org.testcontainers.utility DockerImageName)))
 
 (def default-exposed-port 1883)
-(def default-exposed-tls-port 8883)
 (def default-docker-image-name "hivemq/hivemq-ce:latest")
 
 (def container
-  {:start (fn [{:keys [docker-image-name exposed-port]} instance _]
-            (or instance
-              (try
-                (some-> (tc/init {:container (-> (DockerImageName/parse docker-image-name)
-                                                 (.asCompatibleSubstituteFor "hivemq/hivemq-ce")
-                                                 (HiveMQContainer.)),
-                                  :exposed-ports [exposed-port]})
-                  (tc/start!))
-                (catch ContainerLaunchException e
-                  (log/error "Failed to start mqtt container, %s" e))))),
-   :stop (fn [_ instance _] (tc/stop! instance)),
-   :conf {:docker-image-name default-docker-image-name,
-          :exposed-port default-exposed-port}})
+  {:system/start (fn [{:keys [config instance]}]
+                   (or instance
+                       (let [{:keys [docker-image-name exposed-port]} config]
+                         (try
+                           (some-> (tc/init {:container (-> (DockerImageName/parse docker-image-name)
+                                                            (.asCompatibleSubstituteFor "hivemq/hivemq-ce")
+                                                            (HiveMQContainer.)),
+                                             :exposed-ports [exposed-port]})
+                                   (tc/start!))
+                           (catch ContainerLaunchException e
+                             (log/error "Failed to start mqtt container, %s" e)))))),
+   :system/stop (fn [{:keys [instance]}]
+                  (tc/stop! instance)),
+   :system/config {:docker-image-name default-docker-image-name,
+                   :exposed-port default-exposed-port}})
 
 (def container-connection-uri
-  {:start (fn [{:keys [container-mapped-ports exposed-port]} instance _]
-            (or instance
-                (let [connection-uri-str (str "tcp://localhost:" (get container-mapped-ports exposed-port))]
-                  (log/info "Mapped mqtt container-connection-uri:" connection-uri-str)
-                  connection-uri-str))),
-   :stop (fn [_ _ _]),
-   :conf {:container-mapped-ports system/required-component
-          :exposed-port default-exposed-port}})
+  {:system/start (fn [{:keys [config instance]}]
+                   (or instance
+                       (let [{:keys [container-mapped-ports exposed-port]} config
+                             connection-uri-str (str "tcp://localhost:" (get container-mapped-ports exposed-port))]
+                         (log/info "Mapped mqtt container-connection-uri:" connection-uri-str)
+                         connection-uri-str))),
+   :system/config {:container-mapped-ports system/required-component
+                   :exposed-port default-exposed-port}})

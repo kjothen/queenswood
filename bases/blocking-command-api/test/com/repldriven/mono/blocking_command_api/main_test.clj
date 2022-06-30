@@ -14,19 +14,8 @@
 
 (use-fixtures :once env-fixture)
 
-(defn start!
-  ([] (start! nil))
-  ([booted-system]
-   (log/info "Starting system")
-   (let [system-config (pulsar/create-system (get-in @env/env [:system :pulsar]))]
-     (system/start! system (if (some? booted-system) booted-system system-config))
-     (reset! channel (async/chan))
-     (read-messages (system/instance @system [:pulsar :reader]) @channel))))
-
 
 (comment
-  (require '[clojure.pprint :as pprint])
   (env/set-env! (io/resource "blocking-command-api/test-env.edn") :test)
   (def system-config (SUT/create-system (:system @env/env)))
-
   )

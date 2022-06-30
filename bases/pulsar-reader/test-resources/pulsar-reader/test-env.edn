@@ -7,6 +7,9 @@
                                            :exposed-port 6650}
                    :admin {:service-http-url [#system :ref [:pulsar :container-service-http-url]]},
                    :client {:service-url [#system :ref [:pulsar :container-service-url]]},
-                   :reader {:client [#system :ref [:pulsar :client]]
-                            :config {"startMessageId" #pulsar-message-id :earliest,
-                                     "topicNames" ["persistent://tenant/namespace/identity"]}}}}}
+                   :topics {:admin [#system :ref [:pulsar :admin]]
+                            :topics-and-opts [{:topic "persistent://tenant/namespace/identity"}]}
+                   :reader {:_topics [#system :ref [:pulsar :topics]]
+                            :client [#system :ref [:pulsar :client]]
+                            :conf {"startMessageId" #pulsar-message-id :earliest,
+                                   "topicNames" ["persistent://tenant/namespace/identity"]}}}}}
