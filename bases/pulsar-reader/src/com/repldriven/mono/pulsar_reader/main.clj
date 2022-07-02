@@ -18,10 +18,9 @@
         ]
     (async/go (while true (async/>! c (.readNext reader))))
     (async/go-loop []
-      (if-let [^Message m (async/<! c)]
-        (do
-          ;; (log/info (avro/decode schema (.getData m)))
-          (recur))))))
+      (when-let [^Message m (async/<! c)]
+        ;; (log/info (avro/decode schema (.getData m)))
+        (recur)))))
 
 (defn start!
   ([] (start! nil))

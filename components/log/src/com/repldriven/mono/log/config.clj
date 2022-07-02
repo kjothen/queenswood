@@ -1,9 +1,8 @@
 (ns com.repldriven.mono.log.config
   (:require [clojure.java.io :as io]
             [clojure.string :as str]
-            [com.repldriven.mono.env.interface :as env]
             [taoensso.timbre :as timbre])
-  (:import (java.util Calendar Date)
+  (:import (java.util Calendar)
            (java.text SimpleDateFormat)
            (java.io File IOException)))
 
@@ -71,7 +70,7 @@
            (when-not (.exists log)
              (io/make-parents log))
            (if (.exists log)
-             (if (<= (.lastModified log) (.getTimeInMillis prev-cal))
+             (when (<= (.lastModified log) (.getTimeInMillis prev-cal))
                (shift-log-period log path prev-cal))
              (.createNewFile log))
            (spit path (with-out-str (println output-str)) :append true)

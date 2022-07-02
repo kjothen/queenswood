@@ -1,0 +1,5 @@
+{:system {:helloworld {:container {:docker-image-name "testcontainers/helloworld:1.1.0"
+                                   :exposed-ports [8080 8081]}
+                       :container-mapped-ports {:container [#system :ref [:helloworld :container]]}
+                       :container-mapped-exposed-port {:container [#system :ref [:helloworld :container]]
+                                                       :exposed-port 8080}}}}

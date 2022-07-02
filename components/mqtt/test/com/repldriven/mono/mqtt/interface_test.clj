@@ -23,7 +23,7 @@
               message "World"
               p (promise)]
           (SUT/subscribe client {topic 0}
-            (fn [^String topic _ ^bytes payload]
+            (fn [_ _ ^bytes payload]
               (deliver p (String. payload "UTF-8"))))
           (SUT/publish client topic message)
           (is (= @p message)))

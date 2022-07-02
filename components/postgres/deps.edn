@@ -4,6 +4,6 @@
         com.github.seancorfield/next.jdbc {:mvn/version "1.2.772"}
         org.clojure/java.data {:mvn/version "1.0.95"}
         org.postgresql/postgresql {:mvn/version "42.3.3"}
-        org.testcontainers/postgresql {:mvn/version "1.16.3"},
-        org.testcontainers/testcontainers {:mvn/version "1.16.3"}},
+        org.testcontainers/postgresql {:mvn/version "1.17.3"},
+        org.testcontainers/testcontainers {:mvn/version "1.17.3"}},
  :paths ["src" "resources"]}

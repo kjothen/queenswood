@@ -1,9 +1,7 @@
 (ns com.repldriven.mono.symmetric-key.core
-  (:require [buddy.core.bytes :as bytes]
-            [buddy.core.crypto :as crypto]
+  (:require [buddy.core.crypto :as crypto]
             [buddy.core.codecs :as codecs]
-            [buddy.core.nonce :as nonce]
-            [buddy.core.hash :as hash])
+            [buddy.core.nonce :as nonce])
   (:import (javax.crypto KeyGenerator)))
 
 (defonce ^:private ^KeyGenerator key-gen-aes-256

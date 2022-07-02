@@ -1,5 +1,5 @@
 (ns com.repldriven.mono.log.interface-test
-  (:require [clojure.test :as test :refer :all]
+  (:require [clojure.test :as test :refer [deftest is testing]]
             [com.repldriven.mono.log.interface :as SUT]))
 
 (deftest log-test
