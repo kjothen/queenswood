@@ -25,4 +25,4 @@
 
 (defn configure
   [config]
-  {system/defs (configure-component-groups config)})
+  {:system/defs (configure-component-groups config)})

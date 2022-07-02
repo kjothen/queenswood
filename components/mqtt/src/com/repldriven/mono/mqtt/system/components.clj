@@ -4,15 +4,15 @@
             [clojurewerkz.machine-head.client :as mh]))
 
 (def client
-  {:system/start (fn [{:keys [config instance]}]
+  {:system/start (fn [{:system/keys [config instance]}]
                    (or instance
-                     (let [{:keys [uri options]} config]
-                       (try
-                         (log/info "Opening mqtt connection:" uri options)
-                         (mh/connect uri)
-                         (catch Exception e
-                           (log/error (format "Failed to open mqtt connection, %s" e))))))),
-   :system/stop (fn [{:keys [instance]}]
+                       (let [{:keys [uri options]} config]
+                         (try
+                           (log/info "Opening mqtt connection:" uri options)
+                           (mh/connect uri)
+                           (catch Exception e
+                             (log/error (format "Failed to open mqtt connection, %s" e))))))),
+   :system/stop (fn [{:system/keys [instance]}]
                   (when (some? instance)
                     (try
                       (log/info "Closing mqtt connection")

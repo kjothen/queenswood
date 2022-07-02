@@ -1,17 +1,11 @@
 (ns com.repldriven.mono.system.donut
+  (:refer-clojure :exclude [ref])
   (:require [clojure.walk :as walk]
             [com.repldriven.mono.log.interface :as log]
             [donut.system :as ds]))
 
-(def defs ::ds/defs)
-(def required-component ::ds/required-component)
-
-(def mono-systemn-ns "system")
+(def mono-system-ns "system")
 (def donut-system-ns "donut.system")
-
-(defn- in?
-  [coll x]
-  (some #(= x %) coll))
 
 (defn match-ns-keyword?
   [x match-ns]
@@ -26,10 +20,12 @@
         (if (fn? x)
           (fn [to-ns-map]
             (x (reduce-kv
-                 (fn [m k v] (assoc m (if (match-ns-keyword? k to-ns) (keyword (name k)) k) v))
+                 (fn [m k v] (assoc m (if (match-ns-keyword? k to-ns) (keyword from-ns (name k)) k) v))
                  {}
                  to-ns-map)))
           x))) m))
+
+(def required-component ::ds/required-component)
 
 (defn ref
   [kws]
@@ -38,17 +34,17 @@
 (defn start
   ([config-name]
    (try
-     (ds/start (nsmap->nsmap config-name mono-systemn-ns donut-system-ns))
+     (ds/start (nsmap->nsmap config-name mono-system-ns donut-system-ns))
      (catch Exception e
        (log/error (format "Error starting system, %s, %s" config-name e)))))
   ([config-name custom-config]
    (try
-     (ds/start (nsmap->nsmap config-name mono-systemn-ns donut-system-ns) custom-config)
+     (ds/start (nsmap->nsmap config-name mono-system-ns donut-system-ns) custom-config)
      (catch Exception e
        (log/error (format "Error starting system, %s, %s" config-name e)))))
   ([config-name custom-config component-ids]
    (try
-     (ds/start (nsmap->nsmap config-name mono-systemn-ns donut-system-ns) custom-config component-ids)
+     (ds/start (nsmap->nsmap config-name mono-system-ns donut-system-ns) custom-config component-ids)
      (catch Exception e
        (log/error (format "Error starting system, %s, %s" config-name e))))))
 

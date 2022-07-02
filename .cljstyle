@@ -2,10 +2,12 @@
  :rules
  {:indentation
   {:indents
-   {#"^:?import$" [[:block 0]],
+   {or [[:block 2] [:inner 1]],
+    #"^:?import$" [[:block 0]],
     #"^:?require$" [[:block 0]],
     #"^:?use$" [[:block 0]],
     #"^[^ \[]" [[:inner 0]]}},
   :namespaces {:enabled? false},
   :vars {:enabled? false},
+  :remove-multiple-non-indenting-spaces? true
   :blank-lines {:max-consecutive 1, :padding-lines 1}}}

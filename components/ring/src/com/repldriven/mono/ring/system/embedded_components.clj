@@ -10,12 +10,12 @@
   "Component definition for a
   [ring jetty adapter](https://ring-clojure.github.io/ring/ring.adapter.jetty.html)
   in a [donut.system](https://github.com/donut-power/system)"
-  {:system/start (fn [{:keys [config instance]}]
+  {:system/start (fn [{:system/keys [config instance]}]
                    (or instance
-                     (let [{:keys [handler options]} config]
-                       (log/info "Starting jetty adapter:" handler options)
-                       (jetty/run-jetty handler options))))
-   :systen/stop  (fn [{:keys [^Server instance]}]
+                       (let [{:keys [handler options]} config]
+                         (log/info "Starting jetty adapter:" handler options)
+                         (jetty/run-jetty handler options))))
+   :systen/stop  (fn [{:system/keys [^Server instance]}]
                    (when (some? instance)
                      (.stop instance)))
    :system/config  {:handler system/required-component

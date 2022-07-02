@@ -14,7 +14,7 @@
   (log/info "Starting system")
   (api/init)
   (let [system-config (ring/configure-system (get-in @env/env [:system :ring]))]
-    (system/start! system (assoc-in system-config [system/defs :ring :jetty-adapter :system/config :handler] api/app))))
+    (system/start! system (assoc-in system-config [:system/defs :ring :jetty-adapter :system/config :handler] api/app))))
 
 (defn stop!
   []
