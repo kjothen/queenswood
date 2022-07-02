@@ -1,6 +1,6 @@
 (ns com.repldriven.mono.postgres.interface
-  (:require [com.repldriven.mono.postgres.system :as system]))
+  (:require [com.repldriven.mono.postgres.system.core :as system]))
 
-(defn create-system
+(defn configure-system
   [config]
-  (system/create config))
+  (system/configure config))

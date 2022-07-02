@@ -14,7 +14,7 @@
 
 (deftest development-test
   (testing "Developers should be able to start and stop a ring web server"
-    (let [system-config (SUT/create-system (get-in @env/env [:system :ring]))]
+    (let [system-config (SUT/configure-system (get-in @env/env [:system :ring]))]
       (try
         (let [running-system (system/start system-config)]
           (try

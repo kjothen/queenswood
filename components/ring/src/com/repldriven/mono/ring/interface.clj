@@ -1,6 +1,6 @@
 (ns com.repldriven.mono.ring.interface
-  (:require [com.repldriven.mono.ring.system :as system]))
+  (:require [com.repldriven.mono.ring.system.core :as system]))
 
-(defn create-system
+(defn configure-system
   [config]
-  (system/create config))
+  (system/configure config))

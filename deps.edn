@@ -3,7 +3,6 @@
   :dev {:extra-deps {components/cli {:local/root "components/cli"},
                      components/env {:local/root "components/env"},
                      components/event {:local/root "components/event"},
-                     components/local-system {:local/root "components/local-system"},
                      components/log {:local/root "components/log"},
                      components/migrator {:local/root "components/migrator"},
                      components/mqtt {:local/root "components/mqtt"},
@@ -14,6 +13,7 @@
                      components/symmetric-key {:local/root "components/symmetric-key"},
                      components/spec {:local/root "components/spec"},
                      components/system {:local/root "components/system"},
+                     components/testcontainers-system {:local/root "components/testcontainers-system"},
                      bases/blocking-command-api {:local/root "bases/blocking-command-api"},
                      bases/build {:local/root "bases/build"},
                      bases/pulsar-reader {:local/root "bases/pulsar-reader"},
@@ -25,7 +25,7 @@
   :test {:extra-deps {http-kit/http-kit {:mvn/version "2.5.3"}},
          :extra-paths ["components/cli/test"
                        "components/env/test" "components/env/test-resources"
-                       "components/event/test" "components/event/test-resources"
+                       "components/event/test"
                        "components/log/test"
                        "components/migrator/test" "components/migrator/test-resources"
                        "components/mqtt/test" "components/mqtt/test-resources"

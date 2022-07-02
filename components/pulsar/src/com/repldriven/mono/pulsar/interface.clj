@@ -2,16 +2,16 @@
   (:require [com.repldriven.mono.pulsar.admin :as admin]
             [com.repldriven.mono.pulsar.client :as client]
             [com.repldriven.mono.pulsar.env-reader :as env-reader]
-            [com.repldriven.mono.pulsar.system :as system]
+            [com.repldriven.mono.pulsar.system.core :as system]
             [com.repldriven.mono.env.interface :as env]))
 
 (defmethod env/reader 'pulsar-message-id
   [opts tag value]
   (env-reader/message-id opts tag value))
 
-(defn create-system
+(defn configure-system
   [config]
-  (system/create config))
+  (system/configure config))
 
 (defn ensure-topic
   [admin topic-name & opts]

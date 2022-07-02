@@ -16,7 +16,7 @@
 
 (deftest development-test
   (testing "Developers should be able to start and stop a pulsar system from the REPL"
-    (let [system-config (SUT/create-system (get-in @env/env [:system :pulsar]))]
+    (let [system-config (SUT/configure-system (get-in @env/env [:system :pulsar]))]
       (try
         (let [running-system (system/start system-config)]
           (try

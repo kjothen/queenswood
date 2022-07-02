@@ -17,7 +17,7 @@
            '[donut.system :as ds])
 
   (env/set-env! (io/resource "pulsar/test-env.edn") :default)
-  (def system-config (pulsar/create-system (get-in @env/env [:system :pulsar])))
+  (def system-config (pulsar/configure-system (get-in @env/env [:system :pulsar])))
   (tap> system-config)
 
   (def booted-system (ds/start system-config nil #{[:pulsar :admin] [:pulsar :service-url]}))

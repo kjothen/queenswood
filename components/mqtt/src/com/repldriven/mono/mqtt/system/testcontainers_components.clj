@@ -1,8 +1,7 @@
-(ns com.repldriven.mono.mqtt.local-components
+(ns com.repldriven.mono.mqtt.system.testcontainers-components
   (:require [clj-test-containers.core :as tc]
             [com.repldriven.mono.log.interface :as log]
-            [com.repldriven.mono.system.interface :as system]
-            [clojurewerkz.machine-head.client :as mh])
+            [com.repldriven.mono.system.interface :as system])
   (:import (org.testcontainers.containers ContainerLaunchException)
            (org.testcontainers.hivemq HiveMQContainer)
            (org.testcontainers.utility DockerImageName)))

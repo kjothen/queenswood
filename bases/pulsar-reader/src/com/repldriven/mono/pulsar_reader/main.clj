@@ -27,7 +27,7 @@
   ([] (start! nil))
   ([booted-system]
    (log/info "Starting system")
-   (let [system-config (pulsar/create-system (get-in @env/env [:system :pulsar]))]
+   (let [system-config (pulsar/configure-system (get-in @env/env [:system :pulsar]))]
      (system/start! system (if (some? booted-system) booted-system system-config))
      (reset! channel (async/chan))
      (read-messages (system/instance @system [:pulsar :reader]) @channel))))

@@ -16,7 +16,7 @@
 
 (deftest development-test
   (testing "Developers should be able to start and stop a pulsar system from the REPL"
-    (let [system-config (pulsar/create-system (get-in @env/env [:system :pulsar]))]
+    (let [system-config (pulsar/configure-system (get-in @env/env [:system :pulsar]))]
       (try
         (let [booted-system (system/start system-config nil #{[:pulsar :admin]})]
           (Thread/sleep 5000) ; admin tenant api does not work until clusters are up...

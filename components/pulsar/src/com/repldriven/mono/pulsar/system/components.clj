@@ -1,4 +1,4 @@
-(ns com.repldriven.mono.pulsar.components
+(ns com.repldriven.mono.pulsar.system.components
   (:require [clojure.java.data :as j]
             [clojure.java.data.builder :as builder]
             [com.repldriven.mono.log.interface :as log]

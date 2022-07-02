@@ -16,7 +16,7 @@
 
 (deftest development-test
   (testing "Developers should be able to start and stop a postgres db"
-    (let [system-config (SUT/create-system (get-in @env/env [:system :postgres]))]
+    (let [system-config (SUT/configure-system (get-in @env/env [:system :postgres]))]
       (try
         (let [running-system (system/start system-config)]
           (try
@@ -33,7 +33,7 @@
 
 (comment
   (env/set-env! (io/resource "postgres/test-env.edn") :test)
-  (def system-config (SUT/create-system (get-in @env/env [:system :postgres])))
+  (def system-config (SUT/configure-system (get-in @env/env [:system :postgres])))
   (tap> system-config)
   (def running-system (system/start system-config))
   (tap> running-system)

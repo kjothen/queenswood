@@ -17,7 +17,7 @@
 
 (deftest migrate-test
   (testing "Applying a migration changelog should result in a paved db"
-    (let [system-config (postgres/create-system (get-in @env/env [:system :postgres]))]
+    (let [system-config (postgres/configure-system (get-in @env/env [:system :postgres]))]
       (try
         (let [running-system (system/start system-config)]
           (try

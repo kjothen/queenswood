@@ -1,12 +1,12 @@
-{:paths   ["resources"]
+{:paths   []
  :deps    {component/cli               {:local/root "../../components/cli"}
            component/env               {:local/root "../../components/env"}
-           component/local-system      {:local/root "../../components/local-system"}
            component/log               {:local/root "../../components/log"}
            component/pubsub            {:local/root "../../components/pubsub"}
            component/pulsar            {:local/root "../../components/pulsar"}
            component/spec              {:local/root "../../components/spec"}
            component/system            {:local/root "../../components/system"}
+           component/testcontainers-system      {:local/root "../../components/testcontainers-system"}
            base/pulsar-reader          {:local/root "../../bases/pulsar-reader"}
            org.clojure/clojure         {:mvn/version "1.11.1"}}
 

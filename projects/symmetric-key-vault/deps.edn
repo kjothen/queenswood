@@ -1,4 +1,4 @@
-{:paths   ["resources"]
+{:paths   []
  :deps    {component/cli               {:local/root "../../components/cli"}
            component/env               {:local/root "../../components/env"}
            component/log               {:local/root "../../components/log"}

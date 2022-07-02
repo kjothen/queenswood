@@ -1,4 +1,4 @@
-(ns com.repldriven.mono.local-system.container
+(ns com.repldriven.mono.testcontainers-system.container
   (:require [com.repldriven.mono.log.interface :as log]
             [com.repldriven.mono.system.interface :as system]))
 

@@ -14,8 +14,3 @@
 
 (use-fixtures :once env-fixture)
 
-
-(comment
-  (env/set-env! (io/resource "blocking-command-api/test-env.edn") :test)
-  (def system-config (SUT/create-system (:system @env/env)))
-  )
