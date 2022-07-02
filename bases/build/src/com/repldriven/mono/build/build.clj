@@ -25,7 +25,7 @@
   (let [home (System/getenv "HOME")
         command-args ["java" "-jar"
                       (format "%s/.m2/repository/org/apache/avro/avro-tools/%s/avro-tools-%s.jar",
-                              home, avro-tools-version, avro-tools-version)
+                        home, avro-tools-version, avro-tools-version)
                       "compile" "schema"
                       src target]]
     (b/delete {:path target})

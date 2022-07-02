@@ -6,12 +6,12 @@
 (def client
   {:system/start (fn [{:keys [config instance]}]
                    (or instance
-                       (let [{:keys [uri options]} config]
-                            (try
-                              (log/info "Opening mqtt connection:" uri options)
-                              (mh/connect uri)
-                              (catch Exception e
-                                (log/error (format "Failed to open mqtt connection, %s" e))))))),
+                     (let [{:keys [uri options]} config]
+                       (try
+                         (log/info "Opening mqtt connection:" uri options)
+                         (mh/connect uri)
+                         (catch Exception e
+                           (log/error (format "Failed to open mqtt connection, %s" e))))))),
    :system/stop (fn [{:keys [instance]}]
                   (when (some? instance)
                     (try

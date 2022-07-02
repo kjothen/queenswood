@@ -17,8 +17,18 @@
 (defmethod component :topics [_ v] (system/merge-component-config components/topics v))
 (defmethod component :reader [_ v] (system/merge-component-config components/reader v))
 
-(defn configure-component [m k v] (assoc m k (component k v)))
-(defn configure-component-group [config] (reduce-kv configure-component {} config))
-(defn configure-component-groups [config] {:pulsar (configure-component-group config)})
+(defn configure-component
+  [m k v]
+  (assoc m k (component k v)))
 
-(defn configure [config] {system/defs (configure-component-groups config)})
+(defn configure-component-group
+  [config]
+  (reduce-kv configure-component {} config))
+
+(defn configure-component-groups
+  [config]
+  {:pulsar (configure-component-group config)})
+
+(defn configure
+  [config]
+  {system/defs (configure-component-groups config)})

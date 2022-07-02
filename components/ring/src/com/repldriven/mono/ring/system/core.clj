@@ -6,8 +6,18 @@
 (defmethod component :default [_ v] v)
 (defmethod component :jetty-adapter [_ v] (system/merge-component-config embedded-components/jetty-adapter v))
 
-(defn configure-component [m k v] (assoc m k (component k v)))
-(defn configure-component-group [config] (reduce-kv configure-component {} config))
-(defn configure-component-groups [config] {:ring (configure-component-group config)})
+(defn configure-component
+  [m k v]
+  (assoc m k (component k v)))
 
-(defn configure [config] {system/defs (configure-component-groups config)})
+(defn configure-component-group
+  [config]
+  (reduce-kv configure-component {} config))
+
+(defn configure-component-groups
+  [config]
+  {:ring (configure-component-group config)})
+
+(defn configure
+  [config]
+  {system/defs (configure-component-groups config)})

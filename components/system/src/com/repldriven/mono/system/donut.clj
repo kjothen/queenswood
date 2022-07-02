@@ -9,22 +9,31 @@
 (def mono-systemn-ns "system")
 (def donut-system-ns "donut.system")
 
-(defn- in? [coll x] (some #(= x %) coll))
-(defn match-ns-keyword? [x match-ns] (and (keyword? x) (= match-ns (namespace x))))
+(defn- in?
+  [coll x]
+  (some #(= x %) coll))
+
+(defn match-ns-keyword?
+  [x match-ns]
+  (and (keyword? x) (= match-ns (namespace x))))
+
 (defn- nsmap->nsmap
   [m from-ns to-ns]
   (walk/postwalk
-   (fn [x] (if (match-ns-keyword? x from-ns)
-             (keyword to-ns (name x))
-             (if (fn? x)
-               (fn [to-ns-map]
-                 (x (reduce-kv
-                     (fn [m k v] (assoc m (if (match-ns-keyword? k to-ns) (keyword (name k)) k) v))
-                     {}
-                     to-ns-map)))
-               x))) m))
+    (fn [x]
+      (if (match-ns-keyword? x from-ns)
+        (keyword to-ns (name x))
+        (if (fn? x)
+          (fn [to-ns-map]
+            (x (reduce-kv
+                 (fn [m k v] (assoc m (if (match-ns-keyword? k to-ns) (keyword (name k)) k) v))
+                 {}
+                 to-ns-map)))
+          x))) m))
 
-(defn ref [kws] (ds/ref kws))
+(defn ref
+  [kws]
+  (ds/ref kws))
 
 (defn start
   ([config-name]

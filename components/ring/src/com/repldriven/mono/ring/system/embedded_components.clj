@@ -12,9 +12,9 @@
   in a [donut.system](https://github.com/donut-power/system)"
   {:system/start (fn [{:keys [config instance]}]
                    (or instance
-                       (let [{:keys [handler options]} config]
-                         (log/info "Starting jetty adapter:" handler options)
-                         (jetty/run-jetty handler options))))
+                     (let [{:keys [handler options]} config]
+                       (log/info "Starting jetty adapter:" handler options)
+                       (jetty/run-jetty handler options))))
    :systen/stop  (fn [{:keys [^Server instance]}]
                    (when (some? instance)
                      (.stop instance)))

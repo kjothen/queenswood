@@ -5,18 +5,18 @@
 (def mapped-ports
   {:system/start (fn [{:keys [config instance]}]
                    (or instance
-                       (let [{:keys [container]} config
-                             ports (:mapped-ports container)]
-                         (log/info "Container mapped ports:" ports)
-                         ports)))
+                     (let [{:keys [container]} config
+                           ports (:mapped-ports container)]
+                       (log/info "Container mapped ports:" ports)
+                       ports)))
    :system/config  {:container system/required-component}})
 
 (def mapped-exposed-port
   {:system/start (fn [{:keys [config instance]}]
                    (or instance
-                       (let [{:keys [exposed-port container]} config
-                             port (get-in container [:mapped-ports exposed-port])]
-                         (log/info "Container mapped exposed port:" port)
-                         port)))
+                     (let [{:keys [exposed-port container]} config
+                           port (get-in container [:mapped-ports exposed-port])]
+                       (log/info "Container mapped exposed port:" port)
+                       port)))
    :system/config  {:container system/required-component
                     :exposed-port system/required-component}})

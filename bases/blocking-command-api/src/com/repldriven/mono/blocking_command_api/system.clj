@@ -9,5 +9,10 @@
 (defmethod system :pulsar [_ v] (pulsar/configure-system v))
 (defmethod system :mqtt [_ v] (mqtt/configure-system v))
 
-(defn configure-system [m k v] (merge-with into m (system k v)))
-(defn configure [config] (reduce-kv configure-system {} config))
+(defn configure-system
+  [m k v]
+  (merge-with into m (system k v)))
+
+(defn configure
+  [config]
+  (reduce-kv configure-system {} config))

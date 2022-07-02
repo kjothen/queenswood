@@ -14,19 +14,19 @@
 (use-fixtures :once env-fixture)
 
 (deftest dummy-test
-   (let [system-def (SUT/configure-system (get-in @env/env [:system :mqtt]))]
-     (log/info system-def)
-     (try
-       (let [running-system (system/start system-def)]
-         (let [client (system/instance running-system [:mqtt :client])
-               topic "Hello"
-               message "World"
-               p (promise)]
-           (SUT/subscribe client {topic 0}
-                          (fn [^String topic _ ^bytes payload]
-                            (deliver p (String. payload "UTF-8"))))
-           (SUT/publish client topic message)
-           (is (= @p message)))
-         (system/stop running-system))
-       (catch Exception e
-         (assert false (format "Unable to boot SUT, %s" e))))))
+  (let [system-def (SUT/configure-system (get-in @env/env [:system :mqtt]))]
+    (log/info system-def)
+    (try
+      (let [running-system (system/start system-def)]
+        (let [client (system/instance running-system [:mqtt :client])
+              topic "Hello"
+              message "World"
+              p (promise)]
+          (SUT/subscribe client {topic 0}
+            (fn [^String topic _ ^bytes payload]
+              (deliver p (String. payload "UTF-8"))))
+          (SUT/publish client topic message)
+          (is (= @p message)))
+        (system/stop running-system))
+      (catch Exception e
+        (assert false (format "Unable to boot SUT, %s" e))))))

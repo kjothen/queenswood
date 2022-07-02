@@ -11,8 +11,18 @@
 (defmethod component :container-connection-uri [_ v] (system/merge-component-config container-components/container-connection-uri v))
 (defmethod component :client [_ v] (system/merge-component-config components/client v))
 
-(defn configure-component [m k v] (assoc m k (component k v)))
-(defn configure-component-group [config] (reduce-kv configure-component {} config))
-(defn configure-component-groups [config] {:mqtt (configure-component-group config)})
+(defn configure-component
+  [m k v]
+  (assoc m k (component k v)))
 
-(defn configure [config] {system/defs (configure-component-groups config)})
+(defn configure-component-group
+  [config]
+  (reduce-kv configure-component {} config))
+
+(defn configure-component-groups
+  [config]
+  {:mqtt (configure-component-group config)})
+
+(defn configure
+  [config]
+  {system/defs (configure-component-groups config)})

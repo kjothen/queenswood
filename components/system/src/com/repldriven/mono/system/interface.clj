@@ -11,7 +11,9 @@
 (def defs donut/defs)
 (def required-component donut/required-component)
 
-(defn ref [kws] (donut/ref kws))
+(defn ref
+  [kws]
+  (donut/ref kws))
 
 (defn start
   ([config-name]
