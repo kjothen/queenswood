@@ -1,10 +1,9 @@
 (ns com.repldriven.mono.pulsar-reader.main
-  (:require [abracad.avro :as avro]
-            [clojure.core.async :as async]
+  (:require [clojure.core.async :as async]
             [com.repldriven.mono.cli.interface :as cli]
             [com.repldriven.mono.env.interface :as env]
             [com.repldriven.mono.log.interface :as log]
-            [com.repldriven.mono.pulsar.interface :as pulsar]
+            [com.repldriven.mono.pulsar-reader.system :as pulsar-reader-system]
             [com.repldriven.mono.system.interface :as system])
   (:import (org.apache.pulsar.client.api Message Reader))
   (:gen-class))
@@ -14,8 +13,8 @@
 
 (defn read-messages
   [^Reader reader c]
-  (let [;; schema (.getSchema (UserEventAvroSerde/INSTANCE))
-        ]
+  (let [];; schema (.getSchema (UserEventAvroSerde/INSTANCE))
+
     (async/go (while true (async/>! c (.readNext reader))))
     (async/go-loop []
       (when-let [^Message m (async/<! c)]
@@ -23,21 +22,20 @@
         (recur)))))
 
 (defn start!
-  ([] (start! nil))
-  ([booted-system]
-   (log/info "Starting system")
-   (let [system-config (pulsar/configure-system (get-in @env/env [:system :pulsar]))]
-     (system/start! system (if (some? booted-system) booted-system system-config))
-     (reset! channel (async/chan))
-     (read-messages (system/instance @system [:pulsar :reader]) @channel))))
+  []
+  (log/info "Starting system")
+  (when-let [system-config (pulsar-reader-system/configure (:system @env/env))]
+    (system/start! system system-config)
+    (reset! channel (async/chan))
+    (read-messages (system/instance @system [:pulsar :reader]) @channel)))
 
 (defn stop!
   []
+  (log/info "Stopping system")
   (when-let [_ @system]
-    (do (log/info "Stopping system")
-        (when (some? @channel)
-          (reset! channel (async/close! @channel)))
-        (system/stop! system))))
+    (when (some? @channel)
+      (reset! channel (async/close! @channel)))
+    (system/stop! system)))
 
 (defn -main
   [& args]
@@ -54,5 +52,4 @@
   (-main "-c" "bases/pulsar-reader/test-resources/pulsar-reader/test-env.edn" "-p" "dev")
   (stop!)
   (start!)
-  (stop!)
-)
+  (stop!))

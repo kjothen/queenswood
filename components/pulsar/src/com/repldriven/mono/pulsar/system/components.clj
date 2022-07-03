@@ -56,7 +56,7 @@
                        (let [{:keys [admin topics-and-opts]} config]
                          (try
                            (log/info "Creating pulsar topics:" topics-and-opts)
-                           (run! (fn [{:keys [topic opts]}] (admin/ensure-topic admin topic opts)) topics-and-opts)
+                           (doall (mapv (fn [{:keys [topic opts]}] (admin/ensure-topic admin topic opts)) topics-and-opts))
                            (catch PulsarAdminException e
                              (log/error (format "Failed to create pulsar topics, %s" e))))))),
    :system/config {:admin system/required-component

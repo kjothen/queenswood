@@ -15,7 +15,7 @@
                        (let [{:keys [handler options]} config]
                          (log/info "Starting jetty adapter:" handler options)
                          (jetty/run-jetty handler options))))
-   :systen/stop  (fn [{:system/keys [^Server instance]}]
+   :system/stop  (fn [{:system/keys [^Server instance]}]
                    (when (some? instance)
                      (.stop instance)))
    :system/config  {:handler system/required-component

@@ -31,6 +31,10 @@
   [kws]
   (ds/ref kws))
 
+(defn system?
+  [config-name]
+  (ds/system? (nsmap->nsmap config-name mono-system-ns donut-system-ns)))
+
 (defn start
   ([config-name]
    (try

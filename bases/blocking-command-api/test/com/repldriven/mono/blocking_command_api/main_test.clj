@@ -1,16 +1,13 @@
 (ns com.repldriven.mono.blocking-command-api.main-test
   (:require [clojure.java.io :as io]
-            [clojure.test :refer [deftest is testing use-fixtures]]
-            [com.repldriven.mono.env.interface :as env]
-            [com.repldriven.mono.pulsar.interface :as pulsar]
-            [com.repldriven.mono.blocking-command-api.main :as SUT]
-            [com.repldriven.mono.system.interface :as system])
-  (:import (org.apache.pulsar.client.admin PulsarAdmin)))
+            [clojure.test :refer [deftest is testing]]
+            [com.repldriven.mono.blocking-command-api.main :as SUT]))
 
-(defn env-fixture
-  [f]
-  (env/set-env! (io/resource "blocking-command-api/test-env.edn") :test)
-  (f))
-
-(use-fixtures :once env-fixture)
-
+(deftest main-test
+  (testing "Operations should be able to start the system from the main entry point"
+    (try
+      (SUT/-main "-c" (io/as-file (io/resource "blocking-command-api/test-env.edn")) "-p" "test")
+      (is (some? @SUT/system))
+      (catch Exception e
+        (assert false (format "Unable to start system, %s" e)))
+      (finally (SUT/stop!)))))

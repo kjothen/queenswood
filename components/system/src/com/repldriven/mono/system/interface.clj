@@ -8,6 +8,10 @@
   [opts tag value]
   (env-reader/system opts tag value))
 
+(defn system?
+  [config-name]
+  (donut/system? config-name))
+
 (def required-component donut/required-component)
 
 (defn ref
