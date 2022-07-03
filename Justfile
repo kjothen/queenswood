@@ -43,5 +43,5 @@ XDG_CONFIG_HOME := env_var_or_default('XDG_CONFIG_HOME', env_var('HOME') + '/.co
   just lint-clj-kondo
 
 # Formatter
-@format fix="false":
-    if (( $+commands[cljstyle] )) then cljstyle {{ if fix == "true" { "fix" } else { "check" } }}; fi
+format fix="false":
+    if (( $+commands[cljstyle] )); then cljstyle {{ if fix == "true" { "fix" } else { "check" } }}; fi

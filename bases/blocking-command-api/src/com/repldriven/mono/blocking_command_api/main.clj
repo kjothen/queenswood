@@ -13,7 +13,7 @@
 
 (defn read-messages
   [^Reader reader c]
-  (let [];; schema (.getSchema (UserEventAvroSerde/INSTANCE))
+  (let []; schema (.getSchema (UserEventAvroSerde/INSTANCE))
 
     (async/go (while true (async/>! c (.readNext reader))))
     (async/go-loop []

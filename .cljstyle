@@ -2,7 +2,9 @@
  :rules
  {:indentation
   {:indents
-   {or [[:block 2] [:inner 1]],
+   {cond [[:block 0] [:stair 0]],
+    or [[:block 0]],
+    .. [[:block 0]],
     #"^:?import$" [[:block 0]],
     #"^:?require$" [[:block 0]],
     #"^:?use$" [[:block 0]],

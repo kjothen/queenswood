@@ -68,11 +68,11 @@
                        (let [{:keys [^PulsarClient client conf]} config]
                          (try
                            (log/info "Opening pulsar reader")
-                           (some-> client
-                             (.newReader)
-                             (.startMessageId (get config "startMessageId" MessageId/latest))
-                             (.loadConf (j/to-java Map conf))
-                             (.create))
+                           (.. client
+                               (newReader)
+                               (startMessageId (get config "startMessageId" MessageId/latest))
+                               (loadConf (j/to-java Map conf))
+                               (create))
                            (catch PulsarClientException e
                              (log/error (format "Failed to open pulsar reader, %s" e))))))),
    :system/stop (fn [{:system/keys [^Reader instance]}]
@@ -91,10 +91,10 @@
                        (let [{:system/keys [^PulsarClient client conf]} config]
                          (try
                            (log/info "Opening pulsar consumer")
-                           (some-> client
-                             (.newConsumer)
-                             (.loadConf (j/to-java Map conf))
-                             (.subscribe))
+                           (.. client
+                               (newConsumer)
+                               (loadConf (j/to-java Map conf))
+                               (subscribe))
                            (catch PulsarClientException e
                              (log/error (format "Failed to open pulsar consumer, %s" e))))))),
    :system/stop (fn [{:system/keys [^Consumer instance]}]
