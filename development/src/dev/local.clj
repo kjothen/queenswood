@@ -18,6 +18,7 @@
 
   (env/set-env! (io/resource "pulsar/test-env.edn") :default)
   (def system-config (pulsar/configure-system (get-in @env/env [:system :pulsar])))
+
   (tap> system-config)
 
   (def booted-system (ds/start system-config nil #{[:pulsar :admin] [:pulsar :service-url]}))
@@ -28,4 +29,7 @@
 
   (def system (ds/start booted-system))
   (ds/stop system)
+  ;; => Syntax error compiling at (development/src/dev/local.clj:31:3).
+  ;;    Unable to resolve symbol: system in this context
+
   )

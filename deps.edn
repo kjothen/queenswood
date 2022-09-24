@@ -14,11 +14,14 @@
                      components/spec {:local/root "components/spec"},
                      components/system {:local/root "components/system"},
                      components/testcontainers-system {:local/root "components/testcontainers-system"},
+                     components/vault {:local/root "components/vault"},
                      bases/blocking-command-api {:local/root "bases/blocking-command-api"},
                      bases/build {:local/root "bases/build"},
                      bases/pulsar-reader {:local/root "bases/pulsar-reader"},
-                     bases/symmetric-key-api {:local/root "bases/symmetric-key-api"}},
-        :extra-paths []},
+                     bases/symmetric-key-api {:local/root "bases/symmetric-key-api"}
+                     jinx/jinx {:mvn/version "0.1.6"}
+                     },
+        :extra-paths ["development/resources"]},
   :poly {:extra-deps {polylith/clj-poly {:mvn/version "0.2.14-alpha"}},
          :jvm-opts ["-Dclojure.tools.logging.factory=clojure.tools.logging.impl/log4j2-factory"],
          :main-opts ["-m" "polylith.clj.core.poly-cli.core"]},
@@ -36,6 +39,7 @@
                        "components/spec/test"
                        "components/symmetric-key/test"
                        "components/system/test"
+                       "components/vault/test"
                        "bases/blocking-command-api/test" "bases/blocking-command-api/test-resources"
                        "bases/pulsar-reader/test" "bases/pulsar-reader/test-resources"
                        "bases/symmetric-key-api/test" "bases/symmetric-key-api/test-resources"]}},

@@ -9,3 +9,4 @@
 (def container components/container)
 (def container-mapped-ports components/mapped-ports)
 (def container-mapped-exposed-port components/mapped-exposed-port)
+(def container-connection-url components/connection-url)

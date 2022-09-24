@@ -13,9 +13,15 @@
 (defn start!
   []
   (log/info "Starting system")
-  (let [system-config (-> (blocking-command-api-system/configure (:system @env/env))
-                          (assoc-in [:system/defs :ring :jetty-adapter :system/config :handler] #'api/app))]
-    (system/start! system system-config)))
+  (let [system-config (blocking-command-api-system/configure (:system @env/env))
+        booted-system (system/start system-config #{:boot})
+        pulsar-client (system/instance booted-system [:pulsar :client])
+        mqtt-client (system/instance booted-system [:mqtt :client])
+        ring-handler (api/app {:pulsar-client pulsar-client
+                               :mqtt-client mqtt-client})]
+    (system/start! system (assoc-in system-config
+                                    [:system/defs :ring :jetty-adapter :system/config :handler]
+                                    ring-handler))))
 
 (defn stop!
   []

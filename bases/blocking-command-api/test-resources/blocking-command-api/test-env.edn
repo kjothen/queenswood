@@ -1,6 +1,8 @@
 {:system {:ring {:jetty-adapter {:handler #system :required-component
                                  :options {:port #profile {:default #port 0}
                                            :join? #profile {:default false}}}}
+          :boot {:pulsar-client [#system :ref [:pulsar :client]]
+                 :mqtt-client [#system :ref [:mqtt :client]]}
           :pulsar {:container {:docker-image-name "kezhenxu94/pulsar:latest"
                                :exposed-ports [6650 8080]}
                    :container-mapped-ports {:container [#system :ref [:pulsar :container]]}

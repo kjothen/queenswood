@@ -3,11 +3,16 @@
             [com.repldriven.mono.system.interface :as system]))
 
 (defmulti component (fn [k _] k))
-(defmethod component :default [_ v] v)
-(defmethod component :container [_ v] (system/merge-component-config components/container v))
-(defmethod component :container-mapped-ports [_ v] (system/merge-component-config components/mapped-ports v))
-(defmethod component :container-mapped-exposed-port [_ v] (system/merge-component-config components/mapped-exposed-port v))
 
+(defmethod component :default [_ v] v)
+(defmethod component :container [_ v]
+  (system/merge-component-config components/container v))
+(defmethod component :container-mapped-ports [_ v]
+  (system/merge-component-config components/mapped-ports v))
+(defmethod component :container-mapped-exposed-port [_ v]
+  (system/merge-component-config components/mapped-exposed-port v))
+(defmethod component :container-connection-uri [_ v]
+  (system/merge-component-config components/connection-uri v))
 (defn configure-component
   [m k v]
   (assoc m k (component k v)))

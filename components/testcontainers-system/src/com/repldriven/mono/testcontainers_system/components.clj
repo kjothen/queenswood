@@ -37,3 +37,17 @@
                          port)))
    :system/config  {:container system/required-component
                     :exposed-port system/required-component}})
+
+(def connection-uri
+  {:system/start (fn [{:system/keys [config instance]}]
+                   (or instance
+                       (let [{:keys [container-mapped-ports
+                                     exposed-port]} config
+                             connection-uri-str (str "http://localhost:"
+                                                     (get container-mapped-ports
+                                                          exposed-port))]
+                         (log/info "Mapped container connection-uri:"
+                                   connection-uri-str)
+                         connection-uri-str))),
+   :system/config {:container-mapped-ports system/required-component
+                   :exposed-port system/required-component}})
