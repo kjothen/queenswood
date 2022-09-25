@@ -46,7 +46,7 @@
                              connection-uri-str (str "http://localhost:"
                                                      (get container-mapped-ports
                                                           exposed-port))]
-                         (log/info "Mapped container connection-uri:"
+                         (log/info "Mapped vault container-connection-uri:"
                                    connection-uri-str)
                          connection-uri-str))),
    :system/config {:container-mapped-ports system/required-component

@@ -1,0 +1,3 @@
+#+title:  Mono Plan
+#+author: KJO
+#+date:   2022-09-25
