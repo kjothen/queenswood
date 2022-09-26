@@ -1,6 +1,9 @@
-{:system {:ring {:jetty-adapter {:handler #system :required-component
+{:system {:ring {:interceptors {:pulsar-client [#system :ref [:env :pulsar-client]]}
+                 :jetty-adapter {:handler #system :required-component
+                                 :interceptors [#system :ref [:ring :interceptors]]
                                  :options {:port #profile {:default #port 0}
                                            :join? #profile {:default false}}}}
+
           :boot {:pulsar-client [#system :ref [:pulsar :client]]
                  :mqtt-client [#system :ref [:mqtt :client]]}
           :pulsar {:container {:docker-image-name "kezhenxu94/pulsar:latest"

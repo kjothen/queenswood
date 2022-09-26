@@ -28,8 +28,8 @@
   :test {:extra-deps {http-kit/http-kit {:mvn/version "2.5.3"}},
          :extra-paths ["components/cli/test"
                        "components/env/test" "components/env/test-resources"
-                       "components/event/test"
                        "components/log/test"
+                       "components/event/test"
                        "components/migrator/test" "components/migrator/test-resources"
                        "components/mqtt/test" "components/mqtt/test-resources"
                        "components/postgres/test" "components/postgres/test-resources"

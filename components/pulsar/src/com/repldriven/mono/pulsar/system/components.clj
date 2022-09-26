@@ -105,4 +105,4 @@
                       (catch PulsarClientException e
                         (log/error (format "Failed to close pulsar consumer, %s" e)))))),
    :system/config {:client system/required-component,
-                   :system/conf system/required-component}})
+                   :conf system/required-component}})

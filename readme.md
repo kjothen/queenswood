@@ -1,5 +1,7 @@
 # mono
-This monolithic repo represents a working prototype in clojure of a multi-purpose platform. This project uses the polylith framework (see documentation links below).
+This monolithic repository represents a working prototype in clojure of a multi-purpose platform. This project uses the polylith framework (see documentation links below).
+
+
 
 ## Getting started
 * See [Justfile](./Justfile) for a list of useful commands

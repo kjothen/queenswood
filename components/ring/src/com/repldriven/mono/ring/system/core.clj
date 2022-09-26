@@ -4,6 +4,7 @@
 
 (defmulti component (fn [k _] k))
 (defmethod component :default [_ v] v)
+(defmethod component :interceptors [_ v] (system/merge-component-config embedded-components/interceptors v))
 (defmethod component :jetty-adapter [_ v] (system/merge-component-config embedded-components/jetty-adapter v))
 
 (defn configure-component

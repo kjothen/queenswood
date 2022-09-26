@@ -1,13 +1,14 @@
 (ns dev.local)
 
+(comment)
+
 (comment
   ;; open a debug portal
   (require '[portal.api :as p])
   (def p (p/open {:launcher :vs-code}))
   (add-tap #'p/submit) ; Add portal as a tap> target
   (tap> "Opened tap")
-  (p/close)
-  )
+  (p/close))
 
 (comment
   ;; experiment with pulsar
@@ -21,15 +22,13 @@
 
   (tap> system-config)
 
-  (def booted-system (ds/start system-config nil #{[:pulsar :admin] [:pulsar :service-url]}))
   (tap> booted-system)
+  (def booted-system (ds/start system-config nil #{[:pulsar :admin] [:pulsar :service-url]}))
 
   (def admin (get-in booted-system [::ds/instances :pulsar :admin]))
   (pulsar/ensure-topic admin "persistent://tenant/namespace/identity")
 
   (def system (ds/start booted-system))
-  (ds/stop system)
-  ;; => Syntax error compiling at (development/src/dev/local.clj:31:3).
-  ;;    Unable to resolve symbol: system in this context
 
-  )
+  (ds/stop system)
+)

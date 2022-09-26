@@ -41,25 +41,26 @@
         (start!)))))
 
 (comment
-  (-main "-c" "bases/blocking-command-api/test-resources/blocking-command-api/test-env.edn" "-p" "dev")
-  (def ^Server web-server (system/instance @system [:ring :jetty-adapter]))
-  (def base-uri (as-> (.. web-server getURI toString) url-str
-                  (when (= (last url-str) \/)
-                    (apply str (drop-last url-str)))))
-  (def uri (clojure.string/join "/" [base-uri "api" "command"]))
-  (tap> uri)
-
-  (require '[org.httpkit.client :as http]
+  (require '[clojure.string :as string]
+           '[org.httpkit.client :as http]
            '[clojure.data.json :as json]
            '[clj-ulid :as ulid])
-  (let [{:keys [status error body]} @(http/post uri {:headers {"Content-Type" "application/json"}
-                                                     :body (json/write-str {:data {:type "example"
-                                                                                   :id (ulid/ulid)}})})]
-    (if error
-      (println "Failed, exception is " error)
-      (println "Async HTTP POST: " status body)))
-  (stop!)
-  (start!)
-  (stop!)
-  (ulid/ulid)
+
+  (defn run []
+    (-main "-c" "bases/blocking-command-api/test-resources/blocking-command-api/test-env.edn" "-p" "dev")
+    (let [^Server web-server (system/instance @system [:ring :jetty-adapter])
+          base-uri (as-> (.. web-server getURI toString) url-str
+                     (when (= (last url-str) \/)
+                       (apply str (drop-last url-str))))
+          uri (clojure.string/join "/" [base-uri "api" "command"])]
+      (let [{:keys [status error body]} @(http/post uri {:headers {"Content-Type" "application/json"}
+                                                         :body (json/write-str {:data {:type "example"
+                                                                                       :id (ulid/ulid)}})})]
+        (if error
+          (println "Failed, exception is " error)
+          (println "Async HTTP POST: " status body)))
+
+      (stop!)))
+
+  (run)
   )

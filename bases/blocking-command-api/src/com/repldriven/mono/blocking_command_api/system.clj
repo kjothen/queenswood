@@ -4,7 +4,7 @@
             [com.repldriven.mono.pulsar.interface :as pulsar]))
 
 (defmulti system (fn [k _] k))
-(defmethod system :default [_ v] v)
+(defmethod system :default [k v] {:system/defs {k v}})
 (defmethod system :ring [_ v] (ring/configure-system v))
 (defmethod system :pulsar [_ v] (pulsar/configure-system v))
 (defmethod system :mqtt [_ v] (mqtt/configure-system v))
