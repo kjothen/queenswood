@@ -32,12 +32,11 @@
                                  :exposed-ports [exposed-port]})
                        (tc/start!)))
              (catch ContainerLaunchException e
-               (log/error "Failed to start vault container, %s" e)))))),
-   :system/stop (fn [{:system/keys [instance]}]
-                  (tc/stop! instance)),
-   :system/config {:docker-image-name default-docker-image-name,
-                   :exposed-port default-exposed-port}})
-
+               (log/error "Failed to start vault container, %s" e))))))
+   :system/stop  (fn [{:system/keys [instance]}]
+                   (tc/stop! instance))
+   :system/config  {:docker-image-name default-docker-image-name
+                    :exposed-port      default-exposed-port}})
 
 (comment
   (require '[vault.core :as vault] 'vault.client.http)
@@ -67,4 +66,5 @@
   (vault-kvv2/read-secret client "secret" "testing")
 
   (stop-fn {:system/instance con})
+
   )

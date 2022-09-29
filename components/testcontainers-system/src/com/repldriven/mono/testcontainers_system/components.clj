@@ -4,6 +4,10 @@
             [com.repldriven.mono.system.interface :as system])
   (:import (org.testcontainers.containers ContainerLaunchException)))
 
+(def default-uri-scheme "http")
+(def default-uri-host "localhost")
+(def default-uri-path "")
+
 (def container
   {:system/start (fn [{:system/keys [config instance]}]
                    (or instance
@@ -13,7 +17,8 @@
                                            :exposed-ports exposed-ports})
                              (tc/start!))
                            (catch ContainerLaunchException e
-                             (log/error "Failed to start %s container, %s" docker-image-name e))))))
+                             (log/error "Failed to start %s container, %s"
+                                        docker-image-name e))))))
    :system/stop  (fn [{:system/keys [instance]}]
                    (tc/stop! instance))
    :system/config  {:docker-image-name system/required-component
@@ -38,16 +43,14 @@
    :system/config  {:container system/required-component
                     :exposed-port system/required-component}})
 
-(def connection-uri
+(def uri
   {:system/start (fn [{:system/keys [config instance]}]
                    (or instance
-                       (let [{:keys [container-mapped-ports
-                                     exposed-port]} config
-                             connection-uri-str (str "http://localhost:"
-                                                     (get container-mapped-ports
-                                                          exposed-port))]
-                         (log/info "Mapped vault container-connection-uri:"
-                                   connection-uri-str)
-                         connection-uri-str))),
-   :system/config {:container-mapped-ports system/required-component
-                   :exposed-port system/required-component}})
+                       (let [{:keys [scheme host port path]} config
+                             uri-str (str scheme "://" host ":" port path)]
+                         (log/info "Mapped container uri:" uri-str)
+                         uri-str)))
+   :system/config {:scheme default-uri-scheme
+                   :host default-uri-host
+                   :port system/required-component
+                   :path default-uri-path}})

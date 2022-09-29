@@ -1,15 +1,22 @@
-{:system {:pulsar {:container {:docker-image-name "kezhenxu94/pulsar:latest"
-                               :exposed-ports [6650 8080]}
-                   :container-mapped-ports {:container [#system :ref [:pulsar :container]]}
-                   :container-service-http-url {:container-mapped-ports [#system :ref [:pulsar :container-mapped-ports]]
-                                                :exposed-port 8080}
-                   :container-service-url {:container-mapped-ports [#system :ref [:pulsar :container-mapped-ports]]
-                                           :exposed-port 6650}
-                   :admin {:service-http-url [#system :ref [:pulsar :container-service-http-url]]},
-                   :client {:service-url [#system :ref [:pulsar :container-service-url]]},
-                   :topics {:admin [#system :ref [:pulsar :admin]]
-                            :topics-and-opts [{:topic "persistent://tenant/namespace/identity"}]}
-                   :reader {:_topics [#system :ref [:pulsar :topics]]
-                            :client [#system :ref [:pulsar :client]]
-                            :conf {"startMessageId" #pulsar-message-id :earliest,
-                                   "topicNames" ["persistent://tenant/namespace/identity"]}}}}};
+{:system
+ {:pulsar
+  {:container {:docker-image-name "kezhenxu94/pulsar:latest"
+               :exposed-ports [6650 8080]}
+   :container-mapped-exposed-port-1 {:container [#system :ref [:vault :container]]
+                                     :port 6650}
+   :container-mapped-exposed-port-2 {:container [#system :ref [:vault :container]]
+                                     :port 8080}
+   :container-uri-1 {:scheme "pulsar"
+                     :port [#system :ref [:pulsar
+                                          :container-mapped-exposed-port-1]]}
+   :container-uri-2 {:scheme "httpr"
+                     :port [#system :ref [:pulsar
+                                          :container-mapped-exposed-port-2]]}
+   :admin {:service-http-url [#system :ref [:pulsar :container-uri-2]]}
+   :client {:service-url [#system :ref [:pulsar :container-uri-1]]}
+   :topics {:admin [#system :ref [:pulsar :admin]]
+            :topics-and-opts [{:topic "persistent://tenant/namespace/identity"}]}
+   :reader {:_topics [#system :ref [:pulsar :topics]]
+            :client [#system :ref [:pulsar :client]]
+            :conf {"startMessageId" #pulsar-message-id :earliest,
+                   "topicNames" ["persistent://tenant/namespace/identity"]}}}}}

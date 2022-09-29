@@ -12,11 +12,17 @@
 (defmethod component :container-mapped-ports [_ v]
   (system/merge-component-config components/mapped-ports v))
 
+(derive ::container-mapped-exposed-port-1 ::container-mapped-exposed-port)
+(derive ::container-mapped-exposed-port-2 ::container-mapped-exposed-port)
+(derive ::container-mapped-exposed-port-3 ::container-mapped-exposed-port)
 (defmethod component :container-mapped-exposed-port [_ v]
   (system/merge-component-config components/mapped-exposed-port v))
 
-(defmethod component :container-connection-uri [_ v]
-  (system/merge-component-config components/connection-uri v))
+(derive ::container-uri-1 ::container-uri)
+(derive ::container-uri-2 ::container-uri)
+(derive ::container-uri-3 ::container-uri)
+(defmethod component :container-uri [_ v]
+  (system/merge-component-config components/uri v))
 
 (defn configure-component
   [m k v]
@@ -30,6 +36,6 @@
   [config name]
   {name (configure-component-group config)})
 
-(defn configureg
+(defn configure
   [config name]
   {:system/defs (configure-component-groups config name)})

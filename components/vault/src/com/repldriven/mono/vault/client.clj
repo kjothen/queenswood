@@ -1,0 +1,14 @@
+(ns com.repldriven.mono.vault.client
+  (:require [com.repldriven.mono.log.interface :as log]
+            [vault.core :as vault]
+            [vault.secrets.kvv2 :as vault-kvv2]))
+
+(defn authenticate!
+  [client auth-type credentials]
+  (vault/authenticate! client auth-type credentials))
+
+(defn read-secret
+  ([client mount path]
+   (vault-kvv2/read-secret client mount path))
+  ([client mount path opts]
+   (vault-kvv2/read-secret client mount path opts)))

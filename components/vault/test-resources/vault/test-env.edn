@@ -1,0 +1,10 @@
+{:system
+ {:vault
+  {:container {:docker-image-name "vault:latest"
+               :exposed-ports [6650]}
+   :container-mapped-exposed-port {:container [#system :ref [:vault :container]]
+                                   :port 6650}
+   :container-uri {:scheme "http"
+                   :port [#system :ref [:vault
+                                        :container-mapped-exposed-port]]}
+   :uri [#system :ref [:vault :container-uri]}}}}
