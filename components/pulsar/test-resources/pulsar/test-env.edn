@@ -2,18 +2,20 @@
  {:pulsar
   {:container {:docker-image-name "kezhenxu94/pulsar:latest"
                :exposed-ports [6650 8080]}
-   :container-mapped-exposed-port-1 {:container [#system :ref [:vault :container]]
-                                     :port 6650}
-   :container-mapped-exposed-port-2 {:container [#system :ref [:vault :container]]
-                                     :port 8080}
-   :container-uri-1 {:scheme "pulsar"
-                     :port [#system :ref [:pulsar
-                                          :container-mapped-exposed-port-1]]}
-   :container-uri-2 {:scheme "httpr"
-                     :port [#system :ref [:pulsar
-                                          :container-mapped-exposed-port-2]]}
-   :admin {:service-http-url [#system :ref [:pulsar :container-uri-2]]}
-   :client {:service-url [#system :ref [:pulsar :container-uri-1]]}
+   :container-service-port {:container [#system :ref [:pulsar :container]]
+                            :port 6650}
+   :container-service-url {:scheme "pulsar"
+                           :port [#system :ref
+                                  [:pulsar
+                                   :container-service-port]]}
+   :container-service-http-port {:container [#system :ref [:pulsar :container]]
+                                 :port 8080}
+   :container-service-http-url {:scheme "http"
+                                :port [#system :ref
+                                       [:pulsar
+                                        :container-service-http-port]]}
+   :admin {:service-http-url [#system :ref [:pulsar :container-service-http-url]]}
+   :client {:service-url [#system :ref [:pulsar :container-service-url]]}
    :topics {:admin [#system :ref [:pulsar :admin]]
             :topics-and-opts [{:topic "persistent://tenant/namespace/identity"}]}
    :reader {:_topics [#system :ref [:pulsar :topics]]

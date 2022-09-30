@@ -25,7 +25,7 @@
                  (.withSecretInVault container
                                      (first secret-in-vault)
                                      (second secret-in-vault)
-                                     (into-array String
+                                     (into-array Stri
                                                  (nthrest secret-in-vault 2))))
 
                (some-> (tc/init {:container container
@@ -66,5 +66,4 @@
   (vault-kvv2/read-secret client "secret" "testing")
 
   (stop-fn {:system/instance con})
-
   )

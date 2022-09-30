@@ -11,19 +11,24 @@
 (defmethod component :default [_ v] v)
 
 (defmethod component :container [_ v]
-  (system/merge-component-config testcontainers-components/container v))
-
-(defmethod component :container-service-http-url [_ v]
-  (testcontainers-system/merge-component-config
-   testcontainers-components/container-uri v))
-
-(defmethod component :container-service-http-url [_ v]
   (system/merge-component-config
-   testcontainers-components/container-service-http-url v))
+   testcontainers-components/container v))
+
+(defmethod component :container-service-port [_ v]
+  (system/merge-component-config
+   testcontainers-system/container-mapped-exposed-port v))
 
 (defmethod component :container-service-url [_ v]
   (system/merge-component-config
-   testcontainers-components/container-service-url v))
+   testcontainers-system/container-uri v))
+
+(defmethod component :container-service-http-port [_ v]
+  (system/merge-component-config
+   testcontainers-system/container-mapped-exposed-port v))
+
+(defmethod component :container-service-http-url [_ v]
+  (system/merge-component-config
+   testcontainers-system/container-uri v))
 
 (defmethod component :admin [_ v]
   (system/merge-component-config components/admin v))
