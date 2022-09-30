@@ -20,8 +20,8 @@
         ring-handler (api/app {:pulsar-client pulsar-client
                                :mqtt-client mqtt-client})]
     (system/start! system (assoc-in system-config
-                                    [:system/defs :ring :jetty-adapter :system/config :handler]
-                                    ring-handler))))
+                            [:system/defs :ring :jetty-adapter :system/config :handler]
+                            ring-handler))))
 
 (defn stop!
   []

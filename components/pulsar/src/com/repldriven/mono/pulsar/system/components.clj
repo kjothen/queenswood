@@ -20,9 +20,9 @@
          (let [{:keys [service-http-url]} config]
            (try (log/info "Opening pulsar admin connection:" service-http-url)
                 (builder/to-java PulsarAdmin
-                                 (PulsarAdmin/builder)
-                                 {:serviceHttpUrl service-http-url}
-                                 {:builder-class PulsarAdminBuilder})
+                  (PulsarAdmin/builder)
+                  {:serviceHttpUrl service-http-url}
+                  {:builder-class PulsarAdminBuilder})
                 (catch PulsarAdminException e
                   (log/error (format "Failed to open pulsar admin connection, %s" e))))))),
 
@@ -48,9 +48,9 @@
            (try
              (log/info "Opening pulsar client connection:" service-url)
              (builder/to-java PulsarClient
-                              (PulsarClient/builder)
-                              {:serviceUrl service-url}
-                              {:builder-class ClientBuilder})
+               (PulsarClient/builder)
+               {:serviceUrl service-url}
+               {:builder-class ClientBuilder})
              (catch PulsarClientException e
                (log/error (format "Failed to open pulsar client connection, %s" e))))))),
 
@@ -75,7 +75,7 @@
              (log/info "Creating pulsar topics:" topics-and-opts)
              (doall (mapv (fn [{:keys [topic opts]}]
                             (admin/ensure-topic admin topic opts))
-                          topics-and-opts))
+                      topics-and-opts))
              (catch PulsarAdminException e
                (log/error (format "Failed to create pulsar topics, %s" e))))))),
 

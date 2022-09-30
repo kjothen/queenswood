@@ -17,20 +17,20 @@
                        vault-token secret-in-vault]} config]
            (try
              (let [container (-> (DockerImageName/parse docker-image-name)
-                                 (.asCompatibleSubstituteFor "vault")
-                                 (VaultContainer.))]
+                               (.asCompatibleSubstituteFor "vault")
+                               (VaultContainer.))]
                (when vault-token
                  (.withVaultToken container vault-token))
                (when secret-in-vault
                  (.withSecretInVault container
-                                     (first secret-in-vault)
-                                     (second secret-in-vault)
-                                     (into-array String
-                                                 (nthrest secret-in-vault 2))))
+                   (first secret-in-vault)
+                   (second secret-in-vault)
+                   (into-array String
+                     (nthrest secret-in-vault 2))))
 
                (some-> (tc/init {:container container
                                  :exposed-ports exposed-ports})
-                       (tc/start!)))
+                 (tc/start!)))
              (catch ContainerLaunchException e
                (log/error "Failed to start vault container, %s" e))))))
 

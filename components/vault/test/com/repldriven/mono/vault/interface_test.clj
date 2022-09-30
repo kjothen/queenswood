@@ -21,27 +21,26 @@
           (try
             (let [client (system/instance running-system [:vault :client])
                   token (get-in system-config
-                                [:system/defs :vault :container
-                                 :system/config :vault-token])
+                          [:system/defs :vault :container
+                           :system/config :vault-token])
                   secret (get-in system-config
-                                 [:system/defs :vault :container
-                                  :system/config :secret-in-vault])]
+                           [:system/defs :vault :container
+                            :system/config :secret-in-vault])]
               (is (some? client))
               (is (some? (SUT/authenticate-client! client :token token)))
               (let [mount (-> secret first (str/split #"/") first)
                     path (-> secret first (str/split #"/") second)
                     secret-kvs (-> secret rest)]
                 (is (= (SUT/read-secret client mount path)
-                       (into {} (map (fn [kv]
-                                       (let [[k v] (str/split kv #"=")]
-                                         [(keyword k) v]))) secret-kvs)))))
+                      (into {} (map (fn [kv]
+                                      (let [[k v] (str/split kv #"=")]
+                                        [(keyword k) v]))) secret-kvs)))))
             (catch Exception e
               (assert false (format "Unable to get vault client, %s" e)))
             (finally
               (system/stop running-system))))
         (catch Exception e
           (assert false (format "Unable to start system, %s" e)))))))
-
 
 (comment
   (def system-config (SUT/configure-system (get-in @env/env [:system :vault])))

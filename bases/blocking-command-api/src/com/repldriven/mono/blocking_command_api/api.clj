@@ -10,9 +10,13 @@
             [reitit.ring.middleware.muuntaja :as muuntaja]
             [reitit.ring.middleware.parameters :as parameters]))
 
+(defmacro RequestData
+  [data]
+  [:map [:data data]])
 
-(defmacro RequestData [data] [:map [:data data]])
-(defmacro ResponseData [data] [:map [:data data]])
+(defmacro ResponseData
+  [data]
+  [:map [:data data]])
 
 (def Command [:map [:type string?] [:id string?]])
 (def CommandRequest (RequestData Command))
@@ -20,7 +24,8 @@
 (def CommandResult [:map [:result string?]])
 (def CommandResponse (ResponseData CommandResult))
 
-(defn app [{:keys [pulsar-client mqtt-client]}]
+(defn app
+  [{:keys [pulsar-client mqtt-client]}]
   (ring/ring-handler
     (ring/router
       ["/api"

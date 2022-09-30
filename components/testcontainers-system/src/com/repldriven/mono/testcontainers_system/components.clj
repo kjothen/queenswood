@@ -18,7 +18,7 @@
                              (tc/start!))
                            (catch ContainerLaunchException e
                              (log/error "Failed to start %s container, %s"
-                                        docker-image-name e))))))
+                               docker-image-name e))))))
    :system/stop  (fn [{:system/keys [instance]}]
                    (tc/stop! instance))
    :system/config  {:docker-image-name system/required-component

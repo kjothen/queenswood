@@ -13,19 +13,19 @@
 
 (defmethod component :container [_ v]
   (system/merge-component-config
-   testcontainers-components/container v))
+    testcontainers-components/container v))
 
 (defmethod component :container-api-port [_ v]
   (system/merge-component-config
-   testcontainers-system/container-mapped-exposed-port v))
+    testcontainers-system/container-mapped-exposed-port v))
 
 (defmethod component :container-api-url [_ v]
   (system/merge-component-config
-   testcontainers-system/container-uri v))
+    testcontainers-system/container-uri v))
 
 (defmethod component :client [_ v]
   (system/merge-component-config
-   components/client v))
+    components/client v))
 
 (defn configure-component
   [m k v]
