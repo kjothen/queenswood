@@ -27,3 +27,15 @@
               (system/stop running-system))))
         (catch Exception e
           (assert false (format "Unable to start system, %s" e)))))))
+
+(comment
+  (def system-config (SUT/configure-system (get-in @env/env [:system :pulsar])))
+  (get-in system-config [:system/defs :pulsar :container-service-port :system/config])
+  (def running-system (system/start system-config))
+  (system/instance running-system [:pulsar :reader])
+  (keys running-system)
+  (keys (get-in (:donut.system/resolved-defs running-system)
+               [:pulsar :container-service-port :donut.system/config]))
+
+  (system/stop running-system)
+  )

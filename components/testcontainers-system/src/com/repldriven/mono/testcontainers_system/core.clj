@@ -12,15 +12,9 @@
 (defmethod component :container-mapped-ports [_ v]
   (system/merge-component-config components/mapped-ports v))
 
-(derive ::container-mapped-exposed-port-1 ::container-mapped-exposed-port)
-(derive ::container-mapped-exposed-port-2 ::container-mapped-exposed-port)
-(derive ::container-mapped-exposed-port-3 ::container-mapped-exposed-port)
 (defmethod component :container-mapped-exposed-port [_ v]
   (system/merge-component-config components/mapped-exposed-port v))
 
-(derive ::container-uri-1 ::container-uri)
-(derive ::container-uri-2 ::container-uri)
-(derive ::container-uri-3 ::container-uri)
 (defmethod component :container-uri [_ v]
   (system/merge-component-config components/uri v))
 
