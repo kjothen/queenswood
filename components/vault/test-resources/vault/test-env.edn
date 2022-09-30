@@ -9,6 +9,5 @@
    :container-api-port {:container [#system :ref [:vault :container]]
                         :exposed-port 8200}
    :container-api-url {:scheme "http"
-                       :port [#system :ref [:vault :container-api-port]]
-                       }
+                       :port [#system :ref [:vault :container-api-port]]}
    :client {:api-url [#system :ref [:vault :container-api-url]]}}}}
