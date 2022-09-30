@@ -1,10 +1,14 @@
 {:system
  {:vault
   {:container {:docker-image-name "vault:latest"
-               :exposed-ports [6650]}
-   :container-mapped-exposed-port {:container [#system :ref [:vault :container]]
-                                   :port 6650}
-   :container-uri {:scheme "http"
-                   :port [#system :ref [:vault
-                                        :container-mapped-exposed-port]]}
-   :uri [#system :ref [:vault :container-uri]}}}}
+               :exposed-ports [8200]
+               :vault-token "my-root-token"
+               :secret-in-vault ["secret/testing"
+                                 "top_secret=password1"
+                                 "db_password=dbpassword1"]}
+   :container-api-port {:container [#system :ref [:vault :container]]
+                        :exposed-port 8200}
+   :container-api-url {:scheme "http"
+                       :port [#system :ref [:vault :container-api-port]]
+                       }
+   :client {:api-url [#system :ref [:vault :container-api-url]]}}}}

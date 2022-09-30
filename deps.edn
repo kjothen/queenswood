@@ -1,46 +1,58 @@
 {:aliases
- {:build {:extra-deps {io.github.clojure/tools.build {:git/sha "7d40500", :git/tag "v0.8.1"}}},
-  :dev {:extra-deps {components/cli {:local/root "components/cli"},
-                     components/env {:local/root "components/env"},
-                     components/event {:local/root "components/event"},
-                     components/log {:local/root "components/log"},
-                     components/migrator {:local/root "components/migrator"},
-                     components/mqtt {:local/root "components/mqtt"},
-                     components/postgres {:local/root "components/postgres"},
-                     components/pubsub {:local/root "components/pubsub"},
-                     components/pulsar {:local/root "components/pulsar"},
-                     components/ring {:local/root "components/ring"},
-                     components/symmetric-key {:local/root "components/symmetric-key"},
-                     components/spec {:local/root "components/spec"},
-                     components/system {:local/root "components/system"},
-                     components/testcontainers-system {:local/root "components/testcontainers-system"},
-                     components/vault {:local/root "components/vault"},
-                     bases/blocking-command-api {:local/root "bases/blocking-command-api"},
-                     bases/build {:local/root "bases/build"},
-                     bases/pulsar-reader {:local/root "bases/pulsar-reader"},
-                     bases/symmetric-key-api {:local/root "bases/symmetric-key-api"}
-                     jinx/jinx {:mvn/version "0.1.6"}
-                     },
-        :extra-paths ["development/resources"]},
+ {:build {:extra-deps {io.github.clojure/tools.build
+                       {:git/sha "7d40500", :git/tag "v0.8.1"}}},
+  :dev
+  {:extra-deps {components/cli {:local/root "components/cli"},
+                components/env {:local/root "components/env"},
+                components/event {:local/root "components/event"},
+                components/log {:local/root "components/log"},
+                components/migrator {:local/root "components/migrator"},
+                components/mqtt {:local/root "components/mqtt"},
+                components/postgres {:local/root "components/postgres"},
+                components/pubsub {:local/root "components/pubsub"},
+                components/pulsar {:local/root "components/pulsar"},
+                components/ring {:local/root "components/ring"},
+                components/symmetric-key {:local/root "components/symmetric-key"},
+                components/spec {:local/root "components/spec"},
+                components/system {:local/root "components/system"},
+                components/testcontainers-system
+                {:local/root "components/testcontainers-system"},
+                components/vault {:local/root "components/vault"},
+                bases/blocking-command-api {:local/root "bases/blocking-command-api"},
+                bases/build {:local/root "bases/build"},
+                bases/pulsar-reader {:local/root "bases/pulsar-reader"},
+                bases/symmetric-key-api {:local/root "bases/symmetric-key-api"}
+                jinx/jinx {:mvn/version "0.1.6"}},
+   :extra-paths ["development/resources"]},
   :poly {:extra-deps {polylith/clj-poly {:mvn/version "0.2.14-alpha"}},
          :jvm-opts ["-Dclojure.tools.logging.factory=clojure.tools.logging.impl/log4j2-factory"],
          :main-opts ["-m" "polylith.clj.core.poly-cli.core"]},
   :test {:extra-deps {http-kit/http-kit {:mvn/version "2.5.3"}},
          :extra-paths ["components/cli/test"
-                       "components/env/test" "components/env/test-resources"
+                       "components/env/test"
+                       "components/env/test-resources"
                        "components/log/test"
                        "components/event/test"
-                       "components/migrator/test" "components/migrator/test-resources"
-                       "components/mqtt/test" "components/mqtt/test-resources"
-                       "components/postgres/test" "components/postgres/test-resources"
+                       "components/migrator/test"
+                       "components/migrator/test-resources"
+                       "components/mqtt/test"
+                       "components/mqtt/test-resources"
+                       "components/postgres/test"
+                       "components/postgres/test-resources"
                        "components/pubsub/test"
-                       "components/pulsar/test" "components/pulsar/test-resources"
-                       "components/ring/test" "components/ring/test-resources"
+                       "components/pulsar/test"
+                       "components/pulsar/test-resources"
+                       "components/ring/test"
+                       "components/ring/test-resources"
                        "components/spec/test"
                        "components/symmetric-key/test"
                        "components/system/test"
                        "components/vault/test"
-                       "bases/blocking-command-api/test" "bases/blocking-command-api/test-resources"
-                       "bases/pulsar-reader/test" "bases/pulsar-reader/test-resources"
-                       "bases/symmetric-key-api/test" "bases/symmetric-key-api/test-resources"]}},
+                       "components/vault/test-resources"
+                       "bases/blocking-command-api/test"
+                       "bases/blocking-command-api/test-resources"
+                       "bases/pulsar-reader/test"
+                       "bases/pulsar-reader/test-resources"
+                       "bases/symmetric-key-api/test"
+                       "bases/symmetric-key-api/test-resources"]}},
  :mvn/repos {"maven" {:url "https://packages.confluent.io/maven"}}}

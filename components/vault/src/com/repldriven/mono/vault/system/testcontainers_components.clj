@@ -6,14 +6,14 @@
            (org.testcontainers.vault VaultContainer)
            (org.testcontainers.utility DockerImageName)))
 
-(def default-exposed-port 8200)
+(def default-exposed-ports [8200])
 (def default-docker-image-name "vault:latest")
 
 (def container
   {:system/start
    (fn [{:system/keys [config instance]}]
      (or instance
-         (let [{:keys [docker-image-name exposed-port
+         (let [{:keys [docker-image-name exposed-ports
                        vault-token secret-in-vault]} config]
            (try
              (let [container (-> (DockerImageName/parse docker-image-name)
@@ -25,18 +25,22 @@
                  (.withSecretInVault container
                                      (first secret-in-vault)
                                      (second secret-in-vault)
-                                     (into-array Stri
+                                     (into-array String
                                                  (nthrest secret-in-vault 2))))
 
                (some-> (tc/init {:container container
-                                 :exposed-ports [exposed-port]})
+                                 :exposed-ports exposed-ports})
                        (tc/start!)))
              (catch ContainerLaunchException e
                (log/error "Failed to start vault container, %s" e))))))
-   :system/stop  (fn [{:system/keys [instance]}]
-                   (tc/stop! instance))
-   :system/config  {:docker-image-name default-docker-image-name
-                    :exposed-port      default-exposed-port}})
+
+   :system/stop
+   (fn [{:system/keys [instance]}]
+     (tc/stop! instance))
+
+   :system/config
+   {:docker-image-name default-docker-image-name
+    :exposed-ports     default-exposed-ports}})
 
 (comment
   (require '[vault.core :as vault] 'vault.client.http)

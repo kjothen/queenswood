@@ -3,7 +3,8 @@
             [com.repldriven.mono.env.interface :as env]
             [com.repldriven.mono.log.interface :as log]
             [com.repldriven.mono.symmetric-key-api.api :as api]
-            [com.repldriven.mono.symmetric-key-api.system :as symmetric-key-api-system]
+            [com.repldriven.mono.symmetric-key-api.system
+             :as symmetric-key-api-system]
             [com.repldriven.mono.system.interface :as system])
   (:gen-class))
 
@@ -30,7 +31,8 @@
   [& args]
   (log/init)
   (log/info args)
-  (let [{:keys [options exit-message ok?]} (cli/validate-args "symmetric-key-api" args)]
+  (let [{:keys [options exit-message ok?]}
+        (cli/validate-args "symmetric-key-api" args)]
     (if exit-message
       (cli/exit ok? exit-message)
       (do

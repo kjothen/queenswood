@@ -15,7 +15,9 @@
 
 (defn ensure-topic
   [admin topic-name & opts]
-  (if (some? opts) (admin/ensure-topic admin topic-name opts) (admin/ensure-topic admin topic-name)))
+  (if (some? opts)
+    (admin/ensure-topic admin topic-name opts)
+    (admin/ensure-topic admin topic-name)))
 
 (defn publish
   [client topic-name message]
