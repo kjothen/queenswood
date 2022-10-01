@@ -13,15 +13,14 @@
 
 (use-fixtures :once env-fixture)
 
-(defn props->kw-map
+(defn prop-seq->kw-map
   [props]
-  (into {}
-    (map (fn [kv]
-           (let [[k v] (str/split kv #"=")]
-             [(keyword k) v])) props)))
+  (into {} (map (fn [kv]
+                  (let [[k v] (mapv str/trim (str/split kv #"="))]
+                    [(keyword k) v])) props)))
 
 (deftest development-test
-  (testing "Developers should be able to start/stop a vault system from the REPL"
+  (testing "Developers should be able to start/stop a vault system from a REPL"
     (with-system [sys (SUT/configure-system (get-in @env/env [:system :vault]))]
       (let [client (system/instance sys [:vault :client])
             vault-config (system/config sys :vault :container)
@@ -32,12 +31,20 @@
         (let [[mount path] (-> secret first (str/split #"/"))
               secret-props (-> secret rest)]
           (is (= (SUT/read-secret client mount path)
-                (props->kw-map secret-props))))))))
+                (prop-seq->kw-map secret-props))))))))
 
 (comment
-  (def system-config (SUT/configure-system (get-in @env/env [:system :vault])))
-  (get-in system-config [:system/defs :vault :container :system/config :vault-token])
-  (def running-system (system/start system-config))
-  (def client (system/instance running-system [:vault :client]))
+  (env/set-env! (io/resource "vault/test-env.edn") :test)
+  (def sys (-> (get-in @env/env [:system :vault])
+               (SUT/configure-system)
+               (system/start)))
+  (def client (system/instance sys [:vault :client]))
+  (def vault-config (system/config sys :vault :container))
+  (def token (:vault-token vault-config))
+  (def secret (:secret-in-vault vault-config))
+
   (SUT/authenticate-client! client :token token)
-  (SUT/read-secret client mount path))
+  (let [[mount path] (-> secret first (str/split #"/"))]
+    (SUT/read-secret client mount path))
+  (system/stop sys)
+  )
