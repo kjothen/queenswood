@@ -2,7 +2,8 @@
   (:refer-clojure :exclude [ref])
   (:require [com.repldriven.mono.system.donut :as donut]
             [com.repldriven.mono.system.env-reader :as env-reader]
-            [com.repldriven.mono.env.interface :as env]))
+            [com.repldriven.mono.env.interface :as env]
+            [com.repldriven.mono.log.interface :as log]))
 
 (defmethod env/reader 'system
   [opts tag value]
@@ -69,34 +70,17 @@
 ;; imported code from juxt/clip
 (defmacro with-system
   "Takes a binding and a system like with-open, and tries to close the
-   system even when stopping causes an exception.
-   If an exception is thrown during start, then the partially started
-   system will be stopped and the exception rethrown.  If stopping that
-   system throws an exception, a new exception will be thrown with the
-   original exception as the cause, and the stopping exception under
-   `::stop-exception`.
-   If an exception is thrown during the final stop, then the exception
-   will be thrown."
+   system."
   [[binding system-config] & body]
   `(let [system-config# ~system-config
          system#
          (try
            (start system-config#)
            (catch Exception e#
-             (when-let [partial-system# (::system (ex-data e#))]
-               (try
-                 (stop partial-system#)
-                 (catch Exception e-stop#
-                   (throw
-                    (ex-info
-                     (str "Exception thrown while starting system, "
-                          "failed to stop partially started system.")
-                     {::stop-exception e-stop#}
-                     e#))
-                   )))
-             (throw e#)))
+             (log/error (format "Unable to start system, %s" e#))))
          ~binding system#]
-     (try
-       ~@body
-       (finally
-         (stop system#)))))
+     (when system#
+       (try
+         ~@body
+         (finally
+           (stop system#))))))
