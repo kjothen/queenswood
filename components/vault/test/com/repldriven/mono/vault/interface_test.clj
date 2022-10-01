@@ -16,9 +16,9 @@
 (defn props->kw-map
   [props]
   (into {}
-        (map (fn [kv]
-               (let [[k v] (str/split kv #"=")]
-                 [(keyword k) v])) props)))
+    (map (fn [kv]
+           (let [[k v] (str/split kv #"=")]
+             [(keyword k) v])) props)))
 
 (deftest development-test
   (testing "Developers should be able to start/stop a vault system from the REPL"
@@ -32,7 +32,7 @@
         (let [[mount path] (-> secret first (str/split #"/"))
               secret-props (-> secret rest)]
           (is (= (SUT/read-secret client mount path)
-                 (props->kw-map secret-props))))))))
+                (props->kw-map secret-props))))))))
 
 (comment
   (def system-config (SUT/configure-system (get-in @env/env [:system :vault])))

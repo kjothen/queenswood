@@ -15,6 +15,20 @@
 (use-fixtures :once env-fixture)
 
 (deftest development-test
-  (testing "Developers should be able to start/stop a pulsar system from a REPL"
+  (testing "Developers should be able to start/stop a pulsar system from  REPL"
     (with-system [sys (SUT/configure-system (get-in @env/env [:system :pulsar]))]
       (is (some? (system/instance sys [:pulsar :reader]))))))
+
+(comment
+  (def system-config (SUT/configure-system (get-in @env/env [:system :pulsar])))
+  (get-in system-config
+          [:system/defs :pulsar :container-service-port :system/config])
+  (def running-system (system/start system-config))
+  (system/instance running-system [:pulsar :reader])
+  (keys running-system)
+  (keys (get-in (:donut.system/resolved-defs running-system)
+                [:pulsar :container-service-port :donut.system/config]))
+
+  (system/stop running-system)
+
+  )

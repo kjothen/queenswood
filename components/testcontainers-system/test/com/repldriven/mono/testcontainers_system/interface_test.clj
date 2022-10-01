@@ -3,7 +3,8 @@
             [clojure.java.io :as io]
             [com.repldriven.mono.env.interface :as env]
             [com.repldriven.mono.testcontainers-system.interface :as SUT]
-            [com.repldriven.mono.system.interface :as system]))
+            [com.repldriven.mono.system.interface
+             :as system :refer [with-system]]))
 
 (defn env-fixture
   [f]
@@ -14,16 +15,10 @@
 
 (deftest testcontainers-system-test
   (testing "Developers should be able to start and stop a testcontainers system"
-    (let [system-config (SUT/configure-system (get-in @env/env [:system :helloworld]) :helloworld)]
-      (try
-        (let [running-system (system/start system-config)]
-          (try
-            (is (= [8080 8081] (keys (system/instance running-system [:helloworld :container-mapped-ports]))))
-            (is (= (system/instance running-system [:helloworld :container-mapped-exposed-port])
-                  (get (system/instance running-system [:helloworld :container-mapped-ports]) 8080)))
-            (catch Exception e
-              (assert false (format "Unable to get container mapped ports, %s" e)))
-            (finally
-              (system/stop running-system))))
-        (catch Exception e
-          (assert false (format "Unable to start system, %s" e)))))))
+    (with-system [sys (SUT/configure-system
+                        (get-in @env/env [:system :helloworld]) :helloworld)]
+      (is (= [8080 8081]
+            (keys (system/instance sys [:helloworld :container-mapped-ports]))))
+      (is (= (system/instance sys [:helloworld :container-mapped-exposed-port])
+            (get (system/instance sys [:helloworld :container-mapped-ports])
+              8080))))))

@@ -47,6 +47,8 @@
                        "components/spec/test"
                        "components/symmetric-key/test"
                        "components/system/test"
+                       "components/testcontainers-system/test"
+                       "components/testcontainers-system/test-resources"
                        "components/vault/test"
                        "components/vault/test-resources"
                        "bases/blocking-command-api/test"
