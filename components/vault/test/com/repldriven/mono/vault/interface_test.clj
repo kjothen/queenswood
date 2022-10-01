@@ -4,7 +4,7 @@
             [clojure.test :as test :refer :all]
             [com.repldriven.mono.env.interface :as env]
             [com.repldriven.mono.vault.interface :as SUT]
-            [com.repldriven.mono.system.interface :as system]))
+            [com.repldriven.mono.system.interface :as system :refer [with-system]]))
 
 (defn env-fixture
   [f]
@@ -13,34 +13,26 @@
 
 (use-fixtures :once env-fixture)
 
+(defn props->kw-map
+  [props]
+  (into {}
+        (map (fn [kv]
+               (let [[k v] (str/split kv #"=")]
+                 [(keyword k) v])) props)))
+
 (deftest development-test
   (testing "Developers should be able to start/stop a vault system from the REPL"
-    (let [system-config (SUT/configure-system (get-in @env/env [:system :vault]))]
-      (try
-        (let [running-system (system/start system-config)]
-          (try
-            (let [client (system/instance running-system [:vault :client])
-                  token (get-in system-config
-                          [:system/defs :vault :container
-                           :system/config :vault-token])
-                  secret (get-in system-config
-                           [:system/defs :vault :container
-                            :system/config :secret-in-vault])]
-              (is (some? client))
-              (is (some? (SUT/authenticate-client! client :token token)))
-              (let [mount (-> secret first (str/split #"/") first)
-                    path (-> secret first (str/split #"/") second)
-                    secret-kvs (-> secret rest)]
-                (is (= (SUT/read-secret client mount path)
-                      (into {} (map (fn [kv]
-                                      (let [[k v] (str/split kv #"=")]
-                                        [(keyword k) v]))) secret-kvs)))))
-            (catch Exception e
-              (assert false (format "Unable to get vault client, %s" e)))
-            (finally
-              (system/stop running-system))))
-        (catch Exception e
-          (assert false (format "Unable to start system, %s" e)))))))
+    (with-system [sys (SUT/configure-system (get-in @env/env [:system :vault]))]
+      (let [client (system/instance sys [:vault :client])
+            vault-config (system/config sys :vault :container)
+            token (:vault-token vault-config)
+            secret (:secret-in-vault vault-config)]
+        (is (some? client))
+        (is (some? (SUT/authenticate-client! client :token token)))
+        (let [[mount path] (-> secret first (str/split #"/"))
+              secret-props (-> secret rest)]
+          (is (= (SUT/read-secret client mount path)
+                 (props->kw-map secret-props))))))))
 
 (comment
   (def system-config (SUT/configure-system (get-in @env/env [:system :vault])))
