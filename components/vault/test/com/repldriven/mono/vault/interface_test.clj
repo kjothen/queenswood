@@ -22,6 +22,7 @@
 (deftest development-test
   (testing "Developers should be able to start/stop a vault system from a REPL"
     (with-system [sys (SUT/configure-system (get-in @env/env [:system :vault]))]
+      (is (some? sys))
       (let [client (system/instance sys [:vault :client])
             vault-config (system/config sys :vault :container)
             token (:vault-token vault-config)
@@ -31,7 +32,7 @@
         (let [[mount path] (-> secret first (str/split #"/"))
               secret-props (-> secret rest)]
           (is (= (SUT/read-secret client mount path)
-                (prop-seq->kw-map secret-props))))))))
+                 (prop-seq->kw-map secret-props))))))))
 
 (comment
   (env/set-env! (io/resource "vault/test-env.edn") :test)
