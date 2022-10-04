@@ -1,5 +1,4 @@
 {:paths ["src" "resources"]
- :deps {metosin/reitit {:mvn/version "0.5.18"}
-        medley/medley {:mvn/version "1.4.0"}}
+ :deps {medley/medley {:mvn/version "1.4.0"}}
  :aliases {:test {:extra-paths ["test" "test-resources"]
                   :extra-deps {}}}}

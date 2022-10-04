@@ -25,7 +25,8 @@
     public-routes
     other-routes))
 
-(def app
+(defn app
+  [_]
   (-> app-routes
     logger/wrap-with-logger
     kp/wrap-keyword-params

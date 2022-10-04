@@ -17,11 +17,6 @@
   (let [system-config (blocking-command-api-system/configure (:system @env/env))]
     (system/start! system system-config)))
 
-(comment
-
-
-  )
-
 (defn stop!
   []
   (log/info "Stopping system")
@@ -39,9 +34,6 @@
       (do
         (env/set-env! (:config-file options) (keyword (:profile options)))
         (start!)))))
-
-
-
 
 (comment
   (require '[clojure.string :as string]

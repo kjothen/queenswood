@@ -22,7 +22,6 @@
            (reduce-kv (fn [coll k v] (conj coll (interceptor k v))) [] config))))
    :system/config nil})
 
-
 (def default-jetty-adapter-options {:join? false})
 
 (def jetty-adapter

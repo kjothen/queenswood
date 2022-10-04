@@ -40,7 +40,10 @@
         (start!)))))
 
 (comment
-  (-main "-c" "bases/symmetric-key-api/test-resources/symmetric-key-api/test-env.edn" "-p" "dev")
+  (-main "-c"
+         "bases/symmetric-key-api/test-resources/symmetric-key-api/test-env.edn"
+         "-p"
+         "dev")
   (stop!)
   (start!)
   (stop!)
