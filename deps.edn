@@ -18,7 +18,8 @@
                 components/testcontainers-system
                 {:local/root "components/testcontainers-system"},
                 components/vault {:local/root "components/vault"},
-                bases/blocking-command-api {:local/root "bases/blocking-command-api"},
+                bases/blocking-command-api
+                {:local/root "bases/blocking-command-api"},
                 bases/build {:local/root "bases/build"},
                 bases/pulsar-reader {:local/root "bases/pulsar-reader"},
                 bases/symmetric-key-api {:local/root "bases/symmetric-key-api"}

@@ -1,5 +1,7 @@
 {:system
- {:ring {:jetty-adapter
+ {:ring {:interceptors {}
+         :jetty-adapter
          {:handler #system :required-component
+          :interceptors [#system :ref [:ring :interceptors]]
           :options {:port #profile {:default #port 0}
                     :join? #profile {:default false}}}}}}

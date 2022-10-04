@@ -2,7 +2,9 @@
   (:require [com.repldriven.mono.symmetric-key-api.handler :as h]
             [com.repldriven.mono.symmetric-key-api.middleware :as m]
             [com.repldriven.mono.log.interface :as log]
-            [compojure.core :refer [routes wrap-routes defroutes GET POST PUT DELETE ANY OPTIONS]]
+            [compojure.core
+             :refer [routes wrap-routes defroutes
+                     GET POST PUT DELETE ANY OPTIONS]]
             [ring.logger.timbre :as logger]
             [ring.middleware.json :as js]
             [ring.middleware.keyword-params :as kp]

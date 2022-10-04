@@ -1,30 +1,36 @@
-{:system {:ring {:interceptors {:pulsar-client [#system :ref [:env :pulsar-client]]}
-                 :jetty-adapter {:handler #system :required-component
-                                 :interceptors [#system :ref [:ring :interceptors]]
-                                 :options {:port #profile {:default #port 0}
-                                           :join? #profile {:default false}}}}
+{:system
+ {:ring
+  {:interceptors {:pulsar-client [#system :ref [:pulsar :client]]}
+   :jetty-adapter {:handler #system :required-component
+                   :interceptors [#system :ref [:ring :interceptors]]
+                   :options {:port #profile {:default #port 0}
+                             :join? #profile {:default false}}}}
 
-          :boot {:pulsar-client [#system :ref [:pulsar :client]]
-                 :mqtt-client [#system :ref [:mqtt :client]]}
-          :pulsar {:container {:docker-image-name "kezhenxu94/pulsar:latest"
-                               :exposed-ports [6650 8080]}
-                   :container-mapped-ports {:container [#system :ref [:pulsar :container]]}
-                   :container-service-http-url {:container-mapped-ports [#system :ref [:pulsar :container-mapped-ports]]
-                                                :exposed-port 8080}
-                   :container-service-url {:container-mapped-ports [#system :ref [:pulsar :container-mapped-ports]]
-                                           :exposed-port 6650}
-                   :admin {:service-http-url [#system :ref [:pulsar :container-service-http-url]]},
-                   :client {:service-url [#system :ref [:pulsar :container-service-url]]},
-                   :topics {:admin [#system :ref [:pulsar :admin]]
-                            :topics-and-opts [{:topic "persistent://tenant/namespace/identity"}]}
-                   :reader {:_topics [#system :ref [:pulsar :topics]]
-                            :client [#system :ref [:pulsar :client]]
-                            :conf {"startMessageId" #pulsar-message-id :earliest,
-                                   "topicNames" ["persistent://tenant/namespace/identity"]}}}
-          :mqtt {:container {:docker-image-name "hivemq/hivemq-ce:latest"
-                             :exposed-port 1883}
-                 :container-mapped-ports {:container [#system :ref [:mqtt :container]]}
-                 :container-connection-uri {:container-mapped-ports [#system :ref [:mqtt :container-mapped-ports]]
-                                            :exposed-port 1883}
-                 :client {:uri [#system :ref [:mqtt :container-connection-uri]]
-                          :options {}}}}}
+  :pulsar
+  {:container {:docker-image-name "kezhenxu94/pulsar:latest"
+               :exposed-ports [6650 8080]}
+   :container-mapped-ports {:container [#system :ref [:pulsar :container]]}
+   :container-service-http-url
+   {:container-mapped-ports [#system :ref [:pulsar :container-mapped-ports]]
+    :exposed-port 8080}
+   :container-service-url
+   {:container-mapped-ports [#system :ref [:pulsar :container-mapped-ports]]
+    :exposed-port 6650}
+   :admin {:service-http-url [#system :ref [:pulsar :container-service-http-url]]},
+   :client {:service-url [#system :ref [:pulsar :container-service-url]]},
+   :topics {:admin [#system :ref [:pulsar :admin]]
+            :topics-and-opts [{:topic "persistent://tenant/namespace/identity"}]}
+   :reader {:_topics [#system :ref [:pulsar :topics]]
+            :client [#system :ref [:pulsar :client]]
+            :conf {"startMessageId" #pulsar-message-id :earliest,
+                   "topicNames" ["persistent://tenant/namespace/identity"]}}}
+
+  :mqtt
+  {:container {:docker-image-name "hivemq/hivemq-ce:latest"
+               :exposed-port 1883}
+   :container-mapped-ports {:container [#system :ref [:mqtt :container]]}
+   :container-connection-uri
+   {:container-mapped-ports [#system :ref [:mqtt :container-mapped-ports]]
+    :exposed-port 1883}
+   :client {:uri [#system :ref [:mqtt :container-connection-uri]]
+            :options {}}}}}
