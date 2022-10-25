@@ -3,16 +3,16 @@
             [clojure.java.data.builder :as builder]
             [com.repldriven.mono.log.interface :as log]
             [com.repldriven.mono.system.interface :as system]
-            [com.repldriven.mono.pulsar.admin :as admin])
+            [com.repldriven.mono.pulsar.admin :as admin]
+            [com.repldriven.mono.pulsar.crypto :as crypto])
   (:import [java.util Map]
            [org.apache.pulsar.client.api
             ClientBuilder Consumer MessageId
             PulsarClient PulsarClientException
-            Reader]
+            Producer Reader Schema]
            [org.apache.pulsar.client.admin
             PulsarAdmin PulsarAdminBuilder
             PulsarAdminException]))
-
 (def admin
   {:system/start
    (fn [{:system/keys [config instance]}]
@@ -66,22 +66,85 @@
    :system/config
    {:service-url system/required-component}})
 
-(def topics
+(def consumer
   {:system/start
    (fn [{:system/keys [config instance]}]
      (or instance
-         (let [{:keys [admin topics-and-opts]} config]
+         (let [{:keys [^PulsarClient client conf]} config]
            (try
-             (log/info "Creating pulsar topics:" topics-and-opts)
-             (doall (mapv (fn [{:keys [topic opts]}]
-                            (admin/ensure-topic admin topic opts))
-                      topics-and-opts))
-             (catch PulsarAdminException e
-               (log/error (format "Failed to create pulsar topics, %s" e))))))),
+             (log/info "Opening pulsar consumer")
+             (.. client
+                 (newConsumer (Schema/STRING))
+                 (topics (get conf "topicNames"))
+                 (subscriptionName (get conf "subscriptionName"))
+                 (cryptoKeyReader (get conf "cryptoKeyReader"))
+                 ;;(loadConf (j/to-java Map conf))
+                 (subscribe))
+             (catch PulsarClientException e
+               (log/error (format "Failed to open pulsar consumer, %s" e))))))),
+
+   :system/stop
+   (fn [{:system/keys [^Consumer instance]}]
+     (when (some? instance)
+       (try
+         (log/info "Closing pulsar consumer")
+         (.close instance)
+         (catch PulsarClientException e
+           (log/error (format "Failed to close pulsar consumer, %s" e)))))),
 
    :system/config
-   {:admin system/required-component
-    :topics-and-opts system/required-component}})
+   {:client system/required-component,
+    :conf system/required-component}})
+
+(def crypto-key-pair-generator
+  {:system/start
+   (fn [{:system/keys [config instance]}]
+     (or instance
+         (do
+           (log/info "Creating pulsar crypto-key-pair-generator: " config)
+           (crypto/key-pair-generator config))))
+
+   :system/config system/required-component})
+
+(def crypto-key-reader
+  {:system/start
+   (fn [{:system/keys [config instance]}]
+     (or instance
+         (do
+           (log/info "Creating pulsar crypto-key-reader: " config)
+           (crypto/key-reader config))))
+
+   :system/config system/required-component})
+
+(def producer
+  {:system/start
+   (fn [{:system/keys [config instance]}]
+     (or instance
+         (let [{:keys [^PulsarClient client conf]} config]
+           (try
+             (log/info "Opening pulsar producer")
+             (.. client
+                 (newProducer (Schema/STRING))
+                 (topic (get conf "topic"))
+                 (addEncryptionKey (get conf "encryptionKey"))
+                 (cryptoKeyReader (get conf "cryptoKeyReader"))
+                 ;;(loadConf (j/to-java Map conf))
+                 (create))
+             (catch PulsarClientException e
+               (log/error (format "Failed to open pulsar producer, %s" e))))))),
+
+   :system/stop
+   (fn [{:system/keys [^Producer instance]}]
+     (when (some? instance)
+       (try
+         (log/info "Closing pulsar producer")
+         (.close instance)
+         (catch PulsarClientException e
+           (log/error (format "Failed to close pulsar producer, %s" e)))))),
+
+   :system/config
+   {:client system/required-component,
+    :conf system/required-component}})
 
 (def reader
   {:system/start
@@ -91,9 +154,11 @@
            (try
              (log/info "Opening pulsar reader")
              (.. client
-                 (newReader)
-                 (startMessageId (get config "startMessageId" MessageId/latest))
-                 (loadConf (j/to-java Map conf))
+                 (newReader (Schema/STRING))
+                 (startMessageId (get conf "startMessageId" MessageId/latest))
+                 (topics (get conf "topicNames"))
+                 (cryptoKeyReader (get conf "cryptoKeyReader"))
+                 ;;(loadConf (j/to-java Map conf))
                  (create))
              (catch PulsarClientException e
                (log/error (format "Failed to open pulsar reader, %s" e))))))),
@@ -111,29 +176,19 @@
    {:client system/required-component,
     :conf system/required-component}})
 
-(def consumer
+(def topics
   {:system/start
    (fn [{:system/keys [config instance]}]
      (or instance
-         (let [{:system/keys [^PulsarClient client conf]} config]
+         (let [{:keys [admin topics-and-opts]} config]
            (try
-             (log/info "Opening pulsar consumer")
-             (.. client
-                 (newConsumer)
-                 (loadConf (j/to-java Map conf))
-                 (subscribe))
-             (catch PulsarClientException e
-               (log/error (format "Failed to open pulsar consumer, %s" e))))))),
-
-   :system/stop
-   (fn [{:system/keys [^Consumer instance]}]
-     (when (some? instance)
-       (try
-         (log/info "Closing pulsar consumer")
-         (.close instance)
-         (catch PulsarClientException e
-           (log/error (format "Failed to close pulsar consumer, %s" e)))))),
+             (log/info "Creating pulsar topics:" topics-and-opts)
+             (doall (mapv (fn [{:keys [topic opts]}]
+                            (admin/ensure-topic admin topic opts))
+                      topics-and-opts))
+             (catch PulsarAdminException e
+               (log/error (format "Failed to create pulsar topics, %s" e))))))),
 
    :system/config
-   {:client system/required-component,
-    :conf system/required-component}})
+   {:admin system/required-component
+    :topics-and-opts system/required-component}})

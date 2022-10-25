@@ -12,7 +12,8 @@ XDG_CONFIG_HOME := env_var_or_default('XDG_CONFIG_HOME', env_var('HOME') + '/.co
     rm -rf '{{XDG_CONFIG_HOME}}/clojure'
     git clone git@github.com:practicalli/clojure-deps-edn.git '{{XDG_CONFIG_HOME}}/clojure'
 
-    grep 'export XDG_CONFIG_HOME' '{{ZSHENV}}' || echo 'export XDG_CONFIG_HOME={{XDG_CONFIG_HOME}}' >> '{{ZSHENV}}'
+    grep 'export XDG_CONFIG_HOME' '{{ZSHENV}}' \
+      || echo 'export XDG_CONFIG_HOME={{XDG_CONFIG_HOME}}' >> '{{ZSHENV}}'
     clojure -Sdescribe
 
 # Start preferred repl
