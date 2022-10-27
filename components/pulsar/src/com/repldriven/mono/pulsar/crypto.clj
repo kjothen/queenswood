@@ -1,22 +1,44 @@
 (ns com.repldriven.mono.pulsar.crypto
-  (:require [clojure.string :as string]
+  (:require [clojure.java.io :as io]
+            [clojure.string :as string]
             [com.repldriven.mono.encryption.interface :as encryption])
   (:import (org.apache.pulsar.client.api CryptoKeyReader EncryptionKeyInfo)
            (java.security PrivateKey PublicKey)
            (java.util Map)
            (java.io Serializable)))
 
-
 (defn- get-crypto-key-pair
   [k named-kps]
   (let [k' (if (empty? k) (get :default-key named-kps) k)]
     (get-in named-kps [:keys k'])))
 
+(defn- read-file-as-bytes
+  [f]
+  (-> f io/resource io/file slurp .getBytes))
+
+;; TODO: ->der-string does not work, require ->pem-string instead
 (defn key-pair-generator
   [named-kps]
-  (reduce-kv (fn [m k v] (assoc m k (encryption/create-key-pair v)))
-             {}
-             named-kps))
+  (reduce-kv
+   (fn [m k v]
+     (assoc m k
+            (let [kp (encryption/create-key-pair v)]
+              {:public-key (-> kp (get :public-key)
+                               (encryption/public-key->der-string))
+               :private-key (-> kp (get :private-key)
+                                (encryption/private-key->der-string))})))
+   {}
+   named-kps))
+
+(defn key-pair-file-reader
+  [named-kps]
+  (reduce-kv
+   (fn [m k v]
+     (assoc m k
+            {:public-key (read-file-as-bytes (:public-key v))
+             :private-key (read-file-as-bytes (:private-key v))}))
+     {}
+     named-kps))
 
 (defn key-reader
   [named-kps]
@@ -24,14 +46,12 @@
 
     (^EncryptionKeyInfo getPublicKey [this ^String keyName ^Map _metadata]
      (doto (EncryptionKeyInfo.)
-       (.setKey (-> (:public-key (get-crypto-key-pair keyName named-kps))
-                    encryption/public-key->der-string))))
+       (.setKey (get (get-crypto-key-pair keyName named-kps) :public-key))))
 
     (^EncryptionKeyInfo getPrivateKey [this ^String keyName ^Map _metadata]
      (doto (EncryptionKeyInfo.)
-       (.setKey (-> (:private-key (get-crypto-key-pair keyName named-kps))
-                    encryption/private-key->der-string)))))
-    )
+       (.setKey (get (get-crypto-key-pair keyName named-kps) :private-key))))
+    ))
 
 (comment
   (require '[com.repldriven.mono.encryption.interface :as encryption])

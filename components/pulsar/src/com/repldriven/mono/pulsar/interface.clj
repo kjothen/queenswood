@@ -10,6 +10,10 @@
   [opts tag value]
   (env-reader/message-id opts tag value))
 
+(defmethod env/reader 'pulsar-schema
+  [opts tag value]
+  (env-reader/schema opts tag value))
+
 (defn configure-system
   [config]
   (system/configure config))
@@ -19,6 +23,10 @@
   (if (some? opts)
     (admin/ensure-topic admin topic-name opts)
     (admin/ensure-topic admin topic-name)))
+
+(defn ensure-schema
+  [admin topic-name schema]
+  (admin/ensure-schema admin topic-name schema))
 
 (defn publish
   [client topic-name message]

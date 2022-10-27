@@ -73,15 +73,13 @@
          (let [{:keys [^PulsarClient client conf]} config]
            (try
              (log/info "Opening pulsar consumer")
-             (.. client
-                 (newConsumer (Schema/STRING))
-                 (topics (get conf "topicNames"))
-                 (subscriptionName (get conf "subscriptionName"))
-                 (cryptoKeyReader (get conf "cryptoKeyReader"))
-                 ;;(loadConf (j/to-java Map conf))
-                 (subscribe))
+             (cond-> (.. client (newConsumer (get conf "schema")))
+               (get conf "topicNames") (.topics (get conf "topicNames"))
+               (get conf "subscriptionName") (.subscriptionName (get conf "subscriptionName"))
+               (get conf "cryptoKeyReader") (.cryptoKeyReader (get conf "cryptoKeyReader"))
+               true (.subscribe))
              (catch PulsarClientException e
-               (log/error (format "Failed to open pulsar consumer, %s" e))))))),
+               (log/error (format "Failed to open pulsar consumer, %s" e)))))))
 
    :system/stop
    (fn [{:system/keys [^Consumer instance]}]
@@ -106,6 +104,16 @@
 
    :system/config system/required-component})
 
+(def crypto-key-pair-file-reader
+  {:system/start
+   (fn [{:system/keys [config instance]}]
+     (or instance
+         (do
+           (log/info "Creating pulsar crypto-key-pair-file-reader: " config)
+           (crypto/key-pair-file-reader config))))
+
+   :system/config system/required-component})
+
 (def crypto-key-reader
   {:system/start
    (fn [{:system/keys [config instance]}]
@@ -123,13 +131,11 @@
          (let [{:keys [^PulsarClient client conf]} config]
            (try
              (log/info "Opening pulsar producer")
-             (.. client
-                 (newProducer (Schema/STRING))
-                 (topic (get conf "topic"))
-                 (addEncryptionKey (get conf "encryptionKey"))
-                 (cryptoKeyReader (get conf "cryptoKeyReader"))
-                 ;;(loadConf (j/to-java Map conf))
-                 (create))
+             (cond-> (.. client (newProducer (get conf "schema")))
+               (get conf "topic") (.topic (get conf "topic"))
+               (get conf "encryptionKey") (.addEncryptionKey (get conf "encryptionKey"))
+               (get conf "cryptoKeyReader") (.cryptoKeyReader (get conf "cryptoKeyReader"))
+               true (.create))
              (catch PulsarClientException e
                (log/error (format "Failed to open pulsar producer, %s" e))))))),
 
@@ -154,7 +160,7 @@
            (try
              (log/info "Opening pulsar reader")
              (.. client
-                 (newReader (Schema/STRING))
+                 (newReader (get conf "schema"))
                  (startMessageId (get conf "startMessageId" MessageId/latest))
                  (topics (get conf "topicNames"))
                  (cryptoKeyReader (get conf "cryptoKeyReader"))
@@ -183,8 +189,11 @@
          (let [{:keys [admin topics-and-opts]} config]
            (try
              (log/info "Creating pulsar topics:" topics-and-opts)
-             (doall (mapv (fn [{:keys [topic opts]}]
-                            (admin/ensure-topic admin topic opts))
+             (doall
+              (mapv (fn [{:keys [topic schema opts]}]
+                      (admin/ensure-topic admin topic opts)
+                      (when (some? schema)
+                        (admin/ensure-schema admin topic schema)))
                       topics-and-opts))
              (catch PulsarAdminException e
                (log/error (format "Failed to create pulsar topics, %s" e))))))),

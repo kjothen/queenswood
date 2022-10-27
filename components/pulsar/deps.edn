@@ -4,6 +4,7 @@
         org.apache.pulsar/pulsar-client {:mvn/version "2.9.2"},
         org.apache.pulsar/pulsar-client-admin {:mvn/version "2.9.2"},
         org.apache.pulsar/pulsar-common {:mvn/version "2.9.2"},
+        org.clojure/data.json {:mvn/version "2.4.0"}
         org.clojure/java.data {:mvn/version "1.0.95"}
         org.testcontainers/pulsar {:mvn/version "1.17.3"},
         org.testcontainers/testcontainers {:mvn/version "1.17.3"}},

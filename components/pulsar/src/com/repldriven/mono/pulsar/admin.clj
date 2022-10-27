@@ -1,9 +1,12 @@
 (ns com.repldriven.mono.pulsar.admin
-  (:require [clojure.string :as string]
+  (:require [clojure.data.json :as json]
+            [clojure.string :as string]
             [com.repldriven.mono.log.interface :as log])
   (:import (org.apache.pulsar.client.admin Namespaces PulsarAdmin Tenants Topics)
            (org.apache.pulsar.common.naming TopicName)
-           (org.apache.pulsar.common.policies.data TenantInfo TenantInfoImpl)))
+           (org.apache.pulsar.common.policies.data TenantInfo TenantInfoImpl)
+           (org.apache.pulsar.common.protocol.schema PostSchemaPayload)
+           (org.apache.pulsar.common.schema SchemaInfo)))
 
 (defn- ensure-tenant
   [^PulsarAdmin admin roles clusters tenant-name]
@@ -38,3 +41,22 @@
       (when-not (contains? (set topic-names) fully-qualified-topic-name)
         (log/info "Creating topic: " fully-qualified-topic-name)
         (.createPartitionedTopic topics fully-qualified-topic-name partitions)))))
+
+(defn- build-schema
+  [{:keys [type schema properties]}]
+  (log/info "Building schema: " type schema properties)
+  (let [payload (PostSchemaPayload.)]
+    (when (some? type)
+      (.setType payload type))
+    (when (some? schema)
+      (.setSchema payload (json/write-str schema)))
+    (when (some? properties)
+      (.setProperties payload properties))
+    payload))
+
+(defn ensure-schema
+  [^PulsarAdmin admin fully-qualified-topic-name schema]
+  (log/info "Creating schema for topic: " fully-qualified-topic-name schema)
+  (.createSchema (.schemas admin)
+                 fully-qualified-topic-name
+                 (build-schema schema)))
