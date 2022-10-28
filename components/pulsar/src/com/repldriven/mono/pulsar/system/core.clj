@@ -57,6 +57,9 @@
 (defmethod component :reader [_ v]
   (system/merge-component-config components/reader v))
 
+(defmethod component :schemas [_ v]
+  (system/merge-component-config components/schemas v))
+
 (defn configure-component
   [m k v]
   (assoc m k (component k v)))

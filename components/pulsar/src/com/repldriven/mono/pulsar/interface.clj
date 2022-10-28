@@ -18,15 +18,23 @@
   [config]
   (system/configure config))
 
+(defn ensure-tenant
+  [admin tenant-name & opts]
+  (if (some? opts)
+    (admin/ensure-tenant admin tenant-name opts)
+    (admin/ensure-tenant admin tenant-name)))
+
+(defn ensure-namespace
+  [admin namespace-name & opts]
+  (if (some? opts)
+    (admin/ensure-namespace admin namespace-name opts)
+    (admin/ensure-namespace admin namespace-name)))
+
 (defn ensure-topic
   [admin topic-name & opts]
   (if (some? opts)
     (admin/ensure-topic admin topic-name opts)
     (admin/ensure-topic admin topic-name)))
-
-(defn ensure-schema
-  [admin topic-name schema]
-  (admin/ensure-schema admin topic-name schema))
 
 (defn publish
   [client topic-name message]

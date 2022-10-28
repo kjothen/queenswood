@@ -20,7 +20,8 @@
         (if (fn? x)
           (fn [to-ns-map]
             (x (reduce-kv
-                 (fn [m k v] (assoc m (if (match-ns-keyword? k to-ns) (keyword from-ns (name k)) k) v))
+                (fn [m k v] (assoc m (if (match-ns-keyword? k to-ns)
+                                       (keyword from-ns (name k)) k) v))
                  {}
                  to-ns-map)))
           x))) m))
@@ -40,17 +41,19 @@
    (try
      (ds/start (nsmap->nsmap config-name mono-system-ns donut-system-ns))
      (catch Exception e
-       (log/error (format "Error starting system, %s, %s" config-name e)))))
+       (log/error (format "Error starting system: %s" e)))))
   ([config-name custom-config]
    (try
-     (ds/start (nsmap->nsmap config-name mono-system-ns donut-system-ns) custom-config)
+     (ds/start (nsmap->nsmap config-name mono-system-ns donut-system-ns)
+               custom-config)
      (catch Exception e
-       (log/error (format "Error starting system, %s, %s" config-name e)))))
+       (log/error (format "Error starting system: %s" e)))))
   ([config-name custom-config component-ids]
    (try
-     (ds/start (nsmap->nsmap config-name mono-system-ns donut-system-ns) custom-config component-ids)
+     (ds/start (nsmap->nsmap config-name mono-system-ns donut-system-ns)
+               custom-config component-ids)
      (catch Exception e
-       (log/error (format "Error starting system, %s, %s" config-name e))))))
+       (log/error (format "Error starting system: %s" e))))))
 
 (defn instance
   [system kws]
@@ -61,7 +64,7 @@
   (try
     (ds/stop system)
     (catch Exception e
-      (log/error (format "Error stopping system, %s, %s" system e)))))
+      (log/error (format "Error stopping system: %s" e)))))
 
 (defn suspend
   [system]

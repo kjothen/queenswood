@@ -1,5 +1,7 @@
 (ns com.repldriven.mono.pulsar.system.components
-  (:require [clojure.java.data :as j]
+  (:refer-clojure :exclude [namespace])
+  (:require [clojure.data.json :as json]
+            [clojure.java.data :as j]
             [clojure.java.data.builder :as builder]
             [com.repldriven.mono.log.interface :as log]
             [com.repldriven.mono.system.interface :as system]
@@ -10,9 +12,13 @@
             ClientBuilder Consumer MessageId
             PulsarClient PulsarClientException
             Producer Reader Schema]
+           [org.apache.pulsar.client.api.schema
+            SchemaDefinition]
            [org.apache.pulsar.client.admin
             PulsarAdmin PulsarAdminBuilder
-            PulsarAdminException]))
+            PulsarAdminException]
+           [org.apache.pulsar.common.protocol.schema PostSchemaPayload]))
+
 (def admin
   {:system/start
    (fn [{:system/keys [config instance]}]
@@ -70,12 +76,15 @@
   {:system/start
    (fn [{:system/keys [config instance]}]
      (or instance
-         (let [{:keys [^PulsarClient client conf]} config]
+         (let [{:keys [^PulsarClient client conf schemas]} config]
            (try
              (log/info "Opening pulsar consumer")
              (let [{:strs [cryptoKeyReader schema subscriptionName topics]}
                    conf]
-               (cond-> (.. client (newConsumer schema))
+               (cond-> (.. client (newConsumer
+                                   (if (keyword? schema)
+                                     (get-in schemas [schema :definition])
+                                     schema)))
                  (some? cryptoKeyReader) (.cryptoKeyReader cryptoKeyReader)
                  (some? subscriptionName) (.subscriptionName subscriptionName)
                  (some? topics) (.topics topics)
@@ -134,11 +143,14 @@
   {:system/start
    (fn [{:system/keys [config instance]}]
      (or instance
-         (let [{:keys [^PulsarClient client conf]} config]
+         (let [{:keys [^PulsarClient client conf schemas]} config]
            (try
              (log/info "Opening pulsar producer")
              (let [{:strs [cryptoKeyReader encryptionKeys schema topic]} conf]
-               (cond-> (.. client (newProducer schema))
+               (cond-> (.. client (newProducer
+                                   (if (keyword? schema)
+                                     (get-in schemas [schema :definition])
+                                     schema)))
                  (some? cryptoKeyReader) (.cryptoKeyReader cryptoKeyReader)
                  (some? encryptionKeys) (add-encryption-keys encryptionKeys)
                  (some? topic) (.topic topic)
@@ -189,21 +201,73 @@
    {:client system/required-component,
     :conf system/required-component}})
 
+(defn- build-schema-payload
+  [type schema properties]
+  (let [payload (PostSchemaPayload.)]
+    (when (some? type)
+      (.setType payload type))
+    (when (some? schema)
+      (.setSchema payload (json/write-str schema)))
+    (when (some? properties)
+      (.setProperties payload properties))
+    payload))
+
+(defn- build-schema-definition
+  [schema]
+  (Schema/JSON
+   (-> (SchemaDefinition/builder)
+       (.withJsonDef (json/write-str schema))
+       (.build))))
+
+(def schemas
+  {:system/start
+   (fn [{:system/keys [config instance]}]
+     (or instance
+         (reduce-kv
+          (fn [m k {:keys [type schema properties]}]
+            (let [payload (build-schema-payload type schema properties)
+                  definition (build-schema-definition schema)]
+              (assoc m k {:payload payload
+                          :definition definition})))
+          {}
+          config)))
+
+   :system/config system/required-component})
+
 (def topics
   {:system/start
    (fn [{:system/keys [config instance]}]
      (or instance
-         (let [{:keys [admin topics]} config]
+         (let [{:keys [admin tenants namespaces schemas topics]} config]
            (try
-             (log/info "Creating pulsar topics:" topics)
+             (log/info "Ensure pulsar tenants are configured:" tenants)
+             (doall (mapv (fn [{:keys [tenant] :as opts}]
+                            (admin/ensure-tenant admin tenant
+                                                 (dissoc opts :tenant)))
+                          tenants))
+
+             (log/info "Ensure pulsar namespaces are configured:" namespaces)
+             (doall (mapv (fn [{:keys [namespace] :as opts}]
+                            (admin/ensure-namespace admin namespace
+                                                    (dissoc opts :namespace)))
+                          namespaces))
+
+             (log/info "Ensure pulsar topics are configured:" topics)
              (doall
-              (mapv (fn [{:keys [topic schema opts]}]
-                      (admin/ensure-topic admin topic opts)
-                      (when (some? schema)
-                        (admin/ensure-schema admin topic schema)))
-                    topics))
+              (mapv
+               (fn [{:keys [topic] :as opts}]
+                 (if (contains? opts :schema)
+                   (let [{:keys [schema]} opts
+                         updated-opts (assoc opts :schema
+                                             (get-in schemas
+                                                     [schema :payload]))]
+                     (admin/ensure-topic admin topic
+                                         (dissoc updated-opts :topic)))
+                   (admin/ensure-topic admin topic
+                                       (dissoc opts :topic))))
+               topics))
              (catch PulsarAdminException e
-               (log/error (format "Failed to create pulsar topics, %s" e))))))),
+               (log/error (format "Failed to create pulsar topics, %s" e)))))))
 
    :system/config
    {:admin system/required-component
