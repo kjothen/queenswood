@@ -1,6 +1,6 @@
 {:system
  {:pulsar
-  {:container {:docker-image-name "kezhenxu94/pulsar:latest"
+  {:container {;;:docker-image-name "kezhenxu94/pulsar:latest"
                :exposed-ports [6650 8080]}
    :container-service-port {:container [#system :ref [:pulsar :container]]
                             :exposed-port 6650}
@@ -17,15 +17,15 @@
    :admin {:service-http-url [#system :ref [:pulsar :container-service-http-url]]}
    :client {:service-url [#system :ref [:pulsar :container-service-url]]}
    :topics {:admin [#system :ref [:pulsar :admin]]
-            :topics-and-opts [{:topic "persistent://tenant-1/namespace-1/topic-1"
-                               :schema {:type "JSON"
-                                        :schema {:type "record"
-                                                 :name "User"
-                                                 :namespace "com.repldriven.mono"
-                                                 :fields [{:name "y"
-                                                           :type ["null" "string"]
-                                                           :default nil}]}}
-                                        :properties {}}]}
+            :topics [{:topic "persistent://tenant-1/namespace-1/topic-1"
+                      :schema {:type "JSON"
+                               :schema {:type "record"
+                                        :name "User"
+                                        :namespace "com.repldriven.mono"
+                                        :fields [{:name "y"
+                                                  :type ["null" "string"]
+                                                  :default nil}]}}
+                      :properties {}}]}
    :crypto-key-pair-generator {"tenant-key-1"
                                {:algorithm "RSA" :key-size 512}}
    :crypto-key-pair-file-reader {"tenant-key-1"
@@ -38,13 +38,12 @@
               :client [#system :ref [:pulsar :client]]
               :conf {"cryptoKeyReader" [#system :ref [:pulsar :crypto-key-reader]]
                      "schema" #pulsar-schema :auto-consume
-                     "startMessageId" #pulsar-message-id :earliest
                      "subscriptionName" "tenant-1-subscriber"
-                     "topicNames" ["persistent://tenant-1/namespace-1/topic-1"]}}
+                     "topics" ["persistent://tenant-1/namespace-1/topic-1"]}}
    :producer {:_topics [#system :ref [:pulsar :topics]]
               :client [#system :ref [:pulsar :client]]
               :conf {"cryptoKeyReader" [#system :ref [:pulsar :crypto-key-reader]]
-                     "encryptionKey" "tenant-key-1"
+                     "encryptionKeys" ["tenant-key-1"]
                      "schema" #pulsar-schema :auto-produce-bytes
                      "topic" "persistent://tenant-1/namespace-1/topic-1"}}
    }}}

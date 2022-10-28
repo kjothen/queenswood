@@ -39,3 +39,6 @@
 # tmp dbs
 *.mv.db
 *.trace.db
+
+# keys
+**/*.pem

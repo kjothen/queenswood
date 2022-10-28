@@ -73,11 +73,13 @@
          (let [{:keys [^PulsarClient client conf]} config]
            (try
              (log/info "Opening pulsar consumer")
-             (cond-> (.. client (newConsumer (get conf "schema")))
-               (get conf "topicNames") (.topics (get conf "topicNames"))
-               (get conf "subscriptionName") (.subscriptionName (get conf "subscriptionName"))
-               (get conf "cryptoKeyReader") (.cryptoKeyReader (get conf "cryptoKeyReader"))
-               true (.subscribe))
+             (let [{:strs [cryptoKeyReader schema subscriptionName topics]}
+                   conf]
+               (cond-> (.. client (newConsumer schema))
+                 (some? cryptoKeyReader) (.cryptoKeyReader cryptoKeyReader)
+                 (some? subscriptionName) (.subscriptionName subscriptionName)
+                 (some? topics) (.topics topics)
+                 true (.subscribe)))
              (catch PulsarClientException e
                (log/error (format "Failed to open pulsar consumer, %s" e)))))))
 
@@ -124,6 +126,10 @@
 
    :system/config system/required-component})
 
+(defn- add-encryption-keys
+  [producer ks]
+  (reduce #(.addEncryptionKey %1 %2) producer ks))
+
 (def producer
   {:system/start
    (fn [{:system/keys [config instance]}]
@@ -131,11 +137,12 @@
          (let [{:keys [^PulsarClient client conf]} config]
            (try
              (log/info "Opening pulsar producer")
-             (cond-> (.. client (newProducer (get conf "schema")))
-               (get conf "topic") (.topic (get conf "topic"))
-               (get conf "encryptionKey") (.addEncryptionKey (get conf "encryptionKey"))
-               (get conf "cryptoKeyReader") (.cryptoKeyReader (get conf "cryptoKeyReader"))
-               true (.create))
+             (let [{:strs [cryptoKeyReader encryptionKeys schema topic]} conf]
+               (cond-> (.. client (newProducer schema))
+                 (some? cryptoKeyReader) (.cryptoKeyReader cryptoKeyReader)
+                 (some? encryptionKeys) (add-encryption-keys encryptionKeys)
+                 (some? topic) (.topic topic)
+                 true (.create)))
              (catch PulsarClientException e
                (log/error (format "Failed to open pulsar producer, %s" e))))))),
 
@@ -159,13 +166,13 @@
          (let [{:keys [^PulsarClient client conf]} config]
            (try
              (log/info "Opening pulsar reader")
-             (.. client
-                 (newReader (get conf "schema"))
-                 (startMessageId (get conf "startMessageId" MessageId/latest))
-                 (topics (get conf "topicNames"))
-                 (cryptoKeyReader (get conf "cryptoKeyReader"))
-                 ;;(loadConf (j/to-java Map conf))
-                 (create))
+             (let [{:strs [cryptoKeyReader schema startMessageId topics]
+                    :or {startMessageId MessageId/latest}} conf]
+               (cond-> (.. client (newReader schema)
+                           (startMessageId startMessageId))
+                 (some? cryptoKeyReader) (.cryptoKeyReader cryptoKeyReader)
+                 (some? topics) (.topics topics)
+                 true (.create)))
              (catch PulsarClientException e
                (log/error (format "Failed to open pulsar reader, %s" e))))))),
 
@@ -186,18 +193,18 @@
   {:system/start
    (fn [{:system/keys [config instance]}]
      (or instance
-         (let [{:keys [admin topics-and-opts]} config]
+         (let [{:keys [admin topics]} config]
            (try
-             (log/info "Creating pulsar topics:" topics-and-opts)
+             (log/info "Creating pulsar topics:" topics)
              (doall
               (mapv (fn [{:keys [topic schema opts]}]
                       (admin/ensure-topic admin topic opts)
                       (when (some? schema)
                         (admin/ensure-schema admin topic schema)))
-                      topics-and-opts))
+                    topics))
              (catch PulsarAdminException e
                (log/error (format "Failed to create pulsar topics, %s" e))))))),
 
    :system/config
    {:admin system/required-component
-    :topics-and-opts system/required-component}})
+    :topics system/required-component}})
