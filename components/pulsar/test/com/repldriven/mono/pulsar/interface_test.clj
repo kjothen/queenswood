@@ -47,6 +47,7 @@
   (def running-system (system/start system-config))
 
   (def ^PulsarAdmin admin (system/instance running-system [:pulsar :admin]))
+
   (def service-url (.getServiceUrl admin))
   (def namespace "tenant-1/namespace-1")
   (def namespace-api-url
@@ -55,7 +56,6 @@
   (def is-allow-auto-update-schema-url
     (str namespace-api-url "/isAllowAutoUpdateSchema"))
   (is (= false (http-get-json is-allow-auto-update-schema-url)))
-
   ;;(def schema-auto-update-compatibility-strategy-url
   ;;  (str namespace-api-url "/schemaAutoUpdateCompatibilityStrategy"))
   ;;(is (= "AutoUpdateDisabled"
@@ -66,17 +66,14 @@
 
   (def ^Producer producer (system/instance running-system [:pulsar :producer]))
   (def ^Consumer consumer (system/instance running-system [:pulsar :consumer]))
-  (def ^Consumer schemas (system/instance running-system [:pulsar :schemas]))
-  (def schema (get-in schemas [:user :definition]))
-  (def msg {:y 41})
+  (def msg {:y 42})
 
-  (.. producer (send (.getBytes (json/write-str msg))))
-
+  (.. producer newMessage (value (.getBytes (json/write-str msg))) send)
+  (.. producer getStats getTotalMsgsSent)
   (def recv-msg (.. consumer (receive 500 TimeUnit/MILLISECONDS)))
   (.. consumer (acknowledge recv-msg))
   (= msg
      (json/read-str (.. recv-msg getValue getJsonNode toString)
                     :key-fn keyword))
   (system/stop running-system)
-
 )
