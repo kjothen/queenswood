@@ -217,7 +217,6 @@
 
 (defn- build-schema
   [type schema properties]
-  (log/info "build-schema" type schema properties)
   (case type
     ;; complex schema
     ("JSON", "AVRO")

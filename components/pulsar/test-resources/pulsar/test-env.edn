@@ -17,13 +17,16 @@
    :admin {:service-http-url [#system :ref [:pulsar :container-service-http-url]]}
    :client {:service-url [#system :ref [:pulsar :container-service-url]]}
    :schemas {:user
-             {:type "JSON"
+             {:type "AVRO"
               :schema {:type "record"
                        :name "User"
                        :namespace "com.repldriven.mono"
-                       :fields [{:name "y"
-                                 :type "string"}]}
-              :properties {"__alwaysAllowNull" false}}}
+                       :fields [{:name "name"
+                                 :type "string"}
+                                {:name "age"
+                                 :type ["null", "long"]
+                                 :default nil}]}
+              :properties {}}}
    :topics {:admin [#system :ref [:pulsar :admin]]
             :tenants [{:tenant "tenant-1"
                        :roles []
@@ -38,7 +41,7 @@
                                           "schemaValidationEnforced" true
                                           }
                                    :put {"schemaCompatibilityStrategy"
-                                         "FULL_TRANSITIVE"}
+                                         "FULL"}
                                    }}]
             :schemas [#system :ref [:pulsar :schemas]]
             :topics [{:topic "persistent://tenant-1/namespace-1/topic-1"

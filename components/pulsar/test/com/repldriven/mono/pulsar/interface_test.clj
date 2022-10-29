@@ -9,6 +9,7 @@
             [com.repldriven.mono.pulsar.interface :as SUT]
             [com.repldriven.mono.system.interface :as system
              :refer [with-system]]
+            [deercreeklabs.lancaster :as avro]
             [org.httpkit.client :as httpkit])
   (:import (java.util.concurrent TimeUnit)
            (org.apache.pulsar.client.admin PulsarAdmin)
@@ -34,12 +35,19 @@
     (with-system [sys (SUT/configure-system (get-in @env/env [:system :pulsar]))]
       (let [producer (system/instance sys [:pulsar :producer])
             consumer (system/instance sys [:pulsar :consumer])
-            msg {:y 42}]
-        (.. producer (send (.getBytes (json/write-str msg))))
-        (is (= msg
-               (json/read-str (.. consumer (receive 500 TimeUnit/MILLISECONDS)
-                                  getValue getJsonNode toString)
-                              :key-fn keyword)))))))
+            schemas  (system/instance sys [:pulsar :schemas])
+            schema (-> (get-in schemas [:user :schema])
+                       .getSchemaInfo
+                       .toString
+                       json/read-str
+                       (get "schema"))
+            user-schema (avro/json->schema (json/write-str schema))
+            user {:name "hardcastle" :age 19}]
+        (.. producer (send (avro/serialize user-schema user)))
+        (is (= {:name "hardcastle" :age 19}
+               (avro/deserialize-same
+                user-schema
+                (.. consumer (receive 500 TimeUnit/MILLISECONDS) getData))))))))
 
 (comment
   (env/set-env! (io/resource "pulsar/test-env.edn") :test)
@@ -47,7 +55,6 @@
   (def running-system (system/start system-config))
 
   (def ^PulsarAdmin admin (system/instance running-system [:pulsar :admin]))
-
   (def service-url (.getServiceUrl admin))
   (def namespace "tenant-1/namespace-1")
   (def namespace-api-url
@@ -56,24 +63,12 @@
   (def is-allow-auto-update-schema-url
     (str namespace-api-url "/isAllowAutoUpdateSchema"))
   (is (= false (http-get-json is-allow-auto-update-schema-url)))
-  ;;(def schema-auto-update-compatibility-strategy-url
-  ;;  (str namespace-api-url "/schemaAutoUpdateCompatibilityStrategy"))
-  ;;(is (= "AutoUpdateDisabled"
-  ;;       (http-get-json schema-auto-update-compatibility-strategy-url)))
-
+  (def schema-auto-update-compatibility-strategy-url
+    (str namespace-api-url "/schemaAutoUpdateCompatibilityStrategy"))
+  (is (= "AutoUpdateDisabled"
+         (http-get-json schema-auto-update-compatibility-strategy-url)))
   (def encryption-required-url (str namespace-api-url "/encryptionRequired"))
   (is (= true (http-get-json encryption-required-url)))
 
-  (def ^Producer producer (system/instance running-system [:pulsar :producer]))
-  (def ^Consumer consumer (system/instance running-system [:pulsar :consumer]))
-  (def msg {:y 42})
-
-  (.. producer newMessage (value (.getBytes (json/write-str msg))) send)
-  (.. producer getStats getTotalMsgsSent)
-  (def recv-msg (.. consumer (receive 500 TimeUnit/MILLISECONDS)))
-  (.. consumer (acknowledge recv-msg))
-  (= msg
-     (json/read-str (.. recv-msg getValue getJsonNode toString)
-                    :key-fn keyword))
   (system/stop running-system)
 )
