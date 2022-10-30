@@ -87,12 +87,16 @@
   (let [{:keys [^PulsarClient client conf schemas]} config]
     (try
       (log/info "Opening pulsar consumer")
-      (let [{:strs [cryptoKeyReader schema subscriptionName topics]} conf]
-        (cond-> (.. client (newConsumer (resolve-schema schemas schema)))
-          (some? cryptoKeyReader) (.cryptoKeyReader cryptoKeyReader)
-          (some? subscriptionName) (.subscriptionName subscriptionName)
-          (some? topics) (.topics topics)
-          true (.subscribe)))
+      (let [{:strs [cryptoKeyReader schema]} conf
+            manual-conf ["cryptoKeyReader" "schema"]
+            auto-conf (j/to-java Map (apply dissoc conf manual-conf))
+            _ (prn auto-conf)
+            instance (if (some? schema)
+                       (.. client (newConsumer (resolve-schema schemas schema)))
+                       (.. client newConsumer))]
+         (cond-> (.. instance (loadConf auto-conf))
+           (some? cryptoKeyReader) (.cryptoKeyReader cryptoKeyReader)
+           true (.subscribe)))
       (catch PulsarClientException e
         (log/error (format "Failed to open pulsar consumer, %s" e))))))
 
@@ -150,11 +154,15 @@
   (let [{:keys [^PulsarClient client conf schemas]} config]
     (try
       (log/info "Opening pulsar producer")
-      (let [{:strs [cryptoKeyReader encryptionKeys schema topic]} conf]
-        (cond-> (.. client (newProducer (resolve-schema schemas schema)))
+      (let [{:strs [cryptoKeyReader encryptionKeys schema]} conf
+            manual-conf ["cryptoKeyReader" "encryptionKeys" "schema"]
+            auto-conf (j/to-java Map (apply dissoc conf manual-conf))
+            instance (if (some? schema)
+                       (.. client (newProducer (resolve-schema schemas schema)))
+                       (.. client newProducer))]
+        (cond-> (.. instance (loadConf auto-conf))
           (some? cryptoKeyReader) (.cryptoKeyReader cryptoKeyReader)
           (some? encryptionKeys) (add-encryption-keys encryptionKeys)
-          (some? topic) (.topic topic)
           true (.create)))
       (catch PulsarClientException e
         (log/error (format "Failed to open pulsar producer, %s" e))))))

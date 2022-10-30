@@ -31,44 +31,48 @@
    (:body @(httpkit/get url {:headers {"Accept" "application/json"}}))))
 
 (deftest development-test
-  (testing "Developers should be able to start/stop a pulsar system from  REPL"
+  (testing "Developers should be able to start/stop a pulsar system from a REPL"
     (with-system [sys (SUT/configure-system (get-in @env/env [:system :pulsar]))]
-      (let [producer (system/instance sys [:pulsar :producer])
-            consumer (system/instance sys [:pulsar :consumer])
-            schemas  (system/instance sys [:pulsar :schemas])
-            schema (-> (get-in schemas [:user :schema])
-                       .getSchemaInfo
-                       .toString
-                       json/read-str
-                       (get "schema"))
-            user-schema (avro/json->schema (json/write-str schema))
-            user {:name "hardcastle" :age 19}]
-        (.. producer (send (avro/serialize user-schema user)))
-        (is (= {:name "hardcastle" :age 19}
-               (avro/deserialize-same
-                user-schema
-                (.. consumer (receive 500 TimeUnit/MILLISECONDS) getData))))))))
+      (let [admin (system/instance sys [:pulsar :admin])
+            producer (system/instance sys [:pulsar :producer])
+            consumer (system/instance sys [:pulsar :consumer])]
+
+        ;; produce/consume a complex schema message
+        (let [schemas  (system/instance sys [:pulsar :schemas])
+              schema (-> (get-in schemas [:user :schema])
+                         .getSchemaInfo
+                         .toString
+                         json/read-str
+                         (get "schema"))
+              user-schema (avro/json->schema (json/write-str schema))
+              user {:name "hardcastle" :age 19}]
+
+          (.. producer (send (avro/serialize user-schema user)))
+          (let [user-msg (.. consumer (receive 500 TimeUnit/MILLISECONDS) getData)]
+            (is (= user (avro/deserialize-same user-schema user-msg)))))
+
+        ;; check namespace topic settings enfore encryption on registered schema
+        (let [service-url (.getServiceUrl admin)
+              namespaces-url (string/join "/" [service-url "admin/v2/namespaces"])
+              namespace-url (string/join "/" [namespaces-url "tenant-1/namespace-1"])
+              expected {"autoTopicCreation" {"topicType" "string"
+                                             "defaultNumPartitions" 1
+                                             "allowAutoTopicCreation" false}
+                        "encryptionRequired" true
+                        "isAllowAutoUpdateSchema" false
+                        "schemaCompatibilityStrategy" "FULL"
+                        "schemaValidationEnforced" true}]
+          (dorun
+           (map (fn [[k v]]
+                  (let [url (string/join "/" [namespace-url k])]
+                    (is (= v (http-get-json url)))))
+                expected)))
+        ))))
 
 (comment
   (env/set-env! (io/resource "pulsar/test-env.edn") :test)
   (def system-config (SUT/configure-system (get-in @env/env [:system :pulsar])))
   (def running-system (system/start system-config))
-
-  (def ^PulsarAdmin admin (system/instance running-system [:pulsar :admin]))
-  (def service-url (.getServiceUrl admin))
-  (def namespace "tenant-1/namespace-1")
-  (def namespace-api-url
-    (string/join "/" [service-url "admin" "v2" "namespaces" namespace]))
-
-  (def is-allow-auto-update-schema-url
-    (str namespace-api-url "/isAllowAutoUpdateSchema"))
-  (is (= false (http-get-json is-allow-auto-update-schema-url)))
-  (def schema-auto-update-compatibility-strategy-url
-    (str namespace-api-url "/schemaAutoUpdateCompatibilityStrategy"))
-  (is (= "AutoUpdateDisabled"
-         (http-get-json schema-auto-update-compatibility-strategy-url)))
-  (def encryption-required-url (str namespace-api-url "/encryptionRequired"))
-  (is (= true (http-get-json encryption-required-url)))
 
   (system/stop running-system)
 )
