@@ -1,8 +1,10 @@
 (ns com.repldriven.mono.pulsar.system.components
   (:refer-clojure :exclude [name namespace type])
   (:require [clojure.data.json :as json]
+            [clojure.edn :as edn]
             [clojure.java.data :as j]
             [clojure.java.data.builder :as builder]
+            [clojure.java.io :as io]
             [com.repldriven.mono.log.interface :as log]
             [com.repldriven.mono.system.interface :as system]
             [com.repldriven.mono.pulsar.admin :as admin]
@@ -93,6 +95,7 @@
             instance (if (some? schema)
                        (.. client (newConsumer (resolve-schema schemas schema)))
                        (.. client newConsumer))]
+         (prn auto-conf)
          (cond-> (.. instance (loadConf auto-conf))
            (some? cryptoKeyReader) (.cryptoKeyReader cryptoKeyReader)
            true (.subscribe)))
@@ -261,13 +264,18 @@
     "AUTO_CONSUME" (Schema/AUTO_CONSUME)
     "AUTO_PRODUCE_BYTES" (Schema/AUTO_PRODUCE_BYTES)))
 
+(defn- load-schema
+  [f]
+  (-> f io/resource io/file slurp edn/read-string))
+
 (defn- build-schemas
   [config]
   (reduce-kv (fn [m k {:keys [type schema properties]}]
-               (let [payload (build-schema-payload type schema properties)
-                     schema' (build-schema type schema properties)]
-                 (assoc m k {:payload payload
-                             :schema schema'})))
+               (let [resolved-schema (cond-> schema (string? schema) (load-schema))]
+                 (let [payload (build-schema-payload type resolved-schema properties)
+                       schema' (build-schema type resolved-schema properties)]
+                   (assoc m k {:payload payload
+                               :schema schema'}))))
              {}
              config))
 
