@@ -90,7 +90,6 @@
       (let [{:strs [cryptoKeyReader schema]} conf
             manual-conf ["cryptoKeyReader" "schema"]
             auto-conf (j/to-java Map (apply dissoc conf manual-conf))
-            _ (prn auto-conf)
             instance (if (some? schema)
                        (.. client (newConsumer (resolve-schema schemas schema)))
                        (.. client newConsumer))]
@@ -184,17 +183,20 @@
                    :conf system/required-component}})
 
 ;; reader
-(defn- ^Reader start-reader
+(defn- ^Consumer start-reader
   [config]
-  (let [{:keys [^PulsarClient client conf]} config]
+  (let [{:keys [^PulsarClient client conf schemas]} config]
     (try
       (log/info "Opening pulsar reader")
-      (let [{:strs [cryptoKeyReader schema startMessageId topics]
-             :or {startMessageId MessageId/latest}} conf]
-        (cond-> (.. client (newReader schema)
-                    (startMessageId startMessageId))
+      (let [{:strs [cryptoKeyReader schema startMessageId]} conf
+            manual-conf ["cryptoKeyReader" "schema" "startMessageId"]
+            auto-conf (j/to-java Map (apply dissoc conf manual-conf))
+            instance (if (some? schema)
+                       (.. client (newReader (resolve-schema schemas schema)))
+                       (.. client newReader))]
+        (cond-> (.. instance (loadConf auto-conf))
           (some? cryptoKeyReader) (.cryptoKeyReader cryptoKeyReader)
-          (some? topics) (.topics topics)
+          (some? startMessageId) (.startMessageId startMessageId)
           true (.create)))
       (catch PulsarClientException e
         (log/error (format "Failed to open pulsar reader, %s" e))))))
@@ -230,7 +232,7 @@
     ("JSON", "AVRO")
     (let [schema-definition (.. (SchemaDefinition/builder)
                                 (withJsonDef (json/write-str schema))
-;;                                (withProperties (or properties {})
+                                (withProperties (j/to-java Map (or properties {})))
                                 build)]
       (log/info "schema definition" schema-definition)
       (case type
