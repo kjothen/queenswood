@@ -40,8 +40,7 @@
                                           "encryptionRequired" true
                                           "isAllowAutoUpdateSchema" false
                                           "schemaValidationEnforced" true}
-                                   :put {"schemaCompatibilityStrategy" "FULL"}
-                                   }}]
+                                   :put {"schemaCompatibilityStrategy" "FULL"}}}]
             :schemas [#system :ref [:pulsar :schemas]]
             :topics [{:topic "persistent://tenant-1/namespace-1/topic-1"
                       :partitions 1
@@ -74,5 +73,4 @@
                      "schema" #pulsar-schema :AUTO_PRODUCE_BYTES
                      "topicName" "persistent://tenant-1/namespace-1/topic-1"}
               :schemas  [#system :ref [:pulsar :schemas]]}
-
    }}}
