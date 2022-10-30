@@ -220,11 +220,11 @@
   (case type
     ;; complex schema
     ("JSON", "AVRO")
-    (let [schema-definition (-> (SchemaDefinition/builder)
-                                (.withJsonDef (json/write-str schema))
-                                (.withJSR310ConversionEnabled true)
-                                (.withAlwaysAllowNull false)
-                                (.build))]
+    (let [schema-definition (.. (SchemaDefinition/builder)
+                                (withJsonDef (json/write-str schema))
+;;                                (withProperties (or properties {})
+                                build)]
+      (log/info "schema definition" schema-definition)
       (case type
         "JSON" (Schema/JSON schema-definition)
         "AVRO" (Schema/AVRO schema-definition)))
@@ -263,17 +263,21 @@
 
 (defn- resolve-schema
   [schemas schema']
-  (if (keyword? schema')
-    (get-in schemas [schema' :schema])
-    (let [{:keys [type schema properties]} schema']
-      (build-schema type schema properties))))
+  (cond
+    (keyword? schema') (get-in schemas [schema' :schema])
+    (map? schema') (let [{:keys [type schema properties]} schema']
+                     (build-schema type schema properties))
+    :else schema'))
 
 (defn- resolve-schema-payload
   [schemas schema']
-  (if (keyword? schema')
-    (get-in schemas [schema' :payload])
-    (let [{:keys [type schema properties]} schema']
-      (build-schema-payload type schema properties))))
+  (cond
+    (keyword? schema') (get-in schemas [schema' :payload])
+    (map? schema') (let [{:keys [type schema properties]} schema']
+                     (build-schema-payload type schema properties))
+    :else (throw (ex-info
+                  (format "Invalid value %s for schema payload" schema')
+                  {:schema schema'}))))
 
 (def schemas
   {:system/start (fn [{:system/keys [config instance]}]
