@@ -1,6 +1,6 @@
 {:system
  {:pulsar
-  {:container {;;:docker-image-name "kezhenxu94/pulsar:latest"
+  {:container {:docker-image-name "kezhenxu94/pulsar:latest"
                :exposed-ports [6650 8080]}
    :container-service-port {:container [#system :ref [:pulsar :container]]
                             :exposed-port 6650}

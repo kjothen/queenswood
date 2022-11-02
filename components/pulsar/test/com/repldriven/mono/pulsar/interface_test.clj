@@ -13,7 +13,7 @@
             [org.httpkit.client :as httpkit])
   (:import (java.util.concurrent TimeUnit)
            (org.apache.pulsar.client.admin PulsarAdmin)
-           (org.apache.pulsar.client.api Consumer MessageId Producer)
+           (org.apache.pulsar.client.api Consumer Message MessageId Producer)
            (org.apache.pulsar.common.api EncryptionContext)
            (org.apache.pulsar.common.policies.data
             SchemaAutoUpdateCompatibilityStrategy)))
@@ -24,6 +24,7 @@
   (f))
 
 (use-fixtures :once env-fixture)
+
 
 (defn http-get-json
   [url]
@@ -37,21 +38,28 @@
             producer (system/instance sys [:pulsar :producer])
             consumer (system/instance sys [:pulsar :consumer])]
 
-        ;; produce/consume a complex schema message
-        (let [schemas  (system/instance sys [:pulsar :schemas])
-              schema (-> (get-in schemas [:user :schema])
+        ;; produce/consume a complex schema message with prop
+        (let [raw-schemas  (system/instance sys [:pulsar :schemas])
+              raw-schema (-> (get-in raw-schemas [:user :schema])
                          .getSchemaInfo
                          .toString
                          json/read-str
                          (get "schema"))
-              user-schema (avro/json->schema (json/write-str schema))
-              user {:name "hardcastle" :age 19}]
+              schema (avro/json->schema (json/write-str raw-schema))
+              data {:name "hardcastle" :age 19}
+              props {"message" "user-msg"}]
 
-          (.. producer (send (avro/serialize user-schema user)))
-          (let [user-msg (.. consumer (receive 500 TimeUnit/MILLISECONDS) getData)]
-            (is (= user (avro/deserialize-same user-schema user-msg)))))
+          (.. producer newMessage
+              (properties props)
+              (value (avro/serialize schema data))
+              send)
+          (let [^Message recv-msg (.. consumer (receive 500 TimeUnit/MILLISECONDS))
+                recv-data (.. recv-msg getData)
+                recv-props (.. recv-msg getProperties)]
+            (is (= data (avro/deserialize-same schema recv-data)))
+            (is (= (get props "message") (get recv-props "message")))))
 
-        ;; check namespace topic settings enfore encryption on registered schema
+        ;; check namespace topic settings enforce encryption on registered schema
         (let [service-url (.getServiceUrl admin)
               namespaces-url (string/join "/" [service-url "admin/v2/namespaces"])
               namespace-url (string/join "/" [namespaces-url "tenant-1/namespace-1"])
