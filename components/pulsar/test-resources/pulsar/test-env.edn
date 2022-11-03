@@ -1,6 +1,6 @@
 {:system
  {:pulsar
-  {:container {:docker-image-name "kezhenxu94/pulsar:latest"
+  {:container {:docker-image-name "apachepulsar/pulsar:2.11.0-SNAPSHOT"
                :exposed-ports [6650 8080]}
    :container-service-port {:container [#system :ref [:pulsar :container]]
                             :exposed-port 6650}
@@ -14,56 +14,83 @@
                                 :port [#system :ref
                                        [:pulsar
                                         :container-service-http-port]]}
-   :admin {:service-http-url [#system :ref [:pulsar :container-service-http-url]]}
+   :admin {:service-http-url
+           [#system :ref [:pulsar :container-service-http-url]]}
    :client {:service-url [#system :ref [:pulsar :container-service-url]]}
-   :schemas {:user
-             {:type "AVRO"
-              :schema "pulsar/user.avsc.edn"
-              :properties {"__alwaysAllowNull" "false"
-                           "__jsr310ConversionEnabled" "true"}}}
-   :topics {:admin [#system :ref [:pulsar :admin]]
-            :tenants [{:tenant "tenant-1"
-                       :roles []
-                       :clusters ["standalone"]}]
-            :namespaces [{:namespace "tenant-1/namespace-1"
-                          :config {:post {"autoTopicCreation"
-                                          {"topicType" "string"
-                                           "defaultNumPartitions" 1
-                                           "allowAutoTopicCreation" false}
-                                          "encryptionRequired" true
-                                          "isAllowAutoUpdateSchema" false
-                                          "schemaValidationEnforced" true}
-                                   :put {"schemaCompatibilityStrategy" "FULL"}}}]
-            :schemas [#system :ref [:pulsar :schemas]]
-            :topics [{:topic "persistent://tenant-1/namespace-1/topic-1"
-                      :partitions 1
-                      :schema :user}]}
+   :schemas
+   {:user
+    {:type "AVRO"
+     :schema "pulsar/user.avsc.edn"
+     :properties {"__alwaysAllowNull" "false"
+                  "__jsr310ConversionEnabled" "true"}}}
+   :topics
+   {:admin [#system :ref [:pulsar :admin]]
+    :tenants [{:tenant "tenant-1"
+               :roles []
+               :clusters ["standalone"]}]
+    :namespaces [{:namespace "tenant-1/namespace-1"
+                  :config {:post {"autoTopicCreation"
+                                  {"topicType" "string"
+                                   "defaultNumPartitions" 1
+                                   "allowAutoTopicCreation" false}
+                                  "encryptionRequired" true
+                                  "isAllowAutoUpdateSchema" false
+                                  "schemaValidationEnforced" true}
+                           :put {"schemaCompatibilityStrategy" "FULL"}}}]
+    :schemas [#system :ref [:pulsar :schemas]]
+    :topics [{:topic "persistent://tenant-1/namespace-1/topic-1"
+              :partitions 1
+              :schema :user}]}
    :crypto-key-pair-generator {"tenant-key-1"
                                {:algorithm "RSA" :key-size 512}}
-   :crypto-key-pair-file-reader {"tenant-key-1"
-                                 {:public-key "pulsar/test_ecdsa_pubkey.pem"
-                                  :private-key "pulsar/test_ecdsa_privkey.pem"}}
-   :crypto-key-reader {:default-key "tenant-key-1"
-                       :keys [#system :ref [:pulsar :crypto-key-pair-file-reader]]}
-   :consumer {:_topics [#system :ref [:pulsar :topics]]
-              :client [#system :ref [:pulsar :client]]
-              :conf {"cryptoKeyReader" [#system :ref [:pulsar :crypto-key-reader]]
-                     "schema" #pulsar-schema :AUTO_CONSUME
-                     "subscriptionName" "tenant-1-subscriber"
-                     "topicNames" #{"persistent://tenant-1/namespace-1/topic-1"}}
-              :schemas  [#system :ref [:pulsar :schemas]]}
-   :reader {:_topics [#system :ref [:pulsar :topics]]
-              :client [#system :ref [:pulsar :client]]
-              :conf {"cryptoKeyReader" [#system :ref [:pulsar :crypto-key-reader]]
-                     "schema" #pulsar-schema :AUTO_CONSUME
-                     "startMessageId" #pulsar-message-id :earliest
-                     "topicNames" #{"persistent://tenant-1/namespace-1/topic-1"}}
-              :schemas  [#system :ref [:pulsar :schemas]]}
-   :producer {:_topics [#system :ref [:pulsar :topics]]
-              :client [#system :ref [:pulsar :client]]
-              :conf {"cryptoKeyReader" [#system :ref [:pulsar :crypto-key-reader]]
-                     "encryptionKeys" #{"tenant-key-1"}
-                     "schema" #pulsar-schema :AUTO_PRODUCE_BYTES
-                     "topicName" "persistent://tenant-1/namespace-1/topic-1"}
-              :schemas  [#system :ref [:pulsar :schemas]]}
+   :crypto-key-pair-file-reader
+   {"tenant-key-1"
+    {:public-key "pulsar/test_ecdsa_pubkey.pem"
+     :private-key "pulsar/test_ecdsa_privkey.pem"}}
+   :crypto-key-pair-file-reader-2
+   {"tenant-key-2"
+    {:public-key "pulsar/test-2_ecdsa_pubkey.pem"
+     :private-key "pulsar/test-2_ecdsa_privkey.pem"}}
+   :crypto-key-reader
+   {:default-key "tenant-key-1"
+    :keys [#system :ref [:pulsar :crypto-key-pair-file-reader]]}
+   :crypto-key-reader-2
+   {:default-key "tenant-key-1"
+    :keys [#system :ref [:pulsar :crypto-key-pair-file-reader]]}
+   :consumer
+   {:_topics [#system :ref [:pulsar :topics]]
+    :client [#system :ref [:pulsar :client]]
+    :conf {"cryptoFailureAction" #pulsar-crypto-failure-action :CONSUME
+           "cryptoKeyReader" [#system :ref [:pulsar :crypto-key-reader]]
+           "schema" #pulsar-schema :AUTO_CONSUME
+           "subscriptionName" "tenant-1-subscriber"
+           "subscriptionType" #pulsar-subscription-type :Shared
+           "topicNames" #{"persistent://tenant-1/namespace-1/topic-1"}}
+    :schemas  [#system :ref [:pulsar :schemas]]}
+   :consumer-2
+   {:_topics [#system :ref [:pulsar :topics]]
+    :client [#system :ref [:pulsar :client]]
+    :conf {"cryptoFailureAction" #pulsar-crypto-failure-action :CONSUME
+           "cryptoKeyReader" [#system :ref [:pulsar :crypto-key-reader-2]]
+           "schema" #pulsar-schema :AUTO_CONSUME
+           "subscriptionName" "tenant-2-subscriber"
+           "subscriptionType" #pulsar-subscription-type :Shared
+           "topicNames" #{"persistent://tenant-1/namespace-1/topic-1"}}
+    :schemas  [#system :ref [:pulsar :schemas]]}
+   ;;:reader
+   ;;{:_topics [#system :ref [:pulsar :topics]]
+   ;; :client [#system :ref [:pulsar :client]]
+   ;; :conf {"cryptoKeyReader" [#system :ref [:pulsar :crypto-key-reader]]
+   ;;        "schema" #pulsar-schema :AUTO_CONSUME
+   ;;        "startMessageId" #pulsar-message-id :earliest
+   ;;        "topicNames" #{"persistent://tenant-1/namespace-1/topic-1"}}
+   ;;           :schemas  [#system :ref [:pulsar :schemas]]}
+   :producer
+   {:_topics [#system :ref [:pulsar :topics]]
+    :client [#system :ref [:pulsar :client]]
+    :conf {"cryptoKeyReader" [#system :ref [:pulsar :crypto-key-reader]]
+           "encryptionKeys" #{"tenant-key-1"}
+           "schema" #pulsar-schema :AUTO_PRODUCE_BYTES
+           "topicName" "persistent://tenant-1/namespace-1/topic-1"}
+    :schemas  [#system :ref [:pulsar :schemas]]}
    }}}

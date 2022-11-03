@@ -1,6 +1,7 @@
 (ns com.repldriven.mono.pulsar.crypto
   (:require [clojure.java.io :as io]
             [clojure.string :as string]
+            [com.repldriven.mono.log.interface :as log]
             [com.repldriven.mono.encryption.interface :as encryption])
   (:import (org.apache.pulsar.client.api CryptoKeyReader EncryptionKeyInfo)
            (java.security PrivateKey PublicKey)
@@ -45,13 +46,18 @@
   (reify CryptoKeyReader
 
     (^EncryptionKeyInfo getPublicKey [this ^String keyName ^Map _metadata]
-     (doto (EncryptionKeyInfo.)
-       (.setKey (get (get-crypto-key-pair keyName named-kps) :public-key))))
+     (log/info "Trying to read public key: find"
+               keyName "in" (keys (:keys named-kps)))
+     (when-let [k (get (get-crypto-key-pair keyName named-kps) :public-key)]
+       (doto (EncryptionKeyInfo.)
+         (.setKey k))))
 
     (^EncryptionKeyInfo getPrivateKey [this ^String keyName ^Map _metadata]
-     (doto (EncryptionKeyInfo.)
-       (.setKey (get (get-crypto-key-pair keyName named-kps) :private-key))))
-    ))
+     (log/info "Trying to read private key: find"
+               keyName "in" (keys (:keys named-kps)))
+     (when-let [k (get (get-crypto-key-pair keyName named-kps) :private-key)]
+       (doto (EncryptionKeyInfo.)
+         (.setKey k))))))
 
 (comment
   (require '[com.repldriven.mono.encryption.interface :as encryption])

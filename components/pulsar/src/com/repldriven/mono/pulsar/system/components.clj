@@ -143,6 +143,7 @@
      (or instance
          (do
            (log/info "Creating pulsar crypto-key-reader: " config)
+
            (crypto/key-reader config))))
    :system/config system/required-component})
 
@@ -270,14 +271,15 @@
 
 (defn- build-schemas
   [config]
-  (reduce-kv (fn [m k {:keys [type schema properties]}]
-               (let [resolved-schema (cond-> schema (string? schema) (load-schema))]
-                 (let [payload (build-schema-payload type resolved-schema properties)
-                       schema' (build-schema type resolved-schema properties)]
-                   (assoc m k {:payload payload
-                               :schema schema'}))))
-             {}
-             config))
+  (reduce-kv
+   (fn [m k {:keys [type schema properties]}]
+     (let [resolved-schema (cond-> schema (string? schema) (load-schema))]
+       (let [payload (build-schema-payload type resolved-schema properties)
+             schema' (build-schema type resolved-schema properties)]
+         (assoc m k {:payload payload
+                     :schema schema'}))))
+   {}
+   config))
 
 (defn- resolve-schema
   [schemas schema']

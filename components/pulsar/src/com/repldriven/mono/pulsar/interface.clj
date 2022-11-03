@@ -6,6 +6,10 @@
             [com.repldriven.mono.pulsar.system.core :as system]
             [com.repldriven.mono.env.interface :as env]))
 
+(defmethod env/reader 'pulsar-crypto-failure-action
+  [opts tag value]
+  (env-reader/crypto-failure-action opts tag value))
+
 (defmethod env/reader 'pulsar-message-id
   [opts tag value]
   (env-reader/message-id opts tag value))
@@ -13,6 +17,10 @@
 (defmethod env/reader 'pulsar-schema
   [opts tag value]
   (env-reader/schema opts tag value))
+
+(defmethod env/reader 'pulsar-subscription-type
+  [opts tag value]
+  (env-reader/subscription-type opts tag value))
 
 (defn configure-system
   [config]

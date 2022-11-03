@@ -39,13 +39,22 @@
 (defmethod component :consumer [_ v]
   (system/merge-component-config components/consumer v))
 
+(defmethod component :consumer-2 [_ v]
+  (system/merge-component-config components/consumer v))
+
 (defmethod component :crypto-key-pair-generator [_ v]
   (system/merge-component-config components/crypto-key-pair-generator v))
 
 (defmethod component :crypto-key-pair-file-reader [_ v]
   (system/merge-component-config components/crypto-key-pair-file-reader v))
 
+(defmethod component :crypto-key-pair-file-reader-2 [_ v]
+  (system/merge-component-config components/crypto-key-pair-file-reader v))
+
 (defmethod component :crypto-key-reader [_ v]
+  (system/merge-component-config components/crypto-key-reader v))
+
+(defmethod component :crypto-key-reader-2 [_ v]
   (system/merge-component-config components/crypto-key-reader v))
 
 (defmethod component :topics [_ v]

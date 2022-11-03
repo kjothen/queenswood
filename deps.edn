@@ -58,4 +58,10 @@
                        "bases/pulsar-reader/test-resources"
                        "bases/symmetric-key-api/test"
                        "bases/symmetric-key-api/test-resources"]}},
- :mvn/repos {"maven" {:url "https://packages.confluent.io/maven"}}}
+ :mvn/repos {"maven" {:url "https://packages.confluent.io/maven"}}
+ :deps {org.slf4j/slf4j-api {:mvn/version "1.7.36"}
+        org.slf4j/jul-to-slf4j {:mvn/version "1.7.36"}
+        org.slf4j/jcl-over-slf4j {:mvn/version "1.7.36"}
+        org.slf4j/log4j-over-slf4j {:mvn/version "1.7.36"}
+        org.slf4j/osgi-over-slf4j {:mvn/version "1.7.36"}
+        ch.qos.logback/logback-classic {:mvn/version "1.2.3"}}}

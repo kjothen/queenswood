@@ -25,7 +25,6 @@
 
 (use-fixtures :once env-fixture)
 
-
 (defn http-get-json
   [url]
   (json/read-str
@@ -36,51 +35,72 @@
     (with-system [sys (SUT/configure-system (get-in @env/env [:system :pulsar]))]
       (let [admin (system/instance sys [:pulsar :admin])
             producer (system/instance sys [:pulsar :producer])
-            consumer (system/instance sys [:pulsar :consumer])]
+            consumer (system/instance sys [:pulsar :consumer])
+            consumer-2 (system/instance sys [:pulsar :consumer-2])]
 
         ;; produce/consume a complex schema message with prop
         (let [raw-schemas  (system/instance sys [:pulsar :schemas])
               raw-schema (-> (get-in raw-schemas [:user :schema])
-                         .getSchemaInfo
-                         .toString
-                         json/read-str
-                         (get "schema"))
+                             .getSchemaInfo
+                             .toString
+                             json/read-str
+                             (get "schema"))
               schema (avro/json->schema (json/write-str raw-schema))
               data {:name "hardcastle" :age 19}
               props {"message" "user-msg"}]
 
-          (.. producer newMessage
-              (properties props)
-              (value (avro/serialize schema data))
-              send)
-          (let [^Message recv-msg (.. consumer (receive 500 TimeUnit/MILLISECONDS))
-                recv-data (.. recv-msg getData)
-                recv-props (.. recv-msg getProperties)]
-            (is (= data (avro/deserialize-same schema recv-data)))
-            (is (= (get props "message") (get recv-props "message")))))
+          (testing "and matching private key can decrypt a message"
+            ;; publish message - first consumer eats
+            (.. producer newMessage
+                (properties props)
+                (value (avro/serialize schema data))
+                send)
 
-        ;; check namespace topic settings enforce encryption on registered schema
-        (let [service-url (.getServiceUrl admin)
-              namespaces-url (string/join "/" [service-url "admin/v2/namespaces"])
-              namespace-url (string/join "/" [namespaces-url "tenant-1/namespace-1"])
-              expected {"autoTopicCreation" {"topicType" "string"
-                                             "defaultNumPartitions" 1
-                                             "allowAutoTopicCreation" false}
-                        "encryptionRequired" true
-                        "isAllowAutoUpdateSchema" false
-                        "schemaCompatibilityStrategy" "FULL"
-                        "schemaValidationEnforced" true}]
-          (dorun
-           (map (fn [[k v]]
-                  (let [url (string/join "/" [namespace-url k])]
-                    (is (= v (http-get-json url)))))
-                expected)))
+            (let [^Message recv-msg (.. consumer
+                                        (receive 500 TimeUnit/MILLISECONDS))
+                  recv-data (some-> recv-msg .getData)
+                  recv-props (some-> recv-msg .getProperties)]
+              (some->> recv-msg (.acknowledge consumer))
+              (is (= data (some->> recv-data (avro/deserialize-same schema))))
+              (is (= (get props "message") (get recv-props "message"))))
+            )
+
+          (testing "and non-matching private key cannot decrypt a message"
+            ;; disconnect consumer without message ack to force message resend
+            (.close consumer)
+            (let [^Message recv-msg-2 (.. consumer-2
+                                          (receive 500 TimeUnit/MILLISECONDS))
+                  recv-data-2 (some-> recv-msg-2 .getData)
+                  recv-props-2 (some-> recv-msg-2 .getProperties)]
+              (some->> recv-msg-2 (.acknowledge consumer-2))
+              (is (= data (some->> recv-data-2 (avro/deserialize-same schema))))
+              (is (= (get props "message") (get recv-props-2 "message"))))))
+
+        (testing "and namespace-level topic settings enforce encryption, etc"
+          (let [service-url (.getServiceUrl admin)
+                namespaces-url (string/join
+                                "/" [service-url "admin/v2/namespaces"])
+                namespace-url (string/join
+                               "/" [namespaces-url "tenant-1/namespace-1"])
+                expected {"autoTopicCreation" {"topicType" "string"
+                                               "defaultNumPartitions" 1
+                                               "allowAutoTopicCreation" false}
+                          "encryptionRequired" true
+                          "isAllowAutoUpdateSchema" false
+                          "schemaCompatibilityStrategy" "FULL"
+                          "schemaValidationEnforced" true}]
+            (dorun
+             (map (fn [[k v]]
+                    (let [url (string/join "/" [namespace-url k])]
+                      (is (= v (http-get-json url)))))
+                  expected))))
         ))))
 
 (comment
   (env/set-env! (io/resource "pulsar/test-env.edn") :test)
-  (def system-config (SUT/configure-system (get-in @env/env [:system :pulsar])))
+  (def system-config (SUT/configure-system
+                      (get-in @env/env [:system :pulsar])))
   (def running-system (system/start system-config))
 
   (system/stop running-system)
-)
+ )
