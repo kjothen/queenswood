@@ -1,6 +1,6 @@
 {:system
  {:pulsar
-  {:container {:docker-image-name "apachepulsar/pulsar:2.11.0-SNAPSHOT"
+  {:container {:docker-image-name "apachepulsar/pulsar:2.10.2"
                :exposed-ports [6650 8080]}
    :container-service-port {:container [#system :ref [:pulsar :container]]
                             :exposed-port 6650}
@@ -48,7 +48,7 @@
     {:public-key "pulsar/test_ecdsa_pubkey.pem"
      :private-key "pulsar/test_ecdsa_privkey.pem"}}
    :crypto-key-pair-file-reader-2
-   {"tenant-key-2"
+   {"tenant-key-1"
     {:public-key "pulsar/test-2_ecdsa_pubkey.pem"
      :private-key "pulsar/test-2_ecdsa_privkey.pem"}}
    :crypto-key-reader
@@ -56,7 +56,7 @@
     :keys [#system :ref [:pulsar :crypto-key-pair-file-reader]]}
    :crypto-key-reader-2
    {:default-key "tenant-key-1"
-    :keys [#system :ref [:pulsar :crypto-key-pair-file-reader]]}
+    :keys [#system :ref [:pulsar :crypto-key-pair-file-reader-2]]}
    :consumer
    {:_topics [#system :ref [:pulsar :topics]]
     :client [#system :ref [:pulsar :client]]

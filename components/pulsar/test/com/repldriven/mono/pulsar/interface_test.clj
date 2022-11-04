@@ -18,83 +18,98 @@
            (org.apache.pulsar.common.policies.data
             SchemaAutoUpdateCompatibilityStrategy)))
 
-(defn env-fixture
+
+(def ^:dynamic ^:private *sys* nil)
+
+(defn sys-fixture
   [f]
   (env/set-env! (io/resource "pulsar/test-env.edn") :test)
-  (f))
+  (with-system [sys (SUT/configure-system
+                     (get-in @env/env [:system :pulsar]))]
+    (binding [*sys* sys]
+      (f))))
 
-(use-fixtures :once env-fixture)
+(use-fixtures :once sys-fixture)
 
-(defn http-get-json
+(defn- http-get-json
   [url]
   (json/read-str
    (:body @(httpkit/get url {:headers {"Accept" "application/json"}}))))
 
-(deftest development-test
-  (testing "Developers should be able to start/stop a pulsar system from a REPL"
-    (with-system [sys (SUT/configure-system (get-in @env/env [:system :pulsar]))]
-      (let [admin (system/instance sys [:pulsar :admin])
-            producer (system/instance sys [:pulsar :producer])
-            consumer (system/instance sys [:pulsar :consumer])
-            consumer-2 (system/instance sys [:pulsar :consumer-2])]
+(defn- get-schema
+  [schemas k]
+  (-> (get-in schemas [k :schema])
+      .getSchemaInfo
+      .toString
+      json/read-str
+      (get "schema")))
 
-        ;; produce/consume a complex schema message with prop
-        (let [raw-schemas  (system/instance sys [:pulsar :schemas])
-              raw-schema (-> (get-in raw-schemas [:user :schema])
-                             .getSchemaInfo
-                             .toString
-                             json/read-str
-                             (get "schema"))
-              schema (avro/json->schema (json/write-str raw-schema))
-              data {:name "hardcastle" :age 19}
-              props {"message" "user-msg"}]
+(defn- publish-message
+  [producer props schema data]
+  (.. producer newMessage
+      (properties props)
+      (value (avro/serialize schema data))
+      send))
 
-          (testing "and matching private key can decrypt a message"
-            ;; publish message - first consumer eats
-            (.. producer newMessage
-                (properties props)
-                (value (avro/serialize schema data))
-                send)
+(deftest developer-test
+  (testing "Developers should be able to start a pulsar system from a REPL"
+    (is (some? *sys*))))
 
-            (let [^Message recv-msg (.. consumer
-                                        (receive 500 TimeUnit/MILLISECONDS))
-                  recv-data (some-> recv-msg .getData)
-                  recv-props (some-> recv-msg .getProperties)]
-              (some->> recv-msg (.acknowledge consumer))
-              (is (= data (some->> recv-data (avro/deserialize-same schema))))
-              (is (= (get props "message") (get recv-props "message"))))
-            )
+(deftest encrypted-message-matching-consumer-key-test
+  (testing "Pulsar consumer with a matching decryption key can consume"
+    (let [producer (system/instance *sys* [:pulsar :producer])
+          consumer (system/instance *sys* [:pulsar :consumer])
+          schemas (system/instance *sys* [:pulsar :schemas])]
 
-          (testing "and non-matching private key cannot decrypt a message"
-            ;; disconnect consumer without message ack to force message resend
-            (.close consumer)
-            (let [^Message recv-msg-2 (.. consumer-2
-                                          (receive 500 TimeUnit/MILLISECONDS))
-                  recv-data-2 (some-> recv-msg-2 .getData)
-                  recv-props-2 (some-> recv-msg-2 .getProperties)]
-              (some->> recv-msg-2 (.acknowledge consumer-2))
-              (is (= data (some->> recv-data-2 (avro/deserialize-same schema))))
-              (is (= (get props "message") (get recv-props-2 "message"))))))
+      (let [schema (avro/json->schema (json/write-str (get-schema schemas :user)))
+            data {:name "hardcastle" :age 19}
+            props {"message" "user-msg"}]
+        (publish-message producer props schema data)
 
-        (testing "and namespace-level topic settings enforce encryption, etc"
-          (let [service-url (.getServiceUrl admin)
-                namespaces-url (string/join
-                                "/" [service-url "admin/v2/namespaces"])
-                namespace-url (string/join
-                               "/" [namespaces-url "tenant-1/namespace-1"])
-                expected {"autoTopicCreation" {"topicType" "string"
-                                               "defaultNumPartitions" 1
-                                               "allowAutoTopicCreation" false}
-                          "encryptionRequired" true
-                          "isAllowAutoUpdateSchema" false
-                          "schemaCompatibilityStrategy" "FULL"
-                          "schemaValidationEnforced" true}]
-            (dorun
-             (map (fn [[k v]]
-                    (let [url (string/join "/" [namespace-url k])]
-                      (is (= v (http-get-json url)))))
-                  expected))))
-        ))))
+        (let [^Message recv-msg (.. consumer (receive 500 TimeUnit/MILLISECONDS))
+              recv-data (some-> recv-msg .getData)
+              recv-props (some-> recv-msg .getProperties)]
+          (some->> recv-msg (.acknowledge consumer))
+          (is (= data (some->> recv-data (avro/deserialize-same schema))))
+          (is (= (get props "message") (get recv-props "message"))))))))
+
+(deftest encrypted-message-mismatched-consumer-key-test
+  (testing "Pulsar consumer with a mismatching decryption key cannot consume"
+    (let [producer (system/instance *sys* [:pulsar :producer])
+          consumer (system/instance *sys* [:pulsar :consumer-2])
+          schemas (system/instance *sys* [:pulsar :schemas])]
+
+      (let [schema (avro/json->schema (json/write-str (get-schema schemas :user)))
+            data {:name "hardcastle" :age 19}
+            props {"message" "user-msg"}]
+        (publish-message producer props schema data)
+
+        (let [^Message recv-msg (.. consumer (receive 500 TimeUnit/MILLISECONDS))
+              recv-data (some-> recv-msg .getData)
+              recv-props (some-> recv-msg .getProperties)]
+          (is (nil? recv-msg)))))))
+
+(deftest namespace-configuration-test
+  (testing "Pulsar namespace configuration enforces encryption and topic schema"
+    (let [admin (system/instance *sys* [:pulsar :admin])]
+
+      (let [service-url (.getServiceUrl admin)
+            namespaces-url (string/join
+                            "/" [service-url "admin/v2/namespaces"])
+            namespace-url (string/join
+                           "/" [namespaces-url "tenant-1/namespace-1"])
+            expected {"autoTopicCreation" {"topicType" "string"
+                                           "defaultNumPartitions" 1
+                                           "allowAutoTopicCreation" false}
+                      "encryptionRequired" true
+                      "isAllowAutoUpdateSchema" false
+                      "schemaCompatibilityStrategy" "FULL"
+                      "schemaValidationEnforced" true}]
+        (dorun
+         (map (fn [[k v]]
+                (let [url (string/join "/" [namespace-url k])]
+                  (is (= v (http-get-json url)))))
+              expected))))))
 
 (comment
   (env/set-env! (io/resource "pulsar/test-env.edn") :test)

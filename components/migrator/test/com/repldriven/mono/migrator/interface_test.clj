@@ -8,21 +8,24 @@
             [next.jdbc :as jdbc]
             [next.jdbc.result-set :as rs]))
 
-(defn env-fixture
+(def ^:dynamic ^:private *sys* nil)
+
+(defn sys-fixture
   [f]
   (env/set-env! (io/resource "migrator/test-env.edn") :test)
-  (f))
+  (with-system [sys (postgres/configure-system
+                     (get-in @env/env [:system :postgres]))]
+    (binding [*sys* sys]
+      (f))))))
 
-(use-fixtures :once env-fixture)
+(use-fixtures :once sys-fixture)
 
 (deftest migrate-test
   (testing "Applying a migration changelog should result in a paved db"
-    (with-system [sys (postgres/configure-system
-                        (get-in @env/env [:system :postgres]))]
-      (let [datasource (system/instance sys [:postgres :datasource])
-            db-spec (next.jdbc/get-datasource datasource)]
+    (let [datasource (system/instance *sys* [:postgres :datasource])
+          db-spec (next.jdbc/get-datasource datasource)]
         (SUT/migrate db-spec "migrator/test-changelog.sql")
         (is (= [{:name "hello"} {:name "world"}]
               (jdbc/execute! datasource
                 ["select name from test order by id asc"]
-                {:builder-fn rs/as-unqualified-lower-maps})))))))
+                {:builder-fn rs/as-unqualified-lower-maps}))))))
