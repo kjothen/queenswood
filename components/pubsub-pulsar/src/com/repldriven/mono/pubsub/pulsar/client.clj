@@ -1,22 +1,16 @@
 (ns com.repldriven.mono.pubsub.pulsar.client
-  (:refer-clojure :exclude [send])
-  (:import (java.util.concurrent TimeUnit)
-           (org.apache.pulsar.client.api Consumer Message Producer)))
+  (:require [clojure.java.data.builder :as builder]
+            [com.repldriven.mono.log.interface :as log])
+  (:import (org.apache.pulsar.client.api
+            ClientBuilder PulsarClient PulsarClientException)))
 
-(defn send
-  ([^Producer producer data]
-   (.. producer (send data)))
-  ([^Producer producer data opts]
-   (.. producer newMessage (loadConf opts) (value data) send)))
-
-(defn send-async
-  ([^Producer producer data]
-   (.. producer (sendAsync data)))
-  ([^Producer producer data opts]
-   (.. producer newMessage (loadConf opts) (value data) sendAsync)))
-
-(defn ^Message receive
-  ([^Consumer consumer]
-   (.. consumer receive))
-  ([^Consumer consumer timeout-ms]
-   (.. consumer (receive timeout-ms TimeUnit/MILLISECONDS))))
+(defn ^PulsarClient create
+  [{:keys [service-url]}]
+  (try
+    (log/info "Opening pulsar client connection:" service-url)
+    (builder/to-java PulsarClient
+                     (PulsarClient/builder)
+                     {:serviceUrl service-url}
+                     {:builder-class ClientBuilder})
+    (catch PulsarClientException e
+      (log/error (format "Failed to open pulsar client connection, %s" e)))))

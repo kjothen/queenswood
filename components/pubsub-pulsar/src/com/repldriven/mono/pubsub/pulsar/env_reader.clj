@@ -22,7 +22,7 @@
 (defn schema
   [_ tag value]
   (case value
-    ;; primitive types
+    ;; primitive
     :BOOL (Schema/BOOL)
     :BYTEBUFFER (Schema/BYTEBUFFER)
     :BYTES (Schema/BYTES)
@@ -40,7 +40,7 @@
     :TIME (Schema/TIME)
     :TIMESTAMP (Schema/TIMESTAMP)
 
-    ;; auto typee
+    ;; auto
     :AUTO_CONSUME (Schema/AUTO_CONSUME)
     :AUTO_PRODUCE_BYTES (Schema/AUTO_PRODUCE_BYTES)
     (throw (ex-info (format "Invalid value %s for tag %s" value tag)

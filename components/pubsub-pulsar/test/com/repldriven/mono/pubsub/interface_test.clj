@@ -108,13 +108,5 @@
   (def system-config (SUT/configure-system
                       (get-in @env/env [:system :pubsub])))
   (def running-system (system/start system-config))
-  (def service-url  (.getServiceUrl (system/instance running-system [:pubsub :admin])))
-  (def url (string/join "/" [service-url "admin/v2/namespaces" "tenant-1/namespace-1" "encryptionRequired"]))
-  (-> (http/res->json (http/request {:url url :method :get})))
   (system/stop running-system)
-
-  (require '[clojure.edn :as edn])
-  (= (-> "pubsub/user.avsc.edn" io/resource io/file slurp edn/read-string json/write-str)
-     (-> "schema-avro/user.avsc.json" io/resource io/file slurp json/read-str json/write-str))
-
  )

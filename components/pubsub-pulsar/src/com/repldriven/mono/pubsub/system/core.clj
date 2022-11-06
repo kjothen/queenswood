@@ -57,8 +57,8 @@
 (defmethod component :crypto-key-reader-2 [_ v]
   (system/merge-component-config components/crypto-key-reader v))
 
-(defmethod component :topics [_ v]
-  (system/merge-component-config components/topics v))
+(defmethod component :namespaces [_ v]
+  (system/merge-component-config components/namespaces v))
 
 (defmethod component :producer [_ v]
   (system/merge-component-config components/producer v))
@@ -68,6 +68,12 @@
 
 (defmethod component :schemas [_ v]
   (system/merge-component-config components/schemas v))
+
+(defmethod component :tenants [_ v]
+  (system/merge-component-config components/tenants v))
+
+(defmethod component :topics [_ v]
+  (system/merge-component-config components/topics v))
 
 (defn configure-component
   [m k v]
