@@ -19,6 +19,10 @@
   [kws]
   (donut/ref kws))
 
+(defn local-ref
+  [kws]
+  (donut/local-ref kws))
+
 (defn start
   ([config-name]
    (donut/start config-name))

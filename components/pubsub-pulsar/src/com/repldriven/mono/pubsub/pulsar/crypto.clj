@@ -21,43 +21,43 @@
 (defn key-pair-generator
   [named-kps]
   (reduce-kv
-   (fn [m k v]
-     (assoc m k
-            (let [kp (encryption/create-key-pair v)]
-              {:public-key (-> kp (get :public-key)
-                               (encryption/public-key->der-string))
-               :private-key (-> kp (get :private-key)
-                                (encryption/private-key->der-string))})))
-   {}
-   named-kps))
+    (fn [m k v]
+      (assoc m k
+        (let [kp (encryption/create-key-pair v)]
+          {:public-key (-> kp (get :public-key)
+                         (encryption/public-key->der-string))
+           :private-key (-> kp (get :private-key)
+                          (encryption/private-key->der-string))})))
+    {}
+    named-kps))
 
 (defn key-pair-file-reader
   [named-kps]
   (reduce-kv
-   (fn [m k v]
-     (assoc m k
-            {:public-key (read-file-as-bytes (:public-key v))
-             :private-key (read-file-as-bytes (:private-key v))}))
-     {}
-     named-kps))
+    (fn [m k v]
+      (assoc m k
+        {:public-key (read-file-as-bytes (:public-key v))
+         :private-key (read-file-as-bytes (:private-key v))}))
+    {}
+    named-kps))
 
 (defn key-reader
   [named-kps]
   (reify CryptoKeyReader
 
     (^EncryptionKeyInfo getPublicKey [this ^String keyName ^Map _metadata]
-     (log/info "Trying to read public key: find"
-               keyName "in" (keys (:keys named-kps)))
-     (when-let [k (get (get-crypto-key-pair keyName named-kps) :public-key)]
-       (doto (EncryptionKeyInfo.)
-         (.setKey k))))
+      (log/info "Trying to read public key: find"
+        keyName "in" (keys (:keys named-kps)))
+      (when-let [k (get (get-crypto-key-pair keyName named-kps) :public-key)]
+        (doto (EncryptionKeyInfo.)
+          (.setKey k))))
 
     (^EncryptionKeyInfo getPrivateKey [this ^String keyName ^Map _metadata]
-     (log/info "Trying to read private key: find"
-               keyName "in" (keys (:keys named-kps)))
-     (when-let [k (get (get-crypto-key-pair keyName named-kps) :private-key)]
-       (doto (EncryptionKeyInfo.)
-         (.setKey k))))))
+      (log/info "Trying to read private key: find"
+        keyName "in" (keys (:keys named-kps)))
+      (when-let [k (get (get-crypto-key-pair keyName named-kps) :private-key)]
+        (doto (EncryptionKeyInfo.)
+          (.setKey k))))))
 
 (comment
   (require '[com.repldriven.mono.encryption.interface :as encryption])

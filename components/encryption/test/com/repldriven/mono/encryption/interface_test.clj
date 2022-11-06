@@ -1,6 +1,6 @@
 (ns com.repldriven.mono.encryption.interface-test
-            [com.repldriven.mono.encryption.interface :as SUT])
   (:require [clojure.test :as test :refer [deftest is testing]]
+            [com.repldriven.mono.encryption.interface :as SUT])
   (:import (clojure.lang ExceptionInfo)))
 
 (deftest symmetric-key-test

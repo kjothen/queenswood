@@ -30,10 +30,12 @@
   [encoded-key]
   (core/public-key-x509-encoded->rsa encoded-key))
 
-(defn public-key->der-string [k]
+(defn public-key->der-string
+  [k]
   (core/public-key->der-string k))
 
-(defn private-key->der-string [k]
+(defn private-key->der-string
+  [k]
   (core/private-key->der-string k))
 
 (defn encrypt-str

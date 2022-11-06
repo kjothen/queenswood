@@ -17,12 +17,7 @@
    :admin {:service-http-url
            [#system :ref [:pubsub :container-service-http-url]]}
    :client {:service-url [#system :ref [:pubsub :container-service-url]]}
-   :schemas
-   {:user
-    {:type "AVRO"
-     :schema "pubsub/user.avsc.edn"
-     :properties {"__alwaysAllowNull" "false"
-                  "__jsr310ConversionEnabled" "true"}}}
+   :schemas {:user {:type "AVRO" :schema "schema-avro/user.avsc.json"}}
    :topics
    {:admin [#system :ref [:pubsub :admin]]
     :tenants [{:tenant "tenant-1"
@@ -55,12 +50,12 @@
    {:default-key "tenant-key-1"
     :keys [#system :ref [:pubsub :crypto-key-pair-file-reader]]}
    :crypto-key-reader-2
-   {:default-key "tenant-key-1"
+   {:default-key "tenant-key-2"
     :keys [#system :ref [:pubsub :crypto-key-pair-file-reader-2]]}
    :consumer
    {:_topics [#system :ref [:pubsub :topics]]
     :client [#system :ref [:pubsub :client]]
-    :conf {"cryptoFailureAction" #pulsar-crypto-failure-action :CONSUME
+    :conf {"cryptoFailureAction" #pubsub-crypto-failure-action :CONSUME
            "cryptoKeyReader" [#system :ref [:pubsub :crypto-key-reader]]
            "schema" #pubsub-schema :AUTO_CONSUME
            "subscriptionName" "tenant-1-subscriber"

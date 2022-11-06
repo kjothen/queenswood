@@ -9,9 +9,9 @@
            (org.apache.pulsar.common.protocol.schema PostSchemaPayload)
            (org.apache.pulsar.common.schema SchemaInfo)))
 
-;;---
-;;; tenants
-;;---
+;; ---
+;; tenants
+;; ---
 
 (defn ensure-tenant
   [^PulsarAdmin admin tenant-name
@@ -23,9 +23,9 @@
         (log/info "Creating tenant:" tenant-name)
         (.createTenant tenants tenant-name tenant-info)))))
 
-;;---
-;;; namespaces
-;;---
+;; ---
+;; namespaces
+;; ---
 
 (defn- configure-namespace
   [^PulsarAdmin admin fully-qualified-namespace-name config]
@@ -34,19 +34,19 @@
                                         fully-qualified-namespace-name])]
     (log/info "Configuring namespace:" fully-qualified-namespace-name config)
     (dorun
-     (map (fn [[method settings]]
-            (dorun
-             (map (fn [[k v]]
-                    (let [url (string/join "/" [namespace-url k])
-                          body (json/write-str v)
-                          headers {"Content-Type" "application/json"}
-                          res @(httpkit/request {:method method
-                                                 :url url
-                                                 :headers headers
-                                                 :body body})]
-                      (log/info res)))
-                  settings)))
-          config))))
+      (map (fn [[method settings]]
+             (dorun
+               (map (fn [[k v]]
+                      (let [url (string/join "/" [namespace-url k])
+                            body (json/write-str v)
+                            headers {"Content-Type" "application/json"}
+                            res @(httpkit/request {:method method
+                                                   :url url
+                                                   :headers headers
+                                                   :body body})]
+                        (log/info res)))
+                 settings)))
+        config))))
 
 (defn ensure-namespace
   [^PulsarAdmin admin fully-qualified-namespace-name &
@@ -59,12 +59,12 @@
           (.createNamespace namespaces fully-qualified-namespace-name)
           (when (some? config)
             (configure-namespace admin
-                                 fully-qualified-namespace-name
-                                 config))))))
+              fully-qualified-namespace-name
+              config))))))
 
-;;---
-;;; topics
-;;---
+;; ---
+;; topics
+;; ---
 
 (defn- ensure-topic-schema
   [^PulsarAdmin admin fully-qualified-topic-name schema]
@@ -81,12 +81,12 @@
     (let [^Topics topics (.topics admin)
           domain-name (.getDomain topic-name)
           topic-names (.getList topics
-                                fully-qualified-namespace-name
-                                domain-name)]
+                        fully-qualified-namespace-name
+                        domain-name)]
       (when-not (contains? (set topic-names) fully-qualified-topic-name)
         (log/info "Creating topic:" fully-qualified-topic-name)
         (.createPartitionedTopic topics
-                                 fully-qualified-topic-name
-                                 partitions)
+          fully-qualified-topic-name
+          partitions)
         (when (some? schema)
           (ensure-topic-schema admin fully-qualified-topic-name schema))))))

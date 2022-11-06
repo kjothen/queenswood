@@ -29,28 +29,28 @@
           app
           (fn [ctx]
             (http/ring-handler
-             (http/router
-              ["/api"
-               {:interceptors (:interceptors ctx)}
-               ["/interceptors"
-                {:get {:handler
-                       (fn [req]
-                         {:status 200
-                          :body (select-keys req (keys test-data))})}}]]
-              {:data
-               {:muuntaja m/instance
-                :interceptors [(muuntaja/format-response-interceptor)
-                               (coercion/coerce-response-interceptor)]}})
-             (ring/create-default-handler)
-             {:executor sieppari/executor}))
+              (http/router
+                ["/api"
+                 {:interceptors (:interceptors ctx)}
+                 ["/interceptors"
+                  {:get {:handler
+                         (fn [req]
+                           {:status 200
+                            :body (select-keys req (keys test-data))})}}]]
+                {:data
+                 {:muuntaja m/instance
+                  :interceptors [(muuntaja/format-response-interceptor)
+                                 (coercion/coerce-response-interceptor)]}})
+              (ring/create-default-handler)
+              {:executor sieppari/executor}))
           system-config
           (-> @env/env
-              (assoc-in [:system :ring :jetty-adapter :handler] app)
-              (assoc-in [:system :ring :interceptors] test-data))]
+            (assoc-in [:system :ring :jetty-adapter :handler] app)
+            (assoc-in [:system :ring :interceptors] test-data))]
       (with-system [sys (SUT/configure (get-in system-config [:system :ring]))]
         (let [exposed-port (get-in (system/config sys :ring :jetty-adapter)
-                                   [:options :port])
+                             [:options :port])
               url (str "http://localhost:" exposed-port "/api/interceptors")
               res @(httpkit/get url)]
           (is (= (json/read-str (:body res) :key-fn keyword)
-                 test-data)))))))
+                test-data)))))))

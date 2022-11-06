@@ -27,8 +27,8 @@
   (testing "Connection must be valid")
   (let [datasource (system/instance *sys* [:sql :datasource])]
     (is (= [{:?column? 1}]
-           (jdbc/execute! datasource ["select 1"]
-                          {:builder-fn rs/as-unqualified-lower-maps})))))
+          (jdbc/execute! datasource ["select 1"]
+            {:builder-fn rs/as-unqualified-lower-maps})))))
 
 (comment
   (env/set-env! (io/resource "sql/test-env.edn") :test)

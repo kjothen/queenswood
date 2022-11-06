@@ -1,12 +1,15 @@
 {:paths   []
  :deps    {component/cli               {:local/root "../../components/cli"}
+           component/encryption        {:local/root "../../components/encryption"}
            component/env               {:local/root "../../components/env"}
+           component/http              {:local/root "../../components/http"}
            component/log               {:local/root "../../components/log"}
-           component/pubsub            {:local/root "../../components/pubsub"}
-           component/pulsar            {:local/root "../../components/pulsar"}
+           component/pubsub            {:local/root "../../components/pubsub-pulsar"}
+           component/schema-avro       {:local/root "../../components/schema-avro"}
            component/spec              {:local/root "../../components/spec"}
            component/system            {:local/root "../../components/system"}
-           component/testcontainers-system      {:local/root "../../components/testcontainers-system"}
+           component/testcontainers-system
+           {:local/root "../../components/testcontainers-system"}
            base/pulsar-reader          {:local/root "../../bases/pulsar-reader"}
            org.clojure/clojure         {:mvn/version "1.11.1"}}
 

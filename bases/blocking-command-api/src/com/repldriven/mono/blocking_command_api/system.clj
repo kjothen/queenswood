@@ -1,12 +1,12 @@
 (ns com.repldriven.mono.blocking-command-api.system
   (:require [com.repldriven.mono.ring.interface :as ring]
             [com.repldriven.mono.mqtt.interface :as mqtt]
-            [com.repldriven.mono.pulsar.interface :as pulsar]))
+            [com.repldriven.mono.pubsub.interface :as pubsub]))
 
 (defmulti system (fn [k _] k))
 (defmethod system :default [k v] {:system/defs {k v}})
 (defmethod system :ring [_ v] (ring/configure-system v))
-(defmethod system :pulsar [_ v] (pulsar/configure-system v))
+(defmethod system :pubsub [_ v] (pubsub/configure-system v))
 (defmethod system :mqtt [_ v] (mqtt/configure-system v))
 
 (defn configure-system

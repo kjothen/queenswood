@@ -9,11 +9,11 @@
 
 (defmethod component :interceptors [_ v]
   (system/merge-component-config
-   embedded-components/interceptors v))
+    embedded-components/interceptors v))
 
 (defmethod component :jetty-adapter [_ v]
   (system/merge-component-config
-   embedded-components/jetty-adapter v))
+    embedded-components/jetty-adapter v))
 
 (defn configure-component
   [m k v]

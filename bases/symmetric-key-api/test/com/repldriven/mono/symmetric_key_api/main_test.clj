@@ -17,7 +17,7 @@
   (testing "Ops should be able to start the system from the main entry point"
     (try
       (SUT/-main "-c" (io/as-file (io/resource "symmetric-key-api/test-env.edn"))
-                 "-p" "test")
+        "-p" "test")
       (is (some? @SUT/system))
       (catch Exception e
         (assert false (format "Unable to start system, %s" e)))

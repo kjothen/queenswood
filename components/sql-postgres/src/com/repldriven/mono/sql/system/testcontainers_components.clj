@@ -2,7 +2,7 @@
   (:require [clj-test-containers.core :as tc]
             [com.repldriven.mono.log.interface :as log])
   (:import (org.testcontainers.containers ContainerLaunchException
-                                          PostgreSQLContainer)
+             PostgreSQLContainer)
            (org.testcontainers.utility DockerImageName)))
 
 (def default-exposed-port 5432)
@@ -14,9 +14,9 @@
     (try
       (log/info "Starting postgres container")
       (-> (tc/init {:container (PostgreSQLContainer.
-                                (DockerImageName/parse docker-image-name))
+                                 (DockerImageName/parse docker-image-name))
                     :exposed-ports [exposed-port]})
-          (tc/start!))
+        (tc/start!))
       (catch ContainerLaunchException e
         (log/error "Failed to start postgres container, %s" e)))))
 

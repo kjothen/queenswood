@@ -1,9 +1,9 @@
 (ns com.repldriven.mono.pulsar-reader.system
-  (:require [com.repldriven.mono.pulsar.interface :as pulsar]))
+  (:require [com.repldriven.mono.pubsub.interface :as pubsub]))
 
 (defmulti system (fn [k _] k))
 (defmethod system :default [_ v] v)
-(defmethod system :pulsar [_ v] (pulsar/configure-system v))
+(defmethod system :pubsub [_ v] (pubsub/configure-system v))
 
 (defn configure-system
   [m k v]

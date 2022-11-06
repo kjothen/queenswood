@@ -1,0 +1,4 @@
+{:paths ["src" "resources"]
+ :deps {deercreeklabs/lancaster {:mvn/version "0.9.22"}}
+ :aliases {:test {:extra-paths ["test"]
+                  :extra-deps {}}}}

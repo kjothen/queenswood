@@ -1,4 +1,10 @@
 {:paths ["src" "resources"]
- :deps {com.taoensso/timbre {:mvn/version "5.2.1"}}
+ :deps {com.taoensso/timbre {:mvn/version "5.2.1"}
+        org.slf4j/slf4j-api {:mvn/version "1.7.36"}
+        org.slf4j/jul-to-slf4j {:mvn/version "1.7.36"}
+        org.slf4j/jcl-over-slf4j {:mvn/version "1.7.36"}
+        org.slf4j/log4j-over-slf4j {:mvn/version "1.7.36"}
+        org.slf4j/osgi-over-slf4j {:mvn/version "1.7.36"}
+        ch.qos.logback/logback-classic {:mvn/version "1.4.4"}}
  :aliases {:test {:extra-paths ["test"]
                   :extra-deps []}}}

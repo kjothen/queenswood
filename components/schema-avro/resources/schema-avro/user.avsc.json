@@ -1,0 +1,9 @@
+{
+    "type": "record",
+    "name": "User",
+    "namespace": "com.repldriven.mono",
+    "fields": [
+        { "name": "name", "type": "string" },
+        { "name": "age",  "type": ["null", "long"], "default": null }
+    ]
+}

@@ -14,20 +14,24 @@
 
 (def default-docker-image-name "apachepulsar/pulsar:latest")
 
+(defn- start-container
+  [config]
+  (let [{:keys [docker-image-name exposed-ports]} config]
+    (try
+      (log/info "Starting pulsar container")
+      (let [container (-> (DockerImageName/parse docker-image-name)
+                        (.asCompatibleSubstituteFor "apachepulsar/pulsar")
+                        (PulsarContainer.))]
+        (some-> (tc/init {:container container
+                          :exposed-ports exposed-ports})
+          (tc/start!)))
+      (catch ContainerLaunchException e
+        (log/error "Failed to start pulsar container, %s" e)))))
+
 (def container
-  {:system/start
-   (fn [{:system/keys [config instance]}]
-     (or instance
-         (let [{:keys [docker-image-name exposed-ports]} config]
-           (try
-             (let [container (-> (DockerImageName/parse docker-image-name)
-                               (.asCompatibleSubstituteFor "apachepulsar/pulsar")
-                               (PulsarContainer.))]
-               (some-> (tc/init {:container container
-                                 :exposed-ports exposed-ports})
-                 (tc/start!)))
-             (catch ContainerLaunchException e
-               (log/error "Failed to start pulsar container, %s" e)))))),
-   :system/stop (fn [{:system/keys [instance]}] (tc/stop! instance)),
+  {:system/start (fn [{:system/keys [config instance]}]
+                   (or instance (start-container config)))
+   :system/stop (fn [{:system/keys [instance]}]
+                  (tc/stop! instance)),
    :system/config {:docker-image-name default-docker-image-name,
                    :exposed-ports default-exposed-ports}})

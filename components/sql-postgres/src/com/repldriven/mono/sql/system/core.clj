@@ -12,15 +12,15 @@
 
 (defmethod component :container [_ v]
   (system/merge-component-config
-   testcontainers-components/container v))
+    testcontainers-components/container v))
 
 (defmethod component :container-mapped-exposed-port [_ v]
   (system/merge-component-config
-   testcontainers-system/container-mapped-exposed-port v))
+    testcontainers-system/container-mapped-exposed-port v))
 
 (defmethod component :datasource [_ v]
   (system/merge-component-config
-   components/datasource v))
+    components/datasource v))
 
 (defn configure-component
   [m k v]

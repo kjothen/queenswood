@@ -21,14 +21,19 @@
             PulsarAdminException]
            [org.apache.pulsar.common.protocol.schema PostSchemaPayload]))
 
-(defn- start [instance start-fn] (or instance (start-fn)))
-(defn- stop [instance stop-fn] (when (some? instance) (stop-fn)))
+(defn- start
+  [instance start-fn]
+  (or instance (start-fn)))
+
+(defn- stop
+  [instance stop-fn]
+  (when (some? instance) (stop-fn)))
 
 (declare resolve-schema)
 
-;;---
-;;; admin
-;;---
+;; ---
+;; admin
+;; ---
 
 (defn- ^PulsarAdmin start-admin
   [config]
@@ -36,9 +41,9 @@
     (try
       (log/info "Opening pulsar admin connection:" service-http-url)
       (builder/to-java PulsarAdmin
-                       (PulsarAdmin/builder)
-                       {:serviceHttpUrl service-http-url}
-                       {:builder-class PulsarAdminBuilder})
+        (PulsarAdmin/builder)
+        {:serviceHttpUrl service-http-url}
+        {:builder-class PulsarAdminBuilder})
       (catch PulsarAdminException e
         (log/error (format "Failed to open pulsar admin connection, %s" e))))))
 
@@ -58,9 +63,9 @@
                   (stop instance #(stop-admin instance)))
    :system/config {:service-http-url system/required-component}})
 
-;;---
-;;; client
-;;---
+;; ---
+;; client
+;; ---
 
 (defn- ^PulsarClient start-client
   [config]
@@ -68,9 +73,9 @@
     (try
       (log/info "Opening pulsar client connection:" service-url)
       (builder/to-java PulsarClient
-                       (PulsarClient/builder)
-                       {:serviceUrl service-url}
-                       {:builder-class ClientBuilder})
+        (PulsarClient/builder)
+        {:serviceUrl service-url}
+        {:builder-class ClientBuilder})
       (catch PulsarClientException e
         (log/error (format "Failed to open pulsar client connection, %s" e))))))
 
@@ -89,9 +94,9 @@
                   (stop instance #(stop-client instance)))
    :system/config {:service-url system/required-component}})
 
-;;---
-;;; consumer
-;;---
+;; ---
+;; consumer
+;; ---
 
 (defn- ^Consumer start-consumer
   [config]
@@ -104,10 +109,10 @@
             instance (if (some? schema)
                        (.. client (newConsumer (resolve-schema schemas schema)))
                        (.. client newConsumer))]
-         (prn auto-conf)
-         (cond-> (.. instance (loadConf auto-conf))
-           (some? cryptoKeyReader) (.cryptoKeyReader cryptoKeyReader)
-           true (.subscribe)))
+        (prn auto-conf)
+        (cond-> (.. instance (loadConf auto-conf))
+          (some? cryptoKeyReader) (.cryptoKeyReader cryptoKeyReader)
+          true (.subscribe)))
       (catch PulsarClientException e
         (log/error (format "Failed to open pulsar consumer, %s" e))))))
 
@@ -127,9 +132,9 @@
    :system/config {:client system/required-component
                    :conf system/required-component}})
 
-;;---
-;;; crypto
-;;---
+;; ---
+;; crypto
+;; ---
 
 (def crypto-key-pair-generator
   {:system/start
@@ -163,9 +168,9 @@
   [producer ks]
   (reduce #(.addEncryptionKey %1 %2) producer ks))
 
-;;---
-;;; producer
-;;---
+;; ---
+;; producer
+;; ---
 
 (defn- ^Producer start-producer
   [config]
@@ -201,9 +206,9 @@
    :system/config {:client system/required-component
                    :conf system/required-component}})
 
-;;---
-;;; reader
-;;---
+;; ---
+;; reader
+;; ---
 
 (defn- ^Consumer start-reader
   [config]
@@ -239,16 +244,16 @@
    :system/config {:client system/required-component
                    :conf system/required-component}})
 
-;;---
-;;; schema
-;;---
+;; ---
+;; schema
+;; ---
 
 (defn- build-schema-payload
   [type schema properties]
   (PostSchemaPayload.
-   (or type "")
-   (if (some? schema) (json/write-str schema) "")
-   (or properties {})))
+    (or type "")
+    (if (some? schema) (json/write-str schema) "")
+    (or properties {})))
 
 (defn- build-schema
   [type schema properties]
@@ -288,19 +293,8 @@
 
 (defn- load-schema
   [f]
-  (-> f io/resource io/file slurp edn/read-string))
+  (-> f io/resource io/file slurp json/read-str))
 
-(defn- build-schemas
-  [config]
-  (reduce-kv
-   (fn [m k {:keys [type schema properties]}]
-     (let [resolved-schema (cond-> schema (string? schema) (load-schema))]
-       (let [payload (build-schema-payload type resolved-schema properties)
-             schema' (build-schema type resolved-schema properties)]
-         (assoc m k {:payload payload
-                     :schema schema'}))))
-   {}
-   config))
 
 (defn- resolve-schema
   [schemas schema']
@@ -317,42 +311,54 @@
     (map? schema') (let [{:keys [type schema properties]} schema']
                      (build-schema-payload type schema properties))
     :else (throw (ex-info
-                  (format "Invalid value %s for schema payload" schema')
-                  {:schema schema'}))))
+                   (format "Invalid value %s for schema payload" schema')
+                   {:schema schema'}))))
+
+(defn- build-schemas
+  [config]
+  (reduce-kv
+   (fn [m k {:keys [type schema properties]}]
+     (let [resolved-schema (cond-> schema (string? schema) (load-schema))]
+       (let [payload (build-schema-payload type resolved-schema properties)
+             schema' (build-schema type resolved-schema properties)]
+         (assoc m k {:payload payload
+                     :schema schema'}))))
+   {}
+   config))
 
 (def schemas
   {:system/start (fn [{:system/keys [config instance]}]
                    (start instance #(build-schemas config)))
    :system/config system/required-component})
 
-;;---
-;;; topic
-;;---
+;; ---
+;; topic
+;; ---
 
 (defn- configure-tenants
   [^PulsarAdmin admin tenants]
   (log/info "Ensure pulsar tenants are configured:" tenants)
   (doall
-   (mapv (fn [{:keys [tenant] :as opts}]
-           (admin/ensure-tenant admin tenant (dissoc opts :tenant)))
-         tenants)))
+    (mapv (fn [{:keys [tenant] :as opts}]
+            (admin/ensure-tenant admin tenant (dissoc opts :tenant)))
+      tenants)))
 
 (defn- configure-namespaces
   [^PulsarAdmin admin namespaces]
   (log/info "Ensure pulsar namespaces are configured:" namespaces)
   (doall
-   (mapv (fn [{:keys [namespace] :as opts}]
-           (admin/ensure-namespace admin namespace (dissoc opts :tenant)))
-         namespaces)))
+    (mapv (fn [{:keys [namespace] :as opts}]
+            (admin/ensure-namespace admin namespace (dissoc opts :tenant)))
+      namespaces)))
 
 (defn- configure-topics
   [^PulsarAdmin admin schemas topics]
   (log/info "Ensure pulsar topics are configured:" topics)
   (doall
-   (mapv
-    (fn [{:keys [topic] :as opts}]
-      (let [resolved-opts (update opts :schema #(resolve-schema-payload schemas %))]
-            (admin/ensure-topic admin topic (dissoc resolved-opts :topic))))
+    (mapv
+      (fn [{:keys [topic] :as opts}]
+        (let [resolved-opts (update opts :schema #(resolve-schema-payload schemas %))]
+          (admin/ensure-topic admin topic (dissoc resolved-opts :topic))))
       topics)))
 
 (def topics

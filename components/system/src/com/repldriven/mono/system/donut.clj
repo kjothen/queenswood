@@ -20,8 +20,9 @@
         (if (fn? x)
           (fn [to-ns-map]
             (x (reduce-kv
-                (fn [m k v] (assoc m (if (match-ns-keyword? k to-ns)
-                                       (keyword from-ns (name k)) k) v))
+                 (fn [m k v]
+                   (assoc m (if (match-ns-keyword? k to-ns)
+                              (keyword from-ns (name k)) k) v))
                  {}
                  to-ns-map)))
           x))) m))
@@ -31,6 +32,10 @@
 (defn ref
   [kws]
   (ds/ref kws))
+
+(defn local-ref
+  [kws]
+  (ds/local-ref kws))
 
 (defn system?
   [config-name]
@@ -45,13 +50,13 @@
   ([config-name custom-config]
    (try
      (ds/start (nsmap->nsmap config-name mono-system-ns donut-system-ns)
-               custom-config)
+       custom-config)
      (catch Exception e
        (log/error (format "Error starting system: %s" e)))))
   ([config-name custom-config component-ids]
    (try
      (ds/start (nsmap->nsmap config-name mono-system-ns donut-system-ns)
-               custom-config component-ids)
+       custom-config component-ids)
      (catch Exception e
        (log/error (format "Error starting system: %s" e))))))
 
