@@ -31,6 +31,10 @@
     (catch PulsarClientException e
       (log/error (format "Failed to close pulsar %s connection, %s" n e)))))
 
+(def named-component
+  {:system/start (fn [{:system/keys [config]}] config)
+   :system/config system/required-component})
+
 ;; ---
 ;; admin
 ;; ---
@@ -58,6 +62,21 @@
 ;; consumer
 ;; ---
 
+(def consumers
+  {:system/start
+   (fn [{:system/keys [config instance]}]
+     (or instance (reduce-kv
+                   (fn [m k v]
+                     (assoc m k (consumer/create v)))
+                   {} config)))
+   :system/stop (fn [{:system/keys [instance]}]
+                  (when (some? instance)
+                    (dorun
+                     (map (fn [[_ instance]]
+                            (close-client-connection instance "consumer"))
+                          instance))))
+   :system/config system/required-component})
+
 (def consumer
   {:system/start (fn [{:system/keys [config instance]}]
                    (or instance (consumer/create config)))
@@ -79,23 +98,38 @@
            (crypto/key-pair-generator config))))
    :system/config system/required-component})
 
-(def crypto-key-pair-file-reader
+; crypto-key-pair-file-reader(s)
+(def crypto-key-pair-file-readers
   {:system/start
    (fn [{:system/keys [config instance]}]
      (or instance
-         (do
-           (log/info "Creating pulsar crypto-key-pair-file-reader: " config)
-           (crypto/key-pair-file-reader config))))
+         (reduce-kv
+          (fn [m k v]
+              (assoc m k (crypto/key-pair-file-reader v)))
+          {} config)))
+   :system/config system/required-component})
+
+(def crypto-key-pair-file-reader
+  {:system/start
+   (fn [{:system/keys [config instance]}]
+     (or instance (crypto/key-pair-file-reader config)))
+   :system/config system/required-component})
+
+; crypto-key-reader(s)
+(def crypto-key-readers
+  {:system/start
+   (fn [{:system/keys [config instance]}]
+     (or instance
+         (reduce-kv
+          (fn [m k v]
+              (assoc m k (crypto/key-reader v)))
+          {} config)))
    :system/config system/required-component})
 
 (def crypto-key-reader
   {:system/start
    (fn [{:system/keys [config instance]}]
-     (or instance
-         (do
-           (log/info "Creating pulsar crypto-key-reader: " config)
-
-           (crypto/key-reader config))))
+     (or instance (crypto/key-reader config)))
    :system/config system/required-component})
 
 ;; ---

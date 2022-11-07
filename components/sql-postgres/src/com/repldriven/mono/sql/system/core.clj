@@ -18,6 +18,10 @@
   (system/merge-component-config
     testcontainers-system/container-mapped-exposed-port v))
 
+(defmethod component :datasources [_ v]
+  (system/merge-component-config
+   components/datasources v))
+
 (defmethod component :datasource [_ v]
   (system/merge-component-config
     components/datasource v))

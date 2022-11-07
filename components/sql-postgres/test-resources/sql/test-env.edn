@@ -4,8 +4,13 @@
                :exposed-port 5432}
    :container-mapped-exposed-port {:container [#system :ref [:sql :container]]
                                    :exposed-port 5432}
-   :datasource {:host "localhost"
-                :port [#system :ref [:sql :container-mapped-exposed-port]]
-                :user "test"
-                :password "test"
-                :dbtype "postgres"}}}}
+   :datasources
+   {:a {:port [#system :ref [:sql :container-mapped-exposed-port]]
+        :user "test"
+        :password "test"
+        :dbtype "postgres"}
+    :b {:port [#system :ref [:sql :container-mapped-exposed-port]]
+        :user "test"
+        :password "test"
+        :dbtype "postgres"}}
+   :datasource [#system :ref [:sql :datasources :b]]}}}

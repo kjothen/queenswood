@@ -45,7 +45,7 @@
 (deftest encrypted-message-matching-consumer-key-test
   (testing "Pulsar consumer with a matching decryption key can consume"
     (let [producer (system/instance *sys* [:pubsub :producer])
-          consumer (system/instance *sys* [:pubsub :consumer])
+          consumer (system/instance *sys* [:pubsub :consumers :1])
           schemas (system/instance *sys* [:pubsub :schemas])]
 
       (let [schema (schema-avro/json->schema
@@ -65,7 +65,7 @@
 (deftest encrypted-message-mismatched-consumer-key-test
   (testing "Pulsar consumer with a mismatching decryption key cannot consume"
     (let [producer (system/instance *sys* [:pubsub :producer])
-          consumer (system/instance *sys* [:pubsub :consumer-2])
+          consumer (system/instance *sys* [:pubsub :consumers :2])
           schemas (system/instance *sys* [:pubsub :schemas])]
 
       (let [schema (schema-avro/json->schema
@@ -90,8 +90,8 @@
             namespace-url (string/join
                             "/" [namespaces-url "tenant-1/namespace-1"])
             expected {"autoTopicCreation" {"topicType" "string"
-                                           "defaultNumPartitions" 1
                                            "allowAutoTopicCreation" false}
+                                           "defaultNumPartitions" 1
                       "encryptionRequired" true
                       "isAllowAutoUpdateSchema" false
                       "schemaCompatibilityStrategy" "FULL"

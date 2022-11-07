@@ -2,6 +2,11 @@
   (:require [com.repldriven.mono.system.interface :as system]
             [next.jdbc]))
 
+(def datasources
+  {:system/start (fn [{:system/keys [config]}]
+                   config)
+   :system/config  system/required-component})
+
 (def datasource
   {:system/start (fn [{:system/keys [config]}]
                    (next.jdbc/get-datasource config))
