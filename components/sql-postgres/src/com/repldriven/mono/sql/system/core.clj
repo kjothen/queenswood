@@ -24,7 +24,7 @@
 
 (defmethod component :datasource [_ v]
   (system/merge-component-config
-    components/datasource v))
+   components/datasource v))
 
 (defn configure-component
   [m k v]

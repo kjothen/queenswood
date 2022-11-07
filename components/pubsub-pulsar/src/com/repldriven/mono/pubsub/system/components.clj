@@ -63,18 +63,18 @@
 ;; ---
 
 (def consumers
-  {:system/start
-   (fn [{:system/keys [config instance]}]
-     (or instance (reduce-kv
-                   (fn [m k v]
-                     (assoc m k (consumer/create v)))
-                   {} config)))
+  {:system/start (fn [{:system/keys [config instance]}]
+                   (or instance
+                       (reduce-kv
+                        (fn [m k v]
+                          (assoc m k (consumer/create v)))
+                        {} config)))
    :system/stop (fn [{:system/keys [instance]}]
                   (when (some? instance)
-                    (dorun
-                     (map (fn [[_ instance]]
-                            (close-client-connection instance "consumer"))
-                          instance))))
+                    (dorun (map
+                            (fn [[_ instance]]
+                              (close-client-connection instance "consumer"))
+                            instance))))
    :system/config system/required-component})
 
 (def consumer
@@ -104,8 +104,7 @@
    (fn [{:system/keys [config instance]}]
      (or instance
          (reduce-kv
-          (fn [m k v]
-              (assoc m k (crypto/key-pair-file-reader v)))
+          (fn [m k v] (assoc m k (crypto/key-pair-file-reader v)))
           {} config)))
    :system/config system/required-component})
 
@@ -121,8 +120,7 @@
    (fn [{:system/keys [config instance]}]
      (or instance
          (reduce-kv
-          (fn [m k v]
-              (assoc m k (crypto/key-reader v)))
+          (fn [m k v] (assoc m k (crypto/key-reader v)))
           {} config)))
    :system/config system/required-component})
 

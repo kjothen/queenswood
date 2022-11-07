@@ -4,10 +4,11 @@
 
 (def datasources
   {:system/start (fn [{:system/keys [config]}]
-                   config)
+                   (reduce-kv
+                    (fn [m k v] (assoc m k (next.jdbc/get-datasource v)))
+                      {} config))
    :system/config  system/required-component})
 
 (def datasource
-  {:system/start (fn [{:system/keys [config]}]
-                   (next.jdbc/get-datasource config))
+  {:system/start (fn [{:system/keys [config]}] config)
    :system/config  system/required-component})
