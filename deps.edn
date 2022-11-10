@@ -3,8 +3,8 @@
   {:extra-deps {io.github.clojure/tools.build
                 {:git/sha "7d40500", :git/tag "v0.8.1"}}}
   :poly
-  {:extra-deps {polylith/clj-poly {:mvn/version "0.2.14-alpha"}}
-   :jvm-opts ["-Dclojure.tools.logging.factory=clojure.tools.logging.impl/log4j2-factory"],
+  {:extra-deps {polylith/clj-poly {:mvn/version "0.2.15-alpha"}}
+   :jvm-opts ["-Dclojure.tools.logging.factory=clojure.tools.logging.impl/slf4j-factory"],
    :main-opts ["-m" "polylith.clj.core.poly-cli.core"]}
   :dev
   {:extra-deps {components/cli {:local/root "components/cli"}
@@ -15,11 +15,11 @@
                 components/log {:local/root "components/log"}
                 components/migrator {:local/root "components/migrator"}
                 components/mqtt {:local/root "components/mqtt"}
-                components/pubsub-pulsar {:local/root "components/pubsub-pulsar"}
+                components/pubsub {:local/root "components/pubsub-pulsar"}
                 components/ring {:local/root "components/ring"}
                 components/schema-avro {:local/root "components/schema-avro"}
                 components/spec {:local/root "components/spec"}
-                components/sql-postgres {:local/root "components/sql-postgres"}
+                components/sql {:local/root "components/sql-postgres"}
                 components/system {:local/root "components/system"}
                 components/testcontainers-system
                 {:local/root "components/testcontainers-system"}
@@ -29,10 +29,18 @@
                 bases/build {:local/root "bases/build"}
                 bases/pulsar-reader {:local/root "bases/pulsar-reader"}
                 bases/symmetric-key-api {:local/root "bases/symmetric-key-api"}
-                jinx/jinx {:mvn/version "0.1.6"}}
+                ;  use logback for the slf4j logging backend
+                ch.qos.logback/logback-classic {:mvn/version "1.4.4"}
+                ; redirect logging to the slf4j frontend
+                org.slf4j/jcl-over-slf4j {:mvn/version "1.7.36"}
+                org.slf4j/log4j-over-slf4j {:mvn/version "1.7.36"}
+                org.apache.logging.log4j/log4j-to-slf4j {:mvn/version "2.19.0"}
+                org.slf4j/osgi-over-slf4j {:mvn/version "1.7.36"}
+                org.slf4j/jul-to-slf4j {:mvn/version "1.7.36"}}
    :extra-paths ["development/resources"]}
   :test
-  {:extra-deps {http-kit/http-kit {:mvn/version "2.5.3"}}
+  {:extra-deps {:extra-paths []
+                :extra-deps  {}}
    :extra-paths ["components/cli/test"
                  "components/env/test"
                  "components/env/test-resources"
@@ -63,6 +71,4 @@
                  "bases/pulsar-reader/test-resources"
                  "bases/symmetric-key-api/test"
                  "bases/symmetric-key-api/test-resources"]}}
- :mvn/repos {"maven" {:url "https://packages.confluent.io/maven"}}
- :deps
- {}}
+ :mvn/repos {"maven" {:url "https://packages.confluent.io/maven"}}}

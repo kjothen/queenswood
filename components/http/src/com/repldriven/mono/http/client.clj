@@ -12,8 +12,12 @@
 
 (defn res->json
   [res]
-  (some-> res :body json/read-str))
+  (when-let [{:keys [body headers]} res]
+    (when (= "application/json" (:content-type headers))
+      (json/read-str body))))
 
 (comment
   (res->json {:body "{\"a\":1,\"b\":2}"})
+  (res->json {:headers {:content-type "application/json"}
+              :body "{\"a\":1,\"b\":2}"})
   )

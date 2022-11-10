@@ -1,15 +1,26 @@
 (ns com.repldriven.mono.log.core
-  (:require [taoensso.timbre :as timbre]))
+  (:require [clojure.tools.logging :as log]))
 
 (defmacro info
-  [args]
-  `(timbre/log! :info :p ~args))
+  [& args]
+  `(log/info ~@args))
+
+(defmacro infof
+  [& args]
+  `(log/infof ~@args))
 
 (defmacro warn
-  [args]
-  `(timbre/log! :warn :p ~args))
+  [& args]
+  `(log/warn ~@args))
+
+(defmacro warnf
+  [& args]
+  `(log/warnf ~@args))
 
 (defmacro error
-  [args]
-  `(timbre/log! :error :p ~args))
+  [& args]
+  `(log/error ~@args))
 
+(defmacro errorf
+  [& args]
+  `(log/errorf ~@args))

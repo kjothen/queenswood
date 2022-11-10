@@ -1,4 +1,4 @@
 {:paths ["src" "resources"]
- :deps {medley/medley {:mvn/version "1.4.0"}}
+ :deps {}
  :aliases {:test {:extra-paths ["test" "test-resources"]
                   :extra-deps {}}}}

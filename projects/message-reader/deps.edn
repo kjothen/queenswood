@@ -1,4 +1,4 @@
-{:paths   []
+{:paths   ["resources"]
  :deps    {component/cli               {:local/root "../../components/cli"}
            component/encryption        {:local/root "../../components/encryption"}
            component/env               {:local/root "../../components/env"}
@@ -11,13 +11,23 @@
            component/testcontainers-system
            {:local/root "../../components/testcontainers-system"}
            base/pulsar-reader          {:local/root "../../bases/pulsar-reader"}
-           org.clojure/clojure         {:mvn/version "1.11.1"}}
 
+           ;; use logback for the slf4j logging backend
+           ch.qos.logback/logback-classic {:mvn/version "1.4.4"}
+           ;; redirect logging to the slf4j frontend
+           org.slf4j/jcl-over-slf4j {:mvn/version "2.0.3"}
+           org.slf4j/log4j-over-slf4j {:mvn/version "2.0.3"}
+           org.apache.logging.log4j/log4j-to-slf4j {:mvn/version "2.19.0"}
+           org.slf4j/osgi-over-slf4j {:mvn/version "2.0.3"}
+           org.slf4j/jul-to-slf4j {:mvn/version "2.0.3"}
+
+           org.clojure/clojure         {:mvn/version "1.11.1"}}
  :aliases {:build {:deps       {base/build {:local/root "../../bases/build"}}
                    :ns-default com.repldriven.mono.build.build
                    :exec-args  {:major-minor-version "0.0"
                                 :main                com.repldriven.mono.pulsar-reader.main
                                 :lib                 'com.repldriven.mono/message-reader}}
            :test  {:extra-paths []
-                   :extra-deps  {org.clojure/test.check    {:mvn/version "1.1.1"}}
+                   :extra-deps  {org.clojure/test.check    {:mvn/version "1.1.1"}
+                                 io.github.cognitect-labs/test-runner {:git/tag "v0.5.1" :git/sha "dfb30dd"}}
                    :exec-fn     cognitect.test-runner.api/test}}}

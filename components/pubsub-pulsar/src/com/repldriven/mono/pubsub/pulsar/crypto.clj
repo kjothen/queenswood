@@ -15,7 +15,11 @@
 
 (defn- read-file-as-bytes
   [f]
-  (-> f io/resource io/file slurp .getBytes))
+  (if-let [h (some-> f io/resource io/file)]
+    (do
+      (log/info "Loading file: " f)
+      (some-> h slurp .getBytes))
+    (log/error "Unable to load file: " f)))
 
 ;; TODO: ->der-string does not work, require ->pem-string instead
 (defn key-pair-generator

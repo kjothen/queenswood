@@ -1,19 +1,30 @@
 (ns com.repldriven.mono.log.interface
-  (:require [com.repldriven.mono.log.config :as config]
-            [com.repldriven.mono.log.core :as core]))
+  (:require [com.repldriven.mono.log.core :as core]))
 
 (defn init
-  ([] (config/init :default))
-  ([profile] (config/init profile)))
+  ([])
+  ([profile]))
 
 (defmacro info
   [& args]
-  `(core/info ~args))
+  `(core/info ~@args))
+
+(defmacro infof
+  [& args]
+  `(core/infof ~@args))
 
 (defmacro warn
   [& args]
-  `(core/warn ~args))
+  `(core/warn ~@args))
+
+(defmacro warnf
+  [& args]
+  `(core/warnf ~@args))
 
 (defmacro error
   [& args]
-  `(core/error ~args))
+  `(core/error ~@args))
+
+(defmacro errorf
+  [& args]
+  `(core/errorf ~@args))

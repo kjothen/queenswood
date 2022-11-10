@@ -7,7 +7,7 @@
 (defn ^PulsarAdmin create
   [{:keys [service-http-url]}]
   (try
-    (log/info "Opening pulsar admin connection:" service-http-url)
+    (log/info "Opening pulsar admin connection: " service-http-url)
     (builder/to-java PulsarAdmin
                      (PulsarAdmin/builder)
                      {:serviceHttpUrl service-http-url}

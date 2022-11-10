@@ -4,7 +4,6 @@
 
 (deftest log-test
   (testing "The log should initialize without error"
-    (is (nil? (SUT/init)))
-    (SUT/error "ignore - testing error logging")
-    (SUT/info "ignore - testing info logging")
-    (SUT/warn "ignore - testing warning logging")))
+    (is (nil? (SUT/error "ignore - testing error logging")))
+    (is (nil? (SUT/info "ignore - testing info logging")))
+    (is (nil? (SUT/warn "ignore - testing warning logging")))))
