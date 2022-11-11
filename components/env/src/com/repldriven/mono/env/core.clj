@@ -22,6 +22,4 @@
   ([source] (set-env! source :default))
   ([source profile] (reset! env (config source profile))))
 
-(defn reset-env!
-  [conf]
-  (reset! env conf))
+(defn reset-env! [conf] (reset! env conf))

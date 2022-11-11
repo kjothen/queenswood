@@ -5,18 +5,15 @@
             [clojure.java.io :as io]
             [com.repldriven.mono.log.interface :as log])
   (:import [java.util Map]
-           [org.apache.pulsar.client.api
-            Schema]
-           [org.apache.pulsar.client.api.schema
-            SchemaDefinition]
+           [org.apache.pulsar.client.api Schema]
+           [org.apache.pulsar.client.api.schema SchemaDefinition]
            [org.apache.pulsar.common.protocol.schema PostSchemaPayload]))
 
 (defn- ^PostSchemaPayload create-payload
   [type schema properties]
-  (PostSchemaPayload.
-    (or type "")
-    (if (some? schema) (json/write-str schema) "")
-    (or properties {})))
+  (PostSchemaPayload. (or type "")
+                      (if (some? schema) (json/write-str schema) "")
+                      (or properties {})))
 
 (defn- ^SchemaDefinition create-definition
   [schema properties]
@@ -58,41 +55,40 @@
 
 (defn- load-avsc
   [filename]
-  (some-> filename io/resource io/file slurp json/read-str))
+  (some-> filename
+          io/resource
+          io/file
+          slurp
+          json/read-str))
 
 (defn- read-schema
   [file-or-ref]
-  (if (string? file-or-ref)
-    (load-avsc file-or-ref)
-    file-or-ref))
+  (if (string? file-or-ref) (load-avsc file-or-ref) file-or-ref))
 
 (defn- create-schema-entry
   [type schema properties]
   {:payload (create-payload type schema properties)
-   :schema  (create-schema type schema properties)})
+   :schema (create-schema type schema properties)})
 
 (defn create-schemas
   [coll]
   (reduce-kv
-    (fn [m k {:keys [type schema properties]}]
-      (assoc m k (create-schema-entry type (read-schema schema) properties)))
-    {}
-    coll))
+   (fn [m k {:keys [type schema properties]}]
+     (assoc m k (create-schema-entry type (read-schema schema) properties)))
+   {}
+   coll))
 
 (defn resolve
   [schemas s]
-  (cond
-    (keyword? s) (get-in schemas [s :schema])
-    (map? s) (let [{:keys [type schema properties]} s]
-               (create-schema type schema properties))
-    :else s))
+  (cond (keyword? s) (get-in schemas [s :schema])
+        (map? s) (let [{:keys [type schema properties]} s]
+                   (create-schema type schema properties))
+        :else s))
 
 (defn resolve-payload
   [schemas s]
-  (cond
-    (keyword? s) (get-in schemas [s :payload])
-    (map? s) (let [{:keys [type schema properties]} s]
-               (create-payload type schema properties))
-    :else (throw (ex-info
-                   (format "Invalid value %s for schema payload" s)
-                   {:schema s}))))
+  (cond (keyword? s) (get-in schemas [s :payload])
+        (map? s) (let [{:keys [type schema properties]} s]
+                   (create-payload type schema properties))
+        :else (throw (ex-info (format "Invalid value %s for schema payload" s)
+                              {:schema s}))))

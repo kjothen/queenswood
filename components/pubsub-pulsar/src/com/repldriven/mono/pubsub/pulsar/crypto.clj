@@ -27,51 +27,56 @@
 ;; TODO: ->der-string does not work, require ->pem-string instead
 (defn key-pair-generator
   [named-kps]
-  (reduce-kv (fn [m k v]
-               (assoc m
-                 k (let [kp (encryption/create-key-pair v)]
-                     {:public-key (-> kp
-                                      (get :public-key)
-                                      (encryption/public-key->der-string)),
-                      :private-key (-> kp
-                                       (get :private-key)
-                                       (encryption/private-key->der-string))})))
-             {}
-             named-kps))
+  (reduce-kv
+   (fn [m k v]
+     (assoc m
+            k
+            (let [kp (encryption/create-key-pair v)]
+              {:public-key (-> kp
+                               (get :public-key)
+                               (encryption/public-key->der-string))
+               :private-key (-> kp
+                                (get :private-key)
+                                (encryption/private-key->der-string))})))
+   {}
+   named-kps))
 
 (defn key-pair-file-reader
   [named-kps]
   (reduce-kv (fn [m k v]
                (assoc m
-                 k {:public-key (read-file-as-bytes (:public-key v)),
-                    :private-key (read-file-as-bytes (:private-key v))}))
+                      k
+                      {:public-key (read-file-as-bytes (:public-key v))
+                       :private-key (read-file-as-bytes (:private-key v))}))
              {}
              named-kps))
 
 (defn key-reader
   [named-kps]
   (reify
-    CryptoKeyReader
-      (^EncryptionKeyInfo getPublicKey [this ^String keyName ^Map _metadata]
-        (log/info "Trying to read public key: find" keyName
-                  "in" (keys (:keys named-kps)))
-        (when-let [k (get (get-crypto-key-pair keyName named-kps) :public-key)]
-          (doto (EncryptionKeyInfo.) (.setKey k))))
-      (^EncryptionKeyInfo getPrivateKey [this ^String keyName ^Map _metadata]
-        (log/info "Trying to read private key: find" keyName
-                  "in" (keys (:keys named-kps)))
-        (when-let [k (get (get-crypto-key-pair keyName named-kps) :private-key)]
-          (doto (EncryptionKeyInfo.) (.setKey k))))))
+   CryptoKeyReader
+     (^EncryptionKeyInfo getPublicKey
+       [this ^String keyName ^Map _metadata]
+       (log/info "Trying to read public key: find" keyName
+                 "in" (keys (:keys named-kps)))
+       (when-let [k (get (get-crypto-key-pair keyName named-kps) :public-key)]
+         (doto (EncryptionKeyInfo.) (.setKey k))))
+     (^EncryptionKeyInfo getPrivateKey
+       [this ^String keyName ^Map _metadata]
+       (log/info "Trying to read private key: find" keyName
+                 "in" (keys (:keys named-kps)))
+       (when-let [k (get (get-crypto-key-pair keyName named-kps) :private-key)]
+         (doto (EncryptionKeyInfo.) (.setKey k))))))
 
 (comment
   (require '[com.repldriven.mono.encryption.interface :as encryption])
   (let [key-pair (encryption/create-rsa-512-key-pair)
         key-name "tenant-key-1"
         metadata (java.util.HashMap. {"tenant-key-1" "1st key"})
-        r (key-reader {:default-key key-name,
-                       :keys (key-pair-generator {key-name {:algorithm "RSA",
+        r (key-reader {:default-key key-name
+                       :keys (key-pair-generator {key-name {:algorithm "RSA"
                                                             :key-size 512}})})]
     {:private-key (encryption/private-key-pkcs8-encoded->rsa
-                    (.getKey (.getPrivateKey r key-name metadata))),
+                   (.getKey (.getPrivateKey r key-name metadata)))
      :public-key (encryption/public-key-x509-encoded->rsa
-                   (.getKey (.getPublicKey r key-name metadata)))}))
+                  (.getKey (.getPublicKey r key-name metadata)))}))

@@ -45,4 +45,4 @@ XDG_CONFIG_HOME := env_var_or_default('XDG_CONFIG_HOME', env_var('HOME') + '/.co
 
 # Formatter
 format:
-    if (( $+commands[cljstyle] )); then cljstyle fix; fi
+    if (( $+commands[zprint] )); then git ls-files -z '*.edn' '*.clj' | xargs -0 -I '{}' sh -c "zprint '{:search-config? true}' -w {}"; fi

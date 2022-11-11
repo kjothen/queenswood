@@ -1,5 +1,7 @@
-{:paths ["src" "resources"]
+{:aliases {:test {:extra-deps {clj-test-containers/clj-test-containers
+                               {:mvn/version "0.5.0"}
+                               org.testcontainers/testcontainers {:mvn/version
+                                                                  "1.17.3"}}
+                  :extra-paths ["test" "test-resources"]}}
  :deps {}
- :aliases {:test {:extra-paths ["test" "test-resources"]
-                  :extra-deps {clj-test-containers/clj-test-containers {:mvn/version "0.5.0"}
-                               org.testcontainers/testcontainers {:mvn/version "1.17.3"}}}}}
+ :paths ["src" "resources"]}

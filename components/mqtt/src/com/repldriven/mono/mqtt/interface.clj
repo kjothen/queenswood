@@ -2,13 +2,9 @@
   (:require [com.repldriven.mono.mqtt.system.core :as system]
             [com.repldriven.mono.mqtt.client :as client]))
 
-(defn configure-system
-  [config]
-  (system/configure config))
+(defn configure-system [config] (system/configure config))
 
-(defn publish
-  [client topic payload]
-  (client/publish client topic payload))
+(defn publish [client topic payload] (client/publish client topic payload))
 
 (defn subscribe
   [client topics-and-qos handler-fn]

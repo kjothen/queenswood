@@ -1,11 +1,6 @@
-{:container {:docker-image-name "hivemq/hivemq-ce:latest"
-             :exposed-port 1883}
-
- :container-mapped-ports {:container [#system :local-ref [:container]]}
-
- :container-connection-uri
- {:container-mapped-ports [#system :local-ref [:container-mapped-ports]]
-  :exposed-port 1883}
-
- :client {:uri [#system :local-ref [:container-connection-uri]]
-          :options {}}}
+{:client {:options {} :uri [#system :local-ref [:container-connection-uri]]}
+ :container {:docker-image-name "hivemq/hivemq-ce:latest" :exposed-port 1883}
+ :container-connection-uri {:container-mapped-ports [#system :local-ref
+                                                     [:container-mapped-ports]]
+                            :exposed-port 1883}
+ :container-mapped-ports {:container [#system :local-ref [:container]]}}

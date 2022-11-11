@@ -1,1 +1,1 @@
-{:style :community, :width 80}
+{:map {:comma? false} :style :community :width 80}

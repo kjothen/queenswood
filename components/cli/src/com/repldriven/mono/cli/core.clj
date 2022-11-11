@@ -29,8 +29,7 @@
   indicating the action the program should take and the options provided."
   [program-name args]
   (let [{:keys [options errors summary]} (cli/parse-opts args cli-options)]
-    (cond (:help options) {:exit-message (usage program-name summary),
-                           :ok? true}
+    (cond (:help options) {:exit-message (usage program-name summary) :ok? true}
           errors {:exit-message (error-msg errors)}
           :else {:options options})))
 

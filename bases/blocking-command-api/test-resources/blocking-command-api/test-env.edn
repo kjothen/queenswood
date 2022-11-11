@@ -1,4 +1,3 @@
-{:system
- {:ring #include "test-env-ring.edn"
-  :pubsub #include "test-env-pubsub.edn"
-  :mqtt #include "test-env-mqtt.edn"}}
+{:system {:mqtt #include "test-env-mqtt.edn"
+          :pubsub #include "test-env-pubsub.edn"
+          :ring #include "test-env-ring.edn"}}

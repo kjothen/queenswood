@@ -2,5 +2,4 @@
   (:require [clojure.test :as test :refer [deftest is]]
             [com.repldriven.mono.build.build :as SUT]))
 
-(deftest dummy-test
-  (is (= 1 1)))
+(deftest dummy-test (is (= 1 1)))

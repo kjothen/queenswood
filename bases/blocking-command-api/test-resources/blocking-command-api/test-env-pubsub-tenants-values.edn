@@ -1,3 +1,1 @@
-[{:tenant "tenant-1"
-  :roles []
-  :clusters ["standalone"]}]
+[{:clusters ["standalone"] :roles [] :tenant "tenant-1"}]

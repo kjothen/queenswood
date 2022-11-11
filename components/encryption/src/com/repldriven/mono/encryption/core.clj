@@ -25,24 +25,24 @@
 
 (defn create-aes-256-key
   []
-  {:iv (nonce/random-bytes 16),
+  {:iv (nonce/random-bytes 16)
    :key (-> (.generateKey key-gen-aes-256)
-            (.getEncoded)),
-   :algorithm "AES",
+            (.getEncoded))
+   :algorithm "AES"
    :key-size 256})
 
 (defn create-rsa-512-key-pair
   []
   (when-let [key-pair (.generateKeyPair key-pair-gen-rsa-512)]
-    {:private-key (.getPrivate key-pair),
-     :public-key (.getPublic key-pair),
-     :algorithm "RSA",
+    {:private-key (.getPrivate key-pair)
+     :public-key (.getPublic key-pair)
+     :algorithm "RSA"
      :key-size 512}))
 
 (defn create-key-pair
   [opts]
   (case (select-keys opts [:algorithm :key-size])
-    {:algorithm "RSA", :key-size 512} (create-rsa-512-key-pair)))
+    {:algorithm "RSA" :key-size 512} (create-rsa-512-key-pair)))
 
 (defn public-key-x509-encoded->rsa
   [encoded-key]
@@ -69,15 +69,15 @@
 
 (defn encrypt-str
   [s {:keys [iv key]} algorithm]
-  {:encrypted
-     (crypto/encrypt (codecs/to-bytes s) key iv {:algorithm algorithm}),
-   :iv iv,
+  {:encrypted (crypto/encrypt (codecs/to-bytes s) key iv {:algorithm algorithm})
+   :iv iv
    :algorithm algorithm})
 
 (defn decrypt-str
   [{:keys [encrypted iv algorithm]} {:keys [key]}]
   (codecs/bytes->str (crypto/decrypt encrypted key iv {:algorithm algorithm})))
 
-(comment (create-aes-256-key)
-         (create-rsa-512-key-pair)
-         (create-key-pair {:algorithm "RSA", :key-size 512}))
+(comment
+  (create-aes-256-key)
+  (create-rsa-512-key-pair)
+  (create-key-pair {:algorithm "RSA" :key-size 512}))

@@ -1,2 +1,1 @@
-{:system {:port #profile {:default #port 80
-                          :test    #port 0}}}
+{:system {:port #profile {:default #port 80 :test #port 0}}}

@@ -13,29 +13,27 @@
 
 (defn- nsmap->nsmap
   [m from-ns to-ns]
-  (walk/postwalk
-    (fn [x]
-      (if (match-ns-keyword? x from-ns)
-        (keyword to-ns (name x))
-        (if (fn? x)
-          (fn [to-ns-map]
-            (x (reduce-kv
-                 (fn [m k v]
-                   (assoc m (if (match-ns-keyword? k to-ns)
-                              (keyword from-ns (name k)) k) v))
-                 {}
-                 to-ns-map)))
-          x))) m))
+  (walk/postwalk (fn [x]
+                   (if (match-ns-keyword? x from-ns)
+                     (keyword to-ns (name x))
+                     (if (fn? x)
+                       (fn [to-ns-map]
+                         (x (reduce-kv (fn [m k v]
+                                         (assoc m
+                                                (if (match-ns-keyword? k to-ns)
+                                                  (keyword from-ns (name k))
+                                                  k)
+                                                v))
+                                       {}
+                                       to-ns-map)))
+                       x)))
+                 m))
 
 (def required-component ::ds/required-component)
 
-(defn ref
-  [kws]
-  (ds/ref kws))
+(defn ref [kws] (ds/ref kws))
 
-(defn local-ref
-  [kws]
-  (ds/local-ref kws))
+(defn local-ref [kws] (ds/local-ref kws))
 
 (defn system?
   [config-name]
@@ -43,48 +41,36 @@
 
 (defn start
   ([config-name]
-   (try
-     (ds/start (nsmap->nsmap config-name mono-system-ns donut-system-ns))
-     (catch Exception e
-       (log/error (format "Error starting system: %s" e)))))
+   (try (ds/start (nsmap->nsmap config-name mono-system-ns donut-system-ns))
+        (catch Exception e (log/error (format "Error starting system: %s" e)))))
   ([config-name custom-config]
-   (try
-     (ds/start (nsmap->nsmap config-name mono-system-ns donut-system-ns)
-       custom-config)
-     (catch Exception e
-       (log/error (format "Error starting system: %s" e)))))
+   (try (ds/start (nsmap->nsmap config-name mono-system-ns donut-system-ns)
+                  custom-config)
+        (catch Exception e (log/error (format "Error starting system: %s" e)))))
   ([config-name custom-config component-ids]
-   (try
-     (ds/start (nsmap->nsmap config-name mono-system-ns donut-system-ns)
-       custom-config component-ids)
-     (catch Exception e
-       (log/error (format "Error starting system: %s" e))))))
+   (try (ds/start (nsmap->nsmap config-name mono-system-ns donut-system-ns)
+                  custom-config
+                  component-ids)
+        (catch Exception e
+          (log/error (format "Error starting system: %s" e))))))
 
-(defn instance
-  [system kws]
-  (get-in system (vec (cons ::ds/instances kws))))
+(defn instance [system kws] (get-in system (vec (cons ::ds/instances kws))))
 
 (defn stop
   [system]
-  (try
-    (ds/stop system)
-    (catch Exception e
-      (log/error (format "Error stopping system: %s" e)))))
+  (try (ds/stop system)
+       (catch Exception e (log/error (format "Error stopping system: %s" e)))))
 
-(defn suspend
-  [system]
-  (ds/suspend system))
+(defn suspend [system] (ds/suspend system))
 
-(defn resume
-  [system]
-  (ds/resume system))
+(defn resume [system] (ds/resume system))
 
 (defn- deep-merge
   [& values]
-  (if (every? map? values)
-    (apply merge-with deep-merge values)
-    (last values)))
+  (if (every? map? values) (apply merge-with deep-merge values) (last values)))
 
 (defn merge-component-config
   [component config]
-  (update component :system/config (fn [original] (deep-merge original config))))
+  (update component
+          :system/config
+          (fn [original] (deep-merge original config))))

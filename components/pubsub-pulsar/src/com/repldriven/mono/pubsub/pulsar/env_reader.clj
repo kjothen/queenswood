@@ -1,6 +1,8 @@
 (ns com.repldriven.mono.pubsub.pulsar.env-reader
   (:import (org.apache.pulsar.client.api ConsumerCryptoFailureAction
-             MessageId Schema SubscriptionType)))
+                                         MessageId
+                                         Schema
+                                         SubscriptionType)))
 
 (defn crypto-failure-action
   [_ tag value]
@@ -9,7 +11,7 @@
     :DISCARD ConsumerCryptoFailureAction/DISCARD
     :FAIL ConsumerCryptoFailureAction/FAIL
     (throw (ex-info (format "Invalid value %s for tag %s" value tag)
-             {:tag tag :value value}))))
+                    {:tag tag :value value}))))
 
 (defn message-id
   [_ tag value]
@@ -17,7 +19,7 @@
     :earliest MessageId/earliest
     :latest MessageId/latest
     (throw (ex-info (format "Invalid value %s for tag %s" value tag)
-             {:tag tag :value value}))))
+                    {:tag tag :value value}))))
 
 (defn schema
   [_ tag value]
@@ -39,12 +41,11 @@
     :STRING (Schema/STRING)
     :TIME (Schema/TIME)
     :TIMESTAMP (Schema/TIMESTAMP)
-
     ;; auto
     :AUTO_CONSUME (Schema/AUTO_CONSUME)
     :AUTO_PRODUCE_BYTES (Schema/AUTO_PRODUCE_BYTES)
     (throw (ex-info (format "Invalid value %s for tag %s" value tag)
-             {:tag tag :value value}))))
+                    {:tag tag :value value}))))
 
 (defn subscription-type
   [_ tag value]
@@ -54,4 +55,4 @@
     :Key_Shared SubscriptionType/Key_Shared
     :Shared SubscriptionType/Shared
     (throw (ex-info (format "Invalid value %s for tag %s" value tag)
-             {:tag tag :value value}))))
+                    {:tag tag :value value}))))

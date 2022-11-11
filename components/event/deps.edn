@@ -1,14 +1,14 @@
-{:paths ["src" "resources"]
+{:aliases {:build {:deps {base/build {:local/root "../../bases/build"}}
+                   :exec-args {:avro-tools-version "1.11.0"
+                               :src "resources/schema"
+                               :target "generated"}
+                   :extra-deps {org.apache.avro/avro-tools {:mvn/version
+                                                            "1.11.0"}}
+                   :ns-default com.repldriven.mono.build.build}
+           :test {:extra-deps {} :extra-paths ["test"]}}
  :deps {cddr/edn-avro {:mvn/version "1.1.0"}
+        clj-ulid/clj-ulid {:mvn/version "0.1.0-SNAPSHOT"}
         deercreeklabs/lancaster {:mvn/version "0.9.22"}
-        tick/tick {:mvn/version "0.5.0-RC5"}
         nomnom/abracad {:mvn/version "0.5.2"}
-        clj-ulid/clj-ulid {:mvn/version "0.1.0-SNAPSHOT"}}
- :aliases {:build {:deps       {base/build {:local/root "../../bases/build"}}
-                   :extra-deps {org.apache.avro/avro-tools {:mvn/version "1.11.0"}}
-                   :ns-default com.repldriven.mono.build.build
-                   :exec-args  {:avro-tools-version "1.11.0"
-                                :src "resources/schema"
-                                :target "generated"}}
-           :test {:extra-paths ["test"]
-                  :extra-deps {}}}}
+        tick/tick {:mvn/version "0.5.0-RC5"}}
+ :paths ["src" "resources"]}

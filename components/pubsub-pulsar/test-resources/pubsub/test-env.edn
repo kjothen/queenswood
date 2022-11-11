@@ -1,2 +1,1 @@
-{:system
- {:pubsub #include "test-env-pubsub.edn"}}}
+{:system {:pubsub #include "test-env-pubsub.edn"}}

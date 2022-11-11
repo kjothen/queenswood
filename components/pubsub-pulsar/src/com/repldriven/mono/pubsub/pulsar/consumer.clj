@@ -4,8 +4,10 @@
             [com.repldriven.mono.pubsub.pulsar.schemas :as schemas])
   (:import (java.util Map)
            (java.util.concurrent TimeUnit)
-           (org.apache.pulsar.client.api
-             Consumer Message PulsarClient PulsarClientException)))
+           (org.apache.pulsar.client.api Consumer
+                                         Message
+                                         PulsarClient
+                                         PulsarClientException)))
 
 (defn ^Consumer create
   [{:keys [^PulsarClient client conf schemas]}]
@@ -19,12 +21,12 @@
                      (.. client newConsumer))
           builder (.. instance (loadConf auto-conf))]
       (.subscribe (cond-> builder
-                    (some? cryptoKeyReader) (.cryptoKeyReader cryptoKeyReader))))
+                    (some? cryptoKeyReader) (.cryptoKeyReader
+                                             cryptoKeyReader))))
     (catch PulsarClientException e
       (log/error (format "Failed to create pulsar consumer, %s" e)))))
 
 (defn ^Message receive
-  ([^Consumer consumer]
-   (.. consumer receive))
+  ([^Consumer consumer] (.. consumer receive))
   ([^Consumer consumer timeout-ms]
    (.. consumer (receive timeout-ms TimeUnit/MILLISECONDS))))

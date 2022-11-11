@@ -26,24 +26,16 @@
   [opts tag value]
   (env-reader/subscription-type opts tag value))
 
-(defn configure-system
-  [config]
-  (system/configure config))
+(defn configure-system [config] (system/configure config))
 
 (defn send
-  ([producer data]
-   (producer/send producer data))
-  ([producer data opts]
-   (producer/send producer data opts)))
+  ([producer data] (producer/send producer data))
+  ([producer data opts] (producer/send producer data opts)))
 
 (defn send-async
-  ([producer data]
-   (producer/send-async producer data))
-  ([producer data opts]
-   (producer/send-async producer data opts)))
+  ([producer data] (producer/send-async producer data))
+  ([producer data opts] (producer/send-async producer data opts)))
 
 (defn receive
-  ([consumer]
-   (consumer/receive consumer))
-  ([consumer timeout-ms]
-   (consumer/receive consumer timeout-ms)))
+  ([consumer] (consumer/receive consumer))
+  ([consumer timeout-ms] (consumer/receive consumer timeout-ms)))

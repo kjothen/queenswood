@@ -14,12 +14,11 @@
 (defn read-messages
   [^Reader reader c]
   (let []; schema (.getSchema (UserEventAvroSerde/INSTANCE))
-
     (async/go (while true (async/>! c (.readNext reader))))
     (async/go-loop []
-      (when-let [^Message m (async/<! c)]
-        ;; (log/info (avro/decode schema (.getData m)))
-        (recur)))))
+                   (when-let [^Message m (async/<! c)]
+                     ;; (log/info (avro/decode schema (.getData m)))
+                     (recur)))))
 
 (defn start!
   []
@@ -33,23 +32,23 @@
   []
   (log/info "Stopping system")
   (when-let [_ @system]
-    (when (some? @channel)
-      (reset! channel (async/close! @channel)))
+    (when (some? @channel) (reset! channel (async/close! @channel)))
     (system/stop! system)))
 
 (defn -main
   [& args]
   (log/init)
   (log/info args)
-  (let [{:keys [options exit-message ok?]} (cli/validate-args "pulsar-reader" args)]
+  (let [{:keys [options exit-message ok?]} (cli/validate-args "pulsar-reader"
+                                                              args)]
     (if exit-message
       (cli/exit ok? exit-message)
-      (do
-        (env/set-env! (:config-file options) (keyword (:profile options)))
-        (start!)))))
+      (do (env/set-env! (:config-file options) (keyword (:profile options)))
+          (start!)))))
 
 (comment
-  (-main "-c" "bases/pulsar-reader/test-resources/pulsar-reader/test-env.edn" "-p" "dev")
+  (-main "-c" "bases/pulsar-reader/test-resources/pulsar-reader/test-env.edn"
+         "-p" "dev")
   (stop!)
   (start!)
   (stop!))

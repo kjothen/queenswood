@@ -4,20 +4,11 @@
             [com.repldriven.mono.spec.interface :as spec]))
 
 (defn- handle
-  ([status body]
-   {:status (or status 404)
-    :body   body})
-  ([status]
-   (handle status nil)))
+  ([status body] {:status (or status 404) :body body})
+  ([status] (handle status nil)))
 
-(defn options
-  [_]
-  (handle 200))
+(defn options [_] (handle 200))
 
-(defn other
-  [_]
-  (handle 404 {:errors {:other ["Route not found."]}}))
+(defn other [_] (handle 404 {:errors {:other ["Route not found."]}}))
 
-(defn symmetric-keys
-  [_]
-  (handle 200))
+(defn symmetric-keys [_] (handle 200))

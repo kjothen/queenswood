@@ -17,19 +17,17 @@
 
 (defn- close-admin-connection
   [instance n]
-  (try
-    (log/infof "Closing pulsar %s connection" n)
-    (.close instance)
-    (catch PulsarAdminException e
-      (log/error (format "Failed to close pulsar %s connection, %s" n e)))))
+  (try (log/infof "Closing pulsar %s connection" n)
+       (.close instance)
+       (catch PulsarAdminException e
+         (log/error (format "Failed to close pulsar %s connection, %s" n e)))))
 
 (defn- close-client-connection
   [instance n]
-  (try
-    (log/infof "Closing pulsar %s connection" n)
-    (.close instance)
-    (catch PulsarClientException e
-      (log/error (format "Failed to close pulsar %s connection, %s" n e)))))
+  (try (log/infof "Closing pulsar %s connection" n)
+       (.close instance)
+       (catch PulsarClientException e
+         (log/error (format "Failed to close pulsar %s connection, %s" n e)))))
 
 (def named-component
   {:system/start (fn [{:system/keys [config]}] config)
@@ -63,18 +61,15 @@
 ;; ---
 
 (def consumers
-  {:system/start (fn [{:system/keys [config instance]}]
-                   (or instance
-                       (reduce-kv
-                         (fn [m k v]
-                           (assoc m k (consumer/create v)))
-                         {} config)))
+  {:system/start
+   (fn [{:system/keys [config instance]}]
+     (or instance
+         (reduce-kv (fn [m k v] (assoc m k (consumer/create v))) {} config)))
    :system/stop (fn [{:system/keys [instance]}]
                   (when (some? instance)
-                    (dorun (map
-                             (fn [[_ instance]]
-                               (close-client-connection instance "consumer"))
-                             instance))))
+                    (dorun (map (fn [[_ instance]]
+                                  (close-client-connection instance "consumer"))
+                                instance))))
    :system/config system/required-component})
 
 (def consumer
@@ -93,25 +88,23 @@
   {:system/start
    (fn [{:system/keys [config instance]}]
      (or instance
-         (do
-           (log/info "Creating pulsar crypto-key-pair-generator: " config)
-           (crypto/key-pair-generator config))))
+         (do (log/info "Creating pulsar crypto-key-pair-generator: " config)
+             (crypto/key-pair-generator config))))
    :system/config system/required-component})
 
 ;; crypto-key-pair-file-reader(s)
 (def crypto-key-pair-file-readers
-  {:system/start
-   (fn [{:system/keys [config instance]}]
-     (or instance
-         (reduce-kv
-           (fn [m k v] (assoc m k (crypto/key-pair-file-reader v)))
-           {} config)))
+  {:system/start (fn [{:system/keys [config instance]}]
+                   (or instance
+                       (reduce-kv (fn [m k v]
+                                    (assoc m k (crypto/key-pair-file-reader v)))
+                                  {}
+                                  config)))
    :system/config system/required-component})
 
 (def crypto-key-pair-file-reader
-  {:system/start
-   (fn [{:system/keys [config instance]}]
-     (or instance (crypto/key-pair-file-reader config)))
+  {:system/start (fn [{:system/keys [config instance]}]
+                   (or instance (crypto/key-pair-file-reader config)))
    :system/config system/required-component})
 
 ;; crypto-key-reader(s)
@@ -119,15 +112,12 @@
   {:system/start
    (fn [{:system/keys [config instance]}]
      (or instance
-         (reduce-kv
-           (fn [m k v] (assoc m k (crypto/key-reader v)))
-           {} config)))
+         (reduce-kv (fn [m k v] (assoc m k (crypto/key-reader v))) {} config)))
    :system/config system/required-component})
 
 (def crypto-key-reader
-  {:system/start
-   (fn [{:system/keys [config instance]}]
-     (or instance (crypto/key-reader config)))
+  {:system/start (fn [{:system/keys [config instance]}]
+                   (or instance (crypto/key-reader config)))
    :system/config system/required-component})
 
 ;; ---

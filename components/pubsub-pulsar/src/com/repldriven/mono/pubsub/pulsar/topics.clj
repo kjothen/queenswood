@@ -16,26 +16,24 @@
   (let [^TopicName topic-name (TopicName/get fully-qualified-topic-name)
         tenant-name (.getTenant topic-name)
         fully-qualified-namespace-name (.getNamespace topic-name)
-        namespace-name (last (string/split fully-qualified-namespace-name #"/"))]
+        namespace-name (last (string/split fully-qualified-namespace-name
+                                           #"/"))]
     (let [^Topics topics (.topics admin)
           domain-name (.getDomain topic-name)
-          topic-names (.getList topics
-                        fully-qualified-namespace-name
-                        domain-name)]
+          topic-names
+          (.getList topics fully-qualified-namespace-name domain-name)]
       (when-not (contains? (set topic-names) fully-qualified-topic-name)
         (log/info "Creating topic:" fully-qualified-topic-name)
-        (.createPartitionedTopic topics
-          fully-qualified-topic-name
-          partitions)
+        (.createPartitionedTopic topics fully-qualified-topic-name partitions)
         (when (some? schema)
           (create-topic-schema admin fully-qualified-topic-name schema))))))
 
 (defn create-topics
   [{:keys [^PulsarAdmin admin schemas topics]}]
   (log/info "Ensure pulsar topics exist:" topics)
-  (doall (mapv
-           (fn [{:keys [topic] :as opts}]
-             (let [resolved-opts
-                   (update opts :schema #(schemas/resolve-payload schemas %))]
-               (create admin topic (dissoc resolved-opts :topic))))
-           topics)))
+  (doall
+   (mapv (fn [{:keys [topic] :as opts}]
+           (let [resolved-opts
+                 (update opts :schema #(schemas/resolve-payload schemas %))]
+             (create admin topic (dissoc resolved-opts :topic))))
+         topics)))

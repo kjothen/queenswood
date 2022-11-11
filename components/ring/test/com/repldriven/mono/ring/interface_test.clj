@@ -3,8 +3,8 @@
             [clojure.java.io :as io]
             [com.repldriven.mono.env.interface :as env]
             [com.repldriven.mono.ring.interface :as SUT]
-            [com.repldriven.mono.system.interface
-             :as system :refer [with-system]]))
+            [com.repldriven.mono.system.interface :as system :refer
+             [with-system]]))
 
 (defn env-fixture
   [f]
@@ -15,6 +15,7 @@
 
 (deftest development-test
   (testing "Developers should be able to start and stop a ring web server"
-    (with-system [sys (SUT/configure-system (get-in @env/env [:system :ring]))]
-      (is (some? sys))
-      (is (= 1 1)))))
+           (with-system
+            [sys (SUT/configure-system (get-in @env/env [:system :ring]))]
+            (is (some? sys))
+            (is (= 1 1)))))

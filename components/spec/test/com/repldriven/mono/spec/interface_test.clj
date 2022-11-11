@@ -5,5 +5,5 @@
 
 (deftest non-empty-string-test
   (testing "A non-empty string should meet the spec"
-    (is (m/validate SUT/non-empty-string? "abc"))))
+           (is (m/validate SUT/non-empty-string? "abc"))))
 

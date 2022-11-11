@@ -1,5 +1,4 @@
-{:paths ["src" "resources"]
+{:aliases {:test {:extra-deps {http-kit/http-kit {:mvn/version "2.5.3"}}
+                  :extra-paths ["test" "test-resources"]}}
  :deps {compojure/compojure {:mvn/version "1.6.2"}}
- :aliases {:test
-           {:extra-deps {http-kit/http-kit {:mvn/version "2.5.3"}}
-            :extra-paths ["test" "test-resources"]}}}
+ :paths ["src" "resources"]}

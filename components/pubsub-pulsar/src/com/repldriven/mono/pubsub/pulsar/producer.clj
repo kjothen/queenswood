@@ -4,8 +4,8 @@
             [com.repldriven.mono.log.interface :as log]
             [com.repldriven.mono.pubsub.pulsar.schemas :as schemas])
   (:import [java.util Map]
-           [org.apache.pulsar.client.api
-            Producer PulsarClient PulsarClientException]))
+           [org.apache.pulsar.client.api Producer PulsarClient
+            PulsarClientException]))
 
 (defn- add-encryption-keys
   [producer ks]
@@ -29,13 +29,11 @@
       (log/error (format "Failed to create pulsar producer, %s" e)))))
 
 (defn send
-  ([^Producer producer data]
-   (.. producer (send data)))
+  ([^Producer producer data] (.. producer (send data)))
   ([^Producer producer data opts]
    (.. producer newMessage (loadConf opts) (value data) send)))
 
 (defn send-async
-  ([^Producer producer data]
-   (.. producer (sendAsync data)))
+  ([^Producer producer data] (.. producer (sendAsync data)))
   ([^Producer producer data opts]
    (.. producer newMessage (loadConf opts) (value data) sendAsync)))

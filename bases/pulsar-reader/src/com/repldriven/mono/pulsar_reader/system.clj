@@ -5,10 +5,6 @@
 (defmethod system :default [_ v] v)
 (defmethod system :pubsub [_ v] (pubsub/configure-system v))
 
-(defn configure-system
-  [m k v]
-  (merge-with into m (system k v)))
+(defn configure-system [m k v] (merge-with into m (system k v)))
 
-(defn configure
-  [config]
-  (reduce-kv configure-system {} config))
+(defn configure [config] (reduce-kv configure-system {} config))

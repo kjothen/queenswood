@@ -1,10 +1,9 @@
 (ns com.repldriven.mono.testcontainers-system.interface
-  (:require [com.repldriven.mono.testcontainers-system.components :as components]
+  (:require [com.repldriven.mono.testcontainers-system.components :as
+             components]
             [com.repldriven.mono.testcontainers-system.core :as system]))
 
-(defn configure-system
-  [config name]
-  (system/configure config name))
+(defn configure-system [config name] (system/configure config name))
 
 (def container components/container)
 (def container-mapped-ports components/mapped-ports)

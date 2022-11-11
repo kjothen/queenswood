@@ -1,7 +1,8 @@
-{:system {:mqtt {:container {:docker-image-name "hivemq/hivemq-ce:2021.3"
-                             :exposed-port 1883}
-                 :container-mapped-ports {:container [#system :ref [:mqtt :container]]}
-                 :container-connection-uri {:container-mapped-ports [#system :ref [:mqtt :container-mapped-ports]]
-                                            :exposed-port 1883}
-                 :client {:uri [#system :ref [:mqtt :container-connection-uri]]
-                          :options {}}}}}
+{:system
+ {:mqtt
+  {:client {:options {} :uri [#system :ref [:mqtt :container-connection-uri]]}
+   :container {:docker-image-name "hivemq/hivemq-ce:2021.3" :exposed-port 1883}
+   :container-connection-uri {:container-mapped-ports
+                              [#system :ref [:mqtt :container-mapped-ports]]
+                              :exposed-port 1883}
+   :container-mapped-ports {:container [#system :ref [:mqtt :container]]}}}}

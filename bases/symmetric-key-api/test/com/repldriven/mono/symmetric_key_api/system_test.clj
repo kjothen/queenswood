@@ -7,5 +7,5 @@
 
 (deftest configuration
   (testing "System configuration MUST be valid"
-    (env/set-env! (io/resource "symmetric-key-api/test-env.edn") :test)
-    (is (= true (system/system? (SUT/configure (:system @env/env)))))))
+           (env/set-env! (io/resource "symmetric-key-api/test-env.edn") :test)
+           (is (= true (system/system? (SUT/configure (:system @env/env)))))))

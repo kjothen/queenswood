@@ -10,6 +10,4 @@
   ([source] (core/set-env! source))
   ([source profile] (core/set-env! source profile)))
 
-(defn reset-env!
-  [conf]
-  (core/reset-env! conf))
+(defn reset-env! [conf] (core/reset-env! conf))

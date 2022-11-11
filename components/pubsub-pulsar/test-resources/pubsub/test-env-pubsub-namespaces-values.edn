@@ -1,9 +1,8 @@
-[{:namespace "tenant-1/namespace-1"
-  :config {:post {"autoTopicCreation"
-                  {"topicType" "string"
-                   "defaultNumPartitions" 1
-                   "allowAutoTopicCreation" false}
+[{:config {:post {"autoTopicCreation" {"allowAutoTopicCreation" false
+                                       "defaultNumPartitions" 1
+                                       "topicType" "string"}
                   "encryptionRequired" true
                   "isAllowAutoUpdateSchema" false
                   "schemaValidationEnforced" true}
-           :put {"schemaCompatibilityStrategy" "FULL"}}}]
+           :put {"schemaCompatibilityStrategy" "FULL"}}
+  :namespace "tenant-1/namespace-1"}]

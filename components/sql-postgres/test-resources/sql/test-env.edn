@@ -1,12 +1,10 @@
 {:system
  {:sql
-  {:container {:docker-image-name "postgres:14.2"
-               :exposed-port 5432}
+  {:container {:docker-image-name "postgres:14.2" :exposed-port 5432}
    :container-mapped-exposed-port {:container [#system :local-ref [:container]]
                                    :exposed-port 5432}
-   :datasources
-   {:1 {:port [#system :local-ref [:container-mapped-exposed-port]]
-        :user "test"
-        :password "test"
-        :dbtype "postgres"}}
-   :datasource [#system :local-ref [:datasources :1]]}}}
+   :datasource [#system :local-ref [:datasources :1]]
+   :datasources {:1 {:dbtype "postgres"
+                     :password "test"
+                     :port [#system :local-ref [:container-mapped-exposed-port]]
+                     :user "test"}}}}}
