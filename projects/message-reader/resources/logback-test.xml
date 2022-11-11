@@ -7,7 +7,7 @@
         </encoder>
     </appender>
 
-    <logger name="com.repldriven.com" level="info" additivity="false">
+    <logger name="com.repldriven.mono" level="info" additivity="false">
         <appender-ref ref="CONSOLE"/>
     </logger>
 

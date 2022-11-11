@@ -1,0 +1,46 @@
+{:container
+ {;;:docker-image-name "kezhenxu94/pulsar"
+  :exposed-ports [6650 8080]}
+
+ :container-service-port
+ {:container [#system :local-ref [:container]]
+  :exposed-port #ref [:container :exposed-ports 0]}
+
+ :container-service-url
+ {:scheme "pulsar"
+  :port [#system :local-ref [:container-service-port]]}
+
+ :container-service-http-port
+ {:container [#system :local-ref [:container]]
+  :exposed-port #ref [:container :exposed-ports 1]}
+
+ :container-service-http-url
+ {:scheme "http"
+  :port [#system :local-ref [:container-service-http-port]]}
+
+ :admin {:service-http-url [#system :local-ref [:container-service-http-url]]}
+
+ :client {:service-url [#system :local-ref [:container-service-url]]}
+
+ :schemas {:user {:type "AVRO" :schema "schema-avro/user.avsc.json"}}
+
+ :tenants {:admin [#system :local-ref [:admin]]
+           :tenants #include "test-env-pubsub-tenants-values.edn"}
+
+ :namespaces {:_ [#system :local-ref [:tenants]]
+              :admin [#system :local-ref [:admin]]
+              :namespaces #include "test-env-pubsub-namespaces-values.edn"}
+
+ :topics
+ {:_ [#system :local-ref [:namespaces]]
+  :admin [#system :local-ref [:admin]]
+  :schemas [#system :local-ref [:schemas]]
+  :topics #include "test-env-pubsub-topics-values.edn"}
+
+ :reader
+ {:_ [#system :local-ref [:topics]]
+  :client [#system :local-ref [:client]]
+  :conf {"schema" #pubsub-schema :AUTO_CONSUME
+         "startMessageId" #pubsub-message-id :earliest
+         "topicNames" #{"persistent://tenant-1/namespace-1/topic-1"}}
+  :schemas [#system :local-ref [:schemas]]}}

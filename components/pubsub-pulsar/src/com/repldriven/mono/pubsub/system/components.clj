@@ -18,7 +18,7 @@
 (defn- close-admin-connection
   [instance n]
   (try
-    (log/info "Closing pulsar %s connection" n)
+    (log/infof "Closing pulsar %s connection" n)
     (.close instance)
     (catch PulsarAdminException e
       (log/error (format "Failed to close pulsar %s connection, %s" n e)))))
@@ -26,7 +26,7 @@
 (defn- close-client-connection
   [instance n]
   (try
-    (log/info "Closing pulsar %s connection" n)
+    (log/infof "Closing pulsar %s connection" n)
     (.close instance)
     (catch PulsarClientException e
       (log/error (format "Failed to close pulsar %s connection, %s" n e)))))
@@ -162,7 +162,8 @@
    :system/stop (fn [{:system/keys [instance]}]
                   (close-client-connection instance "reader"))
    :system/config {:client system/required-component
-                   :conf system/required-component}})
+                   :conf system/required-component
+                   :schemas nil}})
 
 ;; ---
 ;; schemas

@@ -5,7 +5,7 @@
             [com.repldriven.mono.env.interface :as env]
             [com.repldriven.mono.system.interface :as system]))
 
-(deftest system-test
+(deftest configuration
   (testing "System configuration MUST be valid"
     (env/set-env! (io/resource "pulsar-reader/test-env.edn") :test)
     (is (= true (system/system? (SUT/configure (:system @env/env)))))))

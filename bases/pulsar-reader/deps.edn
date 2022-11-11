@@ -1,5 +1,5 @@
 {:paths   ["src" "resources"]
- :deps    {com.damballa/abracad    {:mvn/version "0.4.13"}
+ :deps    {nomnom/abracad {:mvn/version "0.5.2"}
            org.clojure/core.async  {:mvn/version "1.5.648"}}
  :jvm-opts ["-Dclojure.tools.logging.factory=clojure.tools.logging.impl/slf4j-factory"]
  :aliases {:test {:extra-paths ["test" "test-resources"]

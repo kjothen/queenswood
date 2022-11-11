@@ -1,10 +1,7 @@
 {:aliases {:test {:extra-deps {},
                   :extra-paths ["test" "test-resources"]}},
  :deps {clj-test-containers/clj-test-containers {:mvn/version "0.5.0"},
-        org.apache.pulsar/pulsar-client
-        {:mvn/version "2.10.2"
-         :exclusions [org.apache.pulsar/bouncy-castle-bc]},
-        org.apache.pulsar/pulsar-client-admin
+        org.apache.pulsar/pulsar-client-all
         {:mvn/version "2.10.2"
          :exclusions [org.apache.pulsar/bouncy-castle-bc]},
         org.apache.pulsar/pulsar-common

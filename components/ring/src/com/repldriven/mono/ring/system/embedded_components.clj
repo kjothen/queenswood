@@ -1,7 +1,6 @@
 (ns com.repldriven.mono.ring.system.embedded-components
   (:require [com.repldriven.mono.log.interface :as log]
             [com.repldriven.mono.system.interface :as system]
-            [medley.core :as medley]
             [ring.adapter.jetty :as jetty])
   (:import (org.eclipse.jetty.server Server)))
 

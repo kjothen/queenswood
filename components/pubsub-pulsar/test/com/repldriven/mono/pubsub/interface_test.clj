@@ -63,23 +63,23 @@
           (is (= (get props "message") (get recv-props "message")))
           )))))
 
-;; (deftest encrypted-message-mismatched-consumer-key-test
-;;   (testing "Pulsar consumer with a mismatching decryption key cannot consume"
-;;     (let [producer (system/instance *sys* [:pubsub :producer])
-;;           consumer (system/instance *sys* [:pubsub :consumers :2])
-;;           schemas (system/instance *sys* [:pubsub :schemas])]
+(deftest encrypted-message-mismatched-consumer-key-test
+  (testing "Pulsar consumer with a mismatching decryption key cannot consume"
+    (let [producer (system/instance *sys* [:pubsub :producer])
+          consumer (system/instance *sys* [:pubsub :consumers :2])
+          schemas (system/instance *sys* [:pubsub :schemas])]
 
-;;       (let [schema (schema-avro/json->schema
-;;                      (json/write-str (get-schema schemas :user)))
-;;             data {:name "hardcastle" :age 19}
-;;             props {"message" "user-msg"}]
-;;         (SUT/send producer (schema-avro/serialize schema data)
-;;           (HashMap. {"properties" props}))
+      (let [schema (schema-avro/json->schema
+                     (json/write-str (get-schema schemas :user)))
+            data {:name "hardcastle" :age 19}
+            props {"message" "user-msg"}]
+        (SUT/send producer (schema-avro/serialize schema data)
+          (HashMap. {"properties" props}))
 
-;;         (let [^Message recv-msg  (SUT/receive consumer 500)
-;;               recv-data (some-> recv-msg .getData)
-;;               recv-props (some-> recv-msg .getProperties)]
-;;           (is (nil? recv-msg)))))))
+        (let [^Message recv-msg  (SUT/receive consumer 500)
+              recv-data (some-> recv-msg .getData)
+              recv-props (some-> recv-msg .getProperties)]
+          (is (nil? recv-msg)))))))
 
 (deftest namespace-configuration-test
   (testing "Pulsar namespace configuration enforces encryption and topic schema"

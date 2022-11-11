@@ -1,0 +1,7 @@
+{:interceptors {:pulsar-reader [#system :ref [:pubsub :reader]]
+                :mqtt-client [#system :ref [:mqtt :client]]}
+
+ :jetty-adapter {:handler #system :required-component
+                 :interceptors [#system :local-ref [:interceptors]]
+                 :options {:port #profile {:default #port 0}
+                           :join? #profile {:default false}}}}

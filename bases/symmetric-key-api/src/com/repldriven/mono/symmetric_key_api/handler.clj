@@ -1,6 +1,6 @@
 (ns com.repldriven.mono.symmetric-key-api.handler
   (:require [clojure.edn :as edn]
-            [com.repldriven.mono.symmetric-key.interface :as symmetric-key]
+            [com.repldriven.mono.encryption.interface :as encryption]
             [com.repldriven.mono.spec.interface :as spec]))
 
 (defn- handle
@@ -21,4 +21,3 @@
 (defn symmetric-keys
   [_]
   (handle 200))
-
