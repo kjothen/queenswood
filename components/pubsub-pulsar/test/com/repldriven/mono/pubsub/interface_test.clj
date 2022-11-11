@@ -60,8 +60,7 @@
               recv-props (some-> recv-msg .getProperties)]
           (some->> recv-msg (.acknowledge consumer))
           (is (= data (some->> recv-data (schema-avro/deserialize-same schema))))
-          (is (= (get props "message") (get recv-props "message")))
-          )))))
+          (is (= (get props "message") (get recv-props "message"))))))))
 
 (deftest encrypted-message-mismatched-consumer-key-test
   (testing "Pulsar consumer with a mismatching decryption key cannot consume"
@@ -101,7 +100,7 @@
           (map (fn [[k v]]
                  (let [url (string/join "/" [namespace-url k])]
                    (is (= v (-> (http/request {:url url :method :get})
-                                (http/res->json))))))
+                              (http/res->json))))))
             expected))))))
 
 (comment

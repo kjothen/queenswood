@@ -18,4 +18,4 @@
   (log/info "Ensure pulsar tenants exist:" tenants)
   (doall (mapv (fn [{:keys [tenant] :as opts}]
                  (create admin tenant (dissoc opts :tenant)))
-               tenants)))
+           tenants)))

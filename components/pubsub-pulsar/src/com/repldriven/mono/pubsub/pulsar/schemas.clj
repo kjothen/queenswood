@@ -14,9 +14,9 @@
 (defn- ^PostSchemaPayload create-payload
   [type schema properties]
   (PostSchemaPayload.
-   (or type "")
-   (if (some? schema) (json/write-str schema) "")
-   (or properties {})))
+    (or type "")
+    (if (some? schema) (json/write-str schema) "")
+    (or properties {})))
 
 (defn- ^SchemaDefinition create-definition
   [schema properties]
@@ -74,10 +74,10 @@
 (defn create-schemas
   [coll]
   (reduce-kv
-   (fn [m k {:keys [type schema properties]}]
-     (assoc m k (create-schema-entry type (read-schema schema) properties)))
-   {}
-   coll))
+    (fn [m k {:keys [type schema properties]}]
+      (assoc m k (create-schema-entry type (read-schema schema) properties)))
+    {}
+    coll))
 
 (defn resolve
   [schemas s]
@@ -92,7 +92,7 @@
   (cond
     (keyword? s) (get-in schemas [s :payload])
     (map? s) (let [{:keys [type schema properties]} s]
-                     (create-payload type schema properties))
+               (create-payload type schema properties))
     :else (throw (ex-info
-                  (format "Invalid value %s for schema payload" s)
-                  {:schema s}))))
+                   (format "Invalid value %s for schema payload" s)
+                   {:schema s}))))

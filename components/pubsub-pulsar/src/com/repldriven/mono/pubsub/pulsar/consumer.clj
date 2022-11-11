@@ -5,7 +5,7 @@
   (:import (java.util Map)
            (java.util.concurrent TimeUnit)
            (org.apache.pulsar.client.api
-            Consumer Message PulsarClient PulsarClientException)))
+             Consumer Message PulsarClient PulsarClientException)))
 
 (defn ^Consumer create
   [{:keys [^PulsarClient client conf schemas]}]

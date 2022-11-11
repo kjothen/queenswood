@@ -1,4 +1,4 @@
-{:files {:ignore #{"target"}},
+{:files {:ignore #{"target" ".clj-kondo" ".lsp"}},
  :rules
  {:indentation
   {:indents

@@ -2,5 +2,4 @@
   (:require [clojure.test :as test :refer :all]
             [com.repldriven.mono.event.interface :as SUT]))
 
-(deftest dummy-test
-  (is (= 1 1)))
+(deftest dummy-test (is (= 1 1)))

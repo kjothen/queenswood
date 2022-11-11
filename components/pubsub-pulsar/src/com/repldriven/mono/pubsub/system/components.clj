@@ -66,15 +66,15 @@
   {:system/start (fn [{:system/keys [config instance]}]
                    (or instance
                        (reduce-kv
-                        (fn [m k v]
-                          (assoc m k (consumer/create v)))
-                        {} config)))
+                         (fn [m k v]
+                           (assoc m k (consumer/create v)))
+                         {} config)))
    :system/stop (fn [{:system/keys [instance]}]
                   (when (some? instance)
                     (dorun (map
-                            (fn [[_ instance]]
-                              (close-client-connection instance "consumer"))
-                            instance))))
+                             (fn [[_ instance]]
+                               (close-client-connection instance "consumer"))
+                             instance))))
    :system/config system/required-component})
 
 (def consumer
@@ -98,14 +98,14 @@
            (crypto/key-pair-generator config))))
    :system/config system/required-component})
 
-; crypto-key-pair-file-reader(s)
+;; crypto-key-pair-file-reader(s)
 (def crypto-key-pair-file-readers
   {:system/start
    (fn [{:system/keys [config instance]}]
      (or instance
          (reduce-kv
-          (fn [m k v] (assoc m k (crypto/key-pair-file-reader v)))
-          {} config)))
+           (fn [m k v] (assoc m k (crypto/key-pair-file-reader v)))
+           {} config)))
    :system/config system/required-component})
 
 (def crypto-key-pair-file-reader
@@ -114,14 +114,14 @@
      (or instance (crypto/key-pair-file-reader config)))
    :system/config system/required-component})
 
-; crypto-key-reader(s)
+;; crypto-key-reader(s)
 (def crypto-key-readers
   {:system/start
    (fn [{:system/keys [config instance]}]
      (or instance
          (reduce-kv
-          (fn [m k v] (assoc m k (crypto/key-reader v)))
-          {} config)))
+           (fn [m k v] (assoc m k (crypto/key-reader v)))
+           {} config)))
    :system/config system/required-component})
 
 (def crypto-key-reader
@@ -182,7 +182,6 @@
   {:system/start (fn [{:system/keys [config instance]}]
                    (or instance (tenants/create-tenants config)))
    :system/config system/required-component})
-
 
 ;; ---
 ;; topics
