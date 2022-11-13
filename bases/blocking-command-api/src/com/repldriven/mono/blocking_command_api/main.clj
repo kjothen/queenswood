@@ -14,10 +14,9 @@
 (defn start!
   []
   (log/info "Starting system")
-  (let [config (-> (blocking-command-api-system/configure (:system @env/env))
-                   (assoc-in [:system/defs :ring :jetty-adapter :system/config
-                              :handler]
-                             (partial api/app)))]
+  (let [config (-> (:system @env/env)
+                   (assoc-in [:ring :jetty-adapter :handler] (partial api/app))
+                   (blocking-command-api-system/configure))]
     (system/start! system config)))
 
 (defn stop!
@@ -35,38 +34,6 @@
       (cli/exit ok? exit-message)
       (do (env/set-env! (:config-file options) (keyword (:profile options)))
           (start!)))))
-
-
-(comment
-  (require '[clojure.walk :as walk])
-  (def mono-system-ns "system")
-  (def donut-system-ns "donut.system")
-  (defn match-ns-keyword?
-    [x match-ns]
-    (and (keyword? x) (= match-ns (namespace x))))
-  (defn- nsmap->nsmap
-    [m from-ns to-ns]
-    (walk/postwalk
-     (fn [x]
-       (if (match-ns-keyword? x from-ns)
-         (keyword to-ns (name x))
-         (if (fn? x)
-           (fn [to-ns-map]
-             (x (reduce-kv (fn [m k v]
-                             (assoc m
-                                    (if (match-ns-keyword? k to-ns)
-                                      (keyword from-ns (name k))
-                                      k)
-                                    v))
-                           {}
-                           to-ns-map)))
-           x)))
-     m))
-  (def config
-    (-> (blocking-command-api-system/configure (:system @env/env))
-        (assoc-in [:system/defs :ring :jetty-adapter :system/config :handler]
-                  (partial api/app))))
-  (.. (system/instance @system [:ring :jetty-adapter]) getConnectors))
 
 
 (comment
@@ -89,21 +56,16 @@
                        (when (= (last url-str) \/)
                          (apply str (drop-last url-str))))
             uri (clojure.string/join "/" [base-uri "api" "command"])]
-        (prn uri)
         (let [{:keys [status error body]}
               (http/request {:url uri
+                             :method :post
                              :headers {"Content-Type" "application/json"}
                              :body (json/write-str {:data {:type "example"
                                                            :id (ulid/ulid)}})})]
           (if error
             (println "Failed, exception is " error)
             (println "Async HTTP POST: " status body)))))
-    (defn stop [] (stop!))
     (start)
-    (query)
-    (assoc-in (:system @env/env)
-     [:ring :jetty-adapter :handler]
-     (partial api/app))
-    (system/instance @system [:ring :jetty-adapter])
-    (stop))
-  (run))
+    (query))
+  (run)
+  (stop!))
