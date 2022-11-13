@@ -1,42 +1,41 @@
 {:aliases
- {:build {:extra-deps #:io.github.clojure{tools.build #:mvn{:version "0.8.4"}}}
+ {:build {:extra-deps #:io.github.clojure{tools.build {:mvn/version "0.8.4"}}}
   :dev
-  {:extra-deps {components/cli #:local{:root "components/cli"}
-                components/encryption #:local{:root "components/encryption"}
-                components/env #:local{:root "components/env"}
-                components/event #:local{:root "components/event"}
-                components/http #:local{:root "components/http"}
-                components/log #:local{:root "components/log"}
-                components/migrator #:local{:root "components/migrator"}
-                components/mqtt #:local{:root "components/mqtt"}
-                components/pubsub #:local{:root "components/pubsub-pulsar"}
-                components/ring #:local{:root "components/ring"}
-                components/schema-avro #:local{:root "components/schema-avro"}
-                components/spec #:local{:root "components/spec"}
-                components/sql #:local{:root "components/sql-postgres"}
-                components/system #:local{:root "components/system"}
+  {:extra-deps {components/cli {:local/root "components/cli"}
+                components/encryption {:local/root "components/encryption"}
+                components/env {:local/root "components/env"}
+                components/event {:local/root "components/event"}
+                components/http {:local/root "components/http"}
+                components/log {:local/root "components/log"}
+                components/migrator {:local/root "components/migrator"}
+                components/mqtt {:local/root "components/mqtt"}
+                components/pubsub {:local/root "components/pubsub-pulsar"}
+                components/ring {:local/root "components/ring"}
+                components/schema-avro {:local/root "components/schema-avro"}
+                components/spec {:local/root "components/spec"}
+                components/sql {:local/root "components/sql-postgres"}
+                components/system {:local/root "components/system"}
                 components/testcontainers-system
-                #:local{:root "components/testcontainers-system"}
-                components/vault #:local{:root "components/vault"}
-                bases/blocking-command-api #:local{:root
-                                                   "bases/blocking-command-api"}
-                bases/build #:local{:root "bases/build"}
-                bases/pulsar-reader #:local{:root "bases/pulsar-reader"}
-                bases/symmetric-key-api #:local{:root "bases/symmetric-key-api"}
+                {:local/root "components/testcontainers-system"}
+                components/vault {:local/root "components/vault"}
+                bases/blocking-command-api {:local/root
+                                            "bases/blocking-command-api"}
+                bases/build {:local/root "bases/build"}
+                bases/pulsar-reader {:local/root "bases/pulsar-reader"}
+                bases/symmetric-key-api {:local/root "bases/symmetric-key-api"}
                 ;; use logback for the slf4j logging backend
-                ch.qos.logback/logback-classic #:mvn{:version "1.4.4"}
+                ch.qos.logback/logback-classic {:mvn/version "1.4.4"}
                 ;; redirect logging to the slf4j frontend
-                org.slf4j/jcl-over-slf4j #:mvn{:version "2.0.3"}
-                org.slf4j/log4j-over-slf4j #:mvn{:version "2.0.3"}
-                org.apache.logging.log4j/log4j-to-slf4j #:mvn{:version "2.19.0"}
-                org.slf4j/osgi-over-slf4j #:mvn{:version "2.0.3"}
-                org.slf4j/jul-to-slf4j #:mvn{:version "2.0.3"}
-                org.clojure/clojure #:mvn{:version "1.11.1"}}
+                org.slf4j/jcl-over-slf4j {:mvn/version "2.0.3"}
+                org.slf4j/log4j-over-slf4j {:mvn/version "2.0.3"}
+                org.apache.logging.log4j/log4j-to-slf4j {:mvn/version "2.19.0"}
+                org.slf4j/osgi-over-slf4j {:mvn/version "2.0.3"}
+                org.slf4j/jul-to-slf4j {:mvn/version "2.0.3"}
+                org.clojure/clojure {:mvn/version "1.11.1"}}
    :extra-paths ["development/resources"]
    :jvm-opts
-   ["-Dclojure.tools.logging.factory=
-clojure.tools.logging.impl/slf4j-factory"]}
-  :poly {:extra-deps #:polylith{clj-poly #:mvn{:version "0.2.15-alpha"}}
+   ["-Dclojure.tools.logging.factory=clojure.tools.logging.impl/slf4j-factory"]}
+  :poly {:extra-deps #:polylith{clj-poly {:mvn/version "0.2.15-alpha"}}
          :main-opts ["-m" "polylith.clj.core.poly-cli.core"]}
   :test
   {:extra-paths

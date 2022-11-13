@@ -1,6 +1,6 @@
 # brew bundle --file Brewfile
 
+tap "clojure/tools"
 brew "clojure/tools/clojure"
-cask "cljstyle"
 brew "ag"
-brew "zprint"
+cask "zprint"

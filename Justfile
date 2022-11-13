@@ -4,11 +4,11 @@ HOME := env_var('HOME')
 ZSHENV := env_var('HOME') + '/.zshenv'
 XDG_CONFIG_HOME := env_var_or_default('XDG_CONFIG_HOME', env_var('HOME') + '/.config')
 
-@list:
+list:
     just --list
 
-# Configure clojure and related tools
-@configure-clojure:
+# Config clojure and related tools
+configure-clojure:
     rm -rf '{{XDG_CONFIG_HOME}}/clojure'
     git clone git@github.com:practicalli/clojure-deps-edn.git '{{XDG_CONFIG_HOME}}/clojure'
 
@@ -16,33 +16,37 @@ XDG_CONFIG_HOME := env_var_or_default('XDG_CONFIG_HOME', env_var('HOME') + '/.co
       || echo 'export XDG_CONFIG_HOME={{XDG_CONFIG_HOME}}' >> '{{ZSHENV}}'
     clojure -Sdescribe
 
-# Start preferred repl
-@repl:
-    clj -M:inspect/portal-cli:repl/rebel:env/dev:dev:test
+    echo '{:search-config? true}' >> '{{HOME}}/.zprintrc'
 
 # Start polylith shell
-@shell:
+shell:
     clj -M:poly shell
 
 # Build all polylith projects as uberjars
-@build snapshot="true":
-    cd components/event && clojure -X:build avro
+build snapshot="true":
+    # cd components/event && clojure -X:build avro
     cd projects/message-reader && clojure -X:build uber :snapshot {{ snapshot }}
     cd projects/symmetric-key-vault && clojure -X:build uber :snapshot {{ snapshot }}
 
 # Run all polylith project tests
-@test:
+test:
     clojure -M:poly test :all
 
 # Linter
-@lint-eastwood:
+lint-eastwood:
     clojure -M:dev:test:lint/eastwood
-@lint-clj-kondo:
+lint-clj-kondo:
     for dir in `find . -type d -name 'src' -or -name 'test'`; do clj -M:lint/clj-kondo --lint $dir; done
-@lint:
+lint:
   just lint-eastwood
   just lint-clj-kondo
 
 # Formatter
 format:
+    # for file in `git ls-files -z '*.edn' '*.clj'`; do clj -M:format/zprint -w $file; done
     if (( $+commands[zprint] )); then git ls-files -z '*.edn' '*.clj' | xargs -0 -I '{}' sh -c "zprint '{:search-config? true}' -w {}"; fi
+
+# Install
+install:
+    brew bundle install --file={{justfile_directory()}}/Brewfile
+    just configure-clojure

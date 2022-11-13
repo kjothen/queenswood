@@ -37,3 +37,7 @@
   [ok? msg]
   (if ok? (log/info msg) (log/error msg))
   (System/exit (if ok? 0 1)))
+
+
+(comment
+  {:a "1" :b "2"})
