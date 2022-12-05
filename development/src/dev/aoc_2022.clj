@@ -129,22 +129,26 @@ CrZsJsPPZsGzwwsLwLmpwMDw"
            '[com.rpl.specter :refer [ALL MAP-VALS LAST select transform]])
   (defn parse-uint [s] (Integer/parseUnsignedInt s))
   (defn repeat-str [n s] (str (apply str (repeat n s))))
+  (defn pad-right
+    [s width pad]
+    (apply str (take width (concat s (repeat pad)))))
   (defn pad-lines
     [lines]
-    (let [max-len (apply max (map count lines))]
-      (map #(str % (repeat-str (inc (- max-len (count %))) " ")) lines)))
+    (let [width (inc (apply max (map count lines)))]
+      (map #(pad-right % width " ") lines)))
+  (defn transpose [coll] (apply map vector coll))
   (defn stack-lines->columns
     [lines]
     (->> (pad-lines (butlast lines))
-         (mapv (partial partition 4))
+         (map (partial partition 4))
          (transform [ALL ALL] #(apply str %))
-         (apply mapv vector)
+         (transpose)
          (map #(remove string/blank? %))
          (transform [ALL ALL] #(ffirst (next (re-matches #"\[(\w)\] " %))))
          (mapv (comp vec reverse))))
   (defn parse-stack-keys
     [lines]
-    (remove string/blank? (string/split (last lines) #" ")))
+    (mapv parse-uint (remove string/blank? (string/split (last lines) #" "))))
   (defn parse-stacks
     [lines]
     (zipmap (parse-stack-keys lines) (stack-lines->columns lines)))
@@ -152,7 +156,8 @@ CrZsJsPPZsGzwwsLwLmpwMDw"
     [lines]
     (->> lines
          (map #(next (re-matches #"move (\d+) from (\d+) to (\d+)" %)))
-         (map (fn [[num from to]] {:from from :to to :num (parse-uint num)}))))
+         (map (fn [[num from to]] {:from from :to to :num num}))
+         (transform [ALL MAP-VALS] parse-uint)))
   (defn part-1
     [instructions stacks]
     (loop [instructions instructions
@@ -204,4 +209,14 @@ move 3 from 1 to 3
 move 2 from 2 to 1
 move 1 from 1 to 2"]
     (assert (= {:part-1 "CMZ" :part-2 "MCD"} (process test-data)))
-    (process input-data)))
+    (assert (= {:part-1 "BZLVHBWQF" :part-2 "TDGJQTZSL"}
+               (process input-data)))))
+
+(comment
+  ;; day 6
+  (require '[clojure.java.io :as io]
+           '[clojure.string :as string]
+           '[clojure.set :refer [intersection]]
+           '[com.rpl.specter :refer [ALL MAP-VALS LAST select transform]])
+  (def test-data "")
+  (def input-data (slurp (io/resource "aoc-2022/06/input.dat"))))
