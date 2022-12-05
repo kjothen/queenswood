@@ -126,10 +126,75 @@ CrZsJsPPZsGzwwsLwLmpwMDw"
   (require '[clojure.java.io :as io]
            '[clojure.string :as string]
            '[clojure.set :refer [intersection]]
-           '[com.rpl.specter :refer [ALL transform]])
-  (def input-data (slurp (io/resource "aoc-2022/05/input.dat")))
-  (def test-data
-    "    [D]
+           '[com.rpl.specter :refer [ALL MAP-VALS LAST select transform]])
+  (defn parse-uint [s] (Integer/parseUnsignedInt s))
+  (defn repeat-str [n s] (str (apply str (repeat n s))))
+  (defn pad-lines
+    [lines]
+    (let [max-len (apply max (map count lines))]
+      (map #(str % (repeat-str (inc (- max-len (count %))) " ")) lines)))
+  (defn stack-lines->columns
+    [lines]
+    (->> (pad-lines (butlast lines))
+         (mapv (partial partition 4))
+         (transform [ALL ALL] #(apply str %))
+         (apply mapv vector)
+         (map #(remove string/blank? %))
+         (transform [ALL ALL] #(ffirst (next (re-matches #"\[(\w)\] " %))))
+         (mapv (comp vec reverse))))
+  (defn parse-stack-keys
+    [lines]
+    (remove string/blank? (string/split (last lines) #" ")))
+  (defn parse-stacks
+    [lines]
+    (zipmap (parse-stack-keys lines) (stack-lines->columns lines)))
+  (defn parse-instructions
+    [lines]
+    (->> lines
+         (map #(next (re-matches #"move (\d+) from (\d+) to (\d+)" %)))
+         (map (fn [[num from to]] {:from from :to to :num (parse-uint num)}))))
+  (defn part-1
+    [instructions stacks]
+    (loop [instructions instructions
+           stacks stacks
+           moves 1]
+      (if-not instructions
+        stacks
+        (let [{:keys [from to num]} (first instructions)
+              from-val (last (get stacks from))]
+          (recur (if (= num moves) (next instructions) instructions)
+                 (-> stacks
+                     (update to (fn [stack] (conj stack from-val)))
+                     (update from (fn [stack] (vec (drop-last stack)))))
+                 (if (= num moves) 1 (inc moves)))))))
+  (defn part-2
+    [instructions stacks]
+    (loop [instructions instructions
+           stacks stacks]
+      (if-not instructions
+        stacks
+        (let [{:keys [from to num]} (first instructions)
+              from-vals (take-last num (get stacks from))]
+          (recur (next instructions)
+                 (-> stacks
+                     (update to (fn [stack] (vec (concat stack from-vals))))
+                     (update from
+                             (fn [stack] (vec (drop-last num stack))))))))))
+  (defn top-of-stacks
+    [stacks]
+    (apply str (select [MAP-VALS LAST] (sort stacks))))
+  (defn process
+    [data]
+    (let [[stack-lines instruction-lines] (map string/split-lines
+                                               (string/split data #"\n\n"))
+          stacks (parse-stacks stack-lines)
+          instructions (parse-instructions instruction-lines)]
+      {:part-1 (top-of-stacks (part-1 instructions stacks))
+       :part-2 (top-of-stacks (part-2 instructions stacks))}))
+  (let
+    [input-data (slurp (io/resource "aoc-2022/05/input.dat"))
+     test-data
+     "    [D]
 [N] [C]
 [Z] [M] [P]
  1   2   3
@@ -137,26 +202,6 @@ CrZsJsPPZsGzwwsLwLmpwMDw"
 move 1 from 2 to 1
 move 3 from 1 to 3
 move 2 from 2 to 1
-move 1 from 1 to 2")
-  (defn repeat-str [n s] (str (apply str (repeat n s))))
-  (def stacks-str (first (string/split test-data #"\n\n")))
-  (def instructions-str (second (string/split test-data #"\n\n")))
-  (def stack-idx
-    (remove string/blank?
-            (-> stacks-str
-                string/split-lines
-                last
-                (string/split #" "))))
-  (def stack-cnt (count stack-idx))
-  (def stack-width (* stack-cnt 4))
-  (def padded-stacks
-    (mapv #(str % (repeat-str (- stack-width (count %)) " "))
-          (-> stacks-str
-              string/split-lines
-              butlast)))
-  (apply
-   map
-   vector
-   (transform [ALL ALL] #(apply str %) (mapv #(partition 4 %) padded-stacks)))
-  (let [[stack-str instruction-str] (string/split test-data #"\n\n")]
-    stack-str))
+move 1 from 1 to 2"]
+    (assert (= {:part-1 "CMZ" :part-2 "MCD"} (process test-data)))
+    (process input-data)))
