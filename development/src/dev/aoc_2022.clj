@@ -6,21 +6,22 @@
            '[clojure.string :as string]
            '[com.rpl.specter :refer [ALL transform]])
   (defn parse-uint [s] (Integer/parseUnsignedInt s))
+  (defn part-1 [data] (first data))
+  (defn part-2 [data] (apply + (take 3 data)))
   (defn process
-    [data]
-    (->> (string/split data #"\n\n")
-         (map string/split-lines)
-         (transform [ALL ALL] parse-uint)
-         (map (partial apply +))
-         (sort >)))
-  (defn part-1 [data] (first (process data)))
-  (defn part-2 [data] (apply + (take 3 (process data))))
+    ([data] {:part-1 (process part-1 data) :part-2 (process part-2 data)})
+    ([f data]
+     (->> (string/split data #"\n\n")
+          (map string/split-lines)
+          (transform [ALL ALL] parse-uint)
+          (map (partial apply +))
+          (sort >)
+          f)))
   (let [test-data
         "1000\n2000\n3000\n\n4000\n\n5000\n6000\n\n7000\n8000\n9000\n\n10000"
         input-data (slurp (io/resource "aoc-2022/01/input.dat"))]
-    (assert (= 24000 (part-1 test-data)))
-    (assert (= 45000 (part-2 test-data)))
-    {:part-1 (part-1 input-data) :part-2 (part-2 input-data)}))
+    (assert (= {:part-1 24000 :part-2 45000} (process test-data)))
+    (assert (= {:part-1 70374 :part-2 204610} (process input-data)))))
 
 (comment
   ;; day 2
@@ -42,6 +43,10 @@
   (defn score-all
     [data score-fn plays points]
     (reduce (fn [res [you me]] (+ res (score-fn plays points you me))) 0 data))
+  (defn process
+    [data rps ldw plays points]
+    {:part-1 (score-all (decrypt data rps rps) score plays points)
+     :part-2 (score-all (decrypt data rps ldw) score plays points)})
   (let [rps {\A :rock \B :paper \C :scissors \X :rock \Y :paper \Z :scissors}
         ldw {\X :lose \Y :draw \Z :win}
         points {:rock 1 :paper 2 :scissors 3 :lose 0 :draw 3 :win 6}
@@ -52,10 +57,10 @@
         plays (merge-with merge play-1 play-2)
         test-data (parse "A Y\nB X\nC Z")
         input-data (parse (slurp (io/resource "aoc-2022/02/input.dat")))]
-    (assert (= 15 (score-all (decrypt test-data rps rps) score plays points)))
-    (assert (= 12 (score-all (decrypt test-data rps ldw) score plays points)))
-    {:part-1 (score-all (decrypt input-data rps rps) score plays points)
-     :part-2 (score-all (decrypt input-data rps ldw) score plays points)}))
+    (assert (= {:part-1 15 :part-2 12}
+               (process test-data rps ldw plays points)))
+    (assert (= {:part-1 13675 :part-2 14184}
+               (process input-data rps ldw plays points)))))
 
 (comment
   ;; day 3
@@ -68,13 +73,6 @@
     (if (Character/isLowerCase c)
       (+ 1 (- (int c) (int \a)))
       (+ 27 (- (int c) (int \A)))))
-  (defn process
-    [f data]
-    (->> (string/split-lines data)
-         f
-         (transform [ALL ALL] prioritize)
-         (map (partial apply +))
-         (apply +)))
   (defn part-1
     [data]
     (->> data
@@ -85,15 +83,22 @@
     (->> data
          (partition 3)
          (map (fn [[x y z]] (intersection (set x) (set y) (set z))))))
+  (defn process
+    ([data] {:part-1 (process part-1 data) :part-2 (process part-2 data)})
+    ([f data]
+     (->> (string/split-lines data)
+          f
+          (transform [ALL ALL] prioritize)
+          (map (partial apply +))
+          (apply +))))
   (let
     [test-data
      "vJrwpWtwJgWrhcsFMMfFFhFp\njqHRNqRjqzjGDLGLrsFMfFZSrLrFZsSL
 PmmdzqPrVvPwwTWBwg\nwMqvLMZHhHMvwLHjbvcjnnSBnvTQFn\nttgJtRGJQctTZtZT
 CrZsJsPPZsGzwwsLwLmpwMDw"
      input-data (slurp (io/resource "aoc-2022/03/input.dat"))]
-    (assert (= 157 (process part-1 test-data)))
-    (assert (= 70 (process part-2 test-data)))
-    {:part-1 (process part-1 input-data) :part-2 (process part-2 input-data)}))
+    (assert (= {:part-1 157 :part-2 70} (process test-data)))
+    (assert (= {:part-1 7878 :part-2 2760} (process input-data)))))
 
 (comment
   ;; day 4
@@ -101,25 +106,25 @@ CrZsJsPPZsGzwwsLwLmpwMDw"
            '[clojure.string :as string]
            '[com.rpl.specter :refer [ALL transform]])
   (defn parse-uint [s] (Integer/parseUnsignedInt s))
-  (defn process
-    [filter-fn data]
-    (->> (string/split-lines data)
-         (map #(next (re-matches #"(\d+)-(\d+),(\d+)-(\d+)" %)))
-         (transform [ALL ALL] parse-uint)
-         (filter filter-fn)
-         count))
   (defn filter-1
     [[x y x' y']]
     (or (and (<= x x') (>= y y')) (and (<= x' x) (>= y' y))))
   (defn filter-2
     [[x y x' y']]
     (or (and (<= x x') (>= y x')) (and (<= x' x) (>= y' x))))
+  (defn process
+    ([data] {:part-1 (process filter-1 data) :part-2 (process filter-2 data)})
+    ([filter-fn data]
+     (->> (string/split-lines data)
+          (map #(next (re-matches #"(\d+)-(\d+),(\d+)-(\d+)" %)))
+          (transform [ALL ALL] parse-uint)
+          (filter filter-fn)
+          count)))
   (let [test-data "2-4,6-8\n2-3,4-5\n5-7,7-9\n2-8,3-7\n6-6,4-6\n2-6,4-8"
         input-data (slurp (io/resource "aoc-2022/04/input.dat"))]
-    (assert (= 2 (process filter-1 test-data)))
-    (assert (= 4 (process filter-2 test-data)))
-    {:part-1 (process filter-1 input-data)
-     :part-2 (process filter-2 input-data)}))
+    (assert (= {:part-1 2 :part-2 4} (process test-data)))
+    (assert (= {:part-1 503 :part-2 807}))))
+
 
 (comment
   ;; day 5
