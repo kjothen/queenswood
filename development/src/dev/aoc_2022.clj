@@ -1,4 +1,5 @@
-(ns com.repldriven.mono.dev.aoc-2022)
+(ns com.repldriven.mono.dev.aoc-2022
+  (:require [clojure.test :refer [deftest is testing]]))
 
 (comment
   ;; day 1
@@ -125,6 +126,8 @@ CrZsJsPPZsGzwwsLwLmpwMDw"
     (assert (= {:part-1 2 :part-2 4} (process test-data)))
     (assert (= {:part-1 503 :part-2 807}))))
 
+(string/join (repeat 5 "A"))
+
 
 (comment
   ;; day 5
@@ -133,27 +136,23 @@ CrZsJsPPZsGzwwsLwLmpwMDw"
            '[clojure.set :refer [intersection]]
            '[com.rpl.specter :refer [ALL MAP-VALS LAST select transform]])
   (defn parse-uint [s] (Integer/parseUnsignedInt s))
-  (defn repeat-str [n s] (str (apply str (repeat n s))))
-  (defn pad-right
-    [s width pad]
-    (apply str (take width (concat s (repeat pad)))))
-  (defn pad-lines
-    [lines]
-    (let [width (inc (apply max (map count lines)))]
-      (map #(pad-right % width " ") lines)))
+  (defn repeat-str [n s] (string/join (repeat n s)))
+  (defn pad-str [n s pad] (string/join (take n (concat s (repeat pad)))))
+  (defn pad-lines [n lines pad] (map #(pad-str n % pad) lines))
   (defn transpose [coll] (apply map vector coll))
   (defn stack-lines->columns
     [lines]
-    (->> (pad-lines (butlast lines))
-         (map (partial partition 4))
-         (transform [ALL ALL] #(apply str %))
-         (transpose)
-         (map #(remove string/blank? %))
-         (transform [ALL ALL] #(ffirst (next (re-matches #"\[(\w)\] " %))))
-         (mapv (comp vec reverse))))
+    (let [line-width (inc (apply max (map count lines)))]
+      (->> (pad-lines line-width (butlast lines) \space)
+           (map (partial partition 4))
+           (transform [ALL ALL] #(apply str %))
+           transpose
+           (map #(remove string/blank? %))
+           (transform [ALL ALL] #(ffirst (next (re-matches #"\[(\w)\] " %))))
+           (mapv (comp vec reverse)))))
   (defn parse-stack-keys
     [lines]
-    (mapv parse-uint (remove string/blank? (string/split (last lines) #" "))))
+    (mapv parse-uint (string/split (string/trim (last lines)) #"\s+")))
   (defn parse-stacks
     [lines]
     (zipmap (parse-stack-keys lines) (stack-lines->columns lines)))
@@ -216,21 +215,20 @@ move 1 from 1 to 2"]
     (assert (= {:part-1 "CMZ" :part-2 "MCD"} (process test-data)))
     (assert (= {:part-1 "BZLVHBWQF" :part-2 "TDGJQTZSL"}
                (process input-data)))))
-
 (comment
   ;; day 6
   (require '[clojure.java.io :as io] '[clojure.string :as string])
-  (def test-data "bvwbjplbgvbhsrlpgdmjqwftvncz")
   (defn marker
-    [data width]
+    [msg width]
     (+ width
-       (reduce (fn [acc data]
-                 (if (apply distinct? data) (reduced acc) (inc acc)))
+       (reduce (fn [acc msg] (if (apply distinct? msg) (reduced acc) (inc acc)))
                0
-               (partition width 1 data))))
-  (marker "bvwbjplbgvbhsrlpgdmjqwftvncz" 4)
-  (marker "nppdvjthqldpwncqszvftbrmjlhg" 4)
-  (marker "nznrnfrfntjfmvfwmzdfjlvtqnbhcprsg" 4)
-  (marker "zcfzfwzzqfrljwzlrfnpqdbhtmscgvjw" 4)
-  (def input-data (slurp (io/resource "aoc-2022/06/input.dat")))
-  (marker input-data 14))
+               (partition width 1 msg))))
+  (assert (= 5 (marker "bvwbjplbgvbhsrlpgdmjqwftvncz" 4)))
+  (assert (= 6 (marker "nppdvjthqldpwncqszvftbrmjlhg" 4)))
+  (assert (= 10 (marker "nznrnfrfntjfmvfwmzdfjlvtqnbhcprsg" 4)))
+  (assert (= 11 (marker "zcfzfwzzqfrljwzlrfnpqdbhtmscgvjw" 4)))
+  (let [input-data (slurp (io/resource "aoc-2022/06/input.dat"))]
+    (assert (= {:part-1 1034 :part-2 2472}
+               {:part-1 (marker input-data 4)
+                :part-2 (marker input-data 14)}))))
