@@ -219,9 +219,18 @@ move 1 from 1 to 2"]
 
 (comment
   ;; day 6
-  (require '[clojure.java.io :as io]
-           '[clojure.string :as string]
-           '[clojure.set :refer [intersection]]
-           '[com.rpl.specter :refer [ALL MAP-VALS LAST select transform]])
-  (def test-data "")
-  (def input-data (slurp (io/resource "aoc-2022/06/input.dat"))))
+  (require '[clojure.java.io :as io] '[clojure.string :as string])
+  (def test-data "bvwbjplbgvbhsrlpgdmjqwftvncz")
+  (defn marker
+    [data width]
+    (+ width
+       (reduce (fn [acc data]
+                 (if (apply distinct? data) (reduced acc) (inc acc)))
+               0
+               (partition width 1 data))))
+  (marker "bvwbjplbgvbhsrlpgdmjqwftvncz" 4)
+  (marker "nppdvjthqldpwncqszvftbrmjlhg" 4)
+  (marker "nznrnfrfntjfmvfwmzdfjlvtqnbhcprsg" 4)
+  (marker "zcfzfwzzqfrljwzlrfnpqdbhtmscgvjw" 4)
+  (def input-data (slurp (io/resource "aoc-2022/06/input.dat")))
+  (marker input-data 14))
