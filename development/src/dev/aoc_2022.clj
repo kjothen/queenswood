@@ -189,17 +189,15 @@ CrZsJsPPZsGzwwsLwLmpwMDw"
                      (update to (fn [stack] (vec (concat stack from-vals))))
                      (update from
                              (fn [stack] (vec (drop-last num stack))))))))))
-  (defn top-of-stacks
-    [stacks]
-    (apply str (select [MAP-VALS LAST] (sort stacks))))
+  (defn read-stacks [stacks] (apply str (select [MAP-VALS LAST] (sort stacks))))
   (defn process
     [data]
     (let [[stack-lines instruction-lines] (map string/split-lines
                                                (string/split data #"\n\n"))
           stacks (parse-stacks stack-lines)
           instructions (parse-instructions instruction-lines)]
-      {:part-1 (top-of-stacks (part-1 instructions stacks))
-       :part-2 (top-of-stacks (part-2 instructions stacks))}))
+      {:part-1 (read-stacks (part-1 instructions stacks))
+       :part-2 (read-stacks (part-2 instructions stacks))}))
   (let
     [input-data (slurp (io/resource "aoc-2022/05/input.dat"))
      test-data
@@ -224,10 +222,16 @@ move 1 from 1 to 2"]
        (reduce (fn [acc msg] (if (apply distinct? msg) (reduced acc) (inc acc)))
                0
                (partition width 1 msg))))
+  (assert (= 7 (marker "mjqjpqmgbljsphdztnvjfqwrcgsmlb" 4)))
   (assert (= 5 (marker "bvwbjplbgvbhsrlpgdmjqwftvncz" 4)))
   (assert (= 6 (marker "nppdvjthqldpwncqszvftbrmjlhg" 4)))
   (assert (= 10 (marker "nznrnfrfntjfmvfwmzdfjlvtqnbhcprsg" 4)))
   (assert (= 11 (marker "zcfzfwzzqfrljwzlrfnpqdbhtmscgvjw" 4)))
+  (assert (= 19 (marker "mjqjpqmgbljsphdztnvjfqwrcgsmlb") 14))
+  (assert (= 23 (marker "bvwbjplbgvbhsrlpgdmjqwftvncz") 14))
+  (assert (= 23 (marker "nppdvjthqldpwncqszvftbrmjlhg") 14))
+  (assert (= 29 (marker "nznrnfrfntjfmvfwmzdfjlvtqnbhcprsg") 14))
+  (assert (= 26 (marker "zcfzfwzzqfrljwzlrfnpqdbhtmscgvjw") 14))
   (let [input-data (slurp (io/resource "aoc-2022/06/input.dat"))]
     (assert (= {:part-1 1034 :part-2 2472}
                {:part-1 (marker input-data 4)
