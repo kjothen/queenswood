@@ -264,19 +264,75 @@ $ ls
 8033020 d.log
 5626152 d.ext
 7214296 k")
-  (loop [files []
-         lines (string/split-lines test-data)
-         path ""
-         cmd nil]
-    (if-not lines
-      files
-      (let [line (first lines)
-            parts (string/split line #"\s+")
-            res (condp = (first parts) "$" 1 "dir" 2)]
-        (recur (assoc-in files [line] parts)
-               (next lines)
-               path
-               (if (= "$" (first parts) (second parts) cmd))))))
-  ["/b.txt" 14848514 "/c.dat" 62596 "/a/f" 29116 "/a/g" 2557 "/a/h.lst" 62596
-   "/a/e/i" 584 "/d/j" 4060174 "/d/d.log" 8033020 "/d/d.ext" 5626152 "/d/k"
-   7214296])
+  (defn cd
+    [path dir]
+    (case dir
+      "/" ["/"]
+      ".." (vec (butlast path))
+      (vec (conj path dir))))
+  (defn make-file-entry
+    [coll]
+    {:size (parse-uint (first coll)) :filename (second coll)})
+  (defn make-path-keys
+    [path]
+    (if (= ["/"] path)
+      path
+      (vec (butlast (interleave path (repeat :children))))))
+  (make-path-keys ["/" "a"])
+  (defn lines->tree
+    [lines]
+    (loop [tree {}
+           lines (string/split-lines lines)
+           path []]
+      (if-not lines
+        tree
+        (let [line (first lines)
+              parts (vec (string/split line #" "))
+              cmd? (= "$" (first parts))
+              cmd (when cmd? (second parts))
+              cmd-args (when cmd? (nthrest cmd 2))
+              path' (cond-> path
+                      (and cmd? (= "cd" (second parts))) (cd (nth parts 2)))]
+          (recur
+           (if (not (or cmd? (= (first parts) "dir")))
+             (update-in tree
+                        (make-path-keys path')
+                        (fn [m]
+                          (update m
+                                  :files
+                                  (fn [vs]
+                                    (vec (conj vs (make-file-entry parts)))))))
+             tree)
+           (next lines)
+           path')))))
+  (defn file-sizes
+    [files]
+    (reduce (fn [acc file] (+ acc (:size file))) 0 files))
+  (defn dir-sizes
+    ([dirs]
+     (let [res (transient {})]
+       (dir-sizes res "" dirs)
+       (persistent! res)))
+    ([res dir dirs]
+     (mapv (fn [[k v]]
+             (let [path (str dir k)]
+               (prn k v)
+               (when (:files v) (assoc! res path (file-sizes (:files v))))
+               (when (:children v) (dir-sizes res path (:children v)))))
+           dirs)))
+  (defn filter-paths
+    [s paths]
+    (filter (fn [[k _]] (string/starts-with? k s)) paths))
+  (defn subdir-sizes
+    [dirs]
+    (reduce-kv (fn [m k v] (assoc m k (apply + (vals (filter-paths k dirs)))))
+               {}
+               dirs))
+  (def input-data (slurp (io/resource "aoc-2022/07/input.dat")))
+  (def x (lines->tree input-data))
+  (def y (dir-sizes x))
+  (def z (subdir-sizes y))
+  (apply + (filter #(<= % 100000) (vals z)))
+  (clojure.pprint/pprint x)
+  (clojure.pprint/pprint y)
+  (clojure.pprint/pprint z))
