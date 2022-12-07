@@ -236,3 +236,47 @@ move 1 from 1 to 2"]
     (assert (= {:part-1 1034 :part-2 2472}
                {:part-1 (marker input-data 4)
                 :part-2 (marker input-data 14)}))))
+
+(comment
+  ;; day 6
+  (require '[clojure.java.io :as io] '[clojure.string :as string])
+  (def test-data
+    "$ cd /
+$ ls
+dir a
+14848514 b.txt
+8504156 c.dat
+dir d
+$ cd a
+$ ls
+dir e
+29116 f
+2557 g
+62596 h.lst
+$ cd e
+$ ls
+584 i
+$ cd ..
+$ cd ..
+$ cd d
+$ ls
+4060174 j
+8033020 d.log
+5626152 d.ext
+7214296 k")
+  (loop [files []
+         lines (string/split-lines test-data)
+         path ""
+         cmd nil]
+    (if-not lines
+      files
+      (let [line (first lines)
+            parts (string/split line #"\s+")
+            res (condp = (first parts) "$" 1 "dir" 2)]
+        (recur (assoc-in files [line] parts)
+               (next lines)
+               path
+               (if (= "$" (first parts) (second parts) cmd))))))
+  ["/b.txt" 14848514 "/c.dat" 62596 "/a/f" 29116 "/a/g" 2557 "/a/h.lst" 62596
+   "/a/e/i" 584 "/d/j" 4060174 "/d/d.log" 8033020 "/d/d.ext" 5626152 "/d/k"
+   7214296])
