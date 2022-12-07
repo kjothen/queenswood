@@ -278,7 +278,6 @@ $ ls
     (if (= ["/"] path)
       path
       (vec (butlast (interleave path (repeat :children))))))
-  (make-path-keys ["/" "a"])
   (defn lines->tree
     [lines]
     (loop [tree {}
@@ -293,36 +292,36 @@ $ ls
               cmd-args (when cmd? (nthrest cmd 2))
               path' (cond-> path
                       (and cmd? (= "cd" (second parts))) (cd (nth parts 2)))]
-          (recur
-           (if (not (or cmd? (= (first parts) "dir")))
-             (update-in tree
+          (recur (if (not (or cmd? (= (first parts) "dir")))
+                   (do (prn path' parts)
+                       (update-in
+                        tree
                         (make-path-keys path')
                         (fn [m]
                           (update m
                                   :files
                                   (fn [vs]
-                                    (vec (conj vs (make-file-entry parts)))))))
-             tree)
-           (next lines)
-           path')))))
+                                    (vec (conj vs (make-file-entry parts))))))))
+                   tree)
+                 (next lines)
+                 path')))))
   (defn file-sizes
     [files]
     (reduce (fn [acc file] (+ acc (:size file))) 0 files))
   (defn dir-sizes
     ([dirs]
-     (let [res (transient {})]
+     (let [res (transient [])]
        (dir-sizes res "" dirs)
-       (persistent! res)))
+       (let [ret (persistent! res)] (apply hash-map (flatten ret)))))
     ([res dir dirs]
      (mapv (fn [[k v]]
-             (let [path (str dir k)]
-               (prn k v)
-               (when (:files v) (assoc! res path (file-sizes (:files v))))
+             (let [path (string/join (if (< 1 (count dir)) "/" "") [dir k])]
+               (when (:files v) (conj! res [path (file-sizes (:files v))]))
                (when (:children v) (dir-sizes res path (:children v)))))
            dirs)))
   (defn filter-paths
     [s paths]
-    (filter (fn [[k _]] (string/starts-with? k s)) paths))
+    (filterv (fn [[k _]] (string/starts-with? k s)) paths))
   (defn subdir-sizes
     [dirs]
     (reduce-kv (fn [m k v] (assoc m k (apply + (vals (filter-paths k dirs)))))
@@ -332,7 +331,24 @@ $ ls
   (def x (lines->tree input-data))
   (def y (dir-sizes x))
   (def z (subdir-sizes y))
-  (apply + (filter #(<= % 100000) (vals z)))
+  (prn (apply + (filter #(<= % 100000) (vals z))))
+  (count (filter #(<= % 100000) (vals z)))
+  (apply + (vals y))
+  (apply + (vals z))
   (clojure.pprint/pprint x)
-  (clojure.pprint/pprint y)
-  (clojure.pprint/pprint z))
+  (clojure.pprint/pprint (sort y))
+  (clojure.pprint/pprint (sort z)))
+
+(defn parse-uint [s] (try (Long/parseUnsignedLong s) (catch Exception e)))
+(->> (string/split-lines input-data)
+     (filter #(parse-uint (first (string/split % #" "))))
+     (map #(parse-uint (first (string/split % #" "))))
+     (apply +))
+
+["/ftj" 40232]
+["/ftj/clchr/sbzf" 257770]
+["/ftj/hmd" 465777]
+["/ftj/hmd/lfpm" 842541]
+["/ftj/hmd/lfpm/vlnbm" 143113]
+
+(+ 465777 842541 143113)
