@@ -238,15 +238,13 @@ move 1 from 1 to 2"]
 (comment
   ;; day 7
   (require '[clojure.java.io :as io] '[clojure.string :as string])
+  (defn parse-uint [s] (Integer/parseUnsignedInt s))
   (defn cd
     [path dir]
     (case dir
       "/" ["/"]
       ".." (vec (butlast path))
       (vec (conj path dir))))
-  (defn make-file-entry
-    [coll]
-    {:size (parse-uint (first coll)) :filename (second coll)})
   (defn make-path-keys
     [path]
     (if (= ["/"] path)
@@ -263,54 +261,52 @@ move 1 from 1 to 2"]
               parts (vec (string/split line #" "))
               cmd? (= "$" (first parts))
               cmd (when cmd? (second parts))
-              cmd-args (when cmd? (nthrest cmd 2))
               path' (cond-> path
                       (and cmd? (= "cd" (second parts))) (cd (nth parts 2)))]
-          (recur (if (not (or cmd? (= (first parts) "dir")))
-                   (do (prn path' parts)
-                       (update-in
-                        tree
-                        (make-path-keys path')
-                        (fn [m]
-                          (update m
-                                  :files
-                                  (fn [vs]
-                                    (vec (conj vs (make-file-entry parts))))))))
-                   tree)
-                 (next lines)
-                 path')))))
+          (recur
+           (if (not (or cmd? (= (first parts) "dir")))
+             (let [file-entry {:size (parse-uint (first parts))
+                               :name (second parts)}]
+               (update-in
+                tree
+                (make-path-keys path')
+                (fn [m]
+                  (update m :files (fn [vs] (vec (conj vs file-entry)))))))
+             tree)
+           (next lines)
+           path')))))
   (defn file-sizes
     [files]
     (reduce (fn [acc file] (+ acc (:size file))) 0 files))
-  (defn dir-sizes
-    ([dirs]
+  (defn tree->dir-sizes
+    ([tree]
      (let [res (transient [])]
-       (dir-sizes res "" dirs)
+       (tree->dir-sizes res "" tree)
        (let [ret (persistent! res)] (apply hash-map (flatten ret)))))
-    ([res dir dirs]
+    ([res dir tree]
      (mapv (fn [[k v]]
              (let [path (string/join (if (< 1 (count dir)) "/" "") [dir k])]
                (conj! res [path (file-sizes (:files v))])
-               (when (:children v) (dir-sizes res path (:children v)))))
-           dirs)))
-  (defn filter-paths
-    [s paths]
-    (filterv (fn [[k _]] (string/starts-with? k s)) paths))
+               (when (:children v) (tree->dir-sizes res path (:children v)))))
+           tree)))
+  (defn subdirs
+    [parent-dir dir->sizes]
+    (filterv (fn [[dir _]] (string/starts-with? dir parent-dir)) dir->sizes))
   (defn subdir-sizes
-    [dirs]
-    (reduce-kv (fn [m k v] (assoc m k (apply + (vals (filter-paths k dirs)))))
+    [dir->sizes]
+    (reduce-kv (fn [m k v] (assoc m k (apply + (vals (subdirs k dir->sizes)))))
                {}
-               dirs))
+               dir->sizes))
   (defn process
     [data]
-    (let [x (lines->tree data)
-          y (dir-sizes x)
-          z (subdir-sizes y)
-          total-size (get z "/")
-          free-space (- 70000000 total-size)
-          target (- 30000000 free-space)]
-      {:part-1 (apply + (filter #(<= % 100000) (vals z)))
-       :part-2 (apply min (filter #(>= % target) (vals z)))}))
+    (let [tree (->> (lines->tree data)
+                    tree->dir-sizes
+                    subdir-sizes)
+          total-size (get tree "/")
+          free (- 70000000 total-size)
+          target (- 30000000 free)]
+      {:part-1 (apply + (filter #(<= % 100000) (vals tree)))
+       :part-2 (apply min (filter #(>= % target) (vals tree)))}))
   (let
     [test-data
      "$ cd /
