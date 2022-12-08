@@ -126,9 +126,6 @@ CrZsJsPPZsGzwwsLwLmpwMDw"
     (assert (= {:part-1 2 :part-2 4} (process test-data)))
     (assert (= {:part-1 503 :part-2 807}))))
 
-(string/join (repeat 5 "A"))
-
-
 (comment
   ;; day 5
   (require '[clojure.java.io :as io]
@@ -213,6 +210,7 @@ move 1 from 1 to 2"]
     (assert (= {:part-1 "CMZ" :part-2 "MCD"} (process test-data)))
     (assert (= {:part-1 "BZLVHBWQF" :part-2 "TDGJQTZSL"}
                (process input-data)))))
+
 (comment
   ;; day 6
   (require '[clojure.java.io :as io] '[clojure.string :as string])
@@ -238,32 +236,8 @@ move 1 from 1 to 2"]
                 :part-2 (marker input-data 14)}))))
 
 (comment
-  ;; day 6
+  ;; day 7
   (require '[clojure.java.io :as io] '[clojure.string :as string])
-  (def test-data
-    "$ cd /
-$ ls
-dir a
-14848514 b.txt
-8504156 c.dat
-dir d
-$ cd a
-$ ls
-dir e
-29116 f
-2557 g
-62596 h.lst
-$ cd e
-$ ls
-584 i
-$ cd ..
-$ cd ..
-$ cd d
-$ ls
-4060174 j
-8033020 d.log
-5626152 d.ext
-7214296 k")
   (defn cd
     [path dir]
     (case dir
@@ -316,7 +290,7 @@ $ ls
     ([res dir dirs]
      (mapv (fn [[k v]]
              (let [path (string/join (if (< 1 (count dir)) "/" "") [dir k])]
-               (when (:files v) (conj! res [path (file-sizes (:files v))]))
+               (conj! res [path (file-sizes (:files v))])
                (when (:children v) (dir-sizes res path (:children v)))))
            dirs)))
   (defn filter-paths
@@ -327,90 +301,47 @@ $ ls
     (reduce-kv (fn [m k v] (assoc m k (apply + (vals (filter-paths k dirs)))))
                {}
                dirs))
-  (def input-data (slurp (io/resource "aoc-2022/07/input.dat")))
-  (def x (lines->tree input-data))
-  (def y (dir-sizes x))
-  (def z (subdir-sizes y))
-  (prn (apply + (filter #(<= % 100000) (vals z))))
-  (count (filter #(<= % 100000) (vals z)))
-  (apply + (vals y))
-  (apply + (vals z))
-  (clojure.pprint/pprint x)
-  (clojure.pprint/pprint (sort y))
-  (clojure.pprint/pprint (sort z)))
-
-(comment
-  (defn read-file
-    "Returns lines from a file as a seq"
-    [filename]
-    (line-seq (java.io.BufferedReader. (java.io.StringReader. (slurp
-                                                               filename)))))
-  (defn regex-match?
-    "Does the given string match the given regular expression?"
-    [re s]
-    (not (nil? (re-matches re s))))
-  (defn to-int
-    "Converts given item into an integer, first turning it into string"
-    ([s] (Integer/parseInt (str s)))
-    ([radix s] (Integer/parseInt (str s) radix)))
-  (defn apply-cd
-    [command current]
-    (let [dir (subs command (count "$ cd "))]
-      (cond (= dir "..") (pop current)
-            :else (conj current dir))))
-  (defn parse-file
-    [file-spec]
-    (let [tokens (string/split file-spec #" ")]
-      {:name (second tokens) :size (to-int (first tokens))}))
-  (defn apply-sizes
-    [tree current {_ :name size :size}]
-    (loop [tree tree
-           current current]
-      ; (println "Applying " name size " to " current " " tree)
-      (if (empty? current)
-        tree
-        (recur (update-in tree [current] (partial + size)) (pop current)))))
-  (defn parse-lines
-    [lines]
-    (loop [lines lines
-           tree {}
-           current '()]
-      (let [head (first lines)
-            tail (rest lines)]
-        ; (println "head" head)
-        (cond (empty? lines) tree
-              (string/starts-with? head "$ cd ")
-              (let [new-dir (apply-cd head current)]
-                (recur tail (merge {new-dir 0} tree) new-dir))
-              (regex-match? #"^\d.*" head)
-              (let [file (parse-file head)]
-                (recur tail (apply-sizes tree current file) current))
-              ; we can ignore "ls" and "dir" names
-              :else (recur tail tree current)))))
-  (defn without-root [tree] (filter (fn [[dir _]] (not (= dir '("/")))) tree))
-  (defn parse [file] (let [lines (read-file file)] (parse-lines lines)))
-  (defn part1
-    [file]
-    (let [tree (parse file)]
-      (->> tree
-           without-root
-           (filter (fn [[_ size]] (<= size 100000)))
-           (map second)
-           (reduce +))))
-  (defn part2
-    [file]
-    (let [tree (parse file)
-          total-size (tree '("/"))
+  (defn process
+    [data]
+    (let [x (lines->tree data)
+          y (dir-sizes x)
+          z (subdir-sizes y)
+          total-size (get z "/")
           free-space (- 70000000 total-size)
-          diff (- 30000000 free-space)]
-      (->> tree
-           (filter (fn [[_ size]] (>= size diff)))
-           (map second)
-           (apply min))))
-  (part2 (io/resource "aoc-2022/07/input.dat"))
-  (parse (io/resource "aoc-2022/07/input.dat")))
+          target (- 30000000 free-space)]
+      {:part-1 (apply + (filter #(<= % 100000) (vals z)))
+       :part-2 (apply min (filter #(>= % target) (vals z)))}))
+  (let
+    [test-data
+     "$ cd /
+$ ls
+dir a
+14848514 b.txt
+8504156 c.dat
+dir d
+$ cd a
+$ ls
+dir e
+29116 f
+2557 g
+62596 h.lst
+$ cd e
+$ ls
+584 i
+$ cd ..
+$ cd ..
+$ cd d
+$ ls
+4060174 j
+8033020 d.log
+5626152 d.ext
+7214296 k"
+     input-data (slurp (io/resource "aoc-2022/07/input.dat"))]
+    (assert (= {:part-1 1297159 :part-2 3866390} (process input-data)))
+    (assert (= {:part-1 95437 :part-2 24933642} (process test-data)))))
 
 (comment
+  ;; day 8
   (require '[clojure.java.io :as io]
            '[clojure.string :as string]
            '[com.rpl.specter :refer [ALL transform]])
@@ -425,27 +356,16 @@ $ ls
       :down (range (inc m) (count vs))))
   (defn make-coll
     [vs m n view]
-    (case view
-      (:up :down) (reduce (fn [res m'] (conj res (cell vs m' n)))
-                          []
-                          (make-range vs m n view))
-      (:left :right) (reduce (fn [res n'] (conj res (cell vs m n')))
-                             []
-                             (make-range vs m n view))))
+    (let [r (make-range vs m n view)]
+      (case view
+        (:up :down) (reduce (fn [res m'] (conj res (cell vs m' n))) [] r)
+        (:left :right) (reduce (fn [res n'] (conj res (cell vs m n'))) [] r))))
+  ;; part-1
   (defn view-visible?
     [vs m n view]
-    (let [v (cell vs m n)]
-      (reduce (fn [res v'] (if (<= v v') (reduced false) res))
-              true
-              (make-coll vs m n view))))
-  (defn view-score
-    [vs m n view]
     (let [v (cell vs m n)
-          coll (make-coll vs m n view)
-          asc (map (fn [[x y]] (and (<= x y) (> v x))) (partition 2 1 coll))]
-      (if (> v (first coll))
-        (reduce (fn [res v'] (if (false? v') res (inc res))) 1 asc)
-        1)))
+          c (make-coll vs m n view)]
+      (reduce (fn [res v'] (if (<= v v') (reduced false) res)) true c)))
   (defn cell-visible?
     [vs m n]
     (or (view-visible? vs m n :up)
@@ -458,25 +378,49 @@ $ ls
           n (range 1 (dec (count vs)))
           :when (cell-visible? vs m n)]
       (cell vs m n)))
+  ;; part-2
+  (defn view-score
+    [vs m n view]
+    (let [v (cell vs m n)
+          c (make-coll vs m n view)]
+      (reduce (fn [res v'] (if (> v v') (inc res) (reduced (inc res)))) 0 c)))
   (defn cell-score
     [vs m n]
-    [(view-score vs m n :up) (view-score vs m n :left) (view-score vs m n :down)
-     (view-score vs m n :right)])
+    (* (view-score vs m n :up)
+       (view-score vs m n :left)
+       (view-score vs m n :down)
+       (view-score vs m n :right)))
   (defn scores
     [vs]
     (for [m (range 1 (dec (count vs)))
           n (range 1 (dec (count vs)))]
       (cell-score vs m n)))
-  (def test-data "30373
+  ;; process
+  (defn process
+    [data]
+    (let [vs (->> (string/split-lines data)
+                  (map (partial partition 1))
+                  (mapv (comp vec flatten))
+                  (transform [ALL ALL] #(parse-uint (str %))))]
+      {:part-1 (+ (count (visibles vs)) (- (* 4 (count vs)) 4))
+       :part-2 (apply max (scores vs))}))
+  (let [test-data "30373
 25512
 65332
 33549
-35390")
-  (def input-data (slurp (io/resource "aoc-2022/08/input.dat")))
-  (def vs
-    (->> (string/split-lines input-data)
-         (map (partial partition 1))
-         (mapv (comp vec flatten))
-         (transform [ALL ALL] #(parse-uint (str %)))))
-  (+ (count (visibles vs)) (- (* 4 (count vs)) 4))
-  (apply max (mapv (partial apply *) (scores vs))))
+35390"
+        input-data (slurp (io/resource "aoc-2022/08/input.dat"))]
+    (assert (= {:part-1 21 :part-2 8} (process test-data)))
+    (assert (= {:part-1 1690 :part-2 535680} (process input-data)))))
+
+(comment
+  ;; day 9
+  (require '[clojure.java.io :as io]
+           '[clojure.string :as string]
+           '[com.rpl.specter :refer [ALL transform]])
+  (def test-data "")
+  (def input-data (slurp (io/resource "aoc-2022/09/input.dat")))
+  (defn process [data] {:part-1 0 :part-2 0})
+  (assert (= {:part-1 0 :part-2 0} (process test-data)))
+  ;;TODO
+)
