@@ -339,16 +339,132 @@ $ ls
   (clojure.pprint/pprint (sort y))
   (clojure.pprint/pprint (sort z)))
 
-(defn parse-uint [s] (try (Long/parseUnsignedLong s) (catch Exception e)))
-(->> (string/split-lines input-data)
-     (filter #(parse-uint (first (string/split % #" "))))
-     (map #(parse-uint (first (string/split % #" "))))
-     (apply +))
+(comment
+  (defn read-file
+    "Returns lines from a file as a seq"
+    [filename]
+    (line-seq (java.io.BufferedReader. (java.io.StringReader. (slurp
+                                                               filename)))))
+  (defn regex-match?
+    "Does the given string match the given regular expression?"
+    [re s]
+    (not (nil? (re-matches re s))))
+  (defn to-int
+    "Converts given item into an integer, first turning it into string"
+    ([s] (Integer/parseInt (str s)))
+    ([radix s] (Integer/parseInt (str s) radix)))
+  (defn apply-cd
+    [command current]
+    (let [dir (subs command (count "$ cd "))]
+      (cond (= dir "..") (pop current)
+            :else (conj current dir))))
+  (defn parse-file
+    [file-spec]
+    (let [tokens (string/split file-spec #" ")]
+      {:name (second tokens) :size (to-int (first tokens))}))
+  (defn apply-sizes
+    [tree current {_ :name size :size}]
+    (loop [tree tree
+           current current]
+      ; (println "Applying " name size " to " current " " tree)
+      (if (empty? current)
+        tree
+        (recur (update-in tree [current] (partial + size)) (pop current)))))
+  (defn parse-lines
+    [lines]
+    (loop [lines lines
+           tree {}
+           current '()]
+      (let [head (first lines)
+            tail (rest lines)]
+        ; (println "head" head)
+        (cond (empty? lines) tree
+              (string/starts-with? head "$ cd ")
+              (let [new-dir (apply-cd head current)]
+                (recur tail (merge {new-dir 0} tree) new-dir))
+              (regex-match? #"^\d.*" head)
+              (let [file (parse-file head)]
+                (recur tail (apply-sizes tree current file) current))
+              ; we can ignore "ls" and "dir" names
+              :else (recur tail tree current)))))
+  (defn without-root [tree] (filter (fn [[dir _]] (not (= dir '("/")))) tree))
+  (defn parse [file] (let [lines (read-file file)] (parse-lines lines)))
+  (defn part1
+    [file]
+    (let [tree (parse file)]
+      (->> tree
+           without-root
+           (filter (fn [[_ size]] (<= size 100000)))
+           (map second)
+           (reduce +))))
+  (defn part2
+    [file]
+    (let [tree (parse file)
+          total-size (tree '("/"))
+          free-space (- 70000000 total-size)
+          diff (- 30000000 free-space)]
+      (->> tree
+           (filter (fn [[_ size]] (>= size diff)))
+           (map second)
+           (apply min))))
+  (part2 (io/resource "aoc-2022/07/input.dat"))
+  (parse (io/resource "aoc-2022/07/input.dat")))
 
-["/ftj" 40232]
-["/ftj/clchr/sbzf" 257770]
-["/ftj/hmd" 465777]
-["/ftj/hmd/lfpm" 842541]
-["/ftj/hmd/lfpm/vlnbm" 143113]
-
-(+ 465777 842541 143113)
+(comment
+  (def test-data "30373
+25512
+65332
+33549
+35390")
+  (def vs
+    (->> (string/split-lines test-data)
+         (map (partial partition 1))
+         (mapv (comp vec flatten))
+         (transform [ALL ALL] #(parse-uint (str %)))))
+  (defn lookup
+    [vs m n]
+    (prn "lookup" m n)
+    (-> vs
+        (nth m)
+        (nth n)))
+  (defn bottom-visible?
+    [vs m n]
+    (let [v (lookup vs m n)
+          res (for [m' (range (inc m) (count vs))
+                    :let [v' (lookup vs m' n)]
+                    :while (> v v')]
+                v)]
+      (not (empty? res))))
+  (defn right-visible?
+    [vs m n]
+    (let [v (lookup vs m n)]
+      (not (empty? (for [n' (range n (count vs))
+                         :let [v' (lookup vs m n')]
+                         :while (< v v')]
+                     v)))))
+  (defn top-visible?
+    [vs m n]
+    (let [v (lookup vs m n)]
+      (not (empty? (for [m' (reverse (range 0 m))
+                         :let [v' (lookup vs m' n)]
+                         :while (< v v')]
+                     v)))))
+  (defn left-visible?
+    [vs m n]
+    (let [v (lookup vs m n)]
+      (not (empty? (for [n' (reverse (range 0 n))
+                         :let [v' (lookup vs m n')]
+                         :while (< v v')]
+                     v)))))
+  (defn visible?
+    [vs m n]
+    (bottom-visible? vs m n)
+    ;(and (bottom-visible? vs m n)
+    ;     (right-visible? vs m n)
+    ;     (top-visible? vs m n)
+    ;     (left-visible? vs m n))
+  )
+  (for [m (range 1 (dec (count vs)))
+        n (range 1 (dec (count vs)))
+        :when (visible? vs m n)]
+    (lookup vs m n)))
