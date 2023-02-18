@@ -6,8 +6,8 @@
 (deftest env-test
   (testing
    "A nonz-ero port number in config is preserved,
-            ie `:port #port 80` -> `:port 80`"
    (let [config (SUT/set-env! (io/resource "env/test-env.edn") :default)
+            ie `:port #port 80` -> `:port 80`"
          port (get-in config [:system :port])]
      (is (= 80 port))))
   (testing

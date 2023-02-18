@@ -21,6 +21,7 @@
                 bases/blocking-command-api {:local/root
                                             "bases/blocking-command-api"}
                 bases/build {:local/root "bases/build"}
+                bases/iam-api {:local/root "bases/iam-api"}
                 bases/pulsar-reader {:local/root "bases/pulsar-reader"}
                 bases/symmetric-key-api {:local/root "bases/symmetric-key-api"}
                 ;; use logback for the slf4j logging backend
@@ -54,5 +55,6 @@
     "components/vault/test-resources" "bases/blocking-command-api/test"
     "bases/blocking-command-api/test-resources" "bases/pulsar-reader/test"
     "bases/pulsar-reader/test-resources" "bases/symmetric-key-api/test"
-    "bases/symmetric-key-api/test-resources"]}}
+    "bases/symmetric-key-api/test-resources" "bases/iam-api/test"
+    "bases/iam/test-resources"]}}
  :mvn/repos {"maven" {:url "https://packages.confluent.io/maven"}}}

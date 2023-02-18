@@ -2,6 +2,7 @@
  :default-profile-name "default"
  :interface-ns "interface"
  :projects {"development" {:alias "dev"}
+            "iam" {:alias "iam"}
             "message-reader" {:alias "msg"}
             "symmetric-key-vault" {:alias "key"}}
  :tag-patterns {:release "v[0-9]*" :stable "stable-*"}

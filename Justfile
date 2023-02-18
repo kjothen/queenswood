@@ -25,8 +25,10 @@ shell:
 # Build all polylith projects as uberjars
 build snapshot="true":
     # cd components/event && clojure -X:build avro
-    cd projects/message-reader && clojure -X:build uber :snapshot {{ snapshot }}
+    cd projects/iam && clojure -X:build uber :snapshot {{ snapshot }}
     cd projects/symmetric-key-vault && clojure -X:build uber :snapshot {{ snapshot }}
+    cd projects/message-reader && clojure -X:build uber :snapshot {{ snapshot }}
+
 
 # Run all polylith project tests
 test:
