@@ -34,7 +34,7 @@
 (def prod-router
   (constantly (ring/router (routes) {:syntax :bracket :data router-data})))
 
-(def app (ring/ring-handler (dev-router)))
+(defn app [_] (ring/ring-handler (dev-router)))
 
 ;;;; Lifecycle
 
@@ -50,7 +50,7 @@
 (comment
   (log/init)
   (log/info "Hi there!")
-  (app {:request-method :get :uri "/v1/projects/123/service-accounts"})
+  (apply app {:request-method :get :uri "/v1/projects/123/service-accounts"})
   (app {:request-method :post
         :uri
         "/v1/projects/12345/service-accounts/kieran.othen@chase.io:enable"})

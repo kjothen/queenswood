@@ -6,7 +6,7 @@
             [com.repldriven.mono.env.interface :as env]
             [com.repldriven.mono.system.interface :as system :refer
              [with-system]]
-            [muuntaja.core :as m]
+            [muuntaja.core]
             [reitit.ring :as ring]
             [reitit.http :as http]
             [reitit.http.coercion :as coercion]
@@ -26,29 +26,25 @@
 (deftest interceptors-test
   (testing
    "Ring interceptors MUST be inserted"
-   (let [test-data {:got "me" :this "time"}
-         app
-         (fn [ctx]
-           (http/ring-handler
-            (http/router
-             ["/api" {:interceptors (:interceptors ctx)}
-              ["/interceptors"
-               {:get {:handler (fn [req]
-                                 {:status 200
-                                  :body (select-keys req (keys test-data))})}}]]
-             {:data {:muuntaja m/instance
-                     :interceptors [(muuntaja/format-response-interceptor)
-                                    (coercion/coerce-response-interceptor)]}})
-            (ring/create-default-handler)
-            {:executor sieppari/executor}))
+   (let [data {:got "me" :this "time"}
+         handler (fn [req] {:status 200 :body (select-keys req (keys data))})
+         routes (fn [ctx] ["/api" {:interceptors (:interceptors ctx)}
+                           ["/interceptors" {:get {:handler handler}}]])
+         router-data {:muuntaja muuntaja.core/instance
+                      :interceptors [(muuntaja/format-response-interceptor)
+                                     (coercion/coerce-response-interceptor)]}
+         app (fn [ctx]
+               (http/ring-handler (http/router (routes ctx) {:data router-data})
+                                  (ring/create-default-handler)
+                                  {:executor sieppari/executor}))
          system-config (-> @env/env
                            (assoc-in [:system :ring :jetty-adapter :handler]
                                      app)
-                           (assoc-in [:system :ring :interceptors] test-data))]
+                           (assoc-in [:system :ring :interceptors] data))]
      (with-system
       [sys (SUT/configure (get-in system-config [:system :ring]))]
-      (let [exposed-port (get-in (system/config sys :ring :jetty-adapter)
-                                 [:options :port])
+      (let [exposed-port (get-in system-config
+                                 [:system :ring :jetty-adapter :options :port])
             url (str "http://localhost:" exposed-port "/api/interceptors")
             res @(httpkit/get url)]
-        (is (= (json/read-str (:body res) :key-fn keyword) test-data)))))))
+        (is (= (json/read-str (:body res) :key-fn keyword) data)))))))

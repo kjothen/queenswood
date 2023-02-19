@@ -37,7 +37,7 @@
    :extra-paths ["development/resources"]
    :jvm-opts
    ["-Dclojure.tools.logging.factory=clojure.tools.logging.impl/slf4j-factory"]}
-  :poly {:extra-deps #:polylith{clj-poly {:mvn/version "0.2.15-alpha"}}
+  :poly {:extra-deps #:polylith{clj-poly {:mvn/version "0.2.17-alpha"}}
          :main-opts ["-m" "polylith.clj.core.poly-cli.core"]}
   :test
   {:extra-paths
@@ -56,5 +56,5 @@
     "bases/blocking-command-api/test-resources" "bases/pulsar-reader/test"
     "bases/pulsar-reader/test-resources" "bases/symmetric-key-api/test"
     "bases/symmetric-key-api/test-resources" "bases/iam-api/test"
-    "bases/iam/test-resources"]}}
+    "bases/iam-api/test-resources"]}}
  :mvn/repos {"maven" {:url "https://packages.confluent.io/maven"}}}

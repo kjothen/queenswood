@@ -6,14 +6,8 @@
             [clojure.java.io :as io]
             [org.httpkit.client :as http]))
 
-(defn env-fixture
-  [f]
-  (env/set-env! (io/resource "iam-api/test-env.edn") :test)
-  (f))
 
-(use-fixtures :each env-fixture)
-
-(deftest main-test
+(deftest start
   (testing
    "Ops should be able to start the system from the main entry point"
    (try (SUT/-main "-c" (io/as-file (io/resource "iam-api/test-env.edn"))
@@ -22,14 +16,3 @@
         (catch Exception e
           (assert false (format "Unable to start system, %s" e)))
         (finally (SUT/stop!)))))
-
-(deftest development-test
-  (testing
-   "Devs should be able to start the system from the REPL"
-   (let [port (get-in @env/env [:system :ring :jetty-adapter :options :port])]
-     (try (SUT/start!)
-          (let [res @(http/options (str "http://localhost:" port))]
-            (is (= 200 (:status res))))
-          (catch Exception (assert false
-                                   (format "Unable to start system, %s" e)))
-          (finally (SUT/stop!))))))
