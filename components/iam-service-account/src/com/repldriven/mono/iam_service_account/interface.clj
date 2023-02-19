@@ -1,4 +1,5 @@
 (ns com.repldriven.mono.iam-service-account.interface
+  (:refer-clojure :exclude [get list])
   (:require [com.repldriven.mono.iam-service-account.core :as core]
             [com.repldriven.mono.iam-service-account.database :as database]
             [com.repldriven.mono.iam-service-account.spec :as spec]))
@@ -15,7 +16,7 @@
 
 ;;;; ServiceAccount Operations
 
-(defn create [db service-account] (core/create db service-account))
+(defn create [db-spec service-account] (core/create db-spec service-account))
 
 (defn delete [db service-account] (core/delete db service-account))
 

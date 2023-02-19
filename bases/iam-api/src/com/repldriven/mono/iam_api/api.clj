@@ -10,38 +10,42 @@
             [reitit.http :as http]
             [reitit.interceptor.sieppari :as sieppari]
             [reitit.ring :as ring]
-            [reitit.ring.coercion :as rrc]
-            [reitit.ring.middleware.muuntaja :as muuntaja]
-            [reitit.ring.middleware.parameters :as parameters]))
+            [reitit.http.coercion :as coercion]
+            [reitit.http.interceptors.muuntaja :as muuntaja]))
 
 ;;;; Reitit routes
 
 (defn routes
-  []
-  [["/v1" ["/projects/{project-id}" (projects-service-accounts/routes)]]])
+  [ctx]
+  [["/v1" {:interceptors (:interceptors ctx)}
+    ["/projects/{project-id}" (projects-service-accounts/routes)]]])
 
 ;;;; Ring application
 
 (def router-data
   {:syntax :bracket
    :data {:muuntaja muuntaja.core/instance
+          :interceptors [(muuntaja/format-response-interceptor)
+                         (coercion/coerce-response-interceptor)]
           :coercion reitit.coercion.malli/coercion
           :exception pretty/exception
-          :middleware
-          [muuntaja/format-middleware rrc/coerce-exceptions-middleware
-           rrc/coerce-request-middleware rrc/coerce-response-middleware]}})
+          ;;:middleware
+          ;;[muuntaja/format-middleware rrc/coerce-exceptions-middleware
+          ;; rrc/coerce-request-middleware rrc/coerce-response-middleware]
+         }})
 
-(def dev-router #(ring/router (routes) router-data))
-(def prod-router (constantly (ring/router (routes) router-data)))
-
-(defn app ([] (app nil)) ([_] (ring/ring-handler (dev-router))))
+(defn app
+  [ctx]
+  (ring/ring-handler (ring/router (routes ctx) router-data)
+                     (ring/create-default-handler)
+                     {:executor sieppari/executor}))
 
 ;;;; Development
 
 (comment
   (log/init)
   (log/info "Hi there!")
-  ((app) {:request-method :get :uri "/v1/projects/123/service-accounts"})
+  ((app nil) {:request-method :get :uri "/v1/projects/123/service-accounts"})
   ((app)
    {:request-method :post
     :uri "/v1/projects/12345/service-accounts/kieran.othen@chase.io:enable"})
@@ -51,7 +55,7 @@
     :body
     "{\"service-account\": {\"display-name\": \"foo\", \"description\": \"bar\"}, \"update-mask\": \"display_name,description\"}"
     :headers {"content-type" "application/json"}})
-  (app
+  ((app)
    {:request-method :post
     :uri "/v1/projects/12345/service-accounts"
     :body

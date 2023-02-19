@@ -1,5 +1,7 @@
 (ns com.repldriven.mono.iam-api.v1.projects.service-accounts.routes
   (:require [com.repldriven.mono.log.interface :as log]
+            [com.repldriven.mono.iam-service-account.interface :as
+             iam-service-account]
             [malli.generator :as mg]))
 
 ;;;; Malli schemas
@@ -20,10 +22,19 @@
 ;;;; Ring handlers
 
 (defn create-service-account
-  [{{{:keys [project-id]} :path {:keys [account-id service-account]} :body}
+  [{:keys [datasource]
+    {{:keys [project-id]} :path {:keys [account-id service-account]} :body}
     :parameters}]
-  (log/info "create-service-account" project-id account-id service-account)
-  {:status 201 :body (mg/generate ServiceAccount)})
+  (log/info "create-service-account"
+            datasource
+            project-id
+            account-id
+            service-account)
+  (let [account (iam-service-account/create datasource
+                                            (-> service-account
+                                                (assoc :project-id project-id)
+                                                (assoc :unique-id account-id)))]
+    {:status 200 :body account}))
 
 (defn get-service-account
   [{{{:keys [project-id account-id]} :path} :parameters}]

@@ -1,7 +1,15 @@
 (ns com.repldriven.mono.iam-service-account.core
-  (:require [com.repldriven.mono.iam-service-account.database :as database]))
+  (:refer-clojure :exclude [get list])
+  (:require [com.repldriven.mono.iam-service-account.database :as database]
+            [com.repldriven.mono.iam-service-account.spec :as spec]
+            [malli.generator :as mg]
+            [next.jdbc.sql :as sql]))
 
-(defn create [db service-account])
+(defn create
+  [db-spec service-account]
+  (sql/insert! db-spec
+               :service_accounts
+               (merge (mg/generate spec/ServiceAccount) service-account)))
 
 (defn delete [db service-account])
 

@@ -1,3 +1,14 @@
-:PORT = 63371
+:PORT = 51300
+
+# get
 GET http://localhost::PORT/v1/projects/12345/service-accounts
 
+# create
+POST http://localhost::PORT/v1/projects/12345/service-accounts
+Content-Type: application/json
+{ "account-id": "sa-123",
+  "service-account": {
+    "display-name": "sa 123",
+    "description": "My First Service Account"
+  }
+}
