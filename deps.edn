@@ -46,7 +46,7 @@
   {:extra-paths
    ["components/cli/test"
     "components/env/test"
-    "components/env/test-resources"
+    "components/env/test-resources/com/repldriven/mono"
     "components/encryption/test"
     "components/event/test"
     "components/http/test"

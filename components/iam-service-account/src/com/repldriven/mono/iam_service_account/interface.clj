@@ -9,7 +9,9 @@
 
 ;;;; Database
 
-(defn migrate [db] (database/migrate db))
+(defn migrate
+  ([db-spec] (database/migrate db-spec))
+  ([db-spec version] (database/migrate db-spec version)))
 
 ;;;; ServiceAccount Operations
 

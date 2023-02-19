@@ -36,15 +36,6 @@
 
 (defn app ([] (app nil)) ([_] (ring/ring-handler (dev-router))))
 
-;;;; Lifecycle
-
-(defn init
-  []
-  (try (log/info "Initialized server.")
-       (catch Exception e (log/error e "Could not start server."))))
-
-(defn destroy [] (log/info "Destroying server."))
-
 ;;;; Development
 
 (comment

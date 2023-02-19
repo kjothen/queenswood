@@ -1,6 +1,8 @@
 (ns com.repldriven.mono.iam-api.main
   (:require [com.repldriven.mono.cli.interface :as cli]
             [com.repldriven.mono.env.interface :as env]
+            [com.repldriven.mono.iam-service-account.interface :as
+             iam-service-account]
             [com.repldriven.mono.log.interface :as log]
             [com.repldriven.mono.iam-api.api :as api]
             [com.repldriven.mono.iam-api.system :as iam-api-system]
@@ -9,22 +11,29 @@
 
 (def system (atom nil))
 
+(defn system-config
+  []
+  (-> (iam-api-system/configure (:system @env/env))
+      (assoc-in [:system/defs :ring :jetty-adapter :system/config :handler]
+                api/app)))
+
+(defn db-spec
+  []
+  (let [datasource (system/instance @system [:sql :datasource])]
+    ;; TODO remove sleep until datasource is available
+    (Thread/sleep 5000)
+    (next.jdbc/get-datasource datasource)))
+
 (defn start!
   []
   (log/info "Starting system")
-  (api/init)
-  (let [system-config (iam-api-system/configure (:system @env/env))]
-    (system/start! system
-                   (assoc-in system-config
-                    [:system/defs :ring :jetty-adapter :system/config :handler]
-                    api/app))))
+  (system/start! system (system-config))
+  (iam-service-account/migrate (db-spec)))
 
 (defn stop!
   []
   (log/info "Stopping system")
-  (when-let [_ @system]
-    (api/destroy)
-    (system/stop! system)))
+  (when-let [_ @system] (system/stop! system)))
 
 (defn -main
   [& args]

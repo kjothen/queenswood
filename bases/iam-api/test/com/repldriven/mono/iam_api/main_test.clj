@@ -6,7 +6,6 @@
             [clojure.java.io :as io]
             [org.httpkit.client :as http]))
 
-
 (deftest start
   (testing
    "Ops should be able to start the system from the main entry point"
