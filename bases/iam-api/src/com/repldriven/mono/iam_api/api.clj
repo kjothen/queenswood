@@ -23,18 +23,18 @@
 ;;;; Ring application
 
 (def router-data
-  {;;:compile reitit.coercion/compile-request-coercers
-   :muuntaja muuntaja.core/instance
-   :coercion reitit.coercion.malli/coercion
-   :exception pretty/exception
-   :middleware [muuntaja/format-middleware rrc/coerce-exceptions-middleware
-                rrc/coerce-request-middleware rrc/coerce-response-middleware]})
+  {:syntax :bracket
+   :data {:muuntaja muuntaja.core/instance
+          :coercion reitit.coercion.malli/coercion
+          :exception pretty/exception
+          :middleware
+          [muuntaja/format-middleware rrc/coerce-exceptions-middleware
+           rrc/coerce-request-middleware rrc/coerce-response-middleware]}})
 
-(def dev-router #(ring/router (routes) {:syntax :bracket :data router-data}))
-(def prod-router
-  (constantly (ring/router (routes) {:syntax :bracket :data router-data})))
+(def dev-router #(ring/router (routes) router-data))
+(def prod-router (constantly (ring/router (routes) router-data)))
 
-(defn app [_] (ring/ring-handler (dev-router)))
+(defn app ([] (app nil)) ([_] (ring/ring-handler (dev-router))))
 
 ;;;; Lifecycle
 
@@ -50,11 +50,11 @@
 (comment
   (log/init)
   (log/info "Hi there!")
-  (apply app {:request-method :get :uri "/v1/projects/123/service-accounts"})
-  (app {:request-method :post
-        :uri
-        "/v1/projects/12345/service-accounts/kieran.othen@chase.io:enable"})
-  (app
+  ((app) {:request-method :get :uri "/v1/projects/123/service-accounts"})
+  ((app)
+   {:request-method :post
+    :uri "/v1/projects/12345/service-accounts/kieran.othen@chase.io:enable"})
+  ((app)
    {:request-method :patch
     :uri "/v1/projects/12345/service-accounts/kieran.othen@chase.io"
     :body

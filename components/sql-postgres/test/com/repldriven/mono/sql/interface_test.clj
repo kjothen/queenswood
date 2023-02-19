@@ -23,7 +23,7 @@
            (is (some? *sys*))))
 
 (deftest valid-connection
-  (testing "Connectio``n must be valid")
+  (testing "Connection must be valid")
   (let [datasource (system/instance *sys* [:sql :datasource])]
     (is (= [{:?column? 1}]
            (jdbc/execute! datasource

@@ -12,7 +12,7 @@
         component/env #:local{:root "../../components/env"}
         component/log #:local{:root "../../components/log"}
         component/ring #:local{:root "../../components/ring"}
-        component/spec #:local{:root "../../components/spec"}
+        component/spec-malli #:local{:root "../../components/spec-malli"}
         components/system #:local{:root "../../components/system"}
         base/symmetric-key-api #:local{:root "../../bases/symmetric-key-api"}
         ;; use logback for the slf4j logging backend

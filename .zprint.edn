@@ -1,1 +1,5 @@
-{:map {:comma? false :lift-ns? false :unlift-ns? true} :style :community :width 80}
+{:map {:comma? false :lift-ns? false :unlift-ns? true}
+ :style :community
+ :vector {:comma? false :respect-nl? true}
+ :width 80}
+
