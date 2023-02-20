@@ -7,8 +7,17 @@
             [next.jdbc.sql :as sql]))
 
 (defn create
-  [db-spec service-account]
-  (let [account (merge (mg/generate spec/ServiceAccount) service-account)]
+  [db-spec
+   {:keys [account-id project-id]
+    {:keys [display-name description]} :service-account}]
+  (let [email (str account-id "@" project-id ".iam.serviceaccount")
+        sa-name (str "projects/" project-id "/serviceAccounts/" email)
+        account {:name sa-name
+                 :project-id project-id
+                 :email email
+                 :display-name display-name
+                 :description description
+                 :enabled true}]
     (tap> account)
     (sql/insert! db-spec
                  :service-account

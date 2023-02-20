@@ -29,10 +29,10 @@
         req]
     (tap> req)
     (let [account (iam-service-account/create datasource
-                                              (-> service-account
-                                                  (assoc :project-id project-id)
-                                                  (assoc :unique-id
-                                                         account-id)))]
+                                              {:account-id account-id
+                                               :project-id project-id
+                                               :service-account
+                                               service-account})]
       {:status 200 :body account})))
 
 (defn get-service-account
