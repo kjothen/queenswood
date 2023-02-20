@@ -5,3 +5,10 @@
                   (projectile-project-type . clojure-cli)
                   (cider-preferred-build-tool . clojure-cli)
                   (cider-clojure-cli-aliases . ":lib/pretty-errors:inspect/portal-web:repl/rebel:dev:test -Sforce"))))
+
+;(setq sql-user "test")
+;(setq sql-server "localhost")
+;(setq sql-database "test")
+;(setq sql-port 49178)
+;(setq sql-password "test")
+;(call-interactively #'sql-postgres)
