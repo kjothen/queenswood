@@ -76,3 +76,23 @@
           (> score 75) "PASS"
           :else "ERROR"))
   (rule-17 {:score 65}))
+
+(comment
+  (require '[next.jdbc :as jdbc] '[next.jdbc.sql :as sql])
+  (def db-spec
+    {:database "test"
+     :dbtype "postgres"
+     :host "localhost"
+     :password "test"
+     :port 49178
+     :user "test"})
+  (sql/insert! db-spec
+               :service-account
+               {:name "2RZbUwK77j"
+                :project-id 12345
+                :unique-id "sa-123"
+                :email "WKR96"
+                :display-name "123"
+                :description "My First Service Account"
+                :disabled false}
+               jdbc/unqualified-snake-kebab-opts))

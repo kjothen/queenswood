@@ -4,4 +4,4 @@
 ((clojure-mode . ((mode . zprint-format-on-save)
                   (projectile-project-type . clojure-cli)
                   (cider-preferred-build-tool . clojure-cli)
-                  (cider-clojure-cli-aliases . ":lib/pretty-errors:repl/rebel:dev:test -Sforce"))))
+                  (cider-clojure-cli-aliases . ":lib/pretty-errors:inspect/portal-web:repl/rebel:dev:test -Sforce"))))

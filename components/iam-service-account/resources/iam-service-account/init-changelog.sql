@@ -4,10 +4,10 @@
 CREATE TABLE service_account(
        id serial primary key,
        name text,
-       "project-id" int,
-       "unique-id" text,
+       project_id int,
+       unique_id text,
        email text,
-       "display-name" text,
+       display_name text,
        description text,
        disabled boolean
        );

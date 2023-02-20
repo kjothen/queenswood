@@ -2,42 +2,69 @@
   (:require [com.repldriven.mono.log.interface :as log]
             [com.repldriven.mono.iam-api.v1.projects.service-accounts.routes :as
              projects-service-accounts]
-            [malli.generator :as mg]
             [muuntaja.core]
             [reitit.coercion]
             [reitit.coercion.malli :as malli]
             [reitit.dev.pretty :as pretty]
             [reitit.http :as http]
-            [reitit.interceptor.sieppari :as sieppari]
             [reitit.ring :as ring]
+            [reitit.interceptor.sieppari :as sieppari]
             [reitit.http.coercion :as coercion]
-            [reitit.http.interceptors.muuntaja :as muuntaja]))
+            [reitit.http.interceptors.parameters :as parameters]
+            [reitit.http.interceptors.muuntaja :as muuntaja]
+            [reitit.http.interceptors.exception :as exception]
+            [reitit.http.interceptors.multipart :as multipart]
+            [reitit.swagger :as swagger]
+            [reitit.swagger-ui :as swagger-ui]))
+
 
 ;;;; Reitit routes
 
 (defn routes
   [ctx]
-  [["/v1" {:interceptors (:interceptors ctx)}
+  (tap> ctx)
+  [["/swagger.json"
+    {:get {:no-doc true
+           :swagger {:info {:title "iam-api" :description "with reitit-http"}}
+           :handler (swagger/create-swagger-handler)}}]
+   ["/v1" {:interceptors (:interceptors ctx)}
     ["/projects/{project-id}" (projects-service-accounts/routes)]]])
+
 
 ;;;; Ring application
 
 (def router-data
-  {:syntax :bracket
-   :data {:muuntaja muuntaja.core/instance
-          :interceptors [(muuntaja/format-response-interceptor)
-                         (coercion/coerce-response-interceptor)]
-          :coercion reitit.coercion.malli/coercion
-          :exception pretty/exception
-          ;;:middleware
-          ;;[muuntaja/format-middleware rrc/coerce-exceptions-middleware
-          ;; rrc/coerce-request-middleware rrc/coerce-response-middleware]
-         }})
+  {:exception pretty/exception
+   :syntax :bracket
+   :data {:coercion reitit.coercion.malli/coercion
+          :muuntaja muuntaja.core/instance
+          :interceptors [;; swagger feature
+                         swagger/swagger-feature
+                         ;; query-params & form-params
+                         (parameters/parameters-interceptor)
+                         ;; content-negotiation
+                         (muuntaja/format-negotiate-interceptor)
+                         ;; encoding response body
+                         (muuntaja/format-response-interceptor)
+                         ;; exception handling
+                         (exception/exception-interceptor)
+                         ;; decoding request body
+                         (muuntaja/format-request-interceptor)
+                         ;; coercing response bodys
+                         (coercion/coerce-response-interceptor)
+                         ;; coercing request parameters
+                         (coercion/coerce-request-interceptor)
+                         ;; multipart
+                         (multipart/multipart-interceptor)]}})
 
 (defn app
   [ctx]
-  (ring/ring-handler (ring/router (routes ctx) router-data)
-                     (ring/create-default-handler)
+  (http/ring-handler (http/router (routes ctx) router-data)
+                     (ring/routes (swagger-ui/create-swagger-ui-handler
+                                   {:path "/"
+                                    :config {:validatorUrl nil
+                                             :operationsSorter "alpha"}})
+                                  (ring/create-default-handler))
                      {:executor sieppari/executor}))
 
 ;;;; Development

@@ -22,19 +22,18 @@
 ;;;; Ring handlers
 
 (defn create-service-account
-  [{:keys [datasource]
-    {{:keys [project-id]} :path {:keys [account-id service-account]} :body}
-    :parameters}]
-  (log/info "create-service-account"
-            datasource
-            project-id
-            account-id
-            service-account)
-  (let [account (iam-service-account/create datasource
-                                            (-> service-account
-                                                (assoc :project-id project-id)
-                                                (assoc :unique-id account-id)))]
-    {:status 200 :body account}))
+  [req]
+  (let [{:keys [datasource]
+         {{:keys [project-id]} :path {:keys [account-id service-account]} :body}
+         :parameters}
+        req]
+    (tap> req)
+    (let [account (iam-service-account/create datasource
+                                              (-> service-account
+                                                  (assoc :project-id project-id)
+                                                  (assoc :unique-id
+                                                         account-id)))]
+      {:status 200 :body account})))
 
 (defn get-service-account
   [{{{:keys [project-id account-id]} :path} :parameters}]

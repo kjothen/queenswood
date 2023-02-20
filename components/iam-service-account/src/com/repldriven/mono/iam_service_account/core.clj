@@ -3,13 +3,17 @@
   (:require [com.repldriven.mono.iam-service-account.database :as database]
             [com.repldriven.mono.iam-service-account.spec :as spec]
             [malli.generator :as mg]
+            [next.jdbc :as jdbc]
             [next.jdbc.sql :as sql]))
 
 (defn create
   [db-spec service-account]
-  (sql/insert! db-spec
-               :service_accounts
-               (merge (mg/generate spec/ServiceAccount) service-account)))
+  (let [account (merge (mg/generate spec/ServiceAccount) service-account)]
+    (tap> account)
+    (sql/insert! db-spec
+                 :service-account
+                 account
+                 jdbc/unqualified-snake-kebab-opts)))
 
 (defn delete [db service-account])
 
@@ -17,7 +21,7 @@
 
 (defn enable [db service-account])
 
-(defn list [db])
+(defn list [db-spec])
 
 (defn get [db id])
 
