@@ -1,44 +1,28 @@
 (ns com.repldriven.mono.iam-api.v1.projects.service-accounts.routes
   (:require [com.repldriven.mono.log.interface :as log]
             [com.repldriven.mono.iam-service-account.interface :as
-             iam-service-account]
+             service-account]
             [malli.generator :as mg]))
 
-;;;; Malli schemas
-
-(def ServiceAccount
-  [:map [:name string?] [:project-id string?] [:unique-id string?]
-   [:email string?] [:display-name string?] [:description string?]
-   [:disabled boolean?]])
-
-(def CreateRequest
-  [:map [:account-id string?]
-   [:service-account [:map [:display-name string?] [:description string?]]]])
-
-(def PatchRequest
-  [:map [:service-account [:map [:display-name string?] [:description string?]]]
-   [:update-mask string?]])
-
 ;;;; Ring handlers
+
+(defn- project-name [project-id] (str "projects/" project-id))
 
 (defn create-service-account
   [req]
   (let [{:keys [datasource]
-         {{:keys [project-id]} :path {:keys [account-id service-account]} :body}
-         :parameters}
+         {:keys [body] {:keys [project-id]} :path} :parameters}
         req]
-    (tap> req)
-    (let [account (iam-service-account/create datasource
-                                              {:account-id account-id
-                                               :project-id project-id
-                                               :service-account
-                                               service-account})]
+    (tap> project-id)
+    (tap> body)
+    (let [account
+          (service-account/create datasource (project-name project-id) body)]
       {:status 200 :body account})))
 
 (defn get-service-account
   [{{{:keys [project-id account-id]} :path} :parameters}]
   (log/info "get-service-account" project-id account-id)
-  {:status 200 :body (mg/generate ServiceAccount)})
+  {:status 200 :body (mg/generate service-account/ServiceAccount)})
 
 (defn patch-service-account
   [{{{:keys [project-id account-id]} :path
@@ -49,7 +33,7 @@
             account-id
             service-account
             update-mask)
-  {:status 200 :body (mg/generate ServiceAccount)})
+  {:status 200 :body (mg/generate service-account/ServiceAccount)})
 
 (defn delete-service-account
   [{{{:keys [project-id account-id]} :path} :parameters}]
@@ -59,7 +43,8 @@
 (defn list-service-accounts
   [{{{:keys [project-id]} :path} :parameters}]
   (log/info "list-service-accounts" project-id)
-  {:status 200 :body {:accounts (vector (mg/generate ServiceAccount))}})
+  {:status 200
+   :body {:accounts (vector (mg/generate service-account/ServiceAccount))}})
 
 (defn enable-service-account
   [{{{:keys [project-id account-id]} :path} :parameters}]
@@ -73,37 +58,45 @@
 
 ;;;; Reitit routes
 
+(comment
+  (require '[reitit.core :as r])
+  (-> (r/router ["http://localhost/{projects/*}/serviceAccounts" ::user-by-id]
+                {:syntax :bracket})
+      (r/match-by-path "http://localhost/projects/prj-123/serviceAccounts")))
+
 (defn routes
   []
-  [["/service-accounts"
-    {:get {:summary
-           "Lists every ServiceAccount that belongs to a specific project"
-           :parameters {:path [:map [:project-id int?]]}
-           :responses {200 {:body [:map [:accounts [:vector ServiceAccount]]]}}
-           :handler list-service-accounts}
+  [["/projects/{project-id}/serviceAccounts"
+    {:get
+     {:summary "Lists every ServiceAccount that belongs to a specific project"
+      :parameters {:path [:map [:project-id string?]]}
+      :responses
+      {200 {:body [:map [:accounts [:vector service-account/ServiceAccount]]]}}
+      :handler list-service-accounts}
      :post {:summary "Creates a ServiceAccount"
-            :parameters {:path [:map [:project-id int?]] :body CreateRequest}
-            :responses {201 {:body ServiceAccount}}
+            :parameters {:path [:map [:project-id string?]]
+                         :body service-account/CreateBody}
+            :responses {201 {:body service-account/ServiceAccount}}
             :handler create-service-account}}]
-   ["/service-accounts/{account-id}"
-    {:parameters {:path {:project-id int? :account-id string?}}
+   ["/projects/{project-id}/serviceAccounts}/{account-id}"
+    {:parameters {:path {:project-id string? :account-id string?}}
      :get {:summary "Gets a ServiceAccount"
-           :responses {200 {:body ServiceAccount}}
+           :responses {200 {:body service-account/ServiceAccount}}
            :handler get-service-account}
      :patch {:summary "Patches a ServiceAccount"
-             :parameters {:body PatchRequest}
-             :responses {200 {:body ServiceAccount}}
+             :parameters {:body service-account/PatchBody}
+             :responses {200 {:body service-account/ServiceAccount}}
              :handler patch-service-account}
      :delete {:summary "Deletes a ServiceAccount"
               :responses {204 {}}
               :handler delete-service-account}}]
-   ["/service-accounts/{account-id}:enable"
-    {:parameters {:path {:project-id int? :account-id string?}}
+   ["/projects/{project-id}/serviceAccounts/{account-id}:enable"
+    {:parameters {:path {:project-id string? :account-id string?}}
      :post {:summary "Enables a ServiceAccount that was disabled"
             :responses {204 {}}
             :handler enable-service-account}}]
-   ["/service-accounts/{account-id}:disable"
-    {:parameters {:path {:project-id int? :account-id string?}}
+   ["/projects/{project-id}/serviceAccounts/{account-id}:disable"
+    {:parameters {:path {:project-id string? :account-id string?}}
      :post {:summary "Disables a ServiceAccount immediately"
             :responses {204 {}}
             :handler disable-service-account}}]])

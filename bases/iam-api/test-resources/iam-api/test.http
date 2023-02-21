@@ -1,10 +1,10 @@
-:PORT = 50131
+:PORT = 56929
 
 # get
-GET http://localhost::PORT/v1/projects/12345/service-accounts
+GET http://localhost::PORT/v1/projects/prj-12345/serviceAccounts
 
 # create
-POST http://localhost::PORT/v1/projects/12345/service-accounts
+POST http://localhost::PORT/v1/projects/prj-12345/serviceAccounts
 Content-Type: application/json
 { "account-id": "sa-123",
   "service-account": {
