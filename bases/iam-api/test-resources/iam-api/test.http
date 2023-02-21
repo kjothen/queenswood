@@ -1,14 +1,24 @@
-:PORT = 56929
+:PORT = 49497
 
-# get
+# list
 GET http://localhost::PORT/v1/projects/prj-12345/serviceAccounts
 
 # create
 POST http://localhost::PORT/v1/projects/prj-12345/serviceAccounts
 Content-Type: application/json
-{ "account-id": "sa-123",
+{ "account-id": "sa-1234",
   "service-account": {
-    "display-name": "sa 123",
+    "display-name": "sa 1234",
     "description": "My First Service Account"
   }
 }
+
+# get
+GET http://localhost::PORT/v1/projects/prj-12345/serviceAccounts/sa-1234@prj-12345.iam.serviceaccount
+
+# delete
+POST http://localhost::PORT/v1/projects/prj-12345/serviceAccounts/sa-1234@prj-12345.iam.serviceaccount:undelete
+
+# disable
+POST http://localhost::PORT/v1/projects/prj-12345/serviceAccounts/sa-1234@prj-12345.iam.serviceaccount:enable
+

@@ -6,55 +6,89 @@
 
 ;;;; Ring handlers
 
+(def unknown-service-account-error
+  {:error {:code "404" :message "Unknown service account" :status "NOT_FOUND"}})
+
 (defn- project-name [project-id] (str "projects/" project-id))
+(defn- service-account-name
+  [project-id email-or-unique-id]
+  (str (project-name project-id) "/serviceAccounts/" email-or-unique-id))
 
 (defn create-service-account
-  [req]
-  (let [{:keys [datasource]
-         {:keys [body] {:keys [project-id]} :path} :parameters}
-        req]
-    (tap> project-id)
-    (tap> body)
-    (let [account
-          (service-account/create datasource (project-name project-id) body)]
-      {:status 200 :body account})))
+  [{:keys [datasource] {:keys [body] {:keys [project-id]} :path} :parameters}]
+  (log/info "create-service-account" project-id body)
+  (let [result
+        (service-account/create datasource (project-name project-id) body)]
+    {:status 200 :body result}))
 
 (defn get-service-account
-  [{{{:keys [project-id account-id]} :path} :parameters}]
-  (log/info "get-service-account" project-id account-id)
-  {:status 200 :body (mg/generate service-account/ServiceAccount)})
+  [{:keys [datasource]
+    {{:keys [project-id email-or-unique-id]} :path} :parameters}]
+  (log/info "get-service-account" project-id email-or-unique-id)
+  (let [result (service-account/get datasource
+                                    (service-account-name project-id
+                                                          email-or-unique-id))]
+    (if result
+      {:status 200 :body result}
+      {:status 404 :body unknown-service-account-error})))
 
 (defn patch-service-account
-  [{{{:keys [project-id account-id]} :path
-     {:keys [service-account update-mask]} :body}
-    :parameters}]
-  (log/info "patch-service-account"
-            project-id
-            account-id
-            service-account
-            update-mask)
-  {:status 200 :body (mg/generate service-account/ServiceAccount)})
+  [{:keys [datasource]
+    {:keys [body] {:keys [project-id email-or-unique-id]} :path} :parameters}]
+  (log/info "patch-service-account" project-id email-or-unique-id body)
+  (if (service-account/patch datasource
+                             (service-account-name project-id
+                                                   email-or-unique-id)
+                             body)
+    {:status 204 :body {}}
+    {:status 404 :body unknown-service-account-error}))
 
 (defn delete-service-account
-  [{{{:keys [project-id account-id]} :path} :parameters}]
-  (log/info "delete-service-account" project-id account-id)
-  {:status 204 :body nil})
+  [{:keys [datasource]
+    {{:keys [project-id email-or-unique-id]} :path} :parameters}]
+  (log/info "delete-service-account" project-id email-or-unique-id)
+  (if (service-account/delete datasource
+                              (service-account-name project-id
+                                                    email-or-unique-id))
+    {:status 204 :body {}}
+    {:status 404 :body unknown-service-account-error}))
+
+(defn undelete-service-account
+  [{:keys [datasource]
+    {{:keys [project-id email-or-unique-id]} :path} :parameters}]
+  (log/info "undelete-service-account" project-id email-or-unique-id)
+  (if (service-account/undelete datasource
+                                (service-account-name project-id
+                                                      email-or-unique-id))
+    {:status 204 :body {}}
+    {:status 404 :body unknown-service-account-error}))
 
 (defn list-service-accounts
-  [{{{:keys [project-id]} :path} :parameters}]
+  [{:keys [datasource] {{:keys [project-id]} :path} :parameters}]
   (log/info "list-service-accounts" project-id)
   {:status 200
-   :body {:accounts (vector (mg/generate service-account/ServiceAccount))}})
+   :body {:accounts (service-account/list datasource
+                                          (project-name project-id))}})
 
 (defn enable-service-account
-  [{{{:keys [project-id account-id]} :path} :parameters}]
-  (log/info "enable-service-account" project-id account-id)
-  {:status 204 :body nil})
+  [{:keys [datasource]
+    {{:keys [project-id email-or-unique-id]} :path} :parameters}]
+  (log/info "enable-service-account" project-id email-or-unique-id)
+  (if (service-account/enable datasource
+                              (service-account-name project-id
+                                                    email-or-unique-id))
+    {:status 204 :body {}}
+    {:status 404 :body unknown-service-account-error}))
 
 (defn disable-service-account
-  [{{{:keys [project-id account-id]} :path} :parameters}]
-  (log/info "disable-service-account" project-id account-id)
-  {:status 204 :body nil})
+  [{:keys [datasource]
+    {{:keys [project-id email-or-unique-id]} :path} :parameters}]
+  (log/info "disable-service-account" project-id email-or-unique-id)
+  (if (service-account/disable datasource
+                               (service-account-name project-id
+                                                     email-or-unique-id))
+    {:status 204 :body {}}
+    {:status 404 :body unknown-service-account-error}))
 
 ;;;; Reitit routes
 
@@ -78,8 +112,8 @@
                          :body service-account/CreateBody}
             :responses {201 {:body service-account/ServiceAccount}}
             :handler create-service-account}}]
-   ["/projects/{project-id}/serviceAccounts}/{account-id}"
-    {:parameters {:path {:project-id string? :account-id string?}}
+   ["/projects/{project-id}/serviceAccounts/{email-or-unique-id}"
+    {:parameters {:path {:project-id string? :email-or-unique-id string?}}
      :get {:summary "Gets a ServiceAccount"
            :responses {200 {:body service-account/ServiceAccount}}
            :handler get-service-account}
@@ -90,13 +124,18 @@
      :delete {:summary "Deletes a ServiceAccount"
               :responses {204 {}}
               :handler delete-service-account}}]
-   ["/projects/{project-id}/serviceAccounts/{account-id}:enable"
-    {:parameters {:path {:project-id string? :account-id string?}}
+   ["/projects/{project-id}/serviceAccounts/{email-or-unique-id}:undelete"
+    {:parameters {:path {:project-id string? :email-or-unique-id string?}}
+     :post {:summary "Undeletes a ServiceAccount that was deleted"
+            :responses {204 {}}
+            :handler undelete-service-account}}]
+   ["/projects/{project-id}/serviceAccounts/{email-or-unique-id}:enable"
+    {:parameters {:path {:project-id string? :email-or-unique-id string?}}
      :post {:summary "Enables a ServiceAccount that was disabled"
             :responses {204 {}}
             :handler enable-service-account}}]
-   ["/projects/{project-id}/serviceAccounts/{account-id}:disable"
-    {:parameters {:path {:project-id string? :account-id string?}}
+   ["/projects/{project-id}/serviceAccounts/{email-or-unique-id}:disable"
+    {:parameters {:path {:project-id string? :email-or-unique-id string?}}
      :post {:summary "Disables a ServiceAccount immediately"
             :responses {204 {}}
             :handler disable-service-account}}]])

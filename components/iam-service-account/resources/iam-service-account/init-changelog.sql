@@ -9,5 +9,8 @@ CREATE TABLE service_account(
   email text,
   display_name text,
   description text,
-  disabled boolean);
+  disabled boolean,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc', now()),
+  updated_at TIMESTAMPTZ,
+  deleted_at TIMESTAMPTZ);
 ALTER SEQUENCE service_account_id_seq OWNED BY service_account.unique_id;

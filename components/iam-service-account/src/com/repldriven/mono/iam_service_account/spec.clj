@@ -1,4 +1,5 @@
 (ns com.repldriven.mono.iam-service-account.spec
+  (:refer-clojure :exclude [name])
   (:require [clojure.string :as str]))
 
 ;;;; rfc standards
@@ -31,8 +32,14 @@
 (def email rfc5322)
 (def email-desc rfc5322-desc)
 
+(def email-or-unique-id (str "(?:" email "|" unique-id ")"))
+
 (def project-id rfc1035)
 (def project-id-desc rfc1035-desc)
+
+(def name (str "projects/" project-id "/serviceAccounts/" email-or-unique-id))
+(def name-desc
+  "must be `projects/{PROJECT_ID}/serviceAccounts/{EMAIL}` or `projects/{PROJECT_ID}/serviceAccounts/{UNIQUE_ID}")
 
 (def project-name (str "projects/" project-id))
 (def project-name-desc "must be `projects/{PROJECT_ID}`")
@@ -50,6 +57,8 @@
 (def DisplayName [:string {:max 100 :error/message display-name-desc}])
 
 (def Email [:re {:max 320 :error/message email-desc} (re-pattern-exact email)])
+
+(def Name [:re {:error/message name-desc} (re-pattern-exact name)])
 
 (def ProjectId
   [:re {:error/message project-id-desc} (re-pattern-exact project-id)])
@@ -69,7 +78,7 @@
     [:map [:display-name DisplayName] [:description Description]]]])
 
 (def ServiceAccount
-  [:map [:name AccountId] [:project-id ProjectId] [:unique-id UniqueId]
+  [:map [:name Name] [:project-id ProjectId] [:unique-id UniqueId]
    [:email Email] [:display-name DisplayName] [:description Description]
    [:disabled boolean?]])
 
