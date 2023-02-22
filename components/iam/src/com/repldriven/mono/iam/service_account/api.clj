@@ -34,7 +34,6 @@
                 :display-name display-name
                 :description description
                 :disabled false}]
-    (tap> record)
     (->ServiceAccount (sql/insert! db
                                    :service-account
                                    record
@@ -46,7 +45,9 @@
     [res
      (jdbc/execute-one!
       db
-      ["UPDATE service_account SET deleted_at = timezone('utc', now()) WHERE name = ? AND deleted_at IS NULL"
+      ["UPDATE service_account
+SET deleted_at = timezone('utc', now())
+WHERE name = ? AND deleted_at IS NULL"
        name]
       jdbc/unqualified-snake-kebab-opts)]
     (>= (:next.jdbc/update-count res) 1)))
@@ -57,7 +58,9 @@
     [res
      (jdbc/execute-one!
       db
-      ["UPDATE service_account SET deleted_at = NULL, updated_at = timezone('utc', now()) WHERE name = ? AND deleted_at IS NOT NULL"
+      ["UPDATE service_account
+SET deleted_at = NULL, updated_at = timezone('utc', now())
+WHERE name = ? AND deleted_at IS NOT NULL"
        name]
       jdbc/unqualified-snake-kebab-opts)]
     (>= (:next.jdbc/update-count res) 1)))
@@ -68,7 +71,9 @@
     [res
      (jdbc/execute-one!
       db
-      ["UPDATE service_account SET disabled = TRUE, updated_at = timezone('utc', now()) WHERE name = ? AND deleted_at IS NULL"
+      ["UPDATE service_account
+SET disabled = TRUE, updated_at = timezone('utc', now())
+WHERE name = ? AND deleted_at IS NULL"
        name]
       jdbc/unqualified-snake-kebab-opts)]
     (>= (:next.jdbc/update-count res) 1)))
@@ -79,7 +84,9 @@
     [res
      (jdbc/execute-one!
       db
-      ["UPDATE service_account SET disabled = FALSE, updated_at = timezone('utc', now()) WHERE name = ? AND deleted_at IS NULL"
+      ["UPDATE service_account
+SET disabled = FALSE, updated_at = timezone('utc', now())
+WHERE name = ? AND deleted_at IS NULL"
        name]
       jdbc/unqualified-snake-kebab-opts)]
     (>= (:next.jdbc/update-count res) 1)))
@@ -90,7 +97,9 @@
    ->ServiceAccount
    (sql/query
     db
-    ["select * from service_account where name like ? AND deleted_at IS NULL"
+    ["SELECT unique_id, name, project_id, email, display_name, description, disabled
+FROM service_account
+WHERE name LIKE ? AND deleted_at IS NULL"
      (str project-name "%")]
     jdbc/unqualified-snake-kebab-opts)))
 
@@ -99,7 +108,10 @@
   (->ServiceAccount
    (jdbc/execute-one!
     db
-    ["SELECT * FROM service_account WHERE name = ? AND deleted_at IS NULL" name]
+    ["SELECT unique_id, name, project_id, email, display_name, description, disabled
+FROM service_account
+WHERE name = ? AND deleted_at IS NULL"
+     name]
     jdbc/unqualified-snake-kebab-opts)))
 
 (defn patch [db name body])

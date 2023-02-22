@@ -26,13 +26,13 @@
 # Clojure tools
 .calva
 **/.calva-repl
+*cider-error*
 .clj-kondo
 .eastwood
 .lsp
 .nrepl-port
 .portal
 .rebel_readline_history
-
 # logs
 *.log
 /log

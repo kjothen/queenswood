@@ -3,7 +3,8 @@
          :jetty-adapter {:handler #system :required-component
                          :interceptors [#system :ref [:ring :interceptors]]
                          :options {:join? #profile {:default false}
-                                   :port #profile {:default #port 0}}}}
+                                   :port #profile
+                                          {:default #port 0 :dev 8080}}}}
   :sql {:container {:docker-image-name "postgres:14.2" :exposed-port 5432}
         :container-mapped-exposed-port
         {:container [#system :local-ref [:container]] :exposed-port 5432}

@@ -20,7 +20,6 @@
 
 (defn routes
   [ctx]
-  (tap> ctx)
   [["/swagger.json"
     {:get {:no-doc true
            :swagger {:info {:title "IAM API"

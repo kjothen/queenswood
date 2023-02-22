@@ -18,7 +18,7 @@
   (log/info "create" project-id body)
   (let [result
         (iam/create-service-account datasource (project-name project-id) body)]
-    {:status 200 :body result}))
+    {:status 201 :body result}))
 
 (defn get
   [{:keys [datasource]

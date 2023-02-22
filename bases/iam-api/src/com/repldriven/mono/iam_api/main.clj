@@ -34,6 +34,8 @@
   (log/info "Stopping system")
   (when-let [_ @system] (system/stop! system)))
 
+(defn restart! [] (stop!) (start!))
+
 (defn -main
   [& args]
   (log/init)
@@ -43,9 +45,3 @@
       (cli/exit ok? exit-message)
       (do (env/set-env! (:config-file options) (keyword (:profile options)))
           (start!)))))
-
-(comment
-  (-main "-c" "bases/iam-api/test-resources/iam-api/test-env.edn" "-p" "dev")
-  (stop!)
-  (start!)
-  (stop!))
