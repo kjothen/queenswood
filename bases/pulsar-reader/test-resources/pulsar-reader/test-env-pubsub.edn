@@ -1,6 +1,6 @@
 {:admin {:service-http-url [#system :local-ref [:container-service-http-url]]}
  :client {:service-url [#system :local-ref [:container-service-url]]}
- :container {;;:docker-image-name "kezhenxu94/pulsar"
+ :container {:docker-image-name "apachepulsar/pulsar:2.11.0"
              :exposed-ports [6650 8080]}
  :container-service-http-port {:container [#system :local-ref [:container]]
                                :exposed-port #ref [:container :exposed-ports 1]}
