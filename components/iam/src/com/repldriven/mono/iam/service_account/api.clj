@@ -100,7 +100,7 @@ WHERE name = ? AND deleted_at IS NULL"
     ["SELECT unique_id, name, project_id, email, display_name, description, disabled
 FROM service_account
 WHERE name LIKE ? AND deleted_at IS NULL"
-     (str project-name "%")]
+     (str project-name "/serviceAccounts/%")]
     jdbc/unqualified-snake-kebab-opts)))
 
 (defn get
@@ -115,13 +115,3 @@ WHERE name = ? AND deleted_at IS NULL"
     jdbc/unqualified-snake-kebab-opts)))
 
 (defn patch [db name body])
-
-(comment
-  (get
-   {:database "test"
-    :dbtype "postgres"
-    :host "localhost"
-    :password "test"
-    :port 49224
-    :user "test"}
-   "projects/prj-12345/serviceAccounts/sa-123@prj-12345.iam.serviceaccount"))
