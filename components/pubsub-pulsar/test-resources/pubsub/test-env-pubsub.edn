@@ -19,7 +19,7 @@
              "subscriptionType" #pubsub-subscription-type :Shared
              "topicNames" #{"persistent://tenant-1/namespace-1/topic-1"}}
       :schemas [#system :local-ref [:schemas]]}}
- :container {:docker-image-name "apachepulsar/pulsar:2.11.0"
+ :container {:docker-image-name "kezhenxu94/pulsar:2.10.0-SNAPSHOT"
              :exposed-ports [6650 8080]}
  :container-service-http-port {:container [#system :local-ref [:container]]
                                :exposed-port #ref [:container :exposed-ports 1]}
