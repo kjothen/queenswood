@@ -1,8 +1,7 @@
-(ns com.repldriven.mono.iam-service-account.api
+(ns com.repldriven.mono.iam.service-account.api
   (:refer-clojure :exclude [delete get list name])
   (:require [clojure.string :as str]
-            [com.repldriven.mono.iam-service-account.database :as database]
-            [com.repldriven.mono.iam-service-account.spec :as spec]
+            [com.repldriven.mono.iam.service-account.spec :as spec]
             [malli.generator :as mg]
             [next.jdbc :as jdbc]
             [next.jdbc.date-time]

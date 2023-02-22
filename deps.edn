@@ -6,8 +6,7 @@
                 components/env {:local/root "components/env"}
                 components/event {:local/root "components/event"}
                 components/http {:local/root "components/http"}
-                components/iam-service-account
-                {:local/root "components/iam-service-account"}
+                components/iam {:local/root "components/iam"}
                 components/log {:local/root "components/log"}
                 components/migrator {:local/root "components/migrator"}
                 components/mqtt {:local/root "components/mqtt"}
@@ -44,38 +43,21 @@
          :main-opts ["-m" "polylith.clj.core.poly-cli.core"]}
   :test
   {:extra-paths
-   ["components/cli/test"
-    "components/env/test"
+   ["components/cli/test" "components/env/test"
     "components/env/test-resources/com/repldriven/mono"
-    "components/encryption/test"
-    "components/event/test"
-    "components/http/test"
-    "components/iam-service-account/test"
-    "components/log/test"
-    "components/migrator/test"
-    "components/migrator/test-resources"
-    "components/mqtt/test"
-    "components/mqtt/test-resources"
-    "components/pubsub-pulsar/test"
-    "components/pubsub-pulsar/test-resources"
-    "components/ring/test"
-    "components/ring/test-resources"
-    "components/schema-avro/test"
-    "components/spec-malli/test"
-    "components/spec-spec/test"
-    "components/sql-postgres/test"
-    "components/sql-postgres/test-resources"
-    "components/system/test"
-    "components/testcontainers-system/test"
-    "components/testcontainers-system/test-resources"
-    "components/vault/test"
-    "components/vault/test-resources"
-    "bases/blocking-command-api/test"
-    "bases/blocking-command-api/test-resources"
-    "bases/pulsar-reader/test"
-    "bases/pulsar-reader/test-resources"
-    "bases/symmetric-key-api/test"
-    "bases/symmetric-key-api/test-resources"
-    "bases/iam-api/test"
+    "components/encryption/test" "components/event/test" "components/http/test"
+    "components/iam/test" "components/log/test" "components/migrator/test"
+    "components/migrator/test-resources" "components/mqtt/test"
+    "components/mqtt/test-resources" "components/pubsub-pulsar/test"
+    "components/pubsub-pulsar/test-resources" "components/ring/test"
+    "components/ring/test-resources" "components/schema-avro/test"
+    "components/spec-malli/test" "components/spec-spec/test"
+    "components/sql-postgres/test" "components/sql-postgres/test-resources"
+    "components/system/test" "components/testcontainers-system/test"
+    "components/testcontainers-system/test-resources" "components/vault/test"
+    "components/vault/test-resources" "bases/blocking-command-api/test"
+    "bases/blocking-command-api/test-resources" "bases/pulsar-reader/test"
+    "bases/pulsar-reader/test-resources" "bases/symmetric-key-api/test"
+    "bases/symmetric-key-api/test-resources" "bases/iam-api/test"
     "bases/iam-api/test-resources"]}}
  :mvn/repos {"maven" {:url "https://packages.confluent.io/maven"}}}

@@ -1,7 +1,7 @@
 (ns com.repldriven.mono.iam-api.api
   (:require [com.repldriven.mono.log.interface :as log]
             [com.repldriven.mono.iam-api.v1.projects.service-accounts.routes :as
-             projects-service-accounts]
+             service-accounts]
             [muuntaja.core]
             [reitit.coercion]
             [reitit.coercion.malli :as malli]
@@ -27,7 +27,8 @@
                             :description "Identity and Access Managment API"}}
            :handler (swagger/create-swagger-handler)}}]
    ["/v1" {:interceptors (:interceptors ctx)}
-    (vec (concat (projects-service-accounts/routes)))]])
+    ["/projects/{project-id}" {:parameters {:path {:project-id string?}}}
+     (vec (concat (service-accounts/routes)))]]])
 
 ;;;; Reitit router
 

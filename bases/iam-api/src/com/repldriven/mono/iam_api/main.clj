@@ -1,8 +1,7 @@
 (ns com.repldriven.mono.iam-api.main
   (:require [com.repldriven.mono.cli.interface :as cli]
             [com.repldriven.mono.env.interface :as env]
-            [com.repldriven.mono.iam-service-account.interface :as
-             iam-service-account]
+            [com.repldriven.mono.iam.interface :as iam]
             [com.repldriven.mono.log.interface :as log]
             [com.repldriven.mono.iam-api.api :as api]
             [com.repldriven.mono.iam-api.system :as iam-api-system]
@@ -28,7 +27,7 @@
   []
   (log/info "Starting system")
   (system/start! system (system-config))
-  (iam-service-account/migrate (db-spec)))
+  (iam/migrate (db-spec)))
 
 (defn stop!
   []

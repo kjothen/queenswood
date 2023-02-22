@@ -1,4 +1,4 @@
-:PORT = 49497
+:PORT = 59113
 
 # list
 GET http://localhost::PORT/v1/projects/prj-12345/serviceAccounts
@@ -16,9 +16,9 @@ Content-Type: application/json
 # get
 GET http://localhost::PORT/v1/projects/prj-12345/serviceAccounts/sa-1234@prj-12345.iam.serviceaccount
 
-# delete
+# undelete
 POST http://localhost::PORT/v1/projects/prj-12345/serviceAccounts/sa-1234@prj-12345.iam.serviceaccount:undelete
 
-# disable
+# enable
 POST http://localhost::PORT/v1/projects/prj-12345/serviceAccounts/sa-1234@prj-12345.iam.serviceaccount:enable
 
