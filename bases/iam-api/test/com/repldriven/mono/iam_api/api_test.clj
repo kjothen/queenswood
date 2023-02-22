@@ -33,7 +33,7 @@
 
 (defn json->edn [res] (json/read-str (:body res) {:key-fn keyword}))
 
-;;;; Service Accounts
+;;;; service-account
 ;;;;
 
 (def service-account-create-body

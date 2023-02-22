@@ -2,5 +2,5 @@
  :deps {clj-test-containers/clj-test-containers {:mvn/version "0.5.0"}
         clojurewerkz/machine_head {:mvn/version "1.0.0"}
         org.clojure/java.data {:mvn/version "1.0.95"}
-        org.testcontainers/hivemq {:mvn/version "1.17.3"}}
+        org.testcontainers/hivemq {:mvn/version "1.17.6"}}
  :paths ["src" "resources"]}

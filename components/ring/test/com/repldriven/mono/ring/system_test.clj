@@ -27,7 +27,8 @@
   (testing
    "Ring interceptors MUST be inserted"
    (let [data {:got "me" :this "time"}
-         handler (fn [req] {:status 200 :body (select-keys req (keys data))})
+         handler
+         (fn [req] (tap> req) {:status 200 :body (select-keys req (keys data))})
          routes (fn [ctx] ["/api" {:interceptors (:interceptors ctx)}
                            ["/interceptors" {:get {:handler handler}}]])
          router-data {:muuntaja muuntaja.core/instance

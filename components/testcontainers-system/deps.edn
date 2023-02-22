@@ -1,7 +1,7 @@
 {:aliases {:test {:extra-deps {clj-test-containers/clj-test-containers
                                {:mvn/version "0.5.0"}
                                org.testcontainers/testcontainers {:mvn/version
-                                                                  "1.17.3"}}
+                                                                  "1.17.6"}}
                   :extra-paths ["test" "test-resources"]}}
  :deps {}
  :paths ["src" "resources"]}

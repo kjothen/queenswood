@@ -20,7 +20,7 @@
   []
   (let [datasource (system/instance @system [:sql :datasource])]
     ;; TODO remove sleep until datasource is available
-    (Thread/sleep 5000)
+    ;; (Thread/sleep 5000)
     (next.jdbc/get-datasource datasource)))
 
 (defn start!

@@ -25,6 +25,7 @@
 (deftest valid-connection
   (testing "Connection must be valid")
   (let [datasource (system/instance *sys* [:sql :datasource])]
+    ;;(Thread/sleep 5000)
     (is (= [{:?column? 1}]
            (jdbc/execute! datasource
                           ["select 1"]
