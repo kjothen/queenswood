@@ -24,7 +24,6 @@
   [source]
   (file-type->keyword (.getPath source)))
 (defmethod file-type java.lang.String [source] (file-type->keyword source))
-
 (defmethod file-type :default
   [source]
   (throw (ex-info "Cannot detect file type" {:source source})))
