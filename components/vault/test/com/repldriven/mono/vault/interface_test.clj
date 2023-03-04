@@ -27,10 +27,12 @@
    "Developers should be able to start/stop a vault system from a REPL"
    (with-system [sys (SUT/configure-system (get-in @env/env [:system :vault]))]
                 (is (some? sys))
+                (tap> sys)
                 (let [client (system/instance sys [:vault :client])
                       vault-config (system/config sys :vault :container)
                       token (:vault-token vault-config)
                       secret (:secret-in-vault vault-config)]
+                  (tap> vault-config)
                   (is (some? client))
                   (is (some? (SUT/authenticate-client! client :token token)))
                   (let [[mount path] (-> secret
@@ -41,19 +43,20 @@
                     (is (= (SUT/read-secret client mount path)
                            (prop-seq->kw-map secret-props))))))))
 
-(comment
-  (env/set-env! (io/resource "vault/test-env.edn") :test)
-  (def sys
-    (-> (get-in @env/env [:system :vault])
-        (SUT/configure-system)
-        (system/start)))
-  (def client (system/instance sys [:vault :client]))
-  (def vault-config (system/config sys :vault :container))
-  (def token (:vault-token vault-config))
-  (def secret (:secret-in-vault vault-config))
-  (SUT/authenticate-client! client :token token)
-  (let [[mount path] (-> secret
-                         first
-                         (str/split #"/"))]
-    (SUT/read-secret client mount path))
-  (system/stop sys))
+(comment)
+((env/set-env! (io/resource "vault/test-env.edn") :test)
+ (def sys
+   (-> (get-in @env/env [:system :vault])
+       (SUT/configure-system)
+       (system/start)))
+ (def client (system/instance sys [:vault :client]))
+ (tap> sys)
+ (def vault-config (system/config sys :vault :container))
+ (def token (:vault-token vault-config))
+ (def secret (:secret-in-vault vault-config))
+ (SUT/authenticate-client! client :token token)
+ (let [[mount path] (-> secret
+                        first
+                        (str/split #"/"))]
+   (SUT/read-secret client mount path))
+ (system/stop sys))

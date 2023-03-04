@@ -58,6 +58,10 @@
 
 (defn instance [system kws] (get-in system (vec (cons ::ds/instances kws))))
 
+(defn config
+  [system group component]
+  (get-in system [::ds/defs group component ::ds/config]))
+
 (defn stop
   [system]
   (try (ds/stop system)

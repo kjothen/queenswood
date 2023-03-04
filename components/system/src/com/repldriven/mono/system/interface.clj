@@ -34,9 +34,7 @@
 
 (defn instance [system kws] (core/instance system kws))
 
-(defn config
-  [system group component]
-  (get-in system [:core.system/defs group component :core.system/config]))
+(defn config [system group component] (core/config system group component))
 
 (defn stop [system] (core/stop system))
 

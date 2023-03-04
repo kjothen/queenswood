@@ -4,7 +4,7 @@
 ((clojure-mode . ((mode . zprint-format-on-save)
                   (projectile-project-type . clojure-cli)
                   (cider-preferred-build-tool . clojure-cli)
-                  (cider-clojure-cli-aliases . ":lib/pretty-errors:inspect/portal-web:repl/rebel:dev:test -Sforce"))))
+                  (cider-clojure-cli-aliases . ":lib/pretty-errors:inspect/portal-web:repl/rebel:dev:test"))))
 
 ;(setq sql-user "test")
 ;(setq sql-server "localhost")
