@@ -9,7 +9,8 @@
 
 (def env (atom nil))
 
-(def reader config.edn/reader)
+(def edn-reader config.edn/reader)
+(def yml-reader config.yml/reader)
 
 (defn file-type->keyword
   [source]

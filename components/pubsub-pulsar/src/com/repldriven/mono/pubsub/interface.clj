@@ -10,19 +10,19 @@
             [com.repldriven.mono.pubsub.system.core :as system]
             [com.repldriven.mono.env.interface :as env]))
 
-(defmethod env/reader 'pubsub-crypto-failure-action
+(defmethod env/edn-reader 'pubsub-crypto-failure-action
   [opts tag value]
   (env-reader/crypto-failure-action opts tag value))
 
-(defmethod env/reader 'pubsub-message-id
+(defmethod env/edn-reader 'pubsub-message-id
   [opts tag value]
   (env-reader/message-id opts tag value))
 
-(defmethod env/reader 'pubsub-schema
+(defmethod env/edn-reader 'pubsub-schema
   [opts tag value]
   (env-reader/schema opts tag value))
 
-(defmethod env/reader 'pubsub-subscription-type
+(defmethod env/edn-reader 'pubsub-subscription-type
   [opts tag value]
   (env-reader/subscription-type opts tag value))
 

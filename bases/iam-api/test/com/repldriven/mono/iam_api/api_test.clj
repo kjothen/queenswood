@@ -16,7 +16,7 @@
 
 (defn start-system
   []
-  (main/-main "-c" (io/as-file (io/resource "iam-api/test-env.edn"))
+  (main/-main "-c" (io/as-file (io/resource "iam-api/test-application.yml"))
               "-p" "test"))
 (defn stop-system [] (main/stop!))
 (defn system-fixture

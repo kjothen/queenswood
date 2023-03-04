@@ -6,6 +6,9 @@
             [com.repldriven.mono.system.interface :as system]))
 
 (deftest configuration
-  (testing "System configuration MUST be valid"
+  (testing "System yaml configuration MUST be valid"
+           (env/set-env! (io/resource "iam-api/test-application.yml") :test)
+           (is (= true (system/system? (SUT/configure (:system @env/env))))))
+  (testing "System edn configuration MUST be valid"
            (env/set-env! (io/resource "iam-api/test-env.edn") :test)
            (is (= true (system/system? (SUT/configure (:system @env/env)))))))

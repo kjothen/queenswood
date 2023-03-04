@@ -23,10 +23,6 @@
 
 (defmulti tag-reader (fn [m] (keyword (get m :tag))))
 
-(defmethod tag-reader :!system/local-ref
-  [{:keys [value]}]
-  (symbol (str "#system local-ref " (pr-str (mapv keyword value)))))
-
 (defmethod tag-reader :!profile
   [{:keys [value]}]
   (symbol (str "#profile " (pr-str (yaml-collections->edn-collections value)))))
@@ -34,6 +30,8 @@
 (defmethod tag-reader :!port [{:keys [value]}] (symbol (str "#port " value)))
 
 (defmethod tag-reader :default [m] (:value m))
+
+(def reader tag-reader)
 
 (defn config
   [source profile]

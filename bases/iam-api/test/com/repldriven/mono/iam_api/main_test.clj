@@ -9,9 +9,9 @@
 (deftest start
   (testing
    "Ops should be able to start the system from the main entry point"
-   (try (SUT/-main "-c" (io/as-file (io/resource "iam-api/test-env.edn"))
-                   "-p" "test")
-        (is (some? @SUT/system))
-        (catch Exception e
-          (assert false (format "Unable to start system, %s" e)))
-        (finally (SUT/stop!)))))
+   (try
+     (SUT/-main "-c" (io/as-file (io/resource "iam-api/test-application.yml"))
+                "-p" "test")
+     (is (some? @SUT/system))
+     (catch Exception e (assert false (format "Unable to start system, %s" e)))
+     (finally (SUT/stop!)))))

@@ -1,0 +1,45 @@
+system:
+  sql:
+    container:
+      docker-image-name: postgres:9.6.12
+      exposed-port: 5432
+    container-mapped-exposed-port:
+      container: !system/local-ref container
+      exposed-port: 5432
+    datasource:
+      database: test
+      dbtype: postgres
+      host: localhost
+      password: test
+      port: !system/local-ref container-mapped-exposed-port
+      user: test
+  ring:
+    interceptors:
+      datasource: !system/ref sql.datasource
+    jetty-adapter:
+      handler: !system/required-component
+      interceptors: !system/ref ring.interceptors
+      options:
+        join?: !profile
+          default: false
+        port: !profile
+          default: !port 8080
+          test: !port 0
+
+
+# {:system
+#  {:ring {:interceptors {:datasource [#system :ref [:sql :datasource]]}
+#          :jetty-adapter {:handler #system :required-component
+#                          :interceptors [#system :ref [:ring :interceptors]]
+#                          :options {:join? #profile {:default false}
+#                                    :port #profile
+#                                           {:default #port 0 :dev 8080}}}}
+#   :sql {:container {:docker-image-name "postgres:9.6.12" :exposed-port 5432}
+#         :container-mapped-exposed-port
+#         {:container [#system :local-ref [:container]] :exposed-port 5432}
+#         :datasource {:database "test"
+#                      :dbtype "postgres"
+#                      :host "localhost"
+#                      :password "test"
+#                      :port [#system :local-ref [:container-mapped-exposed-port]]
+#                      :user "test"}}}}
