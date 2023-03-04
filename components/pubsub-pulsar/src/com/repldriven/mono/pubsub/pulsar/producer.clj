@@ -14,7 +14,7 @@
 (defn ^Producer create
   [{:keys [^PulsarClient client conf schemas]}]
   (try
-    (log/info "Creating pulsar producer")
+    (log/info "Creating pulsar producer" conf)
     (let [{:strs [cryptoKeyReader encryptionKeys schema]} conf
           manual-conf ["cryptoKeyReader" "encryptionKeys" "schema"]
           auto-conf (j/to-java Map (apply dissoc conf manual-conf))

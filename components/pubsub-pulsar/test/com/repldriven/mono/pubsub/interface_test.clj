@@ -107,7 +107,8 @@
                    expected))))))
 
 (comment
-  (env/set-env! (io/resource "pubsub/test-env.edn") :test)
+  (env/set-env! (io/resource "pubsub/test-application.yml") :test)
   (def system-config (SUT/configure-system (get-in @env/env [:system :pubsub])))
   (def running-system (system/start system-config))
-  (system/stop running-system))
+  (system/stop running-system)
+  ;)

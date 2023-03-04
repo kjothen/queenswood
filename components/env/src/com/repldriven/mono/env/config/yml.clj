@@ -6,6 +6,10 @@
             [flatland.ordered.map]
             [com.repldriven.mono.env.config.edn :as config.edn]))
 
+(comment
+ ;
+)
+
 (defn string->stream
   ([s] (string->stream s "UTF-8"))
   ([s encoding]
@@ -21,6 +25,11 @@
                    :else %)
             form))
 
+(defn keys->strs
+  [form]
+  (postwalk #(if (map? %) (into (hash-map) (map (fn [[k v]] [(name k) v]) %)) %)
+            form))
+
 (defmulti tag-reader (fn [m] (keyword (get m :tag))))
 
 (defmethod tag-reader :!profile
@@ -28,6 +37,12 @@
   (symbol (str "#profile " (pr-str (yaml-collections->edn-collections value)))))
 
 (defmethod tag-reader :!port [{:keys [value]}] (symbol (str "#port " value)))
+
+(defmethod tag-reader :!strs [{:keys [value]}] (pr-str (keys->strs value)))
+
+(defmethod tag-reader :!str [{:keys [value]}] (name value))
+
+(defmethod tag-reader :!keyword [{:keys [value]}] (keyword value))
 
 (defmethod tag-reader :default [m] (:value m))
 

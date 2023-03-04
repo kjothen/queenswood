@@ -12,7 +12,7 @@
 (defn ^Consumer create
   [{:keys [^PulsarClient client conf schemas]}]
   (try
-    (log/info "Creating pulsar consumer")
+    (log/info "Creating pulsar consumer" conf schemas)
     (let [{:strs [cryptoKeyReader schema]} conf
           manual-conf ["cryptoKeyReader" "schema"]
           auto-conf (j/to-java Map (apply dissoc conf manual-conf))

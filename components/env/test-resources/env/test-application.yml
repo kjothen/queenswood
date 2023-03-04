@@ -2,3 +2,7 @@ system:
   port: !profile
     default: !port 80
     test: !port 0
+  config: !strs
+    key: value
+    nested-key:
+      key: value

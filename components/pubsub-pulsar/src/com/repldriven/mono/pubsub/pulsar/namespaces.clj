@@ -11,19 +11,19 @@
                                    [(.getServiceUrl admin) "admin/v2/namespaces"
                                     fully-qualified-namespace-name])]
     (log/info "Configuring namespace:" fully-qualified-namespace-name config)
-    (dorun
-     (map (fn [[method settings]]
-            (dorun (map (fn [[k v]]
-                          (let [url (string/join "/" [namespace-url k])
-                                body (json/write-str v)
-                                headers {"Content-Type" "application/json"}
-                                res (http/request {:method method
-                                                   :url url
-                                                   :headers headers
-                                                   :body body})]
-                            (log/info res)))
-                        settings)))
-          config))))
+    (dorun (map (fn [[method settings]]
+                  (tap> [method settings])
+                  (map (fn [[k v]]
+                         (let [url (string/join "/" [namespace-url k])
+                               body (json/write-str v)
+                               headers {"Content-Type" "application/json"}
+                               res (http/request {:method method
+                                                  :url url
+                                                  :headers headers
+                                                  :body body})]
+                           (log/info res)))
+                       settings))
+                config))))
 
 (defn- create
   [^PulsarAdmin admin fully-qualified-namespace-name & {:keys [config]}]

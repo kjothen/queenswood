@@ -10,6 +10,7 @@
             [com.repldriven.mono.pubsub.system.core :as system]
             [com.repldriven.mono.env.interface :as env]))
 
+;;;; edn env reader tags
 (defmethod env/edn-reader 'pubsub-crypto-failure-action
   [opts tag value]
   (env-reader/crypto-failure-action opts tag value))
@@ -26,6 +27,24 @@
   [opts tag value]
   (env-reader/subscription-type opts tag value))
 
+;;;; yml env reader tags
+(defmethod env/yml-reader :!pubsub/crypto-failure-action
+  [{:keys [value]}]
+  (symbol (str "#pubsub-crypto-failure-action " (keyword value))))
+
+(defmethod env/yml-reader :!pubsub/message-id
+  [{:keys [value]}]
+  (symbol (str "#pubsub-message-id " (keyword value))))
+
+(defmethod env/yml-reader :!pubsub/schema
+  [{:keys [value]}]
+  (symbol (str "#pubsub-schema " (keyword value))))
+
+(defmethod env/yml-reader :!pubsub/subscription-type
+  [{:keys [value]}]
+  (symbol (str "#pubsub-subscription-type " (keyword value))))
+
+;;;; system interface
 (defn configure-system [config] (system/configure config))
 
 (defn send
