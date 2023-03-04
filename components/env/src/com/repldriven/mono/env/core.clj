@@ -9,6 +9,8 @@
 
 (def env (atom nil))
 
+(def reader config.edn/reader)
+
 (defn file-type->keyword
   [source]
   (cond (str/ends-with? source ".edn") :edn

@@ -1,7 +1,6 @@
 (ns com.repldriven.mono.symmetric-key-api.handler
   (:require [clojure.edn :as edn]
-            [com.repldriven.mono.encryption.interface :as encryption]
-            [com.repldriven.mono.spec.interface :as spec]))
+            [com.repldriven.mono.encryption.interface :as encryption]))
 
 (defn- handle
   ([status body] {:status (or status 404) :body body})

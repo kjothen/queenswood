@@ -1,6 +1,8 @@
 (ns com.repldriven.mono.env.interface
   (:require [com.repldriven.mono.env.core :as core]))
 
+(def reader core/reader)
+
 (def env core/env)
 
 (defn set-env!

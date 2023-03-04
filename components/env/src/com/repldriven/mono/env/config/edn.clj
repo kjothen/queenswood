@@ -3,6 +3,8 @@
             [clojure.java.io :as io])
   (:import (java.net ServerSocket)))
 
+(def reader aero/reader)
+
 (defmethod aero/reader 'port
   [_ _ value]
   (if (zero? value)

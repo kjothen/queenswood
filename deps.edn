@@ -43,9 +43,7 @@
          :main-opts ["-m" "polylith.clj.core.poly-cli.core"]}
   :test
   {:extra-paths
-<<<<<<< HEAD
-   ["components/cli/test" "components/env/test"
-    "components/env/test-resources/com/repldriven/mono"
+   ["components/cli/test" "components/env/test" "components/env/test-resources"
     "components/encryption/test" "components/event/test" "components/http/test"
     "components/iam/test" "components/log/test" "components/migrator/test"
     "components/migrator/test-resources" "components/mqtt/test"
@@ -55,19 +53,6 @@
     "components/spec-malli/test" "components/spec-spec/test"
     "components/sql-postgres/test" "components/sql-postgres/test-resources"
     "components/system/test" "components/testcontainers-system/test"
-=======
-   ["components/cli/test" "components/env/test" "components/env/test-resources"
-    "components/encryption/test" "components/event/test" "components/http/test"
-    "components/iam-service-account/test" "components/log/test"
-    "components/migrator/test" "components/migrator/test-resources"
-    "components/mqtt/test" "components/mqtt/test-resources"
-    "components/pubsub-pulsar/test" "components/pubsub-pulsar/test-resources"
-    "components/ring/test" "components/ring/test-resources"
-    "components/schema-avro/test" "components/spec-malli/test"
-    "components/spec-spec/test" "components/sql-postgres/test"
-    "components/sql-postgres/test-resources" "components/system/test"
-    "components/testcontainers-system/test"
->>>>>>> 9b695b8 (Added support yaml-based env files!)
     "components/testcontainers-system/test-resources" "components/vault/test"
     "components/vault/test-resources" "bases/blocking-command-api/test"
     "bases/blocking-command-api/test-resources" "bases/pulsar-reader/test"
