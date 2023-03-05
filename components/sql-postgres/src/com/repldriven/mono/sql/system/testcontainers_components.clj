@@ -12,10 +12,14 @@
   [config]
   (let [{:keys [docker-image-name exposed-port]} config]
     (try (log/info "Starting postgres container")
-         (-> (tc/init {:container (PostgreSQLContainer. (DockerImageName/parse
+         (when-let [container (-> (tc/init {:container (PostgreSQLContainer.
+                                                        (DockerImageName/parse
                                                          docker-image-name))
-                       :exposed-ports [exposed-port]})
-             (tc/start!))
+                                            :exposed-ports [exposed-port]})
+                                  (tc/start!))]
+           ;; TODO remove sleep and fix wait strategy
+           (Thread/sleep 5000)
+           container)
          (catch ContainerLaunchException e
            (log/error "Failed to start postgres container, %s" e)))))
 

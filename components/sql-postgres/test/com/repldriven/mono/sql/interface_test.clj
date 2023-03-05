@@ -34,4 +34,6 @@
   (env/set-env! (io/resource "sql/test-env.edn") :test)
   (def system-config (SUT/configure-system (get-in @env/env [:system :sql])))
   (def running-system (system/start system-config))
-  (system/stop running-system))
+  (system/stop running-system)
+  ;
+)
