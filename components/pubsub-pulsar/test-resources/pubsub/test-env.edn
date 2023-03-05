@@ -1,1 +1,0 @@
-{:system {:pubsub #include "test-env-pubsub.edn"}}

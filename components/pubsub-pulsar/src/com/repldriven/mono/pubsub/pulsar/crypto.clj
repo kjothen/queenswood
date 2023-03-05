@@ -57,13 +57,13 @@
    CryptoKeyReader
      (^EncryptionKeyInfo getPublicKey
        [this ^String keyName ^Map _metadata]
-       (log/info "Trying to read public key: find" keyName
+       (log/info "Trying to read public key: get" keyName
                  "in" (keys (:keys named-kps)))
        (when-let [k (get (get-crypto-key-pair keyName named-kps) :public-key)]
          (doto (EncryptionKeyInfo.) (.setKey k))))
      (^EncryptionKeyInfo getPrivateKey
        [this ^String keyName ^Map _metadata]
-       (log/info "Trying to read private key: find" keyName
+       (log/info "Trying to read private key: get" keyName
                  "in" (keys (:keys named-kps)))
        (when-let [k (get (get-crypto-key-pair keyName named-kps) :private-key)]
          (doto (EncryptionKeyInfo.) (.setKey k))))))

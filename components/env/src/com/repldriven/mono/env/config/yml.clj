@@ -6,10 +6,6 @@
             [flatland.ordered.map]
             [com.repldriven.mono.env.config.edn :as config.edn]))
 
-(comment
- ;
-)
-
 (defn string->stream
   ([s] (string->stream s "UTF-8"))
   ([s encoding]
@@ -34,25 +30,30 @@
 
 (defmethod tag-reader :!profile
   [{:keys [value]}]
-  (symbol (str "#profile " (pr-str (yaml-collections->edn-collections value)))))
+  (symbol (str "#profile " (yaml-collections->edn-collections value))))
 
 (defmethod tag-reader :!port [{:keys [value]}] (symbol (str "#port " value)))
 
-(defmethod tag-reader :!strs [{:keys [value]}] (pr-str (keys->strs value)))
+(defmethod tag-reader :!strs [{:keys [value]}] (keys->strs value))
 
-(defmethod tag-reader :!str [{:keys [value]}] (name value))
+(defmethod tag-reader :!str [{:keys [value]}] (str "\"" (name value) "\""))
 
 (defmethod tag-reader :!keyword [{:keys [value]}] (keyword value))
 
 (defmethod tag-reader :default [m] (:value m))
+
+(defn key-fn
+  [{:keys [key]}]
+  (if (and (str/starts-with? key "\"") (str/ends-with? key "\""))
+    (subs key 1 (dec (count key)))
+    (keyword key)))
 
 (def reader tag-reader)
 
 (defn config
   [source profile]
   (-> (io/reader source)
-      (yaml/parse-stream
-       {:keywords true :unsafe false :unknown-tag-fn tag-reader})
+      (yaml/parse-stream {:key-fn key-fn :unknown-tag-fn tag-reader})
       yaml-collections->edn-collections
       str
       string->stream

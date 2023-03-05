@@ -11,19 +11,15 @@
                                    [(.getServiceUrl admin) "admin/v2/namespaces"
                                     fully-qualified-namespace-name])]
     (log/info "Configuring namespace:" fully-qualified-namespace-name config)
-    (dorun (map (fn [[method settings]]
-                  (tap> [method settings])
-                  (map (fn [[k v]]
-                         (let [url (string/join "/" [namespace-url k])
-                               body (json/write-str v)
-                               headers {"Content-Type" "application/json"}
-                               res (http/request {:method method
-                                                  :url url
-                                                  :headers headers
-                                                  :body body})]
-                           (log/info res)))
-                       settings))
-                config))))
+    (doseq [[method settings] config]
+      (tap> [method settings])
+      (doseq [[k v] settings]
+        (let [url (string/join "/" [namespace-url k])
+              body (json/write-str v)
+              headers {"Content-Type" "application/json"}
+              res (http/request
+                   {:method method :url url :headers headers :body body})]
+          (log/info res))))))
 
 (defn- create
   [^PulsarAdmin admin fully-qualified-namespace-name & {:keys [config]}]
@@ -39,6 +35,5 @@
 (defn create-namespaces
   [{:keys [^PulsarAdmin admin namespaces]}]
   (log/info "Ensure pulsar namespaces exist:" namespaces)
-  (doall (mapv (fn [{:keys [namespace] :as opts}]
-                 (create admin namespace (dissoc opts :namespace)))
-               namespaces)))
+  (doseq [{:keys [namespace] :as opts} namespaces]
+    (create admin namespace (dissoc opts :namespace))))

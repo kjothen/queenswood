@@ -23,7 +23,7 @@
 
 (defn sys-fixture
   [f]
-  (env/set-env! (io/resource "pubsub/test-env.edn") :test)
+  (env/set-env! (io/resource "pubsub/test-application.yml") :test)
   (with-system [sys (SUT/configure-system (get-in @env/env [:system :pubsub]))]
                (binding [*sys* sys] (f))))
 
@@ -99,16 +99,18 @@
                      "isAllowAutoUpdateSchema" false
                      "schemaCompatibilityStrategy" "FULL"
                      "schemaValidationEnforced" true}]
-       (dorun (map (fn [[k v]]
-                     (let [url (string/join "/" [namespace-url k])]
-                       (is (= v
-                              (-> (http/request {:url url :method :get})
-                                  (http/res->json))))))
-                   expected))))))
+       (doseq [[k v] expected]
+         (let [url (string/join "/" [namespace-url k])
+               res (-> (http/request {:url url :method :get}))]
+           (tap> [k v res])
+           (is (= v (http/res->json res)))))
+       expected))))
 
 (comment
   (env/set-env! (io/resource "pubsub/test-application.yml") :test)
+  (tap> @env/env)
   (def system-config (SUT/configure-system (get-in @env/env [:system :pubsub])))
   (def running-system (system/start system-config))
   (system/stop running-system)
-  ;)
+  ;
+)
