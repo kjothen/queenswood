@@ -27,6 +27,6 @@
       (log/error (format "Failed to create pulsar consumer, %s" e)))))
 
 (defn ^Message receive
-  ([^Consumer consumer] (.. consumer receive))
+  ([^Consumer consumer] (when consumer (.. consumer receive)))
   ([^Consumer consumer timeout-ms]
-   (.. consumer (receive timeout-ms TimeUnit/MILLISECONDS))))
+   (when consumer (.. consumer (receive timeout-ms TimeUnit/MILLISECONDS)))))

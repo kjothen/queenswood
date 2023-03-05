@@ -1,8 +1,11 @@
 (ns com.repldriven.mono.pubsub.pulsar.env-reader
+  (:require [com.repldriven.mono.env.interface :as env])
   (:import (org.apache.pulsar.client.api ConsumerCryptoFailureAction
                                          MessageId
                                          Schema
                                          SubscriptionType)))
+
+;;;; env reader tag values -> pulsar constants
 
 (defn crypto-failure-action
   [_ tag value]
@@ -56,3 +59,37 @@
     :Shared SubscriptionType/Shared
     (throw (ex-info (format "Invalid value %s for tag %s" value tag)
                     {:tag tag :value value}))))
+
+;;;; edn env reader tags
+(defmethod env/edn-reader 'pubsub-crypto-failure-action
+  [opts tag value]
+  (crypto-failure-action opts tag value))
+
+(defmethod env/edn-reader 'pubsub-message-id
+  [opts tag value]
+  (message-id opts tag value))
+
+(defmethod env/edn-reader 'pubsub-schema
+  [opts tag value]
+  (schema opts tag value))
+
+(defmethod env/edn-reader 'pubsub-subscription-type
+  [opts tag value]
+  (subscription-type opts tag value))
+
+;;;; yml env reader tags
+(defmethod env/yml-reader :!pubsub/crypto-failure-action
+  [{:keys [value]}]
+  (symbol (str "#pubsub-crypto-failure-action " (keyword value))))
+
+(defmethod env/yml-reader :!pubsub/message-id
+  [{:keys [value]}]
+  (symbol (str "#pubsub-message-id " (keyword value))))
+
+(defmethod env/yml-reader :!pubsub/schema
+  [{:keys [value]}]
+  (symbol (str "#pubsub-schema " (keyword value))))
+
+(defmethod env/yml-reader :!pubsub/subscription-type
+  [{:keys [value]}]
+  (symbol (str "#pubsub-subscription-type " (keyword value))))

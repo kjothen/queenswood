@@ -1,52 +1,18 @@
 (ns com.repldriven.mono.pubsub.interface
   (:refer-clojure :exclude [send])
-  (:require [com.repldriven.mono.pubsub.pulsar.admin :as admin]
-            [com.repldriven.mono.pubsub.pulsar.client :as client]
+  (:require [com.repldriven.mono.pubsub.pulsar.admin]
+            [com.repldriven.mono.pubsub.pulsar.client]
             [com.repldriven.mono.pubsub.pulsar.consumer :as consumer]
             [com.repldriven.mono.pubsub.pulsar.crypto]
             [com.repldriven.mono.pubsub.pulsar.env-reader :as env-reader]
             [com.repldriven.mono.pubsub.pulsar.producer :as producer]
-            [com.repldriven.mono.pubsub.pulsar.reader :as reader]
-            [com.repldriven.mono.pubsub.system.core :as system]
-            [com.repldriven.mono.env.interface :as env]))
-
-;;;; edn env reader tags
-(defmethod env/edn-reader 'pubsub-crypto-failure-action
-  [opts tag value]
-  (env-reader/crypto-failure-action opts tag value))
-
-(defmethod env/edn-reader 'pubsub-message-id
-  [opts tag value]
-  (env-reader/message-id opts tag value))
-
-(defmethod env/edn-reader 'pubsub-schema
-  [opts tag value]
-  (env-reader/schema opts tag value))
-
-(defmethod env/edn-reader 'pubsub-subscription-type
-  [opts tag value]
-  (env-reader/subscription-type opts tag value))
-
-;;;; yml env reader tags
-(defmethod env/yml-reader :!pubsub/crypto-failure-action
-  [{:keys [value]}]
-  (symbol (str "#pubsub-crypto-failure-action " (keyword value))))
-
-(defmethod env/yml-reader :!pubsub/message-id
-  [{:keys [value]}]
-  (symbol (str "#pubsub-message-id " (keyword value))))
-
-(defmethod env/yml-reader :!pubsub/schema
-  [{:keys [value]}]
-  (symbol (str "#pubsub-schema " (keyword value))))
-
-(defmethod env/yml-reader :!pubsub/subscription-type
-  [{:keys [value]}]
-  (symbol (str "#pubsub-subscription-type " (keyword value))))
+            [com.repldriven.mono.pubsub.pulsar.reader]
+            [com.repldriven.mono.pubsub.system.core :as system]))
 
 ;;;; system interface
 (defn configure-system [config] (system/configure config))
 
+;;;; producer interface
 (defn send
   ([producer data] (producer/send producer data))
   ([producer data opts] (producer/send producer data opts)))
@@ -55,6 +21,7 @@
   ([producer data] (producer/send-async producer data))
   ([producer data opts] (producer/send-async producer data opts)))
 
+;;;; consumer interface
 (defn receive
   ([consumer] (consumer/receive consumer))
   ([consumer timeout-ms] (consumer/receive consumer timeout-ms)))

@@ -1,4 +1,5 @@
 (ns com.repldriven.mono.system.reader.yml
+  (:refer-clojure :exclude [ref])
   (:require [clojure.string :as str]))
 
 (defn local-ref
