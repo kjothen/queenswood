@@ -43,20 +43,22 @@
                     (is (= (SUT/read-secret client mount path)
                            (prop-seq->kw-map secret-props))))))))
 
-(comment)
-((env/set-env! (io/resource "vault/test-env.edn") :test)
- (def sys
-   (-> (get-in @env/env [:system :vault])
-       (SUT/configure-system)
-       (system/start)))
- (def client (system/instance sys [:vault :client]))
- (tap> sys)
- (def vault-config (system/config sys :vault :container))
- (def token (:vault-token vault-config))
- (def secret (:secret-in-vault vault-config))
- (SUT/authenticate-client! client :token token)
- (let [[mount path] (-> secret
-                        first
-                        (str/split #"/"))]
-   (SUT/read-secret client mount path))
- (system/stop sys))
+(comment
+  (env/set-env! (io/resource "vault/test-env.edn") :test)
+  (def sys
+    (-> (get-in @env/env [:system :vault])
+        (SUT/configure-system)
+        (system/start)))
+  (def client (system/instance sys [:vault :client]))
+  (tap> sys)
+  (def vault-config (system/config sys :vault :container))
+  (def token (:vault-token vault-config))
+  (def secret (:secret-in-vault vault-config))
+  (SUT/authenticate-client! client :token token)
+  (let [[mount path] (-> secret
+                         first
+                         (str/split #"/"))]
+    (SUT/read-secret client mount path))
+  (system/stop sys)
+  ;
+)
