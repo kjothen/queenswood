@@ -6,7 +6,7 @@ client: !system/component
   service-url: !system/local-ref container-service-url
 container: !system/component
   type: pubsub/container
-  docker-image-name: kezhenxu94/pulsar:2.10.0-SNAPSHOT
+  #docker-image-name: kezhenxu94/pulsar:2.10.0-SNAPSHOT
   exposed-ports:
     - 6650
     - 8080
@@ -31,16 +31,6 @@ namespaces: !system/component
   _: !system/local-ref tenants
   admin: !system/local-ref admin
   namespaces: !include blocking-command-api/test-pubsub-namespaces-values.yml
-reader: !system/component
-  type: pubsub/reader
-  _: !system/local-ref topics
-  client: !system/local-ref client
-  conf:
-    schema: !pubsub/schema AUTO_CONSUME
-    startMessageId: !pubsub/message-id earliest
-    topicNames:
-      - persistent://tenant-1/namespace-1/topic-1
-  schemas: !system/local-ref schemas
 schemas: !system/component
   type: pubsub/schemas
   user:

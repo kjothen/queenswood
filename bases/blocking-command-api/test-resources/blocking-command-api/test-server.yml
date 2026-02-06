@@ -1,7 +1,6 @@
 interceptors: !system/component
   type: server/interceptors
   mqtt-client: !system/ref mqtt.client
-  pulsar-reader: !system/ref pubsub.reader
 jetty-adapter: !system/component
   type: server/jetty-adapter
   handler: !system/required-component
