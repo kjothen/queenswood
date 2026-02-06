@@ -1,0 +1,12 @@
+- namespace: tenant-1/namespace-1
+  config:
+    post:
+      autoTopicCreation:
+        allowAutoTopicCreation: false
+        defaultNumPartitions: 1
+        topicType: string
+      encryptionRequired: false
+      isAllowAutoUpdateSchema: false
+      schemaValidationEnforced: true
+    put:
+      schemaCompatibilityStrategy: FULL

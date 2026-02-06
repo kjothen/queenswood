@@ -1,0 +1,3 @@
+- topic: persistent://tenant-1/namespace-1/topic-1
+  partitions: 1
+  schema: user

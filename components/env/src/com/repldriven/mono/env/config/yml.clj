@@ -36,6 +36,18 @@
 
 (defmethod tag-reader :!port [{:keys [value]}] (symbol (str "#port " value)))
 
+(defmethod tag-reader :!include
+  [{:keys [value]}]
+  (let [key-fn (fn [{:keys [key]}]
+                 (if (and (str/starts-with? key "\"") (str/ends-with? key "\""))
+                   (subs key 1 (dec (count key)))
+                   (keyword key)))]
+    (-> value
+        io/resource
+        io/reader
+        (yaml/parse-stream {:key-fn key-fn :unknown-tag-fn tag-reader})
+        yaml-collections->edn-collections)))
+
 (defmethod tag-reader :!system/required-component
   [m]
   (yml-reader m))

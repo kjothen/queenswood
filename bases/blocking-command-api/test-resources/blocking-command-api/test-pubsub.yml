@@ -1,0 +1,46 @@
+admin:
+  service-http-url: !system/local-ref container-service-http-url
+client:
+  service-url: !system/local-ref container-service-url
+container:
+  docker-image-name: kezhenxu94/pulsar:2.10.0-SNAPSHOT
+  exposed-ports:
+    - 6650
+    - 8080
+container-service-http-port:
+  container: !system/local-ref container
+  exposed-port: 8080
+container-service-http-url:
+  port: !system/local-ref container-service-http-port
+  scheme: http
+container-service-port:
+  container: !system/local-ref container
+  exposed-port: 6650
+container-service-url:
+  port: !system/local-ref container-service-port
+  scheme: pulsar
+namespaces:
+  _: !system/local-ref tenants
+  admin: !system/local-ref admin
+  namespaces: !include test-pubsub-namespaces-values.yml
+reader:
+  _: !system/local-ref topics
+  client: !system/local-ref client
+  conf:
+    schema: !pubsub/schema AUTO_CONSUME
+    startMessageId: !pubsub/message-id earliest
+    topicNames:
+      - persistent://tenant-1/namespace-1/topic-1
+  schemas: !system/local-ref schemas
+schemas:
+  user:
+    schema: schema-avro/user.avsc.json
+    type: AVRO
+tenants:
+  admin: !system/local-ref admin
+  tenants: !include test-pubsub-tenants-values.yml
+topics:
+  _: !system/local-ref namespaces
+  admin: !system/local-ref admin
+  schemas: !system/local-ref schemas
+  topics: !include test-pubsub-topics-values.yml

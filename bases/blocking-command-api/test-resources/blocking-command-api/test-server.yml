@@ -1,0 +1,11 @@
+interceptors:
+  mqtt-client: !system/ref mqtt.client
+  pulsar-reader: !system/ref pubsub.reader
+jetty-adapter:
+  handler: !system/required-component
+  interceptors: !system/local-ref interceptors
+  options:
+    join?: !profile
+      default: false
+    port: !profile
+      default: !port 0

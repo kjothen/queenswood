@@ -7,6 +7,6 @@
 
 (deftest configuration
   (testing "System configuration MUST be valid"
-           (env/set-env! (io/resource "blocking-command-api/test-env.edn")
+           (env/set-env! (io/resource "blocking-command-api/application-test.yml")
                          :test)
            (is (= true (system/system? (SUT/configure (:system @env/env)))))))

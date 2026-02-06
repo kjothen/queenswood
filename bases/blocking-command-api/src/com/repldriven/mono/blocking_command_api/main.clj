@@ -38,7 +38,7 @@
 
 (comment
   (require '[clojure.string :as string]
-           '[com.repldriven.mono.http.interface :as http]
+           '[com.repldriven.mono.http-client.interface :as http]
            '[clojure.data.json :as json]
            '[clj-ulid :as ulid])
   (defn run
@@ -47,7 +47,7 @@
       []
       (-main
        "-c"
-       "bases/blocking-command-api/test-resources/blocking-command-api/test-env.edn"
+       "bases/blocking-command-api/test-resources/blocking-command-api/application-test.yml"
        "-p" "dev"))
     (defn query
       []

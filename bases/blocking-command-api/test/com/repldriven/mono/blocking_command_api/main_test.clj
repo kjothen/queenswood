@@ -7,7 +7,7 @@
   (testing
    "Ops should be able to start the system from the main entry point"
    (try (SUT/-main "-c" (io/as-file (io/resource
-                                     "blocking-command-api/test-env.edn"))
+                                     "blocking-command-api/application-test.yml"))
                    "-p" "test")
         (is (some? @SUT/system))
         (catch Exception e
