@@ -1,4 +1,4 @@
-(ns com.repldriven.mono.env.interface-test
+(ns com.repldriven.mono.env.system-test
   (:require [clojure.test :as test :refer [deftest is testing]]
             [com.repldriven.mono.env.interface :as SUT]))
 
