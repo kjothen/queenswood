@@ -1,4 +1,4 @@
 system:
-  mqtt: !include blocking-command-api/test-mqtt.yml
-  pubsub: !include blocking-command-api/test-pubsub.yml
-  server: !include blocking-command-api/test-server.yml
+  mqtt: !include blocking-command-api/mqtt-test.yml
+  pubsub: !include blocking-command-api/pubsub-test.yml
+  server: !include blocking-command-api/server-test.yml
