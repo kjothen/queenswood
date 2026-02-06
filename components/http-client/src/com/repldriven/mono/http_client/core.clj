@@ -75,22 +75,34 @@
 
   Handles various body types (nil, String, InputStream, byte[]).
   If content-type contains 'json', parses the body as JSON.
-  If the response is already an anomaly, passes it through."
+  If the response is already an anomaly, passes it through.
+
+  Options:
+    :key-fn - Function to transform JSON keys (e.g., keyword for keyword keys)"
+  ([res] (res->body res nil))
+  ([res opts]
+   (cond
+     (err/anomaly? res) res
+
+     (nil? res) nil
+
+     :else
+     (err/try-nom :http-client/body-parse-failed
+                  "Failed to parse response body"
+       (when-let [{:keys [body headers]} res]
+         (when-let [body-str (body->string body)]
+           (let [content-type (:content-type headers)]
+             (if (and content-type (str/includes? content-type "json"))
+               (json/read-str body-str opts)
+               body-str))))))))
+
+(defn res->edn
+  "Extract and parse response body as EDN with keyword keys.
+
+  Like res->body but parses JSON with keyword keys for more idiomatic Clojure usage.
+  Convenience wrapper around (res->body res {:key-fn keyword})."
   [res]
-  (cond
-    (err/anomaly? res) res
-
-    (nil? res) nil
-
-    :else
-    (err/try-nom :http-client/body-parse-failed
-                 "Failed to parse response body"
-      (when-let [{:keys [body headers]} res]
-        (when-let [body-str (body->string body)]
-          (let [content-type (:content-type headers)]
-            (if (and content-type (str/includes? content-type "json"))
-              (json/read-str body-str)
-              body-str)))))))
+  (res->body res {:key-fn keyword}))
 
 (comment
   (res->body {:body "{\"a\":1,\"b\":2}"})

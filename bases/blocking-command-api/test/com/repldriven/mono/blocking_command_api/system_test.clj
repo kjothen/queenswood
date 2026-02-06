@@ -14,5 +14,3 @@
     (let [sys-config (update-in test-system/*sysdef* [:system/defs :server] dissoc :jetty-adapter)]
       (system/with-*sys* sys-config
         (is (some? system/*sys*))))))
-(comment
-  (println test-system/*sysdef*))
