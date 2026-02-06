@@ -30,7 +30,7 @@ namespaces: !system/component
   type: pubsub/namespaces
   _: !system/local-ref tenants
   admin: !system/local-ref admin
-  namespaces: !include test-pubsub-namespaces-values.yml
+  namespaces: !include blocking-command-api/test-pubsub-namespaces-values.yml
 reader: !system/component
   type: pubsub/reader
   _: !system/local-ref topics
@@ -49,10 +49,10 @@ schemas: !system/component
 tenants: !system/component
   type: pubsub/tenants
   admin: !system/local-ref admin
-  tenants: !include test-pubsub-tenants-values.yml
+  tenants: !include blocking-command-api/test-pubsub-tenants-values.yml
 topics: !system/component
   type: pubsub/topics
   _: !system/local-ref namespaces
   admin: !system/local-ref admin
   schemas: !system/local-ref schemas
-  topics: !include test-pubsub-topics-values.yml
+  topics: !include blocking-command-api/test-pubsub-topics-values.yml

@@ -9,3 +9,6 @@
 (deftest configuration
   (testing "System configuration MUST be valid"
     (is (system/system? test-system/*sysdef*))))
+
+(comment
+  (println test-system/*sysdef*))
