@@ -4,5 +4,8 @@
 (def ^:dynamic *env* nil)
 (def ^:dynamic *sysdef* nil)
 
-(defn fixture [env-path profile]
-  (core/fixture env-path profile #'*env* #'*sysdef*))
+(defn fixture
+  ([env-path profile]
+   (core/fixture env-path profile #'*env* #'*sysdef*))
+  ([env-path profile configure-fn]
+   (core/fixture env-path profile #'*env* #'*sysdef* configure-fn)))

@@ -1,12 +1,14 @@
 (ns com.repldriven.mono.blocking-command-api.system-test
-  (:require [clojure.java.io :as io]
-            [clojure.test :refer [deftest is testing]]
+  (:require [clojure.test :refer [deftest is testing use-fixtures]]
             [com.repldriven.mono.blocking-command-api.system :as SUT]
-            [com.repldriven.mono.env.interface :as env]
-            [com.repldriven.mono.system.interface :as system]))
+            [com.repldriven.mono.system.interface :as system]
+            [com.repldriven.mono.test-system.interface :as test-system]))
+
+(use-fixtures :once
+  (test-system/fixture "classpath:blocking-command-api/application-test.yml"
+                       :test
+                       SUT/configure))
 
 (deftest configuration
   (testing "System configuration MUST be valid"
-           (env/set-env! (io/resource "blocking-command-api/application-test.yml")
-                         :test)
-           (is (= true (system/system? (SUT/configure (:system @env/env)))))))
+    (is (system/system? test-system/*sysdef*))))

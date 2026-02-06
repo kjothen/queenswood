@@ -12,10 +12,10 @@
 (def system (atom nil))
 
 (defn start!
-  []
+  [environment]
   (log/info "Starting system")
-  (let [config (-> (:system @env/env)
-                   (assoc-in [:ring :jetty-adapter :handler] (partial api/app))
+  (let [config (-> (:system environment)
+                   (assoc-in [:server :jetty-adapter :handler] (partial api/app))
                    (blocking-command-api-system/configure))]
     (system/start! system config)))
 
@@ -32,8 +32,8 @@
         (cli/validate-args "blocking-command-api" args)]
     (if exit-message
       (cli/exit ok? exit-message)
-      (do (env/set-env! (:config-file options) (keyword (:profile options)))
-          (start!)))))
+      (let [environment (env/env (:config-file options) (keyword (:profile options)))]
+        (start! environment)))))
 
 
 (comment
