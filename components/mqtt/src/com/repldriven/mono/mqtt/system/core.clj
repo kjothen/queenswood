@@ -6,6 +6,24 @@
              container-components]
             [com.repldriven.mono.system.interface :as system]))
 
+;; Register mqtt components with system configurator
+(defmethod system/component :mqtt/container
+  [_ v]
+  (system/merge-component-config container-components/container (dissoc v :annotation)))
+
+(defmethod system/component :mqtt/container-mapped-ports
+  [_ v]
+  (system/merge-component-config testcontainers-system/container-mapped-ports (dissoc v :annotation)))
+
+(defmethod system/component :mqtt/container-connection-uri
+  [_ v]
+  (system/merge-component-config container-components/container-connection-uri (dissoc v :annotation)))
+
+(defmethod system/component :mqtt/client
+  [_ v]
+  (system/merge-component-config components/client (dissoc v :annotation)))
+
+;; Legacy component multimethod for backwards compatibility
 (defmulti component (fn [k _] k))
 (defmethod component :default [_ v] v)
 (defmethod component :container

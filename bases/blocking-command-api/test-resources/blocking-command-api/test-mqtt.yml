@@ -1,11 +1,15 @@
-client:
+client: !system/component
+  type: mqtt/client
   options: {}
   uri: !system/local-ref container-connection-uri
-container:
+container: !system/component
+  type: mqtt/container
   docker-image-name: hivemq/hivemq-ce:latest
   exposed-port: 1883
-container-connection-uri:
+container-connection-uri: !system/component
+  type: mqtt/container-connection-uri
   container-mapped-ports: !system/local-ref container-mapped-ports
   exposed-port: 1883
-container-mapped-ports:
+container-mapped-ports: !system/component
+  type: mqtt/container-mapped-ports
   container: !system/local-ref container
