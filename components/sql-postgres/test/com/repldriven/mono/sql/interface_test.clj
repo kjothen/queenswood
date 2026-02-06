@@ -1,19 +1,19 @@
 (ns com.repldriven.mono.sql.interface-test
   (:require [clojure.test :as test :refer [deftest is testing use-fixtures]]
-            [clojure.java.io :as io]
-            [com.repldriven.mono.env.interface :as env]
             [com.repldriven.mono.sql.interface :as SUT]
             [com.repldriven.mono.system.interface :as system]
+            [com.repldriven.mono.test-system.interface :as test-system]
             [next.jdbc :as jdbc]
             [next.jdbc.result-set :as rs]))
 
-(defn sys-fixture
+(defn with-system-fixture
   [f]
-  (env/set-env! (io/resource "sql/test-env.edn") :test)
-  (system/with-*sys* (SUT/configure-system (get-in @env/env [:system :sql]))
+  (system/with-*sys* test-system/*sysdef*
     (f)))
 
-(use-fixtures :once sys-fixture)
+(use-fixtures :once
+  (test-system/fixture "classpath:sql/test-application.yml" :test)
+  with-system-fixture)
 
 (deftest system-start
   (testing "Developers should be able to start a sql system from a REPL"
@@ -26,11 +26,3 @@
            (jdbc/execute! datasource
                           ["select 1"]
                           {:builder-fn rs/as-unqualified-lower-maps})))))
-
-(comment
-  (env/set-env! (io/resource "sql/test-env.edn") :test)
-  (def system-config (SUT/configure-system (get-in @env/env [:system :sql])))
-  (def running-system (system/start system-config))
-  (system/stop running-system)
-  ;
-)

@@ -1,7 +1,6 @@
 system:
   pubsub:
     container:
-      docker-image-name: apachepulsar/pulsar:4.1.2
       exposed-ports: [6650, 8080]
 
     container-service-port:
@@ -46,9 +45,9 @@ system:
           config:
             post: !strs
               autoTopicCreation:
-                 allowAutoTopicCreation: false
-                 defaultNumPartitions: 1
-                 topicType: string
+                allowAutoTopicCreation: false
+                defaultNumPartitions: 1
+                topicType: string
               encryptionRequired: true
               isAllowAutoUpdateSchema: false
               schemaValidationEnforced: true
