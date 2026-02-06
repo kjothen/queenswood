@@ -1,0 +1,18 @@
+system:
+  server:
+    port: !profile
+      default: 80
+      test: !port 0
+    interceptors:
+      annotation:
+        component/definition: server/interceptors
+      got: me
+      this: time
+    jetty-adapter:
+      annotation:
+        component/definition: server/jetty-adapter
+      handler: !system/ref server.handler
+      interceptors: !system/ref server.interceptors
+      options:
+        join?: false
+        port: !system/ref server.port

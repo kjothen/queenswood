@@ -3,8 +3,7 @@
             [clojure.java.io :as io]
             [com.repldriven.mono.env.interface :as env]
             [com.repldriven.mono.testcontainers-system.interface :as SUT]
-            [com.repldriven.mono.system.interface :as system :refer
-             [with-system]]))
+            [com.repldriven.mono.system.interface :as system]))
 
 (defn env-fixture
   [f]
@@ -16,11 +15,10 @@
 (deftest testcontainers-system-test
   (testing
    "Developers should be able to start and stop a testcontainers system"
-   (with-system
-    [sys
-     (SUT/configure-system (get-in @env/env [:system :helloworld]) :helloworld)]
-    (is (= [8080 8081]
-           (keys (system/instance sys [:helloworld :container-mapped-ports]))))
-    (is (= (system/instance sys [:helloworld :container-mapped-exposed-port])
-           (get (system/instance sys [:helloworld :container-mapped-ports])
-                8080))))))
+   (system/with-*sys*
+     (SUT/configure-system (get-in @env/env [:system :helloworld]) :helloworld)
+     (is (= [8080 8081]
+            (keys (system/instance system/*sys* [:helloworld :container-mapped-ports]))))
+     (is (= (system/instance system/*sys* [:helloworld :container-mapped-exposed-port])
+            (get (system/instance system/*sys* [:helloworld :container-mapped-ports])
+                 8080))))))

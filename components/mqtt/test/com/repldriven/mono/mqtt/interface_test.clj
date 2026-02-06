@@ -4,8 +4,7 @@
             [com.repldriven.mono.env.interface :as env]
             [com.repldriven.mono.log.interface :as log]
             [com.repldriven.mono.mqtt.interface :as SUT]
-            [com.repldriven.mono.system.interface :as system :refer
-             [with-system]]))
+            [com.repldriven.mono.system.interface :as system]))
 
 (defn env-fixture
   [f]
@@ -15,14 +14,14 @@
 (use-fixtures :once env-fixture)
 
 (deftest dummy-test
-  (with-system [sys (SUT/configure-system (get-in @env/env [:system :mqtt]))]
-               (let [client (system/instance sys [:mqtt :client])
-                     topic "Hello"
-                     message "World"
-                     p (promise)]
-                 (SUT/subscribe client
-                                {topic 0}
-                                (fn [_ _ ^bytes payload]
-                                  (deliver p (String. payload "UTF-8"))))
-                 (SUT/publish client topic message)
-                 (is (= @p message)))))
+  (system/with-*sys* (SUT/configure-system (get-in @env/env [:system :mqtt]))
+    (let [client (system/instance system/*sys* [:mqtt :client])
+          topic "Hello"
+          message "World"
+          p (promise)]
+      (SUT/subscribe client
+                     {topic 0}
+                     (fn [_ _ ^bytes payload]
+                       (deliver p (String. payload "UTF-8"))))
+      (SUT/publish client topic message)
+      (is (= @p message)))))

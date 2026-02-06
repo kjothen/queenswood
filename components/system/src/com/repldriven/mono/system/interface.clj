@@ -1,6 +1,7 @@
 (ns com.repldriven.mono.system.interface
   (:refer-clojure :exclude [ref])
   (:require [com.repldriven.mono.system.core :as core]
+            [com.repldriven.mono.system.configurator :as configurator]
             [com.repldriven.mono.system.reader.edn :as reader.edn]
             [com.repldriven.mono.system.reader.yml :as reader.yml]
             [com.repldriven.mono.env.interface :as env]
@@ -24,9 +25,9 @@
 
 ;;;; system interface
 
-(defn system? [config-name] (core/system? config-name))
+(def ^:dynamic *sys* nil)
 
-(def required-component core/required-component)
+(defn system? [config-name] (core/system? config-name))
 
 (defn ref [kws] (core/ref kws))
 
@@ -59,18 +60,30 @@
 
 (defn resume [system] (core/resume system))
 
+(def required-component core/required-component)
+
+(def component configurator/component)
+
+(defn definition
+  [config]
+  (configurator/definition config))
+
 (defn merge-component-config
   [component config]
-  (core/merge-component-config component config))
+  (configurator/merge-component-config component config))
 
-;; imported code from juxt/clip
-(defmacro with-system
-  "Takes a binding and a system like with-open, and tries to close the
-   system."
-  [[binding system-config] & body]
-  `(let [system-config# ~system-config
-         system# (try (start system-config#)
-                      (catch Exception e#
-                        (log/error (format "Unable to start system, %s" e#))))
-         ~binding system#]
-     (when system# (try ~@body (finally (stop system#))))))
+(defmacro with-*sys*
+  "Starts a system from the given system definition, binds it to *sys*,
+   executes the body, and stops the system.
+
+   Usage:
+     (with-*sys* system-definition
+       (instance *sys* [:server :jetty-adapter]))"
+  [system-config & body]
+  `(let [system# (start ~system-config)]
+     (try
+       (push-thread-bindings {#'*sys* system#})
+       ~@body
+       (finally
+         (pop-thread-bindings)
+         (when system# (stop system#))))))

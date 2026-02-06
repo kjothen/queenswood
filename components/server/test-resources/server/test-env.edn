@@ -1,0 +1,6 @@
+{:system
+ {:server {:interceptors {}
+         :jetty-adapter {:handler #system :required-component
+                         :interceptors [#system :ref [:server :interceptors]]
+                         :options {:join? #profile {:default false}
+                                   :port #profile {:default #port 0}}}}}}

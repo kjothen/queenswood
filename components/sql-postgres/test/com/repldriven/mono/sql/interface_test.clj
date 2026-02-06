@@ -3,28 +3,25 @@
             [clojure.java.io :as io]
             [com.repldriven.mono.env.interface :as env]
             [com.repldriven.mono.sql.interface :as SUT]
-            [com.repldriven.mono.system.interface :as system :refer
-             [with-system]]
+            [com.repldriven.mono.system.interface :as system]
             [next.jdbc :as jdbc]
             [next.jdbc.result-set :as rs]))
-
-(def ^:dynamic ^:private *sys* nil)
 
 (defn sys-fixture
   [f]
   (env/set-env! (io/resource "sql/test-env.edn") :test)
-  (with-system [sys (SUT/configure-system (get-in @env/env [:system :sql]))]
-               (binding [*sys* sys] (f))))
+  (system/with-*sys* (SUT/configure-system (get-in @env/env [:system :sql]))
+    (f)))
 
 (use-fixtures :once sys-fixture)
 
 (deftest system-start
   (testing "Developers should be able to start a sql system from a REPL"
-           (is (some? *sys*))))
+           (is (some? system/*sys*))))
 
 (deftest valid-connection
   (testing "Connection must be valid")
-  (let [datasource (system/instance *sys* [:sql :datasource])]
+  (let [datasource (system/instance system/*sys* [:sql :datasource])]
     (is (= [{:?column? 1}]
            (jdbc/execute! datasource
                           ["select 1"]

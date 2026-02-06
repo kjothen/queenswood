@@ -8,23 +8,24 @@
                   :extra-paths []}}
  :deps {component/cli {:local/root "../../components/cli"}
         component/env {:local/root "../../components/env"}
-        component/http {:local/root "../../components/http"}
+        component/error {:local/root "../../components/error"}
+        component/http-client {:local/root "../../components/http-client"}
         component/iam {:local/root "../../components/iam"}
         component/log {:local/root "../../components/log"}
         component/migrator {:local/root "../../components/migrator"}
-        component/ring {:local/root "../../components/ring"}
+        component/server {:local/root "../../components/server"}
         component/sql-postgres {:local/root "../../components/sql-postgres"}
         component/system {:local/root "../../components/system"}
         component/testcontainers-system
         {:local/root "../../components/testcontainers-system"}
         base/iam-api {:local/root "../../bases/iam-api"}
         ;; use logback for the slf4j logging backend
-        ch.qos.logback/logback-classic {:mvn/version "1.4.4"}
+        ch.qos.logback/logback-classic {:mvn/version "1.5.27"}
         ;; redirect logging to the slf4j frontend
-        org.slf4j/jcl-over-slf4j {:mvn/version "2.0.3"}
-        org.slf4j/log4j-over-slf4j {:mvn/version "2.0.3"}
-        org.apache.logging.log4j/log4j-to-slf4j {:mvn/version "2.19.0"}
-        org.slf4j/osgi-over-slf4j {:mvn/version "2.0.3"}
-        org.slf4j/jul-to-slf4j {:mvn/version "2.0.3"}
-        org.clojure/clojure {:mvn/version "1.11.1"}}
+        org.slf4j/jcl-over-slf4j {:mvn/version "2.0.17"}
+        org.slf4j/log4j-over-slf4j {:mvn/version "2.0.17"}
+        org.apache.logging.log4j/log4j-to-slf4j {:mvn/version "2.25.3"}
+        org.slf4j/osgi-over-slf4j {:mvn/version "2.0.17"}
+        org.slf4j/jul-to-slf4j {:mvn/version "2.0.17"}
+        org.clojure/clojure {:mvn/version "1.12.4"}}
  :paths ["resources"]}

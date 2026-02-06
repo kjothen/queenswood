@@ -5,23 +5,23 @@
                    :ns-default com.repldriven.mono.build.build}
            :test {:exec-fn cognitect.test-runner.api/test
                   :extra-deps #:org.clojure{test.check #:mvn{:version "1.1.1"}}
-                  :extra-paths ["../../components/ring/test"
-                                "../../components/ring/test-resources"]}}
+                  :extra-paths ["../../components/server/test"
+                                "../../components/server/test-resources"]}}
  :deps {component/cli #:local{:root "../../components/cli"}
         component/encryption #:local{:root "../../components/encryption"}
         component/env #:local{:root "../../components/env"}
         component/log #:local{:root "../../components/log"}
-        component/ring #:local{:root "../../components/ring"}
+        component/server #:local{:root "../../components/server"}
         component/spec-malli #:local{:root "../../components/spec-malli"}
         components/system #:local{:root "../../components/system"}
         base/symmetric-key-api #:local{:root "../../bases/symmetric-key-api"}
         ;; use logback for the slf4j logging backend
-        ch.qos.logback/logback-classic #:mvn{:version "1.4.4"}
+        ch.qos.logback/logback-classic #:mvn{:version "1.5.27"}
         ;; redirect logging to the slf4j frontend
-        org.slf4j/jcl-over-slf4j #:mvn{:version "2.0.3"}
-        org.slf4j/log4j-over-slf4j #:mvn{:version "2.0.3"}
-        org.apache.logging.log4j/log4j-to-slf4j #:mvn{:version "2.19.0"}
-        org.slf4j/osgi-over-slf4j #:mvn{:version "2.0.3"}
-        org.slf4j/jul-to-slf4j #:mvn{:version "2.0.3"}
-        org.clojure/clojure #:mvn{:version "1.11.1"}}
+        org.slf4j/jcl-over-slf4j #:mvn{:version "2.0.17"}
+        org.slf4j/log4j-over-slf4j #:mvn{:version "2.0.17"}
+        org.apache.logging.log4j/log4j-to-slf4j #:mvn{:version "2.25.3"}
+        org.slf4j/osgi-over-slf4j #:mvn{:version "2.0.17"}
+        org.slf4j/jul-to-slf4j #:mvn{:version "2.0.17"}
+        org.clojure/clojure #:mvn{:version "1.12.4"}}
  :paths []}
