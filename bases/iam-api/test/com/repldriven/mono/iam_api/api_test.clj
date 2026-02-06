@@ -6,7 +6,7 @@
             [com.repldriven.mono.iam-api.main :as main]
             [clojure.data.json :as json]
             [clojure.java.io :as io]
-            [org.httpkit.client :as http]))
+            [com.repldriven.mono.http-client.interface :as http]))
 
 ;;;; Fixtures
 ;;;;
@@ -70,47 +70,47 @@
 (deftest service-accounts-api
   (testing "serviceAccounts API"
            ; create service account
-           (let [res (create-service-account)
-                 service-account (json->edn res)]
-             (is (= 201 (:status res)))
-             (is (= false (:disabled service-account)))
+    (let [res (create-service-account)
+          service-account (json->edn res)]
+      (is (= 201 (:status res)))
+      (is (= false (:disabled service-account)))
              ; get created service account
-             (let [res (get-service-account (:name service-account))]
-               (is (= 200 (:status res)))
-               (is (= service-account (json->edn res))))
+      (let [res (get-service-account (:name service-account))]
+        (is (= 200 (:status res)))
+        (is (= service-account (json->edn res))))
              ; list service accounts and check for created service account
-             (let [res (list-service-accounts)
-                   service-accounts (json->edn res)]
-               (is (= 200 (:status res)))
-               (is (= 1 (count (:accounts service-accounts))))
-               (is (= service-account (first (:accounts (json->edn res))))))
+      (let [res (list-service-accounts)
+            service-accounts (json->edn res)]
+        (is (= 200 (:status res)))
+        (is (= 1 (count (:accounts service-accounts))))
+        (is (= service-account (first (:accounts (json->edn res))))))
              ; disable created service account and check it's disabled
-             (let [res (disable-service-account (:name service-account))]
-               (is (= 204 (:status res)))
-               (is (or (nil? (:body res)) (empty? (:body res))))
-               (let [res (get-service-account (:name service-account))]
-                 (is (= 200 (:status res)))
-                 (is (= true (:disabled (json->edn res))))))
+      (let [res (disable-service-account (:name service-account))]
+        (is (= 204 (:status res)))
+        (is (or (nil? (:body res)) (empty? (:body res))))
+        (let [res (get-service-account (:name service-account))]
+          (is (= 200 (:status res)))
+          (is (= true (:disabled (json->edn res))))))
              ; enable created service account and check it's enabled
-             (let [res (enable-service-account (:name service-account))]
-               (is (= 204 (:status res)))
-               (is (or (nil? (:body res)) (empty? (:body res))))
-               (let [res (get-service-account (:name service-account))]
-                 (is (= 200 (:status res)))
-                 (is (= false (:disabled (json->edn res))))))
+      (let [res (enable-service-account (:name service-account))]
+        (is (= 204 (:status res)))
+        (is (or (nil? (:body res)) (empty? (:body res))))
+        (let [res (get-service-account (:name service-account))]
+          (is (= 200 (:status res)))
+          (is (= false (:disabled (json->edn res))))))
              ; delete created service account and check it's not listed
-             (let [res (delete-service-account (:name service-account))]
-               (is (= 204 (:status res)))
-               (is (or (nil? (:body res)) (empty? (:body res))))
-               (let [res (list-service-accounts)
-                     service-accounts (json->edn res)]
-                 (is (= 200 (:status res)))
-                 (is (zero? (count (:accounts service-accounts))))))
+      (let [res (delete-service-account (:name service-account))]
+        (is (= 204 (:status res)))
+        (is (or (nil? (:body res)) (empty? (:body res))))
+        (let [res (list-service-accounts)
+              service-accounts (json->edn res)]
+          (is (= 200 (:status res)))
+          (is (zero? (count (:accounts service-accounts))))))
              ; undelete created service account and check it's listed
-             (let [res (undelete-service-account (:name service-account))]
-               (is (= 204 (:status res)))
-               (is (or (nil? (:body res)) (empty? (:body res))))
-               (let [res (list-service-accounts)
-                     service-accounts (json->edn res)]
-                 (is (= 200 (:status res)))
-                 (is (= 1 (count (:accounts service-accounts)))))))))
+      (let [res (undelete-service-account (:name service-account))]
+        (is (= 204 (:status res)))
+        (is (or (nil? (:body res)) (empty? (:body res))))
+        (let [res (list-service-accounts)
+              service-accounts (json->edn res)]
+          (is (= 200 (:status res)))
+          (is (= 1 (count (:accounts service-accounts)))))))))

@@ -1,7 +1,7 @@
-(ns com.repldriven.mono.server.system.embedded-components
+(ns com.repldriven.mono.server.components
   (:require [com.repldriven.mono.log.interface :as log]
             [com.repldriven.mono.system.interface :as system]
-            [ring.adapter.jetty :as jetty])
+            [ring.adapter.jetty9 :as jetty])
   (:import (org.eclipse.jetty.server Server)))
 
 (defn- assoc-if-missing

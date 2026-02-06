@@ -51,22 +51,24 @@
              {}
              named-kps))
 
+(defn- key->encryption-key-info [k]
+  (when (some? k)
+    (doto (EncryptionKeyInfo.) (.setKey k))))
+
 (defn key-reader
   [named-kps]
   (reify
-   CryptoKeyReader
-     (^EncryptionKeyInfo getPublicKey
-       [this ^String keyName ^Map _metadata]
-       (log/info "Trying to read public key: get" keyName
-                 "in" (keys (:keys named-kps)))
-       (when-let [k (get (get-crypto-key-pair keyName named-kps) :public-key)]
-         (doto (EncryptionKeyInfo.) (.setKey k))))
-     (^EncryptionKeyInfo getPrivateKey
-       [this ^String keyName ^Map _metadata]
-       (log/info "Trying to read private key: get" keyName
-                 "in" (keys (:keys named-kps)))
-       (when-let [k (get (get-crypto-key-pair keyName named-kps) :private-key)]
-         (doto (EncryptionKeyInfo.) (.setKey k))))))
+    CryptoKeyReader
+    (^EncryptionKeyInfo getPublicKey
+      [this ^String keyName ^Map _metadata]
+      (log/info "Trying to read public key: get" keyName
+                "in" (keys (:keys named-kps)))
+      (key->encryption-key-info (get (get-crypto-key-pair keyName named-kps) :public-key)))
+    (^EncryptionKeyInfo getPrivateKey
+      [this ^String keyName ^Map _metadata]
+      (log/info "Trying to read private key: get" keyName
+                "in" (keys (:keys named-kps)))
+      (key->encryption-key-info (get (get-crypto-key-pair keyName named-kps) :private-key)))))
 
 (comment
   (require '[com.repldriven.mono.encryption.interface :as encryption])

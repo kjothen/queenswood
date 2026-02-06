@@ -14,6 +14,8 @@
         component/server #:local{:root "../../components/server"}
         component/spec-malli #:local{:root "../../components/spec-malli"}
         components/system #:local{:root "../../components/system"}
+        component/test-system #:local{:root "../../components/test-system"}
+        component/utility #:local{:root "../../components/utility"}
         base/symmetric-key-api #:local{:root "../../bases/symmetric-key-api"}
         ;; use logback for the slf4j logging backend
         ch.qos.logback/logback-classic #:mvn{:version "1.5.27"}

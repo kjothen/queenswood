@@ -1,5 +1,5 @@
 {:system
- {:sql {:container {:docker-image-name "postgres:9.6.12" :exposed-port 5432}
+ {:sql {:container {:docker-image-name "postgres:16" :exposed-port 5432}
         :container-mapped-exposed-port
         {:container [#system :local-ref [:container]] :exposed-port 5432}
         :datasource {:dbtype "postgres"

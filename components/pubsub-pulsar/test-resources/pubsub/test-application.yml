@@ -1,7 +1,7 @@
 system:
   pubsub:
     container:
-      docker-image-name: kezhenxu94/pulsar:2.10.0-SNAPSHOT
+      docker-image-name: apachepulsar/pulsar:4.1.2
       exposed-ports: [6650, 8080]
 
     container-service-port:

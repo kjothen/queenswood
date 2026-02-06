@@ -24,8 +24,10 @@
                 components/spec-spec {:local/root "components/spec-spec"}
                 components/sql {:local/root "components/sql-postgres"}
                 components/system {:local/root "components/system"}
+                components/test-system {:local/root "components/test-system"}
                 components/testcontainers-system
                 {:local/root "components/testcontainers-system"}
+                components/utility {:local/root "components/utility"}
                 components/vault {:local/root "components/vault"}
                 bases/blocking-command-api {:local/root
                                             "bases/blocking-command-api"}
@@ -63,8 +65,10 @@
     "components/server/test-resources" "components/schema-avro/test"
     "components/spec-malli/test" "components/spec-spec/test"
     "components/sql-postgres/test" "components/sql-postgres/test-resources"
-    "components/system/test" "components/testcontainers-system/test"
-    "components/testcontainers-system/test-resources" "components/vault/test"
+    "components/system/test" "components/test-system/test"
+    "components/testcontainers-system/test"
+    "components/testcontainers-system/test-resources" "components/utility/test"
+    "components/vault/test"
     "components/vault/test-resources" "bases/blocking-command-api/test"
     "bases/blocking-command-api/test-resources" "bases/external-test-runner/test"
     "bases/pulsar-reader/test" "bases/pulsar-reader/test-resources"

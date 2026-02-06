@@ -1,4 +1,4 @@
-{:aliases {:test {:extra-deps {http-kit/http-kit {:mvn/version "2.5.3"}}
+{:aliases {:test {:extra-deps {http-kit/http-kit {:mvn/version "2.8.1"}}
                   :extra-paths ["test" "test-resources"]}}
- :deps {metosin/reitit {:mvn/version "0.5.18"}}
+ :deps {metosin/reitit {:mvn/version "0.10.0"}}
  :paths ["src" "resources"]}

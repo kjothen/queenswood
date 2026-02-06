@@ -13,4 +13,4 @@
 
 (defn read-config [source profile] (aero/read-config source {:profile profile}))
 
-(defn config [source profile] (read-config (io/file source) profile))
+(defn config [source profile] (read-config source profile))

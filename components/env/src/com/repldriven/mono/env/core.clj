@@ -7,12 +7,9 @@
   (:import (java.net ServerSocket)
            (java.net URL)))
 
-(def env (atom nil))
-
 (def edn-reader config.edn/reader)
-(def yml-reader config.yml/reader)
 
-(defn file-type->keyword
+(defn- file-type->keyword
   [source]
   (cond (str/ends-with? source ".edn") :edn
         (str/ends-with? source ".yml") :yml
@@ -35,9 +32,8 @@
   [source _]
   (throw (ex-info "Unsupported config file type" {:source source})))
 
-(defn set-env!
-  ([] (set-env! "env.edn"))
-  ([source] (set-env! source :default))
-  ([source profile] (reset! env (config source profile))))
+(defn env
+  ([] (config "classpath:com/repldriven/mono/application.edn"))
+  ([source] (config source :default))
+  ([source profile] (config source profile)))
 
-(defn reset-env! [conf] (reset! env conf))

@@ -16,8 +16,10 @@
         component/server {:local/root "../../components/server"}
         component/sql-postgres {:local/root "../../components/sql-postgres"}
         component/system {:local/root "../../components/system"}
+        component/test-system {:local/root "../../components/test-system"}
         component/testcontainers-system
         {:local/root "../../components/testcontainers-system"}
+        component/utility {:local/root "../../components/utility"}
         base/iam-api {:local/root "../../bases/iam-api"}
         ;; use logback for the slf4j logging backend
         ch.qos.logback/logback-classic {:mvn/version "1.5.27"}

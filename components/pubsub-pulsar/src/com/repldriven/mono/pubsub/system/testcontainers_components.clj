@@ -2,7 +2,8 @@
   (:require [clj-test-containers.core :as tc]
             [com.repldriven.mono.log.interface :as log]
             [com.repldriven.mono.system.interface :as system])
-  (:import (org.testcontainers.containers ContainerLaunchException
+  (:import (java.time Duration)
+           (org.testcontainers.containers ContainerLaunchException
                                           PulsarContainer)
            (org.testcontainers.utility DockerImageName)))
 
@@ -21,6 +22,11 @@
          (let [container (-> (DockerImageName/parse docker-image-name)
                              (.asCompatibleSubstituteFor "apachepulsar/pulsar")
                              (PulsarContainer.))]
+           ;; Reduce memory allocation to avoid OOM on constrained systems
+           (.addEnv container "PULSAR_MEM" "-Xms128m -Xmx256m -XX:MaxDirectMemorySize=256m")
+           (.addEnv container "PULSAR_GC" "-XX:+UseG1GC")
+           ;; Allow more startup time with reduced memory
+           (.withStartupTimeout container (Duration/ofMinutes 3))
            (some-> (tc/init {:container container :exposed-ports exposed-ports})
                    (tc/start!)))
          (catch ContainerLaunchException e

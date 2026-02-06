@@ -4,6 +4,10 @@ HOME := env_var('HOME')
 ZSHENV := env_var('HOME') + '/.zshenv'
 XDG_CONFIG_HOME := env_var_or_default('XDG_CONFIG_HOME', env_var('HOME') + '/.config')
 
+# Colima/Docker configuration for testcontainers
+export DOCKER_HOST := "unix://" + HOME + "/.config/colima/default/docker.sock"
+export TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE := "/var/run/docker.sock"
+
 list:
     just --list
 
@@ -18,6 +22,14 @@ configure-clojure:
 
     echo '{:search-config? true}' >> '{{HOME}}/.zprintrc'
 
+# Start nREPL server for Conjure connection
+repl:
+    clj -M:dev:test:nrepl
+
+# Start Rebel Readline REPL with colors and completion
+rebel:
+    clj -M:dev:test:rebel
+
 # Start polylith shell
 shell:
     clj -M:poly shell
@@ -31,8 +43,8 @@ build snapshot="true":
 
 
 # Run all polylith project tests
-test:
-    clojure -M:poly test :all
+test: start-docker
+    SKIP_META=repl clojure -M:poly test :all
 
 # Linter
 lint-eastwood:
@@ -52,3 +64,12 @@ format:
 install:
     brew bundle install --file={{justfile_directory()}}/Brewfile
     just configure-clojure
+
+# Start Docker via Colima
+start-docker:
+    colima status 2>/dev/null || colima start
+    docker context use colima
+
+# Stop Docker via Colima
+stop-docker:
+    colima stop
