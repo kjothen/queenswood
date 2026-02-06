@@ -1,7 +1,6 @@
 (ns com.repldriven.mono.pubsub.interface-test
   (:refer-clojure :exclude [send])
-  (:require [clojure.java.io :as io]
-            [clojure.data.json :as json]
+  (:require [clojure.data.json :as json]
             [clojure.string :as string]
             [clojure.test :refer [deftest is testing use-fixtures]]
             [com.repldriven.mono.env.interface :as env]
@@ -26,9 +25,9 @@
 
 (defn sys-fixture
   [f]
-  (env/set-env! (io/resource "pubsub/test-application.yml") :test)
-  (system/with-*sys* (SUT/configure-system (get-in @env/env [:system :pubsub]))
-    (f)))
+  (let [environment (env/env "classpath:pubsub/test-application.yml" :test)]
+    (system/with-*sys* (SUT/configure-system (get-in environment [:system :pubsub]))
+      (f))))
 
 (use-fixtures :once sys-fixture)
 
@@ -112,14 +111,7 @@
           (let [url (string/join "/" [namespace-url k])
                 res (-> (http/request {:url url :method :get}))]
             (tap> [k v res])
-            (is (= v (http/res->json res)))))
+            (is (= v (http/res->body res)))))
         expected))))
 
-(comment
-  (env/set-env! (io/resource "pubsub/test-application.yml") :test)
-  (tap> @env/env)
-  (def system-config (SUT/configure-system (get-in @env/env [:system :pubsub])))
-  (def running-system (system/start system-config))
-  (system/stop running-system))
-  ;
 
