@@ -1,12 +1,12 @@
 (ns com.repldriven.mono.iam-api.api-test
   (:refer-clojure :exclude [name])
   (:require [clojure.test :as test :refer [deftest is testing use-fixtures]]
-            [com.repldriven.mono.env.interface :as env]
-            [com.repldriven.mono.log.interface :as log]
-            [com.repldriven.mono.iam-api.main :as main]
+            [com.repldriven.mono.iam-api.api :as api]
+            [com.repldriven.mono.server.interface]
+            [com.repldriven.mono.sql.interface]
             [com.repldriven.mono.system.interface :as system]
+            [com.repldriven.mono.test-system.interface :as test-system]
             [clojure.data.json :as json]
-            [clojure.java.io :as io]
             [com.repldriven.mono.http-client.interface :as http])
   (:import (org.eclipse.jetty.server Server)))
 
@@ -16,22 +16,18 @@
 (def ^:dynamic *base-url* "http://localhost:{PORT}")
 (def project-id "prj-test")
 
-(defn start-system
-  []
-  (let [environment (env/env "classpath:iam-api/test-application.yml" :test)]
-    (main/start! environment)))
-
-(defn stop-system [] (main/stop! @main/system))
-
-(defn system-fixture
+(defn with-system-fixture
   [f]
-  (start-system)
-  (let [^Server web-server (system/instance @main/system [:server :jetty-adapter])
-        port (.getPort (.getURI web-server))]
-    (binding [*base-url* (str "http://localhost:" port)] (f)))
-  (stop-system))
+  (let [sys-config (assoc-in test-system/*sysdef* [:system/defs :server :jetty-adapter :system/config :handler] (partial api/app))]
+    (system/with-*sys* sys-config
+      (let [^Server web-server (system/instance system/*sys* [:server :jetty-adapter])
+            port (.getPort (.getURI web-server))]
+        (binding [*base-url* (str "http://localhost:" port)]
+          (f))))))
 
-(use-fixtures :once system-fixture)
+(use-fixtures :once
+  (test-system/fixture "classpath:iam-api/test-application.yml" :test)
+  with-system-fixture)
 
 ;;;; Test helpers
 ;;;;
