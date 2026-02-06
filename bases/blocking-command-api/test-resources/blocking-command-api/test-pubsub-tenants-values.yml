@@ -1,4 +1,0 @@
-- tenant: tenant-1
-  clusters:
-    - standalone
-  roles: []

@@ -1,48 +1,76 @@
 admin: !system/component
   type: pubsub/admin
   service-http-url: !system/local-ref container-service-http-url
+
 client: !system/component
   type: pubsub/client
   service-url: !system/local-ref container-service-url
+
 container: !system/component
   type: pubsub/container
-  #docker-image-name: kezhenxu94/pulsar:2.10.0-SNAPSHOT
   exposed-ports:
     - 6650
     - 8080
+
 container-service-http-port: !system/component
   type: pubsub/container-service-http-port
   container: !system/local-ref container
   exposed-port: 8080
+
 container-service-http-url: !system/component
   type: pubsub/container-service-http-url
   port: !system/local-ref container-service-http-port
   scheme: http
+
 container-service-port: !system/component
   type: pubsub/container-service-port
   container: !system/local-ref container
   exposed-port: 6650
+
 container-service-url: !system/component
   type: pubsub/container-service-url
   port: !system/local-ref container-service-port
   scheme: pulsar
+
 namespaces: !system/component
   type: pubsub/namespaces
   _: !system/local-ref tenants
   admin: !system/local-ref admin
-  namespaces: !include blocking-command-api/test-pubsub-namespaces-values.yml
+  namespaces:
+    - namespace: tenant-1/namespace-1
+      config:
+        post:
+          autoTopicCreation:
+            allowAutoTopicCreation: false
+            defaultNumPartitions: 1
+            topicType: string
+          encryptionRequired: false
+          isAllowAutoUpdateSchema: false
+          schemaValidationEnforced: true
+        put:
+          schemaCompatibilityStrategy: FULL
+
 schemas: !system/component
   type: pubsub/schemas
   user:
     schema: schema-avro/user.avsc.json
     type: AVRO
+
 tenants: !system/component
   type: pubsub/tenants
   admin: !system/local-ref admin
-  tenants: !include blocking-command-api/test-pubsub-tenants-values.yml
+  tenants:
+    - tenant: tenant-1
+      clusters:
+        - standalone
+      roles: []
+
 topics: !system/component
   type: pubsub/topics
   _: !system/local-ref namespaces
   admin: !system/local-ref admin
   schemas: !system/local-ref schemas
-  topics: !include blocking-command-api/test-pubsub-topics-values.yml
+  topics:
+    - topic: persistent://tenant-1/namespace-1/topic-1
+      partitions: 1
+      schema: !keyword user
