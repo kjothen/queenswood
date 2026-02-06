@@ -6,6 +6,23 @@
              testcontainers-components]
             [com.repldriven.mono.system.interface :as system]))
 
+;; Register SQL components with system configurator
+(defmethod system/component :sql/container
+  [_ v]
+  (system/merge-component-config testcontainers-components/container (dissoc v :annotation)))
+
+(defmethod system/component :sql/container-mapped-exposed-port
+  [_ v]
+  (system/merge-component-config testcontainers-system/container-mapped-exposed-port (dissoc v :annotation)))
+
+(defmethod system/component :sql/datasources
+  [_ v]
+  (system/merge-component-config components/datasources (dissoc v :annotation)))
+
+(defmethod system/component :sql/datasource
+  [_ v]
+  (system/merge-component-config components/datasource (dissoc v :annotation)))
+
 (defmulti component (fn [k _] k))
 
 (defmethod component :default [_ v] v)
