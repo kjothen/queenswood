@@ -19,7 +19,7 @@
   (Security/addProvider (BouncyCastleProvider.)))
 
 (use-fixtures :once
-  (test-system/fixture "classpath:pubsub/test-application.yml" :test)
+  (test-system/fixture "classpath:pulsar/test-application.yml" :test)
   (fn [f] (system/with-*sys* test-system/*sysdef* (f))))
 
 (defn- get-schema
@@ -37,9 +37,9 @@
 (deftest ^:repl encrypted-message-matching-consumer-key-test
   (testing "Pulsar consumer with a matching decryption key can consume"
     ;; SKIPPED: This test works in REPL but times out in test runners
-    (let [producer (system/instance system/*sys* [:pubsub :producer])
-          consumer (system/instance system/*sys* [:pubsub :consumers :c1])
-          schemas (system/instance system/*sys* [:pubsub :schemas])
+    (let [producer (system/instance system/*sys* [:pulsar :producer])
+          consumer (system/instance system/*sys* [:pulsar :consumers :c1])
+          schemas (system/instance system/*sys* [:pulsar :schemas])
           schema (schema-avro/json->schema
                   (json/write-str (get-schema schemas :user)))
           data {:name "hardcastle" :age 19}
@@ -62,9 +62,9 @@
 (deftest ^:repl encrypted-message-mismatched-consumer-key-test
   (testing "Pulsar consumer with a mismatching decryption key cannot consume"
     ;; SKIPPED: This test works in REPL but times out in test runners
-    (let [producer (system/instance system/*sys* [:pubsub :producer])
-          consumer (system/instance system/*sys* [:pubsub :consumers :c2])
-          schemas (system/instance system/*sys* [:pubsub :schemas])
+    (let [producer (system/instance system/*sys* [:pulsar :producer])
+          consumer (system/instance system/*sys* [:pulsar :consumers :c2])
+          schemas (system/instance system/*sys* [:pulsar :schemas])
           schema (schema-avro/json->schema
                   (json/write-str (get-schema schemas :user)))
           data {:name "hardcastle" :age 19}
@@ -82,7 +82,7 @@
 (deftest namespace-configuration-test
   (testing
    "Pulsar namespace configuration enforces encryption and topic schema"
-    (let [admin (system/instance system/*sys* [:pubsub :admin])
+    (let [admin (system/instance system/*sys* [:pulsar :admin])
           service-url (.getServiceUrl admin)
           namespaces-url (string/join "/" [service-url "admin/v2/namespaces"])
           namespace-url (string/join "/"

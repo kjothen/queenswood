@@ -35,6 +35,6 @@
    :container-service-http-url testcontainers/uri})
 
 ;; PostgreSQL testcontainer components
-(system/defcomponents :db
+(system/defcomponents :postgres
   {:container postgres/container
    :container-mapped-exposed-port testcontainers/mapped-exposed-port})

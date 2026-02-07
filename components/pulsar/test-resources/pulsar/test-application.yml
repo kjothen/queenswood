@@ -1,45 +1,45 @@
 system:
   pulsar:
     container: !system/component
-      system/component-kind: pubsub/container
+      system/component-kind: pulsar/container
       exposed-ports: [6650, 8080]
 
     container-service-port: !system/component
-      system/component-kind: pubsub/container-service-port
+      system/component-kind: pulsar/container-service-port
       container: !system/local-ref container
       exposed-port: 6650
 
     container-service-url: !system/component
-      system/component-kind: pubsub/container-service-url
+      system/component-kind: pulsar/container-service-url
       port: !system/local-ref container-service-port
       scheme: pulsar
 
     container-service-http-port: !system/component
-      system/component-kind: pubsub/container-service-http-port
+      system/component-kind: pulsar/container-service-http-port
       container: !system/local-ref container
       exposed-port: 8080
 
     container-service-http-url: !system/component
-      system/component-kind: pubsub/container-service-http-url
+      system/component-kind: pulsar/container-service-http-url
       port: !system/local-ref container-service-http-port
       scheme: http
 
     client: !system/component
-      system/component-kind: pubsub/client
+      system/component-kind: pulsar/client
       service-url: !system/local-ref container-service-url
 
     admin: !system/component
-      system/component-kind: pubsub/admin
+      system/component-kind: pulsar/admin
       service-http-url: !system/local-ref container-service-http-url
 
     schemas: !system/component
-      system/component-kind: pubsub/schemas
+      system/component-kind: pulsar/schemas
       user:
         schema: schema-avro/user.avsc.json
         type: AVRO
 
     tenants: !system/component
-      system/component-kind: pubsub/tenants
+      system/component-kind: pulsar/tenants
       admin: !system/local-ref admin
       tenants:
         - tenant: tenant-1
@@ -47,7 +47,7 @@ system:
           roles: []
 
     namespaces: !system/component
-      system/component-kind: pubsub/namespaces
+      system/component-kind: pulsar/namespaces
       _: !system/local-ref tenants
       admin: !system/local-ref admin
       namespaces:
@@ -65,7 +65,7 @@ system:
               schemaCompatibilityStrategy: FULL
 
     topics: !system/component
-      system/component-kind: pubsub/topics
+      system/component-kind: pulsar/topics
       _: !system/local-ref namespaces
       admin: !system/local-ref admin
       schemas: !system/local-ref schemas
@@ -75,18 +75,18 @@ system:
           schema: !keyword user
 
     crypto-key-pair-file-readers: !system/component
-      system/component-kind: pubsub/crypto-key-pair-file-readers
+      system/component-kind: pulsar/crypto-key-pair-file-readers
       p1:
         tenant-key-1:
-          private-key: pubsub/test_rsa_privkey.pem
-          public-key: pubsub/test_rsa_pubkey.pem
+          private-key: pulsar/test_rsa_privkey.pem
+          public-key: pulsar/test_rsa_pubkey.pem
       p2:
         tenant-key-2:
-          private-key: pubsub/test_rsa_privkey.pem
-          public-key: pubsub/test_rsa_pubkey.pem
+          private-key: pulsar/test_rsa_privkey.pem
+          public-key: pulsar/test_rsa_pubkey.pem
 
     crypto-key-readers: !system/component
-      system/component-kind: pubsub/crypto-key-readers
+      system/component-kind: pulsar/crypto-key-readers
       r1:
         default-key: tenant-key-1
         keys: !system/local-ref crypto-key-pair-file-readers.p1
@@ -95,43 +95,43 @@ system:
         keys: !system/local-ref crypto-key-pair-file-readers.p2
 
     crypto-key-pair-generator: !system/component
-      system/component-kind: pubsub/crypto-key-pair-generator
+      system/component-kind: pulsar/crypto-key-pair-generator
       tenant-key-1:
         algorithm: RSA
         key-size: 512
 
     producer: !system/component
-      system/component-kind: pubsub/producer
+      system/component-kind: pulsar/producer
       _: !system/local-ref topics
       client: !system/local-ref client
       conf:
         cryptoKeyReader: !system/local-ref crypto-key-readers.r1
         encryptionKeys: [tenant-key-1]
-        schema: !pubsub/schema AUTO_PRODUCE_BYTES
+        schema: !pulsar/schema AUTO_PRODUCE_BYTES
         topicName: "persistent://tenant-1/namespace-1/topic-1"
       schemas: !system/local-ref schemas
 
     consumers: !system/component
-      system/component-kind: pubsub/consumers
+      system/component-kind: pulsar/consumers
       c1:
         _: !system/local-ref topics
         client: !system/local-ref client
         conf:
-          cryptoFailureAction: !pubsub/crypto-failure-action CONSUME
+          cryptoFailureAction: !pulsar/crypto-failure-action CONSUME
           cryptoKeyReader: !system/local-ref crypto-key-readers.r1
-          schema: !pubsub/schema AUTO_CONSUME
+          schema: !pulsar/schema AUTO_CONSUME
           subscriptionName: tenant-1-subscriber
-          subscriptionType: !pubsub/subscription-type Shared
+          subscriptionType: !pulsar/subscription-type Shared
           topicNames: ["persistent://tenant-1/namespace-1/topic-1"]
         schemas: !system/local-ref schemas
       c2:
         _: !system/local-ref topics
         client: !system/local-ref client
         conf:
-          cryptoFailureAction: !pubsub/crypto-failure-action CONSUME
+          cryptoFailureAction: !pulsar/crypto-failure-action CONSUME
           cryptoKeyReader: !system/local-ref crypto-key-readers.r2
-          schema: !pubsub/schema AUTO_CONSUME
+          schema: !pulsar/schema AUTO_CONSUME
           subscriptionName: tenant-2-subscriber
-          subscriptionType: !pubsub/subscription-type Shared
+          subscriptionType: !pulsar/subscription-type Shared
           topicNames: ["persistent://tenant-1/namespace-1/topic-1"]
         schemas: !system/local-ref schemas

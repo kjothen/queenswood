@@ -1,39 +1,39 @@
 container: !system/component
-  system/component-kind: pubsub/container
+  system/component-kind: pulsar/container
   exposed-ports:
     - 6650
     - 8080
 
 container-service-http-port: !system/component
-  system/component-kind: pubsub/container-service-http-port
+  system/component-kind: pulsar/container-service-http-port
   container: !system/local-ref container
   exposed-port: 8080
 
 container-service-http-url: !system/component
-  system/component-kind: pubsub/container-service-http-url
+  system/component-kind: pulsar/container-service-http-url
   port: !system/local-ref container-service-http-port
   scheme: http
 
 container-service-port: !system/component
-  system/component-kind: pubsub/container-service-port
+  system/component-kind: pulsar/container-service-port
   container: !system/local-ref container
   exposed-port: 6650
 
 container-service-url: !system/component
-  system/component-kind: pubsub/container-service-url
+  system/component-kind: pulsar/container-service-url
   port: !system/local-ref container-service-port
   scheme: pulsar
 
 admin: !system/component
-  system/component-kind: pubsub/admin
+  system/component-kind: pulsar/admin
   service-http-url: !system/local-ref container-service-http-url
 
 client: !system/component
-  system/component-kind: pubsub/client
+  system/component-kind: pulsar/client
   service-url: !system/local-ref container-service-url
 
 namespaces: !system/component
-  system/component-kind: pubsub/namespaces
+  system/component-kind: pulsar/namespaces
   _: !system/local-ref tenants
   admin: !system/local-ref admin
   namespaces:
@@ -51,13 +51,13 @@ namespaces: !system/component
           schemaCompatibilityStrategy: FULL
 
 schemas: !system/component
-  system/component-kind: pubsub/schemas
+  system/component-kind: pulsar/schemas
   user:
     schema: schema-avro/user.avsc.json
     type: AVRO
 
 tenants: !system/component
-  system/component-kind: pubsub/tenants
+  system/component-kind: pulsar/tenants
   admin: !system/local-ref admin
   tenants:
     - tenant: tenant-1
@@ -66,7 +66,7 @@ tenants: !system/component
       roles: []
 
 topics: !system/component
-  system/component-kind: pubsub/topics
+  system/component-kind: pulsar/topics
   _: !system/local-ref namespaces
   admin: !system/local-ref admin
   schemas: !system/local-ref schemas
