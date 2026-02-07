@@ -17,6 +17,7 @@ lspconfig.yamlls.setup({
 				"!system/required-component",
 				"!profile mapping",
 				"!port",
+				"!keyword",
 			},
 		},
 	},
