@@ -3,29 +3,24 @@
             [com.repldriven.mono.env.interface :as env]
             [com.repldriven.mono.log.interface :as log]
             [com.repldriven.mono.symmetric-key-api.api :as api]
-            [com.repldriven.mono.symmetric-key-api.system :as
-             symmetric-key-api-system]
+            [com.repldriven.mono.server.interface]
             [com.repldriven.mono.system.interface :as system])
   (:gen-class))
 
 (def system (atom nil))
 
-(defn start!
-  []
+(defn start
+  [environment]
   (log/info "Starting system")
-  (api/init)
-  (let [system-config (symmetric-key-api-system/configure (:system @env/env))]
-    (system/start! system
-                   (assoc-in system-config
-                    [:system/defs :ring :jetty-adapter :system/config :handler]
-                    api/app))))
+  (let [config (-> (:system environment)
+                   (assoc-in [:server :jetty-adapter :handler] (partial api/app))
+                   (system/definition))]
+    (system/start! system config)))
 
-(defn stop!
-  []
+(defn stop
+  [sys]
   (log/info "Stopping system")
-  (when-let [_ @system]
-    (api/destroy)
-    (system/stop! system)))
+  (system/stop sys))
 
 (defn -main
   [& args]
@@ -35,13 +30,12 @@
         (cli/validate-args "symmetric-key-api" args)]
     (if exit-message
       (cli/exit ok? exit-message)
-      (do (env/set-env! (:config-file options) (keyword (:profile options)))
-          (start!)))))
+      (let [{:keys [config-file profile]} options]
+        (start (env/env config-file (keyword profile)))))))
 
 (comment
-  (-main "-c"
-         "bases/symmetric-key-api/test-resources/symmetric-key-api/test-env.edn"
-         "-p" "dev")
-  (stop!)
-  (start!)
-  (stop!))
+  (-main "-c" "classpath:symmetric-key-api/test-application.yml"
+         "-p" "test")
+  (stop @system)
+  (start (env/env "classpath:symmetric-key-api/test-application.yml" :test))
+  (stop @system))

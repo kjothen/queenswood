@@ -11,6 +11,7 @@
   (:import (java.security Security)
            (java.util HashMap)
            (org.apache.pulsar.client.api Message)
+           (org.apache.pulsar.common.api EncryptionContext)
            (org.bouncycastle.jce.provider BouncyCastleProvider)))
 
 ;; Register Bouncy Castle security provider for encryption
@@ -73,7 +74,9 @@
                 (schema-avro/serialize schema data)
                 (HashMap. {"properties" props}))
       (let [^Message recv-msg (SUT/receive consumer 1000)]
-        (is (nil? recv-msg))))))
+        (is (true? (some-> (.getEncryptionCtx recv-msg)
+                           .get
+                           .isEncrypted)))))))
 
 (deftest namespace-configuration-test
   (testing
