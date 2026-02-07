@@ -6,44 +6,24 @@
             [com.repldriven.mono.testcontainers-system.interface :as
              testcontainers-system]))
 
-;; Register pubsub components with system configurator
-(defmethod system/component :pubsub/admin [_ v]
-  (system/merge-component-config components/admin v))
-(defmethod system/component :pubsub/client [_ v]
-  (system/merge-component-config components/client v))
-(defmethod system/component :pubsub/consumer [_ v]
-  (system/merge-component-config components/consumer v))
-(defmethod system/component :pubsub/consumers [_ v]
-  (system/merge-component-config components/consumers v))
-(defmethod system/component :pubsub/container [_ v]
-  (system/merge-component-config testcontainers-components/container v))
-(defmethod system/component :pubsub/container-service-port [_ v]
-  (system/merge-component-config testcontainers-system/container-mapped-exposed-port v))
-(defmethod system/component :pubsub/container-service-url [_ v]
-  (system/merge-component-config testcontainers-system/container-uri v))
-(defmethod system/component :pubsub/container-service-http-port [_ v]
-  (system/merge-component-config testcontainers-system/container-mapped-exposed-port v))
-(defmethod system/component :pubsub/container-service-http-url [_ v]
-  (system/merge-component-config testcontainers-system/container-uri v))
-(defmethod system/component :pubsub/crypto-key-pair-file-reader [_ v]
-  (system/merge-component-config components/crypto-key-pair-file-reader v))
-(defmethod system/component :pubsub/crypto-key-pair-file-readers [_ v]
-  (system/merge-component-config components/crypto-key-pair-file-readers v))
-(defmethod system/component :pubsub/crypto-key-pair-generator [_ v]
-  (system/merge-component-config components/crypto-key-pair-generator v))
-(defmethod system/component :pubsub/crypto-key-reader [_ v]
-  (system/merge-component-config components/crypto-key-reader v))
-(defmethod system/component :pubsub/crypto-key-readers [_ v]
-  (system/merge-component-config components/crypto-key-readers v))
-(defmethod system/component :pubsub/namespaces [_ v]
-  (system/merge-component-config components/namespaces v))
-(defmethod system/component :pubsub/producer [_ v]
-  (system/merge-component-config components/producer v))
-(defmethod system/component :pubsub/reader [_ v]
-  (system/merge-component-config components/reader v))
-(defmethod system/component :pubsub/schemas [_ v]
-  (system/merge-component-config components/schemas v))
-(defmethod system/component :pubsub/tenants [_ v]
-  (system/merge-component-config components/tenants v))
-(defmethod system/component :pubsub/topics [_ v]
-  (system/merge-component-config components/topics v))
+(system/defcomponents :pubsub
+  {:admin components/admin
+   :client components/client
+   :consumer components/consumer
+   :consumers components/consumers
+   :container testcontainers-components/container
+   :container-service-port testcontainers-system/container-mapped-exposed-port
+   :container-service-url testcontainers-system/container-uri
+   :container-service-http-port testcontainers-system/container-mapped-exposed-port
+   :container-service-http-url testcontainers-system/container-uri
+   :crypto-key-pair-file-reader components/crypto-key-pair-file-reader
+   :crypto-key-pair-file-readers components/crypto-key-pair-file-readers
+   :crypto-key-pair-generator components/crypto-key-pair-generator
+   :crypto-key-reader components/crypto-key-reader
+   :crypto-key-readers components/crypto-key-readers
+   :namespaces components/namespaces
+   :producer components/producer
+   :reader components/reader
+   :schemas components/schemas
+   :tenants components/tenants
+   :topics components/topics})
