@@ -2,12 +2,11 @@
   (:refer-clojure :exclude [name namespace resolve type])
   (:require [clojure.data.json :as json]
             [clojure.java.data :as j]
-            [clojure.java.io :as io]
-            [com.repldriven.mono.log.interface :as log])
-  (:import [java.util Map]
-           [org.apache.pulsar.client.api Schema]
-           [org.apache.pulsar.client.api.schema SchemaDefinition]
-           [org.apache.pulsar.common.protocol.schema PostSchemaPayload]))
+            [clojure.java.io :as io])
+  (:import (java.util Map)
+           (org.apache.pulsar.client.api Schema)
+           (org.apache.pulsar.client.api.schema SchemaDefinition)
+           (org.apache.pulsar.common.protocol.schema PostSchemaPayload)))
 
 (defn- create-payload ^PostSchemaPayload
   [type schema properties]

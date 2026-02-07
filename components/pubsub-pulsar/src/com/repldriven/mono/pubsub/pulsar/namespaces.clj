@@ -27,10 +27,10 @@
         tenant-name (first (string/split fully-qualified-namespace-name #"/"))
         namespace-names (.getNamespaces namespaces tenant-name)]
     (when-not (contains? (set namespace-names) fully-qualified-namespace-name)
-      (do (log/info "Creating namespace:" fully-qualified-namespace-name config)
-          (.createNamespace namespaces fully-qualified-namespace-name)
-          (when (some? config)
-            (configure admin fully-qualified-namespace-name config))))))
+      (log/info "Creating namespace:" fully-qualified-namespace-name config)
+      (.createNamespace namespaces fully-qualified-namespace-name)
+      (when (some? config)
+        (configure admin fully-qualified-namespace-name config)))))
 
 (defn create-namespaces
   [{:keys [^PulsarAdmin admin namespaces]}]

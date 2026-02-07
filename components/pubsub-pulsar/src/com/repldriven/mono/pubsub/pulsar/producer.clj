@@ -3,9 +3,9 @@
   (:require [clojure.java.data :as j]
             [com.repldriven.mono.log.interface :as log]
             [com.repldriven.mono.pubsub.pulsar.schemas :as schemas])
-  (:import [java.util Map]
-           [org.apache.pulsar.client.api Producer PulsarClient
-            PulsarClientException]))
+  (:import (java.util Map)
+           (org.apache.pulsar.client.api Producer PulsarClient
+            PulsarClientException)))
 
 (defn- add-encryption-keys
   [producer ks]

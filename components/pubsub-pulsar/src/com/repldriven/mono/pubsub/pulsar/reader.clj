@@ -2,9 +2,9 @@
   (:require [clojure.java.data :as j]
             [com.repldriven.mono.log.interface :as log]
             [com.repldriven.mono.pubsub.pulsar.schemas :as schemas])
-  (:import [java.util Map]
-           [org.apache.pulsar.client.api PulsarClient PulsarClientException
-            Reader]))
+  (:import (java.util Map)
+           (org.apache.pulsar.client.api PulsarClient PulsarClientException
+            Reader)))
 
 (defn create ^Reader
   [{:keys [^PulsarClient client conf schemas]}]
