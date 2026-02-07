@@ -3,7 +3,8 @@
    [com.repldriven.mono.pulsar.system.components :as components]
    [com.repldriven.mono.system.interface :as system]))
 
-(system/defcomponents :pubsub
+;; system components
+(system/defcomponents :pulsar
   {:admin components/admin
    :client components/client
    :consumer components/consumer
@@ -19,3 +20,4 @@
    :schemas components/schemas
    :tenants components/tenants
    :topics components/topics})
+

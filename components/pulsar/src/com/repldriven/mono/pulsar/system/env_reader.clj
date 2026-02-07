@@ -62,35 +62,35 @@
                     {:tag tag :value value}))))
 
 ;;;; edn-reader 
-(defmethod env/edn-reader 'pubsub-crypto-failure-action
+(defmethod env/edn-reader 'pulsar-crypto-failure-action
   [opts tag value]
   (crypto-failure-action opts tag value))
 
-(defmethod env/edn-reader 'pubsub-message-id
+(defmethod env/edn-reader 'pulsar-message-id
   [opts tag value]
   (message-id opts tag value))
 
-(defmethod env/edn-reader 'pubsub-schema
+(defmethod env/edn-reader 'pulsar-schema
   [opts tag value]
   (schema opts tag value))
 
-(defmethod env/edn-reader 'pubsub-subscription-type
+(defmethod env/edn-reader 'pulsar-subscription-type
   [opts tag value]
   (subscription-type opts tag value))
 
 ;;;; yml-reader 
-(defmethod env/yml-reader :!pubsub/crypto-failure-action
+(defmethod env/yml-reader :!pulsar/crypto-failure-action
   [{:keys [value]}]
-  (symbol (str "#pubsub-crypto-failure-action " (pr-str (keyword value)))))
+  (symbol (str "#pulsar-crypto-failure-action " (pr-str (keyword value)))))
 
-(defmethod env/yml-reader :!pubsub/message-id
+(defmethod env/yml-reader :!pulsar/message-id
   [{:keys [value]}]
-  (symbol (str "#pubsub-message-id " (pr-str (keyword value)))))
+  (symbol (str "#pulsar-message-id " (pr-str (keyword value)))))
 
-(defmethod env/yml-reader :!pubsub/schema
+(defmethod env/yml-reader :!pulsar/schema
   [{:keys [value]}]
-  (symbol (str "#pubsub-schema " (pr-str (keyword value)))))
+  (symbol (str "#pulsar-schema " (pr-str (keyword value)))))
 
-(defmethod env/yml-reader :!pubsub/subscription-type
+(defmethod env/yml-reader :!pulsar/subscription-type
   [{:keys [value]}]
-  (symbol (str "#pubsub-subscription-type " (pr-str (keyword value)))))
+  (symbol (str "#pulsar-subscription-type " (pr-str (keyword value)))))

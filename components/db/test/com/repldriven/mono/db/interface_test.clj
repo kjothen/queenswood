@@ -1,10 +1,15 @@
 (ns com.repldriven.mono.db.interface-test
-  (:require [clojure.test :as test :refer [deftest is testing use-fixtures]]
-            [com.repldriven.mono.db.interface :as SUT]
-            [com.repldriven.mono.system.interface :as system]
-            [com.repldriven.mono.test-system.interface :as test-system]
-            [next.jdbc :as jdbc]
-            [next.jdbc.result-set :as rs]))
+  (:require
+   com.repldriven.mono.db.interface
+   com.repldriven.mono.testcontainers.interface
+
+   [com.repldriven.mono.system.interface :as system]
+   [com.repldriven.mono.test-system.interface :as test-system]
+
+   [next.jdbc :as jdbc]
+   [next.jdbc.result-set :as rs]
+
+   [clojure.test :as test :refer [deftest is testing use-fixtures]]))
 
 (defn with-system-fixture
   [f]
@@ -17,7 +22,7 @@
 
 (deftest system-start
   (testing "Developers should be able to start a sql system from a REPL"
-           (is (some? system/*sys*))))
+    (is (some? system/*sys*))))
 
 (deftest valid-connection
   (testing "Connection must be valid")

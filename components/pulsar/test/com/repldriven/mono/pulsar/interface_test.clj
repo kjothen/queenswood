@@ -1,26 +1,41 @@
 (ns com.repldriven.mono.pulsar.interface-test
   (:refer-clojure :exclude [send])
-  (:require [clojure.data.json :as json]
-            [clojure.string :as string]
-            [clojure.test :refer [deftest is testing use-fixtures]]
-            [com.repldriven.mono.http-client.interface :as http]
-            [com.repldriven.mono.pulsar.interface :as SUT]
-            [com.repldriven.mono.schema-avro.interface :as schema-avro]
-            [com.repldriven.mono.system.interface :as system]
-            [com.repldriven.mono.test-system.interface :as test-system])
-  (:import (java.security Security)
-           (java.util HashMap)
-           (org.apache.pulsar.client.api Message)
-           (org.apache.pulsar.common.api EncryptionContext)
-           (org.bouncycastle.jce.provider BouncyCastleProvider)))
+
+  (:require
+   com.repldriven.mono.testcontainers.interface
+
+   [com.repldriven.mono.pulsar.interface :as SUT]
+
+   [com.repldriven.mono.http-client.interface :as http]
+   [com.repldriven.mono.schema-avro.interface :as schema-avro]
+   [com.repldriven.mono.system.interface :as system]
+   [com.repldriven.mono.test-system.interface :as test-system]
+
+   [clojure.data.json :as json]
+   [clojure.string :as string]
+
+   [clojure.test :refer [deftest is testing use-fixtures]])
+
+  (:import
+   (org.apache.pulsar.client.api Message)
+   (org.apache.pulsar.common.api EncryptionContext)
+   (org.bouncycastle.jce.provider BouncyCastleProvider)
+
+   (java.security Security)
+   (java.util HashMap)))
 
 ;; Register Bouncy Castle security provider for encryption
 (when (nil? (Security/getProvider "BC"))
   (Security/addProvider (BouncyCastleProvider.)))
 
+(defn with-system-fixture
+  [f]
+  (system/with-*sys* test-system/*sysdef*
+    (f)))
+
 (use-fixtures :once
   (test-system/fixture "classpath:pulsar/test-application.yml" :test)
-  (fn [f] (system/with-*sys* test-system/*sysdef* (f))))
+  with-system-fixture)
 
 (defn- get-schema
   [schemas k]
