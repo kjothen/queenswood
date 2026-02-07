@@ -9,7 +9,7 @@
                                          PulsarClient
                                          PulsarClientException)))
 
-(defn ^Consumer create
+(defn create ^Consumer
   [{:keys [^PulsarClient client conf schemas]}]
   (try
     (log/info "Creating pulsar consumer" conf schemas)
@@ -26,7 +26,7 @@
     (catch PulsarClientException e
       (log/error (format "Failed to create pulsar consumer, %s" e)))))
 
-(defn ^Message receive
+(defn receive ^Message
   ([^Consumer consumer] (when consumer (.. consumer receive)))
   ([^Consumer consumer timeout-ms]
    (when consumer (.. consumer (receive timeout-ms TimeUnit/MILLISECONDS)))))

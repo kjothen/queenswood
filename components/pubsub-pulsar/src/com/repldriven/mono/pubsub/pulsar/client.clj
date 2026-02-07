@@ -5,7 +5,7 @@
                                          PulsarClient
                                          PulsarClientException)))
 
-(defn ^PulsarClient create
+(defn create ^PulsarClient
   [{:keys [service-url]}]
   (try (log/info "Opening pulsar client connection:" service-url)
        (builder/to-java PulsarClient

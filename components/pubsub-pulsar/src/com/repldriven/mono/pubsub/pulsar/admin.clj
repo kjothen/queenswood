@@ -5,7 +5,7 @@
                                            PulsarAdminBuilder
                                            PulsarAdminException)))
 
-(defn ^PulsarAdmin create
+(defn create ^PulsarAdmin
   [{:keys [service-http-url]}]
   (try (log/info "Opening pulsar admin connection: " service-http-url)
        (builder/to-java PulsarAdmin

@@ -6,7 +6,7 @@
            [org.apache.pulsar.client.api PulsarClient PulsarClientException
             Reader]))
 
-(defn ^Reader create
+(defn create ^Reader
   [{:keys [^PulsarClient client conf schemas]}]
   (try (log/info "Opening pulsar reader")
        (let [{:strs [cryptoKeyReader schema startMessageId]} conf

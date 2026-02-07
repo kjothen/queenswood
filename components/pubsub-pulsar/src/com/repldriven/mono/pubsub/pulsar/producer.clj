@@ -11,7 +11,7 @@
   [producer ks]
   (reduce #(.addEncryptionKey %1 %2) producer ks))
 
-(defn ^Producer create
+(defn create ^Producer
   [{:keys [^PulsarClient client conf schemas]}]
   (try
     (log/info "Creating pulsar producer" conf)
