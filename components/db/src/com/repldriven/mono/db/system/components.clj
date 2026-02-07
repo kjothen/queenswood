@@ -1,4 +1,4 @@
-(ns com.repldriven.mono.sql.system.components
+(ns com.repldriven.mono.db.system.components
   (:require [com.repldriven.mono.system.interface :as system]
             [next.jdbc]))
 

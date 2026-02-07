@@ -6,7 +6,7 @@
    [com.repldriven.mono.env.interface :as env]
    [com.repldriven.mono.iam.interface :as iam]
    [com.repldriven.mono.log.interface :as log]
-   [com.repldriven.mono.sql.interface :as sql]
+   [com.repldriven.mono.db.interface :as sql]
    [com.repldriven.mono.system.interface :as system])
   (:gen-class))
 
@@ -14,7 +14,7 @@
 
 (defn db-spec
   [sys]
-  (let [datasource (system/instance sys [:sql :datasource])]
+  (let [datasource (system/instance sys [:db :datasource])]
     (sql/get-datasource datasource)))
 
 (defn start

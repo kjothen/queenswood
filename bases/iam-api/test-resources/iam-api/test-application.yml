@@ -1,17 +1,17 @@
 system:
-  sql:
+  db:
     container: !system/component
-      system/component-kind: sql/container
+      system/component-kind: db/container
       docker-image-name: postgres:16
       exposed-port: 5432
 
     container-mapped-exposed-port: !system/component
-      system/component-kind: sql/container-mapped-exposed-port
+      system/component-kind: db/container-mapped-exposed-port
       container: !system/local-ref container
       exposed-port: 5432
 
     datasource: !system/component
-      system/component-kind: sql/datasource
+      system/component-kind: db/datasource
       database: test
       dbtype: postgres
       host: localhost
@@ -22,7 +22,7 @@ system:
   server:
     interceptors: !system/component
       system/component-kind: server/interceptors
-      datasource: !system/ref sql.datasource
+      datasource: !system/ref db.datasource
 
     jetty-adapter: !system/component
       system/component-kind: server/jetty-adapter

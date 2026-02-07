@@ -2,7 +2,7 @@
   (:require [clojure.test :as test :refer [deftest is testing]]
             [com.repldriven.mono.iam-api.main :as SUT]
             [com.repldriven.mono.server.interface]
-            [com.repldriven.mono.sql.interface]))
+            [com.repldriven.mono.db.interface]))
 
 (deftest start-test
   (testing

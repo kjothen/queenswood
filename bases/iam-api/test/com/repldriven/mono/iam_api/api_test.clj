@@ -5,7 +5,7 @@
 
    [com.repldriven.mono.http-client.interface :as http]
    [com.repldriven.mono.iam.interface :as iam]
-   [com.repldriven.mono.sql.interface :as sql]
+   [com.repldriven.mono.db.interface :as sql]
    [com.repldriven.mono.system.interface :as system]
    [com.repldriven.mono.test-system.interface :as test-system]
 
@@ -22,7 +22,7 @@
 
 (defn db-spec
   [sys]
-  (let [datasource (system/instance sys [:sql :datasource])]
+  (let [datasource (system/instance sys [:db :datasource])]
     (sql/get-datasource datasource)))
 
 (defn with-system-fixture

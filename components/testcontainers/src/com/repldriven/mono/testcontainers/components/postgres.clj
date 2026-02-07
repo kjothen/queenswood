@@ -17,7 +17,7 @@
                                                          docker-image-name))
                                             :exposed-ports [exposed-port]})
                                   (tc/start!))]
-           ;; TODO remove sleep and fix wait strategy
+           ;TODO remove sleep and fix wait strategy
            (Thread/sleep 5000)
            container)
          (catch ContainerLaunchException e

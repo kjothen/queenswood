@@ -1,7 +1,7 @@
 (ns com.repldriven.mono.iam-api.system-test
   (:require [clojure.test :refer [deftest is testing use-fixtures]]
             [com.repldriven.mono.server.interface]
-            [com.repldriven.mono.sql.interface]
+            [com.repldriven.mono.db.interface]
             [com.repldriven.mono.system.interface :as system]
             [com.repldriven.mono.test-system.interface :as test-system]))
 

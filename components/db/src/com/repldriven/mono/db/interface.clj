@@ -1,5 +1,5 @@
-(ns com.repldriven.mono.sql.interface
-  (:require com.repldriven.mono.sql.system.core
+(ns com.repldriven.mono.db.interface
+  (:require com.repldriven.mono.db.system.core
             [next.jdbc]))
 
 (defn get-datasource

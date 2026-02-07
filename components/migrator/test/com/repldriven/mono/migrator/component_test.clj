@@ -1,7 +1,7 @@
 (ns com.repldriven.mono.migrator.component-test
   (:require [clojure.test :as test :refer [deftest is testing use-fixtures]]
             [com.repldriven.mono.migrator.interface :as SUT]
-            [com.repldriven.mono.sql.interface :as sql]
+            [com.repldriven.mono.db.interface :as sql]
             [com.repldriven.mono.system.interface :as system]
             [com.repldriven.mono.test-system.interface :as test-system]
             [next.jdbc :as jdbc]
@@ -9,7 +9,7 @@
 
 (defn db-spec
   [sys]
-  (let [datasource (system/instance sys [:sql :datasource])]
+  (let [datasource (system/instance sys [:db :datasource])]
     (sql/get-datasource datasource)))
 
 (defn with-system-fixture
@@ -24,7 +24,7 @@
 (deftest migrate-test
   (testing
    "Applying a migration changelog should result in a paved db"
-   (let [datasource (system/instance system/*sys* [:sql :datasource])
+   (let [datasource (system/instance system/*sys* [:db :datasource])
          db-spec (db-spec system/*sys*)]
      (SUT/migrate db-spec "migrator/test-changelog.sql")
      (is (= [{:name "hello"} {:name "world"}]

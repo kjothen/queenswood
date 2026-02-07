@@ -1,6 +1,6 @@
-(ns com.repldriven.mono.sql.interface-test
+(ns com.repldriven.mono.db.interface-test
   (:require [clojure.test :as test :refer [deftest is testing use-fixtures]]
-            [com.repldriven.mono.sql.interface :as SUT]
+            [com.repldriven.mono.db.interface :as SUT]
             [com.repldriven.mono.system.interface :as system]
             [com.repldriven.mono.test-system.interface :as test-system]
             [next.jdbc :as jdbc]
@@ -12,7 +12,7 @@
     (f)))
 
 (use-fixtures :once
-  (test-system/fixture "classpath:sql/test-application.yml" :test)
+  (test-system/fixture "classpath:db/test-application.yml" :test)
   with-system-fixture)
 
 (deftest system-start
@@ -21,7 +21,7 @@
 
 (deftest valid-connection
   (testing "Connection must be valid")
-  (let [datasource (system/instance system/*sys* [:sql :datasource])]
+  (let [datasource (system/instance system/*sys* [:db :datasource])]
     (is (= [{:?column? 1}]
            (jdbc/execute! datasource
                           ["select 1"]

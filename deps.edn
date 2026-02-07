@@ -22,7 +22,7 @@
                 components/schema-avro {:local/root "components/schema-avro"}
                 components/spec-malli {:local/root "components/spec-malli"}
                 components/spec-spec {:local/root "components/spec-spec"}
-                components/sql {:local/root "components/sql-postgres"}
+                components/db {:local/root "components/db"}
                 components/system {:local/root "components/system"}
                 components/test-system {:local/root "components/test-system"}
                 components/testcontainers
@@ -66,8 +66,8 @@
     "components/schema-avro/test"
     "components/spec-malli/test"
     "components/spec-spec/test"
-    "components/sql-postgres/test"
-    "components/sql-postgres/test-resources"
+    "components/db/test"
+    "components/db/test-resources"
     "components/system/test"
     "components/test-system/test"
     "components/testcontainers/test"
