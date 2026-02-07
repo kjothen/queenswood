@@ -9,20 +9,20 @@
            [org.apache.pulsar.client.api.schema SchemaDefinition]
            [org.apache.pulsar.common.protocol.schema PostSchemaPayload]))
 
-(defn- ^PostSchemaPayload create-payload
+(defn- create-payload ^PostSchemaPayload
   [type schema properties]
   (PostSchemaPayload. (or type "")
                       (if (some? schema) (json/write-str schema) "")
                       (or properties {})))
 
-(defn- ^SchemaDefinition create-definition
+(defn- create-definition ^SchemaDefinition
   [schema properties]
   (.. (SchemaDefinition/builder)
       (withJsonDef (json/write-str schema))
       (withProperties (j/to-java Map (or properties {})))
       build))
 
-(defn- ^Schema create-schema
+(defn- create-schema ^Schema
   ([type]
    (case type
      ;; primitive
