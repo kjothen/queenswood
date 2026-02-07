@@ -1,7 +1,7 @@
 system:
   vault:
     container: !system/component
-      kind: vault/container
+      system/component-kind: vault/container
       docker-image-name: hashicorp/vault:latest
       exposed-ports:
         - 8200
@@ -12,15 +12,15 @@ system:
       vault-token: my-root-token
 
     container-api-port: !system/component
-      kind: vault/container-api-port
+      system/component-kind: vault/container-api-port
       container: !system/ref vault.container
       exposed-port: 8200
 
     container-api-url: !system/component
-      kind: vault/container-api-url
+      system/component-kind: vault/container-api-url
       port: !system/ref vault.container-api-port
       scheme: http
 
     client: !system/component
-      kind: vault/client
+      system/component-kind: vault/client
       api-url: !system/ref vault.container-api-url

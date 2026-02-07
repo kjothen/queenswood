@@ -68,10 +68,10 @@
 (defmethod tag-reader :!system/component
   [{:keys [value]}]
   (let [value-map (yaml-collections->edn-collections value)
-        component-kind (get value-map :kind)
-        config (dissoc value-map :kind)
+        component-kind (get value-map :system/component-kind)
+        config (dissoc value-map :system/component-kind)
         config-edn (into {} (map (fn [[k v]] [(keyword k) v]) config))]
-    (assoc config-edn :kind (keyword component-kind))))
+    (assoc config-edn :system/component-kind (keyword component-kind))))
 
 (defmethod tag-reader :!strs [{:keys [value]}] (keys->strs value))
 

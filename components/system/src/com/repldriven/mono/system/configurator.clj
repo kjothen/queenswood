@@ -6,40 +6,40 @@
 ;; The system configuration follows a nested structure of component groups and components:
 ;;
 ;; {:component-group-1
-;;  {:component-a {:kind :namespace/component-a
+;;  {:component-a {:system/component-kind :namespace/component-a
 ;;                 :config {...}}
-;;   :component-b {:kind :namespace/component-b
+;;   :component-b {:system/component-kind :namespace/component-b
 ;;                 :config {...}}}
 ;;  :component-group-2
-;;  {:component-c {:kind :namespace/component-c
+;;  {:component-c {:system/component-kind :namespace/component-c
 ;;                 :config {...}}}}
 ;;
 ;; For example, a server configuration might look like:
 ;;
 ;; {:server
-;;  {:interceptors {:kind :server/interceptors
+;;  {:interceptors {:system/component-kind :server/interceptors
 ;;                  :datasource ...}
-;;   :jetty-adapter {:kind :server/jetty-adapter
+;;   :jetty-adapter {:system/component-kind :server/jetty-adapter
 ;;                   :handler ... :options {:port 8080}}}}
 ;;
 ;; The `definition` function processes this structure by:
 ;; 1. Reducing over component groups (:server, :sql, etc.)
 ;; 2. Reducing over components within each group
 ;; 3. Calling the `component` multimethod for each component
-;;    (which dispatches on :kind)
+;;    (which dispatches on :system/component-kind)
 ;; 4. Building [:system/defs {...}] for donut.system
 
 (defn merge-component-config
   [component config]
   (update component
           :system/config
-          (fn [original] (utility/deep-merge original (dissoc config :kind)))))
+          (fn [original] (utility/deep-merge original (dissoc config :system/component-kind)))))
 
 (defmulti component
   "Component configuration multimethod.
   Dispatches on the component kind.
   Components should extend this to register themselves."
-  (fn [_ v] (keyword (:kind v))))
+  (fn [_ v] (keyword (:system/component-kind v))))
 
 (defmethod component :default
   [_ v]
