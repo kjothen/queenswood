@@ -3,8 +3,7 @@
                                :main com.repldriven.mono.pulsar-reader.main
                                :major-minor-version "0.0"}
                    :ns-default com.repldriven.mono.build.build}
-           :test {:exec-fn cognitect.test-runner.api/test
-                  :extra-deps {org.clojure/test.check {:mvn/version "1.1.1"}
+           :test {:extra-deps {org.clojure/test.check {:mvn/version "1.1.1"}
                                base/external-test-runner {:local/root "../../bases/external-test-runner"}}
                   :extra-paths []}}
  :deps {component/cli {:local/root "../../components/cli"}
