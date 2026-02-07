@@ -8,17 +8,19 @@
 
 (defmulti yml-reader (fn [m] (keyword (get m :tag))))
 
-(defmulti tag-reader (fn [m] (keyword (get m :tag))))
+;; Default - return the value as-is
+(defmethod yml-reader :default [m] (:value m))
 
-(defmethod tag-reader :default [m] (:value m))
-
-(defmethod tag-reader :!profile
+;; Basic common tag readers
+(defmethod yml-reader :!profile
   [{:keys [value]}]
   (symbol (str "#profile " (util/yaml-collections->edn-collections value))))
 
-(defmethod tag-reader :!port [{:keys [value]}] (symbol (str "#port " value)))
+(defmethod yml-reader :!port
+  [{:keys [value]}]
+  (symbol (str "#port " value)))
 
-(defmethod tag-reader :!include
+(defmethod yml-reader :!include
   [{:keys [value]}]
   (let [key-fn (fn [{:keys [key]}]
                  (if (and (str/starts-with? key "\"") (str/ends-with? key "\""))
@@ -27,14 +29,20 @@
     (-> value
         io/resource
         io/reader
-        (yaml/parse-stream {:key-fn key-fn :unknown-tag-fn tag-reader})
+        (yaml/parse-stream {:key-fn key-fn :unknown-tag-fn yml-reader})
         util/yaml-collections->edn-collections)))
 
-(defmethod tag-reader :!keyword [{:keys [value]}] (keyword value))
+(defmethod yml-reader :!keyword
+  [{:keys [value]}]
+  (keyword value))
 
-(defmethod tag-reader :!str [{:keys [value]}] (str "\"" (name value) "\""))
+(defmethod yml-reader :!str
+  [{:keys [value]}]
+  (str "\"" (name value) "\""))
 
-(defmethod tag-reader :!strs [{:keys [value]}] (util/keys->strs value))
+(defmethod yml-reader :!strs
+  [{:keys [value]}]
+  (util/keys->strs value))
 
 (defn- key-fn
   [{:keys [key]}]
@@ -46,7 +54,7 @@
   [source profile]
   (-> (util/resolve-source source)
       io/reader
-      (yaml/parse-stream {:key-fn key-fn :unknown-tag-fn tag-reader})
+      (yaml/parse-stream {:key-fn key-fn :unknown-tag-fn yml-reader})
       util/yaml-collections->edn-collections
       str
       util/string->stream
