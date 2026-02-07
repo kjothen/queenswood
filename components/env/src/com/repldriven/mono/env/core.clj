@@ -33,7 +33,7 @@
   (throw (ex-info "Unsupported config file type" {:source source})))
 
 (defn env
-  ([] (config "classpath:com/repldriven/mono/application.edn"))
+  ([] (config "classpath:application.edn"))
   ([source] (config source :default))
   ([source profile] (config source profile)))
 

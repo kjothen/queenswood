@@ -4,7 +4,8 @@
                                :major-minor-version "0.0"}
                    :ns-default com.repldriven.mono.build.build}
            :test {:exec-fn cognitect.test-runner.api/test
-                  :extra-deps {org.clojure/test.check {:mvn/version "1.1.1"}}
+                  :extra-deps {org.clojure/test.check {:mvn/version "1.1.1"}
+                               base/external-test-runner {:local/root "../../bases/external-test-runner"}}
                   :extra-paths []}}
  :deps {component/cli {:local/root "../../components/cli"}
         component/encryption {:local/root "../../components/encryption"}
@@ -16,6 +17,7 @@
         component/schema-avro {:local/root "../../components/schema-avro"}
         component/spec-malli {:local/root "../../components/spec-malli"}
         component/system {:local/root "../../components/system"}
+        component/test-system {:local/root "../../components/test-system"}
         component/testcontainers-system
         {:local/root "../../components/testcontainers-system"}
         component/utility {:local/root "../../components/utility"}
