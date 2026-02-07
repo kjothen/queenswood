@@ -1,19 +1,22 @@
 (ns com.repldriven.mono.pubsub.system.components
   (:refer-clojure :exclude [name namespace type])
-  (:require [com.repldriven.mono.log.interface :as log]
-            [com.repldriven.mono.pubsub.pulsar.admin :as admin]
-            [com.repldriven.mono.pubsub.pulsar.client :as client]
-            [com.repldriven.mono.pubsub.pulsar.crypto :as crypto]
-            [com.repldriven.mono.pubsub.pulsar.consumer :as consumer]
-            [com.repldriven.mono.pubsub.pulsar.namespaces :as namespaces]
-            [com.repldriven.mono.pubsub.pulsar.producer :as producer]
-            [com.repldriven.mono.pubsub.pulsar.reader :as reader]
-            [com.repldriven.mono.pubsub.pulsar.schemas :as schemas]
-            [com.repldriven.mono.pubsub.pulsar.tenants :as tenants]
-            [com.repldriven.mono.pubsub.pulsar.topics :as topics]
-            [com.repldriven.mono.system.interface :as system])
-  (:import (org.apache.pulsar.client.api PulsarClientException)
-           (org.apache.pulsar.client.admin PulsarAdminException)))
+  (:require
+   [com.repldriven.mono.log.interface :as log]
+   [com.repldriven.mono.pubsub.pulsar.admin :as admin]
+   [com.repldriven.mono.pubsub.pulsar.client :as client]
+   [com.repldriven.mono.pubsub.pulsar.crypto :as crypto]
+   [com.repldriven.mono.pubsub.pulsar.consumer :as consumer]
+   [com.repldriven.mono.pubsub.pulsar.namespaces :as namespaces]
+   [com.repldriven.mono.pubsub.pulsar.producer :as producer]
+   [com.repldriven.mono.pubsub.pulsar.reader :as reader]
+   [com.repldriven.mono.pubsub.pulsar.schemas :as schemas]
+   [com.repldriven.mono.pubsub.pulsar.tenants :as tenants]
+   [com.repldriven.mono.pubsub.pulsar.topics :as topics]
+   [com.repldriven.mono.system.interface :as system])
+
+  (:import
+   (org.apache.pulsar.client.api PulsarClientException)
+   (org.apache.pulsar.client.admin PulsarAdminException)))
 
 (defn- close-admin-connection
   [instance n]
@@ -28,10 +31,6 @@
        (.close instance)
        (catch PulsarClientException e
          (log/error (format "Failed to close pulsar %s connection, %s" n e)))))
-
-(def named-component
-  {:system/start (fn [{:system/keys [config]}] config)
-   :system/config system/required-component})
 
 ;; ---
 ;; admin
@@ -64,7 +63,7 @@
   {:system/start
    (fn [{:system/keys [config instance]}]
      (or instance
-         (reduce-kv (fn [m k v] (assoc m k (consumer/create v))) {} config)))
+         (reduce-kv (fn [m k v] (assoc m k (consumer/create v))) {} (dissoc config :annotation))))
    :system/stop (fn [{:system/keys [instance]}]
                   (when (some? instance)
                     (dorun (map (fn [[_ instance]]
@@ -89,7 +88,7 @@
    (fn [{:system/keys [config instance]}]
      (or instance
          (do (log/info "Creating pulsar crypto-key-pair-generator: " config)
-             (crypto/key-pair-generator config))))
+             (crypto/key-pair-generator (dissoc config :annotation)))))
    :system/config system/required-component})
 
 ;; crypto-key-pair-file-reader(s)
@@ -99,7 +98,7 @@
                        (reduce-kv (fn [m k v]
                                     (assoc m k (crypto/key-pair-file-reader v)))
                                   {}
-                                  config)))
+                                  (dissoc config :annotation))))
    :system/config system/required-component})
 
 (def crypto-key-pair-file-reader
@@ -112,7 +111,7 @@
   {:system/start
    (fn [{:system/keys [config instance]}]
      (or instance
-         (reduce-kv (fn [m k v] (assoc m k (crypto/key-reader v))) {} config)))
+         (reduce-kv (fn [m k v] (assoc m k (crypto/key-reader v))) {} (dissoc config :annotation))))
    :system/config system/required-component})
 
 (def crypto-key-reader
@@ -161,7 +160,7 @@
 
 (def schemas
   {:system/start (fn [{:system/keys [config instance]}]
-                   (or instance (schemas/create-schemas config)))
+                   (or instance (schemas/create-schemas (dissoc config :annotation))))
    :system/config system/required-component})
 
 ;; ---

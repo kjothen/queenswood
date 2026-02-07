@@ -1,13 +1,14 @@
-(ns com.repldriven.mono.pubsub.pulsar.env-reader
-  (:require [com.repldriven.mono.env.interface :as env])
-  (:import (org.apache.pulsar.client.api ConsumerCryptoFailureAction
-                                         MessageId
-                                         Schema
-                                         SubscriptionType)))
+(ns com.repldriven.mono.pubsub.system.env-reader
+  (:require
+   [com.repldriven.mono.env.interface :as env])
 
-;;;; env reader tag values -> pulsar constants
+  (:import
+   (org.apache.pulsar.client.api ConsumerCryptoFailureAction
+                                 MessageId
+                                 Schema
+                                 SubscriptionType)))
 
-(defn crypto-failure-action
+(defn- crypto-failure-action
   [_ tag value]
   (case value
     :CONSUME ConsumerCryptoFailureAction/CONSUME
@@ -16,7 +17,7 @@
     (throw (ex-info (format "Invalid value %s for tag %s" value tag)
                     {:tag tag :value value}))))
 
-(defn message-id
+(defn- message-id
   [_ tag value]
   (case value
     :earliest MessageId/earliest
@@ -24,7 +25,7 @@
     (throw (ex-info (format "Invalid value %s for tag %s" value tag)
                     {:tag tag :value value}))))
 
-(def schema-map
+(def ^:private schema-map
   {:BOOL Schema/BOOL
    :BYTEBUFFER Schema/BYTEBUFFER
    :BYTES Schema/BYTES
@@ -44,13 +45,13 @@
    :AUTO_CONSUME (Schema/AUTO_CONSUME)
    :AUTO_PRODUCE_BYTES (Schema/AUTO_PRODUCE_BYTES)})
 
-(defn schema
+(defn- schema
   [_ tag value]
   (or (get schema-map value)
       (throw (ex-info (format "Invalid value %s for tag %s" value tag)
                       {:tag tag :value value}))))
 
-(defn subscription-type
+(defn- subscription-type
   [_ tag value]
   (case value
     :Exclusive SubscriptionType/Exclusive
@@ -60,7 +61,7 @@
     (throw (ex-info (format "Invalid value %s for tag %s" value tag)
                     {:tag tag :value value}))))
 
-;;;; edn env reader tags
+;;;; edn-reader 
 (defmethod env/edn-reader 'pubsub-crypto-failure-action
   [opts tag value]
   (crypto-failure-action opts tag value))
@@ -77,7 +78,7 @@
   [opts tag value]
   (subscription-type opts tag value))
 
-;;;; yml-reader methods (convert YAML tags to EDN symbols)
+;;;; yml-reader 
 (defmethod env/yml-reader :!pubsub/crypto-failure-action
   [{:keys [value]}]
   (symbol (str "#pubsub-crypto-failure-action " (pr-str (keyword value)))))

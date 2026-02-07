@@ -1,9 +1,6 @@
 (ns com.repldriven.mono.vault.interface
-  (:require [com.repldriven.mono.vault.client :as client]
-            [com.repldriven.mono.vault.system.core :as system]
-            com.repldriven.mono.vault.system.env-reader))
-
-(defn configure-system [config] (system/configure config))
+  (:require com.repldriven.mono.vault.system.core
+            [com.repldriven.mono.vault.client :as client]))
 
 (defn create-client [uri] (client/create uri))
 

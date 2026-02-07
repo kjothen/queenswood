@@ -4,12 +4,12 @@
             [com.repldriven.mono.pubsub.pulsar.client]
             [com.repldriven.mono.pubsub.pulsar.consumer :as consumer]
             [com.repldriven.mono.pubsub.pulsar.crypto]
-            [com.repldriven.mono.pubsub.pulsar.env-reader]
+            [com.repldriven.mono.pubsub.system.env-reader]
             [com.repldriven.mono.pubsub.pulsar.producer :as producer]
             [com.repldriven.mono.pubsub.pulsar.reader]
             [com.repldriven.mono.pubsub.system.core]))
 
-;;;; producer interface
+;;;; producer
 (defn send
   ([producer data] (producer/send producer data))
   ([producer data opts] (producer/send producer data opts)))
@@ -18,7 +18,7 @@
   ([producer data] (producer/send-async producer data))
   ([producer data opts] (producer/send-async producer data opts)))
 
-;;;; consumer interface
+;;;; consumer
 (defn receive
   ([consumer] (consumer/receive consumer))
   ([consumer timeout-ms] (consumer/receive consumer timeout-ms)))

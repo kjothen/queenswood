@@ -2,7 +2,7 @@ system:
   vault:
     container: !system/component
       type: vault/container
-      docker-image-name: vault:latest
+      docker-image-name: hashicorp/vault:latest
       exposed-ports:
         - 8200
       secret-in-vault:

@@ -17,20 +17,20 @@
                  [(keyword k) v]))
              props)))
 
-(deftest ^:repl development-test
+(deftest development-test
   (testing
    "Developers should be able to start/stop a vault system from a REPL"
-   (is (some? system/*sys*))
-   (let [client (system/instance system/*sys* [:vault :client])
-         vault-config (system/config system/*sys* :vault :container)
-         token (:vault-token vault-config)
-         secret (:secret-in-vault vault-config)]
-     (is (some? client))
-     (is (some? (SUT/authenticate-client! client :token token)))
-     (let [[mount path] (-> secret
-                            first
-                            (str/split #"/"))
-           secret-props (-> secret
-                            rest)]
-       (is (= (SUT/read-secret client mount path)
-              (prop-seq->kw-map secret-props)))))))
+    (is (some? system/*sys*))
+    (let [client (system/instance system/*sys* [:vault :client])
+          vault-config (system/config system/*sys* :vault :container)
+          token (:vault-token vault-config)
+          secret (:secret-in-vault vault-config)]
+      (is (some? client))
+      (is (some? (SUT/authenticate-client! client :token token)))
+      (let [[mount path] (-> secret
+                             first
+                             (str/split #"/"))
+            secret-props (-> secret
+                             rest)]
+        (is (= (SUT/read-secret client mount path)
+               (prop-seq->kw-map secret-props)))))))
