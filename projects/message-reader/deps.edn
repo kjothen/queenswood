@@ -3,8 +3,7 @@
                                :main com.repldriven.mono.pulsar-reader.main
                                :major-minor-version "0.0"}
                    :ns-default com.repldriven.mono.build.build}
-           :test {:extra-deps {base/external-test-runner {:local/root "../../bases/external-test-runner"}}
-                  :extra-paths []}}
+           :test {:extra-deps {base/external-test-runner {:local/root "../../bases/external-test-runner"}}}}
  :deps {component/cli {:local/root "../../components/cli"}
         component/encryption {:local/root "../../components/encryption"}
         component/env {:local/root "../../components/env"}
