@@ -1,7 +1,7 @@
-(ns com.repldriven.mono.pubsub.pulsar.topics
+(ns com.repldriven.mono.pulsar.pulsar.topics
   (:require
    [com.repldriven.mono.log.interface :as log]
-   [com.repldriven.mono.pubsub.pulsar.schemas :as schemas])
+   [com.repldriven.mono.pulsar.pulsar.schemas :as schemas])
   (:import (org.apache.pulsar.client.admin PulsarAdmin Topics)
            (org.apache.pulsar.common.naming TopicName)))
 

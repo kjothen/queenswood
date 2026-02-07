@@ -1,17 +1,17 @@
-(ns com.repldriven.mono.pubsub.system.components
+(ns com.repldriven.mono.pulsar.system.components
   (:refer-clojure :exclude [name namespace type])
   (:require
    [com.repldriven.mono.log.interface :as log]
-   [com.repldriven.mono.pubsub.pulsar.admin :as admin]
-   [com.repldriven.mono.pubsub.pulsar.client :as client]
-   [com.repldriven.mono.pubsub.pulsar.crypto :as crypto]
-   [com.repldriven.mono.pubsub.pulsar.consumer :as consumer]
-   [com.repldriven.mono.pubsub.pulsar.namespaces :as namespaces]
-   [com.repldriven.mono.pubsub.pulsar.producer :as producer]
-   [com.repldriven.mono.pubsub.pulsar.reader :as reader]
-   [com.repldriven.mono.pubsub.pulsar.schemas :as schemas]
-   [com.repldriven.mono.pubsub.pulsar.tenants :as tenants]
-   [com.repldriven.mono.pubsub.pulsar.topics :as topics]
+   [com.repldriven.mono.pulsar.pulsar.admin :as admin]
+   [com.repldriven.mono.pulsar.pulsar.client :as client]
+   [com.repldriven.mono.pulsar.pulsar.crypto :as crypto]
+   [com.repldriven.mono.pulsar.pulsar.consumer :as consumer]
+   [com.repldriven.mono.pulsar.pulsar.namespaces :as namespaces]
+   [com.repldriven.mono.pulsar.pulsar.producer :as producer]
+   [com.repldriven.mono.pulsar.pulsar.reader :as reader]
+   [com.repldriven.mono.pulsar.pulsar.schemas :as schemas]
+   [com.repldriven.mono.pulsar.pulsar.tenants :as tenants]
+   [com.repldriven.mono.pulsar.pulsar.topics :as topics]
    [com.repldriven.mono.system.interface :as system])
 
   (:import

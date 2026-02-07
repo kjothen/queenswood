@@ -1,10 +1,10 @@
-(ns com.repldriven.mono.pubsub.interface-test
+(ns com.repldriven.mono.pulsar.interface-test
   (:refer-clojure :exclude [send])
   (:require [clojure.data.json :as json]
             [clojure.string :as string]
             [clojure.test :refer [deftest is testing use-fixtures]]
             [com.repldriven.mono.http-client.interface :as http]
-            [com.repldriven.mono.pubsub.interface :as SUT]
+            [com.repldriven.mono.pulsar.interface :as SUT]
             [com.repldriven.mono.schema-avro.interface :as schema-avro]
             [com.repldriven.mono.system.interface :as system]
             [com.repldriven.mono.test-system.interface :as test-system])

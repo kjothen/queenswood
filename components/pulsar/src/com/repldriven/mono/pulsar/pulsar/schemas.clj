@@ -1,4 +1,4 @@
-(ns com.repldriven.mono.pubsub.pulsar.schemas
+(ns com.repldriven.mono.pulsar.pulsar.schemas
   (:refer-clojure :exclude [name namespace resolve type])
   (:require [clojure.data.json :as json]
             [clojure.java.data :as j]

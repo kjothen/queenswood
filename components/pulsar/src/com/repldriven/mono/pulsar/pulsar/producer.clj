@@ -1,8 +1,8 @@
-(ns com.repldriven.mono.pubsub.pulsar.producer
+(ns com.repldriven.mono.pulsar.pulsar.producer
   (:refer-clojure :exclude [send])
   (:require [clojure.java.data :as j]
             [com.repldriven.mono.log.interface :as log]
-            [com.repldriven.mono.pubsub.pulsar.schemas :as schemas])
+            [com.repldriven.mono.pulsar.pulsar.schemas :as schemas])
   (:import (java.util Map)
            (org.apache.pulsar.client.api Producer PulsarClient
             PulsarClientException)))

@@ -17,7 +17,7 @@
                 components/log {:local/root "components/log"}
                 components/migrator {:local/root "components/migrator"}
                 components/mqtt {:local/root "components/mqtt"}
-                components/pubsub {:local/root "components/pubsub-pulsar"}
+                components/pulsar {:local/root "components/pulsar"}
                 components/server {:local/root "components/server"}
                 components/schema-avro {:local/root "components/schema-avro"}
                 components/spec-malli {:local/root "components/spec-malli"}
@@ -59,8 +59,8 @@
     "components/migrator/test-resources"
     "components/mqtt/test"
     "components/mqtt/test-resources"
-    "components/pubsub-pulsar/test"
-    "components/pubsub-pulsar/test-resources"
+    "components/pulsar/test"
+    "components/pulsar/test-resources"
     "components/server/test"
     "components/server/test-resources"
     "components/schema-avro/test"

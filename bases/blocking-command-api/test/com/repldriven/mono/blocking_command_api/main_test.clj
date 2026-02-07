@@ -2,7 +2,7 @@
   (:require [clojure.test :as test :refer [deftest is testing]]
             [com.repldriven.mono.blocking-command-api.main :as SUT]
             [com.repldriven.mono.mqtt.interface]
-            [com.repldriven.mono.pubsub.interface]
+            [com.repldriven.mono.pulsar.interface]
             [com.repldriven.mono.server.interface]))
 
 (deftest start-test

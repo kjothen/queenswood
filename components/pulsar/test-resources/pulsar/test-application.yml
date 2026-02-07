@@ -1,5 +1,5 @@
 system:
-  pubsub:
+  pulsar:
     container: !system/component
       system/component-kind: pubsub/container
       exposed-ports: [6650, 8080]

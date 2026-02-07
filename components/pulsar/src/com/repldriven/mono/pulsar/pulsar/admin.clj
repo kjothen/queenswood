@@ -1,4 +1,4 @@
-(ns com.repldriven.mono.pubsub.pulsar.admin
+(ns com.repldriven.mono.pulsar.pulsar.admin
   (:require [clojure.java.data.builder :as builder]
             [com.repldriven.mono.log.interface :as log])
   (:import (org.apache.pulsar.client.admin PulsarAdmin

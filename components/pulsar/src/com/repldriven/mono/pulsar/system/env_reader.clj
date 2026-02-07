@@ -1,4 +1,4 @@
-(ns com.repldriven.mono.pubsub.system.env-reader
+(ns com.repldriven.mono.pulsar.system.env-reader
   (:require
    [com.repldriven.mono.env.interface :as env])
 

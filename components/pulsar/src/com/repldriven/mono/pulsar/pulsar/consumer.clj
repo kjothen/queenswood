@@ -1,7 +1,7 @@
-(ns com.repldriven.mono.pubsub.pulsar.consumer
+(ns com.repldriven.mono.pulsar.pulsar.consumer
   (:require [clojure.java.data :as j]
             [com.repldriven.mono.log.interface :as log]
-            [com.repldriven.mono.pubsub.pulsar.schemas :as schemas])
+            [com.repldriven.mono.pulsar.pulsar.schemas :as schemas])
   (:import (java.util Map)
            (java.util.concurrent TimeUnit)
            (org.apache.pulsar.client.api Consumer

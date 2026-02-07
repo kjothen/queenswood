@@ -1,4 +1,4 @@
-(ns com.repldriven.mono.pubsub.pulsar.crypto
+(ns com.repldriven.mono.pulsar.pulsar.crypto
   (:require [clojure.java.io :as io]
 
             [com.repldriven.mono.log.interface :as log]

@@ -27,7 +27,7 @@
    :container-connection-uri mqtt/container-connection-uri})
 
 ;; Pulsar testcontainer components
-(system/defcomponents :pubsub
+(system/defcomponents :pulsar
   {:container pulsar/container
    :container-service-port testcontainers/mapped-exposed-port
    :container-service-url testcontainers/uri

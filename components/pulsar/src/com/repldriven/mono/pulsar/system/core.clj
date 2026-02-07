@@ -1,6 +1,6 @@
-(ns com.repldriven.mono.pubsub.system.core
+(ns com.repldriven.mono.pulsar.system.core
   (:require
-   [com.repldriven.mono.pubsub.system.components :as components]
+   [com.repldriven.mono.pulsar.system.components :as components]
    [com.repldriven.mono.system.interface :as system]))
 
 (system/defcomponents :pubsub

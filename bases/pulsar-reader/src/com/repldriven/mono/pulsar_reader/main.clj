@@ -3,7 +3,7 @@
             [com.repldriven.mono.cli.interface :as cli]
             [com.repldriven.mono.env.interface :as env]
             [com.repldriven.mono.log.interface :as log]
-            [com.repldriven.mono.pubsub.interface]
+            [com.repldriven.mono.pulsar.interface]
             [com.repldriven.mono.system.interface :as system])
   (:import (org.apache.pulsar.client.api Message Reader))
   (:gen-class))
@@ -26,7 +26,7 @@
   (let [config (system/definition (:system environment))]
     (system/start! system config)
     (reset! channel (async/chan))
-    (read-messages (system/instance @system [:pubsub :reader]) @channel)))
+    (read-messages (system/instance @system [:pulsar :reader]) @channel)))
 
 (defn stop
   [sys]

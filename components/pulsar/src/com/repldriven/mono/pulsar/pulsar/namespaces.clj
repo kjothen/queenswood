@@ -1,4 +1,4 @@
-(ns com.repldriven.mono.pubsub.pulsar.namespaces
+(ns com.repldriven.mono.pulsar.pulsar.namespaces
   (:require [clojure.data.json :as json]
             [clojure.string :as string]
             [com.repldriven.mono.http-client.interface :as http]
