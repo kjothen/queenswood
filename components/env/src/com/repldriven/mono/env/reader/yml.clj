@@ -10,7 +10,8 @@
 
 (defmulti tag-reader (fn [m] (keyword (get m :tag))))
 
-;; Basic common tags
+(defmethod tag-reader :default [m] (:value m))
+
 (defmethod tag-reader :!profile
   [{:keys [value]}]
   (symbol (str "#profile " (util/yaml-collections->edn-collections value))))
@@ -29,30 +30,21 @@
         (yaml/parse-stream {:key-fn key-fn :unknown-tag-fn tag-reader})
         util/yaml-collections->edn-collections)))
 
-(defmethod tag-reader :!strs [{:keys [value]}] (util/keys->strs value))
+(defmethod tag-reader :!keyword [{:keys [value]}] (keyword value))
 
 (defmethod tag-reader :!str [{:keys [value]}] (str "\"" (name value) "\""))
 
-(defmethod tag-reader :!keyword [{:keys [value]}] (keyword value))
+(defmethod tag-reader :!strs [{:keys [value]}] (util/keys->strs value))
 
-(defmethod tag-reader :default [m] (:value m))
-
-(defn key-fn
+(defn- key-fn
   [{:keys [key]}]
   (if (and (str/starts-with? key "\"") (str/ends-with? key "\""))
     (subs key 1 (dec (count key)))
     (keyword key)))
 
-(defn- resolve-source
-  "Resolve a source string to a resource. Handles classpath: prefix."
-  [source]
-  (if (str/starts-with? source "classpath:")
-    (io/resource (subs source (count "classpath:")))
-    source))
-
 (defn config
   [source profile]
-  (-> (resolve-source source)
+  (-> (util/resolve-source source)
       io/reader
       (yaml/parse-stream {:key-fn key-fn :unknown-tag-fn tag-reader})
       util/yaml-collections->edn-collections

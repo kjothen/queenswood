@@ -1,4 +1,6 @@
 (ns com.repldriven.mono.utility.string
+  (:require [clojure.string :as str]
+            [clojure.java.io :as io])
   (:import (java.io ByteArrayInputStream)))
 
 (defn string->stream
@@ -8,3 +10,10 @@
    (-> s
        (.getBytes encoding)
        (ByteArrayInputStream.))))
+
+(defn resolve-source
+  "Resolve a source string to a resource. Handles classpath: prefix."
+  [source]
+  (if (str/starts-with? source "classpath:")
+    (io/resource (subs source (count "classpath:")))
+    source))

@@ -1,7 +1,6 @@
 (ns com.repldriven.mono.env.reader.edn
   (:require [aero.core :as aero]
-            [clojure.java.io :as io]
-            [clojure.string :as str])
+            [com.repldriven.mono.utility.interface :as util])
   (:import (java.net ServerSocket)))
 
 ;; edn-reader multimethod (extends aero/reader)
@@ -13,13 +12,6 @@
     (with-open [socket (ServerSocket. 0)] (.getLocalPort socket))
     value))
 
-(defn- resolve-source
-  "Resolve a source string to a resource. Handles classpath: prefix."
-  [source]
-  (if (str/starts-with? source "classpath:")
-    (io/resource (subs source (count "classpath:")))
-    source))
-
-(defn read-config [source profile] (aero/read-config (resolve-source source) {:profile profile}))
+(defn read-config [source profile] (aero/read-config (util/resolve-source source) {:profile profile}))
 
 (defn config [source profile] (read-config source profile))

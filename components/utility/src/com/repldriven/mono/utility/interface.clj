@@ -12,6 +12,7 @@
 
 ;; String utilities
 (def string->stream util.string/string->stream)
+(def resolve-source util.string/resolve-source)
 
 ;; Collection utilities
 (def yaml-collections->edn-collections util.collections/yaml-collections->edn-collections)
