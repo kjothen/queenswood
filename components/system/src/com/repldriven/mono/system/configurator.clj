@@ -1,34 +1,6 @@
 (ns com.repldriven.mono.system.configurator
   (:require [com.repldriven.mono.utility.interface :as utility]))
 
-;; System Configuration Structure
-;;
-;; The system configuration follows a nested structure of component groups and components:
-;;
-;; {:component-group-1
-;;  {:component-a {:system/component-kind :namespace/component-a
-;;                 :config {...}}
-;;   :component-b {:system/component-kind :namespace/component-b
-;;                 :config {...}}}
-;;  :component-group-2
-;;  {:component-c {:system/component-kind :namespace/component-c
-;;                 :config {...}}}}
-;;
-;; For example, a server configuration might look like:
-;;
-;; {:server
-;;  {:interceptors {:system/component-kind :server/interceptors
-;;                  :datasource ...}
-;;   :jetty-adapter {:system/component-kind :server/jetty-adapter
-;;                   :handler ... :options {:port 8080}}}}
-;;
-;; The `definition` function processes this structure by:
-;; 1. Reducing over component groups (:server, :sql, etc.)
-;; 2. Reducing over components within each group
-;; 3. Calling the `component` multimethod for each component
-;;    (which dispatches on :system/component-kind)
-;; 4. Building [:system/defs {...}] for donut.system
-
 (defn merge-component-config
   [component config]
   (update component
@@ -62,7 +34,7 @@
   `(do
      ~@(for [[component-name component-def] component-map]
          `(defmethod component ~(keyword (name ns-keyword)
-                                          (name component-name))
+                                         (name component-name))
             [~'_ ~'v]
             (merge-component-config ~component-def ~'v)))))
 

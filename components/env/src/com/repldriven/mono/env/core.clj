@@ -2,12 +2,13 @@
   (:require [aero.core :as aero]
             [clojure.java.io :as io]
             [clojure.string :as str]
-            [com.repldriven.mono.env.config.edn :as config.edn]
-            [com.repldriven.mono.env.config.yml :as config.yml])
+            [com.repldriven.mono.env.reader.edn :as reader.edn]
+            [com.repldriven.mono.env.reader.yml :as reader.yml])
   (:import (java.net ServerSocket)
            (java.net URL)))
 
-(def edn-reader config.edn/reader)
+(def edn-reader reader.edn/edn-reader)
+(def yml-reader reader.yml/yml-reader)
 
 (defn- file-type->keyword
   [source]
@@ -26,8 +27,8 @@
   (throw (ex-info "Cannot detect file type" {:source source})))
 
 (defmulti config (fn [source _] (file-type source)))
-(defmethod config :edn [source profile] (config.edn/config source profile))
-(defmethod config :yml [source profile] (config.yml/config source profile))
+(defmethod config :edn [source profile] (reader.edn/config source profile))
+(defmethod config :yml [source profile] (reader.yml/config source profile))
 (defmethod config :default
   [source _]
   (throw (ex-info "Unsupported config file type" {:source source})))

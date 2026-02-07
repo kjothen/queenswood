@@ -1,10 +1,11 @@
-(ns com.repldriven.mono.env.config.edn
+(ns com.repldriven.mono.env.reader.edn
   (:require [aero.core :as aero]
             [clojure.java.io :as io]
             [clojure.string :as str])
   (:import (java.net ServerSocket)))
 
-(def reader aero/reader)
+;; edn-reader multimethod (extends aero/reader)
+(def edn-reader aero/reader)
 
 (defmethod aero/reader 'port
   [_ _ value]

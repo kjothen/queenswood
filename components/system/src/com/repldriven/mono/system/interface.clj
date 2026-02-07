@@ -2,26 +2,9 @@
   (:refer-clojure :exclude [ref])
   (:require [com.repldriven.mono.system.core :as core]
             [com.repldriven.mono.system.configurator :as configurator]
-            [com.repldriven.mono.system.reader.edn :as reader.edn]
-            [com.repldriven.mono.system.reader.yml :as reader.yml]
-            [com.repldriven.mono.env.interface :as env]
+            [com.repldriven.mono.system.reader.edn]
+            [com.repldriven.mono.system.reader.yml]
             [com.repldriven.mono.log.interface :as log]))
-
-;;;; system env tagged literal readers
-
-;;; edn
-(defmethod env/edn-reader 'system
-  [opts tag value]
-  (reader.edn/system opts tag value))
-
-;;; yaml
-(defmethod env/yml-reader :!system/local-ref [m] (reader.yml/local-ref m))
-
-(defmethod env/yml-reader :!system/ref [m] (reader.yml/ref m))
-
-(defmethod env/yml-reader :!system/required-component
-  [m]
-  (reader.yml/required-component m))
 
 ;;;; system interface
 
