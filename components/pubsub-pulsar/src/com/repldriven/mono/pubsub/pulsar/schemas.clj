@@ -42,8 +42,8 @@
      "TIME" Schema/TIME
      "TIMESTAMP" Schema/TIMESTAMP
      ;; auto
-     "AUTO_CONSUME" Schema/AUTO_CONSUME
-     "AUTO_PRODUCE_BYTES" Schema/AUTO_PRODUCE_BYTES))
+     "AUTO_CONSUME" (Schema/AUTO_CONSUME)
+     "AUTO_PRODUCE_BYTES" (Schema/AUTO_PRODUCE_BYTES)))
   ([type schema properties]
    (let [schema-definition (create-definition schema properties)]
      (case type

@@ -1,17 +1,16 @@
 (ns com.repldriven.mono.pubsub.pulsar.crypto
   (:require [clojure.java.io :as io]
-            [clojure.string :as string]
+
             [com.repldriven.mono.log.interface :as log]
             [com.repldriven.mono.encryption.interface :as encryption])
   (:import (org.apache.pulsar.client.api CryptoKeyReader EncryptionKeyInfo)
-           (java.security PrivateKey PublicKey)
-           (java.util Map)
-           (java.io Serializable)))
+           (java.util Map)))
 
 (defn- get-crypto-key-pair
   [k named-kps]
-  (let [k' (if (empty? k) (get :default-key named-kps) k)]
-    (get-in named-kps [:keys k'])))
+  (let [k' (if (empty? k) (get named-kps :default-key) k)
+        k'' (if (keyword? k') k' (keyword k'))]
+    (get-in named-kps [:keys k''])))
 
 (defn- read-file-as-bytes
   [f]
@@ -60,20 +59,18 @@
   (reify
     CryptoKeyReader
     (^EncryptionKeyInfo getPublicKey
-      [this ^String keyName ^Map _metadata]
+      [_this ^String keyName ^Map _metadata]
       (log/info "Trying to read public key: get" keyName
                 "in" (keys (:keys named-kps)))
       (key->encryption-key-info (get (get-crypto-key-pair keyName named-kps) :public-key)))
     (^EncryptionKeyInfo getPrivateKey
-      [this ^String keyName ^Map _metadata]
+      [_this ^String keyName ^Map _metadata]
       (log/info "Trying to read private key: get" keyName
                 "in" (keys (:keys named-kps)))
       (key->encryption-key-info (get (get-crypto-key-pair keyName named-kps) :private-key)))))
 
 (comment
-  (require '[com.repldriven.mono.encryption.interface :as encryption])
-  (let [key-pair (encryption/create-rsa-512-key-pair)
-        key-name "tenant-key-1"
+  (let [key-name "tenant-key-1"
         metadata (java.util.HashMap. {"tenant-key-1" "1st key"})
         r (key-reader {:default-key key-name
                        :keys (key-pair-generator {key-name {:algorithm "RSA"

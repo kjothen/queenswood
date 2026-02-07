@@ -86,14 +86,14 @@
     (when (seq focus-meta)
       (println "Focusing on tests with metadata:" focus-meta)))
 
-  (let [test-vars (find-test-vars test-nses)
-        selector (build-selector skip-meta focus-meta)]
-    (eftest/run-tests test-vars
+  (let [all-test-vars (find-test-vars test-nses)
+        selector (build-selector skip-meta focus-meta)
+        filtered-test-vars (filterv selector all-test-vars)]
+    (eftest/run-tests filtered-test-vars
                       {:capture-output? false
                        :multithread? :vars
                        :report report/report
-                       :test-warn-time 1000
-                       :selector selector})))
+                       :test-warn-time 1000})))
 
 (defn- exit-with-results
   "Exit with appropriate code based on test results"
@@ -104,43 +104,27 @@
 (defn -main
   "Main entry point for external test runner subprocess
 
-  Supports metadata-based test filtering via CLI args or environment variables:
-  - CLI: --skip-meta :integration --focus-meta :unit
+  Called by Corfield external-test-runner with positional args:
+    color-mode project-name test-namespace [test-namespace ...]
+
+  Supports metadata-based test filtering via environment variables:
   - ENV: SKIP_META=integration,slow FOCUS_META=unit"
   [& args]
-  (let [{:keys [options arguments errors summary]} (parse-opts args cli-options)
-        {:keys [color-mode project verbose help skip-meta focus-meta]} options
-        ;; Merge CLI options with environment variables (CLI takes precedence)
+  (let [;; Parse positional args from Corfield runner: color-mode project-name ...test-nses
+        color-mode (keyword (first args))
+        project (second args)
+        test-nses (map symbol (drop 2 args))
+        ;; Get metadata filtering from environment variables
         env-skip (parse-env-meta "SKIP_META")
-        env-focus (parse-env-meta "FOCUS_META")
-        final-skip (or (seq skip-meta) env-skip)
-        final-focus (or (seq focus-meta) env-focus)
-        test-nses (map symbol arguments)]
+        env-focus (parse-env-meta "FOCUS_META")]
     (cond
-      help
-      (do (println "External Test Runner with eftest")
-          (println)
-          (println "Supports metadata-based test filtering:")
-          (println "  --skip-meta :integration    Skip tests with :integration metadata")
-          (println "  --focus-meta :unit          Only run tests with :unit metadata")
-          (println "  SKIP_META=integration,slow  Environment variable (comma-separated)")
-          (println "  FOCUS_META=unit             Environment variable")
-          (println)
-          (println summary)
-          (System/exit 0))
-
-      errors
-      (do (doseq [error errors]
-            (println "Error:" error))
-          (System/exit 1))
-
       (empty? test-nses)
       (do (println "No test namespaces specified")
           (System/exit 1))
 
       :else
       (let [results (run-test-namespaces test-nses
-                                         {:verbose verbose
-                                          :skip-meta final-skip
-                                          :focus-meta final-focus})]
+                                         {:verbose false
+                                          :skip-meta env-skip
+                                          :focus-meta env-focus})]
         (exit-with-results results)))))

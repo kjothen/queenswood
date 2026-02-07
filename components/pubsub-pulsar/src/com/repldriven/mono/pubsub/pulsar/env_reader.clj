@@ -24,31 +24,31 @@
     (throw (ex-info (format "Invalid value %s for tag %s" value tag)
                     {:tag tag :value value}))))
 
+(def schema-map
+  {:BOOL Schema/BOOL
+   :BYTEBUFFER Schema/BYTEBUFFER
+   :BYTES Schema/BYTES
+   :DATE Schema/DATE
+   :DOUBLE Schema/DOUBLE
+   :FLOAT Schema/FLOAT
+   :INSTANT Schema/INSTANT
+   :INT16 Schema/INT16
+   :INT32 Schema/INT32
+   :INT64 Schema/INT64
+   :INT8 Schema/INT8
+   :LOCAL_DATE Schema/LOCAL_DATE
+   :LOCAL_DATE_TIME Schema/LOCAL_DATE_TIME
+   :STRING Schema/STRING
+   :TIME Schema/TIME
+   :TIMESTAMP Schema/TIMESTAMP
+   :AUTO_CONSUME (Schema/AUTO_CONSUME)
+   :AUTO_PRODUCE_BYTES (Schema/AUTO_PRODUCE_BYTES)})
+
 (defn schema
   [_ tag value]
-  (case value
-    ;; primitive
-    :BOOL Schema/BOOL
-    :BYTEBUFFER Schema/BYTEBUFFER
-    :BYTES Schema/BYTES
-    :DATE Schema/DATE
-    :DOUBLE Schema/DOUBLE
-    :FLOAT Schema/FLOAT
-    :INSTANT Schema/INSTANT
-    :INT16 Schema/INT16
-    :INT32 Schema/INT32
-    :INT64 Schema/INT64
-    :INT8 Schema/INT8
-    :LOCAL_DATE Schema/LOCAL_DATE
-    :LOCAL_DATE_TIME Schema/LOCAL_DATE_TIME
-    :STRING Schema/STRING
-    :TIME Schema/TIME
-    :TIMESTAMP Schema/TIMESTAMP
-    ;; auto
-    :AUTO_CONSUME Schema/AUTO_CONSUME
-    :AUTO_PRODUCE_BYTES Schema/AUTO_PRODUCE_BYTES
-    (throw (ex-info (format "Invalid value %s for tag %s" value tag)
-                    {:tag tag :value value}))))
+  (or (get schema-map value)
+      (throw (ex-info (format "Invalid value %s for tag %s" value tag)
+                      {:tag tag :value value}))))
 
 (defn subscription-type
   [_ tag value]
@@ -77,19 +77,19 @@
   [opts tag value]
   (subscription-type opts tag value))
 
-;;;; yml env reader tags
+;;;; yml-reader methods (convert YAML tags to EDN symbols)
 (defmethod env/yml-reader :!pubsub/crypto-failure-action
   [{:keys [value]}]
-  (symbol (str "#pubsub-crypto-failure-action " (keyword value))))
+  (symbol (str "#pubsub-crypto-failure-action " (pr-str (keyword value)))))
 
 (defmethod env/yml-reader :!pubsub/message-id
   [{:keys [value]}]
-  (symbol (str "#pubsub-message-id " (keyword value))))
+  (symbol (str "#pubsub-message-id " (pr-str (keyword value)))))
 
 (defmethod env/yml-reader :!pubsub/schema
   [{:keys [value]}]
-  (symbol (str "#pubsub-schema " (keyword value))))
+  (symbol (str "#pubsub-schema " (pr-str (keyword value)))))
 
 (defmethod env/yml-reader :!pubsub/subscription-type
   [{:keys [value]}]
-  (symbol (str "#pubsub-subscription-type " (keyword value))))
+  (symbol (str "#pubsub-subscription-type " (pr-str (keyword value)))))

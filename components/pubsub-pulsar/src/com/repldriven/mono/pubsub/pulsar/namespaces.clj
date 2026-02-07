@@ -14,7 +14,7 @@
     (doseq [[method settings] config]
       (tap> [method settings])
       (doseq [[k v] settings]
-        (let [url (string/join "/" [namespace-url k])
+        (let [url (string/join "/" [namespace-url (name k)])
               body (json/write-str v)
               headers {"Content-Type" "application/json"}
               res (http/request

@@ -60,6 +60,11 @@
   [m]
   (yml-reader m))
 
+(defmethod tag-reader :!pubsub/crypto-failure-action [m] (yml-reader m))
+(defmethod tag-reader :!pubsub/message-id [m] (yml-reader m))
+(defmethod tag-reader :!pubsub/schema [m] (yml-reader m))
+(defmethod tag-reader :!pubsub/subscription-type [m] (yml-reader m))
+
 (defmethod tag-reader :!system/component
   [{:keys [value]}]
   (let [value-map (yaml-collections->edn-collections value)

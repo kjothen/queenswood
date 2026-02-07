@@ -5,7 +5,8 @@
 (set! *warn-on-reflection* true)
 
 (defn create
-  "Create an external test runner that wraps Corfield's implementation with setup/teardown support"
+  "Create an external test runner that wraps Corfield's implementation with setup/teardown support.
+   Uses a custom main namespace that supports SKIP_META and FOCUS_META environment variables."
   [opts]
   (let [corfield-runner (core/create opts)]
     (reify
@@ -35,4 +36,5 @@
 
       test-runner-contract/ExternalTestRunner
       (external-process-namespace [_]
-        (test-runner-contract/external-process-namespace corfield-runner)))))
+        ;; Use our custom main namespace that supports SKIP_META/FOCUS_META
+        "com.repldriven.mono.external-test-runner.main"))))
