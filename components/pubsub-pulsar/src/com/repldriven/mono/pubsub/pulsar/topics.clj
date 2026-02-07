@@ -14,12 +14,11 @@
   [^PulsarAdmin admin fully-qualified-topic-name &
    {:keys [partitions schema] :or {partitions 1}}]
   (let [^TopicName topic-name (TopicName/get fully-qualified-topic-name)
-        fully-qualified-namespace-name (.getNamespace topic-name
-                                                      #"/")
+        fully-qualified-namespace-name (.getNamespace topic-name)
         ^Topics topics (.topics admin)
-        domain-name (.getDomain topic-name)
+        domain (.getDomain topic-name)
         topic-names
-        (.getList topics fully-qualified-namespace-name domain-name)]
+        (.getList topics fully-qualified-namespace-name domain)]
     (when-not (contains? (set topic-names) fully-qualified-topic-name)
       (log/info "Creating topic:" fully-qualified-topic-name)
       (.createPartitionedTopic topics fully-qualified-topic-name partitions)
