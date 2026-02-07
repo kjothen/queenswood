@@ -4,11 +4,11 @@ system:
       default: 80
       test: !port 0
     interceptors: !system/component
-      type: server/interceptors
+      kind: server/interceptors
       got: me
       this: time
     jetty-adapter: !system/component
-      type: server/jetty-adapter
+      kind: server/jetty-adapter
       handler: !system/ref server.handler
       interceptors: !system/ref server.interceptors
       options:

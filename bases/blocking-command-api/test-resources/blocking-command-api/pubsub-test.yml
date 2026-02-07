@@ -1,39 +1,39 @@
-admin: !system/component
-  type: pubsub/admin
-  service-http-url: !system/local-ref container-service-http-url
-
-client: !system/component
-  type: pubsub/client
-  service-url: !system/local-ref container-service-url
-
 container: !system/component
-  type: pubsub/container
+  kind: pubsub/container
   exposed-ports:
     - 6650
     - 8080
 
 container-service-http-port: !system/component
-  type: pubsub/container-service-http-port
+  kind: pubsub/container-service-http-port
   container: !system/local-ref container
   exposed-port: 8080
 
 container-service-http-url: !system/component
-  type: pubsub/container-service-http-url
+  kind: pubsub/container-service-http-url
   port: !system/local-ref container-service-http-port
   scheme: http
 
 container-service-port: !system/component
-  type: pubsub/container-service-port
+  kind: pubsub/container-service-port
   container: !system/local-ref container
   exposed-port: 6650
 
 container-service-url: !system/component
-  type: pubsub/container-service-url
+  kind: pubsub/container-service-url
   port: !system/local-ref container-service-port
   scheme: pulsar
 
+admin: !system/component
+  kind: pubsub/admin
+  service-http-url: !system/local-ref container-service-http-url
+
+client: !system/component
+  kind: pubsub/client
+  service-url: !system/local-ref container-service-url
+
 namespaces: !system/component
-  type: pubsub/namespaces
+  kind: pubsub/namespaces
   _: !system/local-ref tenants
   admin: !system/local-ref admin
   namespaces:
@@ -51,13 +51,13 @@ namespaces: !system/component
           schemaCompatibilityStrategy: FULL
 
 schemas: !system/component
-  type: pubsub/schemas
+  kind: pubsub/schemas
   user:
     schema: schema-avro/user.avsc.json
     type: AVRO
 
 tenants: !system/component
-  type: pubsub/tenants
+  kind: pubsub/tenants
   admin: !system/local-ref admin
   tenants:
     - tenant: tenant-1
@@ -66,7 +66,7 @@ tenants: !system/component
       roles: []
 
 topics: !system/component
-  type: pubsub/topics
+  kind: pubsub/topics
   _: !system/local-ref namespaces
   admin: !system/local-ref admin
   schemas: !system/local-ref schemas

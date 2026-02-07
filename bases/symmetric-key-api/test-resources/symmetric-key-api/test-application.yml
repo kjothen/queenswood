@@ -1,7 +1,7 @@
 system:
   server:
     jetty-adapter: !system/component
-      type: server/jetty-adapter
+      kind: server/jetty-adapter
       handler: !system/required-component
       options:
         join?: false

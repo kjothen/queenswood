@@ -1,17 +1,17 @@
 system:
   helloworld:
     container: !system/component
-      type: testcontainers-system/container
+      kind: testcontainers-system/container
       docker-image-name: testcontainers/helloworld:1.1.0
       exposed-ports:
         - 8080
         - 8081
 
     container-mapped-exposed-port: !system/component
-      type: testcontainers-system/container-mapped-exposed-port
+      kind: testcontainers-system/container-mapped-exposed-port
       container: !system/local-ref container
       exposed-port: 8080
 
     container-mapped-ports: !system/component
-      type: testcontainers-system/container-mapped-ports
+      kind: testcontainers-system/container-mapped-ports
       container: !system/local-ref container

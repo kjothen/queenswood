@@ -1,19 +1,19 @@
 system:
   mqtt:
     container: !system/component
-      type: mqtt/container
+      kind: mqtt/container
       exposed-port: 1883
 
     container-mapped-ports: !system/component
-      type: mqtt/container-mapped-ports
+      kind: mqtt/container-mapped-ports
       container: !system/local-ref container
 
     container-connection-uri: !system/component
-      type: mqtt/container-connection-uri
+      kind: mqtt/container-connection-uri
       container-mapped-ports: !system/local-ref container-mapped-ports
       exposed-port: 1883
 
     client: !system/component
-      type: mqtt/client
+      kind: mqtt/client
       options: {}
       uri: !system/local-ref container-connection-uri

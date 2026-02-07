@@ -6,40 +6,40 @@
 ;; The system configuration follows a nested structure of component groups and components:
 ;;
 ;; {:component-group-1
-;;  {:component-a {:annotation {:component/definition :namespace/component-a}
+;;  {:component-a {:kind :namespace/component-a
 ;;                 :config {...}}
-;;   :component-b {:annotation {:component/definition :namespace/component-b}
+;;   :component-b {:kind :namespace/component-b
 ;;                 :config {...}}}
 ;;  :component-group-2
-;;  {:component-c {:annotation {:component/definition :namespace/component-c}
+;;  {:component-c {:kind :namespace/component-c
 ;;                 :config {...}}}}
 ;;
 ;; For example, a server configuration might look like:
 ;;
 ;; {:server
-;;  {:interceptors {:annotation {:component/definition :server/interceptors}
-;;                  :config {:datasource ...}}
-;;   :jetty-adapter {:annotation {:component/definition :server/jetty-adapter}
-;;                   :config {:handler ... :options {:port 8080}}}}}
+;;  {:interceptors {:kind :server/interceptors
+;;                  :datasource ...}
+;;   :jetty-adapter {:kind :server/jetty-adapter
+;;                   :handler ... :options {:port 8080}}}}
 ;;
 ;; The `definition` function processes this structure by:
 ;; 1. Reducing over component groups (:server, :sql, etc.)
 ;; 2. Reducing over components within each group
 ;; 3. Calling the `component` multimethod for each component
-;;    (which dispatches on [:annotation :component/definition])
+;;    (which dispatches on :kind)
 ;; 4. Building [:system/defs {...}] for donut.system
 
 (defn merge-component-config
   [component config]
   (update component
           :system/config
-          (fn [original] (utility/deep-merge original config))))
+          (fn [original] (utility/deep-merge original (dissoc config :kind)))))
 
 (defmulti component
   "Component configuration multimethod.
-  Dispatches on the component definition from annotation metadata.
+  Dispatches on the component kind.
   Components should extend this to register themselves."
-  (fn [_ v] (keyword (get-in v [:annotation :component/definition]))))
+  (fn [_ v] (keyword (:kind v))))
 
 (defmethod component :default
   [_ v]

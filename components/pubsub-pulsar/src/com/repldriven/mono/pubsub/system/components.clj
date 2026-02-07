@@ -63,7 +63,7 @@
   {:system/start
    (fn [{:system/keys [config instance]}]
      (or instance
-         (reduce-kv (fn [m k v] (assoc m k (consumer/create v))) {} (dissoc config :annotation))))
+         (reduce-kv (fn [m k v] (assoc m k (consumer/create v))) {} config)))
    :system/stop (fn [{:system/keys [instance]}]
                   (when (some? instance)
                     (dorun (map (fn [[_ instance]]
@@ -88,7 +88,7 @@
    (fn [{:system/keys [config instance]}]
      (or instance
          (do (log/info "Creating pulsar crypto-key-pair-generator: " config)
-             (crypto/key-pair-generator (dissoc config :annotation)))))
+             (crypto/key-pair-generator config))))
    :system/config system/required-component})
 
 ;; crypto-key-pair-file-reader(s)
@@ -98,7 +98,7 @@
                        (reduce-kv (fn [m k v]
                                     (assoc m k (crypto/key-pair-file-reader v)))
                                   {}
-                                  (dissoc config :annotation))))
+                                  config)))
    :system/config system/required-component})
 
 (def crypto-key-pair-file-reader
@@ -111,7 +111,7 @@
   {:system/start
    (fn [{:system/keys [config instance]}]
      (or instance
-         (reduce-kv (fn [m k v] (assoc m k (crypto/key-reader v))) {} (dissoc config :annotation))))
+         (reduce-kv (fn [m k v] (assoc m k (crypto/key-reader v))) {} config)))
    :system/config system/required-component})
 
 (def crypto-key-reader
@@ -160,7 +160,7 @@
 
 (def schemas
   {:system/start (fn [{:system/keys [config instance]}]
-                   (or instance (schemas/create-schemas (dissoc config :annotation))))
+                   (or instance (schemas/create-schemas config)))
    :system/config system/required-component})
 
 ;; ---

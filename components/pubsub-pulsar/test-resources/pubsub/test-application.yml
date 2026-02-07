@@ -1,45 +1,45 @@
 system:
   pubsub:
     container: !system/component
-      type: pubsub/container
+      kind: pubsub/container
       exposed-ports: [6650, 8080]
 
     container-service-port: !system/component
-      type: pubsub/container-service-port
+      kind: pubsub/container-service-port
       container: !system/local-ref container
       exposed-port: 6650
 
     container-service-url: !system/component
-      type: pubsub/container-service-url
+      kind: pubsub/container-service-url
       port: !system/local-ref container-service-port
       scheme: pulsar
 
     container-service-http-port: !system/component
-      type: pubsub/container-service-http-port
+      kind: pubsub/container-service-http-port
       container: !system/local-ref container
       exposed-port: 8080
 
     container-service-http-url: !system/component
-      type: pubsub/container-service-http-url
+      kind: pubsub/container-service-http-url
       port: !system/local-ref container-service-http-port
       scheme: http
 
     client: !system/component
-      type: pubsub/client
+      kind: pubsub/client
       service-url: !system/local-ref container-service-url
 
     admin: !system/component
-      type: pubsub/admin
+      kind: pubsub/admin
       service-http-url: !system/local-ref container-service-http-url
 
     schemas: !system/component
-      type: pubsub/schemas
+      kind: pubsub/schemas
       user:
         schema: schema-avro/user.avsc.json
         type: AVRO
 
     tenants: !system/component
-      type: pubsub/tenants
+      kind: pubsub/tenants
       admin: !system/local-ref admin
       tenants:
         - tenant: tenant-1
@@ -47,7 +47,7 @@ system:
           roles: []
 
     namespaces: !system/component
-      type: pubsub/namespaces
+      kind: pubsub/namespaces
       _: !system/local-ref tenants
       admin: !system/local-ref admin
       namespaces:
@@ -65,7 +65,7 @@ system:
               schemaCompatibilityStrategy: FULL
 
     topics: !system/component
-      type: pubsub/topics
+      kind: pubsub/topics
       _: !system/local-ref namespaces
       admin: !system/local-ref admin
       schemas: !system/local-ref schemas
@@ -75,7 +75,7 @@ system:
           schema: !keyword user
 
     crypto-key-pair-file-readers: !system/component
-      type: pubsub/crypto-key-pair-file-readers
+      kind: pubsub/crypto-key-pair-file-readers
       p1:
         tenant-key-1:
           private-key: pubsub/test_rsa_privkey.pem
@@ -86,7 +86,7 @@ system:
           public-key: pubsub/test_rsa_pubkey.pem
 
     crypto-key-readers: !system/component
-      type: pubsub/crypto-key-readers
+      kind: pubsub/crypto-key-readers
       r1:
         default-key: tenant-key-1
         keys: !system/local-ref crypto-key-pair-file-readers.p1
@@ -95,13 +95,13 @@ system:
         keys: !system/local-ref crypto-key-pair-file-readers.p2
 
     crypto-key-pair-generator: !system/component
-      type: pubsub/crypto-key-pair-generator
+      kind: pubsub/crypto-key-pair-generator
       tenant-key-1:
         algorithm: RSA
         key-size: 512
 
     producer: !system/component
-      type: pubsub/producer
+      kind: pubsub/producer
       _: !system/local-ref topics
       client: !system/local-ref client
       conf:
@@ -112,7 +112,7 @@ system:
       schemas: !system/local-ref schemas
 
     consumers: !system/component
-      type: pubsub/consumers
+      kind: pubsub/consumers
       c1:
         _: !system/local-ref topics
         client: !system/local-ref client

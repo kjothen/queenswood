@@ -1,8 +1,8 @@
 interceptors: !system/component
-  type: server/interceptors
+  kind: server/interceptors
   mqtt-client: !system/ref mqtt.client
 jetty-adapter: !system/component
-  type: server/jetty-adapter
+  kind: server/jetty-adapter
   handler: !system/required-component
   interceptors: !system/local-ref interceptors
   options:

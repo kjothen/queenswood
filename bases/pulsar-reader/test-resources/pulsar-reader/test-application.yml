@@ -1,45 +1,45 @@
 system:
   pubsub:
     container: !system/component
-      type: pubsub/container
+      kind: pubsub/container
       exposed-ports: [6650, 8080]
 
     container-service-port: !system/component
-      type: pubsub/container-service-port
+      kind: pubsub/container-service-port
       container: !system/local-ref container
       exposed-port: 6650
 
     container-service-url: !system/component
-      type: pubsub/container-service-url
+      kind: pubsub/container-service-url
       port: !system/local-ref container-service-port
       scheme: pulsar
 
     container-service-http-port: !system/component
-      type: pubsub/container-service-http-port
+      kind: pubsub/container-service-http-port
       container: !system/local-ref container
       exposed-port: 8080
 
     container-service-http-url: !system/component
-      type: pubsub/container-service-http-url
+      kind: pubsub/container-service-http-url
       port: !system/local-ref container-service-http-port
       scheme: http
 
     client: !system/component
-      type: pubsub/client
+      kind: pubsub/client
       service-url: !system/local-ref container-service-url
 
     admin: !system/component
-      type: pubsub/admin
+      kind: pubsub/admin
       service-http-url: !system/local-ref container-service-http-url
 
     schemas: !system/component
-      type: pubsub/schemas
+      kind: pubsub/schemas
       user:
         schema: schema-avro/user.avsc.json
         type: AVRO
 
     tenants: !system/component
-      type: pubsub/tenants
+      kind: pubsub/tenants
       admin: !system/local-ref admin
       tenants:
         - tenant: tenant-1
@@ -47,7 +47,7 @@ system:
           roles: []
 
     namespaces: !system/component
-      type: pubsub/namespaces
+      kind: pubsub/namespaces
       _: !system/local-ref tenants
       admin: !system/local-ref admin
       namespaces:
@@ -65,7 +65,7 @@ system:
               schemaCompatibilityStrategy: FULL
 
     topics: !system/component
-      type: pubsub/topics
+      kind: pubsub/topics
       _: !system/local-ref namespaces
       admin: !system/local-ref admin
       schemas: !system/local-ref schemas
@@ -75,7 +75,7 @@ system:
           schema: !keyword user
 
     reader: !system/component
-      type: pubsub/reader
+      kind: pubsub/reader
       _: !system/local-ref topics
       client: !system/local-ref client
       conf:
