@@ -26,25 +26,25 @@
   ([type]
    (case type
      ;; primitive
-     "BOOL" (Schema/BOOL)
-     "BYTEBUFFER" (Schema/BYTEBUFFER)
-     "BYTES" (Schema/BYTES)
-     "DATE" (Schema/DATE)
-     "DOUBLE" (Schema/DOUBLE)
-     "FLOAT" (Schema/FLOAT)
-     "INSTANT" (Schema/INSTANT)
-     "INT16" (Schema/INT16)
-     "INT32" (Schema/INT32)
-     "INT64" (Schema/INT64)
-     "INT8" (Schema/INT8)
-     "LOCAL_DATE" (Schema/LOCAL_DATE)
-     "LOCAL_DATE_TIME" (Schema/LOCAL_DATE_TIME)
-     "STRING" (Schema/STRING)
-     "TIME" (Schema/TIME)
-     "TIMESTAMP" (Schema/TIMESTAMP)
+     "BOOL" Schema/BOOL
+     "BYTEBUFFER" Schema/BYTEBUFFER
+     "BYTES" Schema/BYTES
+     "DATE" Schema/DATE
+     "DOUBLE" Schema/DOUBLE
+     "FLOAT" Schema/FLOAT
+     "INSTANT" Schema/INSTANT
+     "INT16" Schema/INT16
+     "INT32" Schema/INT32
+     "INT64" Schema/INT64
+     "INT8" Schema/INT8
+     "LOCAL_DATE" Schema/LOCAL_DATE
+     "LOCAL_DATE_TIME" Schema/LOCAL_DATE_TIME
+     "STRING" Schema/STRING
+     "TIME" Schema/TIME
+     "TIMESTAMP" Schema/TIMESTAMP
      ;; auto
-     "AUTO_CONSUME" (Schema/AUTO_CONSUME)
-     "AUTO_PRODUCE_BYTES" (Schema/AUTO_PRODUCE_BYTES)))
+     "AUTO_CONSUME" Schema/AUTO_CONSUME
+     "AUTO_PRODUCE_BYTES" Schema/AUTO_PRODUCE_BYTES))
   ([type schema properties]
    (let [schema-definition (create-definition schema properties)]
      (case type
