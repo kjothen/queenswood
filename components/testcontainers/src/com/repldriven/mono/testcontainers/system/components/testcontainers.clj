@@ -1,4 +1,4 @@
-(ns com.repldriven.mono.testcontainers.components.testcontainers
+(ns com.repldriven.mono.testcontainers.system.components.testcontainers
   (:require [clj-test-containers.core :as tc]
             [com.repldriven.mono.log.interface :as log]
             [com.repldriven.mono.system.interface :as system])
