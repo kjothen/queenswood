@@ -1,49 +1,59 @@
 system:
   pubsub:
-    container:
+    container: !system/component
+      type: pubsub/container
       exposed-ports: [6650, 8080]
 
-    container-service-port:
+    container-service-port: !system/component
+      type: pubsub/container-service-port
       container: !system/local-ref container
       exposed-port: 6650
 
-    container-service-url:
+    container-service-url: !system/component
+      type: pubsub/container-service-url
       port: !system/local-ref container-service-port
       scheme: pulsar
 
-    container-service-http-port:
+    container-service-http-port: !system/component
+      type: pubsub/container-service-http-port
       container: !system/local-ref container
       exposed-port: 8080
 
-    container-service-http-url:
+    container-service-http-url: !system/component
+      type: pubsub/container-service-http-url
       port: !system/local-ref container-service-http-port
       scheme: http
 
-    client:
+    client: !system/component
+      type: pubsub/client
       service-url: !system/local-ref container-service-url
 
-    admin:
+    admin: !system/component
+      type: pubsub/admin
       service-http-url: !system/local-ref container-service-http-url
 
-    schemas:
+    schemas: !system/component
+      type: pubsub/schemas
       user:
         schema: schema-avro/user.avsc.json
         type: AVRO
 
-    tenants:
+    tenants: !system/component
+      type: pubsub/tenants
       admin: !system/local-ref admin
       tenants:
         - tenant: tenant-1
           clusters: [standalone]
           roles: []
 
-    namespaces:
+    namespaces: !system/component
+      type: pubsub/namespaces
       _: !system/local-ref tenants
       admin: !system/local-ref admin
       namespaces:
         - namespace: "tenant-1/namespace-1"
           config:
-            post: !strs
+            post:
               autoTopicCreation:
                 allowAutoTopicCreation: false
                 defaultNumPartitions: 1
@@ -51,10 +61,11 @@ system:
               encryptionRequired: true
               isAllowAutoUpdateSchema: false
               schemaValidationEnforced: true
-            put: !strs
+            put:
               schemaCompatibilityStrategy: FULL
 
-    topics:
+    topics: !system/component
+      type: pubsub/topics
       _: !system/local-ref namespaces
       admin: !system/local-ref admin
       schemas: !system/local-ref schemas
@@ -63,17 +74,19 @@ system:
           partitions: 1
           schema: !keyword user
 
-    crypto-key-pair-file-readers:
+    crypto-key-pair-file-readers: !system/component
+      type: pubsub/crypto-key-pair-file-readers
       p1:
-        !str tenant-key-1:
+        tenant-key-1:
           private-key: pubsub/test_rsa_privkey.pem
           public-key: pubsub/test_rsa_pubkey.pem
       p2:
-        !str tenant-key-2:
+        tenant-key-2:
           private-key: pubsub/test_rsa_privkey.pem
           public-key: pubsub/test_rsa_pubkey.pem
 
-    crypto-key-readers:
+    crypto-key-readers: !system/component
+      type: pubsub/crypto-key-readers
       r1:
         default-key: tenant-key-1
         keys: !system/local-ref crypto-key-pair-file-readers.p1
@@ -81,26 +94,29 @@ system:
         default-key: tenant-key-2
         keys: !system/local-ref crypto-key-pair-file-readers.p2
 
-    crypto-key-pair-generator:
+    crypto-key-pair-generator: !system/component
+      type: pubsub/crypto-key-pair-generator
       tenant-key-1:
         algorithm: RSA
         key-size: 512
 
-    producer:
+    producer: !system/component
+      type: pubsub/producer
       _: !system/local-ref topics
       client: !system/local-ref client
-      conf: !strs
+      conf:
         cryptoKeyReader: !system/local-ref crypto-key-readers.r1
         encryptionKeys: [tenant-key-1]
         schema: !pubsub/schema AUTO_PRODUCE_BYTES
         topicName: "persistent://tenant-1/namespace-1/topic-1"
       schemas: !system/local-ref schemas
 
-    consumers:
+    consumers: !system/component
+      type: pubsub/consumers
       c1:
         _: !system/local-ref topics
         client: !system/local-ref client
-        conf: !strs
+        conf:
           cryptoFailureAction: !pubsub/crypto-failure-action CONSUME
           cryptoKeyReader: !system/local-ref crypto-key-readers.r1
           schema: !pubsub/schema AUTO_CONSUME
@@ -111,7 +127,7 @@ system:
       c2:
         _: !system/local-ref topics
         client: !system/local-ref client
-        conf: !strs
+        conf:
           cryptoFailureAction: !pubsub/crypto-failure-action CONSUME
           cryptoKeyReader: !system/local-ref crypto-key-readers.r2
           schema: !pubsub/schema AUTO_CONSUME

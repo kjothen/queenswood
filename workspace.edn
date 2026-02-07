@@ -6,6 +6,6 @@
             "message-reader" {:alias "msg"}
             "symmetric-key-vault" {:alias "key"}}
  :tag-patterns {:release "v[0-9]*" :stable "stable-*"}
- :test {:create-test-runner [com.repldriven.mono.external-test-runner.core/create]}
+ :test {:create-test-runner com.repldriven.mono.external-test-runner.core/create}
  :top-namespace "com.repldriven.mono"
  :vcs {:auto-add true :name "git"}}

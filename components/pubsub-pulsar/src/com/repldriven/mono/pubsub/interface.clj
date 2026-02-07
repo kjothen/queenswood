@@ -4,13 +4,10 @@
             [com.repldriven.mono.pubsub.pulsar.client]
             [com.repldriven.mono.pubsub.pulsar.consumer :as consumer]
             [com.repldriven.mono.pubsub.pulsar.crypto]
-            [com.repldriven.mono.pubsub.pulsar.env-reader :as env-reader]
+            [com.repldriven.mono.pubsub.pulsar.env-reader]
             [com.repldriven.mono.pubsub.pulsar.producer :as producer]
             [com.repldriven.mono.pubsub.pulsar.reader]
-            [com.repldriven.mono.pubsub.system.core :as system]))
-
-;;;; system interface
-(defn configure-system [config] (system/configure config))
+            [com.repldriven.mono.pubsub.system.core]))
 
 ;;;; producer interface
 (defn send
