@@ -1,4 +1,4 @@
-(ns com.repldriven.mono.testcontainers-system.components.pulsar
+(ns com.repldriven.mono.testcontainers.components.pulsar
   (:require [com.repldriven.mono.log.interface :as log]
             [clj-test-containers.core :as tc])
   (:import (org.testcontainers.containers ContainerLaunchException

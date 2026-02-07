@@ -1,6 +1,6 @@
-(ns com.repldriven.mono.testcontainers-system.interface-test
+(ns com.repldriven.mono.testcontainers.interface-test
   (:require
-   com.repldriven.mono.testcontainers-system.interface
+   com.repldriven.mono.testcontainers.interface
 
    [com.repldriven.mono.system.interface :as system]
    [com.repldriven.mono.test-system.interface :as test-system]
@@ -13,10 +13,10 @@
     (f)))
 
 (use-fixtures :once
-  (test-system/fixture "classpath:testcontainers_system/test-application.yml" :test)
+  (test-system/fixture "classpath:testcontainers/test-application.yml" :test)
   with-system-fixture)
 
-(deftest testcontainers-system-test
+(deftest testcontainers-test
   (testing
    "Developers should be able to start and stop a testcontainers system"
     (is (= [8080 8081]

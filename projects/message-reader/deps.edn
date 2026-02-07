@@ -15,8 +15,8 @@
         component/spec-malli {:local/root "../../components/spec-malli"}
         component/system {:local/root "../../components/system"}
         component/test-system {:local/root "../../components/test-system"}
-        component/testcontainers-system
-        {:local/root "../../components/testcontainers-system"}
+        component/testcontainers
+        {:local/root "../../components/testcontainers"}
         component/utility {:local/root "../../components/utility"}
         base/pulsar-reader {:local/root "../../bases/pulsar-reader"}
         org.clojure/clojure {:mvn/version "1.12.4"}}
