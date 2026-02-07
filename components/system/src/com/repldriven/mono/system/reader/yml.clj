@@ -1,17 +1,8 @@
 (ns com.repldriven.mono.system.reader.yml
   (:refer-clojure :exclude [ref])
   (:require [clojure.string :as str]
-            [clojure.walk :refer [postwalk]]
-            [com.repldriven.mono.env.interface :as env]))
-
-;; Helper functions
-(defn yaml-collections->edn-collections
-  [form]
-  (postwalk #(cond (= "class flatland.ordered.map.OrderedMap" (str (type %)))
-                   (into (hash-map) %)
-                   (seq? %) (into (vector) %)
-                   :else %)
-            form))
+            [com.repldriven.mono.env.interface :as env]
+            [com.repldriven.mono.utility.interface :as util]))
 
 (defn local-ref
   [{:keys [value]}]
@@ -40,7 +31,7 @@
 
 (defmethod env/tag-reader :!system/component
   [{:keys [value]}]
-  (let [value-map (yaml-collections->edn-collections value)
+  (let [value-map (util/yaml-collections->edn-collections value)
         component-kind (get value-map :system/component-kind)
         config (dissoc value-map :system/component-kind)
         config-edn (into {} (map (fn [[k v]] [(keyword k) v]) config))]

@@ -1,4 +1,6 @@
-(ns com.repldriven.mono.utility.interface)
+(ns com.repldriven.mono.utility.interface
+  (:require [com.repldriven.mono.utility.string :as util.string]
+            [com.repldriven.mono.utility.collections :as util.collections]))
 
 (defn deep-merge
   "Recursively merges maps. If all values are maps, merges them recursively.
@@ -7,3 +9,10 @@
   (if (every? map? values)
     (apply merge-with deep-merge values)
     (last values)))
+
+;; String utilities
+(def string->stream util.string/string->stream)
+
+;; Collection utilities
+(def yaml-collections->edn-collections util.collections/yaml-collections->edn-collections)
+(def keys->strs util.collections/keys->strs)

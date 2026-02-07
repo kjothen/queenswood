@@ -1,39 +1,19 @@
 (ns com.repldriven.mono.env.reader.yml
   (:require [clojure.string :as str]
             [clojure.java.io :as io]
-            [clojure.walk :refer [postwalk]]
             [clj-yaml.core :as yaml]
             [flatland.ordered.map]
-            [com.repldriven.mono.env.reader.edn :as reader.edn]))
+            [com.repldriven.mono.env.reader.edn :as reader.edn]
+            [com.repldriven.mono.utility.interface :as util]))
 
 (defmulti yml-reader (fn [m] (keyword (get m :tag))))
-
-(defn string->stream
-  ([s] (string->stream s "UTF-8"))
-  ([s encoding]
-   (-> s
-       (.getBytes encoding)
-       (java.io.ByteArrayInputStream.))))
-
-(defn yaml-collections->edn-collections
-  [form]
-  (postwalk #(cond (= "class flatland.ordered.map.OrderedMap" (str (type %)))
-                   (into (hash-map) %)
-                   (seq? %) (into (vector) %)
-                   :else %)
-            form))
-
-(defn keys->strs
-  [form]
-  (postwalk #(if (map? %) (into (hash-map) (map (fn [[k v]] [(name k) v]) %)) %)
-            form))
 
 (defmulti tag-reader (fn [m] (keyword (get m :tag))))
 
 ;; Basic common tags
 (defmethod tag-reader :!profile
   [{:keys [value]}]
-  (symbol (str "#profile " (yaml-collections->edn-collections value))))
+  (symbol (str "#profile " (util/yaml-collections->edn-collections value))))
 
 (defmethod tag-reader :!port [{:keys [value]}] (symbol (str "#port " value)))
 
@@ -47,9 +27,9 @@
         io/resource
         io/reader
         (yaml/parse-stream {:key-fn key-fn :unknown-tag-fn tag-reader})
-        yaml-collections->edn-collections)))
+        util/yaml-collections->edn-collections)))
 
-(defmethod tag-reader :!strs [{:keys [value]}] (keys->strs value))
+(defmethod tag-reader :!strs [{:keys [value]}] (util/keys->strs value))
 
 (defmethod tag-reader :!str [{:keys [value]}] (str "\"" (name value) "\""))
 
@@ -75,7 +55,7 @@
   (-> (resolve-source source)
       io/reader
       (yaml/parse-stream {:key-fn key-fn :unknown-tag-fn tag-reader})
-      yaml-collections->edn-collections
+      util/yaml-collections->edn-collections
       str
-      string->stream
+      util/string->stream
       (reader.edn/read-config profile)))
