@@ -1,6 +1,6 @@
 (ns com.repldriven.mono.vault.interface-test
   (:require [clojure.string :as str]
-            [clojure.test :as test :refer :all]
+            [clojure.test :as test :refer [deftest is testing use-fixtures]]
             [com.repldriven.mono.vault.interface :as SUT]
             [com.repldriven.mono.system.interface :as system]
             [com.repldriven.mono.test-system.interface :as test-system]))
