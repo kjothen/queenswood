@@ -1,0 +1,85 @@
+system:
+  pubsub:
+    container: !system/component
+      type: pubsub/container
+      exposed-ports: [6650, 8080]
+
+    container-service-port: !system/component
+      type: pubsub/container-service-port
+      container: !system/local-ref container
+      exposed-port: 6650
+
+    container-service-url: !system/component
+      type: pubsub/container-service-url
+      port: !system/local-ref container-service-port
+      scheme: pulsar
+
+    container-service-http-port: !system/component
+      type: pubsub/container-service-http-port
+      container: !system/local-ref container
+      exposed-port: 8080
+
+    container-service-http-url: !system/component
+      type: pubsub/container-service-http-url
+      port: !system/local-ref container-service-http-port
+      scheme: http
+
+    client: !system/component
+      type: pubsub/client
+      service-url: !system/local-ref container-service-url
+
+    admin: !system/component
+      type: pubsub/admin
+      service-http-url: !system/local-ref container-service-http-url
+
+    schemas: !system/component
+      type: pubsub/schemas
+      user:
+        schema: schema-avro/user.avsc.json
+        type: AVRO
+
+    tenants: !system/component
+      type: pubsub/tenants
+      admin: !system/local-ref admin
+      tenants:
+        - tenant: tenant-1
+          clusters: [standalone]
+          roles: []
+
+    namespaces: !system/component
+      type: pubsub/namespaces
+      _: !system/local-ref tenants
+      admin: !system/local-ref admin
+      namespaces:
+        - namespace: "tenant-1/namespace-1"
+          config:
+            post:
+              autoTopicCreation:
+                allowAutoTopicCreation: false
+                defaultNumPartitions: 1
+                topicType: string
+              encryptionRequired: false
+              isAllowAutoUpdateSchema: false
+              schemaValidationEnforced: true
+            put:
+              schemaCompatibilityStrategy: FULL
+
+    topics: !system/component
+      type: pubsub/topics
+      _: !system/local-ref namespaces
+      admin: !system/local-ref admin
+      schemas: !system/local-ref schemas
+      topics:
+        - topic: "persistent://tenant-1/namespace-1/topic-1"
+          partitions: 1
+          schema: !keyword user
+
+    reader: !system/component
+      type: pubsub/reader
+      _: !system/local-ref topics
+      client: !system/local-ref client
+      conf:
+        schema: !pubsub/schema AUTO_CONSUME
+        startMessageId: !pubsub/message-id earliest
+        topicNames: ["persistent://tenant-1/namespace-1/topic-1"]
+      schemas: !system/local-ref schemas

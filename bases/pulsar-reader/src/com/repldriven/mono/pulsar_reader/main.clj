@@ -3,7 +3,7 @@
             [com.repldriven.mono.cli.interface :as cli]
             [com.repldriven.mono.env.interface :as env]
             [com.repldriven.mono.log.interface :as log]
-            [com.repldriven.mono.pulsar-reader.system :as pulsar-reader-system]
+            [com.repldriven.mono.pubsub.interface]
             [com.repldriven.mono.system.interface :as system])
   (:import (org.apache.pulsar.client.api Message Reader))
   (:gen-class))
@@ -20,20 +20,19 @@
                      ;; (log/info (avro/decode schema (.getData m)))
                      (recur)))))
 
-(defn start!
-  []
+(defn start
+  [environment]
   (log/info "Starting system")
-  (when-let [system-config (pulsar-reader-system/configure (:system @env/env))]
-    (system/start! system system-config)
+  (let [config (system/definition (:system environment))]
+    (system/start! system config)
     (reset! channel (async/chan))
-    (read-messages (system/instance @system [:pulsar :reader]) @channel)))
+    (read-messages (system/instance @system [:pubsub :reader]) @channel)))
 
-(defn stop!
-  []
+(defn stop
+  [sys]
   (log/info "Stopping system")
-  (when-let [_ @system]
-    (when (some? @channel) (reset! channel (async/close! @channel)))
-    (system/stop! system)))
+  (when (some? @channel) (reset! channel (async/close! @channel)))
+  (system/stop sys))
 
 (defn -main
   [& args]
@@ -43,12 +42,12 @@
                                                               args)]
     (if exit-message
       (cli/exit ok? exit-message)
-      (do (env/set-env! (:config-file options) (keyword (:profile options)))
-          (start!)))))
+      (let [{:keys [config-file profile]} options]
+        (start (env/env config-file (keyword profile)))))))
 
 (comment
-  (-main "-c" "bases/pulsar-reader/test-resources/pulsar-reader/test-env.edn"
-         "-p" "dev")
-  (stop!)
-  (start!)
-  (stop!))
+  (-main "-c" "classpath:pulsar-reader/test-application.yml"
+         "-p" "test")
+  (stop @system)
+  (start (env/env "classpath:pulsar-reader/test-application.yml" :test))
+  (stop @system))
