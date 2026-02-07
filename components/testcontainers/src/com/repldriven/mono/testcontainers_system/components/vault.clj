@@ -1,4 +1,4 @@
-(ns com.repldriven.mono.testcontainers-system.vault
+(ns com.repldriven.mono.testcontainers-system.components.vault
   (:require [clj-test-containers.core :as tc]
             [com.repldriven.mono.log.interface :as log])
   (:import (org.testcontainers.containers ContainerLaunchException)

@@ -4,5 +4,6 @@
         org.testcontainers/testcontainers {:mvn/version "2.0.3"}
         org.testcontainers/vault {:mvn/version "1.21.4"}
         org.testcontainers/hivemq {:mvn/version "1.21.4"}
-        org.testcontainers/pulsar {:mvn/version "1.21.4"}}
+        org.testcontainers/pulsar {:mvn/version "1.21.4"}
+        org.testcontainers/postgresql {:mvn/version "1.21.4"}}
  :paths ["src"]}

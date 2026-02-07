@@ -15,7 +15,7 @@
    [ring.adapter.jetty9]))
 
 (use-fixtures :once
-  (test-system/fixture "classpath:server/application-test.yml" :test))
+  (test-system/fixture "classpath:com/repldriven/mono/server/application-test.yml" :test))
 
 (deftest system-test
   (testing "System configuration and lifecycle"
