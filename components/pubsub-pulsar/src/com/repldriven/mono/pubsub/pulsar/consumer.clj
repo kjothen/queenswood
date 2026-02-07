@@ -13,9 +13,10 @@
   [{:keys [^PulsarClient client conf schemas]}]
   (try
     (log/info "Creating pulsar consumer" conf schemas)
-    (let [{:strs [cryptoKeyReader schema]} conf
-          manual-conf ["cryptoKeyReader" "schema"]
-          auto-conf (j/to-java Map (apply dissoc conf manual-conf))
+    (let [{:keys [cryptoKeyReader schema]} conf
+          manual-conf [:cryptoKeyReader :schema]
+          conf-str-keys (into {} (map (fn [[k v]] [(name k) v]) conf))
+          auto-conf (j/to-java Map (apply dissoc conf-str-keys (map name manual-conf)))
           instance (if (some? schema)
                      (.. client (newConsumer (schemas/resolve schemas schema)))
                      (.. client newConsumer))

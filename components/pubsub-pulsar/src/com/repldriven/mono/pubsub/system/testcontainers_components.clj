@@ -1,7 +1,6 @@
 (ns com.repldriven.mono.pubsub.system.testcontainers-components
   (:require [clj-test-containers.core :as tc]
-            [com.repldriven.mono.log.interface :as log]
-            [com.repldriven.mono.system.interface :as system])
+            [com.repldriven.mono.log.interface :as log])
   (:import (java.time Duration)
            (org.testcontainers.containers ContainerLaunchException
                                           PulsarContainer)
@@ -26,7 +25,7 @@
            (.addEnv container "PULSAR_MEM" "-Xms128m -Xmx256m -XX:MaxDirectMemorySize=256m")
            (.addEnv container "PULSAR_GC" "-XX:+UseG1GC")
            ;; Allow more startup time with reduced memory
-           (.withStartupTimeout container (Duration/ofMinutes 3))
+           (.withStartupTimeout container (Duration/ofMinutes 1))
            (some-> (tc/init {:container container :exposed-ports exposed-ports})
                    (tc/start!)))
          (catch ContainerLaunchException e

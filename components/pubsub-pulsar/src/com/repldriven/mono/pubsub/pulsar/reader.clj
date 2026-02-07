@@ -9,9 +9,10 @@
 (defn create ^Reader
   [{:keys [^PulsarClient client conf schemas]}]
   (try (log/info "Opening pulsar reader")
-       (let [{:strs [cryptoKeyReader schema startMessageId]} conf
-             manual-conf ["cryptoKeyReader" "schema" "startMessageId"]
-             auto-conf (j/to-java Map (apply dissoc conf manual-conf))
+       (let [{:keys [cryptoKeyReader schema startMessageId]} conf
+             manual-conf [:cryptoKeyReader :schema :startMessageId]
+             conf-str-keys (into {} (map (fn [[k v]] [(name k) v]) conf))
+             auto-conf (j/to-java Map (apply dissoc conf-str-keys (map name manual-conf)))
              instance (if (some? schema)
                         (.. client (newReader (schemas/resolve schemas schema)))
                         (.. client newReader))
