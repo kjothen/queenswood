@@ -4,8 +4,8 @@
 
 (defmethod system/component :server/interceptors
   [_ v]
-  (system/merge-component-config components/interceptors (dissoc v :annotation)))
+  (system/merge-component-config components/interceptors v))
 
 (defmethod system/component :server/jetty-adapter
   [_ v]
-  (system/merge-component-config components/jetty-adapter (dissoc v :annotation)))
+  (system/merge-component-config components/jetty-adapter v))

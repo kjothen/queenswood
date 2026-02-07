@@ -9,19 +9,19 @@
 ;; Register mqtt components with system configurator
 (defmethod system/component :mqtt/container
   [_ v]
-  (system/merge-component-config container-components/container (dissoc v :annotation)))
+  (system/merge-component-config container-components/container v))
 
 (defmethod system/component :mqtt/container-mapped-ports
   [_ v]
-  (system/merge-component-config testcontainers-system/container-mapped-ports (dissoc v :annotation)))
+  (system/merge-component-config testcontainers-system/container-mapped-ports v))
 
 (defmethod system/component :mqtt/container-connection-uri
   [_ v]
-  (system/merge-component-config container-components/container-connection-uri (dissoc v :annotation)))
+  (system/merge-component-config container-components/container-connection-uri v))
 
 (defmethod system/component :mqtt/client
   [_ v]
-  (system/merge-component-config components/client (dissoc v :annotation)))
+  (system/merge-component-config components/client v))
 
 ;; Legacy component multimethod for backwards compatibility
 (defmulti component (fn [k _] k))

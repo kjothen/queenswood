@@ -73,9 +73,10 @@
       (SUT/send producer
                 (schema-avro/serialize schema data)
                 (HashMap. {"properties" props}))
-      (let [^Message recv-msg (SUT/receive consumer 1000)]
-        (is (true? (some-> (.getEncryptionCtx recv-msg)
-                           .get
+      (let [^Message recv-msg (SUT/receive consumer 1000)
+            ^EncryptionContext ctx (.getEncryptionCtx recv-msg)]
+        (is (true? (.isPresent ctx)))
+        (is (true? (some-> (.get ctx)
                            .isEncrypted)))))))
 
 (deftest namespace-configuration-test

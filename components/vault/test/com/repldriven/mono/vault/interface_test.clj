@@ -1,17 +1,13 @@
 (ns com.repldriven.mono.vault.interface-test
-  (:require [clojure.java.io :as io]
-            [clojure.string :as str]
+  (:require [clojure.string :as str]
             [clojure.test :as test :refer :all]
-            [com.repldriven.mono.env.interface :as env]
             [com.repldriven.mono.vault.interface :as SUT]
-            [com.repldriven.mono.system.interface :as system]))
+            [com.repldriven.mono.system.interface :as system]
+            [com.repldriven.mono.test-system.interface :as test-system]))
 
-(defn env-fixture
-  [f]
-  (env/set-env! (io/resource "vault/test-env.edn") :test)
-  (f))
-
-(use-fixtures :once env-fixture)
+(use-fixtures :once
+  (test-system/fixture "classpath:vault/test-application.yml" :test)
+  (fn [f] (system/with-*sys* test-system/*sysdef* (f))))
 
 (defn prop-seq->kw-map
   [props]
@@ -21,43 +17,20 @@
                  [(keyword k) v]))
              props)))
 
-(deftest development-test
+(deftest ^:repl development-test
   (testing
    "Developers should be able to start/stop a vault system from a REPL"
-   (system/with-*sys* (SUT/configure-system (get-in @env/env [:system :vault]))
-     (is (some? system/*sys*))
-     (tap> system/*sys*)
-     (let [client (system/instance system/*sys* [:vault :client])
-           vault-config (system/config system/*sys* :vault :container)
-           token (:vault-token vault-config)
-           secret (:secret-in-vault vault-config)]
-       (tap> vault-config)
-       (is (some? client))
-       (is (some? (SUT/authenticate-client! client :token token)))
-       (let [[mount path] (-> secret
-                              first
-                              (str/split #"/"))
-             secret-props (-> secret
-                              rest)]
-         (is (= (SUT/read-secret client mount path)
-                (prop-seq->kw-map secret-props))))))))
-
-(comment
-  (env/set-env! (io/resource "vault/test-env.edn") :test)
-  (def sys
-    (-> (get-in @env/env [:system :vault])
-        (SUT/configure-system)
-        (system/start)))
-  (def client (system/instance sys [:vault :client]))
-  (tap> sys)
-  (def vault-config (system/config sys :vault :container))
-  (def token (:vault-token vault-config))
-  (def secret (:secret-in-vault vault-config))
-  (SUT/authenticate-client! client :token token)
-  (let [[mount path] (-> secret
-                         first
-                         (str/split #"/"))]
-    (SUT/read-secret client mount path))
-  (system/stop sys)
-  ;
-)
+   (is (some? system/*sys*))
+   (let [client (system/instance system/*sys* [:vault :client])
+         vault-config (system/config system/*sys* :vault :container)
+         token (:vault-token vault-config)
+         secret (:secret-in-vault vault-config)]
+     (is (some? client))
+     (is (some? (SUT/authenticate-client! client :token token)))
+     (let [[mount path] (-> secret
+                            first
+                            (str/split #"/"))
+           secret-props (-> secret
+                            rest)]
+       (is (= (SUT/read-secret client mount path)
+              (prop-seq->kw-map secret-props)))))))

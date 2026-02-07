@@ -1,0 +1,26 @@
+system:
+  vault:
+    container: !system/component
+      type: vault/container
+      docker-image-name: vault:latest
+      exposed-ports:
+        - 8200
+      secret-in-vault:
+        - secret/testing
+        - top_secret=password1
+        - db_password=dbpassword1
+      vault-token: my-root-token
+
+    container-api-port: !system/component
+      type: vault/container-api-port
+      container: !system/ref vault.container
+      exposed-port: 8200
+
+    container-api-url: !system/component
+      type: vault/container-api-url
+      port: !system/ref vault.container-api-port
+      scheme: http
+
+    client: !system/component
+      type: vault/client
+      api-url: !system/ref vault.container-api-url

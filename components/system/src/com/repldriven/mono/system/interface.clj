@@ -64,6 +64,10 @@
 
 (def component configurator/component)
 
+(defmacro defcomponents
+  [ns-keyword component-map]
+  `(configurator/defcomponents ~ns-keyword ~component-map))
+
 (defn definition
   [config]
   (configurator/definition config))

@@ -45,6 +45,27 @@
   [_ v]
   v)
 
+(defmacro defcomponents
+  "Defines multiple system/component defmethods for a given namespace.
+
+  Usage:
+    (defcomponents :server
+      {:interceptors components/interceptors
+       :jetty-adapter components/jetty-adapter})
+
+  Expands to:
+    (defmethod component :server/interceptors [_ v]
+      (merge-component-config components/interceptors v))
+    (defmethod component :server/jetty-adapter [_ v]
+      (merge-component-config components/jetty-adapter v))"
+  [ns-keyword component-map]
+  `(do
+     ~@(for [[component-name component-def] component-map]
+         `(defmethod component ~(keyword (name ns-keyword)
+                                          (name component-name))
+            [~'_ ~'v]
+            (merge-component-config ~component-def ~'v)))))
+
 (defn- component-group
   "Processes a component group by reducing over its components."
   [group-config]
