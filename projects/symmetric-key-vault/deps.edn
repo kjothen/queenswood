@@ -7,6 +7,8 @@
  :deps {component/cli #:local{:root "../../components/cli"}
         component/encryption #:local{:root "../../components/encryption"}
         component/env #:local{:root "../../components/env"}
+        component/error #:local{:root "../../components/error"}
+        component/http-client #:local{:root "../../components/http-client"}
         component/log #:local{:root "../../components/log"}
         component/server #:local{:root "../../components/server"}
         component/spec-malli #:local{:root "../../components/spec-malli"}

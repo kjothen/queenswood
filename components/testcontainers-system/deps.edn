@@ -1,7 +1,8 @@
-{:aliases {:test {:extra-deps {clj-test-containers/clj-test-containers
-                               {:mvn/version "0.7.4"}
-                               org.testcontainers/testcontainers {:mvn/version
-                                                                  "2.0.3"}}
+{:aliases {:test {:extra-deps {}
                   :extra-paths ["test" "test-resources"]}}
- :deps {}
- :paths ["src" "resources"]}
+ :deps {clj-test-containers/clj-test-containers {:mvn/version "0.7.4"}
+        org.testcontainers/testcontainers {:mvn/version "2.0.3"}
+        org.testcontainers/vault {:mvn/version "1.21.4"}
+        org.testcontainers/hivemq {:mvn/version "1.21.4"}
+        org.testcontainers/pulsar {:mvn/version "1.21.4"}}
+ :paths ["src"]}

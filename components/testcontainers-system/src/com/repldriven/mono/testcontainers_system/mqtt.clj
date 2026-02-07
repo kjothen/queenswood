@@ -1,4 +1,4 @@
-(ns com.repldriven.mono.mqtt.system.testcontainers-components
+(ns com.repldriven.mono.testcontainers-system.mqtt
   (:require [clj-test-containers.core :as tc]
             [com.repldriven.mono.log.interface :as log]
             [com.repldriven.mono.system.interface :as system])

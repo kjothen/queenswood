@@ -4,4 +4,4 @@
         ring-logger-timbre/ring-logger-timbre {:mvn/version "0.7.6"}
         info.sunng/ring-jetty9-adapter {:mvn/version "0.39.1"}
         ring/ring-json {:mvn/version "0.5.1"}}
- :paths ["src" "resources"]}
+ :paths ["src"]}

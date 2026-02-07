@@ -8,6 +8,6 @@
 
 (system/defcomponents :sql
   {:container testcontainers-components/container
-   :container-mapped-exposed-port testcontainers-system/container-mapped-exposed-port
+   :container-mapped-exposed-port testcontainers-system/mapped-exposed-port
    :datasources components/datasources
    :datasource components/datasource})

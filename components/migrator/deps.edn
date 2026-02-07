@@ -3,4 +3,4 @@
                   :extra-paths ["test" "test-resources"]}}
  :deps {com.github.seancorfield/next.jdbc {:mvn/version "1.3.1093"}
         org.liquibase/liquibase-core {:mvn/version "5.0.1"}}
- :paths ["src" "resources"]}
+ :paths ["src"]}

@@ -2,4 +2,4 @@
  :deps {aero/aero {:mvn/version "1.1.6"}
         clj-commons/clj-yaml {:mvn/version "1.0.29"}
         org.flatland/ordered {:mvn/version "1.15.12"}}
- :paths ["src" "resources"]}
+ :paths ["src"]}

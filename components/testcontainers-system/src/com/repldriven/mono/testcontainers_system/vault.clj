@@ -1,7 +1,6 @@
-(ns com.repldriven.mono.vault.system.testcontainers-components
+(ns com.repldriven.mono.testcontainers-system.vault
   (:require [clj-test-containers.core :as tc]
             [com.repldriven.mono.log.interface :as log])
-
   (:import (org.testcontainers.containers ContainerLaunchException)
            (org.testcontainers.vault VaultContainer)
            (org.testcontainers.utility DockerImageName)))
@@ -34,4 +33,3 @@
    :system/stop (fn [{:system/keys [instance]}] (tc/stop! instance))
    :system/config {:docker-image-name default-docker-image-name
                    :exposed-ports default-exposed-ports}})
-

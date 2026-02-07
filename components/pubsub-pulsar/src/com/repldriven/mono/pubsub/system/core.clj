@@ -1,9 +1,6 @@
 (ns com.repldriven.mono.pubsub.system.core
   (:require
    [com.repldriven.mono.pubsub.system.components :as components]
-   [com.repldriven.mono.pubsub.system.testcontainers-components :as
-    testcontainers-components]
-
    [com.repldriven.mono.system.interface :as system]
    [com.repldriven.mono.testcontainers-system.interface :as
     testcontainers-system]))
@@ -28,8 +25,8 @@
 
 ;; test system components
 (system/defcomponents :pubsub
-  {:container testcontainers-components/container
-   :container-service-port testcontainers-system/container-mapped-exposed-port
-   :container-service-url testcontainers-system/container-uri
-   :container-service-http-port testcontainers-system/container-mapped-exposed-port
-   :container-service-http-url testcontainers-system/container-uri})
+  {:container testcontainers-system/pulsar-container
+   :container-service-port testcontainers-system/mapped-exposed-port
+   :container-service-url testcontainers-system/uri
+   :container-service-http-port testcontainers-system/mapped-exposed-port
+   :container-service-http-url testcontainers-system/uri})

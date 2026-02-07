@@ -1,6 +1,4 @@
 {:aliases {:test {:extra-deps {} :extra-paths ["test" "test-resources"]}}
- :deps {clj-test-containers/clj-test-containers {:mvn/version "0.7.4"}
-        clojurewerkz/machine_head {:mvn/version "1.0.0"}
-        org.clojure/java.data {:mvn/version "1.4.120"}
-        org.testcontainers/hivemq {:mvn/version "1.21.4"}}
- :paths ["src" "resources"]}
+ :deps {clojurewerkz/machine_head {:mvn/version "1.0.0"}
+        org.clojure/java.data {:mvn/version "1.4.120"}}
+ :paths ["src"]}
