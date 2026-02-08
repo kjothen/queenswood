@@ -1,8 +1,11 @@
 (ns com.repldriven.mono.system.core
   (:refer-clojure :exclude [ref])
-  (:require [clojure.walk :as walk]
-            [com.repldriven.mono.log.interface :as log]
-            [donut.system :as ds]))
+  (:require
+   [com.repldriven.mono.log.interface :as log]
+
+   [donut.system :as ds]
+
+   [clojure.walk :as walk]))
 
 (def mono-system-ns "system")
 (def donut-system-ns "donut.system")

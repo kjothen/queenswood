@@ -1,11 +1,15 @@
 (ns com.repldriven.mono.iam.service-account.api
   (:refer-clojure :exclude [delete get list name])
-  (:require [clojure.string :as str]
-            [com.repldriven.mono.iam.service-account.spec :as spec]
-            [malli.generator :as mg]
-            [next.jdbc :as jdbc]
-            [next.jdbc.date-time]
-            [next.jdbc.sql :as sql]))
+  (:require
+   next.jdbc.date-time
+
+   [com.repldriven.mono.iam.service-account.spec :as spec]
+
+   [malli.generator :as mg]
+   [next.jdbc :as jdbc]
+   [next.jdbc.sql :as sql]
+
+   [clojure.string :as str]))
 
 (defn email
   [account-id project-id]

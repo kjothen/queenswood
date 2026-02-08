@@ -1,5 +1,6 @@
 (ns com.repldriven.mono.test-system.interface
-  (:require [com.repldriven.mono.test-system.core :as core]))
+  (:require
+   [com.repldriven.mono.test-system.core :as core]))
 
 (def ^:dynamic *env* nil)
 (def ^:dynamic *sysdef* nil)

@@ -1,5 +1,6 @@
 (ns com.repldriven.mono.error.interface
-  (:require [de.otto.nom.core :as nom]))
+  (:require
+   [de.otto.nom.core :as nom]))
 
 ;; Predicates
 (defn anomaly? [x] (nom/anomaly? x))

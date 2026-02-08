@@ -1,5 +1,6 @@
 (ns com.repldriven.mono.schema-avro.serde
-  (:require [deercreeklabs.lancaster :as avro]))
+  (:require
+   [deercreeklabs.lancaster :as avro]))
 
 (defn json->schema [json] (avro/json->schema json))
 

@@ -1,6 +1,8 @@
 (ns com.repldriven.mono.testcontainers.system.components.vault
-  (:require [clj-test-containers.core :as tc]
-            [com.repldriven.mono.log.interface :as log])
+  (:require
+   [com.repldriven.mono.log.interface :as log]
+
+   [clj-test-containers.core :as tc])
   (:import (org.testcontainers.containers ContainerLaunchException)
            (org.testcontainers.vault VaultContainer)
            (org.testcontainers.utility DockerImageName)))

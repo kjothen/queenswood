@@ -1,8 +1,11 @@
 (ns com.repldriven.mono.symmetric-key-api.api
-  (:require [com.repldriven.mono.server.interface :as server]
-            [com.repldriven.mono.symmetric-key-api.identities.routes :as identities]
-            [reitit.ring :as ring]
-            [reitit.http :as http]))
+  (:require
+   [com.repldriven.mono.symmetric-key-api.identities.routes :as identities]
+
+   [com.repldriven.mono.server.interface :as server]
+
+   [reitit.http :as http]
+   [reitit.ring :as ring]))
 
 (defn app
   [_ctx]

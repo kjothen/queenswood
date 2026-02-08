@@ -1,8 +1,10 @@
 (ns com.repldriven.mono.external-test-runner.main
-  (:require [clojure.string :as str]
-            [clojure.tools.cli :refer [parse-opts]]
-            [eftest.runner :as eftest]
-            [eftest.report.pretty :as report])
+  (:require
+   [eftest.report.pretty :as report]
+   [eftest.runner :as eftest]
+
+   [clojure.string :as str]
+   [clojure.tools.cli :refer [parse-opts]])
   (:gen-class))
 
 (set! *warn-on-reflection* true)

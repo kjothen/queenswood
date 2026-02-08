@@ -1,6 +1,7 @@
 (ns com.repldriven.mono.utility.interface
-  (:require [com.repldriven.mono.utility.string :as util.string]
-            [com.repldriven.mono.utility.collections :as util.collections]))
+  (:require
+   [com.repldriven.mono.utility.collections :as util.collections]
+   [com.repldriven.mono.utility.string :as util.string]))
 
 (defn deep-merge
   "Recursively merges maps. If all values are maps, merges them recursively.

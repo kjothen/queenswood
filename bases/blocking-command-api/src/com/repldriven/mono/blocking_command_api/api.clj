@@ -1,8 +1,11 @@
 (ns com.repldriven.mono.blocking-command-api.api
-  (:require [com.repldriven.mono.server.interface :as server]
-            [com.repldriven.mono.blocking-command-api.commands.routes :as commands]
-            [reitit.ring :as ring]
-            [reitit.http :as http]))
+  (:require
+   [com.repldriven.mono.blocking-command-api.commands.routes :as commands]
+
+   [com.repldriven.mono.server.interface :as server]
+
+   [reitit.http :as http]
+   [reitit.ring :as ring]))
 
 (defn app
   [{:keys [pulsar-client mqtt-client]}]

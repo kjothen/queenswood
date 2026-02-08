@@ -1,5 +1,6 @@
 (ns com.repldriven.mono.utility.collections
-  (:require [clojure.walk :refer [postwalk]]))
+  (:require
+   [clojure.walk :refer [postwalk]]))
 
 (defn yaml-collections->edn-collections
   "Convert YAML-specific collection types to standard Clojure collections.

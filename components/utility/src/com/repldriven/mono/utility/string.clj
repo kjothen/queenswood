@@ -1,6 +1,7 @@
 (ns com.repldriven.mono.utility.string
-  (:require [clojure.string :as str]
-            [clojure.java.io :as io])
+  (:require
+   [clojure.java.io :as io]
+   [clojure.string :as str])
   (:import (java.io ByteArrayInputStream)))
 
 (defn string->stream

@@ -1,8 +1,9 @@
 (ns com.repldriven.mono.pulsar.pulsar.crypto
-  (:require [clojure.java.io :as io]
+  (:require
+   [com.repldriven.mono.encryption.interface :as encryption]
+   [com.repldriven.mono.log.interface :as log]
 
-            [com.repldriven.mono.log.interface :as log]
-            [com.repldriven.mono.encryption.interface :as encryption])
+   [clojure.java.io :as io])
   (:import (org.apache.pulsar.client.api CryptoKeyReader EncryptionKeyInfo)
            (java.util Map)))
 

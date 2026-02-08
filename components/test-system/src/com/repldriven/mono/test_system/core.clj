@@ -1,6 +1,7 @@
 (ns com.repldriven.mono.test-system.core
-  (:require [com.repldriven.mono.env.interface :as env]
-            [com.repldriven.mono.system.interface :as system]))
+  (:require
+   [com.repldriven.mono.env.interface :as env]
+   [com.repldriven.mono.system.interface :as system]))
 
 (defn fixture
   "Creates a test fixture that loads an environment and constructs a system definition.

@@ -1,8 +1,10 @@
 (ns com.repldriven.mono.encryption.core
-  (:require [clojure.string :as string]
-            [buddy.core.crypto :as crypto]
-            [buddy.core.codecs :as codecs]
-            [buddy.core.nonce :as nonce])
+  (:require
+   [buddy.core.codecs :as codecs]
+   [buddy.core.crypto :as crypto]
+   [buddy.core.nonce :as nonce]
+
+   [clojure.string :as string])
   (:import (javax.crypto KeyGenerator)
            (java.security KeyFactory KeyPairGenerator PrivateKey PublicKey)
            (java.security.spec PKCS8EncodedKeySpec X509EncodedKeySpec)

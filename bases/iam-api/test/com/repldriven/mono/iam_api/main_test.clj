@@ -1,8 +1,5 @@
 (ns com.repldriven.mono.iam-api.main-test
   (:require
-   com.repldriven.mono.db.interface
-   com.repldriven.mono.server.interface
-
    [com.repldriven.mono.iam-api.main :as SUT]
 
    [clojure.test :as test :refer [deftest is testing]]))

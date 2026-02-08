@@ -1,8 +1,10 @@
 (ns com.repldriven.mono.system.reader.yml
   (:refer-clojure :exclude [ref])
-  (:require [clojure.string :as str]
-            [com.repldriven.mono.env.interface :as env]
-            [com.repldriven.mono.utility.interface :as util]))
+  (:require
+   [com.repldriven.mono.env.interface :as env]
+   [com.repldriven.mono.utility.interface :as util]
+
+   [clojure.string :as str]))
 
 (defn local-ref
   [{:keys [value]}]

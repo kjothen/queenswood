@@ -1,8 +1,11 @@
 (ns com.repldriven.mono.http-client.core
-  (:require [clojure.data.json :as json]
-            [clojure.string :as str]
-            [com.repldriven.mono.error.interface :as err]
-            [org.httpkit.client :as client]))
+  (:require
+   [com.repldriven.mono.error.interface :as err]
+
+   [org.httpkit.client :as client]
+
+   [clojure.data.json :as json]
+   [clojure.string :as str]))
 
 (defn request
   "Make an HTTP request. Returns the response map or an anomaly.

@@ -1,13 +1,15 @@
 (ns com.repldriven.mono.server.router
-  (:require [muuntaja.core]
-            [reitit.coercion.malli]
-            [reitit.dev.pretty :as pretty]
-            [reitit.http.coercion :as coercion]
-            [reitit.http.interceptors.exception :as exception]
-            [reitit.http.interceptors.muuntaja :as muuntaja]
-            [reitit.http.interceptors.parameters :as parameters]
-            [reitit.interceptor.sieppari :as sieppari]
-            [reitit.swagger :as swagger]))
+  (:require
+   [muuntaja.core]
+   [reitit.coercion.malli]
+
+   [reitit.dev.pretty :as pretty]
+   [reitit.http.coercion :as coercion]
+   [reitit.http.interceptors.exception :as exception]
+   [reitit.http.interceptors.muuntaja :as muuntaja]
+   [reitit.http.interceptors.parameters :as parameters]
+   [reitit.interceptor.sieppari :as sieppari]
+   [reitit.swagger :as swagger]))
 
 (def standard-router-data
   "Default Reitit router configuration with Malli coercion, Muuntaja, and Swagger support."

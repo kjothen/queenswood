@@ -1,5 +1,6 @@
 (ns com.repldriven.mono.log.core
-  (:require [clojure.tools.logging :as log]))
+  (:require
+   [clojure.tools.logging :as log]))
 
 (defmacro info [& args] `(log/info ~@args))
 

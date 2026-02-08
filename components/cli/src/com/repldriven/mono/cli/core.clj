@@ -1,8 +1,10 @@
 (ns com.repldriven.mono.cli.core
-  (:require [clojure.java.io :as io]
-            [clojure.string :as string]
-            [clojure.tools.cli :as cli]
-            [com.repldriven.mono.log.interface :as log]))
+  (:require
+   [com.repldriven.mono.log.interface :as log]
+
+   [clojure.java.io :as io]
+   [clojure.string :as string]
+   [clojure.tools.cli :as cli]))
 
 (def cli-options
   [["-c" "--config-file FILENAME" "Configuration filename" :default "env.edn"

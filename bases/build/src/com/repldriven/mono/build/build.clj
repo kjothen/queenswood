@@ -1,6 +1,8 @@
 (ns com.repldriven.mono.build.build
-  (:require [clojure.tools.build.api :as b]
-            [org.corfield.build :as bb]))
+  (:require
+   [org.corfield.build :as bb]
+
+   [clojure.tools.build.api :as b]))
 
 (defn uber
   "Build a polylith project uberjar"

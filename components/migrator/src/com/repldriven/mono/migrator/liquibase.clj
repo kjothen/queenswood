@@ -1,6 +1,8 @@
 (ns com.repldriven.mono.migrator.liquibase
-  (:require [next.jdbc]
-            [clojure.java.io :as io])
+  (:require
+   [next.jdbc]
+
+   [clojure.java.io :as io])
   (:import (liquibase Contexts LabelExpression Liquibase)
            (liquibase.database DatabaseFactory)
            (liquibase.database.jvm JdbcConnection)

@@ -1,6 +1,7 @@
 (ns com.repldriven.mono.server.swagger
-  (:require [reitit.swagger :as swagger]
-            [reitit.swagger-ui :as swagger-ui]))
+  (:require
+   [reitit.swagger :as swagger]
+   [reitit.swagger-ui :as swagger-ui]))
 
 (defn standard-ui-handler []
   (swagger-ui/create-swagger-ui-handler

@@ -1,8 +1,11 @@
 (ns com.repldriven.mono.vault.client
-  (:require [com.repldriven.mono.log.interface :as log]
-            [vault.core :as vault]
-            [vault.client.http]
-            [vault.secrets.kvv2 :as vault-kvv2]))
+  (:require
+   vault.client.http
+
+   [com.repldriven.mono.log.interface :as log]
+
+   [vault.core :as vault]
+   [vault.secrets.kvv2 :as vault-kvv2]))
 
 (defn create [uri] (vault/new-client uri))
 

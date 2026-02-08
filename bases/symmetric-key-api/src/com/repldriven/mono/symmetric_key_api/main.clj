@@ -1,10 +1,13 @@
 (ns com.repldriven.mono.symmetric-key-api.main
-  (:require [com.repldriven.mono.cli.interface :as cli]
-            [com.repldriven.mono.env.interface :as env]
-            [com.repldriven.mono.log.interface :as log]
-            [com.repldriven.mono.symmetric-key-api.api :as api]
-            [com.repldriven.mono.server.interface]
-            [com.repldriven.mono.system.interface :as system])
+  (:require
+   com.repldriven.mono.server.interface
+
+   [com.repldriven.mono.symmetric-key-api.api :as api]
+
+   [com.repldriven.mono.cli.interface :as cli]
+   [com.repldriven.mono.env.interface :as env]
+   [com.repldriven.mono.log.interface :as log]
+   [com.repldriven.mono.system.interface :as system])
   (:gen-class))
 
 (def system (atom nil))

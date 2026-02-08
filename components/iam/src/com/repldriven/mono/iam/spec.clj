@@ -1,6 +1,7 @@
 (ns com.repldriven.mono.iam.spec
   (:refer-clojure :exclude [name])
-  (:require [clojure.string :as str]))
+  (:require
+   [clojure.string :as str]))
 
 ;;;; rfc types
 ;;;;

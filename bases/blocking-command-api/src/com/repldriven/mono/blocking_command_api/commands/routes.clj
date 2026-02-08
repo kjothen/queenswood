@@ -1,5 +1,6 @@
 (ns com.repldriven.mono.blocking-command-api.commands.routes
-  (:require [com.repldriven.mono.blocking-command-api.commands.handlers :as handlers]))
+  (:require
+   [com.repldriven.mono.blocking-command-api.commands.handlers :as handlers]))
 
 (defmacro RequestData [data] [:map [:data data]])
 

@@ -1,7 +1,9 @@
 (ns com.repldriven.mono.iam.service-account.spec
   (:refer-clojure :exclude [name])
-  (:require [clojure.string :as str])
-  (:require [com.repldriven.mono.iam.spec :refer :all]))
+  (:require
+   [com.repldriven.mono.iam.spec :refer :all]
+
+   [clojure.string :as str]))
 
 ;;;; field types
 ;;;;

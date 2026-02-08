@@ -1,6 +1,8 @@
 (ns com.repldriven.mono.pulsar.pulsar.client
-  (:require [clojure.java.data.builder :as builder]
-            [com.repldriven.mono.log.interface :as log])
+  (:require
+   [com.repldriven.mono.log.interface :as log]
+
+   [clojure.java.data.builder :as builder])
   (:import (org.apache.pulsar.client.api ClientBuilder
                                          PulsarClient
                                          PulsarClientException)))

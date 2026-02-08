@@ -1,6 +1,8 @@
 (ns com.repldriven.mono.testcontainers.system.components.pulsar
-  (:require [com.repldriven.mono.log.interface :as log]
-            [clj-test-containers.core :as tc])
+  (:require
+   [com.repldriven.mono.log.interface :as log]
+
+   [clj-test-containers.core :as tc])
   (:import (org.testcontainers.containers ContainerLaunchException
                                           PulsarContainer)
            (org.testcontainers.utility DockerImageName)

@@ -1,5 +1,6 @@
 (ns com.repldriven.mono.encryption.interface
-  (:require [com.repldriven.mono.encryption.core :as core]))
+  (:require
+   [com.repldriven.mono.encryption.core :as core]))
 
 (defn decode64 [s] (core/decode64 s))
 

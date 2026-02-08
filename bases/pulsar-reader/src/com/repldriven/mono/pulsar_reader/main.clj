@@ -1,10 +1,13 @@
 (ns com.repldriven.mono.pulsar-reader.main
-  (:require [clojure.core.async :as async]
-            [com.repldriven.mono.cli.interface :as cli]
-            [com.repldriven.mono.env.interface :as env]
-            [com.repldriven.mono.log.interface :as log]
-            [com.repldriven.mono.pulsar.interface]
-            [com.repldriven.mono.system.interface :as system])
+  (:require
+   com.repldriven.mono.pulsar.interface
+
+   [com.repldriven.mono.cli.interface :as cli]
+   [com.repldriven.mono.env.interface :as env]
+   [com.repldriven.mono.log.interface :as log]
+   [com.repldriven.mono.system.interface :as system]
+
+   [clojure.core.async :as async])
   (:import (org.apache.pulsar.client.api Message Reader))
   (:gen-class))
 

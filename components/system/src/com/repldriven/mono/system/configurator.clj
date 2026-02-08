@@ -1,5 +1,6 @@
 (ns com.repldriven.mono.system.configurator
-  (:require [com.repldriven.mono.utility.interface :as utility]))
+  (:require
+   [com.repldriven.mono.utility.interface :as utility]))
 
 (defn merge-component-config
   [component config]

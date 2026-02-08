@@ -1,11 +1,12 @@
 (ns com.repldriven.mono.testcontainers.system.core
-  (:require [com.repldriven.mono.testcontainers.system.components.testcontainers :as
-             testcontainers]
-            [com.repldriven.mono.testcontainers.system.components.vault :as vault]
-            [com.repldriven.mono.testcontainers.system.components.mqtt :as mqtt]
-            [com.repldriven.mono.testcontainers.system.components.pulsar :as pulsar]
-            [com.repldriven.mono.testcontainers.system.components.postgres :as postgres]
-            [com.repldriven.mono.system.interface :as system]))
+  (:require
+   [com.repldriven.mono.testcontainers.system.components.mqtt :as mqtt]
+   [com.repldriven.mono.testcontainers.system.components.postgres :as postgres]
+   [com.repldriven.mono.testcontainers.system.components.pulsar :as pulsar]
+   [com.repldriven.mono.testcontainers.system.components.testcontainers :as testcontainers]
+   [com.repldriven.mono.testcontainers.system.components.vault :as vault]
+
+   [com.repldriven.mono.system.interface :as system]))
 
 ;; Generic testcontainer components
 (system/defcomponents :testcontainers

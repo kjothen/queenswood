@@ -1,7 +1,6 @@
 (ns com.repldriven.mono.pulsar.system.reader.edn
   (:require
    [com.repldriven.mono.env.interface :as env])
-
   (:import
    (org.apache.pulsar.client.api ConsumerCryptoFailureAction
                                  MessageId

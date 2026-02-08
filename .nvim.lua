@@ -6,20 +6,20 @@ lspconfig.yamlls.setup({
 	settings = {
 		yaml = {
 			customTags = {
+				"!keyword",
 				"!include",
-				"!pubsub/crypto-failure-action",
-				"!pubsub/message-id",
-				"!pubsub/schema",
-				"!pubsub/subscription-type",
+				"!port",
+				"!profile mapping",
+
+				"!pulsar/crypto-failure-action",
+				"!pulsar/message-id",
+				"!pulsar/schema",
+				"!pulsar/subscription-type",
+
 				"!system/component mapping",
 				"!system/local-ref",
 				"!system/ref",
 				"!system/required-component",
-				"!profile mapping",
-				"!port",
-				"!keyword",
-				"!pulsar/schema",
-				"!pulsar/message-id",
 			},
 		},
 	},

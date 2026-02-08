@@ -1,5 +1,6 @@
 (ns com.repldriven.mono.pulsar.pulsar.tenants
-  (:require [com.repldriven.mono.log.interface :as log])
+  (:require
+   [com.repldriven.mono.log.interface :as log])
   (:import (org.apache.pulsar.client.admin PulsarAdmin Tenants)
            (org.apache.pulsar.common.policies.data TenantInfo TenantInfoImpl)))
 

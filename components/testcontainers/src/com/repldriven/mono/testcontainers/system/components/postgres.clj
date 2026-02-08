@@ -1,6 +1,8 @@
 (ns com.repldriven.mono.testcontainers.system.components.postgres
-  (:require [clj-test-containers.core :as tc]
-            [com.repldriven.mono.log.interface :as log])
+  (:require
+   [com.repldriven.mono.log.interface :as log]
+
+   [clj-test-containers.core :as tc])
   (:import (org.testcontainers.containers ContainerLaunchException
                                           PostgreSQLContainer)
            (org.testcontainers.utility DockerImageName)))

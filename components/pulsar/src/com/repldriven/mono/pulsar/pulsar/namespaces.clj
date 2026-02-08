@@ -1,8 +1,10 @@
 (ns com.repldriven.mono.pulsar.pulsar.namespaces
-  (:require [clojure.data.json :as json]
-            [clojure.string :as string]
-            [com.repldriven.mono.http-client.interface :as http]
-            [com.repldriven.mono.log.interface :as log])
+  (:require
+   [com.repldriven.mono.http-client.interface :as http]
+   [com.repldriven.mono.log.interface :as log]
+
+   [clojure.data.json :as json]
+   [clojure.string :as string])
   (:import (org.apache.pulsar.client.admin PulsarAdmin Namespaces)))
 
 (defn- configure

@@ -1,5 +1,6 @@
 (ns com.repldriven.mono.symmetric-key-api.identities.routes
-  (:require [com.repldriven.mono.symmetric-key-api.identities.handlers :as handlers]))
+  (:require
+   [com.repldriven.mono.symmetric-key-api.identities.handlers :as handlers]))
 
 (def routes
   [["/identities/{identity-id}/keys"

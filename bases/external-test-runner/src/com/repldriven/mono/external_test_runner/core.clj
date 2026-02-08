@@ -1,6 +1,7 @@
 (ns com.repldriven.mono.external-test-runner.core
-  (:require [org.corfield.external-test-runner.interface :as core]
-            [polylith.clj.core.test-runner-contract.interface :as test-runner-contract]))
+  (:require
+   [org.corfield.external-test-runner.interface :as core]
+   [polylith.clj.core.test-runner-contract.interface :as test-runner-contract]))
 
 (set! *warn-on-reflection* true)
 
