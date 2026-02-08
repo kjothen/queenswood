@@ -13,7 +13,7 @@
   [environment]
   (log/info "Starting system")
   (let [config (-> (:system environment)
-                   (assoc-in [:server :jetty-adapter :handler] (partial api/app))
+                   (assoc-in [:server :handler] (partial api/app))
                    (system/definition))]
     (system/start! system config)))
 

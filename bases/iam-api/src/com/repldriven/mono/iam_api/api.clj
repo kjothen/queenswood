@@ -22,6 +22,6 @@
 (defn app
   [ctx]
   (http/ring-handler (http/router (routes ctx) server/standard-router-data)
-                     (ring/routes server/standard-swagger-ui-handler
+                     (ring/routes (server/standard-swagger-ui-handler)
                                   (ring/create-default-handler))
-                     {:executor server/standard-executor}))
+                     server/standard-executor))

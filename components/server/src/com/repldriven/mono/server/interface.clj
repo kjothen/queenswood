@@ -2,9 +2,11 @@
   (:require
    com.repldriven.mono.server.system.core
 
+   [com.repldriven.mono.server.swagger :as swagger]
    [com.repldriven.mono.server.router :as router]))
 
 (def standard-router-data router/standard-router-data)
 (def standard-executor router/standard-executor)
-(def standard-swagger-ui-handler router/standard-swagger-ui-handler)
-(def standard-swagger-handler router/standard-swagger-handler)
+
+(defn standard-swagger-ui-handler [] (swagger/standard-ui-handler))
+(defn standard-swagger-handler [] (swagger/standard-handler))

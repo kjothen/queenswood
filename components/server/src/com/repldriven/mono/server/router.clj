@@ -6,7 +6,8 @@
             [reitit.http.interceptors.exception :as exception]
             [reitit.http.interceptors.muuntaja :as muuntaja]
             [reitit.http.interceptors.parameters :as parameters]
-            [reitit.interceptor.sieppari :as sieppari]))
+            [reitit.interceptor.sieppari :as sieppari]
+            [reitit.swagger :as swagger]))
 
 (def standard-router-data
   "Default Reitit router configuration with Malli coercion, Muuntaja, and Swagger support."
@@ -33,5 +34,5 @@
 
 (def standard-executor
   "Default Sieppari executor for Reitit ring handler."
-  sieppari/executor)
+  {:executor sieppari/executor})
 

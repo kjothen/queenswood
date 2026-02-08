@@ -1,10 +1,12 @@
+handler: !system/required-component
+
 interceptors: !system/component
   system/component-kind: server/interceptors
   mqtt-client: !system/ref mqtt.client
 
 jetty-adapter: !system/component
   system/component-kind: server/jetty-adapter
-  handler: !system/required-component
+  handler: !system/ref server.handler
   interceptors: !system/local-ref interceptors
   options:
     join?: !profile

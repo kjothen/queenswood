@@ -1,8 +1,10 @@
 system:
   server:
+    handler: !system/required-component
+
     jetty-adapter: !system/component
       system/component-kind: server/jetty-adapter
-      handler: !system/required-component
+      handler: !system/ref server.handler
       options:
         join?: false
         port: !port 0

@@ -1,6 +1,8 @@
 (ns com.repldriven.mono.db.interface
-  (:require com.repldriven.mono.db.system.core
-            [next.jdbc]))
+  (:require
+   com.repldriven.mono.db.system.core
+
+   [next.jdbc]))
 
 (defn get-datasource
   "Get a JDBC datasource from a datasource config map."

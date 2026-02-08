@@ -9,4 +9,4 @@
   (http/ring-handler
    (http/router commands/routes server/standard-router-data)
    (ring/routes (ring/create-default-handler))
-   {:executor server/standard-executor}))
+   server/standard-executor))
