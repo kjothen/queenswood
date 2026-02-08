@@ -1,6 +1,7 @@
 (ns com.repldriven.mono.server.interface
   (:require
-   com.repldriven.mono.server.system
+   com.repldriven.mono.server.system.core
+
    [com.repldriven.mono.server.router :as router]))
 
 (def standard-router-data router/standard-router-data)

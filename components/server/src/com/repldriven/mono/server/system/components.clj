@@ -1,4 +1,4 @@
-(ns com.repldriven.mono.server.components
+(ns com.repldriven.mono.server.system.components
   (:require [com.repldriven.mono.log.interface :as log]
             [com.repldriven.mono.system.interface :as system]
             [ring.adapter.jetty9 :as jetty])

@@ -6,9 +6,7 @@
             [reitit.http.interceptors.exception :as exception]
             [reitit.http.interceptors.muuntaja :as muuntaja]
             [reitit.http.interceptors.parameters :as parameters]
-            [reitit.interceptor.sieppari :as sieppari]
-            [reitit.swagger :as swagger]
-            [reitit.swagger-ui :as swagger-ui]))
+            [reitit.interceptor.sieppari :as sieppari]))
 
 (def standard-router-data
   "Default Reitit router configuration with Malli coercion, Muuntaja, and Swagger support."
@@ -37,13 +35,3 @@
   "Default Sieppari executor for Reitit ring handler."
   sieppari/executor)
 
-(def standard-swagger-ui-handler
-  "Default Swagger UI handler with standard configuration."
-  (swagger-ui/create-swagger-ui-handler
-   {:path "/"
-    :config {:validatorUrl nil
-             :operationsSorter "alpha"}}))
-
-(def standard-swagger-handler
-  "Default Swagger spec handler."
-  swagger/create-swagger-handler)
