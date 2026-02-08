@@ -1,6 +1,7 @@
 (ns com.repldriven.mono.pulsar-reader.system-test
   (:require
    com.repldriven.mono.pulsar.interface
+   com.repldriven.mono.testcontainers.interface
 
    [com.repldriven.mono.system.interface :as system]
    [com.repldriven.mono.test-system.interface :as test-system]

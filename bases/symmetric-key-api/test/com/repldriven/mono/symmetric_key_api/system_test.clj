@@ -1,6 +1,7 @@
 (ns com.repldriven.mono.symmetric-key-api.system-test
   (:require
    com.repldriven.mono.server.interface
+   com.repldriven.mono.testcontainers.interface
 
    [com.repldriven.mono.system.interface :as system]
    [com.repldriven.mono.test-system.interface :as test-system]

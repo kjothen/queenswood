@@ -1,7 +1,5 @@
 (ns com.repldriven.mono.symmetric-key-api.main-test
   (:require
-   com.repldriven.mono.server.interface
-
    [com.repldriven.mono.symmetric-key-api.main :as SUT]
 
    [com.repldriven.mono.env.interface :as env]
