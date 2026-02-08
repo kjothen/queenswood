@@ -1,4 +1,4 @@
-(ns com.repldriven.mono.pulsar.system.env-reader
+(ns com.repldriven.mono.pulsar.system.reader.edn
   (:require
    [com.repldriven.mono.env.interface :as env])
 
@@ -61,7 +61,7 @@
     (throw (ex-info (format "Invalid value %s for tag %s" value tag)
                     {:tag tag :value value}))))
 
-;;;; edn-reader 
+;; edn-reader defmethods
 (defmethod env/edn-reader 'pulsar-crypto-failure-action
   [opts tag value]
   (crypto-failure-action opts tag value))
@@ -77,20 +77,3 @@
 (defmethod env/edn-reader 'pulsar-subscription-type
   [opts tag value]
   (subscription-type opts tag value))
-
-;;;; yml-reader 
-(defmethod env/yml-reader :!pulsar/crypto-failure-action
-  [{:keys [value]}]
-  (symbol (str "#pulsar-crypto-failure-action " (pr-str (keyword value)))))
-
-(defmethod env/yml-reader :!pulsar/message-id
-  [{:keys [value]}]
-  (symbol (str "#pulsar-message-id " (pr-str (keyword value)))))
-
-(defmethod env/yml-reader :!pulsar/schema
-  [{:keys [value]}]
-  (symbol (str "#pulsar-schema " (pr-str (keyword value)))))
-
-(defmethod env/yml-reader :!pulsar/subscription-type
-  [{:keys [value]}]
-  (symbol (str "#pulsar-subscription-type " (pr-str (keyword value)))))

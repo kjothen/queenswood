@@ -1,5 +1,8 @@
 (ns com.repldriven.mono.pulsar.system.core
   (:require
+   com.repldriven.mono.pulsar.system.reader.edn
+   com.repldriven.mono.pulsar.system.reader.yml
+
    [com.repldriven.mono.pulsar.system.components :as components]
    [com.repldriven.mono.system.interface :as system]))
 
