@@ -18,6 +18,8 @@ lspconfig.yamlls.setup({
 				"!profile mapping",
 				"!port",
 				"!keyword",
+				"!pulsar/schema",
+				"!pulsar/message-id",
 			},
 		},
 	},

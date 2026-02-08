@@ -1,8 +1,7 @@
 (ns com.repldriven.mono.server.system-test
   (:require
-   [com.repldriven.mono.server.interface :as server]
-
    [com.repldriven.mono.http-client.interface :as http-client]
+   [com.repldriven.mono.server.interface :as server]
    [com.repldriven.mono.system.interface :as system]
    [com.repldriven.mono.test-system.interface :as test-system]
 

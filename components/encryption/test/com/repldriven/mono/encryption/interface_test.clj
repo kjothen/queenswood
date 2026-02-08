@@ -4,7 +4,8 @@
 
    [clojure.test :as test :refer [deftest is testing]])
 
-  (:import (clojure.lang ExceptionInfo)))
+  (:import
+   (clojure.lang ExceptionInfo)))
 
 (deftest symmetric-key-test
   (testing

@@ -1,6 +1,8 @@
 (ns com.repldriven.mono.pulsar-reader.main-test
-  (:require [clojure.test :refer [deftest is testing]]
-            [com.repldriven.mono.pulsar-reader.main :as SUT]))
+  (:require
+   [com.repldriven.mono.pulsar-reader.main :as SUT]
+
+   [clojure.test :refer [deftest is testing]]))
 
 (deftest start-test
   (testing

@@ -1,12 +1,13 @@
 (ns com.repldriven.mono.blocking-command-api.main-test
   (:require
-   com.repldriven.mono.testcontainers.interface
+   com.repldriven.mono.mqtt.interface
+   com.repldriven.mono.pulsar.interface
    com.repldriven.mono.server.interface
+   com.repldriven.mono.testcontainers.interface
 
-   [clojure.test :as test :refer [deftest is testing]]
    [com.repldriven.mono.blocking-command-api.main :as SUT]
-   [com.repldriven.mono.mqtt.interface]
-   [com.repldriven.mono.pulsar.interface]))
+
+   [clojure.test :as test :refer [deftest is testing]]))
 
 (deftest start-test
   (testing

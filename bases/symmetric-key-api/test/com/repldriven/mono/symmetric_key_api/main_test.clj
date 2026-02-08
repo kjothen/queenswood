@@ -2,11 +2,14 @@
   (:require
    com.repldriven.mono.server.interface
 
-   [clojure.test :as test :refer [deftest is testing use-fixtures]]
-   [com.repldriven.mono.env.interface :as env]
    [com.repldriven.mono.symmetric-key-api.main :as SUT]
+
+   [com.repldriven.mono.env.interface :as env]
    [com.repldriven.mono.system.interface :as system]
-   [org.httpkit.client :as http]))
+
+   [org.httpkit.client :as http]
+
+   [clojure.test :as test :refer [deftest is testing use-fixtures]]))
 
 (def ^:dynamic *test-system* nil)
 (def ^:dynamic *test-port* nil)

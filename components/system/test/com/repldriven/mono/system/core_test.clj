@@ -1,6 +1,8 @@
 (ns com.repldriven.mono.system.core-test
-  (:require [clojure.test :as test :refer [deftest is testing]]
-            [com.repldriven.mono.system.core :as SUT]))
+  (:require
+   [com.repldriven.mono.system.core :as SUT]
+
+   [clojure.test :as test :refer [deftest is testing]]))
 
 (deftest namespaced-config-keys
   (testing

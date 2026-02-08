@@ -1,8 +1,11 @@
 (ns com.repldriven.mono.build.build-test
-  (:require [clojure.test :as test :refer [deftest is testing]]
-            [clojure.tools.build.api :as b]
-            [com.repldriven.mono.build.build :as SUT]
-            [org.corfield.build :as bb]))
+  (:require
+   [com.repldriven.mono.build.build :as SUT]
+
+   [org.corfield.build :as bb]
+
+   [clojure.test :as test :refer [deftest is testing]]
+   [clojure.tools.build.api :as b]))
 
 (deftest uber-version-test
   (testing "Version string with default major-minor"

@@ -1,8 +1,11 @@
 (ns com.repldriven.mono.iam-api.main-test
-  (:require [clojure.test :as test :refer [deftest is testing]]
-            [com.repldriven.mono.iam-api.main :as SUT]
-            [com.repldriven.mono.server.interface]
-            [com.repldriven.mono.db.interface]))
+  (:require
+   com.repldriven.mono.db.interface
+   com.repldriven.mono.server.interface
+
+   [com.repldriven.mono.iam-api.main :as SUT]
+
+   [clojure.test :as test :refer [deftest is testing]]))
 
 (deftest start-test
   (testing

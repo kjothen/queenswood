@@ -1,8 +1,10 @@
 (ns com.repldriven.mono.mqtt.component-test
-  (:require [clojure.test :refer [deftest is use-fixtures]]
-            [com.repldriven.mono.mqtt.interface :as SUT]
-            [com.repldriven.mono.system.interface :as system]
-            [com.repldriven.mono.test-system.interface :as test-system]))
+  (:require
+   [com.repldriven.mono.mqtt.interface :as SUT]
+   [com.repldriven.mono.system.interface :as system]
+   [com.repldriven.mono.test-system.interface :as test-system]
+
+   [clojure.test :refer [deftest is use-fixtures]]))
 
 (defn with-system-fixture
   [f]

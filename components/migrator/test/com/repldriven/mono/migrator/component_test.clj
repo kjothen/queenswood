@@ -1,11 +1,14 @@
 (ns com.repldriven.mono.migrator.component-test
-  (:require [clojure.test :as test :refer [deftest is testing use-fixtures]]
-            [com.repldriven.mono.migrator.interface :as SUT]
-            [com.repldriven.mono.db.interface :as sql]
-            [com.repldriven.mono.system.interface :as system]
-            [com.repldriven.mono.test-system.interface :as test-system]
-            [next.jdbc :as jdbc]
-            [next.jdbc.result-set :as rs]))
+  (:require
+   [com.repldriven.mono.db.interface :as sql]
+   [com.repldriven.mono.migrator.interface :as SUT]
+   [com.repldriven.mono.system.interface :as system]
+   [com.repldriven.mono.test-system.interface :as test-system]
+
+   [next.jdbc :as jdbc]
+   [next.jdbc.result-set :as rs]
+
+   [clojure.test :as test :refer [deftest is testing use-fixtures]]))
 
 (defn db-spec
   [sys]

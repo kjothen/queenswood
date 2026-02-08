@@ -1,8 +1,11 @@
 (ns com.repldriven.mono.http-client.interface-test
-  (:require [clojure.test :as test :refer [deftest is testing]]
-            [com.repldriven.mono.error.interface :as err]
-            [com.repldriven.mono.http-client.interface :as http]
-            [org.httpkit.fake :refer [with-fake-http]]))
+  (:require
+   [com.repldriven.mono.error.interface :as err]
+   [com.repldriven.mono.http-client.interface :as http]
+
+   [org.httpkit.fake :refer [with-fake-http]]
+
+   [clojure.test :as test :refer [deftest is testing]]))
 
 (deftest res->body-string-body-no-content-type-test
   (testing "String body without content-type returns the string"

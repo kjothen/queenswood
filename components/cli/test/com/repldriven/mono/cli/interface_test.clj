@@ -1,6 +1,8 @@
 (ns com.repldriven.mono.cli.interface-test
-  (:require [clojure.test :as test :refer [deftest is testing]]
-            [com.repldriven.mono.cli.interface :as SUT]))
+  (:require
+   [com.repldriven.mono.cli.interface :as SUT]
+
+   [clojure.test :as test :refer [deftest is testing]]))
 
 (deftest validate-args-test
   (testing "Valid arguments with both config and profile"

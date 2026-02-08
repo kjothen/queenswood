@@ -1,6 +1,8 @@
 (ns com.repldriven.mono.env.system-test
-  (:require [clojure.test :as test :refer [deftest is testing]]
-            [com.repldriven.mono.env.interface :as SUT]))
+  (:require
+   [com.repldriven.mono.env.interface :as SUT]
+
+   [clojure.test :as test :refer [deftest is testing]]))
 
 (deftest edn-test
   (testing
