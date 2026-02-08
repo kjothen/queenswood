@@ -23,42 +23,11 @@
                    res))))
 
 (defn request-async
-  "Make an async HTTP request. Returns a promise that will contain either
-  the response map or an anomaly when dereferenced.
+  "Make an async HTTP request. Returns a promise that will contain the response map.
 
-  Handles three types of failures as anomalies:
-  - Exceptions starting the request (:http-client/request-exception)
-  - http-kit error responses with {:error ...} (:http-client/request-failed)
-  - Exceptions in the callback (:http-client/callback-exception)"
+  The caller is responsible for dereferencing the promise and handling any errors."
   [opts]
-  (let [p (promise)]
-    (try
-      (client/request opts
-                      (fn [{:keys [error] :as res}]
-                        (try
-                          (deliver p
-                                   (if error
-                                     (err/fail :http-client/request-failed
-                                               "HTTP request failed"
-                                               {:opts opts
-                                                :error error
-                                                :res res})
-                                     res))
-                          (catch Exception e
-                            (deliver p
-                                     (err/fail :http-client/callback-exception
-                                               "Exception in async request callback"
-                                               {:opts opts
-                                                :exception e
-                                                :message (.getMessage e)}))))))
-      (catch Exception e
-        (deliver p
-                 (err/fail :http-client/request-exception
-                           "Exception starting async request"
-                           {:opts opts
-                            :exception e
-                            :message (.getMessage e)}))))
-    p))
+  (client/request opts))
 
 (defn- body->string
   "Convert various body types to string."
