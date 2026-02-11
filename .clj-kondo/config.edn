@@ -1,0 +1,2 @@
+{:hooks {:analyze-call {com.repldriven.mono.system.interface/with-sysdefs hooks.system-macros/with-sysdefs
+                       com.repldriven.mono.system.interface/with-sys hooks.system-macros/with-sys}}}

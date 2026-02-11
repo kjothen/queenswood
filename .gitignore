@@ -27,7 +27,12 @@
 .calva
 **/.calva-repl
 *cider-error*
-.clj-kondo
+bases/**/.clj-kondo
+components/**/.clj-kondo
+projects/**/.clj-kondo
+.clj-kondo/*
+!.clj-kondo/config.edn
+!.clj-kondo/hooks/
 .eastwood
 .lsp
 .nrepl-port
