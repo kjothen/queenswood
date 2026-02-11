@@ -82,10 +82,10 @@
    Usage:
      (use-fixtures :once
        (fn [f]
-         (with-sysdefs sysdefs \"classpath:app/test.yml\" :test
-           (with-sys sys sysdefs
+         (with-sysdefs [sysdefs \"classpath:app/test.yml\" :test]
+           (with-sys [sys sysdefs]
              (f)))))"
-  [binding env-path profile & body]
+  [[binding env-path profile] & body]
   `(let [environment# (env/env ~env-path ~profile)
          ~binding (configurator/definition (:system environment#))]
      ~@body))
@@ -95,10 +95,10 @@
    executes the body, and stops the system.
 
    Usage:
-     (with-sysdefs sysdefs \"classpath:app/test.yml\" :test
-       (with-sys sys sysdefs
+     (with-sysdefs [sysdefs \"classpath:app/test.yml\" :test]
+       (with-sys [sys sysdefs]
          (f)))"
-  [binding sysdef & body]
+  [[binding sysdef] & body]
   `(let [~binding (start ~sysdef)]
      (try
        ~@body
