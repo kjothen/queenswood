@@ -1,4 +1,5 @@
 (ns com.repldriven.mono.system.interface
+  "System component interface - used by other bricks in the monorepo."
   (:refer-clojure :exclude [ref])
   (:require [com.repldriven.mono.system.core :as core]
             [com.repldriven.mono.system.configurator :as configurator]
@@ -75,8 +76,12 @@
          (pop-thread-bindings)
          (when system# (stop system#))))))
 
-(defmacro with-sysdefs [[sym env-path profile] & body]
+(defmacro with-sysdefs
+  {:clj-kondo/ignore [:unresolved-symbol]}
+  [[sym env-path profile] & body]
   `(core/with-sysdefs [~sym ~env-path ~profile] ~@body))
 
-(defmacro with-sys [[sym sysdef] & body]
+(defmacro with-sys
+  {:clj-kondo/lint-as 'clojure.core/let}
+  [[sym sysdef] & body]
   `(core/with-sys [~sym ~sysdef] ~@body))

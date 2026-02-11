@@ -1,8 +1,8 @@
-{;; Ensure clojure-lsp uses the project's .clj-kondo/config.edn
- :copy-kondo-configs? true
+{;; Polylith monorepo configuration
+ :source-aliases #{:dev :test :poly}
 
- ;; Source paths for better analysis
- :source-paths #{"bases" "components" "projects" "development/src"}
+ ;; Enable kondo config copying for dependency analysis
+ :copy-kondo-configs? true
 
  ;; Linting configuration
  :linters {:clj-kondo {:level :on}}

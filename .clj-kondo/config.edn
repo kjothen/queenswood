@@ -1,9 +1,4 @@
-{:lint-as {com.repldriven.mono.system.interface/with-sys clojure.core/let
-           com.repldriven.mono.system.interface/with-sysdefs clojure.core/let
-           com.repldriven.mono.system.core/with-sys clojure.core/let
-           com.repldriven.mono.system.core/with-sysdefs clojure.core/let}
- :linters {:refer-all {:exclude []}
-           :unused-binding {:exclude-patterns ["^\\?"]}
-           :unresolved-symbol {:exclude-patterns ["^\\?"] :exclude []}
-           :unresolved-var {:exclude []}
-           :syntax {:level :off}}}
+#_{:linters {:unresolved-symbol {:exclude [sys sysdefs]}}
+   :project-specs [{:project-path "deps.edn" :classpath-cmd ["clojure" "-A:dev:test" "-Spath"]}]
+   :config-in-ns {com.repldriven.mono.*.interface
+                  {:linters {:clojure-lsp/unused-public-var {:level :off}}}}}

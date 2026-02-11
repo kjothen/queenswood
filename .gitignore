@@ -33,22 +33,3 @@ projects/**/.clj-kondo
 .clj-kondo/*
 !.clj-kondo/config.edn
 !.clj-kondo/hooks/
-.eastwood
-bases/**/.lsp
-components/**/.lsp
-projects/**/.lsp
-.lsp/*
-!.lsp/config.edn
-.nrepl-port
-.portal
-.rebel_readline_history
-# logs
-*.log
-/log
-
-# tmp dbs
-*.mv.db
-*.trace.db
-
-# keys
-**/*.pem

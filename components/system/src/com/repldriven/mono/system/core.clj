@@ -77,30 +77,17 @@
 (defn resume [system] (ds/resume system))
 
 (defmacro with-sysdefs
-  "Loads environment and creates sysdef, binds it to the provided symbol.
-
-   Usage:
-     (use-fixtures :once
-       (fn [f]
-         (with-sysdefs [sysdefs \"classpath:app/test.yml\" :test]
-           (with-sys [sys sysdefs]
-             (f)))))"
-  [[binding env-path profile] & body]
+  {:clj-kondo/ignore [:unresolved-symbol]}
+  [[sym env-path profile] & body]
   `(let [environment# (env/env ~env-path ~profile)
-         ~binding (configurator/definition (:system environment#))]
+         ~sym (configurator/definition (:system environment#))]
      ~@body))
 
 (defmacro with-sys
-  "Starts a system from the given sysdef, binds it to the provided symbol,
-   executes the body, and stops the system.
-
-   Usage:
-     (with-sysdefs [sysdefs \"classpath:app/test.yml\" :test]
-       (with-sys [sys sysdefs]
-         (f)))"
-  [[binding sysdef] & body]
-  `(let [~binding (start ~sysdef)]
+  {:clj-kondo/lint-as 'clojure.core/let}
+  [[sym sysdef] & body]
+  `(let [~sym (start ~sysdef)]
      (try
        ~@body
        (finally
-         (when ~binding (stop ~binding))))))
+         (when ~sym (stop ~sym))))))
