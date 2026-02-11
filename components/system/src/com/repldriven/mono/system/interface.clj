@@ -75,8 +75,8 @@
          (pop-thread-bindings)
          (when system# (stop system#))))))
 
-(defmacro with-sysdefs [bindings & body]
-  `(core/with-sysdefs ~bindings ~@body))
+(defmacro with-sysdefs [[sym env-path profile] & body]
+  `(core/with-sysdefs [~sym ~env-path ~profile] ~@body))
 
-(defmacro with-sys [bindings & body]
-  `(core/with-sys ~bindings ~@body))
+(defmacro with-sys [[sym sysdef] & body]
+  `(core/with-sys [~sym ~sysdef] ~@body))

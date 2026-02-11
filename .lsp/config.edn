@@ -1,0 +1,10 @@
+{;; Ensure clojure-lsp uses the project's .clj-kondo/config.edn
+ :copy-kondo-configs? true
+
+ ;; Source paths for better analysis
+ :source-paths #{"bases" "components" "projects" "development/src"}
+
+ ;; Linting configuration
+ :linters {:clj-kondo {:level :on}}
+
+ :format {:type :zprint-file :zprint-config-path ".zprint.edn"}}
