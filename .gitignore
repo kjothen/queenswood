@@ -33,3 +33,14 @@ projects/**/.clj-kondo
 .clj-kondo/*
 !.clj-kondo/config.edn
 !.clj-kondo/hooks/
+bases/**/.lsp
+components/**/.lsp
+projects/**/.lsp
+.lsp/*
+!.lsp/config.edn
+
+# REPL and linting files
+.nrepl-port
+**/.nrepl-port
+.rebel_readline_history
+.eastwood
