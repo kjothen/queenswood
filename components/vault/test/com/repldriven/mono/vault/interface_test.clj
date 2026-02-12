@@ -7,7 +7,7 @@
     [com.repldriven.mono.vault.interface :as SUT]
 
     [clojure.string :as str]
-    [clojure.test :as test :refer [deftest is testing]])))
+    [clojure.test :as test :refer [deftest is testing]]))
 
 (deftest vault-component-test
   (testing "Vault component should authenticate and read secrets"
