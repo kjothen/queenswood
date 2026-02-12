@@ -7,7 +7,7 @@
     [com.repldriven.mono.iam-api.api :as api]
 
     [com.repldriven.mono.cli.interface :as cli]
-    [com.repldriven.mono.db.interface :as sql]
+    [com.repldriven.mono.db.interface :as db]
     [com.repldriven.mono.env.interface :as env]
     [com.repldriven.mono.error.interface :as error]
     [com.repldriven.mono.iam.interface :as iam]
@@ -18,16 +18,18 @@
 (defn- migrate-db
   [sys]
   (let [datasource (system/instance sys [:db :datasource])]
-    (iam/migrate (sql/get-datasource datasource))))
+    (iam/migrate (db/get-datasource datasource))))
 
 (defn start
   [config-file profile]
-  (error/let-nom [config (env/config config-file profile)
-                  sys-def (system/defs config)
-                  sys-def' (assoc-in sys-def [:system/defs :server :handler] (partial api/app))
-                  sys (system/start sys-def')
-                  _ (migrate-db sys)]
-    sys))
+  (let [sys (error/nom-> (env/config config-file profile)
+                         system/defs
+                         (assoc-in [:system/defs :server :handler] (partial api/app))
+                         system/start)]
+    (if (error/anomaly? sys)
+      sys
+      (error/let-nom [_ (migrate-db sys)]
+        sys))))
 
 (defn stop [sys] (system/stop sys))
 
