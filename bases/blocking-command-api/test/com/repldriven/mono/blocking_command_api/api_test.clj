@@ -19,7 +19,7 @@
     (let [sys (error/nom->
                (env/config "classpath:blocking-command-api/application-test.yml"
                            :test)
-               system/definition
+               system/defs
                (assoc-in [:system/defs :server :handler] (partial api/app))
                system/start)]
       (is (not (error/anomaly? sys)) "System should start")

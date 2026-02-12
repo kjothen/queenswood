@@ -26,7 +26,7 @@
 (defn start
   [environment]
   (log/info "Starting system")
-  (let [config (system/definition environment)]
+  (let [config (system/defs environment)]
     (system/start! system config)
     (reset! channel (async/chan))
     (read-messages (system/instance @system [:pulsar :reader]) @channel)))

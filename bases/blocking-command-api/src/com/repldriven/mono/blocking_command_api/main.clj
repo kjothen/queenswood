@@ -18,7 +18,7 @@
 (defn start
   [config-file profile]
   (error/nom-> (env/config config-file profile)
-               system/definition
+               system/defs
                (assoc-in [:system/defs :server :handler] (partial api/app))
                system/start))
 

@@ -16,7 +16,7 @@
   [environment]
   (log/info "Starting system")
   (let [config (-> environment
-                   (system/definition)
+                   (system/defs)
                    (assoc-in [:system/defs :server :handler] (partial api/app)))]
     (system/start! system config)))
 

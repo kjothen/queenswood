@@ -48,10 +48,10 @@
              {}
              group-config))
 
-(defn definition
+(defn defs
   "Builds system definitions by reducing over component groups and their components.
   Takes a config map and optional path (defaults to [:system]) to extract system config."
-  ([config] (definition config [:system]))
+  ([config] (defs config [:system]))
   ([config ks]
    {:system/defs
     (reduce-kv (fn [groups group-name group-config]

@@ -52,10 +52,10 @@
   [ns-keyword component-map]
   `(configurator/defcomponents ~ns-keyword ~component-map))
 
-(defn definition
+(defn defs
   "Builds system definitions from config. Extracts system config at path (defaults to [:system])."
-  ([config] (configurator/definition config))
-  ([config ks] (configurator/definition config ks)))
+  ([config] (configurator/defs config))
+  ([config ks] (configurator/defs config ks)))
 
 (defn merge-component-config
   [component config]

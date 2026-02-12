@@ -14,9 +14,9 @@
   Tests should use system/with-*sys* with *sysdef* to start systems as needed.
 
   Optionally provide a configure-fn that takes the system config and returns a system definition.
-  If not provided, uses system/definition."
+  If not provided, uses system/defs."
   ([env-path profile env-var sysdef-var]
-   (fixture env-path profile env-var sysdef-var system/definition))
+   (fixture env-path profile env-var sysdef-var system/defs))
   ([env-path profile env-var sysdef-var configure-fn]
    (fn [f]
      (let [environment (env/config env-path profile)
