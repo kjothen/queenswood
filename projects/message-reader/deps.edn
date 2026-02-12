@@ -3,7 +3,9 @@
                                :main com.repldriven.mono.pulsar-reader.main
                                :major-minor-version "0.0"}
                    :ns-default com.repldriven.mono.build.build}
-           :test {:extra-deps {base/external-test-runner {:local/root "../../bases/external-test-runner"}}}}
+           :test {:extra-deps {base/external-test-runner
+                               {:local/root
+                                "../../bases/external-test-runner"}}}}
  :deps {component/cli {:local/root "../../components/cli"}
         component/encryption {:local/root "../../components/encryption"}
         component/env {:local/root "../../components/env"}
@@ -12,11 +14,8 @@
         component/log {:local/root "../../components/log"}
         component/pulsar {:local/root "../../components/pulsar"}
         component/schema-avro {:local/root "../../components/schema-avro"}
-        component/spec-malli {:local/root "../../components/spec-malli"}
         component/system {:local/root "../../components/system"}
-        component/test-system {:local/root "../../components/test-system"}
-        component/testcontainers
-        {:local/root "../../components/testcontainers"}
+        component/testcontainers {:local/root "../../components/testcontainers"}
         component/utility {:local/root "../../components/utility"}
         base/pulsar-reader {:local/root "../../bases/pulsar-reader"}
         org.clojure/clojure {:mvn/version "1.12.4"}}

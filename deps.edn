@@ -7,82 +7,77 @@
           :main-opts ["-m" "rebel-readline.main"]}
   :build {:extra-deps #:io.github.clojure{tools.build {:mvn/version "0.10.12"}}}
   :dev
-  {:extra-deps {components/cli {:local/root "components/cli"}
-                components/encryption {:local/root "components/encryption"}
-                components/env {:local/root "components/env"}
-                components/error {:local/root "components/error"}
-                components/event {:local/root "components/event"}
-                components/http-client {:local/root "components/http-client"}
-                components/iam {:local/root "components/iam"}
-                components/log {:local/root "components/log"}
-                components/migrator {:local/root "components/migrator"}
-                components/mqtt {:local/root "components/mqtt"}
-                components/pulsar {:local/root "components/pulsar"}
-                components/server {:local/root "components/server"}
-                components/schema-avro {:local/root "components/schema-avro"}
-                components/spec-malli {:local/root "components/spec-malli"}
-                components/spec-spec {:local/root "components/spec-spec"}
-                components/db {:local/root "components/db"}
-                components/system {:local/root "components/system"}
-                components/test-system {:local/root "components/test-system"}
-                components/testcontainers
-                {:local/root "components/testcontainers"}
-                components/utility {:local/root "components/utility"}
-                components/vault {:local/root "components/vault"}
-                bases/blocking-command-api {:local/root
-                                            "bases/blocking-command-api"}
-                bases/build {:local/root "bases/build"}
-                bases/external-test-runner {:local/root "bases/external-test-runner"}
-                bases/iam-api {:local/root "bases/iam-api"}
-                bases/pulsar-reader {:local/root "bases/pulsar-reader"}
-                bases/symmetric-key-api {:local/root "bases/symmetric-key-api"}
-                org.clojure/clojure {:mvn/version "1.12.4"}}
+  {:extra-deps
+   {components/cli {:local/root "components/cli"}
+    components/encryption {:local/root "components/encryption"}
+    components/env {:local/root "components/env"}
+    components/error {:local/root "components/error"}
+    components/event {:local/root "components/event"}
+    components/http-client {:local/root "components/http-client"}
+    components/iam {:local/root "components/iam"}
+    components/log {:local/root "components/log"}
+    components/migrator {:local/root "components/migrator"}
+    components/mqtt {:local/root "components/mqtt"}
+    components/pulsar {:local/root "components/pulsar"}
+    components/server {:local/root "components/server"}
+    components/schema-avro {:local/root "components/schema-avro"}
+    components/spec-malli {:local/root "components/spec-malli"}
+    components/spec-spec {:local/root "components/spec-spec"}
+    components/db {:local/root "components/db"}
+    components/system {:local/root "components/system"}
+    components/testcontainers {:local/root "components/testcontainers"}
+    components/utility {:local/root "components/utility"}
+    components/vault {:local/root "components/vault"}
+    bases/blocking-command-api {:local/root "bases/blocking-command-api"}
+    bases/build {:local/root "bases/build"}
+    bases/external-test-runner {:local/root "bases/external-test-runner"}
+    bases/iam-api {:local/root "bases/iam-api"}
+    bases/pulsar-reader {:local/root "bases/pulsar-reader"}
+    bases/symmetric-key-api {:local/root "bases/symmetric-key-api"}
+    org.clojure/clojure {:mvn/version "1.12.4"}}
    :extra-paths ["development/resources"]
    :jvm-opts
    ["-Dclojure.tools.logging.factory=clojure.tools.logging.impl/slf4j-factory"]}
   :poly {:extra-deps {polylith/clj-poly {:mvn/version "0.3.32"}
-                      bases/external-test-runner {:local/root "bases/external-test-runner"}}
+                      bases/external-test-runner {:local/root
+                                                  "bases/external-test-runner"}}
          :main-opts ["-m" "polylith.clj.core.poly-cli.core"]}
-  :test
-  {:extra-deps {http-kit.fake/http-kit.fake {:mvn/version "0.2.2"}}
-   :extra-paths
-   ["components/cli/test"
-    "components/env/test"
-    "components/env/test-resources"
-    "components/encryption/test"
-    "components/error/test"
-    "components/event/test"
-    "components/http-client/test"
-    "components/iam/test"
-    "components/log/test"
-    "components/migrator/test"
-    "components/migrator/test-resources"
-    "components/mqtt/test"
-    "components/mqtt/test-resources"
-    "components/pulsar/test"
-    "components/pulsar/test-resources"
-    "components/server/test"
-    "components/server/test-resources"
-    "components/schema-avro/test"
-    "components/spec-malli/test"
-    "components/spec-spec/test"
-    "components/db/test"
-    "components/db/test-resources"
-    "components/system/test"
-    "components/test-system/test"
-    "components/testcontainers/test"
-    "components/testcontainers/test-resources"
-    "components/utility/test"
-    "components/vault/test"
-    "components/vault/test-resources"
-    "bases/blocking-command-api/test"
-    "bases/blocking-command-api/test-resources"
-    "bases/external-test-runner/test"
-    "bases/pulsar-reader/test"
-    "bases/pulsar-reader/test-resources"
-    "bases/symmetric-key-api/test"
-    "bases/symmetric-key-api/test-resources"
-    "bases/iam-api/test"
-    "bases/iam-api/test-resources"]}}
- :mvn/repos
- {"maven" {:url "https://packages.confluent.io/maven"}}}
+  :test {:extra-deps {http-kit.fake/http-kit.fake {:mvn/version "0.2.2"}}
+         :extra-paths ["components/cli/test"
+                       "components/env/test"
+                       "components/env/test-resources"
+                       "components/encryption/test"
+                       "components/error/test"
+                       "components/event/test"
+                       "components/http-client/test"
+                       "components/iam/test"
+                       "components/log/test"
+                       "components/migrator/test"
+                       "components/migrator/test-resources"
+                       "components/mqtt/test"
+                       "components/mqtt/test-resources"
+                       "components/pulsar/test"
+                       "components/pulsar/test-resources"
+                       "components/server/test"
+                       "components/server/test-resources"
+                       "components/schema-avro/test"
+                       "components/spec-malli/test"
+                       "components/spec-spec/test"
+                       "components/db/test"
+                       "components/db/test-resources"
+                       "components/system/test"
+                       "components/testcontainers/test"
+                       "components/testcontainers/test-resources"
+                       "components/utility/test"
+                       "components/vault/test"
+                       "components/vault/test-resources"
+                       "bases/blocking-command-api/test"
+                       "bases/blocking-command-api/test-resources"
+                       "bases/external-test-runner/test"
+                       "bases/pulsar-reader/test"
+                       "bases/pulsar-reader/test-resources"
+                       "bases/symmetric-key-api/test"
+                       "bases/symmetric-key-api/test-resources"
+                       "bases/iam-api/test"
+                       "bases/iam-api/test-resources"]}}
+ :mvn/repos {"maven" {:url "https://packages.confluent.io/maven"}}}

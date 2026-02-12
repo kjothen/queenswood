@@ -1,14 +1,11 @@
 (ns com.repldriven.mono.system.core
   (:refer-clojure :exclude [ref])
   (:require
-   [com.repldriven.mono.env.interface :as env]
-   [com.repldriven.mono.error.interface :as error]
-   [com.repldriven.mono.log.interface :as log]
-   [com.repldriven.mono.system.configurator :as configurator]
+    [com.repldriven.mono.error.interface :as error]
 
-   [donut.system :as ds]
+    [donut.system :as ds]
 
-   [clojure.walk :as walk]))
+    [clojure.walk :as walk]))
 
 (def mono-system-ns "system")
 (def donut-system-ns "donut.system")
@@ -19,29 +16,25 @@
 
 (defn- nsmap->nsmap
   [m from-ns to-ns]
-  (walk/postwalk
-   (fn [x]
-     (if (match-ns-keyword? x from-ns)
-       (keyword to-ns (name x))
-       (if (fn? x)
-         (fn [to-ns-map]
-           (let [args (reduce-kv (fn [m k v]
-                                   (assoc m
-                                          (if (match-ns-keyword? k to-ns)
-                                            (keyword from-ns (name k))
-                                            k)
-                                          v))
-                                 {}
-                                 to-ns-map)]
-             (x args)))
-         x)))
-   m))
+  (walk/postwalk (fn [x]
+                   (if (match-ns-keyword? x from-ns)
+                     (keyword to-ns (name x))
+                     (if (fn? x)
+                       (fn [to-ns-map]
+                         (let [args (reduce-kv
+                                     (fn [m k v]
+                                       (assoc m
+                                              (if (match-ns-keyword? k to-ns)
+                                                (keyword from-ns (name k))
+                                                k)
+                                              v))
+                                     {}
+                                     to-ns-map)]
+                           (x args)))
+                       x)))
+                 m))
 
 (def required-component ::ds/required-component)
-
-(defn ref [kws] (ds/ref kws))
-
-(defn local-ref [kws] (ds/local-ref kws))
 
 (defn system?
   [config-name]
@@ -51,18 +44,21 @@
   ([config-name]
    (error/try-nom :system/start-exception
                   "System START threw an exception"
-                  (ds/start (nsmap->nsmap config-name mono-system-ns donut-system-ns))))
+                  (ds/start
+                   (nsmap->nsmap config-name mono-system-ns donut-system-ns))))
   ([config-name custom-config]
    (error/try-nom :system/start-exception
                   "System START threw an exception"
-                  (ds/start (nsmap->nsmap config-name mono-system-ns donut-system-ns)
-                            custom-config)))
+                  (ds/start
+                   (nsmap->nsmap config-name mono-system-ns donut-system-ns)
+                   custom-config)))
   ([config-name custom-config component-ids]
    (error/try-nom :system/start-exception
                   "System START threw an exception"
-                  (ds/start (nsmap->nsmap config-name mono-system-ns donut-system-ns)
-                            custom-config
-                            component-ids))))
+                  (ds/start
+                   (nsmap->nsmap config-name mono-system-ns donut-system-ns)
+                   custom-config
+                   component-ids))))
 
 (defn instance [system kws] (get-in system (vec (cons ::ds/instances kws))))
 
@@ -76,24 +72,8 @@
                  "System STOP threw an exception"
                  (ds/stop system)))
 
-(defn suspend [system] (ds/suspend system))
-
-(defn resume [system] (ds/resume system))
-
-(defmacro with-sysdefs
-  {:clj-kondo/ignore [:unresolved-symbol]}
-  [[sym env-path profile] & body]
-  `(let [environment# (env/config ~env-path ~profile)]
-     (if (error/anomaly? environment#)
-       environment#
-       (let [~sym (configurator/definition (:system environment#))]
-         ~@body))))
-
 (defmacro with-system
   {:clj-kondo/lint-as 'clojure.core/let}
   [sys-binding & body]
-  `(try
-     ~@body
-     (finally
-       (when-not (error/anomaly? ~sys-binding)
-         (stop ~sys-binding)))))
+  `(try ~@body
+        (finally (when-not (error/anomaly? ~sys-binding) (stop ~sys-binding)))))

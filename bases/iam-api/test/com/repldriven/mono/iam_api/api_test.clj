@@ -1,7 +1,6 @@
 (ns com.repldriven.mono.iam-api.api-test
   (:refer-clojure :exclude [name])
   (:require
-    com.repldriven.mono.server.interface
     com.repldriven.mono.testcontainers.interface
 
     [com.repldriven.mono.iam-api.api :as api]

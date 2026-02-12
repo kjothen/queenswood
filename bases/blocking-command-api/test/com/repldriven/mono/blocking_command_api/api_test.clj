@@ -2,7 +2,6 @@
   (:require
     com.repldriven.mono.mqtt.interface
     com.repldriven.mono.pulsar.interface
-    com.repldriven.mono.server.interface
     com.repldriven.mono.testcontainers.interface
 
     [com.repldriven.mono.blocking-command-api.api :as api]
