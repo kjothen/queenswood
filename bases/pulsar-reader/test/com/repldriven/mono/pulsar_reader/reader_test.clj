@@ -16,20 +16,30 @@
     (org.apache.pulsar.client.api Reader Message)))
 
 (defn read-messages
-  "Read n messages from a Pulsar reader and deserialize them onto a channel.
-  Returns a channel that will receive deserialized messages and close after n messages."
-  [^Reader reader schema n timeout-ms]
-  (let [out-chan (async/chan n)]
+  "Continuously read messages from a Pulsar reader and put them on a channel.
+  Returns a map with :out-chan (receives messages) and :stop-chan (send anything to stop).
+  The reader will stop when :stop-chan receives a value, and :out-chan will close."
+  [^Reader reader schema timeout-ms]
+  (let [out-chan (async/chan)
+        stop-chan (async/chan)]
     (async/thread
       (try
-        (dotimes [_ n]
-          (when (.hasMessageAvailable reader)
-            (when-let [^Message msg (.readNext reader timeout-ms java.util.concurrent.TimeUnit/MILLISECONDS)]
-              (let [deserialized (avro/deserialize-same schema (.getData msg))]
-                (async/>!! out-chan deserialized)))))
+        (loop []
+          (let [[v ch] (async/alts!!
+                         [stop-chan
+                          (async/thread
+                            (when (.hasMessageAvailable reader)
+                              (when-let [^Message msg (.readNext reader timeout-ms java.util.concurrent.TimeUnit/MILLISECONDS)]
+                                (avro/deserialize-same schema (.getData msg)))))])]
+            (cond
+              (= ch stop-chan) nil  ; Stop signal received
+              (some? v) (do (async/>!! out-chan v) (recur))
+              :else (recur))))  ; Timeout or no message, try again
         (finally
-          (async/close! out-chan))))
-    out-chan))
+          (async/close! out-chan)
+          (async/close! stop-chan))))
+    {:out-chan out-chan
+     :stop-chan stop-chan}))
 
 (deftest reader-test
   (testing "Pulsar reader should consume messages published by producer"
@@ -51,8 +61,10 @@
               (let [serialized (avro/serialize user-schema msg)]
                 (pulsar/send producer serialized)))
             ;; Read messages from channel
-            (let [msg-chan (read-messages reader user-schema (count test-messages) 500)
-                  received-messages (async/<!! (async/into [] msg-chan))]
+            (let [{:keys [out-chan stop-chan]} (read-messages reader user-schema 500)
+                  take-chan (async/take (count test-messages) out-chan)
+                  received-messages (async/<!! (async/into [] take-chan))]
+              (async/>!! stop-chan :stop)
               ;; Verify we received all messages
               (is (= (count test-messages) (count received-messages))
                   (str "Should receive " (count test-messages)
