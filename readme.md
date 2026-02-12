@@ -1,5 +1,7 @@
 # mono
 
+[![Tests](https://github.com/kjothen/mono/actions/workflows/test.yml/badge.svg)](https://github.com/kjothen/mono/actions/workflows/test.yml)
+
 This monolithic repository represents a working prototype in clojure of a multi-purpose platform. This project uses the polylith framework (see documentation links below).
 
 ## Getting started
