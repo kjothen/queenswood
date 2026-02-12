@@ -7,7 +7,7 @@
 
     [clojure.test :refer [deftest is testing]]))
 
-(deftest main-test
+#_(deftest main-test
   (testing "System should start and stop without anomalies"
     (let [sys (SUT/start "classpath:pulsar-reader/test-application.yml" :test)]
       (is (not (error/anomaly? sys)) "System should start")

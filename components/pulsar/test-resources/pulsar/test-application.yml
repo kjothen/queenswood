@@ -116,6 +116,8 @@ system:
       _: !system/local-ref topics
       client: !system/local-ref client
       conf:
+        cryptoFailureAction: !pulsar/crypto-failure-action CONSUME
+        cryptoKeyReader: !system/local-ref crypto-key-readers.r1
         schema: !pulsar/schema AUTO_CONSUME
         startMessageId: !pulsar/message-id earliest
         topicNames: ["persistent://tenant-1/namespace-1/topic-1"]
