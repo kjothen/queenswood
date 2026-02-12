@@ -4,6 +4,7 @@
    com.repldriven.mono.server.interface
    com.repldriven.mono.testcontainers.interface
 
+   [com.repldriven.mono.error.interface :as error]
    [com.repldriven.mono.system.interface :as system]
    [com.repldriven.mono.test-system.interface :as test-system]
 
@@ -21,8 +22,9 @@
 
 (deftest system-test
   (testing "System configuration and lifecycle"
-    (is (system/system? test-system/*sysdef*))
+    (is (system/system? test-system/*sysdef*) "System definition should be valid")
     (let [sys-config (assoc-in test-system/*sysdef* [:system/defs :server :jetty-adapter :system/config :handler] minimal-app)]
       (system/with-*sys* sys-config
-        (is (some? system/*sys*))))))
+        (is (some? system/*sys*) "System should be initialized")
+        (is (not (error/anomaly? system/*sys*)) "System should not be an anomaly")))))
 

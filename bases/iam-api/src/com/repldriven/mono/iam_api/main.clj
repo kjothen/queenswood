@@ -1,10 +1,16 @@
 (ns com.repldriven.mono.iam-api.main
   (:require
+   ;; system components
+   com.repldriven.mono.db.interface
+   com.repldriven.mono.server.interface
+   com.repldriven.mono.testcontainers.interface
+
    [com.repldriven.mono.iam-api.api :as api]
 
    [com.repldriven.mono.cli.interface :as cli]
    [com.repldriven.mono.db.interface :as sql]
    [com.repldriven.mono.env.interface :as env]
+   [com.repldriven.mono.error.interface :as error]
    [com.repldriven.mono.iam.interface :as iam]
    [com.repldriven.mono.log.interface :as log]
    [com.repldriven.mono.system.interface :as system])
@@ -18,16 +24,20 @@
     (sql/get-datasource datasource)))
 
 (defn start
-  [environment]
-  (let [config (-> (:system environment)
-                   (assoc-in [:server :handler] (partial api/app))
-                   (system/definition))]
-    (system/start! system config)
-    (iam/migrate (db-spec @system))))
+  [config-file profile]
+  (error/let-nom [environment (env/config config-file profile)
+                  sys (error/nom-> environment
+                                   :system
+                                   (assoc-in [:server :handler] (partial api/app))
+                                   system/definition
+                                   system/start)
+                  _ (iam/migrate (db-spec sys))]
+    (reset! system sys)
+    sys))
 
 (defn stop
-  [system]
-  (system/stop system))
+  [sys]
+  (system/stop sys))
 
 (defn -main
   [& args]
@@ -36,5 +46,9 @@
   (let [{:keys [options exit-message ok?]} (cli/validate-args "iam-api" args)]
     (if exit-message
       (cli/exit ok? exit-message)
-      (let [{:keys [config-file profile]} options]
-        (start (env/env config-file (keyword profile)))))))
+      (let [{:keys [config-file profile]} options
+            result (start config-file (keyword profile))]
+        (if (error/anomaly? result)
+          (cli/exit false (str "Failed to start [" (error/kind result) "]: "
+                               (or (:message result) "Unknown error")))
+          (log/info "System started successfully"))))))
