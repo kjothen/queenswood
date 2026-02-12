@@ -1,44 +1,37 @@
 (ns com.repldriven.mono.symmetric-key-api.main
   (:require
-   com.repldriven.mono.server.interface
+    ;; system components
+    com.repldriven.mono.server.interface
 
-   [com.repldriven.mono.symmetric-key-api.api :as api]
+    [com.repldriven.mono.symmetric-key-api.api :as api]
 
-   [com.repldriven.mono.cli.interface :as cli]
-   [com.repldriven.mono.env.interface :as env]
-   [com.repldriven.mono.log.interface :as log]
-   [com.repldriven.mono.system.interface :as system])
+    [com.repldriven.mono.cli.interface :as cli]
+    [com.repldriven.mono.env.interface :as env]
+    [com.repldriven.mono.error.interface :as error]
+    [com.repldriven.mono.log.interface :as log]
+    [com.repldriven.mono.system.interface :as system])
   (:gen-class))
 
-(def system (atom nil))
-
 (defn start
-  [environment]
-  (log/info "Starting system")
-  (let [config (-> environment
-                   (system/defs)
-                   (assoc-in [:system/defs :server :handler] (partial api/app)))]
-    (system/start! system config)))
+  [config-file profile]
+  (error/nom-> (env/config config-file profile)
+               system/defs
+               (assoc-in [:system/defs :server :handler] (partial api/app))
+               system/start))
 
-(defn stop
-  [sys]
-  (log/info "Stopping system")
-  (system/stop sys))
+(defn stop [sys] (system/stop sys))
 
 (defn -main
   [& args]
   (log/init)
   (log/info args)
-  (let [{:keys [options exit-message ok?]}
-        (cli/validate-args "symmetric-key-api" args)]
+  (let [{:keys [options exit-message ok?]} (cli/validate-args "symmetric-key-api" args)]
     (if exit-message
       (cli/exit ok? exit-message)
-      (let [{:keys [config-file profile]} options]
-        (start (env/config config-file (keyword profile)))))))
-
-(comment
-  (-main "-c" "classpath:symmetric-key-api/test-application.yml"
-         "-p" "test")
-  (stop @system)
-  (start (env/config "classpath:symmetric-key-api/test-application.yml" :test))
-  (stop @system))
+      (let [{:keys [config-file profile]} options
+            result (start config-file (keyword profile))]
+        (if (error/anomaly? result)
+          (cli/exit false
+                    (str "Failed to start [" (error/kind result)
+                         "]: " (or (:message result) "Unknown error")))
+          (log/info "System started successfully"))))))
