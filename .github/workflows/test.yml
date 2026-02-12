@@ -54,10 +54,3 @@ jobs:
         name: test-results
         path: target/test-results/**/*.xml
         retention-days: 7
-
-    - name: Publish test results
-      if: always()
-      uses: EnricoMi/publish-unit-test-result-action@v2
-      with:
-        files: target/test-results/**/*.xml
-        check_name: Test Results
