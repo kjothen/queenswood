@@ -1,0 +1,30 @@
+version: 2
+updates:
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "ci"
+      include: "scope"
+
+  # Maven dependencies (Clojure deps.edn)
+  - package-ecosystem: "maven"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "deps"
+      include: "scope"
+    open-pull-requests-limit: 10
+    groups:
+      clojure:
+        patterns:
+          - "org.clojure:*"
+      polylith:
+        patterns:
+          - "polylith/*"
+      apache:
+        patterns:
+          - "org.apache.*:*"
