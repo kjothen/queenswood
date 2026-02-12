@@ -1,5 +1,6 @@
 (ns com.repldriven.mono.external-test-runner.main
   (:require
+   [eftest.report :refer [report-to-file]]
    [eftest.report.junit :as junit]
    [eftest.report.pretty :as report]
    [eftest.runner :as eftest]
@@ -79,18 +80,21 @@
        vec))
 
 (defn- make-junit-reporter
-  "Create a JUnit XML reporter that writes to target/test-results"
+  "Create a JUnit XML reporter that writes to target/test-results/junit.xml"
   []
-  (let [output-dir (io/file "target" "test-results")]
+  (let [output-dir (io/file "target" "test-results")
+        output-file (io/file output-dir "junit.xml")]
     (.mkdirs output-dir)
-    (junit/report output-dir)))
+    (report-to-file junit/report (.getPath output-file))))
 
 (defn- multi-reporter
-  "Create a reporter that outputs to both stdout and JUnit XML"
-  [reporters]
+  "Create a reporter that outputs to both stdout and JUnit XML.
+   Binds *report-counters* to nil for JUnit to prevent double-counting."
+  [junit-reporter]
   (fn [event]
-    (doseq [reporter reporters]
-      (reporter event))))
+    (report/report event)
+    (binding [clojure.test/*report-counters* nil]
+      (junit-reporter event))))
 
 (defn- run-test-namespaces
   "Run tests in the specified namespaces using eftest"
@@ -108,7 +112,7 @@
         selector (build-selector skip-meta focus-meta)
         filtered-test-vars (filterv selector all-test-vars)
         junit-reporter (make-junit-reporter)
-        combined-reporter (multi-reporter [report/report junit-reporter])]
+        combined-reporter (multi-reporter junit-reporter)]
     (eftest/run-tests filtered-test-vars
                       {:capture-output? false
                        :multithread? :vars
