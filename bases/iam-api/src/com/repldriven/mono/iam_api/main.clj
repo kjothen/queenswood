@@ -25,11 +25,10 @@
 
 (defn start
   [config-file profile]
-  (error/let-nom [sys (error/nom-> (env/config config-file profile)
-                                   :system
-                                   system/definition
-                                   (assoc-in [:system/defs :server :handler] (partial api/app))
-                                   system/start)
+  (error/let-nom [environment (env/config config-file profile)
+                  sys-def (system/definition (:system environment))
+                  sys-config (assoc-in sys-def [:system/defs :server :handler] (partial api/app))
+                  sys (system/start sys-config)
                   _ (iam/migrate (db-spec sys))]
     (reset! system sys)
     sys))
