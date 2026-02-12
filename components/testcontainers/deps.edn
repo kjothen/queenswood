@@ -15,8 +15,13 @@
                       io.netty/netty-resolver
                       io.netty/netty-resolver-dns
                       io.netty/netty-codec-dns
+                      io.netty/netty-codec-haproxy
                       io.netty/netty-transport-native-epoll
                       io.netty/netty-transport-native-unix-common
-                      io.netty/netty-transport-classes-epoll]}
+                      io.netty/netty-transport-classes-epoll
+                      io.netty/netty-tcnative-classes
+                      io.netty/netty-tcnative-boringssl-static
+                      io.netty.incubator/netty-incubator-transport-classes-io_uring
+                      io.netty.incubator/netty-incubator-transport-native-io_uring]}
         org.testcontainers/postgresql {:mvn/version "1.21.4"}}
  :paths ["src"]}

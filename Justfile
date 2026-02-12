@@ -11,17 +11,6 @@ export TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE := "/var/run/docker.sock"
 list:
     just --list
 
-# Config clojure and related tools
-configure-clojure:
-    rm -rf '{{XDG_CONFIG_HOME}}/clojure'
-    git clone git@github.com:practicalli/clojure-deps-edn.git '{{XDG_CONFIG_HOME}}/clojure'
-
-    grep 'export XDG_CONFIG_HOME' '{{ZSHENV}}' \
-      || echo 'export XDG_CONFIG_HOME={{XDG_CONFIG_HOME}}' >> '{{ZSHENV}}'
-    clojure -Sdescribe
-
-    echo '{:search-config? true}' >> '{{HOME}}/.zprintrc'
-
 # Start nREPL server for Conjure connection
 repl:
     clj -M:dev:test:nrepl
@@ -55,10 +44,9 @@ lint:
   just lint-eastwood
   just lint-clj-kondo
 
-# Formatter
+# Formatter - uses .zprint.edn config in project root
 format:
-    # for file in `git ls-files -z '*.edn' '*.clj'`; do clj -M:format/zprint -w $file; done
-    if (( $+commands[zprint] )); then git ls-files -z '*.edn' '*.clj' | xargs -0 -I '{}' sh -c "zprint '{:search-config? true}' -w {}"; fi
+    git ls-files '*.clj' '*.cljc' '*.cljs' '*.edn' | xargs -I {} clojure -M:format/zprint -w {}
 
 # Install
 install:
