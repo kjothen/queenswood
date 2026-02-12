@@ -26,11 +26,6 @@
 (def ^:dynamic *base-url* "http://localhost:{PORT}")
 (def project-id "prj-test")
 
-(defn db-spec
-  [sys]
-  (let [datasource (system/instance sys [:db :datasource])]
-    (db/get-datasource datasource)))
-
 ;;;; service-account
 ;;;;
 
@@ -86,7 +81,8 @@
       (is (not (error/anomaly? sys)) (str "System should start: " (pr-str sys)))
       (when (system/system? sys)
         (system/with-system sys
-          (iam/migrate (db-spec sys))
+          (let [datasource (system/instance sys [:db :datasource])]
+            (iam/migrate (db/get-datasource datasource)))
           (let [^Server server (system/instance sys [:server :jetty-adapter])
                 port (.getLocalPort (first (.getConnectors server)))]
             (binding [*base-url* (str "http://localhost:" port)]

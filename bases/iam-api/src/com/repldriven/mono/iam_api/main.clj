@@ -16,10 +16,10 @@
    [com.repldriven.mono.system.interface :as system])
   (:gen-class))
 
-(defn db-spec
+(defn- migrate-db
   [sys]
   (let [datasource (system/instance sys [:db :datasource])]
-    (sql/get-datasource datasource)))
+    (iam/migrate (sql/get-datasource datasource))))
 
 (defn start
   [config-file profile]
@@ -27,7 +27,7 @@
                   sys-def (system/definition (:system environment))
                   sys-config (assoc-in sys-def [:system/defs :server :handler] (partial api/app))
                   sys (system/start sys-config)
-                  _ (iam/migrate (db-spec sys))]
+                  _ (migrate-db sys)]
     sys))
 
 (defn stop
