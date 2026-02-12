@@ -9,10 +9,27 @@
     [com.repldriven.mono.schema-avro.interface :as avro]
     [com.repldriven.mono.system.interface :as system]
 
+    [clojure.core.async :as async]
     [clojure.java.io :as io]
     [clojure.test :refer [deftest is testing]])
   (:import
     (org.apache.pulsar.client.api Reader Message)))
+
+(defn read-messages
+  "Read n messages from a Pulsar reader and deserialize them onto a channel.
+  Returns a channel that will receive deserialized messages and close after n messages."
+  [^Reader reader schema n timeout-ms]
+  (let [out-chan (async/chan n)]
+    (async/thread
+      (try
+        (dotimes [_ n]
+          (when (.hasMessageAvailable reader)
+            (when-let [^Message msg (.readNext reader timeout-ms java.util.concurrent.TimeUnit/MILLISECONDS)]
+              (let [deserialized (avro/deserialize-same schema (.getData msg))]
+                (async/>!! out-chan deserialized)))))
+        (finally
+          (async/close! out-chan))))
+    out-chan))
 
 (deftest reader-test
   (testing "Pulsar reader should consume messages published by producer"
@@ -33,25 +50,16 @@
             (doseq [msg test-messages]
               (let [serialized (avro/serialize user-schema msg)]
                 (pulsar/send producer serialized)))
-            (let [received-messages (atom [])
-                  timeout-ms 500]
-              (dotimes [_ (count test-messages)]
-                (when (.hasMessageAvailable reader)
-                  (let [^Message msg
-                        (.readNext reader
-                                   timeout-ms
-                                   java.util.concurrent.TimeUnit/MILLISECONDS)]
-                    (when msg
-                      (let [deserialized (avro/deserialize-same user-schema
-                                                                (.getData msg))]
-                        (swap! received-messages conj deserialized))))))
+            ;; Read messages from channel
+            (let [msg-chan (read-messages reader user-schema (count test-messages) 500)
+                  received-messages (async/<!! (async/into [] msg-chan))]
               ;; Verify we received all messages
-              (is (= (count test-messages) (count @received-messages))
+              (is (= (count test-messages) (count received-messages))
                   (str "Should receive " (count test-messages)
-                       " messages, got " (count @received-messages)))
+                       " messages, got " (count received-messages)))
               ;; Verify message contents
               (doseq [[expected received]
-                      (map vector test-messages @received-messages)]
+                      (map vector test-messages received-messages)]
                 (is (= (:name expected) (:name received))
                     (str "Message name should match: expected " (:name expected)
                          ", got " (:name received)))
