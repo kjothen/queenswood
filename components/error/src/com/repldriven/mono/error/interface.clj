@@ -41,7 +41,7 @@
 
 ;; Exception catching
 (defmacro try-nom
-  {:clj-kondo/lint-as 'clojure.core/try}
+  {:clj-kondo/lint-as 'clojure.core/do}
   [category message & body]
   `(try
      ~@body
