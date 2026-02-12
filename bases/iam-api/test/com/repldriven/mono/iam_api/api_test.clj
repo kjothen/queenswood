@@ -6,6 +6,7 @@
    [com.repldriven.mono.iam-api.api :as api]
 
    [com.repldriven.mono.db.interface :as db]
+   [com.repldriven.mono.error.interface :as error]
    [com.repldriven.mono.http-client.interface :as http]
    [com.repldriven.mono.iam.interface :as iam]
    [com.repldriven.mono.system.interface :as system]
@@ -84,48 +85,58 @@
         (let [^Server server (system/instance system/*sys* [:server :jetty-adapter])
               port (.getLocalPort (first (.getConnectors server)))]
           (binding [*base-url* (str "http://localhost:" port)]
-            ; create service account
-            (let [res (create-service-account)
-                  service-account (http/res->edn res)]
-              (is (= 201 (:status res)))
-              (is (= false (:disabled service-account)))
-             ; get created service account
-              (let [res (get-service-account (:name service-account))]
-                (is (= 200 (:status res)))
-                (is (= service-account (http/res->edn res))))
-             ; list service accounts and check for created service account
-              (let [res (list-service-accounts)
-                    service-accounts (http/res->edn res)]
-                (is (= 200 (:status res)))
-                (is (= 1 (count (:accounts service-accounts))))
-                (is (= service-account (first (:accounts (http/res->edn res))))))
-             ; disable created service account and check it's disabled
-              (let [res (disable-service-account (:name service-account))]
-                (is (= 204 (:status res)))
-                (is (or (nil? (:body res)) (empty? (:body res))))
-                (let [res (get-service-account (:name service-account))]
-                  (is (= 200 (:status res)))
-                  (is (= true (:disabled (http/res->edn res))))))
-             ; enable created service account and check it's enabled
-              (let [res (enable-service-account (:name service-account))]
-                (is (= 204 (:status res)))
-                (is (or (nil? (:body res)) (empty? (:body res))))
-                (let [res (get-service-account (:name service-account))]
-                  (is (= 200 (:status res)))
-                  (is (= false (:disabled (http/res->edn res))))))
-             ; delete created service account and check it's not listed
-              (let [res (delete-service-account (:name service-account))]
-                (is (= 204 (:status res)))
-                (is (or (nil? (:body res)) (empty? (:body res))))
-                (let [res (list-service-accounts)
-                      service-accounts (http/res->edn res)]
-                  (is (= 200 (:status res)))
-                  (is (zero? (count (:accounts service-accounts))))))
-             ; undelete created service account and check it's listed
-              (let [res (undelete-service-account (:name service-account))]
-                (is (= 204 (:status res)))
-                (is (or (nil? (:body res)) (empty? (:body res))))
-                (let [res (list-service-accounts)
-                      service-accounts (http/res->edn res)]
-                  (is (= 200 (:status res)))
-                  (is (= 1 (count (:accounts service-accounts)))))))))))))
+            (let [result (error/let-nom
+                          ; create service account
+                          [res (create-service-account)
+                           _ (is (= 201 (:status res)))
+                           service-account (http/res->edn res)
+                           _ (is (= false (:disabled service-account)))
+
+                           ; get created service account
+                           get-res (get-service-account (:name service-account))
+                           _ (is (= 200 (:status get-res)))
+                           _ (is (= service-account (http/res->edn get-res)))
+
+                           ; list service accounts
+                           list-res (list-service-accounts)
+                           _ (is (= 200 (:status list-res)))
+                           service-accounts (http/res->edn list-res)
+                           _ (is (= 1 (count (:accounts service-accounts))))
+                           _ (is (= service-account (first (:accounts service-accounts))))
+
+                           ; disable service account
+                           disable-res (disable-service-account (:name service-account))
+                           _ (is (= 204 (:status disable-res)))
+                           _ (is (or (nil? (:body disable-res)) (empty? (:body disable-res))))
+                           disabled-get-res (get-service-account (:name service-account))
+                           _ (is (= 200 (:status disabled-get-res)))
+                           _ (is (= true (:disabled (http/res->edn disabled-get-res))))
+
+                           ; enable service account
+                           enable-res (enable-service-account (:name service-account))
+                           _ (is (= 204 (:status enable-res)))
+                           _ (is (or (nil? (:body enable-res)) (empty? (:body enable-res))))
+                           enabled-get-res (get-service-account (:name service-account))
+                           _ (is (= 200 (:status enabled-get-res)))
+                           _ (is (= false (:disabled (http/res->edn enabled-get-res))))
+
+                           ; delete service account
+                           delete-res (delete-service-account (:name service-account))
+                           _ (is (= 204 (:status delete-res)))
+                           _ (is (or (nil? (:body delete-res)) (empty? (:body delete-res))))
+                           after-delete-list (list-service-accounts)
+                           _ (is (= 200 (:status after-delete-list)))
+                           after-delete-accounts (http/res->edn after-delete-list)
+                           _ (is (zero? (count (:accounts after-delete-accounts))))
+
+                           ; undelete service account
+                           undelete-res (undelete-service-account (:name service-account))
+                           _ (is (= 204 (:status undelete-res)))
+                           _ (is (or (nil? (:body undelete-res)) (empty? (:body undelete-res))))
+                           after-undelete-list (list-service-accounts)
+                           _ (is (= 200 (:status after-undelete-list)))
+                           after-undelete-accounts (http/res->edn after-undelete-list)
+                           _ (is (= 1 (count (:accounts after-undelete-accounts))))]
+                          :success)]
+              (is (not (error/anomaly? result))
+                  (str "API workflow failed: " (pr-str result)))))))))
