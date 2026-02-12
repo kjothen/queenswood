@@ -2,12 +2,22 @@
  :deps {org.apache.pulsar/pulsar-client-all
         {:exclusions [org.apache.pulsar/bouncy-castle-bc
                       org.apache.pulsar/bouncy-castle-bcfips
-                      org.apache.bookkeeper/circe-checksum]
+                      org.apache.bookkeeper/circe-checksum
+                      io.netty/netty-all
+                      io.netty/netty-common
+                      io.netty/netty-handler
+                      io.netty/netty-transport
+                      io.netty/netty-codec]
          :mvn/version "4.1.2"}
         org.apache.pulsar/pulsar-common
         {:exclusions [org.apache.pulsar/bouncy-castle-bc
                       org.apache.pulsar/bouncy-castle-bcfips
-                      org.apache.bookkeeper/circe-checksum]
+                      org.apache.bookkeeper/circe-checksum
+                      io.netty/netty-all
+                      io.netty/netty-common
+                      io.netty/netty-handler
+                      io.netty/netty-transport
+                      io.netty/netty-codec]
          :mvn/version "4.1.2"}
         org.bouncycastle/bcprov-jdk18on {:mvn/version "1.83"}
         org.bouncycastle/bcpkix-jdk18on {:mvn/version "1.83"}
