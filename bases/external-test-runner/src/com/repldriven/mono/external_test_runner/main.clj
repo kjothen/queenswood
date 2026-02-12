@@ -1,13 +1,13 @@
 (ns com.repldriven.mono.external-test-runner.main
   (:require
-   [eftest.report :refer [report-to-file]]
-   [eftest.report.junit :as junit]
-   [eftest.report.pretty :as report]
-   [eftest.runner :as eftest]
+    [eftest.report :refer [report-to-file]]
+    [eftest.report.junit :as junit]
+    [eftest.report.pretty :as report]
+    [eftest.runner :as eftest]
 
-   [clojure.java.io :as io]
-   [clojure.string :as str]
-   [clojure.tools.cli :refer [parse-opts]])
+    [clojure.java.io :as io]
+    [clojure.string :as str]
+    [clojure.tools.cli :refer [parse-opts]])
   (:gen-class))
 
 (set! *warn-on-reflection* true)
@@ -32,8 +32,7 @@
   "Parse comma-separated metadata keywords from environment variable"
   [env-var]
   (when-let [meta-str (System/getenv env-var)]
-    (when-not (str/blank? meta-str)
-      (mapv keyword (str/split meta-str #",")))))
+    (when-not (str/blank? meta-str) (mapv keyword (str/split meta-str #",")))))
 
 (defn- build-selector
   "Build a test selector function based on skip-meta and focus-meta"
@@ -42,30 +41,26 @@
         focus-set (set focus-meta)]
     (cond
       ;; If focus-meta is specified, only run tests with those tags
-      (seq focus-set)
-      (fn [test-var]
-        (let [test-meta (meta test-var)]
-          (some focus-set (keys test-meta))))
-
+      (seq focus-set) (fn [test-var]
+                        (let [test-meta (meta test-var)]
+                          (some focus-set (keys test-meta))))
       ;; If skip-meta is specified, skip tests with those tags
-      (seq skip-set)
-      (fn [test-var]
-        (let [test-meta (meta test-var)]
-          (not (some skip-set (keys test-meta)))))
-
+      (seq skip-set) (fn [test-var]
+                       (let [test-meta (meta test-var)]
+                         (not (some skip-set (keys test-meta)))))
       ;; Otherwise, run all tests
-      :else
-      (constantly true))))
+      :else (constantly true))))
 
 (defn- require-test-namespaces
   "Require all test namespaces"
   [test-nses]
   (doseq [ns-sym test-nses]
-    (try
-      (require ns-sym)
-      (catch Exception e
-        (println (format "Failed to require namespace %s: %s" ns-sym (.getMessage e)))
-        (throw e)))))
+    (try (require ns-sym)
+         (catch Exception e
+           (println (format "Failed to require namespace %s: %s"
+                            ns-sym
+                            (.getMessage e)))
+           (throw e)))))
 
 (defn- find-test-vars
   "Find all test vars in the specified namespaces"
@@ -93,8 +88,7 @@
   [junit-reporter]
   (fn [event]
     (report/report event)
-    (binding [clojure.test/*report-counters* nil]
-      (junit-reporter event))))
+    (binding [clojure.test/*report-counters* nil] (junit-reporter event))))
 
 (defn- run-test-namespaces
   "Run tests in the specified namespaces using eftest"
@@ -103,11 +97,9 @@
     (println (format "Running tests in %d namespace%s"
                      (count test-nses)
                      (if (= 1 (count test-nses)) "" "s")))
-    (when (seq skip-meta)
-      (println "Skipping tests with metadata:" skip-meta))
+    (when (seq skip-meta) (println "Skipping tests with metadata:" skip-meta))
     (when (seq focus-meta)
       (println "Focusing on tests with metadata:" focus-meta)))
-
   (let [all-test-vars (find-test-vars test-nses)
         selector (build-selector skip-meta focus-meta)
         filtered-test-vars (filterv selector all-test-vars)
@@ -115,7 +107,7 @@
         combined-reporter (multi-reporter junit-reporter)]
     (eftest/run-tests filtered-test-vars
                       {:capture-output? false
-                       :multithread? :vars
+                       :multithread? :namespaces
                        :report combined-reporter
                        :test-warn-time 1000})))
 
@@ -134,21 +126,18 @@
   Supports metadata-based test filtering via environment variables:
   - ENV: SKIP_META=integration,slow FOCUS_META=unit"
   [& args]
-  (let [;; Parse positional args from Corfield runner: color-mode project-name ...test-nses
+  (let [;; Parse positional args from Corfield runner: color-mode
+        ;; project-name ...test-nses
         color-mode (keyword (first args))
         project (second args)
         test-nses (map symbol (drop 2 args))
         ;; Get metadata filtering from environment variables
         env-skip (parse-env-meta "SKIP_META")
         env-focus (parse-env-meta "FOCUS_META")]
-    (cond
-      (empty? test-nses)
-      (do (println "No test namespaces specified")
-          (System/exit 1))
-
-      :else
-      (let [results (run-test-namespaces test-nses
-                                         {:verbose false
-                                          :skip-meta env-skip
-                                          :focus-meta env-focus})]
-        (exit-with-results results)))))
+    (cond (empty? test-nses) (do (println "No test namespaces specified")
+                                 (System/exit 1))
+          :else (let [results (run-test-namespaces test-nses
+                                                   {:verbose false
+                                                    :skip-meta env-skip
+                                                    :focus-meta env-focus})]
+                  (exit-with-results results)))))
