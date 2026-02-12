@@ -1,4 +1,4 @@
-(ns com.repldriven.mono.system.configurator
+(ns com.repldriven.mono.system.components
   (:require
    [com.repldriven.mono.utility.interface :as utility]))
 
