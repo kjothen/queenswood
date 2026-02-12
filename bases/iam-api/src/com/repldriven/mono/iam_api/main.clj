@@ -1,19 +1,18 @@
 (ns com.repldriven.mono.iam-api.main
   (:require
-   ;; system components
-   com.repldriven.mono.db.interface
-   com.repldriven.mono.server.interface
-   com.repldriven.mono.testcontainers.interface
+    ;; system components
+    com.repldriven.mono.server.interface
+    com.repldriven.mono.testcontainers.interface
 
-   [com.repldriven.mono.iam-api.api :as api]
+    [com.repldriven.mono.iam-api.api :as api]
 
-   [com.repldriven.mono.cli.interface :as cli]
-   [com.repldriven.mono.db.interface :as sql]
-   [com.repldriven.mono.env.interface :as env]
-   [com.repldriven.mono.error.interface :as error]
-   [com.repldriven.mono.iam.interface :as iam]
-   [com.repldriven.mono.log.interface :as log]
-   [com.repldriven.mono.system.interface :as system])
+    [com.repldriven.mono.cli.interface :as cli]
+    [com.repldriven.mono.db.interface :as sql]
+    [com.repldriven.mono.env.interface :as env]
+    [com.repldriven.mono.error.interface :as error]
+    [com.repldriven.mono.iam.interface :as iam]
+    [com.repldriven.mono.log.interface :as log]
+    [com.repldriven.mono.system.interface :as system])
   (:gen-class))
 
 (defn- migrate-db
@@ -23,16 +22,14 @@
 
 (defn start
   [config-file profile]
-  (error/let-nom [environment (env/config config-file profile)
-                  sys-def (system/defs environment)
-                  sys-config (assoc-in sys-def [:system/defs :server :handler] (partial api/app))
-                  sys (system/start sys-config)
+  (error/let-nom [config (env/config config-file profile)
+                  sys-def (system/defs config)
+                  sys-def' (assoc-in sys-def [:system/defs :server :handler] (partial api/app))
+                  sys (system/start sys-def')
                   _ (migrate-db sys)]
     sys))
 
-(defn stop
-  [sys]
-  (system/stop sys))
+(defn stop [sys] (system/stop sys))
 
 (defn -main
   [& args]
@@ -44,6 +41,7 @@
       (let [{:keys [config-file profile]} options
             result (start config-file (keyword profile))]
         (if (error/anomaly? result)
-          (cli/exit false (str "Failed to start [" (error/kind result) "]: "
-                               (or (:message result) "Unknown error")))
+          (cli/exit false
+                    (str "Failed to start [" (error/kind result)
+                         "]: " (or (:message result) "Unknown error")))
           (log/info "System started successfully"))))))
