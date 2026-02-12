@@ -5,21 +5,14 @@
     com.repldriven.mono.testcontainers.interface
 
     [com.repldriven.mono.iam-api.api :as api]
+    [com.repldriven.mono.iam-api.database :as database]
 
     [com.repldriven.mono.cli.interface :as cli]
-    [com.repldriven.mono.db.interface :as db]
     [com.repldriven.mono.env.interface :as env]
     [com.repldriven.mono.error.interface :as error]
-    [com.repldriven.mono.iam.interface :as iam]
     [com.repldriven.mono.log.interface :as log]
     [com.repldriven.mono.system.interface :as system])
   (:gen-class))
-
-(defn- migrate-db
-  [sys]
-  (error/let-nom> [datasource (system/instance sys [:db :datasource])
-                   _ (iam/migrate (db/get-datasource datasource))]
-    sys))
 
 (defn start
   [config-file profile]
@@ -27,7 +20,7 @@
                system/defs
                (assoc-in [:system/defs :server :handler] (partial api/app))
                system/start
-               migrate-db))
+               database/migrate))
 
 (defn stop [sys] (system/stop sys))
 

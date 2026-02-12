@@ -5,12 +5,11 @@
     com.repldriven.mono.testcontainers.interface
 
     [com.repldriven.mono.iam-api.api :as api]
+    [com.repldriven.mono.iam-api.database :as database]
 
-    [com.repldriven.mono.db.interface :as db]
     [com.repldriven.mono.env.interface :as env]
     [com.repldriven.mono.error.interface :as error]
     [com.repldriven.mono.http-client.interface :as http]
-    [com.repldriven.mono.iam.interface :as iam]
     [com.repldriven.mono.server.interface :as server]
     [com.repldriven.mono.system.interface :as system]
 
@@ -65,15 +64,13 @@
                (env/config "classpath:iam-api/test-application.yml" :test)
                system/defs
                (assoc-in [:system/defs :server :handler] (partial api/app))
-               system/start)]
+               system/start
+               database/migrate)]
       (is (not (error/anomaly? sys)) (str "System should start: " (pr-str sys)))
       (when (system/system? sys)
         (system/with-system sys
-          (let [datasource (system/instance sys [:db :datasource])]
-            (iam/migrate (db/get-datasource datasource)))
-          (let [jetty (system/instance sys [:server :jetty-adapter])
-                base-url (server/http-local-url jetty)]
-            (binding [*base-url* base-url]
+          (let [jetty (system/instance sys [:server :jetty-adapter])]
+            (binding [*base-url* (server/http-local-url jetty)]
               (let [result
                     (error/let-nom
                       ; create service account
