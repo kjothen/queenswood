@@ -7,7 +7,14 @@
                       io.netty/netty-common
                       io.netty/netty-handler
                       io.netty/netty-transport
-                      io.netty/netty-codec]
+                      io.netty/netty-codec
+                      io.netty/netty-buffer
+                      io.netty/netty-resolver
+                      io.netty/netty-resolver-dns
+                      io.netty/netty-codec-dns
+                      io.netty/netty-transport-native-epoll
+                      io.netty/netty-transport-native-unix-common
+                      io.netty/netty-transport-classes-epoll]
          :mvn/version "4.1.2"}
         org.apache.pulsar/pulsar-common
         {:exclusions [org.apache.pulsar/bouncy-castle-bc
@@ -17,7 +24,14 @@
                       io.netty/netty-common
                       io.netty/netty-handler
                       io.netty/netty-transport
-                      io.netty/netty-codec]
+                      io.netty/netty-codec
+                      io.netty/netty-buffer
+                      io.netty/netty-resolver
+                      io.netty/netty-resolver-dns
+                      io.netty/netty-codec-dns
+                      io.netty/netty-transport-native-epoll
+                      io.netty/netty-transport-native-unix-common
+                      io.netty/netty-transport-classes-epoll]
          :mvn/version "4.1.2"}
         org.bouncycastle/bcprov-jdk18on {:mvn/version "1.83"}
         org.bouncycastle/bcpkix-jdk18on {:mvn/version "1.83"}
