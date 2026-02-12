@@ -25,6 +25,11 @@ jobs:
       with:
         cli: latest
 
+    - name: Verify Docker
+      run: |
+        docker --version
+        docker ps
+
     - name: Cache dependencies
       uses: actions/cache@v4
       with:
