@@ -16,7 +16,7 @@
 (def default-exposed-ports
   [default-exposed-broker-port default-exposed-broker-http-port])
 
-(def default-docker-image-name "apachepulsar/pulsar:latest")
+(def default-docker-image-name "apachepulsar/pulsar:3.0.0")
 
 (defn- start-container
   [config]
@@ -27,8 +27,7 @@
                              (PulsarContainer.))]
            (.addEnv container
                     "PULSAR_MEM"
-                    "-Xms128m -Xmx256m -XX:MaxDirectMemorySize=256m")
-           (.addEnv container "PULSAR_GC" "-XX:+UseG1GC")
+                    "-Xms128m -Xmx128m -XX:MaxDirectMemorySize=128m")
            (.withStartupTimeout container (Duration/ofMinutes 1))
            (some-> (tc/init {:container container :exposed-ports exposed-ports})
                    (tc/start!)))
