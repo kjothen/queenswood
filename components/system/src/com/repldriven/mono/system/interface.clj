@@ -53,8 +53,9 @@
   `(configurator/defcomponents ~ns-keyword ~component-map))
 
 (defn definition
-  [config]
-  (configurator/definition config))
+  "Builds system definitions from config. Extracts system config at path (defaults to [:system])."
+  ([config] (configurator/definition config))
+  ([config ks] (configurator/definition config ks)))
 
 (defn merge-component-config
   [component config]
@@ -81,7 +82,7 @@
   [[sym env-path profile] & body]
   `(core/with-sysdefs [~sym ~env-path ~profile] ~@body))
 
-(defmacro with-sys
-  {:clj-kondo/lint-as 'clojure.core/let}
-  [[sym sysdef] & body]
-  `(core/with-sys [~sym ~sysdef] ~@body))
+(defmacro with-system
+  {:clj-kondo/lint-as 'clojure.core/locking}
+  [sys-binding & body]
+  `(core/with-system ~sys-binding ~@body))

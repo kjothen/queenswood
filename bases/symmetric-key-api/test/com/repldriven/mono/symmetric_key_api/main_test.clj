@@ -39,7 +39,7 @@
           (recur (inc attempts)))))))
 
 (defn system-fixture [f]
-  (let [environment (env/env "classpath:symmetric-key-api/test-application.yml" :test)]
+  (let [environment (env/config "classpath:symmetric-key-api/test-application.yml" :test)]
     (try
       (SUT/start environment)
       (let [server (system/instance @SUT/system [:server :jetty-adapter])

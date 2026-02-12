@@ -1,5 +1,6 @@
 (ns com.repldriven.mono.blocking-command-api.main
   (:require
+   ;; system components
    com.repldriven.mono.mqtt.interface
    com.repldriven.mono.pulsar.interface
    com.repldriven.mono.server.interface
@@ -8,19 +9,18 @@
 
    [com.repldriven.mono.cli.interface :as cli]
    [com.repldriven.mono.env.interface :as env]
+   [com.repldriven.mono.error.interface :as error]
    [com.repldriven.mono.log.interface :as log]
    [com.repldriven.mono.system.interface :as system])
 
   (:gen-class))
 
-(def system (atom nil))
-
 (defn start
-  [environment]
-  (let [config (-> (:system environment)
-                   (assoc-in [:server :handler] (partial api/app))
-                   (system/definition))]
-    (system/start! system config)))
+  [config-file profile]
+  (error/nom-> (env/config config-file profile)
+               system/definition
+               (assoc-in [:system/defs :server :handler] (partial api/app))
+               system/start))
 
 (defn stop
   [system]
@@ -33,6 +33,10 @@
   (let [{:keys [options exit-message ok?]} (cli/validate-args "blocking-command-api" args)]
     (if exit-message
       (cli/exit ok? exit-message)
-      (let [{:keys [config-file profile]} options]
-        (start (env/env config-file (keyword profile)))))))
+      (let [{:keys [config-file profile]} options
+            result (start config-file (keyword profile))]
+        (if (error/anomaly? result)
+          (cli/exit false (str "Failed to start [" (error/kind result) "]: "
+                               (or (:message result) "Unknown error")))
+          (log/info "System started successfully"))))))
 

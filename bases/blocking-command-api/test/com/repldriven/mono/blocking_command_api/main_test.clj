@@ -1,17 +1,19 @@
 (ns com.repldriven.mono.blocking-command-api.main-test
   (:require
-   com.repldriven.mono.testcontainers.interface
+    ;; system components
+    com.repldriven.mono.server.interface
+    com.repldriven.mono.testcontainers.interface
 
-   [com.repldriven.mono.blocking-command-api.main :as SUT]
+    [com.repldriven.mono.blocking-command-api.main :as SUT]
+    [com.repldriven.mono.error.interface :as error]
+    [com.repldriven.mono.system.interface :as system]
 
-   [clojure.test :as test :refer [deftest is testing]]))
+    [clojure.test :as test :refer [deftest is testing]]))
 
-(deftest start-test
-  (testing
-   "Ops should be able to start the system from the main entry point"
-    (try
-      (SUT/-main "-c" "classpath:blocking-command-api/application-test.yml"
-                 "-p" "test")
-      (is (some? @SUT/system))
-      (catch Exception e (assert false (format "Unable to start system, %s" e)))
-      (finally (SUT/stop @SUT/system)))))
+(deftest main-test
+  (testing "System should start and stop without anomalies"
+    (let [sys (SUT/start "classpath:blocking-command-api/application-test.yml"
+                         :test)]
+      (is (not (error/anomaly? sys)) "System should start")
+      (is (system/system? sys) "System should be valid")
+      (when (system/system? sys) (is (not (error/anomaly? (SUT/stop sys))))))))

@@ -19,7 +19,6 @@
     (let [sys (error/nom->
                (env/config "classpath:blocking-command-api/application-test.yml"
                            :test)
-               :system
                system/definition
                (assoc-in [:system/defs :server :handler] (partial api/app))
                system/start)]

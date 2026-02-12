@@ -49,10 +49,12 @@
              group-config))
 
 (defn definition
-  "Builds system definitions by reducing over component groups and their components."
-  [config]
-  {:system/defs
-   (reduce-kv (fn [groups group-name group-config]
-                (assoc groups group-name (component-group group-config)))
-              {}
-              config)})
+  "Builds system definitions by reducing over component groups and their components.
+  Takes a config map and optional path (defaults to [:system]) to extract system config."
+  ([config] (definition config [:system]))
+  ([config ks]
+   {:system/defs
+    (reduce-kv (fn [groups group-name group-config]
+                 (assoc groups group-name (component-group group-config)))
+               {}
+               (get-in config ks))}))

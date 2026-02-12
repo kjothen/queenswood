@@ -24,7 +24,7 @@
 (defn start
   [config-file profile]
   (error/let-nom [environment (env/config config-file profile)
-                  sys-def (system/definition (:system environment))
+                  sys-def (system/definition environment)
                   sys-config (assoc-in sys-def [:system/defs :server :handler] (partial api/app))
                   sys (system/start sys-config)
                   _ (migrate-db sys)]

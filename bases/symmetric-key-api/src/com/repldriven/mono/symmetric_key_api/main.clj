@@ -15,9 +15,9 @@
 (defn start
   [environment]
   (log/info "Starting system")
-  (let [config (-> (:system environment)
-                   (assoc-in [:server :handler] (partial api/app))
-                   (system/definition))]
+  (let [config (-> environment
+                   (system/definition)
+                   (assoc-in [:system/defs :server :handler] (partial api/app)))]
     (system/start! system config)))
 
 (defn stop
@@ -34,11 +34,11 @@
     (if exit-message
       (cli/exit ok? exit-message)
       (let [{:keys [config-file profile]} options]
-        (start (env/env config-file (keyword profile)))))))
+        (start (env/config config-file (keyword profile)))))))
 
 (comment
   (-main "-c" "classpath:symmetric-key-api/test-application.yml"
          "-p" "test")
   (stop @system)
-  (start (env/env "classpath:symmetric-key-api/test-application.yml" :test))
+  (start (env/config "classpath:symmetric-key-api/test-application.yml" :test))
   (stop @system))

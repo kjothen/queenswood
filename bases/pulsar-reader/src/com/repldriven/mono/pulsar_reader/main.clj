@@ -26,7 +26,7 @@
 (defn start
   [environment]
   (log/info "Starting system")
-  (let [config (system/definition (:system environment))]
+  (let [config (system/definition environment)]
     (system/start! system config)
     (reset! channel (async/chan))
     (read-messages (system/instance @system [:pulsar :reader]) @channel)))
@@ -46,11 +46,11 @@
     (if exit-message
       (cli/exit ok? exit-message)
       (let [{:keys [config-file profile]} options]
-        (start (env/env config-file (keyword profile)))))))
+        (start (env/config config-file (keyword profile)))))))
 
 (comment
   (-main "-c" "classpath:pulsar-reader/test-application.yml"
          "-p" "test")
   (stop @system)
-  (start (env/env "classpath:pulsar-reader/test-application.yml" :test))
+  (start (env/config "classpath:pulsar-reader/test-application.yml" :test))
   (stop @system))

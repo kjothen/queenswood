@@ -1,33 +1,25 @@
 (ns com.repldriven.mono.iam-api.api-test
   (:refer-clojure :exclude [name])
   (:require
-   com.repldriven.mono.db.interface
-   com.repldriven.mono.server.interface
-   com.repldriven.mono.testcontainers.interface
+    com.repldriven.mono.server.interface
+    com.repldriven.mono.testcontainers.interface
 
-   [com.repldriven.mono.iam-api.api :as api]
+    [com.repldriven.mono.iam-api.api :as api]
 
-   [com.repldriven.mono.db.interface :as db]
-   [com.repldriven.mono.env.interface :as env]
-   [com.repldriven.mono.error.interface :as error]
-   [com.repldriven.mono.http-client.interface :as http]
-   [com.repldriven.mono.iam.interface :as iam]
-   [com.repldriven.mono.system.interface :as system]
+    [com.repldriven.mono.db.interface :as db]
+    [com.repldriven.mono.env.interface :as env]
+    [com.repldriven.mono.error.interface :as error]
+    [com.repldriven.mono.http-client.interface :as http]
+    [com.repldriven.mono.iam.interface :as iam]
+    [com.repldriven.mono.system.interface :as system]
 
-   [clojure.data.json :as json]
-   [clojure.test :as test :refer [deftest is testing]])
-
+    [clojure.data.json :as json]
+    [clojure.test :as test :refer [deftest is testing]])
   (:import
-   (org.eclipse.jetty.server Server)))
-
-;;;; Fixtures
-;;;;
+    (org.eclipse.jetty.server Server)))
 
 (def ^:dynamic *base-url* "http://localhost:{PORT}")
 (def project-id "prj-test")
-
-;;;; service-account
-;;;;
 
 (def service-account-create-body
   {:account-id "sa-test"
@@ -36,48 +28,45 @@
 
 (defn create-service-account
   []
-  (http/request {:url (str *base-url* "/v1/projects/" project-id "/serviceAccounts")
+  (http/request {:url
+                 (str *base-url* "/v1/projects/" project-id "/serviceAccounts")
                  :method :post
                  :headers {"Content-Type" "application/json"}
                  :body (json/write-str service-account-create-body)}))
 
 (defn list-service-accounts
   []
-  (http/request {:url (str *base-url* "/v1/projects/" project-id "/serviceAccounts")
+  (http/request {:url
+                 (str *base-url* "/v1/projects/" project-id "/serviceAccounts")
                  :method :get}))
 
 (defn get-service-account
   [name]
-  (http/request {:url (str *base-url* "/v1/" name)
-                 :method :get}))
+  (http/request {:url (str *base-url* "/v1/" name) :method :get}))
 
 (defn disable-service-account
   [name]
-  (http/request {:url (str *base-url* "/v1/" name ":disable")
-                 :method :post}))
+  (http/request {:url (str *base-url* "/v1/" name ":disable") :method :post}))
 
 (defn enable-service-account
   [name]
-  (http/request {:url (str *base-url* "/v1/" name ":enable")
-                 :method :post}))
+  (http/request {:url (str *base-url* "/v1/" name ":enable") :method :post}))
 
 (defn delete-service-account
   [name]
-  (http/request {:url (str *base-url* "/v1/" name)
-                 :method :delete}))
+  (http/request {:url (str *base-url* "/v1/" name) :method :delete}))
 
 (defn undelete-service-account
   [name]
-  (http/request {:url (str *base-url* "/v1/" name ":undelete")
-                 :method :post}))
+  (http/request {:url (str *base-url* "/v1/" name ":undelete") :method :post}))
 
 (deftest service-accounts-api
   (testing "serviceAccounts API"
-    (let [sys (error/nom-> (env/config "classpath:iam-api/test-application.yml" :test)
-                           :system
-                           system/definition
-                           (assoc-in [:system/defs :server :handler] (partial api/app))
-                           system/start)]
+    (let [sys (error/nom->
+               (env/config "classpath:iam-api/test-application.yml" :test)
+               system/definition
+               (assoc-in [:system/defs :server :handler] (partial api/app))
+               system/start)]
       (is (not (error/anomaly? sys)) (str "System should start: " (pr-str sys)))
       (when (system/system? sys)
         (system/with-system sys
@@ -86,58 +75,67 @@
           (let [^Server server (system/instance sys [:server :jetty-adapter])
                 port (.getLocalPort (first (.getConnectors server)))]
             (binding [*base-url* (str "http://localhost:" port)]
-            (let [result (error/let-nom
-                          ; create service account
-                          [res (create-service-account)
-                           _ (is (= 201 (:status res)))
-                           service-account (http/res->edn res)
-                           _ (is (= false (:disabled service-account)))
-
-                           ; get created service account
-                           get-res (get-service-account (:name service-account))
-                           _ (is (= 200 (:status get-res)))
-                           _ (is (= service-account (http/res->edn get-res)))
-
-                           ; list service accounts
-                           list-res (list-service-accounts)
-                           _ (is (= 200 (:status list-res)))
-                           service-accounts (http/res->edn list-res)
-                           _ (is (= 1 (count (:accounts service-accounts))))
-                           _ (is (= service-account (first (:accounts service-accounts))))
-
-                           ; disable service account
-                           disable-res (disable-service-account (:name service-account))
-                           _ (is (= 204 (:status disable-res)))
-                           _ (is (or (nil? (:body disable-res)) (empty? (:body disable-res))))
-                           disabled-get-res (get-service-account (:name service-account))
-                           _ (is (= 200 (:status disabled-get-res)))
-                           _ (is (= true (:disabled (http/res->edn disabled-get-res))))
-
-                           ; enable service account
-                           enable-res (enable-service-account (:name service-account))
-                           _ (is (= 204 (:status enable-res)))
-                           _ (is (or (nil? (:body enable-res)) (empty? (:body enable-res))))
-                           enabled-get-res (get-service-account (:name service-account))
-                           _ (is (= 200 (:status enabled-get-res)))
-                           _ (is (= false (:disabled (http/res->edn enabled-get-res))))
-
-                           ; delete service account
-                           delete-res (delete-service-account (:name service-account))
-                           _ (is (= 204 (:status delete-res)))
-                           _ (is (or (nil? (:body delete-res)) (empty? (:body delete-res))))
-                           after-delete-list (list-service-accounts)
-                           _ (is (= 200 (:status after-delete-list)))
-                           after-delete-accounts (http/res->edn after-delete-list)
-                           _ (is (zero? (count (:accounts after-delete-accounts))))
-
-                           ; undelete service account
-                           undelete-res (undelete-service-account (:name service-account))
-                           _ (is (= 204 (:status undelete-res)))
-                           _ (is (or (nil? (:body undelete-res)) (empty? (:body undelete-res))))
-                           after-undelete-list (list-service-accounts)
-                           _ (is (= 200 (:status after-undelete-list)))
-                           after-undelete-accounts (http/res->edn after-undelete-list)
-                           _ (is (= 1 (count (:accounts after-undelete-accounts))))]
-                          :success)]
-              (is (not (error/anomaly? result))
-                  (str "API workflow failed: " (pr-str result)))))))))))
+              (let [result
+                    (error/let-nom
+                      ; create service account
+                      [res (create-service-account)
+                       _ (is (= 201 (:status res)))
+                       service-account (http/res->edn res)
+                       _ (is (= false (:disabled service-account)))
+                       ; get created service account
+                       get-res (get-service-account (:name service-account))
+                       _ (is (= 200 (:status get-res)))
+                       _ (is (= service-account (http/res->edn get-res)))
+                       ; list service accounts
+                       list-res (list-service-accounts)
+                       _ (is (= 200 (:status list-res)))
+                       service-accounts (http/res->edn list-res)
+                       _ (is (= 1 (count (:accounts service-accounts))))
+                       _ (is (= service-account
+                                (first (:accounts service-accounts))))
+                       ; disable service account
+                       disable-res (disable-service-account (:name
+                                                             service-account))
+                       _ (is (= 204 (:status disable-res)))
+                       _ (is (or (nil? (:body disable-res))
+                                 (empty? (:body disable-res))))
+                       disabled-get-res (get-service-account (:name
+                                                              service-account))
+                       _ (is (= 200 (:status disabled-get-res)))
+                       _ (is (= true
+                                (:disabled (http/res->edn disabled-get-res))))
+                       ; enable service account
+                       enable-res (enable-service-account (:name
+                                                           service-account))
+                       _ (is (= 204 (:status enable-res)))
+                       _ (is (or (nil? (:body enable-res))
+                                 (empty? (:body enable-res))))
+                       enabled-get-res (get-service-account (:name
+                                                             service-account))
+                       _ (is (= 200 (:status enabled-get-res)))
+                       _ (is (= false
+                                (:disabled (http/res->edn enabled-get-res))))
+                       ; delete service account
+                       delete-res (delete-service-account (:name
+                                                           service-account))
+                       _ (is (= 204 (:status delete-res)))
+                       _ (is (or (nil? (:body delete-res))
+                                 (empty? (:body delete-res))))
+                       after-delete-list (list-service-accounts)
+                       _ (is (= 200 (:status after-delete-list)))
+                       after-delete-accounts (http/res->edn after-delete-list)
+                       _ (is (zero? (count (:accounts after-delete-accounts))))
+                       ; undelete service account
+                       undelete-res (undelete-service-account (:name
+                                                               service-account))
+                       _ (is (= 204 (:status undelete-res)))
+                       _ (is (or (nil? (:body undelete-res))
+                                 (empty? (:body undelete-res))))
+                       after-undelete-list (list-service-accounts)
+                       _ (is (= 200 (:status after-undelete-list)))
+                       after-undelete-accounts (http/res->edn
+                                                after-undelete-list)
+                       _ (is (= 1 (count (:accounts after-undelete-accounts))))]
+                      :success)]
+                (is (not (error/anomaly? result))
+                    (str "API workflow failed: " (pr-str result)))))))))))

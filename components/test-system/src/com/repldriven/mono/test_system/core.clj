@@ -19,8 +19,8 @@
    (fixture env-path profile env-var sysdef-var system/definition))
   ([env-path profile env-var sysdef-var configure-fn]
    (fn [f]
-     (let [environment (env/env env-path profile)
-           sys-def (configure-fn (:system environment))]
+     (let [environment (env/config env-path profile)
+           sys-def (configure-fn environment)]
        (try
          (push-thread-bindings {env-var environment sysdef-var sys-def})
          (f)

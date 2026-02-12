@@ -20,7 +20,6 @@
 (deftest system-test
   (testing "System configuration and lifecycle"
     (let [sys (error/nom-> (env/config "classpath:iam-api/test-application.yml" :test)
-                           :system
                            system/definition
                            (assoc-in [:system/defs :server :handler] minimal-app)
                            system/start)]
