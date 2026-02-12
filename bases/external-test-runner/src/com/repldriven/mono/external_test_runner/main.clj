@@ -1,8 +1,10 @@
 (ns com.repldriven.mono.external-test-runner.main
   (:require
+   [eftest.report.junit :as junit]
    [eftest.report.pretty :as report]
    [eftest.runner :as eftest]
 
+   [clojure.java.io :as io]
    [clojure.string :as str]
    [clojure.tools.cli :refer [parse-opts]])
   (:gen-class))
@@ -76,6 +78,20 @@
                         (filter (fn [v] (:test (meta v))))))))
        vec))
 
+(defn- make-junit-reporter
+  "Create a JUnit XML reporter that writes to target/test-results"
+  []
+  (let [output-dir (io/file "target" "test-results")]
+    (.mkdirs output-dir)
+    (junit/report output-dir)))
+
+(defn- multi-reporter
+  "Create a reporter that outputs to both stdout and JUnit XML"
+  [reporters]
+  (fn [event]
+    (doseq [reporter reporters]
+      (reporter event))))
+
 (defn- run-test-namespaces
   "Run tests in the specified namespaces using eftest"
   [test-nses {:keys [verbose skip-meta focus-meta]}]
@@ -90,11 +106,13 @@
 
   (let [all-test-vars (find-test-vars test-nses)
         selector (build-selector skip-meta focus-meta)
-        filtered-test-vars (filterv selector all-test-vars)]
+        filtered-test-vars (filterv selector all-test-vars)
+        junit-reporter (make-junit-reporter)
+        combined-reporter (multi-reporter [report/report junit-reporter])]
     (eftest/run-tests filtered-test-vars
                       {:capture-output? false
                        :multithread? :vars
-                       :report report/report
+                       :report combined-reporter
                        :test-warn-time 1000})))
 
 (defn- exit-with-results
