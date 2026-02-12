@@ -1,19 +1,21 @@
 (ns com.repldriven.mono.iam-api.api-test
   (:refer-clojure :exclude [name])
   (:require
+   com.repldriven.mono.db.interface
+   com.repldriven.mono.server.interface
    com.repldriven.mono.testcontainers.interface
 
    [com.repldriven.mono.iam-api.api :as api]
 
    [com.repldriven.mono.db.interface :as db]
+   [com.repldriven.mono.env.interface :as env]
    [com.repldriven.mono.error.interface :as error]
    [com.repldriven.mono.http-client.interface :as http]
    [com.repldriven.mono.iam.interface :as iam]
    [com.repldriven.mono.system.interface :as system]
-   [com.repldriven.mono.test-system.interface :as test-system]
 
    [clojure.data.json :as json]
-   [clojure.test :as test :refer [deftest is testing use-fixtures]])
+   [clojure.test :as test :refer [deftest is testing]])
 
   (:import
    (org.eclipse.jetty.server Server)))
@@ -28,9 +30,6 @@
   [sys]
   (let [datasource (system/instance sys [:db :datasource])]
     (db/get-datasource datasource)))
-
-(use-fixtures :once
-  (test-system/fixture "classpath:iam-api/test-application.yml" :test))
 
 ;;;; service-account
 ;;;;
@@ -79,12 +78,18 @@
 
 (deftest service-accounts-api
   (testing "serviceAccounts API"
-    (let [sys-config (assoc-in test-system/*sysdef* [:system/defs :server :handler] (partial api/app))]
-      (system/with-*sys* sys-config
-        (iam/migrate (db-spec system/*sys*))
-        (let [^Server server (system/instance system/*sys* [:server :jetty-adapter])
-              port (.getLocalPort (first (.getConnectors server)))]
-          (binding [*base-url* (str "http://localhost:" port)]
+    (let [sys (error/nom-> (env/config "classpath:iam-api/test-application.yml" :test)
+                           :system
+                           system/definition
+                           (assoc-in [:system/defs :server :handler] (partial api/app))
+                           system/start)]
+      (is (not (error/anomaly? sys)) (str "System should start: " (pr-str sys)))
+      (when (system/system? sys)
+        (system/with-system sys
+          (iam/migrate (db-spec sys))
+          (let [^Server server (system/instance sys [:server :jetty-adapter])
+                port (.getLocalPort (first (.getConnectors server)))]
+            (binding [*base-url* (str "http://localhost:" port)]
             (let [result (error/let-nom
                           ; create service account
                           [res (create-service-account)
@@ -139,4 +144,4 @@
                            _ (is (= 1 (count (:accounts after-undelete-accounts))))]
                           :success)]
               (is (not (error/anomaly? result))
-                  (str "API workflow failed: " (pr-str result)))))))))
+                  (str "API workflow failed: " (pr-str result)))))))))))

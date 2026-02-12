@@ -4,14 +4,11 @@
    com.repldriven.mono.server.interface
    com.repldriven.mono.testcontainers.interface
 
+   [com.repldriven.mono.env.interface :as env]
    [com.repldriven.mono.error.interface :as error]
    [com.repldriven.mono.system.interface :as system]
-   [com.repldriven.mono.test-system.interface :as test-system]
 
-   [clojure.test :refer [deftest is testing use-fixtures]]))
-
-(use-fixtures :once
-  (test-system/fixture "classpath:iam-api/test-application.yml" :test))
+   [clojure.test :refer [deftest is testing]]))
 
 (defn minimal-app
   [_ctx]
@@ -22,9 +19,17 @@
 
 (deftest system-test
   (testing "System configuration and lifecycle"
-    (is (system/system? test-system/*sysdef*) "System definition should be valid")
-    (let [sys-config (assoc-in test-system/*sysdef* [:system/defs :server :jetty-adapter :system/config :handler] minimal-app)]
-      (system/with-*sys* sys-config
-        (is (some? system/*sys*) "System should be initialized")
-        (is (not (error/anomaly? system/*sys*)) "System should not be an anomaly")))))
+    (let [sys (error/nom-> (env/config "classpath:iam-api/test-application.yml" :test)
+                           :system
+                           system/definition
+                           (assoc-in [:system/defs :server :handler] minimal-app)
+                           system/start)]
+      (is (not (error/anomaly? sys)) "System should start")
+      (is (system/system? sys) "System should be valid")
+      (when (system/system? sys)
+        (system/with-system sys
+          (is (some? (system/instance sys [:server :jetty-adapter]))
+              "Server should be running"))
+        (is (not (error/anomaly? (system/stop sys)))
+            "System should stop cleanly")))))
 
