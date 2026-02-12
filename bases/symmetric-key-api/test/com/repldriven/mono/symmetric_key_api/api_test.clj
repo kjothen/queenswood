@@ -12,48 +12,46 @@
 
     [clojure.test :refer [deftest is testing]]))
 
-(deftest api-test
-  (testing "API should respond to symmetric key requests"
+(def ^:dynamic *base-url* "http://localhost:{PORT}")
+
+(defn list-keys
+  [identity-id]
+  (http/request {:url (str *base-url* "/api/identities/" identity-id "/keys")
+                 :method :get}))
+
+(defn get-key
+  [identity-id key-id]
+  (http/request {:url (str *base-url* "/api/identities/" identity-id "/keys/"
+                           key-id)
+                 :method :get}))
+
+(deftest symmetric-keys-api
+  (testing "symmetric keys API"
     (let [sys (error/nom->
                (env/config "classpath:symmetric-key-api/test-application.yml"
                            :test)
                system/defs
                (assoc-in [:system/defs :server :handler] (partial api/app))
                system/start)]
-      (is (not (error/anomaly? sys)) "System should start")
-      (is (system/system? sys) "System should be valid")
+      (is (not (error/anomaly? sys)) (str "System should start: " (pr-str sys)))
       (when (system/system? sys)
         (system/with-system sys
-          (let [jetty (system/instance sys [:server :jetty-adapter])
-                base-url (server/http-local-url jetty)
-                identity-id "test-identity-123"
-                key-id "test-key-456"]
-            ;; Test list keys endpoint
-            (let [list-request {:method :get
-                                :url (str base-url "/api/identities/" identity-id
-                                          "/keys")
-                                :headers {"Accept" "application/json"}}
-                  list-result (error/let-nom [response (http/request
-                                                        list-request)
-                                              body (http/res->edn response)]
-                                {:status (:status response) :body body})]
-              (is (not (error/anomaly? list-result))
-                  (str "List keys request failed: " (pr-str list-result)))
-              (when-not (error/anomaly? list-result)
-                (is (= 200 (:status list-result)) "Should return 200 OK")
-                (is (= {:data []} (:body list-result))
-                    "Should return empty list of keys")))
-            ;; Test get key endpoint
-            (let [get-request {:method :get
-                               :url (str base-url "/api/identities/" identity-id
-                                         "/keys/" key-id)
-                               :headers {"Accept" "application/json"}}
-                  get-result (error/let-nom [response (http/request get-request)
-                                             body (http/res->edn response)]
-                               {:status (:status response) :body body})]
-              (is (not (error/anomaly? get-result))
-                  (str "Get key request failed: " (pr-str get-result)))
-              (when-not (error/anomaly? get-result)
-                (is (= 200 (:status get-result)) "Should return 200 OK")
-                (is (= {:data {}} (:body get-result))
-                    "Should return empty key data")))))))))
+          (let [jetty (system/instance sys [:server :jetty-adapter])]
+            (binding [*base-url* (server/http-local-url jetty)]
+              (let [identity-id "test-identity-123"
+                    key-id "test-key-456"
+                    result
+                    (error/let-nom
+                      ; list keys for identity
+                      [list-res (list-keys identity-id)
+                       _ (is (= 200 (:status list-res)))
+                       list-body (http/res->edn list-res)
+                       _ (is (= {:data []} list-body))
+                       ; get specific key
+                       get-res (get-key identity-id key-id)
+                       _ (is (= 200 (:status get-res)))
+                       get-body (http/res->edn get-res)
+                       _ (is (= {:data {}} get-body))]
+                      :success)]
+                (is (not (error/anomaly? result))
+                    (str "API workflow failed: " (pr-str result)))))))))))
