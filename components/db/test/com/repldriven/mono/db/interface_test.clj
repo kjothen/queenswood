@@ -1,33 +1,27 @@
 (ns com.repldriven.mono.db.interface-test
   (:require
-   com.repldriven.mono.db.interface
-   com.repldriven.mono.testcontainers.interface
+    com.repldriven.mono.db.interface
+    com.repldriven.mono.testcontainers.interface
 
-   [com.repldriven.mono.system.interface :as system]
-   [com.repldriven.mono.test-system.interface :as test-system]
+    [com.repldriven.mono.env.interface :as env]
+    [com.repldriven.mono.error.interface :as error]
+    [com.repldriven.mono.system.interface :as system]
 
-   [next.jdbc :as jdbc]
-   [next.jdbc.result-set :as rs]
+    [next.jdbc :as jdbc]
+    [next.jdbc.result-set :as rs]
 
-   [clojure.test :as test :refer [deftest is testing use-fixtures]]))
+    [clojure.test :as test :refer [deftest is testing]]))
 
-(defn with-system-fixture
-  [f]
-  (system/with-*sys* test-system/*sysdef*
-    (f)))
-
-(use-fixtures :once
-  (test-system/fixture "classpath:db/test-application.yml" :test)
-  with-system-fixture)
-
-(deftest system-start
-  (testing "Developers should be able to start a sql system from a REPL"
-    (is (some? system/*sys*))))
-
-(deftest valid-connection
-  (testing "Connection must be valid")
-  (let [datasource (system/instance system/*sys* [:db :datasource])]
-    (is (= [{:?column? 1}]
-           (jdbc/execute! datasource
-                          ["select 1"]
-                          {:builder-fn rs/as-unqualified-lower-maps})))))
+(deftest db-component-test
+  (testing "DB component should provide valid connections"
+    (let [sys (error/nom-> (env/config "classpath:db/test-application.yml" :test)
+                           system/defs
+                           system/start)]
+      (is (not (error/anomaly? sys)) (str "System should start: " (pr-str sys)))
+      (when (system/system? sys)
+        (system/with-system sys
+          (let [datasource (system/instance sys [:db :datasource])]
+            (is (= [{:?column? 1}]
+                   (jdbc/execute! datasource
+                                  ["select 1"]
+                                  {:builder-fn rs/as-unqualified-lower-maps})))))))))
