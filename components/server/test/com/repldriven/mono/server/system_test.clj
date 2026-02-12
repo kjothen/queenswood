@@ -16,22 +16,20 @@
   (testing "Server component system configuration and lifecycle"
     (let [sys (error/nom->
                (env/config
-                "classpath:com/repldriven/mono/server/application-test.yml" :test)
+                "classpath:com/repldriven/mono/server/application-test.yml"
+                :test)
                system/defs
                (update-in [:system/defs :server] dissoc :jetty-adapter)
                system/start)]
       (is (not (error/anomaly? sys)) (str "System should start: " (pr-str sys)))
-      (when (system/system? sys)
-        (system/with-system sys
-          (is (some? sys)))))))
+      (when (system/system? sys) (system/with-system sys (is (some? sys)))))))
 
 (deftest interceptors-test
   (testing "Ring interceptors MUST be inserted"
     (let [data {:got "me" :this "time"}
           handler (fn [req] {:status 200 :body (select-keys req (keys data))})
-          routes (fn [ctx]
-                   ["/api" {:interceptors (:interceptors ctx)}
-                    ["/interceptors" {:get {:handler handler}}]])
+          routes (fn [ctx] ["/api" {:interceptors (:interceptors ctx)}
+                            ["/interceptors" {:get {:handler handler}}]])
           app (fn [ctx]
                 (http/ring-handler (http/router (routes ctx)
                                                 server/standard-router-data)
@@ -39,7 +37,8 @@
                                    server/standard-executor))
           sys (error/nom->
                (env/config
-                "classpath:com/repldriven/mono/server/application-test.yml" :test)
+                "classpath:com/repldriven/mono/server/application-test.yml"
+                :test)
                system/defs
                (assoc-in [:system/defs :server :handler] app)
                system/start)]

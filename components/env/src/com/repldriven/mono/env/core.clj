@@ -1,12 +1,12 @@
 (ns com.repldriven.mono.env.core
   (:require
-   [aero.core :as aero]
+    [aero.core :as aero]
 
-   [com.repldriven.mono.env.reader.edn :as reader.edn]
-   [com.repldriven.mono.env.reader.yml :as reader.yml]
-   [com.repldriven.mono.error.interface :as error]
+    [com.repldriven.mono.env.reader.edn :as reader.edn]
+    [com.repldriven.mono.env.reader.yml :as reader.yml]
+    [com.repldriven.mono.error.interface :as error]
 
-   [clojure.string :as str]))
+    [clojure.string :as str]))
 
 (def edn-reader reader.edn/edn-reader)
 (def yml-reader reader.yml/yml-reader)
@@ -35,13 +35,16 @@
   (throw (ex-info "Unsupported config file type" {:source source})))
 
 (defn config
-  ([] (error/try-nom :env/config-exception
-                     "Failed to load config"
-                     (read-config "classpath:application.edn" :default)))
-  ([source] (error/try-nom :env/config-exception
-                           "Failed to load config"
-                           (read-config source :default)))
-  ([source profile] (error/try-nom :env/config-exception
-                                    "Failed to load config"
-                                    (read-config source profile))))
+  ([]
+   (error/try-nom :env/config-exception
+                  "Failed to load config"
+                  (read-config "classpath:application.edn" :default)))
+  ([source]
+   (error/try-nom :env/config-exception
+                  "Failed to load config"
+                  (read-config source :default)))
+  ([source profile]
+   (error/try-nom :env/config-exception
+                  "Failed to load config"
+                  (read-config source profile))))
 

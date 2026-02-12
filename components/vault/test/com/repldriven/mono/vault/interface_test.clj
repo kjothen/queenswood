@@ -24,7 +24,10 @@
                 secret (:secret-in-vault vault-config)]
             (is (some? client))
             (is (some? (SUT/authenticate-client! client :token token)))
-            (let [[mount path] (-> secret first (str/split #"/"))
-                  secret-props (-> secret rest)]
+            (let [[mount path] (-> secret
+                                   first
+                                   (str/split #"/"))
+                  secret-props (-> secret
+                                   rest)]
               (is (= (SUT/read-secret client mount path)
                      (utility/prop-seq->kw-map secret-props))))))))))

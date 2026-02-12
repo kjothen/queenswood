@@ -1,14 +1,14 @@
 (ns com.repldriven.mono.env.reader.yml
   (:require
-   flatland.ordered.map
+    flatland.ordered.map
 
-   [com.repldriven.mono.env.reader.edn :as reader.edn]
-   [com.repldriven.mono.utility.interface :as util]
+    [com.repldriven.mono.env.reader.edn :as reader.edn]
+    [com.repldriven.mono.utility.interface :as util]
 
-   [clj-yaml.core :as yaml]
+    [clj-yaml.core :as yaml]
 
-   [clojure.java.io :as io]
-   [clojure.string :as str]))
+    [clojure.java.io :as io]
+    [clojure.string :as str]))
 
 (defmulti yml-reader (fn [m] (keyword (get m :tag))))
 
@@ -20,9 +20,7 @@
   [{:keys [value]}]
   (symbol (str "#profile " (util/yaml-collections->edn-collections value))))
 
-(defmethod yml-reader :!port
-  [{:keys [value]}]
-  (symbol (str "#port " value)))
+(defmethod yml-reader :!port [{:keys [value]}] (symbol (str "#port " value)))
 
 (defmethod yml-reader :!include
   [{:keys [value]}]
@@ -36,17 +34,11 @@
         (yaml/parse-stream {:key-fn key-fn :unknown-tag-fn yml-reader})
         util/yaml-collections->edn-collections)))
 
-(defmethod yml-reader :!keyword
-  [{:keys [value]}]
-  (keyword value))
+(defmethod yml-reader :!keyword [{:keys [value]}] (keyword value))
 
-(defmethod yml-reader :!str
-  [{:keys [value]}]
-  (str "\"" (name value) "\""))
+(defmethod yml-reader :!str [{:keys [value]}] (str "\"" (name value) "\""))
 
-(defmethod yml-reader :!strs
-  [{:keys [value]}]
-  (util/keys->strs value))
+(defmethod yml-reader :!strs [{:keys [value]}] (util/keys->strs value))
 
 (defn- key-fn
   [{:keys [key]}]

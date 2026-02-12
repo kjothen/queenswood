@@ -24,13 +24,13 @@
   (def cloudevt
     {:attribute {"id" (ulid/ulid)
                  ;; :source "persistent://tenant/namesapce/event"
-                 ;; :specversion "1.0"
-                 ;; :type "com.repldriven.mono.topic.v1.event"
-                 ;; :datacontentype "application/cloudevents+avro"
-                 ;; :dataschema
+                 ;; :specversion "1.0" :type
+                 ;; "com.repldriven.mono.topic.v1.event" :datacontentype
+                 ;; "application/cloudevents+avro" :dataschema
                  ;; "https://www.github.com/kjothen/mono/components/event/resources/schema/cloudevent.avsc"
                  ;; :subject "example"
-                 ;; :time (tick/format (tick/formatter :iso-instant) (tick/now))
+                 ;; :time (tick/format (tick/formatter :iso-instant)
+                 ;; (tick/now))
                 }
      :data "some data"})
   (avro/json-encoded schema cloudevt))

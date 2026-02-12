@@ -1,25 +1,26 @@
 (ns com.repldriven.mono.encryption.core
   (:require
-   [buddy.core.codecs :as codecs]
-   [buddy.core.crypto :as crypto]
-   [buddy.core.nonce :as nonce]
+    [buddy.core.codecs :as codecs]
+    [buddy.core.crypto :as crypto]
+    [buddy.core.nonce :as nonce]
 
-   [clojure.string :as string])
-  (:import (javax.crypto KeyGenerator)
-           (java.security KeyFactory KeyPairGenerator PrivateKey PublicKey)
-           (java.security.spec PKCS8EncodedKeySpec X509EncodedKeySpec)
-           (java.util Base64)))
+    [clojure.string :as string])
+  (:import
+    (javax.crypto KeyGenerator)
+    (java.security KeyFactory KeyPairGenerator PrivateKey PublicKey)
+    (java.security.spec PKCS8EncodedKeySpec X509EncodedKeySpec)
+    (java.util Base64)))
 
 (defonce ^:private ^KeyGenerator key-gen-aes-256
-         (when-not *compile-files*
-           (doto (KeyGenerator/getInstance "AES") (.init 256))))
+  (when-not *compile-files*
+    (doto (KeyGenerator/getInstance "AES") (.init 256))))
 
 (defonce ^:private ^KeyPairGenerator key-pair-gen-rsa-512
-         (when-not *compile-files*
-           (doto (KeyPairGenerator/getInstance "RSA") (.initialize 512))))
+  (when-not *compile-files*
+    (doto (KeyPairGenerator/getInstance "RSA") (.initialize 512))))
 
 (defonce ^:private ^KeyFactory key-factory-rsa
-         (when-not *compile-files* (KeyFactory/getInstance "RSA")))
+  (when-not *compile-files* (KeyFactory/getInstance "RSA")))
 
 (defn decode64 [s] (.decode (Base64/getDecoder) s))
 

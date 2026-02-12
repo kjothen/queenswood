@@ -1,18 +1,17 @@
 (ns com.repldriven.mono.blocking-command-api.main
   (:require
-   ;; system components
-   com.repldriven.mono.mqtt.interface
-   com.repldriven.mono.pulsar.interface
-   com.repldriven.mono.server.interface
+    ;; system components
+    com.repldriven.mono.mqtt.interface
+    com.repldriven.mono.pulsar.interface
+    com.repldriven.mono.server.interface
 
-   [com.repldriven.mono.blocking-command-api.api :as api]
+    [com.repldriven.mono.blocking-command-api.api :as api]
 
-   [com.repldriven.mono.cli.interface :as cli]
-   [com.repldriven.mono.env.interface :as env]
-   [com.repldriven.mono.error.interface :as error]
-   [com.repldriven.mono.log.interface :as log]
-   [com.repldriven.mono.system.interface :as system])
-
+    [com.repldriven.mono.cli.interface :as cli]
+    [com.repldriven.mono.env.interface :as env]
+    [com.repldriven.mono.error.interface :as error]
+    [com.repldriven.mono.log.interface :as log]
+    [com.repldriven.mono.system.interface :as system])
   (:gen-class))
 
 (defn start
@@ -22,21 +21,21 @@
                (assoc-in [:system/defs :server :handler] (partial api/app))
                system/start))
 
-(defn stop
-  [system]
-  (system/stop system))
+(defn stop [system] (system/stop system))
 
 (defn -main
   [& args]
   (log/init)
   (log/info args)
-  (let [{:keys [options exit-message ok?]} (cli/validate-args "blocking-command-api" args)]
+  (let [{:keys [options exit-message ok?]}
+        (cli/validate-args "blocking-command-api" args)]
     (if exit-message
       (cli/exit ok? exit-message)
       (let [{:keys [config-file profile]} options
             result (start config-file (keyword profile))]
         (if (error/anomaly? result)
-          (cli/exit false (str "Failed to start [" (error/kind result) "]: "
-                               (or (:message result) "Unknown error")))
+          (cli/exit false
+                    (str "Failed to start [" (error/kind result)
+                         "]: " (or (:message result) "Unknown error")))
           (log/info "System started successfully"))))))
 

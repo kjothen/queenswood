@@ -1,31 +1,31 @@
 (ns com.repldriven.mono.env.system-test
   (:require
-   [com.repldriven.mono.env.interface :as SUT]
+    [com.repldriven.mono.env.interface :as SUT]
 
-   [clojure.test :as test :refer [deftest is testing]]))
+    [clojure.test :as test :refer [deftest is testing]]))
 
 (deftest edn-test
   (testing
-   "A non-zero port number in config is preserved, ie `:port #port 80` -> `:port 80`"
-   (let [environment (SUT/config "classpath:env/test-env.edn" :default)
-         port (get-in environment [:system :port])]
-     (is (= 80 port))))
+    "A non-zero port number in config is preserved, ie `:port #port 80` -> `:port 80`"
+    (let [environment (SUT/config "classpath:env/test-env.edn" :default)
+          port (get-in environment [:system :port])]
+      (is (= 80 port))))
   (testing
-   "A zero port number in config returns an available local port,
+    "A zero port number in config returns an available local port,
             eg `:port #port 0` -> `:port 62457`"
-   (let [environment (SUT/config "classpath:env/test-env.edn" :test)
-         port (get-in environment [:system :port])]
-     (is (and (>= port 1024) (<= port 65535))))))
+    (let [environment (SUT/config "classpath:env/test-env.edn" :test)
+          port (get-in environment [:system :port])]
+      (is (and (>= port 1024) (<= port 65535))))))
 
 (deftest yaml-test
   (testing
-   "A non-zero port number in config is preserved, ie `:port #port 80` -> `:port 80`"
-   (let [environment (SUT/config "classpath:env/test-application.yml" :default)
-         port (get-in environment [:system :port])]
-     (is (= 80 port))))
+    "A non-zero port number in config is preserved, ie `:port #port 80` -> `:port 80`"
+    (let [environment (SUT/config "classpath:env/test-application.yml" :default)
+          port (get-in environment [:system :port])]
+      (is (= 80 port))))
   (testing
-   "A zero port number in config returns an available local port,
+    "A zero port number in config returns an available local port,
             eg `:port #port 0` -> `:port 62457`"
-   (let [environment (SUT/config "classpath:env/test-application.yml" :test)
-         port (get-in environment [:system :port])]
-     (is (and (>= port 1024) (<= port 65535))))))
+    (let [environment (SUT/config "classpath:env/test-application.yml" :test)
+          port (get-in environment [:system :port])]
+      (is (and (>= port 1024) (<= port 65535))))))

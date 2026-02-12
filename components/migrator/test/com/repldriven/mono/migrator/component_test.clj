@@ -31,4 +31,5 @@
             (is (= [{:name "hello"} {:name "world"}]
                    (jdbc/execute! datasource
                                   ["select name from test order by id asc"]
-                                  {:builder-fn rs/as-unqualified-lower-maps})))))))))
+                                  {:builder-fn
+                                   rs/as-unqualified-lower-maps})))))))))

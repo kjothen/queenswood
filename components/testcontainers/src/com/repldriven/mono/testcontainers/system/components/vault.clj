@@ -1,11 +1,12 @@
 (ns com.repldriven.mono.testcontainers.system.components.vault
   (:require
-   [com.repldriven.mono.log.interface :as log]
+    [com.repldriven.mono.log.interface :as log]
 
-   [clj-test-containers.core :as tc])
-  (:import (org.testcontainers.containers ContainerLaunchException)
-           (org.testcontainers.vault VaultContainer)
-           (org.testcontainers.utility DockerImageName)))
+    [clj-test-containers.core :as tc])
+  (:import
+    (org.testcontainers.containers ContainerLaunchException)
+    (org.testcontainers.vault VaultContainer)
+    (org.testcontainers.utility DockerImageName)))
 
 (def default-exposed-ports [8200])
 (def default-docker-image-name "hashicorp/vault:latest")

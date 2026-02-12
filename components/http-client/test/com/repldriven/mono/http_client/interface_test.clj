@@ -1,16 +1,15 @@
 (ns com.repldriven.mono.http-client.interface-test
   (:require
-   [com.repldriven.mono.error.interface :as err]
-   [com.repldriven.mono.http-client.interface :as http]
+    [com.repldriven.mono.error.interface :as err]
+    [com.repldriven.mono.http-client.interface :as http]
 
-   [org.httpkit.fake :refer [with-fake-http]]
+    [org.httpkit.fake :refer [with-fake-http]]
 
-   [clojure.test :as test :refer [deftest is testing]]))
+    [clojure.test :as test :refer [deftest is testing]]))
 
 (deftest res->body-string-body-no-content-type-test
   (testing "String body without content-type returns the string"
-    (is (= "{\"a\":1,\"b\":2}"
-           (http/res->body {:body "{\"a\":1,\"b\":2}"})))))
+    (is (= "{\"a\":1,\"b\":2}" (http/res->body {:body "{\"a\":1,\"b\":2}"})))))
 
 (deftest res->body-string-body-json-content-type-test
   (testing "String body with JSON content-type returns parsed JSON"
@@ -31,8 +30,7 @@
                             :body "<html>...</html>"})))))
 
 (deftest res->body-nil-response-test
-  (testing "Nil response returns nil"
-    (is (nil? (http/res->body nil)))))
+  (testing "Nil response returns nil" (is (nil? (http/res->body nil)))))
 
 (deftest res->body-anomaly-passthrough-test
   (testing "Anomaly response is passed through unchanged"
@@ -41,35 +39,34 @@
 
 (deftest with-fake-http-test
   (testing "with-fake-http works with both sync and async requests"
-    (with-fake-http [{:url "http://example.com/success" :method :get}
-                     {:status 200
-                      :headers {:content-type "application/json"}
-                      :body "{\"result\":\"success\"}"}
-
-                     {:url "http://example.com/exception" :method :get}
-                     (fn [_orig-fn _opts _callback]
-                       (throw (ex-info "Simulated error" {:test true})))
-
-                     {:url "http://example.com/request-failed" :method :get}
-                     {:error "Connection timeout"}]
-
-      (testing "successful synchronous request"
-        (let [res (http/request {:url "http://example.com/success" :method :get})]
-          (is (= 200 (:status res)))
-          (is (= {"result" "success"} (http/res->body res)))))
-
-      (testing "synchronous request with exception returns anomaly"
-        (let [res (http/request {:url "http://example.com/exception" :method :get})]
-          (is (err/anomaly? res))
-          (is (= :http-client/request-exception (err/kind res)))))
-
-      (testing "synchronous request with http-kit error returns anomaly"
-        (let [res (http/request {:url "http://example.com/request-failed" :method :get})]
-          (is (err/anomaly? res))
-          (is (= :http-client/request-failed (err/kind res)))))
-
-      (testing "asynchronous request"
-        (let [p (http/request-async {:url "http://example.com/success" :method :get})
-              res @p]
-          (is (= 200 (:status res)))
-          (is (= {"result" "success"} (http/res->body res))))))))
+    (with-fake-http
+     [{:url "http://example.com/success" :method :get}
+      {:status 200
+       :headers {:content-type "application/json"}
+       :body "{\"result\":\"success\"}"}
+      {:url "http://example.com/exception" :method :get}
+      (fn [_orig-fn _opts _callback]
+        (throw (ex-info "Simulated error" {:test true})))
+      {:url "http://example.com/request-failed" :method :get}
+      {:error "Connection timeout"}]
+     (testing "successful synchronous request"
+       (let [res (http/request {:url "http://example.com/success"
+                                :method :get})]
+         (is (= 200 (:status res)))
+         (is (= {"result" "success"} (http/res->body res)))))
+     (testing "synchronous request with exception returns anomaly"
+       (let [res (http/request {:url "http://example.com/exception"
+                                :method :get})]
+         (is (err/anomaly? res))
+         (is (= :http-client/request-exception (err/kind res)))))
+     (testing "synchronous request with http-kit error returns anomaly"
+       (let [res (http/request {:url "http://example.com/request-failed"
+                                :method :get})]
+         (is (err/anomaly? res))
+         (is (= :http-client/request-failed (err/kind res)))))
+     (testing "asynchronous request"
+       (let [p (http/request-async {:url "http://example.com/success"
+                                    :method :get})
+             res @p]
+         (is (= 200 (:status res)))
+         (is (= {"result" "success"} (http/res->body res))))))))

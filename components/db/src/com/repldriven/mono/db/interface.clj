@@ -1,9 +1,9 @@
 (ns com.repldriven.mono.db.interface
   (:require
-   com.repldriven.mono.db.system.core
+    com.repldriven.mono.db.system.core
 
-   [com.repldriven.mono.error.interface :as error]
-   [next.jdbc]))
+    [com.repldriven.mono.error.interface :as error]
+    [next.jdbc]))
 
 (defn get-datasource
   "Get a JDBC datasource from a datasource config map."

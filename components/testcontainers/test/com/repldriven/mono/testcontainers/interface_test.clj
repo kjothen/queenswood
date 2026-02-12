@@ -10,18 +10,18 @@
 
 (deftest testcontainers-test
   (testing "Testcontainers should start and provide mapped ports"
-    (let [sys (error/nom->
-               (env/config "classpath:testcontainers/test-application.yml" :test)
-               system/defs
-               system/start)]
+    (let [sys (error/nom-> (env/config
+                            "classpath:testcontainers/test-application.yml"
+                            :test)
+                           system/defs
+                           system/start)]
       (is (not (error/anomaly? sys)) (str "System should start: " (pr-str sys)))
       (when (system/system? sys)
         (system/with-system sys
           (is (= [8080 8081]
-                 (keys (system/instance sys [:helloworld
-                                             :container-mapped-ports]))))
-          (is (= (system/instance sys [:helloworld
-                                       :container-mapped-exposed-port])
-                 (get (system/instance sys [:helloworld
-                                            :container-mapped-ports])
-                      8080))))))))
+                 (keys
+                  (system/instance sys [:helloworld :container-mapped-ports]))))
+          (is
+           (= (system/instance sys [:helloworld :container-mapped-exposed-port])
+              (get (system/instance sys [:helloworld :container-mapped-ports])
+                   8080))))))))

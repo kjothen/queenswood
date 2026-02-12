@@ -1,8 +1,8 @@
 (ns com.repldriven.mono.db.system.components
   (:require
-   [next.jdbc]
+    [next.jdbc]
 
-   [com.repldriven.mono.system.interface :as system]))
+    [com.repldriven.mono.system.interface :as system]))
 
 (def datasources
   {:system/start (fn [{:system/keys [config]}]

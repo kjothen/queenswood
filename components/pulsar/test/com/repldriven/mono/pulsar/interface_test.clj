@@ -42,9 +42,7 @@
                            system/defs
                            system/start)]
       (is (not (error/anomaly? sys)) (str "System should start: " (pr-str sys)))
-      (when (system/system? sys)
-        (system/with-system sys
-          (is (some? sys)))))))
+      (when (system/system? sys) (system/with-system sys (is (some? sys)))))))
 
 (deftest ^:repl encrypted-message-matching-consumer-key-test
   (testing "Pulsar consumer with a matching decryption key can consume"
@@ -59,17 +57,20 @@
           (let [producer (system/instance sys [:pulsar :producer])
                 consumer (system/instance sys [:pulsar :consumers :c1])
                 schemas (system/instance sys [:pulsar :schemas])
-                schema (schema-avro/json->schema
-                        (json/write-str (get-schema schemas :user)))
+                schema (schema-avro/json->schema (json/write-str
+                                                  (get-schema schemas :user)))
                 data {:name "hardcastle" :age 19}
                 props (HashMap. {"message" "user-msg"})]
             (SUT/send producer
                       (schema-avro/serialize schema data)
                       (HashMap. {"properties" props}))
             (let [^Message recv-msg (SUT/receive consumer 1000)
-                  recv-data (some-> recv-msg .getData)
-                  recv-props (some-> recv-msg .getProperties)]
-              (some->> recv-msg (.acknowledge consumer))
+                  recv-data (some-> recv-msg
+                                    .getData)
+                  recv-props (some-> recv-msg
+                                     .getProperties)]
+              (some->> recv-msg
+                       (.acknowledge consumer))
               (is (= data
                      (some->> recv-data
                               (schema-avro/deserialize-same schema))))
@@ -88,8 +89,8 @@
           (let [producer (system/instance sys [:pulsar :producer])
                 consumer (system/instance sys [:pulsar :consumers :c2])
                 schemas (system/instance sys [:pulsar :schemas])
-                schema (schema-avro/json->schema
-                        (json/write-str (get-schema schemas :user)))
+                schema (schema-avro/json->schema (json/write-str
+                                                  (get-schema schemas :user)))
                 data {:name "hardcastle" :age 19}
                 props {"message" "user-msg"}]
             (SUT/send producer
@@ -98,7 +99,8 @@
             (let [^Message recv-msg (SUT/receive consumer 1000)
                   ^EncryptionContext ctx (.getEncryptionCtx recv-msg)]
               (is (true? (.isPresent ctx)))
-              (is (true? (some-> (.get ctx) .isEncrypted))))))))))
+              (is (true? (some-> (.get ctx)
+                                 .isEncrypted))))))))))
 
 (deftest namespace-configuration-test
   (testing "Pulsar namespace configuration enforces encryption and topic schema"
@@ -111,10 +113,10 @@
         (system/with-system sys
           (let [admin (system/instance sys [:pulsar :admin])
                 service-url (.getServiceUrl admin)
-                namespaces-url (string/join "/" [service-url "admin/v2/namespaces"])
-                namespace-url (string/join "/"
-                                           [namespaces-url
-                                            "tenant-1/namespace-1"])
+                namespaces-url (string/join "/"
+                                            [service-url "admin/v2/namespaces"])
+                namespace-url
+                (string/join "/" [namespaces-url "tenant-1/namespace-1"])
                 expected {"autoTopicCreation" {"topicType" "string"
                                                "allowAutoTopicCreation" false
                                                "defaultNumPartitions" 1}

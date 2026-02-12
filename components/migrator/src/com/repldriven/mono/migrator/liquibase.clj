@@ -1,14 +1,15 @@
 (ns com.repldriven.mono.migrator.liquibase
   (:require
-   [next.jdbc]
+    [next.jdbc]
 
-   [com.repldriven.mono.error.interface :as error]
-   [clojure.java.io :as io])
-  (:import (liquibase Contexts LabelExpression Liquibase)
-           (liquibase.database DatabaseFactory)
-           (liquibase.database.jvm JdbcConnection)
-           (liquibase.resource DirectoryResourceAccessor)
-           (java.io File)))
+    [com.repldriven.mono.error.interface :as error]
+    [clojure.java.io :as io])
+  (:import
+    (liquibase Contexts LabelExpression Liquibase)
+    (liquibase.database DatabaseFactory)
+    (liquibase.database.jvm JdbcConnection)
+    (liquibase.resource DirectoryResourceAccessor)
+    (java.io File)))
 
 (defn- resource-accessor
   "Create a DirectoryResourceAccessor from a classpath resource path.
@@ -30,7 +31,5 @@
                                    jdbc-connection)
                          accessor (resource-accessor resource-path)
                          filename (.getName (File. ^String resource-path))
-                         lb (Liquibase. ^String filename
-                                        accessor
-                                        database)]
+                         lb (Liquibase. ^String filename accessor database)]
                      (.update lb (Contexts.) (LabelExpression.))))))

@@ -1,11 +1,11 @@
 (ns com.repldriven.mono.pulsar.interface
   (:refer-clojure :exclude [read send])
   (:require
-   com.repldriven.mono.pulsar.system.core
+    com.repldriven.mono.pulsar.system.core
 
-   [com.repldriven.mono.pulsar.pulsar.consumer :as consumer]
-   [com.repldriven.mono.pulsar.pulsar.producer :as producer]
-   [com.repldriven.mono.pulsar.pulsar.reader :as reader]))
+    [com.repldriven.mono.pulsar.pulsar.consumer :as consumer]
+    [com.repldriven.mono.pulsar.pulsar.producer :as producer]
+    [com.repldriven.mono.pulsar.pulsar.reader :as reader]))
 
 ;;;; producer
 (defn send
@@ -22,6 +22,4 @@
   ([consumer timeout-ms] (consumer/receive consumer timeout-ms)))
 
 ;;;; reader
-(defn read
-  [reader schema timeout-ms]
-  (reader/read reader schema timeout-ms))
+(defn read [reader schema timeout-ms] (reader/read reader schema timeout-ms))

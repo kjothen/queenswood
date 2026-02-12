@@ -1,9 +1,9 @@
 (ns com.repldriven.mono.vault.system.components
   (:require
-   [com.repldriven.mono.vault.client :as client]
+    [com.repldriven.mono.vault.client :as client]
 
-   [com.repldriven.mono.log.interface :as log]
-   [com.repldriven.mono.system.interface :as system]))
+    [com.repldriven.mono.log.interface :as log]
+    [com.repldriven.mono.system.interface :as system]))
 
 (def client
   {:system/start (fn [{:system/keys [config instance]}]

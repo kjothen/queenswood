@@ -1,9 +1,9 @@
 (ns com.repldriven.mono.iam-api.database
   (:require
-   [com.repldriven.mono.db.interface :as db]
-   [com.repldriven.mono.error.interface :as error]
-   [com.repldriven.mono.iam.interface :as iam]
-   [com.repldriven.mono.system.interface :as system]))
+    [com.repldriven.mono.db.interface :as db]
+    [com.repldriven.mono.error.interface :as error]
+    [com.repldriven.mono.iam.interface :as iam]
+    [com.repldriven.mono.system.interface :as system]))
 
 (defn migrate
   "Run database migrations for the IAM API.

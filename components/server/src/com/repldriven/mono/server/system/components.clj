@@ -1,10 +1,11 @@
 (ns com.repldriven.mono.server.system.components
   (:require
-   [com.repldriven.mono.log.interface :as log]
-   [com.repldriven.mono.system.interface :as system]
+    [com.repldriven.mono.log.interface :as log]
+    [com.repldriven.mono.system.interface :as system]
 
-   [ring.adapter.jetty9 :as jetty])
-  (:import (org.eclipse.jetty.server Server)))
+    [ring.adapter.jetty9 :as jetty])
+  (:import
+    (org.eclipse.jetty.server Server)))
 
 (defn- assoc-if-missing
   [m ks v]
@@ -16,12 +17,12 @@
 
 (def interceptors
   {:system/start (fn [{:system/keys [config instance]}]
-                   (or
-                    instance
-                    (do (log/info "Building interceptors:" config)
-                        (reduce-kv (fn [coll k v] (conj coll (interceptor k v)))
-                                   []
-                                   config))))
+                   (or instance
+                       (do (log/info "Building interceptors:" config)
+                           (reduce-kv (fn [coll k v]
+                                        (conj coll (interceptor k v)))
+                                      []
+                                      config))))
    :system/config nil})
 
 (def default-jetty-adapter-options {:join? false})

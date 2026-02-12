@@ -1,4 +1,5 @@
 #_{:linters {:unresolved-symbol {:exclude [sys sysdefs]}}
-   :project-specs [{:project-path "deps.edn" :classpath-cmd ["clojure" "-A:dev:test" "-Spath"]}]
+   :project-specs [{:project-path "deps.edn"
+                    :classpath-cmd ["clojure" "-A:dev:test" "-Spath"]}]
    :config-in-ns {com.repldriven.mono.*.interface
                   {:linters {:clojure-lsp/unused-public-var {:level :off}}}}}

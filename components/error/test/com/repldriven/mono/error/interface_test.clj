@@ -1,8 +1,7 @@
 (ns com.repldriven.mono.error.interface-test
   (:require
-   [com.repldriven.mono.error.interface :as error]
+    [com.repldriven.mono.error.interface :as error]
 
-   [clojure.test :as test :refer :all]))
+    [clojure.test :as test :refer :all]))
 
-(deftest dummy-test
-  (is (= 1 1)))
+(deftest dummy-test (is (= 1 1)))

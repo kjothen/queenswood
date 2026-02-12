@@ -1,9 +1,7 @@
 {;; Polylith monorepo configuration
- :source-aliases #{:dev :test :poly}
-
+ :source-aliases #{:dev :poly :test}
  ;; Enable kondo config copying for dependency analysis
  :copy-kondo-configs? true
-
  ;; Linting configuration
  :linters {:clj-kondo {:level :on}}}
 

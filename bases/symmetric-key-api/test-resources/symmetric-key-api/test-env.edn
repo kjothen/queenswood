@@ -1,4 +1,4 @@
 {:system
  {:server {:jetty-adapter {:handler #system :required-component
-                         :options {:join? #profile {:default false}
-                                   :port #profile {:default #port 0}}}}}}
+                           :options {:join? #profile {:default false}
+                                     :port #profile {:default #port 0}}}}}}

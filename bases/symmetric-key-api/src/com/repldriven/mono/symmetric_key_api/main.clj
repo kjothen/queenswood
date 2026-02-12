@@ -25,7 +25,8 @@
   [& args]
   (log/init)
   (log/info args)
-  (let [{:keys [options exit-message ok?]} (cli/validate-args "symmetric-key-api" args)]
+  (let [{:keys [options exit-message ok?]}
+        (cli/validate-args "symmetric-key-api" args)]
     (if exit-message
       (cli/exit ok? exit-message)
       (let [{:keys [config-file profile]} options

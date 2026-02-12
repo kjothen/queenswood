@@ -1,13 +1,14 @@
 (ns com.repldriven.mono.testcontainers.system.components.pulsar
   (:require
-   [com.repldriven.mono.log.interface :as log]
-   [com.repldriven.mono.system.interface :as system]
+    [com.repldriven.mono.log.interface :as log]
+    [com.repldriven.mono.system.interface :as system]
 
-   [clj-test-containers.core :as tc])
-  (:import (org.testcontainers.containers ContainerLaunchException
-                                          PulsarContainer)
-           (org.testcontainers.utility DockerImageName)
-           (java.time Duration)))
+    [clj-test-containers.core :as tc])
+  (:import
+    (org.testcontainers.containers ContainerLaunchException
+                                   PulsarContainer)
+    (org.testcontainers.utility DockerImageName)
+    (java.time Duration)))
 
 (def default-exposed-broker-port 6650)
 (def default-exposed-broker-http-port 8080)
@@ -24,7 +25,9 @@
          (let [container (-> (DockerImageName/parse docker-image-name)
                              (.asCompatibleSubstituteFor "apachepulsar/pulsar")
                              (PulsarContainer.))]
-           (.addEnv container "PULSAR_MEM" "-Xms128m -Xmx256m -XX:MaxDirectMemorySize=256m")
+           (.addEnv container
+                    "PULSAR_MEM"
+                    "-Xms128m -Xmx256m -XX:MaxDirectMemorySize=256m")
            (.addEnv container "PULSAR_GC" "-XX:+UseG1GC")
            (.withStartupTimeout container (Duration/ofMinutes 1))
            (some-> (tc/init {:container container :exposed-ports exposed-ports})
@@ -43,7 +46,8 @@
   {:system/start (fn [{:system/keys [config instance]}]
                    (or instance
                        (let [container-map (get config :container)
-                             ^PulsarContainer pulsar-container (get container-map :container)
+                             ^PulsarContainer pulsar-container
+                             (get container-map :container)
                              url (.getPulsarBrokerUrl pulsar-container)]
                          (log/info "Pulsar broker URL:" url)
                          url)))
@@ -53,7 +57,8 @@
   {:system/start (fn [{:system/keys [config instance]}]
                    (or instance
                        (let [container-map (get config :container)
-                             ^PulsarContainer pulsar-container (get container-map :container)
+                             ^PulsarContainer pulsar-container
+                             (get container-map :container)
                              url (.getHttpServiceUrl pulsar-container)]
                          (log/info "Pulsar HTTP service URL:" url)
                          url)))

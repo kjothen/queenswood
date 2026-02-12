@@ -1,14 +1,15 @@
 (ns com.repldriven.mono.pulsar.pulsar.client
   (:require
-   [com.repldriven.mono.log.interface :as log]
+    [com.repldriven.mono.log.interface :as log]
 
-   [clojure.java.data.builder :as builder])
-  (:import (org.apache.pulsar.client.api ClientBuilder
-                                         PulsarClient
-                                         PulsarClientException)))
+    [clojure.java.data.builder :as builder])
+  (:import
+    (org.apache.pulsar.client.api ClientBuilder
+                                  PulsarClient
+                                  PulsarClientException)))
 
-(defn create ^PulsarClient
-  [{:keys [service-url]}]
+(defn create
+  ^PulsarClient [{:keys [service-url]}]
   (try (log/info "Opening pulsar client connection:" service-url)
        (builder/to-java PulsarClient
                         (PulsarClient/builder)

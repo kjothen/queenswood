@@ -1,28 +1,30 @@
 (ns com.repldriven.mono.pulsar.pulsar.schemas
   (:refer-clojure :exclude [name namespace resolve type])
   (:require
-   [clojure.data.json :as json]
-   [clojure.java.data :as j]
-   [clojure.java.io :as io])
-  (:import (java.util Map)
-           (org.apache.pulsar.client.api Schema)
-           (org.apache.pulsar.client.api.schema SchemaDefinition)
-           (org.apache.pulsar.common.protocol.schema PostSchemaPayload)))
+    [clojure.data.json :as json]
+    [clojure.java.data :as j]
+    [clojure.java.io :as io])
+  (:import
+    (java.util Map)
+    (org.apache.pulsar.client.api Schema)
+    (org.apache.pulsar.client.api.schema SchemaDefinition)
+    (org.apache.pulsar.common.protocol.schema PostSchemaPayload)))
 
-(defn- create-payload ^PostSchemaPayload
-  [type schema properties]
+(defn- create-payload
+  ^PostSchemaPayload [type schema properties]
   (PostSchemaPayload. (or type "")
                       (if (some? schema) (json/write-str schema) "")
                       (or properties {})))
 
-(defn- create-definition ^SchemaDefinition
-  [schema properties]
+(defn- create-definition
+  ^SchemaDefinition [schema properties]
   (.. (SchemaDefinition/builder)
       (withJsonDef (json/write-str schema))
       (withProperties (j/to-java Map (or properties {})))
       build))
 
-(defn- create-schema ^Schema
+(defn- create-schema
+  ^Schema
   ([type]
    (case type
      ;; primitive

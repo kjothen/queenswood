@@ -1,11 +1,12 @@
 (ns com.repldriven.mono.testcontainers.system.components.postgres
   (:require
-   [com.repldriven.mono.log.interface :as log]
+    [com.repldriven.mono.log.interface :as log]
 
-   [clj-test-containers.core :as tc])
-  (:import (org.testcontainers.containers ContainerLaunchException
-                                          PostgreSQLContainer)
-           (org.testcontainers.utility DockerImageName)))
+    [clj-test-containers.core :as tc])
+  (:import
+    (org.testcontainers.containers ContainerLaunchException
+                                   PostgreSQLContainer)
+    (org.testcontainers.utility DockerImageName)))
 
 (def default-exposed-port 5432)
 (def default-docker-image-name "postgres:latest")

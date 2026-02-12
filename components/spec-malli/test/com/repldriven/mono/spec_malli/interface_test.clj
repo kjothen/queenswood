@@ -1,10 +1,10 @@
 (ns com.repldriven.mono.spec-malli.interface-test
   (:require
-   [com.repldriven.mono.spec-malli.interface :as SUT]
+    [com.repldriven.mono.spec-malli.interface :as SUT]
 
-   [malli.core :as m]
+    [malli.core :as m]
 
-   [clojure.test :as test :refer :all]))
+    [clojure.test :as test :refer :all]))
 
 (deftest non-empty-string-test
   (testing "A non-empty string should meet the spec"

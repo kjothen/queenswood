@@ -1,15 +1,15 @@
 (ns com.repldriven.mono.iam-api.main-test
   (:require
-   ;; system components
-   com.repldriven.mono.db.interface
-   com.repldriven.mono.server.interface
-   com.repldriven.mono.testcontainers.interface
+    ;; system components
+    com.repldriven.mono.db.interface
+    com.repldriven.mono.server.interface
+    com.repldriven.mono.testcontainers.interface
 
-   [com.repldriven.mono.iam-api.main :as SUT]
-   [com.repldriven.mono.error.interface :as error]
-   [com.repldriven.mono.system.interface :as system]
+    [com.repldriven.mono.iam-api.main :as SUT]
+    [com.repldriven.mono.error.interface :as error]
+    [com.repldriven.mono.system.interface :as system]
 
-   [clojure.test :as test :refer [deftest is testing]]))
+    [clojure.test :as test :refer [deftest is testing]]))
 
 (deftest main-test
   (testing "System should start and stop without anomalies"

@@ -1,6 +1,6 @@
 (ns com.repldriven.mono.utility.collections
   (:require
-   [clojure.walk :refer [postwalk]]))
+    [clojure.walk :refer [postwalk]]))
 
 (defn yaml-collections->edn-collections
   "Convert YAML-specific collection types to standard Clojure collections.
@@ -15,7 +15,5 @@
 (defn keys->strs
   "Convert all map keys to strings recursively."
   [form]
-  (postwalk #(if (map? %)
-               (into (hash-map) (map (fn [[k v]] [(name k) v]) %))
-               %)
+  (postwalk #(if (map? %) (into (hash-map) (map (fn [[k v]] [(name k) v]) %)) %)
             form))

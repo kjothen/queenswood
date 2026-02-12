@@ -1,5 +1,6 @@
 (ns com.repldriven.mono.server.jetty
-  (:import (org.eclipse.jetty.server Server)))
+  (:import
+    (org.eclipse.jetty.server Server)))
 
 (defn http-local-url
   "Get the local HTTP URL from a Jetty Server instance.

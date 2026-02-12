@@ -1,6 +1,6 @@
 (ns com.repldriven.mono.error.interface
   (:require
-   [de.otto.nom.core :as nom]))
+    [de.otto.nom.core :as nom]))
 
 ;; Predicates
 (defn anomaly? [x] (nom/anomaly? x))
@@ -43,11 +43,9 @@
 (defmacro try-nom
   {:clj-kondo/lint-as 'clojure.core/do}
   [category message & body]
-  `(try
-     ~@body
-     (catch Exception e#
-       (fail ~category
-             ~message
-             {:exception e#
-              :message (.getMessage e#)
-              :cause (.getCause e#)}))))
+  `(try ~@body
+        (catch Exception e#
+          (fail
+           ~category
+           ~message
+           {:exception e# :message (.getMessage e#) :cause (.getCause e#)}))))

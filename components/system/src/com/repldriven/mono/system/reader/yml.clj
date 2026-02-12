@@ -1,10 +1,10 @@
 (ns com.repldriven.mono.system.reader.yml
   (:refer-clojure :exclude [ref])
   (:require
-   [com.repldriven.mono.env.interface :as env]
-   [com.repldriven.mono.utility.interface :as util]
+    [com.repldriven.mono.env.interface :as env]
+    [com.repldriven.mono.utility.interface :as util]
 
-   [clojure.string :as str]))
+    [clojure.string :as str]))
 
 (defn local-ref
   [{:keys [value]}]
@@ -23,13 +23,9 @@
   [m]
   (required-component m))
 
-(defmethod env/yml-reader :!system/ref
-  [m]
-  (ref m))
+(defmethod env/yml-reader :!system/ref [m] (ref m))
 
-(defmethod env/yml-reader :!system/local-ref
-  [m]
-  (local-ref m))
+(defmethod env/yml-reader :!system/local-ref [m] (local-ref m))
 
 (defmethod env/yml-reader :!system/component
   [{:keys [value]}]

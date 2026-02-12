@@ -1,8 +1,8 @@
 (ns com.repldriven.mono.vault.interface
   (:require
-   com.repldriven.mono.vault.system.core
+    com.repldriven.mono.vault.system.core
 
-   [com.repldriven.mono.vault.client :as client]))
+    [com.repldriven.mono.vault.client :as client]))
 
 (defn create-client [uri] (client/create uri))
 

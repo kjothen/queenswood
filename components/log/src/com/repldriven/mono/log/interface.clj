@@ -1,6 +1,6 @@
 (ns com.repldriven.mono.log.interface
   (:require
-   [com.repldriven.mono.log.core :as core]))
+    [com.repldriven.mono.log.core :as core]))
 
 (defn init ([]) ([profile]))
 

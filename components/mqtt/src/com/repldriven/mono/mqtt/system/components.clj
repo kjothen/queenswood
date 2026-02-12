@@ -1,9 +1,9 @@
 (ns com.repldriven.mono.mqtt.system.components
   (:require
-   [com.repldriven.mono.log.interface :as log]
-   [com.repldriven.mono.system.interface :as system]
+    [com.repldriven.mono.log.interface :as log]
+    [com.repldriven.mono.system.interface :as system]
 
-   [clojurewerkz.machine-head.client :as mh]))
+    [clojurewerkz.machine-head.client :as mh]))
 
 (def client
   {:system/start (fn [{:system/keys [config instance]}]

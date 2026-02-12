@@ -1,10 +1,11 @@
 (ns com.repldriven.mono.pulsar.pulsar.topics
   (:require
-   [com.repldriven.mono.pulsar.pulsar.schemas :as schemas]
+    [com.repldriven.mono.pulsar.pulsar.schemas :as schemas]
 
-   [com.repldriven.mono.log.interface :as log])
-  (:import (org.apache.pulsar.client.admin PulsarAdmin Topics)
-           (org.apache.pulsar.common.naming TopicName)))
+    [com.repldriven.mono.log.interface :as log])
+  (:import
+    (org.apache.pulsar.client.admin PulsarAdmin Topics)
+    (org.apache.pulsar.common.naming TopicName)))
 
 (defn- create-topic-schema
   [^PulsarAdmin admin fully-qualified-topic-name schema]
@@ -18,8 +19,7 @@
         fully-qualified-namespace-name (.getNamespace topic-name)
         ^Topics topics (.topics admin)
         domain (.getDomain topic-name)
-        topic-names
-        (.getList topics fully-qualified-namespace-name domain)]
+        topic-names (.getList topics fully-qualified-namespace-name domain)]
     (when-not (contains? (set topic-names) fully-qualified-topic-name)
       (log/info "Creating topic:" fully-qualified-topic-name)
       (.createPartitionedTopic topics fully-qualified-topic-name partitions)
@@ -29,9 +29,9 @@
 (defn create-topics
   [{:keys [^PulsarAdmin admin schemas topics]}]
   (log/info "Ensure pulsar topics exist:" topics)
-  (doall
-   (mapv (fn [{:keys [topic] :as opts}]
-           (let [resolved-opts
-                 (update opts :schema #(schemas/resolve-payload schemas %))]
-             (create admin topic (dissoc resolved-opts :topic))))
-         topics)))
+  (doall (mapv
+          (fn [{:keys [topic] :as opts}]
+            (let [resolved-opts
+                  (update opts :schema #(schemas/resolve-payload schemas %))]
+              (create admin topic (dissoc resolved-opts :topic))))
+          topics)))

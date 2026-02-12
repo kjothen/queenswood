@@ -14,7 +14,8 @@
 
 (deftest db-component-test
   (testing "DB component should provide valid connections"
-    (let [sys (error/nom-> (env/config "classpath:db/test-application.yml" :test)
+    (let [sys (error/nom-> (env/config "classpath:db/test-application.yml"
+                                       :test)
                            system/defs
                            system/start)]
       (is (not (error/anomaly? sys)) (str "System should start: " (pr-str sys)))
@@ -24,4 +25,5 @@
             (is (= [{:?column? 1}]
                    (jdbc/execute! datasource
                                   ["select 1"]
-                                  {:builder-fn rs/as-unqualified-lower-maps})))))))))
+                                  {:builder-fn
+                                   rs/as-unqualified-lower-maps})))))))))

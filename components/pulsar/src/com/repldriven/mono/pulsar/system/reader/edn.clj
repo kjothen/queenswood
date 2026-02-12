@@ -1,11 +1,11 @@
 (ns com.repldriven.mono.pulsar.system.reader.edn
   (:require
-   [com.repldriven.mono.env.interface :as env])
+    [com.repldriven.mono.env.interface :as env])
   (:import
-   (org.apache.pulsar.client.api ConsumerCryptoFailureAction
-                                 MessageId
-                                 Schema
-                                 SubscriptionType)))
+    (org.apache.pulsar.client.api ConsumerCryptoFailureAction
+                                  MessageId
+                                  Schema
+                                  SubscriptionType)))
 
 (defn- crypto-failure-action
   [_ tag value]

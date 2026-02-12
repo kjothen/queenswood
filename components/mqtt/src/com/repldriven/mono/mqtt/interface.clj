@@ -1,8 +1,8 @@
 (ns com.repldriven.mono.mqtt.interface
   (:require
-   com.repldriven.mono.mqtt.system.core
+    com.repldriven.mono.mqtt.system.core
 
-   [com.repldriven.mono.mqtt.client :as client]))
+    [com.repldriven.mono.mqtt.client :as client]))
 
 (defn publish [client topic payload] (client/publish client topic payload))
 

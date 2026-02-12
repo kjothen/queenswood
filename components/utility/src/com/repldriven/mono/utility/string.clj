@@ -1,8 +1,9 @@
 (ns com.repldriven.mono.utility.string
   (:require
-   [clojure.java.io :as io]
-   [clojure.string :as str])
-  (:import (java.io ByteArrayInputStream)))
+    [clojure.java.io :as io]
+    [clojure.string :as str])
+  (:import
+    (java.io ByteArrayInputStream)))
 
 (defn string->stream
   "Convert a string to an InputStream with the specified encoding."

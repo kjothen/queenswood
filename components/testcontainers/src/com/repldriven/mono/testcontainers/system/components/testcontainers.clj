@@ -1,10 +1,11 @@
 (ns com.repldriven.mono.testcontainers.system.components.testcontainers
   (:require
-   [com.repldriven.mono.log.interface :as log]
-   [com.repldriven.mono.system.interface :as system]
+    [com.repldriven.mono.log.interface :as log]
+    [com.repldriven.mono.system.interface :as system]
 
-   [clj-test-containers.core :as tc])
-  (:import (org.testcontainers.containers ContainerLaunchException)))
+    [clj-test-containers.core :as tc])
+  (:import
+    (org.testcontainers.containers ContainerLaunchException)))
 
 (def default-uri-scheme "http")
 (def default-uri-host "localhost")
@@ -36,12 +37,12 @@
 
 (def mapped-exposed-port
   {:system/start (fn [{:system/keys [config instance]}]
-                   (or
-                    instance
-                    (let [{:keys [exposed-port container]} config
-                          port (get-in container [:mapped-ports exposed-port])]
-                      (log/info "Container mapped exposed port:" port)
-                      port)))
+                   (or instance
+                       (let [{:keys [exposed-port container]} config
+                             port (get-in container
+                                          [:mapped-ports exposed-port])]
+                         (log/info "Container mapped exposed port:" port)
+                         port)))
    :system/config {:container system/required-component
                    :exposed-port system/required-component}})
 
