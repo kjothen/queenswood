@@ -74,6 +74,15 @@ system:
           partitions: 1
           schema: !keyword user
 
+    producer: !system/component
+      system/component-kind: pulsar/producer
+      _: !system/local-ref topics
+      client: !system/local-ref client
+      conf:
+        schema: !pulsar/schema AUTO_PRODUCE_BYTES
+        topicName: "persistent://tenant-1/namespace-1/topic-1"
+      schemas: !system/local-ref schemas
+
     reader: !system/component
       system/component-kind: pulsar/reader
       _: !system/local-ref topics
