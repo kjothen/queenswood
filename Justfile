@@ -46,7 +46,16 @@ lint:
 
 # Formatter - uses .zprint.edn config in project root
 format:
-    git ls-files '*.clj' '*.cljc' '*.cljs' '*.edn' | xargs -I {} clojure -M:format/zprint -w {}
+    #!/usr/bin/env bash
+    set -e
+    echo "Formatting Clojure source files..."
+    files=$(git ls-files '*.clj' '*.cljc' '*.cljs' | while read f; do [ -f "$f" ] && echo "$f"; done)
+    if [ -n "$files" ]; then
+        echo "$files" | xargs clojure -M:format/zprint -w
+        echo "✓ Formatting complete"
+    else
+        echo "No Clojure files found"
+    fi
 
 # Install
 install:
