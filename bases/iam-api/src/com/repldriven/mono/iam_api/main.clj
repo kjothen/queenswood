@@ -16,8 +16,6 @@
    [com.repldriven.mono.system.interface :as system])
   (:gen-class))
 
-(def system (atom nil))
-
 (defn db-spec
   [sys]
   (let [datasource (system/instance sys [:db :datasource])]
@@ -30,7 +28,6 @@
                   sys-config (assoc-in sys-def [:system/defs :server :handler] (partial api/app))
                   sys (system/start sys-config)
                   _ (iam/migrate (db-spec sys))]
-    (reset! system sys)
     sys))
 
 (defn stop
