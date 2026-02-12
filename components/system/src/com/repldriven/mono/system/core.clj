@@ -2,6 +2,7 @@
   (:refer-clojure :exclude [ref])
   (:require
    [com.repldriven.mono.env.interface :as env]
+   [com.repldriven.mono.error.interface :as error]
    [com.repldriven.mono.log.interface :as log]
    [com.repldriven.mono.system.configurator :as configurator]
 
@@ -48,18 +49,20 @@
 
 (defn start
   ([config-name]
-   (try (ds/start (nsmap->nsmap config-name mono-system-ns donut-system-ns))
-        (catch Exception e (log/error (format "Error starting system: %s" e)))))
+   (error/try-nom :system/start-exception
+                  "System START threw an exception"
+                  (ds/start (nsmap->nsmap config-name mono-system-ns donut-system-ns))))
   ([config-name custom-config]
-   (try (ds/start (nsmap->nsmap config-name mono-system-ns donut-system-ns)
-                  custom-config)
-        (catch Exception e (log/error (format "Error starting system: %s" e)))))
+   (error/try-nom :system/start-exception
+                  "System START threw an exception"
+                  (ds/start (nsmap->nsmap config-name mono-system-ns donut-system-ns)
+                            custom-config)))
   ([config-name custom-config component-ids]
-   (try (ds/start (nsmap->nsmap config-name mono-system-ns donut-system-ns)
-                  custom-config
-                  component-ids)
-        (catch Exception e
-          (log/error (format "Error starting system: %s" e))))))
+   (error/try-nom :system/start-exception
+                  "System START threw an exception"
+                  (ds/start (nsmap->nsmap config-name mono-system-ns donut-system-ns)
+                            custom-config
+                            component-ids))))
 
 (defn instance [system kws] (get-in system (vec (cons ::ds/instances kws))))
 
@@ -69,8 +72,9 @@
 
 (defn stop
   [system]
-  (try (ds/stop system)
-       (catch Exception e (log/error (format "Error stopping system: %s" e)))))
+  (error/try-nom :system/stop-exception
+                 "System STOP threw an exception"
+                 (ds/stop system)))
 
 (defn suspend [system] (ds/suspend system))
 
@@ -79,15 +83,17 @@
 (defmacro with-sysdefs
   {:clj-kondo/ignore [:unresolved-symbol]}
   [[sym env-path profile] & body]
-  `(let [environment# (env/env ~env-path ~profile)
-         ~sym (configurator/definition (:system environment#))]
-     ~@body))
+  `(let [environment# (env/config ~env-path ~profile)]
+     (if (error/anomaly? environment#)
+       environment#
+       (let [~sym (configurator/definition (:system environment#))]
+         ~@body))))
 
-(defmacro with-sys
+(defmacro with-system
   {:clj-kondo/lint-as 'clojure.core/let}
-  [[sym sysdef] & body]
-  `(let [~sym (start ~sysdef)]
-     (try
-       ~@body
-       (finally
-         (when ~sym (stop ~sym))))))
+  [sys-binding & body]
+  `(try
+     ~@body
+     (finally
+       (when-not (error/anomaly? ~sys-binding)
+         (stop ~sys-binding)))))

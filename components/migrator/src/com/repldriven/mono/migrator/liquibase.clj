@@ -2,6 +2,7 @@
   (:require
    [next.jdbc]
 
+   [com.repldriven.mono.error.interface :as error]
    [clojure.java.io :as io])
   (:import (liquibase Contexts LabelExpression Liquibase)
            (liquibase.database DatabaseFactory)
@@ -20,14 +21,16 @@
 
 (defn migrate
   [db-spec resource-path]
-  (with-open [conn (next.jdbc/get-connection db-spec)]
-    (let [jdbc-connection (JdbcConnection. conn)
-          database (.findCorrectDatabaseImplementation
-                    (DatabaseFactory/getInstance)
-                    jdbc-connection)
-          accessor (resource-accessor resource-path)
-          filename (.getName (File. ^String resource-path))
-          lb (Liquibase. ^String filename
-                         accessor
-                         database)]
-      (.update lb (Contexts.) (LabelExpression.)))))
+  (error/try-nom :migrator/migration-failed
+                 "Failed to run database migrations"
+                 (with-open [conn (next.jdbc/get-connection db-spec)]
+                   (let [jdbc-connection (JdbcConnection. conn)
+                         database (.findCorrectDatabaseImplementation
+                                   (DatabaseFactory/getInstance)
+                                   jdbc-connection)
+                         accessor (resource-accessor resource-path)
+                         filename (.getName (File. ^String resource-path))
+                         lb (Liquibase. ^String filename
+                                        accessor
+                                        database)]
+                     (.update lb (Contexts.) (LabelExpression.))))))

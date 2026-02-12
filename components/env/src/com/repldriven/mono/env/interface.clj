@@ -5,8 +5,8 @@
 (def edn-reader core/edn-reader)
 (def yml-reader core/yml-reader)
 
-(defn env
-  ([] (core/env))
-  ([source] (core/env source))
-  ([source profile] (core/env source profile)))
+(defn config
+  ([] (core/config))
+  ([source] (core/config source))
+  ([source profile] (core/config source profile)))
 

@@ -15,26 +15,33 @@
 (defn kind [x] (nom/kind x))
 
 ;; Threading macros
-(defmacro nom-> [& forms] `(nom/nom-> ~@forms))
-(defmacro nom->> [& forms] `(nom/nom->> ~@forms))
+(defmacro nom->
+  {:clj-kondo/lint-as 'clojure.core/->}
+  [& forms]
+  `(nom/nom-> ~@forms))
+
+(defmacro nom->>
+  {:clj-kondo/lint-as 'clojure.core/->>}
+  [& forms]
+  `(nom/nom->> ~@forms))
 
 ;; Let bindings
-(defmacro let-nom [bindings & body] `(nom/let-nom ~bindings ~@body))
-(defmacro let-nom> [bindings & body] `(nom/let-nom> ~bindings ~@body))
+(defmacro let-nom
+  {:clj-kondo/lint-as 'clojure.core/let}
+  [bindings & body]
+  `(nom/let-nom ~bindings ~@body))
+
+(defmacro let-nom>
+  {:clj-kondo/lint-as 'clojure.core/let}
+  [bindings & body]
+  `(nom/let-nom> ~bindings ~@body))
 
 ;; Context wrapper
 (defmacro with-nom [& body] `(nom/with-nom ~@body))
 
 ;; Exception catching
 (defmacro try-nom
-  "Wraps body in try-catch and converts exceptions to anomalies.
-
-  Usage:
-    (try-nom :my-component/operation
-             \"Operation description\"
-             (risky-operation))
-
-  Returns the result of the body or an anomaly if an exception is thrown."
+  {:clj-kondo/lint-as 'clojure.core/try}
   [category message & body]
   `(try
      ~@body

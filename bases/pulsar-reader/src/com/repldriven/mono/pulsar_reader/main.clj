@@ -1,31 +1,17 @@
 (ns com.repldriven.mono.pulsar-reader.main
   (:require
-   com.repldriven.mono.pulsar.interface
+    com.repldriven.mono.pulsar.interface
 
-   [com.repldriven.mono.cli.interface :as cli]
-   [com.repldriven.mono.env.interface :as env]
-   [com.repldriven.mono.error.interface :as error]
-   [com.repldriven.mono.log.interface :as log]
-   [com.repldriven.mono.system.interface :as system]
-
-   [clojure.core.async :as async])
-  (:import (org.apache.pulsar.client.api Message Reader))
+    [com.repldriven.mono.cli.interface :as cli]
+    [com.repldriven.mono.env.interface :as env]
+    [com.repldriven.mono.error.interface :as error]
+    [com.repldriven.mono.log.interface :as log]
+    [com.repldriven.mono.system.interface :as system])
   (:gen-class))
-
-(defn read-messages
-  [^Reader reader c]
-  (let []; schema (.getSchema (UserEventAvroSerde/INSTANCE))
-    (async/go (while (some? c) (async/>! c (.readNext reader))))
-    (async/go-loop []
-                   (when-let [^Message m (async/<! c)]
-                     ;; (log/info (avro/decode schema (.getData m)))
-                     (recur)))))
 
 (defn start
   [config-file profile]
-  (error/nom-> (env/config config-file profile)
-               system/defs
-               system/start))
+  (error/nom-> (env/config config-file profile) system/defs system/start))
 
 (defn stop [sys] (system/stop sys))
 

@@ -5,6 +5,8 @@
  :copy-kondo-configs? true
 
  ;; Linting configuration
- :linters {:clj-kondo {:level :on}}
+ :linters {:clj-kondo {:level :on}}}
 
- :format {:type :zprint-file :zprint-config-path ".zprint.edn"}}
+;; Note: clojure-lsp only supports cljfmt for formatting, not zprint.
+;; For zprint formatting, use the .zprint-format.bb script (via BufWritePost)
+;; or integrate zprint via none-ls plugin.

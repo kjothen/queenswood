@@ -1,3 +1,16 @@
-{:map {:comma? false :lift-ns? false :unlift-ns? true}
+#_:clj-kondo/ignore
+{:fn-map {":import" [:flow-body {:style :respect-nl}]
+          ":require" [:flow-body {:style :respect-nl}]
+          "comment" [:flow-body {:style :respect-nl}]
+          "with-system" :arg1-body
+          "let-nom" :binding
+          "let-nom>" :binding}
+ :map {:comma? false
+       :lift-ns? false
+       :nl-separator? false
+       :sort? false
+       :unlift-ns? true}
+ :search-config? true
+ :width 80
  :style :community
- :width 80}
+ :vector {:option-fn-first #(if (string? %2) {:vector {:respect-nl? true}})}}
