@@ -17,19 +17,17 @@
 
 (defn- migrate-db
   [sys]
-  (let [datasource (system/instance sys [:db :datasource])]
-    (iam/migrate (db/get-datasource datasource))))
+  (error/let-nom [datasource (system/instance sys [:db :datasource])
+                  _ (iam/migrate (db/get-datasource datasource))]
+    sys))
 
 (defn start
   [config-file profile]
-  (let [sys (error/nom-> (env/config config-file profile)
-                         system/defs
-                         (assoc-in [:system/defs :server :handler] (partial api/app))
-                         system/start)]
-    (if (error/anomaly? sys)
-      sys
-      (error/let-nom [_ (migrate-db sys)]
-        sys))))
+  (error/nom-> (env/config config-file profile)
+               system/defs
+               (assoc-in [:system/defs :server :handler] (partial api/app))
+               system/start
+               migrate-db))
 
 (defn stop [sys] (system/stop sys))
 
