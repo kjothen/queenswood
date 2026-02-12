@@ -11,12 +11,11 @@
     [com.repldriven.mono.error.interface :as error]
     [com.repldriven.mono.http-client.interface :as http]
     [com.repldriven.mono.iam.interface :as iam]
+    [com.repldriven.mono.server.interface :as server]
     [com.repldriven.mono.system.interface :as system]
 
     [clojure.data.json :as json]
-    [clojure.test :as test :refer [deftest is testing]])
-  (:import
-    (org.eclipse.jetty.server Server)))
+    [clojure.test :as test :refer [deftest is testing]]))
 
 (def ^:dynamic *base-url* "http://localhost:{PORT}")
 (def project-id "prj-test")
@@ -72,9 +71,9 @@
         (system/with-system sys
           (let [datasource (system/instance sys [:db :datasource])]
             (iam/migrate (db/get-datasource datasource)))
-          (let [^Server server (system/instance sys [:server :jetty-adapter])
-                port (.getLocalPort (first (.getConnectors server)))]
-            (binding [*base-url* (str "http://localhost:" port)]
+          (let [jetty (system/instance sys [:server :jetty-adapter])
+                base-url (server/http-local-url jetty)]
+            (binding [*base-url* base-url]
               (let [result
                     (error/let-nom
                       ; create service account

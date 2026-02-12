@@ -9,6 +9,7 @@
     [com.repldriven.mono.env.interface :as env]
     [com.repldriven.mono.error.interface :as error]
     [com.repldriven.mono.http-client.interface :as http]
+    [com.repldriven.mono.server.interface :as server]
     [com.repldriven.mono.system.interface :as system]
 
     [clojure.data.json :as json]
@@ -27,11 +28,7 @@
       (when (system/system? sys)
         (system/with-system sys
           (let [jetty (system/instance sys [:server :jetty-adapter])
-                port (some-> jetty
-                             .getConnectors
-                             first
-                             .getPort)
-                base-url (str "http://localhost:" port)
+                base-url (server/http-local-url jetty)
                 request {:method :post
                          :url (str base-url "/api/command")
                          :headers {"Content-Type" "application/json"}

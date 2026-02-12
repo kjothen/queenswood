@@ -17,8 +17,8 @@
 
 (defn- migrate-db
   [sys]
-  (error/let-nom [datasource (system/instance sys [:db :datasource])
-                  _ (iam/migrate (db/get-datasource datasource))]
+  (error/let-nom> [datasource (system/instance sys [:db :datasource])
+                   _ (iam/migrate (db/get-datasource datasource))]
     sys))
 
 (defn start
