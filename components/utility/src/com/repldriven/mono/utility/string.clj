@@ -18,3 +18,12 @@
   (if (str/starts-with? source "classpath:")
     (io/resource (subs source (count "classpath:")))
     source))
+
+(defn prop-seq->kw-map
+  "Convert a sequence of property strings (\"key=value\") to a keyword map."
+  [props]
+  (into {}
+        (map (fn [kv]
+               (let [[k v] (mapv str/trim (str/split kv #"="))]
+                 [(keyword k) v]))
+             props)))

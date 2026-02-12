@@ -3,18 +3,11 @@
     [com.repldriven.mono.env.interface :as env]
     [com.repldriven.mono.error.interface :as error]
     [com.repldriven.mono.system.interface :as system]
+    [com.repldriven.mono.utility.interface :as utility]
     [com.repldriven.mono.vault.interface :as SUT]
 
     [clojure.string :as str]
-    [clojure.test :as test :refer [deftest is testing]]))
-
-(defn prop-seq->kw-map
-  [props]
-  (into {}
-        (map (fn [kv]
-               (let [[k v] (mapv str/trim (str/split kv #"="))]
-                 [(keyword k) v]))
-             props)))
+    [clojure.test :as test :refer [deftest is testing]])))
 
 (deftest vault-component-test
   (testing "Vault component should authenticate and read secrets"
@@ -34,4 +27,4 @@
             (let [[mount path] (-> secret first (str/split #"/"))
                   secret-props (-> secret rest)]
               (is (= (SUT/read-secret client mount path)
-                     (prop-seq->kw-map secret-props))))))))))
+                     (utility/prop-seq->kw-map secret-props))))))))))

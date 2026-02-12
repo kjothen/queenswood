@@ -14,6 +14,7 @@
 ;; String utilities
 (def string->stream util.string/string->stream)
 (def resolve-source util.string/resolve-source)
+(def prop-seq->kw-map util.string/prop-seq->kw-map)
 
 ;; Collection utilities
 (def yaml-collections->edn-collections util.collections/yaml-collections->edn-collections)
