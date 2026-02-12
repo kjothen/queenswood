@@ -4,33 +4,21 @@ system:
       system/component-kind: pulsar/container
       exposed-ports: [6650, 8080]
 
-    container-service-port: !system/component
-      system/component-kind: pulsar/container-service-port
+    broker-url: !system/component
+      system/component-kind: pulsar/broker-url
       container: !system/local-ref container
-      exposed-port: 6650
 
-    container-service-url: !system/component
-      system/component-kind: pulsar/container-service-url
-      port: !system/local-ref container-service-port
-      scheme: pulsar
-
-    container-service-http-port: !system/component
-      system/component-kind: pulsar/container-service-http-port
+    http-service-url: !system/component
+      system/component-kind: pulsar/http-service-url
       container: !system/local-ref container
-      exposed-port: 8080
-
-    container-service-http-url: !system/component
-      system/component-kind: pulsar/container-service-http-url
-      port: !system/local-ref container-service-http-port
-      scheme: http
 
     client: !system/component
       system/component-kind: pulsar/client
-      service-url: !system/local-ref container-service-url
+      service-url: !system/local-ref broker-url
 
     admin: !system/component
       system/component-kind: pulsar/admin
-      service-http-url: !system/local-ref container-service-http-url
+      service-http-url: !system/local-ref http-service-url
 
     schemas: !system/component
       system/component-kind: pulsar/schemas

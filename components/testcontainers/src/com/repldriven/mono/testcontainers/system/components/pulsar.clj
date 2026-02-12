@@ -1,6 +1,7 @@
 (ns com.repldriven.mono.testcontainers.system.components.pulsar
   (:require
    [com.repldriven.mono.log.interface :as log]
+   [com.repldriven.mono.system.interface :as system]
 
    [clj-test-containers.core :as tc])
   (:import (org.testcontainers.containers ContainerLaunchException
@@ -37,3 +38,23 @@
    :system/stop (fn [{:system/keys [instance]}] (tc/stop! instance))
    :system/config {:docker-image-name default-docker-image-name
                    :exposed-ports default-exposed-ports}})
+
+(def broker-url
+  {:system/start (fn [{:system/keys [config instance]}]
+                   (or instance
+                       (let [container-map (get config :container)
+                             ^PulsarContainer pulsar-container (get container-map :container)
+                             url (.getPulsarBrokerUrl pulsar-container)]
+                         (log/info "Pulsar broker URL:" url)
+                         url)))
+   :system/config {:container system/required-component}})
+
+(def http-service-url
+  {:system/start (fn [{:system/keys [config instance]}]
+                   (or instance
+                       (let [container-map (get config :container)
+                             ^PulsarContainer pulsar-container (get container-map :container)
+                             url (.getHttpServiceUrl pulsar-container)]
+                         (log/info "Pulsar HTTP service URL:" url)
+                         url)))
+   :system/config {:container system/required-component}})

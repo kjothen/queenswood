@@ -30,6 +30,8 @@
 ;; Pulsar testcontainer components
 (system/defcomponents :pulsar
   {:container pulsar/container
+   :broker-url pulsar/broker-url
+   :http-service-url pulsar/http-service-url
    :container-service-port testcontainers/mapped-exposed-port
    :container-service-url testcontainers/uri
    :container-service-http-port testcontainers/mapped-exposed-port
