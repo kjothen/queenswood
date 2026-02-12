@@ -4,15 +4,13 @@
 
    [com.repldriven.mono.cli.interface :as cli]
    [com.repldriven.mono.env.interface :as env]
+   [com.repldriven.mono.error.interface :as error]
    [com.repldriven.mono.log.interface :as log]
    [com.repldriven.mono.system.interface :as system]
 
    [clojure.core.async :as async])
   (:import (org.apache.pulsar.client.api Message Reader))
   (:gen-class))
-
-(def system (atom nil))
-(def channel (atom nil))
 
 (defn read-messages
   [^Reader reader c]
@@ -24,18 +22,12 @@
                      (recur)))))
 
 (defn start
-  [environment]
-  (log/info "Starting system")
-  (let [config (system/defs environment)]
-    (system/start! system config)
-    (reset! channel (async/chan))
-    (read-messages (system/instance @system [:pulsar :reader]) @channel)))
+  [config-file profile]
+  (error/nom-> (env/config config-file profile)
+               system/defs
+               system/start))
 
-(defn stop
-  [sys]
-  (log/info "Stopping system")
-  (when (some? @channel) (reset! channel (async/close! @channel)))
-  (system/stop sys))
+(defn stop [sys] (system/stop sys))
 
 (defn -main
   [& args]
@@ -45,12 +37,10 @@
                                                               args)]
     (if exit-message
       (cli/exit ok? exit-message)
-      (let [{:keys [config-file profile]} options]
-        (start (env/config config-file (keyword profile)))))))
-
-(comment
-  (-main "-c" "classpath:pulsar-reader/test-application.yml"
-         "-p" "test")
-  (stop @system)
-  (start (env/config "classpath:pulsar-reader/test-application.yml" :test))
-  (stop @system))
+      (let [{:keys [config-file profile]} options
+            result (start config-file (keyword profile))]
+        (if (error/anomaly? result)
+          (cli/exit false
+                    (str "Failed to start [" (error/kind result)
+                         "]: " (or (:message result) "Unknown error")))
+          (log/info "System started successfully"))))))
