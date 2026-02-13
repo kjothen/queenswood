@@ -9,8 +9,7 @@
 (def Command [:map [:type string?] [:id string?]])
 (def CommandRequest (RequestData Command))
 
-(def CommandResult
-  [:map [:result string?] [:mqtt-client boolean?] [:pulsar-producer boolean?]])
+(def CommandResult [:map [:type string?] [:id string?]])
 (def CommandResponse (ResponseData CommandResult))
 
 (defn routes

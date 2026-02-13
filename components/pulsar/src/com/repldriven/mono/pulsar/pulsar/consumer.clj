@@ -1,9 +1,11 @@
 (ns com.repldriven.mono.pulsar.pulsar.consumer
   (:require
     [com.repldriven.mono.pulsar.pulsar.schemas :as schemas]
+    [com.repldriven.mono.pulsar.pulsar.message :as message]
 
     [com.repldriven.mono.log.interface :as log]
 
+    [clojure.core.async :as async]
     [clojure.java.data :as j])
   (:import
     (java.util Map)
@@ -35,6 +37,28 @@
          (log/error (format "Failed to create pulsar consumer, %s" e)))))
 
 (defn receive
-  ^Message ([^Consumer consumer] (when consumer (.. consumer receive)))
-  ([^Consumer consumer timeout-ms]
-   (when consumer (.. consumer (receive timeout-ms TimeUnit/MILLISECONDS)))))
+  "Continuously receive messages from a Pulsar consumer and put them on a channel.
+   Returns {:c chan :stop chan}. Send anything to :stop to stop receiving."
+  [^Consumer consumer schema timeout-ms]
+  (let [c (async/chan)
+        stop (async/chan)]
+    (async/thread
+     (try (loop []
+            (let [[v port] (async/alts!!
+                            [stop
+                             (async/thread
+                              (when-let [^Message msg
+                                         (.. consumer
+                                             (receive timeout-ms
+                                                      TimeUnit/MILLISECONDS))]
+                                msg))])]
+              (cond (= port stop) nil
+                    (some? v)
+                    (do (async/>!!
+                         c
+                         {:message v
+                          :data (message/deserialize-same schema v)})
+                        (recur))
+                    :else (recur))))
+          (finally (async/close! c) (async/close! stop))))
+    {:c c :stop stop}))

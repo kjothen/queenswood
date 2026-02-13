@@ -3,12 +3,14 @@
   (:require
     [clojure.data.json :as json]
     [clojure.java.data :as j]
-    [clojure.java.io :as io])
+    [clojure.java.io :as io]
+    [com.repldriven.mono.avro.interface :as avro])
   (:import
     (java.util Map)
     (org.apache.pulsar.client.api Schema)
     (org.apache.pulsar.client.api.schema SchemaDefinition)
-    (org.apache.pulsar.common.protocol.schema PostSchemaPayload)))
+    (org.apache.pulsar.common.protocol.schema PostSchemaPayload)
+    (org.apache.pulsar.common.schema SchemaInfo)))
 
 (defn- create-payload
   ^PostSchemaPayload [type schema properties]
@@ -94,3 +96,15 @@
                    (create-payload type schema properties))
         :else (throw (ex-info (format "Invalid value %s for schema payload" s)
                               {:schema s}))))
+
+(defn schema->avro
+  "Converts a Pulsar Schema to an Avro schema for manual serialization.
+   Used when producer/consumer are configured with AUTO_PRODUCE_BYTES/AUTO_CONSUME."
+  [^Schema schema]
+  (let [^SchemaInfo schema-info (.getSchemaInfo schema)]
+    (-> schema-info
+        .toString
+        json/read-str
+        (get "schema")
+        json/write-str
+        avro/json->schema)))

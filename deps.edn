@@ -20,7 +20,7 @@
     components/mqtt {:local/root "components/mqtt"}
     components/pulsar {:local/root "components/pulsar"}
     components/server {:local/root "components/server"}
-    components/schema-avro {:local/root "components/schema-avro"}
+    components/avro {:local/root "components/avro"}
     components/spec-malli {:local/root "components/spec-malli"}
     components/spec-spec {:local/root "components/spec-spec"}
     components/db {:local/root "components/db"}
@@ -65,7 +65,7 @@
                        "components/pulsar/test-resources"
                        "components/server/test"
                        "components/server/test-resources"
-                       "components/schema-avro/test"
+                       "components/avro/test"
                        "components/spec-malli/test"
                        "components/spec-spec/test"
                        "components/db/test"

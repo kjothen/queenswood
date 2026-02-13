@@ -23,7 +23,7 @@ system:
     schemas: !system/component
       system/component-kind: pulsar/schemas
       user:
-        schema: schema-avro/user.avsc.json
+        schema: avro/user.avsc.json
         type: AVRO
 
     tenants: !system/component

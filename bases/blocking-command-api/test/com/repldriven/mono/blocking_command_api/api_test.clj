@@ -1,7 +1,7 @@
 (ns ^:eftest/synchronized com.repldriven.mono.blocking-command-api.api-test
   (:require
-    com.repldriven.mono.mqtt.interface
-    com.repldriven.mono.pulsar.interface
+    [com.repldriven.mono.mqtt.interface :as mqtt]
+    [com.repldriven.mono.pulsar.interface :as pulsar]
     com.repldriven.mono.testcontainers.interface
 
     [com.repldriven.mono.blocking-command-api.api :as api]
@@ -12,8 +12,11 @@
     [com.repldriven.mono.server.interface :as server]
     [com.repldriven.mono.system.interface :as system]
 
+    [clojure.core.async :as async]
     [clojure.data.json :as json]
-    [clojure.test :refer [deftest is testing]]))
+    [clojure.test :refer [deftest is testing]])
+  (:import
+    (org.apache.pulsar.client.api Consumer)))
 
 (def ^:dynamic *base-url* "http://localhost:{PORT}")
 
@@ -25,32 +28,53 @@
                (assoc-in [:system/defs :server :handler] api/app)
                system/start))
 
-(defn send-command
-  [command-data]
+(defn send-http-command
+  "Simulates Client - synchronous command request"
+  [command]
   (http/request {:method :post
                  :url (str *base-url* "/api/command")
                  :headers {"Content-Type" "application/json"}
-                 :body (json/write-str {:data command-data})}))
+                 :body (json/write-str {:data command})}))
 
-(deftest blocking-command-api
-  (testing "blocking command API"
+(defn- process-pulsar-reply-mqtt
+  "Simulates Processor - reads from Pulsar and replies via MQTT"
+  [^Consumer consumer mqtt-client schemas]
+  (let [schema (pulsar/schema->avro (get-in schemas [:command :schema]))
+        {:keys [c stop]} (pulsar/receive consumer schema 1000)]
+    (async/thread
+     (loop []
+       ;; Receive messages from pulsar
+       (when-let [{:keys [message data]} (async/<!! c)]
+         (try (let [correlation-id (:correlation-id data)
+                    reply-topic (str "replies/" correlation-id)
+                    response {:type (:type data) :id (:id data)}]
+                ;; Send reply message to MQTT
+                (mqtt/publish mqtt-client reply-topic (json/write-str response))
+                (.acknowledge consumer message))
+              (catch Exception e
+                (println "Error processing command:" (.getMessage e))))
+         (recur))))
+    {:stop stop}))
+
+(deftest request-pulsar-reply-mqtt-test
+  (testing "Request-Reply with Pulsar and MQTT"
     (system/with-system [sys (test-system)]
-      (println "System valid?" (system/system? sys))
-      (println "System is anomaly?" (error/anomaly? sys))
-      (when (error/anomaly? sys)
-        (println "Anomaly:" sys))
-      (let [jetty (system/instance sys [:server :jetty-adapter])]
-        (println "Jetty:" jetty)
+      (is (system/system? sys) "System should be valid")
+      (let [jetty (system/instance sys [:server :jetty-adapter])
+            consumer (system/instance sys [:pulsar :consumers :c1])
+            mqtt-client (system/instance sys [:mqtt :client])
+            schemas (system/instance sys [:pulsar :schemas])
+            {:keys [stop]}
+            (process-pulsar-reply-mqtt consumer mqtt-client schemas)
+            command {:type "test-command" :id "123"}
+            command-response {:data command}]
         (binding [*base-url* (server/http-local-url jetty)]
-          (let [result (error/let-nom
-                         ; send test command
-                         [res (send-command {:type "test-command" :id "123"})
-                          _ (is (= 200 (:status res)))
-                          body (http/res->edn res)
-                          _ (is (= {:data {:result "test-command/123"
-                                           :pulsar-producer true
-                                           :mqtt-client true}}
-                                   body))]
-                         :success)]
-            (is (not (error/anomaly? result))
-                (str "API workflow failed: " (pr-str result)))))))))
+          (error/let-nom
+            ;; command
+            [res (send-http-command command)
+             _ (is (= 200 (:status res)) "Should receive 200 OK")
+             body (http/res->edn res)
+             _ (is (= command-response body) "Should receive echoed command")
+             result :success]
+            (is (not (error/anomaly? result)))))
+        (async/>!! stop :stop)))))

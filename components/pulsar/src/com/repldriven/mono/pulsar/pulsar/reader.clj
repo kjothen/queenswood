@@ -2,7 +2,7 @@
   (:refer-clojure :exclude [read])
   (:require
     [com.repldriven.mono.pulsar.pulsar.schemas :as schemas]
-    [com.repldriven.mono.schema-avro.interface :as avro]
+    [com.repldriven.mono.pulsar.pulsar.message :as message]
 
     [com.repldriven.mono.log.interface :as log]
 
@@ -45,16 +45,17 @@
         stop (async/chan)]
     (async/thread
      (try (loop []
-            (let [[v port]
-                  (async/alts!!
-                   [stop
-                    (async/thread
-                     (when-let [^Message msg (.readNext reader
-                                                        timeout-ms
-                                                        TimeUnit/MILLISECONDS)]
-                       (avro/deserialize-same schema (.getData msg))))])]
-              (cond (= port stop) nil ; Stop signal received
-                    (some? v) (do (async/>!! c v) (recur)) ; Got message
-                    :else (recur)))) ; Timeout - keep trying
+            (let [[v port] (async/alts!!
+                            [stop
+                             (async/thread
+                              (when-let [^Message msg
+                                         (.. reader
+                                             (readNext timeout-ms
+                                                       TimeUnit/MILLISECONDS))]
+                                msg))])]
+              (cond (= port stop) nil
+                    (some? v) (do (async/>!! c (message/deserialize-same schema v))
+                                  (recur))
+                    :else (recur))))
           (finally (async/close! c) (async/close! stop))))
     {:c c :stop stop}))

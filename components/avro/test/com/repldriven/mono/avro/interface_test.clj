@@ -1,6 +1,6 @@
-(ns com.repldriven.mono.schema-avro.interface-test
+(ns com.repldriven.mono.avro.interface-test
   (:require
-    [com.repldriven.mono.schema-avro.interface :as SUT]
+    [com.repldriven.mono.avro.interface :as SUT]
 
     [clojure.test :refer [deftest is testing]]))
 

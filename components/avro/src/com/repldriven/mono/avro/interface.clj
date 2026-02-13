@@ -1,6 +1,6 @@
-(ns com.repldriven.mono.schema-avro.interface
+(ns com.repldriven.mono.avro.interface
   (:require
-    [com.repldriven.mono.schema-avro.serde :as serde]))
+    [com.repldriven.mono.avro.serde :as serde]))
 
 (defn json->schema [json] (serde/json->schema json))
 

@@ -5,7 +5,8 @@
 
     [com.repldriven.mono.pulsar.pulsar.consumer :as consumer]
     [com.repldriven.mono.pulsar.pulsar.producer :as producer]
-    [com.repldriven.mono.pulsar.pulsar.reader :as reader]))
+    [com.repldriven.mono.pulsar.pulsar.reader :as reader]
+    [com.repldriven.mono.pulsar.pulsar.schemas :as schemas]))
 
 ;;;; producer
 (defn send
@@ -17,9 +18,11 @@
   ([producer data opts] (producer/send-async producer data opts)))
 
 ;;;; consumer
-(defn receive
-  ([consumer] (consumer/receive consumer))
-  ([consumer timeout-ms] (consumer/receive consumer timeout-ms)))
+(defn receive [consumer schema timeout-ms]
+  (consumer/receive consumer schema timeout-ms))
 
 ;;;; reader
 (defn read [reader schema timeout-ms] (reader/read reader schema timeout-ms))
+
+;;;; schema
+(defn schema->avro [schema] (schemas/schema->avro schema))

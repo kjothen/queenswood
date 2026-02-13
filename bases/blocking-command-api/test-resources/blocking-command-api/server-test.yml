@@ -4,6 +4,7 @@ interceptors: !system/component
   system/component-kind: server/interceptors
   mqtt-client: !system/ref mqtt.client
   pulsar-producer: !system/ref pulsar.producer
+  pulsar-schemas: !system/ref pulsar.schemas
 
 jetty-adapter: !system/component
   system/component-kind: server/jetty-adapter

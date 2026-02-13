@@ -53,7 +53,10 @@ namespaces: !system/component
 schemas: !system/component
   system/component-kind: pulsar/schemas
   user:
-    schema: schema-avro/user.avsc.json
+    schema: avro/user.avsc.json
+    type: AVRO
+  command:
+    schema: avro/command.avsc.json
     type: AVRO
 
 tenants: !system/component
@@ -73,7 +76,7 @@ topics: !system/component
   topics:
     - topic: persistent://tenant-1/namespace-1/topic-1
       partitions: 1
-      schema: !keyword user
+      schema: !keyword command
 
 producer: !system/component
   system/component-kind: pulsar/producer
@@ -82,4 +85,13 @@ producer: !system/component
   conf:
     schema: !pulsar/schema AUTO_PRODUCE_BYTES
     topicName: "persistent://tenant-1/namespace-1/topic-1"
-  schemas: !system/local-ref schemas
+
+consumers: !system/component
+  system/component-kind: pulsar/consumers
+  c1:
+    _: !system/local-ref topics
+    client: !system/local-ref client
+    conf:
+      schema: !pulsar/schema AUTO_CONSUME
+      subscriptionName: "test-subscription"
+      topicNames: ["persistent://tenant-1/namespace-1/topic-1"]
