@@ -47,6 +47,15 @@ jobs:
     - name: Run tests
       run: clojure -M:poly test :all
 
+    - name: Publish test report
+      uses: dorny/test-reporter@v1
+      if: always()
+      with:
+        name: Test Results
+        path: target/test-results/**/*.xml
+        reporter: java-junit
+        fail-on-error: true
+
     - name: Upload test results
       if: always()
       uses: actions/upload-artifact@v4
