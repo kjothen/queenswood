@@ -44,6 +44,11 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-clojure-
 
+    - name: Clear Pulsar cache to fix Netty conflicts
+      run: |
+        rm -rf ~/.m2/repository/org/apache/pulsar
+        rm -rf ~/.m2/repository/org/testcontainers/pulsar
+
     - name: Run tests
       run: clojure -M:poly test :all :verbose
 
