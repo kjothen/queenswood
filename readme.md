@@ -2,7 +2,7 @@
 
 [![Tests](https://github.com/kjothen/mono/actions/workflows/test.yml/badge.svg)](https://github.com/kjothen/mono/actions/workflows/test.yml)
 
-This monolithic repository represents a working prototype in clojure of a multi-purpose platform. This project uses the polylith framework (see documentation links below).
+A Clojure monorepo with all the building blocks to build end-to-end systems. This project uses the Polylith framework and includes several working examples demonstrating real-world patterns. With significant testcontainers support, it enables building complex integration test environments that mimic production deployments end-to-end.
 
 ## Architecture
 
