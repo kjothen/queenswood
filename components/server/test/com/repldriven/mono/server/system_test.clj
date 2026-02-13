@@ -10,7 +10,6 @@
     [reitit.http :as http]
     [reitit.ring :as ring]
 
-    [clojure.pprint :as pp]
     [clojure.test :refer [deftest is testing]]
     [clojure.walk :as walk]))
 
@@ -32,7 +31,6 @@
   (testing "Ring interceptors MUST be inserted"
     (let [data {:got "me" :this "time"}
           handler (fn [req]
-                    (log/info "\n" (with-out-str (pp/pprint req)))
                     {:status 200 :body (select-keys req (keys data))})
           routes (fn [ctx] ["/api"
                             {:interceptors (:interceptors ctx)}
