@@ -2,7 +2,6 @@ system:
   db:
     container: !system/component
       system/component-kind: postgres/container
-      docker-image-name: postgres:16
       exposed-port: 5432
 
     container-mapped-exposed-port: !system/component

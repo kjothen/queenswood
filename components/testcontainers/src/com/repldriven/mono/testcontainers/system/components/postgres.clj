@@ -9,7 +9,7 @@
     (org.testcontainers.utility DockerImageName)))
 
 (def default-exposed-port 5432)
-(def default-docker-image-name "postgres:latest")
+(def default-docker-image-name "postgres:16.2")
 
 (defn- start-container
   [config]

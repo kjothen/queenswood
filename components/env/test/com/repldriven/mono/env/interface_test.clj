@@ -1,4 +1,4 @@
-(ns com.repldriven.mono.env.system-test
+(ns com.repldriven.mono.env.interface-test
   (:require
     [com.repldriven.mono.env.interface :as SUT]
 

@@ -10,7 +10,7 @@
     (org.testcontainers.utility DockerImageName)))
 
 (def default-exposed-port 1883)
-(def default-docker-image-name "hivemq/hivemq-ce:latest")
+(def default-docker-image-name "hivemq/hivemq-ce:2025.5")
 
 (def container
   {:system/start

@@ -10,7 +10,7 @@
     (org.testcontainers.utility DockerImageName)))
 
 (def default-exposed-ports [8200])
-(def default-docker-image-name "hashicorp/vault:latest")
+(def default-docker-image-name "hashicorp/vault:1.21")
 
 (def container
   {:system/start
@@ -27,10 +27,13 @@
                   (when secret-in-vault
                     (let [path (first secret-in-vault)
                           key-values (rest secret-in-vault)
-                          kv-put-cmd (str "kv put " path " " (string/join " " key-values))]
-                      (.withInitCommand container (into-array String [kv-put-cmd]))))
+                          kv-put-cmd (str "kv put " path
+                                          " " (string/join " " key-values))]
+                      (.withInitCommand container
+                                        (into-array String [kv-put-cmd]))))
                   (when init-commands
-                    (.withInitCommand container (into-array String init-commands)))
+                    (.withInitCommand container
+                                      (into-array String init-commands)))
                   (some-> (tc/init {:container container
                                     :exposed-ports exposed-ports})
                           (tc/start!)))

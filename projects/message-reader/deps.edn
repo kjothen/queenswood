@@ -18,5 +18,6 @@
         component/testcontainers {:local/root "../../components/testcontainers"}
         component/utility {:local/root "../../components/utility"}
         base/pulsar-reader {:local/root "../../bases/pulsar-reader"}
-        org.clojure/clojure {:mvn/version "1.12.4"}}
+        org.clojure/clojure {:mvn/version "1.12.4"}
+        org.clojure/core.async {:mvn/version "1.8.741"}}
  :paths ["resources"]}

@@ -31,6 +31,6 @@
   ([config ks] (components/defs config ks)))
 
 (defmacro with-system
-  {:clj-kondo/lint-as 'clojure.core/locking}
+  {:clj-kondo/lint-as 'clojure.core/let}
   [sys-binding & body]
   `(core/with-system ~sys-binding ~@body))

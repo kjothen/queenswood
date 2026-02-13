@@ -16,7 +16,7 @@
 (def default-exposed-ports
   [default-exposed-broker-port default-exposed-broker-http-port])
 
-(def default-docker-image-name "apachepulsar/pulsar:3.0.0")
+(def default-docker-image-name "apachepulsar/pulsar:4.1.2")
 
 (defn- start-container
   [config]

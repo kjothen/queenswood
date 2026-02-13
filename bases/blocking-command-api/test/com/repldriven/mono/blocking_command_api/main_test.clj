@@ -1,4 +1,4 @@
-(ns com.repldriven.mono.blocking-command-api.main-test
+(ns ^:eftest/synchronized com.repldriven.mono.blocking-command-api.main-test
   (:require
     ;; system components
     com.repldriven.mono.server.interface

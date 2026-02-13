@@ -15,5 +15,6 @@
         components/system {:local/root "../../components/system"}
         component/utility {:local/root "../../components/utility"}
         base/symmetric-key-api {:local/root "../../bases/symmetric-key-api"}
-        org.clojure/clojure {:mvn/version "1.12.4"}}
+        org.clojure/clojure {:mvn/version "1.12.4"}
+        org.clojure/core.async {:mvn/version "1.8.741"}}
  :paths []}

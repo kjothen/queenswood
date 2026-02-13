@@ -74,6 +74,7 @@
 
 (defmacro with-system
   {:clj-kondo/lint-as 'clojure.core/let}
-  [sys-binding & body]
-  `(try ~@body
-        (finally (when-not (error/anomaly? ~sys-binding) (stop ~sys-binding)))))
+  [binding & body]
+  (let [[sym init] binding]
+    `(let [~sym ~init]
+       (try ~@body (finally (when-not (error/anomaly? ~sym) (stop ~sym)))))))

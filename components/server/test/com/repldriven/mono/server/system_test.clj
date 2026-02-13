@@ -12,17 +12,19 @@
     [clojure.test :refer [deftest is testing]]
     [clojure.walk :as walk]))
 
-(deftest server-component-test
+(deftest server-test
   (testing "Server component system configuration and lifecycle"
-    (let [sys (error/nom->
-               (env/config
-                "classpath:com/repldriven/mono/server/application-test.yml"
-                :test)
-               system/defs
-               (update-in [:system/defs :server] dissoc :jetty-adapter)
-               system/start)]
-      (is (not (error/anomaly? sys)) (str "System should start: " (pr-str sys)))
-      (when (system/system? sys) (system/with-system sys (is (some? sys)))))))
+    (let [handler (fn [_] {:status 200 :body "ok"})]
+      (system/with-system
+        [sys
+         (error/nom->
+          (env/config
+           "classpath:com/repldriven/mono/server/application-test.yml"
+           :test)
+          system/defs
+          (assoc-in [:system/defs :server :handler] (constantly handler))
+          system/start)]
+        (is (system/system? sys) "System should be valid")))))
 
 (deftest interceptors-test
   (testing "Ring interceptors MUST be inserted"
@@ -34,20 +36,19 @@
                 (http/ring-handler (http/router (routes ctx)
                                                 server/standard-router-data)
                                    (ring/create-default-handler)
-                                   server/standard-executor))
-          sys (error/nom->
-               (env/config
-                "classpath:com/repldriven/mono/server/application-test.yml"
-                :test)
-               system/defs
-               (assoc-in [:system/defs :server :handler] app)
-               system/start)]
-      (is (not (error/anomaly? sys)) (str "System should start: " (pr-str sys)))
-      (when (system/system? sys)
-        (system/with-system sys
-          (let [jetty (system/instance sys [:server :jetty-adapter])
-                base-url (server/http-local-url jetty)
-                url (str base-url "/api/interceptors")
-                res (http-client/request {:url url :method :get})
-                body (walk/keywordize-keys (http-client/res->body res))]
-            (is (= body data))))))))
+                                   server/standard-executor))]
+      (system/with-system
+        [sys
+         (error/nom->
+          (env/config
+           "classpath:com/repldriven/mono/server/application-test.yml"
+           :test)
+          system/defs
+          (assoc-in [:system/defs :server :handler] app)
+          system/start)]
+        (let [jetty (system/instance sys [:server :jetty-adapter])
+              base-url (server/http-local-url jetty)
+              url (str base-url "/api/interceptors")
+              res (http-client/request {:url url :method :get})
+              body (walk/keywordize-keys (http-client/res->body res))]
+          (is (= body data)))))))

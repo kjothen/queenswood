@@ -35,6 +35,49 @@ build snapshot="true":
 test: start-docker
     SKIP_META=repl clojure -M:poly test :all
 
+# Check test failures from last test run
+poly-test-check:
+    #!/usr/bin/env python3
+    import xml.etree.ElementTree as ET
+    import sys
+    from pathlib import Path
+
+    xml_file = Path("./target/test-results/junit.xml")
+
+    if not xml_file.exists():
+        print("❌ No test results found. Run 'just test' first.")
+        sys.exit(1)
+
+    try:
+        tree = ET.parse(xml_file)
+        root = tree.getroot()
+
+        failures = []
+        for testsuite in root.findall('.//testsuite'):
+            for testcase in testsuite.findall('.//testcase'):
+                failure = testcase.find('failure')
+                if failure is not None:
+                    failures.append({
+                        'package': testsuite.get('package', ''),
+                        'test': testcase.get('name', ''),
+                        'class': testcase.get('classname', ''),
+                        'message': failure.text or ''
+                    })
+
+        if failures:
+            print("\n=== Failed Tests ===\n")
+            for f in failures:
+                print(f"❌ {f['package']}/{f['test']}")
+                print(f"   {f['message'].strip()[:200]}")
+                print()
+            print(f"Total failures: {len(failures)}")
+        else:
+            print("✅ All tests passed!")
+
+    except Exception as e:
+        print(f"Error reading test results: {e}")
+        sys.exit(1)
+
 # Linter
 lint-eastwood:
     clojure -M:dev:test:lint/eastwood
@@ -64,7 +107,7 @@ install:
 
 # Start Docker via Colima
 start-docker:
-    colima status 2>/dev/null || colima start
+    colima status 2>/dev/null || colima start --cpu 2 --memory 4
     docker context use colima
 
 # Stop Docker via Colima
