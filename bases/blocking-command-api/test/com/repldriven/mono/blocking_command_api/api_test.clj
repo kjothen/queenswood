@@ -30,7 +30,7 @@
                (env/config "classpath:blocking-command-api/application-test.yml"
                            :test)
                system/defs
-               (assoc-in [:system/defs :server :handler] (partial api/app))
+               (assoc-in [:system/defs :server :handler] api/app)
                system/start)]
       (is (not (error/anomaly? sys)) (str "System should start: " (pr-str sys)))
       (when (system/system? sys)

@@ -17,7 +17,8 @@
    (fn [{:system/keys [config instance]}]
      (or instance
          (let [{:keys [docker-image-name exposed-port]} config]
-           (try (some-> (tc/init {:container (-> (DockerImageName/parse
+           (try (log/info "Starting mqtt container")
+                (some-> (tc/init {:container (-> (DockerImageName/parse
                                                   docker-image-name)
                                                  (.asCompatibleSubstituteFor
                                                   "hivemq/hivemq-ce")
@@ -26,7 +27,9 @@
                         (tc/start!))
                 (catch ContainerLaunchException e
                   (log/error "Failed to start mqtt container, %s" e))))))
-   :system/stop (fn [{:system/keys [instance]}] (tc/stop! instance))
+   :system/stop (fn [{:system/keys [instance]}]
+                  (log/info "Stopping mqtt container")
+                  (tc/stop! instance))
    :system/config {:docker-image-name default-docker-image-name
                    :exposed-port default-exposed-port}})
 

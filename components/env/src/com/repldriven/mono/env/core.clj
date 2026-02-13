@@ -20,7 +20,7 @@
 
 (defmulti file-type (fn [source] (type source)))
 (defmethod file-type java.net.URL
-  [source]
+  [^java.net.URL source]
   (file-type->keyword (.getPath source)))
 (defmethod file-type java.lang.String [source] (file-type->keyword source))
 (defmethod file-type :default

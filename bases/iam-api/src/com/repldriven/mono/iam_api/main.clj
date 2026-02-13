@@ -18,7 +18,7 @@
   [config-file profile]
   (error/nom-> (env/config config-file profile)
                system/defs
-               (assoc-in [:system/defs :server :handler] (partial api/app))
+               (assoc-in [:system/defs :server :handler] api/app)
                system/start
                database/migrate))
 

@@ -9,6 +9,7 @@
     (java.util Map)
     (java.util.concurrent TimeUnit)
     (org.apache.pulsar.client.api Consumer
+                                  ConsumerBuilder
                                   Message
                                   PulsarClient
                                   PulsarClientException)))
@@ -25,10 +26,11 @@
                         (.. client
                             (newConsumer (schemas/resolve schemas schema)))
                         (.. client newConsumer))
-             builder (.. instance (loadConf auto-conf))]
-         (.subscribe (cond-> builder
-                       (some? cryptoKeyReader) (.cryptoKeyReader
-                                                cryptoKeyReader))))
+             ^ConsumerBuilder builder (.. instance (loadConf auto-conf))
+             ^ConsumerBuilder builder-with-conf
+             (cond-> builder
+               (some? cryptoKeyReader) (.cryptoKeyReader cryptoKeyReader))]
+         (.subscribe builder-with-conf))
        (catch PulsarClientException e
          (log/error (format "Failed to create pulsar consumer, %s" e)))))
 

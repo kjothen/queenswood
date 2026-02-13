@@ -4,13 +4,14 @@
 
     [com.repldriven.mono.log.interface :as log])
   (:import
-    (org.apache.pulsar.client.admin PulsarAdmin Topics)
-    (org.apache.pulsar.common.naming TopicName)))
+    (org.apache.pulsar.client.admin PulsarAdmin Schemas Topics)
+    (org.apache.pulsar.common.naming TopicName)
+    (org.apache.pulsar.common.schema SchemaInfo)))
 
 (defn- create-topic-schema
-  [^PulsarAdmin admin fully-qualified-topic-name schema]
+  [^PulsarAdmin admin ^String fully-qualified-topic-name schema]
   (log/info "Creating schema for topic:" fully-qualified-topic-name schema)
-  (.createSchema (.schemas admin) fully-qualified-topic-name schema))
+  (.createSchema ^Schemas (.schemas admin) fully-qualified-topic-name schema))
 
 (defn- create
   [^PulsarAdmin admin fully-qualified-topic-name &

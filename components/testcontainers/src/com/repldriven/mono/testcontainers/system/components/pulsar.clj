@@ -37,7 +37,9 @@
 (def container
   {:system/start (fn [{:system/keys [config instance]}]
                    (or instance (start-container config)))
-   :system/stop (fn [{:system/keys [instance]}] (tc/stop! instance))
+   :system/stop (fn [{:system/keys [instance]}]
+                  (log/info "Stopping pulsar container")
+                  (tc/stop! instance))
    :system/config {:docker-image-name default-docker-image-name
                    :exposed-ports default-exposed-ports}})
 

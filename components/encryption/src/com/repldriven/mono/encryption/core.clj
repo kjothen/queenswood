@@ -22,7 +22,7 @@
 (defonce ^:private ^KeyFactory key-factory-rsa
   (when-not *compile-files* (KeyFactory/getInstance "RSA")))
 
-(defn decode64 [s] (.decode (Base64/getDecoder) s))
+(defn decode64 [^String s] (.decode (Base64/getDecoder) s))
 
 (defn encode64 [bytes] (.encodeToString (Base64/getEncoder) bytes))
 

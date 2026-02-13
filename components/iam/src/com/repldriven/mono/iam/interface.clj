@@ -34,9 +34,10 @@
   [db project-name]
   (service-account-api/list db project-name))
 (defn get-service-account [db name] (service-account-api/get db name))
-(defn patch-service-account [db name body] (service-account-api/patch db name))
+(defn patch-service-account
+  [db name body]
+  (service-account-api/patch db name body))
 (defn undelete-service-account [db name] (service-account-api/undelete db name))
-
 
 ;;;; Other IAM things...
 ;;;;

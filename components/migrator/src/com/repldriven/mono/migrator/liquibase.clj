@@ -6,9 +6,9 @@
     [clojure.java.io :as io])
   (:import
     (liquibase Contexts LabelExpression Liquibase)
-    (liquibase.database DatabaseFactory)
+    (liquibase.database Database DatabaseFactory)
     (liquibase.database.jvm JdbcConnection)
-    (liquibase.resource DirectoryResourceAccessor)
+    (liquibase.resource DirectoryResourceAccessor ResourceAccessor)
     (java.io File)))
 
 (defn- resource-accessor
@@ -22,14 +22,15 @@
 
 (defn migrate
   [db-spec resource-path]
-  (error/try-nom :migrator/migration-failed
-                 "Failed to run database migrations"
-                 (with-open [conn (next.jdbc/get-connection db-spec)]
-                   (let [jdbc-connection (JdbcConnection. conn)
-                         database (.findCorrectDatabaseImplementation
-                                   (DatabaseFactory/getInstance)
-                                   jdbc-connection)
-                         accessor (resource-accessor resource-path)
-                         filename (.getName (File. ^String resource-path))
-                         lb (Liquibase. ^String filename accessor database)]
-                     (.update lb (Contexts.) (LabelExpression.))))))
+  (error/try-nom
+   :migrator/migration-failed
+   "Failed to run database migrations"
+   (with-open [conn (next.jdbc/get-connection db-spec)]
+     (let [jdbc-connection (JdbcConnection. conn)
+           ^Database database (.findCorrectDatabaseImplementation
+                               (DatabaseFactory/getInstance)
+                               jdbc-connection)
+           ^ResourceAccessor accessor (resource-accessor resource-path)
+           ^String filename (.getName (File. ^String resource-path))
+           lb (Liquibase. filename accessor database)]
+       (.update lb (Contexts.) (LabelExpression.))))))

@@ -25,12 +25,12 @@
 
 (deftest symmetric-keys-api
   (testing "symmetric keys API"
-    (let [sys (error/nom->
-               (env/config "classpath:symmetric-key-api/test-application.yml"
-                           :test)
-               system/defs
-               (assoc-in [:system/defs :server :handler] (partial api/app))
-               system/start)]
+    (let [sys (error/nom-> (env/config
+                            "classpath:symmetric-key-api/test-application.yml"
+                            :test)
+                           system/defs
+                           (assoc-in [:system/defs :server :handler] api/app)
+                           system/start)]
       (is (not (error/anomaly? sys)) (str "System should start: " (pr-str sys)))
       (when (system/system? sys)
         (system/with-system sys

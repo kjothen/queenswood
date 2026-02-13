@@ -15,18 +15,18 @@
     [com.repldriven.mono.log.interface :as log]
     [com.repldriven.mono.system.interface :as system])
   (:import
-    (org.apache.pulsar.client.api PulsarClientException)
-    (org.apache.pulsar.client.admin PulsarAdminException)))
+    (org.apache.pulsar.client.api PulsarClient PulsarClientException)
+    (org.apache.pulsar.client.admin PulsarAdmin PulsarAdminException)))
 
 (defn- close-admin-connection
-  [instance n]
+  [^PulsarAdmin instance n]
   (try (log/infof "Closing pulsar %s connection" n)
        (.close instance)
        (catch PulsarAdminException e
          (log/error (format "Failed to close pulsar %s connection, %s" n e)))))
 
 (defn- close-client-connection
-  [instance n]
+  [^PulsarClient instance n]
   (try (log/infof "Closing pulsar %s connection" n)
        (.close instance)
        (catch PulsarClientException e

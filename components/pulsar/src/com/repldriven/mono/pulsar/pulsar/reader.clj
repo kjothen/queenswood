@@ -12,7 +12,8 @@
     (org.apache.pulsar.client.api Message
                                   PulsarClient
                                   PulsarClientException
-                                  Reader)
+                                  Reader
+                                  ReaderBuilder)
     (java.util Map)
     (java.util.concurrent TimeUnit)))
 
@@ -27,10 +28,12 @@
              instance (if (some? schema)
                         (.. client (newReader (schemas/resolve schemas schema)))
                         (.. client newReader))
-             builder (.. instance (loadConf auto-conf))]
-         (.create (cond-> builder
-                    (some? cryptoKeyReader) (.cryptoKeyReader cryptoKeyReader)
-                    (some? startMessageId) (.startMessageId startMessageId))))
+             ^ReaderBuilder builder (.. instance (loadConf auto-conf))
+             ^ReaderBuilder builder-with-conf
+             (cond-> builder
+               (some? cryptoKeyReader) (.cryptoKeyReader cryptoKeyReader)
+               (some? startMessageId) (.startMessageId startMessageId))]
+         (.create builder-with-conf))
        (catch PulsarClientException e
          (log/error (format "Failed to open pulsar reader, %s" e)))))
 

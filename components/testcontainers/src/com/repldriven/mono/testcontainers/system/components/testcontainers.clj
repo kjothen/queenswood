@@ -15,14 +15,18 @@
   {:system/start (fn [{:system/keys [config instance]}]
                    (or instance
                        (let [{:keys [docker-image-name exposed-ports]} config]
-                         (try (-> (tc/create {:image-name docker-image-name
-                                              :exposed-ports exposed-ports})
-                                  (tc/start!))
-                              (catch ContainerLaunchException e
-                                (log/error "Failed to start %s container, %s"
-                                           docker-image-name
-                                           e))))))
-   :system/stop (fn [{:system/keys [instance]}] (tc/stop! instance))
+                         (try
+                           (log/info "Starting" docker-image-name "container")
+                           (-> (tc/create {:image-name docker-image-name
+                                           :exposed-ports exposed-ports})
+                               (tc/start!))
+                           (catch ContainerLaunchException e
+                             (log/error "Failed to start %s container, %s"
+                                        docker-image-name
+                                        e))))))
+   :system/stop (fn [{:system/keys [config instance]}]
+                  (log/info "Stopping" (:docker-image-name config) "container")
+                  (tc/stop! instance))
    :system/config {:docker-image-name system/required-component
                    :exposed-ports system/required-component}})
 

@@ -59,12 +59,12 @@
 
 (deftest service-accounts-api
   (testing "serviceAccounts API"
-    (let [sys (error/nom->
-               (env/config "classpath:iam-api/test-application.yml" :test)
-               system/defs
-               (assoc-in [:system/defs :server :handler] (partial api/app))
-               system/start
-               database/migrate)]
+    (let [sys (error/nom-> (env/config "classpath:iam-api/test-application.yml"
+                                       :test)
+                           system/defs
+                           (assoc-in [:system/defs :server :handler] api/app)
+                           system/start
+                           database/migrate)]
       (is (not (error/anomaly? sys)) (str "System should start: " (pr-str sys)))
       (when (system/system? sys)
         (system/with-system sys

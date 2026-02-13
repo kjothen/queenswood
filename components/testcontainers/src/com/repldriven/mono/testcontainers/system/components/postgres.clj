@@ -30,6 +30,7 @@
   {:system/start (fn [{:system/keys [config instance]}]
                    (or instance (start-container config)))
    :system/stop (fn [{:system/keys [instance]}]
+                  (log/info "Stopping postgres container")
                   (when (some? instance) (tc/stop! instance)))
    :system/config {:docker-image-name default-docker-image-name
                    :exposed-port default-exposed-port}})

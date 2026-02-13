@@ -8,7 +8,7 @@
 (defn string->stream
   "Convert a string to an InputStream with the specified encoding."
   ([s] (string->stream s "UTF-8"))
-  ([s encoding]
+  ([^String s ^String encoding]
    (-> s
        (.getBytes encoding)
        (ByteArrayInputStream.))))
