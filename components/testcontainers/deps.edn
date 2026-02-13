@@ -7,6 +7,7 @@
         org.testcontainers/pulsar
         {:mvn/version "1.21.4"
          :exclusions [io.netty/netty-all
+                      io.netty/netty-bom
                       io.netty/netty-common
                       io.netty/netty-handler
                       io.netty/netty-transport
