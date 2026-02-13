@@ -13,7 +13,7 @@
 
 (defn- interceptor
   [k v]
-  {:enter (fn [ctx] (assoc-if-missing ctx [:request k] v))})
+  {:name :mono :enter (fn [ctx] (assoc-if-missing ctx [:request k] v))})
 
 (def interceptors
   {:system/start (fn [{:system/keys [config instance]}]

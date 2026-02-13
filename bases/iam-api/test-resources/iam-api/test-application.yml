@@ -30,8 +30,4 @@ system:
       handler: !system/ref server.handler
       interceptors: !system/ref server.interceptors
       options:
-        join?: !profile
-          default: false
-        port: !profile
-          default: !port 8080
-          test: !port 0
+        port: !port 0

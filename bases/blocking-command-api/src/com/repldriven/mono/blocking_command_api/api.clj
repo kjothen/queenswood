@@ -8,7 +8,8 @@
     [reitit.ring :as ring]))
 
 (defn app
-  [{:keys [pulsar-client mqtt-client]}]
-  (http/ring-handler (http/router commands/routes server/standard-router-data)
-                     (ring/routes (ring/create-default-handler))
+  [ctx]
+  (http/ring-handler (http/router (commands/routes ctx)
+                                  server/standard-router-data)
+                     (ring/create-default-handler)
                      server/standard-executor))

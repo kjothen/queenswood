@@ -3,12 +3,14 @@
     [com.repldriven.mono.env.interface :as env]
     [com.repldriven.mono.error.interface :as error]
     [com.repldriven.mono.http-client.interface :as http-client]
+    [com.repldriven.mono.log.interface :as log]
     [com.repldriven.mono.server.interface :as server]
     [com.repldriven.mono.system.interface :as system]
 
     [reitit.http :as http]
     [reitit.ring :as ring]
 
+    [clojure.pprint :as pp]
     [clojure.test :refer [deftest is testing]]
     [clojure.walk :as walk]))
 
@@ -29,8 +31,11 @@
 (deftest interceptors-test
   (testing "Ring interceptors MUST be inserted"
     (let [data {:got "me" :this "time"}
-          handler (fn [req] {:status 200 :body (select-keys req (keys data))})
-          routes (fn [ctx] ["/api" {:interceptors (:interceptors ctx)}
+          handler (fn [req]
+                    (log/info "\n" (with-out-str (pp/pprint req)))
+                    {:status 200 :body (select-keys req (keys data))})
+          routes (fn [ctx] ["/api"
+                            {:interceptors (:interceptors ctx)}
                             ["/interceptors" {:get {:handler handler}}]])
           app (fn [ctx]
                 (http/ring-handler (http/router (routes ctx)

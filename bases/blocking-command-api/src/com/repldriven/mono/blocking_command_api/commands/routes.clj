@@ -9,11 +9,13 @@
 (def Command [:map [:type string?] [:id string?]])
 (def CommandRequest (RequestData Command))
 
-(def CommandResult [:map [:result string?]])
+(def CommandResult
+  [:map [:result string?] [:mqtt-client boolean?] [:pulsar-producer boolean?]])
 (def CommandResponse (ResponseData CommandResult))
 
-(def routes
-  ["/api"
+(defn routes
+  [ctx]
+  ["/api" {:interceptors (:interceptors ctx)}
    ["/command"
     {:post {:summary "negotiated request & response (json, edn, transit)"
             :parameters {:body CommandRequest}

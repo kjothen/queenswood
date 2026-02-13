@@ -35,14 +35,22 @@
 (deftest blocking-command-api
   (testing "blocking command API"
     (system/with-system [sys (test-system)]
+      (println "System valid?" (system/system? sys))
+      (println "System is anomaly?" (error/anomaly? sys))
+      (when (error/anomaly? sys)
+        (println "Anomaly:" sys))
       (let [jetty (system/instance sys [:server :jetty-adapter])]
+        (println "Jetty:" jetty)
         (binding [*base-url* (server/http-local-url jetty)]
           (let [result (error/let-nom
                          ; send test command
                          [res (send-command {:type "test-command" :id "123"})
                           _ (is (= 200 (:status res)))
                           body (http/res->edn res)
-                          _ (is (= {:data {:result "test-command/123"}} body))]
+                          _ (is (= {:data {:result "test-command/123"
+                                           :pulsar-producer true
+                                           :mqtt-client true}}
+                                   body))]
                          :success)]
             (is (not (error/anomaly? result))
                 (str "API workflow failed: " (pr-str result)))))))))

@@ -3,13 +3,11 @@ handler: !system/required-component
 interceptors: !system/component
   system/component-kind: server/interceptors
   mqtt-client: !system/ref mqtt.client
+  pulsar-producer: !system/ref pulsar.producer
 
 jetty-adapter: !system/component
   system/component-kind: server/jetty-adapter
   handler: !system/ref server.handler
-  interceptors: !system/local-ref interceptors
+  interceptors: !system/ref server.interceptors
   options:
-    join?: !profile
-      default: false
-    port: !profile
-      default: !port 0
+    port: !port 0
