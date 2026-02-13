@@ -57,7 +57,7 @@
             msgs [{:name "Alice" :age 30} {:name "Bob" :age 25}
                   {:name "Charlie" :age 35}]
             props {"message" "user-msg"}]
-        ;; Send n messages to pulsar
+        ;; Send messages to pulsar
         (doseq [msg msgs]
           (SUT/send producer (avro/serialize schema msg) {"properties" props}))
         ;; Receive messages from pulsar
@@ -69,13 +69,10 @@
           (async/>!! stop :stop)
           (is (some? recv-msgs) "Should receive messages")
           (when recv-msgs
-            (for [recv-msg recv-msgs]
-              (let [{:keys [message data]} recv-msg]
-                (is (not (error/anomaly? data)))
-                (.acknowledge consumer message)
-                (is (= data recv-msg))
-                (is (= (get (.getProperties ^Message message) "message")
-                       "user-msg"))))))))))
+            (doseq [{:keys [message data]} recv-msgs]
+              (is (not (error/anomaly? data)))
+              (.acknowledge consumer message))
+            (is (= msgs (mapv :data recv-msgs)) "Messages don't match")))))))
 
 (deftest encrypted-messages-mismatched-consumer-key-test
   (testing "Pulsar consumer with a mismatching decryption key cannot consume"
@@ -99,10 +96,9 @@
           (async/>!! stop :stop)
           (is (some? recv-msgs) "Should receive messages")
           (when recv-msgs
-            (for [recv-msg recv-msgs]
-              (let [{:keys [data]} recv-msg]
-                (is (= :pulsar/message-decrypt (error/kind data))
-                    "Should return decrypt anomaly for mismatched key")))))))))
+            (for [{:keys [data]} recv-msgs]
+              (is (= :pulsar/message-decrypt (error/kind data))
+                  "Should return decrypt anomaly for mismatched key"))))))))
 
 (deftest encrypted-messages-reader-test
   (testing "Pulsar reader with a matching decryption key can receive"
@@ -114,10 +110,10 @@
             msgs [{:name "Alice" :age 30} {:name "Bob" :age 25}
                   {:name "Charlie" :age 35}]
             props {"message" "user-msg"}]
-        ;; Send n messages to pulsar
+        ;; Send messages to pulsar
         (doseq [msg msgs]
           (SUT/send producer (avro/serialize schema msg) {"properties" props}))
-        ;; Read n messages from pulsar
+        ;; Read messages from pulsar
         (let [{:keys [c stop]} (SUT/read reader schema 50)
               timeout (async/timeout 5000)
               [recv-msgs _] (async/alts!!
@@ -125,4 +121,4 @@
                               timeout])]
           (async/>!! stop :stop)
           (is (some? recv-msgs) "Should receive messages")
-          (is (= msgs recv-msgs) "Messages don't match"))))))
+          (is (= msgs (mapv :data recv-msgs)) "Messages don't match"))))))

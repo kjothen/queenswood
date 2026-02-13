@@ -53,12 +53,11 @@
                                                       TimeUnit/MILLISECONDS))]
                                 msg))])]
               (cond (= port stop) nil
-                    (some? v)
-                    (do (async/>!!
-                         c
-                         {:message v
-                          :data (message/deserialize-same schema v)})
-                        (recur))
+                    (some? v) (do (async/>!!
+                                   c
+                                   {:message v
+                                    :data (message/deserialize-same schema v)})
+                                  (recur))
                     :else (recur))))
           (finally (async/close! c) (async/close! stop))))
     {:c c :stop stop}))
