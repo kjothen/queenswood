@@ -2,17 +2,6 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Parent Repository Structure
-
-This mono/ directory is part of a multi-project monorepo:
-
-- **mono/** - This Clojure/Polylith codebase (you are here)
-- **nix-shells/** - Nix flake providing dev environment (JDK 21, Clojure, clojure-lsp, Babashka, Node.js)
-- **advent-of-code/** - Advent of Code solutions
-- **prelude/** - Emacs distribution (third-party fork)
-
-The parent directory uses direnv with `nix-shells/flake.nix` for environment management.
-
 ## Architecture
 
 This is a Clojure monorepo using the **Polylith** architecture pattern. The codebase is structured as follows:
@@ -20,7 +9,7 @@ This is a Clojure monorepo using the **Polylith** architecture pattern. The code
 - **Components** (`components/`): Reusable building blocks with interface/implementation separation
   - Each component has an `interface.clj` that defines the public API
   - Implementation is contained within the component's namespace
-  - Key components include: system, log, env, http, sql-postgres, pubsub-pulsar, vault, encryption, iam
+  - Key components include: system, log, env, http-client, server, db, migrator, pulsar, avro, mqtt, vault, encryption, iam, error, event
 - **Bases** (`bases/`): Application entry points and web APIs
   - `iam-api`: Identity and Access Management API
   - `symmetric-key-api`: Cryptographic key management API  
@@ -65,12 +54,6 @@ just lint-eastwood    # Static analysis
 just lint-clj-kondo   # Linting
 ```
 
-### Setup
-```bash
-# Install all dependencies and configure environment
-just install
-```
-
 ## Testing
 
 - Individual component tests can be run with: `clojure -M:test`
@@ -92,19 +75,48 @@ component-name/
 ```
 
 ### System Configuration
-Applications use EDN configuration files with environment-specific profiles. The `env` component handles loading configuration from:
-- `-c` flag for config file path
-- `-p` flag for profile selection (dev, test, prod)
+The system configuration is the key architectural pattern - entire systems are defined as data in YAML (preferred) or EDN files:
+- System definitions specify all components, their dependencies, and configuration
+- The `env` component handles loading configuration:
+  - `-c` flag for config file path
+  - `-p` flag for profile selection (dev, test, prod)
+- Environment-specific profiles allow different configurations for dev, test, and prod
+- **Testcontainers Integration**: Substantial support for spinning up test infrastructure (databases, message queues, etc.) defined in the system configuration
+- **Interceptor-based Dependency Injection**:
+  - Servers are configured with interceptors in the system definition
+  - Interceptors provide handlers with access to system components they require
+  - Handlers can access datasources, connections (MQTT, Pulsar), and other components via the request context
+  - This eliminates the need for global state or manual dependency wiring
+
+### Error Handling
+The codebase uses anomaly-based error handling via the `error` component (based on nom library):
+- Most interface functions return either a value or an anomaly (not exceptions)
+- Anomalies are maps with a `:category` key indicating the error kind
+- Common error handling functions:
+  - `error/anomaly?` - checks if a value is an anomaly
+  - `error/kind` - extracts the error category/kind from an anomaly
+  - `error/fail` - creates a new anomaly with a kind and message
+  - `error/let-nom` - monadic let that short-circuits on anomalies (similar to `let` but stops on first error)
+  - `error/nom->` - threading macro that short-circuits on anomalies
+- When calling interface functions, always check for anomalies before using the result
+- Prefer `error/let-nom` over nested if-checks when chaining operations that may fail
 
 ### Database Integration
-- PostgreSQL integration via `sql-postgres` component
+- PostgreSQL integration via `db` component
 - Database migrations handled by `migrator` component using Liquibase
 - Connection pooling and lifecycle managed by the system component
 
 ### Message Queue Integration
-- Apache Pulsar integration via `pubsub-pulsar` component
+- Apache Pulsar integration via `pulsar` component
 - Supports encrypted messaging with RSA key pairs
 - Topic and schema management built-in
+- Uses channel-based async patterns (core.async) for consumers and readers
+  - Both `receive` (consumer) and `read` (reader) return `{:c chan :stop chan}`
+  - Messages on `:c` channel have format `{:message <Message> :data <deserialized-data>}`
+  - Send to `:stop` channel to stop receiving/reading
+- Encryption context checking for messages that fail decryption
+  - Returns anomaly with `:pulsar/message-decrypt` kind when decryption fails
+- Avro serialization/deserialization via `avro` component
 
 ## Main Entry Points
 
