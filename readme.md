@@ -2,7 +2,7 @@
 
 [![Tests](https://github.com/kjothen/mono/actions/workflows/test.yml/badge.svg)](https://github.com/kjothen/mono/actions/workflows/test.yml)
 
-A Clojure monorepo with all the building blocks to build end-to-end systems. This project uses the Polylith framework and includes several working examples demonstrating real-world patterns. With significant testcontainers support, it enables building complex integration test environments that mimic production deployments end-to-end.
+A Clojure monorepo providing reusable components for building end-to-end systems. This project uses the Polylith framework and includes several working examples demonstrating real-world patterns. With comprehensive testcontainers support, it enables complex integration test environments that replicate production deployments end-to-end.
 
 ## Architecture
 
@@ -18,12 +18,7 @@ This is a Clojure monorepo using the **Polylith** architecture pattern:
 Systems are defined as data in YAML (preferred) or EDN with environment-specific profiles:
 - Substantial **testcontainers** support for spinning up test infrastructure
 - **Interceptor-based dependency injection** - handlers access system components (datasources, message queues, etc.) via request context
-- No global state or manual dependency wiring required
-
-### Anomaly-Based Error Handling
-Most interface functions return values or anomalies (not exceptions) using the `error` component:
-- `error/let-nom` - monadic let that short-circuits on errors
-- `error/anomaly?`, `error/kind`, `error/fail` - for working with anomalies
+- All data-driven - no global state, no need to wire working systems together with code
 
 ### Key Integrations
 - **Jetty** - Embedded web server with interceptor support
@@ -33,6 +28,11 @@ Most interface functions return values or anomalies (not exceptions) using the `
 - **Vault** - Secrets management and cryptographic key storage
 - **Avro** - Schema-based serialization
 - **MQTT** - IoT messaging protocol support
+
+### Anomaly-Based Error Handling
+Most interface functions return values or anomalies (not exceptions) using the `error` component:
+- `error/let-nom` - monadic let that short-circuits on errors
+- `error/anomaly?`, `error/kind`, `error/fail` - for working with anomalies
 
 ## Getting started
 
