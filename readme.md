@@ -9,6 +9,8 @@ A Clojure monorepo providing reusable components for building end-to-end systems
 This is a Clojure monorepo using the **Polylith** architecture pattern:
 
 - **Components** - Reusable building blocks with interface/implementation separation
+  - Wrap access to all key concerns (databases, message queues, serialization, etc.)
+  - Enable swapping library implementations with no library-specific code in applications
 - **Bases** - Application entry points and web APIs
 - **Projects** - Deployable applications combining components and bases
 
