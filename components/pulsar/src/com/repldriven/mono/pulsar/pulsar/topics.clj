@@ -6,11 +6,11 @@
   (:import
     (org.apache.pulsar.client.admin PulsarAdmin Schemas Topics)
     (org.apache.pulsar.common.naming TopicName)
-    (org.apache.pulsar.common.protocol.schema PostSchemaPayload)
-    (org.apache.pulsar.common.schema SchemaInfo)))
+    (org.apache.pulsar.common.protocol.schema PostSchemaPayload)))
 
 (defn- create-topic-schema
-  [^PulsarAdmin admin ^String fully-qualified-topic-name ^PostSchemaPayload schema]
+  [^PulsarAdmin admin ^String fully-qualified-topic-name
+   ^PostSchemaPayload schema]
   (log/info "Creating schema for topic:" fully-qualified-topic-name schema)
   (.createSchema ^Schemas (.schemas admin) fully-qualified-topic-name schema))
 
