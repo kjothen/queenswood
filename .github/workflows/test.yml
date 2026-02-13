@@ -50,7 +50,7 @@ jobs:
         rm -rf ~/.m2/repository/org/testcontainers/pulsar
 
     - name: Run tests
-      run: clojure -M:poly test :all :verbose
+      run: clojure -M:poly test :all
 
     - name: Upload test results
       if: always()
