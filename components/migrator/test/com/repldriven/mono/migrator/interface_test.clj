@@ -1,5 +1,7 @@
 (ns com.repldriven.mono.migrator.interface-test
   (:require
+    com.repldriven.mono.testcontainers.interface
+
     [com.repldriven.mono.db.interface :as sql]
     [com.repldriven.mono.env.interface :as env]
     [com.repldriven.mono.error.interface :as error]

@@ -26,7 +26,6 @@
 
 (defn -main
   [& args]
-  (log/init)
   (log/info args)
   (let [{:keys [options exit-message ok?]} (cli/validate-args "iam-api" args)]
     (if exit-message

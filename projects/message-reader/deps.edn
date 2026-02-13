@@ -1,9 +1,9 @@
-{:aliases {:build {:deps {base/build {:local/root "../../bases/build"}}
+{:aliases {:build {:deps {bases/build {:local/root "../../bases/build"}}
                    :exec-args {:lib 'com.repldriven.mono/message-reader
                                :main com.repldriven.mono.pulsar-reader.main
                                :major-minor-version "0.0"}
                    :ns-default com.repldriven.mono.build.build}
-           :test {:extra-deps {base/external-test-runner
+           :test {:extra-deps {bases/external-test-runner
                                {:local/root
                                 "../../bases/external-test-runner"}}}}
  :deps {component/cli {:local/root "../../components/cli"}

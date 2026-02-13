@@ -3,6 +3,8 @@
         org.slf4j/slf4j-api {:mvn/version "2.0.17"}
         ;; use logback for the slf4j logging backend
         ch.qos.logback/logback-classic {:mvn/version "1.5.27"}
+        ;; json encoder for logback
+        net.logstash.logback/logstash-logback-encoder {:mvn/version "8.0"}
         ;; redirect logging to the slf4j frontend
         org.slf4j/jcl-over-slf4j {:mvn/version "2.0.17"}
         org.slf4j/log4j-over-slf4j {:mvn/version "2.0.17"}

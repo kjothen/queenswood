@@ -2,8 +2,6 @@
   (:require
     [com.repldriven.mono.log.core :as core]))
 
-(defn init ([]) ([profile]))
-
 (defmacro info [& args] `(core/info ~@args))
 
 (defmacro infof [& args] `(core/infof ~@args))

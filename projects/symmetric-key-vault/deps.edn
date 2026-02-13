@@ -1,9 +1,9 @@
-{:aliases {:build {:deps #:base{build {:local/root "../../bases/build"}}
+{:aliases {:build {:deps {bases/build {:local/root "../../bases/build"}}
                    :exec-args {:lib 'com.repldriven.mono/symmetric-key-vault
                                :main com.repldriven.mono.symmetric-key-api.main
                                :major-minor-version "0.0"}
                    :ns-default com.repldriven.mono.build.build}
-           :test {:extra-deps {base/external-test-runner
+           :test {:extra-deps {bases/external-test-runner
                                {:local/root
                                 "../../bases/external-test-runner"}}}}
  :deps {component/cli {:local/root "../../components/cli"}
@@ -17,4 +17,4 @@
         base/symmetric-key-api {:local/root "../../bases/symmetric-key-api"}
         org.clojure/clojure {:mvn/version "1.12.4"}
         org.clojure/core.async {:mvn/version "1.8.741"}}
- :paths []}
+ :paths ["resources"]}

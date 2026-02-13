@@ -25,7 +25,6 @@
 
 (defn -main
   [& args]
-  (log/init)
   (log/info args)
   (let [{:keys [options exit-message ok?]}
         (cli/validate-args "blocking-command-api" args)]

@@ -62,14 +62,10 @@
    CryptoKeyReader
      (^EncryptionKeyInfo getPublicKey
        [_this ^String keyName ^Map _metadata]
-       (log/info "Trying to read public key: get" keyName
-                 "in" (keys (:keys named-kps)))
        (key->encryption-key-info (get (get-crypto-key-pair keyName named-kps)
                                       :public-key)))
      (^EncryptionKeyInfo getPrivateKey
        [_this ^String keyName ^Map _metadata]
-       (log/info "Trying to read private key: get" keyName
-                 "in" (keys (:keys named-kps)))
        (key->encryption-key-info (get (get-crypto-key-pair keyName named-kps)
                                       :private-key)))))
 

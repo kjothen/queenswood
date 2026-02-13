@@ -32,7 +32,7 @@
    (fn [{:system/keys [config instance]}]
      (or instance
          (let [{:keys [handler interceptors options]} config]
-           (log/info "Starting jetty adapter:" handler interceptors options)
+           (log/info "Starting jetty adapter")
            (jetty/run-jetty (handler {:interceptors interceptors}) options))))
    :system/stop (fn [{:system/keys [^Server instance]}]
                   (when (some? instance) (.stop instance)))
