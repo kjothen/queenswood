@@ -1,16 +1,6 @@
 {:aliases {:test {:extra-deps {} :extra-paths ["test" "test-resources"]}}
  :deps {org.apache.pulsar/pulsar-client-all
-        {:exclusions [org.apache.pulsar/bouncy-castle-bc
-                      org.apache.pulsar/bouncy-castle-bcfips
-                      org.apache.bookkeeper/circe-checksum]
-         :mvn/version "4.1.2"}
-        org.apache.pulsar/pulsar-common
-        {:exclusions [org.apache.pulsar/bouncy-castle-bc
-                      org.apache.pulsar/bouncy-castle-bcfips
-                      org.apache.bookkeeper/circe-checksum]
-         :mvn/version "4.1.2"}
-        org.bouncycastle/bcprov-jdk18on {:mvn/version "1.83"}
-        org.bouncycastle/bcpkix-jdk18on {:mvn/version "1.83"}
+        {:mvn/version "4.1.2" :exclusions [org.bouncycastle/bcprov-ext-jdk18on]}
         org.clojure/data.json {:mvn/version "2.5.2"}
         org.clojure/java.data {:mvn/version "1.4.120"}}
  :paths ["src"]}
