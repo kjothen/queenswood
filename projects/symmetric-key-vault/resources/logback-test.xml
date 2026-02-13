@@ -34,10 +34,6 @@
 
     <logger name="org.eclipse" level="warn"/>
 
-    <logger name="io.pedestal" level="warn" additivity="false">
-        <appender-ref ref="CONSOLE"/>
-    </logger>
-
    <logger name="org.testcontainers.utility.RyukResourceReaper" level="error" additivity="false">
         <appender-ref ref="CONSOLE"/>
    </logger>
