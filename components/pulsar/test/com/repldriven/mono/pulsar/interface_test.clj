@@ -41,74 +41,88 @@
                       "isAllowAutoUpdateSchema" false
                       "schemaCompatibilityStrategy" "FULL"
                       "schemaValidationEnforced" true}]
+        ;; Send requests to pulsar admin
         (doseq [[k v] expected]
           (let [url (string/join "/" [namespace-url k])
                 res (http/request {:url url :method :get})]
-            (is (= v (http/res->body res)))))
-        expected))))
+            (is (= v (http/res->body res)))))))))
 
-(deftest encrypted-message-matching-consumer-key-test
+(deftest encrypted-messages-matching-consumer-key-test
   (testing "Pulsar consumer with a matching decryption key can consume"
     (system/with-system [sys (test-system)]
       (let [producer (system/instance sys [:pulsar :producer])
-            ^Consumer consumer (system/instance sys [:pulsar :consumers :c1])
+            consumer (system/instance sys [:pulsar :consumers :c1])
             schemas (system/instance sys [:pulsar :schemas])
             schema (SUT/schema->avro (get-in schemas [:user :schema]))
-            data {:name "hardcastle" :age 19}
+            msgs [{:name "Alice" :age 30} {:name "Bob" :age 25}
+                  {:name "Charlie" :age 35}]
             props {"message" "user-msg"}]
-        (SUT/send producer (avro/serialize schema data) {"properties" props})
+        ;; Send n messages to pulsar
+        (doseq [msg msgs]
+          (SUT/send producer (avro/serialize schema msg) {"properties" props}))
+        ;; Receive messages from pulsar
         (let [{:keys [c stop]} (SUT/receive consumer schema 50)
               timeout (async/timeout 5000)
-              [received _] (async/alts!! [c timeout])]
+              [recv-msgs _] (async/alts!!
+                             [(async/into [] (async/take (count msgs) c))
+                              timeout])]
           (async/>!! stop :stop)
-          (is (some? received) "Should receive a message")
-          (when received
-            (let [{:keys [message data]} received]
-              (is (not (error/anomaly? data)))
-              (.acknowledge consumer message)
-              (is (= data {:name "hardcastle" :age 19}))
-              (is (= (get (.getProperties ^Message message) "message")
-                     "user-msg")))))))))
+          (is (some? recv-msgs) "Should receive messages")
+          (when recv-msgs
+            (for [recv-msg recv-msgs]
+              (let [{:keys [message data]} recv-msg]
+                (is (not (error/anomaly? data)))
+                (.acknowledge consumer message)
+                (is (= data recv-msg))
+                (is (= (get (.getProperties ^Message message) "message")
+                       "user-msg"))))))))))
 
-(deftest encrypted-message-mismatched-consumer-key-test
+(deftest encrypted-messages-mismatched-consumer-key-test
   (testing "Pulsar consumer with a mismatching decryption key cannot consume"
     (system/with-system [sys (test-system)]
       (let [producer (system/instance sys [:pulsar :producer])
             consumer (system/instance sys [:pulsar :consumers :c2])
             schemas (system/instance sys [:pulsar :schemas])
             schema (SUT/schema->avro (get-in schemas [:user :schema]))
-            data {:name "hardcastle" :age 19}
+            msgs [{:name "Alice" :age 30} {:name "Bob" :age 25}
+                  {:name "Charlie" :age 35}]
             props {"message" "user-msg"}]
-        (SUT/send producer (avro/serialize schema data) {"properties" props})
+        ;; Send messages to pulsar
+        (doseq [msg msgs]
+          (SUT/send producer (avro/serialize schema msg) {"properties" props}))
+        ;; Receive messages from pulsar
         (let [{:keys [c stop]} (SUT/receive consumer schema 50)
               timeout (async/timeout 5000)
-              [received _] (async/alts!! [c timeout])]
+              [recv-msgs _] (async/alts!!
+                             [(async/into [] (async/take (count msgs) c))
+                              timeout])]
           (async/>!! stop :stop)
-          (is (some? received) "Should receive a message")
-          (when received
-            (let [{:keys [data]} received]
-              (is (= :pulsar/message-decrypt (error/kind data))
-                  "Should return decrypt anomaly for mismatched key"))))))))
+          (is (some? recv-msgs) "Should receive messages")
+          (when recv-msgs
+            (for [recv-msg recv-msgs]
+              (let [{:keys [data]} recv-msg]
+                (is (= :pulsar/message-decrypt (error/kind data))
+                    "Should return decrypt anomaly for mismatched key")))))))))
 
-
-(deftest reader-test
-  (testing "Pulsar reader should consume messages published by producer"
+(deftest encrypted-messages-reader-test
+  (testing "Pulsar reader with a matching decryption key can receive"
     (system/with-system [sys (test-system)]
       (let [producer (system/instance sys [:pulsar :producer])
-            ^Reader reader (system/instance sys [:pulsar :reader])
-            user-schema (avro/json->schema (slurp (io/resource
-                                                   "avro/user.avsc.json")))
-            test-messages [{:name "Alice" :age 30} {:name "Bob" :age 25}
-                           {:name "Charlie" :age 35}]]
-        ;; Send messages to pulsar
-        (doseq [msg test-messages]
-          (let [serialized (avro/serialize user-schema msg)]
-            (SUT/send producer serialized)))
-        ;; Read messages from pulsar reader channel
-        (let [{:keys [c stop]} (SUT/read reader user-schema 50)
+            reader (system/instance sys [:pulsar :reader])
+            schemas (system/instance sys [:pulsar :schemas])
+            schema (SUT/schema->avro (get-in schemas [:user :schema]))
+            msgs [{:name "Alice" :age 30} {:name "Bob" :age 25}
+                  {:name "Charlie" :age 35}]
+            props {"message" "user-msg"}]
+        ;; Send n messages to pulsar
+        (doseq [msg msgs]
+          (SUT/send producer (avro/serialize schema msg) {"properties" props}))
+        ;; Read n messages from pulsar
+        (let [{:keys [c stop]} (SUT/read reader schema 50)
               timeout (async/timeout 5000)
-              [received-messages _]
-              (async/alts!!
-               [(async/into [] (async/take (count test-messages) c)) timeout])]
-          (async/>!! stop :stop) ; Send stop signal
-          (is (= test-messages received-messages) "Messages don't match"))))))
+              [recv-msgs _] (async/alts!!
+                             [(async/into [] (async/take (count msgs) c))
+                              timeout])]
+          (async/>!! stop :stop)
+          (is (some? recv-msgs) "Should receive messages")
+          (is (= msgs recv-msgs) "Messages don't match"))))))
