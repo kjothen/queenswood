@@ -1,8 +1,6 @@
 set shell := ["zsh", "-cu"]
 
 HOME := env_var('HOME')
-ZSHENV := env_var('HOME') + '/.zshenv'
-XDG_CONFIG_HOME := env_var_or_default('XDG_CONFIG_HOME', env_var('HOME') + '/.config')
 
 # Colima/Docker configuration for testcontainers
 export DOCKER_HOST := "unix://" + HOME + "/.config/colima/default/docker.sock"
@@ -25,7 +23,6 @@ shell:
 
 # Build all polylith projects as uberjars
 build snapshot="true":
-    # cd components/event && clojure -X:build avro
     cd projects/iam && clojure -X:build uber :snapshot {{ snapshot }}
     cd projects/symmetric-key-vault && clojure -X:build uber :snapshot {{ snapshot }}
     cd projects/message-reader && clojure -X:build uber :snapshot {{ snapshot }}
@@ -82,7 +79,7 @@ poly-test-check:
 lint-eastwood:
     clojure -M:dev:test:lint/eastwood
 lint-clj-kondo:
-    for dir in `find . -type d -name 'src' -or -name 'test'`; do clj -M:lint/clj-kondo --lint $dir; done
+    clojure -M:lint/clj-kondo --lint bases components development
 lint:
   just lint-eastwood
   just lint-clj-kondo
@@ -99,11 +96,6 @@ format:
     else
         echo "No Clojure files found"
     fi
-
-# Install
-install:
-    brew bundle install --file={{justfile_directory()}}/Brewfile
-    just configure-clojure
 
 # Start Docker via Colima
 start-docker:

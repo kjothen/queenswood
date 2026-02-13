@@ -12,6 +12,12 @@
                    :else %)
             form))
 
+(defn deep-merge
+  "Recursively merges maps. If all values are maps, merges them recursively.
+  Otherwise returns the last value."
+  [& values]
+  (if (every? map? values) (apply merge-with deep-merge values) (last values)))
+
 (defn keys->strs
   "Convert all map keys to strings recursively."
   [form]

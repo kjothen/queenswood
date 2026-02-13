@@ -45,6 +45,8 @@
          :main-opts ["-m" "polylith.clj.core.poly-cli.core"]}
   :format/zprint {:extra-deps {zprint/zprint {:mvn/version "1.2.9"}}
                  :main-opts ["-m" "zprint.main"]}
+  :lint/clj-kondo {:extra-deps {clj-kondo/clj-kondo {:mvn/version "2024.11.14"}}
+                   :main-opts ["-m" "clj-kondo.main"]}
   :test {:extra-deps {http-kit.fake/http-kit.fake {:mvn/version "0.2.2"}}
          :extra-paths ["components/cli/test"
                        "components/env/test"
