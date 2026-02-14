@@ -1,135 +1,107 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to Claude Code when working with this Clojure/Polylith monorepo.
 
-## Architecture
+## Polylith Architecture
 
-This is a Clojure monorepo using the **Polylith** architecture pattern. The codebase is structured as follows:
+- **Three artifact types**: Components (reusable), Bases (entry points), Projects (deployable)
+- **Components** (`components/`):
+  - Reusable building blocks with `interface.clj` defining public API
+  - Implementation in same namespace, never access internals directly
+  - Examples: system, log, env, http-client, server, db, migrator, pulsar, avro, mqtt, vault, encryption, iam, error, test, event
+- **Bases** (`bases/`):
+  - Application entry points (e.g., APIs, readers, processors)
+  - Have `-main` functions and handle application bootstrap
+  - Examples: iam-api, symmetric-key-api, blocking-command-api, pulsar-reader
+  - Bases cannot depend on other bases
+- **Projects** (`projects/`):
+  - Combine bases and components into deployable applications
+  - No code, just `deps.edn` files
+  - Examples: iam, symmetric-key-vault, message-reader
+  - Projects do not have `-main` functions (bases do)
 
-- **Components** (`components/`): Reusable building blocks with interface/implementation separation
-  - Each component has an `interface.clj` that defines the public API
-  - Implementation is contained within the component's namespace
-  - Key components include: system, log, env, http-client, server, db, migrator, pulsar, avro, mqtt, vault, encryption, iam, error, event
-- **Bases** (`bases/`): Application entry points and web APIs
-  - `iam-api`: Identity and Access Management API
-  - `symmetric-key-api`: Cryptographic key management API  
-  - `blocking-command-api`: Command processing API
-  - `pulsar-reader`: Message queue consumer
-- **Projects** (`projects/`): Deployable applications that combine components and bases
-  - `iam`: IAM service combining iam-api base with required components
-  - `symmetric-key-vault`: Key management service
-  - `message-reader`: Message processing service
+## Component-Based Infrastructure
 
-The system uses **Donut System** for dependency injection and component lifecycle management, wrapped by the custom `system` component.
+- **System-as-data**: Entire systems defined in YAML/EDN configuration files
+- **Donut System**: Dependency injection and lifecycle management (wrapped by `system` component)
+- **Testcontainers**: Test infrastructure (DBs, message queues) defined in system config
+- **Interceptor-based DI**:
+  - Server interceptors inject component instances into request context
+  - Handlers access datasources, MQTT clients, Pulsar consumers via request map
+  - No global state or manual dependency wiring
+- **Configuration loading** (`env` component):
+  - `-c` flag for config file path
+  - `-p` flag for profile (dev, test, prod)
+  - Supports environment-specific overrides
+
+## Error Handling
+
+- **Anomaly-based** (nom library via `error` component):
+  - Functions return values OR anomalies (maps with `:category` key)
+  - Never throw exceptions for expected errors
+  - `error/anomaly?` - check if value is anomaly
+  - `error/kind` - extract error category
+  - `error/fail` - create anomaly with kind and message
+  - `error/let-nom` - monadic let, short-circuits on first anomaly
+  - `error/nom->` - threading macro, short-circuits on anomalies
+  - `error/with-anomaly?` - execute operations, call error-fn if any returns anomaly
+  - `error/with-let-anomaly?` - execute let-nom bindings, call error-fn if result is anomaly
+- **Test assertion**: `test/refute-anomaly` - fails test if value is anomaly
+
+## Testing Patterns
+
+- **Test component**: Provides `test/refute-anomaly` for consistent anomaly checking
+- **with-let-anomaly? pattern**:
+  ```clojure
+  (error/with-let-anomaly?
+    [result1 (operation1)
+     _ (is (= expected result1))
+     result2 (operation2 result1)]
+    test/refute-anomaly)
+  ```
+- **system/with-system**: Binding-based macro for test system lifecycle
+  ```clojure
+  (system/with-system [sys (test-system)]
+    (let [component (system/instance sys [:path :to :component])]
+      ;; test code
+      ))
+  ```
+- **Test resources**: Located in `test-resources/` within each component/base
+- **Property-based testing**: Use test.check where applicable
+- **Synchronized tests**: Mark with `^:eftest/synchronized` for tests requiring serialization (e.g., shared testcontainers)
+
+## Database Patterns
+
+- **db component**: PostgreSQL integration
+- **migrator component**: Liquibase-based migrations
+- **Connection pooling**: Managed by system component lifecycle
+- **Testcontainers**: Spin up PostgreSQL in tests via system config
+
+## Message Queue Patterns
+
+- **pulsar component**: Apache Pulsar integration with Avro serialization
+- **Channel-based async**: Both `receive` (consumer) and `read` (reader) return `{:c chan :stop chan}`
+- **Message format**: `{:message <Message> :data <deserialized-data>}` on `:c` channel
+- **Stopping**: Send to `:stop` channel to stop receiving/reading
+- **Encryption**: Supports RSA key pairs for encrypted messaging
+- **Decryption failures**: Return anomaly with `:pulsar/message-decrypt` kind
+- **mqtt component**: MQTT client integration for request-reply patterns
 
 ## Development Commands
 
-Run these commands from the repository root:
-
-### Core Polylith Commands
 ```bash
-# Start interactive Polylith shell for exploration
-just shell
-
-# Run all tests across the entire monorepo
-just test
-
-# Build all project uberjars
-just build
-
-# Build with development snapshot versions
-just build true
+just shell          # Start Polylith REPL
+just test           # Run all tests
+just build          # Build all uberjars
+just build true     # Build with snapshot versions
+just lint           # Run all linters
+just format         # Format all code
+just lint-eastwood  # Static analysis
+just lint-clj-kondo # Linting
 ```
 
-### Code Quality
-```bash
-# Run all linters
-just lint
+## Code Formatting
 
-# Format all Clojure code
-just format
-
-# Individual linters
-just lint-eastwood    # Static analysis
-just lint-clj-kondo   # Linting
-```
-
-## Testing
-
-- Individual component tests can be run with: `clojure -M:test`
-- All tests run via: `clojure -M:poly test :all`
-- Test resources are located in `test-resources/` directories within each component/base
-- The codebase uses test.check for property-based testing where applicable
-
-## Key Architectural Patterns
-
-### Component Structure
-Each component follows this pattern:
-```
-component-name/
-├── deps.edn           # Component dependencies
-├── src/com/repldriven/mono/component_name/
-│   ├── interface.clj  # Public API
-│   └── [impl files]   # Implementation
-└── test/             # Tests
-```
-
-### System Configuration
-The system configuration is the key architectural pattern - entire systems are defined as data in YAML (preferred) or EDN files:
-- System definitions specify all components, their dependencies, and configuration
-- The `env` component handles loading configuration:
-  - `-c` flag for config file path
-  - `-p` flag for profile selection (dev, test, prod)
-- Environment-specific profiles allow different configurations for dev, test, and prod
-- **Testcontainers Integration**: Substantial support for spinning up test infrastructure (databases, message queues, etc.) defined in the system configuration
-- **Interceptor-based Dependency Injection**:
-  - Servers are configured with interceptors in the system definition
-  - Interceptors provide handlers with access to system components they require
-  - Handlers can access datasources, connections (MQTT, Pulsar), and other components via the request context
-  - This eliminates the need for global state or manual dependency wiring
-
-### Error Handling
-The codebase uses anomaly-based error handling via the `error` component (based on nom library):
-- Most interface functions return either a value or an anomaly (not exceptions)
-- Anomalies are maps with a `:category` key indicating the error kind
-- Common error handling functions:
-  - `error/anomaly?` - checks if a value is an anomaly
-  - `error/kind` - extracts the error category/kind from an anomaly
-  - `error/fail` - creates a new anomaly with a kind and message
-  - `error/let-nom` - monadic let that short-circuits on anomalies (similar to `let` but stops on first error)
-  - `error/nom->` - threading macro that short-circuits on anomalies
-- When calling interface functions, always check for anomalies before using the result
-- Prefer `error/let-nom` over nested if-checks when chaining operations that may fail
-
-### Database Integration
-- PostgreSQL integration via `db` component
-- Database migrations handled by `migrator` component using Liquibase
-- Connection pooling and lifecycle managed by the system component
-
-### Message Queue Integration
-- Apache Pulsar integration via `pulsar` component
-- Supports encrypted messaging with RSA key pairs
-- Topic and schema management built-in
-- Uses channel-based async patterns (core.async) for consumers and readers
-  - Both `receive` (consumer) and `read` (reader) return `{:c chan :stop chan}`
-  - Messages on `:c` channel have format `{:message <Message> :data <deserialized-data>}`
-  - Send to `:stop` channel to stop receiving/reading
-- Encryption context checking for messages that fail decryption
-  - Returns anomaly with `:pulsar/message-decrypt` kind when decryption fails
-- Avro serialization/deserialization via `avro` component
-
-## Main Entry Points
-
-Applications are started via their main namespaces:
-- `com.repldriven.mono.iam-api.main/-main`
-- `com.repldriven.mono.symmetric-key-api.main/-main`
-
-Each accepts `-c config-file` and `-p profile` arguments.
-
-## Development Workflow
-
-1. Use `just shell` to start the Polylith REPL for interactive development
-2. Load specific services in development via `development/src/dev/local.clj`
-3. Run tests with `just test` before committing
-4. Format code with `just format`
-5. Build projects with `just build` for deployment
+- **zprint**: Configured in `.zprint.edn`
+- **Special forms**: `with-system`, `let-nom`, `with-anomaly?`, `with-let-anomaly?` have custom formatting rules
+- **clj-kondo**: Configured in `.clj-kondo/config.edn` with lint-as mappings for macros
