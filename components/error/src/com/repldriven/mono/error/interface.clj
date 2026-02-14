@@ -60,7 +60,6 @@
 
 (defmacro when-let-anomaly?
   "Execute let-nom bindings. If the result is an anomaly, call error-fn with it."
-  {:clj-kondo/lint-as 'clojure.core/let}
   [bindings error-fn]
   `(let [result# (nom/let-nom ~bindings nil)]
      (when (nom/anomaly? result#)

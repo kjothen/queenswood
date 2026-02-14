@@ -1,1 +1,2 @@
-{}
+{:lint-as {com.repldriven.mono.error.interface/when-anomaly? clojure.core/->
+           com.repldriven.mono.error.interface/when-let-anomaly? clojure.core/let}}

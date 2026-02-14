@@ -25,6 +25,7 @@
     components/spec-spec {:local/root "components/spec-spec"}
     components/db {:local/root "components/db"}
     components/system {:local/root "components/system"}
+    components/test {:local/root "components/test"}
     components/testcontainers {:local/root "components/testcontainers"}
     components/utility {:local/root "components/utility"}
     components/vault {:local/root "components/vault"}

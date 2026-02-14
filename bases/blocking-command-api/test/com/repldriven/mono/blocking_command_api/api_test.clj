@@ -1,23 +1,24 @@
 (ns ^:eftest/synchronized com.repldriven.mono.blocking-command-api.api-test
   (:require
-    [com.repldriven.mono.mqtt.interface :as mqtt]
-    [com.repldriven.mono.pulsar.interface :as pulsar]
-    com.repldriven.mono.testcontainers.interface
+   [com.repldriven.mono.mqtt.interface :as mqtt]
+   [com.repldriven.mono.pulsar.interface :as pulsar]
+   com.repldriven.mono.testcontainers.interface
 
-    [com.repldriven.mono.blocking-command-api.api :as api]
+   [com.repldriven.mono.blocking-command-api.api :as api]
 
-    [com.repldriven.mono.env.interface :as env]
-    [com.repldriven.mono.error.interface :as error]
-    [com.repldriven.mono.http-client.interface :as http]
-    [com.repldriven.mono.log.interface :as log]
-    [com.repldriven.mono.server.interface :as server]
-    [com.repldriven.mono.system.interface :as system]
+   [com.repldriven.mono.env.interface :as env]
+   [com.repldriven.mono.error.interface :as error]
+   [com.repldriven.mono.http-client.interface :as http]
+   [com.repldriven.mono.log.interface :as log]
+   [com.repldriven.mono.server.interface :as server]
+   [com.repldriven.mono.system.interface :as system]
+   [com.repldriven.mono.test.interface :as test]
 
-    [clojure.core.async :as async]
-    [clojure.data.json :as json]
-    [clojure.test :refer [deftest is testing]])
+   [clojure.core.async :as async]
+   [clojure.data.json :as json]
+   [clojure.test :refer [deftest is testing]])
   (:import
-    (org.apache.pulsar.client.api Consumer)))
+   (org.apache.pulsar.client.api Consumer)))
 
 (def ^:dynamic *base-url* "http://localhost:{PORT}")
 
@@ -43,17 +44,17 @@
   (let [schema (pulsar/schema->avro (get-in schemas [:command :schema]))
         {:keys [c stop]} (pulsar/receive consumer schema 1000)]
     (async/thread
-     (loop []
+      (loop []
        ;; Receive messages from pulsar
-       (when-let [{:keys [message data]} (async/<!! c)]
-         (let [correlation-id (:correlation-id data)
-               reply-topic (str "replies/" correlation-id)
-               response {:type (:type data) :id (:id data)}]
-           (error/when-anomaly?
+        (when-let [{:keys [message data]} (async/<!! c)]
+          (let [correlation-id (:correlation-id data)
+                reply-topic (str "replies/" correlation-id)
+                response {:type (:type data) :id (:id data)}]
+            (error/when-anomaly?
              [(mqtt/publish mqtt-client reply-topic (json/write-str response))
               (pulsar/acknowledge consumer message)]
              (log/anomaly {:message "Error processing command"})))
-         (recur))))
+          (recur))))
     {:stop stop}))
 
 (deftest request-pulsar-reply-mqtt-test
@@ -70,9 +71,11 @@
             command-response {:data command}]
         (binding [*base-url* (server/http-local-url jetty)]
           (error/when-let-anomaly?
-            [res (send-http-command command)
-             _ (is (= 200 (:status res)) "Should receive 200 OK")
-             body (http/res->edn res)
-             _ (is (= command-response body) "Should receive echoed command")]
-            #(is (not (error/anomaly? %)))))
+           [res (send-http-command command)
+            _ (is (= 200 (:status res))
+                  "Should receive 200 OK")
+            body (http/res->edn res)
+            _ (is (= command-response body)
+                  "Should receive echoed command")]
+           test/refute-anomaly))
         (async/>!! stop :stop)))))

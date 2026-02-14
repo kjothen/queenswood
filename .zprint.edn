@@ -4,7 +4,9 @@
           "comment" [:flow-body {:style :respect-nl}]
           "with-system" :arg1-body
           "let-nom" :binding
-          "let-nom>" :binding}
+          "let-nom>" :binding
+          "when-anomaly?" [:arg1 {:respect-nl? true}]
+          "when-let-anomaly?" [:binding {:respect-nl? true}]}
  :map {:comma? false
        :lift-ns? false
        :nl-separator? false
