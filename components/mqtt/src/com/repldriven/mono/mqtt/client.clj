@@ -1,9 +1,22 @@
 (ns com.repldriven.mono.mqtt.client
   (:require
-    [clojurewerkz.machine-head.client :as mh]))
+    [clojurewerkz.machine-head.client :as mh]
+    [com.repldriven.mono.error.interface :as error]))
 
-(defn publish [client topic payload] (mh/publish client topic payload))
+(defn publish
+  "Publish a message to an MQTT topic. Returns nil on success or an anomaly on failure."
+  [client topic payload]
+  (try (mh/publish client topic payload)
+       nil
+       (catch Exception e
+         (error/fail :mqtt/publish-failed
+                     (format "Failed to publish to topic %s: %s" topic (.getMessage e))))))
 
 (defn subscribe
+  "Subscribe to MQTT topics. Returns nil on success or an anomaly on failure."
   [client topics-and-qos handler-fn]
-  (mh/subscribe client topics-and-qos handler-fn))
+  (try (mh/subscribe client topics-and-qos handler-fn)
+       nil
+       (catch Exception e
+         (error/fail :mqtt/subscribe-failed
+                     (format "Failed to subscribe to topics %s: %s" topics-and-qos (.getMessage e))))))

@@ -48,3 +48,21 @@
            ~category
            ~message
            {:exception e# :message (.getMessage e#) :cause (.getCause e#)}))))
+
+;; Side-effect error handling
+(defmacro when-anomaly?
+  "Execute operations sequentially. If any returns an anomaly, call error-fn with it."
+  [ops error-fn]
+  (let [bindings (vec (mapcat (fn [op] [`_# op]) ops))]
+    `(let [result# (nom/let-nom ~bindings :ok)]
+       (when (nom/anomaly? result#)
+         (~error-fn result#)))))
+
+(defmacro when-let-anomaly?
+  "Execute let-nom bindings. If the result is an anomaly, call error-fn with it."
+  {:clj-kondo/lint-as 'clojure.core/let}
+  [bindings error-fn]
+  `(let [result# (nom/let-nom ~bindings nil)]
+     (when (nom/anomaly? result#)
+       (~error-fn result#))
+     result#))

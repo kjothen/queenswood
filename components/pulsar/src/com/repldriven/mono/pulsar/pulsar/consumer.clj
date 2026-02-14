@@ -4,6 +4,7 @@
     [com.repldriven.mono.pulsar.pulsar.message :as message]
 
     [com.repldriven.mono.log.interface :as log]
+    [com.repldriven.mono.error.interface :as error]
 
     [clojure.core.async :as async]
     [clojure.java.data :as j])
@@ -61,3 +62,12 @@
                     :else (recur))))
           (finally (async/close! c) (async/close! stop))))
     {:c c :stop stop}))
+
+(defn acknowledge
+  "Acknowledge a message. Returns nil on success or an anomaly on failure."
+  [^Consumer consumer ^Message message]
+  (try (.acknowledge consumer message)
+       nil
+       (catch PulsarClientException e
+         (error/fail :pulsar/consumer-message-ack-fail
+                     (format "Failed to acknowledge message: %s" (.getMessage e))))))

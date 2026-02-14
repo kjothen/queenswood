@@ -9,6 +9,7 @@
     [com.repldriven.mono.env.interface :as env]
     [com.repldriven.mono.error.interface :as error]
     [com.repldriven.mono.http-client.interface :as http]
+    [com.repldriven.mono.log.interface :as log]
     [com.repldriven.mono.server.interface :as server]
     [com.repldriven.mono.system.interface :as system]
 
@@ -45,14 +46,13 @@
      (loop []
        ;; Receive messages from pulsar
        (when-let [{:keys [message data]} (async/<!! c)]
-         (try (let [correlation-id (:correlation-id data)
-                    reply-topic (str "replies/" correlation-id)
-                    response {:type (:type data) :id (:id data)}]
-                ;; Send reply message to MQTT
-                (mqtt/publish mqtt-client reply-topic (json/write-str response))
-                (.acknowledge consumer message))
-              (catch Exception e
-                (println "Error processing command:" (.getMessage e))))
+         (let [correlation-id (:correlation-id data)
+               reply-topic (str "replies/" correlation-id)
+               response {:type (:type data) :id (:id data)}]
+           (error/when-anomaly?
+             [(mqtt/publish mqtt-client reply-topic (json/write-str response))
+              (pulsar/acknowledge consumer message)]
+             (log/anomaly {:message "Error processing command"})))
          (recur))))
     {:stop stop}))
 
@@ -69,12 +69,10 @@
             command {:type "test-command" :id "123"}
             command-response {:data command}]
         (binding [*base-url* (server/http-local-url jetty)]
-          (error/let-nom
-            ;; command
+          (error/when-let-anomaly?
             [res (send-http-command command)
              _ (is (= 200 (:status res)) "Should receive 200 OK")
              body (http/res->edn res)
-             _ (is (= command-response body) "Should receive echoed command")
-             result :success]
-            (is (not (error/anomaly? result)))))
+             _ (is (= command-response body) "Should receive echoed command")]
+            #(is (not (error/anomaly? %)))))
         (async/>!! stop :stop)))))

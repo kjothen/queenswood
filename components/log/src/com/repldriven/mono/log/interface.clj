@@ -13,3 +13,5 @@
 (defmacro error [& args] `(core/error ~@args))
 
 (defmacro errorf [& args] `(core/errorf ~@args))
+
+(defn anomaly [& args] (apply core/anomaly args))

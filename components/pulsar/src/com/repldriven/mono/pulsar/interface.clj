@@ -21,6 +21,9 @@
 (defn receive [consumer schema timeout-ms]
   (consumer/receive consumer schema timeout-ms))
 
+(defn acknowledge [consumer message]
+  (consumer/acknowledge consumer message))
+
 ;;;; reader
 (defn read [reader schema timeout-ms] (reader/read reader schema timeout-ms))
 
