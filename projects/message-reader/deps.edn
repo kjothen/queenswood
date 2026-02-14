@@ -16,6 +16,9 @@
         component/pulsar {:local/root "../../components/pulsar"}
         component/avro {:local/root "../../components/avro"}
         component/system {:local/root "../../components/system"}
+
+        component/test {:local/root "../../components/test"}
+
         component/testcontainers {:local/root "../../components/testcontainers"}
         component/utility {:local/root "../../components/utility"}
         base/pulsar-reader {:local/root "../../bases/pulsar-reader"}

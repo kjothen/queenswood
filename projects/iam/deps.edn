@@ -15,6 +15,7 @@
         component/server {:local/root "../../components/server"}
         component/db {:local/root "../../components/db"}
         component/system {:local/root "../../components/system"}
+        component/test {:local/root "../../components/test"}
         component/testcontainers
         {:local/root "../../components/testcontainers"}
         component/utility {:local/root "../../components/utility"}
