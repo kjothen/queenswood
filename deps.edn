@@ -9,7 +9,10 @@
   :dev
   {:extra-deps
    {components/accounts {:local/root "components/accounts"}
+    components/avro {:local/root "components/avro"}
     components/cli {:local/root "components/cli"}
+    components/command {:local/root "components/command"}
+    components/db {:local/root "components/db"}
     components/encryption {:local/root "components/encryption"}
     components/env {:local/root "components/env"}
     components/error {:local/root "components/error"}
@@ -21,10 +24,8 @@
     components/mqtt {:local/root "components/mqtt"}
     components/pulsar {:local/root "components/pulsar"}
     components/server {:local/root "components/server"}
-    components/avro {:local/root "components/avro"}
     components/spec-malli {:local/root "components/spec-malli"}
     components/spec-spec {:local/root "components/spec-spec"}
-    components/db {:local/root "components/db"}
     components/system {:local/root "components/system"}
     components/test {:local/root "components/test"}
     components/testcontainers {:local/root "components/testcontainers"}
@@ -34,6 +35,7 @@
     bases/build {:local/root "bases/build"}
     bases/external-test-runner {:local/root "bases/external-test-runner"}
     bases/iam-api {:local/root "bases/iam-api"}
+    bases/pulsar-mqtt-processor {:local/root "bases/pulsar-mqtt-processor"}
     bases/pulsar-reader {:local/root "bases/pulsar-reader"}
     bases/symmetric-key-api {:local/root "bases/symmetric-key-api"}
     org.clojure/clojure {:mvn/version "1.12.4"}
