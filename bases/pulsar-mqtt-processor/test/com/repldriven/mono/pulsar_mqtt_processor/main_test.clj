@@ -7,9 +7,11 @@
    [com.repldriven.mono.pulsar-mqtt-processor.main :as SUT]
 
    [com.repldriven.mono.error.interface :as error]
+   [com.repldriven.mono.log.interface :as log]
    [com.repldriven.mono.system.interface :as system]
 
    [clojure.core.async :as async]
+   [clojure.pprint :as pp]
    [clojure.test :refer [deftest is testing]]))
 
 (deftest main-test
@@ -27,4 +29,7 @@
           (async/>!! stop :stop)
 
           ;; Stop system
-          (is (not (error/anomaly? (system/stop sys)))))))))
+          (let [result (system/stop sys)]
+            (when (error/anomaly? result)
+              (println (with-out-str (pp/pprint result)))
+              (is (not (error/anomaly? result))))))))))

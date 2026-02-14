@@ -1,15 +1,12 @@
 (ns com.repldriven.mono.error.interface
   (:require
-    [de.otto.nom.core :as nom]))
+   [de.otto.nom.core :as nom]))
 
 ;; Predicates
 (defn anomaly? [x] (nom/anomaly? x))
 
 ;; Creation
-(defn fail
-  ([category] (nom/fail category))
-  ([category message] (nom/fail category message))
-  ([category message data] (nom/fail category message data)))
+(defn fail [category & more] (apply nom/fail category more))
 
 ;; Introspection
 (defn kind [x] (nom/kind x))
@@ -46,8 +43,8 @@
         (catch Exception e#
           (fail
            ~category
-           ~message
-           {:exception e# :message (.getMessage e#) :cause (.getCause e#)}))))
+           {:message ~message
+            :exception e#}))))
 
 ;; Side-effect error handling
 (defmacro with-anomaly?

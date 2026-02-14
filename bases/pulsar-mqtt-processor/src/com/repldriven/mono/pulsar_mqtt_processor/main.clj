@@ -29,7 +29,7 @@
   Returns: {:c channel :stop channel}
   - Send to :stop channel to stop processing"
   [sys]
-  (let [consumer (system/instance sys [:pulsar :consumer])
+  (let [consumer (system/instance sys [:pulsar :consumers :c1])
         mqtt-client (system/instance sys [:mqtt :client])
         schemas (system/instance sys [:pulsar :schemas])
         schema (pulsar/schema->avro (get-in schemas [:command :schema]))]
