@@ -50,7 +50,7 @@
            {:exception e# :message (.getMessage e#) :cause (.getCause e#)}))))
 
 ;; Side-effect error handling
-(defmacro when-anomaly?
+(defmacro with-anomaly?
   "Execute operations sequentially. If any returns an anomaly, call error-fn with it."
   [ops error-fn]
   (let [bindings (vec (mapcat (fn [op] [`_# op]) ops))]
@@ -58,7 +58,7 @@
        (when (nom/anomaly? result#)
          (~error-fn result#)))))
 
-(defmacro when-let-anomaly?
+(defmacro with-let-anomaly?
   "Execute let-nom bindings. If the result is an anomaly, call error-fn with it."
   [bindings error-fn]
   `(let [result# (nom/let-nom ~bindings nil)]

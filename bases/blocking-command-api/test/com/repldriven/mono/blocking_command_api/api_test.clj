@@ -50,7 +50,7 @@
           (let [correlation-id (:correlation-id data)
                 reply-topic (str "replies/" correlation-id)
                 response {:type (:type data) :id (:id data)}]
-            (error/when-anomaly?
+            (error/with-anomaly?
              [(mqtt/publish mqtt-client reply-topic (json/write-str response))
               (pulsar/acknowledge consumer message)]
              (log/anomaly {:message "Error processing command"})))
@@ -70,7 +70,7 @@
             command {:type "test-command" :id "123"}
             command-response {:data command}]
         (binding [*base-url* (server/http-local-url jetty)]
-          (error/when-let-anomaly?
+          (error/with-let-anomaly?
            [res (send-http-command command)
             _ (is (= 200 (:status res))
                   "Should receive 200 OK")
