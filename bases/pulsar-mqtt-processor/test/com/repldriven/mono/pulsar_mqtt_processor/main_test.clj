@@ -30,6 +30,7 @@
 
           ;; Stop system
           (let [result (system/stop sys)]
+            (async/>!! stop :stop)
             (when (error/anomaly? result)
               (println (with-out-str (pp/pprint result)))
               (is (not (error/anomaly? result))))))))))
