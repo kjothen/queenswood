@@ -9,3 +9,5 @@
 (defn subscribe
   [client topics-and-qos handler-fn]
   (client/subscribe client topics-and-qos handler-fn))
+
+(defn unsubscribe [client topics] (client/unsubscribe client topics))

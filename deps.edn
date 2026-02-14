@@ -8,7 +8,8 @@
   :build {:extra-deps #:io.github.clojure{tools.build {:mvn/version "0.10.12"}}}
   :dev
   {:extra-deps
-   {components/cli {:local/root "components/cli"}
+   {components/accounts {:local/root "components/accounts"}
+    components/cli {:local/root "components/cli"}
     components/encryption {:local/root "components/encryption"}
     components/env {:local/root "components/env"}
     components/error {:local/root "components/error"}
@@ -45,7 +46,7 @@
                                                   "bases/external-test-runner"}}
          :main-opts ["-m" "polylith.clj.core.poly-cli.core"]}
   :format/zprint {:extra-deps {zprint/zprint {:mvn/version "1.2.9"}}
-                 :main-opts ["-m" "zprint.main"]}
+                  :main-opts ["-m" "zprint.main"]}
   :lint/clj-kondo {:extra-deps {clj-kondo/clj-kondo {:mvn/version "2024.11.14"}}
                    :main-opts ["-m" "clj-kondo.main"]}
   :test {:extra-deps {http-kit.fake/http-kit.fake {:mvn/version "0.2.2"}}

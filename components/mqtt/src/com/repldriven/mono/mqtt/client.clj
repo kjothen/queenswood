@@ -20,3 +20,12 @@
        (catch Exception e
          (error/fail :mqtt/subscribe-failed
                      (format "Failed to subscribe to topics %s: %s" topics-and-qos (.getMessage e))))))
+
+(defn unsubscribe
+  "Unsubscribe from MQTT topics. Returns nil on success or an anomaly on failure."
+  [client topics]
+  (try (mh/unsubscribe client topics)
+       nil
+       (catch Exception e
+         (error/fail :mqtt/unsubscribe-failed
+                     (format "Failed to unsubscribe from topics %s: %s" topics (.getMessage e))))))
