@@ -1,17 +1,17 @@
 (ns com.repldriven.mono.server.system-test
   (:require
-    [com.repldriven.mono.env.interface :as env]
-    [com.repldriven.mono.error.interface :as error]
-    [com.repldriven.mono.http-client.interface :as http-client]
-    [com.repldriven.mono.log.interface :as log]
-    [com.repldriven.mono.server.interface :as server]
-    [com.repldriven.mono.system.interface :as system]
+   [com.repldriven.mono.env.interface :as env]
+   [com.repldriven.mono.error.interface :as error]
+   [com.repldriven.mono.http-client.interface :as http-client]
+   [com.repldriven.mono.log.interface :as log]
+   [com.repldriven.mono.server.interface :as server]
+   [com.repldriven.mono.system.interface :as system]
 
-    [reitit.http :as http]
-    [reitit.ring :as ring]
+   [reitit.http :as http]
+   [reitit.ring :as ring]
 
-    [clojure.test :refer [deftest is testing]]
-    [clojure.walk :as walk]))
+   [clojure.test :refer [deftest is testing]]
+   [clojure.walk :as walk]))
 
 (deftest server-test
   (testing "Server component system configuration and lifecycle"
@@ -19,9 +19,7 @@
       (system/with-system
         [sys
          (error/nom->
-          (env/config
-           "classpath:com/repldriven/mono/server/application-test.yml"
-           :test)
+          (env/config "classpath:server/application-test.yml" :test)
           system/defs
           (assoc-in [:system/defs :server :handler] (constantly handler))
           system/start)]
@@ -43,9 +41,7 @@
       (system/with-system
         [sys
          (error/nom->
-          (env/config
-           "classpath:com/repldriven/mono/server/application-test.yml"
-           :test)
+          (env/config "classpath:server/application-test.yml" :test)
           system/defs
           (assoc-in [:system/defs :server :handler] app)
           system/start)]

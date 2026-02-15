@@ -2,6 +2,8 @@ handler: !system/required-component
 
 interceptors: !system/component
   system/component-kind: server/interceptors
+  got: "me"
+  this: "time"
 
 jetty-adapter: !system/component
   system/component-kind: server/jetty-adapter

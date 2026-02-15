@@ -1,14 +1,23 @@
 container: !system/component
   system/component-kind: vault/container
-  exposed-ports: [8200]
+  exposed-ports:
+    - 8200
+  secret-in-vault:
+    - secret/testing
+    - top_secret=password1
+    - db_password=dbpassword1
   vault-token: my-root-token
 
 container-api-port: !system/component
   system/component-kind: vault/container-api-port
-  container: !system/local-ref container
+  container: !system/ref vault.container
   exposed-port: 8200
 
 container-api-url: !system/component
   system/component-kind: vault/container-api-url
-  port: !system/local-ref container-api-port
+  port: !system/ref vault.container-api-port
   scheme: http
+
+client: !system/component
+  system/component-kind: vault/client
+  api-url: !system/ref vault.container-api-url

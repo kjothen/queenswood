@@ -12,6 +12,7 @@ lspconfig.yamlls.setup({
 				"!port",
 				"!profile mapping",
 
+				"!pulsar/access-mode",
 				"!pulsar/crypto-failure-action",
 				"!pulsar/message-id",
 				"!pulsar/schema",

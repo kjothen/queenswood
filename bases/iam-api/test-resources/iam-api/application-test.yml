@@ -1,3 +1,4 @@
 system:
-  db: !include testcontainers/postgres-test.yml
+  postgres: !include testcontainers/postgres-test.yml
+  db: !include db/postgres/datasource-test.yml
   server: !include server/server-test.yml
