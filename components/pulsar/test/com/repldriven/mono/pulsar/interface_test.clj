@@ -1,24 +1,22 @@
 (ns ^:eftest/synchronized com.repldriven.mono.pulsar.interface-test
   (:refer-clojure :exclude [send])
   (:require
-    com.repldriven.mono.testcontainers.interface
+   com.repldriven.mono.testcontainers.interface
 
-    [com.repldriven.mono.pulsar.interface :as SUT]
+   [com.repldriven.mono.pulsar.interface :as SUT]
 
-    [com.repldriven.mono.env.interface :as env]
-    [com.repldriven.mono.error.interface :as error]
-    [com.repldriven.mono.http-client.interface :as http]
-    [com.repldriven.mono.avro.interface :as avro]
-    [com.repldriven.mono.system.interface :as system]
+   [com.repldriven.mono.env.interface :as env]
+   [com.repldriven.mono.error.interface :as error]
+   [com.repldriven.mono.http-client.interface :as http]
+   [com.repldriven.mono.avro.interface :as avro]
+   [com.repldriven.mono.system.interface :as system]
 
-    [clojure.core.async :as async]
-    [clojure.java.io :as io]
-    [clojure.string :as string]
+   [clojure.core.async :as async]
+   [clojure.string :as string]
 
-    [clojure.test :refer [deftest is testing]])
+   [clojure.test :refer [deftest is testing]])
   (:import
-    (org.apache.pulsar.client.admin PulsarAdmin)
-    (org.apache.pulsar.client.api Consumer Message Reader)))
+   (org.apache.pulsar.client.admin PulsarAdmin)))
 
 (defn- test-system
   []
@@ -50,8 +48,8 @@
 (deftest encrypted-messages-matching-consumer-key-test
   (testing "Pulsar consumer with a matching decryption key can consume"
     (system/with-system [sys (test-system)]
-      (let [producer (system/instance sys [:pulsar :producer])
-            consumer (system/instance sys [:pulsar :consumers :c1])
+      (let [producer (system/instance sys [:pulsar :producers :user])
+            consumer (system/instance sys [:pulsar :consumers :user-1])
             schemas (system/instance sys [:pulsar :schemas])
             schema (SUT/schema->avro (get-in schemas [:user :schema]))
             msgs [{:name "Alice" :age 30} {:name "Bob" :age 25}
@@ -59,7 +57,7 @@
             props {"message" "user-msg"}]
         ;; Send messages to pulsar
         (doseq [msg msgs]
-          (SUT/send producer (avro/serialize schema msg) {"properties" props}))
+          (SUT/send producer msg {"properties" props}))
         ;; Receive messages from pulsar
         (let [{:keys [c stop]} (SUT/receive consumer schema 50)
               timeout (async/timeout 5000)
@@ -77,8 +75,8 @@
 (deftest encrypted-messages-mismatched-consumer-key-test
   (testing "Pulsar consumer with a mismatching decryption key cannot consume"
     (system/with-system [sys (test-system)]
-      (let [producer (system/instance sys [:pulsar :producer])
-            consumer (system/instance sys [:pulsar :consumers :c2])
+      (let [producer (system/instance sys [:pulsar :producers :user])
+            consumer (system/instance sys [:pulsar :consumers :user-2])
             schemas (system/instance sys [:pulsar :schemas])
             schema (SUT/schema->avro (get-in schemas [:user :schema]))
             msgs [{:name "Alice" :age 30} {:name "Bob" :age 25}
@@ -86,7 +84,7 @@
             props {"message" "user-msg"}]
         ;; Send messages to pulsar
         (doseq [msg msgs]
-          (SUT/send producer (avro/serialize schema msg) {"properties" props}))
+          (SUT/send producer msg {"properties" props}))
         ;; Receive messages from pulsar
         (let [{:keys [c stop]} (SUT/receive consumer schema 50)
               timeout (async/timeout 5000)
@@ -103,8 +101,8 @@
 (deftest encrypted-messages-reader-test
   (testing "Pulsar reader with a matching decryption key can receive"
     (system/with-system [sys (test-system)]
-      (let [producer (system/instance sys [:pulsar :producer])
-            reader (system/instance sys [:pulsar :reader])
+      (let [producer (system/instance sys [:pulsar :producers :user])
+            reader (system/instance sys [:pulsar :readers :user])
             schemas (system/instance sys [:pulsar :schemas])
             schema (SUT/schema->avro (get-in schemas [:user :schema]))
             msgs [{:name "Alice" :age 30} {:name "Bob" :age 25}
@@ -112,7 +110,7 @@
             props {"message" "user-msg"}]
         ;; Send messages to pulsar
         (doseq [msg msgs]
-          (SUT/send producer (avro/serialize schema msg) {"properties" props}))
+          (SUT/send producer msg {"properties" props}))
         ;; Read messages from pulsar
         (let [{:keys [c stop]} (SUT/read reader schema 50)
               timeout (async/timeout 5000)
@@ -121,4 +119,4 @@
                               timeout])]
           (async/>!! stop :stop)
           (is (some? recv-msgs) "Should receive messages")
-          (is (= msgs (mapv :data recv-msgs)) "Messages don't match"))))))
+          (is (= msgs (mapv :data recv-msgs)) "Messages don'tmatch"))))))

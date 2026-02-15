@@ -1,16 +1,16 @@
 (ns com.repldriven.mono.pulsar.pulsar.schemas
   (:refer-clojure :exclude [name namespace resolve type])
   (:require
-    [clojure.data.json :as json]
-    [clojure.java.data :as j]
-    [clojure.java.io :as io]
-    [com.repldriven.mono.avro.interface :as avro])
+   [clojure.data.json :as json]
+   [clojure.java.data :as j]
+   [clojure.java.io :as io]
+   [com.repldriven.mono.avro.interface :as avro])
   (:import
-    (java.util Map)
-    (org.apache.pulsar.client.api Schema)
-    (org.apache.pulsar.client.api.schema SchemaDefinition)
-    (org.apache.pulsar.common.protocol.schema PostSchemaPayload)
-    (org.apache.pulsar.common.schema SchemaInfo)))
+   (java.util Map)
+   (org.apache.pulsar.client.api Schema)
+   (org.apache.pulsar.client.api.schema SchemaDefinition)
+   (org.apache.pulsar.common.protocol.schema PostSchemaPayload)
+   (org.apache.pulsar.common.schema SchemaInfo)))
 
 (defn- create-payload
   ^PostSchemaPayload [type schema properties]
@@ -76,11 +76,10 @@
 
 (defn create-schemas
   [coll]
-  (reduce-kv
-   (fn [m k {:keys [type schema properties]}]
-     (assoc m k (create-schema-entry type (read-schema schema) properties)))
-   {}
-   coll))
+  (into {} (doall (reduce-kv (fn [m k {:keys [type schema properties]}]
+                               (assoc m k (create-schema-entry type (read-schema schema) properties)))
+                             {}
+                             coll))))
 
 (defn resolve
   [schemas s]

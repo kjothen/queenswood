@@ -59,7 +59,7 @@
   {:system/start
    (fn [{:system/keys [config instance]}]
      (or instance
-         (reduce-kv (fn [m k v] (assoc m k (consumer/create v))) {} config)))
+         (into {} (map (fn [[k v]] [k (consumer/create v)]) config))))
    :system/stop (fn [{:system/keys [instance]}]
                   (when (some? instance)
                     (dorun (map (fn [[_ instance]]
@@ -91,10 +91,7 @@
 (def crypto-key-pair-file-readers
   {:system/start (fn [{:system/keys [config instance]}]
                    (or instance
-                       (reduce-kv (fn [m k v]
-                                    (assoc m k (crypto/key-pair-file-reader v)))
-                                  {}
-                                  config)))
+                       (into {} (map (fn [[k v]] [k (crypto/key-pair-file-reader v)]) config))))
    :system/config system/required-component})
 
 (def crypto-key-pair-file-reader
@@ -107,7 +104,7 @@
   {:system/start
    (fn [{:system/keys [config instance]}]
      (or instance
-         (reduce-kv (fn [m k v] (assoc m k (crypto/key-reader v))) {} config)))
+         (into {} (map (fn [[k v]] [k (crypto/key-reader v)]) config))))
    :system/config system/required-component})
 
 (def crypto-key-reader
@@ -132,11 +129,11 @@
   {:system/start
    (fn [{:system/keys [config instance]}]
      (or instance
-         (reduce-kv (fn [m k v] (assoc m k (producer/create v))) {} config)))
+         (into {} (map (fn [[k v]] [k (producer/create v)]) config))))
    :system/stop (fn [{:system/keys [instance]}]
                   (when (some? instance)
-                    (dorun (map (fn [[_ instance]]
-                                  (close-connection instance "producer"))
+                    (dorun (map (fn [[_ producer-map]]
+                                  (close-connection (:producer producer-map) "producer"))
                                 instance))))
    :system/config system/required-component})
 
@@ -144,7 +141,8 @@
   {:system/start (fn [{:system/keys [config instance]}]
                    (or instance (producer/create config)))
    :system/stop (fn [{:system/keys [instance]}]
-                  (close-connection instance "producer"))
+                  (when instance
+                    (close-connection (:producer instance) "producer")))
    :system/config {:client system/required-component
                    :conf system/required-component
                    :schemas nil}})
@@ -157,7 +155,7 @@
   {:system/start
    (fn [{:system/keys [config instance]}]
      (or instance
-         (reduce-kv (fn [m k v] (assoc m k (reader/create v))) {} config)))
+         (into {} (map (fn [[k v]] [k (reader/create v)]) config))))
    :system/stop (fn [{:system/keys [instance]}]
                   (when (some? instance)
                     (dorun (map (fn [[_ instance]]
@@ -199,4 +197,5 @@
 (def topics
   {:system/start (fn [{:system/keys [config instance]}]
                    (or instance (topics/create-topics config)))
+   :system/post-start (fn [_] (Thread/sleep 5000))
    :system/config system/required-component})

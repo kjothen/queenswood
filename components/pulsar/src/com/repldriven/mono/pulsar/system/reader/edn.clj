@@ -4,6 +4,7 @@
   (:import
     (org.apache.pulsar.client.api ConsumerCryptoFailureAction
                                   MessageId
+                                  ProducerAccessMode
                                   Schema
                                   SubscriptionType)))
 
@@ -60,6 +61,15 @@
     (throw (ex-info (format "Invalid value %s for tag %s" value tag)
                     {:tag tag :value value}))))
 
+(defn- access-mode
+  [_ tag value]
+  (case value
+    :Shared ProducerAccessMode/Shared
+    :Exclusive ProducerAccessMode/Exclusive
+    :WaitForExclusive ProducerAccessMode/WaitForExclusive
+    (throw (ex-info (format "Invalid value %s for tag %s" value tag)
+                    {:tag tag :value value}))))
+
 ;; edn-reader defmethods
 (defmethod env/edn-reader 'pulsar-crypto-failure-action
   [opts tag value]
@@ -76,3 +86,7 @@
 (defmethod env/edn-reader 'pulsar-subscription-type
   [opts tag value]
   (subscription-type opts tag value))
+
+(defmethod env/edn-reader 'pulsar-access-mode
+  [opts tag value]
+  (access-mode opts tag value))

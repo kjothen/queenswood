@@ -108,24 +108,38 @@ crypto-key-pair-generator: !system/component
     algorithm: RSA
     key-size: 512
 
+#producer: !system/component
+#  system/component-kind: pulsar/producer
+#  _: !system/local-ref topics
+#  client: !system/local-ref client
+#  conf:
+#    accessMode: !pulsar/access-mode Shared
+#    cryptoKeyReader: !system/local-ref crypto-key-readers.r1
+#    encryptionKeys: [tenant-key-1]
+#    schema: !pulsar/schema AUTO_PRODUCE_BYTES
+#    topicName: "persistent://tenant-1/namespace-1/topic-user"
+#  schemas: !system/local-ref schemas
+
 producers: !system/component
   system/component-kind: pulsar/producers
   command:
     _: !system/local-ref topics
     client: !system/local-ref client
     conf:
+      accessMode: !pulsar/access-mode Shared
       cryptoKeyReader: !system/local-ref crypto-key-readers.r1
       encryptionKeys: [tenant-key-1]
-      schema: !pulsar/schema AUTO_PRODUCE_BYTES
+      schema: !keyword command
       topicName: "persistent://tenant-1/namespace-1/topic-command"
     schemas: !system/local-ref schemas
   user:
     _: !system/local-ref topics
     client: !system/local-ref client
     conf:
+      accessMode: !pulsar/access-mode Shared
       cryptoKeyReader: !system/local-ref crypto-key-readers.r1
       encryptionKeys: [tenant-key-1]
-      schema: !pulsar/schema AUTO_PRODUCE_BYTES
+      schema: !keyword user
       topicName: "persistent://tenant-1/namespace-1/topic-user"
     schemas: !system/local-ref schemas
 
