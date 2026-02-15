@@ -1,0 +1,12 @@
+handler: !system/required-component
+
+interceptors: !system/component
+  system/component-kind: server/interceptors
+  datasource: !system/ref db.datasource
+
+jetty-adapter: !system/component
+  system/component-kind: server/jetty-adapter
+  handler: !system/local-ref handler
+  interceptors: !system/local-ref interceptors
+  options:
+    port: !port 0
