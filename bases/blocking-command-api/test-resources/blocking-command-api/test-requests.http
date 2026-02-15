@@ -1,5 +1,0 @@
-:PORT = 61996
-POST http://localhost::PORT/api/command
-Content-Type: application/json
-{ "data": { "type": "example", "id": "12345" } }
-

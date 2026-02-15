@@ -8,8 +8,6 @@ jetty-adapter: !system/component
   handler: !system/local-ref handler
   interceptors: !system/local-ref interceptors
   options:
-    join?: !profile
-      default: false
     port: !profile
       default: 80
       test: !port 0

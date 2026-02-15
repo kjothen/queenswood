@@ -1,22 +1,3 @@
 system:
   db: !include testcontainers/postgres-test.yml
-
-  db.datasource: !system/component
-    system/component-kind: db/datasource
-    database: test
-    dbtype: postgres
-    host: localhost
-    password: test
-    port: !system/ref db.container-mapped-exposed-port
-    user: test
-
   server: !include server/server-test.yml
-
-  # Override interceptors with datasource dependency
-  server.interceptors:
-    datasource: !system/ref db.datasource
-
-  # Override port
-  server.jetty-adapter:
-    options:
-      port: !port 0

@@ -11,7 +11,7 @@
 
 (defn- test-system
   []
-  (error/nom-> (env/config "classpath:mqtt/test-application.yml" :test)
+  (error/nom-> (env/config "classpath:mqtt/application-test.yml" :test)
                system/defs
                system/start))
 

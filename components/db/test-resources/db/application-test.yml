@@ -1,11 +1,3 @@
 system:
-  db: !include testcontainers/postgres-test.yml
-
-  db.datasource: !system/component
-    system/component-kind: db/datasource
-    database: test
-    dbtype: postgres
-    host: localhost
-    password: test
-    port: !system/ref db.container-mapped-exposed-port
-    user: test
+  postgres: !include testcontainers/postgres-test.yml
+  db: !include db/postgres/datasource-test.yml

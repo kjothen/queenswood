@@ -26,7 +26,7 @@
 
 (defn- test-system
   []
-  (error/nom-> (env/config "classpath:iam-api/test-application.yml" :test)
+  (error/nom-> (env/config "classpath:iam-api/application-test.yml" :test)
                system/defs
                (assoc-in [:system/defs :server :handler] api/app)
                system/start

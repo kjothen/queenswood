@@ -14,7 +14,7 @@
 
 (defn- test-system
   []
-  (error/nom-> (env/config "classpath:symmetric-key-api/test-application.yml"
+  (error/nom-> (env/config "classpath:symmetric-key-api/application-test.yml"
                            :test)
                system/defs
                (assoc-in [:system/defs :server :handler] api/app)

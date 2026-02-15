@@ -11,7 +11,7 @@
 
 (deftest main-test
   (testing "System should start and stop without anomalies"
-    (let [sys (SUT/start "classpath:symmetric-key-api/test-application.yml"
+    (let [sys (SUT/start "classpath:symmetric-key-api/application-test.yml"
                          :test)]
       (is (not (error/anomaly? sys)) "System should start")
       (is (system/system? sys) "System should be valid")

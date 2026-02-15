@@ -1,15 +1,15 @@
 (ns com.repldriven.mono.blocking-command-api.commands.routes
   (:require
-    [com.repldriven.mono.blocking-command-api.commands.handlers :as handlers]))
+   [com.repldriven.mono.blocking-command-api.commands.handlers :as handlers]))
 
 (defmacro RequestData [data] [:map [:data data]])
 
 (defmacro ResponseData [data] [:map [:data data]])
 
-(def Command [:map [:type string?] [:id string?]])
+(def Command [:map [:correlation_id string?] [:type string?] [:id string?]])
 (def CommandRequest (RequestData Command))
 
-(def CommandResult [:map [:type string?] [:id string?]])
+(def CommandResult [:map [:correlation_id string?] [:type string?] [:id string?]])
 (def CommandResponse (ResponseData CommandResult))
 
 (defn routes

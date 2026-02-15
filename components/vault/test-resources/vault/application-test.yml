@@ -1,13 +1,2 @@
 system:
   vault: !include testcontainers/vault-test.yml
-
-  # Override container with test-specific secrets
-  vault.container:
-    secret-in-vault:
-      - secret/testing
-      - top_secret=password1
-      - db_password=dbpassword1
-
-  vault.client: !system/component
-    system/component-kind: vault/client
-    api-url: !system/ref vault.container-api-url

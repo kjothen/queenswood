@@ -1,6 +1,5 @@
 container: !system/component
   system/component-kind: mqtt/container
-  docker-image-name: hivemq/hivemq-ce:latest
   exposed-port: 1883
 
 container-connection-uri: !system/component

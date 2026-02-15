@@ -1,23 +1,23 @@
 (ns com.repldriven.mono.pulsar.system.components
   (:refer-clojure :exclude [name namespace type])
   (:require
-    [com.repldriven.mono.pulsar.pulsar.admin :as admin]
-    [com.repldriven.mono.pulsar.pulsar.client :as client]
-    [com.repldriven.mono.pulsar.pulsar.consumer :as consumer]
-    [com.repldriven.mono.pulsar.pulsar.crypto :as crypto]
-    [com.repldriven.mono.pulsar.pulsar.namespaces :as namespaces]
-    [com.repldriven.mono.pulsar.pulsar.producer :as producer]
-    [com.repldriven.mono.pulsar.pulsar.reader :as reader]
-    [com.repldriven.mono.pulsar.pulsar.schemas :as schemas]
-    [com.repldriven.mono.pulsar.pulsar.tenants :as tenants]
-    [com.repldriven.mono.pulsar.pulsar.topics :as topics]
+   [com.repldriven.mono.pulsar.pulsar.admin :as admin]
+   [com.repldriven.mono.pulsar.pulsar.client :as client]
+   [com.repldriven.mono.pulsar.pulsar.consumer :as consumer]
+   [com.repldriven.mono.pulsar.pulsar.crypto :as crypto]
+   [com.repldriven.mono.pulsar.pulsar.namespaces :as namespaces]
+   [com.repldriven.mono.pulsar.pulsar.producer :as producer]
+   [com.repldriven.mono.pulsar.pulsar.reader :as reader]
+   [com.repldriven.mono.pulsar.pulsar.schemas :as schemas]
+   [com.repldriven.mono.pulsar.pulsar.tenants :as tenants]
+   [com.repldriven.mono.pulsar.pulsar.topics :as topics]
 
-    [com.repldriven.mono.log.interface :as log]
-    [com.repldriven.mono.system.interface :as system])
+   [com.repldriven.mono.log.interface :as log]
+   [com.repldriven.mono.system.interface :as system])
   (:import
-    (org.apache.pulsar.client.api PulsarClientException)
-    (org.apache.pulsar.client.admin PulsarAdminException)
-    (java.lang AutoCloseable)))
+   (org.apache.pulsar.client.api PulsarClientException)
+   (org.apache.pulsar.client.admin PulsarAdminException)
+   (java.lang AutoCloseable)))
 
 (defn- close-connection
   [^AutoCloseable instance n]
@@ -125,8 +125,20 @@
    :system/config system/required-component})
 
 ;; ---
-;; producer
+;; producer(s)
 ;; ---
+
+(def producers
+  {:system/start
+   (fn [{:system/keys [config instance]}]
+     (or instance
+         (reduce-kv (fn [m k v] (assoc m k (producer/create v))) {} config)))
+   :system/stop (fn [{:system/keys [instance]}]
+                  (when (some? instance)
+                    (dorun (map (fn [[_ instance]]
+                                  (close-connection instance "producer"))
+                                instance))))
+   :system/config system/required-component})
 
 (def producer
   {:system/start (fn [{:system/keys [config instance]}]
@@ -140,6 +152,18 @@
 ;; ---
 ;; reader
 ;; ---
+
+(def readers
+  {:system/start
+   (fn [{:system/keys [config instance]}]
+     (or instance
+         (reduce-kv (fn [m k v] (assoc m k (reader/create v))) {} config)))
+   :system/stop (fn [{:system/keys [instance]}]
+                  (when (some? instance)
+                    (dorun (map (fn [[_ instance]]
+                                  (close-connection instance "reader"))
+                                instance))))
+   :system/config system/required-component})
 
 (def reader
   {:system/start (fn [{:system/keys [config instance]}]

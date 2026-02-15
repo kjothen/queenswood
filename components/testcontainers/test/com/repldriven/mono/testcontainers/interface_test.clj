@@ -10,7 +10,7 @@
 
 (defn- test-system
   []
-  (error/nom-> (env/config "classpath:testcontainers/test-application.yml"
+  (error/nom-> (env/config "classpath:testcontainers/application-test.yml"
                            :test)
                system/defs
                system/start))

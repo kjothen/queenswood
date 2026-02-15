@@ -1,15 +1,2 @@
 system:
   db: !include testcontainers/postgres-test.yml
-
-  # Override with specific postgres version
-  db.container:
-    docker-image-name: postgres:16
-
-  db.datasource: !system/component
-    system/component-kind: db/datasource
-    database: test
-    dbtype: postgres
-    host: localhost
-    password: test
-    port: !system/ref db.container-mapped-exposed-port
-    user: test

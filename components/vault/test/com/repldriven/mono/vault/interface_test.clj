@@ -13,7 +13,7 @@
 
 (defn- test-system
   []
-  (error/nom-> (env/config "classpath:vault/test-application.yml" :test)
+  (error/nom-> (env/config "classpath:vault/application-test.yml" :test)
                system/defs
                system/start))
 
