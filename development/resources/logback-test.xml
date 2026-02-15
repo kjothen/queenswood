@@ -32,7 +32,7 @@
         <appender-ref ref="CONSOLE"/>
     </logger>
 
-    <logger name="org.eclipse" level="warn" additivity="false">
+    <logger name="org.eclipse" level="debug" additivity="false">
         <appender-ref ref="CONSOLE"/>
     </logger>
 
