@@ -76,20 +76,19 @@
   Args:
   - producer: Pulsar producer instance
   - mqtt-client: MQTT client instance
-  - schema: Pulsar Avro schema for command messages
   - command: Command data map
   - opts: Optional map with keys:
     - :timeout-ms - Timeout in milliseconds (default 10000)
 
   Returns: Response map or anomaly"
-  ([producer mqtt-client schema command]
-   (send producer mqtt-client schema command {}))
-  ([producer mqtt-client schema command opts]
+  ([producer mqtt-client command]
+   (send producer mqtt-client command {}))
+  ([producer mqtt-client command opts]
    (let [{:keys [timeout-ms] :or {timeout-ms 10000}} opts
          correlation-id (str (java.util.UUID/randomUUID))
          reply-topic (str "replies/" correlation-id)
          command-with-correlation (assoc command :correlation-id correlation-id)
-         send-result (pulsar/send producer schema command-with-correlation)]
+         send-result (pulsar/send producer command-with-correlation)]
      (if (error/anomaly? send-result)
        send-result
        (async/<!! (await-reply mqtt-client reply-topic timeout-ms))))))

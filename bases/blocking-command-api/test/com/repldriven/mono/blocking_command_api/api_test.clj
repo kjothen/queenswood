@@ -49,7 +49,9 @@
         (when-let [{:keys [message data]} (async/<!! c)]
           (let [correlation-id (:correlation_id data)
                 reply-topic (str "replies/" correlation-id)
-                response {:type (:type data) :id (:id data)}]
+                response {:correlation_id correlation-id
+                          :type (:type data)
+                          :id (:id data)}]
             (error/with-anomaly?
               [(mqtt/publish mqtt-client reply-topic (json/write-str response))
                (pulsar/acknowledge consumer message)]
