@@ -35,7 +35,6 @@
 (def admin
   {:system/start (fn [{:system/keys [config instance]}]
                    (or instance (admin/create config)))
-   :system/post-start (fn [_] (Thread/sleep 5000))
    :system/stop (fn [{:system/keys [instance]}]
                   (close-connection instance "admin"))
    :system/config {:service-http-url system/required-component}})
@@ -197,5 +196,4 @@
 (def topics
   {:system/start (fn [{:system/keys [config instance]}]
                    (or instance (topics/create-topics config)))
-   :system/post-start (fn [_] (Thread/sleep 5000))
    :system/config system/required-component})
