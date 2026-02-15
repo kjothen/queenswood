@@ -1,25 +1,13 @@
 system:
-  vault:
-    container: !system/component
-      system/component-kind: vault/container
-      exposed-ports:
-        - 8200
-      secret-in-vault:
-        - secret/testing
-        - top_secret=password1
-        - db_password=dbpassword1
-      vault-token: my-root-token
+  vault: !include testcontainers/vault-test.yml
 
-    container-api-port: !system/component
-      system/component-kind: vault/container-api-port
-      container: !system/ref vault.container
-      exposed-port: 8200
+  # Override container with test-specific secrets
+  vault.container:
+    secret-in-vault:
+      - secret/testing
+      - top_secret=password1
+      - db_password=dbpassword1
 
-    container-api-url: !system/component
-      system/component-kind: vault/container-api-url
-      port: !system/ref vault.container-api-port
-      scheme: http
-
-    client: !system/component
-      system/component-kind: vault/client
-      api-url: !system/ref vault.container-api-url
+  vault.client: !system/component
+    system/component-kind: vault/client
+    api-url: !system/ref vault.container-api-url

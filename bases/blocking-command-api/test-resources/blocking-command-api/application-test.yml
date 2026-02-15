@@ -1,4 +1,4 @@
 system:
-  mqtt: !include blocking-command-api/mqtt-test.yml
+  mqtt: !include testcontainers/mqtt-test.yml
   pulsar: !include blocking-command-api/pubsub-test.yml
   server: !include blocking-command-api/server-test.yml

@@ -1,19 +1,11 @@
 system:
-  db:
-    container: !system/component
-      system/component-kind: postgres/container
-      exposed-port: 5432
+  db: !include testcontainers/postgres-test.yml
 
-    container-mapped-exposed-port: !system/component
-      system/component-kind: postgres/container-mapped-exposed-port
-      container: !system/local-ref container
-      exposed-port: 5432
-
-    datasource: !system/component
-      system/component-kind: db/datasource
-      database: test
-      dbtype: postgres
-      host: localhost
-      password: test
-      port: !system/local-ref container-mapped-exposed-port
-      user: test
+  db.datasource: !system/component
+    system/component-kind: db/datasource
+    database: test
+    dbtype: postgres
+    host: localhost
+    password: test
+    port: !system/ref db.container-mapped-exposed-port
+    user: test

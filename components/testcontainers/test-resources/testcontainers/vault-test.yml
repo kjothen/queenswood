@@ -1,0 +1,14 @@
+container: !system/component
+  system/component-kind: vault/container
+  exposed-ports: [8200]
+  vault-token: my-root-token
+
+container-api-port: !system/component
+  system/component-kind: vault/container-api-port
+  container: !system/local-ref container
+  exposed-port: 8200
+
+container-api-url: !system/component
+  system/component-kind: vault/container-api-url
+  port: !system/local-ref container-api-port
+  scheme: http

@@ -1,19 +1,2 @@
 system:
-  server:
-    handler: !system/required-component
-
-    interceptors: !system/component
-      system/component-kind: server/interceptors
-      got: me
-      this: time
-
-    jetty-adapter: !system/component
-      system/component-kind: server/jetty-adapter
-      handler: !system/ref server.handler
-      interceptors: !system/ref server.interceptors
-      options:
-        join?: !profile
-          default: false
-        port: !profile
-          default: 80
-          test: !port 0
+  server: !include server/server-test.yml

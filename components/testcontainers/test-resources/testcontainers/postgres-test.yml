@@ -1,0 +1,8 @@
+container: !system/component
+  system/component-kind: postgres/container
+  exposed-port: 5432
+
+container-mapped-exposed-port: !system/component
+  system/component-kind: postgres/container-mapped-exposed-port
+  container: !system/local-ref container
+  exposed-port: 5432

@@ -1,3 +1,3 @@
 system:
-  mqtt: !include pulsar-mqtt-processor/mqtt-test.yml
+  mqtt: !include testcontainers/mqtt-test.yml
   pulsar: !include pulsar-mqtt-processor/pubsub-test.yml

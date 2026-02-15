@@ -1,0 +1,15 @@
+handler: !system/required-component
+
+interceptors: !system/component
+  system/component-kind: server/interceptors
+
+jetty-adapter: !system/component
+  system/component-kind: server/jetty-adapter
+  handler: !system/local-ref handler
+  interceptors: !system/local-ref interceptors
+  options:
+    join?: !profile
+      default: false
+    port: !profile
+      default: 80
+      test: !port 0

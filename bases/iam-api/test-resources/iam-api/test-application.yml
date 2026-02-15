@@ -1,33 +1,22 @@
 system:
-  db:
-    container: !system/component
-      system/component-kind: postgres/container
-      exposed-port: 5432
+  db: !include testcontainers/postgres-test.yml
 
-    container-mapped-exposed-port: !system/component
-      system/component-kind: postgres/container-mapped-exposed-port
-      container: !system/local-ref container
-      exposed-port: 5432
+  db.datasource: !system/component
+    system/component-kind: db/datasource
+    database: test
+    dbtype: postgres
+    host: localhost
+    password: test
+    port: !system/ref db.container-mapped-exposed-port
+    user: test
 
-    datasource: !system/component
-      system/component-kind: db/datasource
-      database: test
-      dbtype: postgres
-      host: localhost
-      password: test
-      port: !system/local-ref container-mapped-exposed-port
-      user: test
+  server: !include server/server-test.yml
 
-  server:
-    handler: !system/required-component
+  # Override interceptors with datasource dependency
+  server.interceptors:
+    datasource: !system/ref db.datasource
 
-    interceptors: !system/component
-      system/component-kind: server/interceptors
-      datasource: !system/ref db.datasource
-
-    jetty-adapter: !system/component
-      system/component-kind: server/jetty-adapter
-      handler: !system/ref server.handler
-      interceptors: !system/ref server.interceptors
-      options:
-        port: !port 0
+  # Override port
+  server.jetty-adapter:
+    options:
+      port: !port 0
