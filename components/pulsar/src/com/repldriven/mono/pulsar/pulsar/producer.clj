@@ -14,6 +14,7 @@
                                   PulsarClient
                                   PulsarClientException
                                   Schema)
+    (org.apache.pulsar.common.schema SchemaType)
     (org.apache.pulsar.shade.org.apache.avro.generic GenericData$Record
                                                      GenericRecord)))
 
@@ -21,17 +22,24 @@
   [^ProducerBuilder producer ks]
   (reduce #(.addEncryptionKey ^ProducerBuilder %1 %2) producer ks))
 
+(defn- pulsar-schema->avro-schema
+  "Extract the Avro schema from a Pulsar Schema if it's an AVRO type."
+  [^Schema pulsar-schema]
+  (when (and pulsar-schema
+             (= SchemaType/AVRO (.. pulsar-schema getSchemaInfo getType)))
+    (some-> pulsar-schema
+            .getSchemaInfo
+            .toString
+            json/read-str
+            (get "schema")
+            json/write-str
+            org.apache.pulsar.shade.org.apache.avro.Schema/parse)))
+
 (defn- map->generic-record
-  "Convert a Clojure map to an Avro GenericRecord using the provided schema."
-  [^Schema pulsar-schema data]
-  (when (map? data)
-    (let [schema-info (.getSchemaInfo pulsar-schema)
-          schema-def-str (.toString schema-info)
-          schema-def-json (json/read-str schema-def-str)
-          avro-schema-map (get schema-def-json "schema")
-          avro-schema-json-str (json/write-str avro-schema-map)
-          avro-schema (org.apache.pulsar.shade.org.apache.avro.Schema/parse ^String avro-schema-json-str)
-          ^GenericRecord record (GenericData$Record. avro-schema)]
+  "Convert a Clojure map to an Avro GenericRecord using the provided Avro schema."
+  [avro-schema data]
+  (when (and avro-schema (map? data))
+    (let [^GenericRecord record (GenericData$Record. avro-schema)]
       (doseq [[k v] data]
         (.put record (name k) v))
       record)))
@@ -53,36 +61,38 @@
              ^ProducerBuilder builder-with-conf
              (cond-> builder
                (some? cryptoKeyReader) (.cryptoKeyReader cryptoKeyReader)
-               (some? encryptionKeys) (add-encryption-keys encryptionKeys))]
+               (some? encryptionKeys) (add-encryption-keys encryptionKeys))
+             avro-schema (pulsar-schema->avro-schema resolved-schema)]
          {:producer (.create builder-with-conf)
-          :schema resolved-schema})
+          :schema resolved-schema
+          :avro-schema avro-schema})
        (catch PulsarClientException e
          (log/error (format "Failed to create pulsar producer, %s" e)))))
 
 (defn send
   ([producer-map data]
-   (let [{:keys [^Producer producer schema]} producer-map
-         converted-data (if (and schema (map? data))
-                          (map->generic-record schema data)
+   (let [{:keys [^Producer producer avro-schema]} producer-map
+         converted-data (if avro-schema
+                          (map->generic-record avro-schema data)
                           data)]
      (.send producer converted-data)))
   ([producer-map data opts]
-   (let [{:keys [^Producer producer schema]} producer-map
-         converted-data (if (and schema (map? data))
-                          (map->generic-record schema data)
+   (let [{:keys [^Producer producer avro-schema]} producer-map
+         converted-data (if avro-schema
+                          (map->generic-record avro-schema data)
                           data)]
      (.. producer newMessage (loadConf opts) (value converted-data) send))))
 
 (defn send-async
   ([producer-map data]
-   (let [{:keys [^Producer producer schema]} producer-map
-         converted-data (if (and schema (map? data))
-                          (map->generic-record schema data)
+   (let [{:keys [^Producer producer avro-schema]} producer-map
+         converted-data (if avro-schema
+                          (map->generic-record avro-schema data)
                           data)]
      (.sendAsync producer converted-data)))
   ([producer-map data opts]
-   (let [{:keys [^Producer producer schema]} producer-map
-         converted-data (if (and schema (map? data))
-                          (map->generic-record schema data)
+   (let [{:keys [^Producer producer avro-schema]} producer-map
+         converted-data (if avro-schema
+                          (map->generic-record avro-schema data)
                           data)]
      (.. producer newMessage (loadConf opts) (value converted-data) sendAsync))))
