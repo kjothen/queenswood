@@ -23,6 +23,7 @@
         component/pulsar {:local/root "../../components/pulsar"}
         component/spec-malli {:local/root "../../components/spec-malli"}
         component/system {:local/root "../../components/system"}
+        component/telemetry {:local/root "../../components/telemetry"}
         component/test {:local/root "../../components/test"}
         component/testcontainers {:local/root "../../components/testcontainers"}
         component/utility {:local/root "../../components/utility"}

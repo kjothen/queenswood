@@ -34,8 +34,9 @@
         (migrator/migrate spec "accounts/init-changelog.sql")
 
         ;; Test the processor
-        (let [command {"type" "open-account"
-                       "id" "cmd-1"
+        (let [command {"id" "cmd-1"
+                       "type" "open-account"
+                       "correlation_id" "corr-1"
                        "data" (json/write-str {"account-id" "acc-1"
                                                "name" "Test Account"
                                                "currency" "USD"})}]
@@ -61,16 +62,19 @@
         (migrator/migrate spec "accounts/init-changelog.sql")
 
         ;; First create an account
-        (let [open-command {"type" "open-account"
-                            "id" "cmd-1"
+        (let [open-command {"id" "cmd-1"
+                            "type" "open-account"
+                            "correlation_id" "corr-2"
                             "data" (json/write-str {"account-id" "acc-2"
                                                     "name" "Account to Close"
                                                     "currency" "USD"})}]
           (error/with-let-anomaly?
             [_ (SUT/process processor open-command)
              ;; Now close the account
-             close-command {"type" "close-account"
-                            "id" "cmd-2"
+             close-command {"id" "cmd-2"
+                            "type" "close-account"
+                            "correlation_id" "corr-2"
+                            "causation_id" "cmd-1"
                             "data" (json/write-str {"account-id" "acc-2"})}
              result (SUT/process processor close-command)
              _ (is (= :ok (:status result)))
@@ -92,17 +96,22 @@
 
         ;; Create and close an account first
         (error/with-let-anomaly?
-          [_ (SUT/process processor {"type" "open-account"
-                                     "id" "cmd-1"
+          [_ (SUT/process processor {"id" "cmd-1"
+                                     "type" "open-account"
+                                     "correlation_id" "corr-3"
                                      "data" (json/write-str {"account-id" "acc-3"
                                                              "name" "Account to Reopen"
                                                              "currency" "USD"})})
-           _ (SUT/process processor {"type" "close-account"
-                                     "id" "cmd-2"
+           _ (SUT/process processor {"id" "cmd-2"
+                                     "type" "close-account"
+                                     "correlation_id" "corr-3"
+                                     "causation_id" "cmd-1"
                                      "data" (json/write-str {"account-id" "acc-3"})})
            ;; Now reopen the account
-           reopen-command {"type" "reopen-account"
-                           "id" "cmd-3"
+           reopen-command {"id" "cmd-3"
+                           "type" "reopen-account"
+                           "correlation_id" "corr-3"
+                           "causation_id" "cmd-2"
                            "data" (json/write-str {"account-id" "acc-3"})}
            result (SUT/process processor reopen-command)
            _ (is (= :ok (:status result)))
@@ -124,14 +133,17 @@
 
         ;; Create an account first
         (error/with-let-anomaly?
-          [_ (SUT/process processor {"type" "open-account"
-                                     "id" "cmd-1"
+          [_ (SUT/process processor {"id" "cmd-1"
+                                     "type" "open-account"
+                                     "correlation_id" "corr-3"
                                      "data" (json/write-str {"account-id" "acc-4"
                                                              "name" "Account to Suspend"
                                                              "currency" "EUR"})})
            ;; Now suspend the account
-           suspend-command {"type" "suspend-account"
-                            "id" "cmd-2"
+           suspend-command {"id" "cmd-2"
+                            "type" "suspend-account"
+                            "correlation_id" "corr-4"
+                            "causation_id" "cmd-1"
                             "data" (json/write-str {"account-id" "acc-4"})}
            result (SUT/process processor suspend-command)
            _ (is (= :ok (:status result)))
@@ -153,8 +165,9 @@
 
         ;; Create and suspend an account first
         (error/with-let-anomaly?
-          [_ (SUT/process processor {"type" "open-account"
-                                     "id" "cmd-1"
+          [_ (SUT/process processor {"id" "cmd-1"
+                                     "type" "open-account"
+                                     "correlation_id" "corr-3"
                                      "data" (json/write-str {"account-id" "acc-5"
                                                              "name" "Account to Unsuspend"
                                                              "currency" "GBP"})})
@@ -162,8 +175,10 @@
                                      "id" "cmd-2"
                                      "data" (json/write-str {"account-id" "acc-5"})})
            ;; Now unsuspend the account
-           unsuspend-command {"type" "unsuspend-account"
-                              "id" "cmd-3"
+           unsuspend-command {"id" "cmd-3"
+                              "type" "unsuspend-account"
+                              "correlation_id" "corr-5"
+                              "causation_id" "cmd-2"
                               "data" (json/write-str {"account-id" "acc-5"})}
            result (SUT/process processor unsuspend-command)
            _ (is (= :ok (:status result)))
@@ -185,14 +200,17 @@
 
         ;; Create an account first
         (error/with-let-anomaly?
-          [_ (SUT/process processor {"type" "open-account"
-                                     "id" "cmd-1"
+          [_ (SUT/process processor {"id" "cmd-1"
+                                     "type" "open-account"
+                                     "correlation_id" "corr-3"
                                      "data" (json/write-str {"account-id" "acc-6"
                                                              "name" "Account to Archive"
                                                              "currency" "CAD"})})
            ;; Now archive the account
-           archive-command {"type" "archive-account"
-                            "id" "cmd-2"
+           archive-command {"id" "cmd-2"
+                            "type" "archive-account"
+                            "correlation_id" "corr-6"
+                            "causation_id" "cmd-1"
                             "data" (json/write-str {"account-id" "acc-6"})}
            result (SUT/process processor archive-command)
            _ (is (= :ok (:status result)))
@@ -214,7 +232,7 @@
         (migrator/migrate spec "accounts/init-changelog.sql")
 
         ;; Test the processor
-        (let [command {"type" "invalid-command" "id" "cmd-3"}
+        (let [command {"id" "cmd-3" "type" "invalid-command" "correlation_id" "corr-7"}
               result (SUT/process processor command)]
           (is (error/anomaly? result))
           (is (= :accounts/process-command (error/kind result))))))))

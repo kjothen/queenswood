@@ -1,0 +1,4 @@
+{:paths ["src"]
+ :deps {com.github.steffan-westcott/clj-otel-api {:mvn/version "0.2.7"}}
+ :aliases {:test {:extra-paths ["test"]
+                  :extra-deps {}}}}

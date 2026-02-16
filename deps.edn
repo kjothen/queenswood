@@ -28,6 +28,7 @@
     components/spec-malli {:local/root "components/spec-malli"}
     components/spec-spec {:local/root "components/spec-spec"}
     components/system {:local/root "components/system"}
+    components/telemetry {:local/root "components/telemetry"}
     components/test {:local/root "components/test"}
     components/testcontainers {:local/root "components/testcontainers"}
     components/utility {:local/root "components/utility"}
