@@ -12,21 +12,7 @@
    [com.repldriven.mono.pulsar.pulsar.tenants :as tenants]
    [com.repldriven.mono.pulsar.pulsar.topics :as topics]
 
-   [com.repldriven.mono.log.interface :as log]
-   [com.repldriven.mono.system.interface :as system])
-  (:import
-   (org.apache.pulsar.client.api PulsarClientException)
-   (org.apache.pulsar.client.admin PulsarAdminException)
-   (java.lang AutoCloseable)))
-
-(defn- close-connection
-  [^AutoCloseable instance n]
-  (try (log/infof "Closing pulsar %s connection" n)
-       (.close instance)
-       (catch PulsarClientException e
-         (log/error (format "Failed to close pulsar %s connection, %s" n e)))
-       (catch PulsarAdminException e
-         (log/error (format "Failed to close pulsar %s connection, %s" n e)))))
+   [com.repldriven.mono.system.interface :as system]))
 
 ;; ---
 ;; admin
@@ -36,7 +22,7 @@
   {:system/start (fn [{:system/keys [config instance]}]
                    (or instance (admin/create config)))
    :system/stop (fn [{:system/keys [instance]}]
-                  (close-connection instance "admin"))
+                  (admin/close instance))
    :system/config {:service-http-url system/required-component}})
 
 ;; ---
@@ -47,7 +33,7 @@
   {:system/start (fn [{:system/keys [config instance]}]
                    (or instance (client/create config)))
    :system/stop (fn [{:system/keys [instance]}]
-                  (close-connection instance "client"))
+                  (client/close instance))
    :system/config {:service-url system/required-component}})
 
 ;; ---
@@ -62,7 +48,7 @@
    :system/stop (fn [{:system/keys [instance]}]
                   (when (some? instance)
                     (dorun (map (fn [[_ instance]]
-                                  (close-connection instance "consumer"))
+                                  (consumer/close instance))
                                 instance))))
    :system/config system/required-component})
 
@@ -70,7 +56,7 @@
   {:system/start (fn [{:system/keys [config instance]}]
                    (or instance (consumer/create config)))
    :system/stop (fn [{:system/keys [instance]}]
-                  (close-connection instance "consumer"))
+                  (consumer/close instance))
    :system/config {:client system/required-component
                    :conf system/required-component}})
 
@@ -81,9 +67,7 @@
 (def crypto-key-pair-generator
   {:system/start
    (fn [{:system/keys [config instance]}]
-     (or instance
-         (do (log/info "Creating pulsar crypto-key-pair-generator: " config)
-             (crypto/key-pair-generator config))))
+     (or instance (crypto/key-pair-generator config)))
    :system/config system/required-component})
 
 ;; crypto-key-pair-file-reader(s)
@@ -131,8 +115,8 @@
          (into {} (map (fn [[k v]] [k (producer/create v)]) config))))
    :system/stop (fn [{:system/keys [instance]}]
                   (when (some? instance)
-                    (dorun (map (fn [[_ producer-map]]
-                                  (close-connection (:producer producer-map) "producer"))
+                    (dorun (map (fn [[_ producer]]
+                                  (producer/close producer))
                                 instance))))
    :system/config system/required-component})
 
@@ -141,7 +125,7 @@
                    (or instance (producer/create config)))
    :system/stop (fn [{:system/keys [instance]}]
                   (when instance
-                    (close-connection (:producer instance) "producer")))
+                    (producer/close instance)))
    :system/config {:client system/required-component
                    :conf system/required-component
                    :schemas nil}})
@@ -158,7 +142,7 @@
    :system/stop (fn [{:system/keys [instance]}]
                   (when (some? instance)
                     (dorun (map (fn [[_ instance]]
-                                  (close-connection instance "reader"))
+                                  (reader/close instance))
                                 instance))))
    :system/config system/required-component})
 
@@ -166,7 +150,7 @@
   {:system/start (fn [{:system/keys [config instance]}]
                    (or instance (reader/create config)))
    :system/stop (fn [{:system/keys [instance]}]
-                  (close-connection instance "reader"))
+                  (reader/close instance))
    :system/config {:client system/required-component
                    :conf system/required-component
                    :schemas nil}})

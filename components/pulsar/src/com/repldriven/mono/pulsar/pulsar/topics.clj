@@ -2,6 +2,7 @@
   (:require
     [com.repldriven.mono.pulsar.pulsar.schemas :as schemas]
 
+    [com.repldriven.mono.error.interface :as error]
     [com.repldriven.mono.log.interface :as log])
   (:import
     (org.apache.pulsar.client.admin PulsarAdmin Schemas Topics)
@@ -30,10 +31,12 @@
 
 (defn create-topics
   [{:keys [^PulsarAdmin admin schemas topics]}]
-  (log/info "Ensure pulsar topics exist:" topics)
-  (doall (mapv
-          (fn [{:keys [topic] :as opts}]
-            (let [resolved-opts
-                  (update opts :schema #(schemas/resolve-payload schemas %))]
-              (create admin topic (dissoc resolved-opts :topic))))
-          topics)))
+  (log/info "Creating Pulsar topics:" topics)
+  (error/try-nom :pulsar/topics-create
+                 "Failed to create Pulsar topics"
+                 (doall (mapv
+                         (fn [{:keys [topic] :as opts}]
+                           (let [resolved-opts
+                                 (update opts :schema #(schemas/resolve-payload schemas %))]
+                             (create admin topic (dissoc resolved-opts :topic))))
+                         topics))))

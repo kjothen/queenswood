@@ -4,6 +4,7 @@
     [com.repldriven.mono.pulsar.pulsar.schemas :as schemas]
     [com.repldriven.mono.pulsar.pulsar.message :as message]
 
+    [com.repldriven.mono.error.interface :as error]
     [com.repldriven.mono.log.interface :as log]
 
     [clojure.core.async :as async]
@@ -19,23 +20,24 @@
 
 (defn create
   ^Reader [{:keys [^PulsarClient client conf schemas]}]
-  (try (log/info "Opening pulsar reader")
-       (let [{:keys [cryptoKeyReader schema startMessageId]} conf
-             manual-conf [:cryptoKeyReader :schema :startMessageId]
-             conf-str-keys (into {} (map (fn [[k v]] [(name k) v]) conf))
-             auto-conf
-             (j/to-java Map (apply dissoc conf-str-keys (map name manual-conf)))
-             instance (if (some? schema)
-                        (.. client (newReader (schemas/resolve schemas schema)))
-                        (.. client newReader))
-             ^ReaderBuilder builder (.. instance (loadConf auto-conf))
-             ^ReaderBuilder builder-with-conf
-             (cond-> builder
-               (some? cryptoKeyReader) (.cryptoKeyReader cryptoKeyReader)
-               (some? startMessageId) (.startMessageId startMessageId))]
-         (.create builder-with-conf))
-       (catch PulsarClientException e
-         (log/error (format "Failed to open pulsar reader, %s" e)))))
+  (log/info "Creating Pulsar reader:" conf schemas)
+  (error/try-nom-ex :pulsar/reader-create
+                    PulsarClientException
+                    "Failed to create Pulsar reader"
+                    (let [{:keys [cryptoKeyReader schema startMessageId]} conf
+                          manual-conf [:cryptoKeyReader :schema :startMessageId]
+                          conf-str-keys (into {} (map (fn [[k v]] [(name k) v]) conf))
+                          auto-conf
+                          (j/to-java Map (apply dissoc conf-str-keys (map name manual-conf)))
+                          instance (if (some? schema)
+                                     (.. client (newReader (schemas/resolve schemas schema)))
+                                     (.. client newReader))
+                          ^ReaderBuilder builder (.. instance (loadConf auto-conf))
+                          ^ReaderBuilder builder-with-conf
+                          (cond-> builder
+                            (some? cryptoKeyReader) (.cryptoKeyReader cryptoKeyReader)
+                            (some? startMessageId) (.startMessageId startMessageId))]
+                      (.create builder-with-conf))))
 
 (defn read
   "Continuously read messages from a Pulsar reader and put them on a channel.
@@ -62,3 +64,11 @@
                     :else (recur))))
           (finally (async/close! c) (async/close! stop))))
     {:c c :stop stop}))
+
+(defn close
+  [^Reader reader]
+  (log/info "Closing Pulsar reader connection")
+  (error/try-nom-ex :pulsar/reader-close
+                    PulsarClientException
+                    "Failed to close Pulsar reader connection"
+                    (.close reader)))

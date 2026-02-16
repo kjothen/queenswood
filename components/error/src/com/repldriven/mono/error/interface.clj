@@ -46,6 +46,16 @@
            {:message ~message
             :exception e#}))))
 
+(defmacro try-nom-ex
+  "Like try-nom but catches a specific exception type."
+  [category exception-type message & body]
+  `(try ~@body
+        (catch ~exception-type e#
+          (fail
+           ~category
+           {:message ~message
+            :exception e#}))))
+
 ;; Side-effect error handling
 (defmacro with-anomaly?
   "Execute operations sequentially. If any returns an anomaly, call error-fn with it."

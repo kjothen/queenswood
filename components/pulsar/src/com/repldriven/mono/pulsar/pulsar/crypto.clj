@@ -1,6 +1,7 @@
 (ns com.repldriven.mono.pulsar.pulsar.crypto
   (:require
     [com.repldriven.mono.encryption.interface :as encryption]
+    [com.repldriven.mono.error.interface :as error]
     [com.repldriven.mono.log.interface :as log]
 
     [clojure.java.io :as io])
@@ -16,58 +17,62 @@
 
 (defn- read-file-as-bytes
   [f]
-  (if-let [h (some-> f
-                     io/resource
-                     io/file)]
-    (do (log/info "Loading file: " f)
-        (some-> h
-                slurp
-                .getBytes))
-    (log/error "Unable to load file: " f)))
+  (log/info "Reading Pulsar crypto key pair file:" f)
+  (-> f
+      io/resource
+      io/file
+      slurp
+      .getBytes))
 
 ;; TODO: ->der-string does not work, require ->pem-string instead
 (defn key-pair-generator
   [named-kps]
-  (reduce-kv (fn [m k v]
-               (assoc m
-                      k
-                      (let [kp (encryption/create-key-pair v)]
-                        {:public-key (-> kp
-                                         (get :public-key)
-                                         (encryption/public-key->der-string))
-                         :private-key
-                         (-> kp
-                             (get :private-key)
-                             (encryption/private-key->der-string))})))
-             {}
-             named-kps))
+  (error/try-nom :pulsar/crypto-key-pair-generator
+                 "Failed to generate Pulsar crypto key pairs"
+                 (reduce-kv (fn [m k v]
+                              (assoc m
+                                     k
+                                     (let [kp (encryption/create-key-pair v)]
+                                       {:public-key (-> kp
+                                                        (get :public-key)
+                                                        (encryption/public-key->der-string))
+                                        :private-key
+                                        (-> kp
+                                            (get :private-key)
+                                            (encryption/private-key->der-string))})))
+                            {}
+                            named-kps)))
 
 (defn key-pair-file-reader
   [named-kps]
-  (reduce-kv (fn [m k v]
-               (assoc m
-                      k
-                      {:public-key (read-file-as-bytes (:public-key v))
-                       :private-key (read-file-as-bytes (:private-key v))}))
-             {}
-             named-kps))
+  (error/try-nom :pulsar/crypto-key-pair-file-reader
+                 "Failed to read Pulsar crypto key pair files"
+                 (reduce-kv (fn [m k v]
+                              (assoc m
+                                     k
+                                     {:public-key (read-file-as-bytes (:public-key v))
+                                      :private-key (read-file-as-bytes (:private-key v))}))
+                            {}
+                            named-kps)))
 
 (defn- key->encryption-key-info
   [k]
-  (when (some? k) (doto (EncryptionKeyInfo.) (.setKey k))))
+  (doto (EncryptionKeyInfo.) (.setKey k)))
 
 (defn key-reader
   [named-kps]
-  (reify
-   CryptoKeyReader
-     (^EncryptionKeyInfo getPublicKey
-       [_this ^String keyName ^Map _metadata]
-       (key->encryption-key-info (get (get-crypto-key-pair keyName named-kps)
-                                      :public-key)))
-     (^EncryptionKeyInfo getPrivateKey
-       [_this ^String keyName ^Map _metadata]
-       (key->encryption-key-info (get (get-crypto-key-pair keyName named-kps)
-                                      :private-key)))))
+  (error/try-nom :pulsar/crypto-key-reader
+                 "Failed to create Pulsar crypto key reader"
+                 (reify
+                  CryptoKeyReader
+                    (^EncryptionKeyInfo getPublicKey
+                      [_this ^String keyName ^Map _metadata]
+                      (key->encryption-key-info (get (get-crypto-key-pair keyName named-kps)
+                                                     :public-key)))
+                    (^EncryptionKeyInfo getPrivateKey
+                      [_this ^String keyName ^Map _metadata]
+                      (key->encryption-key-info (get (get-crypto-key-pair keyName named-kps)
+                                                     :private-key))))))
 
 (comment
   (let [key-name "tenant-key-1"

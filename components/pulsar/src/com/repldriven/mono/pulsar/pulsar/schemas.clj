@@ -4,7 +4,9 @@
    [clojure.data.json :as json]
    [clojure.java.data :as j]
    [clojure.java.io :as io]
-   [com.repldriven.mono.avro.interface :as avro])
+   [com.repldriven.mono.avro.interface :as avro]
+   [com.repldriven.mono.error.interface :as error]
+   [com.repldriven.mono.log.interface :as log])
   (:import
    (java.util Map)
    (org.apache.pulsar.client.api Schema)
@@ -59,11 +61,12 @@
 
 (defn- load-avsc
   [filename]
-  (some-> filename
-          io/resource
-          io/file
-          slurp
-          json/read-str))
+  (log/info "Loading Pulsar schema file:" filename)
+  (-> filename
+      io/resource
+      io/file
+      slurp
+      json/read-str))
 
 (defn- read-schema
   [file-or-ref]
@@ -76,25 +79,32 @@
 
 (defn create-schemas
   [coll]
-  (into {} (doall (reduce-kv (fn [m k {:keys [type schema properties]}]
-                               (assoc m k (create-schema-entry type (read-schema schema) properties)))
-                             {}
-                             coll))))
+  (log/info "Creating Pulsar schemas:" (keys coll))
+  (error/try-nom :pulsar/schemas-create
+                 "Failed to create Pulsar schemas"
+                 (into {} (doall (reduce-kv (fn [m k {:keys [type schema properties]}]
+                                              (assoc m k (create-schema-entry type (read-schema schema) properties)))
+                                            {}
+                                            coll)))))
 
 (defn resolve
   [schemas s]
   (cond (keyword? s) (get-in schemas [s :schema])
-        (map? s) (let [{:keys [type schema properties]} s]
-                   (create-schema type schema properties))
+        (map? s) (error/try-nom :pulsar/schema-resolve
+                                "Failed to resolve Pulsar schema"
+                                (let [{:keys [type schema properties]} s]
+                                  (create-schema type schema properties)))
         :else s))
 
 (defn resolve-payload
   [schemas s]
   (cond (keyword? s) (get-in schemas [s :payload])
-        (map? s) (let [{:keys [type schema properties]} s]
-                   (create-payload type schema properties))
-        :else (throw (ex-info (format "Invalid value %s for schema payload" s)
-                              {:schema s}))))
+        (map? s) (error/try-nom :pulsar/schema-resolve-payload
+                                "Failed to resolve Pulsar schema payload"
+                                (let [{:keys [type schema properties]} s]
+                                  (create-payload type schema properties)))
+        :else (error/fail :pulsar/schema-resolve-payload-invalid
+                          (format "Invalid value for schema payload: %s" s))))
 
 (defn schema->avro
   "Converts a Pulsar Schema to an Avro schema for manual serialization.

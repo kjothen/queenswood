@@ -1,5 +1,6 @@
 (ns com.repldriven.mono.pulsar.pulsar.client
   (:require
+    [com.repldriven.mono.error.interface :as error]
     [com.repldriven.mono.log.interface :as log]
 
     [clojure.java.data.builder :as builder])
@@ -10,10 +11,19 @@
 
 (defn create
   ^PulsarClient [{:keys [service-url]}]
-  (try (log/info "Opening pulsar client connection:" service-url)
-       (builder/to-java PulsarClient
-                        (PulsarClient/builder)
-                        {:serviceUrl service-url}
-                        {:builder-class ClientBuilder})
-       (catch PulsarClientException e
-         (log/error (format "Failed to open pulsar client connection, %s" e)))))
+  (log/info "Creating Pulsar client:" service-url)
+  (error/try-nom-ex :pulsar/client-create
+                    PulsarClientException
+                    "Failed to create Pulsar client"
+                    (builder/to-java PulsarClient
+                                     (PulsarClient/builder)
+                                     {:serviceUrl service-url}
+                                     {:builder-class ClientBuilder})))
+
+(defn close
+  [^PulsarClient client]
+  (log/info "Closing Pulsar client connection")
+  (error/try-nom-ex :pulsar/client-close
+                    PulsarClientException
+                    "Failed to close Pulsar client connection"
+                    (.close client)))

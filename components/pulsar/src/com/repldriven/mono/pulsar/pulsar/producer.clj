@@ -3,6 +3,7 @@
   (:require
     [com.repldriven.mono.pulsar.pulsar.schemas :as schemas]
 
+    [com.repldriven.mono.error.interface :as error]
     [com.repldriven.mono.log.interface :as log]
 
     [clojure.data.json :as json]
@@ -27,13 +28,13 @@
   [^Schema pulsar-schema]
   (when (and pulsar-schema
              (= SchemaType/AVRO (.. pulsar-schema getSchemaInfo getType)))
-    (some-> pulsar-schema
-            .getSchemaInfo
-            .toString
-            json/read-str
-            (get "schema")
-            json/write-str
-            org.apache.pulsar.shade.org.apache.avro.Schema/parse)))
+    (-> pulsar-schema
+        .getSchemaInfo
+        .toString
+        json/read-str
+        (get "schema")
+        json/write-str
+        org.apache.pulsar.shade.org.apache.avro.Schema/parse)))
 
 (defn- map->generic-record
   "Convert a Clojure map to an Avro GenericRecord using the provided Avro schema."
@@ -44,55 +45,73 @@
         (.put record (name k) v))
       record)))
 
+(defn- serialize
+  "Serialize data to Avro GenericRecord if schema is present, otherwise return as-is."
+  [producer data]
+  (let [{:keys [avro-schema]} producer]
+    (if avro-schema
+      (map->generic-record avro-schema data)
+      data)))
+
 (defn create
   [{:keys [^PulsarClient client conf schemas]}]
-  (try (log/info "Creating pulsar producer" conf schemas)
-       (let [{:keys [cryptoKeyReader encryptionKeys schema]} conf
-             manual-conf [:cryptoKeyReader :encryptionKeys :schema]
-             conf-str-keys (into {} (map (fn [[k v]] [(name k) v]) conf))
-             auto-conf
-             (j/to-java Map (apply dissoc conf-str-keys (map name manual-conf)))
-             resolved-schema (when (some? schema)
-                              (schemas/resolve schemas schema))
-             instance (if resolved-schema
-                        (.. client (newProducer resolved-schema))
-                        (.. client newProducer))
-             ^ProducerBuilder builder (.. instance (loadConf auto-conf))
-             ^ProducerBuilder builder-with-conf
-             (cond-> builder
-               (some? cryptoKeyReader) (.cryptoKeyReader cryptoKeyReader)
-               (some? encryptionKeys) (add-encryption-keys encryptionKeys))
-             avro-schema (pulsar-schema->avro-schema resolved-schema)]
-         {:producer (.create builder-with-conf)
-          :schema resolved-schema
-          :avro-schema avro-schema})
-       (catch PulsarClientException e
-         (log/error (format "Failed to create pulsar producer, %s" e)))))
+  (log/info "Creating Pulsar producer:" conf schemas)
+  (error/try-nom-ex :pulsar/producer-create
+                    PulsarClientException
+                    "Failed to create Pulsar producer"
+                    (let [{:keys [cryptoKeyReader encryptionKeys schema]} conf
+                          manual-conf [:cryptoKeyReader :encryptionKeys :schema]
+                          conf-str-keys (into {} (map (fn [[k v]] [(name k) v]) conf))
+                          auto-conf
+                          (j/to-java Map (apply dissoc conf-str-keys (map name manual-conf)))
+                          resolved-schema (when (some? schema)
+                                           (schemas/resolve schemas schema))
+                          instance (if resolved-schema
+                                     (.. client (newProducer resolved-schema))
+                                     (.. client newProducer))
+                          ^ProducerBuilder builder (.. instance (loadConf auto-conf))
+                          ^ProducerBuilder builder-with-conf
+                          (cond-> builder
+                            (some? cryptoKeyReader) (.cryptoKeyReader cryptoKeyReader)
+                            (some? encryptionKeys) (add-encryption-keys encryptionKeys))
+                          avro-schema (pulsar-schema->avro-schema resolved-schema)]
+                      {:instance (.create builder-with-conf)
+                       :schema resolved-schema
+                       :avro-schema avro-schema})))
 
 (defn send
-  ([producer-map data]
-   (let [{:keys [^Producer producer avro-schema]} producer-map
-         converted-data (if avro-schema
-                          (map->generic-record avro-schema data)
-                          data)]
-     (.send producer converted-data)))
-  ([producer-map data opts]
-   (let [{:keys [^Producer producer avro-schema]} producer-map
-         converted-data (if avro-schema
-                          (map->generic-record avro-schema data)
-                          data)]
-     (.. producer newMessage (loadConf opts) (value converted-data) send))))
+  ([producer data]
+   (error/try-nom-ex :pulsar/producer-send
+                     PulsarClientException
+                     "Failed to send message to Pulsar"
+                     (let [{:keys [^Producer instance]} producer]
+                       (.send instance (serialize producer data)))))
+  ([producer data opts]
+   (error/try-nom-ex :pulsar/producer-send
+                     PulsarClientException
+                     "Failed to send message to Pulsar"
+                     (let [{:keys [^Producer instance]} producer]
+                       (.. instance newMessage (loadConf opts) (value (serialize producer data)) send)))))
 
 (defn send-async
-  ([producer-map data]
-   (let [{:keys [^Producer producer avro-schema]} producer-map
-         converted-data (if avro-schema
-                          (map->generic-record avro-schema data)
-                          data)]
-     (.sendAsync producer converted-data)))
-  ([producer-map data opts]
-   (let [{:keys [^Producer producer avro-schema]} producer-map
-         converted-data (if avro-schema
-                          (map->generic-record avro-schema data)
-                          data)]
-     (.. producer newMessage (loadConf opts) (value converted-data) sendAsync))))
+  ([producer data]
+   (error/try-nom-ex :pulsar/producer-send-async
+                     PulsarClientException
+                     "Failed to send async message to Pulsar"
+                     (let [{:keys [^Producer instance]} producer]
+                       (.sendAsync instance (serialize producer data)))))
+  ([producer data opts]
+   (error/try-nom-ex :pulsar/producer-send-async
+                     PulsarClientException
+                     "Failed to send async message to Pulsar"
+                     (let [{:keys [^Producer instance]} producer]
+                       (.. instance newMessage (loadConf opts) (value (serialize producer data)) sendAsync)))))
+
+(defn close
+  [producer]
+  (log/info "Closing Pulsar producer connection")
+  (error/try-nom-ex :pulsar/producer-close
+                    PulsarClientException
+                    "Failed to close Pulsar producer connection"
+                    (let [{:keys [^Producer instance]} producer]
+                      (.close instance))))
