@@ -41,3 +41,51 @@ vim.api.nvim_create_autocmd("BufWritePost", {
 	end,
 	desc = "Format Clojure files with zprint via babashka",
 })
+
+-- Disable JSON formatting for Avro schema files
+vim.api.nvim_create_autocmd("BufEnter", {
+	pattern = "*.avsc.json",
+	callback = function()
+		-- Disable formatting for this buffer
+		vim.b.disable_autoformat = true
+
+		-- If LSP is already attached, disable its formatting capability
+		local clients = vim.lsp.get_active_clients({ bufnr = 0 })
+		for _, client in ipairs(clients) do
+			if client.name == "jsonls" then
+				client.server_capabilities.documentFormattingProvider = false
+			end
+		end
+	end,
+	desc = "Disable formatting for Avro schema files",
+})
+
+-- Disable conform.nvim formatting for Avro schema files
+local conform_ok, _ = pcall(require, "conform")
+if conform_ok then
+	-- Override format_on_save to skip .avsc.json files
+	vim.api.nvim_create_autocmd("BufWritePre", {
+		pattern = "*",
+		callback = function(args)
+			local bufname = vim.api.nvim_buf_get_name(args.buf)
+			if bufname:match("%.avsc%.json$") then
+				-- Don't format this file
+				return
+			end
+		end,
+		desc = "Skip conform.nvim for Avro schema files",
+	})
+end
+
+-- Also prevent any format commands from working on these files
+vim.api.nvim_create_autocmd("FileType", {
+	pattern = "json",
+	callback = function()
+		local bufname = vim.api.nvim_buf_get_name(0)
+		if bufname:match("%.avsc%.json$") then
+			vim.bo.formatexpr = ""
+			vim.bo.formatprg = ""
+		end
+	end,
+	desc = "Disable all formatting for Avro schema files",
+})
