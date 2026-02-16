@@ -18,7 +18,7 @@
   [config-file profile]
   (error/nom-> (env/config config-file profile)
                system/defs
-               (assoc-in [:system/defs :server :handler] (constantly api/app))
+               (assoc-in [:system/defs :server :handler] api/app)
                system/start))
 
 (defn stop [system] (system/stop system))
