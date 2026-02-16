@@ -217,4 +217,4 @@
         (let [command {"type" "invalid-command" "id" "cmd-3"}
               result (SUT/process processor command)]
           (is (error/anomaly? result))
-          (is (= :accounts/unknown-command (error/kind result))))))))
+          (is (= :accounts/process-command (error/kind result))))))))

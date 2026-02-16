@@ -23,15 +23,18 @@
         command-data-str (get command "data")]
     (if-not command-data-str
       ;; No data field - check if it's an unknown command
-      (error/fail :accounts/unknown-command
-                  (str "Unknown command type: " command-type))
+      (error/fail :accounts/process-command
+                  {:message "Unknown command type"
+                   :command-type command-type})
       ;; Parse JSON data
       (error/let-nom
         [command-data (json/read-str command-data-str)
          schema (get specs/specs command-type)]
         (if (and schema (not (spec/validate schema command-data)))
-          (error/fail :accounts/invalid-command-data
-                      (str "Invalid command data: " (spec/humanize (spec/explain schema command-data))))
+          (error/fail :accounts/process-command
+                      {:message "Invalid command data"
+                       :command-type command-type
+                       :validation-errors (spec/humanize (spec/explain schema command-data))})
           (case command-type
             "open-account" (account-lifecycle/open config command-data)
             "close-account" (account-lifecycle/close config command-data)
@@ -41,5 +44,6 @@
             "archive-account" (account-lifecycle/archive config command-data)
 
             ;; Unknown command
-            (error/fail :accounts/unknown-command
-                        (str "Unknown command type: " command-type))))))))
+            (error/fail :accounts/process-command
+                        {:message "Unknown command type"
+                         :command-type command-type})))))))

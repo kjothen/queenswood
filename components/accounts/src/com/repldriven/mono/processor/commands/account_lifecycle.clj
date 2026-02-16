@@ -13,9 +13,12 @@
                                  account-id
                                  name
                                  currency])]
-    (if (error/anomaly? result)
-      result
-      {:status :ok :account-id account-id})))
+    (cond
+      (error/anomaly? result) result
+      (pos? (db/update-count result)) {:status :ok :account-id account-id}
+      :else (error/fail :accounts/account-open
+                        {:message "Failed to create account"
+                         :account-id account-id}))))
 
 (defn close
   "Close an existing account by updating its status to 'closed'."
@@ -30,8 +33,9 @@
     (cond
       (error/anomaly? result) result
       (pos? (db/update-count result)) {:status :ok :account-id account-id}
-      :else (error/fail :accounts/account-not-found
-                        (str "Account not found: " account-id)))))
+      :else (error/fail :accounts/account-close
+                        {:message "Account not found"
+                         :account-id account-id}))))
 
 (defn reopen
   "Reopen a closed account by updating its status to 'open'."
@@ -46,8 +50,9 @@
     (cond
       (error/anomaly? result) result
       (pos? (db/update-count result)) {:status :ok :account-id account-id}
-      :else (error/fail :accounts/account-not-found
-                        (str "Account not found: " account-id)))))
+      :else (error/fail :accounts/account-reopen
+                        {:message "Account not found"
+                         :account-id account-id}))))
 
 (defn suspend
   "Suspend an account by updating its status to 'suspended'."
@@ -62,8 +67,9 @@
     (cond
       (error/anomaly? result) result
       (pos? (db/update-count result)) {:status :ok :account-id account-id}
-      :else (error/fail :accounts/account-not-found
-                        (str "Account not found: " account-id)))))
+      :else (error/fail :accounts/account-suspend
+                        {:message "Account not found"
+                         :account-id account-id}))))
 
 (defn unsuspend
   "Unsuspend an account by updating its status to 'open'."
@@ -78,8 +84,9 @@
     (cond
       (error/anomaly? result) result
       (pos? (db/update-count result)) {:status :ok :account-id account-id}
-      :else (error/fail :accounts/account-not-found
-                        (str "Account not found: " account-id)))))
+      :else (error/fail :accounts/account-unsuspend
+                        {:message "Account not found"
+                         :account-id account-id}))))
 
 (defn archive
   "Archive an account by updating its status to 'archived'."
@@ -95,8 +102,9 @@
     (cond
       (error/anomaly? result) result
       (pos? (db/update-count result)) {:status :ok :account-id account-id}
-      :else (error/fail :accounts/account-not-found
-                        (str "Account not found: " account-id)))))
+      :else (error/fail :accounts/account-archive
+                        {:message "Account not found"
+                         :account-id account-id}))))
 
 (defn get
   "Retrieve an account by account-id."
