@@ -4,6 +4,7 @@
 
    [com.repldriven.mono.blocking-command-api.api :as api]
 
+   [com.repldriven.mono.command.interface :as command]
    [com.repldriven.mono.env.interface :as env]
    [com.repldriven.mono.error.interface :as error]
    [com.repldriven.mono.http-client.interface :as http]
@@ -38,26 +39,6 @@
                  :headers {"Content-Type" "application/json"}
                  :body (json/write-str {:data command})}))
 
-(defn- process-pulsar-reply-mqtt
-  "Simulates Processor - reads from Pulsar and replies via MQTT"
-  [^Consumer consumer mqtt-client schemas]
-  (let [schema (pulsar/schema->avro (get-in schemas [:command :schema]))
-        {:keys [c stop]} (pulsar/receive consumer schema 1000)]
-    (async/thread
-      (loop []
-       ;; Receive messages from pulsar
-        (when-let [{:keys [message data]} (async/<!! c)]
-          (let [correlation-id (:correlation_id data)
-                reply-topic (str "replies/" correlation-id)
-                response {:correlation_id correlation-id
-                          :type (:type data)
-                          :id (:id data)}]
-            (error/with-anomaly?
-              [(mqtt/publish mqtt-client reply-topic (json/write-str response))
-               (pulsar/acknowledge consumer message)]
-              (log/anomaly {:message "Error processing command"})))
-          (recur))))
-    {:stop stop}))
 
 (deftest request-pulsar-reply-mqtt-test
   (testing "Request-Reply with Pulsar and MQTT"
@@ -67,8 +48,10 @@
             consumer (system/instance sys [:pulsar :consumers :command])
             mqtt-client (system/instance sys [:mqtt :client])
             schemas (system/instance sys [:pulsar :schemas])
+            schema (pulsar/schema->avro (get-in schemas [:command :schema]))
+            process-fn identity
             {:keys [stop]}
-            (process-pulsar-reply-mqtt consumer mqtt-client schemas)
+            (command/process consumer mqtt-client schema process-fn {:timeout-ms 1000})
             command {:correlation_id "1" :type "test-command" :id "123"}
             command-response {:data command}]
         (binding [*base-url* (server/http-local-url jetty)]
