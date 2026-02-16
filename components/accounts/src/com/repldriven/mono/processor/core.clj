@@ -13,9 +13,9 @@
   {:datasource ...}
 
   Command structure:
-  {:type \"command-type\"
-   :id \"command-id\"
-   :data {...}}
+  {\"type\" \"command-type\"
+   \"id\" \"command-id\"
+   \"data\" \"json-string\"}
 
   Returns success response or anomaly."
   [config command]
