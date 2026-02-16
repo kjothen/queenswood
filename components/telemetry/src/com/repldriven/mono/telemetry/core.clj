@@ -4,9 +4,12 @@
   Provides tracing and metrics without direct clj-otel coupling in domain code."
   (:require
    [steffan-westcott.clj-otel.api.trace.span :as span]
-   [steffan-westcott.clj-otel.api.metrics.instrument :as instrument])
+   [steffan-westcott.clj-otel.api.metrics.instrument :as instrument]
+   [steffan-westcott.clj-otel.context :as context])
   (:import
-   (io.opentelemetry.api.trace Span)))
+   (io.opentelemetry.api.trace Span)
+   (io.opentelemetry.api GlobalOpenTelemetry)
+   (io.opentelemetry.context.propagation TextMapGetter)))
 
 (defmacro with-span
   "Add a span around code execution.
@@ -22,6 +25,27 @@
      (catch Exception _e#
        ;; Gracefully degrade if OTel not configured
        (do ~@body))))
+
+(defn with-span-parent
+  "Create a span with an explicit parent context.
+
+  Args:
+  - name: Span name
+  - parent-ctx: Parent OpenTelemetry context (from extract-parent-context)
+  - attrs: Span attributes map
+  - f: Function to execute within the span
+
+  Returns: Result of executing f"
+  [name parent-ctx attrs f]
+  (try
+    (span/with-span! {:name name
+                      :parent parent-ctx
+                      :kind :consumer
+                      :attributes attrs}
+      (f))
+    (catch Exception _e
+      ;; Gracefully degrade if OTel not configured
+      (f))))
 
 (defn add-event
   "Add an event to the current span with attributes.
@@ -87,3 +111,29 @@
                 (if (.isSampled span-context) 1 0))))
     (catch Exception _e
       nil)))
+
+(def ^:private command-getter
+  "TextMapGetter implementation for extracting trace context from command maps."
+  (reify TextMapGetter
+    (keys [_ _carrier]
+      ["traceparent" "tracestate"])
+    (get [_ carrier key]
+      (clojure.core/get carrier key))))
+
+(defn extract-parent-context
+  "Extract parent OpenTelemetry context from command with traceparent/tracestate.
+
+  Args:
+  - command: Map with string keys containing \"traceparent\" and \"tracestate\" fields
+
+  Returns: OpenTelemetry context with extracted trace information, or current context if extraction fails."
+  [command]
+  (try
+    (let [propagator (.getTextMapPropagator
+                      (.getPropagators (GlobalOpenTelemetry/get)))
+          carrier {"traceparent" (get command "traceparent")
+                   "tracestate" (get command "tracestate")}]
+      (.extract propagator (context/current) carrier command-getter))
+    (catch Exception _e
+      ;; Fallback to current context if extraction fails
+      (context/current))))

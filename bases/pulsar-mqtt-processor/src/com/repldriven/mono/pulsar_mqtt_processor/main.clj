@@ -10,6 +10,7 @@
    [com.repldriven.mono.processor.interface :as processor]
    [com.repldriven.mono.pulsar.interface :as pulsar]
    [com.repldriven.mono.system.interface :as system]
+   [com.repldriven.mono.telemetry.interface :as telemetry]
 
    [clojure.core.async :as async])
   (:gen-class))
@@ -33,7 +34,14 @@
         mqtt-client (system/instance sys [:mqtt :client])
         schemas (system/instance sys [:pulsar :schemas])
         schema (pulsar/schema->avro (get-in schemas [:command :schema]))
-        process-fn (partial processor/process (system/instance sys [:processor]))]
+        processor-instance (system/instance sys [:processor])
+        process-fn (fn [data]
+                     (let [parent-ctx (telemetry/extract-parent-context data)]
+                       (telemetry/with-span-parent
+                         "process-command"
+                         parent-ctx
+                         (select-keys data ["id" "command" "correlation_id" "causation_id"])
+                         #(processor/process processor-instance data))))]
     (command/process consumer mqtt-client schema process-fn)))
 
 (defn -main

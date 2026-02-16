@@ -14,6 +14,19 @@
   [name-and-attrs & body]
   `(core/with-span ~name-and-attrs ~@body))
 
+(defn with-span-parent
+  "Create a span with an explicit parent context.
+
+  Args:
+  - name: Span name
+  - parent-ctx: Parent OpenTelemetry context (from extract-parent-context)
+  - attrs: Span attributes map
+  - f: Function to execute within the span
+
+  Returns: Result of executing f"
+  [name parent-ctx attrs f]
+  (core/with-span-parent name parent-ctx attrs f))
+
 (defn add-event
   "Add an event to the current span."
   [name attrs]
@@ -31,6 +44,16 @@
   Returns nil if no active span or OpenTelemetry is not configured."
   []
   (core/inject-traceparent))
+
+(defn extract-parent-context
+  "Extract parent OpenTelemetry context from command with traceparent/tracestate.
+
+  Args:
+  - command: Map with string keys containing \"traceparent\" and \"tracestate\" fields
+
+  Returns: OpenTelemetry context with extracted trace information."
+  [command]
+  (core/extract-parent-context command))
 
 ;; Metrics
 (defn counter
