@@ -3,6 +3,7 @@
    com.repldriven.mono.testcontainers.interface
 
    [com.repldriven.mono.processor.interface :as SUT]
+   [com.repldriven.mono.processor.commands.account :as account]
    [com.repldriven.mono.db.interface :as sql]
    [com.repldriven.mono.env.interface :as env]
    [com.repldriven.mono.error.interface :as error]
@@ -24,7 +25,7 @@
     (sql/get-datasource datasource)))
 
 (deftest process-open-account-test
-  (testing "Processing open-account command should succeed"
+  (testing "Processing open-account command should create account in database"
     (system/with-system [sys (test-system)]
       (let [spec (db-spec sys)
             processor (system/instance sys [:processor])]
@@ -32,27 +33,51 @@
         (migrator/migrate spec "accounts/init-changelog.sql")
 
         ;; Test the processor
-        (let [command {:type "open-account" :id "cmd-1" :data {:account-id "acc-1"}}]
+        (let [command {:type "open-account"
+                       :id "cmd-1"
+                       :data {:account-id "acc-1"
+                              :name "Test Account"
+                              :currency "USD"}}]
           (error/with-let-anomaly?
             [result (SUT/process processor command)
              _ (is (= :ok (:status result)))
-             _ (is (= "cmd-1" (:command-id result)))]
+             _ (is (= "acc-1" (:account-id result)))
+             ;; Verify account was created in database
+             account (account/get processor "acc-1")
+             _ (is (some? account))
+             _ (is (= "acc-1" (:account_id account)))
+             _ (is (= "Test Account" (:name account)))
+             _ (is (= "open" (:status account)))
+             _ (is (= "USD" (:currency account)))]
             test/refute-anomaly))))))
 
 (deftest process-close-account-test
-  (testing "Processing close-account command should succeed"
+  (testing "Processing close-account command should update account status in database"
     (system/with-system [sys (test-system)]
       (let [spec (db-spec sys)
             processor (system/instance sys [:processor])]
         ;; Run migrations
         (migrator/migrate spec "accounts/init-changelog.sql")
 
-        ;; Test the processor
-        (let [command {:type "close-account" :id "cmd-2" :data {:account-id "acc-1"}}]
+        ;; First create an account
+        (let [open-command {:type "open-account"
+                            :id "cmd-1"
+                            :data {:account-id "acc-2"
+                                   :name "Account to Close"}}]
           (error/with-let-anomaly?
-            [result (SUT/process processor command)
+            [_ (SUT/process processor open-command)
+             ;; Now close the account
+             close-command {:type "close-account"
+                            :id "cmd-2"
+                            :data {:account-id "acc-2"}}
+             result (SUT/process processor close-command)
              _ (is (= :ok (:status result)))
-             _ (is (= "cmd-2" (:command-id result)))]
+             _ (is (= "acc-2" (:account-id result)))
+             ;; Verify account status was updated to closed
+             account (account/get processor "acc-2")
+             _ (is (some? account))
+             _ (is (= "acc-2" (:account_id account)))
+             _ (is (= "closed" (:status account)))]
             test/refute-anomaly))))))
 
 (deftest process-unknown-command-test

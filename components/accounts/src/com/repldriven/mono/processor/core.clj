@@ -1,5 +1,6 @@
 (ns com.repldriven.mono.processor.core
   (:require
+   [com.repldriven.mono.processor.commands.account :as account]
    [com.repldriven.mono.error.interface :as error]))
 
 (defn process
@@ -14,13 +15,12 @@
    :data {...}}
 
   Returns success response or anomaly."
-  [{:keys [datasource]} command]
-  (let [command-type (:type command)]
+  [config command]
+  (let [command-type (:type command)
+        command-data (:data command)]
     (case command-type
-      ;; Stub implementations - return success for now
-      ;; TODO: Use datasource to perform actual DB operations
-      "open-account" {:status :ok :command-id (:id command)}
-      "close-account" {:status :ok :command-id (:id command)}
+      "open-account" (account/open config command-data)
+      "close-account" (account/close config command-data)
 
       ;; Unknown command
       (error/fail :accounts/unknown-command
