@@ -37,7 +37,7 @@ admin: !system/component
 schemas: !system/component
   system/component-kind: pulsar/schemas
   command:
-    schema: avro/command.avsc.json
+    schema: command.avsc.json
     type: AVRO
   user:
     schema: avro/user.avsc.json

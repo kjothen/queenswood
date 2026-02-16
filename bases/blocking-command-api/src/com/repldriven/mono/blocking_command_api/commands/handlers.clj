@@ -1,25 +1,25 @@
 (ns com.repldriven.mono.blocking-command-api.commands.handlers
-  (:refer-clojure :exclude [type])
   (:require
-   [com.repldriven.mono.log.interface :as log]
    [com.repldriven.mono.mqtt.interface :as mqtt]
    [com.repldriven.mono.pulsar.interface :as pulsar]
+   [com.repldriven.mono.telemetry.interface :as telemetry]
 
-   [clojure.data.json :as json])
-  (:import
-   (java.util UUID)))
+   [clojure.data.json :as json]))
 
 (defn create
   [request]
-  (let [{:keys [parameters mqtt-client pulsar-producers]} request
+  (let [{:keys [parameters mqtt-client pulsar-producers telemetry/idempotency-key telemetry/correlation-id]} request
         {:keys [body]} parameters
-        {:keys [data]} body
-        {:keys [correlation_id type id]} data
-        reply-topic (str "replies/" correlation_id)
+        {:keys [data command]} (:data body)
+        reply-topic (str "replies/" correlation-id)
         response-promise (promise)
-        command {:correlation_id correlation_id
-                 :type type
-                 :id id}
+        command {:id idempotency-key
+                 :command command
+                 :correlation_id correlation-id
+                 :causation_id nil
+                 :traceparent (telemetry/inject-traceparent)
+                 :tracestate nil
+                 :data (when data (json/write-str data))}
         producer (get-in pulsar-producers [:command])]
 
     ;; Subscribe to MQTT reply topic

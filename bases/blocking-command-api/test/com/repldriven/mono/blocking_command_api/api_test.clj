@@ -11,7 +11,9 @@
    [com.repldriven.mono.pulsar.interface :as pulsar]
    [com.repldriven.mono.server.interface :as server]
    [com.repldriven.mono.system.interface :as system]
+   [com.repldriven.mono.telemetry.interface :as telemetry]
    [com.repldriven.mono.test.interface :as test]
+   [com.repldriven.mono.utility.interface :as util]
 
    [clojure.core.async :as async]
    [clojure.data.json :as json]
@@ -32,8 +34,10 @@
   [command]
   (http/request {:method :post
                  :url (str *base-url* "/api/command")
-                 :headers {"Content-Type" "application/json"}
-                 :body (json/write-str {:data command})}))
+                 :headers {"Content-Type" "application/json"
+                           "Idempotency-Key" (str (util/uuidv7))
+                           "Correlation-ID" (str (util/uuidv7))}
+                 :body (json/write-str {:command command :data nil})}))
 
 (defn command-processor
   "Simulates Processor - reads commands from Pulsar and replies via MQTT"
@@ -42,7 +46,14 @@
         mqtt-client (system/instance sys [:mqtt :client])
         schemas (system/instance sys [:pulsar :schemas])
         schema (pulsar/schema->avro (get-in schemas [:command :schema]))
-        process-fn identity]
+        process-fn (fn [command]
+                     (telemetry/with-span
+                       ["process-command"
+                        {:command/id (get command "id")
+                         :command/type (get command "type")
+                         :command/correlation-id (get command "correlation_id")
+                         :command/causation-id (get command "causation_id")}]
+                       command))]
     (command/process consumer mqtt-client schema process-fn {:timeout-ms 1000})))
 
 (deftest request-pulsar-reply-mqtt-test

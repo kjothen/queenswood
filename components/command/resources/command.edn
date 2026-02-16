@@ -1,0 +1,14 @@
+{:command [:map
+           [:id string?]
+           [:type string?]
+           [:correlation_id string?]
+           [:causation_id {:optional true} [:maybe string?]]
+           [:traceparent {:optional true} [:maybe string?]]
+           [:tracestate {:optional true} [:maybe string?]]
+           [:data {:optional true} [:maybe string?]]]
+
+ :command-request [:map any?]
+
+ :command-result [:map any?]
+
+ :command-response [:map any?]}

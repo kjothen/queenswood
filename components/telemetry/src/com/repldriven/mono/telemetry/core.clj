@@ -4,7 +4,9 @@
   Provides tracing and metrics without direct clj-otel coupling in domain code."
   (:require
    [steffan-westcott.clj-otel.api.trace.span :as span]
-   [steffan-westcott.clj-otel.api.metrics.instrument :as instrument]))
+   [steffan-westcott.clj-otel.api.metrics.instrument :as instrument])
+  (:import
+   (io.opentelemetry.api.trace Span)))
 
 (defmacro with-span
   "Add a span around code execution.
@@ -68,3 +70,20 @@
     (add-counter! my-counter 5 {:operation :batch-insert})"
   [counter value attrs]
   (instrument/add! counter {:value value :attributes attrs}))
+
+(defn inject-traceparent
+  "Extract W3C traceparent from current OpenTelemetry span context.
+
+  Returns traceparent string in format: 00-{trace-id}-{span-id}-{trace-flags}
+  Returns nil if no active span or OpenTelemetry is not configured."
+  []
+  (try
+    (let [span (Span/current)
+          span-context (.getSpanContext span)]
+      (when (.isValid span-context)
+        (format "00-%s-%s-%02x"
+                (.getTraceId span-context)
+                (.getSpanId span-context)
+                (if (.isSampled span-context) 1 0))))
+    (catch Exception _e
+      nil)))

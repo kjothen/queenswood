@@ -1,7 +1,8 @@
 (ns com.repldriven.mono.telemetry.interface
   "Public API for telemetry operations."
   (:require
-   [com.repldriven.mono.telemetry.core :as core]))
+   [com.repldriven.mono.telemetry.core :as core]
+   [com.repldriven.mono.telemetry.interceptors :as interceptors]))
 
 ;; Tracing
 (defmacro with-span
@@ -23,6 +24,14 @@
   [k v]
   (core/set-attribute k v))
 
+(defn inject-traceparent
+  "Extract W3C traceparent from current OpenTelemetry span context.
+
+  Returns traceparent string in format: 00-{trace-id}-{span-id}-{trace-flags}
+  Returns nil if no active span or OpenTelemetry is not configured."
+  []
+  (core/inject-traceparent))
+
 ;; Metrics
 (defn counter
   "Create or get a counter instrument."
@@ -38,3 +47,16 @@
   "Add a value to a counter with attributes."
   [counter value attrs]
   (core/add-counter! counter value attrs))
+
+;; Interceptors
+(def require-idempotency-key
+  "Interceptor that validates Idempotency-Key header is present."
+  interceptors/require-idempotency-key)
+
+(def extract-correlation-id
+  "Interceptor that extracts correlation ID from request headers."
+  interceptors/extract-correlation-id)
+
+(def trace-span
+  "Interceptor that creates OpenTelemetry spans for HTTP requests."
+  interceptors/trace-span)

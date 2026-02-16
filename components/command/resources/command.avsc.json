@@ -4,11 +4,11 @@
     "namespace": "com.repldriven.mono",
     "fields": [
         { "name": "id",             "type": "string" },
-        { "name": "type",           "type": "string" },
+        { "name": "command",        "type": "string" },
+        { "name": "data",           "type": ["null", "string"], "default": null },
         { "name": "correlation_id", "type": "string" },
         { "name": "causation_id",   "type": ["null", "string"], "default": null },
         { "name": "traceparent",    "type": ["null", "string"], "default": null },
-        { "name": "tracestate",     "type": ["null", "string"], "default": null },
-        { "name": "data",           "type": ["null", "string"], "default": null }
+        { "name": "tracestate",     "type": ["null", "string"], "default": null }
     ]
 }

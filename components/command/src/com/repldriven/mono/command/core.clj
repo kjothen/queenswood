@@ -2,12 +2,28 @@
   (:require
    [clojure.core.async :as async]
    [clojure.data.json :as json]
+   [clojure.edn :as edn]
+   [clojure.java.io :as io]
    [com.repldriven.mono.error.interface :as error]
    [com.repldriven.mono.log.interface :as log]
    [com.repldriven.mono.mqtt.interface :as mqtt]
    [com.repldriven.mono.pulsar.interface :as pulsar])
   (:import
    (org.apache.pulsar.client.api Consumer Message)))
+
+(def specs
+  "Command Malli specs for request/response validation.
+
+  Loaded from command.edn resource file. Includes:
+  - :command - Command data structure
+  - :command-request - HTTP request wrapper
+  - :command-result - Command processing result
+  - :command-response - HTTP response wrapper"
+  (delay
+    (-> "command.edn"
+        io/resource
+        slurp
+        edn/read-string)))
 
 (defn- await-reply
   "Wait for a reply on MQTT topic with timeout."

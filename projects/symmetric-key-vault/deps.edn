@@ -14,6 +14,7 @@
         component/log {:local/root "../../components/log"}
         component/server {:local/root "../../components/server"}
         components/system {:local/root "../../components/system"}
+        component/telemetry {:local/root "../../components/telemetry"}
         component/test {:local/root "../../components/test"}
         component/utility {:local/root "../../components/utility"}
         base/symmetric-key-api {:local/root "../../bases/symmetric-key-api"}

@@ -3,6 +3,16 @@
   (:require
    [com.repldriven.mono.command.core :as core]))
 
+(def specs
+  "Command Malli specs for request/response validation.
+
+  Includes:
+  - :command - Command data structure
+  - :command-request - HTTP request wrapper
+  - :command-result - Command processing result
+  - :command-response - HTTP response wrapper"
+  core/specs)
+
 (defn process
   "Process commands from Pulsar, send replies via MQTT.
 

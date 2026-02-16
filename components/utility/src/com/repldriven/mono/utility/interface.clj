@@ -1,7 +1,8 @@
 (ns com.repldriven.mono.utility.interface
   (:require
     [com.repldriven.mono.utility.collections :as util.collections]
-    [com.repldriven.mono.utility.string :as util.string]))
+    [com.repldriven.mono.utility.string :as util.string]
+    [com.repldriven.mono.utility.uuid :as util.uuid]))
 
 ;; Collection utilities
 (def deep-merge util.collections/deep-merge)
@@ -14,3 +15,6 @@
 (def yaml-collections->edn-collections
   util.collections/yaml-collections->edn-collections)
 (def keys->strs util.collections/keys->strs)
+
+;; UUID utilities
+(def uuidv7 util.uuid/v7)

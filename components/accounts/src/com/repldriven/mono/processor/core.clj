@@ -4,8 +4,7 @@
    [com.repldriven.mono.processor.specs.core :as specs]
    [com.repldriven.mono.error.interface :as error]
    [com.repldriven.mono.spec-malli.interface :as spec]
-   [com.repldriven.mono.json.interface :as json]
-   [com.repldriven.mono.telemetry.interface :as telemetry]))
+   [com.repldriven.mono.json.interface :as json]))
 
 (defn process
   "Process an account command and return result or anomaly.
@@ -15,7 +14,7 @@
 
   Command structure (Avro schema):
   {\"id\" \"cmd-123\"
-   \"type\" \"command-type\"
+   \"command\" \"command-name\"
    \"data\" \"json-string\"
    \"correlation_id\" \"corr-456\"
    \"causation_id\" \"cause-789\"
@@ -24,18 +23,10 @@
 
   Returns success response or anomaly."
   [config command]
-  (let [command-id (get command "id")
-        command-type (get command "type")
+  (let [command-type (get command "command")
         command-data-str (get command "data")
-        correlation-id (get command "correlation_id")
-        causation-id (get command "causation_id")]
-    (telemetry/with-span
-      ["process-command"
-       {:command/id command-id
-        :command/type command-type
-        :command/correlation-id correlation-id
-        :command/causation-id causation-id}]
-      (if-not command-data-str
+        correlation-id (get command "correlation_id")]
+    (if-not command-data-str
         ;; No data field - check if it's an unknown command
         (error/fail :accounts/process-command
                     {:message "Unknown command type"
@@ -63,4 +54,4 @@
               (error/fail :accounts/process-command
                           {:message "Unknown command type"
                            :command-type command-type
-                           :correlation-id correlation-id}))))))))
+                           :correlation-id correlation-id})))))))
