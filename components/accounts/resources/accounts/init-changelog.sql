@@ -8,7 +8,7 @@ CREATE TABLE account(
   name text,
   status text NOT NULL DEFAULT 'open',
   balance NUMERIC(19,4) NOT NULL DEFAULT 0,
-  currency text NOT NULL DEFAULT 'USD',
+  currency text NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc', now()),
   updated_at TIMESTAMPTZ,
   deleted_at TIMESTAMPTZ);

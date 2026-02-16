@@ -63,7 +63,8 @@
         (let [open-command {:type "open-account"
                             :id "cmd-1"
                             :data {:account-id "acc-2"
-                                   :name "Account to Close"}}]
+                                   :name "Account to Close"
+                                   :currency "USD"}}]
           (error/with-let-anomaly?
             [_ (SUT/process processor open-command)
              ;; Now close the account
