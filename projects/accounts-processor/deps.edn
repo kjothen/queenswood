@@ -20,6 +20,7 @@
         component/migrator {:local/root "../../components/migrator"}
         component/mqtt {:local/root "../../components/mqtt"}
         component/pulsar {:local/root "../../components/pulsar"}
+        component/spec-malli {:local/root "../../components/spec-malli"}
         component/system {:local/root "../../components/system"}
         component/test {:local/root "../../components/test"}
         component/testcontainers {:local/root "../../components/testcontainers"}

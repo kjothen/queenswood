@@ -1,10 +1,9 @@
 (ns com.repldriven.mono.processor.core
   (:require
    [com.repldriven.mono.processor.commands.account-lifecycle :as account-lifecycle]
-   [com.repldriven.mono.processor.spec.account-lifecycle :as spec]
+   [com.repldriven.mono.processor.specs.core :as specs]
    [com.repldriven.mono.error.interface :as error]
-   [malli.core :as m]
-   [malli.error :as me]))
+   [com.repldriven.mono.spec-malli.interface :as spec]))
 
 (defn process
   "Process an account command and return result or anomaly.
@@ -19,12 +18,12 @@
 
   Returns success response or anomaly."
   [config command]
-  (let [command-type (:type command)
-        command-data (:data command)
-        schema (get spec/specs command-type)]
-    (if (and schema (not (m/validate schema command-data)))
+  (let [command-type (get command "type")
+        command-data (get command "data")
+        schema (get specs/specs command-type)]
+    (if (and schema (not (spec/validate schema command-data)))
       (error/fail :accounts/invalid-command-data
-                  (str "Invalid command data: " (me/humanize (m/explain schema command-data))))
+                  (str "Invalid command data: " (spec/humanize (spec/explain schema command-data))))
       (case command-type
         "open-account" (account-lifecycle/open config command-data)
         "close-account" (account-lifecycle/close config command-data)

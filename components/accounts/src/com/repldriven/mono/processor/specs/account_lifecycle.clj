@@ -1,4 +1,4 @@
-(ns com.repldriven.mono.processor.spec.account-lifecycle)
+(ns com.repldriven.mono.processor.specs.account-lifecycle)
 
 (def ^:private open-account
   "Schema for open-account command data."
