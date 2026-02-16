@@ -1,0 +1,5 @@
+system:
+  postgres: !include testcontainers/postgres-test.yml
+  db: !include processor/postgres/datasource-test.yml
+  processor:
+    datasource: !system/ref db.datasource

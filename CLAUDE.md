@@ -51,6 +51,11 @@ This file provides guidance to Claude Code when working with this Clojure/Polyli
 ## Testing Patterns
 
 - **Test component**: Provides `test/refute-anomaly` for consistent anomaly checking
+- **Testing specific bricks**: When testing a changed component or base (brick), run tests for that brick in the context of a project:
+  ```bash
+  clojure -M:poly test brick:<brick-name> :project <project-name>
+  # Example: clojure -M:poly test brick:accounts :project accounts-processor
+  ```
 - **with-let-anomaly? pattern**:
   ```clojure
   (error/with-let-anomaly?
@@ -68,7 +73,7 @@ This file provides guidance to Claude Code when working with this Clojure/Polyli
   ```
 - **Test resources**: Located in `test-resources/` within each component/base
 - **Property-based testing**: Use test.check where applicable
-- **Synchronized tests**: Mark with `^:eftest/synchronized` for tests requiring serialization (e.g., shared testcontainers)
+- **Synchronized tests**: Mark with `^:eftest/synchronized` to prevent too many parallel tests from overwhelming CPU/memory
 
 ## Database Patterns
 

@@ -4,5 +4,5 @@
 
 (defn process
   "Process an account command and return result or anomaly."
-  [command]
-  (core/process command))
+  [config command]
+  (core/process config command))

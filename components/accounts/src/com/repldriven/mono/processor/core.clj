@@ -5,16 +5,20 @@
 (defn process
   "Process an account command and return result or anomaly.
 
+  Config structure:
+  {:datasource ...}
+
   Command structure:
   {:type \"command-type\"
    :id \"command-id\"
    :data {...}}
 
   Returns success response or anomaly."
-  [command]
+  [{:keys [datasource]} command]
   (let [command-type (:type command)]
     (case command-type
       ;; Stub implementations - return success for now
+      ;; TODO: Use datasource to perform actual DB operations
       "open-account" {:status :ok :command-id (:id command)}
       "close-account" {:status :ok :command-id (:id command)}
 

@@ -23,7 +23,7 @@
 (defn run
   "Start command processing on the given system.
 
-  Extracts the Pulsar consumer, MQTT client, and schema from the system
+  Extracts the Pulsar consumer, MQTT client, schema, and processor from the system
   and starts the command processing loop.
 
   Returns: {:c channel :stop channel}
@@ -32,8 +32,9 @@
   (let [consumer (system/instance sys [:pulsar :consumers :c1])
         mqtt-client (system/instance sys [:mqtt :client])
         schemas (system/instance sys [:pulsar :schemas])
-        schema (pulsar/schema->avro (get-in schemas [:command :schema]))]
-    (command/process consumer mqtt-client schema processor/process)))
+        schema (pulsar/schema->avro (get-in schemas [:command :schema]))
+        process-fn (partial processor/process (system/instance sys [:processor]))]
+    (command/process consumer mqtt-client schema process-fn)))
 
 (defn -main
   [& args]
