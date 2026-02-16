@@ -6,7 +6,7 @@
 
 (defn open
   "Open a new account by inserting a record into the database."
-  [{:keys [datasource]} {:keys [account-id name currency]}]
+  [{:keys [datasource]} {:strs [account-id name currency]}]
   (let [result (db/execute-one! datasource
                                 ["INSERT INTO account (account_id, name, currency, status)
                                   VALUES (?, ?, ?, 'open')"
@@ -19,7 +19,7 @@
 
 (defn close
   "Close an existing account by updating its status to 'closed'."
-  [{:keys [datasource]} {:keys [account-id]}]
+  [{:keys [datasource]} {:strs [account-id]}]
   (let [result (db/execute-one! datasource
                                 ["UPDATE account
                                   SET status = 'closed',
@@ -35,7 +35,7 @@
 
 (defn reopen
   "Reopen a closed account by updating its status to 'open'."
-  [{:keys [datasource]} {:keys [account-id]}]
+  [{:keys [datasource]} {:strs [account-id]}]
   (let [result (db/execute-one! datasource
                                 ["UPDATE account
                                   SET status = 'open',
@@ -51,7 +51,7 @@
 
 (defn suspend
   "Suspend an account by updating its status to 'suspended'."
-  [{:keys [datasource]} {:keys [account-id]}]
+  [{:keys [datasource]} {:strs [account-id]}]
   (let [result (db/execute-one! datasource
                                 ["UPDATE account
                                   SET status = 'suspended',
@@ -67,7 +67,7 @@
 
 (defn unsuspend
   "Unsuspend an account by updating its status to 'open'."
-  [{:keys [datasource]} {:keys [account-id]}]
+  [{:keys [datasource]} {:strs [account-id]}]
   (let [result (db/execute-one! datasource
                                 ["UPDATE account
                                   SET status = 'open',
@@ -83,7 +83,7 @@
 
 (defn archive
   "Archive an account by updating its status to 'archived'."
-  [{:keys [datasource]} {:keys [account-id]}]
+  [{:keys [datasource]} {:strs [account-id]}]
   (let [result (db/execute-one! datasource
                                 ["UPDATE account
                                   SET status = 'archived',
