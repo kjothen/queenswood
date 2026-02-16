@@ -5,14 +5,16 @@ Domain component for account/ledger operations.
 ## Command Checklist
 
 ### Account Lifecycle
-- [ ] open-account
-- [ ] close-account
-- [ ] reopen-account
-- [ ] suspend-account
-- [ ] unsuspend-account
-- [ ] archive-account
+
+- [x] open-account
+- [x] close-account
+- [x] reopen-account
+- [x] suspend-account
+- [x] unsuspend-account
+- [x] archive-account
 
 ### Account Management
+
 - [ ] update-account-details
 - [ ] change-account-type
 - [ ] change-account-ownership
@@ -23,6 +25,7 @@ Domain component for account/ledger operations.
 - [ ] unlink-accounts
 
 ### Posting Operations
+
 - [ ] post-debit
 - [ ] post-credit
 - [ ] reverse-debit
@@ -33,6 +36,7 @@ Domain component for account/ledger operations.
 - [ ] batch-post-credits
 
 ### Balance Operations
+
 - [ ] freeze-balance
 - [ ] unfreeze-balance
 - [ ] partial-freeze-balance
@@ -42,6 +46,7 @@ Domain component for account/ledger operations.
 - [ ] release-reserved-balance
 
 ### Transaction Operations
+
 - [ ] authorize-transaction
 - [ ] settle-transaction
 - [ ] cancel-transaction
@@ -51,6 +56,7 @@ Domain component for account/ledger operations.
 - [ ] void-transaction
 
 ### Interest Operations
+
 - [ ] calculate-interest
 - [ ] post-interest
 - [ ] reverse-interest
@@ -58,6 +64,7 @@ Domain component for account/ledger operations.
 - [ ] set-interest-calculation-method
 
 ### Fee Operations
+
 - [ ] charge-fee
 - [ ] waive-fee
 - [ ] reverse-fee
@@ -65,12 +72,14 @@ Domain component for account/ledger operations.
 - [ ] apply-fee-schedule
 
 ### Statement Operations
+
 - [ ] generate-statement
 - [ ] send-statement
 - [ ] regenerate-statement
 - [ ] request-statement-copy
 
 ### Reporting Operations
+
 - [ ] get-account-balance
 - [ ] get-available-balance
 - [ ] get-transaction-history
