@@ -16,6 +16,7 @@
         component/env {:local/root "../../components/env"}
         component/error {:local/root "../../components/error"}
         component/http-client {:local/root "../../components/http-client"}
+        component/json {:local/root "../../components/json"}
         component/log {:local/root "../../components/log"}
         component/migrator {:local/root "../../components/migrator"}
         component/mqtt {:local/root "../../components/mqtt"}

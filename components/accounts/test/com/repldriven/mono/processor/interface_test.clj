@@ -10,6 +10,7 @@
    [com.repldriven.mono.migrator.interface :as migrator]
    [com.repldriven.mono.system.interface :as system]
    [com.repldriven.mono.test.interface :as test]
+   [com.repldriven.mono.json.interface :as json]
 
    [clojure.test :refer [deftest is testing]]))
 
@@ -35,9 +36,9 @@
         ;; Test the processor
         (let [command {"type" "open-account"
                        "id" "cmd-1"
-                       "data" {"account-id" "acc-1"
-                              "name" "Test Account"
-                              "currency" "USD"}}]
+                       "data" (json/write-str {"account-id" "acc-1"
+                                               "name" "Test Account"
+                                               "currency" "USD"})}]
           (error/with-let-anomaly?
             [result (SUT/process processor command)
              _ (is (= :ok (:status result)))
@@ -62,15 +63,15 @@
         ;; First create an account
         (let [open-command {"type" "open-account"
                             "id" "cmd-1"
-                            "data" {"account-id" "acc-2"
-                                   "name" "Account to Close"
-                                   "currency" "USD"}}]
+                            "data" (json/write-str {"account-id" "acc-2"
+                                                    "name" "Account to Close"
+                                                    "currency" "USD"})}]
           (error/with-let-anomaly?
             [_ (SUT/process processor open-command)
              ;; Now close the account
              close-command {"type" "close-account"
                             "id" "cmd-2"
-                            "data" {"account-id" "acc-2"}}
+                            "data" (json/write-str {"account-id" "acc-2"})}
              result (SUT/process processor close-command)
              _ (is (= :ok (:status result)))
              _ (is (= "acc-2" (:account-id result)))
@@ -93,16 +94,16 @@
         (error/with-let-anomaly?
           [_ (SUT/process processor {"type" "open-account"
                                      "id" "cmd-1"
-                                     "data" {"account-id" "acc-3"
-                                            "name" "Account to Reopen"
-                                            "currency" "USD"}})
+                                     "data" (json/write-str {"account-id" "acc-3"
+                                                             "name" "Account to Reopen"
+                                                             "currency" "USD"})})
            _ (SUT/process processor {"type" "close-account"
                                      "id" "cmd-2"
-                                     "data" {"account-id" "acc-3"}})
+                                     "data" (json/write-str {"account-id" "acc-3"})})
            ;; Now reopen the account
            reopen-command {"type" "reopen-account"
                            "id" "cmd-3"
-                           "data" {"account-id" "acc-3"}}
+                           "data" (json/write-str {"account-id" "acc-3"})}
            result (SUT/process processor reopen-command)
            _ (is (= :ok (:status result)))
            _ (is (= "acc-3" (:account-id result)))
@@ -125,13 +126,13 @@
         (error/with-let-anomaly?
           [_ (SUT/process processor {"type" "open-account"
                                      "id" "cmd-1"
-                                     "data" {"account-id" "acc-4"
-                                            "name" "Account to Suspend"
-                                            "currency" "EUR"}})
+                                     "data" (json/write-str {"account-id" "acc-4"
+                                                             "name" "Account to Suspend"
+                                                             "currency" "EUR"})})
            ;; Now suspend the account
            suspend-command {"type" "suspend-account"
                             "id" "cmd-2"
-                            "data" {"account-id" "acc-4"}}
+                            "data" (json/write-str {"account-id" "acc-4"})}
            result (SUT/process processor suspend-command)
            _ (is (= :ok (:status result)))
            _ (is (= "acc-4" (:account-id result)))
@@ -154,16 +155,16 @@
         (error/with-let-anomaly?
           [_ (SUT/process processor {"type" "open-account"
                                      "id" "cmd-1"
-                                     "data" {"account-id" "acc-5"
-                                            "name" "Account to Unsuspend"
-                                            "currency" "GBP"}})
+                                     "data" (json/write-str {"account-id" "acc-5"
+                                                             "name" "Account to Unsuspend"
+                                                             "currency" "GBP"})})
            _ (SUT/process processor {"type" "suspend-account"
                                      "id" "cmd-2"
-                                     "data" {"account-id" "acc-5"}})
+                                     "data" (json/write-str {"account-id" "acc-5"})})
            ;; Now unsuspend the account
            unsuspend-command {"type" "unsuspend-account"
                               "id" "cmd-3"
-                              "data" {"account-id" "acc-5"}}
+                              "data" (json/write-str {"account-id" "acc-5"})}
            result (SUT/process processor unsuspend-command)
            _ (is (= :ok (:status result)))
            _ (is (= "acc-5" (:account-id result)))
@@ -186,13 +187,13 @@
         (error/with-let-anomaly?
           [_ (SUT/process processor {"type" "open-account"
                                      "id" "cmd-1"
-                                     "data" {"account-id" "acc-6"
-                                            "name" "Account to Archive"
-                                            "currency" "CAD"}})
+                                     "data" (json/write-str {"account-id" "acc-6"
+                                                             "name" "Account to Archive"
+                                                             "currency" "CAD"})})
            ;; Now archive the account
            archive-command {"type" "archive-account"
                             "id" "cmd-2"
-                            "data" {"account-id" "acc-6"}}
+                            "data" (json/write-str {"account-id" "acc-6"})}
            result (SUT/process processor archive-command)
            _ (is (= :ok (:status result)))
            _ (is (= "acc-6" (:account-id result)))
