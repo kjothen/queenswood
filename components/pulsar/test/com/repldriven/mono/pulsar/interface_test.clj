@@ -27,11 +27,8 @@
 (deftest namespace-configuration-test
   (testing "Pulsar namespace configuration enforces encryption and topic schema"
     (system/with-system [sys (test-system)]
-      (let [^PulsarAdmin admin (system/instance sys [:pulsar :admin])
-            service-url (.getServiceUrl admin)
-            namespaces-url (string/join "/" [service-url "admin/v2/namespaces"])
-            namespace-url (string/join "/"
-                                       [namespaces-url "tenant-1/namespace-1"])
+      (let [admin (system/instance sys [:pulsar :admin])
+            namespace-url (SUT/admin-namespace-url admin "tenant-1" "namespace-1")
             expected {"autoTopicCreation" {"topicType" "string"
                                            "allowAutoTopicCreation" false
                                            "defaultNumPartitions" 1}

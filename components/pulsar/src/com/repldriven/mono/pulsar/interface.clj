@@ -3,6 +3,7 @@
   (:require
     com.repldriven.mono.pulsar.system.core
 
+    [com.repldriven.mono.pulsar.pulsar.admin :as admin]
     [com.repldriven.mono.pulsar.pulsar.consumer :as consumer]
     [com.repldriven.mono.pulsar.pulsar.producer :as producer]
     [com.repldriven.mono.pulsar.pulsar.reader :as reader]
@@ -29,3 +30,7 @@
 
 ;;;; schema
 (defn schema->avro [schema] (schemas/schema->avro schema))
+
+;;;; admin
+(defn admin-namespace-url [admin tenant namespace]
+  (admin/namespace-url admin tenant namespace))
