@@ -12,7 +12,8 @@
    [com.repldriven.mono.pulsar.pulsar.tenants :as tenants]
    [com.repldriven.mono.pulsar.pulsar.topics :as topics]
 
-   [com.repldriven.mono.system.interface :as system]))
+   [com.repldriven.mono.system.interface :as system]
+   [com.repldriven.mono.log.interface :as log]))
 
 ;; ---
 ;; admin
@@ -44,11 +45,12 @@
   {:system/start
    (fn [{:system/keys [config instance]}]
      (or instance
-         (into {} (map (fn [[k v]] [k (consumer/create v)]) config))))
+         (into {} (map (fn [[k v]] [k (consumer/create (assoc v :name (clojure.core/name k)))]) config))))
    :system/stop (fn [{:system/keys [instance]}]
                   (when (some? instance)
-                    (dorun (map (fn [[_ instance]]
-                                  (consumer/close instance))
+                    (dorun (map (fn [[k v]]
+                                  (log/info "Closing Pulsar consumer:" (clojure.core/name k))
+                                  (consumer/close v))
                                 instance))))
    :system/config system/required-component})
 
@@ -112,11 +114,12 @@
   {:system/start
    (fn [{:system/keys [config instance]}]
      (or instance
-         (into {} (map (fn [[k v]] [k (producer/create v)]) config))))
+         (into {} (map (fn [[k v]] [k (producer/create (assoc v :name (clojure.core/name k)))]) config))))
    :system/stop (fn [{:system/keys [instance]}]
                   (when (some? instance)
-                    (dorun (map (fn [[_ producer]]
-                                  (producer/close producer))
+                    (dorun (map (fn [[k v]]
+                                  (log/info "Closing Pulsar producer:" (clojure.core/name k))
+                                  (producer/close v))
                                 instance))))
    :system/config system/required-component})
 
@@ -138,11 +141,12 @@
   {:system/start
    (fn [{:system/keys [config instance]}]
      (or instance
-         (into {} (map (fn [[k v]] [k (reader/create v)]) config))))
+         (into {} (map (fn [[k v]] [k (reader/create (assoc v :name (clojure.core/name k)))]) config))))
    :system/stop (fn [{:system/keys [instance]}]
                   (when (some? instance)
-                    (dorun (map (fn [[_ instance]]
-                                  (reader/close instance))
+                    (dorun (map (fn [[k v]]
+                                  (log/info "Closing Pulsar reader:" (clojure.core/name k))
+                                  (reader/close v))
                                 instance))))
    :system/config system/required-component})
 

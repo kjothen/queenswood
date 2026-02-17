@@ -19,8 +19,8 @@
    (java.util.concurrent TimeUnit)))
 
 (defn create
-  ^Reader [{:keys [^PulsarClient client conf schemas]}]
-  (log/info "Creating Pulsar reader:" conf schemas)
+  ^Reader [{:keys [^PulsarClient client conf schemas] :as opts}]
+  (log/info "Creating Pulsar reader:" (:name opts))
   (error/try-nom-ex :pulsar/reader-create
                     PulsarClientException
                     "Failed to create Pulsar reader"
@@ -73,7 +73,6 @@
 
 (defn close
   [^Reader reader]
-  (log/info "Closing Pulsar reader connection")
   (error/try-nom-ex :pulsar/reader-close
                     PulsarClientException
                     "Failed to close Pulsar reader connection"

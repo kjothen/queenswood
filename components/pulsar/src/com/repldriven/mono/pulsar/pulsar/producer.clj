@@ -54,8 +54,8 @@
       data)))
 
 (defn create
-  [{:keys [^PulsarClient client conf schemas]}]
-  (log/info "Creating Pulsar producer:" conf schemas)
+  [{:keys [^PulsarClient client conf schemas] :as opts}]
+  (log/info "Creating Pulsar producer:" (:name opts))
   (error/try-nom-ex :pulsar/producer-create
                     PulsarClientException
                     "Failed to create Pulsar producer"
@@ -111,7 +111,6 @@
 
 (defn close
   [producer]
-  (log/info "Closing Pulsar producer connection")
   (error/try-nom-ex :pulsar/producer-close
                     PulsarClientException
                     "Failed to close Pulsar producer connection"

@@ -18,8 +18,8 @@
                                  PulsarClientException)))
 
 (defn create
-  ^Consumer [{:keys [^PulsarClient client conf schemas]}]
-  (log/info "Creating Pulsar consumer:" conf schemas)
+  ^Consumer [{:keys [^PulsarClient client conf schemas] :as opts}]
+  (log/info "Creating Pulsar consumer:" (:name opts))
   (error/try-nom-ex :pulsar/consumer-create
                     PulsarClientException
                     "Failed to create Pulsar consumer"
@@ -81,7 +81,6 @@
 
 (defn close
   [^Consumer consumer]
-  (log/info "Closing Pulsar consumer connection")
   (error/try-nom-ex :pulsar/consumer-close
                     PulsarClientException
                     "Failed to close Pulsar consumer connection"

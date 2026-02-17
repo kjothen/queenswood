@@ -14,7 +14,7 @@
   (let [namespace-url (string/join "/"
                                    [(.getServiceUrl admin) "admin/v2/namespaces"
                                     fully-qualified-namespace-name])]
-    (log/info "Configuring Pulsar namespace: " fully-qualified-namespace-name config)
+    (log/info "Configuring Pulsar namespace:" fully-qualified-namespace-name)
     (doseq [[method settings] config]
       (doseq [[k v] settings]
         (let [url (string/join "/" [namespace-url (name k)])
@@ -31,14 +31,14 @@
         tenant-name (first (string/split fully-qualified-namespace-name #"/"))
         namespace-names (.getNamespaces namespaces tenant-name)]
     (when-not (contains? (set namespace-names) fully-qualified-namespace-name)
-      (log/info "Creating Pulsar namespace:" fully-qualified-namespace-name config)
+      (log/info "Creating Pulsar namespace:" fully-qualified-namespace-name)
       (.createNamespace namespaces fully-qualified-namespace-name)
       (when (some? config)
         (configure admin fully-qualified-namespace-name config)))))
 
 (defn create-namespaces
   [{:keys [^PulsarAdmin admin namespaces]}]
-  (log/info "Creating Pulsar namespaces:" namespaces)
+  (log/info "Creating Pulsar namespaces:" (map :namespace namespaces))
   (error/try-nom :pulsar/namespaces-create
                  "Failed to create Pulsar namespaces"
                  (doseq [{:keys [namespace] :as opts} namespaces]

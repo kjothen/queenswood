@@ -12,7 +12,7 @@
 (defn- create-topic-schema
   [^PulsarAdmin admin ^String fully-qualified-topic-name
    ^PostSchemaPayload schema]
-  (log/info "Creating schema for topic:" fully-qualified-topic-name schema)
+  (log/info "Creating schema for topic:" fully-qualified-topic-name)
   (.createSchema ^Schemas (.schemas admin) fully-qualified-topic-name schema))
 
 (defn- create
@@ -31,7 +31,7 @@
 
 (defn create-topics
   [{:keys [^PulsarAdmin admin schemas topics]}]
-  (log/info "Creating Pulsar topics:" topics)
+  (log/info "Creating Pulsar topics:" (map :topic topics))
   (error/try-nom :pulsar/topics-create
                  "Failed to create Pulsar topics"
                  (doall (mapv

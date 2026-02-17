@@ -19,7 +19,7 @@
 
 (defn create-tenants
   [{:keys [^PulsarAdmin admin tenants]}]
-  (log/info "Creating Pulsar tenants:" tenants)
+  (log/info "Creating Pulsar tenants:" (map :tenant tenants))
   (error/try-nom :pulsar/tenants-create
                  "Failed to create Pulsar tenant(s)"
                  (doall (mapv (fn [{:keys [tenant] :as opts}]
