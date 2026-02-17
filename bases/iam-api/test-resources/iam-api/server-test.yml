@@ -8,5 +8,3 @@ jetty-adapter: !system/component
   system/component-kind: server/jetty-adapter
   handler: !system/local-ref handler
   interceptors: !system/local-ref interceptors
-  options:
-    port: !port 0

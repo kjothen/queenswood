@@ -5,6 +5,3 @@ system:
     jetty-adapter: !system/component
       system/component-kind: server/jetty-adapter
       handler: !system/ref server.handler
-      options:
-        join?: false
-        port: !port 0

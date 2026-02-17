@@ -25,7 +25,7 @@
                                       config))))
    :system/config nil})
 
-(def default-jetty-adapter-options {:join? false})
+(def default-jetty-adapter-options {:join? false :port 0})
 
 (def jetty-adapter
   {:system/start
