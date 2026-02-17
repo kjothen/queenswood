@@ -1,6 +1,10 @@
 (ns com.repldriven.mono.log.interface
   (:require
-    [com.repldriven.mono.log.core :as core]))
+   [com.repldriven.mono.log.core :as core]))
+
+(defmacro debug [& args] `(core/debug ~@args))
+
+(defmacro debugf [& args] `(core/debugf ~@args))
 
 (defmacro info [& args] `(core/info ~@args))
 

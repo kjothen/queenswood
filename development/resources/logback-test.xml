@@ -20,19 +20,19 @@
         </encoder>
     </appender>
 
-    <logger name="com.repldriven.mono" level="info" additivity="false">
+    <logger name="com.repldriven.mono" level="debug" additivity="false">
         <appender-ref ref="CONSOLE"/>
     </logger>
 
-    <logger name="org.apache.pulsar" level="info" additivity="false">
+    <logger name="org.apache.pulsar" level="warn" additivity="false">
         <appender-ref ref="CONSOLE"/>
     </logger>
 
-    <logger name="liquibase" level="info" additivity="false">
+    <logger name="liquibase" level="warn" additivity="false">
         <appender-ref ref="CONSOLE"/>
     </logger>
 
-    <logger name="org.eclipse" level="debug" additivity="false">
+    <logger name="org.eclipse.paho" level="warn" additivity="false">
         <appender-ref ref="CONSOLE"/>
     </logger>
 

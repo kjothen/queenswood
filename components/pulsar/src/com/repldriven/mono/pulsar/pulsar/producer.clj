@@ -1,23 +1,23 @@
 (ns com.repldriven.mono.pulsar.pulsar.producer
   (:refer-clojure :exclude [send])
   (:require
-    [com.repldriven.mono.pulsar.pulsar.schemas :as schemas]
+   [com.repldriven.mono.pulsar.pulsar.schemas :as schemas]
 
-    [com.repldriven.mono.error.interface :as error]
-    [com.repldriven.mono.log.interface :as log]
+   [com.repldriven.mono.error.interface :as error]
+   [com.repldriven.mono.log.interface :as log]
 
-    [clojure.data.json :as json]
-    [clojure.java.data :as j])
+   [clojure.data.json :as json]
+   [clojure.java.data :as j])
   (:import
-    (java.util Map)
-    (org.apache.pulsar.client.api Producer
-                                  ProducerBuilder
-                                  PulsarClient
-                                  PulsarClientException
-                                  Schema)
-    (org.apache.pulsar.common.schema SchemaType)
-    (org.apache.pulsar.shade.org.apache.avro.generic GenericData$Record
-                                                     GenericRecord)))
+   (java.util Map)
+   (org.apache.pulsar.client.api Producer
+                                 ProducerBuilder
+                                 PulsarClient
+                                 PulsarClientException
+                                 Schema)
+   (org.apache.pulsar.common.schema SchemaType)
+   (org.apache.pulsar.shade.org.apache.avro.generic GenericData$Record
+                                                    GenericRecord)))
 
 (defn- add-encryption-keys
   [^ProducerBuilder producer ks]
@@ -65,7 +65,7 @@
                           auto-conf
                           (j/to-java Map (apply dissoc conf-str-keys (map name manual-conf)))
                           resolved-schema (when (some? schema)
-                                           (schemas/resolve schemas schema))
+                                            (schemas/resolve schemas schema))
                           instance (if resolved-schema
                                      (.. client (newProducer resolved-schema))
                                      (.. client newProducer))
@@ -81,12 +81,14 @@
 
 (defn send
   ([producer data]
+   (log/debugf "pulsar.pulsar.producer: [producer=%s, data=%s]" producer data)
    (error/try-nom-ex :pulsar/producer-send
                      PulsarClientException
                      "Failed to send message to Pulsar"
                      (let [{:keys [^Producer instance]} producer]
                        (.send instance (serialize producer data)))))
   ([producer data opts]
+   (log/debugf "pulsar.pulsar.producer: [producer=%s, data=%s, opts=%s]" producer data opts)
    (error/try-nom-ex :pulsar/producer-send
                      PulsarClientException
                      "Failed to send message to Pulsar"
