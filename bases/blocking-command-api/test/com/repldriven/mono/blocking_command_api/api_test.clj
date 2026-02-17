@@ -8,6 +8,7 @@
    [com.repldriven.mono.env.interface :as env]
    [com.repldriven.mono.error.interface :as error]
    [com.repldriven.mono.http-client.interface :as http]
+   [com.repldriven.mono.log.interface :as log]
    [com.repldriven.mono.pulsar.interface :as pulsar]
    [com.repldriven.mono.server.interface :as server]
    [com.repldriven.mono.system.interface :as system]
@@ -31,13 +32,12 @@
 
 (defn send-http-command
   "Simulates Client - synchronous command request"
-  [command]
+  [command-name]
   (http/request {:method :post
                  :url (str *base-url* "/api/command")
                  :headers {"Content-Type" "application/json"
-                           "Idempotency-Key" (str (util/uuidv7))
-                           "Correlation-ID" (str (util/uuidv7))}
-                 :body (json/write-str {:command command :data nil})}))
+                           "Idempotency-Key" (str (util/uuidv7))}
+                 :body (json/write-str {"command" command-name})}))
 
 (defn command-processor
   "Simulates Processor - reads commands from Pulsar and replies via MQTT"
@@ -46,14 +46,13 @@
         mqtt-client (system/instance sys [:mqtt :client])
         schemas (system/instance sys [:pulsar :schemas])
         schema (pulsar/schema->avro (get-in schemas [:command :schema]))
-        process-fn (fn [command]
-                     (telemetry/with-span
-                       ["process-command"
-                        {:command/id (get command "id")
-                         :command/type (get command "type")
-                         :command/correlation-id (get command "correlation_id")
-                         :command/causation-id (get command "causation_id")}]
-                       command))]
+        process-fn (fn [data]
+                     (let [parent-ctx (telemetry/extract-parent-context data)]
+                       (telemetry/with-span-parent
+                         "process-command"
+                         parent-ctx
+                         (select-keys data [:id :command :correlation_id :causation_id])
+                         (fn [] data))))]
     (command/process consumer mqtt-client schema process-fn {:timeout-ms 1000})))
 
 (deftest request-pulsar-reply-mqtt-test
@@ -61,16 +60,14 @@
     (system/with-system [sys (test-system)]
       (is (system/system? sys) "System should be valid")
       (let [jetty (system/instance sys [:server :jetty-adapter])
-            {:keys [stop]} (command-processor sys)
-            command {:correlation_id "1" :type "test-command" :id "123"}
-            expected {:data command}]
+            {:keys [stop]} (command-processor sys)]
         (binding [*base-url* (server/http-local-url jetty)]
           (error/with-let-anomaly?
-            [res (send-http-command command)
+            [res (send-http-command "test-command")
              _ (is (= 200 (:status res))
                    "Should receive 200 OK")
-             actual (http/res->edn res)
-             _ (is (= expected actual)
-                   "Should receive echoed command")]
+             actual (http/res->body res)
+             _ (is (= "test-command" (get-in actual ["result" "command"]))
+                   "Should receive command name")]
             test/refute-anomaly))
         (async/>!! stop :stop)))))

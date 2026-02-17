@@ -8,7 +8,7 @@
   [ctx]
   (let [specs @command/specs]
     ["/api" {:interceptors (concat [telemetry/trace-span]
-                                    (:interceptors ctx))}
+                                   (:interceptors ctx))}
      ["/command"
       {:interceptors [telemetry/require-idempotency-key
                       telemetry/extract-correlation-id]

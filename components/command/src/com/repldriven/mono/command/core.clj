@@ -1,4 +1,5 @@
 (ns com.repldriven.mono.command.core
+  (:refer-clojure :exclude [send])
   (:require
    [clojure.core.async :as async]
    [clojure.data.json :as json]
@@ -72,16 +73,17 @@
      (async/thread
        (loop []
          (when-let [{:keys [^Message message data]} (async/<!! c)]
-           (let [correlation-id (:correlation_id data)
-                 reply-topic (str "replies/" correlation-id)
+           (let [id (:id data)
+                 reply-topic (str "replies/" id)
                  response (process-fn data)]
+             (log/debugf "command.core/process: [data=%s, response=%s, reply-topic=%s]" data response reply-topic)
              (error/with-anomaly?
                [(mqtt/publish mqtt-client
                               reply-topic
                               (json/write-str response))
                 (pulsar/acknowledge consumer message)]
                (log/anomaly {:message "Error processing command"
-                             :correlation-id correlation-id})))
+                             :id id})))
            (recur))))
      {:c result-chan :stop stop})))
 

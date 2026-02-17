@@ -1,6 +1,8 @@
 (ns com.repldriven.mono.telemetry.interceptors
   "Interceptors for distributed tracing and request validation."
   (:require
+   [com.repldriven.mono.log.interface :as log]
+
    [steffan-westcott.clj-otel.api.trace.span :as span]
    [steffan-westcott.clj-otel.api.trace.http :as trace-http]))
 
@@ -11,6 +13,7 @@
   Returns 400 Bad Request if header is missing."
   {:name ::require-idempotency-key
    :enter (fn [ctx]
+            (log/debugf "telemetry.interceptors/require-idempotency-key(enter): [headers=]" (get-in ctx [:request :headers]))
             (let [idem-key (get-in ctx [:request :headers "idempotency-key"])]
               (if (some? idem-key)
                 (assoc-in ctx [:request :telemetry/idempotency-key] idem-key)
@@ -25,6 +28,7 @@
   Adds the correlation ID to request context as :telemetry/correlation-id."
   {:name ::extract-correlation-id
    :enter (fn [ctx]
+            (log/debugf "telemetry.interceptors/extract-correlation-id(enter): [headers=]" (get-in ctx [:request :headers]))
             (let [correlation-id (or (get-in ctx [:request :headers "correlation-id"])
                                      (get-in ctx [:request :telemetry/idempotency-key]))]
               (assoc-in ctx [:request :telemetry/correlation-id] correlation-id)))})
