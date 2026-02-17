@@ -2,10 +2,6 @@ set shell := ["zsh", "-cu"]
 
 HOME := env_var('HOME')
 
-# Colima/Docker configuration for testcontainers
-export DOCKER_HOST := "unix://" + HOME + "/.config/colima/default/docker.sock"
-export TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE := "/var/run/docker.sock"
-
 list:
     just --list
 
@@ -98,7 +94,7 @@ format:
 
 # Start Docker via Colima
 start-docker:
-    colima status 2>/dev/null || colima start --cpu 2 --memory 4
+    colima status 2>/dev/null || colima start --cpu 4 --memory 8 
     docker context use colima
 
 # Stop Docker via Colima
