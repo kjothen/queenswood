@@ -10,8 +10,7 @@
    [reitit.http :as http]
    [reitit.ring :as ring]
 
-   [clojure.test :refer [deftest is testing]]
-   [clojure.walk :as walk]))
+   [clojure.test :refer [deftest is testing]]))
 
 (deftest server-test
   (testing "Server component system configuration and lifecycle"
@@ -49,5 +48,5 @@
               base-url (server/http-local-url jetty)
               url (str base-url "/api/interceptors")
               res (http-client/request {:url url :method :get})
-              body (walk/keywordize-keys (http-client/res->body res))]
-          (is (= body data)))))))
+              body (http-client/res->body res)]
+          (is (= body {"got" "me" "this" "time"})))))))

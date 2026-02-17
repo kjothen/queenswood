@@ -42,13 +42,13 @@
                          ; list keys for identity
                          [list-res (list-keys identity-id)
                           _ (is (= 200 (:status list-res)))
-                          list-body (http/res->edn list-res)
-                          _ (is (= {:data []} list-body))
+                          list-body (http/res->body list-res)
+                          _ (is (= {"data" []} list-body))
                           ; get specific key
                           get-res (get-key identity-id key-id)
                           _ (is (= 200 (:status get-res)))
-                          get-body (http/res->edn get-res)
-                          _ (is (= {:data {}} get-body))]
+                          get-body (http/res->body get-res)
+                          _ (is (= {"data" {}} get-body))]
                          :success)]
             (is (not (error/anomaly? result))
                 (str "API workflow failed: " (pr-str result)))))))))

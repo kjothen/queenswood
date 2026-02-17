@@ -28,8 +28,10 @@
 
 (defn create
   [db project-name body]
-  (let [{:keys [account-id service-account]} body
-        {:keys [display-name description]} service-account
+  (let [account-id      (clojure.core/get body "account-id")
+        service-account (clojure.core/get body "service-account")
+        display-name    (clojure.core/get service-account "display-name")
+        description     (clojure.core/get service-account "description")
         project-id (project-id project-name)
         email (email account-id project-id)
         record {:name (name project-name email)

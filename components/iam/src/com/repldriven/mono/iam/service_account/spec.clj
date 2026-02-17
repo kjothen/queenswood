@@ -40,9 +40,9 @@
 ;;;;
 
 (def CreateBody
-  [:map [:account-id AccountId]
-   [:service-account
-    [:map [:display-name DisplayName] [:description Description]]]])
+  [:map ["account-id" AccountId]
+   ["service-account"
+    [:map ["display-name" DisplayName] ["description" Description]]]])
 
 (def ServiceAccount
   [:map [:name Name] [:project-id ProjectId] [:unique-id UniqueId]

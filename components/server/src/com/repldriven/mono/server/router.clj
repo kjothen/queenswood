@@ -1,6 +1,6 @@
 (ns com.repldriven.mono.server.router
   (:require
-    [muuntaja.core]
+    [muuntaja.core :as m]
     [reitit.coercion.malli]
 
     [reitit.dev.pretty :as pretty]
@@ -11,12 +11,18 @@
     [reitit.interceptor.sieppari :as sieppari]
     [reitit.swagger :as swagger]))
 
+(def muuntaja-instance
+  "Muuntaja instance configured to decode JSON with string keys."
+  (m/create (assoc-in m/default-options
+                      [:formats "application/json" :decoder-opts :decode-key-fn]
+                      identity)))
+
 (def standard-router-data
   "Default Reitit router configuration with Malli coercion, Muuntaja, and Swagger support."
   {:exception pretty/exception
    :syntax :bracket
    :data {:coercion reitit.coercion.malli/coercion
-          :muuntaja muuntaja.core/instance
+          :muuntaja muuntaja-instance
           :interceptors [;; swagger feature
                          swagger/swagger-feature
                          ;; query-params & form-params

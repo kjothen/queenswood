@@ -8,8 +8,8 @@
            [:data {:optional true} [:maybe string?]]]
 
  :command-request [:map
-                   [:command string?]
-                   [:data {:optional true} [:maybe string?]]]
+                   ["command" string?]
+                   ["data" {:optional true} [:maybe string?]]]
 
  :command-result [:map
                   [:result :map]]

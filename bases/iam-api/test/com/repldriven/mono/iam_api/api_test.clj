@@ -20,9 +20,9 @@
 (def project-id "prj-test")
 
 (def service-account-create-body
-  {:account-id "sa-test"
-   :service-account {:display-name "sa-test-zzz-d-shared"
-                     :description "Test service account for all dev projects"}})
+  {"account-id" "sa-test"
+   "service-account" {"display-name" "sa-test-zzz-d-shared"
+                      "description" "Test service account for all dev projects"}})
 
 (defn- test-system
   []
@@ -75,53 +75,51 @@
             ; create service account
             [res (create-service-account)
              _ (is (= 201 (:status res)))
-             service-account (http/res->edn res)
-             _ (is (= false (:disabled service-account)))
+             service-account (http/res->body res)
+             _ (is (= false (get service-account "disabled")))
              ; get created service account
-             get-res (get-service-account (:name service-account))
+             get-res (get-service-account (get service-account "name"))
              _ (is (= 200 (:status get-res)))
-             _ (is (= service-account (http/res->edn get-res)))
+             _ (is (= service-account (http/res->body get-res)))
              ; list service accounts
              list-res (list-service-accounts)
              _ (is (= 200 (:status list-res)))
-             service-accounts (http/res->edn list-res)
-             _ (is (= 1 (count (:accounts service-accounts))))
+             service-accounts (http/res->body list-res)
+             _ (is (= 1 (count (get service-accounts "accounts"))))
              _ (is (= service-account
-                      (first (:accounts service-accounts))))
+                      (first (get service-accounts "accounts"))))
              ; disable service account
-             disable-res (disable-service-account (:name service-account))
+             disable-res (disable-service-account (get service-account "name"))
              _ (is (= 204 (:status disable-res)))
              _ (is (or (nil? (:body disable-res))
                        (empty? (:body disable-res))))
-             disabled-get-res (get-service-account (:name
-                                                    service-account))
+             disabled-get-res (get-service-account (get service-account "name"))
              _ (is (= 200 (:status disabled-get-res)))
-             _ (is (= true (:disabled (http/res->edn disabled-get-res))))
+             _ (is (= true (get (http/res->body disabled-get-res) "disabled")))
              ; enable service account
-             enable-res (enable-service-account (:name service-account))
+             enable-res (enable-service-account (get service-account "name"))
              _ (is (= 204 (:status enable-res)))
              _ (is (or (nil? (:body enable-res))
                        (empty? (:body enable-res))))
-             enabled-get-res (get-service-account (:name service-account))
+             enabled-get-res (get-service-account (get service-account "name"))
              _ (is (= 200 (:status enabled-get-res)))
-             _ (is (= false (:disabled (http/res->edn enabled-get-res))))
+             _ (is (= false (get (http/res->body enabled-get-res) "disabled")))
              ; delete service account
-             delete-res (delete-service-account (:name service-account))
+             delete-res (delete-service-account (get service-account "name"))
              _ (is (= 204 (:status delete-res)))
              _ (is (or (nil? (:body delete-res))
                        (empty? (:body delete-res))))
              after-delete-list (list-service-accounts)
              _ (is (= 200 (:status after-delete-list)))
-             after-delete-accounts (http/res->edn after-delete-list)
-             _ (is (zero? (count (:accounts after-delete-accounts))))
+             after-delete-accounts (http/res->body after-delete-list)
+             _ (is (zero? (count (get after-delete-accounts "accounts"))))
              ; undelete service account
-             undelete-res (undelete-service-account (:name
-                                                     service-account))
+             undelete-res (undelete-service-account (get service-account "name"))
              _ (is (= 204 (:status undelete-res)))
              _ (is (or (nil? (:body undelete-res))
                        (empty? (:body undelete-res))))
              after-undelete-list (list-service-accounts)
              _ (is (= 200 (:status after-undelete-list)))
-             after-undelete-accounts (http/res->edn after-undelete-list)
-             _ (is (= 1 (count (:accounts after-undelete-accounts))))]
+             after-undelete-accounts (http/res->body after-undelete-list)
+             _ (is (= 1 (count (get after-undelete-accounts "accounts"))))]
             test/refute-anomaly))))))

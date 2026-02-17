@@ -17,7 +17,8 @@
   [request]
   (let [{:keys [parameters mqtt-client pulsar-producers telemetry/idempotency-key telemetry/correlation-id]} request
         {:keys [body]} parameters
-        {:keys [command data]} body
+        command (get body "command")
+        data    (get body "data")
         reply-topic (str "replies/" idempotency-key)
         p (promise)
         command {"command" command
