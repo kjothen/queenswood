@@ -12,7 +12,7 @@
      ["/command"
       {:interceptors [telemetry/require-idempotency-key
                       telemetry/extract-correlation-id]
-       :post {:summary "Submit a command and block until a reply is received via MQTT"
+       :post {:summary "Submit a command and wait synchronously for its result"
               :parameters {:body (:command-request specs)}
               :responses {200 {:body (:command-response specs)}}
               :handler handlers/create}}]]))
