@@ -9,7 +9,7 @@
   {:system/start (fn [{:system/keys [config instance]}]
                    (or instance
                        (let [{:keys [uri options]} config]
-                         (try (log/info "Opening mqtt connection:" uri options)
+                         (try (log/info "Opening mqtt connection:" uri)
                               (mh/connect uri)
                               (catch Exception e
                                 (log/error (format
