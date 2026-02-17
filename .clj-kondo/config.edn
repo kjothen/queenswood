@@ -1,2 +1,4 @@
 {:lint-as {com.repldriven.mono.error.interface/with-anomaly? clojure.core/->
-           com.repldriven.mono.error.interface/with-let-anomaly? clojure.core/let}}
+           com.repldriven.mono.error.interface/with-let-anomaly? clojure.core/let
+           com.repldriven.mono.telemetry.interface/with-span-tests clojure.core/let
+           com.repldriven.mono.telemetry.span-tests/with-span-tests clojure.core/let}}
