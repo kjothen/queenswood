@@ -83,7 +83,7 @@ bases/symmetric-key-api {:local/root "bases/symmetric-key-api"}
                        "components/db/test"
                        "components/db/test-resources"
                        "components/system/test"
-                       "components/testcontainers/test"
+"components/testcontainers/test"
                        "components/testcontainers/test-resources"
                        "components/utility/test"
                        "components/vault/test"

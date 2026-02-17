@@ -7,7 +7,7 @@
 (defn routes
   [ctx]
   (let [specs @command/specs]
-    ["/api" {:interceptors (concat [telemetry/trace-span]
+    ["/api" {:interceptors (concat telemetry/trace-span
                                    (:interceptors ctx))}
      ["/command"
       {:interceptors [telemetry/require-idempotency-key

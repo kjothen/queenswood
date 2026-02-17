@@ -2,7 +2,8 @@
   "Public API for telemetry operations."
   (:require
    [com.repldriven.mono.telemetry.core :as core]
-   [com.repldriven.mono.telemetry.interceptors :as interceptors]))
+   [com.repldriven.mono.telemetry.interceptors :as interceptors]
+   [com.repldriven.mono.telemetry.test-fixtures :as test-fixtures]))
 
 ;; Tracing
 (defmacro with-span
@@ -38,7 +39,7 @@
   (core/set-attribute k v))
 
 (defn inject-traceparent
-  "Extract W3C traceparent from current OpenTelemetry span context.
+  "Extract W3C traceparent from the current thread-local span (Span/current).
 
   Returns traceparent string in format: 00-{trace-id}-{span-id}-{trace-flags}
   Returns nil if no active span or OpenTelemetry is not configured."
@@ -71,6 +72,18 @@
   [counter value attrs]
   (core/add-counter! counter value attrs))
 
+;; Test support
+(def with-otel-test-fixture
+  "Test fixture. Installs an in-memory OTel SDK for the duration of a test.
+   Use with clojure.test/use-fixtures or inline as a zero-arg wrapper.
+   Access recorded spans via (span-exporter)."
+  test-fixtures/with-otel)
+
+(defn span-exporter
+  "Returns the in-memory span exporter bound by with-otel-test-fixture for the current test."
+  []
+  test-fixtures/*span-exporter*)
+
 ;; Interceptors
 (def require-idempotency-key
   "Interceptor that validates Idempotency-Key header is present."
@@ -81,5 +94,6 @@
   interceptors/extract-correlation-id)
 
 (def trace-span
-  "Interceptor that creates OpenTelemetry spans for HTTP requests."
+  "Vector of interceptors that add OpenTelemetry server span support to HTTP requests.
+  Use with concat, not conj, when composing interceptor chains."
   interceptors/trace-span)

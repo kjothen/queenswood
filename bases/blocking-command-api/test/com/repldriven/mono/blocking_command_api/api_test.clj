@@ -8,7 +8,6 @@
    [com.repldriven.mono.env.interface :as env]
    [com.repldriven.mono.error.interface :as error]
    [com.repldriven.mono.http-client.interface :as http]
-   [com.repldriven.mono.log.interface :as log]
    [com.repldriven.mono.pulsar.interface :as pulsar]
    [com.repldriven.mono.server.interface :as server]
    [com.repldriven.mono.system.interface :as system]
@@ -18,7 +17,9 @@
 
    [clojure.core.async :as async]
    [clojure.data.json :as json]
-   [clojure.test :refer [deftest is testing]]))
+   [clojure.test :refer [deftest is testing use-fixtures]]))
+
+(use-fixtures :each telemetry/with-otel-test-fixture)
 
 (def ^:dynamic *base-url* "http://localhost:{PORT}")
 
@@ -69,5 +70,14 @@
              actual (http/res->body res)
              _ (is (= "test-command" (get-in actual ["result" "command"]))
                    "Should receive command name")]
-            test/refute-anomaly))
+            test/refute-anomaly)
+          (let [spans (vec (.getFinishedSpanItems (telemetry/span-exporter)))
+              process-span (first (filter #(= "process-command" (.getName %)) spans))
+              server-span (first (remove #(= "process-command" (.getName %)) spans))]
+            (is (= 2 (count spans)) "Should have 2 telemetry spans")
+            (is (some? server-span) "Should have server span")
+            (is (some? process-span) "Should have process-command span")
+            (is (= (.getTraceId (.getSpanContext server-span))
+                   (.getTraceId (.getSpanContext process-span)))
+                "Spans should share trace ID (propagation worked)")))
         (async/>!! stop :stop)))))

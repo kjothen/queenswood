@@ -2,8 +2,17 @@
  :default-profile-name "default"
  :interface-ns "interface"
  :projects {"development" {:alias "dev"}
-            "iam" {:alias "iam"}
-"symmetric-key-vault" {:alias "key"}}
+            ;; test-resources provides shared classpath resources (Testcontainers configs,
+            ;; application-test.yml files) consumed by test runners at runtime.
+            ;; Polylith's dependency analysis tracks source-code imports only, so it
+            ;; cannot see this resource-level coupling and incorrectly flags the component
+            ;; as unnecessary. :necessary tells poly to keep it.
+            "accounts-processor" {:alias "ap"
+                                  :necessary ["test-resources"]}
+            "iam" {:alias "iam"
+                   :necessary ["test-resources"]}
+            "symmetric-key-vault" {:alias "key"
+                                   :necessary ["test-resources"]}}
  :tag-patterns {:release "v[0-9]*" :stable "stable-*"}
  :test {:create-test-runner com.repldriven.mono.external-test-runner.core/create}
  :top-namespace "com.repldriven.mono"

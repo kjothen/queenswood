@@ -3,7 +3,6 @@
   (:require
    [com.repldriven.mono.log.interface :as log]
 
-   [steffan-westcott.clj-otel.api.trace.span :as span]
    [steffan-westcott.clj-otel.api.trace.http :as trace-http]))
 
 (def require-idempotency-key
@@ -33,27 +32,14 @@
                                      (get-in ctx [:request :telemetry/idempotency-key]))]
               (assoc-in ctx [:request :telemetry/correlation-id] correlation-id)))})
 
-(defn- server-span-interceptor
-  "Creates an interceptor that adds OpenTelemetry server span support.
-
-  Uses clj-otel span-interceptor to manage span lifecycle automatically.
-  W3C trace context from incoming HTTP headers is automatically extracted."
-  [span-name]
-  (span/span-interceptor
-   ::span-context
-   (fn [ctx]
-     (let [request (:request ctx)]
-       (trace-http/server-span-opts
-        {:name (or span-name
-                   (str (name (:request-method request))
-                        " " (:uri request)))
-         :kind :server})))))
-
 (def trace-span
-  "Interceptor that creates OpenTelemetry spans for HTTP requests.
+  "Vector of interceptors that add OpenTelemetry server span support to HTTP requests.
 
-  Creates server spans using OpenTelemetry SDK. W3C trace context from incoming
-  HTTP headers is automatically extracted and propagated.
+  Uses clj-otel server-span-interceptors with :create-span? true, which:
+  - Creates a new server span with parent extracted from incoming W3C headers
+  - Sets the span as the current context so handlers can call (inject-traceparent)
+  - Records HTTP response status and exceptions, ends span on leave or error
 
-  Records HTTP status code and exceptions, properly ends span on :leave or :error."
-  (server-span-interceptor nil))
+  Synchronous-only: :set-current-context? is true, which is appropriate because
+  all Reitit/Sieppari interceptors and handlers run on the same thread."
+  (trace-http/server-span-interceptors {:create-span? true}))

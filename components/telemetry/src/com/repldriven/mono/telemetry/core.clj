@@ -5,10 +5,10 @@
   (:require
    [steffan-westcott.clj-otel.api.trace.span :as span]
    [steffan-westcott.clj-otel.api.metrics.instrument :as instrument]
+   [steffan-westcott.clj-otel.api.otel :as otel]
    [steffan-westcott.clj-otel.context :as context])
   (:import
    (io.opentelemetry.api.trace Span)
-   (io.opentelemetry.api GlobalOpenTelemetry)
    (io.opentelemetry.context.propagation TextMapGetter)))
 
 (defmacro with-span
@@ -95,22 +95,23 @@
   [counter value attrs]
   (instrument/add! counter {:value value :attributes attrs}))
 
+(defn- traceparent-from-span-context
+  [span-context]
+  (when (.isValid span-context)
+    (format "00-%s-%s-%02x"
+            (.getTraceId span-context)
+            (.getSpanId span-context)
+            (if (.isSampled span-context) 1 0))))
+
 (defn inject-traceparent
-  "Extract W3C traceparent from current OpenTelemetry span context.
+  "Extract W3C traceparent from the current thread-local span (Span/current).
 
   Returns traceparent string in format: 00-{trace-id}-{span-id}-{trace-flags}
   Returns nil if no active span or OpenTelemetry is not configured."
   []
   (try
-    (let [span (Span/current)
-          span-context (.getSpanContext span)]
-      (when (.isValid span-context)
-        (format "00-%s-%s-%02x"
-                (.getTraceId span-context)
-                (.getSpanId span-context)
-                (if (.isSampled span-context) 1 0))))
-    (catch Exception _e
-      nil)))
+    (traceparent-from-span-context (.getSpanContext (Span/current)))
+    (catch Exception _e nil)))
 
 (def ^:private command-getter
   "TextMapGetter implementation for extracting trace context from command maps."
@@ -124,15 +125,17 @@
   "Extract parent OpenTelemetry context from command with traceparent/tracestate.
 
   Args:
-  - command: Map with string keys containing \"traceparent\" and \"tracestate\" fields
+  - command: Map with string or keyword keys containing \"traceparent\" and \"tracestate\" fields
+    (Avro-deserialized messages use keyword keys; JSON-parsed messages use string keys)
 
   Returns: OpenTelemetry context with extracted trace information, or current context if extraction fails."
   [command]
   (try
     (let [propagator (.getTextMapPropagator
-                      (.getPropagators (GlobalOpenTelemetry/get)))
-          carrier {"traceparent" (get command "traceparent")
-                   "tracestate" (get command "tracestate")}]
+                      (.getPropagators (otel/get-default-otel!)))
+          get-field (fn [k] (or (get command k) (get command (keyword k))))
+          carrier {"traceparent" (get-field "traceparent")
+                   "tracestate" (get-field "tracestate")}]
       (.extract propagator (context/current) carrier command-getter))
     (catch Exception _e
       ;; Fallback to current context if extraction fails
