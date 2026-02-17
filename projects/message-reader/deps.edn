@@ -14,6 +14,7 @@
         component/error {:local/root "../../components/error"}
         component/http-client {:local/root "../../components/http-client"}
         component/log {:local/root "../../components/log"}
+        component/mqtt {:local/root "../../components/mqtt"}
         component/pulsar {:local/root "../../components/pulsar"}
         component/avro {:local/root "../../components/avro"}
         component/system {:local/root "../../components/system"}
