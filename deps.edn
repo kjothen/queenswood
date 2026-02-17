@@ -40,8 +40,7 @@
     bases/external-test-runner {:local/root "bases/external-test-runner"}
     bases/iam-api {:local/root "bases/iam-api"}
     bases/pulsar-mqtt-processor {:local/root "bases/pulsar-mqtt-processor"}
-    bases/pulsar-reader {:local/root "bases/pulsar-reader"}
-    bases/symmetric-key-api {:local/root "bases/symmetric-key-api"}
+bases/symmetric-key-api {:local/root "bases/symmetric-key-api"}
     org.clojure/clojure {:mvn/version "1.12.4"}
     org.clojure/core.async {:mvn/version "1.8.741"}}
    :extra-paths ["development/resources"]
@@ -92,9 +91,7 @@
                        "bases/blocking-command-api/test"
                        "bases/blocking-command-api/test-resources"
                        "bases/external-test-runner/test"
-                       "bases/pulsar-reader/test"
-                       "bases/pulsar-reader/test-resources"
-                       "bases/symmetric-key-api/test"
+"bases/symmetric-key-api/test"
                        "bases/symmetric-key-api/test-resources"
                        "bases/iam-api/test"
                        "bases/iam-api/test-resources"]}}

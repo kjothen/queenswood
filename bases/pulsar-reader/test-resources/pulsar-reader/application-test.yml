@@ -1,2 +1,0 @@
-system:
-  pulsar: !include testcontainers/pulsar-all-test.yml

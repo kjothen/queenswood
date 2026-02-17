@@ -12,12 +12,12 @@ This file provides guidance to Claude Code when working with this Clojure/Polyli
 - **Bases** (`bases/`):
   - Application entry points (e.g., APIs, readers, processors)
   - Have `-main` functions and handle application bootstrap
-  - Examples: iam-api, symmetric-key-api, blocking-command-api, pulsar-reader
+  - Examples: iam-api, symmetric-key-api, blocking-command-api, pulsar-mqtt-processor
   - Bases cannot depend on other bases
 - **Projects** (`projects/`):
   - Combine bases and components into deployable applications
   - No code, just `deps.edn` files
-  - Examples: iam, symmetric-key-vault, message-reader
+  - Examples: iam, symmetric-key-vault
   - Projects do not have `-main` functions (bases do)
 
 ## Component-Based Infrastructure

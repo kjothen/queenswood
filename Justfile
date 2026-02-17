@@ -25,7 +25,6 @@ shell:
 build snapshot="true":
     cd projects/iam && clojure -X:build uber :snapshot {{ snapshot }}
     cd projects/symmetric-key-vault && clojure -X:build uber :snapshot {{ snapshot }}
-    cd projects/message-reader && clojure -X:build uber :snapshot {{ snapshot }}
 
 
 # Run all polylith project tests
