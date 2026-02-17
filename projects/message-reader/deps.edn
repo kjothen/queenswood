@@ -8,6 +8,7 @@
                                {:local/root
                                 "../../bases/external-test-runner"}}}}
  :deps {component/cli {:local/root "../../components/cli"}
+        component/command {:local/root "../../components/command"}
         component/encryption {:local/root "../../components/encryption"}
         component/env {:local/root "../../components/env"}
         component/error {:local/root "../../components/error"}
