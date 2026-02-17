@@ -1,4 +1,4 @@
 {:aliases {:test {:extra-deps {} :extra-paths ["test"]}}
  :deps {nomnom/abracad {:mvn/version "0.5.2"}
         deercreeklabs/lancaster {:mvn/version "0.12.2"}}
- :paths ["src" "resources"]}
+ :paths ["src"]}

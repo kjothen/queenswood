@@ -15,13 +15,13 @@
 (def specs
   "Command Malli specs for request/response validation.
 
-  Loaded from command.edn resource file. Includes:
+  Loaded from schema/command/command.edn resource file. Includes:
   - :command - Command data structure
   - :command-request - HTTP request wrapper
   - :command-result - Command processing result
   - :command-response - HTTP response wrapper"
   (delay
-    (-> "command.edn"
+    (-> "schema/command/command.edn"
         io/resource
         slurp
         edn/read-string)))

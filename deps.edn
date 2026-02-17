@@ -30,6 +30,7 @@
     components/system {:local/root "components/system"}
     components/telemetry {:local/root "components/telemetry"}
     components/test {:local/root "components/test"}
+    components/test-resources {:local/root "components/test-resources"}
     components/testcontainers {:local/root "components/testcontainers"}
     components/utility {:local/root "components/utility"}
     components/vault {:local/root "components/vault"}
@@ -54,7 +55,8 @@
   :lint/clj-kondo {:extra-deps {clj-kondo/clj-kondo {:mvn/version "2024.11.14"}}
                    :main-opts ["-m" "clj-kondo.main"]}
   :test {:extra-deps {http-kit.fake/http-kit.fake {:mvn/version "0.2.2"}}
-         :extra-paths ["components/accounts/test"
+         :extra-paths ["components/test-resources/test-resources"
+                       "components/accounts/test"
                        "components/accounts/test-resources"
                        "components/cli/test"
                        "components/env/test"
@@ -64,7 +66,6 @@
                        "components/event/test"
                        "components/http-client/test"
                        "components/iam/test"
-                       "components/json/test"
                        "components/log/test"
                        "components/migrator/test"
                        "components/migrator/test-resources"

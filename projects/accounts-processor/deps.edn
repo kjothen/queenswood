@@ -5,8 +5,9 @@
                    :ns-default com.repldriven.mono.build.build}
            :dev {:extra-deps {component/test {:local/root "../../components/test"}}}
            :test {:extra-deps {bases/external-test-runner
-                               {:local/root
-                                "../../bases/external-test-runner"}}}}
+                               {:local/root "../../bases/external-test-runner"}
+                               component/test-resources
+                               {:local/root "../../components/test-resources"}}}}
  :deps {component/accounts {:local/root "../../components/accounts"}
         component/avro {:local/root "../../components/avro"}
         component/cli {:local/root "../../components/cli"}
