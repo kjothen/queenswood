@@ -43,7 +43,7 @@
    Returns {:c chan :stop chan}. Send anything to :stop to stop receiving."
   [^Consumer consumer schema timeout-ms]
   (let [c (async/chan)
-        stop (async/chan)]
+        stop (async/chan 1)]
     (async/thread
       (try (loop []
              (let [[v port] (async/alts!!
@@ -55,11 +55,17 @@
                                                         TimeUnit/MILLISECONDS))]
                                   msg))])]
                (cond (= port stop) nil
-                     (some? v) (do (async/>!!
-                                    c
-                                    {:message v
-                                     :data (message/deserialize-same schema v)})
-                                   (recur))
+                     (some? v) (do
+                                 (comment
+                                   "Race the put against stop. If the caller took fewer messages"
+                                   "than the consumer produced (e.g. via async/take), nobody reads"
+                                   "c anymore and a plain >!! would block the loop — making"
+                                   ">!! stop :stop deadlock too.")
+                                 (let [[_ p] (async/alts!!
+                                              [[c {:message v
+                                                   :data (message/deserialize-same schema v)}]
+                                               stop])]
+                                   (when (not= p stop) (recur))))
                      :else (recur))))
            (finally (async/close! c) (async/close! stop))))
     {:c c :stop stop}))

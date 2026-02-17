@@ -1,22 +1,22 @@
 (ns com.repldriven.mono.pulsar.pulsar.reader
   (:refer-clojure :exclude [read])
   (:require
-    [com.repldriven.mono.pulsar.pulsar.schemas :as schemas]
-    [com.repldriven.mono.pulsar.pulsar.message :as message]
+   [com.repldriven.mono.pulsar.pulsar.schemas :as schemas]
+   [com.repldriven.mono.pulsar.pulsar.message :as message]
 
-    [com.repldriven.mono.error.interface :as error]
-    [com.repldriven.mono.log.interface :as log]
+   [com.repldriven.mono.error.interface :as error]
+   [com.repldriven.mono.log.interface :as log]
 
-    [clojure.core.async :as async]
-    [clojure.java.data :as j])
+   [clojure.core.async :as async]
+   [clojure.java.data :as j])
   (:import
-    (org.apache.pulsar.client.api Message
-                                  PulsarClient
-                                  PulsarClientException
-                                  Reader
-                                  ReaderBuilder)
-    (java.util Map)
-    (java.util.concurrent TimeUnit)))
+   (org.apache.pulsar.client.api Message
+                                 PulsarClient
+                                 PulsarClientException
+                                 Reader
+                                 ReaderBuilder)
+   (java.util Map)
+   (java.util.concurrent TimeUnit)))
 
 (defn create
   ^Reader [{:keys [^PulsarClient client conf schemas]}]
@@ -44,25 +44,31 @@
   Returns {:c chan :stop chan}. Send anything to :stop to stop reading."
   [^Reader reader schema timeout-ms]
   (let [c (async/chan)
-        stop (async/chan)]
+        stop (async/chan 1)]
     (async/thread
-     (try (loop []
-            (let [[v port] (async/alts!!
-                            [stop
-                             (async/thread
-                              (when-let [^Message msg
-                                         (.. reader
-                                             (readNext timeout-ms
-                                                       TimeUnit/MILLISECONDS))]
-                                msg))])]
-              (cond (= port stop) nil
-                    (some? v) (do (async/>!!
-                                   c
-                                   {:message v
-                                    :data (message/deserialize-same schema v)})
-                                  (recur))
-                    :else (recur))))
-          (finally (async/close! c) (async/close! stop))))
+      (try (loop []
+             (let [[v port] (async/alts!!
+                             [stop
+                              (async/thread
+                                (when-let [^Message msg
+                                           (.. reader
+                                               (readNext timeout-ms
+                                                         TimeUnit/MILLISECONDS))]
+                                  msg))])]
+               (cond (= port stop) nil
+                     (some? v) (do
+                                (comment
+                                  "Race the put against stop. If the caller took fewer messages"
+                                  "than the reader produced (e.g. via async/take), nobody reads"
+                                  "c anymore and a plain >!! would block the loop — making"
+                                  ">!! stop :stop deadlock too.")
+                                (let [[_ p] (async/alts!!
+                                             [[c {:message v
+                                                  :data (message/deserialize-same schema v)}]
+                                              stop])]
+                                  (when (not= p stop) (recur))))
+                     :else (recur))))
+           (finally (async/close! c) (async/close! stop))))
     {:c c :stop stop}))
 
 (defn close
