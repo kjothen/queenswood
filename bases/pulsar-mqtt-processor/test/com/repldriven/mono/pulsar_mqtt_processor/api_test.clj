@@ -23,7 +23,7 @@
    "accounts/init-changelog.sql"))
 
 (defn send-command
-  "Simulates Client - sends a command via Pulsar and blocks until the result is received via MQTT"
+  "Simulates Dispatcher - sends a command via Pulsar and blocks until the result is received via MQTT"
   [sys command-name data]
   (let [producer    (system/instance sys [:pulsar :producers :command])
         mqtt-client (system/instance sys [:mqtt :client])
