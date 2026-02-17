@@ -1,4 +1,7 @@
 system:
   mqtt: !include testcontainers/mqtt-test.yml
-  pulsar: !include pulsar-mqtt-processor/pubsub-test.yml
-  processor: {}
+  pulsar: !include testcontainers/pulsar-all-test.yml
+  postgres: !include testcontainers/postgres-test.yml
+  db: !include pulsar-mqtt-processor/datasource-test.yml
+  processor:
+    datasource: !system/ref db.datasource
