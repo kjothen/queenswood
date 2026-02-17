@@ -45,6 +45,8 @@ jobs:
           ${{ runner.os }}-clojure-
 
     - name: Run tests
+      env:
+        TESTCONTAINERS_REUSE_ENABLE: "true"
       run: clojure -M:poly test :all
 
     - name: Publish test report
