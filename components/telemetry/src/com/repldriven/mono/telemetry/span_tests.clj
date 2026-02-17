@@ -1,7 +1,9 @@
 (ns com.repldriven.mono.telemetry.span-tests
   (:require
-   [clojure.test :refer [is]]
-   [steffan-westcott.clj-otel.sdk.otel-sdk :as sdk])
+   [steffan-westcott.clj-otel.sdk.otel-sdk :as sdk]
+
+   [clojure.test :refer [is]])
+
   (:import
    (io.opentelemetry.sdk.testing.exporter InMemorySpanExporter)
    (io.opentelemetry.sdk.trace.export SimpleSpanProcessor)))
