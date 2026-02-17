@@ -37,18 +37,19 @@
         cmd-id      (str (java.util.UUID/randomUUID))
         reply-topic (str "replies/" cmd-id)
         p           (promise)]
-    (mqtt/subscribe mqtt-client
-                    {reply-topic 0}
-                    (fn [_ _topic ^bytes payload]
-                      (deliver p (json/read-str (String. payload "UTF-8")))))
-    (pulsar/send producer
-                 {:id             cmd-id
-                  :command        command-name
-                  :correlation_id cmd-id
-                  :causation_id   nil
-                  :traceparent    (telemetry/inject-traceparent)
-                  :tracestate     nil
-                  :data           (json/write-str data)})
+    (telemetry/with-span ["send-command" {}]
+      (mqtt/subscribe mqtt-client
+                      {reply-topic 0}
+                      (fn [_ _topic ^bytes payload]
+                        (deliver p (json/read-str (String. payload "UTF-8")))))
+      (pulsar/send producer
+                   {:id             cmd-id
+                    :command        command-name
+                    :correlation_id cmd-id
+                    :causation_id   nil
+                    :traceparent    (telemetry/inject-traceparent)
+                    :tracestate     nil
+                    :data           (json/write-str data)}))
     (deref p 5000 ::timeout)))
 
 (deftest process-command-test
@@ -57,11 +58,10 @@
       (migrate sys)
       (let [{:keys [stop]} (SUT/run sys)]
         (telemetry/with-span-tests [_ ["send-command" "process-command"]]
-          (telemetry/with-span ["send-command" {}]
-            (let [result (send-command sys "open-account" {"account-id" "acc-api-test"
-                                                           "name"       "API Test Account"
-                                                           "currency"   "GBP"})]
-              (is (not= ::timeout result) "Should receive a reply within timeout")
-              (is (= "ok" (get result "status")))
-              (is (= "acc-api-test" (get result "account-id"))))))
+          (let [result (send-command sys "open-account" {"account-id" "acc-api-test"
+                                                         "name"       "API Test Account"
+                                                         "currency"   "GBP"})]
+            (is (not= ::timeout result) "Should receive a reply within timeout")
+            (is (= "ok" (get result "status")))
+            (is (= "acc-api-test" (get result "account-id")))))
         (async/>!! stop :stop)))))
