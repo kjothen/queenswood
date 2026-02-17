@@ -1,20 +1,27 @@
-(ns ^:eftest/synchronized com.repldriven.mono.pulsar-mqtt-processor.api-test
+(ns ^:eftest/synchronized com.repldriven.mono.pulsar-mqtt-processor.processor-test
   (:require
    com.repldriven.mono.testcontainers.interface
 
-   [com.repldriven.mono.pulsar-mqtt-processor.main :as SUT]
+   [com.repldriven.mono.pulsar-mqtt-processor.processor :as SUT]
 
    [com.repldriven.mono.db.interface :as db]
+   [com.repldriven.mono.env.interface :as env]
    [com.repldriven.mono.error.interface :as error]
    [com.repldriven.mono.migrator.interface :as migrator]
    [com.repldriven.mono.mqtt.interface :as mqtt]
    [com.repldriven.mono.pulsar.interface :as pulsar]
    [com.repldriven.mono.system.interface :as system]
-   [com.repldriven.mono.test.interface :as test]
+   [com.repldriven.mono.telemetry.interface :as telemetry]
 
    [clojure.core.async :as async]
    [clojure.data.json :as json]
    [clojure.test :refer [deftest is testing]]))
+
+(defn- test-system
+  []
+  (error/nom-> (env/config "classpath:pulsar-mqtt-processor/application-test.yml" :test)
+               system/defs
+               system/start))
 
 (defn- migrate
   [sys]
@@ -39,24 +46,22 @@
                   :command        command-name
                   :correlation_id cmd-id
                   :causation_id   nil
-                  :traceparent    nil
+                  :traceparent    (telemetry/inject-traceparent)
                   :tracestate     nil
                   :data           (json/write-str data)})
     (deref p 5000 ::timeout)))
 
 (deftest process-command-test
   (testing "Commands sent via Pulsar are processed and replied to via MQTT"
-    (let [sys (SUT/start "classpath:pulsar-mqtt-processor/application-test.yml" :test)]
-      (is (not (error/anomaly? sys)) "System should start")
-      (is (system/system? sys) "System should be valid")
-      (when (system/system? sys)
-        (migrate sys)
-        (let [{:keys [stop]} (SUT/run sys)
-              result (send-command sys "open-account" {"account-id" "acc-api-test"
-                                                       "name"       "API Test Account"
-                                                       "currency"   "GBP"})]
-          (is (not= ::timeout result) "Should receive a reply within timeout")
-          (is (= "ok" (get result "status")))
-          (is (= "acc-api-test" (get result "account-id")))
-          (async/>!! stop :stop)
-          (system/stop sys))))))
+    (system/with-system [sys (test-system)]
+      (migrate sys)
+      (let [{:keys [stop]} (SUT/run sys)]
+        (telemetry/with-span-tests [_ ["send-command" "process-command"]]
+          (telemetry/with-span ["send-command" {}]
+            (let [result (send-command sys "open-account" {"account-id" "acc-api-test"
+                                                           "name"       "API Test Account"
+                                                           "currency"   "GBP"})]
+              (is (not= ::timeout result) "Should receive a reply within timeout")
+              (is (= "ok" (get result "status")))
+              (is (= "acc-api-test" (get result "account-id"))))))
+        (async/>!! stop :stop)))))
