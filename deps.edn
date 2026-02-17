@@ -24,6 +24,7 @@
     components/migrator {:local/root "components/migrator"}
     components/mqtt {:local/root "components/mqtt"}
     components/pulsar {:local/root "components/pulsar"}
+    components/pulsar-vault-crypto {:local/root "components/pulsar-vault-crypto"}
     components/server {:local/root "components/server"}
     components/spec-malli {:local/root "components/spec-malli"}
     components/spec-spec {:local/root "components/spec-spec"}
@@ -73,6 +74,8 @@
                        "components/mqtt/test-resources"
                        "components/pulsar/test"
                        "components/pulsar/test-resources"
+                       "components/pulsar-vault-crypto/test"
+                       "components/pulsar-vault-crypto/test-resources"
                        "components/server/test"
                        "components/server/test-resources"
                        "components/avro/test"

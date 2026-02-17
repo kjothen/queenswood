@@ -20,7 +20,7 @@
         </encoder>
     </appender>
 
-    <logger name="com.repldriven.mono" level="debug" additivity="false">
+    <logger name="com.repldriven.mono" level="info" additivity="false">
         <appender-ref ref="CONSOLE"/>
     </logger>
 

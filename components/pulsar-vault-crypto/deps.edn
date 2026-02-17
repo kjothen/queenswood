@@ -1,0 +1,4 @@
+{:aliases {:test {:extra-deps {} :extra-paths ["test" "test-resources"]}}
+ :deps {org.apache.pulsar/pulsar-client-all
+        {:mvn/version "4.1.2" :exclusions [org.bouncycastle/bcprov-ext-jdk18on]}}
+ :paths ["src"]}

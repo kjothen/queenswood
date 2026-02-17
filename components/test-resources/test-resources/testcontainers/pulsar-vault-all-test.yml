@@ -1,6 +1,7 @@
-# Complete Pulsar testcontainer setup with all common components
-# Includes: container, admin, client, tenants, namespaces, schemas, topics,
-# crypto (key generators, readers), producer, consumer, and reader
+# Pulsar testcontainer setup using vault-backed tenant encryption keys.
+# Mirrors pulsar-all-test.yml but replaces file-based crypto key readers
+# with pulsar-vault-crypto/tenant-key-reader components.
+# Expects vault to be available at system key :vault (see pulsar-vault-keys-test.yml).
 
 container: !system/component
   system/component-kind: pulsar/container
@@ -82,31 +83,21 @@ topics: !system/component
       partitions: 1
       schema: !keyword user
 
-crypto-key-pair-file-readers: !system/component
-  system/component-kind: pulsar/crypto-key-pair-file-readers
-  p1:
-    tenant-key-1:
-      private-key: pulsar/test_rsa_privkey.pem
-      public-key: pulsar/test_rsa_pubkey.pem
-  p2:
-    tenant-key-2:
-      private-key: pulsar/test_rsa_privkey.pem
-      public-key: pulsar/test_rsa_pubkey.pem
+# Vault-backed crypto key readers — one per tenant.
+# tenant-1 has keys seeded in vault; tenant-2 does not (simulates wrong-tenant failure).
+vault-crypto-tenant-1: !system/component
+  system/component-kind: pulsar-vault-crypto/tenant-key-reader
+  client: !system/ref vault.client
+  token: my-root-token
+  tenant-id: tenant-1
+  mount: secret
 
-crypto-key-readers: !system/component
-  system/component-kind: pulsar/crypto-key-readers
-  r1:
-    default-key: tenant-key-1
-    keys: !system/local-ref crypto-key-pair-file-readers.p1
-  r2:
-    default-key: tenant-key-2
-    keys: !system/local-ref crypto-key-pair-file-readers.p2
-
-crypto-key-pair-generator: !system/component
-  system/component-kind: pulsar/crypto-key-pair-generator
-  tenant-key-1:
-    algorithm: RSA
-    key-size: 512
+vault-crypto-tenant-2: !system/component
+  system/component-kind: pulsar-vault-crypto/tenant-key-reader
+  client: !system/ref vault.client
+  token: my-root-token
+  tenant-id: tenant-2
+  mount: secret
 
 producers: !system/component
   system/component-kind: pulsar/producers
@@ -115,7 +106,7 @@ producers: !system/component
     client: !system/local-ref client
     conf:
       accessMode: !pulsar/access-mode Shared
-      cryptoKeyReader: !system/local-ref crypto-key-readers.r1
+      cryptoKeyReader: !system/local-ref vault-crypto-tenant-1
       encryptionKeys: [tenant-key-1]
       schema: !keyword command
       topicName: "persistent://tenant-1/namespace-1/topic-command"
@@ -125,7 +116,7 @@ producers: !system/component
     client: !system/local-ref client
     conf:
       accessMode: !pulsar/access-mode Shared
-      cryptoKeyReader: !system/local-ref crypto-key-readers.r1
+      cryptoKeyReader: !system/local-ref vault-crypto-tenant-1
       encryptionKeys: [tenant-key-1]
       schema: !keyword user
       topicName: "persistent://tenant-1/namespace-1/topic-user"
@@ -138,7 +129,7 @@ readers: !system/component
     client: !system/local-ref client
     conf:
       cryptoFailureAction: !pulsar/crypto-failure-action CONSUME
-      cryptoKeyReader: !system/local-ref crypto-key-readers.r1
+      cryptoKeyReader: !system/local-ref vault-crypto-tenant-1
       schema: !pulsar/schema AUTO_CONSUME
       startMessageId: !pulsar/message-id earliest
       topicNames: ["persistent://tenant-1/namespace-1/topic-command"]
@@ -148,7 +139,7 @@ readers: !system/component
     client: !system/local-ref client
     conf:
       cryptoFailureAction: !pulsar/crypto-failure-action CONSUME
-      cryptoKeyReader: !system/local-ref crypto-key-readers.r1
+      cryptoKeyReader: !system/local-ref vault-crypto-tenant-1
       schema: !pulsar/schema AUTO_CONSUME
       startMessageId: !pulsar/message-id earliest
       topicNames: ["persistent://tenant-1/namespace-1/topic-user"]
@@ -161,7 +152,7 @@ consumers: !system/component
     client: !system/local-ref client
     conf:
       cryptoFailureAction: !pulsar/crypto-failure-action CONSUME
-      cryptoKeyReader: !system/local-ref crypto-key-readers.r1
+      cryptoKeyReader: !system/local-ref vault-crypto-tenant-1
       schema: !pulsar/schema AUTO_CONSUME
       subscriptionName: tenant-1-subscriber
       subscriptionType: !pulsar/subscription-type Shared
@@ -172,7 +163,7 @@ consumers: !system/component
     client: !system/local-ref client
     conf:
       cryptoFailureAction: !pulsar/crypto-failure-action CONSUME
-      cryptoKeyReader: !system/local-ref crypto-key-readers.r1
+      cryptoKeyReader: !system/local-ref vault-crypto-tenant-1
       schema: !pulsar/schema AUTO_CONSUME
       subscriptionName: tenant-1-subscriber-r1
       subscriptionType: !pulsar/subscription-type Shared
@@ -183,7 +174,7 @@ consumers: !system/component
     client: !system/local-ref client
     conf:
       cryptoFailureAction: !pulsar/crypto-failure-action CONSUME
-      cryptoKeyReader: !system/local-ref crypto-key-readers.r2
+      cryptoKeyReader: !system/local-ref vault-crypto-tenant-2
       schema: !pulsar/schema AUTO_CONSUME
       subscriptionName: tenant-1-subscriber-r2
       subscriptionType: !pulsar/subscription-type Shared
