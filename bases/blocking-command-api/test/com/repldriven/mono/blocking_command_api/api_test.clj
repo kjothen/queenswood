@@ -17,9 +17,7 @@
 
    [clojure.core.async :as async]
    [clojure.data.json :as json]
-   [clojure.test :refer [deftest is testing use-fixtures]]))
-
-(use-fixtures :each telemetry/with-otel-test-fixture)
+   [clojure.test :refer [deftest is testing]]))
 
 (def ^:dynamic *base-url* "http://localhost:{PORT}")
 
@@ -63,21 +61,13 @@
       (let [jetty (system/instance sys [:server :jetty-adapter])
             {:keys [stop]} (command-processor sys)]
         (binding [*base-url* (server/http-local-url jetty)]
-          (error/with-let-anomaly?
-            [res (send-http-command "test-command")
-             _ (is (= 200 (:status res))
-                   "Should receive 200 OK")
-             actual (http/res->body res)
-             _ (is (= "test-command" (get-in actual ["result" "command"]))
-                   "Should receive command name")]
-            test/refute-anomaly)
-          (let [spans (vec (.getFinishedSpanItems (telemetry/span-exporter)))
-              process-span (first (filter #(= "process-command" (.getName %)) spans))
-              server-span (first (remove #(= "process-command" (.getName %)) spans))]
-            (is (= 2 (count spans)) "Should have 2 telemetry spans")
-            (is (some? server-span) "Should have server span")
-            (is (some? process-span) "Should have process-command span")
-            (is (= (.getTraceId (.getSpanContext server-span))
-                   (.getTraceId (.getSpanContext process-span)))
-                "Spans should share trace ID (propagation worked)")))
+          (telemetry/with-span-tests [_ ["process-command"]]
+            (error/with-let-anomaly?
+              [res    (send-http-command "test-command")
+               _      (is (= 200 (:status res))
+                          "Should receive 200 OK")
+               actual (http/res->body res)
+               _      (is (= "test-command" (get-in actual ["result" "command"]))
+                          "Should receive command name")]
+              test/refute-anomaly)))
         (async/>!! stop :stop)))))

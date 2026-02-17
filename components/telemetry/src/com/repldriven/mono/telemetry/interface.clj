@@ -3,7 +3,7 @@
   (:require
    [com.repldriven.mono.telemetry.core :as core]
    [com.repldriven.mono.telemetry.interceptors :as interceptors]
-   [com.repldriven.mono.telemetry.test-fixtures :as test-fixtures]))
+   [com.repldriven.mono.telemetry.span-tests :as span-tests]))
 
 ;; Tracing
 (defmacro with-span
@@ -73,16 +73,19 @@
   (core/add-counter! counter value attrs))
 
 ;; Test support
-(def with-otel-test-fixture
-  "Test fixture. Installs an in-memory OTel SDK for the duration of a test.
-   Use with clojure.test/use-fixtures or inline as a zero-arg wrapper.
-   Access recorded spans via (span-exporter)."
-  test-fixtures/with-otel)
+(defmacro with-span-tests
+  "Run body under an in-memory OTel SDK, then automatically assert:
+   - Each name in expected-names has a corresponding finished span
+   - All finished spans share the same trace ID (W3C propagation worked)
 
-(defn span-exporter
-  "Returns the in-memory span exporter bound by with-otel-test-fixture for the current test."
-  []
-  test-fixtures/*span-exporter*)
+   spans-sym is bound to a map of span-name -> SpanData after the body completes.
+   Use _ if you don't need to inspect individual spans.
+
+   Usage:
+     (with-span-tests [_ [\"process-command\"]]
+       (do-work))"
+  [[spans-sym expected-names] & body]
+  `(span-tests/with-span-tests [~spans-sym ~expected-names] ~@body))
 
 ;; Interceptors
 (def require-idempotency-key
