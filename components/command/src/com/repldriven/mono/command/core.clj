@@ -57,15 +57,13 @@
   - opts: Optional map with keys:
     - :timeout-ms - Timeout in milliseconds (default 10000)
 
-  Returns: {:c channel :stop channel}
-  - Messages arrive on :c channel as processed results
+  Returns: {:stop channel}
   - Send to :stop channel to stop processing"
   ([consumer mqtt-client schema process-fn]
    (process consumer mqtt-client schema process-fn {}))
   ([^Consumer consumer mqtt-client schema process-fn opts]
    (let [{:keys [timeout-ms] :or {timeout-ms 10000}} opts
-         {:keys [c stop]} (pulsar/receive consumer schema timeout-ms)
-         result-chan (async/chan 1)]
+         {:keys [c stop]} (pulsar/receive consumer schema timeout-ms)]
      (async/thread
       (loop []
         (when-let [{:keys [^Message message data]} (async/<!! c)]
@@ -82,7 +80,7 @@
                                   (pulsar/acknowledge consumer message)]
              (log/anomaly {:message "Error processing command" :id id})))
           (recur))))
-     {:c result-chan :stop stop})))
+     {:stop stop})))
 
 (defn send
   "Send a command via Pulsar and wait for reply via MQTT.

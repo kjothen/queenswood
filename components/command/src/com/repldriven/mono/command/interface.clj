@@ -47,8 +47,7 @@
   - opts: Optional map with keys:
     - :timeout-ms - Timeout in milliseconds (default 10000)
 
-  Returns: {:c channel :stop channel}
-  - Messages arrive on :c channel as processed results
+  Returns: {:stop channel}
   - Send to :stop channel to stop processing"
   ([consumer mqtt-client schema process-fn]
    (core/process consumer mqtt-client schema process-fn))
