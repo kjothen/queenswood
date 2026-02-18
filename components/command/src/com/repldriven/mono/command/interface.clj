@@ -16,7 +16,7 @@
   [req command data]
   (core/req->command req command data))
 
-(defn command-error-response
+(defn ->command-error-response
   "Build a command-response-shaped error body.
 
   Args:
@@ -27,7 +27,10 @@
 
   Returns a command-response map with status \"error\"."
   [idempotency-key correlation-id category details]
-  (core/command-error-response idempotency-key correlation-id category details))
+  (core/->command-error-response idempotency-key
+                                 correlation-id
+                                 category
+                                 details))
 
 (def specs
   "Command Malli specs for request/response validation.

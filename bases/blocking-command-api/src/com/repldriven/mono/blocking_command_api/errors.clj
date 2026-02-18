@@ -14,10 +14,10 @@
   "Build a command-response error body from a request map."
   [req category details]
   (let [[idempotency-key correlation-id] (request->ids req)]
-    (command/command-error-response idempotency-key
-                                    correlation-id
-                                    category
-                                    details)))
+    (command/->command-error-response idempotency-key
+                                      correlation-id
+                                      category
+                                      details)))
 
 (defn coercion-ex->command-response
   "Convert a Reitit coercion exception and request to a command-response error body."
