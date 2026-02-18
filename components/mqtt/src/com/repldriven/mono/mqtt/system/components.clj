@@ -8,7 +8,7 @@
 (def client
   {:system/start (fn [{:system/keys [config instance]}]
                    (or instance
-                       (let [{:keys [uri options]} config]
+                       (let [{:keys [uri _options]} config]
                          (try (log/info "Opening mqtt connection:" uri)
                               (mh/connect uri)
                               (catch Exception e

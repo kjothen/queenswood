@@ -2,8 +2,6 @@
   (:require
     vault.client.http
 
-    [com.repldriven.mono.log.interface :as log]
-
     [vault.core :as vault]
     [vault.secrets.kvv2 :as vault-kvv2]))
 

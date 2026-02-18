@@ -70,7 +70,7 @@
   (testing "Default avro-tools version"
     (with-redefs [b/delete (constantly nil)
                   b/process (constantly nil)]
-      (let [home (System/getenv "HOME")
+      (let [_home (System/getenv "HOME")
             command-args (atom nil)]
         (with-redefs [b/process (fn [opts]
                                   (reset! command-args (:command-args opts)))]

@@ -1,7 +1,7 @@
 (ns com.repldriven.mono.iam.interface-test
   (:require
-    [com.repldriven.mono.iam.interface :as SUT]
+    com.repldriven.mono.iam.interface
 
-    [clojure.test :as test :refer :all]))
+    [clojure.test :refer [deftest is]]))
 
 (deftest dummy-test (is (= 1 1)))

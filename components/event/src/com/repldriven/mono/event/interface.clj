@@ -4,11 +4,8 @@
   (require '[clojure.java.io :as io]
            '[abracad.avro :as avro]
            '[abracad.io :as avro.io]
-           '[abracad.avro.codec :as avro.codec]
-           '[cddr.edn-avro :as edn.avro]
            '[deercreeklabs.lancaster :as l]
-           '[clj-ulid :as ulid]
-           '[tick.core :as tick])
+           '[clj-ulid :as ulid])
   (import '(org.apache.avro.util RandomData))
   (def schema
     (avro/parse-schema (avro.io/read-json-resource "schema/cloudevent.avsc")))

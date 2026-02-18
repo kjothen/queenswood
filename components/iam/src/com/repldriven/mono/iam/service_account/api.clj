@@ -3,9 +3,6 @@
   (:require
     next.jdbc.date-time
 
-    [com.repldriven.mono.iam.service-account.spec :as spec]
-
-    [malli.generator :as mg]
     [next.jdbc :as jdbc]
     [next.jdbc.sql :as sql]
 
@@ -28,9 +25,10 @@
 
 (defn create
   [db project-name body]
-  (let [{account-id      "account-id"
-         {display-name "display-name"
-          description  "description"} "service-account"} body
+  (let [{account-id "account-id"
+         {display-name "display-name" description "description"}
+         "service-account"}
+        body
         project-id (project-id project-name)
         email (email account-id project-id)
         record {:name (name project-name email)
@@ -119,4 +117,4 @@ WHERE name = ? AND deleted_at IS NULL"
      name]
     jdbc/unqualified-snake-kebab-opts)))
 
-(defn patch [db name body])
+(defn patch [_db _name _body])

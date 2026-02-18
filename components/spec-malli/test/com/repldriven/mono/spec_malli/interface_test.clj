@@ -4,7 +4,7 @@
 
     [malli.core :as m]
 
-    [clojure.test :as test :refer :all]))
+    [clojure.test :refer [deftest is testing]]))
 
 (deftest non-empty-string-test
   (testing "A non-empty string should meet the spec"

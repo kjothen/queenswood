@@ -16,7 +16,7 @@
   (let [ks (str/split value #"\.")]
     (symbol (str "[#system ref " (pr-str (mapv keyword ks)) "]"))))
 
-(defn required-component [_] (symbol (str "#system required-component")))
+(defn required-component [_] (symbol "#system required-component"))
 
 ;; System yml-reader defmethods
 (defmethod env/yml-reader :!system/required-component

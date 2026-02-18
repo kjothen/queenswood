@@ -11,7 +11,7 @@
       (is (= tgt (#'SUT/nsmap->nsmap src "src" "tgt")))))
   (testing
     "Source and target ns keys args to system config fns are mapped to source ns"
-    (let [src {:src/config {:f (fn [{:src/keys [arg1] :as args}] arg1)}}
+    (let [src {:src/config {:f (fn [{:src/keys [arg1] :as _args}] arg1)}}
           tgt (#'SUT/nsmap->nsmap src "src" "tgt")]
       (is (= "arg1"
              ((get-in src [:src/config :f]) {:src/arg1 "arg1"})

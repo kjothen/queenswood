@@ -7,7 +7,7 @@
 
     [clojure.java.io :as io]
     [clojure.string :as str]
-    [clojure.tools.cli :refer [parse-opts]])
+    clojure.test)
   (:gen-class))
 
 (set! *warn-on-reflection* true)
@@ -113,7 +113,7 @@
 
 (defn- exit-with-results
   "Exit with appropriate code based on test results"
-  [{:keys [fail error] :as results}]
+  [{:keys [fail error]}]
   (let [failures (+ (or fail 0) (or error 0))]
     (System/exit (if (zero? failures) 0 1))))
 
@@ -128,8 +128,8 @@
   [& args]
   (let [;; Parse positional args from Corfield runner: color-mode
         ;; project-name ...test-nses
-        color-mode (keyword (first args))
-        project (second args)
+        _color-mode (keyword (first args))
+        _project (second args)
         test-nses (map symbol (drop 2 args))
         ;; Get metadata filtering from environment variables
         env-skip (parse-env-meta "SKIP_META")

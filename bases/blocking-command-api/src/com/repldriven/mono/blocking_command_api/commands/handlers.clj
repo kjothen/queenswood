@@ -34,19 +34,17 @@
                  "tracestate" nil
                  "data" (when data (json/write-str data))
                  "reply_to" reply-to}
-        producer (get-in pulsar-producers [:command])]
-    ;; Subscribe to MQTT reply topic and
-    ;; Publish command to Pulsar
-    (let [sub (mqtt/subscribe mqtt-client
-                              {reply-topic 0}
-                              (partial process-mqqt-payload p))]
-      (if (error/anomaly? sub)
-        {:status 500 :body {:error sub}}
-        (let [pub (pulsar/send producer command)]
-          (if (error/anomaly? pub)
-            (do (mqtt/unsubscribe mqtt-client [reply-topic])
-                {:status 500 :body {:error pub}})
-            (let [result (deref p 5000 ::timeout)]
-              (if (= result ::timeout)
-                {:status 408 :body {:error "Request timeout"}}
-                {:status 200 :body {:result result}}))))))))
+        producer (get-in pulsar-producers [:command])
+        sub (mqtt/subscribe mqtt-client
+                            {reply-topic 0}
+                            (partial process-mqqt-payload p))]
+    (if (error/anomaly? sub)
+      {:status 500 :body {:error sub}}
+      (let [pub (pulsar/send producer command)]
+        (if (error/anomaly? pub)
+          (do (mqtt/unsubscribe mqtt-client [reply-topic])
+              {:status 500 :body {:error pub}})
+          (let [result (deref p 5000 ::timeout)]
+            (if (= result ::timeout)
+              {:status 408 :body {:error "Request timeout"}}
+              {:status 200 :body {:result result}})))))))
