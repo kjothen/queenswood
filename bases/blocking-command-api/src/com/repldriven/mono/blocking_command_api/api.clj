@@ -12,16 +12,15 @@
   {:reitit.coercion/request-coercion
    (fn [ex req]
      {:status 400
-      :body (errors/coercion-ex->command-response ex
-                                                  req
-                                                  :command/request-validation)})
-   :reitit.coercion/response-coercion (fn [ex req]
-                                        {:status 500
-                                         :body
-                                         (errors/coercion-ex->command-response
-                                          ex
-                                          req
-                                          :command/response-coercion)})})
+      :body (errors/coercion-ex->command-response req
+                                                  :command/request-validation
+                                                  ex)})
+   :reitit.coercion/response-coercion
+   (fn [ex req]
+     {:status 500
+      :body (errors/coercion-ex->command-response req
+                                                  :command/response-coercion
+                                                  ex)})})
 
 (defn app
   [ctx]
