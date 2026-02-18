@@ -7,17 +7,19 @@ This file provides guidance to Claude Code when working with this Clojure/Polyli
 - **Three artifact types**: Components (reusable), Bases (entry points), Projects (deployable)
 - **Components** (`components/`):
   - Reusable building blocks with `interface.clj` defining public API
-  - Implementation in same namespace, never access internals directly
-  - Examples: system, log, env, http-client, server, db, migrator, pulsar, avro, mqtt, vault, encryption, iam, error, test, event
+  - MUST defer implementation in `interface.clj` to other namespaces in the
+    component, such as `core.clj`
+  - MUST NOT access other components through internal namespaces — only via
+    their `interface.clj`
+  - MUST NOT include other components in its `deps.edn` — require other
+    components through their interface namespace directly
 - **Bases** (`bases/`):
   - Application entry points (e.g., APIs, readers, processors)
   - Have `-main` functions and handle application bootstrap
-  - Examples: iam-api, symmetric-key-api, blocking-command-api, pulsar-mqtt-processor
-  - Bases cannot depend on other bases
+  - MUST NOT depend on other bases
 - **Projects** (`projects/`):
   - Combine bases and components into deployable applications
   - No code, just `deps.edn` files
-  - Examples: iam, symmetric-key-vault
   - Projects do not have `-main` functions (bases do)
 
 ## Component-Based Infrastructure
@@ -37,11 +39,35 @@ This file provides guidance to Claude Code when working with this Clojure/Polyli
 ## Error Handling
 
 - **Anomaly-based** (nom library via `error` component):
-  - Functions return values OR anomalies (maps with `:category` key)
-  - Never throw exceptions for expected errors
+  - Component interface functions MUST NOT throw exceptions — they MUST
+    return anomalies if they fail
+  - MUST NOT use `try-catch` directly; MUST use `error/try-nom` or
+    `error/try-nom-ex` to catch exceptions and convert them to anomalies:
+
+    ```clojure
+    ;; Catches all exceptions
+    (error/try-nom :http-client/request
+                   "Failed to execute request"
+                   (do-the-thing))
+
+    ;; Catches a specific exception type
+    (error/try-nom-ex :db/query
+                      SQLException
+                      "Failed to execute query"
+                      (do-the-thing))
+    ```
+
+  - MAY use `try/finally` in special circumstances where an anomaly is not
+    appropriate (e.g. ensuring resource cleanup)
+  - Anomaly category reflects the call site, not the failure mode — e.g.
+    `:http-client/request` not `:http-client/failed`
+  - Anomalies MUST be a map and MUST contain a `:message` key
+
+- **Common functions**:
   - `error/anomaly?` - check if value is anomaly
-  - `error/kind` - extract error category
-  - `error/fail` - create anomaly with kind and message
+  - `error/fail` - create anomaly with category and details map
+  - `error/try-nom` - wrap body, catching all exceptions as anomalies
+  - `error/try-nom-ex` - wrap body, catching a specific exception type
   - `error/let-nom` - monadic let, short-circuits on first named binding anomaly
   - `error/nom->` - threading macro, short-circuits on anomalies
   - `error/nom-do>` - execute a list of operations, short-circuit and call
@@ -52,23 +78,36 @@ This file provides guidance to Claude Code when working with this Clojure/Polyli
 
 ### Running Tests
 
-- **Testing specific bricks**: When testing a changed component or base (brick),
-  run tests for that brick in the context of a project:
-
-  ```bash
-  clojure -M:poly test brick:<brick-name> project:<project-name>
-  # Example: clojure -M:poly test brick:accounts project:dev
-  ```
-
+- **Default project**: Always use `project:dev` unless a specific project is
+  requested
 - **Running all tests**:
 
   ```bash
   clojure -M:poly test project:dev
   ```
 
+- **Testing specific bricks**:
+
+  ```bash
+  clojure -M:poly test brick:<brick-name> project:dev
+  ```
+
 ### Writing Tests
 
-- **Test assertion**: `test/refute-anomaly` - fails test if value is anomaly
+- **No test fixtures**: Do not use `use-fixtures` — manage lifecycle explicitly
+  with `system/with-system` instead
+- **Test resources**: Shared config lives in the `test-resources` component.
+  Each brick combines this with its own
+  `test-resources/<brick>/application-test.yml`
+- **system/with-system**: Binding-based macro for test system lifecycle:
+
+  ```clojure
+  (system/with-system [sys (test-system)]
+    (let [component (system/instance sys [:path :to :component])]
+      ;; test code
+      ))
+  ```
+
 - **nom-let> pattern**: chain operations, fail fast on anomaly:
 
   ```clojure
@@ -79,7 +118,7 @@ This file provides guidance to Claude Code when working with this Clojure/Polyli
     test/refute-anomaly)
   ```
 
-- **nom-> + refute-anomaly**: for simple sequential operations without bindings:
+- **nom-> + refute-anomaly**: for simple sequential checks without bindings:
 
   ```clojure
   (test/refute-anomaly
@@ -87,19 +126,9 @@ This file provides guidance to Claude Code when working with this Clojure/Polyli
                 (second-operation)))
   ```
 
-- **system/with-system**: Binding-based macro for test system lifecycle:
-
-  ```clojure
-  (system/with-system [sys (test-system)]
-    (let [component (system/instance sys [:path :to :component])]
-      ;; test code
-      ))
-  ```
-
-- **Test resources**: Located in `test-resources/` within each component/base
-- **Property-based testing**: Use test.check where applicable
-- **Synchronized tests**: Mark with `^:eftest/synchronized` to prevent too many
-  parallel tests from overwhelming CPU/memory
+- **Test runner**: eftest runs tests in parallel out of process. Mark expensive
+  infrastructure tests with `^:eftest/synchronized` to prevent too many from
+  overwhelming CPU/memory
 
 ## Database Patterns
 
@@ -111,12 +140,20 @@ This file provides guidance to Claude Code when working with this Clojure/Polyli
 ## Message Queue Patterns
 
 - **pulsar component**: Apache Pulsar integration with Avro serialization
-- **Channel-based async**: Both `receive` (consumer) and `read` (reader) return `{:c chan :stop chan}`
-- **Message format**: `{:message <Message> :data <deserialized-data>}` on `:c` channel
 - **Stopping**: Send to `:stop` channel to stop receiving/reading
-- **Encryption**: Supports RSA key pairs for encrypted messaging
-- **Decryption failures**: Return anomaly with `:pulsar/message-decrypt` kind
 - **mqtt component**: MQTT client integration for request-reply patterns
+- **command component**: Higher-level command processing over Pulsar/MQTT
+  - **Channel-based async**: Both `receive` (consumer) and `read` (reader)
+    return `{:c chan :stop chan}`
+  - **Message format**: `{:message <Message> :data <deserialized-data>}` on
+    `:c` channel
+  - `command/process` - consumes commands from Pulsar, dispatches to a
+    process-fn, publishes replies via MQTT. Returns `{:stop chan}`
+  - `command/send` - sends a command via Pulsar, awaits reply via MQTT.
+    Returns response map or anomaly
+  - `command/req->command-request` - builds wire command map from HTTP request
+  - `command/req->command-response` - builds command response from HTTP request
+    and result (anomaly-aware)
 
 ## Code Formatting
 
@@ -143,6 +180,13 @@ This file provides guidance to Claude Code when working with this Clojure/Polyli
     body)
   ```
 
+## Code Linting
+
+- **clj-kondo**: Configured in `.clj-kondo/config.edn` with lint-as mappings for macros
+- **Git hook**: `scripts/hooks/pre-commit` also runs clj-kondo against the full
+  `bases`, `components`, and `projects` directories when any Clojure files
+  are staged, blocking the commit if lint errors are found
+
 ## Coding Guidelines
 
 - **Referential transparency**: For an expression to be referentially
@@ -157,10 +201,3 @@ This file provides guidance to Claude Code when working with this Clojure/Polyli
   wire data to keyword keys — use `{:strs [...]}` destructuring and string
   literals for map access. Converting between string and keyword keys at
   different layers causes confusion about data provenance.
-
-## Code Linting
-
-- **clj-kondo**: Configured in `.clj-kondo/config.edn` with lint-as mappings for macros
-- **Git hook**: `scripts/hooks/pre-commit` also runs clj-kondo against the full
-  `bases`, `components`, and `projects` directories when any Clojure files
-  are staged, blocking the commit if lint errors are found
