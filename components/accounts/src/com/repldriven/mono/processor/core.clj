@@ -28,7 +28,7 @@
     ;; No data field - check if it's an unknown command
     (error/fail :accounts/process-command
                 {:message "Unknown command type"
-                 :command-type command
+                 :command command
                  :correlation-id correlation_id})
     ;; Parse JSON data
     (error/let-nom [command-data (json/read-str data)
@@ -36,7 +36,7 @@
       (if (and schema (not (spec/validate schema command-data)))
         (error/fail :accounts/process-command
                     {:message "Invalid command data"
-                     :command-type command
+                     :command command
                      :correlation-id correlation_id
                      :validation-errors (spec/humanize
                                          (spec/explain schema command-data))})
@@ -50,5 +50,5 @@
           ;; Unknown command
           (error/fail :accounts/process-command
                       {:message "Unknown command type"
-                       :command-type command
+                       :command command
                        :correlation-id correlation_id}))))))
