@@ -51,20 +51,19 @@
   (let [result-chan (async/chan 1)
         timeout-chan (async/timeout timeout-ms)
         callback (fn [_topic ^bytes payload]
-                   (try (let [response (json/read-str (String. payload "UTF-8")
-                                                      :key-fn
-                                                      keyword)]
-                          (async/put! result-chan response))
-                        (catch Exception e
-                          (async/put! result-chan
-                                      (error/fail :command/parse
-                                                  (str "Failed to parse reply: "
-                                                       (.getMessage e)))))))]
+                   (async/put! result-chan
+                               (error/try-nom :command/parse
+                                              "Failed to parse reply"
+                                              (json/read-str (String. payload
+                                                                      "UTF-8")
+                                                             :key-fn
+                                                             keyword))))]
     (mqtt/subscribe mqtt-client reply-topic callback)
     (async/go (let [[v ch] (async/alts! [result-chan timeout-chan])]
                 (mqtt/unsubscribe mqtt-client reply-topic)
                 (if (= ch timeout-chan)
-                  (error/fail :command/timeout "Command reply timed out")
+                  (error/fail :command/timeout
+                              {:message "Command reply timed out"})
                   v)))))
 
 (defn process
