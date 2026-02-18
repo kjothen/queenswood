@@ -74,7 +74,7 @@ poly-test-check:
 lint-eastwood:
     clojure -M:dev:test:lint/eastwood
 lint-clj-kondo:
-    clojure -M:lint/clj-kondo --lint bases components development
+    clojure -M:lint/clj-kondo --lint bases components projects deps.edn workspace.edn
 lint:
   just lint-eastwood
   just lint-clj-kondo
