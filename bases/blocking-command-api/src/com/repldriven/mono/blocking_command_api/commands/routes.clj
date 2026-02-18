@@ -13,5 +13,8 @@
                       telemetry/extract-correlation-id]
        :post {:summary "Submit a command and receive its result"
               :parameters {:body (:command-request specs)}
-              :responses {200 {:body (:command-response specs)}}
+              :responses {200 {:body (:command-response specs)}
+                          400 {:body (:command-response specs)}
+                          408 {:body (:command-response specs)}
+                          500 {:body (:command-response specs)}}
               :handler handlers/create}}]]))

@@ -8,6 +8,10 @@
 
 (def standard-router-data router/standard-router-data)
 (def standard-executor router/standard-executor)
+(def default-exception-handlers router/default-exception-handlers)
+(defn router-data
+  ([] (router/router-data))
+  ([exception-handlers] (router/router-data exception-handlers)))
 
 (defn standard-swagger-ui-handler [] (swagger/standard-ui-handler))
 (defn standard-swagger-handler [] (swagger/standard-handler))

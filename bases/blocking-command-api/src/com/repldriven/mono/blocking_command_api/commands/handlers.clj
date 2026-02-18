@@ -16,6 +16,18 @@
      message)
     (let [parsed (json/read-str message)] (deliver p parsed))))
 
+(defn- error-body
+  "Build a command-response-shaped error body."
+  [idempotency-key correlation-id category details]
+  {"id" (str (java.util.UUID/randomUUID))
+   "correlation_id" correlation-id
+   "causation_id" idempotency-key
+   "traceparent" (telemetry/inject-traceparent)
+   "tracestate" nil
+   "status" "error"
+   "data" nil
+   "error" (json/write-str {:category category :details details})})
+
 (defn create
   [request]
   (let [{:keys [parameters mqtt-client pulsar-producers
@@ -39,12 +51,22 @@
                             {reply-topic 0}
                             (partial process-mqqt-payload p))]
     (if (error/anomaly? sub)
-      {:status 500 :body {:error sub}}
+      {:status 500
+       :body
+       (error-body idempotency-key correlation-id :command/mqtt-subscribe sub)}
       (let [pub (pulsar/send producer command)]
         (if (error/anomaly? pub)
           (do (mqtt/unsubscribe mqtt-client [reply-topic])
-              {:status 500 :body {:error pub}})
+              {:status 500
+               :body (error-body idempotency-key
+                                 correlation-id
+                                 :command/pulsar-send
+                                 pub)})
           (let [result (deref p 5000 ::timeout)]
             (if (= result ::timeout)
-              {:status 408 :body {:error "Request timeout"}}
+              {:status 408
+               :body (error-body idempotency-key
+                                 correlation-id
+                                 :command/timeout
+                                 {:message "Command reply timed out"})}
               {:status 200 :body result})))))))
