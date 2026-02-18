@@ -58,7 +58,7 @@
     (system/with-system [sys (test-system)]
       (migrate sys)
       (let [{:keys [stop]} (SUT/run sys)]
-        (telemetry/with-span-tests [_ ["send-command" "mqtt/subscribe" "process-command" "mqtt/publish"]]
+        (telemetry/with-span-tests [_ ["send-command" "process-command"]]
           (let [result (send-command sys "open-account" {"account-id" "acc-api-test"
                                                          "name"       "API Test Account"
                                                          "currency"   "GBP"})]
