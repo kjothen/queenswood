@@ -55,7 +55,7 @@
      "data" (when data (json/write-str data))
      "reply_to" (str "mqtt://replies/" idempotency-key)}))
 
-(defn ->command-error-response
+(defn ->command-error
   "Build a command-response-shaped error body.
 
   Args:
@@ -75,23 +75,23 @@
    "data" nil
    "error" (json/write-str {:category category :details details})})
 
-(defn req->command-error-response
+(defn req->command-error
   "Build a command-response error body from an HTTP request."
   [req category details]
   (let [[idempotency-key correlation-id] (req->ids req)]
-    (->command-error-response idempotency-key correlation-id category details)))
+    (->command-error idempotency-key correlation-id category details)))
 
 (defn- command-response
   "Build a structured command response from a command and its result.
 
   On success: status ok, data JSON-encoded result, error nil.
-  On anomaly: delegates to ->command-error-response."
+  On anomaly: delegates to ->command-error."
   [{:strs [id correlation_id]} result]
   (if (error/anomaly? result)
-    (->command-error-response id
-                              correlation_id
-                              (error/kind result)
-                              (dissoc result :category))
+    (->command-error id
+                     correlation_id
+                     (error/kind result)
+                     (dissoc result :category))
     {"id" (str (utility/uuidv7))
      "correlation_id" correlation_id
      "causation_id" id
