@@ -27,6 +27,13 @@
              slurp
              edn/read-string)))
 
+(defn- req->ids
+  [req]
+  (let [idempotency-key (get-in req [:headers "idempotency-key"])
+        correlation-id (or (get-in req [:headers "correlation-id"])
+                           idempotency-key)]
+    [idempotency-key correlation-id]))
+
 (defn req->command
   "Build a command wire message from an HTTP request.
 
@@ -38,9 +45,7 @@
   Returns a command map ready for Pulsar, with reply_to set to
   mqtt://replies/<idempotency-key>."
   [req command data]
-  (let [idempotency-key (get-in req [:headers "idempotency-key"])
-        correlation-id (or (get-in req [:headers "correlation-id"])
-                           idempotency-key)]
+  (let [[idempotency-key correlation-id] (req->ids req)]
     {"command" command
      "id" idempotency-key
      "correlation_id" correlation-id
@@ -69,6 +74,12 @@
    "status" "error"
    "data" nil
    "error" (json/write-str {:category category :details details})})
+
+(defn req->command-error-response
+  "Build a command-response error body from an HTTP request."
+  [req category details]
+  (let [[idempotency-key correlation-id] (req->ids req)]
+    (->command-error-response idempotency-key correlation-id category details)))
 
 (defn- command-response
   "Build a structured command response from a command and its result.

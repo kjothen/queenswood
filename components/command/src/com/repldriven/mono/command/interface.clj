@@ -32,6 +32,11 @@
                                  category
                                  details))
 
+(defn req->command-error-response
+  "Build a command-response error body from an HTTP request."
+  [req category details]
+  (core/req->command-error-response req category details))
+
 (def specs
   "Command Malli specs for request/response validation.
 

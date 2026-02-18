@@ -1,6 +1,5 @@
 (ns com.repldriven.mono.blocking-command-api.commands.handlers
   (:require
-    [com.repldriven.mono.blocking-command-api.errors :as errors]
     [com.repldriven.mono.command.interface :as command]
     [com.repldriven.mono.json.interface :as json]
     [com.repldriven.mono.log.interface :as log]
@@ -31,21 +30,20 @@
                             (partial process-mqqt-payload p))]
     (if (error/anomaly? sub)
       {:status 500
-       :body (errors/request->command-error-response request
-                                                     :command/mqtt-subscribe
-                                                     sub)}
+       :body (command/req->command-error-response request
+                                                  :command/mqtt-subscribe
+                                                  sub)}
       (let [pub (pulsar/send producer cmd)]
         (if (error/anomaly? pub)
           (do (mqtt/unsubscribe mqtt-client [reply-to])
               {:status 500
-               :body (errors/request->command-error-response
-                      request
-                      :command/pulsar-send
-                      pub)})
+               :body (command/req->command-error-response request
+                                                          :command/pulsar-send
+                                                          pub)})
           (let [result (deref p 5000 ::timeout)]
             (if (= result ::timeout)
               {:status 408
-               :body (errors/request->command-error-response
+               :body (command/req->command-error-response
                       request
                       :command/timeout
                       {:message "Command reply timed out"})}
