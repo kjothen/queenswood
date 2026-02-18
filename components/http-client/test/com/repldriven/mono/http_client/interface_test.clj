@@ -58,12 +58,12 @@
        (let [res (SUT/request {:url "http://example.com/exception"
                                 :method :get})]
          (is (err/anomaly? res))
-         (is (= :http-client/request-exception (err/kind res)))))
+         (is (= :http-client/request (err/kind res)))))
      (testing "synchronous request with http-kit error returns anomaly"
        (let [res (SUT/request {:url "http://example.com/request-failed"
                                 :method :get})]
          (is (err/anomaly? res))
-         (is (= :http-client/request-failed (err/kind res)))))
+         (is (= :http-client/request (err/kind res)))))
      (testing "asynchronous request"
        (let [p (SUT/request-async {:url "http://example.com/success"
                                     :method :get})

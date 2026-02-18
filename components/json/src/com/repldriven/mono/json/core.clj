@@ -8,7 +8,7 @@
   Returns the parsed data or an anomaly on error."
   [s & {:as options}]
   (error/try-nom
-   :json/parse-error
+   :json/parse
    "Failed to parse JSON string"
    (apply json/read-str s (apply concat options))))
 
@@ -17,6 +17,6 @@
   Returns the JSON string or an anomaly on error."
   [x & {:as options}]
   (error/try-nom
-   :json/serialize-error
+   :json/serialize
    "Failed to serialize to JSON string"
    (apply json/write-str x (apply concat options))))

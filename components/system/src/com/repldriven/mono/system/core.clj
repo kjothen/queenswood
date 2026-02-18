@@ -42,18 +42,18 @@
 
 (defn start
   ([config-name]
-   (error/try-nom :system/start-exception
+   (error/try-nom :system/start
                   "System START threw an exception"
                   (ds/start
                    (nsmap->nsmap config-name mono-system-ns donut-system-ns))))
   ([config-name custom-config]
-   (error/try-nom :system/start-exception
+   (error/try-nom :system/start
                   "System START threw an exception"
                   (ds/start
                    (nsmap->nsmap config-name mono-system-ns donut-system-ns)
                    custom-config)))
   ([config-name custom-config component-ids]
-   (error/try-nom :system/start-exception
+   (error/try-nom :system/start
                   "System START threw an exception"
                   (ds/start
                    (nsmap->nsmap config-name mono-system-ns donut-system-ns)
@@ -68,7 +68,7 @@
 
 (defn stop
   [system]
-  (error/try-nom :system/stop-exception
+  (error/try-nom :system/stop
                  "System STOP threw an exception"
                  (ds/stop system)))
 

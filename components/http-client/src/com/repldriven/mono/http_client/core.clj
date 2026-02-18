@@ -11,14 +11,14 @@
   "Make an HTTP request. Returns the response map or an anomaly.
 
   Handles two types of failures as anomalies:
-  - Exceptions thrown during the request (:http-client/request-exception)
-  - http-kit error responses with {:error ...} (:http-client/request-failed)"
+  - Exceptions thrown during the request (:http-client/request)
+  - http-kit error responses with {:error ...} (:http-client/request)"
   [opts]
-  (err/try-nom :http-client/request-exception
+  (err/try-nom :http-client/request
                "HTTP request threw an exception"
                (let [res @(client/request opts)]
                  (if-let [error (:error res)]
-                   (err/fail :http-client/request-failed
+                   (err/fail :http-client/request
                              "HTTP request failed"
                              {:opts opts :error error :res res})
                    res))))
@@ -52,7 +52,7 @@
   ([res opts]
    (cond (err/anomaly? res) res
          (nil? res) nil
-         :else (err/try-nom :http-client/body-parse-failed
+         :else (err/try-nom :http-client/body-parse
                             "Failed to parse response body"
                             (when-let [{:keys [body headers]} res]
                               (when-let [body-str (body->string body)]

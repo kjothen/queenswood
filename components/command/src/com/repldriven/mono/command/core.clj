@@ -39,7 +39,7 @@
                        (async/put! result-chan response))
                      (catch Exception e
                        (async/put! result-chan
-                                   (error/fail :command/parse-error
+                                   (error/fail :command/parse
                                                (str "Failed to parse reply: "
                                                     (.getMessage e)))))))]
     (mqtt/subscribe mqtt-client reply-topic callback)

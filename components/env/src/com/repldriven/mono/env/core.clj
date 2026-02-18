@@ -36,15 +36,15 @@
 
 (defn config
   ([]
-   (error/try-nom :env/config-exception
+   (error/try-nom :env/config
                   "Failed to load config"
                   (read-config "classpath:application.edn" :default)))
   ([source]
-   (error/try-nom :env/config-exception
+   (error/try-nom :env/config
                   "Failed to load config"
                   (read-config source :default)))
   ([source profile]
-   (error/try-nom :env/config-exception
+   (error/try-nom :env/config
                   "Failed to load config"
                   (read-config source profile))))
 
