@@ -42,33 +42,52 @@ This file provides guidance to Claude Code when working with this Clojure/Polyli
   - `error/anomaly?` - check if value is anomaly
   - `error/kind` - extract error category
   - `error/fail` - create anomaly with kind and message
-  - `error/let-nom` - monadic let, short-circuits on first anomaly
+  - `error/let-nom` - monadic let, short-circuits on first named binding anomaly
   - `error/nom->` - threading macro, short-circuits on anomalies
-  - `error/with-anomaly?` - execute operations, call error-fn if any returns anomaly
-  - `error/with-let-anomaly?` - execute let-nom bindings, call error-fn if result is anomaly
-- **Test assertion**: `test/refute-anomaly` - fails test if value is anomaly
+  - `error/nom-do>` - execute a list of operations, short-circuit and call
+    error-fn on first anomaly
+  - `error/nom-let>` - like `let-nom>` but calls error-fn if result is anomaly
 
-## Testing Patterns
+## Testing
 
-- **Test component**: Provides `test/refute-anomaly` for consistent anomaly checking
-- **Testing specific bricks**: When testing a changed component or base (brick), run tests for that brick in the context of a project:
+### Running Tests
+
+- **Testing specific bricks**: When testing a changed component or base (brick),
+  run tests for that brick in the context of a project:
 
   ```bash
-  clojure -M:poly test brick:<brick-name> :project <project-name>
-  # Example: clojure -M:poly test brick:accounts :project accounts-processor
+  clojure -M:poly test brick:<brick-name> project:<project-name>
+  # Example: clojure -M:poly test brick:accounts project:dev
   ```
 
-- **with-let-anomaly? pattern**:
+- **Running all tests**:
+
+  ```bash
+  clojure -M:poly test project:dev
+  ```
+
+### Writing Tests
+
+- **Test assertion**: `test/refute-anomaly` - fails test if value is anomaly
+- **nom-let> pattern**: chain operations, fail fast on anomaly:
 
   ```clojure
-  (error/with-let-anomaly?
+  (error/nom-let>
     [result1 (operation1)
      _ (is (= expected result1))
      result2 (operation2 result1)]
     test/refute-anomaly)
   ```
 
-- **system/with-system**: Binding-based macro for test system lifecycle
+- **nom-> + refute-anomaly**: for simple sequential operations without bindings:
+
+  ```clojure
+  (test/refute-anomaly
+   (error/nom-> (first-operation)
+                (second-operation)))
+  ```
+
+- **system/with-system**: Binding-based macro for test system lifecycle:
 
   ```clojure
   (system/with-system [sys (test-system)]
@@ -79,7 +98,8 @@ This file provides guidance to Claude Code when working with this Clojure/Polyli
 
 - **Test resources**: Located in `test-resources/` within each component/base
 - **Property-based testing**: Use test.check where applicable
-- **Synchronized tests**: Mark with `^:eftest/synchronized` to prevent too many parallel tests from overwhelming CPU/memory
+- **Synchronized tests**: Mark with `^:eftest/synchronized` to prevent too many
+  parallel tests from overwhelming CPU/memory
 
 ## Database Patterns
 
