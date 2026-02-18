@@ -3,7 +3,7 @@
   (:require
     [com.repldriven.mono.command.core :as core]))
 
-(defn command-request
+(defn req->command
   "Build a command wire message from an HTTP request.
 
   Args:
@@ -14,7 +14,7 @@
   Returns a command map ready for Pulsar, with reply_to set to
   mqtt://replies/<idempotency-key>."
   [req command data]
-  (core/command-request req command data))
+  (core/req->command req command data))
 
 (defn command-error-response
   "Build a command-response-shaped error body.

@@ -27,7 +27,7 @@
              slurp
              edn/read-string)))
 
-(defn command-request
+(defn req->command
   "Build a command wire message from an HTTP request.
 
   Args:

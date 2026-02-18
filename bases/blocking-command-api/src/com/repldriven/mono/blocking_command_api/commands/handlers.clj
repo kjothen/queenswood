@@ -22,7 +22,7 @@
   (let [{:keys [parameters mqtt-client pulsar-producers]} request
         {:keys [body]} parameters
         {:strs [command data]} body
-        cmd (command/command-request request command data)
+        cmd (command/req->command request command data)
         reply-to (get cmd "reply_to")
         p (promise)
         producer (get-in pulsar-producers [:command])
