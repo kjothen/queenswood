@@ -47,4 +47,4 @@
           (let [result (deref p 5000 ::timeout)]
             (if (= result ::timeout)
               {:status 408 :body {:error "Request timeout"}}
-              {:status 200 :body {:result result}})))))))
+              {:status 200 :body result})))))))
