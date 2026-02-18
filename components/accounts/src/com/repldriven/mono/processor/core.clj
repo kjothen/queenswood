@@ -23,36 +23,32 @@
    \"tracestate\" \"vendor=value\"}
 
   Returns success response or anomaly."
-  [config command]
-  (let [command-type (get command "command")
-        command-data-str (get command "data")
-        correlation-id (get command "correlation_id")]
-    (if-not command-data-str
-      ;; No data field - check if it's an unknown command
-      (error/fail :accounts/process-command
-                  {:message "Unknown command type"
-                   :command-type command-type
-                   :correlation-id correlation-id})
-      ;; Parse JSON data
-      (error/let-nom [command-data (json/read-str command-data-str)
-                      schema (get specs/specs command-type)]
-        (if (and schema (not (spec/validate schema command-data)))
+  [config {:strs [command data correlation_id]}]
+  (if-not data
+    ;; No data field - check if it's an unknown command
+    (error/fail :accounts/process-command
+                {:message "Unknown command type"
+                 :command-type command
+                 :correlation-id correlation_id})
+    ;; Parse JSON data
+    (error/let-nom [command-data (json/read-str data)
+                    schema (get specs/specs command)]
+      (if (and schema (not (spec/validate schema command-data)))
+        (error/fail :accounts/process-command
+                    {:message "Invalid command data"
+                     :command-type command
+                     :correlation-id correlation_id
+                     :validation-errors (spec/humanize
+                                         (spec/explain schema command-data))})
+        (case command
+          "open-account" (account-lifecycle/open config command-data)
+          "close-account" (account-lifecycle/close config command-data)
+          "reopen-account" (account-lifecycle/reopen config command-data)
+          "suspend-account" (account-lifecycle/suspend config command-data)
+          "unsuspend-account" (account-lifecycle/unsuspend config command-data)
+          "archive-account" (account-lifecycle/archive config command-data)
+          ;; Unknown command
           (error/fail :accounts/process-command
-                      {:message "Invalid command data"
-                       :command-type command-type
-                       :correlation-id correlation-id
-                       :validation-errors (spec/humanize
-                                           (spec/explain schema command-data))})
-          (case command-type
-            "open-account" (account-lifecycle/open config command-data)
-            "close-account" (account-lifecycle/close config command-data)
-            "reopen-account" (account-lifecycle/reopen config command-data)
-            "suspend-account" (account-lifecycle/suspend config command-data)
-            "unsuspend-account" (account-lifecycle/unsuspend config
-                                                             command-data)
-            "archive-account" (account-lifecycle/archive config command-data)
-            ;; Unknown command
-            (error/fail :accounts/process-command
-                        {:message "Unknown command type"
-                         :command-type command-type
-                         :correlation-id correlation-id})))))))
+                      {:message "Unknown command type"
+                       :command-type command
+                       :correlation-id correlation_id}))))))
