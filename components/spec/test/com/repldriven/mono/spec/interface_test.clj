@@ -1,6 +1,6 @@
-(ns com.repldriven.mono.spec-malli.interface-test
+(ns com.repldriven.mono.spec.interface-test
   (:require
-    [com.repldriven.mono.spec-malli.interface :as SUT]
+    [com.repldriven.mono.spec.interface :as SUT]
 
     [malli.core :as m]
 

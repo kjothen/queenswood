@@ -52,11 +52,14 @@ This file provides guidance to Claude Code when working with this Clojure/Polyli
 
 - **Test component**: Provides `test/refute-anomaly` for consistent anomaly checking
 - **Testing specific bricks**: When testing a changed component or base (brick), run tests for that brick in the context of a project:
+
   ```bash
   clojure -M:poly test brick:<brick-name> :project <project-name>
   # Example: clojure -M:poly test brick:accounts :project accounts-processor
   ```
+
 - **with-let-anomaly? pattern**:
+
   ```clojure
   (error/with-let-anomaly?
     [result1 (operation1)
@@ -64,13 +67,16 @@ This file provides guidance to Claude Code when working with this Clojure/Polyli
      result2 (operation2 result1)]
     test/refute-anomaly)
   ```
+
 - **system/with-system**: Binding-based macro for test system lifecycle
+
   ```clojure
   (system/with-system [sys (test-system)]
     (let [component (system/instance sys [:path :to :component])]
       ;; test code
       ))
   ```
+
 - **Test resources**: Located in `test-resources/` within each component/base
 - **Property-based testing**: Use test.check where applicable
 - **Synchronized tests**: Mark with `^:eftest/synchronized` to prevent too many parallel tests from overwhelming CPU/memory
@@ -111,12 +117,15 @@ just lint-clj-kondo # Linting
 - **Width**: 80 characters
 - **Git hook**: `scripts/hooks/pre-commit` automatically formats staged Clojure
   files before each commit. Install it once with:
+
   ```bash
   cp scripts/hooks/pre-commit .git/hooks/pre-commit
   chmod +x .git/hooks/pre-commit
   ```
+
 - **Docstrings**: zprint does not reflow string content, so docstrings must be
   manually wrapped at 80 characters. Write multi-line docstrings like:
+
   ```clojure
   (defn my-fn
     "First line of docstring, kept within 80 characters.
@@ -131,5 +140,5 @@ just lint-clj-kondo # Linting
 
 - **clj-kondo**: Configured in `.clj-kondo/config.edn` with lint-as mappings for macros
 - **Git hook**: `scripts/hooks/pre-commit` also runs clj-kondo against the full
-  `bases`, `components`, and `development` directories when any Clojure files
+  `bases`, `components`, and `projects` directories when any Clojure files
   are staged, blocking the commit if lint errors are found

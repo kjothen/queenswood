@@ -1,20 +1,21 @@
-(ns com.repldriven.mono.spec-malli.interface
+(ns com.repldriven.mono.spec.core
   (:require
-    [com.repldriven.mono.spec-malli.core :as core]))
+    [malli.core :as m]
+    [malli.error :as me]))
 
-(def non-empty-string? core/non-empty-string?)
+(def non-empty-string? [:string {:min 1}])
 
 (defn validate
   "Validate data against a Malli schema."
   [schema data]
-  (core/validate schema data))
+  (m/validate schema data))
 
 (defn explain
   "Explain validation errors for data against a Malli schema."
   [schema data]
-  (core/explain schema data))
+  (m/explain schema data))
 
 (defn humanize
   "Convert validation explanation to human-readable format."
   [explanation]
-  (core/humanize explanation))
+  (me/humanize explanation))

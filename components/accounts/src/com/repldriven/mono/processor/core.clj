@@ -4,7 +4,7 @@
      account-lifecycle]
     [com.repldriven.mono.processor.specs.core :as specs]
     [com.repldriven.mono.error.interface :as error]
-    [com.repldriven.mono.spec-malli.interface :as spec]
+    [com.repldriven.mono.spec.interface :as spec]
     [com.repldriven.mono.json.interface :as json]))
 
 (defn process

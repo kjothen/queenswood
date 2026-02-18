@@ -26,7 +26,7 @@
     components/pulsar {:local/root "components/pulsar"}
     components/pulsar-vault-crypto {:local/root "components/pulsar-vault-crypto"}
     components/server {:local/root "components/server"}
-    components/spec-malli {:local/root "components/spec-malli"}
+    components/spec {:local/root "components/spec"}
 
     components/system {:local/root "components/system"}
     components/telemetry {:local/root "components/telemetry"}
@@ -78,7 +78,7 @@ bases/symmetric-key-api {:local/root "bases/symmetric-key-api"}
                        "components/server/test"
                        "components/server/test-resources"
                        "components/avro/test"
-                       "components/spec-malli/test"
+                       "components/spec/test"
 
                        "components/db/test"
                        "components/db/test-resources"
