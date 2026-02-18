@@ -38,8 +38,8 @@
                     {:message "Invalid command data"
                      :command command
                      :correlation-id correlation_id
-                     :validation-errors (spec/humanize
-                                         (spec/explain schema command-data))})
+                     :reason (spec/humanize (spec/explain schema
+                                                          command-data))})
         (case command
           "open-account" (account-lifecycle/open config command-data)
           "close-account" (account-lifecycle/close config command-data)
