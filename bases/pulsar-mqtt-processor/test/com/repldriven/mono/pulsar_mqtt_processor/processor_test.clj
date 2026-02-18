@@ -70,5 +70,6 @@
                                      "currency" "GBP"})]
            (is (not= ::timeout result) "Should receive a reply within timeout")
            (is (= "ok" (get result "status")))
-           (is (= "acc-api-test" (get result "account-id")))))
+           (is (= "acc-api-test"
+                  (get (json/read-str (get result "data")) "account-id")))))
         (async/>!! stop :stop)))))
