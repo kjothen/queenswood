@@ -38,10 +38,10 @@
              data
              resp
              reply_to)
-            (error/with-anomaly? [(mqtt/publish mqtt-client
-                                                reply_to
-                                                (json/write-str resp))
-                                  (pulsar/acknowledge consumer message)]
+            (error/nom-do> [(mqtt/publish mqtt-client
+                                          reply_to
+                                          (json/write-str resp))
+                            (pulsar/acknowledge consumer message)]
              (log/anomaly {:message "Error processing command" :id id})))
           (recur))))
      {:stop stop})))

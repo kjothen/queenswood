@@ -5,7 +5,7 @@
           "with-system" :arg1-body
           "let-nom" :binding
           "let-nom>" :binding
-          "with-anomaly?" :arg1
+          "nom-do>" :arg1
           "nom-let>" :binding}
  :map {:comma? false
        :lift-ns? false

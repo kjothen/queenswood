@@ -51,8 +51,9 @@
           (fail ~category {:message ~message :exception e#}))))
 
 ;; Side-effect error handling
-(defmacro with-anomaly?
-  "Execute operations sequentially. If any returns an anomaly, call error-fn with it."
+(defmacro nom-do>
+  "Execute operations sequentially, short-circuiting on the first anomaly.
+  If any returns an anomaly, call error-fn with it."
   [ops error-fn]
   (let [bindings (vec (mapcat (fn [op] [`_# op]) ops))]
     `(let [result# (nom/let-nom ~bindings :ok)]
