@@ -7,8 +7,6 @@
     [com.repldriven.mono.log.interface :as log]
     [com.repldriven.mono.mqtt.interface :as mqtt]
     [com.repldriven.mono.pulsar.interface :as pulsar]
-    [com.repldriven.mono.utility.interface :as utility]
-
     [clojure.core.async :as async]
     [clojure.data.json :as json]
     [clojure.edn :as edn]
@@ -100,11 +98,8 @@
   ([producer mqtt-client command] (send producer mqtt-client command {}))
   ([producer mqtt-client command opts]
    (let [{:keys [timeout-ms] :or {timeout-ms 10000}} opts
-         correlation-id (str (utility/uuidv7))
-         reply-to (str "mqtt://replies/" correlation-id)
-         command-with-correlation
-         (assoc command :correlation_id correlation-id :reply_to reply-to)
-         send-result (pulsar/send producer command-with-correlation)]
+         {:strs [reply_to]} command
+         send-result (pulsar/send producer command)]
      (if (error/anomaly? send-result)
        send-result
-       (async/<!! (await-reply mqtt-client reply-to timeout-ms))))))
+       (async/<!! (await-reply mqtt-client reply_to timeout-ms))))))
