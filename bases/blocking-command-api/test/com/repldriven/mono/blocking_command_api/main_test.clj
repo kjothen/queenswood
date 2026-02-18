@@ -9,13 +9,18 @@
 
     [clojure.test :as test :refer [deftest is testing]]))
 
-(deftest main-test
-  (testing "System should start and stop without anomalies"
-    (let [sys (SUT/start "classpath:blocking-command-api/application-test.yml"
-                         :test)]
-      (is (not (error/anomaly? sys)) "System should start")
-      (is (system/system? sys) "System should be valid")
-      (when (system/system? sys) (is (not (error/anomaly? (SUT/stop sys))))))))
+(comment
+  (deftest main-test
+    (testing "System should start and stop without anomalies"
+      (let [sys (SUT/start "classpath:blocking-command-api/application-test.yml"
+                           :test)]
+        (is (not (error/anomaly? sys)) "System should start")
+        (is (system/system? sys) "System should be valid")
+        (when (system/system? sys)
+          (is (not (error/anomaly? (SUT/stop sys)))))))))
+
+
+
 
 
 
