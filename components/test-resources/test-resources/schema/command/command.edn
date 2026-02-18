@@ -5,7 +5,8 @@
            [:causation_id {:optional true} [:maybe string?]]
            [:traceparent {:optional true} [:maybe string?]]
            [:tracestate {:optional true} [:maybe string?]]
-           [:data {:optional true} [:maybe string?]]]
+           [:data {:optional true} [:maybe string?]]
+           [:reply_to {:optional true} [:maybe string?]]]
 
  :command-request [:map
                    ["command" string?]

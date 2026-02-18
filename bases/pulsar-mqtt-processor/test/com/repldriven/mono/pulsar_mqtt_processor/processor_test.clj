@@ -49,7 +49,8 @@
                     :causation_id   nil
                     :traceparent    (telemetry/inject-traceparent)
                     :tracestate     nil
-                    :data           (json/write-str data)}))
+                    :data           (json/write-str data)
+                    :reply_to       reply-topic}))
     (deref p 5000 ::timeout)))
 
 (deftest process-command-test

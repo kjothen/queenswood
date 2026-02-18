@@ -26,7 +26,8 @@
                  "causation_id" nil
                  "traceparent" (telemetry/inject-traceparent)
                  "tracestate" nil
-                 "data" (when data (json/write-str data))}
+                 "data" (when data (json/write-str data))
+                 "reply_to" reply-topic}
         producer (get-in pulsar-producers [:command])]
 
     ;; Subscribe to MQTT reply topic and
