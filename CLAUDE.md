@@ -64,15 +64,20 @@ This file provides guidance to Claude Code when working with this Clojure/Polyli
   - Anomalies MUST be a map and MUST contain a `:message` key
 
 - **Common functions**:
-  - `error/anomaly?` - check if value is anomaly
-  - `error/fail` - create anomaly with category and details map
-  - `error/try-nom` - wrap body, catching all exceptions as anomalies
-  - `error/try-nom-ex` - wrap body, catching a specific exception type
-  - `error/let-nom` - monadic let, short-circuits on first named binding anomaly
-  - `error/nom->` - threading macro, short-circuits on anomalies
-  - `error/nom-do>` - execute a list of operations, short-circuit and call
-    error-fn on first anomaly
-  - `error/nom-let>` - like `let-nom>` but calls error-fn if result is anomaly
+  - *Predicates and construction*:
+    - `error/anomaly?` - check if value is anomaly
+    - `error/fail` - create anomaly with category and details map
+  - *Exception catching*:
+    - `error/try-nom` - wrap body, catching all exceptions as anomalies
+    - `error/try-nom-ex` - wrap body, catching a specific exception type
+  - *Let-style bindings*:
+    - `error/let-nom>` - monadic let, short-circuits on first binding anomaly
+    - `error/nom-let>` - like `let-nom>` but calls error-fn if result is
+      anomaly
+  - *Threading and side effects*:
+    - `error/nom->` - threading macro, short-circuits on anomalies
+    - `error/nom-do>` - execute operations sequentially, short-circuit and
+      call error-fn on first anomaly
 
 ## Testing
 
