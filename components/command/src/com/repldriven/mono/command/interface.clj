@@ -30,13 +30,12 @@
   (core/->command-error idempotency-key correlation-id category details))
 
 (defn req->command-response
-  "Build a command-response from an HTTP request.
+  "Build a command-response from an HTTP request and a result.
 
-  Two arities:
-  - [req result] - builds from an anomaly result
-  - [req category details] - builds an explicit error response"
-  ([req result] (core/req->command-response req result))
-  ([req category details] (core/req->command-response req category details)))
+  If result is an anomaly, builds an error response.
+  Otherwise (not yet used), builds a success response."
+  [req result]
+  (core/req->command-response req result))
 
 (def specs
   "Command Malli specs for request/response validation.

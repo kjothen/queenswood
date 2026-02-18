@@ -39,6 +39,6 @@
               {:status 408
                :body (command/req->command-response
                       request
-                      :command/timeout
-                      {:message "Command reply timed out"})}
+                      (error/fail :command/timeout
+                                  {:message "Command reply timed out"}))}
               {:status 200 :body result})))))))

@@ -76,20 +76,18 @@
    "error" (json/write-str {:category category :details details})})
 
 (defn req->command-response
-  "Build a command-response from an HTTP request.
+  "Build a command-response from an HTTP request and a result.
 
-  Two arities:
-  - [req result] - builds from an anomaly result (extracts category and details)
-  - [req category details] - builds an explicit error response"
-  ([req result]
-   (let [[idempotency-key correlation-id] (req->ids req)]
-     (->command-error idempotency-key
-                      correlation-id
-                      (error/kind result)
-                      (dissoc result :category))))
-  ([req category details]
-   (let [[idempotency-key correlation-id] (req->ids req)]
-     (->command-error idempotency-key correlation-id category details))))
+  If result is an anomaly, builds an error response.
+  Otherwise (not yet used), builds a success response."
+  [req result]
+  (let [[idempotency-key correlation-id] (req->ids req)]
+    (if (error/anomaly? result)
+      (->command-error idempotency-key
+                       correlation-id
+                       (error/kind result)
+                       (dissoc result :category))
+      result)))
 
 (defn- command-response
   "Build a structured command response from a command and its result.
