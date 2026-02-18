@@ -110,7 +110,6 @@ just lint-clj-kondo # Linting
 - **zprint**: All Clojure source is formatted with zprint (`just format`), configured in `.zprint.edn`
 - **Width**: 80 characters
 - **Special forms**: `with-system`, `let-nom`, `with-anomaly?`, `with-let-anomaly?` have custom formatting rules
-- **clj-kondo**: Configured in `.clj-kondo/config.edn` with lint-as mappings for macros
 - **Docstrings**: zprint does not reflow string content, so docstrings must be
   manually wrapped at 80 characters. Write multi-line docstrings like:
   ```clojure
@@ -122,3 +121,7 @@ just lint-clj-kondo # Linting
     [args]
     body)
   ```
+
+## Code Linting
+
+- **clj-kondo**: Configured in `.clj-kondo/config.edn` with lint-as mappings for macros
