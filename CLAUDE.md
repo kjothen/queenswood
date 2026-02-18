@@ -98,19 +98,6 @@ This file provides guidance to Claude Code when working with this Clojure/Polyli
 - **Decryption failures**: Return anomaly with `:pulsar/message-decrypt` kind
 - **mqtt component**: MQTT client integration for request-reply patterns
 
-## Development Commands
-
-```bash
-just shell          # Start Polylith REPL
-just test           # Run all tests
-just build          # Build all uberjars
-just build true     # Build with snapshot versions
-just lint           # Run all linters
-just format         # Format all code
-just lint-eastwood  # Static analysis
-just lint-clj-kondo # Linting
-```
-
 ## Code Formatting
 
 - **zprint**: All Clojure source is formatted with zprint, configured in `.zprint.edn`
