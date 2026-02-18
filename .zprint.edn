@@ -5,8 +5,8 @@
           "with-system" :arg1-body
           "let-nom" :binding
           "let-nom>" :binding
-          "with-anomaly?" [:arg1 {:respect-nl? true}]
-          "with-let-anomaly?" [:binding {:respect-nl? true}]}
+          "with-anomaly?" :arg1
+          "with-let-anomaly?" :binding}
  :map {:comma? false
        :lift-ns? false
        :nl-separator? false
