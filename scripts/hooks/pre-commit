@@ -11,5 +11,5 @@ if [ -n "$files" ]; then
   echo "$files" | xargs git add
 
   echo "Linting Clojure files..."
-  clojure -M:lint/clj-kondo --lint bases components development
+  echo "$files" | xargs clojure -M:lint/clj-kondo --lint
 fi
