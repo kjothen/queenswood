@@ -136,6 +136,21 @@ just lint-clj-kondo # Linting
     body)
   ```
 
+## Coding Guidelines
+
+- **Referential transparency**: For an expression to be referentially
+  transparent, we must be able to bind the expression to a name, substitute
+  that name for any or all occurrences of the original expression (within the
+  same context), and nothing should have changed (except perhaps the execution
+  time). Prefer pure functions that return the same value for the same inputs,
+  with no observable side effects. Name functions after what they return, not
+  what they do.
+- **Wire data uses string keys**: Message data from external systems (Pulsar,
+  MQTT, HTTP, JSON) is handled with string keys throughout. Do not convert
+  wire data to keyword keys — use `{:strs [...]}` destructuring and string
+  literals for map access. Converting between string and keyword keys at
+  different layers causes confusion about data provenance.
+
 ## Code Linting
 
 - **clj-kondo**: Configured in `.clj-kondo/config.edn` with lint-as mappings for macros

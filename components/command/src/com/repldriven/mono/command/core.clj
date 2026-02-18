@@ -26,24 +26,24 @@
              slurp
              edn/read-string)))
 
-(defn- build-response
+(defn- command-response
   "Build a structured command response from a command and its result.
 
   On success: :status :ok, :data JSON-encoded result, :error nil.
   On anomaly: :status :error, :data nil, :error JSON-encoded anomaly."
-  [command result]
-  (let [base {:id (str (java.util.UUID/randomUUID))
-              :correlation_id (:correlation_id command)
-              :causation_id (:id command)
-              :traceparent (telemetry/inject-traceparent)
-              :tracestate nil}]
+  [{:strs [id correlation_id]} result]
+  (let [base {"id" (str (java.util.UUID/randomUUID))
+              "correlation_id" correlation_id
+              "causation_id" id
+              "traceparent" (telemetry/inject-traceparent)
+              "tracestate" nil}]
     (if (error/anomaly? result)
       (assoc base
-             :status :error
-             :data nil
-             :error (json/write-str {:category (error/kind result)
-                                     :context (dissoc result :category)}))
-      (assoc base :status :ok :data (json/write-str result) :error nil))))
+             "status" "error"
+             "data" nil
+             "error" (json/write-str {:category (error/kind result)
+                                      :details (dissoc result :category)}))
+      (assoc base "status" "ok" "data" (json/write-str result) "error" nil))))
 
 (defn- await-reply
   "Wait for a reply on MQTT topic with timeout."
@@ -54,10 +54,8 @@
                    (async/put! result-chan
                                (error/try-nom :command/parse
                                               "Failed to parse reply"
-                                              (json/read-str (String. payload
-                                                                      "UTF-8")
-                                                             :key-fn
-                                                             keyword))))]
+                                              (json/read-str
+                                               (String. payload "UTF-8")))))]
     (mqtt/subscribe mqtt-client reply-topic callback)
     (async/go (let [[v ch] (async/alts! [result-chan timeout-chan])]
                 (mqtt/unsubscribe mqtt-client reply-topic)
@@ -89,10 +87,10 @@
      (async/thread
       (loop []
         (when-let [{:keys [^Message message data]} (async/<!! c)]
-          (let [id (:id data)
-                reply-topic (some-> (:reply_to data)
+          (let [{:strs [id reply_to]} data
+                reply-topic (some-> reply_to
                                     (.replace "mqtt://" ""))
-                response (build-response data (process-fn data))]
+                response (command-response data (process-fn data))]
             (log/debugf
              "command.core/process: [data=%s, response=%s, reply-topic=%s]"
              data
