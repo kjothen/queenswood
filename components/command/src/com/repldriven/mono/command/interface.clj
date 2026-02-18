@@ -3,7 +3,7 @@
   (:require
     [com.repldriven.mono.command.core :as core]))
 
-(defn req->command
+(defn req->command-request
   "Build a command wire message from an HTTP request.
 
   Args:
@@ -14,7 +14,7 @@
   Returns a command map ready for Pulsar, with reply_to set to
   mqtt://replies/<idempotency-key>."
   [req command data]
-  (core/req->command req command data))
+  (core/req->command-request req command data))
 
 (defn ->command-error
   "Build a command-response-shaped error body.
@@ -29,10 +29,14 @@
   [idempotency-key correlation-id category details]
   (core/->command-error idempotency-key correlation-id category details))
 
-(defn req->command-error
-  "Build a command-response error body from an HTTP request."
-  [req category details]
-  (core/req->command-error req category details))
+(defn req->command-response
+  "Build a command-response from an HTTP request.
+
+  Two arities:
+  - [req result] - builds from an anomaly result
+  - [req category details] - builds an explicit error response"
+  ([req result] (core/req->command-response req result))
+  ([req category details] (core/req->command-response req category details)))
 
 (def specs
   "Command Malli specs for request/response validation.

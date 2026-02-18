@@ -5,6 +5,6 @@
 (defn coercion-ex->command-response
   "Convert a Reitit coercion exception and request to a command-response error body."
   [req category ex]
-  (command/req->command-error req
-                              category
-                              (select-keys (ex-data ex) [:humanized :in])))
+  (command/req->command-response req
+                                 category
+                                 (select-keys (ex-data ex) [:humanized :in])))

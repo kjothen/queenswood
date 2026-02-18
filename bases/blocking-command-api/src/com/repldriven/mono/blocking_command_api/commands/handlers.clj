@@ -21,7 +21,7 @@
   (let [{:keys [parameters mqtt-client pulsar-producers]} request
         {:keys [body]} parameters
         {:strs [command data]} body
-        cmd (command/req->command request command data)
+        cmd (command/req->command-request request command data)
         reply-to (get cmd "reply_to")
         p (promise)
         producer (get-in pulsar-producers [:command])
@@ -29,19 +29,16 @@
                             {reply-to 0}
                             (partial process-mqqt-payload p))]
     (if (error/anomaly? sub)
-      {:status 500
-       :body (command/req->command-error request :command/mqtt-subscribe sub)}
+      {:status 500 :body (command/req->command-response request sub)}
       (let [pub (pulsar/send producer cmd)]
         (if (error/anomaly? pub)
           (do (mqtt/unsubscribe mqtt-client [reply-to])
-              {:status 500
-               :body
-               (command/req->command-error request :command/pulsar-send pub)})
+              {:status 500 :body (command/req->command-response request pub)})
           (let [result (deref p 5000 ::timeout)]
             (if (= result ::timeout)
               {:status 408
-               :body (command/req->command-error request
-                                                 :command/timeout
-                                                 {:message
-                                                  "Command reply timed out"})}
+               :body (command/req->command-response
+                      request
+                      :command/timeout
+                      {:message "Command reply timed out"})}
               {:status 200 :body result})))))))
