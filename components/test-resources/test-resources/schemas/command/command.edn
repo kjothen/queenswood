@@ -12,7 +12,12 @@
                    ["command" string?]
                    ["data" {:optional true} [:maybe string?]]]
 
- :command-result [:map
-                  [:result :map]]
-
- :command-response [:map [:result map?]]}
+ :command-response [:map
+                    [:id string?]
+                    [:correlation_id string?]
+                    [:causation_id string?]
+                    [:traceparent string?]
+                    [:tracestate {:optional true} [:maybe string?]]
+                    [:status [:enum :ok :error]]
+                    [:data {:optional true} [:maybe string?]]
+                    [:error {:optional true} [:maybe string?]]]}
