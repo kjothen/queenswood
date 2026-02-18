@@ -4,18 +4,17 @@
     [com.repldriven.mono.command.core :as core]))
 
 (defn command-request
-  "Build a command wire message from request fields.
+  "Build a command wire message from an HTTP request.
 
   Args:
+  - req: HTTP request map (reads idempotency-key and correlation-id from headers)
   - command: command name string
-  - idempotency-key: originating request id, used as command id
-  - correlation-id: correlation chain id
   - data: optional data map (JSON-encoded if present)
 
   Returns a command map ready for Pulsar, with reply_to set to
   mqtt://replies/<idempotency-key>."
-  [command idempotency-key correlation-id data]
-  (core/command-request command idempotency-key correlation-id data))
+  [req command data]
+  (core/command-request req command data))
 
 (defn command-error-response
   "Build a command-response-shaped error body.

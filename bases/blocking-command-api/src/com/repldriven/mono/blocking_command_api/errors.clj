@@ -3,16 +3,10 @@
     [com.repldriven.mono.command.interface :as command]))
 
 (defn- request->ids
-  "Extract [idempotency-key correlation-id] from a request map.
-
-  Checks interceptor-set keys first (available after route interceptors run),
-  then falls back to raw headers (available even before route interceptors,
-  e.g. during request coercion)."
+  "Extract [idempotency-key correlation-id] from a request map's headers."
   [req]
-  (let [idempotency-key (or (get req :telemetry/idempotency-key)
-                            (get-in req [:headers "idempotency-key"]))
-        correlation-id (or (get req :telemetry/correlation-id)
-                           (get-in req [:headers "correlation-id"])
+  (let [idempotency-key (get-in req [:headers "idempotency-key"])
+        correlation-id (or (get-in req [:headers "correlation-id"])
                            idempotency-key)]
     [idempotency-key correlation-id]))
 

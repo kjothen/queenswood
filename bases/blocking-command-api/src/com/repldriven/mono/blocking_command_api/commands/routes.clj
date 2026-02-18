@@ -9,8 +9,7 @@
   (let [specs @command/specs]
     ["/api" {:interceptors (concat telemetry/trace-span (:interceptors ctx))}
      ["/command"
-      {:interceptors [telemetry/require-idempotency-key
-                      telemetry/extract-correlation-id]
+      {:interceptors [telemetry/require-idempotency-key]
        :post {:summary "Submit a command and receive its result"
               :parameters {:body (:command-request specs)}
               :responses {200 {:body (:command-response specs)}

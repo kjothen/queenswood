@@ -89,10 +89,6 @@
   "Interceptor that validates Idempotency-Key header is present."
   interceptors/require-idempotency-key)
 
-(def extract-correlation-id
-  "Interceptor that extracts correlation ID from request headers."
-  interceptors/extract-correlation-id)
-
 (def trace-span
   "Vector of interceptors that add OpenTelemetry server span support to HTTP requests.
   Use with concat, not conj, when composing interceptor chains."

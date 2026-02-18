@@ -19,13 +19,10 @@
 
 (defn create
   [request]
-  (let [{:keys [parameters mqtt-client pulsar-producers
-                telemetry/idempotency-key telemetry/correlation-id]}
-        request
+  (let [{:keys [parameters mqtt-client pulsar-producers]} request
         {:keys [body]} parameters
         {:strs [command data]} body
-        cmd
-        (command/command-request command idempotency-key correlation-id data)
+        cmd (command/command-request request command data)
         reply-topic (.replace (get cmd "reply_to") "mqtt://" "")
         p (promise)
         producer (get-in pulsar-producers [:command])
