@@ -27,24 +27,45 @@
              slurp
              edn/read-string)))
 
+(defn command-error-response
+  "Build a command-response-shaped error body.
+
+  Args:
+  - idempotency-key: the originating command id, used as causation-id
+  - correlation-id: the correlation chain id
+  - category: error category keyword
+  - details: error details map
+
+  Returns a command-response map with status \"error\"."
+  [idempotency-key correlation-id category details]
+  {"id" (str (utility/uuidv7))
+   "correlation_id" correlation-id
+   "causation_id" idempotency-key
+   "traceparent" (telemetry/inject-traceparent)
+   "tracestate" nil
+   "status" "error"
+   "data" nil
+   "error" (json/write-str {:category category :details details})})
+
 (defn- command-response
   "Build a structured command response from a command and its result.
 
-  On success: :status :ok, :data JSON-encoded result, :error nil.
-  On anomaly: :status :error, :data nil, :error JSON-encoded anomaly."
+  On success: status ok, data JSON-encoded result, error nil.
+  On anomaly: delegates to command-error-response."
   [{:strs [id correlation_id]} result]
-  (let [base {"id" (str (utility/uuidv7))
-              "correlation_id" correlation_id
-              "causation_id" id
-              "traceparent" (telemetry/inject-traceparent)
-              "tracestate" nil}]
-    (if (error/anomaly? result)
-      (assoc base
-             "status" "error"
-             "data" nil
-             "error" (json/write-str {:category (error/kind result)
-                                      :details (dissoc result :category)}))
-      (assoc base "status" "ok" "data" (json/write-str result) "error" nil))))
+  (if (error/anomaly? result)
+    (command-error-response id
+                            correlation_id
+                            (error/kind result)
+                            (dissoc result :category))
+    {"id" (str (utility/uuidv7))
+     "correlation_id" correlation_id
+     "causation_id" id
+     "traceparent" (telemetry/inject-traceparent)
+     "tracestate" nil
+     "status" "ok"
+     "data" (json/write-str result)
+     "error" nil}))
 
 (defn- await-reply
   "Wait for a reply on MQTT topic with timeout."

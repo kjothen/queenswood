@@ -3,6 +3,19 @@
   (:require
     [com.repldriven.mono.command.core :as core]))
 
+(defn command-error-response
+  "Build a command-response-shaped error body.
+
+  Args:
+  - idempotency-key: the originating command id, used as causation-id
+  - correlation-id: the correlation chain id
+  - category: error category keyword
+  - details: error details map
+
+  Returns a command-response map with status \"error\"."
+  [idempotency-key correlation-id category details]
+  (core/command-error-response idempotency-key correlation-id category details))
+
 (def specs
   "Command Malli specs for request/response validation.
 

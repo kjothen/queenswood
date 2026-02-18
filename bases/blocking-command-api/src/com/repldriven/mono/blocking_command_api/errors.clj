@@ -1,28 +1,6 @@
 (ns com.repldriven.mono.blocking-command-api.errors
   (:require
-    [com.repldriven.mono.json.interface :as json]
-    [com.repldriven.mono.telemetry.interface :as telemetry]
-    [com.repldriven.mono.utility.interface :as utility]))
-
-(defn command-error-response
-  "Build a command-response-shaped error body.
-
-  Args:
-  - idempotency-key: the originating command id, used as causation-id
-  - correlation-id: the correlation chain id
-  - category: error category keyword
-  - details: error details map
-
-  Returns a command-response map with status \"error\"."
-  [idempotency-key correlation-id category details]
-  {"id" (str (utility/uuidv7))
-   "correlation_id" correlation-id
-   "causation_id" idempotency-key
-   "traceparent" (telemetry/inject-traceparent)
-   "tracestate" nil
-   "status" "error"
-   "data" nil
-   "error" (json/write-str {:category category :details details})})
+    [com.repldriven.mono.command.interface :as command]))
 
 (defn- request->ids
   "Extract [idempotency-key correlation-id] from a request map.
@@ -42,7 +20,10 @@
   "Build a command-response error body from a request map."
   [req category details]
   (let [[idempotency-key correlation-id] (request->ids req)]
-    (command-error-response idempotency-key correlation-id category details)))
+    (command/command-error-response idempotency-key
+                                    correlation-id
+                                    category
+                                    details)))
 
 (defn coercion-ex->command-response
   "Convert a Reitit coercion exception and request to a command-response error body."
