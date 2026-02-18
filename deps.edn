@@ -16,7 +16,7 @@
     components/encryption {:local/root "components/encryption"}
     components/env {:local/root "components/env"}
     components/error {:local/root "components/error"}
-    components/event {:local/root "components/event"}
+
     components/http-client {:local/root "components/http-client"}
     components/iam {:local/root "components/iam"}
     components/json {:local/root "components/json"}
@@ -63,7 +63,7 @@ bases/symmetric-key-api {:local/root "bases/symmetric-key-api"}
                        "components/env/test-resources"
                        "components/encryption/test"
                        "components/error/test"
-                       "components/event/test"
+
                        "components/http-client/test"
                        "components/iam/test"
                        "components/log/test"
