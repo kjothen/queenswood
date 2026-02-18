@@ -109,6 +109,12 @@ just lint-clj-kondo # Linting
 
 - **zprint**: All Clojure source is formatted with zprint, configured in `.zprint.edn`
 - **Width**: 80 characters
+- **Git hook**: `scripts/hooks/pre-commit` automatically formats staged Clojure
+  files before each commit. Install it once with:
+  ```bash
+  cp scripts/hooks/pre-commit .git/hooks/pre-commit
+  chmod +x .git/hooks/pre-commit
+  ```
 - **Docstrings**: zprint does not reflow string content, so docstrings must be
   manually wrapped at 80 characters. Write multi-line docstrings like:
   ```clojure
@@ -124,3 +130,6 @@ just lint-clj-kondo # Linting
 ## Code Linting
 
 - **clj-kondo**: Configured in `.clj-kondo/config.edn` with lint-as mappings for macros
+- **Git hook**: `scripts/hooks/pre-commit` also runs clj-kondo against the full
+  `bases`, `components`, and `development` directories when any Clojure files
+  are staged, blocking the commit if lint errors are found
