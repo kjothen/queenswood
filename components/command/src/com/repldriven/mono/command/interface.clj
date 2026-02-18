@@ -1,7 +1,9 @@
 (ns com.repldriven.mono.command.interface
   (:refer-clojure :exclude [send])
   (:require
-    [com.repldriven.mono.command.core :as core]))
+    [com.repldriven.mono.command.core :as core]
+    [com.repldriven.mono.command.request :as request]
+    [com.repldriven.mono.command.response :as response]))
 
 (defn req->command-request
   "Build a command wire message from an HTTP request.
@@ -14,20 +16,7 @@
   Returns a command map ready for Pulsar, with reply_to set to
   mqtt://replies/<idempotency-key>."
   [req command data]
-  (core/req->command-request req command data))
-
-(defn ->command-error
-  "Build a command-response-shaped error body.
-
-  Args:
-  - idempotency-key: the originating command id, used as causation-id
-  - correlation-id: the correlation chain id
-  - category: error category keyword
-  - details: error details map
-
-  Returns a command-response map with status \"error\"."
-  [idempotency-key correlation-id category details]
-  (core/->command-error idempotency-key correlation-id category details))
+  (request/req->command-request req command data))
 
 (defn req->command-response
   "Build a command-response from an HTTP request and a result.
@@ -35,7 +24,7 @@
   If result is an anomaly, builds an error response.
   Otherwise (not yet used), builds a success response."
   [req result]
-  (core/req->command-response req result))
+  (response/req->command-response req result))
 
 (def specs
   "Command Malli specs for request/response validation.

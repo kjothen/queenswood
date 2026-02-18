@@ -1,10 +1,9 @@
 (ns com.repldriven.mono.blocking-command-api.api
   (:require
     [com.repldriven.mono.blocking-command-api.commands.routes :as commands]
-    [com.repldriven.mono.blocking-command-api.errors :as errors]
-
+    [com.repldriven.mono.command.interface :as command]
+    [com.repldriven.mono.error.interface :as error]
     [com.repldriven.mono.server.interface :as server]
-
     [reitit.http :as http]
     [reitit.ring :as ring]))
 
@@ -12,15 +11,17 @@
   {:reitit.coercion/request-coercion
    (fn [ex req]
      {:status 400
-      :body (errors/coercion-ex->command-response req
-                                                  :command/request-validation
-                                                  ex)})
+      :body (command/req->command-response
+             req
+             (error/fail :command/request-validation
+                         (select-keys (ex-data ex) [:humanized :in])))})
    :reitit.coercion/response-coercion
    (fn [ex req]
      {:status 500
-      :body (errors/coercion-ex->command-response req
-                                                  :command/response-coercion
-                                                  ex)})})
+      :body (command/req->command-response
+             req
+             (error/fail :command/response-coercion
+                         (select-keys (ex-data ex) [:humanized :in])))})})
 
 (defn app
   [ctx]
