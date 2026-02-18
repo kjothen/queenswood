@@ -19,6 +19,7 @@
         {:keys [body]} parameters
         {:strs [command data]} body
         reply-topic (str "replies/" idempotency-key)
+        reply-to    (str "mqtt://" reply-topic)
         p (promise)
         command {"command" command
                  "id" idempotency-key
@@ -27,7 +28,7 @@
                  "traceparent" (telemetry/inject-traceparent)
                  "tracestate" nil
                  "data" (when data (json/write-str data))
-                 "reply_to" reply-topic}
+                 "reply_to" reply-to}
         producer (get-in pulsar-producers [:command])]
 
     ;; Subscribe to MQTT reply topic and

@@ -36,6 +36,7 @@
         mqtt-client (system/instance sys [:mqtt :client])
         cmd-id      (str (java.util.UUID/randomUUID))
         reply-topic (str "replies/" cmd-id)
+        reply-to    (str "mqtt://" reply-topic)
         p           (promise)]
     (telemetry/with-span ["send-command" {}]
       (mqtt/subscribe mqtt-client
@@ -50,7 +51,7 @@
                     :traceparent    (telemetry/inject-traceparent)
                     :tracestate     nil
                     :data           (json/write-str data)
-                    :reply_to       reply-topic}))
+                    :reply_to       reply-to}))
     (deref p 5000 ::timeout)))
 
 (deftest process-command-test

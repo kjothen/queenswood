@@ -74,7 +74,7 @@
        (loop []
          (when-let [{:keys [^Message message data]} (async/<!! c)]
            (let [id (:id data)
-                 reply-topic (:reply_to data)
+                 reply-topic (some-> (:reply_to data) (.replace "mqtt://" ""))
                  response (process-fn data)]
              (log/debugf "command.core/process: [data=%s, response=%s, reply-topic=%s]" data response reply-topic)
              (error/with-anomaly?
@@ -104,7 +104,8 @@
    (let [{:keys [timeout-ms] :or {timeout-ms 10000}} opts
          correlation-id (str (java.util.UUID/randomUUID))
          reply-topic (str "replies/" correlation-id)
-         command-with-correlation (assoc command :correlation_id correlation-id :reply_to reply-topic)
+         reply-to    (str "mqtt://" reply-topic)
+         command-with-correlation (assoc command :correlation_id correlation-id :reply_to reply-to)
          send-result (pulsar/send producer command-with-correlation)]
      (if (error/anomaly? send-result)
        send-result
