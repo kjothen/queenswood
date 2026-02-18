@@ -66,15 +66,17 @@
       (let [jetty (system/instance sys [:server :jetty-adapter])
             {:keys [stop]} (command-processor sys)]
         (binding [*base-url* (server/http-local-url jetty)]
-          (telemetry/with-span-tests [_ ["process-command"]]
-                                     (error/with-let-anomaly?
-                                       [res (send-http-command "test-command")
-                                        _ (is (= 200 (:status res))
-                                              "Should receive 200 OK")
-                                        actual (http/res->body res)
-                                        _ (is (= "test-command"
-                                                 (get-in actual
-                                                         ["result" "command"]))
-                                              "Should receive command name")]
-                                       test/refute-anomaly)))
+          (telemetry/with-span-tests
+           [_ ["process-command"]]
+           (error/with-let-anomaly? [res (send-http-command "test-command")
+                                     _ (is (= 200 (:status res))
+                                           "Should receive 200 OK")
+                                     actual (http/res->body res)
+                                     _ (is (= "test-command"
+                                              (get (json/read-str
+                                                    (get-in actual
+                                                            ["result" "data"]))
+                                                   "command"))
+                                           "Should receive command name")]
+             test/refute-anomaly)))
         (async/>!! stop :stop)))))
