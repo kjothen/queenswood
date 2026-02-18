@@ -37,11 +37,15 @@
                            idempotency-key)]
     [idempotency-key correlation-id]))
 
+(defn request->command-error-response
+  "Build a command-response error body from a request map."
+  [req category details]
+  (let [[idempotency-key correlation-id] (request->ids req)]
+    (command-error-response idempotency-key correlation-id category details)))
+
 (defn coercion-ex->command-response
   "Convert a Reitit coercion exception and request to a command-response error body."
   [ex req category]
-  (let [[idempotency-key correlation-id] (request->ids req)]
-    (command-error-response idempotency-key
-                            correlation-id
-                            category
-                            (select-keys (ex-data ex) [:humanized :in]))))
+  (request->command-error-response req
+                                   category
+                                   (select-keys (ex-data ex) [:humanized :in])))

@@ -41,24 +41,22 @@
                             (partial process-mqqt-payload p))]
     (if (error/anomaly? sub)
       {:status 500
-       :body (errors/command-error-response idempotency-key
-                                            correlation-id
-                                            :command/mqtt-subscribe
-                                            sub)}
+       :body (errors/request->command-error-response request
+                                                     :command/mqtt-subscribe
+                                                     sub)}
       (let [pub (pulsar/send producer command)]
         (if (error/anomaly? pub)
           (do (mqtt/unsubscribe mqtt-client [reply-topic])
               {:status 500
-               :body (errors/command-error-response idempotency-key
-                                                    correlation-id
-                                                    :command/pulsar-send
-                                                    pub)})
+               :body (errors/request->command-error-response
+                      request
+                      :command/pulsar-send
+                      pub)})
           (let [result (deref p 5000 ::timeout)]
             (if (= result ::timeout)
               {:status 408
-               :body (errors/command-error-response
-                      idempotency-key
-                      correlation-id
+               :body (errors/request->command-error-response
+                      request
                       :command/timeout
                       {:message "Command reply timed out"})}
               {:status 200 :body result})))))))
