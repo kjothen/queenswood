@@ -8,7 +8,8 @@
     [com.repldriven.mono.error.interface :as error]
     [com.repldriven.mono.log.interface :as log]
     [com.repldriven.mono.mqtt.interface :as mqtt]
-    [com.repldriven.mono.pulsar.interface :as pulsar])
+    [com.repldriven.mono.pulsar.interface :as pulsar]
+    [com.repldriven.mono.telemetry.interface :as telemetry])
   (:import
     (org.apache.pulsar.client.api Consumer Message)))
 
@@ -24,6 +25,25 @@
              io/resource
              slurp
              edn/read-string)))
+
+(defn- build-response
+  "Build a structured command response from a command and its result.
+
+  On success: :status :ok, :data JSON-encoded result, :error nil.
+  On anomaly: :status :error, :data nil, :error JSON-encoded anomaly."
+  [command result]
+  (let [base {:id (str (java.util.UUID/randomUUID))
+              :correlation_id (:correlation_id command)
+              :causation_id (:id command)
+              :traceparent (telemetry/inject-traceparent)
+              :tracestate nil}]
+    (if (error/anomaly? result)
+      (assoc base
+             :status :error
+             :data nil
+             :error (json/write-str {:category (error/kind result)
+                                     :context (dissoc result :category)}))
+      (assoc base :status :ok :data (json/write-str result) :error nil))))
 
 (defn- await-reply
   "Wait for a reply on MQTT topic with timeout."
@@ -73,7 +93,7 @@
           (let [id (:id data)
                 reply-topic (some-> (:reply_to data)
                                     (.replace "mqtt://" ""))
-                response (process-fn data)]
+                response (build-response data (process-fn data))]
             (log/debugf
              "command.core/process: [data=%s, response=%s, reply-topic=%s]"
              data
