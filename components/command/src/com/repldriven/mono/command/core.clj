@@ -27,6 +27,27 @@
              slurp
              edn/read-string)))
 
+(defn command-request
+  "Build a command wire message from request fields.
+
+  Args:
+  - command: command name string
+  - idempotency-key: originating request id, used as command id
+  - correlation-id: correlation chain id
+  - data: optional data map (JSON-encoded if present)
+
+  Returns a command map ready for Pulsar, with reply_to set to
+  mqtt://replies/<idempotency-key>."
+  [command idempotency-key correlation-id data]
+  {"command" command
+   "id" idempotency-key
+   "correlation_id" correlation-id
+   "causation_id" nil
+   "traceparent" (telemetry/inject-traceparent)
+   "tracestate" nil
+   "data" (when data (json/write-str data))
+   "reply_to" (str "mqtt://replies/" idempotency-key)})
+
 (defn command-error-response
   "Build a command-response-shaped error body.
 

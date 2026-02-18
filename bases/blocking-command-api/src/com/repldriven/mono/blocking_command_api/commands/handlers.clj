@@ -1,11 +1,11 @@
 (ns com.repldriven.mono.blocking-command-api.commands.handlers
   (:require
     [com.repldriven.mono.blocking-command-api.errors :as errors]
+    [com.repldriven.mono.command.interface :as command]
     [com.repldriven.mono.json.interface :as json]
     [com.repldriven.mono.log.interface :as log]
     [com.repldriven.mono.mqtt.interface :as mqtt]
     [com.repldriven.mono.pulsar.interface :as pulsar]
-    [com.repldriven.mono.telemetry.interface :as telemetry]
     [com.repldriven.mono.error.interface :as error]))
 
 (defn- process-mqqt-payload
@@ -24,17 +24,10 @@
         request
         {:keys [body]} parameters
         {:strs [command data]} body
-        reply-topic (str "replies/" idempotency-key)
-        reply-to (str "mqtt://" reply-topic)
+        cmd
+        (command/command-request command idempotency-key correlation-id data)
+        reply-topic (.replace (get cmd "reply_to") "mqtt://" "")
         p (promise)
-        command {"command" command
-                 "id" idempotency-key
-                 "correlation_id" correlation-id
-                 "causation_id" nil
-                 "traceparent" (telemetry/inject-traceparent)
-                 "tracestate" nil
-                 "data" (when data (json/write-str data))
-                 "reply_to" reply-to}
         producer (get-in pulsar-producers [:command])
         sub (mqtt/subscribe mqtt-client
                             {reply-topic 0}
@@ -44,7 +37,7 @@
        :body (errors/request->command-error-response request
                                                      :command/mqtt-subscribe
                                                      sub)}
-      (let [pub (pulsar/send producer command)]
+      (let [pub (pulsar/send producer cmd)]
         (if (error/anomaly? pub)
           (do (mqtt/unsubscribe mqtt-client [reply-topic])
               {:status 500
