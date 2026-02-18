@@ -12,8 +12,7 @@
 (defn create
   ^PulsarClient [{:keys [service-url]}]
   (log/info "Creating Pulsar client:" service-url)
-  (error/try-nom-ex :pulsar/client-create
-                    PulsarClientException
+  (error/try-nom-ex :pulsar/client-create PulsarClientException
                     "Failed to create Pulsar client"
                     (builder/to-java PulsarClient
                                      (PulsarClient/builder)
@@ -23,7 +22,5 @@
 (defn close
   [^PulsarClient client]
   (log/info "Closing Pulsar client connection")
-  (error/try-nom-ex :pulsar/client-close
-                    PulsarClientException
-                    "Failed to close Pulsar client connection"
-                    (.close client)))
+  (error/try-nom-ex :pulsar/client-close PulsarClientException
+                    "Failed to close Pulsar client connection" (.close client)))

@@ -14,8 +14,8 @@
 (def muuntaja-instance
   "Muuntaja instance configured to decode JSON with string keys."
   (m/create (assoc-in m/default-options
-                      [:formats "application/json" :decoder-opts :decode-key-fn]
-                      identity)))
+             [:formats "application/json" :decoder-opts :decode-key-fn]
+             identity)))
 
 (def standard-router-data
   "Default Reitit router configuration with Malli coercion, Muuntaja, and Swagger support."

@@ -1,16 +1,16 @@
 (ns com.repldriven.mono.db.interface-test
   (:require
-   com.repldriven.mono.db.interface
-   com.repldriven.mono.testcontainers.interface
+    com.repldriven.mono.db.interface
+    com.repldriven.mono.testcontainers.interface
 
-   [com.repldriven.mono.env.interface :as env]
-   [com.repldriven.mono.error.interface :as error]
-   [com.repldriven.mono.system.interface :as system]
+    [com.repldriven.mono.env.interface :as env]
+    [com.repldriven.mono.error.interface :as error]
+    [com.repldriven.mono.system.interface :as system]
 
-   [next.jdbc :as jdbc]
-   [next.jdbc.result-set :as rs]
+    [next.jdbc :as jdbc]
+    [next.jdbc.result-set :as rs]
 
-   [clojure.test :as test :refer [deftest is testing]]))
+    [clojure.test :as test :refer [deftest is testing]]))
 
 (defn- test-system
   []

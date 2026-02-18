@@ -28,12 +28,12 @@
 (def default-jetty-adapter-options {:join? false :port 0})
 
 (def jetty-adapter
-  {:system/start
-   (fn [{:system/keys [config instance]}]
-     (or instance
-         (let [{:keys [handler interceptors options]} config]
-           (log/info "Starting jetty adapter")
-           (jetty/run-jetty (handler {:interceptors interceptors}) options))))
+  {:system/start (fn [{:system/keys [config instance]}]
+                   (or instance
+                       (let [{:keys [handler interceptors options]} config]
+                         (log/info "Starting jetty adapter")
+                         (jetty/run-jetty (handler {:interceptors interceptors})
+                                          options))))
    :system/stop (fn [{:system/keys [^Server instance]}]
                   (when (some? instance) (.stop instance)))
    :system/config {:handler system/required-component

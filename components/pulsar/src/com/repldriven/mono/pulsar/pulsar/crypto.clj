@@ -27,52 +27,53 @@
 ;; TODO: ->der-string does not work, require ->pem-string instead
 (defn key-pair-generator
   [named-kps]
-  (error/try-nom :pulsar/crypto-key-pair-generator
-                 "Failed to generate Pulsar crypto key pairs"
-                 (reduce-kv (fn [m k v]
-                              (assoc m
-                                     k
-                                     (let [kp (encryption/create-key-pair v)]
-                                       {:public-key (-> kp
-                                                        (get :public-key)
-                                                        (encryption/public-key->der-string))
-                                        :private-key
-                                        (-> kp
-                                            (get :private-key)
-                                            (encryption/private-key->der-string))})))
-                            {}
-                            named-kps)))
+  (error/try-nom
+   :pulsar/crypto-key-pair-generator
+   "Failed to generate Pulsar crypto key pairs"
+   (reduce-kv (fn [m k v]
+                (assoc m
+                       k
+                       (let [kp (encryption/create-key-pair v)]
+                         {:public-key (-> kp
+                                          (get :public-key)
+                                          (encryption/public-key->der-string))
+                          :private-key
+                          (-> kp
+                              (get :private-key)
+                              (encryption/private-key->der-string))})))
+              {}
+              named-kps)))
 
 (defn key-pair-file-reader
   [named-kps]
-  (error/try-nom :pulsar/crypto-key-pair-file-reader
-                 "Failed to read Pulsar crypto key pair files"
-                 (reduce-kv (fn [m k v]
-                              (assoc m
-                                     k
-                                     {:public-key (read-file-as-bytes (:public-key v))
-                                      :private-key (read-file-as-bytes (:private-key v))}))
-                            {}
-                            named-kps)))
+  (error/try-nom
+   :pulsar/crypto-key-pair-file-reader
+   "Failed to read Pulsar crypto key pair files"
+   (reduce-kv (fn [m k v]
+                (assoc m
+                       k
+                       {:public-key (read-file-as-bytes (:public-key v))
+                        :private-key (read-file-as-bytes (:private-key v))}))
+              {}
+              named-kps)))
 
-(defn- key->encryption-key-info
-  [k]
-  (doto (EncryptionKeyInfo.) (.setKey k)))
+(defn- key->encryption-key-info [k] (doto (EncryptionKeyInfo.) (.setKey k)))
 
 (defn key-reader
   [named-kps]
-  (error/try-nom :pulsar/crypto-key-reader
-                 "Failed to create Pulsar crypto key reader"
-                 (reify
-                  CryptoKeyReader
-                    (^EncryptionKeyInfo getPublicKey
-                      [_this ^String keyName ^Map _metadata]
-                      (key->encryption-key-info (get (get-crypto-key-pair keyName named-kps)
-                                                     :public-key)))
-                    (^EncryptionKeyInfo getPrivateKey
-                      [_this ^String keyName ^Map _metadata]
-                      (key->encryption-key-info (get (get-crypto-key-pair keyName named-kps)
-                                                     :private-key))))))
+  (error/try-nom
+   :pulsar/crypto-key-reader
+   "Failed to create Pulsar crypto key reader"
+   (reify
+    CryptoKeyReader
+      (^EncryptionKeyInfo getPublicKey
+        [_this ^String keyName ^Map _metadata]
+        (key->encryption-key-info (get (get-crypto-key-pair keyName named-kps)
+                                       :public-key)))
+      (^EncryptionKeyInfo getPrivateKey
+        [_this ^String keyName ^Map _metadata]
+        (key->encryption-key-info (get (get-crypto-key-pair keyName named-kps)
+                                       :private-key))))))
 
 (comment
   (let [key-name "tenant-key-1"

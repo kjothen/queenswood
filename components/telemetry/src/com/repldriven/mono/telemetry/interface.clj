@@ -1,9 +1,9 @@
 (ns com.repldriven.mono.telemetry.interface
   "Public API for telemetry operations."
   (:require
-   [com.repldriven.mono.telemetry.core :as core]
-   [com.repldriven.mono.telemetry.interceptors :as interceptors]
-   [com.repldriven.mono.telemetry.span-tests :as span-tests]))
+    [com.repldriven.mono.telemetry.core :as core]
+    [com.repldriven.mono.telemetry.interceptors :as interceptors]
+    [com.repldriven.mono.telemetry.span-tests :as span-tests]))
 
 ;; Tracing
 (defmacro with-span
@@ -57,10 +57,7 @@
   (core/extract-parent-context command))
 
 ;; Metrics
-(defn counter
-  "Create or get a counter instrument."
-  [opts]
-  (core/counter opts))
+(defn counter "Create or get a counter instrument." [opts] (core/counter opts))
 
 (defn inc-counter!
   "Increment a counter with attributes."

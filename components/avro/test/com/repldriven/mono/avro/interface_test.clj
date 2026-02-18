@@ -9,8 +9,7 @@
 
 (deftest json->schema-test
   (testing "Convert JSON string to Avro schema"
-    (let [schema (SUT/json->schema user-schema-json)]
-      (is (some? schema)))))
+    (let [schema (SUT/json->schema user-schema-json)] (is (some? schema)))))
 
 (deftest serialize-deserialize-test
   (testing "Serialize and deserialize Avro data"

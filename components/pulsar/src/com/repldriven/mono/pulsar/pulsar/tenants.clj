@@ -1,10 +1,10 @@
 (ns com.repldriven.mono.pulsar.pulsar.tenants
   (:require
-   [com.repldriven.mono.error.interface :as error]
-   [com.repldriven.mono.log.interface :as log])
+    [com.repldriven.mono.error.interface :as error]
+    [com.repldriven.mono.log.interface :as log])
   (:import
-   (org.apache.pulsar.client.admin PulsarAdmin Tenants)
-   (org.apache.pulsar.common.policies.data TenantInfo TenantInfoImpl)))
+    (org.apache.pulsar.client.admin PulsarAdmin Tenants)
+    (org.apache.pulsar.common.policies.data TenantInfo TenantInfoImpl)))
 
 (defn- create
   [^PulsarAdmin admin tenant-name &

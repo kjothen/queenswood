@@ -1,20 +1,20 @@
 (ns com.repldriven.mono.iam-api.api-test
   (:refer-clojure :exclude [name test])
   (:require
-   com.repldriven.mono.testcontainers.interface
+    com.repldriven.mono.testcontainers.interface
 
-   [com.repldriven.mono.iam-api.api :as api]
-   [com.repldriven.mono.iam-api.database :as database]
+    [com.repldriven.mono.iam-api.api :as api]
+    [com.repldriven.mono.iam-api.database :as database]
 
-   [com.repldriven.mono.env.interface :as env]
-   [com.repldriven.mono.error.interface :as error]
-   [com.repldriven.mono.http-client.interface :as http]
-   [com.repldriven.mono.server.interface :as server]
-   [com.repldriven.mono.system.interface :as system]
-   [com.repldriven.mono.test.interface :as test]
+    [com.repldriven.mono.env.interface :as env]
+    [com.repldriven.mono.error.interface :as error]
+    [com.repldriven.mono.http-client.interface :as http]
+    [com.repldriven.mono.server.interface :as server]
+    [com.repldriven.mono.system.interface :as system]
+    [com.repldriven.mono.test.interface :as test]
 
-   [clojure.data.json :as json]
-   [clojure.test :refer [deftest is testing]]))
+    [clojure.data.json :as json]
+    [clojure.test :refer [deftest is testing]]))
 
 (def ^:dynamic *base-url* "http://localhost:{PORT}")
 (def project-id "prj-test")
@@ -22,7 +22,8 @@
 (def service-account-create-body
   {"account-id" "sa-test"
    "service-account" {"display-name" "sa-test-zzz-d-shared"
-                      "description" "Test service account for all dev projects"}})
+                      "description"
+                      "Test service account for all dev projects"}})
 
 (defn- test-system
   []
@@ -91,30 +92,28 @@
              ; disable service account
              disable-res (disable-service-account (get service-account "name"))
              _ (is (= 204 (:status disable-res)))
-             _ (is (or (nil? (:body disable-res))
-                       (empty? (:body disable-res))))
+             _ (is (or (nil? (:body disable-res)) (empty? (:body disable-res))))
              disabled-get-res (get-service-account (get service-account "name"))
              _ (is (= 200 (:status disabled-get-res)))
              _ (is (= true (get (http/res->body disabled-get-res) "disabled")))
              ; enable service account
              enable-res (enable-service-account (get service-account "name"))
              _ (is (= 204 (:status enable-res)))
-             _ (is (or (nil? (:body enable-res))
-                       (empty? (:body enable-res))))
+             _ (is (or (nil? (:body enable-res)) (empty? (:body enable-res))))
              enabled-get-res (get-service-account (get service-account "name"))
              _ (is (= 200 (:status enabled-get-res)))
              _ (is (= false (get (http/res->body enabled-get-res) "disabled")))
              ; delete service account
              delete-res (delete-service-account (get service-account "name"))
              _ (is (= 204 (:status delete-res)))
-             _ (is (or (nil? (:body delete-res))
-                       (empty? (:body delete-res))))
+             _ (is (or (nil? (:body delete-res)) (empty? (:body delete-res))))
              after-delete-list (list-service-accounts)
              _ (is (= 200 (:status after-delete-list)))
              after-delete-accounts (http/res->body after-delete-list)
              _ (is (zero? (count (get after-delete-accounts "accounts"))))
              ; undelete service account
-             undelete-res (undelete-service-account (get service-account "name"))
+             undelete-res (undelete-service-account (get service-account
+                                                         "name"))
              _ (is (= 204 (:status undelete-res)))
              _ (is (or (nil? (:body undelete-res))
                        (empty? (:body undelete-res))))

@@ -1,18 +1,18 @@
 (ns com.repldriven.mono.pulsar.pulsar.schemas
   (:refer-clojure :exclude [name namespace resolve type])
   (:require
-   [clojure.data.json :as json]
-   [clojure.java.data :as j]
-   [clojure.java.io :as io]
-   [com.repldriven.mono.avro.interface :as avro]
-   [com.repldriven.mono.error.interface :as error]
-   [com.repldriven.mono.log.interface :as log])
+    [clojure.data.json :as json]
+    [clojure.java.data :as j]
+    [clojure.java.io :as io]
+    [com.repldriven.mono.avro.interface :as avro]
+    [com.repldriven.mono.error.interface :as error]
+    [com.repldriven.mono.log.interface :as log])
   (:import
-   (java.util Map)
-   (org.apache.pulsar.client.api Schema)
-   (org.apache.pulsar.client.api.schema SchemaDefinition)
-   (org.apache.pulsar.common.protocol.schema PostSchemaPayload)
-   (org.apache.pulsar.common.schema SchemaInfo)))
+    (java.util Map)
+    (org.apache.pulsar.client.api Schema)
+    (org.apache.pulsar.client.api.schema SchemaDefinition)
+    (org.apache.pulsar.common.protocol.schema PostSchemaPayload)
+    (org.apache.pulsar.common.schema SchemaInfo)))
 
 (defn- create-payload
   ^PostSchemaPayload [type schema properties]
@@ -80,12 +80,17 @@
 (defn create-schemas
   [coll]
   (log/info "Creating Pulsar schemas:" (keys coll))
-  (error/try-nom :pulsar/schemas-create
-                 "Failed to create Pulsar schemas"
-                 (into {} (doall (reduce-kv (fn [m k {:keys [type schema properties]}]
-                                              (assoc m k (create-schema-entry type (read-schema schema) properties)))
-                                            {}
-                                            coll)))))
+  (error/try-nom
+   :pulsar/schemas-create
+   "Failed to create Pulsar schemas"
+   (into
+    {}
+    (doall
+     (reduce-kv
+      (fn [m k {:keys [type schema properties]}]
+        (assoc m k (create-schema-entry type (read-schema schema) properties)))
+      {}
+      coll)))))
 
 (defn resolve
   [schemas s]

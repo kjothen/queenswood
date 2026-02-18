@@ -1,14 +1,13 @@
 (ns com.repldriven.mono.blocking-command-api.commands.routes
   (:require
-   [com.repldriven.mono.blocking-command-api.commands.handlers :as handlers]
-   [com.repldriven.mono.command.interface :as command]
-   [com.repldriven.mono.telemetry.interface :as telemetry]))
+    [com.repldriven.mono.blocking-command-api.commands.handlers :as handlers]
+    [com.repldriven.mono.command.interface :as command]
+    [com.repldriven.mono.telemetry.interface :as telemetry]))
 
 (defn routes
   [ctx]
   (let [specs @command/specs]
-    ["/api" {:interceptors (concat telemetry/trace-span
-                                   (:interceptors ctx))}
+    ["/api" {:interceptors (concat telemetry/trace-span (:interceptors ctx))}
      ["/command"
       {:interceptors [telemetry/require-idempotency-key
                       telemetry/extract-correlation-id]

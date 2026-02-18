@@ -1,7 +1,7 @@
 (ns com.repldriven.mono.spec-malli.core
   (:require
-   [malli.core :as m]
-   [malli.error :as me]))
+    [malli.core :as m]
+    [malli.error :as me]))
 
 (def non-empty-string? [:string {:min 1}])
 

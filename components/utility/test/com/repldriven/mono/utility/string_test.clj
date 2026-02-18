@@ -23,5 +23,4 @@
   (testing "Convert property strings to keyword map"
     (is (= {:key1 "value1" :key2 "value2"}
            (SUT/prop-seq->kw-map ["key1=value1" "key2=value2"])))
-    (is (= {:foo "bar"}
-           (SUT/prop-seq->kw-map [" foo = bar "])))))
+    (is (= {:foo "bar"} (SUT/prop-seq->kw-map [" foo = bar "])))))

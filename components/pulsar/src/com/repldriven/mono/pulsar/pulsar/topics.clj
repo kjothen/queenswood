@@ -32,11 +32,12 @@
 (defn create-topics
   [{:keys [^PulsarAdmin admin schemas topics]}]
   (log/info "Creating Pulsar topics:" (map :topic topics))
-  (error/try-nom :pulsar/topics-create
-                 "Failed to create Pulsar topics"
-                 (doall (mapv
-                         (fn [{:keys [topic] :as opts}]
-                           (let [resolved-opts
-                                 (update opts :schema #(schemas/resolve-payload schemas %))]
-                             (create admin topic (dissoc resolved-opts :topic))))
-                         topics))))
+  (error/try-nom
+   :pulsar/topics-create
+   "Failed to create Pulsar topics"
+   (doall (mapv
+           (fn [{:keys [topic] :as opts}]
+             (let [resolved-opts
+                   (update opts :schema #(schemas/resolve-payload schemas %))]
+               (create admin topic (dissoc resolved-opts :topic))))
+           topics))))
