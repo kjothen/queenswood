@@ -1,7 +1,8 @@
 (ns com.repldriven.mono.blocking-command-api.errors
   (:require
     [com.repldriven.mono.json.interface :as json]
-    [com.repldriven.mono.telemetry.interface :as telemetry]))
+    [com.repldriven.mono.telemetry.interface :as telemetry]
+    [com.repldriven.mono.utility.interface :as utility]))
 
 (defn command-error-response
   "Build a command-response-shaped error body.
@@ -14,7 +15,7 @@
 
   Returns a command-response map with status \"error\"."
   [idempotency-key correlation-id category details]
-  {"id" (str (java.util.UUID/randomUUID))
+  {"id" (str (utility/uuidv7))
    "correlation_id" correlation-id
    "causation_id" idempotency-key
    "traceparent" (telemetry/inject-traceparent)

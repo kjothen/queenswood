@@ -9,7 +9,8 @@
     [com.repldriven.mono.log.interface :as log]
     [com.repldriven.mono.mqtt.interface :as mqtt]
     [com.repldriven.mono.pulsar.interface :as pulsar]
-    [com.repldriven.mono.telemetry.interface :as telemetry])
+    [com.repldriven.mono.telemetry.interface :as telemetry]
+    [com.repldriven.mono.utility.interface :as utility])
   (:import
     (org.apache.pulsar.client.api Consumer Message)))
 
@@ -32,7 +33,7 @@
   On success: :status :ok, :data JSON-encoded result, :error nil.
   On anomaly: :status :error, :data nil, :error JSON-encoded anomaly."
   [{:strs [id correlation_id]} result]
-  (let [base {"id" (str (java.util.UUID/randomUUID))
+  (let [base {"id" (str (utility/uuidv7))
               "correlation_id" correlation_id
               "causation_id" id
               "traceparent" (telemetry/inject-traceparent)
@@ -118,7 +119,7 @@
   ([producer mqtt-client command] (send producer mqtt-client command {}))
   ([producer mqtt-client command opts]
    (let [{:keys [timeout-ms] :or {timeout-ms 10000}} opts
-         correlation-id (str (java.util.UUID/randomUUID))
+         correlation-id (str (utility/uuidv7))
          reply-topic (str "replies/" correlation-id)
          reply-to (str "mqtt://" reply-topic)
          command-with-correlation
