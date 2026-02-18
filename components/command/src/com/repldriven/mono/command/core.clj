@@ -39,12 +39,14 @@
                                               (json/read-str
                                                (String. payload "UTF-8")))))]
     (mqtt/subscribe mqtt-client {reply-topic 0} callback)
-    (async/go (let [[v ch] (async/alts! [result-chan timeout-chan])]
-                (mqtt/unsubscribe mqtt-client [reply-topic])
-                (if (= ch timeout-chan)
-                  (error/fail :command/timeout
-                              {:message "Command reply timed out"})
-                  v)))))
+    (async/go
+     (let [[v ch] (async/alts! [result-chan timeout-chan])]
+       (error/with-anomaly? [(mqtt/unsubscribe mqtt-client [reply-topic])]
+        (log/anomaly {:message "Error unsubscribing from reply topic"
+                      :topic reply-topic}))
+       (if (= ch timeout-chan)
+         (error/fail :command/timeout {:message "Command reply timed out"})
+         v)))))
 
 (defn process
   "Process commands from Pulsar, send replies via MQTT.
