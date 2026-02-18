@@ -101,9 +101,9 @@
                                               "Failed to parse reply"
                                               (json/read-str
                                                (String. payload "UTF-8")))))]
-    (mqtt/subscribe mqtt-client reply-topic callback)
+    (mqtt/subscribe mqtt-client {reply-topic 0} callback)
     (async/go (let [[v ch] (async/alts! [result-chan timeout-chan])]
-                (mqtt/unsubscribe mqtt-client reply-topic)
+                (mqtt/unsubscribe mqtt-client [reply-topic])
                 (if (= ch timeout-chan)
                   (error/fail :command/timeout
                               {:message "Command reply timed out"})
@@ -133,16 +133,14 @@
       (loop []
         (when-let [{:keys [^Message message data]} (async/<!! c)]
           (let [{:strs [id reply_to]} data
-                reply-topic (some-> reply_to
-                                    (.replace "mqtt://" ""))
                 response (command-response data (process-fn data))]
             (log/debugf
              "command.core/process: [data=%s, response=%s, reply-topic=%s]"
              data
              response
-             reply-topic)
+             reply_to)
             (error/with-anomaly? [(mqtt/publish mqtt-client
-                                                reply-topic
+                                                reply_to
                                                 (json/write-str response))
                                   (pulsar/acknowledge consumer message)]
              (log/anomaly {:message "Error processing command" :id id})))
@@ -164,11 +162,10 @@
   ([producer mqtt-client command opts]
    (let [{:keys [timeout-ms] :or {timeout-ms 10000}} opts
          correlation-id (str (utility/uuidv7))
-         reply-topic (str "replies/" correlation-id)
-         reply-to (str "mqtt://" reply-topic)
+         reply-to (str "mqtt://replies/" correlation-id)
          command-with-correlation
          (assoc command :correlation_id correlation-id :reply_to reply-to)
          send-result (pulsar/send producer command-with-correlation)]
      (if (error/anomaly? send-result)
        send-result
-       (async/<!! (await-reply mqtt-client reply-topic timeout-ms))))))
+       (async/<!! (await-reply mqtt-client reply-to timeout-ms))))))

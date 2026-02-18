@@ -4,6 +4,8 @@
     [com.repldriven.mono.log.interface :as log]
     [clojurewerkz.machine-head.client :as mh]))
 
+(defn- strip-prefix [s] (if (.startsWith s "mqtt://") (subs s 7) s))
+
 (defn publish
   "Publish a message to an MQTT topic. Returns nil on success or an anomaly on failure."
   [client topic payload]
@@ -13,7 +15,7 @@
               payload)
   (error/try-nom :mqtt/publish
                  (format "Failed to publish to topic %s" topic)
-                 (mh/publish client topic payload)
+                 (mh/publish client (strip-prefix topic) payload)
                  nil))
 
 (defn subscribe
@@ -24,10 +26,11 @@
    client
    topics-and-qos
    handler-fn)
-  (error/try-nom :mqtt/subscribe
-                 (format "Failed to subscribe to topics %s" topics-and-qos)
-                 (mh/subscribe client topics-and-qos handler-fn)
-                 nil))
+  (error/try-nom
+   :mqtt/subscribe
+   (format "Failed to subscribe to topics %s" topics-and-qos)
+   (mh/subscribe client (update-keys topics-and-qos strip-prefix) handler-fn)
+   nil))
 
 (defn unsubscribe
   "Unsubscribe from MQTT topics. Returns nil on success or an anomaly on failure."
@@ -35,5 +38,5 @@
   (log/debugf "mqqt.client/usubscribe [client=%s, topics=%s]" client topics)
   (error/try-nom :mqtt/unsubscribe
                  (format "Failed to unsubscribe from topics %s" topics)
-                 (mh/unsubscribe client topics)
+                 (mh/unsubscribe client (mapv strip-prefix topics))
                  nil))

@@ -23,11 +23,11 @@
         {:keys [body]} parameters
         {:strs [command data]} body
         cmd (command/command-request request command data)
-        reply-topic (.replace (get cmd "reply_to") "mqtt://" "")
+        reply-to (get cmd "reply_to")
         p (promise)
         producer (get-in pulsar-producers [:command])
         sub (mqtt/subscribe mqtt-client
-                            {reply-topic 0}
+                            {reply-to 0}
                             (partial process-mqqt-payload p))]
     (if (error/anomaly? sub)
       {:status 500
@@ -36,7 +36,7 @@
                                                      sub)}
       (let [pub (pulsar/send producer cmd)]
         (if (error/anomaly? pub)
-          (do (mqtt/unsubscribe mqtt-client [reply-topic])
+          (do (mqtt/unsubscribe mqtt-client [reply-to])
               {:status 500
                :body (errors/request->command-error-response
                       request
