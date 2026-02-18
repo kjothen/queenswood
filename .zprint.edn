@@ -6,7 +6,6 @@
           "let-nom" :binding
           "let-nom>" :binding
           "with-anomaly?" :arg1
-          "with-let-anomaly?" :binding
           "nom-let>" :binding}
  :map {:comma? false
        :lift-ns? false

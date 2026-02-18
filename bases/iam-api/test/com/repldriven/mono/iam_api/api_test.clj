@@ -72,7 +72,7 @@
     (system/with-system [sys (test-system)]
       (let [jetty (system/instance sys [:server :jetty-adapter])]
         (binding [*base-url* (server/http-local-url jetty)]
-          (error/with-let-anomaly?
+          (error/nom-let>
             ; create service account
             [res (create-service-account)
              _ (is (= 201 (:status res)))

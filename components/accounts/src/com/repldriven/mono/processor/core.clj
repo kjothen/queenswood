@@ -25,17 +25,14 @@
   Returns success response or anomaly."
   [config {:strs [command data]}]
   (if-not command
-    ;; No data field - check if it's an unknown command
-    (error/fail :accounts/process-command
-                {:message "Unknown command" :command command})
-    ;; Parse JSON data
+    (error/fail :accounts/process-command {:message "Missing command"})
     (error/let-nom [data (json/read-str data)
                     schema (get specs/specs command)]
       (if (and schema (not (spec/validate schema data)))
         (error/fail :accounts/process-command
-                    {:message "Invalid command data"
+                    {:message "Invalid command data or missing command schema"
                      :command command
-                     :reason (spec/humanize (spec/explain schema data))})
+                     :details (spec/humanize (spec/explain schema data))})
         (case command
           "open-account" (account-lifecycle/open config data)
           "close-account" (account-lifecycle/close config data)
@@ -43,6 +40,5 @@
           "suspend-account" (account-lifecycle/suspend config data)
           "unsuspend-account" (account-lifecycle/unsuspend config data)
           "archive-account" (account-lifecycle/archive config data)
-          ;; Unknown command
           (error/fail :accounts/process-command
                       {:message "Unknown command" :command command}))))))
