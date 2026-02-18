@@ -21,19 +21,17 @@
                system/defs
                system/start))
 
-(defn- db-spec
+(defn- migrate-db
   [sys]
-  (let [datasource (system/instance sys [:db :datasource])]
-    (sql/get-datasource datasource)))
+  (test/refute-anomaly
+   (error/nom-> (sql/get-datasource (system/instance sys [:db :datasource]))
+                (migrator/migrate "accounts/init-changelog.sql"))))
 
 (deftest process-open-account-test
   (testing "Processing open-account command should create account in database"
     (system/with-system [sys (test-system)]
-      (let [spec (db-spec sys)
-            processor (system/instance sys [:processor])]
-        ;; Run migrations
-        (migrator/migrate spec "accounts/init-changelog.sql")
-        ;; Test the processor
+      (let [processor (system/instance sys [:processor])]
+        (migrate-db sys)
         (let [command {"command" "open-account"
                        "data" (json/write-str {"account-id" "acc-1"
                                                "name" "Test Account"
@@ -56,11 +54,8 @@
   (testing
     "Processing close-account command should update account status in database"
     (system/with-system [sys (test-system)]
-      (let [spec (db-spec sys)
-            processor (system/instance sys [:processor])]
-        ;; Run migrations
-        (migrator/migrate spec "accounts/init-changelog.sql")
-        ;; First create an account
+      (let [processor (system/instance sys [:processor])]
+        (migrate-db sys)
         (let [open-command {"command" "open-account"
                             "data" (json/write-str {"account-id" "acc-2"
                                                     "name" "Account to Close"
@@ -87,10 +82,8 @@
   (testing
     "Processing reopen-account command should update account status to open"
     (system/with-system [sys (test-system)]
-      (let [spec (db-spec sys)
-            processor (system/instance sys [:processor])]
-        ;; Run migrations
-        (migrator/migrate spec "accounts/init-changelog.sql")
+      (let [processor (system/instance sys [:processor])]
+        (migrate-db sys)
         ;; Create and close an account first
         (error/with-let-anomaly? [_ (SUT/process processor
                                                  {"command" "open-account"
@@ -125,10 +118,8 @@
   (testing
     "Processing suspend-account command should update account status to suspended"
     (system/with-system [sys (test-system)]
-      (let [spec (db-spec sys)
-            processor (system/instance sys [:processor])]
-        ;; Run migrations
-        (migrator/migrate spec "accounts/init-changelog.sql")
+      (let [processor (system/instance sys [:processor])]
+        (migrate-db sys)
         ;; Create an account first
         (error/with-let-anomaly? [_ (SUT/process processor
                                                  {"command" "open-account"
@@ -158,10 +149,8 @@
   (testing
     "Processing unsuspend-account command should update account status to open"
     (system/with-system [sys (test-system)]
-      (let [spec (db-spec sys)
-            processor (system/instance sys [:processor])]
-        ;; Run migrations
-        (migrator/migrate spec "accounts/init-changelog.sql")
+      (let [processor (system/instance sys [:processor])]
+        (migrate-db sys)
         ;; Create and suspend an account first
         (error/with-let-anomaly? [_ (SUT/process
                                      processor
@@ -197,10 +186,8 @@
   (testing
     "Processing archive-account command should update account status and set deleted_at"
     (system/with-system [sys (test-system)]
-      (let [spec (db-spec sys)
-            processor (system/instance sys [:processor])]
-        ;; Run migrations
-        (migrator/migrate spec "accounts/init-changelog.sql")
+      (let [processor (system/instance sys [:processor])]
+        (migrate-db sys)
         ;; Create an account first
         (error/with-let-anomaly? [_ (SUT/process processor
                                                  {"command" "open-account"
@@ -230,11 +217,8 @@
 (deftest process-unknown-command-test
   (testing "Processing unknown command should return anomaly"
     (system/with-system [sys (test-system)]
-      (let [spec (db-spec sys)
-            processor (system/instance sys [:processor])]
-        ;; Run migrations
-        (migrator/migrate spec "accounts/init-changelog.sql")
-        ;; Test the processor
+      (let [processor (system/instance sys [:processor])]
+        (migrate-db sys)
         (let [command {"command" "invalid-command"}
               result (SUT/process processor command)]
           (is (error/anomaly? result))

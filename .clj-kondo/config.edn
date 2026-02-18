@@ -1,4 +1,5 @@
 {:lint-as {com.repldriven.mono.error.interface/with-anomaly? clojure.core/->
            com.repldriven.mono.error.interface/with-let-anomaly? clojure.core/let
+           com.repldriven.mono.error.interface/nom-let> clojure.core/let
            com.repldriven.mono.telemetry.interface/with-span-tests clojure.core/let}
  :output {:exclude-files ["target/" ".clj-kondo/imports/"]}}

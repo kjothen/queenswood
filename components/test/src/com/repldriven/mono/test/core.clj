@@ -4,9 +4,9 @@
     [com.repldriven.mono.error.interface :as error]))
 
 (defn refute-anomaly
-  "Fails the test if called with an anomaly, showing its kind and message."
-  [anom]
-  (is false
+  "Fails the test if value is an anomaly, showing its kind and message."
+  [v]
+  (is (not (error/anomaly? v))
       (format "Unexpected anomaly [%s]: %s"
-              (error/kind anom)
-              (or (:message anom) (pr-str anom)))))
+              (error/kind v)
+              (or (:message v) (pr-str v)))))

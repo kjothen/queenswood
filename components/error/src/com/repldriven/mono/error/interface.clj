@@ -64,3 +64,11 @@
   `(let [result# (nom/let-nom ~bindings nil)]
      (when (nom/anomaly? result#) (~error-fn result#))
      result#))
+
+(defmacro nom-let>
+  "Execute let-nom> bindings (every binding anomaly-checked). If the result is
+  an anomaly, call error-fn with it. Returns the result."
+  [bindings error-fn]
+  `(let [result# (nom/let-nom> ~bindings nil)]
+     (when (nom/anomaly? result#) (~error-fn result#))
+     result#))
