@@ -117,16 +117,14 @@
   "Extract parent OpenTelemetry context from command with traceparent/tracestate.
 
   Args:
-  - command: Map with string or keyword keys containing \"traceparent\" and \"tracestate\" fields
-    (Avro-deserialized messages use keyword keys; JSON-parsed messages use string keys)
+  - command: Map with string keys containing \"traceparent\" and \"tracestate\" fields
 
   Returns: OpenTelemetry context with extracted trace information, or current context if extraction fails."
   [command]
   (try (let [propagator (.getTextMapPropagator (.getPropagators
                                                 (otel/get-default-otel!)))
-             get-field (fn [k] (or (get command k) (get command (keyword k))))
-             carrier {"traceparent" (get-field "traceparent")
-                      "tracestate" (get-field "tracestate")}]
+             carrier {"traceparent" (get command "traceparent")
+                      "tracestate" (get command "tracestate")}]
          (.extract propagator (context/current) carrier command-getter))
        (catch Exception _e
          ;; Fallback to current context if extraction fails

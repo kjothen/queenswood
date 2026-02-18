@@ -51,7 +51,7 @@
             (telemetry/with-span-parent
              "process-command"
              parent-ctx
-             (select-keys data [:id :command :correlation_id :causation_id])
+             (select-keys data ["id" "command" "correlation_id" "causation_id"])
              (fn [] data))))]
     (command/process consumer
                      mqtt-client

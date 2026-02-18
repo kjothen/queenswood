@@ -1,7 +1,8 @@
 (ns com.repldriven.mono.pulsar.pulsar.message
   (:require
     [com.repldriven.mono.avro.interface :as avro]
-    [com.repldriven.mono.error.interface :as error])
+    [com.repldriven.mono.error.interface :as error]
+    [clojure.walk :as walk])
   (:import
     (java.util Optional)
     (org.apache.pulsar.client.api Message)
@@ -24,7 +25,7 @@
             (map (fn [field]
                    (let [field-name (.getName field)
                          value (.getField record field-name)]
-                     [(keyword field-name) value]))
+                     [field-name value]))
                  fields)))))
 
 (defn deserialize-same
@@ -38,4 +39,5 @@
     (let [value (.getValue msg)]
       (if (instance? GenericRecord value)
         (generic-record->map value)
-        (avro/deserialize-same schema (.getData msg))))))
+        (let [result (avro/deserialize-same schema (.getData msg))]
+          (if (error/anomaly? result) result (walk/stringify-keys result)))))))
