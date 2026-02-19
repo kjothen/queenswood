@@ -57,7 +57,9 @@ that follows the Polylith architecture.
     appropriate (e.g. ensuring resource cleanup)
   - Anomaly category reflects the call site, not the failure mode — e.g.
     `:http-client/request` not `:http-client/failed`
-  - Anomalies MUST be a map and MUST contain a `:message` key
+  - Anomaly payloads MUST contain a `:message` key. Pass a string as
+    shorthand — `(error/fail :ns/x "message")` — or a map for additional
+    context — `(error/fail :ns/x {:message "..." :account-id id})`
 
 - **Common functions**:
   - _Predicates and construction_:
