@@ -2,14 +2,26 @@
   (:require
     [de.otto.nom.core :as nom]))
 
+(defn- error-anomaly? [x] (and (vector? x) (= :error/anomaly (first x))))
+
+(defmethod nom/abominable? error-anomaly? [_] true)
+(defmethod nom/adapt error-anomaly? [x] x)
+
 ;; Predicates
-(defn anomaly? [x] (nom/anomaly? x))
+(defn anomaly? [x] (error-anomaly? x))
 
 ;; Creation
-(defn fail [category & more] (apply nom/fail category more))
+(defn fail
+  [category & more]
+  (let [p (cond (map? (first more)) (first more)
+                (string? (first more)) {:message (first more)}
+                (seq more) (apply hash-map more)
+                :else {})]
+    [:error/anomaly category p]))
 
 ;; Introspection
-(defn kind [x] (nom/kind x))
+(defn kind [x] (when (anomaly? x) (second x)))
+(defn payload [x] (when (anomaly? x) (get x 2 {})))
 
 ;; Threading macros
 (defmacro nom->
@@ -57,12 +69,12 @@
   [ops error-fn]
   (let [bindings (vec (mapcat (fn [op] [`_# op]) ops))]
     `(let [result# (nom/let-nom ~bindings :ok)]
-       (when (nom/anomaly? result#) (~error-fn result#)))))
+       (when (anomaly? result#) (~error-fn result#)))))
 
 (defmacro nom-let>
   "Execute let-nom> bindings (every binding anomaly-checked). If the result is
   an anomaly, call error-fn with it. Returns the result."
   [bindings error-fn]
   `(let [result# (nom/let-nom> ~bindings nil)]
-     (when (nom/anomaly? result#) (~error-fn result#))
+     (when (anomaly? result#) (~error-fn result#))
      result#))

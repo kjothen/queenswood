@@ -9,4 +9,4 @@
   (is (not (error/anomaly? v))
       (format "Unexpected anomaly [%s]: %s"
               (error/kind v)
-              (or (:message v) (pr-str v)))))
+              (or (:message (error/payload v)) (pr-str v)))))
