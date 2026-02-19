@@ -27,7 +27,7 @@
   Returns success response or anomaly."
   [config {:strs [command data]}]
   (if-not command
-    (error/fail :accounts/process-command {:message "Missing command"})
+    (error/fail :accounts/process-command "Missing command")
     (error/let-nom [data (json/read-str data)
                     schema (get specs/specs command)]
       (if (and schema (not (spec/validate schema data)))
