@@ -1,6 +1,7 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code when working with this Clojure/Polylith monorepo.
+This file provides guidance to Claude Code when working with this Clojure monorepo
+that follows the Polylith architecture.
 
 ## Polylith Architecture
 
@@ -24,17 +25,12 @@ This file provides guidance to Claude Code when working with this Clojure/Polyli
 
 ## Component-Based Infrastructure
 
-- **System-as-data**: Entire systems defined in YAML/EDN configuration files
-- **Donut System**: Dependency injection and lifecycle management (wrapped by `system` component)
+- **System-as-data**: Entire systems defined in YAML/EDN configuration files: config -> system definitions -> started system
+- **System construction**: Lifecycle management, through `system` component wrapping `donut.system`
 - **Testcontainers**: Test infrastructure (DBs, message queues) defined in system config
-- **Interceptor-based DI**:
-  - Server interceptors inject component instances into request context
-  - Handlers access datasources, MQTT clients, Pulsar consumers via request map
-  - No global state or manual dependency wiring
-- **Configuration loading** (`env` component):
-  - `-c` flag for config file path
-  - `-p` flag for profile (dev, test, prod)
-  - Supports environment-specific overrides
+- **Web Service Interceptors**: Server (`server` component) interceptors inject component instances into request context, such as datasources, MQTT clients, Pulsar consumers/producers
+- **Configuration**: Env (`env` component) loading supporting profiles (:dev, :test, :prod)
+- **System Multimethods**: New system components registered using `system/defcomponents` to extend system component definitions
 
 ## Error Handling
 
@@ -64,17 +60,17 @@ This file provides guidance to Claude Code when working with this Clojure/Polyli
   - Anomalies MUST be a map and MUST contain a `:message` key
 
 - **Common functions**:
-  - *Predicates and construction*:
+  - _Predicates and construction_:
     - `error/anomaly?` - check if value is anomaly
     - `error/fail` - create anomaly with category and details map
-  - *Exception catching*:
+  - _Exception catching_:
     - `error/try-nom` - wrap body, catching all exceptions as anomalies
     - `error/try-nom-ex` - wrap body, catching a specific exception type
-  - *Let-style bindings*:
+  - _Let-style bindings_:
     - `error/let-nom>` - monadic let, short-circuits on first binding anomaly
     - `error/nom-let>` - like `let-nom>` but calls error-fn if result is
       anomaly
-  - *Threading and side effects*:
+  - _Threading and side effects_:
     - `error/nom->` - threading macro, short-circuits on anomalies
     - `error/nom-do>` - execute operations sequentially, short-circuit and
       call error-fn on first anomaly
@@ -172,6 +168,31 @@ This file provides guidance to Claude Code when working with this Clojure/Polyli
   chmod +x .git/hooks/pre-commit
   ```
 
+- **Namespaces**: MUST `:require` entries innermost to outermost —
+  excepting indirect interfaces which extend multi-methods MUST take precedence
+  (removing [] to make it obvious) unless they need to required by alias too -
+  then internal namespaces, then other component interfaces (and interfaces **ONLY**),
+  then external libraries, then standard libraries, separated by line-breaks. For
+  component interface tests, use MUST use the `SUT` alias for the component interface,
+  and MUST NOT include any other namespaces from the component.
+
+  ```clojure
+  (ns ^:eftest/synchronized com.repldriven.mono.processor.interface-test
+    (:require
+      com.repldriven.mono.testcontainers.interface  ;; extends `system/components`
+
+      [com.repldriven.mono.processor.interface :as SUT]
+
+      [com.repldriven.mono.error.interface :as error]
+      [com.repldriven.mono.system.interface :as system]
+      [com.repldriven.mono.test.interface :as test]
+      [com.repldriven.mono.db.interface :as sql]
+      [com.repldriven.mono.env.interface :as env]
+      [com.repldriven.mono.json.interface :as json]
+
+      [clojure.test :refer [deftest is testing]]))
+  ```
+
 - **Docstrings**: zprint does not reflow string content, so docstrings must be
   manually wrapped at 80 characters. Write multi-line docstrings like:
 
@@ -206,3 +227,6 @@ This file provides guidance to Claude Code when working with this Clojure/Polyli
   wire data to keyword keys — use `{:strs [...]}` destructuring and string
   literals for map access. Converting between string and keyword keys at
   different layers causes confusion about data provenance.
+- **Naming**: Naming is hard, so try not to name at all by using thread macros.
+  Names should be narrow. "Elements of Clojure" by Zachary Tellman gets _everything_
+  right about names.

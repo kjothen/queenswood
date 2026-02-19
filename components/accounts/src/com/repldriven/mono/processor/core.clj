@@ -1,11 +1,13 @@
 (ns com.repldriven.mono.processor.core
   (:require
+    [com.repldriven.mono.error.interface :as error]
+    [com.repldriven.mono.json.interface :as json]
+    [com.repldriven.mono.spec.interface :as spec]
     [com.repldriven.mono.processor.commands.account-lifecycle :as
      account-lifecycle]
-    [com.repldriven.mono.processor.specs.core :as specs]
-    [com.repldriven.mono.error.interface :as error]
-    [com.repldriven.mono.spec.interface :as spec]
-    [com.repldriven.mono.json.interface :as json]))
+    [com.repldriven.mono.processor.commands.reporting-operations :as
+     reporting]
+    [com.repldriven.mono.processor.specs.core :as specs]))
 
 (defn process
   "Process an account command and return result or anomaly.
@@ -40,5 +42,6 @@
           "suspend-account" (account-lifecycle/suspend config data)
           "unsuspend-account" (account-lifecycle/unsuspend config data)
           "archive-account" (account-lifecycle/archive config data)
+          "get-account-status" (reporting/get-account-status config data)
           (error/fail :accounts/process-command
                       {:message "Unknown command" :command command}))))))

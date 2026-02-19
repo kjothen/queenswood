@@ -80,6 +80,7 @@ Domain component for account/ledger operations.
 
 ### Reporting Operations
 
+- [x] get-account-status
 - [ ] get-account-balance
 - [ ] get-available-balance
 - [ ] get-transaction-history

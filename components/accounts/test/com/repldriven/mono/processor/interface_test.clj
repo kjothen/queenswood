@@ -3,8 +3,7 @@
     com.repldriven.mono.testcontainers.interface
 
     [com.repldriven.mono.processor.interface :as SUT]
-    [com.repldriven.mono.processor.commands.account-lifecycle :as
-     account-lifecycle]
+
     [com.repldriven.mono.db.interface :as sql]
     [com.repldriven.mono.env.interface :as env]
     [com.repldriven.mono.error.interface :as error]
@@ -32,21 +31,21 @@
     (system/with-system [sys (test-system)]
       (let [processor (system/instance sys [:processor])]
         (migrate-db sys)
-        (let [command {"command" "open-account"
-                       "data" (json/write-str {"account-id" "acc-1"
-                                               "name" "Test Account"
-                                               "currency" "USD"})}]
-          (error/nom-let> [result (SUT/process processor command)
-                           _ (is (= :ok (:status result)))
-                           _ (is (= "acc-1" (:account-id result)))
-                           ;; Verify account was created in database
-                           account (account-lifecycle/get processor "acc-1")
-                           _ (is (some? account))
-                           _ (is (= "acc-1" (:account_id account)))
-                           _ (is (= "Test Account" (:name account)))
-                           _ (is (= "open" (:status account)))
-                           _ (is (= "USD" (:currency account)))]
-            test/refute-anomaly))))))
+        (error/nom-let> [result (SUT/process processor
+                                             {"command" "open-account"
+                                              "data" (json/write-str
+                                                      {"account-id" "acc-1"
+                                                       "name" "Test Account"
+                                                       "currency" "USD"})})
+                         _ (is (= :ok (:status result)))
+                         _ (is (= "acc-1" (:account-id result)))
+                         status (SUT/process processor
+                                             {"command" "get-account-status"
+                                              "data" (json/write-str
+                                                      {"account-id" "acc-1"})})
+                         _ (is (= :ok (:status status)))
+                         _ (is (= "open" (:account-status status)))]
+          test/refute-anomaly)))))
 
 (deftest process-close-account-test
   (testing
@@ -54,24 +53,25 @@
     (system/with-system [sys (test-system)]
       (let [processor (system/instance sys [:processor])]
         (migrate-db sys)
-        (let [open-command {"command" "open-account"
-                            "data" (json/write-str {"account-id" "acc-2"
-                                                    "name" "Account to Close"
-                                                    "currency" "USD"})}]
-          (error/nom-let> [_ (SUT/process processor open-command)
-                           ;; Now close the account
-                           close-command {"command" "close-account"
-                                          "data" (json/write-str {"account-id"
-                                                                  "acc-2"})}
-                           result (SUT/process processor close-command)
-                           _ (is (= :ok (:status result)))
-                           _ (is (= "acc-2" (:account-id result)))
-                           ;; Verify account status was updated to closed
-                           account (account-lifecycle/get processor "acc-2")
-                           _ (is (some? account))
-                           _ (is (= "acc-2" (:account_id account)))
-                           _ (is (= "closed" (:status account)))]
-            test/refute-anomaly))))))
+        (error/nom-let> [_ (SUT/process processor
+                                        {"command" "open-account"
+                                         "data" (json/write-str
+                                                 {"account-id" "acc-2"
+                                                  "name" "Account to Close"
+                                                  "currency" "USD"})})
+                         result (SUT/process processor
+                                             {"command" "close-account"
+                                              "data" (json/write-str
+                                                      {"account-id" "acc-2"})})
+                         _ (is (= :ok (:status result)))
+                         _ (is (= "acc-2" (:account-id result)))
+                         status (SUT/process processor
+                                             {"command" "get-account-status"
+                                              "data" (json/write-str
+                                                      {"account-id" "acc-2"})})
+                         _ (is (= :ok (:status status)))
+                         _ (is (= "closed" (:account-status status)))]
+          test/refute-anomaly)))))
 
 (deftest process-reopen-account-test
   (testing
@@ -79,7 +79,6 @@
     (system/with-system [sys (test-system)]
       (let [processor (system/instance sys [:processor])]
         (migrate-db sys)
-        ;; Create and close an account first
         (error/nom-let> [_ (SUT/process processor
                                         {"command" "open-account"
                                          "data" (json/write-str
@@ -90,18 +89,18 @@
                                         {"command" "close-account"
                                          "data" (json/write-str {"account-id"
                                                                  "acc-3"})})
-                         ;; Now reopen the account
-                         reopen-command {"command" "reopen-account"
-                                         "data" (json/write-str {"account-id"
-                                                                 "acc-3"})}
-                         result (SUT/process processor reopen-command)
+                         result (SUT/process processor
+                                             {"command" "reopen-account"
+                                              "data" (json/write-str
+                                                      {"account-id" "acc-3"})})
                          _ (is (= :ok (:status result)))
                          _ (is (= "acc-3" (:account-id result)))
-                         ;; Verify account status was updated to open
-                         account (account-lifecycle/get processor "acc-3")
-                         _ (is (some? account))
-                         _ (is (= "acc-3" (:account_id account)))
-                         _ (is (= "open" (:status account)))]
+                         status (SUT/process processor
+                                             {"command" "get-account-status"
+                                              "data" (json/write-str
+                                                      {"account-id" "acc-3"})})
+                         _ (is (= :ok (:status status)))
+                         _ (is (= "open" (:account-status status)))]
           test/refute-anomaly)))))
 
 (deftest process-suspend-account-test
@@ -110,25 +109,24 @@
     (system/with-system [sys (test-system)]
       (let [processor (system/instance sys [:processor])]
         (migrate-db sys)
-        ;; Create an account first
         (error/nom-let> [_ (SUT/process processor
                                         {"command" "open-account"
                                          "data" (json/write-str
                                                  {"account-id" "acc-4"
                                                   "name" "Account to Suspend"
                                                   "currency" "EUR"})})
-                         ;; Now suspend the account
-                         suspend-command {"command" "suspend-account"
-                                          "data" (json/write-str {"account-id"
-                                                                  "acc-4"})}
-                         result (SUT/process processor suspend-command)
+                         result (SUT/process processor
+                                             {"command" "suspend-account"
+                                              "data" (json/write-str
+                                                      {"account-id" "acc-4"})})
                          _ (is (= :ok (:status result)))
                          _ (is (= "acc-4" (:account-id result)))
-                         ;; Verify account status was updated to suspended
-                         account (account-lifecycle/get processor "acc-4")
-                         _ (is (some? account))
-                         _ (is (= "acc-4" (:account_id account)))
-                         _ (is (= "suspended" (:status account)))]
+                         status (SUT/process processor
+                                             {"command" "get-account-status"
+                                              "data" (json/write-str
+                                                      {"account-id" "acc-4"})})
+                         _ (is (= :ok (:status status)))
+                         _ (is (= "suspended" (:account-status status)))]
           test/refute-anomaly)))))
 
 (deftest process-unsuspend-account-test
@@ -137,7 +135,6 @@
     (system/with-system [sys (test-system)]
       (let [processor (system/instance sys [:processor])]
         (migrate-db sys)
-        ;; Create and suspend an account first
         (error/nom-let> [_ (SUT/process processor
                                         {"command" "open-account"
                                          "data" (json/write-str
@@ -148,46 +145,64 @@
                                         {"command" "suspend-account"
                                          "data" (json/write-str {"account-id"
                                                                  "acc-5"})})
-                         ;; Now unsuspend the account
-                         unsuspend-command {"command" "unsuspend-account"
-                                            "data" (json/write-str {"account-id"
-                                                                    "acc-5"})}
-                         result (SUT/process processor unsuspend-command)
+                         result (SUT/process processor
+                                             {"command" "unsuspend-account"
+                                              "data" (json/write-str
+                                                      {"account-id" "acc-5"})})
                          _ (is (= :ok (:status result)))
                          _ (is (= "acc-5" (:account-id result)))
-                         ;; Verify account status was updated to open
-                         account (account-lifecycle/get processor "acc-5")
-                         _ (is (some? account))
-                         _ (is (= "acc-5" (:account_id account)))
-                         _ (is (= "open" (:status account)))]
+                         status (SUT/process processor
+                                             {"command" "get-account-status"
+                                              "data" (json/write-str
+                                                      {"account-id" "acc-5"})})
+                         _ (is (= :ok (:status status)))
+                         _ (is (= "open" (:account-status status)))]
           test/refute-anomaly)))))
 
 (deftest process-archive-account-test
   (testing
-    "Processing archive-account command should update account status and set deleted_at"
+    "Processing archive-account command should update account status to archived"
     (system/with-system [sys (test-system)]
       (let [processor (system/instance sys [:processor])]
         (migrate-db sys)
-        ;; Create an account first
         (error/nom-let> [_ (SUT/process processor
                                         {"command" "open-account"
                                          "data" (json/write-str
                                                  {"account-id" "acc-6"
                                                   "name" "Account to Archive"
                                                   "currency" "CAD"})})
-                         ;; Now archive the account
-                         archive-command {"command" "archive-account"
-                                          "data" (json/write-str {"account-id"
-                                                                  "acc-6"})}
-                         result (SUT/process processor archive-command)
+                         result (SUT/process processor
+                                             {"command" "archive-account"
+                                              "data" (json/write-str
+                                                      {"account-id" "acc-6"})})
                          _ (is (= :ok (:status result)))
                          _ (is (= "acc-6" (:account-id result)))
-                         ;; Verify account status was updated to archived
-                         account (account-lifecycle/get processor "acc-6")
-                         _ (is (some? account))
-                         _ (is (= "acc-6" (:account_id account)))
-                         _ (is (= "archived" (:status account)))
-                         _ (is (some? (:deleted_at account)))]
+                         status (SUT/process processor
+                                             {"command" "get-account-status"
+                                              "data" (json/write-str
+                                                      {"account-id" "acc-6"})})
+                         _ (is (= :ok (:status status)))
+                         _ (is (= "archived" (:account-status status)))]
+          test/refute-anomaly)))))
+
+(deftest process-get-account-status-test
+  (testing "Processing get-account-status should return the account status"
+    (system/with-system [sys (test-system)]
+      (let [processor (system/instance sys [:processor])]
+        (migrate-db sys)
+        (error/nom-let> [_ (SUT/process processor
+                                        {"command" "open-account"
+                                         "data" (json/write-str
+                                                 {"account-id" "acc-7"
+                                                  "name" "Status Account"
+                                                  "currency" "USD"})})
+                         result (SUT/process processor
+                                             {"command" "get-account-status"
+                                              "data" (json/write-str
+                                                      {"account-id" "acc-7"})})
+                         _ (is (= :ok (:status result)))
+                         _ (is (= "acc-7" (:account-id result)))
+                         _ (is (= "open" (:account-status result)))]
           test/refute-anomaly)))))
 
 (deftest process-unknown-command-test
