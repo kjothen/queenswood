@@ -19,7 +19,7 @@
 
 (defn- test-system
   []
-  (error/nom-> (env/config "classpath:fdb/fdb-test.yml" :test)
+  (error/nom-> (env/config "classpath:fdb/application-test.yml" :test)
                system/defs
                system/start))
 
