@@ -1,11 +1,11 @@
-(ns com.repldriven.mono.vault.system.components
+(ns com.repldriven.mono.vault.system
   (:require
     [com.repldriven.mono.vault.client :as client]
 
     [com.repldriven.mono.log.interface :as log]
     [com.repldriven.mono.system.interface :as system]))
 
-(def client
+(def vault-client
   {:system/start (fn [{:system/keys [config instance]}]
                    (or instance
                        (let [{:keys [api-url]} config]
@@ -19,3 +19,5 @@
                   (when (some? instance)
                     (log/info "Relinquishing vault api client")))
    :system/config {:api-url system/required-component}})
+
+(system/defcomponents :vault {:client vault-client})

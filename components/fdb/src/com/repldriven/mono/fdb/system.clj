@@ -1,4 +1,4 @@
-(ns com.repldriven.mono.fdb.system.components
+(ns com.repldriven.mono.fdb.system
   (:require
     [com.repldriven.mono.error.interface :as error]
     [com.repldriven.mono.log.interface :as log]
@@ -44,3 +44,5 @@
                     (.close instance)))
    :system/config {:cluster-file-path system/required-component
                    :api-version 730}})
+
+(system/defcomponents :fdb {:cluster-file-path cluster-file-path :db db})

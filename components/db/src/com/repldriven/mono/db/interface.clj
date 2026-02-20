@@ -1,6 +1,6 @@
 (ns com.repldriven.mono.db.interface
   (:require
-    com.repldriven.mono.db.system.core
+    com.repldriven.mono.db.system
 
     [com.repldriven.mono.db.core :as core]))
 

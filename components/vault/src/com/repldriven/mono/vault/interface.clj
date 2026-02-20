@@ -1,6 +1,6 @@
 (ns com.repldriven.mono.vault.interface
   (:require
-    com.repldriven.mono.vault.system.core
+    com.repldriven.mono.vault.system
 
     [com.repldriven.mono.vault.core :as core]))
 

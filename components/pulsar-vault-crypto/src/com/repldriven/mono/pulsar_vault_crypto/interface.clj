@@ -1,6 +1,6 @@
 (ns com.repldriven.mono.pulsar-vault-crypto.interface
   (:require
-    com.repldriven.mono.pulsar-vault-crypto.system.core
+    com.repldriven.mono.pulsar-vault-crypto.system
     [com.repldriven.mono.pulsar-vault-crypto.core :as core]))
 
 (defn tenant-key-reader

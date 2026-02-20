@@ -1,4 +1,4 @@
-(ns com.repldriven.mono.mqtt.system.components
+(ns com.repldriven.mono.mqtt.system
   (:require
     [com.repldriven.mono.log.interface :as log]
     [com.repldriven.mono.system.interface :as system]
@@ -23,3 +23,5 @@
             (catch Exception e
               (log/error (format "Failed to close mqtt connection, %s" e))))))
    :system/config {:uri system/required-component :options {}}})
+
+(system/defcomponents :mqtt {:client client})

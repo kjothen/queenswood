@@ -1,6 +1,6 @@
 (ns com.repldriven.mono.mqtt.interface
   (:require
-    com.repldriven.mono.mqtt.system.core
+    com.repldriven.mono.mqtt.system
 
     [com.repldriven.mono.mqtt.core :as core]))
 

@@ -1,4 +1,4 @@
-(ns com.repldriven.mono.server.system.components
+(ns com.repldriven.mono.server.system
   (:require
     [com.repldriven.mono.log.interface :as log]
     [com.repldriven.mono.system.interface :as system]
@@ -39,3 +39,7 @@
    :system/config {:handler system/required-component
                    :interceptors nil
                    :options default-jetty-adapter-options}})
+
+(system/defcomponents :server
+                      {:interceptors interceptors
+                       :jetty-adapter jetty-adapter})

@@ -1,4 +1,4 @@
-(ns com.repldriven.mono.pulsar-vault-crypto.system.components
+(ns com.repldriven.mono.pulsar-vault-crypto.system
   (:require
     [com.repldriven.mono.pulsar-vault-crypto.core :as core]
     [com.repldriven.mono.vault.interface :as vault]
@@ -18,3 +18,6 @@
                    :token system/required-component
                    :tenant-id system/required-component
                    :mount "secret"}})
+
+(system/defcomponents :pulsar-vault-crypto
+                      {:tenant-key-reader tenant-key-reader})
