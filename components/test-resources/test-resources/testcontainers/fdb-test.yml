@@ -5,6 +5,6 @@ cluster-file-path: !system/component
   system/component-kind: fdb/cluster-file-path
   container: !system/local-ref container
 
-database: !system/component
-  system/component-kind: fdb/database
+db: !system/component
+  system/component-kind: fdb/db
   cluster-file-path: !system/local-ref cluster-file-path

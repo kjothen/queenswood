@@ -19,7 +19,7 @@ from https://github.com/apple/foundationdb/releases/tag/7.3.27
 
 ## Usage
 
-The component registers `:fdb/cluster-file-path` and `:fdb/database` system
+The component registers `:fdb/cluster-file-path` and `:fdb/db` system
 components. Include via `testcontainers/fdb-test.yml` in tests, or configure
 directly with a cluster file path in production:
 
@@ -35,7 +35,7 @@ Access the database and use the interface:
 
 ```clojure
 (system/with-system [sys (system-config)]
-  (let [db (system/instance sys [:fdb :database])]
+  (let [db (system/instance sys [:fdb :db])]
     (fdb/set db "key" "value")
     (fdb/get db "key")))
 ```

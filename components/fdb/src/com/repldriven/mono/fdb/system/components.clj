@@ -19,10 +19,10 @@
    :system/config {:container system/required-component}})
 
 ;; ---
-;; database
+;; db
 ;; ---
 
-(def database
+(def db
   {:system/start (fn [{:system/keys [config instance]}]
                    (let [{:keys [cluster-file-path api-version]} config
                          api-version (or api-version 730)]
