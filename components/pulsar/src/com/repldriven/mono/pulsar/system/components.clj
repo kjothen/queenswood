@@ -16,6 +16,28 @@
     [com.repldriven.mono.log.interface :as log]))
 
 ;; ---
+;; container urls
+;; ---
+
+(def broker-url
+  {:system/start (fn [{:system/keys [config instance]}]
+                   (or instance
+                       (let [url (.getPulsarBrokerUrl
+                                  (get-in config [:container :container]))]
+                         (log/info "Pulsar broker URL:" url)
+                         url)))
+   :system/config {:container system/required-component}})
+
+(def http-service-url
+  {:system/start (fn [{:system/keys [config instance]}]
+                   (or instance
+                       (let [url (.getHttpServiceUrl
+                                  (get-in config [:container :container]))]
+                         (log/info "Pulsar HTTP service URL:" url)
+                         url)))
+   :system/config {:container system/required-component}})
+
+;; ---
 ;; admin
 ;; ---
 

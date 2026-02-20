@@ -10,7 +10,9 @@
 ;; system components
 (system/defcomponents
  :pulsar
- {:admin components/admin
+ {:broker-url components/broker-url
+  :http-service-url components/http-service-url
+  :admin components/admin
   :client components/client
   :consumer components/consumer
   :consumers components/consumers
