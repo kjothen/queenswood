@@ -44,13 +44,3 @@
                     (.close instance)))
    :system/config {:cluster-file-path system/required-component
                    :api-version 730}})
-
-;; ---
-;; client
-;; ---
-
-(def client
-  {:system/start (fn [{:system/keys [config instance]}]
-                   (or instance {:db (:database config)}))
-   :system/stop (fn [_] nil)
-   :system/config {:database system/required-component}})
