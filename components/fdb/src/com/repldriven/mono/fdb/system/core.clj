@@ -5,4 +5,5 @@
     [com.repldriven.mono.system.interface :as system]))
 
 ;; system components
-(system/defcomponents :fdb {:database components/database})
+(system/defcomponents :fdb
+                      {:database components/database :client components/client})

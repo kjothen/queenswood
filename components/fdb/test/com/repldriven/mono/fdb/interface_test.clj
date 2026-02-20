@@ -26,9 +26,9 @@
 (deftest integration-test
   (testing "FDB container starts and can execute transactions"
     (system/with-system [sys (test-system)]
-      (let [db (system/instance sys [:fdb :database])]
-        (error/nom-let> [_ (SUT/set db "test-key" "test-value")
-                         result (SUT/get db "test-key")
+      (let [client (system/instance sys [:fdb :client])]
+        (error/nom-let> [_ (SUT/set client "test-key" "test-value")
+                         result (SUT/get client "test-key")
                          _ (is
                             (= "test-value" result)
                             "Should be able to write and read values from FDB")]
