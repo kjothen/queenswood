@@ -1,11 +1,7 @@
 container: !system/component
   system/component-kind: fdb/container
   exposed-port: 4500
-
-container-mapped-exposed-port: !system/component
-  system/component-kind: fdb/container-mapped-exposed-port
-  container: !system/local-ref container
-  exposed-port: 4500
+  host-port: !port 0
 
 cluster-file-path: !system/component
   system/component-kind: fdb/cluster-file-path
