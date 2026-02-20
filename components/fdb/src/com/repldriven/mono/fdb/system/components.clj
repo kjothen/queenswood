@@ -7,6 +7,18 @@
     (com.apple.foundationdb FDB)))
 
 ;; ---
+;; cluster-file-path
+;; ---
+
+(def cluster-file-path
+  {:system/start (fn [{:system/keys [config instance]}]
+                   (or instance
+                       (let [path (.getClusterFilePath (:container config))]
+                         (log/info "FDB cluster file path:" path)
+                         path)))
+   :system/config {:container system/required-component}})
+
+;; ---
 ;; database
 ;; ---
 

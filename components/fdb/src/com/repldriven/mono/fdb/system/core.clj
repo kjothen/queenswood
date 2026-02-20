@@ -6,4 +6,6 @@
 
 ;; system components
 (system/defcomponents :fdb
-                      {:database components/database :client components/client})
+                      {:cluster-file-path components/cluster-file-path
+                       :database components/database
+                       :client components/client})

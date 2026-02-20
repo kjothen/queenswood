@@ -1,7 +1,6 @@
 (ns com.repldriven.mono.testcontainers.system.components.fdb
   (:require
-    [com.repldriven.mono.log.interface :as log]
-    [com.repldriven.mono.system.interface :as system])
+    [com.repldriven.mono.log.interface :as log])
   (:import
     (earth.adi.testcontainers.containers FoundationDBContainer)
     (org.testcontainers.utility DockerImageName)))
@@ -30,11 +29,3 @@
                   (when (some? instance) (.stop instance)))
    :system/config {:docker-image-name default-docker-image-name}})
 
-(def cluster-file-path
-  {:system/start (fn [{:system/keys [config instance]}]
-                   (or instance
-                       (let [{:keys [container]} config
-                             path (.getClusterFilePath container)]
-                         (log/info "FDB cluster file path:" path)
-                         path)))
-   :system/config {:container system/required-component}})
