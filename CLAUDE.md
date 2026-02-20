@@ -37,8 +37,9 @@ that follows the Polylith architecture.
   methods on a started container instance to extract runtime information, as this
   creates a hidden dependency on the component's library. Any component group
   that interrogates a running container instance (e.g. extracting a connection
-  URL or cluster file path) MUST be defined in `system/components.clj` of the
-  relevant component, not in `testcontainers`
+  URL or cluster file path) MUST be defined in the `system/` folder of the
+  relevant component (i.e. `system/components.clj`, registered via
+  `system/core.clj`), not in `testcontainers`
 - **Web Service Interceptors**: Server (`server` component) interceptors inject component instances into request context, such as datasources, MQTT clients, Pulsar consumers/producers
 - **Configuration**: Env (`env` component) loading supporting profiles (:dev, :test, :prod)
 - **System Multimethods**: New system components registered using `system/defcomponents` to extend system component definitions
