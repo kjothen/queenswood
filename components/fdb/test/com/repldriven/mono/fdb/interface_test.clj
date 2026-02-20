@@ -1,11 +1,13 @@
 (ns ^:eftest/synchronized com.repldriven.mono.fdb.interface-test
   (:require
     com.repldriven.mono.testcontainers.interface
-    com.repldriven.mono.fdb.interface
 
-    [com.repldriven.mono.env.interface :as env]
+    [com.repldriven.mono.fdb.interface :as SUT]
+
     [com.repldriven.mono.error.interface :as error]
     [com.repldriven.mono.system.interface :as system]
+    [com.repldriven.mono.test.interface :as test]
+    [com.repldriven.mono.env.interface :as env]
 
     [clojure.test :refer [deftest is testing]]))
 
@@ -17,29 +19,17 @@
 
 (defn- test-system
   []
-  (error/nom-> (env/config "classpath:fdb/application-test.yml" :test)
+  (error/nom-> (env/config "classpath:fdb/fdb-test.yml" :test)
                system/defs
                system/start))
 
-(deftest fdb-testcontainer-integration-test
+(deftest integration-test
   (testing "FDB container starts and can execute transactions"
     (system/with-system [sys (test-system)]
       (let [db (system/instance sys [:fdb :database])]
-        (is (some? db) "Database instance should be created")
-        (when db
-          (testing "Can write and read a value"
-            (let [test-key (.getBytes "test-key")
-                  test-value (.getBytes "test-value")]
-              ;; Write a value
-              (.run db
-                    (reify
-                     java.util.function.Function
-                       (apply [_ tr] (.set tr test-key test-value) nil)))
-              ;; Read the value back
-              (let [result (.run db
-                                 (reify
-                                  java.util.function.Function
-                                    (apply [_ tr]
-                                      (String. (.join (.get tr test-key))))))]
-                (is (= "test-value" result)
-                    "Should be able to write and read values from FDB")))))))))
+        (error/nom-let> [_ (SUT/set db "test-key" "test-value")
+                         result (SUT/get db "test-key")
+                         _ (is
+                            (= "test-value" result)
+                            "Should be able to write and read values from FDB")]
+          test/refute-anomaly)))))
