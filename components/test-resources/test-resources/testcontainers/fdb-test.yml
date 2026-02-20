@@ -1,11 +1,13 @@
+host-port: !port 0
+
 container: !system/component
   system/component-kind: fdb/container
   exposed-port: 4500
-  host-port: !port 0
+  host-port: !system/local-ref host-port
 
 cluster-file-path: !system/component
   system/component-kind: fdb/cluster-file-path
-  container: !system/local-ref container
+  host-port: !system/local-ref host-port
 
 database: !system/component
   system/component-kind: fdb/database

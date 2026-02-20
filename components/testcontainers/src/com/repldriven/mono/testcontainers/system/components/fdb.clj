@@ -3,8 +3,7 @@
     [com.repldriven.mono.log.interface :as log]
     [com.repldriven.mono.system.interface :as system]
 
-    [clj-test-containers.core :as tc]
-    [clojure.string :as str])
+    [clj-test-containers.core :as tc])
   (:import
     (org.testcontainers.containers GenericContainer)
     (org.testcontainers.containers.wait.strategy Wait)
@@ -28,6 +27,12 @@
                container
                (-> (GenericContainer. (DockerImageName/parse docker-image-name))
                    (.withExposedPorts (into-array Integer [(int exposed-port)]))
+                   ;; Critical: FDB_PORT tells FDB what port to advertise
+                   ;; This must match the mapped port to avoid canonical
+                   ;; port mismatch
+                   (.withEnv "FDB_PORT" (str host-port))
+                   ;; Use container mode (not host) so FDB binds to 0.0.0.0
+                   (.withEnv "FDB_NETWORKING_MODE" "container")
                    (.withCreateContainerCmdModifier (reify
                                                      java.util.function.Consumer
                                                        (accept [_ cmd]
@@ -40,7 +45,8 @@
                         (.withStartupTimeout (Duration/ofSeconds 60)))))]
            (if-let [started-container (some-> (tc/init {:container container})
                                               (tc/start!))]
-             (do (log/info "FDB container started successfully")
+             (do (log/info "FDB container started successfully on port:"
+                           host-port)
                  ;; Give FDB a moment to fully initialize after joining
                  ;; cluster
                  (Thread/sleep 2000)
@@ -63,39 +69,15 @@
                    :exposed-port default-exposed-port
                    :host-port system/required-component}})
 
-(defn- get-container-ip
-  [^GenericContainer container]
-  (try
-    ;; Get the container ID and use docker inspect to get the real IP
-    (let [container-id (.getContainerId container)
-          process (->
-                    (ProcessBuilder.
-                     ["docker" "inspect" "--format"
-                      "{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}"
-                      container-id])
-                    .start)
-          _ (.waitFor process)
-          ip (-> process
-                 .getInputStream
-                 slurp
-                 str/trim)]
-      (log/info "Got container IP from docker inspect:" ip)
-      ip)
-    (catch Exception e
-      (log/error "Failed to get container IP, falling back to host:"
-                 (.getMessage e))
-      (.getHost container))))
-
 (def cluster-file-path
   {:system/start
    (fn [{:system/keys [config instance]}]
      (or instance
-         (let [container-map (get config :container)
-               ^GenericContainer fdb-container (get container-map :container)
-               ;; Use container's internal IP and port to avoid canonical
-               ;; port mismatch
-               host (get-container-ip fdb-container)
-               port default-exposed-port
+         (let [{:keys [host-port]} config
+               ;; Use localhost with the mapped port since container IP is
+               ;; not routable on macOS
+               host "127.0.0.1"
+               port host-port
                content (str "docker:docker@" host ":" port)
                tmp-file (doto (java.io.File/createTempFile "fdb" ".cluster")
                           .deleteOnExit)]
@@ -104,4 +86,4 @@
              (log/info "FDB cluster file path:" path)
              (log/info "FDB cluster file content:" content)
              path))))
-   :system/config {:container system/required-component}})
+   :system/config {:host-port system/required-component}})

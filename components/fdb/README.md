@@ -43,12 +43,25 @@ Access the database instance:
 
 ## Testing
 
-**Note:** FDB testcontainers don't work reliably on macOS due to Docker
-networking limitations (canonical port mismatch between mapped and internal
-ports). The component test only verifies the structure loads correctly.
+### macOS Limitation
 
-For full integration testing, run FDB natively:
-1. Install FDB locally (via the releases page or package manager)
-2. Start fdbserver: `fdbserver -p auto:4500`
-3. Create a cluster file pointing to `127.0.0.1:4500`
-4. Configure your test system to use that cluster file path
+FDB testcontainers **do not work on macOS** due to Docker Desktop networking
+architecture. Container IPs (e.g., `172.17.0.x`) run in a Linux VM and are not
+routable from the macOS host.
+
+The [reference implementation](https://github.com/aleris/testcontainers-foundationdb)
+solves this with a Socat proxy container that bridges the networking gap, but
+this adds significant complexity.
+
+**Workaround for macOS:**
+1. Download FDB from https://github.com/apple/foundationdb/releases/tag/7.3.27
+2. Install and start the server
+3. Use native cluster file path in tests instead of testcontainer config
+
+**Linux:** Testcontainers should work as container IPs are directly routable.
+
+### Component Test
+
+The included test verifies the component structure loads correctly without
+requiring a running FDB instance. For full integration testing with actual
+transactions, use a native FDB installation.
