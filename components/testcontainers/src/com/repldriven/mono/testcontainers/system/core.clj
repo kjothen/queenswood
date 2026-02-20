@@ -50,6 +50,4 @@
 ;; FoundationDB testcontainer components
 (system/defcomponents :fdb
                       {:container fdb/container
-                       :container-mapped-exposed-port
-                       testcontainers/mapped-exposed-port
                        :cluster-file-path fdb/cluster-file-path})
