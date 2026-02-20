@@ -3,7 +3,7 @@
   (:require
     com.repldriven.mono.fdb.system.core
 
-    [com.repldriven.mono.fdb.fdb.core :as core]))
+    [com.repldriven.mono.fdb.core :as core]))
 
 (defn set [db key value] (core/set db key value))
 
