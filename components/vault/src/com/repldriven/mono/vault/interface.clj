@@ -1,17 +1,13 @@
 (ns com.repldriven.mono.vault.interface
   (:require
-    com.repldriven.mono.vault.system.core
+    [com.repldriven.mono.vault.core :as core]))
 
-    [com.repldriven.mono.vault.client :as client]))
-
-(defn create-client [uri] (client/create uri))
+(defn create-client [uri] (core/create-client uri))
 
 (defn authenticate-client!
   [client auth-type credentials]
-  (client/authenticate! client auth-type credentials))
+  (core/authenticate-client! client auth-type credentials))
 
 (defn read-secret
   [client mount path & opts]
-  (if (some? opts)
-    (client/read-secret client mount path opts)
-    (client/read-secret client mount path)))
+  (apply core/read-secret client mount path opts))
