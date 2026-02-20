@@ -9,10 +9,11 @@
 
     [clojure.test :refer [deftest is testing]]))
 
-;; NOTE: The testcontainers-foundationdb library (v1.1.0) has a packaging issue
-;; on macOS where its bundled native library references a hardcoded build-time
-;; path. This test will fail on macOS but works on Linux/CI environments. For
-;; local macOS development, use a native FDB installation.
+;; NOTE: The FDB Java client requires libfdb_c to be installed on the host —
+;; the testcontainer runs FDB but the JNI bridge still needs the native library
+;; locally. On macOS the Nix flake provides it; without Nix install via
+;; `brew install foundationdb`. On Linux install foundationdb-clients from the
+;; FDB GitHub releases.
 
 (defn- test-system
   []
