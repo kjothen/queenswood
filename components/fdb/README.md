@@ -1,59 +1,46 @@
 # FDB Component
 
-FoundationDB integration component providing client lifecycle management and
-system component registration.
+FoundationDB integration component providing database lifecycle management,
+system component registration, and key-value operations.
 
 ## Requirements
 
-The FoundationDB Java client requires the native `libfdb_c.dylib` library to
-be installed on the system. Without it, the client will fail at runtime when
-attempting to connect to FDB.
+The FoundationDB Java client requires the native `libfdb_c` library to be
+installed on the host. Without it, the client will fail at runtime.
 
 ### Installation
 
-**macOS:**
-Download and install from https://github.com/apple/foundationdb/releases/tag/7.3.27
+**macOS (with Nix):** The Nix flake provides the native library automatically.
 
-The Nix flake in this repo automatically installs the native library via a
-custom derivation that fetches the pre-built binary.
+**macOS (without Nix):** `brew install foundationdb`
 
-**Linux:** Install via package manager or from the releases page above.
+**Linux:** Download and install `foundationdb-clients_7.3.27-1_amd64.deb`
+from https://github.com/apple/foundationdb/releases/tag/7.3.27
 
 ## Usage
 
-The component registers the `:fdb/database` system component:
+The component registers `:fdb/cluster-file-path` and `:fdb/database` system
+components. Include via `testcontainers/fdb-test.yml` in tests, or configure
+directly with a cluster file path in production:
 
-```clojure
-{:fdb/database {:cluster-file-path "/path/to/fdb.cluster"
-                :api-version 730}}  ; optional, defaults to 730
+```yaml
+system:
+  fdb:
+    cluster-file-path: /path/to/fdb.cluster
+    database:
+      api-version: 730  # optional, defaults to 730
 ```
 
-Access the database instance:
+Access the database and use the interface:
 
 ```clojure
 (system/with-system [sys (system-config)]
   (let [db (system/instance sys [:fdb :database])]
-    ;; Use FDB Java client API directly on db
-    (.run db
-          (reify java.util.function.Function
-            (apply [_ tr]
-              ;; transaction operations
-              )))))
+    (fdb/set db "key" "value")
+    (fdb/get db "key")))
 ```
 
 ## Testing
 
-The component includes a testcontainer setup using the
-[testcontainers-foundationdb](https://github.com/aleris/testcontainers-foundationdb)
-library for Linux/CI environments.
-
-**macOS Limitation:** The testcontainers-foundationdb library (v1.1.0) has a
-packaging issue on macOS - its bundled native library references a hardcoded
-build-time path that doesn't exist on user systems. For local macOS
-development, use a native FDB installation instead:
-
-1. Install FDB: https://github.com/apple/foundationdb/releases/tag/7.3.27
-2. Use native cluster file path in your system config
-
-The testcontainer works correctly on Linux CI environments where Docker
-networking is direct and the native library packaging doesn't cause issues.
+Tests use the `earth.adi/testcontainers-foundationdb` testcontainer, which
+works on both macOS and Linux provided `libfdb_c` is installed on the host.
