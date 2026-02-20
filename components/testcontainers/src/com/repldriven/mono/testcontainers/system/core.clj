@@ -1,5 +1,6 @@
 (ns com.repldriven.mono.testcontainers.system.core
   (:require
+    [com.repldriven.mono.testcontainers.system.components.fdb :as fdb]
     [com.repldriven.mono.testcontainers.system.components.mqtt :as mqtt]
     [com.repldriven.mono.testcontainers.system.components.postgres :as postgres]
     [com.repldriven.mono.testcontainers.system.components.pulsar :as pulsar]
@@ -45,3 +46,10 @@
                       {:container postgres/container
                        :container-mapped-exposed-port
                        testcontainers/mapped-exposed-port})
+
+;; FoundationDB testcontainer components
+(system/defcomponents :fdb
+                      {:container fdb/container
+                       :container-mapped-exposed-port
+                       testcontainers/mapped-exposed-port
+                       :cluster-file-path fdb/cluster-file-path})
