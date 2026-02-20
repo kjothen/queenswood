@@ -3,8 +3,8 @@
   (:require
     com.repldriven.mono.fdb.system.core
 
-    [com.repldriven.mono.fdb.fdb.client :as client]))
+    [com.repldriven.mono.fdb.fdb.core :as core]))
 
-(defn set [db key value] (client/set db key value))
+(defn set [db key value] (core/set db key value))
 
-(defn get [db key] (client/get db key))
+(defn get [db key] (core/get db key))
