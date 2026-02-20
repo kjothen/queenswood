@@ -10,9 +10,12 @@ that follows the Polylith architecture.
   - Reusable building blocks with `interface.clj` defining public API
   - MUST defer implementation in `interface.clj` to other namespaces in the
     component, such as `core.clj`
-  - The require chain MUST be `interface.clj` → `core.clj` → `system/core.clj`
-    (or `system.clj` for simple cases). `interface.clj` MUST NOT directly
-    bare-require `system/core.clj` — that belongs in `core.clj`
+  - Components that register system components MUST follow one of two patterns:
+    1. **Simple** (`system.clj`): a single file containing all `system/defcomponents`
+       calls, bare-required directly in `interface.clj`
+    2. **Structured** (`system/` folder): component defs split across multiple
+       namespaces (use this when there are at least two), with a `system/core.clj`
+       aggregating them, bare-required directly in `interface.clj`
   - MUST NOT access other components through internal namespaces — only via
     their `interface.clj`
   - MUST NOT include other components in its `deps.edn` — require other

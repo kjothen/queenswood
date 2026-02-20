@@ -1,8 +1,6 @@
 (ns com.repldriven.mono.pulsar.core
   (:refer-clojure :exclude [read send])
   (:require
-    com.repldriven.mono.pulsar.system.core
-
     [com.repldriven.mono.pulsar.pulsar.admin :as admin]
     [com.repldriven.mono.pulsar.pulsar.consumer :as consumer]
     [com.repldriven.mono.pulsar.pulsar.producer :as producer]

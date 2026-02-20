@@ -1,8 +1,6 @@
 (ns com.repldriven.mono.fdb.core
   (:refer-clojure :exclude [get set])
   (:require
-    com.repldriven.mono.fdb.system.core
-
     [com.repldriven.mono.error.interface :as error])
   (:import
     (com.apple.foundationdb Database)))

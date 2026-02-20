@@ -1,7 +1,5 @@
 (ns com.repldriven.mono.db.core
   (:require
-    com.repldriven.mono.db.system.core
-
     [com.repldriven.mono.error.interface :as error]
 
     [next.jdbc :as jdbc]
