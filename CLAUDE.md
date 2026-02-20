@@ -27,7 +27,12 @@ that follows the Polylith architecture.
 
 - **System-as-data**: Entire systems defined in YAML/EDN configuration files: config -> system definitions -> started system
 - **System construction**: Lifecycle management, through `system` component wrapping `donut.system`
-- **Testcontainers**: Test infrastructure (DBs, message queues) defined in system config
+- **Testcontainers**: Test infrastructure (DBs, message queues) defined in system
+  config. The `testcontainers` component MUST only manage container lifecycle
+  (start/stop) — it MUST NOT make library-specific calls on container instances.
+  Any component group that interrogates a container instance (e.g. extracting a
+  connection URL, cluster file path, or port) MUST be defined in
+  `system/components.clj` of the relevant component, not in `testcontainers`
 - **Web Service Interceptors**: Server (`server` component) interceptors inject component instances into request context, such as datasources, MQTT clients, Pulsar consumers/producers
 - **Configuration**: Env (`env` component) loading supporting profiles (:dev, :test, :prod)
 - **System Multimethods**: New system components registered using `system/defcomponents` to extend system component definitions
