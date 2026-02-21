@@ -3,7 +3,7 @@
     [com.repldriven.mono.http-client.interface :as http-client]
     [com.repldriven.mono.server.interface :as server]
     [com.repldriven.mono.system.interface :as system]
-    [com.repldriven.mono.test-system.interface :as test]
+    [com.repldriven.mono.test-system.interface :refer [with-test-system]]
 
     [reitit.http :as http]
     [reitit.ring :as ring]
@@ -14,11 +14,11 @@
 (deftest server-test
   (testing "Server component system configuration and lifecycle"
     (let [handler (fn [_] {:status 200 :body "ok"})]
-      (test/with-test-system [_
-                              ["classpath:server/application-test.yml"
-                               #(assoc-in %
-                                 [:system/defs :server :handler]
-                                 (constantly handler))]]))))
+      (with-test-system [_
+                         ["classpath:server/application-test.yml"
+                          #(assoc-in %
+                            [:system/defs :server :handler]
+                            (constantly handler))]]))))
 
 (deftest interceptors-test
   (testing "Ring interceptors MUST be inserted"
@@ -32,16 +32,16 @@
                                                 server/standard-router-data)
                                    (ring/create-default-handler)
                                    server/standard-executor))]
-      (test/with-test-system
-       [sys
-        ["classpath:server/application-test.yml"
-         #(assoc-in % [:system/defs :server :handler] app)]]
-       (let [jetty (system/instance sys [:server :jetty-adapter])
-             base-url (server/http-local-url jetty)
-             url (str base-url "/api/interceptors")
-             res (http-client/request {:url url :method :get})
-             body (http-client/res->body res)]
-         (is (= body {"got" "me" "this" "time"})))))))
+      (with-test-system [sys
+                         ["classpath:server/application-test.yml"
+                          #(assoc-in % [:system/defs :server :handler] app)]]
+                        (let [jetty (system/instance sys
+                                                     [:server :jetty-adapter])
+                              base-url (server/http-local-url jetty)
+                              url (str base-url "/api/interceptors")
+                              res (http-client/request {:url url :method :get})
+                              body (http-client/res->body res)]
+                          (is (= body {"got" "me" "this" "time"})))))))
 
 (deftest coercion-error-test
   (testing "Coercion errors return structured responses"
@@ -62,7 +62,7 @@
                                                 server/standard-router-data)
                                    (ring/create-default-handler)
                                    server/standard-executor))]
-      (test/with-test-system
+      (with-test-system
        [sys
         ["classpath:server/application-test.yml"
          #(assoc-in % [:system/defs :server :handler] app)]]

@@ -10,7 +10,7 @@
     [com.repldriven.mono.http-client.interface :as http]
     [com.repldriven.mono.server.interface :as server]
     [com.repldriven.mono.system.interface :as system]
-    [com.repldriven.mono.test-system.interface :as test]
+    [com.repldriven.mono.test-system.interface :refer [with-test-system]]
 
     [clojure.data.json :as json]
     [clojure.test :refer [deftest is testing]]))
@@ -60,7 +60,7 @@
 
 (deftest service-accounts-api
   (testing "serviceAccounts API"
-    (test/with-test-system
+    (with-test-system
      [sys
       ["classpath:iam-api/application-test.yml"
        #(assoc-in % [:system/defs :server :handler] api/app)]]

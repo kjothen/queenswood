@@ -8,7 +8,7 @@
     [com.repldriven.mono.error.interface :as error]
     [com.repldriven.mono.migrator.interface :as migrator]
     [com.repldriven.mono.system.interface :as system]
-    [com.repldriven.mono.test-system.interface :as test]
+    [com.repldriven.mono.test-system.interface :refer [with-test-system]]
     [com.repldriven.mono.json.interface :as json]
 
     [clojure.test :refer [deftest is testing]]))
@@ -21,7 +21,7 @@
 
 (deftest process-open-account-test
   (testing "Processing open-account command should create account in database"
-    (test/with-test-system
+    (with-test-system
      [sys "classpath:processor/application-test.yml"]
      (let [processor (system/instance sys [:processor])]
        (migrate-db sys)
@@ -44,7 +44,7 @@
 (deftest process-close-account-test
   (testing
     "Processing close-account command should update account status in database"
-    (test/with-test-system
+    (with-test-system
      [sys "classpath:processor/application-test.yml"]
      (let [processor (system/instance sys [:processor])]
        (migrate-db sys)
@@ -71,7 +71,7 @@
 (deftest process-reopen-account-test
   (testing
     "Processing reopen-account command should update account status to open"
-    (test/with-test-system
+    (with-test-system
      [sys "classpath:processor/application-test.yml"]
      (let [processor (system/instance sys [:processor])]
        (migrate-db sys)
@@ -102,7 +102,7 @@
 (deftest process-suspend-account-test
   (testing
     "Processing suspend-account command should update account status to suspended"
-    (test/with-test-system
+    (with-test-system
      [sys "classpath:processor/application-test.yml"]
      (let [processor (system/instance sys [:processor])]
        (migrate-db sys)
@@ -129,7 +129,7 @@
 (deftest process-unsuspend-account-test
   (testing
     "Processing unsuspend-account command should update account status to open"
-    (test/with-test-system
+    (with-test-system
      [sys "classpath:processor/application-test.yml"]
      (let [processor (system/instance sys [:processor])]
        (migrate-db sys)
@@ -160,7 +160,7 @@
 (deftest process-archive-account-test
   (testing
     "Processing archive-account command should update account status to archived"
-    (test/with-test-system
+    (with-test-system
      [sys "classpath:processor/application-test.yml"]
      (let [processor (system/instance sys [:processor])]
        (migrate-db sys)
@@ -186,7 +186,7 @@
 
 (deftest process-get-account-status-test
   (testing "Processing get-account-status should return the account status"
-    (test/with-test-system
+    (with-test-system
      [sys "classpath:processor/application-test.yml"]
      (let [processor (system/instance sys [:processor])]
        (migrate-db sys)
@@ -207,11 +207,11 @@
 
 (deftest process-unknown-command-test
   (testing "Processing unknown command should return anomaly"
-    (test/with-test-system [sys "classpath:processor/application-test.yml"]
-                           (let [processor (system/instance sys [:processor])]
-                             (migrate-db sys)
-                             (let [command {"command" "invalid-command"}
-                                   result (SUT/process processor command)]
-                               (is (error/anomaly? result))
-                               (is (= :accounts/process-command
-                                      (error/kind result))))))))
+    (with-test-system [sys "classpath:processor/application-test.yml"]
+                      (let [processor (system/instance sys [:processor])]
+                        (migrate-db sys)
+                        (let [command {"command" "invalid-command"}
+                              result (SUT/process processor command)]
+                          (is (error/anomaly? result))
+                          (is (= :accounts/process-command
+                                 (error/kind result))))))))

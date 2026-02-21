@@ -6,7 +6,7 @@
     [com.repldriven.mono.http-client.interface :as http]
     [com.repldriven.mono.server.interface :as server]
     [com.repldriven.mono.system.interface :as system]
-    [com.repldriven.mono.test-system.interface :as test]
+    [com.repldriven.mono.test-system.interface :refer [with-test-system]]
 
     [clojure.test :refer [deftest is testing]]))
 
@@ -25,7 +25,7 @@
 
 (deftest symmetric-keys-api
   (testing "symmetric keys API"
-    (test/with-test-system
+    (with-test-system
      [sys
       ["classpath:symmetric-key-api/application-test.yml"
        #(assoc-in % [:system/defs :server :handler] api/app)]]

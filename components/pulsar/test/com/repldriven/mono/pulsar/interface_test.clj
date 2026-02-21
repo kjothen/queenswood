@@ -8,7 +8,7 @@
     [com.repldriven.mono.error.interface :as error]
     [com.repldriven.mono.http-client.interface :as http]
     [com.repldriven.mono.system.interface :as system]
-    [com.repldriven.mono.test-system.interface :as test]
+    [com.repldriven.mono.test-system.interface :refer [with-test-system]]
 
     [clojure.core.async :as async]
     [clojure.string :as string]
@@ -16,7 +16,7 @@
     [clojure.test :refer [deftest is testing]]))
 
 (deftest pulsar-test
-  (test/with-test-system
+  (with-test-system
    [sys "classpath:pulsar/application-test.yml"]
    (let [admin (system/instance sys [:pulsar :admin])
          producer (system/instance sys [:pulsar :producers :user])

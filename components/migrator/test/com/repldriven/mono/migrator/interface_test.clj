@@ -5,7 +5,7 @@
     [com.repldriven.mono.db.interface :as sql]
     [com.repldriven.mono.migrator.interface :as SUT]
     [com.repldriven.mono.system.interface :as system]
-    [com.repldriven.mono.test-system.interface :as test]
+    [com.repldriven.mono.test-system.interface :refer [with-test-system]]
 
     [next.jdbc :as jdbc]
     [next.jdbc.result-set :as rs]
@@ -19,7 +19,7 @@
 
 (deftest migrate-test
   (testing "Applying a migration changelog should result in a paved db"
-    (test/with-test-system
+    (with-test-system
      [sys "classpath:migrator/application-test.yml"]
      (let [datasource (system/instance sys [:db :datasource])
            db-spec (db-spec sys)]

@@ -6,7 +6,7 @@
 
     [com.repldriven.mono.error.interface :as error]
     [com.repldriven.mono.system.interface :as system]
-    [com.repldriven.mono.test-system.interface :as test]
+    [com.repldriven.mono.test-system.interface :refer [with-test-system]]
 
     [clojure.test :refer [deftest is testing]]))
 
@@ -18,7 +18,7 @@
 
 (deftest integration-test
   (testing "FDB container starts and can execute transactions"
-    (test/with-test-system
+    (with-test-system
      [sys "classpath:fdb/application-test.yml"]
      (let [db (system/instance sys [:fdb :db])]
        (error/nom-let> [_ (SUT/set db "test-key" "test-value")

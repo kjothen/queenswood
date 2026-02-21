@@ -8,13 +8,13 @@
 
     [com.repldriven.mono.error.interface :as error]
     [com.repldriven.mono.system.interface :as system]
-    [com.repldriven.mono.test-system.interface :as test]
+    [com.repldriven.mono.test-system.interface :refer [with-test-system]]
 
     [clojure.core.async :as async]
     [clojure.test :refer [deftest is testing]]))
 
 (deftest pulsar-vault-crypto-test
-  (test/with-test-system
+  (with-test-system
    [sys "classpath:pulsar-vault-crypto/application-test.yml"]
    (let [producer (system/instance sys [:pulsar :producers :user])
          consumer-1 (system/instance sys [:pulsar :consumers :user-1])

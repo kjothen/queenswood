@@ -11,7 +11,7 @@
     [com.repldriven.mono.server.interface :as server]
     [com.repldriven.mono.system.interface :as system]
     [com.repldriven.mono.telemetry.interface :as telemetry]
-    [com.repldriven.mono.test-system.interface :as test]
+    [com.repldriven.mono.test-system.interface :refer [with-test-system]]
     [com.repldriven.mono.utility.interface :as util]
 
     [clojure.core.async :as async]
@@ -52,7 +52,7 @@
 
 (deftest request-pulsar-reply-mqtt-test
   (testing "Request-Reply with Pulsar and MQTT"
-    (test/with-test-system
+    (with-test-system
      [sys
       ["classpath:blocking-command-api/application-test.yml"
        #(assoc-in % [:system/defs :server :handler] api/app)]]

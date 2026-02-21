@@ -3,13 +3,13 @@
     com.repldriven.mono.testcontainers.interface
 
     [com.repldriven.mono.system.interface :as system]
-    [com.repldriven.mono.test-system.interface :as test]
+    [com.repldriven.mono.test-system.interface :refer [with-test-system]]
 
     [clojure.test :refer [deftest is testing]]))
 
 (deftest testcontainers-test
   (testing "Testcontainers should start and provide mapped ports"
-    (test/with-test-system
+    (with-test-system
      [sys "classpath:testcontainers/application-test.yml"]
      (is (= [8080 8081]
             (keys (system/instance sys [:helloworld :container-mapped-ports]))))

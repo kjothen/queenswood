@@ -4,7 +4,7 @@
     com.repldriven.mono.testcontainers.interface
 
     [com.repldriven.mono.system.interface :as system]
-    [com.repldriven.mono.test-system.interface :as test]
+    [com.repldriven.mono.test-system.interface :refer [with-test-system]]
 
     [next.jdbc :as jdbc]
     [next.jdbc.result-set :as rs]
@@ -13,7 +13,7 @@
 
 (deftest db-component-test
   (testing "DB component should provide valid connections"
-    (test/with-test-system
+    (with-test-system
      [sys "classpath:db/application-test.yml"]
      (let [datasource (system/instance sys [:db :datasource])]
        (is (= [{:?column? 1}]

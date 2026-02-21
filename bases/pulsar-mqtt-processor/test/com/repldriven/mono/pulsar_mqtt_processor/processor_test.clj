@@ -11,7 +11,7 @@
     [com.repldriven.mono.pulsar.interface :as pulsar]
     [com.repldriven.mono.system.interface :as system]
     [com.repldriven.mono.telemetry.interface :as telemetry]
-    [com.repldriven.mono.test-system.interface :as test]
+    [com.repldriven.mono.test-system.interface :refer [with-test-system]]
 
     [clojure.core.async :as async]
     [clojure.data.json :as json]
@@ -50,7 +50,7 @@
 
 (deftest process-command-test
   (testing "Commands sent via Pulsar are processed and replied to via MQTT"
-    (test/with-test-system
+    (with-test-system
      [sys "classpath:pulsar-mqtt-processor/application-test.yml"]
      (migrate sys)
      (let [{:keys [stop]} (SUT/run sys)]
