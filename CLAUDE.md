@@ -222,6 +222,21 @@ that follows the Polylith architecture.
       [clojure.test :refer [deftest is testing]]))
   ```
 
+- **Destructuring**: MUST destructure one level at a time in `let`, not nested
+  in function args. Take the full request as a plain argument and bind each
+  level separately:
+
+  ```clojure
+  (defn create
+    [request]
+    (let [{:keys [datasource parameters]} request
+          {:keys [body path]} parameters
+          {:keys [project-id]} path
+          {account-id "account-id" sa "service-account"} body
+          {display-name "display-name" description "description"} sa]
+      ...))
+  ```
+
 - **Docstrings**: zprint does not reflow string content, so docstrings must be
   manually wrapped at 80 characters. Write multi-line docstrings like:
 
