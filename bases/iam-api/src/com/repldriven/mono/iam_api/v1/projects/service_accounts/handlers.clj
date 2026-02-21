@@ -22,8 +22,8 @@
   (let [{:keys [datasource parameters]} request
         {:keys [body path]} parameters
         {:keys [project-id]} path
-        {account-id "account-id" sa "service-account"} body
-        {display-name "display-name" description "description"} sa
+        {:strs [account-id service-account]} body
+        {:strs [display-name description]} service-account
         result (iam/create-service-account datasource
                                            (project-name project-id)
                                            account-id
@@ -50,8 +50,8 @@
   (let [{:keys [datasource parameters]} request
         {:keys [body path]} parameters
         {:keys [project-id email-or-unique-id]} path
-        {sa "service-account"} body
-        {display-name "display-name" description "description"} sa]
+        {:strs [service-account]} body
+        {:strs [display-name description]} service-account]
     (log/info "patch" project-id email-or-unique-id body)
     (if (iam/patch-service-account datasource
                                    (service-account-name project-id

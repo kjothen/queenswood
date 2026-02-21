@@ -232,8 +232,8 @@ that follows the Polylith architecture.
     (let [{:keys [datasource parameters]} request
           {:keys [body path]} parameters
           {:keys [project-id]} path
-          {account-id "account-id" sa "service-account"} body
-          {display-name "display-name" description "description"} sa]
+          {:strs [account-id service-account]} body
+          {:strs [display-name description]} service-account]
       ...))
   ```
 
