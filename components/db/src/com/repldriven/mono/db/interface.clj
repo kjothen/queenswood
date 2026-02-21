@@ -5,6 +5,7 @@
     [com.repldriven.mono.db.core :as core]))
 
 (def as-unqualified-lower-maps core/as-unqualified-lower-maps)
+(def as-unqualified-kebab-maps core/as-unqualified-kebab-maps)
 
 (def update-count core/update-count)
 

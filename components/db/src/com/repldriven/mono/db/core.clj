@@ -6,6 +6,7 @@
     [next.jdbc.result-set :as rs]))
 
 (def as-unqualified-lower-maps rs/as-unqualified-lower-maps)
+(def as-unqualified-kebab-maps rs/as-unqualified-kebab-maps)
 
 (def update-count :next.jdbc/update-count)
 

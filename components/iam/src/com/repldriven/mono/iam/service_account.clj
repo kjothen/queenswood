@@ -1,12 +1,13 @@
 (ns com.repldriven.mono.iam.service-account
   (:refer-clojure :exclude [delete get list name])
   (:require
-    next.jdbc.date-time
-
-    [next.jdbc :as jdbc]
-    [next.jdbc.sql :as sql]
+    [com.repldriven.mono.db.interface :as db]
+    [com.repldriven.mono.error.interface :as error]
 
     [clojure.string :as str]))
+
+(def ^:private kebab {:builder-fn db/as-unqualified-kebab-maps})
+(def ^:private no-keys {:return-keys false})
 
 (defn email
   [account-id project-id]
@@ -25,92 +26,137 @@
 
 (defn create
   [db project-name account-id display-name description]
-  (let [project-id (project-id project-name)
-        email (email account-id project-id)
-        record {:name (name project-name email)
-                :project-id project-id
-                :email email
-                :display-name display-name
-                :description description
-                :disabled false}]
-    (->ServiceAccount (sql/insert! db
-                                   :service-account
-                                   record
-                                   jdbc/unqualified-snake-kebab-opts))))
+  (let
+    [project-id (project-id project-name)
+     email (email account-id project-id)
+     result
+     (db/execute-one!
+      db
+      ["INSERT INTO service_account
+             (name, project_id, email, display_name, description, disabled)
+           VALUES (?, ?, ?, ?, ?, FALSE)
+           RETURNING unique_id, name, project_id, email,
+                     display_name, description, disabled"
+       (name project-name email)
+       project-id
+       email
+       display-name
+       description]
+      kebab)]
+    (if (error/anomaly? result) result (->ServiceAccount result))))
 
 (defn delete
   [db name]
   (let
-    [res
-     (jdbc/execute-one!
+    [result
+     (db/execute-one!
       db
       ["UPDATE service_account
-SET deleted_at = timezone('utc', now())
-WHERE name = ? AND deleted_at IS NULL"
+           SET deleted_at = timezone('utc', now())
+           WHERE name = ? AND deleted_at IS NULL"
        name]
-      jdbc/unqualified-snake-kebab-opts)]
-    (>= (:next.jdbc/update-count res) 1)))
+      no-keys)]
+    (cond (error/anomaly? result) result
+          (pos? (db/update-count result)) {:name name}
+          :else (error/fail :iam/service-account-not-found
+                            {:message "Service account not found"
+                             :name name}))))
 
 (defn undelete
   [db name]
   (let
-    [res
-     (jdbc/execute-one!
+    [result
+     (db/execute-one!
       db
       ["UPDATE service_account
-SET deleted_at = NULL, updated_at = timezone('utc', now())
-WHERE name = ? AND deleted_at IS NOT NULL"
+           SET deleted_at = NULL, updated_at = timezone('utc', now())
+           WHERE name = ? AND deleted_at IS NOT NULL"
        name]
-      jdbc/unqualified-snake-kebab-opts)]
-    (>= (:next.jdbc/update-count res) 1)))
+      no-keys)]
+    (cond (error/anomaly? result) result
+          (pos? (db/update-count result)) {:name name}
+          :else (error/fail :iam/service-account-not-found
+                            {:message "Service account not found"
+                             :name name}))))
 
 (defn disable
   [db name]
   (let
-    [res
-     (jdbc/execute-one!
+    [result
+     (db/execute-one!
       db
       ["UPDATE service_account
-SET disabled = TRUE, updated_at = timezone('utc', now())
-WHERE name = ? AND deleted_at IS NULL"
+           SET disabled = TRUE, updated_at = timezone('utc', now())
+           WHERE name = ? AND deleted_at IS NULL"
        name]
-      jdbc/unqualified-snake-kebab-opts)]
-    (>= (:next.jdbc/update-count res) 1)))
+      no-keys)]
+    (cond (error/anomaly? result) result
+          (pos? (db/update-count result)) {:name name}
+          :else (error/fail :iam/service-account-not-found
+                            {:message "Service account not found"
+                             :name name}))))
 
 (defn enable
   [db name]
   (let
-    [res
-     (jdbc/execute-one!
+    [result
+     (db/execute-one!
       db
       ["UPDATE service_account
-SET disabled = FALSE, updated_at = timezone('utc', now())
-WHERE name = ? AND deleted_at IS NULL"
+           SET disabled = FALSE, updated_at = timezone('utc', now())
+           WHERE name = ? AND deleted_at IS NULL"
        name]
-      jdbc/unqualified-snake-kebab-opts)]
-    (>= (:next.jdbc/update-count res) 1)))
+      no-keys)]
+    (cond (error/anomaly? result) result
+          (pos? (db/update-count result)) {:name name}
+          :else (error/fail :iam/service-account-not-found
+                            {:message "Service account not found"
+                             :name name}))))
 
 (defn list
   [db project-name]
-  (mapv
-   ->ServiceAccount
-   (sql/query
-    db
-    ["SELECT unique_id, name, project_id, email, display_name, description, disabled
-FROM service_account
-WHERE name LIKE ? AND deleted_at IS NULL"
-     (str project-name "/serviceAccounts/%")]
-    jdbc/unqualified-snake-kebab-opts)))
+  (let
+    [result
+     (db/execute!
+      db
+      ["SELECT unique_id, name, project_id, email,
+                  display_name, description, disabled
+           FROM service_account
+           WHERE name LIKE ? AND deleted_at IS NULL"
+       (str project-name "/serviceAccounts/%")]
+      kebab)]
+    (if (error/anomaly? result) result (mapv ->ServiceAccount result))))
 
 (defn get
   [db name]
-  (->ServiceAccount
-   (jdbc/execute-one!
-    db
-    ["SELECT unique_id, name, project_id, email, display_name, description, disabled
-FROM service_account
-WHERE name = ? AND deleted_at IS NULL"
-     name]
-    jdbc/unqualified-snake-kebab-opts)))
+  (let
+    [result
+     (db/execute-one!
+      db
+      ["SELECT unique_id, name, project_id, email,
+                  display_name, description, disabled
+           FROM service_account
+           WHERE name = ? AND deleted_at IS NULL"
+       name]
+      kebab)]
+    (if (error/anomaly? result) result (->ServiceAccount result))))
 
-(defn patch [_db _name _display-name _description])
+(defn patch
+  [db name display-name description]
+  (let
+    [result
+     (db/execute-one!
+      db
+      ["UPDATE service_account
+           SET display_name = ?, description = ?,
+               updated_at = timezone('utc', now())
+           WHERE name = ? AND deleted_at IS NULL"
+       display-name
+       description
+       name]
+      no-keys)]
+    (cond (error/anomaly? result) result
+          (pos? (db/update-count result)) {:name name}
+          :else (error/fail :iam/service-account-not-found
+                            {:message "Service account not found"
+                             :name name}))))
