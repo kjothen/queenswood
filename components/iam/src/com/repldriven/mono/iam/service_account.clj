@@ -1,4 +1,4 @@
-(ns com.repldriven.mono.iam.service-account.api
+(ns com.repldriven.mono.iam.service-account
   (:refer-clojure :exclude [delete get list name])
   (:require
     next.jdbc.date-time
