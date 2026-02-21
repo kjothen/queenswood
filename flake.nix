@@ -1,0 +1,91 @@
+{
+  description = "Clojure monorepo development environment";
+
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    flake-utils.url = "github:numtide/flake-utils";
+  };
+
+  outputs =
+    {
+      self,
+      nixpkgs,
+      flake-utils,
+    }:
+    flake-utils.lib.eachDefaultSystem (
+      system:
+      let
+        pkgs = import nixpkgs {
+          inherit system;
+          config.allowUnsupportedSystem = true;
+        };
+
+        # Fetch pre-built FDB binary directly from GitHub releases
+        fdbArch = if pkgs.stdenv.isAarch64 then "arm64" else "x86_64";
+        fdbBinary = pkgs.stdenv.mkDerivation {
+          name = "foundationdb-7.3.27";
+          src = pkgs.fetchurl {
+            url = "https://github.com/apple/foundationdb/releases/download/7.3.27/FoundationDB-7.3.27_${fdbArch}.pkg";
+            sha256 = if pkgs.stdenv.isAarch64
+              then "0000000000000000000000000000000000000000000000000000"  # ARM hash - will fix after first run
+              else "sha256-Vyh8Peqxgk9/G7w3KKRTjRcdqdWjY5dYE77weozxVlM="; # x86 hash
+          };
+          buildInputs = [ pkgs.xar pkgs.cpio ];
+          unpackPhase = ''
+            xar -xf $src
+            cat FoundationDB-clients.pkg/Payload | gunzip -dc | cpio -i
+          '';
+          installPhase = ''
+            mkdir -p $out/lib $out/bin
+            cp -r usr/local/lib/* $out/lib/
+            cp -r usr/local/bin/* $out/bin/
+          '';
+        };
+
+        libPath = pkgs.lib.makeLibraryPath [ fdbBinary ];
+
+        # Wrap clojure to always set DYLD_LIBRARY_PATH for the FDB native
+        # library. DYLD_* vars are stripped by macOS SIP when launching
+        # restricted processes (e.g. Claude Code), so env inheritance is
+        # unreliable — the wrapper bakes the path in at the binary level.
+        clojureWithFdb = pkgs.writeShellScriptBin "clojure" ''
+          export DYLD_LIBRARY_PATH="${libPath}:$DYLD_LIBRARY_PATH"
+          exec ${pkgs.clojure}/bin/clojure "$@"
+        '';
+
+      in
+      {
+        devShells.default = pkgs.mkShell {
+          buildInputs = [
+            pkgs.babashka
+            clojureWithFdb
+            pkgs.clj-kondo
+            pkgs.clojure-lsp
+            pkgs.colima
+            pkgs.docker
+            pkgs.docker-credential-helpers
+            fdbBinary
+            pkgs.jdk21
+            pkgs.just
+            pkgs.openssl
+            pkgs.zprint
+          ];
+
+          shellHook = ''
+            # Make libfdb_c findable by the JVM's JNI loader
+            export LD_LIBRARY_PATH="${libPath}:$LD_LIBRARY_PATH"
+            export DYLD_LIBRARY_PATH="${libPath}:$DYLD_LIBRARY_PATH"
+
+            # Colima/Docker configuration for testcontainers
+            export DOCKER_HOST="unix://$HOME/.config/colima/default/docker.sock"
+            export TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE="/var/run/docker.sock"
+            export TESTCONTAINERS_REUSE_ENABLE="TRUE"
+
+            echo "FDB libs: ${libPath}"
+            echo "fdbcli: $(command -v fdbcli || echo 'not found')"
+            echo "Clojure monorepo environment loaded"
+          '';
+        };
+      }
+    );
+}
