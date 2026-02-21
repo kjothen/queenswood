@@ -6,7 +6,6 @@
 
     [com.repldriven.mono.db.interface :as sql]
     [com.repldriven.mono.error.interface :as error]
-    [com.repldriven.mono.migrator.interface :as migrator]
     [com.repldriven.mono.system.interface :as system]
     [com.repldriven.mono.test-system.interface :refer
      [with-test-system nom-test>]]
@@ -17,9 +16,9 @@
 (defn- migrate-db
   [sys]
   (nom-test> [_
-              (error/nom->
-               (sql/get-datasource (system/instance sys [:db :datasource]))
-               (migrator/migrate "schemas/accounts/init-changelog.sql"))]))
+              (error/nom-> (sql/get-datasource
+                            (system/instance sys [:db :datasource]))
+                           SUT/migrate)]))
 
 (deftest process-open-account-test
   (testing "Processing open-account command should create account in database"
