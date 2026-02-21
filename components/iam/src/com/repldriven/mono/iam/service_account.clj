@@ -58,7 +58,7 @@
       no-keys)]
     (cond (error/anomaly? result) result
           (pos? (db/update-count result)) {:name name}
-          :else (error/fail :iam/service-account-not-found
+          :else (error/fail :iam/service-account
                             {:message "Service account not found"
                              :name name}))))
 
@@ -75,7 +75,7 @@
       no-keys)]
     (cond (error/anomaly? result) result
           (pos? (db/update-count result)) {:name name}
-          :else (error/fail :iam/service-account-not-found
+          :else (error/fail :iam/service-account
                             {:message "Service account not found"
                              :name name}))))
 
@@ -92,7 +92,7 @@
       no-keys)]
     (cond (error/anomaly? result) result
           (pos? (db/update-count result)) {:name name}
-          :else (error/fail :iam/service-account-not-found
+          :else (error/fail :iam/service-account
                             {:message "Service account not found"
                              :name name}))))
 
@@ -109,7 +109,7 @@
       no-keys)]
     (cond (error/anomaly? result) result
           (pos? (db/update-count result)) {:name name}
-          :else (error/fail :iam/service-account-not-found
+          :else (error/fail :iam/service-account
                             {:message "Service account not found"
                              :name name}))))
 
@@ -157,6 +157,6 @@
       no-keys)]
     (cond (error/anomaly? result) result
           (pos? (db/update-count result)) {:name name}
-          :else (error/fail :iam/service-account-not-found
+          :else (error/fail :iam/service-account
                             {:message "Service account not found"
                              :name name}))))
