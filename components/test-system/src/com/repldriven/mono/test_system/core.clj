@@ -6,6 +6,17 @@
 
     [clojure.test :refer [is]]))
 
+(defmacro nom-test>
+  {:clj-kondo/lint-as 'clojure.core/let}
+  [bindings]
+  `(error/nom-let> ~bindings
+                   (fn [v#]
+                     (is (not (error/anomaly? v#))
+                         (format "Unexpected anomaly [%s]: %s"
+                                 (error/kind v#)
+                                 (or (:message (error/payload v#))
+                                     (pr-str v#)))))))
+
 (defmacro with-test-system
   {:clj-kondo/lint-as 'clojure.core/let}
   [[sym config] & body]

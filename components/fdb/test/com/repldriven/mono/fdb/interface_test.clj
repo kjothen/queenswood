@@ -4,9 +4,9 @@
 
     [com.repldriven.mono.fdb.interface :as SUT]
 
-    [com.repldriven.mono.error.interface :as error]
     [com.repldriven.mono.system.interface :as system]
-    [com.repldriven.mono.test-system.interface :refer [with-test-system]]
+    [com.repldriven.mono.test-system.interface :refer
+     [with-test-system nom-test>]]
 
     [clojure.test :refer [deftest is testing]]))
 
@@ -21,9 +21,7 @@
     (with-test-system
      [sys "classpath:fdb/application-test.yml"]
      (let [db (system/instance sys [:fdb :db])]
-       (error/nom-let> [_ (SUT/set db "test-key" "test-value")
-                        result (SUT/get db "test-key")
-                        _ (is
-                           (= "test-value" result)
-                           "Should be able to write and read values from FDB")]
-         error/refute-nom)))))
+       (nom-test> [_ (SUT/set db "test-key" "test-value") result
+                   (SUT/get db "test-key") _
+                   (is (= "test-value" result)
+                       "Should be able to write and read values from FDB")])))))
