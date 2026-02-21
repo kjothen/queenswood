@@ -7,7 +7,14 @@
      account-lifecycle]
     [com.repldriven.mono.processor.commands.reporting-operations :as
      reporting]
-    [com.repldriven.mono.processor.specs.core :as specs]))
+    [clojure.edn :as edn]
+    [clojure.java.io :as io]))
+
+(def ^:private specs
+  (-> "schemas/accounts/accounts.edn"
+      io/resource
+      slurp
+      edn/read-string))
 
 (defn process
   "Process an account command and return result or anomaly.
@@ -29,7 +36,7 @@
   (if-not command
     (error/fail :accounts/process-command "Missing command")
     (error/let-nom [data (json/read-str data)
-                    schema (get specs/specs command)]
+                    schema (get specs command)]
       (if (and schema (not (spec/validate schema data)))
         (error/fail :accounts/process-command
                     {:message "Invalid command data or missing command schema"
