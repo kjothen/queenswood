@@ -3,11 +3,17 @@
   (:require
     [com.repldriven.mono.iam.database :as database]
     [com.repldriven.mono.iam.service-account.api :as service-account-api]
-    [com.repldriven.mono.iam.service-account.spec :as service-account-spec]
-    [com.repldriven.mono.iam.spec :as spec]))
+    [clojure.edn :as edn]
+    [clojure.java.io :as io]))
+
+(def ^:private schemas
+  (-> "schemas/iam/iam.edn"
+      io/resource
+      slurp
+      edn/read-string))
 
 ;;;; Shared Schema
-(def ProjectId spec/ProjectId)
+(def ProjectId (:ProjectId schemas))
 
 ;;;; Database
 (defn migrate
@@ -18,10 +24,10 @@
 ;;;;
 
 ;;; Schema
-(def EmailAddressOrUniqueId service-account-spec/EmailAddressOrUniqueId)
-(def ServiceAccount service-account-spec/ServiceAccount)
-(def ServiceAccountCreateBody service-account-spec/CreateBody)
-(def ServiceAccountPatchBody service-account-spec/CreateBody)
+(def EmailAddressOrUniqueId (:EmailAddressOrUniqueId schemas))
+(def ServiceAccount (:ServiceAccount schemas))
+(def ServiceAccountCreateBody (:ServiceAccountCreateBody schemas))
+(def ServiceAccountPatchBody (:ServiceAccountCreateBody schemas))
 
 ;;; Methods
 (defn create-service-account

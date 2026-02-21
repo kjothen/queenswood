@@ -14,6 +14,7 @@
         component/iam {:local/root "../../components/iam"}
         component/log {:local/root "../../components/log"}
         component/migrator {:local/root "../../components/migrator"}
+        component/schema {:local/root "../../components/schema"}
         component/server {:local/root "../../components/server"}
         component/db {:local/root "../../components/db"}
         component/system {:local/root "../../components/system"}
