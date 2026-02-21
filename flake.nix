@@ -90,6 +90,9 @@
 
             echo "FDB libs: ${libPath}"
             echo "fdbcli: $(command -v fdbcli || echo 'not found')"
+            if ! colima status &>/dev/null; then
+              echo "Docker not running — use 'just start-docker' to start"
+            fi
             echo "Clojure monorepo environment loaded"
           '';
         };
