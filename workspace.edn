@@ -8,7 +8,7 @@
             ;; cannot see this resource-level coupling and incorrectly flags the component
             ;; as unnecessary. :necessary tells poly to keep it.
             "accounts-processor" {:alias "ap"
-                                  :necessary ["test-resources"]}
+                                  :necessary ["schema" "test-resources"]}
             "iam" {:alias "iam"
                    :necessary ["test-resources"]}
             "symmetric-key-vault" {:alias "key"
