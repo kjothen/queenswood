@@ -17,9 +17,9 @@
 (defn- migrate-db
   [sys]
   (nom-test> [_
-              (error/nom-> (sql/get-datasource
-                            (system/instance sys [:db :datasource]))
-                           (migrator/migrate "accounts/init-changelog.sql"))]))
+              (error/nom->
+               (sql/get-datasource (system/instance sys [:db :datasource]))
+               (migrator/migrate "schemas/accounts/init-changelog.sql"))]))
 
 (deftest process-open-account-test
   (testing "Processing open-account command should create account in database"

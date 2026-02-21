@@ -20,7 +20,7 @@
 (defn- migrate
   [sys]
   (migrator/migrate (db/get-datasource (system/instance sys [:db :datasource]))
-                    "accounts/init-changelog.sql"))
+                    "schemas/accounts/init-changelog.sql"))
 
 (defn send-command
   "Simulates Sender - sends a command via Pulsar and blocks until the result is received via MQTT"
