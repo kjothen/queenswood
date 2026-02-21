@@ -56,7 +56,8 @@ bases/symmetric-key-api {:local/root "bases/symmetric-key-api"}
   :lint/clj-kondo {:extra-deps {clj-kondo/clj-kondo {:mvn/version "2024.11.14"}}
                    :main-opts ["-m" "clj-kondo.main"]}
   :test {:extra-deps {http-kit.fake/http-kit.fake {:mvn/version "0.2.2"}}
-         :extra-paths ["components/test-resources/test-resources"
+         :extra-paths ["components/schema/test-resources"
+                       "components/test-resources/test-resources"
                        "components/accounts/test"
                        "components/accounts/test-resources"
                        "components/cli/test"
