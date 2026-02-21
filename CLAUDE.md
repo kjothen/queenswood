@@ -85,8 +85,6 @@ that follows the Polylith architecture.
     - `error/try-nom-ex` - wrap body, catching a specific exception type
   - _Let-style bindings_:
     - `error/let-nom>` - monadic let, short-circuits on first binding anomaly
-    - `error/nom-let>` - like `let-nom>` but calls error-fn if result is
-      anomaly
   - _Threading and side effects_:
     - `error/nom->` - threading macro, short-circuits on anomalies
     - `error/nom-do>` - execute operations sequentially, short-circuit and
@@ -113,35 +111,43 @@ that follows the Polylith architecture.
 ### Writing Tests
 
 - **No test fixtures**: Do not use `use-fixtures` — manage lifecycle explicitly
-  with `system/with-system` instead
+  with `with-test-system` instead
 - **Test resources**: Shared config lives in the `test-resources` component.
   Each brick combines this with its own
   `test-resources/<brick>/application-test.yml`
-- **system/with-system**: Binding-based macro for test system lifecycle:
+- **with-test-system**: Starts a test system from config, asserts it started,
+  and stops it after the body. The optional second element of the binding
+  vector is a patch-fn applied to the system defs before start:
 
   ```clojure
-  (system/with-system [sys (test-system)]
+  ;; Simple form
+  (with-test-system [sys "classpath:my-component/application-test.yml"]
     (let [component (system/instance sys [:path :to :component])]
       ;; test code
       ))
+
+  ;; With patch-fn to inject a handler before start
+  (with-test-system [sys ["classpath:server/application-test.yml"
+                          #(assoc-in % [:system/defs :server :handler] app)]]
+    ;; test code
+    )
   ```
 
-- **nom-let> pattern**: chain operations, fail fast on anomaly:
+- **nom-test>**: Chain operations as let-style bindings, failing fast on any
+  anomaly and asserting none occurred. Use `_` for bindings whose values are
+  only needed for their side effects (e.g. `is` assertions):
 
   ```clojure
-  (error/nom-let>
-    [result1 (operation1)
-     _ (is (= expected result1))
-     result2 (operation2 result1)]
-    test/refute-anomaly)
+  (nom-test> [result1 (operation1)
+              _ (is (= expected result1))
+              result2 (operation2 result1)
+              _ (is (some? result2))])
   ```
 
-- **nom-> + refute-anomaly**: for simple sequential checks without bindings:
+  For a single anomaly check with no further bindings:
 
   ```clojure
-  (test/refute-anomaly
-   (error/nom-> (first-operation)
-                (second-operation)))
+  (nom-test> [_ (operation-that-must-not-fail)])
   ```
 
 - **Test runner**: eftest runs tests in parallel out of process. Mark expensive
@@ -202,7 +208,7 @@ that follows the Polylith architecture.
 
       [com.repldriven.mono.error.interface :as error]
       [com.repldriven.mono.system.interface :as system]
-      [com.repldriven.mono.test.interface :as test]
+      [com.repldriven.mono.test-system.interface :refer [with-test-system nom-test>]]
       [com.repldriven.mono.db.interface :as sql]
       [com.repldriven.mono.env.interface :as env]
       [com.repldriven.mono.json.interface :as json]
