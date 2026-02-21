@@ -10,7 +10,7 @@
             "accounts-processor" {:alias "ap"
                                   :necessary ["schema" "test-resources"]}
             "iam" {:alias "iam"
-                   :necessary ["test-resources"]}
+                   :necessary ["schema" "test-resources"]}
             "symmetric-key-vault" {:alias "key"
                                    :necessary ["test-resources"]}}
  :tag-patterns {:release "v[0-9]*" :stable "stable-*"}
