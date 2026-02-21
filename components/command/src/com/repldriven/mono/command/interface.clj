@@ -5,7 +5,6 @@
     [com.repldriven.mono.command.request :as request]
     [com.repldriven.mono.command.response :as response]
     [com.repldriven.mono.command.sender :as sender]
-    [com.repldriven.mono.schema.interface :as schema]
     [clojure.edn :as edn]
     [clojure.java.io :as io]))
 
@@ -38,7 +37,7 @@
   - :command-request - HTTP request wrapper
   - :command-result - Command processing result
   - :command-response - HTTP response wrapper"
-  (delay (-> schema/command
+  (delay (-> "schemas/command/command.edn"
              io/resource
              slurp
              edn/read-string)))
