@@ -20,13 +20,11 @@
 ;;; Schema
 (def EmailAddressOrUniqueId (:EmailAddressOrUniqueId schemas))
 (def ServiceAccount (:ServiceAccount schemas))
-(def ServiceAccountCreateBody (:ServiceAccountCreateBody schemas))
-(def ServiceAccountPatchBody (:ServiceAccountCreateBody schemas))
 
 ;;; Methods
 (defn create-service-account
-  [db project-name body]
-  (service-account/create db project-name body))
+  [db project-name account-id display-name description]
+  (service-account/create db project-name account-id display-name description))
 (defn delete-service-account [db name] (service-account/delete db name))
 (defn disable-service-account [db name] (service-account/disable db name))
 (defn enable-service-account [db name] (service-account/enable db name))
@@ -34,7 +32,9 @@
   [db project-name]
   (service-account/list db project-name))
 (defn get-service-account [db name] (service-account/get db name))
-(defn patch-service-account [db name body] (service-account/patch db name body))
+(defn patch-service-account
+  [db name display-name description]
+  (service-account/patch db name display-name description))
 (defn undelete-service-account [db name] (service-account/undelete db name))
 
 ;;;; Other IAM things...

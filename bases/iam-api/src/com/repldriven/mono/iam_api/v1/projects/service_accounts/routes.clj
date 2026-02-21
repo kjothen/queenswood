@@ -5,6 +5,31 @@
 
     [com.repldriven.mono.iam.interface :as iam]))
 
+(def ^:private service-account-create-body
+  [:map
+   ["account-id"
+    [:re
+     {:error/message
+      "must be 6 to 30 lowercase letters, digits, or hyphen. Must start with a letter. Trailing hyphens are prohibited"}
+     "^[a-z][-a-z0-9]{4,28}[a-z0-9]$"]]
+   ["service-account"
+    [:map
+     ["display-name"
+      [:string {:max 100 :error/message "must be maximum of 100 UTF-8 bytes"}]]
+     ["description"
+      [:string
+       {:max 256 :error/message "must be maximum of 256 UTF-8 bytes"}]]]]])
+
+(def ^:private service-account-patch-body
+  [:map
+   ["service-account"
+    [:map
+     ["display-name"
+      [:string {:max 100 :error/message "must be maximum of 100 UTF-8 bytes"}]]
+     ["description"
+      [:string
+       {:max 256 :error/message "must be maximum of 256 UTF-8 bytes"}]]]]])
+
 (defn routes
   []
   [["/serviceAccounts"
@@ -13,7 +38,7 @@
       :responses {200 {:body [:map [:accounts [:vector iam/ServiceAccount]]]}}
       :handler handlers/list}
      :post {:summary "Creates a ServiceAccount"
-            :parameters {:body iam/ServiceAccountCreateBody}
+            :parameters {:body service-account-create-body}
             :responses {201 {:body iam/ServiceAccount}}
             :handler handlers/create}}]
    ["/serviceAccounts/{email-or-unique-id}"
@@ -22,7 +47,7 @@
            :responses {200 {:body iam/ServiceAccount}}
            :handler handlers/get}
      :patch {:summary "Patches a ServiceAccount"
-             :parameters {:body iam/ServiceAccountPatchBody}
+             :parameters {:body service-account-patch-body}
              :responses {200 {:body iam/ServiceAccount}}
              :handler handlers/patch}
      :delete {:summary "Deletes a ServiceAccount"
@@ -49,4 +74,3 @@
   (-> (r/router ["http://localhost/{projects/*}/serviceAccounts" ::user-by-id]
                 {:syntax :bracket})
       (r/match-by-path "http://localhost/projects/prj-123/serviceAccounts")))
-

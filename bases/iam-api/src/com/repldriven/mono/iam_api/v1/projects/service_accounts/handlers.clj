@@ -20,8 +20,15 @@
 (defn create
   [{:keys [datasource] {:keys [body] {:keys [project-id]} :path} :parameters}]
   (log/info "create" project-id body)
-  (let [result
-        (iam/create-service-account datasource (project-name project-id) body)]
+  (let [{account-id "account-id"
+         {display-name "display-name" description "description"}
+         "service-account"}
+        body
+        result (iam/create-service-account datasource
+                                           (project-name project-id)
+                                           account-id
+                                           display-name
+                                           description)]
     {:status 201 :body result}))
 
 (defn get
@@ -39,12 +46,16 @@
   [{:keys [datasource]
     {:keys [body] {:keys [project-id email-or-unique-id]} :path} :parameters}]
   (log/info "patch" project-id email-or-unique-id body)
-  (if (iam/patch-service-account datasource
-                                 (service-account-name project-id
-                                                       email-or-unique-id)
-                                 body)
-    {:status 204 :body {}}
-    {:status 404 :body unknown-service-account-error}))
+  (let [{{display-name "display-name" description "description"}
+         "service-account"}
+        body]
+    (if (iam/patch-service-account datasource
+                                   (service-account-name project-id
+                                                         email-or-unique-id)
+                                   display-name
+                                   description)
+      {:status 204 :body {}}
+      {:status 404 :body unknown-service-account-error})))
 
 (defn delete
   [{:keys [datasource]

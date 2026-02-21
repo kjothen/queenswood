@@ -24,12 +24,8 @@
         (update :unique-id (fn [unique-id] (format "%021.0f" unique-id))))))
 
 (defn create
-  [db project-name body]
-  (let [{account-id "account-id"
-         {display-name "display-name" description "description"}
-         "service-account"}
-        body
-        project-id (project-id project-name)
+  [db project-name account-id display-name description]
+  (let [project-id (project-id project-name)
         email (email account-id project-id)
         record {:name (name project-name email)
                 :project-id project-id
@@ -117,4 +113,4 @@ WHERE name = ? AND deleted_at IS NULL"
      name]
     jdbc/unqualified-snake-kebab-opts)))
 
-(defn patch [_db _name _body])
+(defn patch [_db _name _display-name _description])
