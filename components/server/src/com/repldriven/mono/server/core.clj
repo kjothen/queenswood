@@ -1,8 +1,8 @@
 (ns com.repldriven.mono.server.core
   (:require
     [com.repldriven.mono.server.jetty :as jetty]
-    [com.repldriven.mono.server.router :as router]
-    [com.repldriven.mono.server.swagger :as swagger]))
+    [com.repldriven.mono.server.openapi :as openapi]
+    [com.repldriven.mono.server.router :as router]))
 
 (def standard-router-data router/standard-router-data)
 (def standard-executor router/standard-executor)
@@ -12,9 +12,9 @@
   ([] (router/router-data))
   ([exception-handlers] (router/router-data exception-handlers)))
 
-(defn standard-swagger-ui-handler [] (swagger/standard-ui-handler))
+(defn standard-openapi-handler [] (openapi/standard-handler))
 
-(defn standard-swagger-handler [] (swagger/standard-handler))
+(defn standard-openapi-ui-handler [] (openapi/standard-ui-handler))
 
 (defn http-local-url
   "Get the local HTTP URL from a Jetty Server instance."

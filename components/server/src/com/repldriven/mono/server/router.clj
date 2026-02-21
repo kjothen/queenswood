@@ -9,7 +9,7 @@
     [reitit.http.interceptors.muuntaja :as muuntaja]
     [reitit.http.interceptors.parameters :as parameters]
     [reitit.interceptor.sieppari :as sieppari]
-    [reitit.swagger :as swagger]))
+    [reitit.openapi :as openapi]))
 
 (def muuntaja-instance
   "Muuntaja instance configured to decode JSON with string keys."
@@ -49,8 +49,8 @@
     :syntax :bracket
     :data {:coercion reitit.coercion.malli/coercion
            :muuntaja muuntaja-instance
-           :interceptors [;; swagger feature
-                          swagger/swagger-feature
+           :interceptors [;; openapi feature
+                          openapi/openapi-feature
                           ;; query-params & form-params
                           (parameters/parameters-interceptor)
                           ;; content-negotiation
@@ -69,7 +69,7 @@
                           (coercion/coerce-request-interceptor)]}}))
 
 (def standard-router-data
-  "Default Reitit router configuration with Malli coercion, Muuntaja, and Swagger support."
+  "Default Reitit router configuration with Malli coercion, Muuntaja, and OpenAPI support."
   (router-data))
 
 (def standard-executor

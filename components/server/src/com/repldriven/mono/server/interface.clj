@@ -12,9 +12,9 @@
   ([] (core/router-data))
   ([exception-handlers] (core/router-data exception-handlers)))
 
-(defn standard-swagger-ui-handler [] (core/standard-swagger-ui-handler))
+(defn standard-openapi-handler [] (core/standard-openapi-handler))
 
-(defn standard-swagger-handler [] (core/standard-swagger-handler))
+(defn standard-openapi-ui-handler [] (core/standard-openapi-ui-handler))
 
 (defn http-local-url
   "Get the local HTTP URL from a Jetty Server instance."

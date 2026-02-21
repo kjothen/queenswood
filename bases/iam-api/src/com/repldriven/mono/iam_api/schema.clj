@@ -26,11 +26,7 @@
     `projects/{PROJECT_ID}/serviceAccounts/{UNIQUE_ID}`"}
    "^projects/[a-z][-a-z0-9]{4,28}[a-z0-9]/serviceAccounts/(?:[a-zA-Z0-9_!#$%&'*+/=?`{|}~^.-]{1,64}@[a-zA-Z0-9.-]{1,255}|\\d{21})$"])
 
-(def EmailAddressOrUniqueId
-  [:re
-   {:title "EmailAddressOrUniqueId"
-    :description "Email address or 21-digit unique ID"}
-   "^(?:[a-zA-Z0-9_!#$%&'*+/=?`{|}~^.-]{1,64}@[a-zA-Z0-9.-]{1,255}|\\d{21})$"])
+(def EmailAddressOrUniqueId [:or #'ServiceAccountEmail #'UniqueId])
 
 (def ServiceAccount
   [:map [:name #'ServiceAccountName] [:project-id #'ProjectId]

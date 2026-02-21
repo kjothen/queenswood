@@ -10,11 +10,12 @@
 
 (defn routes
   [ctx]
-  [["/swagger.json"
+  [["/openapi.json"
     {:get {:no-doc true
-           :swagger {:info {:title "IAM API"
-                            :description "Identity and Access Managment API"}}
-           :handler (server/standard-swagger-handler)}}]
+           :openapi {:info {:title "IAM API"
+                            :description "Identity and Access Management API"
+                            :version "1.0.0"}}
+           :handler (server/standard-openapi-handler)}}]
    ["/v1" {:interceptors (:interceptors ctx)}
     ["/projects/{project-id}" {:parameters {:path {:project-id string?}}}
      (vec (concat (service-accounts/routes)))]]])
@@ -22,6 +23,6 @@
 (defn app
   [ctx]
   (http/ring-handler (http/router (routes ctx) server/standard-router-data)
-                     (ring/routes (server/standard-swagger-ui-handler)
+                     (ring/routes (server/standard-openapi-ui-handler)
                                   (ring/create-default-handler))
                      server/standard-executor))

@@ -1,12 +1,13 @@
-(ns com.repldriven.mono.server.swagger
+(ns com.repldriven.mono.server.openapi
   (:require
-    [reitit.swagger :as swagger]
+    [reitit.openapi :as openapi]
     [reitit.swagger-ui :as swagger-ui]))
+
+(defn standard-handler [] (openapi/create-openapi-handler))
 
 (defn standard-ui-handler
   []
   (swagger-ui/create-swagger-ui-handler {:path "/"
+                                         :url "/openapi.json"
                                          :config {:validatorUrl nil
                                                   :operationsSorter "alpha"}}))
-
-(defn standard-handler [] (swagger/create-swagger-handler))
