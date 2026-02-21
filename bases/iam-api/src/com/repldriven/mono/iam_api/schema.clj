@@ -18,13 +18,20 @@
     :description "RFC 5322 email address, max 320 characters"}
    "^[a-zA-Z0-9_!#$%&'*+/=?`{|}~^.-]{1,64}@[a-zA-Z0-9.-]{1,255}$"])
 
-(def ServiceAccountName
+(def ServiceAccountNameByEmail
   [:re
-   {:title "ServiceAccountName"
-    :description
-    "`projects/{PROJECT_ID}/serviceAccounts/{EMAIL_ADDRESS}` or
-    `projects/{PROJECT_ID}/serviceAccounts/{UNIQUE_ID}`"}
-   "^projects/[a-z][-a-z0-9]{4,28}[a-z0-9]/serviceAccounts/(?:[a-zA-Z0-9_!#$%&'*+/=?`{|}~^.-]{1,64}@[a-zA-Z0-9.-]{1,255}|\\d{21})$"])
+   {:title "ServiceAccountNameByEmail"
+    :description "`projects/{PROJECT_ID}/serviceAccounts/{EMAIL_ADDRESS}`"}
+   "^projects/[a-z][-a-z0-9]{4,28}[a-z0-9]/serviceAccounts/[a-zA-Z0-9_!#$%&'*+/=?`{|}~^.-]{1,64}@[a-zA-Z0-9.-]{1,255}$"])
+
+(def ServiceAccountNameByUniqueId
+  [:re
+   {:title "ServiceAccountNameByUniqueId"
+    :description "`projects/{PROJECT_ID}/serviceAccounts/{UNIQUE_ID}`"}
+   "^projects/[a-z][-a-z0-9]{4,28}[a-z0-9]/serviceAccounts/\\d{21}$"])
+
+(def ServiceAccountName
+  [:or #'ServiceAccountNameByEmail #'ServiceAccountNameByUniqueId])
 
 (def EmailAddressOrUniqueId [:or #'ServiceAccountEmail #'UniqueId])
 
