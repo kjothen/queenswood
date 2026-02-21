@@ -2,11 +2,10 @@
     com.repldriven.mono.pulsar-mqtt-processor.processor-test
   (:require
     com.repldriven.mono.testcontainers.interface
+    com.repldriven.mono.migrator.interface
 
     [com.repldriven.mono.pulsar-mqtt-processor.processor :as SUT]
 
-    [com.repldriven.mono.db.interface :as db]
-    [com.repldriven.mono.migrator.interface :as migrator]
     [com.repldriven.mono.mqtt.interface :as mqtt]
     [com.repldriven.mono.pulsar.interface :as pulsar]
     [com.repldriven.mono.system.interface :as system]
@@ -16,11 +15,6 @@
     [clojure.core.async :as async]
     [clojure.data.json :as json]
     [clojure.test :refer [deftest is testing]]))
-
-(defn- migrate
-  [sys]
-  (migrator/migrate (db/get-datasource (system/instance sys [:db :datasource]))
-                    "schemas/accounts/init-changelog.sql"))
 
 (defn send-command
   "Simulates Sender - sends a command via Pulsar and blocks until the result is received via MQTT"
@@ -52,7 +46,6 @@
   (testing "Commands sent via Pulsar are processed and replied to via MQTT"
     (with-test-system
      [sys "classpath:pulsar-mqtt-processor/application-test.yml"]
-     (migrate sys)
      (let [{:keys [stop]} (SUT/run sys)]
        (telemetry/with-span-tests
         [_ ["send-command" "process-command"]]

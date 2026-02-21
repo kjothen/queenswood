@@ -7,7 +7,6 @@
 
     [com.repldriven.mono.error.interface :as error]
     [com.repldriven.mono.json.interface :as json]
-    [com.repldriven.mono.migrator.interface :as migrator]
     [com.repldriven.mono.spec.interface :as spec]
 
     [clojure.edn :as edn]
@@ -18,10 +17,6 @@
       io/resource
       slurp
       edn/read-string))
-
-(defn migrate
-  [datasource]
-  (migrator/migrate datasource "schemas/accounts/init-changelog.sql"))
 
 (defn process
   "Process an account command and return result or anomaly.

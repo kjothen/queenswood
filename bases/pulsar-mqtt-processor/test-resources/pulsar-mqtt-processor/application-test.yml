@@ -3,5 +3,11 @@ system:
   pulsar: !include testcontainers/pulsar-all-test.yml
   postgres: !include testcontainers/postgres-test.yml
   db: !include pulsar-mqtt-processor/datasource-test.yml
+  migrator:
+    migrations: !system/component
+      system/component-kind: migrator/migrations
+      datasource: !system/ref db.datasource
+      changelogs:
+        - schemas/accounts/init-changelog.sql
   processor:
-    datasource: !system/ref db.datasource
+    datasource: !system/ref migrator.migrations

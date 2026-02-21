@@ -1,10 +1,10 @@
 (ns ^:eftest/synchronized com.repldriven.mono.processor.interface-test
   (:require
     com.repldriven.mono.testcontainers.interface
+    com.repldriven.mono.migrator.interface
 
     [com.repldriven.mono.processor.interface :as SUT]
 
-    [com.repldriven.mono.db.interface :as sql]
     [com.repldriven.mono.error.interface :as error]
     [com.repldriven.mono.system.interface :as system]
     [com.repldriven.mono.test-system.interface :refer
@@ -13,19 +13,11 @@
 
     [clojure.test :refer [deftest is testing]]))
 
-(defn- migrate-db
-  [sys]
-  (nom-test> [_
-              (error/nom-> (sql/get-datasource
-                            (system/instance sys [:db :datasource]))
-                           SUT/migrate)]))
-
 (deftest process-open-account-test
   (testing "Processing open-account command should create account in database"
     (with-test-system
      [sys "classpath:processor/application-test.yml"]
      (let [processor (system/instance sys [:processor])]
-       (migrate-db sys)
        (nom-test> [result
                    (SUT/process processor
                                 {"command" "open-account"
@@ -47,7 +39,6 @@
     (with-test-system
      [sys "classpath:processor/application-test.yml"]
      (let [processor (system/instance sys [:processor])]
-       (migrate-db sys)
        (nom-test>
         [_
          (SUT/process processor
@@ -72,7 +63,6 @@
     (with-test-system
      [sys "classpath:processor/application-test.yml"]
      (let [processor (system/instance sys [:processor])]
-       (migrate-db sys)
        (nom-test>
         [_
          (SUT/process processor
@@ -100,7 +90,6 @@
     (with-test-system
      [sys "classpath:processor/application-test.yml"]
      (let [processor (system/instance sys [:processor])]
-       (migrate-db sys)
        (nom-test>
         [_
          (SUT/process processor
@@ -125,7 +114,6 @@
     (with-test-system
      [sys "classpath:processor/application-test.yml"]
      (let [processor (system/instance sys [:processor])]
-       (migrate-db sys)
        (nom-test>
         [_
          (SUT/process processor
@@ -153,7 +141,6 @@
     (with-test-system
      [sys "classpath:processor/application-test.yml"]
      (let [processor (system/instance sys [:processor])]
-       (migrate-db sys)
        (nom-test>
         [_
          (SUT/process processor
@@ -177,7 +164,6 @@
     (with-test-system
      [sys "classpath:processor/application-test.yml"]
      (let [processor (system/instance sys [:processor])]
-       (migrate-db sys)
        (nom-test>
         [_
          (SUT/process processor
@@ -193,11 +179,9 @@
 
 (deftest process-unknown-command-test
   (testing "Processing unknown command should return anomaly"
-    (with-test-system [sys "classpath:processor/application-test.yml"]
-                      (let [processor (system/instance sys [:processor])]
-                        (migrate-db sys)
-                        (let [command {"command" "invalid-command"}
-                              result (SUT/process processor command)]
-                          (is (error/anomaly? result))
-                          (is (= :accounts/process-command
-                                 (error/kind result))))))))
+    (with-test-system
+     [sys "classpath:processor/application-test.yml"]
+     (let [processor (system/instance sys [:processor])
+           result (SUT/process processor {"command" "invalid-command"})]
+       (is (error/anomaly? result))
+       (is (= :accounts/process-command (error/kind result)))))))
