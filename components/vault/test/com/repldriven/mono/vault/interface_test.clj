@@ -2,34 +2,28 @@
   (:require
     com.repldriven.mono.testcontainers.interface
 
-    [com.repldriven.mono.env.interface :as env]
-    [com.repldriven.mono.error.interface :as error]
     [com.repldriven.mono.system.interface :as system]
+    [com.repldriven.mono.test-system.interface :as test]
     [com.repldriven.mono.utility.interface :as utility]
     [com.repldriven.mono.vault.interface :as SUT]
 
     [clojure.string :as str]
-    [clojure.test :as test :refer [deftest is testing]]))
-
-(defn- test-system
-  []
-  (error/nom-> (env/config "classpath:vault/application-test.yml" :test)
-               system/defs
-               system/start))
+    [clojure.test :refer [deftest is testing]]))
 
 (deftest vault-component-test
   (testing "Vault component should authenticate and read secrets"
-    (system/with-system [sys (test-system)]
-      (let [client (system/instance sys [:vault :client])
-            vault-config (system/config sys :vault :container)
-            token (:vault-token vault-config)
-            secret (:secret-in-vault vault-config)]
-        (is (some? client))
-        (is (some? (SUT/authenticate-client! client :token token)))
-        (let [[mount path] (-> secret
-                               first
-                               (str/split #"/"))
-              secret-props (-> secret
-                               rest)]
-          (is (= (SUT/read-secret client mount path)
-                 (utility/prop-seq->kw-map secret-props))))))))
+    (test/with-test-system
+     [sys "classpath:vault/application-test.yml"]
+     (let [client (system/instance sys [:vault :client])
+           vault-config (system/config sys :vault :container)
+           token (:vault-token vault-config)
+           secret (:secret-in-vault vault-config)]
+       (is (some? client))
+       (is (some? (SUT/authenticate-client! client :token token)))
+       (let [[mount path] (-> secret
+                              first
+                              (str/split #"/"))
+             secret-props (-> secret
+                              rest)]
+         (is (= (SUT/read-secret client mount path)
+                (utility/prop-seq->kw-map secret-props))))))))

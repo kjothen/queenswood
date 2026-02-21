@@ -6,8 +6,7 @@
 
     [com.repldriven.mono.error.interface :as error]
     [com.repldriven.mono.system.interface :as system]
-    [com.repldriven.mono.test.interface :as test]
-    [com.repldriven.mono.env.interface :as env]
+    [com.repldriven.mono.test-system.interface :as test]
 
     [clojure.test :refer [deftest is testing]]))
 
@@ -17,19 +16,14 @@
 ;; `brew install foundationdb`. On Linux install foundationdb-clients from the
 ;; FDB GitHub releases.
 
-(defn- test-system
-  []
-  (error/nom-> (env/config "classpath:fdb/application-test.yml" :test)
-               system/defs
-               system/start))
-
 (deftest integration-test
   (testing "FDB container starts and can execute transactions"
-    (system/with-system [sys (test-system)]
-      (let [db (system/instance sys [:fdb :db])]
-        (error/nom-let> [_ (SUT/set db "test-key" "test-value")
-                         result (SUT/get db "test-key")
-                         _ (is
-                            (= "test-value" result)
-                            "Should be able to write and read values from FDB")]
-          test/refute-anomaly)))))
+    (test/with-test-system
+     [sys "classpath:fdb/application-test.yml"]
+     (let [db (system/instance sys [:fdb :db])]
+       (error/nom-let> [_ (SUT/set db "test-key" "test-value")
+                        result (SUT/get db "test-key")
+                        _ (is
+                           (= "test-value" result)
+                           "Should be able to write and read values from FDB")]
+         error/refute-nom)))))

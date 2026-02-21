@@ -30,7 +30,7 @@
 
     components/system {:local/root "components/system"}
     components/telemetry {:local/root "components/telemetry"}
-    components/test {:local/root "components/test"}
+    components/test-system {:local/root "components/test-system"}
     components/test-resources {:local/root "components/test-resources"}
     components/testcontainers {:local/root "components/testcontainers"}
     components/utility {:local/root "components/utility"}

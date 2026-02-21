@@ -2,23 +2,15 @@
   (:require
     [com.repldriven.mono.symmetric-key-api.api :as api]
 
-    [com.repldriven.mono.env.interface :as env]
     [com.repldriven.mono.error.interface :as error]
     [com.repldriven.mono.http-client.interface :as http]
     [com.repldriven.mono.server.interface :as server]
     [com.repldriven.mono.system.interface :as system]
+    [com.repldriven.mono.test-system.interface :as test]
 
     [clojure.test :refer [deftest is testing]]))
 
 (def ^:dynamic *base-url* "http://localhost:{PORT}")
-
-(defn- test-system
-  []
-  (error/nom-> (env/config "classpath:symmetric-key-api/application-test.yml"
-                           :test)
-               system/defs
-               (assoc-in [:system/defs :server :handler] api/app)
-               system/start))
 
 (defn list-keys
   [identity-id]
@@ -33,22 +25,25 @@
 
 (deftest symmetric-keys-api
   (testing "symmetric keys API"
-    (system/with-system [sys (test-system)]
-      (let [jetty (system/instance sys [:server :jetty-adapter])]
-        (binding [*base-url* (server/http-local-url jetty)]
-          (let [identity-id "test-identity-123"
-                key-id "test-key-456"
-                result (error/let-nom
-                         ; list keys for identity
-                         [list-res (list-keys identity-id)
-                          _ (is (= 200 (:status list-res)))
-                          list-body (http/res->body list-res)
-                          _ (is (= {"data" []} list-body))
-                          ; get specific key
-                          get-res (get-key identity-id key-id)
-                          _ (is (= 200 (:status get-res)))
-                          get-body (http/res->body get-res)
-                          _ (is (= {"data" {}} get-body))]
-                         :success)]
-            (is (not (error/anomaly? result))
-                (str "API workflow failed: " (pr-str result)))))))))
+    (test/with-test-system
+     [sys
+      ["classpath:symmetric-key-api/application-test.yml"
+       #(assoc-in % [:system/defs :server :handler] api/app)]]
+     (let [jetty (system/instance sys [:server :jetty-adapter])]
+       (binding [*base-url* (server/http-local-url jetty)]
+         (let [identity-id "test-identity-123"
+               key-id "test-key-456"
+               result (error/let-nom
+                        ; list keys for identity
+                        [list-res (list-keys identity-id)
+                         _ (is (= 200 (:status list-res)))
+                         list-body (http/res->body list-res)
+                         _ (is (= {"data" []} list-body))
+                         ; get specific key
+                         get-res (get-key identity-id key-id)
+                         _ (is (= 200 (:status get-res)))
+                         get-body (http/res->body get-res)
+                         _ (is (= {"data" {}} get-body))]
+                        :success)]
+           (is (not (error/anomaly? result))
+               (str "API workflow failed: " (pr-str result)))))))))

@@ -1,4 +1,0 @@
-{:paths ["src"]
- :deps {com.repldriven.mono/error {:local/root "../error"}}
- :aliases {:test {:extra-paths ["test"]
-                  :extra-deps {}}}}

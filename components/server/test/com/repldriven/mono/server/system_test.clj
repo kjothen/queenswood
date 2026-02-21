@@ -1,10 +1,9 @@
 (ns com.repldriven.mono.server.system-test
   (:require
-    [com.repldriven.mono.env.interface :as env]
-    [com.repldriven.mono.error.interface :as error]
     [com.repldriven.mono.http-client.interface :as http-client]
     [com.repldriven.mono.server.interface :as server]
     [com.repldriven.mono.system.interface :as system]
+    [com.repldriven.mono.test-system.interface :as test]
 
     [reitit.http :as http]
     [reitit.ring :as ring]
@@ -15,15 +14,11 @@
 (deftest server-test
   (testing "Server component system configuration and lifecycle"
     (let [handler (fn [_] {:status 200 :body "ok"})]
-      (system/with-system [sys
-                           (error/nom->
-                            (env/config "classpath:server/application-test.yml"
-                                        :test)
-                            system/defs
-                            (assoc-in [:system/defs :server :handler]
-                             (constantly handler))
-                            system/start)]
-        (is (system/system? sys) "System should be valid")))))
+      (test/with-test-system [_
+                              ["classpath:server/application-test.yml"
+                               #(assoc-in %
+                                 [:system/defs :server :handler]
+                                 (constantly handler))]]))))
 
 (deftest interceptors-test
   (testing "Ring interceptors MUST be inserted"
@@ -37,19 +32,16 @@
                                                 server/standard-router-data)
                                    (ring/create-default-handler)
                                    server/standard-executor))]
-      (system/with-system [sys
-                           (error/nom->
-                            (env/config "classpath:server/application-test.yml"
-                                        :test)
-                            system/defs
-                            (assoc-in [:system/defs :server :handler] app)
-                            system/start)]
-        (let [jetty (system/instance sys [:server :jetty-adapter])
-              base-url (server/http-local-url jetty)
-              url (str base-url "/api/interceptors")
-              res (http-client/request {:url url :method :get})
-              body (http-client/res->body res)]
-          (is (= body {"got" "me" "this" "time"})))))))
+      (test/with-test-system
+       [sys
+        ["classpath:server/application-test.yml"
+         #(assoc-in % [:system/defs :server :handler] app)]]
+       (let [jetty (system/instance sys [:server :jetty-adapter])
+             base-url (server/http-local-url jetty)
+             url (str base-url "/api/interceptors")
+             res (http-client/request {:url url :method :get})
+             body (http-client/res->body res)]
+         (is (= body {"got" "me" "this" "time"})))))))
 
 (deftest coercion-error-test
   (testing "Coercion errors return structured responses"
@@ -70,33 +62,30 @@
                                                 server/standard-router-data)
                                    (ring/create-default-handler)
                                    server/standard-executor))]
-      (system/with-system [sys
-                           (error/nom->
-                            (env/config "classpath:server/application-test.yml"
-                                        :test)
-                            system/defs
-                            (assoc-in [:system/defs :server :handler] app)
-                            system/start)]
-        (let [jetty (system/instance sys [:server :jetty-adapter])
-              base-url (server/http-local-url jetty)
-              post! (fn [path body]
-                      (http-client/request {:method :post
-                                            :url (str base-url path)
-                                            :headers {"Content-Type"
-                                                      "application/json"}
-                                            :body (json/write-str body)}))]
-          (testing "Valid request returns 200"
-            (let [res (post! "/api/validate" {"name" "Alice"})]
-              (is (= 200 (:status res)))))
-          (testing "Invalid request body returns 400 with error type"
-            (let [res (post! "/api/validate" {})
-                  body (http-client/res->body res)]
-              (is (= 400 (:status res)))
-              (is (= "request-validation" (get body "type")))
-              (is (contains? body "details"))))
-          (testing "Invalid response body returns 500 with error type"
-            (let [res (post! "/api/bad-response" {"name" "Alice"})
-                  body (http-client/res->body res)]
-              (is (= 500 (:status res)))
-              (is (= "response-coercion" (get body "type")))
-              (is (contains? body "details")))))))))
+      (test/with-test-system
+       [sys
+        ["classpath:server/application-test.yml"
+         #(assoc-in % [:system/defs :server :handler] app)]]
+       (let [jetty (system/instance sys [:server :jetty-adapter])
+             base-url (server/http-local-url jetty)
+             post! (fn [path body]
+                     (http-client/request {:method :post
+                                           :url (str base-url path)
+                                           :headers {"Content-Type"
+                                                     "application/json"}
+                                           :body (json/write-str body)}))]
+         (testing "Valid request returns 200"
+           (let [res (post! "/api/validate" {"name" "Alice"})]
+             (is (= 200 (:status res)))))
+         (testing "Invalid request body returns 400 with error type"
+           (let [res (post! "/api/validate" {})
+                 body (http-client/res->body res)]
+             (is (= 400 (:status res)))
+             (is (= "request-validation" (get body "type")))
+             (is (contains? body "details"))))
+         (testing "Invalid response body returns 500 with error type"
+           (let [res (post! "/api/bad-response" {"name" "Alice"})
+                 body (http-client/res->body res)]
+             (is (= 500 (:status res)))
+             (is (= "response-coercion" (get body "type")))
+             (is (contains? body "details")))))))))

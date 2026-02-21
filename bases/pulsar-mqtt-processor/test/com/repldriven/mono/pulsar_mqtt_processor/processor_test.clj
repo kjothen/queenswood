@@ -6,24 +6,16 @@
     [com.repldriven.mono.pulsar-mqtt-processor.processor :as SUT]
 
     [com.repldriven.mono.db.interface :as db]
-    [com.repldriven.mono.env.interface :as env]
-    [com.repldriven.mono.error.interface :as error]
     [com.repldriven.mono.migrator.interface :as migrator]
     [com.repldriven.mono.mqtt.interface :as mqtt]
     [com.repldriven.mono.pulsar.interface :as pulsar]
     [com.repldriven.mono.system.interface :as system]
     [com.repldriven.mono.telemetry.interface :as telemetry]
+    [com.repldriven.mono.test-system.interface :as test]
 
     [clojure.core.async :as async]
     [clojure.data.json :as json]
     [clojure.test :refer [deftest is testing]]))
-
-(defn- test-system
-  []
-  (error/nom->
-   (env/config "classpath:pulsar-mqtt-processor/application-test.yml" :test)
-   system/defs
-   system/start))
 
 (defn- migrate
   [sys]
@@ -58,18 +50,19 @@
 
 (deftest process-command-test
   (testing "Commands sent via Pulsar are processed and replied to via MQTT"
-    (system/with-system [sys (test-system)]
-      (migrate sys)
-      (let [{:keys [stop]} (SUT/run sys)]
-        (telemetry/with-span-tests
-         [_ ["send-command" "process-command"]]
-         (let [result (send-command sys
-                                    "open-account"
-                                    {"account-id" "acc-api-test"
-                                     "name" "API Test Account"
-                                     "currency" "GBP"})]
-           (is (not= ::timeout result) "Should receive a reply within timeout")
-           (is (= "ok" (get result "status")))
-           (is (= "acc-api-test"
-                  (get (json/read-str (get result "data")) "account-id")))))
-        (async/>!! stop :stop)))))
+    (test/with-test-system
+     [sys "classpath:pulsar-mqtt-processor/application-test.yml"]
+     (migrate sys)
+     (let [{:keys [stop]} (SUT/run sys)]
+       (telemetry/with-span-tests
+        [_ ["send-command" "process-command"]]
+        (let [result (send-command sys
+                                   "open-account"
+                                   {"account-id" "acc-api-test"
+                                    "name" "API Test Account"
+                                    "currency" "GBP"})]
+          (is (not= ::timeout result) "Should receive a reply within timeout")
+          (is (= "ok" (get result "status")))
+          (is (= "acc-api-test"
+                 (get (json/read-str (get result "data")) "account-id")))))
+       (async/>!! stop :stop)))))

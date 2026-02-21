@@ -1,6 +1,8 @@
 (ns com.repldriven.mono.error.interface
   (:require
-    [de.otto.nom.core :as nom]))
+    [de.otto.nom.core :as nom]
+
+    [clojure.test :refer [is]]))
 
 (defn- error-anomaly? [x] (and (vector? x) (= :error/anomaly (first x))))
 
@@ -22,6 +24,15 @@
 ;; Introspection
 (defn kind [x] (when (anomaly? x) (second x)))
 (defn payload [x] (when (anomaly? x) (get x 2 {})))
+
+;; Test assertions
+(defn refute-nom
+  "Fails the test if value is an anomaly, printing its kind and message."
+  [v]
+  (is (not (anomaly? v))
+      (format "Unexpected anomaly [%s]: %s"
+              (kind v)
+              (or (:message (payload v)) (pr-str v)))))
 
 ;; Threading macros
 (defmacro nom->
