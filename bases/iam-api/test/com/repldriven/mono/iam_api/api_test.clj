@@ -2,9 +2,9 @@
   (:refer-clojure :exclude [name test])
   (:require
     com.repldriven.mono.testcontainers.interface
+    com.repldriven.mono.migrator.interface
 
     [com.repldriven.mono.iam-api.api :as api]
-    [com.repldriven.mono.iam-api.database :as database]
 
     [com.repldriven.mono.http-client.interface :as http]
     [com.repldriven.mono.server.interface :as server]
@@ -67,8 +67,7 @@
      (let [jetty (system/instance sys [:server :jetty-adapter])]
        (binding [*base-url* (server/http-local-url jetty)]
          (nom-test>
-          [_ (database/migrate sys)
-           ; create service account
+          [; create service account
            res (create-service-account) _ (is (= 201 (:status res)))
            service-account (http/res->body res) _
            (is (= false (get service-account "disabled")))

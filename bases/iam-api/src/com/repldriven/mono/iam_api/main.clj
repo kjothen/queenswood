@@ -1,11 +1,11 @@
 (ns com.repldriven.mono.iam-api.main
   (:require
     ;; system components
+    com.repldriven.mono.migrator.interface
     com.repldriven.mono.server.interface
     com.repldriven.mono.testcontainers.interface
 
     [com.repldriven.mono.iam-api.api :as api]
-    [com.repldriven.mono.iam-api.database :as database]
 
     [com.repldriven.mono.cli.interface :as cli]
     [com.repldriven.mono.env.interface :as env]
@@ -19,8 +19,7 @@
   (error/nom-> (env/config config-file profile)
                system/defs
                (assoc-in [:system/defs :server :handler] api/app)
-               system/start
-               database/migrate))
+               system/start))
 
 (defn stop [sys] (system/stop sys))
 

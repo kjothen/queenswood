@@ -2,6 +2,7 @@
   (:require
     ;; system components
     com.repldriven.mono.db.interface
+    com.repldriven.mono.migrator.interface
     com.repldriven.mono.server.interface
     com.repldriven.mono.testcontainers.interface
 

@@ -1,7 +1,6 @@
 (ns com.repldriven.mono.iam.interface
   (:refer-clojure :exclude [delete get list name])
   (:require
-    [com.repldriven.mono.iam.database :as database]
     [com.repldriven.mono.iam.service-account.api :as service-account-api]
     [clojure.edn :as edn]
     [clojure.java.io :as io]))
@@ -14,11 +13,6 @@
 
 ;;;; Shared Schema
 (def ProjectId (:ProjectId schemas))
-
-;;;; Database
-(defn migrate
-  ([db-spec] (database/migrate db-spec))
-  ([db-spec version] (database/migrate db-spec version)))
 
 ;;;; ServiceAcccounts
 ;;;;
