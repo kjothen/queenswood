@@ -1,4 +1,4 @@
-(ns com.repldriven.mono.iam-api.schema)
+(ns com.repldriven.mono.iam-api.v1.projects.service-accounts.schema)
 
 (def ^:private project-id-pat "[a-z][-a-z0-9]{4,28}[a-z0-9]")
 (def ^:private email-pat

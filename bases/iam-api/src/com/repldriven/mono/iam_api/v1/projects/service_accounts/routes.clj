@@ -1,6 +1,6 @@
 (ns com.repldriven.mono.iam-api.v1.projects.service-accounts.routes
   (:require
-    [com.repldriven.mono.iam-api.schema :as schema]
+    [com.repldriven.mono.iam-api.v1.projects.service-accounts.schema :as schema]
     [com.repldriven.mono.iam-api.v1.projects.service-accounts.handlers :as
      handlers]))
 
