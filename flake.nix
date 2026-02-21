@@ -44,13 +44,19 @@
 
         libPath = pkgs.lib.makeLibraryPath [ fdbBinary ];
 
-        # Wrap clojure to always set DYLD_LIBRARY_PATH for the FDB native
+        # Wrap clojure/clj to always set DYLD_LIBRARY_PATH for the FDB native
         # library. DYLD_* vars are stripped by macOS SIP when launching
         # restricted processes (e.g. Claude Code), so env inheritance is
         # unreliable — the wrapper bakes the path in at the binary level.
+        # Both binaries are wrapped: clojure (raw CLI) and clj (rlwrap
+        # variant for interactive REPLs).
         clojureWithFdb = pkgs.writeShellScriptBin "clojure" ''
           export DYLD_LIBRARY_PATH="${libPath}:$DYLD_LIBRARY_PATH"
           exec ${pkgs.clojure}/bin/clojure "$@"
+        '';
+        cljWithFdb = pkgs.writeShellScriptBin "clj" ''
+          export DYLD_LIBRARY_PATH="${libPath}:$DYLD_LIBRARY_PATH"
+          exec ${pkgs.clojure}/bin/clj "$@"
         '';
 
       in
@@ -58,6 +64,7 @@
         devShells.default = pkgs.mkShell {
           buildInputs = [
             pkgs.babashka
+            cljWithFdb
             clojureWithFdb
             pkgs.clj-kondo
             pkgs.clojure-lsp
