@@ -108,6 +108,12 @@ that follows the Polylith architecture.
   clojure -M:poly test brick:<brick-name> project:dev
   ```
 
+  Multiple bricks can be tested in one pass using colon-separated names:
+
+  ```bash
+  clojure -M:poly test brick:<brick1>:<brick2> project:dev
+  ```
+
 ### Writing Tests
 
 - **No test fixtures**: Do not use `use-fixtures` — manage lifecycle explicitly
