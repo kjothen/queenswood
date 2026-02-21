@@ -1,25 +1,10 @@
 (ns com.repldriven.mono.iam.interface
   (:refer-clojure :exclude [delete get list name])
   (:require
-    [com.repldriven.mono.iam.service-account :as service-account]
-    [clojure.edn :as edn]
-    [clojure.java.io :as io]))
+    [com.repldriven.mono.iam.service-account :as service-account]))
 
-(def ^:private schemas
-  (-> "schemas/iam/iam.edn"
-      io/resource
-      slurp
-      edn/read-string))
-
-;;;; Shared Schema
-(def ProjectId (:ProjectId schemas))
-
-;;;; ServiceAcccounts
+;;;; ServiceAccounts
 ;;;;
-
-;;; Schema
-(def EmailAddressOrUniqueId (:EmailAddressOrUniqueId schemas))
-(def ServiceAccount (:ServiceAccount schemas))
 
 ;;; Methods
 (defn create-service-account
