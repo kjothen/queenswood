@@ -12,9 +12,9 @@
     [clojure.test :refer [deftest is testing]]))
 
 (def ^:private project-name "projects/prj-test")
-(def ^:private sa-email "sa-test@prj-test.iam.serviceaccount")
+(def ^:private sa-email "sa-test@prj-test.iam.repldriven.com")
 (def ^:private sa-name
-  "projects/prj-test/serviceAccounts/sa-test@prj-test.iam.serviceaccount")
+  "projects/prj-test/serviceAccounts/sa-test@prj-test.iam.repldriven.com")
 
 (deftest create-service-account-test
   (testing "Creating a service account returns the account details"

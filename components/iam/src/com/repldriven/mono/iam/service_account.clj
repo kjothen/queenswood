@@ -13,7 +13,7 @@
 
 (defn email
   [account-id project-id]
-  (str account-id "@" project-id ".iam.serviceaccount"))
+  (str account-id "@" project-id ".iam.repldriven.com"))
 
 (defn name [name email] (str name "/serviceAccounts/" email))
 

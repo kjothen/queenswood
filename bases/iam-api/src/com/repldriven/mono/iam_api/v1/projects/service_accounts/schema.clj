@@ -10,31 +10,36 @@
    {:title "ProjectId"
     :description
     "6 to 30 lowercase letters, digits, or hyphens. Must start with a
-    letter. No trailing hyphens."}
-   (str "^" project-id-pat "$")])
+    letter. No trailing hyphens."
+    :json-schema/example "my-project"} (str "^" project-id-pat "$")])
 
 (def ServiceAccountId
   [:re
    {:title "ServiceAccountId"
     :description
     "6 to 30 lowercase letters, digits, or hyphens. Must start with a
-    letter. No trailing hyphens."}
-   (str "^" project-id-pat "$")])
+    letter. No trailing hyphens."
+    :json-schema/example "my-service-account"} (str "^" project-id-pat "$")])
 
 (def UniqueId
-  [:re {:title "UniqueId" :description "21-digit numeric identifier"}
-   (str "^" unique-id-pat "$")])
+  [:re
+   {:title "UniqueId"
+    :description "21-digit numeric identifier"
+    :json-schema/example "103798426813399185444"} (str "^" unique-id-pat "$")])
 
 (def ServiceAccountEmail
   [:re
    {:title "ServiceAccountEmail"
-    :description "RFC 5322 email address, max 320 characters"}
+    :description "RFC 5322 email address, max 320 characters"
+    :json-schema/example "my-service-account@my-project.iam.repldriven.com"}
    (str "^" email-pat "$")])
 
 (def ServiceAccountNameByEmail
   [:re
    {:title "ServiceAccountNameByEmail"
-    :description "`projects/{PROJECT_ID}/serviceAccounts/{EMAIL_ADDRESS}`"}
+    :description "`projects/{PROJECT_ID}/serviceAccounts/{EMAIL_ADDRESS}`"
+    :json-schema/example
+    "projects/my-project/serviceAccounts/my-service-account@my-project.iam.repldriven.com"}
    (str "^projects/" project-id-pat "/serviceAccounts/" email-pat "$")])
 
 (def EmailAddressOrUniqueId
