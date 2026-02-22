@@ -6,12 +6,14 @@
 
     [com.repldriven.mono.server.interface :as server]
 
+    [malli.core :as m]
     [reitit.coercion.malli :as malli-coercion]
     [reitit.http :as http]
     [reitit.ring :as ring]))
 
 (def ^:private coercion
-  (malli-coercion/create {:options {:registry schema/registry}}))
+  (malli-coercion/create {:options {:registry (merge (m/default-schemas)
+                                                     schema/registry)}}))
 
 (defn routes
   [ctx]
