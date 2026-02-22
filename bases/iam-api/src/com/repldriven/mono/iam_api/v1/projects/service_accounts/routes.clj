@@ -16,11 +16,17 @@
      :post {:summary "Creates a ServiceAccount"
             :openapi {:operationId "CreateServiceAccount"}
             :parameters {:body [:ref "CreateServiceAccountRequest"]}
-            :responses {201 {:body [:ref "ServiceAccount"]}}
+            :responses {201 {:body [:ref "ServiceAccount"]}
+                        409 {:body [:map
+                                    [:error
+                                     [:map [:code string?] [:message string?]
+                                      [:status string?]]]]}}
             :handler handlers/create}}]
    ["/serviceAccounts/{id}"
-    {:parameters {:path {:id [:or [:ref "Email"]
-                              [:ref "UniqueId"]]}}
+    {:parameters {:path
+                  {:id [:string
+                        {:json-schema/example
+                         "my-service-account@my-project.iam.repldriven.com"}]}}
      :get {:summary "Gets a ServiceAccount"
            :openapi {:operationId "GetServiceAccount"}
            :responses {200 {:body [:ref "ServiceAccount"]}}
@@ -35,22 +41,28 @@
               :responses {200 {:body [:ref "ServiceAccount"]}}
               :handler handlers/delete}}]
    ["/serviceAccounts/{id}:undelete"
-    {:parameters {:path {:id [:or [:ref "Email"]
-                              [:ref "UniqueId"]]}}
+    {:parameters {:path
+                  {:id [:string
+                        {:json-schema/example
+                         "my-service-account@my-project.iam.repldriven.com"}]}}
      :post {:summary "Undeletes a ServiceAccount that was deleted"
             :openapi {:operationId "UndeleteServiceAccount"}
             :responses {200 {:body [:ref "ServiceAccount"]}}
             :handler handlers/undelete}}]
    ["/serviceAccounts/{id}:enable"
-    {:parameters {:path {:id [:or [:ref "Email"]
-                              [:ref "UniqueId"]]}}
+    {:parameters {:path
+                  {:id [:string
+                        {:json-schema/example
+                         "my-service-account@my-project.iam.repldriven.com"}]}}
      :post {:summary "Enables a ServiceAccount that was disabled"
             :openapi {:operationId "EnableServiceAccount"}
             :responses {200 {:body [:ref "ServiceAccount"]}}
             :handler handlers/enable}}]
    ["/serviceAccounts/{id}:disable"
-    {:parameters {:path {:id [:or [:ref "Email"]
-                              [:ref "UniqueId"]]}}
+    {:parameters {:path
+                  {:id [:string
+                        {:json-schema/example
+                         "my-service-account@my-project.iam.repldriven.com"}]}}
      :post {:summary "Disables a ServiceAccount immediately"
             :openapi {:operationId "DisableServiceAccount"}
             :responses {200 {:body [:ref "ServiceAccount"]}}

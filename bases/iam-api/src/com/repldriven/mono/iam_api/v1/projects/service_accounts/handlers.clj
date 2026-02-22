@@ -10,6 +10,11 @@
 (def unknown-service-account-error
   {:error {:code "404" :message "Unknown service account" :status "NOT_FOUND"}})
 
+(def already-exists-error
+  {:error {:code "409"
+           :message "Service account already exists"
+           :status "ALREADY_EXISTS"}})
+
 (defn- project-name [project-id] (str "projects/" project-id))
 
 (defn- service-account-name
@@ -17,6 +22,8 @@
   (str (project-name project-id) "/serviceAccounts/" id))
 
 (defn- not-found? [result] (error/anomaly? result))
+
+(defn- conflict? [result] (= :iam/service-account-create (error/kind result)))
 
 ;;;; Handlers
 
@@ -32,7 +39,9 @@
                                            display-name
                                            description)]
     (log/info "create" project-id body)
-    {:status 201 :body result}))
+    (cond (conflict? result) {:status 409 :body already-exists-error}
+          (not-found? result) {:status 500 :body result}
+          :else {:status 201 :body result})))
 
 (defn get
   [request]

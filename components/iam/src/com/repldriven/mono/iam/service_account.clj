@@ -50,7 +50,11 @@
                                        email display-name description false]]
                              :returning select-cols})
                 {:builder-fn db/as-unqualified-kebab-maps})]
-    (cond (error/anomaly? result) result
+    (cond (db/unique-violation? result)
+          (error/fail :iam/service-account-create
+                      {:message "Service account already exists"
+                       :name (name project-name email)})
+          (error/anomaly? result) result
           result (format-result result)
           :else result)))
 
@@ -66,7 +70,7 @@
                                 {:builder-fn db/as-unqualified-kebab-maps})]
     (cond (error/anomaly? result) result
           result (format-result result)
-          :else (error/fail :iam/service-account
+          :else (error/fail :iam/service-account-delete
                             {:message "Service account not found"
                              :name name}))))
 
@@ -82,7 +86,7 @@
                 {:builder-fn db/as-unqualified-kebab-maps})]
     (cond (error/anomaly? result) result
           result (format-result result)
-          :else (error/fail :iam/service-account
+          :else (error/fail :iam/service-account-undelete
                             {:message "Service account not found"
                              :name name}))))
 
@@ -98,7 +102,7 @@
                 {:builder-fn db/as-unqualified-kebab-maps})]
     (cond (error/anomaly? result) result
           result (format-result result)
-          :else (error/fail :iam/service-account
+          :else (error/fail :iam/service-account-disable
                             {:message "Service account not found"
                              :name name}))))
 
@@ -114,7 +118,7 @@
                 {:builder-fn db/as-unqualified-kebab-maps})]
     (cond (error/anomaly? result) result
           result (format-result result)
-          :else (error/fail :iam/service-account
+          :else (error/fail :iam/service-account-enable
                             {:message "Service account not found"
                              :name name}))))
 
@@ -158,6 +162,6 @@
                                 {:builder-fn db/as-unqualified-kebab-maps})]
     (cond (error/anomaly? result) result
           result (format-result result)
-          :else (error/fail :iam/service-account
+          :else (error/fail :iam/service-account-patch
                             {:message "Service account not found"
                              :name name}))))

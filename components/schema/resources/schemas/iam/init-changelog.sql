@@ -14,3 +14,12 @@ CREATE TABLE service_account(
   updated_at TIMESTAMPTZ,
   deleted_at TIMESTAMPTZ);
 ALTER SEQUENCE service_account_id_seq OWNED BY service_account.unique_id;
+
+--changeset kjothen:2
+ALTER TABLE service_account
+  ALTER COLUMN name SET NOT NULL,
+  ALTER COLUMN project_id SET NOT NULL,
+  ALTER COLUMN email SET NOT NULL,
+  ALTER COLUMN disabled SET NOT NULL;
+CREATE UNIQUE INDEX service_account_name_active_unique
+  ON service_account(name) WHERE deleted_at IS NULL;

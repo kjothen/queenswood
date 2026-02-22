@@ -3,7 +3,9 @@
     [com.repldriven.mono.error.interface :as error]
 
     [next.jdbc :as jdbc]
-    [next.jdbc.result-set :as rs]))
+    [next.jdbc.result-set :as rs])
+  (:import
+    org.postgresql.util.PSQLException))
 
 (def as-unqualified-lower-maps rs/as-unqualified-lower-maps)
 (def as-unqualified-kebab-maps rs/as-unqualified-kebab-maps)
@@ -40,3 +42,10 @@
    (error/try-nom :db/execute
                   "Failed to execute SQL statement"
                   (jdbc/execute! datasource sql-params opts))))
+
+(defn unique-violation?
+  "Returns true if the anomaly represents a unique constraint violation."
+  [anomaly]
+  (when (error/anomaly? anomaly)
+    (let [ex (:exception (error/payload anomaly))]
+      (and (instance? PSQLException ex) (= "23505" (.getSQLState ex))))))

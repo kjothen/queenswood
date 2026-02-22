@@ -20,3 +20,5 @@
 (defn execute!
   ([datasource sql-params] (core/execute! datasource sql-params))
   ([datasource sql-params opts] (core/execute! datasource sql-params opts)))
+
+(defn unique-violation? [anomaly] (core/unique-violation? anomaly))
