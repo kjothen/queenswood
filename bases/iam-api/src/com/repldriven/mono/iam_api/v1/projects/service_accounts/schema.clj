@@ -68,12 +68,12 @@
      {:max 256 :json-schema/example "A service account for automated tasks"}]]])
 
 (def registry
-  {"CreateServiceAccountRequest" CreateServiceAccountRequest
-   "EmailAddressOrUniqueId" EmailAddressOrUniqueId
-   "PatchServiceAccountRequest" PatchServiceAccountRequest
-   "ProjectId" ProjectId
-   "ServiceAccount" ServiceAccount
-   "ServiceAccountEmail" ServiceAccountEmail
-   "ServiceAccountId" ServiceAccountId
-   "ServiceAccountNameByEmail" ServiceAccountNameByEmail
-   "UniqueId" UniqueId})
+  (array-map "CreateServiceAccountRequest" CreateServiceAccountRequest
+             "PatchServiceAccountRequest" PatchServiceAccountRequest
+             "ServiceAccount" ServiceAccount
+             "ServiceAccountEmail" ServiceAccountEmail
+             "ServiceAccountId" ServiceAccountId
+             "ServiceAccountNameByEmail" ServiceAccountNameByEmail
+             "EmailAddressOrUniqueId" EmailAddressOrUniqueId
+             "ProjectId" ProjectId
+             "UniqueId" UniqueId))
