@@ -14,6 +14,18 @@
   [result]
   (update result :unique-id #(format "%021d" (biginteger %))))
 
+(defn- name-where
+  "WHERE clause fragment for a service account name path. Matches by
+  email-based name or, when the identifier is a 21-digit numeric
+  string, by project_id + unique_id."
+  [sa-name]
+  (let [parts (str/split sa-name #"/")
+        identifier (last parts)]
+    (if (re-matches #"\d{21}" identifier)
+      [:and [:= :project_id (nth parts 1)]
+       [:= :unique_id (Long/parseLong identifier)]]
+      [:= :name sa-name])))
+
 (defn email
   [account-id project-id]
   (str account-id "@" project-id ".iam.repldriven.com"))
@@ -45,7 +57,7 @@
                                 (sql/format {:update :service_account
                                              :set {:deleted_at [:timezone "utc"
                                                                 [:now]]}
-                                             :where [:and [:= :name name]
+                                             :where [:and (name-where name)
                                                      [:= :deleted_at nil]]})
                                 {:return-keys false})]
     (cond (error/anomaly? result) result
@@ -61,7 +73,7 @@
                 (sql/format
                  {:update :service_account
                   :set {:deleted_at nil :updated_at [:timezone "utc" [:now]]}
-                  :where [:and [:= :name name] [:!= :deleted_at nil]]})
+                  :where [:and (name-where name) [:!= :deleted_at nil]]})
                 {:return-keys false})]
     (cond (error/anomaly? result) result
           (pos? (db/update-count result)) {:name name}
@@ -76,7 +88,7 @@
                 (sql/format
                  {:update :service_account
                   :set {:disabled true :updated_at [:timezone "utc" [:now]]}
-                  :where [:and [:= :name name] [:= :deleted_at nil]]})
+                  :where [:and (name-where name) [:= :deleted_at nil]]})
                 {:return-keys false})]
     (cond (error/anomaly? result) result
           (pos? (db/update-count result)) {:name name}
@@ -91,7 +103,7 @@
                 (sql/format
                  {:update :service_account
                   :set {:disabled false :updated_at [:timezone "utc" [:now]]}
-                  :where [:and [:= :name name] [:= :deleted_at nil]]})
+                  :where [:and (name-where name) [:= :deleted_at nil]]})
                 {:return-keys false})]
     (cond (error/anomaly? result) result
           (pos? (db/update-count result)) {:name name}
@@ -118,7 +130,7 @@
   (let [result (db/execute-one! db
                                 (sql/format {:select select-cols
                                              :from :service_account
-                                             :where [:and [:= :name name]
+                                             :where [:and (name-where name)
                                                      [:= :deleted_at nil]]})
                                 {:builder-fn db/as-unqualified-kebab-maps})]
     (cond (error/anomaly? result) result
@@ -133,7 +145,7 @@
                                                    :description description
                                                    :updated_at [:timezone "utc"
                                                                 [:now]]}
-                                             :where [:and [:= :name name]
+                                             :where [:and (name-where name)
                                                      [:= :deleted_at nil]]})
                                 {:return-keys false})]
     (cond (error/anomaly? result) result

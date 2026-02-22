@@ -49,6 +49,24 @@
                                     (is (= sa-name (:name result))) _
                                     (is (= sa-email (:email result)))])))))
 
+(deftest get-service-account-by-unique-id-test
+  (testing "Getting a service account by unique-id returns the account"
+    (with-test-system [sys "classpath:iam/application-test.yml"]
+                      (let [db (system/instance sys [:migrator :migrations])]
+                        (nom-test> [created
+                                    (SUT/create-service-account
+                                     db
+                                     project-name
+                                     "sa-test"
+                                     "Test Service Account"
+                                     "A test service account") result
+                                    (SUT/get-service-account
+                                     db
+                                     (str "projects/prj-test/serviceAccounts/"
+                                          (:unique-id created))) _
+                                    (is (= sa-name (:name result))) _
+                                    (is (= sa-email (:email result)))])))))
+
 (deftest list-service-accounts-test
   (testing "Listing service accounts returns accounts for the project"
     (with-test-system
