@@ -25,6 +25,7 @@
         component/pulsar {:local/root "../../components/pulsar"}
         component/schema {:local/root "../../components/schema"}
         component/spec {:local/root "../../components/spec"}
+        component/sql {:local/root "../../components/sql"}
         component/system {:local/root "../../components/system"}
         component/telemetry {:local/root "../../components/telemetry"}
         component/test-system {:local/root "../../components/test-system"}
