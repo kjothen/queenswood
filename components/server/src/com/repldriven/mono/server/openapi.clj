@@ -1,13 +1,27 @@
 (ns com.repldriven.mono.server.openapi
   (:require
-    [reitit.openapi :as openapi]
-    [reitit.swagger-ui :as swagger-ui]))
+    [reitit.openapi :as openapi]))
 
 (defn standard-handler [] (openapi/create-openapi-handler))
 
 (defn standard-ui-handler
   []
-  (swagger-ui/create-swagger-ui-handler {:path "/"
-                                         :url "/openapi.json"
-                                         :config {:validatorUrl nil
-                                                  :operationsSorter "alpha"}}))
+  (fn [_]
+    {:status 200
+     :headers {"Content-Type" "text/html"}
+     :body
+     "<!DOCTYPE html>
+<html>
+<head>
+  <title>API Docs</title>
+  <meta charset=\"utf-8\" />
+  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\" />
+</head>
+<body>
+  <script
+    id=\"api-reference\"
+    data-url=\"/openapi.json\">
+  </script>
+  <script src=\"https://cdn.jsdelivr.net/npm/@scalar/api-reference\"></script>
+</body>
+</html>"}))
