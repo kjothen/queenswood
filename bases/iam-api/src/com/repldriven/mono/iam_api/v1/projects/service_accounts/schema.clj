@@ -43,7 +43,7 @@
    (str "^projects/" project-id-pat "/serviceAccounts/" email-pat "$")])
 
 (def ServiceAccount
-  [:map [:name [:ref "Id"]] [:project-id [:ref "ProjectId"]]
+  [:map [:id [:ref "Id"]] [:name [:ref "Name"]] [:project-id [:ref "ProjectId"]]
    [:unique-id [:ref "UniqueId"]] [:email [:ref "Email"]]
    [:display-name [:string {:max 100}]] [:description [:string {:max 256}]]
    [:disabled boolean?]])

@@ -10,9 +10,12 @@
 (def ^:private select-cols
   [:unique_id :name :project_id :email :display_name :description :disabled])
 
-(defn- pad-unique-id
-  [result]
-  (update result :unique-id #(format "%021d" (biginteger %))))
+(defn- format-result
+  [{db-name :name :as result}]
+  (-> result
+      (dissoc :name)
+      (assoc :id db-name :name (first (str/split (:email result) #"@")))
+      (update :unique-id #(format "%021d" (biginteger %)))))
 
 (defn- name-where
   "WHERE clause fragment for a service account name path. Matches by
@@ -48,7 +51,7 @@
                              :returning select-cols})
                 {:builder-fn db/as-unqualified-kebab-maps})]
     (cond (error/anomaly? result) result
-          result (pad-unique-id result)
+          result (format-result result)
           :else result)))
 
 (defn delete
@@ -62,7 +65,7 @@
                                              :returning select-cols})
                                 {:builder-fn db/as-unqualified-kebab-maps})]
     (cond (error/anomaly? result) result
-          result (pad-unique-id result)
+          result (format-result result)
           :else (error/fail :iam/service-account
                             {:message "Service account not found"
                              :name name}))))
@@ -78,7 +81,7 @@
                   :returning select-cols})
                 {:builder-fn db/as-unqualified-kebab-maps})]
     (cond (error/anomaly? result) result
-          result (pad-unique-id result)
+          result (format-result result)
           :else (error/fail :iam/service-account
                             {:message "Service account not found"
                              :name name}))))
@@ -94,7 +97,7 @@
                   :returning select-cols})
                 {:builder-fn db/as-unqualified-kebab-maps})]
     (cond (error/anomaly? result) result
-          result (pad-unique-id result)
+          result (format-result result)
           :else (error/fail :iam/service-account
                             {:message "Service account not found"
                              :name name}))))
@@ -110,7 +113,7 @@
                   :returning select-cols})
                 {:builder-fn db/as-unqualified-kebab-maps})]
     (cond (error/anomaly? result) result
-          result (pad-unique-id result)
+          result (format-result result)
           :else (error/fail :iam/service-account
                             {:message "Service account not found"
                              :name name}))))
@@ -127,7 +130,7 @@
                                                  [:= :deleted_at nil]]})
                             {:builder-fn db/as-unqualified-kebab-maps})]
     (cond (error/anomaly? result) result
-          :else (mapv pad-unique-id result))))
+          :else (mapv format-result result))))
 
 (defn get
   [db name]
@@ -138,7 +141,7 @@
                                                      [:= :deleted_at nil]]})
                                 {:builder-fn db/as-unqualified-kebab-maps})]
     (cond (error/anomaly? result) result
-          result (pad-unique-id result)
+          result (format-result result)
           :else result)))
 
 (defn patch
@@ -154,7 +157,7 @@
                                              :returning select-cols})
                                 {:builder-fn db/as-unqualified-kebab-maps})]
     (cond (error/anomaly? result) result
-          result (pad-unique-id result)
+          result (format-result result)
           :else (error/fail :iam/service-account
                             {:message "Service account not found"
                              :name name}))))

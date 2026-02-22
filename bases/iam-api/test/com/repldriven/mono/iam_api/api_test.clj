@@ -38,24 +38,24 @@
                  :method :get}))
 
 (defn get-service-account
-  [name]
-  (http/request {:url (str *base-url* "/v1/" name) :method :get}))
+  [id]
+  (http/request {:url (str *base-url* "/v1/" id) :method :get}))
 
 (defn disable-service-account
-  [name]
-  (http/request {:url (str *base-url* "/v1/" name ":disable") :method :post}))
+  [id]
+  (http/request {:url (str *base-url* "/v1/" id ":disable") :method :post}))
 
 (defn enable-service-account
-  [name]
-  (http/request {:url (str *base-url* "/v1/" name ":enable") :method :post}))
+  [id]
+  (http/request {:url (str *base-url* "/v1/" id ":enable") :method :post}))
 
 (defn delete-service-account
-  [name]
-  (http/request {:url (str *base-url* "/v1/" name) :method :delete}))
+  [id]
+  (http/request {:url (str *base-url* "/v1/" id) :method :delete}))
 
 (defn undelete-service-account
-  [name]
-  (http/request {:url (str *base-url* "/v1/" name ":undelete") :method :post}))
+  [id]
+  (http/request {:url (str *base-url* "/v1/" id ":undelete") :method :post}))
 
 (deftest service-accounts-api
   (testing "serviceAccounts API"
@@ -71,7 +71,7 @@
            service-account (http/res->body res) _
            (is (= false (get service-account "disabled")))
            ; get created service account
-           get-res (get-service-account (get service-account "name")) _
+           get-res (get-service-account (get service-account "id")) _
            (is (= 200 (:status get-res))) _
            (is (= service-account (http/res->body get-res)))
            ; list service accounts
@@ -80,27 +80,26 @@
            (is (= 1 (count (get service-accounts "accounts")))) _
            (is (= service-account (first (get service-accounts "accounts"))))
            ; disable service account
-           disable-res (disable-service-account (get service-account "name")) _
+           disable-res (disable-service-account (get service-account "id")) _
            (is (= 200 (:status disable-res))) _
            (is (= true (get (http/res->body disable-res) "disabled")))
            ; enable service account
-           enable-res (enable-service-account (get service-account "name")) _
+           enable-res (enable-service-account (get service-account "id")) _
            (is (= 200 (:status enable-res))) _
            (is (= false (get (http/res->body enable-res) "disabled")))
            ; delete service account
-           delete-res (delete-service-account (get service-account "name")) _
+           delete-res (delete-service-account (get service-account "id")) _
            (is (= 200 (:status delete-res))) _
-           (is (= (get service-account "name")
-                  (get (http/res->body delete-res) "name"))) after-delete-list
+           (is (= (get service-account "id")
+                  (get (http/res->body delete-res) "id"))) after-delete-list
            (list-service-accounts) _ (is (= 200 (:status after-delete-list)))
            after-delete-accounts (http/res->body after-delete-list) _
            (is (zero? (count (get after-delete-accounts "accounts"))))
            ; undelete service account
-           undelete-res (undelete-service-account (get service-account "name"))
-           _ (is (= 200 (:status undelete-res))) _
-           (is (= (get service-account "name")
-                  (get (http/res->body undelete-res) "name")))
-           after-undelete-list (list-service-accounts) _
-           (is (= 200 (:status after-undelete-list))) after-undelete-accounts
-           (http/res->body after-undelete-list) _
+           undelete-res (undelete-service-account (get service-account "id")) _
+           (is (= 200 (:status undelete-res))) _
+           (is (= (get service-account "id")
+                  (get (http/res->body undelete-res) "id"))) after-undelete-list
+           (list-service-accounts) _ (is (= 200 (:status after-undelete-list)))
+           after-undelete-accounts (http/res->body after-undelete-list) _
            (is (= 1 (count (get after-undelete-accounts "accounts"))))]))))))
