@@ -1,5 +1,7 @@
 (ns com.repldriven.mono.server.system
   (:require
+    [com.repldriven.mono.server.jetty :as server-jetty]
+
     [com.repldriven.mono.log.interface :as log]
     [com.repldriven.mono.system.interface :as system]
 
@@ -28,12 +30,15 @@
 (def default-jetty-adapter-options {:join? false :port 0})
 
 (def jetty-adapter
-  {:system/start (fn [{:system/keys [config instance]}]
-                   (or instance
-                       (let [{:keys [handler interceptors options]} config]
-                         (log/info "Starting jetty adapter")
-                         (jetty/run-jetty (handler {:interceptors interceptors})
-                                          options))))
+  {:system/start
+   (fn [{:system/keys [config instance]}]
+     (or instance
+         (let [{:keys [handler interceptors options]} config
+               _ (log/info "Starting jetty adapter")
+               server (jetty/run-jetty (handler {:interceptors interceptors})
+                                       options)]
+           (log/info "Jetty listening on" (server-jetty/http-local-url server))
+           server)))
    :system/stop (fn [{:system/keys [^Server instance]}]
                   (when (some? instance) (.stop instance)))
    :system/config {:handler system/required-component
@@ -41,5 +46,4 @@
                    :options default-jetty-adapter-options}})
 
 (system/defcomponents :server
-                      {:interceptors interceptors
-                       :jetty-adapter jetty-adapter})
+                      {:interceptors interceptors :jetty-adapter jetty-adapter})

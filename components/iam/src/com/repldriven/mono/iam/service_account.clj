@@ -8,8 +8,11 @@
     [clojure.string :as str]))
 
 (def ^:private select-cols
-  [[[:lpad [:cast :unique_id :text] [:inline 21] [:inline "0"]] :unique_id]
-   :name :project_id :email :display_name :description :disabled])
+  [:unique_id :name :project_id :email :display_name :description :disabled])
+
+(defn- pad-unique-id
+  [result]
+  (update result :unique-id #(format "%021d" (biginteger %))))
 
 (defn email
   [account-id project-id]
@@ -22,16 +25,19 @@
 (defn create
   [db project-name account-id display-name description]
   (let [project-id (project-id project-name)
-        email (email account-id project-id)]
-    (db/execute-one! db
-                     (sql/format
-                      {:insert-into :service_account
-                       :columns [:name :project_id :email :display_name
-                                 :description :disabled]
-                       :values [[(name project-name email) project-id email
-                                 display-name description false]]
-                       :returning select-cols})
-                     {:builder-fn db/as-unqualified-kebab-maps})))
+        email (email account-id project-id)
+        result (db/execute-one!
+                db
+                (sql/format {:insert-into :service_account
+                             :columns [:name :project_id :email :display_name
+                                       :description :disabled]
+                             :values [[(name project-name email) project-id
+                                       email display-name description false]]
+                             :returning select-cols})
+                {:builder-fn db/as-unqualified-kebab-maps})]
+    (cond (error/anomaly? result) result
+          result (pad-unique-id result)
+          :else result)))
 
 (defn delete
   [db name]
@@ -95,23 +101,29 @@
 
 (defn list
   [db project-name]
-  (db/execute! db
-               (sql/format {:select select-cols
-                            :from :service_account
-                            :where [:and
-                                    [:like :name
-                                     (str project-name "/serviceAccounts/%")]
-                                    [:= :deleted_at nil]]})
-               {:builder-fn db/as-unqualified-kebab-maps}))
+  (let [result (db/execute! db
+                            (sql/format {:select select-cols
+                                         :from :service_account
+                                         :where [:and
+                                                 [:like :name
+                                                  (str project-name
+                                                       "/serviceAccounts/%")]
+                                                 [:= :deleted_at nil]]})
+                            {:builder-fn db/as-unqualified-kebab-maps})]
+    (cond (error/anomaly? result) result
+          :else (mapv pad-unique-id result))))
 
 (defn get
   [db name]
-  (db/execute-one! db
-                   (sql/format {:select select-cols
-                                :from :service_account
-                                :where [:and [:= :name name]
-                                        [:= :deleted_at nil]]})
-                   {:builder-fn db/as-unqualified-kebab-maps}))
+  (let [result (db/execute-one! db
+                                (sql/format {:select select-cols
+                                             :from :service_account
+                                             :where [:and [:= :name name]
+                                                     [:= :deleted_at nil]]})
+                                {:builder-fn db/as-unqualified-kebab-maps})]
+    (cond (error/anomaly? result) result
+          result (pad-unique-id result)
+          :else result)))
 
 (defn patch
   [db name display-name description]

@@ -1,9 +1,9 @@
 (ns com.repldriven.mono.iam-api.main
   (:require
     ;; system components
+    com.repldriven.mono.db.interface
     com.repldriven.mono.migrator.interface
     com.repldriven.mono.server.interface
-    com.repldriven.mono.testcontainers.interface
 
     [com.repldriven.mono.iam-api.api :as api]
 
@@ -11,7 +11,8 @@
     [com.repldriven.mono.env.interface :as env]
     [com.repldriven.mono.error.interface :as error]
     [com.repldriven.mono.log.interface :as log]
-    [com.repldriven.mono.system.interface :as system])
+    [com.repldriven.mono.system.interface :as system]
+    [clojure.core :as c])
   (:gen-class))
 
 (defn start
@@ -36,3 +37,11 @@
                     (str "Failed to start [" (error/kind result)
                          "]: " (or (:message result) "Unknown error")))
           (log/info "System started successfully"))))))
+
+(comment
+  (require 'com.repldriven.mono.testcontainers.interface)
+  (def sys (start "classpath:iam-api/application-test.yml" :test))
+  (stop sys))
+
+
+
