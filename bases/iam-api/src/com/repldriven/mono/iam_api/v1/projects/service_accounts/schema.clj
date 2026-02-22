@@ -42,10 +42,6 @@
 (def EmailAddressOrUniqueId
   [:or [:ref "ServiceAccountEmail"] [:ref "UniqueId"]])
 
-(def ServiceAccountInput
-  [:map ["display-name" [:string {:max 100}]]
-   ["description" [:string {:max 256}]]])
-
 (def ServiceAccount
   [:map [:name [:ref "ServiceAccountName"]] [:project-id [:ref "ProjectId"]]
    [:unique-id [:ref "UniqueId"]] [:email [:ref "ServiceAccountEmail"]]
@@ -53,11 +49,12 @@
    [:disabled boolean?]])
 
 (def CreateServiceAccountRequest
-  [:map ["account-id" [:ref "ProjectId"]]
-   ["service-account" [:ref "ServiceAccountInput"]]])
+  [:map ["account-id" [:ref "ProjectId"]] ["display-name" [:string {:max 100}]]
+   ["description" [:string {:max 256}]]])
 
 (def PatchServiceAccountRequest
-  [:map ["service-account" [:ref "ServiceAccountInput"]]])
+  [:map ["display-name" [:string {:max 100}]]
+   ["description" [:string {:max 256}]]])
 
 (def registry
   {"CreateServiceAccountRequest" CreateServiceAccountRequest
@@ -66,7 +63,6 @@
    "ProjectId" ProjectId
    "ServiceAccount" ServiceAccount
    "ServiceAccountEmail" ServiceAccountEmail
-   "ServiceAccountInput" ServiceAccountInput
    "ServiceAccountName" ServiceAccountName
    "ServiceAccountNameByEmail" ServiceAccountNameByEmail
    "ServiceAccountNameByUniqueId" ServiceAccountNameByUniqueId

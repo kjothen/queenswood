@@ -20,9 +20,8 @@
 
 (def service-account-create-body
   {"account-id" "sa-test"
-   "service-account" {"display-name" "sa-test-zzz-d-shared"
-                      "description"
-                      "Test service account for all dev projects"}})
+   "display-name" "sa-test-zzz-d-shared"
+   "description" "Test service account for all dev projects"})
 
 (defn create-service-account
   []
