@@ -58,10 +58,11 @@
                                              :set {:deleted_at [:timezone "utc"
                                                                 [:now]]}
                                              :where [:and (name-where name)
-                                                     [:= :deleted_at nil]]})
-                                {:return-keys false})]
+                                                     [:= :deleted_at nil]]
+                                             :returning select-cols})
+                                {:builder-fn db/as-unqualified-kebab-maps})]
     (cond (error/anomaly? result) result
-          (pos? (db/update-count result)) {:name name}
+          result (pad-unique-id result)
           :else (error/fail :iam/service-account
                             {:message "Service account not found"
                              :name name}))))
@@ -73,10 +74,11 @@
                 (sql/format
                  {:update :service_account
                   :set {:deleted_at nil :updated_at [:timezone "utc" [:now]]}
-                  :where [:and (name-where name) [:!= :deleted_at nil]]})
-                {:return-keys false})]
+                  :where [:and (name-where name) [:!= :deleted_at nil]]
+                  :returning select-cols})
+                {:builder-fn db/as-unqualified-kebab-maps})]
     (cond (error/anomaly? result) result
-          (pos? (db/update-count result)) {:name name}
+          result (pad-unique-id result)
           :else (error/fail :iam/service-account
                             {:message "Service account not found"
                              :name name}))))
@@ -88,10 +90,11 @@
                 (sql/format
                  {:update :service_account
                   :set {:disabled true :updated_at [:timezone "utc" [:now]]}
-                  :where [:and (name-where name) [:= :deleted_at nil]]})
-                {:return-keys false})]
+                  :where [:and (name-where name) [:= :deleted_at nil]]
+                  :returning select-cols})
+                {:builder-fn db/as-unqualified-kebab-maps})]
     (cond (error/anomaly? result) result
-          (pos? (db/update-count result)) {:name name}
+          result (pad-unique-id result)
           :else (error/fail :iam/service-account
                             {:message "Service account not found"
                              :name name}))))
@@ -103,10 +106,11 @@
                 (sql/format
                  {:update :service_account
                   :set {:disabled false :updated_at [:timezone "utc" [:now]]}
-                  :where [:and (name-where name) [:= :deleted_at nil]]})
-                {:return-keys false})]
+                  :where [:and (name-where name) [:= :deleted_at nil]]
+                  :returning select-cols})
+                {:builder-fn db/as-unqualified-kebab-maps})]
     (cond (error/anomaly? result) result
-          (pos? (db/update-count result)) {:name name}
+          result (pad-unique-id result)
           :else (error/fail :iam/service-account
                             {:message "Service account not found"
                              :name name}))))
@@ -146,10 +150,11 @@
                                                    :updated_at [:timezone "utc"
                                                                 [:now]]}
                                              :where [:and (name-where name)
-                                                     [:= :deleted_at nil]]})
-                                {:return-keys false})]
+                                                     [:= :deleted_at nil]]
+                                             :returning select-cols})
+                                {:builder-fn db/as-unqualified-kebab-maps})]
     (cond (error/anomaly? result) result
-          (pos? (db/update-count result)) {:name name}
+          result (pad-unique-id result)
           :else (error/fail :iam/service-account
                             {:message "Service account not found"
                              :name name}))))

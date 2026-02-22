@@ -81,30 +81,25 @@
            (is (= service-account (first (get service-accounts "accounts"))))
            ; disable service account
            disable-res (disable-service-account (get service-account "name")) _
-           (is (= 204 (:status disable-res))) _
-           (is (or (nil? (:body disable-res)) (empty? (:body disable-res))))
-           disabled-get-res (get-service-account (get service-account "name")) _
-           (is (= 200 (:status disabled-get-res))) _
-           (is (= true (get (http/res->body disabled-get-res) "disabled")))
+           (is (= 200 (:status disable-res))) _
+           (is (= true (get (http/res->body disable-res) "disabled")))
            ; enable service account
            enable-res (enable-service-account (get service-account "name")) _
-           (is (= 204 (:status enable-res))) _
-           (is (or (nil? (:body enable-res)) (empty? (:body enable-res))))
-           enabled-get-res (get-service-account (get service-account "name")) _
-           (is (= 200 (:status enabled-get-res))) _
-           (is (= false (get (http/res->body enabled-get-res) "disabled")))
+           (is (= 200 (:status enable-res))) _
+           (is (= false (get (http/res->body enable-res) "disabled")))
            ; delete service account
            delete-res (delete-service-account (get service-account "name")) _
-           (is (= 204 (:status delete-res))) _
-           (is (or (nil? (:body delete-res)) (empty? (:body delete-res))))
-           after-delete-list (list-service-accounts) _
-           (is (= 200 (:status after-delete-list))) after-delete-accounts
-           (http/res->body after-delete-list) _
+           (is (= 200 (:status delete-res))) _
+           (is (= (get service-account "name")
+                  (get (http/res->body delete-res) "name"))) after-delete-list
+           (list-service-accounts) _ (is (= 200 (:status after-delete-list)))
+           after-delete-accounts (http/res->body after-delete-list) _
            (is (zero? (count (get after-delete-accounts "accounts"))))
            ; undelete service account
            undelete-res (undelete-service-account (get service-account "name"))
-           _ (is (= 204 (:status undelete-res))) _
-           (is (or (nil? (:body undelete-res)) (empty? (:body undelete-res))))
+           _ (is (= 200 (:status undelete-res))) _
+           (is (= (get service-account "name")
+                  (get (http/res->body undelete-res) "name")))
            after-undelete-list (list-service-accounts) _
            (is (= 200 (:status after-undelete-list))) after-undelete-accounts
            (http/res->body after-undelete-list) _

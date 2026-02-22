@@ -129,7 +129,7 @@
                                                       "Test Service Account"
                                                       "") result
                           (SUT/delete-service-account db sa-name) _
-                          (is (= {:name sa-name} result)) _
+                          (is (= sa-name (:name result))) _
                           (is (nil? (SUT/get-service-account db sa-name)))])))))
 
 (deftest undelete-service-account-test

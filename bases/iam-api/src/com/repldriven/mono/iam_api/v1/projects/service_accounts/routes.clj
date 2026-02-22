@@ -31,25 +31,25 @@
              :handler handlers/patch}
      :delete {:summary "Deletes a ServiceAccount"
               :openapi {:operationId "DeleteServiceAccount"}
-              :responses {204 {}}
+              :responses {200 {:body [:ref "ServiceAccount"]}}
               :handler handlers/delete}}]
    ["/serviceAccounts/{email-or-unique-id}:undelete"
     {:parameters {:path {:email-or-unique-id [:ref "EmailAddressOrUniqueId"]}}
      :post {:summary "Undeletes a ServiceAccount that was deleted"
             :openapi {:operationId "UndeleteServiceAccount"}
-            :responses {204 {}}
+            :responses {200 {:body [:ref "ServiceAccount"]}}
             :handler handlers/undelete}}]
    ["/serviceAccounts/{email-or-unique-id}:enable"
     {:parameters {:path {:email-or-unique-id [:ref "EmailAddressOrUniqueId"]}}
      :post {:summary "Enables a ServiceAccount that was disabled"
             :openapi {:operationId "EnableServiceAccount"}
-            :responses {204 {}}
+            :responses {200 {:body [:ref "ServiceAccount"]}}
             :handler handlers/enable}}]
    ["/serviceAccounts/{email-or-unique-id}:disable"
     {:parameters {:path {:email-or-unique-id [:ref "EmailAddressOrUniqueId"]}}
      :post {:summary "Disables a ServiceAccount immediately"
             :openapi {:operationId "DisableServiceAccount"}
-            :responses {204 {}}
+            :responses {200 {:body [:ref "ServiceAccount"]}}
             :handler handlers/disable}}]])
 
 (comment

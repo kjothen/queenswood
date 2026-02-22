@@ -61,7 +61,7 @@
     (log/info "patch" project-id email-or-unique-id body)
     (if (not-found? result)
       {:status 404 :body unknown-service-account-error}
-      {:status 204 :body {}})))
+      {:status 200 :body result})))
 
 (defn delete
   [request]
@@ -74,7 +74,7 @@
     (log/info "delete" project-id email-or-unique-id)
     (if (not-found? result)
       {:status 404 :body unknown-service-account-error}
-      {:status 204 :body {}})))
+      {:status 200 :body result})))
 
 (defn undelete
   [request]
@@ -87,7 +87,7 @@
     (log/info "undelete" project-id email-or-unique-id)
     (if (not-found? result)
       {:status 404 :body unknown-service-account-error}
-      {:status 204 :body {}})))
+      {:status 200 :body result})))
 
 (defn list
   [request]
@@ -109,7 +109,7 @@
     (log/info "enable" project-id email-or-unique-id)
     (if (not-found? result)
       {:status 404 :body unknown-service-account-error}
-      {:status 204 :body {}})))
+      {:status 200 :body result})))
 
 (defn disable
   [request]
@@ -122,4 +122,4 @@
     (log/info "disable" project-id email-or-unique-id)
     (if (not-found? result)
       {:status 404 :body unknown-service-account-error}
-      {:status 204 :body {}})))
+      {:status 200 :body result})))
