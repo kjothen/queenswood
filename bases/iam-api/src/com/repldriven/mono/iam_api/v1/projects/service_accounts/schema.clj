@@ -53,11 +53,19 @@
 
 (def CreateServiceAccountRequest
   [:map ["account-id" [:ref "ServiceAccountId"]]
-   ["display-name" [:string {:max 100}]] ["description" [:string {:max 256}]]])
+   ["display-name"
+    [:string {:max 100 :json-schema/example "My Service Account"}]]
+   ["description"
+    [:string
+     {:max 256 :json-schema/example "A service account for automated tasks"}]]])
 
 (def PatchServiceAccountRequest
-  [:map ["display-name" [:string {:max 100}]]
-   ["description" [:string {:max 256}]]])
+  [:map
+   ["display-name"
+    [:string {:max 100 :json-schema/example "My Service Account"}]]
+   ["description"
+    [:string
+     {:max 256 :json-schema/example "A service account for automated tasks"}]]])
 
 (def registry
   {"CreateServiceAccountRequest" CreateServiceAccountRequest
