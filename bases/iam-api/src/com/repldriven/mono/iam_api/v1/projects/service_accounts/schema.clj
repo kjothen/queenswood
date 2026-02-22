@@ -13,9 +13,9 @@
     letter. No trailing hyphens."
     :json-schema/example "my-project"} (str "^" project-id-pat "$")])
 
-(def AccountId
+(def Name
   [:re
-   {:title "AccountId"
+   {:title "Name"
     :description
     "6 to 30 lowercase letters, digits, or hyphens. Must start with a
     letter. No trailing hyphens."
@@ -34,22 +34,22 @@
     :json-schema/example "my-service-account@my-project.iam.repldriven.com"}
    (str "^" email-pat "$")])
 
-(def Name
+(def Id
   [:re
-   {:title "Name"
+   {:title "Id"
     :description "`projects/{PROJECT_ID}/serviceAccounts/{EMAIL_ADDRESS}`"
     :json-schema/example
     "projects/my-project/serviceAccounts/my-service-account@my-project.iam.repldriven.com"}
    (str "^projects/" project-id-pat "/serviceAccounts/" email-pat "$")])
 
 (def ServiceAccount
-  [:map [:name [:ref "Name"]] [:project-id [:ref "ProjectId"]]
+  [:map [:name [:ref "Id"]] [:project-id [:ref "ProjectId"]]
    [:unique-id [:ref "UniqueId"]] [:email [:ref "Email"]]
    [:display-name [:string {:max 100}]] [:description [:string {:max 256}]]
    [:disabled boolean?]])
 
 (def CreateServiceAccountRequest
-  [:map ["account-id" [:ref "AccountId"]]
+  [:map ["account-id" [:ref "Name"]]
    ["display-name"
     [:string {:max 100 :json-schema/example "My Service Account"}]]
    ["description"
@@ -68,8 +68,8 @@
   (array-map "CreateServiceAccountRequest" CreateServiceAccountRequest
              "PatchServiceAccountRequest" PatchServiceAccountRequest
              "ServiceAccount" ServiceAccount
-             "AccountId" AccountId
              "Email" Email
+             "Id" Id
              "Name" Name
              "ProjectId" ProjectId
              "UniqueId" UniqueId))
