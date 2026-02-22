@@ -19,7 +19,7 @@
 (def project-id "prj-test")
 
 (def service-account-create-body
-  {"account-id" "sa-test"
+  {"name" "sa-test"
    "display-name" "sa-test-zzz-d-shared"
    "description" "Test service account for all dev projects"})
 

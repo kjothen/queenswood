@@ -25,10 +25,10 @@
   (let [{:keys [datasource parameters]} request
         {:keys [body path]} parameters
         {:keys [project-id]} path
-        {:strs [account-id display-name description]} body
+        {:strs [name display-name description]} body
         result (iam/create-service-account datasource
                                            (project-name project-id)
-                                           account-id
+                                           name
                                            display-name
                                            description)]
     (log/info "create" project-id body)

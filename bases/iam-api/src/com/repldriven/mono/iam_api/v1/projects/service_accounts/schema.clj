@@ -49,7 +49,7 @@
    [:disabled boolean?]])
 
 (def CreateServiceAccountRequest
-  [:map ["account-id" [:ref "Name"]]
+  [:map ["name" [:ref "Name"]]
    ["display-name"
     [:string {:max 100 :json-schema/example "My Service Account"}]]
    ["description"
