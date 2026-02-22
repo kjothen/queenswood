@@ -6,9 +6,6 @@
 
     [clojure.string :as str]))
 
-(def ^:private kebab {:builder-fn db/as-unqualified-kebab-maps})
-(def ^:private no-keys {:return-keys false})
-
 (def ^:private select-cols
   "LPAD(unique_id::text, 21, '0') AS unique_id,
    name, project_id, email, display_name, description, disabled")
@@ -31,12 +28,12 @@
       db
       [(str
         "INSERT INTO service_account
-                  (name, project_id, email, display_name, description, disabled)
-                VALUES (?, ?, ?, ?, ?, FALSE)
-                RETURNING "
+         (name, project_id, email, display_name, description, disabled)
+         VALUES (?, ?, ?, ?, ?, FALSE)
+         RETURNING "
         select-cols) (name project-name email) project-id email display-name
        description]
-      kebab)]
+      {:builder-fn db/as-unqualified-kebab-maps})]
     result))
 
 (defn delete
@@ -47,9 +44,9 @@
       db
       ["UPDATE service_account
            SET deleted_at = timezone('utc', now())
-           WHERE name = ? AND deleted_at IS NULL"
+         WHERE name = ? AND deleted_at IS NULL"
        name]
-      no-keys)]
+      {:return-keys false})]
     (cond (error/anomaly? result) result
           (pos? (db/update-count result)) {:name name}
           :else (error/fail :iam/service-account
@@ -64,9 +61,9 @@
       db
       ["UPDATE service_account
            SET deleted_at = NULL, updated_at = timezone('utc', now())
-           WHERE name = ? AND deleted_at IS NOT NULL"
+         WHERE name = ? AND deleted_at IS NOT NULL"
        name]
-      no-keys)]
+      {:return-keys false})]
     (cond (error/anomaly? result) result
           (pos? (db/update-count result)) {:name name}
           :else (error/fail :iam/service-account
@@ -81,9 +78,9 @@
       db
       ["UPDATE service_account
            SET disabled = TRUE, updated_at = timezone('utc', now())
-           WHERE name = ? AND deleted_at IS NULL"
+         WHERE name = ? AND deleted_at IS NULL"
        name]
-      no-keys)]
+      {:return-keys false})]
     (cond (error/anomaly? result) result
           (pos? (db/update-count result)) {:name name}
           :else (error/fail :iam/service-account
@@ -98,9 +95,9 @@
       db
       ["UPDATE service_account
            SET disabled = FALSE, updated_at = timezone('utc', now())
-           WHERE name = ? AND deleted_at IS NULL"
+         WHERE name = ? AND deleted_at IS NULL"
        name]
-      no-keys)]
+      {:return-keys false})]
     (cond (error/anomaly? result) result
           (pos? (db/update-count result)) {:name name}
           :else (error/fail :iam/service-account
@@ -117,10 +114,10 @@
         "SELECT "
         select-cols
         "
-                FROM service_account
-                WHERE name LIKE ? AND deleted_at IS NULL")
+               FROM service_account
+              WHERE name LIKE ? AND deleted_at IS NULL")
        (str project-name "/serviceAccounts/%")]
-      kebab)]
+      {:builder-fn db/as-unqualified-kebab-maps})]
     result))
 
 (defn get
@@ -132,11 +129,11 @@
       [(str
         "SELECT "
         select-cols
-        "
-                FROM service_account
-                WHERE name = ? AND deleted_at IS NULL")
+        "  
+               FROM service_account
+              WHERE name = ? AND deleted_at IS NULL")
        name]
-      kebab)]
+      {:builder-fn db/as-unqualified-kebab-maps})]
     result))
 
 (defn patch
@@ -148,11 +145,11 @@
       ["UPDATE service_account
            SET display_name = ?, description = ?,
                updated_at = timezone('utc', now())
-           WHERE name = ? AND deleted_at IS NULL"
+         WHERE name = ? AND deleted_at IS NULL"
        display-name
        description
        name]
-      no-keys)]
+      {:return-keys false})]
     (cond (error/anomaly? result) result
           (pos? (db/update-count result)) {:name name}
           :else (error/fail :iam/service-account
