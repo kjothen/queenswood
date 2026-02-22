@@ -15,7 +15,7 @@
            :handler handlers/list}
      :post {:summary "Creates a ServiceAccount"
             :openapi {:operationId "CreateServiceAccount"}
-            :parameters {:body [:ref "ServiceAccountCreateBody"]}
+            :parameters {:body [:ref "CreateServiceAccountRequest"]}
             :responses {201 {:body [:ref "ServiceAccount"]}}
             :handler handlers/create}}]
    ["/serviceAccounts/{email-or-unique-id}"
@@ -26,7 +26,7 @@
            :handler handlers/get}
      :patch {:summary "Patches a ServiceAccount"
              :openapi {:operationId "PatchServiceAccount"}
-             :parameters {:body [:ref "ServiceAccountPatchBody"]}
+             :parameters {:body [:ref "PatchServiceAccountRequest"]}
              :responses {200 {:body [:ref "ServiceAccount"]}}
              :handler handlers/patch}
      :delete {:summary "Deletes a ServiceAccount"

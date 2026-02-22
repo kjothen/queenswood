@@ -52,22 +52,22 @@
    [:display-name [:string {:max 100}]] [:description [:string {:max 256}]]
    [:disabled boolean?]])
 
-(def ServiceAccountCreateBody
+(def CreateServiceAccountRequest
   [:map ["account-id" [:ref "ProjectId"]]
    ["service-account" [:ref "ServiceAccountInput"]]])
 
-(def ServiceAccountPatchBody
+(def PatchServiceAccountRequest
   [:map ["service-account" [:ref "ServiceAccountInput"]]])
 
 (def registry
-  {"EmailAddressOrUniqueId" EmailAddressOrUniqueId
+  {"CreateServiceAccountRequest" CreateServiceAccountRequest
+   "EmailAddressOrUniqueId" EmailAddressOrUniqueId
+   "PatchServiceAccountRequest" PatchServiceAccountRequest
    "ProjectId" ProjectId
    "ServiceAccount" ServiceAccount
-   "ServiceAccountCreateBody" ServiceAccountCreateBody
    "ServiceAccountEmail" ServiceAccountEmail
    "ServiceAccountInput" ServiceAccountInput
    "ServiceAccountName" ServiceAccountName
    "ServiceAccountNameByEmail" ServiceAccountNameByEmail
    "ServiceAccountNameByUniqueId" ServiceAccountNameByUniqueId
-   "ServiceAccountPatchBody" ServiceAccountPatchBody
    "UniqueId" UniqueId})
