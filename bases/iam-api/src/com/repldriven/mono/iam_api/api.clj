@@ -24,7 +24,8 @@
                             :version "1.0.0"}}
            :handler (server/standard-openapi-handler)}}]
    ["/v1" {:interceptors (:interceptors ctx)}
-    ["/projects/{project-id}" {:parameters {:path {:project-id string?}}}
+    ["/projects/{project-id}"
+     {:parameters {:path {:project-id [:ref "ProjectId"]}}}
      (vec (concat (service-accounts/routes)))]]])
 
 (defn app
