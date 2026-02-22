@@ -1,6 +1,5 @@
 (ns com.repldriven.mono.iam-api.v1.projects.service-accounts.routes
   (:require
-    [com.repldriven.mono.iam-api.v1.projects.service-accounts.schema :as schema]
     [com.repldriven.mono.iam-api.v1.projects.service-accounts.handlers :as
      handlers]))
 
@@ -11,37 +10,36 @@
            "Lists every ServiceAccount that belongs to a specific project"
            :responses {200 {:body [:map
                                    [:accounts
-                                    [:vector
-                                     #'schema/ServiceAccount]]]}}
+                                    [:vector [:ref "ServiceAccount"]]]]}}
            :handler handlers/list}
      :post {:summary "Creates a ServiceAccount"
-            :parameters {:body #'schema/ServiceAccountCreateBody}
-            :responses {201 {:body #'schema/ServiceAccount}}
+            :parameters {:body [:ref "ServiceAccountCreateBody"]}
+            :responses {201 {:body [:ref "ServiceAccount"]}}
             :handler handlers/create}}]
    ["/serviceAccounts/{email-or-unique-id}"
-    {:parameters {:path {:email-or-unique-id #'schema/EmailAddressOrUniqueId}}
+    {:parameters {:path {:email-or-unique-id [:ref "EmailAddressOrUniqueId"]}}
      :get {:summary "Gets a ServiceAccount"
-           :responses {200 {:body #'schema/ServiceAccount}}
+           :responses {200 {:body [:ref "ServiceAccount"]}}
            :handler handlers/get}
      :patch {:summary "Patches a ServiceAccount"
-             :parameters {:body #'schema/ServiceAccountPatchBody}
-             :responses {200 {:body #'schema/ServiceAccount}}
+             :parameters {:body [:ref "ServiceAccountPatchBody"]}
+             :responses {200 {:body [:ref "ServiceAccount"]}}
              :handler handlers/patch}
      :delete {:summary "Deletes a ServiceAccount"
               :responses {204 {}}
               :handler handlers/delete}}]
    ["/serviceAccounts/{email-or-unique-id}:undelete"
-    {:parameters {:path {:email-or-unique-id #'schema/EmailAddressOrUniqueId}}
+    {:parameters {:path {:email-or-unique-id [:ref "EmailAddressOrUniqueId"]}}
      :post {:summary "Undeletes a ServiceAccount that was deleted"
             :responses {204 {}}
             :handler handlers/undelete}}]
    ["/serviceAccounts/{email-or-unique-id}:enable"
-    {:parameters {:path {:email-or-unique-id string?}}
+    {:parameters {:path {:email-or-unique-id [:ref "EmailAddressOrUniqueId"]}}
      :post {:summary "Enables a ServiceAccount that was disabled"
             :responses {204 {}}
             :handler handlers/enable}}]
    ["/serviceAccounts/{email-or-unique-id}:disable"
-    {:parameters {:path {:email-or-unique-id string?}}
+    {:parameters {:path {:email-or-unique-id [:ref "EmailAddressOrUniqueId"]}}
      :post {:summary "Disables a ServiceAccount immediately"
             :responses {204 {}}
             :handler handlers/disable}}]])

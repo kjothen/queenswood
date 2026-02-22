@@ -36,21 +36,38 @@
    (str "^projects/" project-id-pat "/serviceAccounts/" unique-id-pat "$")])
 
 (def ServiceAccountName
-  [:or #'ServiceAccountNameByEmail #'ServiceAccountNameByUniqueId])
+  [:or [:ref "ServiceAccountNameByEmail"]
+   [:ref "ServiceAccountNameByUniqueId"]])
 
-(def EmailAddressOrUniqueId [:or #'ServiceAccountEmail #'UniqueId])
-
-(def ServiceAccount
-  [:map [:name #'ServiceAccountName] [:project-id #'ProjectId]
-   [:unique-id #'UniqueId] [:email #'ServiceAccountEmail]
-   [:display-name [:string {:max 100}]] [:description [:string {:max 256}]]
-   [:disabled boolean?]])
+(def EmailAddressOrUniqueId
+  [:or [:ref "ServiceAccountEmail"] [:ref "UniqueId"]])
 
 (def ServiceAccountInput
   [:map ["display-name" [:string {:max 100}]]
    ["description" [:string {:max 256}]]])
 
-(def ServiceAccountCreateBody
-  [:map ["account-id" #'ProjectId] ["service-account" #'ServiceAccountInput]])
+(def ServiceAccount
+  [:map [:name [:ref "ServiceAccountName"]] [:project-id [:ref "ProjectId"]]
+   [:unique-id [:ref "UniqueId"]] [:email [:ref "ServiceAccountEmail"]]
+   [:display-name [:string {:max 100}]] [:description [:string {:max 256}]]
+   [:disabled boolean?]])
 
-(def ServiceAccountPatchBody [:map ["service-account" #'ServiceAccountInput]])
+(def ServiceAccountCreateBody
+  [:map ["account-id" [:ref "ProjectId"]]
+   ["service-account" [:ref "ServiceAccountInput"]]])
+
+(def ServiceAccountPatchBody
+  [:map ["service-account" [:ref "ServiceAccountInput"]]])
+
+(def registry
+  {"EmailAddressOrUniqueId" EmailAddressOrUniqueId
+   "ProjectId" ProjectId
+   "ServiceAccount" ServiceAccount
+   "ServiceAccountCreateBody" ServiceAccountCreateBody
+   "ServiceAccountEmail" ServiceAccountEmail
+   "ServiceAccountInput" ServiceAccountInput
+   "ServiceAccountName" ServiceAccountName
+   "ServiceAccountNameByEmail" ServiceAccountNameByEmail
+   "ServiceAccountNameByUniqueId" ServiceAccountNameByUniqueId
+   "ServiceAccountPatchBody" ServiceAccountPatchBody
+   "UniqueId" UniqueId})

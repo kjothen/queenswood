@@ -2,11 +2,16 @@
   (:require
     [com.repldriven.mono.iam-api.v1.projects.service-accounts.routes :as
      service-accounts]
+    [com.repldriven.mono.iam-api.v1.projects.service-accounts.schema :as schema]
 
     [com.repldriven.mono.server.interface :as server]
 
+    [reitit.coercion.malli :as malli-coercion]
     [reitit.http :as http]
     [reitit.ring :as ring]))
+
+(def ^:private coercion
+  (malli-coercion/create {:options {:registry schema/registry}}))
 
 (defn routes
   [ctx]
@@ -22,7 +27,10 @@
 
 (defn app
   [ctx]
-  (http/ring-handler (http/router (routes ctx) server/standard-router-data)
+  (http/ring-handler (http/router (routes ctx)
+                                  (assoc-in server/standard-router-data
+                                   [:data :coercion]
+                                   coercion))
                      (ring/routes (server/standard-openapi-ui-handler)
                                   (ring/create-default-handler))
                      server/standard-executor))
