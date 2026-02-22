@@ -8,39 +8,47 @@
   [["/serviceAccounts"
     {:get {:summary
            "Lists every ServiceAccount that belongs to a specific project"
+           :openapi {:operationId "ListServiceAccounts"}
            :responses {200 {:body [:map
                                    [:accounts
                                     [:vector [:ref "ServiceAccount"]]]]}}
            :handler handlers/list}
      :post {:summary "Creates a ServiceAccount"
+            :openapi {:operationId "CreateServiceAccount"}
             :parameters {:body [:ref "ServiceAccountCreateBody"]}
             :responses {201 {:body [:ref "ServiceAccount"]}}
             :handler handlers/create}}]
    ["/serviceAccounts/{email-or-unique-id}"
     {:parameters {:path {:email-or-unique-id [:ref "EmailAddressOrUniqueId"]}}
      :get {:summary "Gets a ServiceAccount"
+           :openapi {:operationId "GetServiceAccount"}
            :responses {200 {:body [:ref "ServiceAccount"]}}
            :handler handlers/get}
      :patch {:summary "Patches a ServiceAccount"
+             :openapi {:operationId "PatchServiceAccount"}
              :parameters {:body [:ref "ServiceAccountPatchBody"]}
              :responses {200 {:body [:ref "ServiceAccount"]}}
              :handler handlers/patch}
      :delete {:summary "Deletes a ServiceAccount"
+              :openapi {:operationId "DeleteServiceAccount"}
               :responses {204 {}}
               :handler handlers/delete}}]
    ["/serviceAccounts/{email-or-unique-id}:undelete"
     {:parameters {:path {:email-or-unique-id [:ref "EmailAddressOrUniqueId"]}}
      :post {:summary "Undeletes a ServiceAccount that was deleted"
+            :openapi {:operationId "UndeleteServiceAccount"}
             :responses {204 {}}
             :handler handlers/undelete}}]
    ["/serviceAccounts/{email-or-unique-id}:enable"
     {:parameters {:path {:email-or-unique-id [:ref "EmailAddressOrUniqueId"]}}
      :post {:summary "Enables a ServiceAccount that was disabled"
+            :openapi {:operationId "EnableServiceAccount"}
             :responses {204 {}}
             :handler handlers/enable}}]
    ["/serviceAccounts/{email-or-unique-id}:disable"
     {:parameters {:path {:email-or-unique-id [:ref "EmailAddressOrUniqueId"]}}
      :post {:summary "Disables a ServiceAccount immediately"
+            :openapi {:operationId "DisableServiceAccount"}
             :responses {204 {}}
             :handler handlers/disable}}]])
 
