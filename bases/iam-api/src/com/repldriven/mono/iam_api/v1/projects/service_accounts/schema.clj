@@ -25,7 +25,7 @@
   [:re
    {:title "UniqueId"
     :description "21-digit numeric identifier"
-    :json-schema/example "103798426813399185444"} (str "^" unique-id-pat "$")])
+    :json-schema/example "000000000000000000001"} (str "^" unique-id-pat "$")])
 
 (def Email
   [:re
