@@ -19,7 +19,8 @@
             :responses {201 {:body [:ref "ServiceAccount"]}}
             :handler handlers/create}}]
    ["/serviceAccounts/{email-or-unique-id}"
-    {:parameters {:path {:email-or-unique-id [:ref "ServiceAccountIdentifier"]}}
+    {:parameters {:path {:email-or-unique-id [:or [:ref "Email"]
+                                              [:ref "UniqueId"]]}}
      :get {:summary "Gets a ServiceAccount"
            :openapi {:operationId "GetServiceAccount"}
            :responses {200 {:body [:ref "ServiceAccount"]}}
@@ -34,19 +35,22 @@
               :responses {200 {:body [:ref "ServiceAccount"]}}
               :handler handlers/delete}}]
    ["/serviceAccounts/{email-or-unique-id}:undelete"
-    {:parameters {:path {:email-or-unique-id [:ref "ServiceAccountIdentifier"]}}
+    {:parameters {:path {:email-or-unique-id [:or [:ref "Email"]
+                                              [:ref "UniqueId"]]}}
      :post {:summary "Undeletes a ServiceAccount that was deleted"
             :openapi {:operationId "UndeleteServiceAccount"}
             :responses {200 {:body [:ref "ServiceAccount"]}}
             :handler handlers/undelete}}]
    ["/serviceAccounts/{email-or-unique-id}:enable"
-    {:parameters {:path {:email-or-unique-id [:ref "ServiceAccountIdentifier"]}}
+    {:parameters {:path {:email-or-unique-id [:or [:ref "Email"]
+                                              [:ref "UniqueId"]]}}
      :post {:summary "Enables a ServiceAccount that was disabled"
             :openapi {:operationId "EnableServiceAccount"}
             :responses {200 {:body [:ref "ServiceAccount"]}}
             :handler handlers/enable}}]
    ["/serviceAccounts/{email-or-unique-id}:disable"
-    {:parameters {:path {:email-or-unique-id [:ref "ServiceAccountIdentifier"]}}
+    {:parameters {:path {:email-or-unique-id [:or [:ref "Email"]
+                                              [:ref "UniqueId"]]}}
      :post {:summary "Disables a ServiceAccount immediately"
             :openapi {:operationId "DisableServiceAccount"}
             :responses {200 {:body [:ref "ServiceAccount"]}}
