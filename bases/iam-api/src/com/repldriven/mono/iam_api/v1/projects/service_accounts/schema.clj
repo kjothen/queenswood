@@ -34,22 +34,22 @@
     :json-schema/example "my-service-account@my-project.iam.repldriven.com"}
    (str "^" email-pat "$")])
 
-(def ServiceAccountNameByEmail
+(def ServiceAccountName
   [:re
-   {:title "ServiceAccountNameByEmail"
+   {:title "ServiceAccountName"
     :description "`projects/{PROJECT_ID}/serviceAccounts/{EMAIL_ADDRESS}`"
     :json-schema/example
     "projects/my-project/serviceAccounts/my-service-account@my-project.iam.repldriven.com"}
    (str "^projects/" project-id-pat "/serviceAccounts/" email-pat "$")])
 
-(def EmailAddressOrUniqueId
+(def ServiceAccountIdentifier
   [:or [:ref "ServiceAccountEmail"] [:ref "UniqueId"]])
 
 (def ServiceAccount
-  [:map [:name [:ref "ServiceAccountNameByEmail"]]
-   [:project-id [:ref "ProjectId"]] [:unique-id [:ref "UniqueId"]]
-   [:email [:ref "ServiceAccountEmail"]] [:display-name [:string {:max 100}]]
-   [:description [:string {:max 256}]] [:disabled boolean?]])
+  [:map [:name [:ref "ServiceAccountName"]] [:project-id [:ref "ProjectId"]]
+   [:unique-id [:ref "UniqueId"]] [:email [:ref "ServiceAccountEmail"]]
+   [:display-name [:string {:max 100}]] [:description [:string {:max 256}]]
+   [:disabled boolean?]])
 
 (def CreateServiceAccountRequest
   [:map ["account-id" [:ref "ServiceAccountId"]]
@@ -73,7 +73,7 @@
              "ServiceAccount" ServiceAccount
              "ServiceAccountEmail" ServiceAccountEmail
              "ServiceAccountId" ServiceAccountId
-             "ServiceAccountNameByEmail" ServiceAccountNameByEmail
-             "EmailAddressOrUniqueId" EmailAddressOrUniqueId
+             "ServiceAccountName" ServiceAccountName
+             "ServiceAccountIdentifier" ServiceAccountIdentifier
              "ProjectId" ProjectId
              "UniqueId" UniqueId))
