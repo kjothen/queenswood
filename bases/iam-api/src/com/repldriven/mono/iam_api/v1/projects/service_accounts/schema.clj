@@ -13,6 +13,14 @@
     letter. No trailing hyphens."}
    (str "^" project-id-pat "$")])
 
+(def ServiceAccountId
+  [:re
+   {:title "ServiceAccountId"
+    :description
+    "6 to 30 lowercase letters, digits, or hyphens. Must start with a
+    letter. No trailing hyphens."}
+   (str "^" project-id-pat "$")])
+
 (def UniqueId
   [:re {:title "UniqueId" :description "21-digit numeric identifier"}
    (str "^" unique-id-pat "$")])
@@ -29,28 +37,18 @@
     :description "`projects/{PROJECT_ID}/serviceAccounts/{EMAIL_ADDRESS}`"}
    (str "^projects/" project-id-pat "/serviceAccounts/" email-pat "$")])
 
-(def ServiceAccountNameByUniqueId
-  [:re
-   {:title "ServiceAccountNameByUniqueId"
-    :description "`projects/{PROJECT_ID}/serviceAccounts/{UNIQUE_ID}`"}
-   (str "^projects/" project-id-pat "/serviceAccounts/" unique-id-pat "$")])
-
-(def ServiceAccountName
-  [:or [:ref "ServiceAccountNameByEmail"]
-   [:ref "ServiceAccountNameByUniqueId"]])
-
 (def EmailAddressOrUniqueId
   [:or [:ref "ServiceAccountEmail"] [:ref "UniqueId"]])
 
 (def ServiceAccount
-  [:map [:name [:ref "ServiceAccountName"]] [:project-id [:ref "ProjectId"]]
-   [:unique-id [:ref "UniqueId"]] [:email [:ref "ServiceAccountEmail"]]
-   [:display-name [:string {:max 100}]] [:description [:string {:max 256}]]
-   [:disabled boolean?]])
+  [:map [:name [:ref "ServiceAccountNameByEmail"]]
+   [:project-id [:ref "ProjectId"]] [:unique-id [:ref "UniqueId"]]
+   [:email [:ref "ServiceAccountEmail"]] [:display-name [:string {:max 100}]]
+   [:description [:string {:max 256}]] [:disabled boolean?]])
 
 (def CreateServiceAccountRequest
-  [:map ["account-id" [:ref "ProjectId"]] ["display-name" [:string {:max 100}]]
-   ["description" [:string {:max 256}]]])
+  [:map ["account-id" [:ref "ServiceAccountId"]]
+   ["display-name" [:string {:max 100}]] ["description" [:string {:max 256}]]])
 
 (def PatchServiceAccountRequest
   [:map ["display-name" [:string {:max 100}]]
@@ -63,7 +61,6 @@
    "ProjectId" ProjectId
    "ServiceAccount" ServiceAccount
    "ServiceAccountEmail" ServiceAccountEmail
-   "ServiceAccountName" ServiceAccountName
+   "ServiceAccountId" ServiceAccountId
    "ServiceAccountNameByEmail" ServiceAccountNameByEmail
-   "ServiceAccountNameByUniqueId" ServiceAccountNameByUniqueId
    "UniqueId" UniqueId})
