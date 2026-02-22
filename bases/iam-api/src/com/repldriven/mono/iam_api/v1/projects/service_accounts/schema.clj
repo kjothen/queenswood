@@ -30,14 +30,14 @@
 (def Email
   [:re
    {:title "Email"
-    :description "RFC 5322 email address, max 320 characters"
+    :description "{name}@{project-id}.iam.repldriven.com"
     :json-schema/example "my-service-account@my-project.iam.repldriven.com"}
    (str "^" email-pat "$")])
 
 (def Id
   [:re
    {:title "Id"
-    :description "`projects/{PROJECT_ID}/serviceAccounts/{EMAIL_ADDRESS}`"
+    :description "projects/{project-id}/serviceAccounts/{email}"
     :json-schema/example
     "projects/my-project/serviceAccounts/my-service-account@my-project.iam.repldriven.com"}
    (str "^projects/" project-id-pat "/serviceAccounts/" email-pat "$")])
