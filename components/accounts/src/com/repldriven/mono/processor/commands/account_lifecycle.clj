@@ -1,5 +1,4 @@
 (ns com.repldriven.mono.processor.commands.account-lifecycle
-  (:refer-clojure :exclude [get])
   (:require
     [com.repldriven.mono.db.interface :as db]
     [com.repldriven.mono.error.interface :as error]
@@ -100,14 +99,3 @@
           :else (error/fail :accounts/account-archive
                             {:message "Account not found"
                              :account-id account-id}))))
-
-(defn get
-  "Retrieve an account by account-id."
-  [{:keys [datasource]} account-id]
-  (db/execute-one! datasource
-                   (sql/format {:select [:account_id :name :status :currency
-                                         :balance :created_at :updated_at
-                                         :deleted_at]
-                                :from :account
-                                :where [:= :account_id account-id]})
-                   {:builder-fn db/as-unqualified-lower-maps}))
