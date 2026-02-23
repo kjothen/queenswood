@@ -59,7 +59,7 @@
                                 schema/pb->Person)
                      _ (is (= alice (utility/record->map retrieved)))]))))))
 
-(deftest outbox-layer-test
+(deftest outbox-test
   (testing "outbox watch fires when record is written via outbox-record"
     (let [alice {:name "Alice" :id 1 :email "alice@example.com" :phones []}]
       (with-test-system
@@ -70,4 +70,20 @@
                                           "persons"
                                           (schema/Person->java alice)
                                           (schema/Person->pb alice))
-                     _ (is (nil? (.join watch)))]))))))
+                     _ (is (nil? (.join watch)))])))))
+  (testing "relay-batch delivers outbox entries to handler-fn"
+    (let [alice {:name "Alice" :id 1 :email "alice@example.com" :phones []}
+          received (atom [])]
+      (with-test-system
+       [sys "classpath:fdb/application-test.yml"]
+       (let [record-db (system/instance sys [:fdb :record-db])]
+         (nom-test> [_ (SUT/outbox-record record-db
+                                          "persons"
+                                          (schema/Person->java alice)
+                                          (schema/Person->pb alice))
+                     _ (SUT/relay-batch record-db
+                                        "persons"
+                                        (fn [_k v] (swap! received conj v)))
+                     _ (is (= 1 (count @received)))
+                     retrieved (error/nom-> (first @received) schema/pb->Person)
+                     _ (is (= alice (utility/record->map retrieved)))]))))))

@@ -2,7 +2,8 @@
   (:require
     com.repldriven.mono.fdb.system
 
-    [com.repldriven.mono.fdb.core :as core]))
+    [com.repldriven.mono.fdb.core :as core]
+    [com.repldriven.mono.fdb.relay :as relay]))
 
 (defn set-str [db key value] (core/set-str db key value))
 
@@ -27,3 +28,11 @@
 (defn outbox-record
   [record-db store-name record event-bytes]
   (core/outbox-record record-db store-name record event-bytes))
+
+(defn relay-batch
+  [record-db store-name handler-fn]
+  (relay/relay-batch record-db store-name handler-fn))
+
+(defn start-relay
+  [record-db store-name handler-fn]
+  (relay/start-relay record-db store-name handler-fn))
