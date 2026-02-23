@@ -51,10 +51,11 @@
       (with-test-system
        [sys "classpath:fdb/application-test.yml"]
        (let [record-db (system/instance sys [:fdb :record-db])]
-         (nom-test> [_ (SUT/save-record! record-db
-                                         "persons"
-                                         (schema/Person->java alice)
-                                         (byte-array 0))
-                     loaded (SUT/load-record record-db "persons" 1)
-                     retrieved (schema/pb->Person (.toByteArray loaded))
+         (nom-test> [_ (SUT/save-record record-db
+                                        "persons"
+                                        (schema/Person->java alice)
+                                        (byte-array 0))
+                     retrieved (error/nom->
+                                (SUT/load-record record-db "persons" 1)
+                                schema/pb->Person)
                      _ (is (= alice (utility/record->map retrieved)))]))))))

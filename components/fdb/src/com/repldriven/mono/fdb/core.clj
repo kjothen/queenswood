@@ -60,7 +60,7 @@
 
 (defn load-record
   "Loads a record by primary key from the named record store.
-  Returns the Java proto Message, or nil if not found."
+  Returns the serialized bytes of the record, or nil if not found."
   [^FDBDatabase record-db store-name primary-key]
   (error/try-nom
    :fdb/load-record
@@ -73,9 +73,10 @@
                 (some-> (.loadRecord fdb-store
                                      (Tuple/from
                                       (into-array Object [(long primary-key)])))
-                        .getRecord)))))))
+                        .getRecord
+                        .toByteArray)))))))
 
-(defn save-record!
+(defn save-record
   "Atomically saves a Java protobuf Message to the named record store
   and appends event-bytes to the transactional outbox. Both writes
   occur in a single FDB transaction and are automatically retried on

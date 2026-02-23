@@ -16,6 +16,6 @@
   [record-db store-name primary-key]
   (core/load-record record-db store-name primary-key))
 
-(defn save-record!
+(defn save-record
   [record-db store-name record event-bytes]
-  (core/save-record! record-db store-name record event-bytes))
+  (core/save-record record-db store-name record event-bytes))
