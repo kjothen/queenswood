@@ -47,14 +47,23 @@
 
 (deftest record-layer-test
   (testing "can save and load Person records via FDB Record Layer"
-    (let [alice {:name "Alice" :id 1 :email "alice@example.com" :phones []}]
+    (let [alice {:name "Alice" :id 1 :email "alice@example.com" :phones []}
+          bob {:name "Bob" :id 2 :email "bob@example.com" :phones []}]
       (with-test-system
        [sys "classpath:fdb/application-test.yml"]
        (let [record-db (system/instance sys [:fdb :record-db])]
          (nom-test> [_ (SUT/save-record record-db
                                         "persons"
                                         (schema/Person->java alice))
-                     retrieved (error/nom->
-                                (SUT/load-record record-db "persons" 1)
-                                schema/pb->Person)
-                     _ (is (= alice (utility/record->map retrieved)))]))))))
+                     _ (SUT/outbox-record record-db
+                                          "persons"
+                                          (schema/Person->java bob)
+                                          (schema/Person->pb bob))
+                     retrieved-alice (error/nom->
+                                      (SUT/load-record record-db "persons" 1)
+                                      schema/pb->Person)
+                     _ (is (= alice (utility/record->map retrieved-alice)))
+                     retrieved-bob (error/nom->
+                                    (SUT/load-record record-db "persons" 2)
+                                    schema/pb->Person)
+                     _ (is (= bob (utility/record->map retrieved-bob)))]))))))
