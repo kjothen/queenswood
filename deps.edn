@@ -101,4 +101,5 @@ bases/symmetric-key-api {:local/root "bases/symmetric-key-api"}
                        "bases/symmetric-key-api/test-resources"
                        "bases/iam-api/test"
                        "bases/iam-api/test-resources"]}}
- :mvn/repos {"maven" {:url "https://packages.confluent.io/maven"}}}
+ :mvn/repos {"maven"     {:url "https://packages.confluent.io/maven"}
+             "fdb-record-layer" {:url "https://ossartifacts.jfrog.io/artifactory/fdb-record-layer/"}}}

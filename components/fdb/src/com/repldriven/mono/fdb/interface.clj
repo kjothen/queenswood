@@ -12,3 +12,7 @@
 (defn set-bytes [db key value] (core/set-bytes db key value))
 
 (defn get-bytes [db key] (core/get-bytes db key))
+
+(defn save-record!
+  [record-db store-name record event-bytes]
+  (core/save-record! record-db store-name record event-bytes))

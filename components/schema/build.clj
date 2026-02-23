@@ -13,12 +13,18 @@
 (defn gen-proto
   [{:keys [root] :or {root "."}}]
   (let [proto-path (str root "/resources")
-        out-path (str root "/src/gen")
+        clj-out (str root "/src/gen/clojure")
+        java-out (str root "/src/gen/java")
+        class-out (str root "/classes")
         protos (proto-files proto-path)]
     (when (empty? protos)
       (throw (ex-info "No .proto files found" {:path proto-path})))
-    (.mkdirs (io/file out-path))
+    (run! #(.mkdirs (io/file %)) [clj-out java-out class-out])
     (b/process {:command-args (concat ["protoc"
-                                       "--clojure_out" out-path
+                                       "--clojure_out" clj-out
+                                       "--java_out" java-out
                                        "--proto_path" proto-path]
-                                      protos)})))
+                                      protos)})
+    (b/javac {:src-dirs [java-out]
+              :class-dir class-out
+              :basis (b/create-basis {:project (str root "/deps.edn")})})))

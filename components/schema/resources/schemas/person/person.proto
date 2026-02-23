@@ -1,5 +1,9 @@
 syntax = "proto3";
+
 package com.repldriven.mono.schema.person;
+
+option java_package = "com.repldriven.mono.schema.generated";
+option java_outer_classname = "PersonProto";
 
 message Person {
     string name = 1;

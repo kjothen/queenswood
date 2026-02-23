@@ -4,7 +4,8 @@
     [com.repldriven.mono.log.interface :as log]
     [com.repldriven.mono.system.interface :as system])
   (:import
-    (com.apple.foundationdb FDB)))
+    (com.apple.foundationdb FDB)
+    (com.apple.foundationdb.record.provider.foundationdb FDBDatabaseFactory)))
 
 ;; ---
 ;; cluster-file-path
@@ -45,4 +46,23 @@
    :system/config {:cluster-file-path system/required-component
                    :api-version 730}})
 
-(system/defcomponents :fdb {:cluster-file-path cluster-file-path :db db})
+;; ---
+;; record-db
+;; ---
+
+(def record-db
+  {:system/start (fn [{:system/keys [config instance]}]
+                   (or instance
+                       (let [{:keys [cluster-file-path]} config]
+                         (log/info "Opening FDB Record Layer database")
+                         (.getDatabase (FDBDatabaseFactory/instance)
+                                       cluster-file-path))))
+   :system/stop (fn [{:system/keys [instance]}]
+                  (when (some? instance)
+                    (log/info "Closing FDB Record Layer database")
+                    (.close instance)))
+   :system/config {:cluster-file-path system/required-component}})
+
+(system/defcomponents
+ :fdb
+ {:cluster-file-path cluster-file-path :db db :record-db record-db})

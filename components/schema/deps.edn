@@ -1,6 +1,7 @@
-{:paths ["src" "resources" "src/gen"]
- :deps {io.github.protojure/core {:mvn/version "2.11.0"}}
- :deps/prep-lib {:alias :build :fn build/gen-proto :ensure "src/gen"}
- :aliases {:test {:extra-paths ["test" "test-resources"]}
-           :build {:deps {io.github.clojure/tools.build {:mvn/version "0.10.12"}}
+{:paths ["src" "resources" "src/gen/clojure" "classes"]
+ :deps {io.github.protojure/core    {:mvn/version "2.11.0"}
+        com.google.protobuf/protobuf-java {:mvn/version "3.25.5"}}
+ :deps/prep-lib {:alias :build :fn build/gen-proto :ensure "src/gen/clojure"}
+ :aliases {:test  {:extra-paths ["test" "test-resources"]}
+           :build {:deps  {io.github.clojure/tools.build {:mvn/version "0.10.12"}}
                    :paths ["."]}}}
