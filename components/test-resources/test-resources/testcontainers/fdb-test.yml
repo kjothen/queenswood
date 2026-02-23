@@ -8,6 +8,7 @@ cluster-file-path: !system/component
 db: !system/component
   system/component-kind: fdb/db
   cluster-file-path: !system/local-ref cluster-file-path
+  record-db: !system/local-ref record-db
 
 record-db: !system/component
   system/component-kind: fdb/record-db

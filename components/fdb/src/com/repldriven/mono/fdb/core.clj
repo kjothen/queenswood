@@ -7,6 +7,7 @@
   (:import
     (com.apple.foundationdb Database)
     (com.apple.foundationdb.record.provider.foundationdb FDBDatabase)
+    (com.apple.foundationdb.tuple Tuple)
     (com.google.protobuf MessageLite)))
 
 (defn set
@@ -56,6 +57,23 @@
                           (apply [_ tr]
                             (some-> (.get tr (.getBytes key))
                                     .join))))))
+
+(defn load-record
+  "Loads a record by primary key from the named record store.
+  Returns the Java proto Message, or nil if not found."
+  [^FDBDatabase record-db store-name primary-key]
+  (error/try-nom
+   :fdb/load-record
+   {:message "Failed to load record" :store store-name}
+   (.run record-db
+         (reify
+          java.util.function.Function
+            (apply [_ ctx]
+              (let [fdb-store (store/open-record-store ctx store-name)]
+                (some-> (.loadRecord fdb-store
+                                     (Tuple/from
+                                      (into-array Object [(long primary-key)])))
+                        .getRecord)))))))
 
 (defn save-record!
   "Atomically saves a Java protobuf Message to the named record store

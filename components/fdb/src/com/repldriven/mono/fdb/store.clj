@@ -5,8 +5,7 @@
   (:import
     (com.apple.foundationdb.record.provider.foundationdb FDBRecordStore)))
 
-(def ^:private store-metadata
-  {"persons" (delay (metadata/build-persons-metadata))})
+(def ^:private store-metadata {"persons" (metadata/build-persons-metadata)})
 
 (defn open-record-store
   "Opens or creates the named record store within the given context."
@@ -15,7 +14,7 @@
         path (keyspace/records-path store-name)]
     (when-not meta (throw (ex-info "Unknown record store" {:store store-name})))
     (-> (FDBRecordStore/newBuilder)
-        (.setMetaDataProvider @meta)
+        (.setMetaDataProvider meta)
         (.setContext ctx)
         (.setKeySpacePath path)
         .createOrOpen)))

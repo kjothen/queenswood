@@ -5,7 +5,9 @@
     [com.repldriven.mono.system.interface :as system])
   (:import
     (com.apple.foundationdb FDB)
-    (com.apple.foundationdb.record.provider.foundationdb FDBDatabaseFactory)))
+    (com.apple.foundationdb.record.provider.foundationdb APIVersion
+                                                         FDBDatabaseFactory)
+    (java.util.concurrent Executors)))
 
 ;; ---
 ;; cluster-file-path
@@ -26,12 +28,12 @@
 (def db
   {:system/start (fn [{:system/keys [config instance]}]
                    (let [{:keys [cluster-file-path api-version]} config
-                         api-version (or api-version 730)]
+                         api-version (or api-version 710)]
                      (log/info "FDB database start called, instance:" instance
                                "config:" config)
                      (or instance
                          (error/try-nom
-                          :fdb/create
+                          :fdb/create-db
                           {:message "Failed to create FDB database"
                            :cluster-file-path cluster-file-path}
                           (let [fdb (FDB/selectAPIVersion api-version)
@@ -44,7 +46,7 @@
                     (log/info "Closing FDB database")
                     (.close instance)))
    :system/config {:cluster-file-path system/required-component
-                   :api-version 730}})
+                   :api-version 710}})
 
 ;; ---
 ;; record-db
@@ -53,10 +55,17 @@
 (def record-db
   {:system/start (fn [{:system/keys [config instance]}]
                    (or instance
-                       (let [{:keys [cluster-file-path]} config]
-                         (log/info "Opening FDB Record Layer database")
-                         (.getDatabase (FDBDatabaseFactory/instance)
-                                       cluster-file-path))))
+                       (error/try-nom
+                        :fdb/create-record-db
+                        {:message "Failed to create FDB Record Layer database"}
+                        (let [{:keys [cluster-file-path]} config]
+                          (log/info "Opening FDB Record Layer database")
+                          (.getDatabase
+                           (doto (FDBDatabaseFactory/instance)
+                             (.setAPIVersion APIVersion/API_VERSION_7_1)
+                             (.setScheduledExecutor
+                              (Executors/newSingleThreadScheduledExecutor)))
+                           cluster-file-path)))))
    :system/stop (fn [{:system/keys [instance]}]
                   (when (some? instance)
                     (log/info "Closing FDB Record Layer database")
