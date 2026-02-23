@@ -8,3 +8,7 @@
 (defn set [db key value] (core/set db key value))
 
 (defn get [db key] (core/get db key))
+
+(defn set-bytes [db key value] (core/set-bytes db key value))
+
+(defn get-bytes [db key] (core/get-bytes db key))

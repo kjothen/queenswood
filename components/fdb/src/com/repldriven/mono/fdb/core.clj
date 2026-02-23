@@ -29,3 +29,26 @@
                             (some-> (.get tr (.getBytes key))
                                     .join
                                     (String.)))))))
+
+(defn set-bytes
+  "Set a byte array value for a string key in FDB."
+  [^Database db ^String key ^bytes value]
+  (error/try-nom :fdb/set-bytes
+                 {:message "Failed to set bytes" :key key}
+                 (.run db
+                       (reify
+                        java.util.function.Function
+                          (apply [_ tr] (.set tr (.getBytes key) value) nil)))))
+
+(defn get-bytes
+  "Get a byte array value by key from FDB.
+  Returns nil if the key does not exist."
+  [^Database db ^String key]
+  (error/try-nom :fdb/get-bytes
+                 {:message "Failed to get bytes" :key key}
+                 (.run db
+                       (reify
+                        java.util.function.Function
+                          (apply [_ tr]
+                            (some-> (.get tr (.getBytes key))
+                                    .join))))))
