@@ -6,6 +6,7 @@
 
 ;; Collection utilities
 (def deep-merge util.collections/deep-merge)
+(def record->map util.collections/record->map)
 
 ;; String utilities
 (def string->stream util.string/string->stream)

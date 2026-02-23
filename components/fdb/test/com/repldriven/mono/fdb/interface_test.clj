@@ -8,6 +8,7 @@
     [com.repldriven.mono.system.interface :as system]
     [com.repldriven.mono.test-system.interface :refer
      [with-test-system nom-test>]]
+    [com.repldriven.mono.utility.interface :as utility]
 
     [clojure.test :refer [deftest is testing]]))
 
@@ -45,9 +46,7 @@
                                                                         bob]}))
                      alice-bytes (SUT/get-bytes db "person/1")
                      retrieved-alice (schema/pb->Person alice-bytes)
-                     _ (is (= (dissoc alice :phones)
-                              (select-keys retrieved-alice [:name :id :email])))
-                     _ (is (= 1 (count (:phones retrieved-alice))))
+                     _ (is (= alice (utility/record->map retrieved-alice)))
                      book-bytes (SUT/get-bytes db "addressbook/main")
                      retrieved-book (schema/pb->AddressBook book-bytes)
                      _ (is (= 2 (count (:people retrieved-book))))]))))))
@@ -64,4 +63,4 @@
                                          (byte-array 0))
                      loaded (SUT/load-record record-db "persons" 1)
                      retrieved (schema/pb->Person (.toByteArray loaded))
-                     _ (is (= alice (into {} retrieved)))]))))))
+                     _ (is (= alice (utility/record->map retrieved)))]))))))

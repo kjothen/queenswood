@@ -23,3 +23,8 @@
   [form]
   (postwalk #(if (map? %) (into (hash-map) (map (fn [[k v]] [(name k) v]) %)) %)
             form))
+
+(defn record->map
+  "Recursively converts all records to plain maps."
+  [form]
+  (postwalk #(if (record? %) (into {} %) %) form))
