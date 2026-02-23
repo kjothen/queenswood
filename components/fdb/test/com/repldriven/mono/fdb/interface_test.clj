@@ -53,8 +53,7 @@
        (let [record-db (system/instance sys [:fdb :record-db])]
          (nom-test> [_ (SUT/save-record record-db
                                         "persons"
-                                        (schema/Person->java alice)
-                                        (byte-array 0))
+                                        (schema/Person->java alice))
                      retrieved (error/nom->
                                 (SUT/load-record record-db "persons" 1)
                                 schema/pb->Person)

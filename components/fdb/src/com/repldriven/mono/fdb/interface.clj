@@ -17,5 +17,9 @@
   (core/load-record record-db store-name primary-key))
 
 (defn save-record
+  [record-db store-name record]
+  (core/save-record record-db store-name record))
+
+(defn outbox-record
   [record-db store-name record event-bytes]
-  (core/save-record record-db store-name record event-bytes))
+  (core/outbox-record record-db store-name record event-bytes))

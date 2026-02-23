@@ -77,12 +77,25 @@
                         .toByteArray)))))))
 
 (defn save-record
+  "Saves a Java protobuf Message to the named record store."
+  [^FDBDatabase record-db store-name ^MessageLite record]
+  (error/try-nom
+   :fdb/save-record
+   {:message "Failed to save record" :store store-name}
+   (.run record-db
+         (reify
+          java.util.function.Function
+            (apply [_ ctx]
+              (.saveRecord (store/open-record-store ctx store-name) record)
+              nil)))))
+
+(defn outbox-record
   "Atomically saves a Java protobuf Message to the named record store
   and appends event-bytes to the transactional outbox. Both writes
   occur in a single FDB transaction and are automatically retried on
   conflict."
   [^FDBDatabase record-db store-name ^MessageLite record ^bytes event-bytes]
-  (error/try-nom :fdb/save-record
+  (error/try-nom :fdb/outbox-record
                  {:message "Failed to save record" :store store-name}
                  (.run record-db
                        (reify
