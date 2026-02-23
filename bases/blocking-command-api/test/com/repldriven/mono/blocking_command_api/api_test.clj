@@ -52,19 +52,19 @@
 
 (deftest request-pulsar-reply-mqtt-test
   (testing "Request-Reply with Pulsar and MQTT"
-    (with-test-system [sys
-                       ["classpath:blocking-command-api/application-test.yml"
-                        #(assoc-in % [:system/defs :server :handler] api/app)]]
-                      (let [jetty (system/instance sys [:server :jetty-adapter])
-                            {:keys [stop]} (command-processor sys)]
-                        (binding [*base-url* (server/http-local-url jetty)]
-                          (telemetry/with-span-tests
-                           [_ ["process-command"]]
-                           (nom-test>
-                            [res (send-http-command "test-command") _
-                             (is (= 200 (:status res)) "Should receive 200 OK")
-                             actual (http/res->body res) _
-                             (is (= {"ok" "computer"}
-                                    (json/read-str (get-in actual ["data"])))
-                                 "Should receive data")])))
-                        (async/>!! stop :stop)))))
+    (with-test-system
+     [sys
+      ["classpath:blocking-command-api/application-test.yml"
+       #(assoc-in % [:system/defs :server :handler] api/app)]]
+     (let [jetty (system/instance sys [:server :jetty-adapter])
+           {:keys [stop]} (command-processor sys)]
+       (binding [*base-url* (server/http-local-url jetty)]
+         (telemetry/with-span-tests
+          [_ ["process-command"]]
+          (nom-test> [res (send-http-command "test-command")
+                      _ (is (= 200 (:status res)) "Should receive 200 OK")
+                      actual (http/res->body res)
+                      _ (is (= {"ok" "computer"}
+                               (json/read-str (get-in actual ["data"])))
+                            "Should receive data")])))
+       (async/>!! stop :stop)))))
