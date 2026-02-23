@@ -58,6 +58,20 @@
                             (some-> (.get tr (.getBytes key))
                                     .join))))))
 
+(defn watch-outbox
+  "Sets up a watch on the outbox head key for store-name. Returns a
+  CompletableFuture<Void> that completes when the next outbox-record
+  for this store is committed."
+  [^FDBDatabase record-db store-name]
+  (error/try-nom :fdb/watch-outbox
+                 {:message "Failed to set up outbox watch" :store store-name}
+                 (.run record-db
+                       (reify
+                        java.util.function.Function
+                          (apply [_ ctx]
+                            (.watch (.ensureActive ctx)
+                                    (outbox/head-key store-name)))))))
+
 (defn load-record
   "Loads a record by primary key from the named record store.
   Returns the serialized bytes of the record, or nil if not found."

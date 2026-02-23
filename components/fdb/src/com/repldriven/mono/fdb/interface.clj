@@ -12,6 +12,10 @@
 
 (defn get-bytes [db key] (core/get-bytes db key))
 
+(defn watch-outbox
+  [record-db store-name]
+  (core/watch-outbox record-db store-name))
+
 (defn load-record
   [record-db store-name primary-key]
   (core/load-record record-db store-name primary-key))
