@@ -59,7 +59,7 @@
                                     .join))))))
 
 (defn watch-outbox
-  "Sets up a watch on the outbox head key for store-name. Returns a
+  "Sets up a watch on the outbox sentinel key for store-name. Returns a
   CompletableFuture<Void> that completes when the next outbox-record
   for this store is committed."
   [^FDBDatabase record-db store-name]
@@ -70,7 +70,7 @@
                         java.util.function.Function
                           (apply [_ ctx]
                             (.watch (.ensureActive ctx)
-                                    (outbox/head-key store-name)))))))
+                                    (outbox/sentinel-key store-name)))))))
 
 (defn load-record
   "Loads a record by primary key from the named record store.
