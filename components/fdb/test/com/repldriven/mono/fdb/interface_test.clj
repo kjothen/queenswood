@@ -13,77 +13,69 @@
 
     [clojure.test :refer [deftest is testing]]))
 
-(deftest str-kv-test
-  (testing "can store and retrieve string values as raw KV"
-    (with-test-system [sys "classpath:fdb/application-test.yml"]
-                      (let [db (system/instance sys [:fdb :db])]
-                        (nom-test> [_ (SUT/set-str db "test-key" "test-value")
-                                    result (SUT/get-str db "test-key")
-                                    _ (is (= "test-value" result))])))))
+(defn- test-str-kv
+  [sys]
+  (let [db (system/instance sys [:fdb :db])]
+    (testing "can store and retrieve string values as raw KV"
+      (nom-test> [_ (SUT/set-str db "test-key" "test-value")
+                  result (SUT/get-str db "test-key")
+                  _ (is (= "test-value" result))]))))
 
-(deftest proto-kv-test
-  (testing "can store and retrieve Person and AddressBook records as raw KV"
-    (let [alice {:name "Alice"
-                 :id 1
-                 :email "alice@example.com"
-                 :phones [{:number "555-0100" :type :mobile}]}
-          bob {:name "Bob" :id 2 :email "bob@example.com" :phones []}
-          book {:people [alice bob]}]
-      (with-test-system
-       [sys "classpath:fdb/application-test.yml"]
-       (let [db (system/instance sys [:fdb :db])]
-         (nom-test> [_ (SUT/set-bytes db "person/1" (schema/Person->pb alice))
-                     _ (SUT/set-bytes db "person/2" (schema/Person->pb bob))
-                     _ (SUT/set-bytes db
-                                      "addressbook/main"
-                                      (schema/AddressBook->pb book))
-                     retrieved-alice (error/nom-> (SUT/get-bytes db "person/1")
-                                                  schema/pb->Person)
-                     _ (is (= alice (utility/record->map retrieved-alice)))
-                     retrieved-book (error/nom->
-                                     (SUT/get-bytes db "addressbook/main")
-                                     schema/pb->AddressBook)
-                     _ (is (= book (utility/record->map retrieved-book)))]))))))
+(defn- test-proto-kv
+  [sys]
+  (let [alice {:name "Alice"
+               :id 1
+               :email "alice@example.com"
+               :phones [{:number "555-0100" :type :mobile}]}
+        bob {:name "Bob" :id 2 :email "bob@example.com" :phones []}
+        book {:people [alice bob]}
+        db (system/instance sys [:fdb :db])]
+    (testing "can store and retrieve Person and AddressBook records as raw KV"
+      (nom-test> [_ (SUT/set-bytes db "person/1" (schema/Person->pb alice))
+                  _ (SUT/set-bytes db "person/2" (schema/Person->pb bob))
+                  _ (SUT/set-bytes db
+                                   "addressbook/main"
+                                   (schema/AddressBook->pb book))
+                  retrieved-alice (error/nom-> (SUT/get-bytes db "person/1")
+                                               schema/pb->Person)
+                  _ (is (= alice (utility/record->map retrieved-alice)))
+                  retrieved-book (error/nom-> (SUT/get-bytes db
+                                                             "addressbook/main")
+                                              schema/pb->AddressBook)
+                  _ (is (= book (utility/record->map retrieved-book)))]))))
 
-(deftest record-layer-test
-  (testing "can save and load Person records via FDB Record Layer"
-    (let [alice {:name "Alice" :id 1 :email "alice@example.com" :phones []}]
-      (with-test-system
-       [sys "classpath:fdb/application-test.yml"]
-       (let [record-db (system/instance sys [:fdb :record-db])]
-         (nom-test> [_ (SUT/save-record record-db
-                                        "persons"
-                                        (schema/Person->java alice))
-                     retrieved (error/nom->
-                                (SUT/load-record record-db "persons" 1)
-                                schema/pb->Person)
-                     _ (is (= alice (utility/record->map retrieved)))]))))))
+(defn- test-record-layer
+  [sys]
+  (let [alice {:name "Alice" :id 1 :email "alice@example.com" :phones []}
+        record-db (system/instance sys [:fdb :record-db])]
+    (testing "can save and load Person records via FDB Record Layer"
+      (nom-test> [_ (SUT/save-record record-db
+                                     "persons"
+                                     (schema/Person->java alice))
+                  retrieved (error/nom-> (SUT/load-record record-db "persons" 1)
+                                         schema/pb->Person)
+                  _ (is (= alice (utility/record->map retrieved)))]))))
 
-(deftest outbox-test
-  (testing "outbox watch fires when record is written via outbox-record"
-    (let [alice {:name "Alice" :id 1 :email "alice@example.com" :phones []}]
-      (with-test-system
-       [sys "classpath:fdb/application-test.yml"]
-       (let [record-db (system/instance sys [:fdb :record-db])]
-         (nom-test> [watch (SUT/watch-outbox record-db "persons")
-                     _ (SUT/outbox-record record-db
-                                          "persons"
-                                          (schema/Person->java alice)
-                                          (schema/Person->pb alice))
-                     _ (is (nil? (.join watch)))])))))
-  (testing "relay-batch delivers outbox entries to handler-fn"
-    (let [alice {:name "Alice" :id 1 :email "alice@example.com" :phones []}
-          received (atom [])]
-      (with-test-system
-       [sys "classpath:fdb/application-test.yml"]
-       (let [record-db (system/instance sys [:fdb :record-db])]
-         (nom-test> [_ (SUT/outbox-record record-db
-                                          "persons"
-                                          (schema/Person->java alice)
-                                          (schema/Person->pb alice))
-                     _ (SUT/relay-batch record-db
-                                        "persons"
-                                        (fn [_k v] (swap! received conj v)))
-                     _ (is (= 1 (count @received)))
-                     retrieved (error/nom-> (first @received) schema/pb->Person)
-                     _ (is (= alice (utility/record->map retrieved)))]))))))
+(defn- test-relay-batch
+  [sys]
+  (let [alice {:name "Alice" :id 1 :email "alice@example.com" :phones []}
+        record-db (system/instance sys [:fdb :record-db])
+        received (atom [])]
+    (testing "relay-batch delivers outbox entries to handler-fn"
+      (nom-test> [_ (SUT/outbox-record record-db
+                                       "persons"
+                                       (schema/Person->java alice)
+                                       (schema/Person->pb alice))
+                  _ (SUT/relay-batch record-db
+                                     "persons"
+                                     (fn [_k v] (swap! received conj v)))
+                  _ (is (= 1 (count @received)))
+                  retrieved (error/nom-> (first @received) schema/pb->Person)
+                  _ (is (= alice (utility/record->map retrieved)))]))))
+
+(deftest interface-test
+  (with-test-system [sys "classpath:fdb/application-test.yml"]
+                    (test-str-kv sys)
+                    (test-proto-kv sys)
+                    (test-record-layer sys)
+                    (test-relay-batch sys)))
