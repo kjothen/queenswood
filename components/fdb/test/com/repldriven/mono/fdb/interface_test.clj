@@ -22,10 +22,10 @@
     (with-test-system
      [sys "classpath:fdb/application-test.yml"]
      (let [db (system/instance sys [:fdb :db])]
-       (nom-test> [_ (SUT/set db "test-key" "test-value") result
-                   (SUT/get db "test-key") _
-                   (is (= "test-value" result)
-                       "Should be able to write and read values from FDB")])))))
+       (nom-test> [_ (SUT/set db "test-key" "test-value")
+                   result (SUT/get db "test-key")
+                   _ (is (= "test-value" result)
+                         "Should be able to write and read values from FDB")])))))
 
 (deftest proto-kv-test
   (testing "can store and retrieve Person and AddressBook records as raw KV"
@@ -37,32 +37,31 @@
       (with-test-system
        [sys "classpath:fdb/application-test.yml"]
        (let [db (system/instance sys [:fdb :db])]
-         (nom-test> [_ (SUT/set-bytes db "person/1" (schema/Person->pb alice)) _
-                     (SUT/set-bytes db "person/2" (schema/Person->pb bob)) _
-                     (SUT/set-bytes db
-                                    "addressbook/main"
-                                    (schema/AddressBook->pb {:people [alice
-                                                                      bob]}))
-                     alice-bytes (SUT/get-bytes db "person/1") retrieved-alice
-                     (schema/pb->Person alice-bytes) _
-                     (is (= (dissoc alice :phones)
-                            (select-keys retrieved-alice [:name :id :email]))) _
-                     (is (= 1 (count (:phones retrieved-alice)))) book-bytes
-                     (SUT/get-bytes db "addressbook/main") retrieved-book
-                     (schema/pb->AddressBook book-bytes) _
-                     (is (= 2 (count (:people retrieved-book))))]))))))
+         (nom-test> [_ (SUT/set-bytes db "person/1" (schema/Person->pb alice))
+                     _ (SUT/set-bytes db "person/2" (schema/Person->pb bob))
+                     _ (SUT/set-bytes db
+                                      "addressbook/main"
+                                      (schema/AddressBook->pb {:people [alice
+                                                                        bob]}))
+                     alice-bytes (SUT/get-bytes db "person/1")
+                     retrieved-alice (schema/pb->Person alice-bytes)
+                     _ (is (= (dissoc alice :phones)
+                              (select-keys retrieved-alice [:name :id :email])))
+                     _ (is (= 1 (count (:phones retrieved-alice))))
+                     book-bytes (SUT/get-bytes db "addressbook/main")
+                     retrieved-book (schema/pb->AddressBook book-bytes)
+                     _ (is (= 2 (count (:people retrieved-book))))]))))))
 
 (deftest record-layer-test
   (testing "can save and load Person records via FDB Record Layer"
     (let [alice {:name "Alice" :id 1 :email "alice@example.com" :phones []}]
-      (with-test-system [sys "classpath:fdb/application-test.yml"]
-                        (let [record-db (system/instance sys [:fdb :record-db])]
-                          (nom-test>
-                           [_
-                            (SUT/save-record! record-db
-                                              "persons"
-                                              (schema/Person->java alice)
-                                              (byte-array 0)) loaded
-                            (SUT/load-record record-db "persons" 1) retrieved
-                            (schema/pb->Person (.toByteArray loaded)) _
-                            (is (= alice (into {} retrieved)))]))))))
+      (with-test-system
+       [sys "classpath:fdb/application-test.yml"]
+       (let [record-db (system/instance sys [:fdb :record-db])]
+         (nom-test> [_ (SUT/save-record! record-db
+                                         "persons"
+                                         (schema/Person->java alice)
+                                         (byte-array 0))
+                     loaded (SUT/load-record record-db "persons" 1)
+                     retrieved (schema/pb->Person (.toByteArray loaded))
+                     _ (is (= alice (into {} retrieved)))]))))))

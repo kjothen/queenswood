@@ -6,7 +6,8 @@
           "let-nom" :binding
           "let-nom>" :binding
           "nom-do>" :arg1
-          "nom-let>" :binding}
+          "nom-let>" :binding
+          "nom-test>" :binding}
  :map {:comma? false
        :lift-ns? false
        :nl-separator? false
