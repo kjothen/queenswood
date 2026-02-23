@@ -11,7 +11,20 @@
      [with-test-system nom-test>]]
     [com.repldriven.mono.utility.interface :as utility]
 
-    [clojure.test :refer [deftest is testing]]))
+    [clojure.test :refer [deftest is testing]])
+  (:import
+    (com.apple.foundationdb.record RecordMetaData)
+    (com.apple.foundationdb.record.metadata Index Key$Expressions)
+    (com.repldriven.mono.schema SchemaProto)))
+
+(defn- persons-metadata
+  []
+  (let [b (-> (RecordMetaData/newBuilder)
+              (.setRecords (SchemaProto/getDescriptor)))]
+    (-> (.getRecordType b "Person")
+        (.setPrimaryKey (Key$Expressions/field "id")))
+    (.addIndex b "Person" (Index. "email_idx" (Key$Expressions/field "email")))
+    (.build b)))
 
 (defn- test-str-kv
   [sys]
@@ -45,24 +58,27 @@
                   _ (is (= book (utility/record->map retrieved-book)))]))))
 
 (defn- test-record-layer
-  [sys]
+  [sys registry]
   (let [alice {:name "Alice" :id 1 :email "alice@example.com" :phones []}
         record-db (system/instance sys [:fdb :record-db])]
     (testing "can save and load Person records via FDB Record Layer"
       (nom-test> [_ (SUT/save-record record-db
+                                     registry
                                      "persons"
                                      (schema/Person->java alice))
-                  retrieved (error/nom-> (SUT/load-record record-db "persons" 1)
-                                         schema/pb->Person)
+                  retrieved (error/nom->
+                             (SUT/load-record record-db registry "persons" 1)
+                             schema/pb->Person)
                   _ (is (= alice (utility/record->map retrieved)))]))))
 
 (defn- test-relay-batch
-  [sys]
+  [sys registry]
   (let [alice {:name "Alice" :id 1 :email "alice@example.com" :phones []}
         record-db (system/instance sys [:fdb :record-db])
         received (atom [])]
     (testing "relay-batch delivers outbox entries to handler-fn"
       (nom-test> [_ (SUT/outbox-record record-db
+                                       registry
                                        "persons"
                                        (schema/Person->java alice)
                                        (schema/Person->pb alice))
@@ -75,7 +91,10 @@
 
 (deftest interface-test
   (with-test-system [sys "classpath:fdb/application-test.yml"]
-                    (test-str-kv sys)
-                    (test-proto-kv sys)
-                    (test-record-layer sys)
-                    (test-relay-batch sys)))
+                    (let [registry {"persons" (persons-metadata)}
+                          record-db (system/instance sys [:fdb :record-db])]
+                      (SUT/create-store record-db registry "persons")
+                      (test-str-kv sys)
+                      (test-proto-kv sys)
+                      (test-record-layer sys registry)
+                      (test-relay-batch sys registry))))
