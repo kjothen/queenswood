@@ -26,11 +26,16 @@
           name = "foundationdb-7.3.27";
           src = pkgs.fetchurl {
             url = "https://github.com/apple/foundationdb/releases/download/7.3.27/FoundationDB-7.3.27_${fdbArch}.pkg";
-            sha256 = if pkgs.stdenv.isAarch64
-              then "0000000000000000000000000000000000000000000000000000"  # ARM hash - will fix after first run
-              else "sha256-Vyh8Peqxgk9/G7w3KKRTjRcdqdWjY5dYE77weozxVlM="; # x86 hash
+            sha256 =
+              if pkgs.stdenv.isAarch64 then
+                "0000000000000000000000000000000000000000000000000000" # ARM hash - will fix after first run
+              else
+                "sha256-Vyh8Peqxgk9/G7w3KKRTjRcdqdWjY5dYE77weozxVlM="; # x86 hash
           };
-          buildInputs = [ pkgs.xar pkgs.cpio ];
+          buildInputs = [
+            pkgs.xar
+            pkgs.cpio
+          ];
           unpackPhase = ''
             xar -xf $src
             cat FoundationDB-clients.pkg/Payload | gunzip -dc | cpio -i
@@ -39,6 +44,20 @@
             mkdir -p $out/lib $out/bin
             cp -r usr/local/lib/* $out/lib/
             cp -r usr/local/bin/* $out/bin/
+          '';
+        };
+
+        protocGenClojure = pkgs.stdenv.mkDerivation {
+          name = "protoc-gen-clojure-2.1.2";
+          src = pkgs.fetchurl {
+            url = "https://github.com/protojure/protoc-plugin/releases/download/v2.1.2/protoc-gen-clojure";
+            sha256 = "0vzz78fd4awbsc5iykych9yqd86yab18f8fbbgydrw556lmhv8hh";
+          };
+          dontUnpack = true;
+          installPhase = ''
+            mkdir -p $out/bin
+            cp $src $out/bin/protoc-gen-clojure
+            chmod +x $out/bin/protoc-gen-clojure
           '';
         };
 
@@ -75,6 +94,9 @@
             pkgs.jdk21
             pkgs.just
             pkgs.openssl
+            pkgs.protobuf
+            pkgs.protoc-gen-go
+            protocGenClojure
             pkgs.zprint
           ];
 
@@ -90,6 +112,7 @@
 
             echo "FDB libs: ${libPath}"
             echo "fdbcli: $(command -v fdbcli || echo 'not found')"
+            echo "protoc-gen-clojure: $(protoc-gen-clojure -v 2>&1 || echo 'not found')"
             if ! colima status &>/dev/null; then
               echo "Docker not running — use 'just start-docker' to start"
             fi
