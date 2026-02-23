@@ -1,0 +1,8 @@
+syntax = "proto3";
+package com.repldriven.mono.schema.addressbook;
+
+import "schemas/person/person.proto";
+
+message AddressBook {
+    repeated com.repldriven.mono.schema.person.Person people = 1;
+}

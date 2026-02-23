@@ -92,6 +92,11 @@ format:
         echo "No Clojure files found"
     fi
 
+# Regenerate protobuf sources for the schema component
+schema-gen:
+    rm -rf components/schema/src/gen
+    clj -X:deps prep :aliases '[:dev]'
+
 # Start Docker via Colima
 start-docker:
     colima status 2>/dev/null || colima start --cpu 4 --memory 8 
