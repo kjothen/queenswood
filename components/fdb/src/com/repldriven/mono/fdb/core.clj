@@ -1,5 +1,5 @@
 (ns com.repldriven.mono.fdb.core
-  (:refer-clojure :exclude [get set])
+  (:refer-clojure :exclude [get])
   (:require
     [com.repldriven.mono.error.interface :as error]
     [com.repldriven.mono.fdb.outbox :as outbox]
@@ -10,22 +10,22 @@
     (com.apple.foundationdb.tuple Tuple)
     (com.google.protobuf MessageLite)))
 
-(defn set
+(defn set-str
   "Set a string key-value pair in the FDB database."
   [^Database db ^String key ^String value]
   (error/try-nom
-   :fdb/set
+   :fdb/set-str
    {:message "Failed to set value" :key key}
    (.run db
          (reify
           java.util.function.Function
             (apply [_ tr] (.set tr (.getBytes key) (.getBytes value)) nil)))))
 
-(defn get
+(defn get-str
   "Get a string value by key from the FDB database.
   Returns nil if the key does not exist."
   [^Database db ^String key]
-  (error/try-nom :fdb/get
+  (error/try-nom :fdb/get-str
                  {:message "Failed to get value" :key key}
                  (.run db
                        (reify

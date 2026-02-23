@@ -4,6 +4,7 @@
 
     [com.repldriven.mono.fdb.interface :as SUT]
 
+    [com.repldriven.mono.error.interface :as error]
     [com.repldriven.mono.schema.interface :as schema]
     [com.repldriven.mono.system.interface :as system]
     [com.repldriven.mono.test-system.interface :refer
@@ -12,21 +13,13 @@
 
     [clojure.test :refer [deftest is testing]]))
 
-;; NOTE: The FDB Java client requires libfdb_c to be installed on the host —
-;; the testcontainer runs FDB but the JNI bridge still needs the native library
-;; locally. On macOS the Nix flake provides it; without Nix install via
-;; `brew install foundationdb`. On Linux install foundationdb-clients from the
-;; FDB GitHub releases.
-
-(deftest integration-test
-  (testing "FDB container starts and can execute transactions"
-    (with-test-system
-     [sys "classpath:fdb/application-test.yml"]
-     (let [db (system/instance sys [:fdb :db])]
-       (nom-test> [_ (SUT/set db "test-key" "test-value")
-                   result (SUT/get db "test-key")
-                   _ (is (= "test-value" result)
-                         "Should be able to write and read values from FDB")])))))
+(deftest str-kv-test
+  (testing "can store and retrieve string values as raw KV"
+    (with-test-system [sys "classpath:fdb/application-test.yml"]
+                      (let [db (system/instance sys [:fdb :db])]
+                        (nom-test> [_ (SUT/set-str db "test-key" "test-value")
+                                    result (SUT/get-str db "test-key")
+                                    _ (is (= "test-value" result))])))))
 
 (deftest proto-kv-test
   (testing "can store and retrieve Person and AddressBook records as raw KV"
@@ -34,7 +27,8 @@
                  :id 1
                  :email "alice@example.com"
                  :phones [{:number "555-0100" :type :mobile}]}
-          bob {:name "Bob" :id 2 :email "bob@example.com"}]
+          bob {:name "Bob" :id 2 :email "bob@example.com" :phones []}
+          book {:people [alice bob]}]
       (with-test-system
        [sys "classpath:fdb/application-test.yml"]
        (let [db (system/instance sys [:fdb :db])]
@@ -42,14 +36,14 @@
                      _ (SUT/set-bytes db "person/2" (schema/Person->pb bob))
                      _ (SUT/set-bytes db
                                       "addressbook/main"
-                                      (schema/AddressBook->pb {:people [alice
-                                                                        bob]}))
-                     alice-bytes (SUT/get-bytes db "person/1")
-                     retrieved-alice (schema/pb->Person alice-bytes)
+                                      (schema/AddressBook->pb book))
+                     retrieved-alice (error/nom-> (SUT/get-bytes db "person/1")
+                                                  schema/pb->Person)
                      _ (is (= alice (utility/record->map retrieved-alice)))
-                     book-bytes (SUT/get-bytes db "addressbook/main")
-                     retrieved-book (schema/pb->AddressBook book-bytes)
-                     _ (is (= 2 (count (:people retrieved-book))))]))))))
+                     retrieved-book (error/nom->
+                                     (SUT/get-bytes db "addressbook/main")
+                                     schema/pb->AddressBook)
+                     _ (is (= book (utility/record->map retrieved-book)))]))))))
 
 (deftest record-layer-test
   (testing "can save and load Person records via FDB Record Layer"
