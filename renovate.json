@@ -41,7 +41,8 @@
     {
       "groupName": "foundationdb",
       "matchManagers": ["deps-edn"],
-      "matchPackagePatterns": ["^org\\.foundationdb:"]
+      "matchPackagePatterns": ["^org\\.foundationdb:"],
+      "enabled": false
     },
     {
       "groupName": "opentelemetry",
@@ -57,7 +58,8 @@
       "matchPackagePatterns": [
         "^com\\.google\\.protobuf:",
         "^io\\.github\\.protojure:"
-      ]
+      ],
+      "enabled": false
     },
     {
       "groupName": "metosin",
