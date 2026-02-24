@@ -61,6 +61,26 @@
           '';
         };
 
+        protocArch = if pkgs.stdenv.isAarch64 then "aarch_64" else "x86_64";
+        protocBinary = pkgs.stdenv.mkDerivation {
+          name = "protoc-25.8";
+          src = pkgs.fetchurl {
+            url = "https://github.com/protocolbuffers/protobuf/releases/download/v25.8/protoc-25.8-osx-${protocArch}.zip";
+            sha256 =
+              if pkgs.stdenv.isAarch64 then
+                "sha256-PHTHHFcjfz3xqtP9QOBmQiy3JRHRvW8dLWVEh0MFUQ4="
+              else
+                "sha256-J2NjPhXHFDEra/dW+H1YGaXypsbc6291RPDht9bblm0=";
+          };
+          sourceRoot = ".";
+          nativeBuildInputs = [ pkgs.unzip ];
+          installPhase = ''
+            mkdir -p $out/bin $out/include
+            cp bin/protoc $out/bin/
+            cp -r include/* $out/include/
+          '';
+        };
+
         libPath = pkgs.lib.makeLibraryPath [ fdbBinary ];
 
         # Wrap clojure/clj to always set DYLD_LIBRARY_PATH for the FDB native
@@ -94,7 +114,7 @@
             pkgs.jdk21
             pkgs.just
             pkgs.openssl
-            pkgs.protobuf
+            protocBinary
             pkgs.protoc-gen-go
             protocGenClojure
             pkgs.zprint
