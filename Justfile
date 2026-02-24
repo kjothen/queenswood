@@ -94,7 +94,7 @@ format:
 
 # Regenerate protobuf sources for the schema component
 schema-gen:
-    rm -rf components/schema/src/gen components/schema/classes
+    rm -rf components/schema/src/com/repldriven/mono/schema/*.cljc components/schema/classes components/schema/target
     clj -X:deps prep :aliases '[:dev]'
 
 # Start Docker via Colima

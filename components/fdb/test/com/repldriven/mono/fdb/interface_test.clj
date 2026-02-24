@@ -15,7 +15,7 @@
   (:import
     (com.apple.foundationdb.record RecordMetaData)
     (com.apple.foundationdb.record.metadata Index Key$Expressions)
-    (com.repldriven.mono.schema SchemaProto)))
+    (com.repldriven.mono.schema.schemas SchemaProto)))
 
 (defn- persons-metadata
   []
