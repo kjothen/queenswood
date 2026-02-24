@@ -1,3 +1,3 @@
 system:
   pulsar: !include testcontainers/pulsar-all-test.yml
-  message-bus: !include message-bus/pulsar-all-tests.yml
+  message-bus: !include message-bus/pulsar-pulsar-tests.yml

@@ -1,0 +1,16 @@
+producers: !system/component
+  system/component-kind: message-bus/producers
+  command:
+    kind: mqtt
+    producer: !system/ref mqtt.producers.command
+
+consumers: !system/component
+  system/component-kind: message-bus/consumers
+  command:
+    kind: mqtt
+    consumer: !system/ref mqtt.consumers.command
+
+bus: !system/component
+  system/component-kind: message-bus/bus
+  producers: !system/local-ref producers
+  consumers: !system/local-ref consumers

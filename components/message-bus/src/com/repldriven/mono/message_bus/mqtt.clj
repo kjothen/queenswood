@@ -2,15 +2,21 @@
   (:require
     [com.repldriven.mono.message-bus.protocol :as proto]
 
+    [com.repldriven.mono.json.interface :as json]
     [com.repldriven.mono.mqtt.interface :as mqtt]))
 
 (defrecord MqttProducer [client topic qos]
   proto/Producer
-    (send [_ message] (mqtt/publish client topic message)))
+    (send [_ message] (mqtt/publish client topic (json/write-str message))))
 
 (defrecord MqttConsumer [client topic qos]
   proto/Consumer
-    (subscribe [_ handler-fn] (mqtt/subscribe client {topic qos} handler-fn))
+    (subscribe [_ handler-fn]
+      (mqtt/subscribe client
+                      {topic qos}
+                      (fn [_ _ ^bytes payload]
+                        (handler-fn (json/read-str (String. payload
+                                                            "UTF-8"))))))
     (unsubscribe [_] (mqtt/unsubscribe client [topic])))
 
 (defn producer

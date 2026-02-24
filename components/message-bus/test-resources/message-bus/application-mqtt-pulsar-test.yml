@@ -1,0 +1,4 @@
+system:
+  pulsar: !include testcontainers/pulsar-all-test.yml
+  mqtt: !include testcontainers/mqtt-all-test.yml
+  message-bus: !include message-bus/mqtt-pulsar-tests.yml
