@@ -5,6 +5,12 @@
 
     [com.repldriven.mono.pulsar.core :as core]))
 
+;;;; lifecycle
+
+(defn producer [opts] (core/producer opts))
+
+(defn consumer [opts] (core/consumer opts))
+
 ;;;; producer
 (defn send
   ([producer data] (core/send producer data))

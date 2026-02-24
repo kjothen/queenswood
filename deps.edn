@@ -22,6 +22,7 @@
     components/json {:local/root "components/json"}
     components/log {:local/root "components/log"}
     components/migrator {:local/root "components/migrator"}
+    components/message-bus {:local/root "components/message-bus"}
     components/mqtt {:local/root "components/mqtt"}
     components/pulsar {:local/root "components/pulsar"}
     components/pulsar-vault-crypto {:local/root "components/pulsar-vault-crypto"}
@@ -75,6 +76,8 @@ bases/symmetric-key-api {:local/root "bases/symmetric-key-api"}
                        "components/log/test"
                        "components/migrator/test"
                        "components/migrator/test-resources"
+                       "components/message-bus/test"
+                       "components/message-bus/test-resources"
                        "components/mqtt/test"
                        "components/mqtt/test-resources"
                        "components/pulsar/test"

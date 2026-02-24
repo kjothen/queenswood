@@ -7,6 +7,18 @@
     [com.repldriven.mono.pulsar.pulsar.reader :as reader]
     [com.repldriven.mono.pulsar.pulsar.schemas :as schemas]))
 
+;;;; lifecycle
+
+(defn producer [opts] (producer/create opts))
+
+(defn consumer
+  "Creates a consumer and returns a map with the Java Consumer
+  instance and its resolved schema for later deserialization."
+  [opts]
+  {:instance (consumer/create opts)
+   :schema (when-let [s (get-in opts [:conf :schema])]
+             (schemas/resolve (:schemas opts) s))})
+
 ;;;; producer
 (defn send
   ([producer data] (producer/send producer data))
