@@ -24,6 +24,9 @@
 .idea/replstate.xml
 *.iml
 
+# Claude Code
+.claude
+
 # Clojure tools
 .calva
 **/.calva-repl
