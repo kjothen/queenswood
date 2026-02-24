@@ -99,7 +99,7 @@ schema-gen:
 
 # Start Docker via Colima
 start-docker:
-    colima status 2>/dev/null || colima start --cpu 4 --memory 8 
+    colima status 2>/dev/null || colima start --cpu 6 --memory 12 
     docker context use colima
 
 # Stop Docker via Colima

@@ -9,7 +9,7 @@ consumers: !system/component
   command:
     kind: pulsar
     consumer: !system/ref pulsar.consumers.command
-    timeout: 1000
+    timeout: 10000
 
 bus: !system/component
   system/component-kind: message-bus/bus
