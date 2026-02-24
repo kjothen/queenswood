@@ -14,10 +14,14 @@
     (unsubscribe [_] (mqtt/unsubscribe client [topic])))
 
 (defn producer
-  [{:keys [client conf]}]
-  (let [{:keys [topic qos]} conf] (->MqttProducer client topic (or qos 0))))
+  [{:keys [producer client conf]}]
+  (if producer
+    (map->MqttProducer producer)
+    (let [{:keys [topic qos]} conf] (->MqttProducer client topic (or qos 0)))))
 
 (defn consumer
-  [{:keys [client conf]}]
-  (let [{:keys [topic qos]} conf] (->MqttConsumer client topic (or qos 0))))
+  [{:keys [consumer client conf]}]
+  (if consumer
+    (map->MqttConsumer consumer)
+    (let [{:keys [topic qos]} conf] (->MqttConsumer client topic (or qos 0)))))
 

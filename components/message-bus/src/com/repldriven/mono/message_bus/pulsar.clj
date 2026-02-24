@@ -25,13 +25,20 @@
         (async/put! stop :stop)
         (reset! stop-ch nil))))
 
-(defn producer [opts] (->PulsarProducer (pulsar/producer opts)))
+(defn producer
+  [{:keys [producer] :as opts}]
+  (->PulsarProducer (or producer (pulsar/producer opts))))
 
 (defn consumer
-  [opts]
-  (let [{:keys [instance schema]} (pulsar/consumer opts)]
-    (map->PulsarConsumer {:consumer instance
-                          :schema schema
-                          :timeout (get opts :timeout 10000)
-                          :stop-ch (atom nil)})))
+  [{:keys [consumer timeout] :as opts}]
+  (if consumer
+    (map->PulsarConsumer {:consumer consumer
+                          :schema nil
+                          :timeout (or timeout 10000)
+                          :stop-ch (atom nil)})
+    (let [{:keys [instance schema]} (pulsar/consumer opts)]
+      (map->PulsarConsumer {:consumer instance
+                            :schema schema
+                            :timeout (or timeout 10000)
+                            :stop-ch (atom nil)}))))
 

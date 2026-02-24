@@ -2,31 +2,14 @@ producers: !system/component
   system/component-kind: message-bus/producers
   command:
     kind: pulsar
-    _: !system/ref pulsar.topics
-    client: !system/ref pulsar.client
-    schemas: !system/ref pulsar.schemas
-    conf:
-      accessMode: !pulsar/access-mode Shared
-      cryptoKeyReader: !system/ref pulsar.crypto-key-readers.r1
-      encryptionKeys: [tenant-key-1]
-      schema: !keyword command
-      topicName: "persistent://tenant-1/namespace-1/topic-command"
+    producer: !system/ref pulsar.producers.command
 
 consumers: !system/component
   system/component-kind: message-bus/consumers
   command:
     kind: pulsar
+    consumer: !system/ref pulsar.consumers.command
     timeout: 1000
-    _: !system/ref pulsar.topics
-    client: !system/ref pulsar.client
-    schemas: !system/ref pulsar.schemas
-    conf:
-      cryptoFailureAction: !pulsar/crypto-failure-action CONSUME
-      cryptoKeyReader: !system/ref pulsar.crypto-key-readers.r1
-      schema: !pulsar/schema AUTO_CONSUME
-      subscriptionName: message-bus-command-subscriber
-      subscriptionType: !pulsar/subscription-type Shared
-      topicNames: ["persistent://tenant-1/namespace-1/topic-command"]
 
 bus: !system/component
   system/component-kind: message-bus/bus
