@@ -144,6 +144,7 @@
      (or instance
          (let [{:keys [record-db meta-path descriptor record-types]} config
                path (keyspace/meta-path meta-path)
+               file-desc (resolve-descriptor descriptor)
                meta-data (build-meta-data descriptor record-types)]
            (log/info "FDB meta-store saving metadata to:" meta-path)
            (.run record-db
@@ -154,7 +155,8 @@
                         (.saveRecordMetaData ms meta-data))
                       nil)))
            (fn [ctx store-name]
-             (let [ms (FDBMetaDataStore. ctx path)]
+             (let [ms (doto (FDBMetaDataStore. ctx path)
+                        (.setLocalFileDescriptor file-desc))]
                (-> (FDBRecordStore/newBuilder)
                    (.setMetaDataStore ms)
                    (.setContext ctx)

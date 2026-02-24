@@ -1,6 +1,6 @@
 {:paths ["src" "resources" "classes"]
  :deps {io.github.protojure/core    {:mvn/version "2.11.0"}
-        com.google.protobuf/protobuf-java {:mvn/version "4.32.1"}
+        com.google.protobuf/protobuf-java {:mvn/version "3.25.8"}
         org.foundationdb/fdb-record-layer-core {:mvn/version "4.10.3.0"}}
  :deps/prep-lib {:alias :build :fn build/gen-proto :ensure "classes"}
  :aliases {:test  {:extra-paths ["test" "test-resources"]}
