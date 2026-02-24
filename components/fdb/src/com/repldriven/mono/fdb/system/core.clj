@@ -8,4 +8,5 @@
                       {:cluster-file-path components/cluster-file-path
                        :db components/db
                        :record-db components/record-db
-                       :store components/store})
+                       :store components/store
+                       :meta-store components/meta-store})

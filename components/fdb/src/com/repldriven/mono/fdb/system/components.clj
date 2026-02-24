@@ -1,5 +1,7 @@
 (ns com.repldriven.mono.fdb.system.components
   (:require
+    [com.repldriven.mono.fdb.keyspace :as keyspace]
+
     [com.repldriven.mono.error.interface :as error]
     [com.repldriven.mono.log.interface :as log]
     [com.repldriven.mono.system.interface :as system])
@@ -8,7 +10,9 @@
     (com.apple.foundationdb.record RecordMetaData)
     (com.apple.foundationdb.record.metadata Index Key$Expressions)
     (com.apple.foundationdb.record.provider.foundationdb APIVersion
-                                                         FDBDatabaseFactory)
+                                                         FDBDatabaseFactory
+                                                         FDBMetaDataStore
+                                                         FDBRecordStore)
     (java.util.concurrent Executors)))
 
 ;; ---
@@ -31,8 +35,8 @@
   {:system/start (fn [{:system/keys [config instance]}]
                    (let [{:keys [cluster-file-path api-version]} config
                          api-version (or api-version 710)]
-                     (log/info "FDB database start called, instance:"
-                               instance "config:" config)
+                     (log/info "FDB database start called, instance:" instance
+                               "config:" config)
                      (or instance
                          (error/try-nom
                           :fdb/create-db
@@ -40,9 +44,8 @@
                            :cluster-file-path cluster-file-path}
                           (let [fdb (FDB/selectAPIVersion api-version)
                                 db (.open fdb cluster-file-path)]
-                            (log/info
-                             "Opened FDB database with cluster file:"
-                             cluster-file-path)
+                            (log/info "Opened FDB database with cluster file:"
+                                      cluster-file-path)
                             db)))))
    :system/stop (fn [{:system/keys [instance]}]
                   (when (some? instance)
@@ -60,15 +63,12 @@
                    (or instance
                        (error/try-nom
                         :fdb/create-record-db
-                        {:message
-                         "Failed to create FDB Record Layer database"}
+                        {:message "Failed to create FDB Record Layer database"}
                         (let [{:keys [cluster-file-path]} config]
-                          (log/info
-                           "Opening FDB Record Layer database")
+                          (log/info "Opening FDB Record Layer database")
                           (.getDatabase
                            (doto (FDBDatabaseFactory/instance)
-                             (.setAPIVersion
-                              APIVersion/API_VERSION_7_1)
+                             (.setAPIVersion APIVersion/API_VERSION_7_1)
                              (.setScheduledExecutor
                               (Executors/newSingleThreadScheduledExecutor)))
                            cluster-file-path)))))
@@ -85,9 +85,7 @@
 (defn- resolve-descriptor
   [class-name]
   (let [clazz (Class/forName class-name)
-        method (.getMethod clazz
-                           "getDescriptor"
-                           (into-array Class []))]
+        method (.getMethod clazz "getDescriptor" (into-array Class []))]
     (.invoke method nil (into-array Object []))))
 
 (def store
@@ -95,21 +93,74 @@
    (fn [{:system/keys [config instance]}]
      (or instance
          (let [{:keys [descriptor record-types]} config
-               file-desc (resolve-descriptor descriptor)]
-           (reduce-kv
-            (fn [registry store-name record-type-cfg]
-              (let [{:keys [record-type indexes]}
-                    record-type-cfg
-                    b (-> (RecordMetaData/newBuilder)
-                          (.setRecords file-desc))]
-                (doseq [{:keys [name field]} indexes]
-                  (.addIndex b
-                             record-type
-                             (Index. name
-                                     (Key$Expressions/field
-                                      field))))
-                (assoc registry store-name (.build b))))
-            {}
-            record-types))))
+               file-desc (resolve-descriptor descriptor)
+               registry (reduce-kv
+                         (fn [reg store-name record-type-cfg]
+                           (let [{:keys [record-type indexes]} record-type-cfg
+                                 b (-> (RecordMetaData/newBuilder)
+                                       (.setRecords file-desc))]
+                             (doseq [{:keys [name field]} indexes]
+                               (.addIndex
+                                b
+                                record-type
+                                (Index. name (Key$Expressions/field field))))
+                             (assoc reg store-name (.build b))))
+                         {}
+                         record-types)]
+           (fn [ctx store-name]
+             (let [meta (get registry store-name)]
+               (when-not meta
+                 (throw (ex-info "Unknown record store" {:store store-name})))
+               (-> (FDBRecordStore/newBuilder)
+                   (.setMetaDataProvider meta)
+                   (.setContext ctx)
+                   (.setKeySpacePath (keyspace/records-path store-name))
+                   .createOrOpen))))))
    :system/config {:descriptor system/required-component
+                   :record-types system/required-component}})
+
+;; ---
+;; meta-store
+;; ---
+
+(defn- build-meta-data
+  [descriptor record-types]
+  (let [file-desc (resolve-descriptor descriptor)]
+    (reduce-kv (fn [_ _store-name record-type-cfg]
+                 (let [{:keys [record-type indexes]} record-type-cfg
+                       b (-> (RecordMetaData/newBuilder)
+                             (.setRecords file-desc))]
+                   (doseq [{:keys [name field]} indexes]
+                     (.addIndex b
+                                record-type
+                                (Index. name (Key$Expressions/field field))))
+                   (.build b)))
+               nil
+               record-types)))
+
+(def meta-store
+  {:system/start
+   (fn [{:system/keys [config instance]}]
+     (or instance
+         (let [{:keys [record-db meta-path descriptor record-types]} config
+               path (keyspace/meta-path meta-path)
+               meta-data (build-meta-data descriptor record-types)]
+           (log/info "FDB meta-store saving metadata to:" meta-path)
+           (.run record-db
+                 (reify
+                  java.util.function.Function
+                    (apply [_ ctx]
+                      (let [ms (FDBMetaDataStore. ctx path)]
+                        (.saveRecordMetaData ms meta-data))
+                      nil)))
+           (fn [ctx store-name]
+             (let [ms (FDBMetaDataStore. ctx path)]
+               (-> (FDBRecordStore/newBuilder)
+                   (.setMetaDataStore ms)
+                   (.setContext ctx)
+                   (.setKeySpacePath (keyspace/records-path store-name))
+                   .createOrOpen))))))
+   :system/config {:record-db system/required-component
+                   :meta-path system/required-component
+                   :descriptor system/required-component
                    :record-types system/required-component}})

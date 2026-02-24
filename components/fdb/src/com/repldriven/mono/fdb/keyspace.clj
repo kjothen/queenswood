@@ -10,3 +10,10 @@
   (-> (KeySpace. (into-array DirectoryLayerDirectory
                              [(DirectoryLayerDirectory. store-name)]))
       (.path store-name store-name)))
+
+(defn meta-path
+  "Returns the KeySpacePath for the metadata store."
+  [path-name]
+  (-> (KeySpace. (into-array DirectoryLayerDirectory
+                             [(DirectoryLayerDirectory. path-name)]))
+      (.path path-name path-name)))

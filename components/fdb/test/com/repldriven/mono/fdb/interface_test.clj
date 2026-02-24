@@ -45,27 +45,27 @@
                   _ (is (= book (utility/record->map retrieved-book)))]))))
 
 (defn- test-record-layer
-  [sys registry]
+  [sys store]
   (let [alice {:name "Alice" :id 1 :email "alice@example.com" :phones []}
         record-db (system/instance sys [:fdb :record-db])]
     (testing "can save and load Person records via FDB Record Layer"
       (nom-test> [_ (SUT/save-record record-db
-                                     registry
+                                     store
                                      "persons"
                                      (schema/Person->java alice))
                   retrieved (error/nom->
-                             (SUT/load-record record-db registry "persons" 1)
+                             (SUT/load-record record-db store "persons" 1)
                              schema/pb->Person)
                   _ (is (= alice (utility/record->map retrieved)))]))))
 
 (defn- test-relay-batch
-  [sys registry]
+  [sys store]
   (let [alice {:name "Alice" :id 1 :email "alice@example.com" :phones []}
         record-db (system/instance sys [:fdb :record-db])
         received (atom [])]
     (testing "relay-batch delivers outbox entries to handler-fn"
       (nom-test> [_ (SUT/outbox-record record-db
-                                       registry
+                                       store
                                        "persons"
                                        (schema/Person->java alice)
                                        (schema/Person->pb alice))
@@ -78,10 +78,8 @@
 
 (deftest interface-test
   (with-test-system [sys "classpath:fdb/application-test.yml"]
-                    (let [registry (system/instance sys [:fdb :store])
-                          record-db (system/instance sys [:fdb :record-db])]
-                      (SUT/create-store record-db registry "persons")
+                    (let [store (system/instance sys [:fdb :store])]
                       (test-str-kv sys)
                       (test-proto-kv sys)
-                      (test-record-layer sys registry)
-                      (test-relay-batch sys registry))))
+                      (test-record-layer sys store)
+                      (test-relay-batch sys store))))

@@ -58,22 +58,10 @@
                             (some-> (.get tr (.getBytes key))
                                     .join))))))
 
-(defn create-store
-  "Creates the named record store in FDB, or opens it if it already
-  exists. Must be called before any record operations on this store."
-  [^FDBDatabase record-db registry store-name]
-  (error/try-nom
-   :fdb/create-store
-   {:message "Failed to create store" :store store-name}
-   (.run record-db
-         (reify
-          java.util.function.Function
-            (apply [_ ctx] (store/create-store ctx registry store-name) nil)))))
-
 (defn watch-outbox
-  "Sets up a watch on the outbox sentinel key for store-name. Returns a
-  CompletableFuture<Void> that completes when the next outbox-record
-  for this store is committed."
+  "Sets up a watch on the outbox sentinel key for store-name.
+  Returns a CompletableFuture<Void> that completes when the next
+  outbox-record for this store is committed."
   [^FDBDatabase record-db store-name]
   (error/try-nom :fdb/watch-outbox
                  {:message "Failed to set up outbox watch" :store store-name}
@@ -86,8 +74,9 @@
 
 (defn load-record
   "Loads a record by primary key from the named record store.
-  Returns the serialized bytes of the record, or nil if not found."
-  [^FDBDatabase record-db registry store-name primary-key]
+  Returns the serialized bytes of the record, or nil if not
+  found."
+  [^FDBDatabase record-db open-store-fn store-name primary-key]
   (error/try-nom
    :fdb/load-record
    {:message "Failed to load record" :store store-name}
@@ -95,7 +84,7 @@
          (reify
           java.util.function.Function
             (apply [_ ctx]
-              (let [fdb-store (store/open-record-store ctx registry store-name)]
+              (let [fdb-store (store/open-store open-store-fn ctx store-name)]
                 (some-> (.loadRecord fdb-store
                                      (Tuple/from
                                       (into-array Object [(long primary-key)])))
@@ -104,7 +93,7 @@
 
 (defn save-record
   "Saves a Java protobuf Message to the named record store."
-  [^FDBDatabase record-db registry store-name ^MessageLite record]
+  [^FDBDatabase record-db open-store-fn store-name ^MessageLite record]
   (error/try-nom :fdb/save-record
                  {:message "Failed to save record" :store store-name}
                  (.run record-db
@@ -112,16 +101,16 @@
                         java.util.function.Function
                           (apply [_ ctx]
                             (.saveRecord
-                             (store/open-record-store ctx registry store-name)
+                             (store/open-store open-store-fn ctx store-name)
                              record)
                             nil)))))
 
 (defn outbox-record
-  "Atomically saves a Java protobuf Message to the named record store
-  and appends event-bytes to the transactional outbox. Both writes
-  occur in a single FDB transaction and are automatically retried on
-  conflict."
-  [^FDBDatabase record-db registry store-name ^MessageLite record
+  "Atomically saves a Java protobuf Message to the named record
+  store and appends event-bytes to the transactional outbox. Both
+  writes occur in a single FDB transaction and are automatically
+  retried on conflict."
+  [^FDBDatabase record-db open-store-fn store-name ^MessageLite record
    ^bytes event-bytes]
   (error/try-nom
    :fdb/outbox-record
@@ -130,7 +119,7 @@
          (reify
           java.util.function.Function
             (apply [_ ctx]
-              (let [fdb-store (store/open-record-store ctx registry store-name)
+              (let [fdb-store (store/open-store open-store-fn ctx store-name)
                     tr (.ensureActive ctx)]
                 (.saveRecord fdb-store record)
                 (outbox/write-entry tr store-name event-bytes)

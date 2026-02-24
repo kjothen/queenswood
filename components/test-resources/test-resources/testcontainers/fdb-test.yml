@@ -23,3 +23,15 @@ store: !system/component
       indexes:
         - name: email_idx
           field: email
+
+meta-store: !system/component
+  system/component-kind: fdb/meta-store
+  record-db: !system/local-ref record-db
+  meta-path: meta
+  descriptor: com.repldriven.mono.schema.schemas.SchemaProto
+  record-types: !strs
+    persons:
+      record-type: Person
+      indexes:
+        - name: email_idx
+          field: email
