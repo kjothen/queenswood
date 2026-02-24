@@ -73,4 +73,5 @@
     (strip-fdb-requires clj-out)
     (b/javac {:src-dirs [java-out]
               :class-dir class-out
-              :basis (b/create-basis {:project (str root "/deps.edn")})})))
+              :basis (b/create-basis {:project (str root "/deps.edn")})
+              :javac-opts ["-proc:none"]})))
