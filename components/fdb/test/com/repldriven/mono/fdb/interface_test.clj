@@ -76,10 +76,19 @@
                   retrieved (error/nom-> (first @received) schema/pb->Person)
                   _ (is (= alice (utility/record->map retrieved)))]))))
 
-(deftest interface-test
+(deftest kv-test
+  (with-test-system [sys "classpath:fdb/application-test.yml"]
+                    (test-str-kv sys)
+                    (test-proto-kv sys)))
+
+(deftest store-test
   (with-test-system [sys "classpath:fdb/application-test.yml"]
                     (let [store (system/instance sys [:fdb :store])]
-                      (test-str-kv sys)
-                      (test-proto-kv sys)
+                      (test-record-layer sys store)
+                      (test-relay-batch sys store))))
+
+(deftest meta-store-test
+  (with-test-system [sys "classpath:fdb/application-test.yml"]
+                    (let [store (system/instance sys [:fdb :meta-store])]
                       (test-record-layer sys store)
                       (test-relay-batch sys store))))
