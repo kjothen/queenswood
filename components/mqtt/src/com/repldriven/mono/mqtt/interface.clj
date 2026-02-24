@@ -11,3 +11,7 @@
   (core/subscribe client topics-and-qos handler-fn))
 
 (defn unsubscribe [client topics] (core/unsubscribe client topics))
+
+(defn producer [opts] (core/producer opts))
+
+(defn consumer [opts] (core/consumer opts))

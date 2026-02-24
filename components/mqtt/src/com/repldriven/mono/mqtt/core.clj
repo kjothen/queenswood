@@ -9,3 +9,13 @@
   (client/subscribe c topics-and-qos handler-fn))
 
 (defn unsubscribe [c topics] (client/unsubscribe c topics))
+
+(defn producer
+  [{:keys [client conf]}]
+  (let [{:keys [topic qos]} conf]
+    {:client client :topic topic :qos (or qos 0)}))
+
+(defn consumer
+  [{:keys [client conf]}]
+  (let [{:keys [topic qos]} conf]
+    {:client client :topic topic :qos (or qos 0)}))

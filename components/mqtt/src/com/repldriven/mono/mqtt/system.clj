@@ -1,5 +1,7 @@
 (ns com.repldriven.mono.mqtt.system
   (:require
+    [com.repldriven.mono.mqtt.core :as core]
+
     [com.repldriven.mono.log.interface :as log]
     [com.repldriven.mono.system.interface :as system]
 
@@ -24,4 +26,28 @@
               (log/error (format "Failed to close mqtt connection, %s" e))))))
    :system/config {:uri system/required-component :options {}}})
 
-(system/defcomponents :mqtt {:client client})
+(def producers
+  {:system/start (fn [{:system/keys [config instance]}]
+                   (or instance
+                       (into {}
+                             (map (fn [[k v]]
+                                    (log/info "Creating MQTT producer:"
+                                              (name k))
+                                    [k (core/producer v)])
+                                  config))))
+   :system/config system/required-component})
+
+(def consumers
+  {:system/start (fn [{:system/keys [config instance]}]
+                   (or instance
+                       (into {}
+                             (map (fn [[k v]]
+                                    (log/info "Creating MQTT consumer:"
+                                              (name k))
+                                    [k (core/consumer v)])
+                                  config))))
+   :system/config system/required-component})
+
+(system/defcomponents
+ :mqtt
+ {:client client :producers producers :consumers consumers})
