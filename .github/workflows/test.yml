@@ -2,9 +2,9 @@ name: Tests
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -15,58 +15,60 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v6
+      - name: Checkout code
+        uses: actions/checkout@v6
 
-    - name: Setup Java
-      uses: actions/setup-java@v5
-      with:
-        distribution: 'temurin'
-        java-version: '21'
+      - name: Setup Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: "temurin"
+          java-version: "21"
 
-    - name: Setup Clojure
-      uses: DeLaGuardo/setup-clojure@13.5
-      with:
-        cli: latest
+      - name: Setup Clojure
+        uses: DeLaGuardo/setup-clojure@13.5
+        with:
+          cli: latest
 
-    - name: Install FoundationDB client library
-      run: |
-        curl -LO https://github.com/apple/foundationdb/releases/download/7.3.27/foundationdb-clients_7.3.27-1_amd64.deb
-        sudo dpkg -i foundationdb-clients_7.3.27-1_amd64.deb
+      - name: Install FoundationDB client library
+        run: |
+          curl -LO https://github.com/apple/foundationdb/releases/download/7.3.27/foundationdb-clients_7.3.27-1_amd64.deb
+          sudo dpkg -i foundationdb-clients_7.3.27-1_amd64.deb
 
-    - name: Verify Docker
-      run: |
-        docker --version
-        docker ps
+      - name: Verify Docker
+        run: |
+          docker --version
+          docker ps
 
-    - name: Cache dependencies
-      uses: actions/cache@v5
-      with:
-        path: |
-          ~/.m2/repository
-          ~/.gitlibs
-        key: ${{ runner.os }}-clojure-${{ hashFiles('**/deps.edn') }}
-        restore-keys: |
-          ${{ runner.os }}-clojure-
+      - name: Cache dependencies
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.m2/repository
+            ~/.gitlibs
+          key: ${{ runner.os }}-clojure-${{ hashFiles('**/deps.edn') }}
+          restore-keys: |
+            ${{ runner.os }}-clojure-
 
-    - name: Run tests
-      env:
-        TESTCONTAINERS_REUSE_ENABLE: "true"
-      run: clojure -M:poly test :all
+      - name: Run tests
+        env:
+          TESTCONTAINERS_REUSE_ENABLE: "true"
+        run: |
+          clojure -X:deps prep :aliases '[:dev]'
+          clojure -M:poly test :all
 
-    - name: Publish test report
-      uses: dorny/test-reporter@v1
-      if: always()
-      with:
-        name: Test Results
-        path: target/test-results/**/*.xml
-        reporter: java-junit
-        fail-on-error: true
+      - name: Publish test report
+        uses: dorny/test-reporter@v1
+        if: always()
+        with:
+          name: Test Results
+          path: target/test-results/**/*.xml
+          reporter: java-junit
+          fail-on-error: true
 
-    - name: Upload test results
-      if: always()
-      uses: actions/upload-artifact@v4
-      with:
-        name: test-results
-        path: target/test-results/**/*.xml
-        retention-days: 7
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: target/test-results/**/*.xml
+          retention-days: 7

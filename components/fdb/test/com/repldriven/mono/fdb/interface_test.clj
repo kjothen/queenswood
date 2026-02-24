@@ -11,18 +11,7 @@
      [with-test-system nom-test>]]
     [com.repldriven.mono.utility.interface :as utility]
 
-    [clojure.test :refer [deftest is testing]])
-  (:import
-    (com.apple.foundationdb.record RecordMetaData)
-    (com.apple.foundationdb.record.metadata Index Key$Expressions)
-    (com.repldriven.mono.schema.schemas SchemaProto)))
-
-(defn- persons-metadata
-  []
-  (let [b (-> (RecordMetaData/newBuilder)
-              (.setRecords (SchemaProto/getDescriptor)))]
-    (.addIndex b "Person" (Index. "email_idx" (Key$Expressions/field "email")))
-    (.build b)))
+    [clojure.test :refer [deftest is testing]]))
 
 (defn- test-str-kv
   [sys]
@@ -89,7 +78,7 @@
 
 (deftest interface-test
   (with-test-system [sys "classpath:fdb/application-test.yml"]
-                    (let [registry {"persons" (persons-metadata)}
+                    (let [registry (system/instance sys [:fdb :store])
                           record-db (system/instance sys [:fdb :record-db])]
                       (SUT/create-store record-db registry "persons")
                       (test-str-kv sys)

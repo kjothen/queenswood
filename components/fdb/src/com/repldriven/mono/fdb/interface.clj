@@ -1,6 +1,6 @@
 (ns com.repldriven.mono.fdb.interface
   (:require
-    com.repldriven.mono.fdb.system
+    com.repldriven.mono.fdb.system.core
 
     [com.repldriven.mono.fdb.core :as core]
     [com.repldriven.mono.fdb.relay :as relay]))

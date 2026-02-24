@@ -13,3 +13,13 @@ db: !system/component
 record-db: !system/component
   system/component-kind: fdb/record-db
   cluster-file-path: !system/local-ref cluster-file-path
+
+store: !system/component
+  system/component-kind: fdb/store
+  descriptor: com.repldriven.mono.schema.schemas.SchemaProto
+  record-types: !strs
+    persons:
+      record-type: Person
+      indexes:
+        - name: email_idx
+          field: email
