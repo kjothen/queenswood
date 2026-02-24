@@ -1,7 +1,11 @@
 {:paths ["src" "resources" "src/gen/clojure" "classes"]
  :deps {io.github.protojure/core    {:mvn/version "2.11.0"}
-        com.google.protobuf/protobuf-java {:mvn/version "4.32.1"}}
+        com.google.protobuf/protobuf-java {:mvn/version "4.32.1"}
+        org.foundationdb/fdb-record-layer-core {:mvn/version "4.10.3.0"}}
  :deps/prep-lib {:alias :build :fn build/gen-proto :ensure "src/gen/clojure"}
  :aliases {:test  {:extra-paths ["test" "test-resources"]}
-           :build {:deps  {io.github.clojure/tools.build {:mvn/version "0.10.12"}}
+           :build {:deps  {io.github.clojure/tools.build
+                           {:mvn/version "0.10.12"}
+                           org.foundationdb/fdb-record-layer-core
+                           {:mvn/version "4.10.3.0"}}
                    :paths ["."]}}}
