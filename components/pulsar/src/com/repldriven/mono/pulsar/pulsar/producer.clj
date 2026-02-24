@@ -16,7 +16,9 @@
                                   PulsarClientException
                                   Schema)
     (org.apache.pulsar.common.schema SchemaType)
-    (org.apache.pulsar.shade.org.apache.avro.generic GenericData$Record
+    (org.apache.pulsar.shade.org.apache.avro Schema$Type)
+    (org.apache.pulsar.shade.org.apache.avro.generic GenericData$EnumSymbol
+                                                     GenericData$Record
                                                      GenericRecord)))
 
 (defn- add-encryption-keys
@@ -36,12 +38,28 @@
         json/write-str
         org.apache.pulsar.shade.org.apache.avro.Schema/parse)))
 
+(defn- enum-schema
+  "Return the Avro enum schema for a field schema, or nil.
+  Handles both direct ENUM and UNION containing an ENUM."
+  [field-schema]
+  (let [t (.getType field-schema)]
+    (cond (= t Schema$Type/ENUM) field-schema
+          (= t Schema$Type/UNION)
+          (some (fn [s] (when (= Schema$Type/ENUM (.getType s)) s))
+                (.getTypes field-schema)))))
+
 (defn- map->generic-record
-  "Convert a Clojure map to an Avro GenericRecord using the provided Avro schema."
+  "Convert a Clojure map to an Avro GenericRecord using the
+  provided Avro schema."
   [avro-schema data]
   (when (and avro-schema (map? data))
     (let [^GenericRecord record (GenericData$Record. avro-schema)]
-      (doseq [[k v] data] (.put record (name k) v))
+      (doseq [[k v] data]
+        (let [n (name k)
+              f (.getField avro-schema n)
+              es (when (and f (some? v)) (enum-schema (.schema f)))
+              v (if es (GenericData$EnumSymbol. es (str v)) v)]
+          (.put record n v)))
       record)))
 
 (defn- serialize

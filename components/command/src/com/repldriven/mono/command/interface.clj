@@ -29,6 +29,15 @@
   [req result]
   (response/req->command-response req result))
 
+(defn command-response
+  "Build a structured command response from a command and
+  its result.
+
+  On success: status ok, data JSON-encoded result, error nil.
+  On anomaly: builds an error response."
+  [command result]
+  (response/command-response command result))
+
 (def specs
   "Command Malli specs for request/response validation.
 

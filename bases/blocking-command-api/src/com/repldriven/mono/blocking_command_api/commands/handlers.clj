@@ -1,40 +1,29 @@
 (ns com.repldriven.mono.blocking-command-api.commands.handlers
   (:require
     [com.repldriven.mono.command.interface :as command]
-    [com.repldriven.mono.json.interface :as json]
-    [com.repldriven.mono.log.interface :as log]
-    [com.repldriven.mono.mqtt.interface :as mqtt]
-    [com.repldriven.mono.pulsar.interface :as pulsar]
-    [com.repldriven.mono.error.interface :as error]))
-
-(defn- process-mqqt-payload
-  [p _ _topic ^bytes payload]
-  (let [message (String. payload "UTF-8")]
-    (log/debugf
-     "blocking-command-api.commands.handlers.process-mqqt-payload [_topic=%s, payload=%s]"
-     _topic
-     message)
-    (let [parsed (json/read-str message)] (deliver p parsed))))
+    [com.repldriven.mono.error.interface :as error]
+    [com.repldriven.mono.message-bus.interface :as message-bus]))
 
 (defn create
   [request]
-  (let [{:keys [parameters mqtt-client pulsar-producers]} request
+  (let [{:keys [parameters]} request
+        bus (:message-bus request)
         {:keys [body]} parameters
         {:strs [command data]} body
         cmd (command/req->command-request request command data)
-        reply-to (get cmd "reply_to")
         p (promise)
-        producer (get-in pulsar-producers [:command])
-        sub (mqtt/subscribe mqtt-client
-                            {reply-to 0}
-                            (partial process-mqqt-payload p))]
+        sub (message-bus/subscribe bus
+                                   :command-response
+                                   (fn [data] (deliver p data)))]
     (if (error/anomaly? sub)
       {:status 500 :body (command/req->command-response request sub)}
-      (let [pub (pulsar/send producer cmd)]
+      (let [pub (message-bus/send bus :command cmd)]
         (if (error/anomaly? pub)
-          (do (mqtt/unsubscribe mqtt-client [reply-to])
-              {:status 500 :body (command/req->command-response request pub)})
+          (do (message-bus/unsubscribe bus :command-response)
+              {:status 500
+               :body (command/req->command-response request pub)})
           (let [result (deref p 5000 ::timeout)]
+            (message-bus/unsubscribe bus :command-response)
             (if (= result ::timeout)
               {:status 408
                :body (command/req->command-response

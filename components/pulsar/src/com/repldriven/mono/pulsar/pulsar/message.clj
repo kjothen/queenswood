@@ -16,6 +16,19 @@
     (and (.isPresent encryption-ctx)
          (.isEncrypted ^EncryptionContext (.get encryption-ctx)))))
 
+(declare generic-record->map)
+
+(defn- coerce-value
+  "Coerce Avro-specific types (enum symbols, Utf8) to plain
+  Clojure/Java types."
+  [v]
+  (cond (nil? v) nil
+        (string? v) v
+        (number? v) v
+        (instance? Boolean v) v
+        (instance? GenericRecord v) (generic-record->map v)
+        :else (str v)))
+
 (defn- generic-record->map
   "Convert a Pulsar GenericRecord to a Clojure map."
   [^GenericRecord record]
@@ -25,7 +38,7 @@
             (map (fn [field]
                    (let [field-name (.getName field)
                          value (.getField record field-name)]
-                     [field-name value]))
+                     [field-name (coerce-value value)]))
                  fields)))))
 
 (defn deserialize-same

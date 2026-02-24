@@ -39,6 +39,9 @@ schemas: !system/component
   command:
     schema: schemas/command/command.avsc.json
     type: AVRO
+  command-response:
+    schema: schemas/command/command-response.avsc.json
+    type: AVRO
   user:
     schema: schemas/user/user.avsc.json
     type: AVRO
@@ -78,6 +81,9 @@ topics: !system/component
     - topic: "persistent://tenant-1/namespace-1/topic-command"
       partitions: 1
       schema: !keyword command
+    - topic: "persistent://tenant-1/namespace-1/topic-command-response"
+      partitions: 1
+      schema: !keyword command-response
     - topic: "persistent://tenant-1/namespace-1/topic-user"
       partitions: 1
       schema: !keyword user
@@ -119,6 +125,16 @@ producers: !system/component
       encryptionKeys: [tenant-key-1]
       schema: !keyword command
       topicName: "persistent://tenant-1/namespace-1/topic-command"
+    schemas: !system/local-ref schemas
+  command-response:
+    _: !system/local-ref topics
+    client: !system/local-ref client
+    conf:
+      accessMode: !pulsar/access-mode Shared
+      cryptoKeyReader: !system/local-ref crypto-key-readers.r1
+      encryptionKeys: [tenant-key-1]
+      schema: !keyword command-response
+      topicName: "persistent://tenant-1/namespace-1/topic-command-response"
     schemas: !system/local-ref schemas
   user:
     _: !system/local-ref topics
@@ -166,6 +182,17 @@ consumers: !system/component
       subscriptionName: tenant-1-subscriber
       subscriptionType: !pulsar/subscription-type Shared
       topicNames: ["persistent://tenant-1/namespace-1/topic-command"]
+    schemas: !system/local-ref schemas
+  command-response:
+    _: !system/local-ref topics
+    client: !system/local-ref client
+    conf:
+      cryptoFailureAction: !pulsar/crypto-failure-action CONSUME
+      cryptoKeyReader: !system/local-ref crypto-key-readers.r1
+      schema: !pulsar/schema AUTO_CONSUME
+      subscriptionName: tenant-1-command-response-subscriber
+      subscriptionType: !pulsar/subscription-type Shared
+      topicNames: ["persistent://tenant-1/namespace-1/topic-command-response"]
     schemas: !system/local-ref schemas
   user-1:
     _: !system/local-ref topics

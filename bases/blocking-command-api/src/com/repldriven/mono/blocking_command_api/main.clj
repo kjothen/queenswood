@@ -1,8 +1,7 @@
 (ns com.repldriven.mono.blocking-command-api.main
   (:require
     ;; system components
-    com.repldriven.mono.mqtt.interface
-    com.repldriven.mono.pulsar.interface
+    com.repldriven.mono.message-bus.interface
     com.repldriven.mono.server.interface
 
     [com.repldriven.mono.blocking-command-api.api :as api]

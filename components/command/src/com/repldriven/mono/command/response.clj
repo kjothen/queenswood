@@ -34,7 +34,7 @@
     (->command-error id
                      correlation_id
                      (error/kind result)
-                     (dissoc result :category))
+                     (error/payload result))
     {"id" (str (utility/uuidv7))
      "correlation_id" correlation_id
      "causation_id" id
@@ -55,5 +55,5 @@
       (->command-error idempotency-key
                        correlation-id
                        (error/kind result)
-                       (dissoc result :category))
+                       (error/payload result))
       result)))
