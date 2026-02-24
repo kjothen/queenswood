@@ -274,3 +274,14 @@ that follows the Polylith architecture.
 - **Naming**: Naming is hard, so try not to name at all by using thread macros.
   Names should be narrow. "Elements of Clojure" by Zachary Tellman gets _everything_
   right about names.
+
+## Git Workflow
+
+- **Merge from main before committing**: Renovate automatically merges
+  dependency updates to `main`. Before committing work on a branch (or
+  on `main` directly), pull/merge from `main` to avoid conflicts with
+  Renovate's `deps.edn` and GitHub Actions updates.
+- **Dependency management**: Renovate (`renovate.json`) handles all
+  dependency updates — Clojure `deps.edn` and GitHub Actions. PRs are
+  created automatically on a weekly schedule. Do NOT manually bump
+  dependency versions that Renovate manages.
