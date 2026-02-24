@@ -1,16 +1,7 @@
 version: 2
 updates:
-  # GitHub Actions
-  - package-ecosystem: "github-actions"
-    directory: "/"
-    schedule:
-      interval: "weekly"
-    commit-message:
-      prefix: "ci"
-      include: "scope"
-
-  # Maven dependencies (Clojure deps.edn)
-  - package-ecosystem: "maven"
+  # Clojure dependencies (deps.edn)
+  - package-ecosystem: "clojure"
     directory: "/"
     schedule:
       interval: "weekly"
@@ -19,12 +10,62 @@ updates:
       include: "scope"
     open-pull-requests-limit: 10
     groups:
-      clojure:
+      clojure-core:
         patterns:
           - "org.clojure:*"
       polylith:
         patterns:
           - "polylith/*"
-      apache:
+          - "io.github.seancorfield/polylith-external-test-runner"
+      logging:
         patterns:
-          - "org.apache.*:*"
+          - "org.slf4j:*"
+          - "ch.qos.logback:*"
+          - "net.logstash.logback:*"
+          - "org.apache.logging.log4j:*"
+      testcontainers:
+        patterns:
+          - "org.testcontainers:*"
+          - "clj-test-containers/clj-test-containers"
+          - "earth.adi/testcontainers-foundationdb"
+      foundationdb:
+        patterns:
+          - "org.foundationdb:*"
+      opentelemetry:
+        patterns:
+          - "io.opentelemetry:*"
+          - "com.github.steffan-westcott/clj-otel-*"
+      protobuf:
+        patterns:
+          - "com.google.protobuf:*"
+          - "io.github.protojure:*"
+      metosin:
+        patterns:
+          - "metosin/*"
+      http:
+        patterns:
+          - "http-kit/*"
+          - "http-kit.fake/*"
+          - "metosin/reitit"
+          - "info.sunng/ring-jetty9-adapter"
+          - "ring/*"
+          - "ring-logger-timbre/*"
+          - "compojure/*"
+      database:
+        patterns:
+          - "org.postgresql:*"
+          - "org.liquibase:*"
+          - "com.github.seancorfield/next.jdbc"
+          - "com.github.seancorfield/honeysql"
+      apache-pulsar:
+        patterns:
+          - "org.apache.pulsar:*"
+      testing:
+        patterns:
+          - "eftest/*"
+          - "com.gfredericks/test.chuck"
+          - "org.clojure/test.check"
+      build-tools:
+        patterns:
+          - "io.github.clojure/tools.build"
+          - "io.github.seancorfield/build-clj"
