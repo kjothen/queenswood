@@ -15,12 +15,12 @@
   "Build a command wire message from an HTTP request.
 
   Args:
-  - req: HTTP request map (reads idempotency-key and correlation-id from headers)
+  - req: HTTP request map (reads idempotency-key and
+    correlation-id from headers)
   - command: command name string
   - data: optional data map (JSON-encoded if present)
 
-  Returns a command map ready for Pulsar, with reply_to set to
-  mqtt://replies/<idempotency-key>."
+  Returns a command map ready for message-bus."
   [req command data]
   (let [[idempotency-key correlation-id] (req->ids req)]
     {"command" command
@@ -30,4 +30,4 @@
      "traceparent" (telemetry/inject-traceparent)
      "tracestate" nil
      "data" (when data (json/write-str data))
-     "reply_to" (str "mqtt://replies/" idempotency-key)}))
+     "reply_to" nil}))

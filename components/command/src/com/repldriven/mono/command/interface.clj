@@ -12,12 +12,12 @@
   "Build a command wire message from an HTTP request.
 
   Args:
-  - req: HTTP request map (reads idempotency-key and correlation-id from headers)
+  - req: HTTP request map (reads idempotency-key and
+    correlation-id from headers)
   - command: command name string
   - data: optional data map (JSON-encoded if present)
 
-  Returns a command map ready for Pulsar, with reply_to set to
-  mqtt://replies/<idempotency-key>."
+  Returns a command map ready for message-bus."
   [req command data]
   (request/req->command-request req command data))
 
@@ -52,34 +52,27 @@
              edn/read-string)))
 
 (defn process
-  "Process commands from Pulsar, send replies via MQTT.
+  "Process commands via message-bus.
 
   Args:
-  - consumer: Pulsar consumer instance
-  - mqtt-client: MQTT client instance
-  - schema: Pulsar Avro schema for command messages
-  - process-fn: Function that takes command data and returns response or anomaly
-  - opts: Optional map with keys:
-    - :timeout-ms - Timeout in milliseconds (default 10000)
+  - bus: message-bus instance
+  - process-fn: function that takes command data and returns
+    result or anomaly
+  - opts: optional map (reserved for future use)
 
-  Returns: {:stop channel}
-  - Send to :stop channel to stop processing"
-  ([consumer mqtt-client schema process-fn]
-   (processor/process consumer mqtt-client schema process-fn))
-  ([consumer mqtt-client schema process-fn opts]
-   (processor/process consumer mqtt-client schema process-fn opts)))
+  Returns: {:stop (fn [])} — call stop to unsubscribe"
+  ([bus process-fn] (processor/process bus process-fn))
+  ([bus process-fn opts] (processor/process bus process-fn opts)))
 
 (defn send
-  "Send a command via Pulsar and wait for reply via MQTT.
+  "Send a command via message-bus and wait for reply.
 
   Args:
-  - producer: Pulsar producer instance
-  - mqtt-client: MQTT client instance
-  - command: Command data map
-  - opts: Optional map with keys:
-    - :timeout-ms - Timeout in milliseconds (default 10000)
+  - bus: message-bus instance
+  - command: command data map
+  - opts: optional map with keys:
+    - :timeout-ms - timeout in milliseconds (default 10000)
 
-  Returns: Response map or anomaly"
-  ([producer mqtt-client command] (sender/send producer mqtt-client command))
-  ([producer mqtt-client command opts]
-   (sender/send producer mqtt-client command opts)))
+  Returns: response map or anomaly"
+  ([bus command] (sender/send bus command))
+  ([bus command opts] (sender/send bus command opts)))
