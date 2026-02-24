@@ -1,0 +1,24 @@
+producers: !system/component
+  system/component-kind: message-bus/producers
+  command:
+    kind: pulsar
+    producer: !system/ref pulsar.producers.command
+  command-response:
+    kind: pulsar
+    producer: !system/ref pulsar.producers.command-response
+
+consumers: !system/component
+  system/component-kind: message-bus/consumers
+  command:
+    kind: pulsar
+    consumer: !system/ref pulsar.consumers.command
+    timeout: 10000
+  command-response:
+    kind: pulsar
+    consumer: !system/ref pulsar.consumers.command-response
+    timeout: 10000
+
+bus: !system/component
+  system/component-kind: message-bus/bus
+  producers: !system/local-ref producers
+  consumers: !system/local-ref consumers

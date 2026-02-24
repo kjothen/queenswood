@@ -1,8 +1,8 @@
 system:
-  mqtt: !include testcontainers/mqtt-test.yml
   pulsar: !include testcontainers/pulsar-all-test.yml
+  message-bus: !include command-processor/message-bus-test.yml
   postgres: !include testcontainers/postgres-test.yml
-  db: !include pulsar-mqtt-processor/datasource-test.yml
+  db: !include command-processor/datasource-test.yml
   migrator: !include processor/migrator-test.yml
   processor:
     datasource: !system/ref migrator.migrations

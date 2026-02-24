@@ -1,14 +1,14 @@
-(ns com.repldriven.mono.pulsar-mqtt-processor.main
+(ns com.repldriven.mono.command-processor.main
   (:require
-    [com.repldriven.mono.pulsar-mqtt-processor.processor :as processor]
+    com.repldriven.mono.message-bus.interface
+
+    [com.repldriven.mono.command-processor.processor :as processor]
 
     [com.repldriven.mono.cli.interface :as cli]
     [com.repldriven.mono.env.interface :as env]
     [com.repldriven.mono.error.interface :as error]
     [com.repldriven.mono.log.interface :as log]
-    [com.repldriven.mono.system.interface :as system]
-
-    [clojure.core.async :as async])
+    [com.repldriven.mono.system.interface :as system])
   (:gen-class))
 
 (defn start
@@ -19,7 +19,7 @@
   [& args]
   (log/info args)
   (let [{:keys [options exit-message ok?]}
-        (cli/validate-args "pulsar-mqtt-processor" args)]
+        (cli/validate-args "command-processor" args)]
     (if exit-message
       (cli/exit ok? exit-message)
       (let [{:keys [config-file profile]} options
@@ -28,6 +28,6 @@
           (cli/exit false
                     (str "Failed to start [" (error/kind sys)
                          "]: " (or (:message sys) "Unknown error")))
-          (let [{:keys [stop]} (processor/run sys)]
-            (log/info "System started successfully")
-            (async/<!! stop)))))))
+          (do (processor/run sys)
+              (log/info "System started successfully")
+              @(promise)))))))

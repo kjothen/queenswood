@@ -1,6 +1,6 @@
 {:aliases {:build {:deps {bases/build {:local/root "../../bases/build"}}
                    :exec-args {:lib 'com.repldriven.mono/accounts-processor
-                               :main com.repldriven.mono.pulsar-mqtt-processor.main
+                               :main com.repldriven.mono.command-processor.main
                                :major-minor-version "0.0"}
                    :ns-default com.repldriven.mono.build.build}
            :dev {:extra-deps {component/test-system {:local/root "../../components/test-system"}}}
@@ -32,7 +32,6 @@
         component/test-system {:local/root "../../components/test-system"}
         component/testcontainers {:local/root "../../components/testcontainers"}
         component/utility {:local/root "../../components/utility"}
-        base/pulsar-mqtt-processor {:local/root "../../bases/pulsar-mqtt-processor"}
-        org.clojure/clojure {:mvn/version "1.12.4"}
-        org.clojure/core.async {:mvn/version "1.8.741"}}
+        base/command-processor {:local/root "../../bases/command-processor"}
+        org.clojure/clojure {:mvn/version "1.12.4"}}
  :paths ["resources"]}

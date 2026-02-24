@@ -42,7 +42,7 @@
     bases/build {:local/root "bases/build"}
     bases/external-test-runner {:local/root "bases/external-test-runner"}
     bases/iam-api {:local/root "bases/iam-api"}
-    bases/pulsar-mqtt-processor {:local/root "bases/pulsar-mqtt-processor"}
+    bases/command-processor {:local/root "bases/command-processor"}
 bases/symmetric-key-api {:local/root "bases/symmetric-key-api"}
     org.clojure/clojure {:mvn/version "1.12.4"}
     org.clojure/core.async {:mvn/version "1.8.741"}}
