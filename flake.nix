@@ -28,7 +28,7 @@
             url = "https://github.com/apple/foundationdb/releases/download/7.3.27/FoundationDB-7.3.27_${fdbArch}.pkg";
             sha256 =
               if pkgs.stdenv.isAarch64 then
-                "0000000000000000000000000000000000000000000000000000" # ARM hash - will fix after first run
+                "sha256-WFEDEjy4rbDygTxHwbEuxnV5JLSoiA8Asc0D0e0lVv0="
               else
                 "sha256-Vyh8Peqxgk9/G7w3KKRTjRcdqdWjY5dYE77weozxVlM="; # x86 hash
           };
@@ -68,7 +68,7 @@
             url = "https://github.com/protocolbuffers/protobuf/releases/download/v25.8/protoc-25.8-osx-${protocArch}.zip";
             sha256 =
               if pkgs.stdenv.isAarch64 then
-                "sha256-PHTHHFcjfz3xqtP9QOBmQiy3JRHRvW8dLWVEh0MFUQ4="
+                "sha256-UIIE7oJiT01MQUF81XNyHzqZWkzqTzCD+wYp7Gk2ZxI="
               else
                 "sha256-J2NjPhXHFDEra/dW+H1YGaXypsbc6291RPDht9bblm0=";
           };
