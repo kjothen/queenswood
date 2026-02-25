@@ -50,6 +50,7 @@ that follows the Polylith architecture.
 ## Error Handling
 
 - **Anomaly-based** (nom library via `error` component):
+
   - Component interface functions MUST NOT throw exceptions — they MUST
     return anomalies if they fail
   - MUST NOT use `try-catch` directly; MUST use `error/try-nom` or
@@ -159,6 +160,29 @@ that follows the Polylith architecture.
 - **Test runner**: eftest runs tests in parallel out of process. Mark expensive
   infrastructure tests with `^:eftest/synchronized` to prevent too many from
   overwhelming CPU/memory
+
+## Code Generation
+
+- All code generation MUST use Clojure's standard prepping libraries
+  support, using `:deps/prep-lib` in the appropriate `deps.edn`, with
+  implementation through a co-located `build.clj` file
+- **Prep all libraries**:
+
+  ```bash
+  clj -X:deps prep :aliases '[:dev]'
+  ```
+
+- **Force preparation** after a code change (e.g. changing a src file in
+  the brick or project):
+
+  ```bash
+  clj -X:deps prep :aliases '[:dev]' :force true
+  ```
+
+- Generated code MUST follow Polylith naming conventions and remain
+  inside the brick src tree in a `gen` folder
+- Generated code MUST NOT be committed to git — use a locally scoped
+  `.gitignore` file within the brick to exclude it
 
 ## Database Patterns
 
