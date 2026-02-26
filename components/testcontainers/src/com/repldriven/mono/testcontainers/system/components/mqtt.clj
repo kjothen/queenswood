@@ -5,6 +5,7 @@
 
     [clj-test-containers.core :as tc])
   (:import
+    (java.time Duration)
     (org.testcontainers.hivemq HiveMQContainer)
     (org.testcontainers.utility DockerImageName)))
 
@@ -17,12 +18,12 @@
      (or instance
          (let [{:keys [docker-image-name exposed-port]} config]
            (log/info "Starting mqtt container")
-           (-> (tc/init {:container
-                         (-> (DockerImageName/parse docker-image-name)
-                             (.asCompatibleSubstituteFor "hivemq/hivemq-ce")
-                             (HiveMQContainer.))
-                         :exposed-ports [exposed-port]})
-               (tc/start!)))))
+           (let [container (-> (DockerImageName/parse docker-image-name)
+                               (.asCompatibleSubstituteFor "hivemq/hivemq-ce")
+                               (HiveMQContainer.))]
+             (.withStartupTimeout container (Duration/ofSeconds 60))
+             (-> (tc/init {:container container :exposed-ports [exposed-port]})
+                 (tc/start!))))))
    :system/stop (fn [{:system/keys [instance]}]
                   (log/info "Stopping mqtt container")
                   (tc/stop! instance))

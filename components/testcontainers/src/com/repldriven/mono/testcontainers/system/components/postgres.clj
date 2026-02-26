@@ -4,6 +4,7 @@
 
     [clj-test-containers.core :as tc])
   (:import
+    (java.time Duration)
     (org.testcontainers.containers PostgreSQLContainer)
     (org.testcontainers.utility DockerImageName)))
 
@@ -14,10 +15,11 @@
   [config]
   (let [{:keys [docker-image-name exposed-port]} config]
     (log/info "Starting postgres container")
-    (-> (tc/init {:container (PostgreSQLContainer. (DockerImageName/parse
-                                                    docker-image-name))
-                  :exposed-ports [exposed-port]})
-        (tc/start!))))
+    (let [container (PostgreSQLContainer. (DockerImageName/parse
+                                           docker-image-name))]
+      (.withStartupTimeout container (Duration/ofSeconds 60))
+      (-> (tc/init {:container container :exposed-ports [exposed-port]})
+          (tc/start!)))))
 
 (def container
   {:system/start (fn [{:system/keys [config instance]}]

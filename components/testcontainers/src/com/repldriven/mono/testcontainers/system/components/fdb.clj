@@ -2,6 +2,7 @@
   (:require
     [com.repldriven.mono.log.interface :as log])
   (:import
+    (java.time Duration)
     (earth.adi.testcontainers.containers FoundationDBContainer)
     (org.testcontainers.utility DockerImageName)))
 
@@ -13,6 +14,7 @@
     (log/info "Starting FDB container with image:" docker-image-name)
     (let [container (FoundationDBContainer. (DockerImageName/parse
                                              docker-image-name))]
+      (.withStartupTimeout container (Duration/ofSeconds 60))
       (.start container)
       (log/info "FDB container started successfully")
       container)))

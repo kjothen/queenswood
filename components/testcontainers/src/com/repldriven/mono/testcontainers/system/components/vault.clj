@@ -5,6 +5,7 @@
     [clj-test-containers.core :as tc]
     [clojure.string :as string])
   (:import
+    (java.time Duration)
     (org.testcontainers.vault VaultContainer)
     (org.testcontainers.utility DockerImageName)))
 
@@ -31,6 +32,7 @@
                  (.withInitCommand container (into-array String [kv-put-cmd]))))
              (when init-commands
                (.withInitCommand container (into-array String init-commands)))
+             (.withStartupTimeout container (Duration/ofSeconds 60))
              (-> (tc/init {:container container :exposed-ports exposed-ports})
                  (tc/start!))))))
    :system/stop (fn [{:system/keys [instance]}]

@@ -3,27 +3,34 @@
     [com.repldriven.mono.log.interface :as log]
     [com.repldriven.mono.system.interface :as system]
 
-    [clj-test-containers.core :as tc]))
+    [clj-test-containers.core :as tc])
+  (:import
+    (java.time Duration)
+    (org.testcontainers.containers GenericContainer)))
 
 (def default-uri-scheme "http")
 (def default-uri-host "localhost")
 (def default-uri-path "")
 
 (def container
-  {:system/start (fn [{:system/keys [config instance]}]
-                   (or instance
-                       (let [{:keys [docker-image-name exposed-ports]} config]
-                         (log/info "Starting" docker-image-name "container")
-                         (-> (tc/create {:image-name docker-image-name
-                                         :exposed-ports exposed-ports})
-                             (tc/start!)))))
+  {:system/start
+   (fn [{:system/keys [config instance]}]
+     (or instance
+         (let [{:keys [docker-image-name exposed-ports startup-timeout]} config
+               container (GenericContainer. ^String docker-image-name)]
+           (log/info "Starting" docker-image-name "container")
+           (.withStartupTimeout container (Duration/ofSeconds startup-timeout))
+           (-> (tc/init {:container container :exposed-ports exposed-ports})
+               (tc/start!)))))
    :system/stop (fn [{:system/keys [config instance]}]
                   (log/info "Stopping" (:docker-image-name config) "container")
                   (tc/stop! instance))
    :system/config {:docker-image-name system/required-component
-                   :exposed-ports system/required-component}
+                   :exposed-ports system/required-component
+                   :startup-timeout 60}
    :system/config-schema [:map [:docker-image-name string?]
-                          [:exposed-ports [:vector int?]]]
+                          [:exposed-ports [:vector int?]]
+                          [:startup-timeout int?]]
    :system/instance-schema map?})
 
 (def mapped-ports
