@@ -1,4 +1,3 @@
 {:aliases {:test {:extra-deps {} :extra-paths ["test"]}}
- :deps {club.donutpower/system {:mvn/version "0.0.165"
-                               :exclusions [tailrecursion/cljs-priority-map]}}
+ :deps {party.donut/system {:mvn/version "1.0.258"}}
  :paths ["src"]}

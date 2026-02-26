@@ -26,7 +26,9 @@
                                   (get-in config [:container :container]))]
                          (log/info "Pulsar broker URL:" url)
                          url)))
-   :system/config {:container system/required-component}})
+   :system/config {:container system/required-component}
+   :system/config-schema [:map [:container map?]]
+   :system/instance-schema string?})
 
 (def http-service-url
   {:system/start (fn [{:system/keys [config instance]}]
@@ -35,7 +37,9 @@
                                   (get-in config [:container :container]))]
                          (log/info "Pulsar HTTP service URL:" url)
                          url)))
-   :system/config {:container system/required-component}})
+   :system/config {:container system/required-component}
+   :system/config-schema [:map [:container map?]]
+   :system/instance-schema string?})
 
 ;; ---
 ;; admin
@@ -45,7 +49,9 @@
   {:system/start (fn [{:system/keys [config instance]}]
                    (or instance (admin/create config)))
    :system/stop (fn [{:system/keys [instance]}] (admin/close instance))
-   :system/config {:service-http-url system/required-component}})
+   :system/config {:service-http-url system/required-component}
+   :system/config-schema [:map [:service-http-url string?]]
+   :system/instance-schema some?})
 
 ;; ---
 ;; client
@@ -55,7 +61,9 @@
   {:system/start (fn [{:system/keys [config instance]}]
                    (or instance (client/create config)))
    :system/stop (fn [{:system/keys [instance]}] (client/close instance))
-   :system/config {:service-url system/required-component}})
+   :system/config {:service-url system/required-component}
+   :system/config-schema [:map [:service-url string?]]
+   :system/instance-schema some?})
 
 ;; ---
 ;; consumer
@@ -77,14 +85,17 @@
                                             (clojure.core/name k))
                                   (consumer/close v))
                                 instance))))
-   :system/config system/required-component})
+   :system/config system/required-component
+   :system/instance-schema map?})
 
 (def consumer
   {:system/start (fn [{:system/keys [config instance]}]
                    (or instance (consumer/create config)))
    :system/stop (fn [{:system/keys [instance]}] (consumer/close instance))
    :system/config {:client system/required-component
-                   :conf system/required-component}})
+                   :conf system/required-component}
+   :system/config-schema [:map [:client some?] [:conf some?]]
+   :system/instance-schema some?})
 
 ;; ---
 ;; crypto
@@ -93,7 +104,8 @@
 (def crypto-key-pair-generator
   {:system/start (fn [{:system/keys [config instance]}]
                    (or instance (crypto/key-pair-generator config)))
-   :system/config system/required-component})
+   :system/config system/required-component
+   :system/instance-schema some?})
 
 ;; crypto-key-pair-file-reader(s)
 (def crypto-key-pair-file-readers
@@ -102,12 +114,14 @@
      (or instance
          (into {}
                (map (fn [[k v]] [k (crypto/key-pair-file-reader v)]) config))))
-   :system/config system/required-component})
+   :system/config system/required-component
+   :system/instance-schema map?})
 
 (def crypto-key-pair-file-reader
   {:system/start (fn [{:system/keys [config instance]}]
                    (or instance (crypto/key-pair-file-reader config)))
-   :system/config system/required-component})
+   :system/config system/required-component
+   :system/instance-schema some?})
 
 ;; crypto-key-reader(s)
 (def crypto-key-readers
@@ -115,12 +129,14 @@
    (fn [{:system/keys [config instance]}]
      (or instance
          (into {} (map (fn [[k v]] [k (crypto/key-reader v)]) config))))
-   :system/config system/required-component})
+   :system/config system/required-component
+   :system/instance-schema map?})
 
 (def crypto-key-reader
   {:system/start (fn [{:system/keys [config instance]}]
                    (or instance (crypto/key-reader config)))
-   :system/config system/required-component})
+   :system/config system/required-component
+   :system/instance-schema some?})
 
 ;; ---
 ;; namespaces
@@ -151,7 +167,8 @@
                                             (clojure.core/name k))
                                   (producer/close v))
                                 instance))))
-   :system/config system/required-component})
+   :system/config system/required-component
+   :system/instance-schema map?})
 
 (def producer
   {:system/start (fn [{:system/keys [config instance]}]
@@ -160,7 +177,9 @@
                   (when instance (producer/close instance)))
    :system/config {:client system/required-component
                    :conf system/required-component
-                   :schemas nil}})
+                   :schemas nil}
+   :system/config-schema [:map [:client some?] [:conf some?]]
+   :system/instance-schema some?})
 
 ;; ---
 ;; reader
@@ -182,7 +201,8 @@
                                             (clojure.core/name k))
                                   (reader/close v))
                                 instance))))
-   :system/config system/required-component})
+   :system/config system/required-component
+   :system/instance-schema map?})
 
 (def reader
   {:system/start (fn [{:system/keys [config instance]}]
@@ -190,7 +210,9 @@
    :system/stop (fn [{:system/keys [instance]}] (reader/close instance))
    :system/config {:client system/required-component
                    :conf system/required-component
-                   :schemas nil}})
+                   :schemas nil}
+   :system/config-schema [:map [:client some?] [:conf some?]]
+   :system/instance-schema some?})
 
 ;; ---
 ;; schemas
@@ -199,7 +221,8 @@
 (def schemas
   {:system/start (fn [{:system/keys [config instance]}]
                    (or instance (schemas/create-schemas config)))
-   :system/config system/required-component})
+   :system/config system/required-component
+   :system/instance-schema some?})
 
 ;; ---
 ;; tenants

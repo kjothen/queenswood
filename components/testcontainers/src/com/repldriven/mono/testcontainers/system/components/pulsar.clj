@@ -4,8 +4,7 @@
 
     [clj-test-containers.core :as tc])
   (:import
-    (org.testcontainers.containers ContainerLaunchException
-                                   PulsarContainer)
+    (org.testcontainers.containers PulsarContainer)
     (org.testcontainers.utility DockerImageName)
     (java.time Duration)))
 
@@ -20,18 +19,16 @@
 (defn- start-container
   [config]
   (let [{:keys [docker-image-name exposed-ports]} config]
-    (try (log/info "Starting pulsar container")
-         (let [container (-> (DockerImageName/parse docker-image-name)
-                             (.asCompatibleSubstituteFor "apachepulsar/pulsar")
-                             (PulsarContainer.))]
-           (.addEnv container
-                    "PULSAR_MEM"
-                    "-Xms128m -Xmx128m -XX:MaxDirectMemorySize=128m")
-           (.withStartupTimeout container (Duration/ofMinutes 1))
-           (some-> (tc/init {:container container :exposed-ports exposed-ports})
-                   (tc/start!)))
-         (catch ContainerLaunchException e
-           (log/error "Failed to start pulsar container, %s" e)))))
+    (log/info "Starting pulsar container")
+    (let [container (-> (DockerImageName/parse docker-image-name)
+                        (.asCompatibleSubstituteFor "apachepulsar/pulsar")
+                        (PulsarContainer.))]
+      (.addEnv container
+               "PULSAR_MEM"
+               "-Xms128m -Xmx128m -XX:MaxDirectMemorySize=128m")
+      (.withStartupTimeout container (Duration/ofMinutes 1))
+      (-> (tc/init {:container container :exposed-ports exposed-ports})
+          (tc/start!)))))
 
 (def container
   {:system/start (fn [{:system/keys [config instance]}]
@@ -40,4 +37,7 @@
                   (log/info "Stopping pulsar container")
                   (tc/stop! instance))
    :system/config {:docker-image-name default-docker-image-name
-                   :exposed-ports default-exposed-ports}})
+                   :exposed-ports default-exposed-ports}
+   :system/config-schema [:map [:docker-image-name string?]
+                          [:exposed-ports [:vector int?]]]
+   :system/instance-schema map?})

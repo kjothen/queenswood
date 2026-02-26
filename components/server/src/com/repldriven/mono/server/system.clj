@@ -25,7 +25,8 @@
                                         (conj coll (interceptor k v)))
                                       []
                                       config))))
-   :system/config nil})
+   :system/config nil
+   :system/instance-schema vector?})
 
 (def default-jetty-adapter-options {:join? false :port 0})
 
@@ -43,7 +44,9 @@
                   (when (some? instance) (.stop instance)))
    :system/config {:handler system/required-component
                    :interceptors nil
-                   :options default-jetty-adapter-options}})
+                   :options default-jetty-adapter-options}
+   :system/config-schema [:map [:handler fn?]]
+   :system/instance-schema some?})
 
 (system/defcomponents :server
                       {:interceptors interceptors :jetty-adapter jetty-adapter})

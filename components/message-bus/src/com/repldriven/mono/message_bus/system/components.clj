@@ -14,7 +14,8 @@
                                               (name k))
                                     [k (core/producer v)])
                                   config))))
-   :system/config system/required-component})
+   :system/config system/required-component
+   :system/instance-schema map?})
 
 (def consumers
   {:system/start (fn [{:system/keys [config instance]}]
@@ -25,11 +26,14 @@
                                               (name k))
                                     [k (core/consumer v)])
                                   config))))
-   :system/config system/required-component})
+   :system/config system/required-component
+   :system/instance-schema map?})
 
 (def bus
   {:system/start (fn [{:system/keys [config instance]}]
                    (or instance
                        (core/->Bus (:producers config) (:consumers config))))
    :system/config {:producers system/required-component
-                   :consumers system/required-component}})
+                   :consumers system/required-component}
+   :system/config-schema [:map [:producers map?] [:consumers map?]]
+   :system/instance-schema some?})

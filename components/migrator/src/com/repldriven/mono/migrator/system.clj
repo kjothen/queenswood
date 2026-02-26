@@ -16,6 +16,8 @@
                                             :anomaly result})))))
                      datasource))
    :system/config {:datasource system/required-component
-                   :changelogs system/required-component}})
+                   :changelogs system/required-component}
+   :system/config-schema [:map [:datasource some?] [:changelogs some?]]
+   :system/instance-schema some?})
 
 (system/defcomponents :migrator {:migrations migrations})

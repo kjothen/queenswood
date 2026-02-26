@@ -25,7 +25,9 @@
                        (let [path (.getClusterFilePath (:container config))]
                          (log/info "FDB cluster file path:" path)
                          path)))
-   :system/config {:container system/required-component}})
+   :system/config {:container system/required-component}
+   :system/config-schema [:map [:container some?]]
+   :system/instance-schema string?})
 
 ;; ---
 ;; db
@@ -52,7 +54,9 @@
                     (log/info "Closing FDB database")
                     (.close instance)))
    :system/config {:cluster-file-path system/required-component
-                   :api-version 710}})
+                   :api-version 710}
+   :system/config-schema [:map [:cluster-file-path string?]]
+   :system/instance-schema some?})
 
 ;; ---
 ;; record-db
@@ -76,7 +80,9 @@
                   (when (some? instance)
                     (log/info "Closing FDB Record Layer database")
                     (.close instance)))
-   :system/config {:cluster-file-path system/required-component}})
+   :system/config {:cluster-file-path system/required-component}
+   :system/config-schema [:map [:cluster-file-path string?]]
+   :system/instance-schema some?})
 
 ;; ---
 ;; store
@@ -117,7 +123,9 @@
                    (.setKeySpacePath (keyspace/records-path store-name))
                    .createOrOpen))))))
    :system/config {:descriptor system/required-component
-                   :record-types system/required-component}})
+                   :record-types system/required-component}
+   :system/config-schema [:map [:descriptor string?] [:record-types map?]]
+   :system/instance-schema fn?})
 
 ;; ---
 ;; meta-store
@@ -165,4 +173,7 @@
    :system/config {:record-db system/required-component
                    :meta-path system/required-component
                    :descriptor system/required-component
-                   :record-types system/required-component}})
+                   :record-types system/required-component}
+   :system/config-schema [:map [:record-db some?] [:meta-path string?]
+                          [:descriptor string?] [:record-types map?]]
+   :system/instance-schema fn?})

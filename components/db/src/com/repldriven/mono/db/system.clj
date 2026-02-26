@@ -10,10 +10,12 @@
                                 (assoc m k (next.jdbc/get-datasource v)))
                               {}
                               config))
-   :system/config system/required-component})
+   :system/config system/required-component
+   :system/instance-schema map?})
 
 (def datasource
   {:system/start (fn [{:system/keys [config]}] config)
-   :system/config system/required-component})
+   :system/config system/required-component
+   :system/instance-schema some?})
 
 (system/defcomponents :db {:datasources datasources :datasource datasource})

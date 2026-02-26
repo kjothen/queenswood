@@ -10,16 +10,12 @@
 (defn- start-container
   [config]
   (let [{:keys [docker-image-name]} config]
-    (try (log/info "Starting FDB container with image:" docker-image-name)
-         (let [container (FoundationDBContainer. (DockerImageName/parse
-                                                  docker-image-name))]
-           (.start container)
-           (log/info "FDB container started successfully")
-           container)
-         (catch Exception e
-           (log/error "Failed to start FDB container:" (.getMessage e))
-           (.printStackTrace e)
-           nil))))
+    (log/info "Starting FDB container with image:" docker-image-name)
+    (let [container (FoundationDBContainer. (DockerImageName/parse
+                                             docker-image-name))]
+      (.start container)
+      (log/info "FDB container started successfully")
+      container)))
 
 (def container
   {:system/start (fn [{:system/keys [config instance]}]
@@ -27,5 +23,7 @@
    :system/stop (fn [{:system/keys [instance]}]
                   (log/info "Stopping FDB container")
                   (when (some? instance) (.stop instance)))
-   :system/config {:docker-image-name default-docker-image-name}})
+   :system/config {:docker-image-name default-docker-image-name}
+   :system/config-schema [:map [:docker-image-name string?]]
+   :system/instance-schema some?})
 

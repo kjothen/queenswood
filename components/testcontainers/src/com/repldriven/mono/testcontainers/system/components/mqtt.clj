@@ -5,7 +5,6 @@
 
     [clj-test-containers.core :as tc])
   (:import
-    (org.testcontainers.containers ContainerLaunchException)
     (org.testcontainers.hivemq HiveMQContainer)
     (org.testcontainers.utility DockerImageName)))
 
@@ -17,21 +16,21 @@
    (fn [{:system/keys [config instance]}]
      (or instance
          (let [{:keys [docker-image-name exposed-port]} config]
-           (try (log/info "Starting mqtt container")
-                (some-> (tc/init {:container (-> (DockerImageName/parse
-                                                  docker-image-name)
-                                                 (.asCompatibleSubstituteFor
-                                                  "hivemq/hivemq-ce")
-                                                 (HiveMQContainer.))
-                                  :exposed-ports [exposed-port]})
-                        (tc/start!))
-                (catch ContainerLaunchException e
-                  (log/error "Failed to start mqtt container, %s" e))))))
+           (log/info "Starting mqtt container")
+           (-> (tc/init {:container
+                         (-> (DockerImageName/parse docker-image-name)
+                             (.asCompatibleSubstituteFor "hivemq/hivemq-ce")
+                             (HiveMQContainer.))
+                         :exposed-ports [exposed-port]})
+               (tc/start!)))))
    :system/stop (fn [{:system/keys [instance]}]
                   (log/info "Stopping mqtt container")
                   (tc/stop! instance))
    :system/config {:docker-image-name default-docker-image-name
-                   :exposed-port default-exposed-port}})
+                   :exposed-port default-exposed-port}
+   :system/config-schema [:map [:docker-image-name string?]
+                          [:exposed-port int?]]
+   :system/instance-schema map?})
 
 (def container-connection-uri
   {:system/start
@@ -44,4 +43,7 @@
            (log/info "Mapped mqtt container-connection-uri:" connection-uri-str)
            connection-uri-str)))
    :system/config {:container-mapped-ports system/required-component
-                   :exposed-port default-exposed-port}})
+                   :exposed-port default-exposed-port}
+   :system/config-schema [:map [:container-mapped-ports map?]
+                          [:exposed-port int?]]
+   :system/instance-schema string?})

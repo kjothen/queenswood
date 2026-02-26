@@ -19,6 +19,8 @@
                           (assoc m (name k) schema))))
                     {}
                     (:schemas config)))
-   :system/config {:schemas system/required-component}})
+   :system/config {:schemas system/required-component}
+   :system/config-schema [:map [:schemas map?]]
+   :system/instance-schema map?})
 
 (system/defcomponents :avro {:serde serde-component})

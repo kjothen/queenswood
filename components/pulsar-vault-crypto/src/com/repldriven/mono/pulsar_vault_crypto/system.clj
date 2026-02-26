@@ -17,7 +17,10 @@
    :system/config {:client system/required-component
                    :token system/required-component
                    :tenant-id system/required-component
-                   :mount "secret"}})
+                   :mount "secret"}
+   :system/config-schema [:map [:client some?] [:token string?]
+                          [:tenant-id string?]]
+   :system/instance-schema some?})
 
 (system/defcomponents :pulsar-vault-crypto
                       {:tenant-key-reader tenant-key-reader})
