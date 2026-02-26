@@ -7,22 +7,22 @@ import "record_metadata_options.proto";
 option java_outer_classname = "PersonProto";
 
 message Person {
-    option (com.apple.foundationdb.record.record).usage = RECORD;
- 
-    required int32 id = 1 [(com.apple.foundationdb.record.field).primary_key = true];
-    optional string name = 2;
-    optional string email = 3;
+  option (com.apple.foundationdb.record.record).usage = RECORD;
 
-    enum PhoneType {
-        MOBILE = 0;
-        HOME = 1;
-        WORK = 2;
-    }
+  required int32 id = 1 [(com.apple.foundationdb.record.field).primary_key = true];
+  optional string name = 2;
+  optional string email = 3;
 
-    message PhoneNumber {
-        optional string number = 1;
-        optional PhoneType type = 2;
-    }
+  enum PhoneType {
+    MOBILE = 0;
+    HOME = 1;
+    WORK = 2;
+  }
 
-    repeated PhoneNumber phones = 4;
+  message PhoneNumber {
+    optional string number = 1;
+    optional PhoneType type = 2;
+  }
+
+  repeated PhoneNumber phones = 4;
 }

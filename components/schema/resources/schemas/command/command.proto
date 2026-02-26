@@ -1,0 +1,38 @@
+syntax = "proto2";
+
+package com.repldriven.mono.schema.command;
+
+import "record_metadata_options.proto";
+
+option java_outer_classname = "CommandProto";
+
+message Command {
+  option (com.apple.foundationdb.record.record).usage = RECORD;
+
+  required string id = 1 [(com.apple.foundationdb.record.field).primary_key = true];
+  required string correlation_id = 2;
+  required string command = 3;
+  optional string data = 4;
+  optional string causation_id = 5;
+  optional string traceparent = 6;
+  optional string tracestate = 7;
+  optional string reply_to = 8;
+}
+
+enum CommandResponseStatus {
+  OK = 0;
+  ERROR = 1;
+}
+
+message CommandResponse {
+  option (com.apple.foundationdb.record.record).usage = RECORD;
+
+  required string id = 1 [(com.apple.foundationdb.record.field).primary_key = true];
+  required string correlation_id = 2;
+  required string causation_id = 3;
+  required string traceparent = 4;
+  optional string tracestate = 5;
+  required CommandResponseStatus status = 6;
+  optional string data = 7;
+  optional string error = 8;
+}

@@ -92,10 +92,8 @@ format:
         echo "No Clojure files found"
     fi
 
-# Regenerate protobuf sources for the schema component
-schema-gen:
-    rm -rf components/schema/src/com/repldriven/mono/schema/*.cljc components/schema/classes components/schema/target
-    clj -X:deps prep :aliases '[:dev]'
+force-prep:
+    clj -X:deps prep :aliases '[:dev]' :force true
 
 # Start Docker via Colima
 start-docker:

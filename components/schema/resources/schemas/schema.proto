@@ -2,13 +2,16 @@ syntax = "proto3";
 
 package com.repldriven.mono.schema.schemas;
 
-option java_outer_classname = "SchemaProto";
-
 import "schemas/person/person.proto";
+import "schemas/command/command.proto";
+
+option java_outer_classname = "SchemaProto";
 
 // RecordTypeUnion marks which messages are top-level record types
 // for the FDB Record Layer. Named RecordTypeUnion so the Record
 // Layer recognises it without requiring proto annotations.
 message RecordTypeUnion {
-    com.repldriven.mono.schema.person.Person _Person = 1;
+  com.repldriven.mono.schema.person.Person _Person = 1;
+  com.repldriven.mono.schema.command.Command _Command = 2;
+  com.repldriven.mono.schema.command.CommandResponse _CommandResponse = 3;
 }
