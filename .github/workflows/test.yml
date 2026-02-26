@@ -75,6 +75,7 @@ jobs:
           curl -LO https://github.com/apple/foundationdb/releases/download/7.3.27/foundationdb-clients_7.3.27-1_amd64.deb
           sudo dpkg -i foundationdb-clients_7.3.27-1_amd64.deb
           sudo apt-get install -y lcov
+          sudo sed -i 's/lcov_branch_coverage/branch_coverage/' /etc/lcovrc
 
       - name: Verify Docker
         run: |
