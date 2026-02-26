@@ -25,12 +25,12 @@
     components/message-bus {:local/root "components/message-bus"}
     components/mqtt {:local/root "components/mqtt"}
     components/pulsar {:local/root "components/pulsar"}
-    components/pulsar-vault-crypto {:local/root "components/pulsar-vault-crypto"}
+    components/pulsar-vault-crypto {:local/root
+                                    "components/pulsar-vault-crypto"}
     components/schema {:local/root "components/schema"}
     components/server {:local/root "components/server"}
     components/spec {:local/root "components/spec"}
     components/sql {:local/root "components/sql"}
-
     components/system {:local/root "components/system"}
     components/telemetry {:local/root "components/telemetry"}
     components/test-system {:local/root "components/test-system"}
@@ -43,9 +43,10 @@
     bases/external-test-runner {:local/root "bases/external-test-runner"}
     bases/iam-api {:local/root "bases/iam-api"}
     bases/command-processor {:local/root "bases/command-processor"}
-bases/symmetric-key-api {:local/root "bases/symmetric-key-api"}
+    bases/symmetric-key-api {:local/root "bases/symmetric-key-api"}
     org.clojure/clojure {:mvn/version "1.12.4"}
-    org.clojure/core.async {:mvn/version "1.8.741"}}
+    org.clojure/core.async {:mvn/version "1.8.741"}
+    com.google.protobuf/protobuf-java {:mvn/version "3.25.8"}}
    :extra-paths ["development/resources"]
    :jvm-opts
    ["-Dclojure.tools.logging.factory=clojure.tools.logging.impl/slf4j-factory"]}
@@ -92,7 +93,7 @@ bases/symmetric-key-api {:local/root "bases/symmetric-key-api"}
                        "components/db/test"
                        "components/db/test-resources"
                        "components/system/test"
-"components/testcontainers/test"
+                       "components/testcontainers/test"
                        "components/testcontainers/test-resources"
                        "components/utility/test"
                        "components/vault/test"
@@ -100,7 +101,7 @@ bases/symmetric-key-api {:local/root "bases/symmetric-key-api"}
                        "bases/blocking-command-api/test"
                        "bases/blocking-command-api/test-resources"
                        "bases/external-test-runner/test"
-"bases/symmetric-key-api/test"
+                       "bases/symmetric-key-api/test"
                        "bases/symmetric-key-api/test-resources"
                        "bases/iam-api/test"
                        "bases/iam-api/test-resources"]}}
