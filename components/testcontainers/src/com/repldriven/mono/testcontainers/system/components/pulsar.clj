@@ -26,7 +26,7 @@
       (.addEnv container
                "PULSAR_MEM"
                "-Xms128m -Xmx128m -XX:MaxDirectMemorySize=128m")
-      (.withStartupTimeout container (Duration/ofMinutes 1))
+      (.withStartupTimeout container (Duration/ofMinutes 3))
       (-> (tc/init {:container container :exposed-ports exposed-ports})
           (tc/start!)))))
 
