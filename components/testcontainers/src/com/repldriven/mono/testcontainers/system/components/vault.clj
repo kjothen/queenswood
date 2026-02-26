@@ -1,8 +1,9 @@
 (ns com.repldriven.mono.testcontainers.system.components.vault
   (:require
+    [com.repldriven.mono.testcontainers.container :as container]
+
     [com.repldriven.mono.log.interface :as log]
 
-    [clj-test-containers.core :as tc]
     [clojure.string :as string])
   (:import
     (java.time Duration)
@@ -20,24 +21,23 @@
                        secret-in-vault init-commands]}
                config]
            (log/info "Starting vault container")
-           (let [container (-> (DockerImageName/parse docker-image-name)
-                               (.asCompatibleSubstituteFor "vault")
-                               (VaultContainer.))]
-             (when vault-token (.withVaultToken container vault-token))
+           (let [c (-> (DockerImageName/parse docker-image-name)
+                       (.asCompatibleSubstituteFor "vault")
+                       (VaultContainer.))]
+             (when vault-token (.withVaultToken c vault-token))
              (when secret-in-vault
                (let [path (first secret-in-vault)
                      key-values (rest secret-in-vault)
                      kv-put-cmd (str "kv put " path
                                      " " (string/join " " key-values))]
-                 (.withInitCommand container (into-array String [kv-put-cmd]))))
+                 (.withInitCommand c (into-array String [kv-put-cmd]))))
              (when init-commands
-               (.withInitCommand container (into-array String init-commands)))
-             (.withStartupTimeout container (Duration/ofSeconds 60))
-             (-> (tc/init {:container container :exposed-ports exposed-ports})
-                 (tc/start!))))))
+               (.withInitCommand c (into-array String init-commands)))
+             (.withStartupTimeout c (Duration/ofSeconds 60))
+             (container/start! c exposed-ports)))))
    :system/stop (fn [{:system/keys [instance]}]
                   (log/info "Stopping vault container")
-                  (tc/stop! instance))
+                  (container/stop! instance))
    :system/config {:docker-image-name default-docker-image-name
                    :exposed-ports default-exposed-ports}
    :system/config-schema [:map [:docker-image-name string?]

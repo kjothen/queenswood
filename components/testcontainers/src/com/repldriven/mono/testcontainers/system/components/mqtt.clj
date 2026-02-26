@@ -1,9 +1,9 @@
 (ns com.repldriven.mono.testcontainers.system.components.mqtt
   (:require
-    [com.repldriven.mono.log.interface :as log]
-    [com.repldriven.mono.system.interface :as system]
+    [com.repldriven.mono.testcontainers.container :as container]
 
-    [clj-test-containers.core :as tc])
+    [com.repldriven.mono.log.interface :as log]
+    [com.repldriven.mono.system.interface :as system])
   (:import
     (java.time Duration)
     (org.testcontainers.hivemq HiveMQContainer)
@@ -13,20 +13,19 @@
 (def default-docker-image-name "hivemq/hivemq-ce:2025.5")
 
 (def container
-  {:system/start
-   (fn [{:system/keys [config instance]}]
-     (or instance
-         (let [{:keys [docker-image-name exposed-port]} config]
-           (log/info "Starting mqtt container")
-           (let [container (-> (DockerImageName/parse docker-image-name)
-                               (.asCompatibleSubstituteFor "hivemq/hivemq-ce")
-                               (HiveMQContainer.))]
-             (.withStartupTimeout container (Duration/ofSeconds 60))
-             (-> (tc/init {:container container :exposed-ports [exposed-port]})
-                 (tc/start!))))))
+  {:system/start (fn [{:system/keys [config instance]}]
+                   (or instance
+                       (let [{:keys [docker-image-name exposed-port]} config]
+                         (log/info "Starting mqtt container")
+                         (-> (DockerImageName/parse docker-image-name)
+                             (.asCompatibleSubstituteFor "hivemq/hivemq-ce")
+                             (HiveMQContainer.)
+                             (doto (.withStartupTimeout (Duration/ofSeconds
+                                                         60)))
+                             (container/start! [exposed-port])))))
    :system/stop (fn [{:system/keys [instance]}]
                   (log/info "Stopping mqtt container")
-                  (tc/stop! instance))
+                  (container/stop! instance))
    :system/config {:docker-image-name default-docker-image-name
                    :exposed-port default-exposed-port}
    :system/config-schema [:map [:docker-image-name string?]

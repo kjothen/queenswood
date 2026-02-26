@@ -34,7 +34,6 @@
       "matchManagers": ["deps-edn"],
       "matchPackagePatterns": ["^org\\.testcontainers:"],
       "matchPackageNames": [
-        "clj-test-containers/clj-test-containers",
         "earth.adi/testcontainers-foundationdb"
       ]
     },

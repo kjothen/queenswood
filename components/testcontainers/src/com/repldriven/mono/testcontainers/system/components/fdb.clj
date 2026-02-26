@@ -12,12 +12,14 @@
   [config]
   (let [{:keys [docker-image-name]} config]
     (log/info "Starting FDB container with image:" docker-image-name)
-    (let [container (FoundationDBContainer. (DockerImageName/parse
-                                             docker-image-name))]
-      (.withStartupTimeout container (Duration/ofSeconds 60))
-      (.start container)
-      (log/info "FDB container started successfully")
-      container)))
+    (doto (-> (DockerImageName/parse docker-image-name)
+              (FoundationDBContainer.))
+      (.withStartupTimeout (Duration/ofSeconds 60))
+      (.start))
+    ;; FoundationDB container is returned directly (not wrapped in
+    ;; a map) because the fdb component's system/components.clj
+    ;; extracts the cluster file path from the running instance.
+  ))
 
 (def container
   {:system/start (fn [{:system/keys [config instance]}]
@@ -28,4 +30,3 @@
    :system/config {:docker-image-name default-docker-image-name}
    :system/config-schema [:map [:docker-image-name string?]]
    :system/instance-schema some?})
-
