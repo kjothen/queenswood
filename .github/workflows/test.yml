@@ -10,9 +10,52 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+  checks: write
+  pull-requests: write
+
 jobs:
-  test:
+  discover:
     runs-on: ubuntu-latest
+
+    outputs:
+      projects: ${{ steps.projects.outputs.matrix }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Setup Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: "temurin"
+          java-version: "21"
+
+      - name: Setup Clojure
+        uses: DeLaGuardo/setup-clojure@13.5
+        with:
+          cli: latest
+
+      - name: Discover projects
+        id: projects
+        run: |
+          matrix=$(clojure -M:poly ws get:projects:keys \
+            | sed 's/\x1b\[[0-9;]*m//g' \
+            | jq -c '[.[] | select(test("development") | not)]')
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+          echo "Discovered projects: $matrix"
+
+  test:
+    needs: discover
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        project: ${{ fromJson(needs.discover.outputs.projects) }}
+
+    name: test (${{ matrix.project }})
 
     steps:
       - name: Checkout code
@@ -63,15 +106,17 @@ jobs:
       - name: Run tests
         env:
           TESTCONTAINERS_REUSE_ENABLE: "true"
+          COVERAGE: "true"
+          COVERAGE_THRESHOLD: "50"
         run: |
           clojure -X:deps prep :aliases '[:dev]'
-          clojure -M:poly test :all
+          clojure -M:poly test project:${{ matrix.project }}
 
       - name: Publish test report
         uses: dorny/test-reporter@v1
         if: always()
         with:
-          name: Test Results
+          name: Test Results (${{ matrix.project }})
           path: target/test-results/**/*.xml
           reporter: java-junit
           fail-on-error: true
@@ -80,6 +125,24 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: test-results
+          name: test-results-${{ matrix.project }}
           path: target/test-results/**/*.xml
+          retention-days: 7
+
+      - name: Report coverage
+        if: always()
+        uses: zgosalvez/github-actions-report-lcov@v4
+        with:
+          coverage-files: target/coverage/${{ matrix.project }}/lcov.info
+          minimum-coverage: 50
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          update-comment: true
+          title-prefix: "[${{ matrix.project }}]"
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report-${{ matrix.project }}
+          path: target/coverage/${{ matrix.project }}/
           retention-days: 7

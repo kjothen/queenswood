@@ -1,5 +1,9 @@
 (ns com.repldriven.mono.external-test-runner.main
   (:require
+    [cloverage.coverage :as cov]
+    [cloverage.instrument :as inst]
+    [cloverage.report :as rep]
+
     [eftest.report :refer [report-to-file]]
     [eftest.report.junit :as junit]
     [eftest.report.pretty :as report]
@@ -27,6 +31,11 @@
     :parse-fn keyword
     :assoc-fn (fn [m k v] (update m k (fnil conj []) v))]
    ["-h" "--help" "Show help"]])
+
+(defn- parse-env-nses
+  [env-var]
+  (when-let [s (System/getenv env-var)]
+    (when-not (str/blank? s) (mapv symbol (str/split s #",")))))
 
 (defn- parse-env-meta
   "Parse comma-separated metadata keywords from environment variable"
@@ -111,6 +120,56 @@
                        :report combined-reporter
                        :test-warn-time 1000})))
 
+(defn- coverage-pct
+  "Calculate overall line coverage percentage from gathered stats"
+  [forms]
+  (let [tracked (filter :tracked forms)
+        total (count tracked)
+        hit (count (filter :covered tracked))]
+    (if (pos? total) (* 100.0 (/ hit total)) 0.0)))
+
+(defn- run-with-coverage
+  "Instrument src namespaces, run tests, emit coverage report.
+
+  Env vars:
+    COVERAGE_THRESHOLD - minimum coverage % (default: none)"
+  [test-nses src-nses project opts]
+  (let [src-ns-syms (or src-nses
+                        ;; fallback: derive from test nses by convention
+                        ;; com.repldriven.mono.foo.core-test ->
+                        ;; com.repldriven.mono.foo.core
+                        (mapv #(-> (str %)
+                                   (str/replace #"-test$" "")
+                                   symbol)
+                              test-nses))
+        threshold (some-> (System/getenv "COVERAGE_THRESHOLD")
+                          parse-double)]
+    (println "Coverage: instrumenting" (count src-ns-syms) "namespaces")
+    ;; 1. Reset tracking atom
+    (reset! cov/*covered* [])
+    ;; 2. Require then instrument each src namespace
+    (doseq [ns-sym src-ns-syms]
+      (require ns-sym)
+      (binding [cov/*instrumented-ns* ns-sym]
+        (inst/instrument #'cov/track-coverage ns-sym))
+      (cov/mark-loaded ns-sym)
+      (println "Instrumented" ns-sym))
+    ;; 3. Run tests via existing eftest runner
+    (let [results (run-test-namespaces test-nses opts)
+          ;; 4. Collect and report coverage
+          forms (rep/gather-stats (cov/covered))
+          pct (coverage-pct forms)]
+      (cov/report-results
+       {:output (str "target/coverage/" project) :html? true :lcov? true}
+       {}
+       forms)
+      (println (format "Coverage: %.1f%%" pct))
+      (when (and threshold (< pct threshold))
+        (println
+         (format "FAIL: coverage %.1f%% below threshold %.1f%%" pct threshold))
+        (System/exit 1))
+      results)))
+
 (defn- exit-with-results
   "Exit with appropriate code based on test results"
   [{:keys [fail error]}]
@@ -129,15 +188,18 @@
   (let [;; Parse positional args from Corfield runner: color-mode
         ;; project-name ...test-nses
         _color-mode (keyword (first args))
-        _project (second args)
+        project (second args)
         test-nses (map symbol (drop 2 args))
         ;; Get metadata filtering from environment variables
         env-skip (parse-env-meta "SKIP_META")
-        env-focus (parse-env-meta "FOCUS_META")]
+        env-focus (parse-env-meta "FOCUS_META")
+        coverage? (= "true" (System/getenv "COVERAGE"))
+        src-nses (parse-env-nses "COVERAGE_SRC_NSES")]
     (cond (empty? test-nses) (do (println "No test namespaces specified")
                                  (System/exit 1))
-          :else (let [results (run-test-namespaces test-nses
-                                                   {:verbose false
-                                                    :skip-meta env-skip
-                                                    :focus-meta env-focus})]
-                  (exit-with-results results)))))
+          :else
+          (let [opts {:verbose false :skip-meta env-skip :focus-meta env-focus}
+                results (if coverage?
+                          (run-with-coverage test-nses src-nses project opts)
+                          (run-test-namespaces test-nses opts))]
+            (exit-with-results results)))))
