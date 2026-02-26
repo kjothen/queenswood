@@ -1,6 +1,7 @@
 (ns ^:eftest/synchronized com.repldriven.mono.blocking-command-api.api-test
   (:require
     com.repldriven.mono.testcontainers.interface
+    com.repldriven.mono.avro.interface
 
     [com.repldriven.mono.blocking-command-api.api :as api]
 
@@ -21,16 +22,16 @@
 
 (defn send-http-command
   "Simulates Client - synchronous command request"
-  [command]
+  [command-name data]
   (http/request {:method :post
                  :url (str *base-url* "/api/command")
                  :headers {"Content-Type" "application/json"
                            "Idempotency-Key" (str (util/uuidv7))}
-                 :body (json/write-str {"command" command})}))
+                 :body (json/write-str {"command" command-name "data" data})}))
 
 (defn command-processor
-  "Simulates Processor - receives commands and replies
-  via message-bus"
+  "Simulates Processor - receives command envelopes and
+  replies via message-bus"
   [sys]
   (let [bus (system/instance sys [:message-bus :bus])]
     (message-bus/subscribe
@@ -45,10 +46,10 @@
                        ["id" "command" "correlation_id"
                         "causation_id"])
           (fn []
-            (message-bus/send bus
-                              :command-response
-                              (command/command-response data
-                                                        {"ok" "computer"})))))))
+            (message-bus/send
+             bus
+             :command-response
+             (command/command-response data {"record_id" "test-123"})))))))
     {:stop (fn [] (message-bus/unsubscribe bus :command))}))
 
 (deftest request-reply-test
@@ -62,10 +63,14 @@
        (binding [*base-url* (server/http-local-url jetty)]
          (telemetry/with-span-tests
           [_ ["process-command"]]
-          (nom-test> [res (send-http-command "test-command")
+          (nom-test> [res (send-http-command "open-account"
+                                             {"account_id" "acc-test"
+                                              "name" "Test Account"
+                                              "currency" "GBP"})
                       _ (is (= 200 (:status res)) "Should receive 200 OK")
                       actual (http/res->body res)
-                      _ (is (= {"ok" "computer"}
-                               (json/read-str (get-in actual ["data"])))
-                            "Should receive data")])))
+                      _ (is (= "ACCEPTED" (get actual "status"))
+                            "Should have ACCEPTED status")
+                      _ (is (= "test-123" (get actual "record_id"))
+                            "Should have record_id")])))
        (stop)))))

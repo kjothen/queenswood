@@ -9,32 +9,33 @@
     [clojure.java.io :as io]))
 
 (defn req->command-request
-  "Build a command wire message from an HTTP request.
+  "Build a command envelope from an HTTP request.
 
   Args:
   - req: HTTP request map (reads idempotency-key and
     correlation-id from headers)
   - command: command name string
-  - data: optional data map (JSON-encoded if present)
+  - payload: Avro-serialized bytes or nil
 
-  Returns a command map ready for message-bus."
-  [req command data]
-  (request/req->command-request req command data))
+  Returns a command envelope map ready for message-bus."
+  [req command payload]
+  (request/req->command-request req command payload))
 
 (defn req->command-response
-  "Build a command-response from an HTTP request and a result.
+  "Build a command-response from an HTTP request and a
+  result.
 
-  If result is an anomaly, builds an error response.
-  Otherwise (not yet used), builds a success response."
+  If result is an anomaly, builds a FAILED response.
+  Otherwise passes the result through."
   [req result]
   (response/req->command-response req result))
 
 (defn command-response
-  "Build a structured command response from a command and
-  its result.
+  "Build a structured command response from a command
+  envelope and its process-fn result.
 
-  On success: status ok, data JSON-encoded result, error nil.
-  On anomaly: builds an error response."
+  On success: status ACCEPTED, record_id from result.
+  On anomaly: status FAILED with error details."
   [command result]
   (response/command-response command result))
 
@@ -42,9 +43,8 @@
   "Command Malli specs for request/response validation.
 
   Includes:
-  - :command - Command data structure
+  - :command-envelope - Command envelope structure
   - :command-request - HTTP request wrapper
-  - :command-result - Command processing result
   - :command-response - HTTP response wrapper"
   (delay (-> "schemas/command/command.edn"
              io/resource
@@ -52,12 +52,12 @@
              edn/read-string)))
 
 (defn process
-  "Process commands via message-bus.
+  "Process command envelopes via message-bus.
 
   Args:
   - bus: message-bus instance
-  - process-fn: function that takes command data and returns
-    result or anomaly
+  - process-fn: function that takes a command envelope
+    and returns a result map or anomaly
   - opts: optional map (reserved for future use)
 
   Returns: {:stop (fn [])} — call stop to unsubscribe"
@@ -69,7 +69,7 @@
 
   Args:
   - bus: message-bus instance
-  - command: command data map
+  - command: command envelope map
   - opts: optional map with keys:
     - :timeout-ms - timeout in milliseconds (default 10000)
 

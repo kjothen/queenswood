@@ -3,6 +3,7 @@ handler: !system/required-component
 interceptors: !system/component
   system/component-kind: server/interceptors
   message-bus: !system/ref message-bus.bus
+  avro: !system/ref avro.serde
 
 jetty-adapter: !system/component
   system/component-kind: server/jetty-adapter

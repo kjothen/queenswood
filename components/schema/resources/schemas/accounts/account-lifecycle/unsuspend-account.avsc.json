@@ -1,0 +1,8 @@
+{
+  "type": "record",
+  "name": "UnsuspendAccount",
+  "namespace": "com.repldriven.mono.accounts.account_lifecycle",
+  "fields": [
+    {"name": "account_id",     "type": "string"}
+  ]
+}

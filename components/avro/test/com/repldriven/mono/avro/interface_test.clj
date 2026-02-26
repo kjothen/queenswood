@@ -14,17 +14,17 @@
 (deftest serialize-deserialize-test
   (testing "Serialize and deserialize Avro data"
     (let [schema (SUT/json->schema user-schema-json)
-          data {:name "Alice" :age 30}
+          data {"name" "Alice" "age" 30}
           serialized (SUT/serialize schema data)
           deserialized (SUT/deserialize-same schema serialized)]
       (is (bytes? serialized))
       (is (pos? (alength serialized)))
-      (is (= "Alice" (:name deserialized)))
-      (is (= 30 (:age deserialized)))))
+      (is (= "Alice" (get deserialized "name")))
+      (is (= 30 (get deserialized "age")))))
   (testing "Serialize data with null optional field"
     (let [schema (SUT/json->schema user-schema-json)
-          data {:name "Bob" :age nil}
+          data {"name" "Bob" "age" nil}
           serialized (SUT/serialize schema data)
           deserialized (SUT/deserialize-same schema serialized)]
-      (is (= "Bob" (:name deserialized)))
-      (is (nil? (:age deserialized))))))
+      (is (= "Bob" (get deserialized "name")))
+      (is (nil? (get deserialized "age"))))))

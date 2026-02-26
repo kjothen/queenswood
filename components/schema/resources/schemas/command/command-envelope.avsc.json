@@ -1,0 +1,15 @@
+{
+  "type": "record",
+  "name": "CommandEnvelope",
+  "namespace": "com.repldriven.mono.command",
+  "fields": [
+    {"name": "id",             "type": "string"},
+    {"name": "correlation_id", "type": "string"},
+    {"name": "command",        "type": "string"},
+    {"name": "payload",        "type": ["null", "bytes"], "default": null},
+    {"name": "causation_id",   "type": ["null", "string"], "default": null},
+    {"name": "traceparent",    "type": ["null", "string"], "default": null},
+    {"name": "tracestate",     "type": ["null", "string"], "default": null},
+    {"name": "reply_to",       "type": ["null", "string"], "default": null}
+  ]
+}

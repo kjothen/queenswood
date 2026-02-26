@@ -1,0 +1,10 @@
+{
+  "type": "record",
+  "name": "OpenAccount",
+  "namespace": "com.repldriven.mono.accounts.account_lifecycle",
+  "fields": [
+    {"name": "account_id",     "type": "string"},
+    {"name": "name",           "type": "string"},
+    {"name": "currency",       "type": "string"}
+  ]
+}

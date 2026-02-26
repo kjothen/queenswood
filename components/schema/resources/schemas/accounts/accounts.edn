@@ -1,9 +1,10 @@
 ;; Account command Malli specs, keyed by command name.
-{"open-account"      [:map ["account-id" :string] ["name" :string]
+;; Field names match Avro schema definitions (underscores).
+{"open-account"      [:map ["account_id" :string] ["name" :string]
                       ["currency" :string]]
- "close-account"     [:map ["account-id" :string]]
- "reopen-account"    [:map ["account-id" :string]]
- "suspend-account"   [:map ["account-id" :string]]
- "unsuspend-account" [:map ["account-id" :string]]
- "archive-account"   [:map ["account-id" :string]]
- "get-account-status" [:map ["account-id" :string]]}
+ "close-account"     [:map ["account_id" :string]]
+ "reopen-account"    [:map ["account_id" :string]]
+ "suspend-account"   [:map ["account_id" :string]]
+ "unsuspend-account" [:map ["account_id" :string]]
+ "archive-account"   [:map ["account_id" :string]]
+ "get-account-status" [:map ["account_id" :string]]}

@@ -1,8 +1,6 @@
 (ns com.repldriven.mono.command.request
   (:require
-    [com.repldriven.mono.telemetry.interface :as telemetry]
-
-    [clojure.data.json :as json]))
+    [com.repldriven.mono.telemetry.interface :as telemetry]))
 
 (defn- req->ids
   [req]
@@ -12,16 +10,16 @@
     [idempotency-key correlation-id]))
 
 (defn req->command-request
-  "Build a command wire message from an HTTP request.
+  "Build a command envelope from an HTTP request.
 
   Args:
   - req: HTTP request map (reads idempotency-key and
     correlation-id from headers)
   - command: command name string
-  - data: optional data map (JSON-encoded if present)
+  - payload: Avro-serialized bytes or nil
 
-  Returns a command map ready for message-bus."
-  [req command data]
+  Returns a command envelope map ready for message-bus."
+  [req command payload]
   (let [[idempotency-key correlation-id] (req->ids req)]
     {"command" command
      "id" idempotency-key
@@ -29,5 +27,5 @@
      "causation_id" nil
      "traceparent" (telemetry/inject-traceparent)
      "tracestate" nil
-     "data" (when data (json/write-str data))
+     "payload" payload
      "reply_to" nil}))

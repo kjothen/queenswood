@@ -23,8 +23,8 @@
                               :causation_id nil
                               :traceparent nil
                               :tracestate nil
-                              :data "{}"
-                              :reply_to "mqtt://test/reply"})])
+                              :payload nil
+                              :reply_to nil})])
      (let [data (deref received 10000 ::timeout)]
        (is (not= ::timeout data) "Should receive message within timeout")
        (when (not= ::timeout data)
@@ -46,8 +46,8 @@
                               :causation_id nil
                               :traceparent nil
                               :tracestate nil
-                              :data "{}"
-                              :reply_to "mqtt://test/reply"})])
+                              :payload nil
+                              :reply_to nil})])
      (let [data (deref received 10000 ::timeout)]
        (is (not= ::timeout data) "Should receive message within timeout")
        (when (not= ::timeout data)

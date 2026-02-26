@@ -6,10 +6,11 @@
         { "name": "id",             "type": "string" },
         { "name": "correlation_id", "type": "string" },
         { "name": "causation_id",   "type": "string" },
+        { "name": "record_id",      "type": "string" },
         { "name": "traceparent",    "type": "string" },
         { "name": "tracestate",     "type": ["null", "string"], "default": null },
-        { "name": "status",         "type": {"type": "enum", "name": "CommandResponseStatus", "symbols": ["ok", "error"]} },
-        { "name": "data",           "type": ["null", "string"], "default": null },
+        { "name": "status",         "type": {"type": "enum", "name": "CommandResponseStatus", "symbols": ["ACCEPTED", "REJECTED", "FAILED"]} },
+        { "name": "payload",        "type": ["null", "bytes"], "default": null },
         { "name": "error",          "type": ["null", "string"], "default": null }
     ]
 }

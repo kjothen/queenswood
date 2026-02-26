@@ -6,17 +6,22 @@
     [com.repldriven.mono.telemetry.interface :as telemetry]))
 
 (defn process
-  "Process commands via message-bus.
+  "Process command envelopes via message-bus.
 
   Extracts the parent trace context from each incoming
-  command and creates a span that covers both the
+  envelope and creates a span that covers both the
   process-fn call and the response send. This ensures
   inject-traceparent in the response has an active span.
 
+  The process-fn receives the raw command envelope
+  (including payload bytes) and is responsible for
+  deserializing the payload.
+
   Args:
   - bus: message-bus instance
-  - process-fn: function that takes command data and
-    returns result or anomaly
+  - process-fn: function that takes a command envelope
+    and returns a result map or anomaly. On success the
+    result should include a \"record_id\" key.
   - opts: optional map (reserved for future use)
 
   Returns: {:stop (fn [])} — call stop to unsubscribe"

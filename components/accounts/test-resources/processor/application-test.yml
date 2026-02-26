@@ -2,5 +2,17 @@ system:
   postgres: !include testcontainers/postgres-test.yml
   db: !include processor/postgres/datasource-test.yml
   migrator: !include processor/migrator-test.yml
+  avro:
+    serde: !system/component
+      system/component-kind: avro/serde
+      schemas:
+        open-account: schemas/accounts/account-lifecycle/open-account.avsc.json
+        close-account: schemas/accounts/account-lifecycle/close-account.avsc.json
+        reopen-account: schemas/accounts/account-lifecycle/reopen-account.avsc.json
+        suspend-account: schemas/accounts/account-lifecycle/suspend-account.avsc.json
+        unsuspend-account: schemas/accounts/account-lifecycle/unsuspend-account.avsc.json
+        archive-account: schemas/accounts/account-lifecycle/archive-account.avsc.json
+        get-account-status: schemas/accounts/reporting-operations/get-account-status.avsc.json
   processor:
     datasource: !system/ref migrator.migrations
+    schemas: !system/ref avro.serde

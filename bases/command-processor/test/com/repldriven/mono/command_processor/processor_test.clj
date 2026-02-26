@@ -5,20 +5,24 @@
 
     [com.repldriven.mono.command-processor.processor :as SUT]
 
+    [com.repldriven.mono.avro.interface :as avro]
     [com.repldriven.mono.command.interface :as command]
     [com.repldriven.mono.system.interface :as system]
     [com.repldriven.mono.telemetry.interface :as telemetry]
     [com.repldriven.mono.test-system.interface :refer
      [with-test-system nom-test>]]
 
-    [clojure.data.json :as json]
     [clojure.test :refer [deftest is testing]]))
 
 (defn send-command
-  "Simulates Sender - sends a command via message-bus and
-  blocks until the result is received"
+  "Simulates Sender - Avro-serializes payload, sends a
+  command envelope via message-bus, and blocks until the
+  result is received."
   [sys command-name data]
   (let [bus (system/instance sys [:message-bus :bus])
+        schemas (system/instance sys [:avro :serde])
+        schema (get schemas command-name)
+        payload (avro/serialize schema data)
         cmd-id (str (java.util.UUID/randomUUID))]
     (telemetry/with-span ["send-command" {}]
                          (command/send bus
@@ -29,7 +33,7 @@
                                         "traceparent"
                                         (telemetry/inject-traceparent)
                                         "tracestate" nil
-                                        "data" (json/write-str data)
+                                        "payload" payload
                                         "reply_to" nil}))))
 
 (deftest process-command-test
@@ -41,11 +45,9 @@
         [_ ["send-command" "process-command"]]
         (nom-test> [result (send-command sys
                                          "open-account"
-                                         {"account-id" "acc-api-test"
+                                         {"account_id" "acc-api-test"
                                           "name" "API Test Account"
                                           "currency" "GBP"})
-                    _ (is (= "ok" (get result "status")))
-                    _ (is (= "acc-api-test"
-                             (get (json/read-str (get result "data"))
-                                  "account-id")))]))
+                    _ (is (= "ACCEPTED" (get result "status")))
+                    _ (is (= "acc-api-test" (get result "record_id")))]))
        (stop)))))

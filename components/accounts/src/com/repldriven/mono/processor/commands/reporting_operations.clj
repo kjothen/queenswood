@@ -6,16 +6,16 @@
 
 (defn get-account-status
   "Return the current status of an account."
-  [{:keys [datasource]} {:strs [account-id]}]
+  [{:keys [datasource]} {:strs [account_id]}]
   (let [row (db/execute-one! datasource
                              (sql/format {:select [:account_id :status]
                                           :from :account
-                                          :where [:= :account_id account-id]})
+                                          :where [:= :account_id account_id]})
                              {:builder-fn db/as-unqualified-lower-maps})]
     (cond (error/anomaly? row) row
           (some? row) {:status :ok
-                       :account-id (:account_id row)
+                       :account_id (:account_id row)
                        :account-status (:status row)}
           :else (error/fail :accounts/get-account-status
                             {:message "Account not found"
-                             :account-id account-id}))))
+                             :account_id account_id}))))
