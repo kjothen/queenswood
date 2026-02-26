@@ -46,6 +46,7 @@
     bases/symmetric-key-api {:local/root "bases/symmetric-key-api"}
     org.clojure/clojure {:mvn/version "1.12.4"}
     org.clojure/core.async {:mvn/version "1.8.741"}
+    ;; Pin to 3.x for FDB Record Layer compatibility
     com.google.protobuf/protobuf-java {:mvn/version "3.25.8"}}
    :extra-paths ["development/resources"]
    :jvm-opts
