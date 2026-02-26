@@ -2,13 +2,11 @@
   (:require
     com.repldriven.mono.testcontainers.interface
 
-    [com.repldriven.mono.db.interface :as sql]
     [com.repldriven.mono.migrator.interface :as SUT]
+
+    [com.repldriven.mono.db.interface :as sql]
     [com.repldriven.mono.system.interface :as system]
     [com.repldriven.mono.test-system.interface :refer [with-test-system]]
-
-    [next.jdbc :as jdbc]
-    [next.jdbc.result-set :as rs]
 
     [clojure.test :refer [deftest is testing]]))
 
@@ -25,6 +23,6 @@
            db-spec (db-spec sys)]
        (SUT/migrate db-spec "migrator/test-changelog.sql")
        (is (= [{:name "hello"} {:name "world"}]
-              (jdbc/execute! datasource
-                             ["select name from test order by id asc"]
-                             {:builder-fn rs/as-unqualified-lower-maps})))))))
+              (sql/execute! datasource
+                            ["select name from test order by id asc"]
+                            {:builder-fn sql/as-unqualified-lower-maps})))))))

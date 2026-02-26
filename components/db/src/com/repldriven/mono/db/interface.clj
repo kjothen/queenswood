@@ -9,6 +9,8 @@
 
 (def update-count core/update-count)
 
+(defn get-connection [connectable] (core/get-connection connectable))
+
 (defn get-datasource
   [datasource-config]
   (core/get-datasource datasource-config))

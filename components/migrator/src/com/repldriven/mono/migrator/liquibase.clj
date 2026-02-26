@@ -1,8 +1,8 @@
 (ns com.repldriven.mono.migrator.liquibase
   (:require
-    [next.jdbc]
-
+    [com.repldriven.mono.db.interface :as sql]
     [com.repldriven.mono.error.interface :as error]
+
     [clojure.java.io :as io])
   (:import
     (liquibase Contexts LabelExpression Liquibase)
@@ -25,7 +25,7 @@
   (error/try-nom
    :migrator/migration-failed
    "Failed to run database migrations"
-   (with-open [conn (next.jdbc/get-connection db-spec)]
+   (with-open [conn (sql/get-connection db-spec)]
      (let [jdbc-connection (JdbcConnection. conn)
            ^Database database (.findCorrectDatabaseImplementation
                                (DatabaseFactory/getInstance)

@@ -1,4 +1,4 @@
-{:aliases {:test {:extra-deps {repldriven/http-client {:local/root "../http-client"}}
+{:aliases {:test {:extra-deps {}
                      :extra-paths ["test" "test-resources"]}}
  :deps {metosin/reitit {:mvn/version "0.10.0"}
         ring-logger-timbre/ring-logger-timbre {:mvn/version "0.7.6"}

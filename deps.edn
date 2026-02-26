@@ -90,7 +90,6 @@
                        "components/server/test"
                        "components/server/test-resources"
                        "components/spec/test"
-                       "components/sql/test"
                        "components/system/test"
                        "components/test-resources/test-resources"
                        "components/testcontainers/test"

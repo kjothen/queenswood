@@ -12,6 +12,13 @@
 
 (def update-count :next.jdbc/update-count)
 
+(defn get-connection
+  "Get a JDBC connection from a connectable (datasource, db-spec,
+  etc.). Returns a java.sql.Connection suitable for use with
+  with-open."
+  [connectable]
+  (jdbc/get-connection connectable))
+
 (defn get-datasource
   "Get a JDBC datasource from a datasource config map."
   [datasource-config]
