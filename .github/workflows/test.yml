@@ -26,23 +26,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
 
-      - name: Setup Java
-        uses: actions/setup-java@v5
-        with:
-          distribution: "temurin"
-          java-version: "21"
-
-      - name: Setup Clojure
-        uses: DeLaGuardo/setup-clojure@13.5
-        with:
-          cli: latest
-
       - name: Discover projects
         id: projects
         run: |
-          matrix=$(clojure -M:poly ws get:projects:keys \
-            | sed 's/\x1b\[[0-9;]*m//g' \
-            | jq -c '[.[] | select(test("development") | not)]')
+          matrix=$(ls projects/ | jq -Rc '[inputs]')
           echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
           echo "Discovered projects: $matrix"
 
