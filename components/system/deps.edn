@@ -1,3 +1,4 @@
 {:aliases {:test {:extra-deps {} :extra-paths ["test"]}}
- :deps {party.donut/system {:mvn/version "1.0.258"}}
+ :deps {party.donut/system {:mvn/version "1.0.258"
+                            :exclusions [com.google.javascript/closure-compiler]}}
  :paths ["src"]}
