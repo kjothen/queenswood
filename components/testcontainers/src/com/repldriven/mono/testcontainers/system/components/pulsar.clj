@@ -26,6 +26,7 @@
         (doto (.addEnv "PULSAR_MEM"
                        (str "-Xms128m -Xmx128m"
                             " -XX:MaxDirectMemorySize=128m"))
+              (.addEnv "PULSAR_GC" "-XX:+UseSerialGC")
               (.withStartupTimeout (Duration/ofMinutes 3)))
         (container/start! exposed-ports))))
 
