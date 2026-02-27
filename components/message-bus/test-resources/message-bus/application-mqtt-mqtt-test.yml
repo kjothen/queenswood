@@ -1,3 +1,0 @@
-system:
-  mqtt: !include testcontainers/mqtt-all-test.yml
-  message-bus: !include message-bus/mqtt-mqtt-tests.yml

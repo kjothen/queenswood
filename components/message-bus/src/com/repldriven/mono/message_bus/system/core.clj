@@ -5,4 +5,5 @@
 
     [com.repldriven.mono.system.interface :as system]))
 
-(system/defcomponents :message-bus {:bus components/bus})
+(system/defcomponents :message-bus
+                      {:bus components/bus :local-bus components/local-bus})

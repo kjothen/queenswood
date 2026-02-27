@@ -20,7 +20,7 @@
 (def interceptors
   {:system/start (fn [{:system/keys [config instance]}]
                    (or instance
-                       (do (log/info "Building interceptors:" config)
+                       (do (log/info "Building interceptors:" (keys config))
                            (reduce-kv (fn [coll k v]
                                         (conj coll (interceptor k v)))
                                       []
