@@ -4,8 +4,6 @@
                       :main com.repldriven.mono.symmetric-key-api.main
                       :major-minor-version "0.0"}
           :ns-default com.repldriven.mono.build.build}
-  :dev {:extra-deps {component/test-system {:local/root
-                                            "../../components/test-system"}}}
   :test
   {:extra-deps
    {bases/external-test-runner {:local/root "../../bases/external-test-runner"}
