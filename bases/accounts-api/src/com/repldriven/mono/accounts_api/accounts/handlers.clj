@@ -17,30 +17,33 @@
               (error/fail :accounts-api/unknown-command
                           {:message "No Avro schema for command"
                            :command command-name}))}
-      (let [payload (avro/serialize schema data)]
-        (if (error/anomaly? payload)
-          {:status 500 :body (command/req->command-response request payload)}
-          (let [cmd (command/req->command-request request command-name payload)
-                p (promise)
-                sub (message-bus/subscribe bus
-                                           :command-response
-                                           (fn [d] (deliver p d)))]
-            (if (error/anomaly? sub)
-              {:status 500 :body (command/req->command-response request sub)}
-              (try (let [pub (message-bus/send bus :command cmd)]
-                     (if (error/anomaly? pub)
-                       {:status 500
-                        :body (command/req->command-response request pub)}
-                       (let [result (deref p 5000 ::timeout)]
-                         (if (= result ::timeout)
-                           {:status 408
-                            :body (command/req->command-response
-                                   request
-                                   (error/fail :accounts-api/timeout
-                                               "Command reply timed out"))}
-                           {:status 200 :body result}))))
-                   (finally (message-bus/unsubscribe bus
-                                                     :command-response))))))))))
+      (let [p (promise)
+            result
+            (error/let-nom> [payload (avro/serialize schema data)
+                             _ (message-bus/subscribe bus
+                                                      :command-response
+                                                      (fn [d] (deliver p d)))
+                             _ (message-bus/send bus
+                                                 :command
+                                                 (command/req->command-request
+                                                  request
+                                                  command-name
+                                                  payload))]
+              (deref p 5000 ::timeout))]
+        (cond
+         (error/anomaly? result)
+         {:status 500
+          :body (command/req->command-response request result)}
+
+         (= result ::timeout)
+         {:status 408
+          :body (command/req->command-response
+                 request
+                 (error/fail :accounts-api/timeout
+                             "Command reply timed out"))}
+
+         :else
+         {:status 200 :body result})))))
 
 (defn open-account
   [request]

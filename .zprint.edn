@@ -7,7 +7,8 @@
           "let-nom>" :binding
           "nom-do>" :arg1
           "nom-let>" :binding
-          "nom-test>" :binding}
+          "nom-test>" :binding
+          "cond" [:pair {:style :respect-nl}]}
  :map {:comma? false
        :lift-ns? false
        :nl-separator? false
