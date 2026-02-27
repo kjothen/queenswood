@@ -1,6 +1,7 @@
 (ns com.repldriven.mono.command-processor.main
   (:require
     com.repldriven.mono.message-bus.interface
+    com.repldriven.mono.pulsar.interface
 
     [com.repldriven.mono.command-processor.processor :as processor]
 

@@ -1,6 +1,7 @@
 (ns com.repldriven.mono.accounts-api.main
   (:require
     com.repldriven.mono.message-bus.interface
+    com.repldriven.mono.pulsar.interface
     com.repldriven.mono.server.interface
 
     [com.repldriven.mono.accounts-api.api :as api]
@@ -24,8 +25,8 @@
 (defn -main
   [& args]
   (log/info args)
-  (let [{:keys [options exit-message ok?]}
-        (cli/validate-args "accounts-api" args)]
+  (let [{:keys [options exit-message ok?]} (cli/validate-args "accounts-api"
+                                                              args)]
     (if exit-message
       (cli/exit ok? exit-message)
       (let [{:keys [config-file profile]} options
