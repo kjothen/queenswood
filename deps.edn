@@ -60,8 +60,7 @@
                   :main-opts ["-m" "zprint.main"]}
   :lint/clj-kondo {:extra-deps {clj-kondo/clj-kondo {:mvn/version "2024.11.14"}}
                    :main-opts ["-m" "clj-kondo.main"]}
-  :test {:extra-deps {cloverage/cloverage {:mvn/version "1.2.4"}
-                      http-kit.fake/http-kit.fake {:mvn/version "0.2.2"}}
+  :test {:extra-deps {cloverage/cloverage {:mvn/version "1.2.4"}}
          :extra-paths ["components/accounts/test"
                        "components/accounts/test-resources"
                        "components/avro/test"
