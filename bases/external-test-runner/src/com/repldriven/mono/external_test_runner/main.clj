@@ -5,8 +5,9 @@
     [cloverage.report :as rep]
 
     [eftest.report :refer [report-to-file]]
-    [eftest.report.junit :as junit]
     [eftest.report.pretty :as report]
+
+    [com.repldriven.mono.external-test-runner.junit :as junit]
     [eftest.runner :as eftest]
 
     [clojure.java.io :as io]
