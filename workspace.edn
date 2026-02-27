@@ -12,8 +12,8 @@
                              :necessary ["schema" "test-resources"]}
             "accounts-processor" {:alias "ap"
                                   :necessary ["schema" "test-resources"]}
-            "iam" {:alias "iam" :necessary ["schema" "test-resources"]}
-            "symmetric-key-vault" {:alias "key" :necessary ["test-resources"]}}
+            "iam-web" {:alias "iam" :necessary ["schema" "test-resources"]}
+            "keyring-web" {:alias "key" :necessary ["test-resources"]}}
  :tag-patterns {:release "v[0-9]*" :stable "stable-*"}
  :test {:create-test-runner
         com.repldriven.mono.external-test-runner.core/create}
