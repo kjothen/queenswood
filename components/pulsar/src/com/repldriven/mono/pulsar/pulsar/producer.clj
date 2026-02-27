@@ -43,7 +43,8 @@
   Handles both direct ENUM and UNION containing an ENUM."
   [field-schema]
   (let [t (.getType field-schema)]
-    (cond (= t Schema$Type/ENUM) field-schema
+    (cond (= t Schema$Type/ENUM)
+          field-schema
           (= t Schema$Type/UNION)
           (some (fn [s] (when (= Schema$Type/ENUM (.getType s)) s))
                 (.getTypes field-schema)))))

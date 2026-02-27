@@ -57,21 +57,25 @@
                                                         TimeUnit/MILLISECONDS))]
                                           msg))])]
            (cond
-             (= port stop) nil
-             (some? v)
-             (do
-               (comment
-                 "Race the put against stop. If the caller took fewer messages"
-                 "than the reader produced (e.g. via async/take), nobody reads"
-                 "c anymore and a plain >!! would block the loop — making"
-                 ">!! stop :stop deadlock too.")
-               (let [[_ p] (async/alts!! [[c
-                                           {:message v
-                                            :data (message/deserialize-same
-                                                   schema
-                                                   v)}] stop])]
-                 (when (not= p stop) (recur))))
-             :else (recur))))
+            (= port stop)
+            nil
+
+            (some? v)
+            (do
+              (comment
+                "Race the put against stop. If the caller took fewer messages"
+                "than the reader produced (e.g. via async/take), nobody reads"
+                "c anymore and a plain >!! would block the loop — making"
+                ">!! stop :stop deadlock too.")
+              (let [[_ p] (async/alts!! [[c
+                                          {:message v
+                                           :data (message/deserialize-same
+                                                  schema
+                                                  v)}] stop])]
+                (when (not= p stop) (recur))))
+
+            :else
+            (recur))))
        (finally (async/close! c) (async/close! stop))))
     {:c c :stop stop}))
 

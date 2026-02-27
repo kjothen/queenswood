@@ -39,9 +39,15 @@
                                            display-name
                                            description)]
     (log/info "create" project-id body)
-    (cond (conflict? result) {:status 409 :body already-exists-error}
-          (not-found? result) {:status 500 :body result}
-          :else {:status 201 :body result})))
+    (cond
+     (conflict? result)
+     {:status 409 :body already-exists-error}
+
+     (not-found? result)
+     {:status 500 :body result}
+
+     :else
+     {:status 201 :body result})))
 
 (defn get
   [request]
@@ -51,9 +57,15 @@
         result (iam/get-service-account datasource
                                         (service-account-name project-id id))]
     (log/info "get" project-id id)
-    (cond (not-found? result) {:status 404 :body unknown-service-account-error}
-          result {:status 200 :body result}
-          :else {:status 404 :body unknown-service-account-error})))
+    (cond
+     (not-found? result)
+     {:status 404 :body unknown-service-account-error}
+
+     result
+     {:status 200 :body result}
+
+     :else
+     {:status 404 :body unknown-service-account-error})))
 
 (defn patch
   [request]

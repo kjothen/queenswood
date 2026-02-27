@@ -49,16 +49,21 @@
   (let [skip-set (set skip-meta)
         focus-set (set focus-meta)]
     (cond
-      ;; If focus-meta is specified, only run tests with those tags
-      (seq focus-set) (fn [test-var]
-                        (let [test-meta (meta test-var)]
-                          (some focus-set (keys test-meta))))
-      ;; If skip-meta is specified, skip tests with those tags
-      (seq skip-set) (fn [test-var]
-                       (let [test-meta (meta test-var)]
-                         (not (some skip-set (keys test-meta)))))
-      ;; Otherwise, run all tests
-      :else (constantly true))))
+     ;; If focus-meta is specified, only run tests with those tags
+     (seq focus-set)
+     (fn [test-var]
+       (let [test-meta (meta test-var)]
+         (some focus-set (keys test-meta))))
+
+     ;; If skip-meta is specified, skip tests with those tags
+     (seq skip-set)
+     (fn [test-var]
+       (let [test-meta (meta test-var)]
+         (not (some skip-set (keys test-meta)))))
+
+     ;; Otherwise, run all tests
+     :else
+     (constantly true))))
 
 (defn- require-test-namespaces
   "Require all test namespaces"
@@ -195,11 +200,14 @@
         env-focus (parse-env-meta "FOCUS_META")
         coverage? (= "true" (System/getenv "COVERAGE"))
         src-nses (parse-env-nses "COVERAGE_SRC_NSES")]
-    (cond (empty? test-nses) (do (println "No test namespaces specified")
-                                 (System/exit 1))
-          :else
-          (let [opts {:verbose false :skip-meta env-skip :focus-meta env-focus}
-                results (if coverage?
-                          (run-with-coverage test-nses src-nses project opts)
-                          (run-test-namespaces test-nses opts))]
-            (exit-with-results results)))))
+    (cond
+     (empty? test-nses)
+     (do (println "No test namespaces specified")
+         (System/exit 1))
+
+     :else
+     (let [opts {:verbose false :skip-meta env-skip :focus-meta env-focus}
+           results (if coverage?
+                     (run-with-coverage test-nses src-nses project opts)
+                     (run-test-namespaces test-nses opts))]
+       (exit-with-results results)))))

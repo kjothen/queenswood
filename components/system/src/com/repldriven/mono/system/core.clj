@@ -30,20 +30,35 @@
 
 (defn- nsmap->nsmap
   [m from-ns to-ns]
-  (letfn [(walk [x]
-            (cond (map? x) (into {}
-                                 (map (fn [[k v]]
-                                        (let [k' (walk k)]
-                                          (if (schema-key-name? k')
-                                            [k' v]
-                                            [k' (walk v)]))))
-                                 x)
-                  (vector? x) (mapv walk x)
-                  (seq? x) (doall (map walk x))
-                  (set? x) (into #{} (map walk x))
-                  (match-ns-keyword? x from-ns) (keyword to-ns (name x))
-                  (fn? x) (wrap-fn x from-ns to-ns)
-                  :else x))]
+  (letfn
+    [(walk [x]
+       (cond
+        (map? x)
+        (into {}
+              (map (fn [[k v]]
+                     (let [k' (walk k)]
+                       (if (schema-key-name? k')
+                         [k' v]
+                         [k' (walk v)]))))
+              x)
+
+        (vector? x)
+        (mapv walk x)
+
+        (seq? x)
+        (doall (map walk x))
+
+        (set? x)
+        (into #{} (map walk x))
+
+        (match-ns-keyword? x from-ns)
+        (keyword to-ns (name x))
+
+        (fn? x)
+        (wrap-fn x from-ns to-ns)
+
+        :else
+        x))]
     (walk m)))
 
 (def required-component ::ds/required-component)

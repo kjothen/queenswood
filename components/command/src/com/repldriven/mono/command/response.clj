@@ -15,13 +15,19 @@
 
 (defn- serializable-details
   [details]
-  (cond (string? details) {:message details}
-        (map? details) (into {}
-                             (keep (fn [[k v]]
-                                     (when-not (instance? Throwable v)
-                                       [k (if (keyword? v) (str v) v)])))
-                             details)
-        :else {:message (str details)}))
+  (cond
+   (string? details)
+   {:message details}
+
+   (map? details)
+   (into {}
+         (keep (fn [[k v]]
+                 (when-not (instance? Throwable v)
+                   [k (if (keyword? v) (str v) v)])))
+         details)
+
+   :else
+   {:message (str details)}))
 
 (defn- ->command-error
   [causation-id correlation-id category details]

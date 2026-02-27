@@ -13,10 +13,18 @@
 
 (defn- file-type->keyword
   [source]
-  (cond (str/ends-with? source ".edn") :edn
-        (str/ends-with? source ".yml") :yml
-        (str/ends-with? source ".yaml") :yml
-        :else (throw (ex-info "Unknown file type" {:source source}))))
+  (cond
+   (str/ends-with? source ".edn")
+   :edn
+
+   (str/ends-with? source ".yml")
+   :yml
+
+   (str/ends-with? source ".yaml")
+   :yml
+
+   :else
+   (throw (ex-info "Unknown file type" {:source source}))))
 
 (defmulti file-type (fn [source] (type source)))
 (defmethod file-type java.net.URL

@@ -6,10 +6,15 @@
   "Convert YAML-specific collection types to standard Clojure collections.
   Converts OrderedMaps to hash-maps and seqs to vectors."
   [form]
-  (postwalk #(cond (= "class flatland.ordered.map.OrderedMap" (str (type %)))
-                   (into (hash-map) %)
-                   (seq? %) (into (vector) %)
-                   :else %)
+  (postwalk #(cond
+              (= "class flatland.ordered.map.OrderedMap" (str (type %)))
+              (into (hash-map) %)
+
+              (seq? %)
+              (into (vector) %)
+
+              :else
+              %)
             form))
 
 (defn deep-merge

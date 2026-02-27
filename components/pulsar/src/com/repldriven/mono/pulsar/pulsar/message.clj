@@ -22,18 +22,33 @@
   "Coerce Avro-specific types (enum symbols, Utf8, ByteBuffer)
   to plain Clojure/Java types."
   [v]
-  (cond (nil? v) nil
-        (string? v) v
-        (number? v) v
-        (instance? Boolean v) v
-        (bytes? v) v
-        (instance? java.nio.ByteBuffer v)
-        (let [^java.nio.ByteBuffer buf (.duplicate v)
-              arr (byte-array (.remaining buf))]
-          (.get buf arr)
-          arr)
-        (instance? GenericRecord v) (generic-record->map v)
-        :else (str v)))
+  (cond
+   (nil? v)
+   nil
+
+   (string? v)
+   v
+
+   (number? v)
+   v
+
+   (instance? Boolean v)
+   v
+
+   (bytes? v)
+   v
+
+   (instance? java.nio.ByteBuffer v)
+   (let [^java.nio.ByteBuffer buf (.duplicate v)
+         arr (byte-array (.remaining buf))]
+     (.get buf arr)
+     arr)
+
+   (instance? GenericRecord v)
+   (generic-record->map v)
+
+   :else
+   (str v)))
 
 (defn- generic-record->map
   "Convert a Pulsar GenericRecord to a Clojure map."

@@ -12,11 +12,17 @@
                                                        :currency :status]
                                              :values [[account_id name currency
                                                        [:inline "open"]]]}))]
-    (cond (error/anomaly? result) result
-          (pos? (db/update-count result)) {:status :ok :account_id account_id}
-          :else (error/fail :accounts/account-open
-                            {:message "Failed to create account"
-                             :account_id account_id}))))
+    (cond
+     (error/anomaly? result)
+     result
+
+     (pos? (db/update-count result))
+     {:status :ok :account_id account_id}
+
+     :else
+     (error/fail :accounts/account-open
+                 {:message "Failed to create account"
+                  :account_id account_id}))))
 
 (defn close
   [{:keys [datasource]} {:strs [account_id]}]
@@ -27,11 +33,17 @@
                                         :updated_at [:timezone "utc" [:now]]}
                                   :where [:= :account_id account_id]})
                                 {:return-keys false})]
-    (cond (error/anomaly? result) result
-          (pos? (db/update-count result)) {:status :ok :account_id account_id}
-          :else (error/fail :accounts/account-close
-                            {:message "Account not found"
-                             :account_id account_id}))))
+    (cond
+     (error/anomaly? result)
+     result
+
+     (pos? (db/update-count result))
+     {:status :ok :account_id account_id}
+
+     :else
+     (error/fail :accounts/account-close
+                 {:message "Account not found"
+                  :account_id account_id}))))
 
 (defn reopen
   [{:keys [datasource]} {:strs [account_id]}]
@@ -42,11 +54,17 @@
                                         :updated_at [:timezone "utc" [:now]]}
                                   :where [:= :account_id account_id]})
                                 {:return-keys false})]
-    (cond (error/anomaly? result) result
-          (pos? (db/update-count result)) {:status :ok :account_id account_id}
-          :else (error/fail :accounts/account-reopen
-                            {:message "Account not found"
-                             :account_id account_id}))))
+    (cond
+     (error/anomaly? result)
+     result
+
+     (pos? (db/update-count result))
+     {:status :ok :account_id account_id}
+
+     :else
+     (error/fail :accounts/account-reopen
+                 {:message "Account not found"
+                  :account_id account_id}))))
 
 (defn suspend
   [{:keys [datasource]} {:strs [account_id]}]
@@ -57,11 +75,17 @@
                                         :updated_at [:timezone "utc" [:now]]}
                                   :where [:= :account_id account_id]})
                                 {:return-keys false})]
-    (cond (error/anomaly? result) result
-          (pos? (db/update-count result)) {:status :ok :account_id account_id}
-          :else (error/fail :accounts/account-suspend
-                            {:message "Account not found"
-                             :account_id account_id}))))
+    (cond
+     (error/anomaly? result)
+     result
+
+     (pos? (db/update-count result))
+     {:status :ok :account_id account_id}
+
+     :else
+     (error/fail :accounts/account-suspend
+                 {:message "Account not found"
+                  :account_id account_id}))))
 
 (defn unsuspend
   [{:keys [datasource]} {:strs [account_id]}]
@@ -72,11 +96,17 @@
                                         :updated_at [:timezone "utc" [:now]]}
                                   :where [:= :account_id account_id]})
                                 {:return-keys false})]
-    (cond (error/anomaly? result) result
-          (pos? (db/update-count result)) {:status :ok :account_id account_id}
-          :else (error/fail :accounts/account-unsuspend
-                            {:message "Account not found"
-                             :account_id account_id}))))
+    (cond
+     (error/anomaly? result)
+     result
+
+     (pos? (db/update-count result))
+     {:status :ok :account_id account_id}
+
+     :else
+     (error/fail :accounts/account-unsuspend
+                 {:message "Account not found"
+                  :account_id account_id}))))
 
 (defn archive
   [{:keys [datasource]} {:strs [account_id]}]
@@ -88,8 +118,14 @@
                                         :deleted_at [:timezone "utc" [:now]]}
                                   :where [:= :account_id account_id]})
                                 {:return-keys false})]
-    (cond (error/anomaly? result) result
-          (pos? (db/update-count result)) {:status :ok :account_id account_id}
-          :else (error/fail :accounts/account-archive
-                            {:message "Account not found"
-                             :account_id account_id}))))
+    (cond
+     (error/anomaly? result)
+     result
+
+     (pos? (db/update-count result))
+     {:status :ok :account_id account_id}
+
+     :else
+     (error/fail :accounts/account-archive
+                 {:message "Account not found"
+                  :account_id account_id}))))

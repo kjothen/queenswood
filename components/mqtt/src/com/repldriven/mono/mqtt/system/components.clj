@@ -51,25 +51,23 @@
 ;; ---
 
 (def message-bus-producers
-  {:system/start (fn [{:system/keys [config instance]}]
-                   (or instance
-                       (into {}
-                             (map (fn [[k {:keys [client topic qos]}]]
-                                    [k (message-bus/->MqttProducer client
-                                                                    topic
-                                                                    (or qos 0))])
-                                  config))))
+  {:system/start
+   (fn [{:system/keys [config instance]}]
+     (or instance
+         (into {}
+               (map (fn [[k {:keys [client topic qos]}]]
+                      [k (message-bus/->MqttProducer client topic (or qos 0))])
+                    config))))
    :system/config system/required-component
    :system/instance-schema map?})
 
 (def message-bus-consumers
-  {:system/start (fn [{:system/keys [config instance]}]
-                   (or instance
-                       (into {}
-                             (map (fn [[k {:keys [client topic qos]}]]
-                                    [k (message-bus/->MqttConsumer client
-                                                                    topic
-                                                                    (or qos 0))])
-                                  config))))
+  {:system/start
+   (fn [{:system/keys [config instance]}]
+     (or instance
+         (into {}
+               (map (fn [[k {:keys [client topic qos]}]]
+                      [k (message-bus/->MqttConsumer client topic (or qos 0))])
+                    config))))
    :system/config system/required-component
    :system/instance-schema map?})

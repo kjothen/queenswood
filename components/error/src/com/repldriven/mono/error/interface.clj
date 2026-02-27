@@ -13,10 +13,18 @@
 ;; Creation
 (defn fail
   [category & more]
-  (let [p (cond (map? (first more)) (first more)
-                (string? (first more)) {:message (first more)}
-                (seq more) (apply hash-map more)
-                :else {})]
+  (let [p (cond
+           (map? (first more))
+           (first more)
+
+           (string? (first more))
+           {:message (first more)}
+
+           (seq more)
+           (apply hash-map more)
+
+           :else
+           {})]
     [:error/anomaly category p]))
 
 ;; Introspection

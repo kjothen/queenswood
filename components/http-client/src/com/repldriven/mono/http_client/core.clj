@@ -33,11 +33,21 @@
 (defn- body->string
   "Convert various body types to string."
   [body]
-  (cond (nil? body) nil
-        (string? body) body
-        (instance? java.io.InputStream body) (slurp body)
-        (bytes? body) (String. ^bytes body "UTF-8")
-        :else (str body)))
+  (cond
+   (nil? body)
+   nil
+
+   (string? body)
+   body
+
+   (instance? java.io.InputStream body)
+   (slurp body)
+
+   (bytes? body)
+   (String. ^bytes body "UTF-8")
+
+   :else
+   (str body)))
 
 (defn res->body
   "Extract and parse response body. Returns the body string or parsed JSON.
@@ -50,17 +60,23 @@
     :key-fn - Function to transform JSON keys (e.g., keyword for keyword keys)"
   ([res] (res->body res nil))
   ([res opts]
-   (cond (err/anomaly? res) res
-         (nil? res) nil
-         :else (err/try-nom :http-client/body-parse
-                            "Failed to parse response body"
-                            (when-let [{:keys [body headers]} res]
-                              (when-let [body-str (body->string body)]
-                                (let [content-type (:content-type headers)]
-                                  (if (and content-type
-                                           (str/includes? content-type "json"))
-                                    (json/read-str body-str opts)
-                                    body-str))))))))
+   (cond
+    (err/anomaly? res)
+    res
+
+    (nil? res)
+    nil
+
+    :else
+    (err/try-nom :http-client/body-parse
+                 "Failed to parse response body"
+                 (when-let [{:keys [body headers]} res]
+                   (when-let [body-str (body->string body)]
+                     (let [content-type (:content-type headers)]
+                       (if (and content-type
+                                (str/includes? content-type "json"))
+                         (json/read-str body-str opts)
+                         body-str))))))))
 
 (defn res->edn
   "Extract and parse response body as EDN with keyword keys.
