@@ -89,7 +89,7 @@
                        "bases/symmetric-key-api/test-resources"]}
 :format/zprint {:extra-deps {zprint/zprint {:mvn/version "1.2.9"}}
                   :main-opts ["-m" "zprint.main"]}
-  :lint/clj-kondo {:extra-deps {clj-kondo/clj-kondo {:mvn/version "2024.11.14"}}
+  :lint/clj-kondo {:extra-deps {clj-kondo/clj-kondo {:mvn/version "2026.01.19"}}
                    :main-opts ["-m" "clj-kondo.main"]}
   :nrepl {:extra-deps {nrepl/nrepl {:mvn/version "1.5.2"}
                        cider/cider-nrepl {:mvn/version "0.58.0"}}
