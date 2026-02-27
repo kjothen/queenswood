@@ -4,5 +4,6 @@
                                          org.xerial.snappy/snappy-java]}
         org.xerial.snappy/snappy-java {:mvn/version "1.1.10.8"}
         org.apache.avro/avro {:mvn/version "1.11.5"}
+        com.fasterxml.jackson.core/jackson-databind {:mvn/version "2.20.1"}
         deercreeklabs/lancaster {:mvn/version "0.12.2"}}
  :paths ["src"]}
