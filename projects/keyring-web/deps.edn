@@ -1,14 +1,16 @@
-{:aliases {:build {:deps {bases/build {:local/root "../../bases/build"}}
-                   :exec-args {:lib 'com.repldriven.mono/symmetric-key-vault
-                               :main com.repldriven.mono.symmetric-key-api.main
-                               :major-minor-version "0.0"}
-                   :ns-default com.repldriven.mono.build.build}
-           :dev {:extra-deps {component/test-system {:local/root "../../components/test-system"}}}
-           :test {:extra-deps {bases/external-test-runner
-                               {:local/root "../../bases/external-test-runner"}
-                               component/test-system {:local/root "../../components/test-system"}
-                               component/test-resources
-                               {:local/root "../../components/test-resources"}}}}
+{:aliases
+ {:build {:deps {bases/build {:local/root "../../bases/build"}}
+          :exec-args {:lib 'com.repldriven.mono/symmetric-key-vault
+                      :main com.repldriven.mono.symmetric-key-api.main
+                      :major-minor-version "0.0"}
+          :ns-default com.repldriven.mono.build.build}
+  :dev {:extra-deps {component/test-system {:local/root
+                                            "../../components/test-system"}}}
+  :test
+  {:extra-deps
+   {bases/external-test-runner {:local/root "../../bases/external-test-runner"}
+    component/test-system {:local/root "../../components/test-system"}
+    component/test-resources {:local/root "../../components/test-resources"}}}}
  :deps {component/cli {:local/root "../../components/cli"}
         component/env {:local/root "../../components/env"}
         component/error {:local/root "../../components/error"}

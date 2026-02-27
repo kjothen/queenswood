@@ -1,12 +1,16 @@
-{:aliases {:build {:deps {base/build {:local/root "../../bases/build"}}
-                   :exec-args {:lib 'com.repldriven.mono/iam
-                               :main com.repldriven.mono.iam-api.main
-                               :major-minor-version "0.0"}
-                   :ns-default com.repldriven.mono.build.build}
-           :dev {:extra-deps {component/test-system {:local/root "../../components/test-system"}}}
-           :test {:extra-deps {base/external-test-runner {:local/root "../../bases/external-test-runner"}
-                               component/test-system {:local/root "../../components/test-system"}
-                               component/test-resources {:local/root "../../components/test-resources"}}}}
+{:aliases
+ {:build {:deps {base/build {:local/root "../../bases/build"}}
+          :exec-args {:lib 'com.repldriven.mono/iam
+                      :main com.repldriven.mono.iam-api.main
+                      :major-minor-version "0.0"}
+          :ns-default com.repldriven.mono.build.build}
+  :dev {:extra-deps {component/test-system {:local/root
+                                            "../../components/test-system"}}}
+  :test
+  {:extra-deps
+   {base/external-test-runner {:local/root "../../bases/external-test-runner"}
+    component/test-system {:local/root "../../components/test-system"}
+    component/test-resources {:local/root "../../components/test-resources"}}}}
  :deps {component/cli {:local/root "../../components/cli"}
         component/env {:local/root "../../components/env"}
         component/error {:local/root "../../components/error"}
@@ -19,8 +23,7 @@
         component/sql {:local/root "../../components/sql"}
         component/db {:local/root "../../components/db"}
         component/system {:local/root "../../components/system"}
-        component/testcontainers
-        {:local/root "../../components/testcontainers"}
+        component/testcontainers {:local/root "../../components/testcontainers"}
         component/utility {:local/root "../../components/utility"}
         base/iam-api {:local/root "../../bases/iam-api"}
         org.clojure/clojure {:mvn/version "1.12.4"}
