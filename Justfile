@@ -73,6 +73,16 @@ poly-test-check:
         print(f"Error reading test results: {e}")
         sys.exit(1)
 
+# Check dependencies for known CVEs (no args = dev classpath, or pass project name)
+nvd project="":
+    #!/usr/bin/env zsh
+    if [[ -z "{{ project }}" ]]; then
+      classpath=$(clojure -Spath -A:dev)
+    else
+      classpath=$(cd projects/{{ project }} && clojure -Spath)
+    fi
+    clojure -J-Dclojure.main.report=stderr -J-Danalyzer.ossindex.enabled=false -M:nvd "nvd-clojure.edn" "$classpath"
+
 # Linter
 lint-eastwood:
     clojure -M:dev:test:lint/eastwood

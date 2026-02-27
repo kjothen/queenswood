@@ -56,7 +56,7 @@
 (defn gen-proto
   [{:keys [root] :or {root "."}}]
   (let [proto-path (str root "/resources")
-        clj-out (str root "/src")
+        clj-out (str root "/gen")
         java-out (str root "/target/gen-java")
         class-out (str root "/classes")
         fdb-path (fdb-proto-dir root)

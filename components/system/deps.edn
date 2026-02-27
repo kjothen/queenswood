@@ -2,5 +2,6 @@
  ;; closure-compiler bundles a package-private WireFormat that shadows
  ;; protobuf-java, breaking protojure (pinned to 3.x for FDB)
  :deps {party.donut/system {:mvn/version "1.0.258"
-                            :exclusions [com.google.javascript/closure-compiler]}}
+                            :exclusions [com.google.javascript/closure-compiler
+                                         org.clojure/clojurescript]}}
  :paths ["src"]}

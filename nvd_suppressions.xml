@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<suppressions xmlns="https://jeremylong.github.io/DependencyCheck/dependency-suppression.1.3.xsd">
+  <!-- This is an automatically generated config file by nvd-clojure. -->
+  <!-- Feel free to tweak it, version-control it and remove any comment. -->
+  <!-- You can find suppression examples in https://jeremylong.github.io/DependencyCheck/general/suppression.html -->
+
+  <!-- False positive: CVE-2023-37475 affects hamba/avro, a Go library.
+       abracad is a Java/Clojure Avro library with no relation to it. -->
+  <suppress>
+    <packageUrl regex="true">^pkg:maven/nomnom/abracad@.*$</packageUrl>
+    <cve>CVE-2023-37475</cve>
+  </suppress>
+
+  <!-- False positive: CVE-2010-0538 affects Apple Java for Mac OS X 10.5/10.6
+       (com.sun.medialib.mlib). No relation to FoundationDB. -->
+  <suppress>
+    <packageUrl regex="true">^pkg:maven/org\.foundationdb/fdb-java.*$</packageUrl>
+    <cve>CVE-2010-0538</cve>
+  </suppress>
+
+  <!-- False positive: CVE-2025-10543 affects paho.mqtt.golang (the Go client).
+       This jar is the Java client, org.eclipse.paho.client.mqttv3. -->
+  <suppress>
+    <packageUrl regex="true">^pkg:maven/org\.eclipse\.paho/org\.eclipse\.paho\.client\.mqttv3@.*$</packageUrl>
+    <cve>CVE-2025-10543</cve>
+  </suppress>
+
+  <!-- Known/accepted: CVE-2024-7254 affects protobuf-java 4.28.0 (fixed in 4.28.2+).
+       Upgrading past 4.28.0 breaks FDB Record Layer compatibility.
+       Risk is accepted until FDB Record Layer supports newer protobuf. -->
+  <suppress>
+    <packageUrl regex="true">^pkg:maven/com\.google\.protobuf/protobuf-java@.*$</packageUrl>
+    <cve>CVE-2024-7254</cve>
+  </suppress>
+</suppressions>

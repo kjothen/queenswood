@@ -1,4 +1,8 @@
 {:aliases {:test {:extra-deps {} :extra-paths ["test"]}}
- :deps {nomnom/abracad {:mvn/version "0.5.2"}
+ :deps {nomnom/abracad {:mvn/version "0.5.2"
+                        :exclusions [org.apache.avro/avro
+                                         org.xerial.snappy/snappy-java]}
+        org.xerial.snappy/snappy-java {:mvn/version "1.1.10.8"}
+        org.apache.avro/avro {:mvn/version "1.11.5"}
         deercreeklabs/lancaster {:mvn/version "0.12.2"}}
  :paths ["src"]}
