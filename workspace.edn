@@ -9,7 +9,7 @@
             ;; this resource-level coupling and incorrectly flags the
             ;; component as unnecessary. :necessary tells poly to keep it.
             "accounts-web" {:alias "aw"
-                             :necessary ["test-resources"]}
+                             :necessary ["schema" "test-resources"]}
             "accounts-processor" {:alias "ap"
                                   :necessary ["schema" "test-resources"]}
             "iam" {:alias "iam" :necessary ["schema" "test-resources"]}
