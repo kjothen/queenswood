@@ -23,6 +23,7 @@
     components/log {:local/root "components/log"}
     components/migrator {:local/root "components/migrator"}
     components/message-bus {:local/root "components/message-bus"}
+    components/processor {:local/root "components/processor"}
     components/mqtt {:local/root "components/mqtt"}
     components/pulsar {:local/root "components/pulsar"}
     components/pulsar-vault-crypto {:local/root

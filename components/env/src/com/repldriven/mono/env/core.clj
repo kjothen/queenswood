@@ -1,6 +1,6 @@
 (ns com.repldriven.mono.env.core
   (:require
-    [aero.core :as aero]
+    aero.core
 
     [com.repldriven.mono.env.reader.edn :as reader.edn]
     [com.repldriven.mono.env.reader.yml :as reader.yml]

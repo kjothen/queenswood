@@ -1,11 +1,10 @@
-(ns com.repldriven.mono.processor.commands.reporting-operations
+(ns com.repldriven.mono.accounts.commands.reporting-operations
   (:require
     [com.repldriven.mono.db.interface :as db]
     [com.repldriven.mono.error.interface :as error]
     [com.repldriven.mono.sql.interface :as sql]))
 
 (defn get-account-status
-  "Return the current status of an account."
   [{:keys [datasource]} {:strs [account_id]}]
   (let [row (db/execute-one! datasource
                              (sql/format {:select [:account_id :status]

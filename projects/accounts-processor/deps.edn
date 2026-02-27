@@ -14,6 +14,7 @@
         component/command {:local/root "../../components/command"}
         component/db {:local/root "../../components/db"}
         component/message-bus {:local/root "../../components/message-bus"}
+        component/processor {:local/root "../../components/processor"}
         component/encryption {:local/root "../../components/encryption"}
         component/env {:local/root "../../components/env"}
         component/fdb {:local/root "../../components/fdb"}

@@ -1,4 +1,7 @@
 {:lint-as {com.repldriven.mono.error.interface/nom-do> clojure.core/->
            com.repldriven.mono.error.interface/nom-let> clojure.core/let
-           com.repldriven.mono.telemetry.interface/with-span-tests clojure.core/let}
- :output {:exclude-files ["target/" ".clj-kondo/imports/"]}}
+           com.repldriven.mono.telemetry.interface/with-span-tests
+           clojure.core/let}
+ :output {:exclude-files
+          ["target/" ".clj-kondo/imports/"
+           "components/schema/src/com/repldriven/mono/schema/*.*\\.cljc"]}}

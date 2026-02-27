@@ -1,0 +1,10 @@
+system:
+  postgres: !include testcontainers/postgres-test.yml
+  db: !include accounts/postgres/datasource-test.yml
+  migrator: !include accounts/migrator-test.yml
+  avro: !include avro/avro-test.yml
+  accounts:
+    processor: !system/component
+      system/component-kind: accounts/processor
+      datasource: !system/ref migrator.migrations
+      schemas: !system/ref avro.serde

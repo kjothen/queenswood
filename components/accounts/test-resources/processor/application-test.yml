@@ -1,8 +1,0 @@
-system:
-  postgres: !include testcontainers/postgres-test.yml
-  db: !include processor/postgres/datasource-test.yml
-  migrator: !include processor/migrator-test.yml
-  avro: !include avro/avro-test.yml
-  processor:
-    datasource: !system/ref migrator.migrations
-    schemas: !system/ref avro.serde

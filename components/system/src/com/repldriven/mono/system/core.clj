@@ -79,7 +79,10 @@
                             custom-config
                             component-ids))))
 
-(defn instance [system kws] (get-in system (vec (cons ::ds/instances kws))))
+(defn instance
+  [system kws]
+  (let [kws (if (= 1 (count kws)) (into kws kws) kws)]
+    (get-in system (vec (cons ::ds/instances kws)))))
 
 (defn config
   [system group component]

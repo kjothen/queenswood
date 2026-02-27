@@ -1,11 +1,10 @@
-(ns com.repldriven.mono.processor.commands.account-lifecycle
+(ns com.repldriven.mono.accounts.commands.account-lifecycle
   (:require
     [com.repldriven.mono.db.interface :as db]
     [com.repldriven.mono.error.interface :as error]
     [com.repldriven.mono.sql.interface :as sql]))
 
 (defn open
-  "Open a new account by inserting a record into the database."
   [{:keys [datasource]} {:strs [account_id name currency]}]
   (let [result (db/execute-one! datasource
                                 (sql/format {:insert-into :account
@@ -20,7 +19,6 @@
                              :account_id account_id}))))
 
 (defn close
-  "Close an existing account by updating its status to 'closed'."
   [{:keys [datasource]} {:strs [account_id]}]
   (let [result (db/execute-one! datasource
                                 (sql/format
@@ -36,7 +34,6 @@
                              :account_id account_id}))))
 
 (defn reopen
-  "Reopen a closed account by updating its status to 'open'."
   [{:keys [datasource]} {:strs [account_id]}]
   (let [result (db/execute-one! datasource
                                 (sql/format
@@ -52,7 +49,6 @@
                              :account_id account_id}))))
 
 (defn suspend
-  "Suspend an account by updating its status to 'suspended'."
   [{:keys [datasource]} {:strs [account_id]}]
   (let [result (db/execute-one! datasource
                                 (sql/format
@@ -68,7 +64,6 @@
                              :account_id account_id}))))
 
 (defn unsuspend
-  "Unsuspend an account by updating its status to 'open'."
   [{:keys [datasource]} {:strs [account_id]}]
   (let [result (db/execute-one! datasource
                                 (sql/format
@@ -84,7 +79,6 @@
                              :account_id account_id}))))
 
 (defn archive
-  "Archive an account by updating its status to 'archived'."
   [{:keys [datasource]} {:strs [account_id]}]
   (let [result (db/execute-one! datasource
                                 (sql/format

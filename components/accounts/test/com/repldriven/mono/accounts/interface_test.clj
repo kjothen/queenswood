@@ -1,9 +1,10 @@
-(ns ^:eftest/synchronized com.repldriven.mono.processor.interface-test
+(ns ^:eftest/synchronized com.repldriven.mono.accounts.interface-test
   (:require
     com.repldriven.mono.testcontainers.interface
     com.repldriven.mono.migrator.interface
+    com.repldriven.mono.accounts.interface
 
-    [com.repldriven.mono.processor.interface :as SUT]
+    [com.repldriven.mono.processor.interface :as processor]
 
     [com.repldriven.mono.avro.interface :as avro]
     [com.repldriven.mono.error.interface :as error]
@@ -13,24 +14,20 @@
 
     [clojure.test :refer [deftest is testing]]))
 
-(defn- serialize-payload
-  [schemas command-name data]
-  (avro/serialize (get schemas command-name) data))
-
 (defn- send-command
-  [processor schemas command-name data]
-  (let [payload (serialize-payload schemas command-name data)]
+  [proc schemas command-name data]
+  (let [payload (avro/serialize (get schemas command-name) data)]
     (if (error/anomaly? payload)
       payload
-      (SUT/process processor {"command" command-name "payload" payload}))))
+      (processor/process proc {"command" command-name "payload" payload}))))
 
 (deftest process-open-account-test
-  (testing "Processing open-account command should create account"
+  (testing "open-account creates account"
     (with-test-system
-     [sys "classpath:processor/application-test.yml"]
-     (let [processor (system/instance sys [:processor])
+     [sys "classpath:accounts/application-test.yml"]
+     (let [proc (system/instance sys [:accounts :processor])
            schemas (system/instance sys [:avro :serde])]
-       (nom-test> [result (send-command processor
+       (nom-test> [result (send-command proc
                                         schemas
                                         "open-account"
                                         {"account_id" "acc-1"
@@ -39,127 +36,127 @@
                    _ (is (= "acc-1" (get result "record_id")))])))))
 
 (deftest process-close-account-test
-  (testing "Processing close-account command should close account"
+  (testing "close-account closes account"
     (with-test-system
-     [sys "classpath:processor/application-test.yml"]
-     (let [processor (system/instance sys [:processor])
+     [sys "classpath:accounts/application-test.yml"]
+     (let [proc (system/instance sys [:accounts :processor])
            schemas (system/instance sys [:avro :serde])]
-       (nom-test> [_ (send-command processor
+       (nom-test> [_ (send-command proc
                                    schemas
                                    "open-account"
                                    {"account_id" "acc-2"
                                     "name" "Account to Close"
                                     "currency" "USD"})
-                   result (send-command processor
+                   result (send-command proc
                                         schemas
                                         "close-account"
                                         {"account_id" "acc-2"})
                    _ (is (= "acc-2" (get result "record_id")))])))))
 
 (deftest process-reopen-account-test
-  (testing "Processing reopen-account command should reopen account"
+  (testing "reopen-account reopens closed account"
     (with-test-system
-     [sys "classpath:processor/application-test.yml"]
-     (let [processor (system/instance sys [:processor])
+     [sys "classpath:accounts/application-test.yml"]
+     (let [proc (system/instance sys [:accounts :processor])
            schemas (system/instance sys [:avro :serde])]
-       (nom-test> [_ (send-command processor
+       (nom-test> [_ (send-command proc
                                    schemas
                                    "open-account"
                                    {"account_id" "acc-3"
                                     "name" "Account to Reopen"
                                     "currency" "USD"})
-                   _ (send-command processor
+                   _ (send-command proc
                                    schemas
                                    "close-account"
                                    {"account_id" "acc-3"})
-                   result (send-command processor
+                   result (send-command proc
                                         schemas
                                         "reopen-account"
                                         {"account_id" "acc-3"})
                    _ (is (= "acc-3" (get result "record_id")))])))))
 
 (deftest process-suspend-account-test
-  (testing "Processing suspend-account command should suspend account"
+  (testing "suspend-account suspends account"
     (with-test-system
-     [sys "classpath:processor/application-test.yml"]
-     (let [processor (system/instance sys [:processor])
+     [sys "classpath:accounts/application-test.yml"]
+     (let [proc (system/instance sys [:accounts :processor])
            schemas (system/instance sys [:avro :serde])]
-       (nom-test> [_ (send-command processor
+       (nom-test> [_ (send-command proc
                                    schemas
                                    "open-account"
                                    {"account_id" "acc-4"
                                     "name" "Account to Suspend"
                                     "currency" "EUR"})
-                   result (send-command processor
+                   result (send-command proc
                                         schemas
                                         "suspend-account"
                                         {"account_id" "acc-4"})
                    _ (is (= "acc-4" (get result "record_id")))])))))
 
 (deftest process-unsuspend-account-test
-  (testing "Processing unsuspend-account command should unsuspend"
+  (testing "unsuspend-account unsuspends account"
     (with-test-system
-     [sys "classpath:processor/application-test.yml"]
-     (let [processor (system/instance sys [:processor])
+     [sys "classpath:accounts/application-test.yml"]
+     (let [proc (system/instance sys [:accounts :processor])
            schemas (system/instance sys [:avro :serde])]
-       (nom-test> [_ (send-command processor
+       (nom-test> [_ (send-command proc
                                    schemas
                                    "open-account"
                                    {"account_id" "acc-5"
                                     "name" "Account to Unsuspend"
                                     "currency" "GBP"})
-                   _ (send-command processor
+                   _ (send-command proc
                                    schemas
                                    "suspend-account"
                                    {"account_id" "acc-5"})
-                   result (send-command processor
+                   result (send-command proc
                                         schemas
                                         "unsuspend-account"
                                         {"account_id" "acc-5"})
                    _ (is (= "acc-5" (get result "record_id")))])))))
 
 (deftest process-archive-account-test
-  (testing "Processing archive-account command should archive account"
+  (testing "archive-account archives account"
     (with-test-system
-     [sys "classpath:processor/application-test.yml"]
-     (let [processor (system/instance sys [:processor])
+     [sys "classpath:accounts/application-test.yml"]
+     (let [proc (system/instance sys [:accounts :processor])
            schemas (system/instance sys [:avro :serde])]
-       (nom-test> [_ (send-command processor
+       (nom-test> [_ (send-command proc
                                    schemas
                                    "open-account"
                                    {"account_id" "acc-6"
                                     "name" "Account to Archive"
                                     "currency" "CAD"})
-                   result (send-command processor
+                   result (send-command proc
                                         schemas
                                         "archive-account"
                                         {"account_id" "acc-6"})
                    _ (is (= "acc-6" (get result "record_id")))])))))
 
 (deftest process-get-account-status-test
-  (testing "Processing get-account-status should return record_id"
+  (testing "get-account-status returns record_id"
     (with-test-system
-     [sys "classpath:processor/application-test.yml"]
-     (let [processor (system/instance sys [:processor])
+     [sys "classpath:accounts/application-test.yml"]
+     (let [proc (system/instance sys [:accounts :processor])
            schemas (system/instance sys [:avro :serde])]
-       (nom-test> [_ (send-command processor
+       (nom-test> [_ (send-command proc
                                    schemas
                                    "open-account"
                                    {"account_id" "acc-7"
                                     "name" "Status Account"
                                     "currency" "USD"})
-                   result (send-command processor
+                   result (send-command proc
                                         schemas
                                         "get-account-status"
                                         {"account_id" "acc-7"})
                    _ (is (= "acc-7" (get result "record_id")))])))))
 
 (deftest process-unknown-command-test
-  (testing "Processing unknown command should return anomaly"
+  (testing "unknown command returns anomaly"
     (with-test-system
-     [sys "classpath:processor/application-test.yml"]
-     (let [processor (system/instance sys [:processor])
-           result (SUT/process processor
-                               {"command" "invalid-command" "payload" nil})]
+     [sys "classpath:accounts/application-test.yml"]
+     (let [proc (system/instance sys [:accounts :processor])
+           result
+           (processor/process proc {"command" "invalid-command" "payload" nil})]
        (is (error/anomaly? result))
        (is (= :accounts/process-command (error/kind result)))))))
