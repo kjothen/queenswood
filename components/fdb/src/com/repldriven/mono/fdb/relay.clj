@@ -5,30 +5,35 @@
     [com.repldriven.mono.fdb.outbox :as outbox])
   (:import
     (com.apple.foundationdb KeySelector Range StreamingMode)
-    (com.apple.foundationdb.record.provider.foundationdb FDBDatabase)
+    (com.apple.foundationdb.record.provider.foundationdb FDBDatabase
+                                                         FDBStoreTimer$Waits)
     (com.apple.foundationdb.tuple ByteArrayUtil)))
 
 (defn- read-checkpoint
   "Returns the raw FDB key bytes of the last processed outbox entry stored
   at the checkpoint key, or nil when no checkpoint exists yet."
-  [tr store-name]
-  (some-> (.get tr (outbox/checkpoint-key store-name))
-          .join))
+  [ctx store-name]
+  (.asyncToSync ctx
+                FDBStoreTimer$Waits/WAIT_LOAD_RECORD
+                (.get (.ensureActive ctx) (outbox/checkpoint-key store-name))))
 
 (defn- scan-entries
   "Returns a Java List of KeyValues in the outbox for store-name that come
   strictly after from-key (raw key bytes), or all entries when from-key is
   nil. Reads at most limit entries."
-  [tr store-name from-key limit]
-  (let [subspace (outbox/outbox-subspace store-name)
+  [ctx store-name from-key limit]
+  (let [tr (.ensureActive ctx)
+        subspace (outbox/outbox-subspace store-name)
         begin (if from-key
                 (KeySelector/firstGreaterThan from-key)
                 (KeySelector/firstGreaterOrEqual (.pack subspace)))
         end (KeySelector/firstGreaterOrEqual (ByteArrayUtil/strinc (.pack
                                                                     subspace)))]
-    (-> (.getRange tr begin end limit false StreamingMode/ITERATOR)
-        .asList
-        .join)))
+    (.asyncToSync ctx
+                  FDBStoreTimer$Waits/WAIT_SCAN_RECORDS
+                  (->
+                    (.getRange tr begin end limit false StreamingMode/ITERATOR)
+                    .asList))))
 
 (defn relay-batch
   "Reads the outbox for store-name, calls (handler-fn key-bytes val-bytes)
@@ -43,8 +48,8 @@
           java.util.function.Function
             (apply [_ ctx]
               (let [tr (.ensureActive ctx)
-                    checkpoint (read-checkpoint tr store-name)
-                    entries (scan-entries tr store-name checkpoint 100)]
+                    checkpoint (read-checkpoint ctx store-name)
+                    entries (scan-entries ctx store-name checkpoint 100)]
                 (when (seq entries)
                   (doseq [kv entries] (handler-fn (.getKey kv) (.getValue kv)))
                   (let [last-key (.getKey (last entries))]
