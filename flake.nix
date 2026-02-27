@@ -115,7 +115,6 @@
             pkgs.just
             pkgs.openssl
             protocBinary
-            pkgs.protoc-gen-go
             protocGenClojure
             pkgs.zprint
           ];
