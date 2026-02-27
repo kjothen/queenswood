@@ -17,13 +17,10 @@
         component/processor {:local/root "../../components/processor"}
         component/encryption {:local/root "../../components/encryption"}
         component/env {:local/root "../../components/env"}
-        component/fdb {:local/root "../../components/fdb"}
         component/error {:local/root "../../components/error"}
         component/http-client {:local/root "../../components/http-client"}
-        component/json {:local/root "../../components/json"}
         component/log {:local/root "../../components/log"}
         component/migrator {:local/root "../../components/migrator"}
-        component/mqtt {:local/root "../../components/mqtt"}
         component/pulsar {:local/root "../../components/pulsar"}
         component/schema {:local/root "../../components/schema"}
         component/spec {:local/root "../../components/spec"}
