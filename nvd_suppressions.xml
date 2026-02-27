@@ -27,7 +27,7 @@
 
   <!-- Known/accepted: CVE-2024-7254 affects protobuf-java 4.28.0 (fixed in 4.28.2+).
        Brought in by protojure, which is required at runtime by the generated
-       Clojure protobuf code. FDB Record Layer 4.10.3.0 is incompatible with
+       Clojure protobuf code. FDB Record Layer 4.10.4.0 is incompatible with
        4.28.2+ specifically — tested 4.28.2, 4.33.5, 4.34.0, all fail.
        Risk is accepted until FDB Record Layer ships a compatible release. -->
   <suppress>

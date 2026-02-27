@@ -4,10 +4,10 @@
         ;; the build step (javac) must compile against 3.x for FDB Record
         ;; Layer compatibility — pin here so the :build alias sees 3.x
         com.google.protobuf/protobuf-java {:mvn/version "3.25.8"}
-        org.foundationdb/fdb-record-layer-core {:mvn/version "4.10.3.0"}}
+        org.foundationdb/fdb-record-layer-core {:mvn/version "4.10.4.0"}}
  :deps/prep-lib {:alias :build :fn build/gen-proto :ensure "gen"}
  :aliases {:test {:extra-paths ["test" "test-resources"]}
            :build {:deps {io.github.clojure/tools.build {:mvn/version "0.10.12"}
                           org.foundationdb/fdb-record-layer-core {:mvn/version
-                                                                  "4.10.3.0"}}
+                                                                  "4.10.4.0"}}
                    :paths ["."]}}}
