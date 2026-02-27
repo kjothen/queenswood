@@ -2,12 +2,10 @@
  :default-profile-name "default"
  :interface-ns "interface"
  :projects {"development" {:alias "dev"}
-            ;; test-resources provides shared classpath resources
-            ;; (Testcontainers configs, application-test.yml files)
-            ;; consumed by test runners at runtime. Polylith's dependency
-            ;; analysis tracks source-code imports only, so it cannot see
-            ;; this resource-level coupling and incorrectly flags the
-            ;; component as unnecessary. :necessary tells poly to keep it.
+            ;; schema and test-resources provide centralised Avro schemas
+            ;; and shared classpath resources (Testcontainers configs,
+            ;; application-test.yml files). Polylith tracks source imports
+            ;; only, so :necessary suppresses false-positive warnings.
             "accounts-web" {:alias "aw"
                              :necessary ["schema" "test-resources"]}
             "accounts-processor" {:alias "ap"
