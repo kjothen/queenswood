@@ -1,10 +1,10 @@
-(ns ^:eftest/synchronized com.repldriven.mono.blocking-command-api.api-test
+(ns ^:eftest/synchronized com.repldriven.mono.accounts-api.api-test
   (:require
     com.repldriven.mono.testcontainers.interface
     com.repldriven.mono.avro.interface
     com.repldriven.mono.pulsar.interface
 
-    [com.repldriven.mono.blocking-command-api.api :as api]
+    [com.repldriven.mono.accounts-api.api :as api]
 
     [com.repldriven.mono.command.interface :as command]
     [com.repldriven.mono.http-client.interface :as http]
@@ -21,17 +21,18 @@
 
 (def ^:dynamic *base-url* "http://localhost:{PORT}")
 
-(defn send-http-command
-  "Simulates Client - synchronous command request"
-  [command-name data]
-  (http/request {:method :post
-                 :url (str *base-url* "/api/command")
-                 :headers {"Content-Type" "application/json"
+(defn- open-account-request
+  [account-id name currency]
+  (http/request {:method  :post
+                 :url     (str *base-url* "/v1/accounts")
+                 :headers {"Content-Type"    "application/json"
                            "Idempotency-Key" (str (util/uuidv7))}
-                 :body (json/write-str {"command" command-name "data" data})}))
+                 :body    (json/write-str {"account_id" account-id
+                                           "name"       name
+                                           "currency"   currency})}))
 
-(defn command-processor
-  "Simulates Processor - receives command envelopes and
+(defn- command-processor
+  "Simulates Processor — receives command envelopes and
   replies via message-bus"
   [sys]
   (let [bus (system/instance sys [:message-bus :bus])]
@@ -44,8 +45,7 @@
           "process-command"
           parent-ctx
           (select-keys data
-                       ["id" "command" "correlation_id"
-                        "causation_id"])
+                       ["id" "command" "correlation_id" "causation_id"])
           (fn []
             (message-bus/send
              bus
@@ -53,25 +53,22 @@
              (command/command-response data {"record_id" "test-123"})))))))
     {:stop (fn [] (message-bus/unsubscribe bus :command))}))
 
-(deftest request-reply-test
-  (testing "Request-Reply via Pulsar"
+(deftest open-account-test
+  (testing "POST /v1/accounts sends open-account command"
     (with-test-system
      [sys
-      ["classpath:blocking-command-api/application-test.yml"
+      ["classpath:accounts-api/application-test.yml"
        #(assoc-in % [:system/defs :server :handler] api/app)]]
-     (let [jetty (system/instance sys [:server :jetty-adapter])
+     (let [jetty         (system/instance sys [:server :jetty-adapter])
            {:keys [stop]} (command-processor sys)]
        (binding [*base-url* (server/http-local-url jetty)]
          (telemetry/with-span-tests
           [_ ["process-command"]]
-          (nom-test> [res (send-http-command "open-account"
-                                             {"account_id" "acc-test"
-                                              "name" "Test Account"
-                                              "currency" "GBP"})
-                      _ (is (= 200 (:status res)) "Should receive 200 OK")
+          (nom-test> [res    (open-account-request "acc-test"
+                                                   "Test Account"
+                                                   "GBP")
+                      _      (is (= 200 (:status res)))
                       actual (http/res->body res)
-                      _ (is (= "ACCEPTED" (get actual "status"))
-                            "Should have ACCEPTED status")
-                      _ (is (= "test-123" (get actual "record_id"))
-                            "Should have record_id")])))
+                      _      (is (= "ACCEPTED" (get actual "status")))
+                      _      (is (= "test-123" (get actual "record_id")))])))
        (stop)))))

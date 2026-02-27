@@ -1,10 +1,9 @@
-(ns com.repldriven.mono.blocking-command-api.main
+(ns com.repldriven.mono.accounts-api.main
   (:require
-    ;; system components
     com.repldriven.mono.message-bus.interface
     com.repldriven.mono.server.interface
 
-    [com.repldriven.mono.blocking-command-api.api :as api]
+    [com.repldriven.mono.accounts-api.api :as api]
 
     [com.repldriven.mono.cli.interface :as cli]
     [com.repldriven.mono.env.interface :as env]
@@ -26,7 +25,7 @@
   [& args]
   (log/info args)
   (let [{:keys [options exit-message ok?]}
-        (cli/validate-args "blocking-command-api" args)]
+        (cli/validate-args "accounts-api" args)]
     (if exit-message
       (cli/exit ok? exit-message)
       (let [{:keys [config-file profile]} options
@@ -36,4 +35,3 @@
                     (str "Failed to start [" (error/kind result)
                          "]: " (or (:message result) "Unknown error")))
           (log/info "System started successfully"))))))
-

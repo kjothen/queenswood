@@ -1,5 +1,0 @@
-system:
-  pulsar: !include testcontainers/pulsar-all-test.yml
-  message-bus: !include blocking-command-api/message-bus-test.yml
-  avro: !include avro/avro-test.yml
-  server: !include blocking-command-api/server-test.yml

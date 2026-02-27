@@ -39,7 +39,7 @@
     components/testcontainers {:local/root "components/testcontainers"}
     components/utility {:local/root "components/utility"}
     components/vault {:local/root "components/vault"}
-    bases/blocking-command-api {:local/root "bases/blocking-command-api"}
+    bases/accounts-api {:local/root "bases/accounts-api"}
     bases/build {:local/root "bases/build"}
     bases/external-test-runner {:local/root "bases/external-test-runner"}
     bases/iam-api {:local/root "bases/iam-api"}
@@ -99,8 +99,8 @@
                        "components/utility/test"
                        "components/vault/test"
                        "components/vault/test-resources"
-                       "bases/blocking-command-api/test"
-                       "bases/blocking-command-api/test-resources"
+                       "bases/accounts-api/test"
+                       "bases/accounts-api/test-resources"
                        "bases/external-test-runner/test"
                        "bases/iam-api/test"
                        "bases/iam-api/test-resources"
