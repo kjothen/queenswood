@@ -10,7 +10,8 @@
   {:extra-deps
    {base/external-test-runner {:local/root "../../bases/external-test-runner"}
     component/test-system {:local/root "../../components/test-system"}
-    component/test-resources {:local/root "../../components/test-resources"}}}}
+    component/test-resources {:local/root "../../components/test-resources"}
+    component/testcontainers {:local/root "../../components/testcontainers"}}}}
  :deps {component/cli {:local/root "../../components/cli"}
         component/env {:local/root "../../components/env"}
         component/error {:local/root "../../components/error"}
@@ -23,7 +24,6 @@
         component/sql {:local/root "../../components/sql"}
         component/db {:local/root "../../components/db"}
         component/system {:local/root "../../components/system"}
-        component/testcontainers {:local/root "../../components/testcontainers"}
         component/utility {:local/root "../../components/utility"}
         base/iam-api {:local/root "../../bases/iam-api"}
         org.clojure/clojure {:mvn/version "1.12.4"}

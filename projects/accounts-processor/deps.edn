@@ -10,7 +10,9 @@
                                component/test-resources
                                {:local/root "../../components/test-resources"}
                                component/test-system
-                               {:local/root "../../components/test-system"}}}}
+                               {:local/root "../../components/test-system"}
+                               component/testcontainers
+                               {:local/root "../../components/testcontainers"}}}}
  :deps {component/accounts {:local/root "../../components/accounts"}
         component/avro {:local/root "../../components/avro"}
         component/cli {:local/root "../../components/cli"}
@@ -30,7 +32,6 @@
         component/sql {:local/root "../../components/sql"}
         component/system {:local/root "../../components/system"}
         component/telemetry {:local/root "../../components/telemetry"}
-        component/testcontainers {:local/root "../../components/testcontainers"}
         component/utility {:local/root "../../components/utility"}
         base/command-processor {:local/root "../../bases/command-processor"}
         org.clojure/clojure {:mvn/version "1.12.4"}
