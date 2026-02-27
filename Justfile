@@ -19,8 +19,11 @@ shell:
 
 # Build all polylith projects as uberjars
 build snapshot="true":
-    cd projects/iam && clojure -X:build uber :snapshot {{ snapshot }}
-    cd projects/symmetric-key-vault && clojure -X:build uber :snapshot {{ snapshot }}
+    #!/usr/bin/env zsh
+    for project in projects/*/; do
+        echo "Building ${project:t}..."
+        (cd "$project" && clojure -X:build uber :snapshot {{ snapshot }})
+    done
 
 
 # Run all polylith project tests
