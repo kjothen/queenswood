@@ -1,5 +1,4 @@
 system:
-  pulsar: !include testcontainers/pulsar-all-test.yml
   message-bus: !include command-processor/message-bus-test.yml
   postgres: !include testcontainers/postgres-test.yml
   db: !include command-processor/datasource-test.yml

@@ -1,8 +1,6 @@
-(ns ^:eftest/synchronized com.repldriven.mono.accounts-api.api-test
+(ns com.repldriven.mono.accounts-api.api-test
   (:require
-    com.repldriven.mono.testcontainers.interface
     com.repldriven.mono.avro.interface
-    com.repldriven.mono.pulsar.interface
 
     [com.repldriven.mono.accounts-api.api :as api]
 
@@ -23,13 +21,13 @@
 
 (defn- open-account-request
   [account-id name currency]
-  (http/request {:method  :post
-                 :url     (str *base-url* "/v1/accounts")
-                 :headers {"Content-Type"    "application/json"
+  (http/request {:method :post
+                 :url (str *base-url* "/v1/accounts")
+                 :headers {"Content-Type" "application/json"
                            "Idempotency-Key" (str (util/uuidv7))}
-                 :body    (json/write-str {"account_id" account-id
-                                           "name"       name
-                                           "currency"   currency})}))
+                 :body (json/write-str {"account_id" account-id
+                                        "name" name
+                                        "currency" currency})}))
 
 (defn- command-processor
   "Simulates Processor — receives command envelopes and
@@ -44,8 +42,7 @@
          (telemetry/with-span-parent
           "process-command"
           parent-ctx
-          (select-keys data
-                       ["id" "command" "correlation_id" "causation_id"])
+          (select-keys data ["id" "command" "correlation_id" "causation_id"])
           (fn []
             (message-bus/send
              bus
@@ -59,16 +56,14 @@
      [sys
       ["classpath:accounts-api/application-test.yml"
        #(assoc-in % [:system/defs :server :handler] api/app)]]
-     (let [jetty         (system/instance sys [:server :jetty-adapter])
+     (let [jetty (system/instance sys [:server :jetty-adapter])
            {:keys [stop]} (command-processor sys)]
        (binding [*base-url* (server/http-local-url jetty)]
          (telemetry/with-span-tests
           [_ ["process-command"]]
-          (nom-test> [res    (open-account-request "acc-test"
-                                                   "Test Account"
-                                                   "GBP")
-                      _      (is (= 200 (:status res)))
+          (nom-test> [res (open-account-request "acc-test" "Test Account" "GBP")
+                      _ (is (= 200 (:status res)))
                       actual (http/res->body res)
-                      _      (is (= "ACCEPTED" (get actual "status")))
-                      _      (is (= "test-123" (get actual "record_id")))])))
+                      _ (is (= "ACCEPTED" (get actual "status")))
+                      _ (is (= "test-123" (get actual "record_id")))])))
        (stop)))))
