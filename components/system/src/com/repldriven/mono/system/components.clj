@@ -53,12 +53,8 @@
   Takes a config map and optional path (defaults to [:system]) to extract system config."
   ([config] (defs config [:system]))
   ([config ks]
-   {:system/defs (reduce-kv (fn [groups group-name group-config]
-                              (assoc groups
-                                     group-name
-                                     (if (:system/component-kind group-config)
-                                       {group-name (component group-name
-                                                              group-config)}
-                                       (component-group group-config))))
-                            {}
-                            (get-in config ks))}))
+   {:system/defs (reduce-kv
+                  (fn [groups group-name group-config]
+                    (assoc groups group-name (component-group group-config)))
+                  {}
+                  (get-in config ks))}))

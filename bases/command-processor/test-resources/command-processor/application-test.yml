@@ -5,7 +5,8 @@ system:
   db: !include command-processor/datasource-test.yml
   migrator: !include accounts/migrator-test.yml
   avro: !include avro/avro-test.yml
-  processor: !system/component
-    system/component-kind: accounts/processor
-    datasource: !system/ref migrator.migrations
-    schemas: !system/ref avro.serde
+  command:
+    processor: !system/component
+      system/component-kind: accounts/processor
+      datasource: !system/ref migrator.migrations
+      schemas: !system/ref avro.serde

@@ -13,5 +13,5 @@
   Returns: {:stop (fn [])} — call stop to stop processing"
   [sys]
   (let [bus (system/instance sys [:message-bus :bus])
-        processor-instance (system/instance sys [:processor])]
+        processor-instance (system/instance sys [:command :processor])]
     (command/process bus #(processor/process processor-instance %))))
