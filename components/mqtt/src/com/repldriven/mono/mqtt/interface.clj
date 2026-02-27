@@ -1,6 +1,6 @@
 (ns com.repldriven.mono.mqtt.interface
   (:require
-    com.repldriven.mono.mqtt.system
+    com.repldriven.mono.mqtt.system.core
 
     [com.repldriven.mono.mqtt.core :as core]))
 
@@ -12,6 +12,3 @@
 
 (defn unsubscribe [client topics] (core/unsubscribe client topics))
 
-(defn producer [opts] (core/producer opts))
-
-(defn consumer [opts] (core/consumer opts))

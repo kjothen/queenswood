@@ -5,7 +5,4 @@
 
     [com.repldriven.mono.system.interface :as system]))
 
-(system/defcomponents :message-bus
-                      {:bus components/bus
-                       :producers components/producers
-                       :consumers components/consumers})
+(system/defcomponents :message-bus {:bus components/bus})

@@ -1,21 +1,7 @@
 (ns com.repldriven.mono.message-bus.core
   (:refer-clojure :exclude [send])
   (:require
-    [com.repldriven.mono.message-bus.protocol :as proto]
-    [com.repldriven.mono.message-bus.pulsar :as pulsar]
-    [com.repldriven.mono.message-bus.mqtt :as mqtt]))
-
-(defn producer
-  [{:keys [kind] :as opts}]
-  (case (keyword kind)
-    :pulsar (pulsar/producer opts)
-    :mqtt (mqtt/producer opts)))
-
-(defn consumer
-  [{:keys [kind] :as opts}]
-  (case (keyword kind)
-    :pulsar (pulsar/consumer opts)
-    :mqtt (mqtt/consumer opts)))
+    [com.repldriven.mono.message-bus.protocol :as proto]))
 
 (defrecord Bus [producers consumers])
 

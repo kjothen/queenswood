@@ -1,23 +1,27 @@
-producers: !system/component
-  system/component-kind: message-bus/producers
-  command:
-    kind: mqtt
-    producer: !system/ref mqtt.producers.command
+mqtt-producers: !system/component
+  system/component-kind: mqtt/message-bus-producers
+  command: !system/ref mqtt.producers.command
+
+pulsar-producers: !system/component
+  system/component-kind: pulsar/message-bus-producers
   reply:
-    kind: pulsar
     producer: !system/ref pulsar.producers.command
 
-consumers: !system/component
-  system/component-kind: message-bus/consumers
-  command:
-    kind: mqtt
-    consumer: !system/ref mqtt.consumers.command
+mqtt-consumers: !system/component
+  system/component-kind: mqtt/message-bus-consumers
+  command: !system/ref mqtt.consumers.command
+
+pulsar-consumers: !system/component
+  system/component-kind: pulsar/message-bus-consumers
   reply:
-    kind: pulsar
     consumer: !system/ref pulsar.consumers.command
     timeout: 10000
 
 bus: !system/component
   system/component-kind: message-bus/bus
-  producers: !system/local-ref producers
-  consumers: !system/local-ref consumers
+  producers:
+    command: !system/local-ref mqtt-producers.command
+    reply: !system/local-ref pulsar-producers.reply
+  consumers:
+    command: !system/local-ref mqtt-consumers.command
+    reply: !system/local-ref pulsar-consumers.reply

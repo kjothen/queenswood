@@ -72,10 +72,23 @@
   [file-or-ref]
   (if (string? file-or-ref) (load-avsc file-or-ref) file-or-ref))
 
+(defn- schema->avro
+  [^Schema schema]
+  (let [^SchemaInfo schema-info (.getSchemaInfo schema)]
+    (-> schema-info
+        .toString
+        json/read-str
+        (get "schema")
+        json/write-str
+        avro/json->schema)))
+
 (defn- create-schema-entry
   [type schema properties]
-  {:payload (create-payload type schema properties)
-   :schema (create-schema type schema properties)})
+  (let [pulsar-schema (create-schema type schema properties)]
+    (cond-> {:payload (create-payload type schema properties)
+             :schema pulsar-schema}
+      (contains? #{"AVRO" "JSON"} type) (assoc :avro
+                                               (schema->avro pulsar-schema)))))
 
 (defn create-schemas
   [coll]
@@ -111,14 +124,3 @@
         :else (error/fail :pulsar/schema-resolve-payload-invalid
                           (format "Invalid value for schema payload: %s" s))))
 
-(defn schema->avro
-  "Converts a Pulsar Schema to an Avro schema for manual serialization.
-   Used when producer/consumer are configured with AUTO_PRODUCE_BYTES/AUTO_CONSUME."
-  [^Schema schema]
-  (let [^SchemaInfo schema-info (.getSchemaInfo schema)]
-    (-> schema-info
-        .toString
-        json/read-str
-        (get "schema")
-        json/write-str
-        avro/json->schema)))

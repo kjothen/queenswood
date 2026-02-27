@@ -5,12 +5,6 @@
 
     [com.repldriven.mono.pulsar.core :as core]))
 
-;;;; lifecycle
-
-(defn producer [opts] (core/producer opts))
-
-(defn consumer [opts] (core/consumer opts))
-
 ;;;; producer
 (defn send
   ([producer data] (core/send producer data))
@@ -25,13 +19,8 @@
   [consumer schema timeout-ms]
   (core/receive consumer schema timeout-ms))
 
-(defn acknowledge [consumer message] (core/acknowledge consumer message))
-
 ;;;; reader
 (defn read [reader schema timeout-ms] (core/read reader schema timeout-ms))
-
-;;;; schema
-(defn schema->avro [schema] (core/schema->avro schema))
 
 ;;;; admin
 (defn admin-namespace-url

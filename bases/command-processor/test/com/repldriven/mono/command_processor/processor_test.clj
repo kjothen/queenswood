@@ -2,6 +2,7 @@
   (:require
     com.repldriven.mono.testcontainers.interface
     com.repldriven.mono.migrator.interface
+    com.repldriven.mono.pulsar.interface
 
     [com.repldriven.mono.command-processor.processor :as SUT]
 

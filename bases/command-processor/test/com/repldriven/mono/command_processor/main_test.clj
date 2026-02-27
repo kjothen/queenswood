@@ -1,6 +1,7 @@
 (ns ^:eftest/synchronized com.repldriven.mono.command-processor.main-test
   (:require
     com.repldriven.mono.message-bus.interface
+    com.repldriven.mono.pulsar.interface
     com.repldriven.mono.testcontainers.interface
 
     [com.repldriven.mono.command-processor.main :as SUT]

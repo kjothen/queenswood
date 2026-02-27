@@ -21,6 +21,8 @@
   :crypto-key-pair-generator components/crypto-key-pair-generator
   :crypto-key-reader components/crypto-key-reader
   :crypto-key-readers components/crypto-key-readers
+  :message-bus-consumers components/message-bus-consumers
+  :message-bus-producers components/message-bus-producers
   :namespaces components/namespaces
   :producers components/producers
   :producer components/producer

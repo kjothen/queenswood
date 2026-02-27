@@ -1,6 +1,7 @@
 (ns com.repldriven.mono.pulsar.system.components
   (:refer-clojure :exclude [name namespace type])
   (:require
+    [com.repldriven.mono.pulsar.message-bus :as message-bus]
     [com.repldriven.mono.pulsar.pulsar.admin :as admin]
     [com.repldriven.mono.pulsar.pulsar.client :as client]
     [com.repldriven.mono.pulsar.pulsar.consumer :as consumer]
@@ -241,3 +242,32 @@
   {:system/start (fn [{:system/keys [config instance]}]
                    (or instance (topics/create-topics config)))
    :system/config system/required-component})
+
+;; ---
+;; message-bus
+;; ---
+
+(def message-bus-producers
+  {:system/start (fn [{:system/keys [config instance]}]
+                   (or instance
+                       (into {}
+                             (map (fn [[k {:keys [producer]}]]
+                                    [k (message-bus/->PulsarProducer producer)])
+                                  config))))
+   :system/config system/required-component
+   :system/instance-schema map?})
+
+(def message-bus-consumers
+  {:system/start (fn [{:system/keys [config instance]}]
+                   (or instance
+                       (into {}
+                             (map (fn [[k {:keys [consumer timeout]}]]
+                                    [k
+                                     (message-bus/map->PulsarConsumer
+                                      {:consumer consumer
+                                       :schema nil
+                                       :timeout (or timeout 10000)
+                                       :stop-ch (atom nil)})])
+                                  config))))
+   :system/config system/required-component
+   :system/instance-schema map?})

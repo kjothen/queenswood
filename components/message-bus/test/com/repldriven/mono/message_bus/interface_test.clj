@@ -1,6 +1,8 @@
 (ns ^:eftest/synchronized com.repldriven.mono.message-bus.interface-test
   (:require
     com.repldriven.mono.testcontainers.interface
+    com.repldriven.mono.pulsar.interface
+    com.repldriven.mono.mqtt.interface
 
     [com.repldriven.mono.message-bus.interface :as SUT]
 

@@ -24,7 +24,7 @@
          consumer-2 (system/instance sys [:pulsar :consumers :user-2])
          reader (system/instance sys [:pulsar :readers :user])
          schemas (system/instance sys [:pulsar :schemas])
-         schema (SUT/schema->avro (get-in schemas [:user :schema]))
+         schema (get-in schemas [:user :avro])
          msgs [{"name" "Alice" "age" 30} {"name" "Bob" "age" 25}
                {"name" "Charlie" "age" 35}]
          props {"message" "user-msg"}]
