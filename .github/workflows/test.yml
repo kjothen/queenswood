@@ -102,7 +102,7 @@ jobs:
           clojure -M:poly test project:${{ matrix.project }} :all
 
       - name: Publish test report
-        uses: dorny/test-reporter@v1
+        uses: dorny/test-reporter@v2
         if: always()
         with:
           name: Test Results (${{ matrix.project }})
@@ -112,7 +112,7 @@ jobs:
 
       - name: Upload test results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: test-results-${{ matrix.project }}
           path: target/test-results/**/*.xml
@@ -120,7 +120,7 @@ jobs:
 
       - name: Report coverage
         if: always()
-        uses: zgosalvez/github-actions-report-lcov@v4
+        uses: zgosalvez/github-actions-report-lcov@v7
         with:
           coverage-files: target/coverage/${{ matrix.project }}/lcov.info
           minimum-coverage: 50
@@ -130,7 +130,7 @@ jobs:
 
       - name: Upload coverage report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: coverage-report-${{ matrix.project }}
           path: target/coverage/${{ matrix.project }}/
