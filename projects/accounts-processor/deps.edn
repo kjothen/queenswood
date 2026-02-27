@@ -1,16 +1,15 @@
-{:aliases {:build {:deps {bases/build {:local/root "../../bases/build"}}
-                   :exec-args {:lib 'com.repldriven.mono/accounts-processor
-                               :main com.repldriven.mono.command-processor.main
-                               :major-minor-version "0.0"}
-                   :ns-default com.repldriven.mono.build.build}
-           :test {:extra-deps {bases/external-test-runner
-                               {:local/root "../../bases/external-test-runner"}
-                               component/test-resources
-                               {:local/root "../../components/test-resources"}
-                               component/test-system
-                               {:local/root "../../components/test-system"}
-                               component/testcontainers
-                               {:local/root "../../components/testcontainers"}}}}
+{:aliases
+ {:build {:deps {bases/build {:local/root "../../bases/build"}}
+          :exec-args {:lib 'com.repldriven.mono/accounts-processor
+                      :main com.repldriven.mono.command-processor.main
+                      :major-minor-version "0.0"}
+          :ns-default com.repldriven.mono.build.build}
+  :test
+  {:extra-deps
+   {bases/external-test-runner {:local/root "../../bases/external-test-runner"}
+    component/test-resources {:local/root "../../components/test-resources"}
+    component/test-system {:local/root "../../components/test-system"}
+    component/testcontainers {:local/root "../../components/testcontainers"}}}}
  :deps {component/accounts {:local/root "../../components/accounts"}
         component/avro {:local/root "../../components/avro"}
         component/cli {:local/root "../../components/cli"}
