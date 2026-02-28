@@ -45,11 +45,14 @@
      (let [{:keys [stop]} (SUT/run sys)]
        (telemetry/with-span-tests
         [_ ["send-command" "process-command"]]
-        (nom-test> [result (send-command sys
-                                         "open-account"
-                                         {"account_id" "acc-api-test"
-                                          "name" "API Test Account"
-                                          "currency" "GBP"})
-                    _ (is (= "ACCEPTED" (get result "status")))
-                    _ (is (= "acc-api-test" (get result "record_id")))]))
+        (let [schemas (system/instance sys [:avro :serde])]
+          (nom-test> [result (send-command sys
+                                           "open-account"
+                                           {"account_id" "acc-api-test"
+                                            "name" "API Test Account"
+                                            "currency" "GBP"})
+                      _ (is (= "ACCEPTED" (get result "status")))
+                      decoded (avro/deserialize-same (get schemas "account")
+                                                     (get result "payload"))
+                      _ (is (= "acc-api-test" (get decoded "account_id")))])))
        (stop)))))
