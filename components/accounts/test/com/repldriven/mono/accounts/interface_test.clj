@@ -21,6 +21,10 @@
       payload
       (processor/process proc {"command" command-name "payload" payload}))))
 
+(defn- decode-payload
+  [schemas schema-name result]
+  (avro/deserialize-same (get schemas schema-name) (:payload result)))
+
 (deftest process-open-account-test
   (testing "open-account creates account"
     (with-test-system
@@ -33,7 +37,9 @@
                                         {"account_id" "acc-1"
                                          "name" "Test Account"
                                          "currency" "USD"})
-                   _ (is (= "acc-1" (get result "record_id")))])))))
+                   _ (is (= :accepted (:status result)))
+                   decoded (decode-payload schemas "account" result)
+                   _ (is (= "acc-1" (get decoded "account_id")))])))))
 
 (deftest process-close-account-test
   (testing "close-account closes account"
@@ -51,7 +57,9 @@
                                         schemas
                                         "close-account"
                                         {"account_id" "acc-2"})
-                   _ (is (= "acc-2" (get result "record_id")))])))))
+                   _ (is (= :accepted (:status result)))
+                   decoded (decode-payload schemas "account" result)
+                   _ (is (= "acc-2" (get decoded "account_id")))])))))
 
 (deftest process-reopen-account-test
   (testing "reopen-account reopens closed account"
@@ -73,7 +81,9 @@
                                         schemas
                                         "reopen-account"
                                         {"account_id" "acc-3"})
-                   _ (is (= "acc-3" (get result "record_id")))])))))
+                   _ (is (= :accepted (:status result)))
+                   decoded (decode-payload schemas "account" result)
+                   _ (is (= "acc-3" (get decoded "account_id")))])))))
 
 (deftest process-suspend-account-test
   (testing "suspend-account suspends account"
@@ -91,7 +101,9 @@
                                         schemas
                                         "suspend-account"
                                         {"account_id" "acc-4"})
-                   _ (is (= "acc-4" (get result "record_id")))])))))
+                   _ (is (= :accepted (:status result)))
+                   decoded (decode-payload schemas "account" result)
+                   _ (is (= "acc-4" (get decoded "account_id")))])))))
 
 (deftest process-unsuspend-account-test
   (testing "unsuspend-account unsuspends account"
@@ -113,7 +125,9 @@
                                         schemas
                                         "unsuspend-account"
                                         {"account_id" "acc-5"})
-                   _ (is (= "acc-5" (get result "record_id")))])))))
+                   _ (is (= :accepted (:status result)))
+                   decoded (decode-payload schemas "account" result)
+                   _ (is (= "acc-5" (get decoded "account_id")))])))))
 
 (deftest process-archive-account-test
   (testing "archive-account archives account"
@@ -131,10 +145,12 @@
                                         schemas
                                         "archive-account"
                                         {"account_id" "acc-6"})
-                   _ (is (= "acc-6" (get result "record_id")))])))))
+                   _ (is (= :accepted (:status result)))
+                   decoded (decode-payload schemas "account" result)
+                   _ (is (= "acc-6" (get decoded "account_id")))])))))
 
 (deftest process-get-account-status-test
-  (testing "get-account-status returns record_id"
+  (testing "get-account-status returns account status"
     (with-test-system
      [sys "classpath:accounts/application-test.yml"]
      (let [proc (system/instance sys [:accounts :processor])
@@ -149,14 +165,17 @@
                                         schemas
                                         "get-account-status"
                                         {"account_id" "acc-7"})
-                   _ (is (= "acc-7" (get result "record_id")))])))))
+                   _ (is (= :accepted (:status result)))
+                   decoded (decode-payload schemas "account-status" result)
+                   _ (is (= "acc-7" (get decoded "account_id")))
+                   _ (is (= "open" (get decoded "account_status")))])))))
 
 (deftest process-unknown-command-test
-  (testing "unknown command returns anomaly"
+  (testing "unknown command returns rejection"
     (with-test-system
      [sys "classpath:accounts/application-test.yml"]
      (let [proc (system/instance sys [:accounts :processor])
+           schemas (system/instance sys [:avro :serde])
            result
-           (processor/process proc {"command" "invalid-command" "payload" nil})]
-       (is (error/anomaly? result))
-       (is (= :accounts/process-command (error/kind result)))))))
+           (send-command proc schemas "unknown-command" {"account_id" "acc-8"})]
+       (is (= :rejected (:status result)))))))

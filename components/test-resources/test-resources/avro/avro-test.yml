@@ -8,3 +8,6 @@ serde: !system/component
     unsuspend-account: schemas/accounts/account-lifecycle/unsuspend-account.avsc.json
     archive-account: schemas/accounts/account-lifecycle/archive-account.avsc.json
     get-account-status: schemas/accounts/reporting-operations/get-account-status.avsc.json
+    account: schemas/accounts/account-lifecycle/account.avsc.json
+    account-status: schemas/accounts/reporting-operations/account-status.avsc.json
+    unknown-command: schemas/accounts/account-lifecycle/account.avsc.json

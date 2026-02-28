@@ -4,4 +4,4 @@
 
 (def Processor protocol/Processor)
 
-(defn process [processor command] (protocol/process processor command))
+(defn process [processor message] (protocol/process processor message))

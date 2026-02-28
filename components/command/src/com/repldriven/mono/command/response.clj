@@ -29,40 +29,51 @@
    :else
    {:message (str details)}))
 
-(defn- ->command-error
-  [causation-id correlation-id category details]
+(defn- ->command-envelope
+  [causation-id correlation-id status payload error]
   {"id" (str (utility/uuidv7))
    "correlation_id" correlation-id
    "causation_id" causation-id
-   "record_id" ""
    "traceparent" (telemetry/inject-traceparent)
    "tracestate" nil
-   "status" "FAILED"
-   "payload" nil
-   "error" (json/write-str {:category (str category)
-                            :details (serializable-details details)})})
+   "status" status
+   "payload" payload
+   "error" error})
+
+(defn- ->command-error
+  [causation-id correlation-id category details]
+  (->command-envelope causation-id
+                      correlation-id
+                      "FAILED"
+                      nil
+                      (json/write-str {:category (str category)
+                                       :details (serializable-details
+                                                 details)})))
 
 (defn command-response
   "Build a structured command response from a command
   envelope and its process-fn result.
 
-  On success: status ACCEPTED, record_id from result.
+  On {:status :accepted :payload ...}: status ACCEPTED with payload.
+  On {:status :rejected :message ...}: status REJECTED with error.
   On anomaly: status FAILED with error details."
   [{:strs [id correlation_id]} result]
-  (if (error/anomaly? result)
-    (->command-error id
-                     correlation_id
-                     (error/kind result)
-                     (error/payload result))
-    {"id" (str (utility/uuidv7))
-     "correlation_id" correlation_id
-     "causation_id" id
-     "record_id" (get result "record_id" "")
-     "traceparent" (telemetry/inject-traceparent)
-     "tracestate" nil
-     "status" "ACCEPTED"
-     "payload" nil
-     "error" nil}))
+  (cond
+   (error/anomaly? result)
+   (->command-error id
+                    correlation_id
+                    (error/kind result)
+                    (error/payload result))
+
+   (= :rejected (:status result))
+   (->command-envelope id
+                       correlation_id
+                       "REJECTED"
+                       nil
+                       (json/write-str {:message (:message result)}))
+
+   :else
+   (->command-envelope id correlation_id "ACCEPTED" (:payload result) nil)))
 
 (defn req->command-response
   "Build a command-response from an HTTP request and a
