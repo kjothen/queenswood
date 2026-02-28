@@ -123,8 +123,8 @@
   [command]
   (try (let [propagator (.getTextMapPropagator (.getPropagators
                                                 (otel/get-default-otel!)))
-             carrier {"traceparent" (get command "traceparent")
-                      "tracestate" (get command "tracestate")}]
+             carrier {"traceparent" (:traceparent command)
+                      "tracestate" (:tracestate command)}]
          (.extract propagator (context/current) carrier command-getter))
        (catch Exception _e
          ;; Fallback to current context if extraction fails

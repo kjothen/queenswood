@@ -18,7 +18,7 @@
   (let [payload (avro/serialize (get schemas command-name) data)]
     (if (error/anomaly? payload)
       payload
-      (processor/process proc {"command" command-name "payload" payload}))))
+      (processor/process proc {:command command-name :payload payload}))))
 
 (defn- decode-payload
   [schemas schema-name result]
@@ -28,11 +28,11 @@
   [proc schemas]
   (testing "open-account creates account"
     (let [open-payload
-          {"customer_id" "cust-1" "name" "Test Account" "currency" "USD"}]
+          {:customer-id "cust-1" :name "Test Account" :currency "USD"}]
       (nom-test> [result (send-command proc schemas "open-account" open-payload)
                   _ (is (= "ACCEPTED" (:status result)))
                   decoded (decode-payload schemas "account" result)
-                  _ (is (some? (get decoded "account_id")))
+                  _ (is (some? (:account-id decoded)))
                   _ (is (= open-payload
                            (select-keys decoded (keys open-payload))))]))))
 
@@ -40,10 +40,10 @@
   [proc schemas]
   (testing "close-account closes account"
     (let [open-payload
-          {"customer_id" "cust-2" "name" "Account to Close" "currency" "USD"}]
+          {:customer-id "cust-2" :name "Account to Close" :currency "USD"}]
       (nom-test> [opened (send-command proc schemas "open-account" open-payload)
                   account (decode-payload schemas "account" opened)
-                  account-id (select-keys account ["account_id"])
+                  account-id (select-keys account [:account-id])
                   result (send-command proc schemas "close-account" account-id)
                   _ (is (= "ACCEPTED" (:status result)))
                   decoded (decode-payload schemas "account" result)
@@ -54,10 +54,10 @@
   [proc schemas]
   (testing "reopen-account reopens closed account"
     (let [open-payload
-          {"customer_id" "cust-3" "name" "Account to Reopen" "currency" "USD"}]
+          {:customer-id "cust-3" :name "Account to Reopen" :currency "USD"}]
       (nom-test> [opened (send-command proc schemas "open-account" open-payload)
                   account (decode-payload schemas "account" opened)
-                  account-id (select-keys account ["account_id"])
+                  account-id (select-keys account [:account-id])
                   _ (send-command proc schemas "close-account" account-id)
                   result (send-command proc schemas "reopen-account" account-id)
                   _ (is (= "ACCEPTED" (:status result)))
@@ -69,10 +69,10 @@
   [proc schemas]
   (testing "suspend-account suspends account"
     (let [open-payload
-          {"customer_id" "cust-4" "name" "Account to Suspend" "currency" "EUR"}]
+          {:customer-id "cust-4" :name "Account to Suspend" :currency "EUR"}]
       (nom-test> [opened (send-command proc schemas "open-account" open-payload)
                   account (decode-payload schemas "account" opened)
-                  account-id (select-keys account ["account_id"])
+                  account-id (select-keys account [:account-id])
                   result
                   (send-command proc schemas "suspend-account" account-id)
                   _ (is (= "ACCEPTED" (:status result)))
@@ -83,12 +83,11 @@
 (defn- test-unsuspend-account
   [proc schemas]
   (testing "unsuspend-account unsuspends account"
-    (let [open-payload {"customer_id" "cust-5"
-                        "name" "Account to Unsuspend"
-                        "currency" "GBP"}]
+    (let [open-payload
+          {:customer-id "cust-5" :name "Account to Unsuspend" :currency "GBP"}]
       (nom-test> [opened (send-command proc schemas "open-account" open-payload)
                   account (decode-payload schemas "account" opened)
-                  account-id (select-keys account ["account_id"])
+                  account-id (select-keys account [:account-id])
                   _ (send-command proc schemas "suspend-account" account-id)
                   result
                   (send-command proc schemas "unsuspend-account" account-id)
@@ -101,10 +100,10 @@
   [proc schemas]
   (testing "archive-account archives account"
     (let [open-payload
-          {"customer_id" "cust-6" "name" "Account to Archive" "currency" "CAD"}]
+          {:customer-id "cust-6" :name "Account to Archive" :currency "CAD"}]
       (nom-test> [opened (send-command proc schemas "open-account" open-payload)
                   account (decode-payload schemas "account" opened)
-                  account-id (select-keys account ["account_id"])
+                  account-id (select-keys account [:account-id])
                   result
                   (send-command proc schemas "archive-account" account-id)
                   _ (is (= "ACCEPTED" (:status result)))
@@ -116,15 +115,15 @@
   [proc schemas]
   (testing "get-account-status returns account status"
     (let [open-payload
-          {"customer_id" "cust-7" "name" "Status Account" "currency" "USD"}]
+          {:customer-id "cust-7" :name "Status Account" :currency "USD"}]
       (nom-test> [opened (send-command proc schemas "open-account" open-payload)
                   account (decode-payload schemas "account" opened)
-                  account-id (select-keys account ["account_id"])
+                  account-id (select-keys account [:account-id])
                   result
                   (send-command proc schemas "get-account-status" account-id)
                   _ (is (= "ACCEPTED" (:status result)))
                   decoded (decode-payload schemas "account-status" result)
-                  _ (is (= (assoc account-id "account_status" "open") decoded))]))))
+                  _ (is (= (assoc account-id :account-status "open") decoded))]))))
 
 (defn- test-close-missing-account
   [proc schemas]
@@ -133,14 +132,13 @@
            (:status (send-command proc
                                   schemas
                                   "close-account"
-                                  {"account_id" "missing-id"}))))))
+                                  {:account-id "missing-id"}))))))
 
 (defn- test-open-existing-account
   [proc schemas]
   (testing "open-account rejects duplicate customer"
-    (let [open-payload {"customer_id" "cust-dup"
-                        "name" "Duplicate Account"
-                        "currency" "USD"}]
+    (let [open-payload
+          {:customer-id "cust-dup" :name "Duplicate Account" :currency "USD"}]
       (nom-test> [_ (send-command proc schemas "open-account" open-payload)
                   result (send-command proc schemas "open-account" open-payload)
                   _ (is (= "REJECTED" (:status result)))]))))
@@ -152,7 +150,7 @@
            (:status (send-command proc
                                   schemas
                                   "unknown-command"
-                                  {"account_id" "acc-8"}))))))
+                                  {:account-id "acc-8"}))))))
 
 (deftest process-accounts-test
   (with-test-system [sys "classpath:accounts/application-test.yml"]

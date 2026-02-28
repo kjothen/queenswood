@@ -35,9 +35,7 @@
         (telemetry/with-span-parent
          "process-command"
          parent-ctx
-         (select-keys data
-                      ["id" "command" "correlation_id"
-                       "causation_id"])
+         (select-keys data [:id :command :correlation-id :causation-id])
          (fn []
            (let [resp (response/command-response data (process-fn data))]
              (log/debugf "command.processor/process: [data=%s, response=%s]"

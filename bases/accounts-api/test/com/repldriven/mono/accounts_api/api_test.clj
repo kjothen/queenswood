@@ -25,7 +25,7 @@
                  :url (str *base-url* "/v1/accounts")
                  :headers {"Content-Type" "application/json"
                            "Idempotency-Key" (str (util/uuidv7))}
-                 :body (json/write-str {"customer_id" customer-id
+                 :body (json/write-str {"customer-id" customer-id
                                         "name" name
                                         "currency" currency})}))
 
@@ -42,7 +42,7 @@
          (telemetry/with-span-parent
           "process-command"
           parent-ctx
-          (select-keys data ["id" "command" "correlation_id" "causation_id"])
+          (select-keys data [:id :command :correlation-id :causation-id])
           (fn []
             (message-bus/send bus
                               :command-response

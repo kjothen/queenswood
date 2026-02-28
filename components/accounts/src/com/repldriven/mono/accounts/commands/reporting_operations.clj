@@ -8,9 +8,9 @@
     [com.repldriven.mono.schema.interface :as schema]))
 
 (defn- ->data
-  "Converts a protojure account map to a string-keyed wire map."
+  "Converts a protojure account map to a keyword-keyed wire map."
   [account]
-  {"account_id" (:account-id account) "account_status" (:status account)})
+  {:account-id (:account-id account) :account-status (:status account)})
 
 (defn- ->response
   "Converts protobuf bytes to an account-status response. Returns
@@ -32,6 +32,6 @@
   "Returns the current status of an account."
   [config data]
   (let [{:keys [record-db record-store schemas]} config
-        {:strs [account_id]} data]
-    (-> (fdb/load-record record-db record-store "accounts" account_id)
+        {:keys [account-id]} data]
+    (-> (fdb/load-record record-db record-store "accounts" account-id)
         (->response schemas "Account not found"))))

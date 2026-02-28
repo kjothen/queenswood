@@ -21,11 +21,11 @@
   Returns a command envelope map ready for message-bus."
   [req command payload]
   (let [[idempotency-key correlation-id] (req->ids req)]
-    {"command" command
-     "id" idempotency-key
-     "correlation_id" correlation-id
-     "causation_id" nil
-     "traceparent" (telemetry/inject-traceparent)
-     "tracestate" nil
-     "payload" payload
-     "reply_to" nil}))
+    {:command command
+     :id idempotency-key
+     :correlation-id correlation-id
+     :causation-id nil
+     :traceparent (telemetry/inject-traceparent)
+     :tracestate nil
+     :payload payload
+     :reply-to nil}))

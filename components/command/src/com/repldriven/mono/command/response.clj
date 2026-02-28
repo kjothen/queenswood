@@ -31,14 +31,14 @@
 
 (defn- ->command-envelope
   [causation-id correlation-id status payload error]
-  {"id" (str (utility/uuidv7))
-   "correlation_id" correlation-id
-   "causation_id" causation-id
-   "traceparent" (telemetry/inject-traceparent)
-   "tracestate" nil
-   "status" status
-   "payload" payload
-   "error" error})
+  {:id (str (utility/uuidv7))
+   :correlation-id correlation-id
+   :causation-id causation-id
+   :traceparent (telemetry/inject-traceparent)
+   :tracestate nil
+   :status status
+   :payload payload
+   :error error})
 
 (defn- ->command-error
   [causation-id correlation-id category details]
@@ -57,23 +57,23 @@
   On {:status :accepted :payload ...}: status ACCEPTED with payload.
   On {:status :rejected :message ...}: status REJECTED with error.
   On anomaly: status FAILED with error details."
-  [{:strs [id correlation_id]} result]
+  [{:keys [id correlation-id]} result]
   (cond
    (error/anomaly? result)
    (->command-error id
-                    correlation_id
+                    correlation-id
                     (error/kind result)
                     (error/payload result))
 
    (= "REJECTED" (:status result))
    (->command-envelope id
-                       correlation_id
+                       correlation-id
                        "REJECTED"
                        nil
                        (json/write-str {:message (:message result)}))
 
    :else
-   (->command-envelope id correlation_id "ACCEPTED" (:payload result) nil)))
+   (->command-envelope id correlation-id "ACCEPTED" (:payload result) nil)))
 
 (defn req->command-response
   "Build a command-response from an HTTP request and a

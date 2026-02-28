@@ -11,7 +11,7 @@
 
 (defn- dispatch
   [config message]
-  (let [{:strs [command payload]} message
+  (let [{:keys [command payload]} message
         {:keys [schemas]} config
         schema (get schemas command)]
     (if-not schema

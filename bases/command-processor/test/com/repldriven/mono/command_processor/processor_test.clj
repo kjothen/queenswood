@@ -27,15 +27,15 @@
         cmd-id (str (java.util.UUID/randomUUID))]
     (telemetry/with-span ["send-command" {}]
                          (command/send bus
-                                       {"id" cmd-id
-                                        "command" command-name
-                                        "correlation_id" cmd-id
-                                        "causation_id" nil
-                                        "traceparent"
+                                       {:id cmd-id
+                                        :command command-name
+                                        :correlation-id cmd-id
+                                        :causation-id nil
+                                        :traceparent
                                         (telemetry/inject-traceparent)
-                                        "tracestate" nil
-                                        "payload" payload
-                                        "reply_to" nil}))))
+                                        :tracestate nil
+                                        :payload payload
+                                        :reply-to nil}))))
 
 (deftest process-command-test
   (testing "Commands sent are processed and replied to via message-bus"
@@ -47,11 +47,11 @@
         (let [schemas (system/instance sys [:avro :serde])]
           (nom-test> [result (send-command sys
                                            "open-account"
-                                           {"customer_id" "cust-api-test"
-                                            "name" "API Test Account"
-                                            "currency" "GBP"})
-                      _ (is (= "ACCEPTED" (get result "status")))
+                                           {:customer-id "cust-api-test"
+                                            :name "API Test Account"
+                                            :currency "GBP"})
+                      _ (is (= "ACCEPTED" (:status result)))
                       decoded (avro/deserialize-same (get schemas "account")
-                                                     (get result "payload"))
-                      _ (is (some? (get decoded "account_id")))])))
+                                                     (:payload result))
+                      _ (is (some? (:account-id decoded)))])))
        (stop)))))

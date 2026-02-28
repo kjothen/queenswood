@@ -47,35 +47,35 @@
 
 (defn open-account
   [request]
-  (let [body (:body-params request)]
+  (let [body (update-keys (:body-params request) keyword)]
     (send-command request "open-account" body)))
 
 (defn close-account
   [request]
   (let [{:keys [account-id]} (:path-params request)]
-    (send-command request "close-account" {"account_id" account-id})))
+    (send-command request "close-account" {:account-id account-id})))
 
 (defn reopen-account
   [request]
   (let [{:keys [account-id]} (:path-params request)]
-    (send-command request "reopen-account" {"account_id" account-id})))
+    (send-command request "reopen-account" {:account-id account-id})))
 
 (defn suspend-account
   [request]
   (let [{:keys [account-id]} (:path-params request)]
-    (send-command request "suspend-account" {"account_id" account-id})))
+    (send-command request "suspend-account" {:account-id account-id})))
 
 (defn unsuspend-account
   [request]
   (let [{:keys [account-id]} (:path-params request)]
-    (send-command request "unsuspend-account" {"account_id" account-id})))
+    (send-command request "unsuspend-account" {:account-id account-id})))
 
 (defn archive-account
   [request]
   (let [{:keys [account-id]} (:path-params request)]
-    (send-command request "archive-account" {"account_id" account-id})))
+    (send-command request "archive-account" {:account-id account-id})))
 
 (defn get-account-status
   [request]
   (let [{:keys [account-id]} (:path-params request)]
-    (send-command request "get-account-status" {"account_id" account-id})))
+    (send-command request "get-account-status" {:account-id account-id})))

@@ -10,12 +10,12 @@
     [com.repldriven.mono.utility.interface :as utility]))
 
 (defn- ->data
-  "Converts a protojure account map to a string-keyed wire map."
+  "Converts a protojure account map to a keyword-keyed wire map."
   [account]
-  {"account_id" (:account-id account)
-   "customer_id" (:customer-id account)
-   "name" (:name account)
-   "currency" (:currency account)})
+  {:account-id (:account-id account)
+   :customer-id (:customer-id account)
+   :name (:name account)
+   :currency (:currency account)})
 
 (defn- ->response
   "Converts protobuf bytes to an account response. Returns the
@@ -36,8 +36,8 @@
 (defn- load
   "Loads an account by id from the store, returning a Clojure
   map or nil if not found."
-  [store account_id]
-  (some-> (fdb/load-record store account_id)
+  [store account-id]
+  (some-> (fdb/load-record store account-id)
           schema/pb->Account))
 
 (defn- save
@@ -50,34 +50,34 @@
 (defn- update
   "Loads account by id, applies f, saves back. Returns protobuf
   bytes, nil if not found, or anomaly on failure."
-  [config account_id f]
+  [config account-id f]
   (let [{:keys [record-db record-store]} config]
     (fdb/transact record-db
                   (fn [ctx]
                     (let [store (record-store ctx "accounts")]
-                      (some->> (load store account_id)
+                      (some->> (load store account-id)
                                f
                                (save store ctx)))))))
 
 (defn- customer-exists?
-  "Returns truthy if an account with the given customer_id
+  "Returns truthy if an account with the given customer-id
   already exists in the store."
-  [store customer_id]
-  (seq (fdb/query-records store "Account" "customer_id" customer_id)))
+  [store customer-id]
+  (seq (fdb/query-records store "Account" "customer_id" customer-id)))
 
 (defn- create
-  "Creates account if customer_id is unique. Returns protobuf
+  "Creates account if customer-id is unique. Returns protobuf
   bytes or nil if customer already exists."
   [config data]
   (let [{:keys [record-db record-store]} config
-        {:strs [customer_id name currency]} data
+        {:keys [customer-id name currency]} data
         account-id (str (utility/uuidv7))]
     (fdb/transact
      record-db
      (fn [ctx]
        (let [store (record-store ctx "accounts")]
-         (when-not (customer-exists? store customer_id)
-           (->> (domain/new-account account-id customer_id name currency)
+         (when-not (customer-exists? store customer-id)
+           (->> (domain/new-account account-id customer-id name currency)
                 (save store ctx))))))))
 
 (defn open
@@ -90,10 +90,10 @@
 (defn- update-status
   "Updates account status and returns an account response."
   [config data status]
-  (let [{:strs [account_id]} data
+  (let [{:keys [account-id]} data
         {:keys [schemas]} config]
     (-> (update config
-                account_id
+                account-id
                 (fn [account] (domain/set-status account status)))
         (->response schemas "Account not found"))))
 
