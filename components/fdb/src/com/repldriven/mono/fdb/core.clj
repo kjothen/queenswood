@@ -2,7 +2,6 @@
   (:refer-clojure :exclude [get])
   (:require
     [com.repldriven.mono.error.interface :as error]
-    [com.repldriven.mono.fdb.outbox :as outbox]
     [com.repldriven.mono.fdb.store :as store])
   (:import
     (com.apple.foundationdb Database)
@@ -60,20 +59,6 @@
                             (some-> (.get tr (.getBytes key))
                                     .join))))))
 
-(defn watch-outbox
-  "Sets up a watch on the outbox sentinel key for store-name.
-  Returns a CompletableFuture<Void> that completes when the next
-  outbox-record for this store is committed."
-  [^FDBDatabase record-db store-name]
-  (error/try-nom :fdb/watch-outbox
-                 {:message "Failed to set up outbox watch" :store store-name}
-                 (.run record-db
-                       (reify
-                        java.util.function.Function
-                          (apply [_ ctx]
-                            (.watch (.ensureActive ctx)
-                                    (outbox/sentinel-key store-name)))))))
-
 (defn load-record
   "Loads a record by primary key from the named record store.
   Returns the serialized bytes of the record, or nil if not
@@ -106,26 +91,6 @@
                              (store/open-store open-store-fn ctx store-name)
                              record)
                             nil)))))
-
-(defn outbox-record
-  "Atomically saves a Java protobuf Message to the named record
-  store and appends event-bytes to the transactional outbox. Both
-  writes occur in a single FDB transaction and are automatically
-  retried on conflict."
-  [^FDBDatabase record-db open-store-fn store-name ^MessageLite record
-   ^bytes event-bytes]
-  (error/try-nom
-   :fdb/outbox-record
-   {:message "Failed to save record" :store store-name}
-   (.run record-db
-         (reify
-          java.util.function.Function
-            (apply [_ ctx]
-              (let [fdb-store (store/open-store open-store-fn ctx store-name)
-                    tr (.ensureActive ctx)]
-                (.saveRecord fdb-store record)
-                (outbox/write-entry tr store-name event-bytes)
-                nil))))))
 
 (defn store-load
   "Loads a record by primary key from an open FDBRecordStore.

@@ -40,3 +40,8 @@ meta-store: !system/component
       indexes:
         - name: email_idx
           field: email
+    accounts:
+      record-type: Account
+      indexes:
+        - name: customer_id_idx
+          field: customer_id

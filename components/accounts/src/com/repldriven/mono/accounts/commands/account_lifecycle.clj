@@ -41,9 +41,10 @@
           schema/pb->Account))
 
 (defn- save
-  "Saves account to store, returns protobuf bytes."
-  [store account]
+  "Saves account to store, writes changelog entry, returns protobuf bytes."
+  [store ctx account]
   (fdb/store-save store (schema/Account->java account))
+  (fdb/write-changelog ctx "accounts" (:account-id account))
   (schema/Account->pb account))
 
 (defn- update
@@ -56,7 +57,7 @@
                     (let [store (record-store ctx "accounts")]
                       (some->> (load store account_id)
                                f
-                               (save store)))))))
+                               (save store ctx)))))))
 
 (defn- customer-exists?
   "Returns truthy if an account with the given customer_id
@@ -77,7 +78,7 @@
        (let [store (record-store ctx "accounts")]
          (when-not (customer-exists? store customer_id)
            (->> (domain/new-account account-id customer_id name currency)
-                (save store))))))))
+                (save store ctx))))))))
 
 (defn open
   "Inserts a new account record with status open."

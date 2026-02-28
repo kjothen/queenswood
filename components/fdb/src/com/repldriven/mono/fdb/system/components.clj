@@ -133,18 +133,13 @@
 
 (defn- build-meta-data
   [descriptor record-types]
-  (let [file-desc (resolve-descriptor descriptor)]
-    (reduce-kv (fn [_ _store-name record-type-cfg]
-                 (let [{:keys [record-type indexes]} record-type-cfg
-                       b (-> (RecordMetaData/newBuilder)
-                             (.setRecords file-desc))]
-                   (doseq [{:keys [name field]} indexes]
-                     (.addIndex b
-                                record-type
-                                (Index. name (Key$Expressions/field field))))
-                   (.build b)))
-               nil
-               record-types)))
+  (let [file-desc (resolve-descriptor descriptor)
+        b (-> (RecordMetaData/newBuilder)
+              (.setRecords file-desc))]
+    (doseq [[_store-name {:keys [record-type indexes]}] record-types]
+      (doseq [{:keys [name field]} indexes]
+        (.addIndex b record-type (Index. name (Key$Expressions/field field)))))
+    (.build b)))
 
 (def meta-store
   {:system/start

@@ -58,23 +58,67 @@
                              schema/pb->Person)
                   _ (is (= alice (utility/record->map retrieved)))]))))
 
-(defn- test-relay-batch
+(defn- test-record-layer-consumer
   [sys store]
-  (let [alice {:name "Alice" :id 1 :email "alice@example.com" :phones []}
+  (let [alice {:account-id (str (utility/uuidv7))
+               :customer-id "cust-1"
+               :name "Alice"
+               :currency "GBP"
+               :status "open"}
+        bob {:account-id (str (utility/uuidv7))
+             :customer-id "cust-2"
+             :name "Bob"
+             :currency "USD"
+             :status "open"}
         record-db (system/instance sys [:fdb :record-db])
         received (atom [])]
-    (testing "relay-batch delivers outbox entries to handler-fn"
-      (nom-test> [_ (SUT/outbox-record record-db
-                                       store
-                                       "persons"
-                                       (schema/Person->java alice)
-                                       (schema/Person->pb alice))
-                  _ (SUT/relay-batch record-db
+    (testing
+      "consumer reads changelog entries and calls handler with record bytes"
+      (nom-test> [_
+                  (SUT/transact
+                   record-db
+                   (fn [ctx]
+                     (let [fdb-store (store ctx "accounts")]
+                       (SUT/store-save fdb-store (schema/Account->java alice))
+                       (SUT/write-changelog ctx "accounts" (:account-id alice))
+                       (SUT/store-save fdb-store (schema/Account->java bob))
+                       (SUT/write-changelog ctx "accounts" (:account-id bob)))))
+                  _ (SUT/process-changelog record-db
+                                           store
+                                           "test-consumer"
+                                           "accounts"
+                                           (fn [record]
+                                             (swap! received conj record)))
+                  _ (is (= 2 (count @received)))
+                  retrieved-alice (error/nom-> (first @received)
+                                               schema/pb->Account)
+                  _ (is (= alice (utility/record->map retrieved-alice)))
+                  retrieved-bob (error/nom-> (second @received)
+                                             schema/pb->Account)
+                  _ (is (= bob (utility/record->map retrieved-bob)))]))))
+
+(defn- test-query-records
+  [sys store]
+  (let [alice {:name "Alice" :id 10 :email "alice@query.com" :phones []}
+        bob {:name "Bob" :id 11 :email "bob@query.com" :phones []}
+        record-db (system/instance sys [:fdb :record-db])]
+    (testing "can query records by field value"
+      (nom-test> [_ (SUT/save-record record-db
+                                     store
                                      "persons"
-                                     (fn [_k v] (swap! received conj v)))
-                  _ (is (= 1 (count @received)))
-                  retrieved (error/nom-> (first @received) schema/pb->Person)
+                                     (schema/Person->java alice))
+                  _ (SUT/save-record record-db
+                                     store
+                                     "persons"
+                                     (schema/Person->java bob))
+                  results (SUT/query-records record-db
+                                             store
+                                             "persons" "Person"
+                                             "email" "alice@query.com")
+                  _ (is (= 1 (count results)))
+                  retrieved (error/nom-> (first results) schema/pb->Person)
                   _ (is (= alice (utility/record->map retrieved)))]))))
+
 
 (deftest kv-test
   (with-test-system [sys "classpath:fdb/application-test.yml"]
@@ -85,10 +129,12 @@
   (with-test-system [sys "classpath:fdb/application-test.yml"]
                     (let [store (system/instance sys [:fdb :store])]
                       (test-record-layer sys store)
-                      (test-relay-batch sys store))))
+                      (test-query-records sys store)
+                      (test-record-layer-consumer sys store))))
 
 (deftest meta-store-test
   (with-test-system [sys "classpath:fdb/application-test.yml"]
                     (let [store (system/instance sys [:fdb :meta-store])]
                       (test-record-layer sys store)
-                      (test-relay-batch sys store))))
+                      (test-query-records sys store)
+                      (test-record-layer-consumer sys store))))
