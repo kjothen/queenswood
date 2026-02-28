@@ -15,7 +15,7 @@
    (some? result)
    (->account-status schemas
                      "ACCEPTED"
-                     {"account_id" (:account_id result)
+                     {"account_id" (str (:account_id result))
                       "account_status" (:account_status result)})
 
    :else
@@ -28,9 +28,9 @@
         {:strs [account_id]} data]
     (->account-status-or-reject
      (db/execute-one! datasource
-                      (sql/format {:select [:account_id
-                                            [:status :account_status]]
-                                   :from :account
-                                   :where [:= :account_id account_id]})
+                      (sql/format
+                       {:select [:account_id [:status :account_status]]
+                        :from :account
+                        :where [:= :account_id [:cast account_id :uuid]]})
                       {:builder-fn db/as-unqualified-lower-maps})
      schemas)))

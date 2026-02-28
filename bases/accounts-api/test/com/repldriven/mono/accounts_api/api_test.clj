@@ -20,12 +20,12 @@
 (def ^:dynamic *base-url* "http://localhost:{PORT}")
 
 (defn- open-account-request
-  [account-id name currency]
+  [customer-id name currency]
   (http/request {:method :post
                  :url (str *base-url* "/v1/accounts")
                  :headers {"Content-Type" "application/json"
                            "Idempotency-Key" (str (util/uuidv7))}
-                 :body (json/write-str {"account_id" account-id
+                 :body (json/write-str {"customer_id" customer-id
                                         "name" name
                                         "currency" currency})}))
 

@@ -4,7 +4,8 @@
 
     [com.repldriven.mono.db.interface :as db]
     [com.repldriven.mono.error.interface :as error]
-    [com.repldriven.mono.sql.interface :as sql]))
+    [com.repldriven.mono.sql.interface :as sql]
+    [com.repldriven.mono.utility.interface :as utility]))
 
 (defn- ->account-or-reject
   "Returns a serialized account on success, a rejection if not found,
@@ -42,7 +43,8 @@
                         (sql/format {:update :account
                                      :set {:status [:inline status]
                                            :updated_at [:timezone "utc" [:now]]}
-                                     :where [:= :account_id account_id]})
+                                     :where [:= :account_id
+                                             [:cast account_id :uuid]]})
                         {:return-keys false})
                        schemas
                        {"account_id" account_id}))
@@ -51,16 +53,18 @@
   "Inserts a new account record with status open."
   [config data]
   (let [{:keys [datasource schemas]} config
-        {:strs [account_id name currency]} data]
-    (->account-or-fail
-     (db/execute-one! datasource
-                      (sql/format
-                       {:insert-into :account
-                        :columns [:account_id :name :currency :status]
-                        :values [[account_id name currency [:inline "open"]]]}))
-     schemas
-     :accounts/account-open
-     {"account_id" account_id})))
+        {:strs [customer_id name currency]} data
+        account-id (utility/uuidv7)]
+    (->account-or-fail (db/execute-one!
+                        datasource
+                        (sql/format {:insert-into :account
+                                     :columns [:account_id :customer_id :name
+                                               :currency :status]
+                                     :values [[account-id customer_id name
+                                               currency [:inline "open"]]]}))
+                       schemas
+                       :accounts/account-open
+                       {"account_id" (str account-id)})))
 
 (defn close
   "Sets account status to closed."
@@ -95,13 +99,14 @@
   [config data]
   (let [{:keys [datasource schemas]} config
         {:strs [account_id]} data]
-    (->account-or-reject
-     (db/execute-one! datasource
-                      (sql/format {:update :account
-                                   :set {:status [:inline "archived"]
-                                         :updated_at [:timezone "utc" [:now]]
-                                         :deleted_at [:timezone "utc" [:now]]}
-                                   :where [:= :account_id account_id]})
-                      {:return-keys false})
-     schemas
-     {"account_id" account_id})))
+    (->account-or-reject (db/execute-one!
+                          datasource
+                          (sql/format
+                           {:update :account
+                            :set {:status [:inline "archived"]
+                                  :updated_at [:timezone "utc" [:now]]
+                                  :deleted_at [:timezone "utc" [:now]]}
+                            :where [:= :account_id [:cast account_id :uuid]]})
+                          {:return-keys false})
+                         schemas
+                         {"account_id" account_id})))

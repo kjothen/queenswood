@@ -4,7 +4,8 @@
 CREATE SEQUENCE account_id_seq;
 CREATE TABLE account(
   unique_id NUMERIC(21,0) NOT NULL DEFAULT nextval('account_id_seq'),
-  account_id text NOT NULL,
+  customer_id text NOT NULL,
+  account_id UUID NOT NULL,
   name text,
   status text NOT NULL DEFAULT 'open',
   balance NUMERIC(19,4) NOT NULL DEFAULT 0,

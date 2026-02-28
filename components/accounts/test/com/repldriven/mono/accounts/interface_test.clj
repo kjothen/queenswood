@@ -34,12 +34,12 @@
        (nom-test> [result (send-command proc
                                         schemas
                                         "open-account"
-                                        {"account_id" "acc-1"
+                                        {"customer_id" "cust-1"
                                          "name" "Test Account"
                                          "currency" "USD"})
                    _ (is (= "ACCEPTED" (:status result)))
                    decoded (decode-payload schemas "account" result)
-                   _ (is (= "acc-1" (get decoded "account_id")))])))))
+                   _ (is (some? (get decoded "account_id")))])))))
 
 (deftest process-close-account-test
   (testing "close-account closes account"
@@ -47,19 +47,22 @@
      [sys "classpath:accounts/application-test.yml"]
      (let [proc (system/instance sys [:accounts :processor])
            schemas (system/instance sys [:avro :serde])]
-       (nom-test> [_ (send-command proc
-                                   schemas
-                                   "open-account"
-                                   {"account_id" "acc-2"
-                                    "name" "Account to Close"
-                                    "currency" "USD"})
+       (nom-test> [opened (send-command proc
+                                        schemas
+                                        "open-account"
+                                        {"customer_id" "cust-2"
+                                         "name" "Account to Close"
+                                         "currency" "USD"})
+                   account (decode-payload schemas "account" opened)
                    result (send-command proc
                                         schemas
                                         "close-account"
-                                        {"account_id" "acc-2"})
+                                        {"account_id" (get account
+                                                           "account_id")})
                    _ (is (= "ACCEPTED" (:status result)))
                    decoded (decode-payload schemas "account" result)
-                   _ (is (= "acc-2" (get decoded "account_id")))])))))
+                   _ (is (= (get account "account_id")
+                            (get decoded "account_id")))])))))
 
 (deftest process-reopen-account-test
   (testing "reopen-account reopens closed account"
@@ -67,23 +70,26 @@
      [sys "classpath:accounts/application-test.yml"]
      (let [proc (system/instance sys [:accounts :processor])
            schemas (system/instance sys [:avro :serde])]
-       (nom-test> [_ (send-command proc
-                                   schemas
-                                   "open-account"
-                                   {"account_id" "acc-3"
-                                    "name" "Account to Reopen"
-                                    "currency" "USD"})
+       (nom-test> [opened (send-command proc
+                                        schemas
+                                        "open-account"
+                                        {"customer_id" "cust-3"
+                                         "name" "Account to Reopen"
+                                         "currency" "USD"})
+                   account (decode-payload schemas "account" opened)
                    _ (send-command proc
                                    schemas
                                    "close-account"
-                                   {"account_id" "acc-3"})
+                                   {"account_id" (get account "account_id")})
                    result (send-command proc
                                         schemas
                                         "reopen-account"
-                                        {"account_id" "acc-3"})
+                                        {"account_id" (get account
+                                                           "account_id")})
                    _ (is (= "ACCEPTED" (:status result)))
                    decoded (decode-payload schemas "account" result)
-                   _ (is (= "acc-3" (get decoded "account_id")))])))))
+                   _ (is (= (get account "account_id")
+                            (get decoded "account_id")))])))))
 
 (deftest process-suspend-account-test
   (testing "suspend-account suspends account"
@@ -91,19 +97,22 @@
      [sys "classpath:accounts/application-test.yml"]
      (let [proc (system/instance sys [:accounts :processor])
            schemas (system/instance sys [:avro :serde])]
-       (nom-test> [_ (send-command proc
-                                   schemas
-                                   "open-account"
-                                   {"account_id" "acc-4"
-                                    "name" "Account to Suspend"
-                                    "currency" "EUR"})
+       (nom-test> [opened (send-command proc
+                                        schemas
+                                        "open-account"
+                                        {"customer_id" "cust-4"
+                                         "name" "Account to Suspend"
+                                         "currency" "EUR"})
+                   account (decode-payload schemas "account" opened)
                    result (send-command proc
                                         schemas
                                         "suspend-account"
-                                        {"account_id" "acc-4"})
+                                        {"account_id" (get account
+                                                           "account_id")})
                    _ (is (= "ACCEPTED" (:status result)))
                    decoded (decode-payload schemas "account" result)
-                   _ (is (= "acc-4" (get decoded "account_id")))])))))
+                   _ (is (= (get account "account_id")
+                            (get decoded "account_id")))])))))
 
 (deftest process-unsuspend-account-test
   (testing "unsuspend-account unsuspends account"
@@ -111,23 +120,26 @@
      [sys "classpath:accounts/application-test.yml"]
      (let [proc (system/instance sys [:accounts :processor])
            schemas (system/instance sys [:avro :serde])]
-       (nom-test> [_ (send-command proc
-                                   schemas
-                                   "open-account"
-                                   {"account_id" "acc-5"
-                                    "name" "Account to Unsuspend"
-                                    "currency" "GBP"})
+       (nom-test> [opened (send-command proc
+                                        schemas
+                                        "open-account"
+                                        {"customer_id" "cust-5"
+                                         "name" "Account to Unsuspend"
+                                         "currency" "GBP"})
+                   account (decode-payload schemas "account" opened)
                    _ (send-command proc
                                    schemas
                                    "suspend-account"
-                                   {"account_id" "acc-5"})
+                                   {"account_id" (get account "account_id")})
                    result (send-command proc
                                         schemas
                                         "unsuspend-account"
-                                        {"account_id" "acc-5"})
+                                        {"account_id" (get account
+                                                           "account_id")})
                    _ (is (= "ACCEPTED" (:status result)))
                    decoded (decode-payload schemas "account" result)
-                   _ (is (= "acc-5" (get decoded "account_id")))])))))
+                   _ (is (= (get account "account_id")
+                            (get decoded "account_id")))])))))
 
 (deftest process-archive-account-test
   (testing "archive-account archives account"
@@ -135,19 +147,22 @@
      [sys "classpath:accounts/application-test.yml"]
      (let [proc (system/instance sys [:accounts :processor])
            schemas (system/instance sys [:avro :serde])]
-       (nom-test> [_ (send-command proc
-                                   schemas
-                                   "open-account"
-                                   {"account_id" "acc-6"
-                                    "name" "Account to Archive"
-                                    "currency" "CAD"})
+       (nom-test> [opened (send-command proc
+                                        schemas
+                                        "open-account"
+                                        {"customer_id" "cust-6"
+                                         "name" "Account to Archive"
+                                         "currency" "CAD"})
+                   account (decode-payload schemas "account" opened)
                    result (send-command proc
                                         schemas
                                         "archive-account"
-                                        {"account_id" "acc-6"})
+                                        {"account_id" (get account
+                                                           "account_id")})
                    _ (is (= "ACCEPTED" (:status result)))
                    decoded (decode-payload schemas "account" result)
-                   _ (is (= "acc-6" (get decoded "account_id")))])))))
+                   _ (is (= (get account "account_id")
+                            (get decoded "account_id")))])))))
 
 (deftest process-get-account-status-test
   (testing "get-account-status returns account status"
@@ -155,19 +170,22 @@
      [sys "classpath:accounts/application-test.yml"]
      (let [proc (system/instance sys [:accounts :processor])
            schemas (system/instance sys [:avro :serde])]
-       (nom-test> [_ (send-command proc
-                                   schemas
-                                   "open-account"
-                                   {"account_id" "acc-7"
-                                    "name" "Status Account"
-                                    "currency" "USD"})
+       (nom-test> [opened (send-command proc
+                                        schemas
+                                        "open-account"
+                                        {"customer_id" "cust-7"
+                                         "name" "Status Account"
+                                         "currency" "USD"})
+                   account (decode-payload schemas "account" opened)
                    result (send-command proc
                                         schemas
                                         "get-account-status"
-                                        {"account_id" "acc-7"})
+                                        {"account_id" (get account
+                                                           "account_id")})
                    _ (is (= "ACCEPTED" (:status result)))
                    decoded (decode-payload schemas "account-status" result)
-                   _ (is (= "acc-7" (get decoded "account_id")))
+                   _ (is (= (get account "account_id")
+                            (get decoded "account_id")))
                    _ (is (= "open" (get decoded "account_status")))])))))
 
 (deftest process-unknown-command-test

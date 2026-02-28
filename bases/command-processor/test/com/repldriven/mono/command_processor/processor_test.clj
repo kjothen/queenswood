@@ -48,11 +48,11 @@
         (let [schemas (system/instance sys [:avro :serde])]
           (nom-test> [result (send-command sys
                                            "open-account"
-                                           {"account_id" "acc-api-test"
+                                           {"customer_id" "cust-api-test"
                                             "name" "API Test Account"
                                             "currency" "GBP"})
                       _ (is (= "ACCEPTED" (get result "status")))
                       decoded (avro/deserialize-same (get schemas "account")
                                                      (get result "payload"))
-                      _ (is (= "acc-api-test" (get decoded "account_id")))])))
+                      _ (is (some? (get decoded "account_id")))])))
        (stop)))))
