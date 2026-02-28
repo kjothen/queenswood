@@ -1,5 +1,4 @@
 (ns com.repldriven.mono.fdb.interface
-  (:refer-clojure :exclude [load])
   (:require
     com.repldriven.mono.fdb.system.core
 

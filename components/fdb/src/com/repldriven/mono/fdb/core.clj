@@ -1,5 +1,4 @@
 (ns com.repldriven.mono.fdb.core
-  (:refer-clojure :exclude [get])
   (:require
     [com.repldriven.mono.error.interface :as error]
     [com.repldriven.mono.fdb.record :as record])
