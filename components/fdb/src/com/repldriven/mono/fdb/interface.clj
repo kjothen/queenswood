@@ -30,7 +30,14 @@
   (changelog/write ctx store-name record-id))
 
 (defn process-changelog
-  [record-db open-store-fn consumer-id store-name handler]
-  (changelog/process record-db open-store-fn consumer-id store-name handler))
+  ([record-db open-store-fn consumer-id store-name handler]
+   (changelog/process record-db open-store-fn consumer-id store-name handler))
+  ([record-db open-store-fn consumer-id store-name handler opts]
+   (changelog/process record-db
+                      open-store-fn
+                      consumer-id
+                      store-name
+                      handler
+                      opts)))
 
 (defn transact [record-db f] (core/transact record-db f))

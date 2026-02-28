@@ -75,31 +75,51 @@
                   (-> (.getRange (.ensureActive ctx) begin end)
                       .asList))))
 
+(defn- deduplicate
+  "Keeps only the latest changelog entry per record-id. Since entries
+  are ordered by versionstamp, last within each group is the most
+  recent write for that record."
+  [entries]
+  (->> entries
+       (group-by (fn [kv] (String. (.getValue kv))))
+       vals
+       (map last)))
+
 (defn process
   "Reads unprocessed changelog entries for consumer-id in store-name,
   calls (handler serialized-bytes) for each, and advances the
   checkpoint to the last versionstamp seen. All reads and the
-  checkpoint write occur in a single transaction."
-  [^FDBDatabase record-db open-store-fn consumer-id store-name handler]
-  (.run record-db
-        ^Function
-        (fn [ctx]
-          (let [tr (.ensureActive ctx)
-                cp (checkpoint/read record-db
-                                    (checkpoint-key consumer-id store-name))
-                entries (scan ctx store-name cp)]
-            (when (seq entries)
-              (doseq [kv entries]
-                (let [record-id (String. (.getValue kv))
-                      record (record/load
-                              (record/open-store open-store-fn ctx store-name)
-                              record-id)]
-                  (handler record)))
-              (let [subspace (changelog-subspace store-name)
-                    last-vs (.getVersionstamp (.unpack subspace
-                                                       (.getKey (last entries)))
-                                              0)]
-                (checkpoint/write tr
-                                  (checkpoint-key consumer-id store-name)
-                                  last-vs)))
-            nil))))
+  checkpoint write occur in a single transaction.
+
+  Options:
+    :deduplicate? (default true) — when true, only the latest entry
+    per record-id is processed. Set to false for audit consumers that
+    need every write."
+  ([^FDBDatabase record-db open-store-fn consumer-id store-name handler]
+   (process record-db open-store-fn consumer-id store-name handler {}))
+  ([^FDBDatabase record-db open-store-fn consumer-id store-name handler opts]
+   (let [{:keys [deduplicate?] :or {deduplicate? true}} opts]
+     (.run record-db
+           ^Function
+           (fn [ctx]
+             (let [tr (.ensureActive ctx)
+                   cp (checkpoint/read record-db
+                                       (checkpoint-key consumer-id store-name))
+                   entries (scan ctx store-name cp)]
+               (when (seq entries)
+                 (doseq [kv (cond-> entries deduplicate? deduplicate)]
+                   (let [record-id (String. (.getValue kv))
+                         record (record/load (record/open-store open-store-fn
+                                                                ctx
+                                                                store-name)
+                                             record-id)]
+                     (handler record)))
+                 (let [subspace (changelog-subspace store-name)
+                       last-vs (.getVersionstamp
+                                (.unpack subspace (.getKey (last entries)))
+                                0)]
+                   (checkpoint/write tr
+                                     (checkpoint-key consumer-id store-name)
+                                     last-vs)))
+               nil))))))
+
