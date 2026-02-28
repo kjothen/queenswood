@@ -39,7 +39,10 @@
                                          "currency" "USD"})
                    _ (is (= "ACCEPTED" (:status result)))
                    decoded (decode-payload schemas "account" result)
-                   _ (is (some? (get decoded "account_id")))])))))
+                   _ (is (some? (get decoded "account_id")))
+                   _ (is (= "cust-1" (get decoded "customer_id")))
+                   _ (is (= "Test Account" (get decoded "name")))
+                   _ (is (= "USD" (get decoded "currency")))])))))
 
 (deftest process-close-account-test
   (testing "close-account closes account"

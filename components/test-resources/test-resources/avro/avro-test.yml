@@ -10,4 +10,4 @@ serde: !system/component
     get-account-status: schemas/accounts/reporting-operations/get-account-status.avsc.json
     account: schemas/accounts/account-lifecycle/account.avsc.json
     account-status: schemas/accounts/reporting-operations/account-status.avsc.json
-    unknown-command: schemas/accounts/account-lifecycle/account.avsc.json
+    unknown-command: schemas/accounts/account-lifecycle/close-account.avsc.json

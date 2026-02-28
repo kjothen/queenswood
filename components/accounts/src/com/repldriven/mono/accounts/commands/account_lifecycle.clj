@@ -7,19 +7,28 @@
     [com.repldriven.mono.sql.interface :as sql]
     [com.repldriven.mono.utility.interface :as utility]))
 
+(def ^:private account-returning [:account_id :customer_id :name :currency])
+
+(defn- row->account-data
+  [row]
+  {"account_id" (str (:account_id row))
+   "customer_id" (:customer_id row)
+   "name" (:name row)
+   "currency" (:currency row)})
+
 (defn- ->account-or-reject
   "Returns a serialized account on success, a rejection if not found,
   or an anomaly on failure."
-  [result schemas data]
+  [result schemas]
   (cond
    (error/anomaly? result)
    result
 
-   (zero? (db/update-count result))
+   (nil? result)
    {:status "REJECTED" :message "Account not found"}
 
    :else
-   (->account schemas "ACCEPTED" data)))
+   (->account schemas "ACCEPTED" (row->account-data result))))
 
 (defn- ->account-or-fail
   "Returns a serialized account on success, or an anomaly on failure."
@@ -34,7 +43,7 @@
    :else
    (error/fail category
                {:message "Failed to create account"
-                :account_id (:account_id data)})))
+                :account_id (get data "account_id")})))
 
 (defn- update-status
   [datasource schemas account_id status]
@@ -44,10 +53,10 @@
                                      :set {:status [:inline status]
                                            :updated_at [:timezone "utc" [:now]]}
                                      :where [:= :account_id
-                                             [:cast account_id :uuid]]})
-                        {:return-keys false})
-                       schemas
-                       {"account_id" account_id}))
+                                             [:cast account_id :uuid]]
+                                     :returning account-returning})
+                        {:builder-fn db/as-unqualified-lower-maps})
+                       schemas))
 
 (defn open
   "Inserts a new account record with status open."
@@ -64,7 +73,10 @@
                                                currency [:inline "open"]]]}))
                        schemas
                        :accounts/account-open
-                       {"account_id" (str account-id)})))
+                       {"account_id" (str account-id)
+                        "customer_id" customer_id
+                        "name" name
+                        "currency" currency})))
 
 (defn close
   "Sets account status to closed."
@@ -106,7 +118,7 @@
                             :set {:status [:inline "archived"]
                                   :updated_at [:timezone "utc" [:now]]
                                   :deleted_at [:timezone "utc" [:now]]}
-                            :where [:= :account_id [:cast account_id :uuid]]})
-                          {:return-keys false})
-                         schemas
-                         {"account_id" account_id})))
+                            :where [:= :account_id [:cast account_id :uuid]]
+                            :returning account-returning})
+                          {:builder-fn db/as-unqualified-lower-maps})
+                         schemas)))
