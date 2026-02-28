@@ -1,36 +1,37 @@
 (ns com.repldriven.mono.accounts.commands.reporting-operations
   (:require
-    [com.repldriven.mono.accounts.commands.response :refer [->account-status]]
+    [com.repldriven.mono.accounts.commands.response
+     :refer [->account-status]]
 
-    [com.repldriven.mono.db.interface :as db]
     [com.repldriven.mono.error.interface :as error]
-    [com.repldriven.mono.sql.interface :as sql]))
+    [com.repldriven.mono.fdb.interface :as fdb]
+    [com.repldriven.mono.schema.interface :as schema]))
 
-(defn- ->account-status-or-reject
-  [result schemas]
+(defn- ->data
+  "Converts a protojure account map to a string-keyed wire map."
+  [account]
+  {"account_id" (:account-id account) "account_status" (:status account)})
+
+(defn- ->response
+  "Converts protobuf bytes to an account-status response. Returns
+  the result unchanged if it is an anomaly, or a rejection if nil."
+  [result schemas rejection]
   (cond
    (error/anomaly? result)
    result
 
-   (some? result)
-   (->account-status schemas
-                     "ACCEPTED"
-                     {"account_id" (str (:account_id result))
-                      "account_status" (:account_status result)})
+   (nil? result)
+   {:status "REJECTED" :message rejection}
 
    :else
-   {:status "REJECTED" :message "Account not found"}))
+   (->> (schema/pb->Account result)
+        ->data
+        (->account-status schemas "ACCEPTED"))))
 
 (defn get-account-status
   "Returns the current status of an account."
   [config data]
-  (let [{:keys [datasource schemas]} config
+  (let [{:keys [record-db record-store schemas]} config
         {:strs [account_id]} data]
-    (->account-status-or-reject
-     (db/execute-one! datasource
-                      (sql/format
-                       {:select [:account_id [:status :account_status]]
-                        :from :account
-                        :where [:= :account_id [:cast account_id :uuid]]})
-                      {:builder-fn db/as-unqualified-lower-maps})
-     schemas)))
+    (-> (fdb/load-record record-db record-store "accounts" account_id)
+        (->response schemas "Account not found"))))

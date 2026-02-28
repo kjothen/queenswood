@@ -7,6 +7,7 @@
 (def processor
   {:system/start (fn [{:system/keys [config instance]}]
                    (or instance (core/->AccountProcessor config)))
-   :system/config {:datasource system/required-component
+   :system/config {:record-db system/required-component
+                   :record-store system/required-component
                    :schemas system/required-component}
    :system/instance-schema some?})

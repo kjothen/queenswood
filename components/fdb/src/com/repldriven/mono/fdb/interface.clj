@@ -29,6 +29,22 @@
   [record-db store store-name record event-bytes]
   (core/outbox-record record-db store store-name record event-bytes))
 
+(defn store-load
+  [fdb-store primary-key]
+  (core/store-load fdb-store primary-key))
+
+(defn store-save [fdb-store record] (core/store-save fdb-store record))
+
+(defn store-query
+  [fdb-store record-type field value]
+  (core/store-query fdb-store record-type field value))
+
+(defn transact [record-db f] (core/transact record-db f))
+
+(defn query-records
+  [record-db store store-name record-type field value]
+  (core/query-records record-db store store-name record-type field value))
+
 (defn relay-batch
   [record-db store-name handler-fn]
   (relay/relay-batch record-db store-name handler-fn))

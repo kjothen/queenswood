@@ -1,10 +1,12 @@
 (ns com.repldriven.mono.schema.interface
   (:require
+    [com.repldriven.mono.schema.accounts :as accounts]
     [com.repldriven.mono.schema.addressbook :as addressbook]
     [com.repldriven.mono.schema.person :as person]
 
     [protojure.protobuf :as proto])
   (:import
+    (com.repldriven.mono.schema.accounts AccountProto$Account)
     (com.repldriven.mono.schema.person PersonProto$Person)))
 
 (def pb->Person person/pb->Person)
@@ -14,3 +16,6 @@
 (def pb->AddressBook addressbook/pb->AddressBook)
 (defn AddressBook->pb [m] (proto/->pb (addressbook/new-AddressBook m)))
 
+(def pb->Account accounts/pb->Account)
+(defn Account->pb [m] (proto/->pb (accounts/new-Account m)))
+(defn Account->java [m] (AccountProto$Account/parseFrom (Account->pb m)))

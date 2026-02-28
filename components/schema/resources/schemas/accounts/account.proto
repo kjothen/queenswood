@@ -1,0 +1,17 @@
+syntax = "proto2";
+
+package com.repldriven.mono.schema.accounts;
+
+import "record_metadata_options.proto";
+
+option java_outer_classname = "AccountProto";
+
+message Account {
+  option (com.apple.foundationdb.record.record).usage = RECORD;
+
+  required string account_id = 1 [(com.apple.foundationdb.record.field).primary_key = true];
+  optional string customer_id = 2;
+  optional string name = 3;
+  optional string currency = 4;
+  optional string status = 5;
+}

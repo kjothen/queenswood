@@ -1,7 +1,6 @@
 (ns ^:eftest/synchronized com.repldriven.mono.command-processor.processor-test
   (:require
     com.repldriven.mono.message-bus.interface
-    com.repldriven.mono.migrator.interface
     com.repldriven.mono.accounts.interface
     com.repldriven.mono.testcontainers.interface
 

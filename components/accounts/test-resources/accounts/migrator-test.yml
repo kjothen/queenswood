@@ -1,5 +1,0 @@
-migrations: !system/component
-  system/component-kind: migrator/migrations
-  datasource: !system/ref db.datasource
-  changelogs:
-    - schemas/accounts/init-changelog.sql

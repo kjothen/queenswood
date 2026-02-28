@@ -1,124 +1,122 @@
 (ns com.repldriven.mono.accounts.commands.account-lifecycle
+  (:refer-clojure :exclude [load update])
   (:require
     [com.repldriven.mono.accounts.commands.response :refer [->account]]
+    [com.repldriven.mono.accounts.domain :as domain]
 
-    [com.repldriven.mono.db.interface :as db]
     [com.repldriven.mono.error.interface :as error]
-    [com.repldriven.mono.sql.interface :as sql]
+    [com.repldriven.mono.fdb.interface :as fdb]
+    [com.repldriven.mono.schema.interface :as schema]
     [com.repldriven.mono.utility.interface :as utility]))
 
-(def ^:private account-returning [:account_id :customer_id :name :currency])
+(defn- ->data
+  "Converts a protojure account map to a string-keyed wire map."
+  [account]
+  {"account_id" (:account-id account)
+   "customer_id" (:customer-id account)
+   "name" (:name account)
+   "currency" (:currency account)})
 
-(defn- row->account-data
-  [row]
-  {"account_id" (str (:account_id row))
-   "customer_id" (:customer_id row)
-   "name" (:name row)
-   "currency" (:currency row)})
-
-(defn- ->account-or-reject
-  "Returns a serialized account on success, a rejection if not found,
-  or an anomaly on failure."
-  [result schemas]
+(defn- ->response
+  "Converts protobuf bytes to an account response. Returns the
+  result unchanged if it is an anomaly, or a rejection if nil."
+  [result schemas rejection]
   (cond
    (error/anomaly? result)
    result
 
    (nil? result)
-   {:status "REJECTED" :message "Account not found"}
+   {:status "REJECTED" :message rejection}
 
    :else
-   (->account schemas "ACCEPTED" (row->account-data result))))
+   (->> (schema/pb->Account result)
+        ->data
+        (->account schemas "ACCEPTED"))))
 
-(defn- ->account-or-fail
-  "Returns a serialized account on success, or an anomaly on failure."
-  [result schemas category data]
-  (cond
-   (error/anomaly? result)
-   result
+(defn- load
+  "Loads an account by id from the store, returning a Clojure
+  map or nil if not found."
+  [store account_id]
+  (some-> (fdb/store-load store account_id)
+          schema/pb->Account))
 
-   (pos? (db/update-count result))
-   (->account schemas "ACCEPTED" data)
+(defn- save
+  "Saves account to store, returns protobuf bytes."
+  [store account]
+  (fdb/store-save store (schema/Account->java account))
+  (schema/Account->pb account))
 
-   :else
-   (error/fail category
-               {:message "Failed to create account"
-                :account_id (get data "account_id")})))
+(defn- update
+  "Loads account by id, applies f, saves back. Returns protobuf
+  bytes, nil if not found, or anomaly on failure."
+  [config account_id f]
+  (let [{:keys [record-db record-store]} config]
+    (fdb/transact record-db
+                  (fn [ctx]
+                    (let [store (record-store ctx "accounts")]
+                      (some->> (load store account_id)
+                               f
+                               (save store)))))))
 
-(defn- update-status
-  [datasource schemas account_id status]
-  (->account-or-reject (db/execute-one!
-                        datasource
-                        (sql/format {:update :account
-                                     :set {:status [:inline status]
-                                           :updated_at [:timezone "utc" [:now]]}
-                                     :where [:= :account_id
-                                             [:cast account_id :uuid]]
-                                     :returning account-returning})
-                        {:builder-fn db/as-unqualified-lower-maps})
-                       schemas))
+(defn- customer-exists?
+  "Returns truthy if an account with the given customer_id
+  already exists in the store."
+  [store customer_id]
+  (seq (fdb/store-query store "Account" "customer_id" customer_id)))
+
+(defn- create
+  "Creates account if customer_id is unique. Returns protobuf
+  bytes or nil if customer already exists."
+  [config data]
+  (let [{:keys [record-db record-store]} config
+        {:strs [customer_id name currency]} data
+        account-id (str (utility/uuidv7))]
+    (fdb/transact
+     record-db
+     (fn [ctx]
+       (let [store (record-store ctx "accounts")]
+         (when-not (customer-exists? store customer_id)
+           (->> (domain/new-account account-id customer_id name currency)
+                (save store))))))))
 
 (defn open
   "Inserts a new account record with status open."
   [config data]
-  (let [{:keys [datasource schemas]} config
-        {:strs [customer_id name currency]} data
-        account-id (utility/uuidv7)]
-    (->account-or-fail (db/execute-one!
-                        datasource
-                        (sql/format {:insert-into :account
-                                     :columns [:account_id :customer_id :name
-                                               :currency :status]
-                                     :values [[account-id customer_id name
-                                               currency [:inline "open"]]]}))
-                       schemas
-                       :accounts/account-open
-                       {"account_id" (str account-id)
-                        "customer_id" customer_id
-                        "name" name
-                        "currency" currency})))
+  (let [{:keys [schemas]} config]
+    (-> (create config data)
+        (->response schemas "Account already exists for customer"))))
+
+(defn- update-status
+  "Updates account status and returns an account response."
+  [config data status]
+  (let [{:strs [account_id]} data
+        {:keys [schemas]} config]
+    (-> (update config
+                account_id
+                (fn [account] (domain/set-status account status)))
+        (->response schemas "Account not found"))))
 
 (defn close
   "Sets account status to closed."
   [config data]
-  (let [{:keys [datasource schemas]} config
-        {:strs [account_id]} data]
-    (update-status datasource schemas account_id "closed")))
+  (update-status config data "closed"))
 
 (defn reopen
   "Sets account status back to open."
   [config data]
-  (let [{:keys [datasource schemas]} config
-        {:strs [account_id]} data]
-    (update-status datasource schemas account_id "open")))
+  (update-status config data "open"))
 
 (defn suspend
   "Sets account status to suspended."
   [config data]
-  (let [{:keys [datasource schemas]} config
-        {:strs [account_id]} data]
-    (update-status datasource schemas account_id "suspended")))
+  (update-status config data "suspended"))
 
 (defn unsuspend
   "Sets account status back to open from suspended."
   [config data]
-  (let [{:keys [datasource schemas]} config
-        {:strs [account_id]} data]
-    (update-status datasource schemas account_id "open")))
+  (update-status config data "open"))
 
 (defn archive
-  "Sets account status to archived and records the deletion timestamp."
+  "Sets account status to archived."
   [config data]
-  (let [{:keys [datasource schemas]} config
-        {:strs [account_id]} data]
-    (->account-or-reject (db/execute-one!
-                          datasource
-                          (sql/format
-                           {:update :account
-                            :set {:status [:inline "archived"]
-                                  :updated_at [:timezone "utc" [:now]]
-                                  :deleted_at [:timezone "utc" [:now]]}
-                            :where [:= :account_id [:cast account_id :uuid]]
-                            :returning account-returning})
-                          {:builder-fn db/as-unqualified-lower-maps})
-                         schemas)))
+  (update-status config data "archived"))

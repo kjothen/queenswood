@@ -1,7 +1,6 @@
 (ns ^:eftest/synchronized com.repldriven.mono.accounts.interface-test
   (:require
     com.repldriven.mono.testcontainers.interface
-    com.repldriven.mono.migrator.interface
     com.repldriven.mono.accounts.interface
 
     [com.repldriven.mono.processor.interface :as processor]
@@ -25,178 +24,147 @@
   [schemas schema-name result]
   (avro/deserialize-same (get schemas schema-name) (:payload result)))
 
-(deftest process-open-account-test
+(defn- test-open-account
+  [proc schemas]
   (testing "open-account creates account"
-    (with-test-system
-     [sys "classpath:accounts/application-test.yml"]
-     (let [proc (system/instance sys [:accounts :processor])
-           schemas (system/instance sys [:avro :serde])]
-       (nom-test> [result (send-command proc
-                                        schemas
-                                        "open-account"
-                                        {"customer_id" "cust-1"
-                                         "name" "Test Account"
-                                         "currency" "USD"})
-                   _ (is (= "ACCEPTED" (:status result)))
-                   decoded (decode-payload schemas "account" result)
-                   _ (is (some? (get decoded "account_id")))
-                   _ (is (= "cust-1" (get decoded "customer_id")))
-                   _ (is (= "Test Account" (get decoded "name")))
-                   _ (is (= "USD" (get decoded "currency")))])))))
+    (let [open-payload
+          {"customer_id" "cust-1" "name" "Test Account" "currency" "USD"}]
+      (nom-test> [result (send-command proc schemas "open-account" open-payload)
+                  _ (is (= "ACCEPTED" (:status result)))
+                  decoded (decode-payload schemas "account" result)
+                  _ (is (some? (get decoded "account_id")))
+                  _ (is (= open-payload
+                           (select-keys decoded (keys open-payload))))]))))
 
-(deftest process-close-account-test
+(defn- test-close-account
+  [proc schemas]
   (testing "close-account closes account"
-    (with-test-system
-     [sys "classpath:accounts/application-test.yml"]
-     (let [proc (system/instance sys [:accounts :processor])
-           schemas (system/instance sys [:avro :serde])]
-       (nom-test> [opened (send-command proc
-                                        schemas
-                                        "open-account"
-                                        {"customer_id" "cust-2"
-                                         "name" "Account to Close"
-                                         "currency" "USD"})
-                   account (decode-payload schemas "account" opened)
-                   result (send-command proc
-                                        schemas
-                                        "close-account"
-                                        {"account_id" (get account
-                                                           "account_id")})
-                   _ (is (= "ACCEPTED" (:status result)))
-                   decoded (decode-payload schemas "account" result)
-                   _ (is (= (get account "account_id")
-                            (get decoded "account_id")))])))))
+    (let [open-payload
+          {"customer_id" "cust-2" "name" "Account to Close" "currency" "USD"}]
+      (nom-test> [opened (send-command proc schemas "open-account" open-payload)
+                  account (decode-payload schemas "account" opened)
+                  account-id (select-keys account ["account_id"])
+                  result (send-command proc schemas "close-account" account-id)
+                  _ (is (= "ACCEPTED" (:status result)))
+                  decoded (decode-payload schemas "account" result)
+                  _ (is (= open-payload
+                           (select-keys decoded (keys open-payload))))]))))
 
-(deftest process-reopen-account-test
+(defn- test-reopen-account
+  [proc schemas]
   (testing "reopen-account reopens closed account"
-    (with-test-system
-     [sys "classpath:accounts/application-test.yml"]
-     (let [proc (system/instance sys [:accounts :processor])
-           schemas (system/instance sys [:avro :serde])]
-       (nom-test> [opened (send-command proc
-                                        schemas
-                                        "open-account"
-                                        {"customer_id" "cust-3"
-                                         "name" "Account to Reopen"
-                                         "currency" "USD"})
-                   account (decode-payload schemas "account" opened)
-                   _ (send-command proc
-                                   schemas
-                                   "close-account"
-                                   {"account_id" (get account "account_id")})
-                   result (send-command proc
-                                        schemas
-                                        "reopen-account"
-                                        {"account_id" (get account
-                                                           "account_id")})
-                   _ (is (= "ACCEPTED" (:status result)))
-                   decoded (decode-payload schemas "account" result)
-                   _ (is (= (get account "account_id")
-                            (get decoded "account_id")))])))))
+    (let [open-payload
+          {"customer_id" "cust-3" "name" "Account to Reopen" "currency" "USD"}]
+      (nom-test> [opened (send-command proc schemas "open-account" open-payload)
+                  account (decode-payload schemas "account" opened)
+                  account-id (select-keys account ["account_id"])
+                  _ (send-command proc schemas "close-account" account-id)
+                  result (send-command proc schemas "reopen-account" account-id)
+                  _ (is (= "ACCEPTED" (:status result)))
+                  decoded (decode-payload schemas "account" result)
+                  _ (is (= open-payload
+                           (select-keys decoded (keys open-payload))))]))))
 
-(deftest process-suspend-account-test
+(defn- test-suspend-account
+  [proc schemas]
   (testing "suspend-account suspends account"
-    (with-test-system
-     [sys "classpath:accounts/application-test.yml"]
-     (let [proc (system/instance sys [:accounts :processor])
-           schemas (system/instance sys [:avro :serde])]
-       (nom-test> [opened (send-command proc
-                                        schemas
-                                        "open-account"
-                                        {"customer_id" "cust-4"
-                                         "name" "Account to Suspend"
-                                         "currency" "EUR"})
-                   account (decode-payload schemas "account" opened)
-                   result (send-command proc
-                                        schemas
-                                        "suspend-account"
-                                        {"account_id" (get account
-                                                           "account_id")})
-                   _ (is (= "ACCEPTED" (:status result)))
-                   decoded (decode-payload schemas "account" result)
-                   _ (is (= (get account "account_id")
-                            (get decoded "account_id")))])))))
+    (let [open-payload
+          {"customer_id" "cust-4" "name" "Account to Suspend" "currency" "EUR"}]
+      (nom-test> [opened (send-command proc schemas "open-account" open-payload)
+                  account (decode-payload schemas "account" opened)
+                  account-id (select-keys account ["account_id"])
+                  result
+                  (send-command proc schemas "suspend-account" account-id)
+                  _ (is (= "ACCEPTED" (:status result)))
+                  decoded (decode-payload schemas "account" result)
+                  _ (is (= open-payload
+                           (select-keys decoded (keys open-payload))))]))))
 
-(deftest process-unsuspend-account-test
+(defn- test-unsuspend-account
+  [proc schemas]
   (testing "unsuspend-account unsuspends account"
-    (with-test-system
-     [sys "classpath:accounts/application-test.yml"]
-     (let [proc (system/instance sys [:accounts :processor])
-           schemas (system/instance sys [:avro :serde])]
-       (nom-test> [opened (send-command proc
-                                        schemas
-                                        "open-account"
-                                        {"customer_id" "cust-5"
-                                         "name" "Account to Unsuspend"
-                                         "currency" "GBP"})
-                   account (decode-payload schemas "account" opened)
-                   _ (send-command proc
-                                   schemas
-                                   "suspend-account"
-                                   {"account_id" (get account "account_id")})
-                   result (send-command proc
-                                        schemas
-                                        "unsuspend-account"
-                                        {"account_id" (get account
-                                                           "account_id")})
-                   _ (is (= "ACCEPTED" (:status result)))
-                   decoded (decode-payload schemas "account" result)
-                   _ (is (= (get account "account_id")
-                            (get decoded "account_id")))])))))
+    (let [open-payload {"customer_id" "cust-5"
+                        "name" "Account to Unsuspend"
+                        "currency" "GBP"}]
+      (nom-test> [opened (send-command proc schemas "open-account" open-payload)
+                  account (decode-payload schemas "account" opened)
+                  account-id (select-keys account ["account_id"])
+                  _ (send-command proc schemas "suspend-account" account-id)
+                  result
+                  (send-command proc schemas "unsuspend-account" account-id)
+                  _ (is (= "ACCEPTED" (:status result)))
+                  decoded (decode-payload schemas "account" result)
+                  _ (is (= open-payload
+                           (select-keys decoded (keys open-payload))))]))))
 
-(deftest process-archive-account-test
+(defn- test-archive-account
+  [proc schemas]
   (testing "archive-account archives account"
-    (with-test-system
-     [sys "classpath:accounts/application-test.yml"]
-     (let [proc (system/instance sys [:accounts :processor])
-           schemas (system/instance sys [:avro :serde])]
-       (nom-test> [opened (send-command proc
-                                        schemas
-                                        "open-account"
-                                        {"customer_id" "cust-6"
-                                         "name" "Account to Archive"
-                                         "currency" "CAD"})
-                   account (decode-payload schemas "account" opened)
-                   result (send-command proc
-                                        schemas
-                                        "archive-account"
-                                        {"account_id" (get account
-                                                           "account_id")})
-                   _ (is (= "ACCEPTED" (:status result)))
-                   decoded (decode-payload schemas "account" result)
-                   _ (is (= (get account "account_id")
-                            (get decoded "account_id")))])))))
+    (let [open-payload
+          {"customer_id" "cust-6" "name" "Account to Archive" "currency" "CAD"}]
+      (nom-test> [opened (send-command proc schemas "open-account" open-payload)
+                  account (decode-payload schemas "account" opened)
+                  account-id (select-keys account ["account_id"])
+                  result
+                  (send-command proc schemas "archive-account" account-id)
+                  _ (is (= "ACCEPTED" (:status result)))
+                  decoded (decode-payload schemas "account" result)
+                  _ (is (= open-payload
+                           (select-keys decoded (keys open-payload))))]))))
 
-(deftest process-get-account-status-test
+(defn- test-get-account-status
+  [proc schemas]
   (testing "get-account-status returns account status"
-    (with-test-system
-     [sys "classpath:accounts/application-test.yml"]
-     (let [proc (system/instance sys [:accounts :processor])
-           schemas (system/instance sys [:avro :serde])]
-       (nom-test> [opened (send-command proc
-                                        schemas
-                                        "open-account"
-                                        {"customer_id" "cust-7"
-                                         "name" "Status Account"
-                                         "currency" "USD"})
-                   account (decode-payload schemas "account" opened)
-                   result (send-command proc
-                                        schemas
-                                        "get-account-status"
-                                        {"account_id" (get account
-                                                           "account_id")})
-                   _ (is (= "ACCEPTED" (:status result)))
-                   decoded (decode-payload schemas "account-status" result)
-                   _ (is (= (get account "account_id")
-                            (get decoded "account_id")))
-                   _ (is (= "open" (get decoded "account_status")))])))))
+    (let [open-payload
+          {"customer_id" "cust-7" "name" "Status Account" "currency" "USD"}]
+      (nom-test> [opened (send-command proc schemas "open-account" open-payload)
+                  account (decode-payload schemas "account" opened)
+                  account-id (select-keys account ["account_id"])
+                  result
+                  (send-command proc schemas "get-account-status" account-id)
+                  _ (is (= "ACCEPTED" (:status result)))
+                  decoded (decode-payload schemas "account-status" result)
+                  _ (is (= (assoc account-id "account_status" "open") decoded))]))))
 
-(deftest process-unknown-command-test
+(defn- test-close-missing-account
+  [proc schemas]
+  (testing "close-account rejects missing account"
+    (is (= "REJECTED"
+           (:status (send-command proc
+                                  schemas
+                                  "close-account"
+                                  {"account_id" "missing-id"}))))))
+
+(defn- test-open-existing-account
+  [proc schemas]
+  (testing "open-account rejects duplicate customer"
+    (let [open-payload {"customer_id" "cust-dup"
+                        "name" "Duplicate Account"
+                        "currency" "USD"}]
+      (nom-test> [_ (send-command proc schemas "open-account" open-payload)
+                  result (send-command proc schemas "open-account" open-payload)
+                  _ (is (= "REJECTED" (:status result)))]))))
+
+(defn- test-unknown-command
+  [proc schemas]
   (testing "unknown command returns rejection"
-    (with-test-system
-     [sys "classpath:accounts/application-test.yml"]
-     (let [proc (system/instance sys [:accounts :processor])
-           schemas (system/instance sys [:avro :serde])
-           result
-           (send-command proc schemas "unknown-command" {"account_id" "acc-8"})]
-       (is (= "REJECTED" (:status result)))))))
+    (is (= "REJECTED"
+           (:status (send-command proc
+                                  schemas
+                                  "unknown-command"
+                                  {"account_id" "acc-8"}))))))
+
+(deftest process-accounts-test
+  (with-test-system [sys "classpath:accounts/application-test.yml"]
+                    (let [proc (system/instance sys [:accounts :processor])
+                          schemas (system/instance sys [:avro :serde])]
+                      (test-open-account proc schemas)
+                      (test-close-account proc schemas)
+                      (test-reopen-account proc schemas)
+                      (test-suspend-account proc schemas)
+                      (test-unsuspend-account proc schemas)
+                      (test-archive-account proc schemas)
+                      (test-get-account-status proc schemas)
+                      (test-close-missing-account proc schemas)
+                      (test-open-existing-account proc schemas)
+                      (test-unknown-command proc schemas))))

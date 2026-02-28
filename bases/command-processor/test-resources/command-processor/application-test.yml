@@ -1,11 +1,10 @@
 system:
   message-bus: !include command-processor/message-bus-test.yml
-  postgres: !include testcontainers/postgres-test.yml
-  db: !include command-processor/datasource-test.yml
-  migrator: !include accounts/migrator-test.yml
+  fdb: !include testcontainers/fdb-test.yml
   avro: !include avro/avro-test.yml
   command:
     processor: !system/component
       system/component-kind: accounts/processor
-      datasource: !system/ref migrator.migrations
+      record-db: !system/ref fdb.record-db
+      record-store: !system/ref fdb.store
       schemas: !system/ref avro.serde

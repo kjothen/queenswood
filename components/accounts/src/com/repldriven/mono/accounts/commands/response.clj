@@ -3,10 +3,10 @@
     [com.repldriven.mono.avro.interface :as avro]))
 
 (defn ->account
-  [schemas status data]
-  {:status status :payload (avro/serialize (get schemas "account") data)})
+  [schemas status payload]
+  {:status status :payload (avro/serialize (get schemas "account") payload)})
 
 (defn ->account-status
-  [schemas status data]
+  [schemas status payload]
   {:status status
-   :payload (avro/serialize (get schemas "account-status") data)})
+   :payload (avro/serialize (get schemas "account-status") payload)})

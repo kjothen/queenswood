@@ -2,6 +2,7 @@ syntax = "proto2";
 
 package com.repldriven.mono.schema.schemas;
 
+import "schemas/accounts/account.proto";
 import "schemas/person/person.proto";
 
 option java_outer_classname = "SchemaProto";
@@ -10,5 +11,6 @@ option java_outer_classname = "SchemaProto";
 // for the FDB Record Layer. Named RecordTypeUnion so the Record
 // Layer recognises it without requiring proto annotations.
 message RecordTypeUnion {
-  optional com.repldriven.mono.schema.person.Person _Person = 1;
+  optional com.repldriven.mono.schema.accounts.Account _Account = 1;
+  optional com.repldriven.mono.schema.person.Person _Person = 2;
 }
