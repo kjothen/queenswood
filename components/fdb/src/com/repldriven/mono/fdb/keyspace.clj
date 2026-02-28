@@ -4,16 +4,9 @@
      DirectoryLayerDirectory
      KeySpace)))
 
-(defn records-path
-  "Returns the KeySpacePath for the named record store."
-  [store-name]
+(defn path
+  "Returns the KeySpacePath for the given name."
+  [name]
   (-> (KeySpace. (into-array DirectoryLayerDirectory
-                             [(DirectoryLayerDirectory. store-name)]))
-      (.path store-name store-name)))
-
-(defn meta-path
-  "Returns the KeySpacePath for the metadata store."
-  [path-name]
-  (-> (KeySpace. (into-array DirectoryLayerDirectory
-                             [(DirectoryLayerDirectory. path-name)]))
-      (.path path-name path-name)))
+                             [(DirectoryLayerDirectory. name)]))
+      (.path name name)))

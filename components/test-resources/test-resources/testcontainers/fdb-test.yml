@@ -32,7 +32,7 @@ store: !system/component
 meta-store: !system/component
   system/component-kind: fdb/meta-store
   record-db: !system/local-ref record-db
-  meta-path: meta
+  path: meta
   descriptor: com.repldriven.mono.schema.schemas.SchemaProto
   record-types: !strs
     persons:

@@ -13,7 +13,8 @@
                                                          FDBDatabaseFactory
                                                          FDBMetaDataStore
                                                          FDBRecordStore)
-    (java.util.concurrent Executors)))
+    (java.util.concurrent Executors)
+    (java.util.function Function)))
 
 ;; ---
 ;; cluster-file-path
@@ -120,7 +121,7 @@
                (-> (FDBRecordStore/newBuilder)
                    (.setMetaDataProvider meta)
                    (.setContext ctx)
-                   (.setKeySpacePath (keyspace/records-path store-name))
+                   (.setKeySpacePath (keyspace/path store-name))
                    .createOrOpen))))))
    :system/config {:descriptor system/required-component
                    :record-types system/required-component}
@@ -145,30 +146,29 @@
   {:system/start
    (fn [{:system/keys [config instance]}]
      (or instance
-         (let [{:keys [record-db meta-path descriptor record-types]} config
-               path (keyspace/meta-path meta-path)
+         (let [{:keys [record-db path descriptor record-types]} config
+               ks-path (keyspace/path path)
                file-desc (resolve-descriptor descriptor)
                meta-data (build-meta-data descriptor record-types)]
-           (log/info "FDB meta-store saving metadata to:" meta-path)
+           (log/info "FDB meta-store saving metadata to:" path)
            (.run record-db
-                 (reify
-                  java.util.function.Function
-                    (apply [_ ctx]
-                      (let [ms (FDBMetaDataStore. ctx path)]
-                        (.saveRecordMetaData ms meta-data))
-                      nil)))
+                 ^Function
+                 (fn [ctx]
+                   (let [ms (FDBMetaDataStore. ctx ks-path)]
+                     (.saveRecordMetaData ms meta-data))
+                   nil))
            (fn [ctx store-name]
-             (let [ms (doto (FDBMetaDataStore. ctx path)
+             (let [ms (doto (FDBMetaDataStore. ctx ks-path)
                         (.setLocalFileDescriptor file-desc))]
                (-> (FDBRecordStore/newBuilder)
                    (.setMetaDataStore ms)
                    (.setContext ctx)
-                   (.setKeySpacePath (keyspace/records-path store-name))
+                   (.setKeySpacePath (keyspace/path store-name))
                    .createOrOpen))))))
    :system/config {:record-db system/required-component
-                   :meta-path system/required-component
+                   :path system/required-component
                    :descriptor system/required-component
                    :record-types system/required-component}
-   :system/config-schema [:map [:record-db some?] [:meta-path string?]
+   :system/config-schema [:map [:record-db some?] [:path string?]
                           [:descriptor string?] [:record-types map?]]
    :system/instance-schema fn?})

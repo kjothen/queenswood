@@ -37,13 +37,13 @@
   "Loads an account by id from the store, returning a Clojure
   map or nil if not found."
   [store account_id]
-  (some-> (fdb/store-load store account_id)
+  (some-> (fdb/load-record store account_id)
           schema/pb->Account))
 
 (defn- save
   "Saves account to store, writes changelog entry, returns protobuf bytes."
   [store ctx account]
-  (fdb/store-save store (schema/Account->java account))
+  (fdb/save-record store (schema/Account->java account))
   (fdb/write-changelog ctx "accounts" (:account-id account))
   (schema/Account->pb account))
 
@@ -63,7 +63,7 @@
   "Returns truthy if an account with the given customer_id
   already exists in the store."
   [store customer_id]
-  (seq (fdb/store-query store "Account" "customer_id" customer_id)))
+  (seq (fdb/query-records store "Account" "customer_id" customer_id)))
 
 (defn- create
   "Creates account if customer_id is unique. Returns protobuf

@@ -45,21 +45,23 @@
                   _ (is (= book (utility/record->map retrieved-book)))]))))
 
 (defn- test-record-layer
-  [sys store]
+  [sys record-store]
   (let [alice {:name "Alice" :id 1 :email "alice@example.com" :phones []}
         record-db (system/instance sys [:fdb :record-db])]
     (testing "can save and load Person records via FDB Record Layer"
-      (nom-test> [_ (SUT/save-record record-db
-                                     store
-                                     "persons"
-                                     (schema/Person->java alice))
-                  retrieved (error/nom->
-                             (SUT/load-record record-db store "persons" 1)
-                             schema/pb->Person)
+      (nom-test> [_ (SUT/transact record-db
+                                  (fn [ctx]
+                                    (SUT/save-record
+                                     (record-store ctx "persons")
+                                     (schema/Person->java alice))))
+                  retrieved
+                  (error/nom->
+                   (SUT/load-record record-db record-store "persons" 1)
+                   schema/pb->Person)
                   _ (is (= alice (utility/record->map retrieved)))]))))
 
 (defn- test-record-layer-consumer
-  [sys store]
+  [sys record-store]
   (let [alice {:account-id (str (utility/uuidv7))
                :customer-id "cust-1"
                :name "Alice"
@@ -78,13 +80,13 @@
                   (SUT/transact
                    record-db
                    (fn [ctx]
-                     (let [fdb-store (store ctx "accounts")]
-                       (SUT/store-save fdb-store (schema/Account->java alice))
+                     (let [store (record-store ctx "accounts")]
+                       (SUT/save-record store (schema/Account->java alice))
                        (SUT/write-changelog ctx "accounts" (:account-id alice))
-                       (SUT/store-save fdb-store (schema/Account->java bob))
+                       (SUT/save-record store (schema/Account->java bob))
                        (SUT/write-changelog ctx "accounts" (:account-id bob)))))
                   _ (SUT/process-changelog record-db
-                                           store
+                                           record-store
                                            "test-consumer"
                                            "accounts"
                                            (fn [record]
@@ -98,23 +100,24 @@
                   _ (is (= bob (utility/record->map retrieved-bob)))]))))
 
 (defn- test-query-records
-  [sys store]
+  [sys record-store]
   (let [alice {:name "Alice" :id 10 :email "alice@query.com" :phones []}
         bob {:name "Bob" :id 11 :email "bob@query.com" :phones []}
         record-db (system/instance sys [:fdb :record-db])]
     (testing "can query records by field value"
-      (nom-test> [_ (SUT/save-record record-db
-                                     store
-                                     "persons"
-                                     (schema/Person->java alice))
-                  _ (SUT/save-record record-db
-                                     store
-                                     "persons"
-                                     (schema/Person->java bob))
-                  results (SUT/query-records record-db
-                                             store
-                                             "persons" "Person"
-                                             "email" "alice@query.com")
+      (nom-test> [_ (SUT/transact
+                     record-db
+                     (fn [ctx]
+                       (let [store (record-store ctx "persons")]
+                         (SUT/save-record store (schema/Person->java alice))
+                         (SUT/save-record store (schema/Person->java bob)))))
+                  results (SUT/transact record-db
+                                        (fn [ctx]
+                                          (SUT/query-records
+                                           (record-store ctx "persons")
+                                           "Person"
+                                           "email"
+                                           "alice@query.com")))
                   _ (is (= 1 (count results)))
                   retrieved (error/nom-> (first results) schema/pb->Person)
                   _ (is (= alice (utility/record->map retrieved)))]))))
@@ -127,14 +130,14 @@
 
 (deftest store-test
   (with-test-system [sys "classpath:fdb/application-test.yml"]
-                    (let [store (system/instance sys [:fdb :store])]
-                      (test-record-layer sys store)
-                      (test-query-records sys store)
-                      (test-record-layer-consumer sys store))))
+                    (let [record-store (system/instance sys [:fdb :store])]
+                      (test-record-layer sys record-store)
+                      (test-query-records sys record-store)
+                      (test-record-layer-consumer sys record-store))))
 
 (deftest meta-store-test
   (with-test-system [sys "classpath:fdb/application-test.yml"]
-                    (let [store (system/instance sys [:fdb :meta-store])]
-                      (test-record-layer sys store)
-                      (test-query-records sys store)
-                      (test-record-layer-consumer sys store))))
+                    (let [record-store (system/instance sys [:fdb :meta-store])]
+                      (test-record-layer sys record-store)
+                      (test-query-records sys record-store)
+                      (test-record-layer-consumer sys record-store))))
