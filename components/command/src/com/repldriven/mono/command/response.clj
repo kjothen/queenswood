@@ -65,7 +65,7 @@
                     (error/kind result)
                     (error/payload result))
 
-   (= :rejected (:status result))
+   (= "REJECTED" (:status result))
    (->command-envelope id
                        correlation_id
                        "REJECTED"

@@ -15,10 +15,10 @@
    result
 
    (zero? (db/update-count result))
-   {:status :rejected :message "Account not found"}
+   {:status "REJECTED" :message "Account not found"}
 
    :else
-   (->account schemas :accepted data)))
+   (->account schemas "ACCEPTED" data)))
 
 (defn- ->account-or-fail
   "Returns a serialized account on success, or an anomaly on failure."
@@ -28,7 +28,7 @@
    result
 
    (pos? (db/update-count result))
-   (->account schemas :accepted data)
+   (->account schemas "ACCEPTED" data)
 
    :else
    (error/fail category

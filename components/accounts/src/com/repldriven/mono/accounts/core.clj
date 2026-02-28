@@ -26,7 +26,7 @@
           "unsuspend-account" (account-lifecycle/unsuspend config data)
           "archive-account" (account-lifecycle/archive config data)
           "get-account-status" (reporting/get-account-status config data)
-          {:status :rejected :message (str "Unknown command: " command)})))))
+          {:status "REJECTED" :message (str "Unknown command: " command)})))))
 
 (defrecord AccountProcessor [config]
   processor/Processor

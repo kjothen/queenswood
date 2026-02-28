@@ -37,7 +37,7 @@
                                         {"account_id" "acc-1"
                                          "name" "Test Account"
                                          "currency" "USD"})
-                   _ (is (= :accepted (:status result)))
+                   _ (is (= "ACCEPTED" (:status result)))
                    decoded (decode-payload schemas "account" result)
                    _ (is (= "acc-1" (get decoded "account_id")))])))))
 
@@ -57,7 +57,7 @@
                                         schemas
                                         "close-account"
                                         {"account_id" "acc-2"})
-                   _ (is (= :accepted (:status result)))
+                   _ (is (= "ACCEPTED" (:status result)))
                    decoded (decode-payload schemas "account" result)
                    _ (is (= "acc-2" (get decoded "account_id")))])))))
 
@@ -81,7 +81,7 @@
                                         schemas
                                         "reopen-account"
                                         {"account_id" "acc-3"})
-                   _ (is (= :accepted (:status result)))
+                   _ (is (= "ACCEPTED" (:status result)))
                    decoded (decode-payload schemas "account" result)
                    _ (is (= "acc-3" (get decoded "account_id")))])))))
 
@@ -101,7 +101,7 @@
                                         schemas
                                         "suspend-account"
                                         {"account_id" "acc-4"})
-                   _ (is (= :accepted (:status result)))
+                   _ (is (= "ACCEPTED" (:status result)))
                    decoded (decode-payload schemas "account" result)
                    _ (is (= "acc-4" (get decoded "account_id")))])))))
 
@@ -125,7 +125,7 @@
                                         schemas
                                         "unsuspend-account"
                                         {"account_id" "acc-5"})
-                   _ (is (= :accepted (:status result)))
+                   _ (is (= "ACCEPTED" (:status result)))
                    decoded (decode-payload schemas "account" result)
                    _ (is (= "acc-5" (get decoded "account_id")))])))))
 
@@ -145,7 +145,7 @@
                                         schemas
                                         "archive-account"
                                         {"account_id" "acc-6"})
-                   _ (is (= :accepted (:status result)))
+                   _ (is (= "ACCEPTED" (:status result)))
                    decoded (decode-payload schemas "account" result)
                    _ (is (= "acc-6" (get decoded "account_id")))])))))
 
@@ -165,7 +165,7 @@
                                         schemas
                                         "get-account-status"
                                         {"account_id" "acc-7"})
-                   _ (is (= :accepted (:status result)))
+                   _ (is (= "ACCEPTED" (:status result)))
                    decoded (decode-payload schemas "account-status" result)
                    _ (is (= "acc-7" (get decoded "account_id")))
                    _ (is (= "open" (get decoded "account_status")))])))))
@@ -178,4 +178,4 @@
            schemas (system/instance sys [:avro :serde])
            result
            (send-command proc schemas "unknown-command" {"account_id" "acc-8"})]
-       (is (= :rejected (:status result)))))))
+       (is (= "REJECTED" (:status result)))))))

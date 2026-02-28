@@ -14,12 +14,12 @@
 
    (some? result)
    (->account-status schemas
-                     :accepted
+                     "ACCEPTED"
                      {"account_id" (:account_id result)
                       "account_status" (:account_status result)})
 
    :else
-   {:status :rejected :message "Account not found"}))
+   {:status "REJECTED" :message "Account not found"}))
 
 (defn get-account-status
   "Returns the current status of an account."
