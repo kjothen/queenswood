@@ -44,10 +44,11 @@
           parent-ctx
           (select-keys data ["id" "command" "correlation_id" "causation_id"])
           (fn []
-            (message-bus/send
-             bus
-             :command-response
-             (command/command-response data {"record_id" "test-123"})))))))
+            (message-bus/send bus
+                              :command-response
+                              (command/command-response data
+                                                        {:status "ACCEPTED"
+                                                         :payload nil})))))))
     {:stop (fn [] (message-bus/unsubscribe bus :command))}))
 
 (deftest open-account-test
@@ -64,6 +65,5 @@
           (nom-test> [res (open-account-request "acc-test" "Test Account" "GBP")
                       _ (is (= 200 (:status res)))
                       actual (http/res->body res)
-                      _ (is (= "ACCEPTED" (get actual "status")))
-                      _ (is (= "test-123" (get actual "record_id")))])))
+                      _ (is (= "ACCEPTED" (get actual "status")))])))
        (stop)))))
