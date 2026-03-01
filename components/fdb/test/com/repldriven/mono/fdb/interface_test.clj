@@ -55,10 +55,13 @@
                      "persons"
                      (fn [store]
                        (SUT/save-record store (schema/Person->java alice))))
-                  retrieved
-                  (error/nom->
-                   (SUT/load-record record-db record-store "persons" 1)
-                   schema/pb->Person)
+                  retrieved (error/nom-> (SUT/transact record-db
+                                                       record-store
+                                                       "persons"
+                                                       (fn [store]
+                                                         (SUT/load-record store
+                                                                          1)))
+                                         schema/pb->Person)
                   _ (is (= alice (utility/record->map retrieved)))]))))
 
 (defn- test-record-layer-consumer

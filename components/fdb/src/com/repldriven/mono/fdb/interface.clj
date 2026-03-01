@@ -15,10 +15,7 @@
 
 (defn get-bytes [db key] (kv/get-bytes db key))
 
-(defn load-record
-  ([store primary-key] (record/load store primary-key))
-  ([record-db open-store-fn store-name primary-key]
-   (core/load-record record-db open-store-fn store-name primary-key)))
+(defn load-record [store primary-key] (record/load store primary-key))
 
 (defn save-record [store record] (record/save store record))
 

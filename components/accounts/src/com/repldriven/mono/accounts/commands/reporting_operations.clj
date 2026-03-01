@@ -30,5 +30,8 @@
   [config data]
   (let [{:keys [record-db record-store schemas]} config
         {:keys [account-id]} data]
-    (-> (fdb/load-record record-db record-store "accounts" account-id)
+    (-> (fdb/transact record-db
+                      record-store
+                      "accounts"
+                      (fn [store] (fdb/load-record store account-id)))
         (->response schemas "Account not found"))))
