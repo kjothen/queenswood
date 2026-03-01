@@ -7,6 +7,8 @@
     [com.repldriven.mono.fdb.kv :as kv]
     [com.repldriven.mono.fdb.record :as record]))
 
+;; KV layer
+
 (defn set-str [db key value] (kv/set-str db key value))
 
 (defn get-str [db key] (kv/get-str db key))
@@ -14,6 +16,8 @@
 (defn set-bytes [db key value] (kv/set-bytes db key value))
 
 (defn get-bytes [db key] (kv/get-bytes db key))
+
+;; Record layer
 
 (defn load-record [store primary-key] (record/load store primary-key))
 
