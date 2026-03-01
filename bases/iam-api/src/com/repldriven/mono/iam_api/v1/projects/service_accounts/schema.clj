@@ -49,18 +49,18 @@
    [:disabled boolean?]])
 
 (def CreateServiceAccountRequest
-  [:map ["name" [:ref "Name"]]
-   ["display-name"
+  [:map [:name [:ref "Name"]]
+   [:display-name
     [:string {:max 100 :json-schema/example "My Service Account"}]]
-   ["description"
+   [:description
     [:string
      {:max 256 :json-schema/example "A service account for automated tasks"}]]])
 
 (def PatchServiceAccountRequest
   [:map
-   ["display-name"
+   [:display-name
     [:string {:max 100 :json-schema/example "My Service Account"}]]
-   ["description"
+   [:description
     [:string
      {:max 256 :json-schema/example "A service account for automated tasks"}]]])
 

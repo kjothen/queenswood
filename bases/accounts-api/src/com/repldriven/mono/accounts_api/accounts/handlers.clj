@@ -47,8 +47,7 @@
 
 (defn open-account
   [request]
-  (let [body (update-keys (:body-params request) keyword)]
-    (send-command request "open-account" body)))
+  (send-command request "open-account" (:body-params request)))
 
 (defn close-account
   [request]

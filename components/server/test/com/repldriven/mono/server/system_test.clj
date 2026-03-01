@@ -45,18 +45,18 @@
 
 (deftest coercion-error-test
   (testing "Coercion errors return structured responses"
-    (let [routes
-          (fn [_ctx]
-            ["/api"
-             ["/validate"
-              {:post {:parameters {:body [:map ["name" string?]]}
-                      :responses {200 {:body [:map ["greeting" string?]]}}
-                      :handler (fn [_]
-                                 {:status 200 :body {"greeting" "hello"}})}}]
-             ["/bad-response"
-              {:post {:parameters {:body [:map ["name" string?]]}
-                      :responses {200 {:body [:map ["greeting" string?]]}}
-                      :handler (fn [_] {:status 200 :body {"wrong" "key"}})}}]])
+    (let [routes (fn [_ctx]
+                   ["/api"
+                    ["/validate"
+                     {:post {:parameters {:body [:map [:name string?]]}
+                             :responses {200 {:body [:map [:greeting string?]]}}
+                             :handler
+                             (fn [_] {:status 200 :body {:greeting "hello"}})}}]
+                    ["/bad-response"
+                     {:post {:parameters {:body [:map [:name string?]]}
+                             :responses {200 {:body [:map [:greeting string?]]}}
+                             :handler (fn [_]
+                                        {:status 200 :body {:wrong "key"}})}}]])
           app (fn [ctx]
                 (http/ring-handler (http/router (routes ctx)
                                                 server/standard-router-data)

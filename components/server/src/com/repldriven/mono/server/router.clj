@@ -12,10 +12,10 @@
     [reitit.openapi :as openapi]))
 
 (def muuntaja-instance
-  "Muuntaja instance configured to decode JSON with string keys."
+  "Muuntaja instance configured to decode JSON with keyword keys."
   (m/create (assoc-in m/default-options
              [:formats "application/json" :decoder-opts :decode-key-fn]
-             identity)))
+             keyword)))
 
 (def default-exception-handlers
   "Default exception handlers for Reitit router.
@@ -27,13 +27,13 @@
          {:reitit.coercion/request-coercion
           (fn [ex _req]
             {:status 400
-             :body {"type" "request-validation"
-                    "details" (select-keys (ex-data ex) [:humanized :in])}})
+             :body {:type "request-validation"
+                    :details (select-keys (ex-data ex) [:humanized :in])}})
           :reitit.coercion/response-coercion
           (fn [ex _req]
             {:status 500
-             :body {"type" "response-coercion"
-                    "details" (select-keys (ex-data ex) [:humanized :in])}})}))
+             :body {:type "response-coercion"
+                    :details (select-keys (ex-data ex) [:humanized :in])}})}))
 
 (defn router-data
   "Build Reitit router data, merging the given exception handlers with defaults.
