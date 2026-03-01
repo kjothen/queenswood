@@ -291,11 +291,13 @@ that follows the Polylith architecture.
   with no observable side effects. Name functions after what they return, not
   what they do.
 - **Keyword keys throughout**: All data — including from external systems
-  (Pulsar, MQTT, HTTP, JSON) — uses kebab-case keyword keys. Avro
-  (Lancaster) and Protojure both use keyword keys natively. Muuntaja
-  decodes JSON request bodies with `keyword` decode-key-fn. Use
-  `{:keys [...]}` destructuring everywhere. Do not convert to or from
-  string keys at any layer.
+  (Pulsar, MQTT, HTTP) — uses kebab-case keyword keys. Avro (Lancaster)
+  and Protojure both use keyword keys natively. Muuntaja decodes JSON
+  request bodies with `keyword` decode-key-fn. Use `{:keys [...]}`
+  destructuring everywhere. Exception: explicit JSON parsing via
+  `json/read-str` or `http-client/res->body` returns string keys
+  (clojure.data.json default) — callers of those functions check with
+  string keys.
 - **Naming**: Naming is hard, so try not to name at all by using thread macros.
   Names should be narrow. "Elements of Clojure" by Zachary Tellman gets _everything_
   right about names.
