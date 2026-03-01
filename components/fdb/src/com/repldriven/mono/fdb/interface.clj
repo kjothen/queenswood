@@ -2,7 +2,7 @@
   (:require
     com.repldriven.mono.fdb.system.core
 
-    [com.repldriven.mono.fdb.changelog.core :as changelog]
+    [com.repldriven.mono.fdb.changelog :as changelog]
     [com.repldriven.mono.fdb.core :as core]
     [com.repldriven.mono.fdb.kv :as kv]
     [com.repldriven.mono.fdb.record :as record]))

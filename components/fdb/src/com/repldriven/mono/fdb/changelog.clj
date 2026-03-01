@@ -1,6 +1,6 @@
-(ns com.repldriven.mono.fdb.changelog.core
+(ns com.repldriven.mono.fdb.changelog
+  (:refer-clojure :exclude [read])
   (:require
-    [com.repldriven.mono.fdb.changelog.checkpoint :as checkpoint]
     [com.repldriven.mono.fdb.record :as record])
   (:import
     (com.apple.foundationdb KeySelector MutationType)
@@ -37,6 +37,24 @@
   (.pack (Subspace. (Tuple/from (into-array Object
                                             [root "checkpoint" consumer-id
                                              store-name])))))
+
+(defn- read-checkpoint
+  "Returns the Versionstamp of the last processed changelog entry for
+  the given checkpoint key, or nil if no checkpoint exists yet."
+  [^FDBDatabase record-db checkpoint-key]
+  (.run record-db
+        ^Function
+        (fn [ctx]
+          (some-> (.asyncToSync ctx
+                                FDBStoreTimer$Waits/WAIT_LOAD_SYSTEM_KEY
+                                (.get (.ensureActive ctx) checkpoint-key))
+                  (Versionstamp/complete)))))
+
+(defn- write-checkpoint
+  "Stores the raw bytes of vs as the checkpoint at checkpoint-key
+  within the given transaction."
+  [tr checkpoint-key ^Versionstamp vs]
+  (.set tr checkpoint-key (.getBytes vs)))
 
 (defn write
   "Writes a versionstamped changelog entry for record-id and bumps the
@@ -90,7 +108,7 @@
   "Reads unprocessed changelog entries for consumer-id in store-name,
   calls (handler serialized-bytes) for each, and advances the
   checkpoint to the last versionstamp seen. All reads and the
-  checkpoint write occur in a single runion.
+  checkpoint write occur in a single transaction.
 
   Options:
     :deduplicate? (default true) — when true, only the latest entry
@@ -104,7 +122,7 @@
            ^Function
            (fn [ctx]
              (let [tr (.ensureActive ctx)
-                   cp (checkpoint/read record-db
+                   cp (read-checkpoint record-db
                                        (checkpoint-key consumer-id store-name))
                    entries (scan ctx store-name cp)]
                (when (seq entries)
@@ -119,8 +137,7 @@
                        last-vs (.getVersionstamp
                                 (.unpack subspace (.getKey (last entries)))
                                 0)]
-                   (checkpoint/write tr
+                   (write-checkpoint tr
                                      (checkpoint-key consumer-id store-name)
                                      last-vs)))
                nil))))))
-
