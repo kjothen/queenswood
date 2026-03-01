@@ -2,8 +2,7 @@
   (:require
     [com.repldriven.mono.avro.interface :as avro]
     [com.repldriven.mono.command.interface :as command]
-    [com.repldriven.mono.error.interface :as error]
-    [com.repldriven.mono.message-bus.interface :as message-bus]))
+    [com.repldriven.mono.error.interface :as error]))
 
 (defn- send-command
   [request command-name data]
@@ -17,30 +16,19 @@
               (error/fail :accounts-api/unknown-command
                           {:message "No Avro schema for command"
                            :command command-name}))}
-      (let [p (promise)
-            result
-            (error/let-nom> [payload (avro/serialize schema data)
-                             _ (message-bus/subscribe bus
-                                                      :command-response
-                                                      (fn [d] (deliver p d)))
-                             _ (message-bus/send bus
-                                                 :command
-                                                 (command/req->command-request
-                                                  request
-                                                  command-name
-                                                  payload))]
-              (deref p 5000 ::timeout))]
+      (let [result (error/let-nom> [payload (avro/serialize schema data)]
+                     (command/send bus
+                                   (command/req->command-request request
+                                                                 command-name
+                                                                 payload)))]
         (cond
+         (= (:cognitect.anomalies/category result) :command/timeout)
+         {:status 408
+          :body (command/req->command-response request result)}
+
          (error/anomaly? result)
          {:status 500
           :body (command/req->command-response request result)}
-
-         (= result ::timeout)
-         {:status 408
-          :body (command/req->command-response
-                 request
-                 (error/fail :accounts-api/timeout
-                             "Command reply timed out"))}
 
          :else
          {:status 200 :body result})))))
