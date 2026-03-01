@@ -4,6 +4,6 @@
   "namespace": "com.repldriven.mono.accounts.reporting_operations",
   "fields": [
     {"name": "account_id",     "type": "string"},
-    {"name": "account_status", "type": "string"}
+    {"name": "status", "type": "string"}
   ]
 }

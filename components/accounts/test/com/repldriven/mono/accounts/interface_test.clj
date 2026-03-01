@@ -123,7 +123,7 @@
                   (send-command proc schemas "get-account-status" account-id)
                   _ (is (= "ACCEPTED" (:status result)))
                   decoded (decode-payload schemas "account-status" result)
-                  _ (is (= (assoc account-id :account-status "open") decoded))]))))
+                  _ (is (= (assoc account-id :status "open") decoded))]))))
 
 (defn- test-close-missing-account
   [proc schemas]
