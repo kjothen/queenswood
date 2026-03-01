@@ -3,6 +3,9 @@
   "extends": [
     "config:recommended"
   ],
+  "nix": {
+    "enabled": true
+  },
   "schedule": [
     "before 9am on monday"
   ],
@@ -152,6 +155,12 @@
       "groupName": "github-actions",
       "matchManagers": [
         "github-actions"
+      ]
+    },
+    {
+      "groupName": "nix-flake",
+      "matchManagers": [
+        "nix"
       ]
     }
   ]
