@@ -49,10 +49,12 @@
   (let [alice {:name "Alice" :id 1 :email "alice@example.com" :phones []}
         record-db (system/instance sys [:fdb :record-db])]
     (testing "can save and load Person records via FDB Record Layer"
-      (nom-test> [_ (SUT/run record-db
-                             (fn [ctx]
-                               (SUT/save-record (record-store ctx "persons")
-                                                (schema/Person->java alice))))
+      (nom-test> [_ (SUT/transact
+                     record-db
+                     record-store
+                     "persons"
+                     (fn [store]
+                       (SUT/save-record store (schema/Person->java alice))))
                   retrieved
                   (error/nom->
                    (SUT/load-record record-db record-store "persons" 1)
@@ -76,14 +78,15 @@
     (testing
       "consumer reads changelog entries and calls handler with record bytes"
       (nom-test> [_
-                  (SUT/run
+                  (SUT/transact
                    record-db
-                   (fn [ctx]
-                     (let [store (record-store ctx "accounts")]
-                       (SUT/save-record store (schema/Account->java alice))
-                       (SUT/write-changelog ctx "accounts" (:account-id alice))
-                       (SUT/save-record store (schema/Account->java bob))
-                       (SUT/write-changelog ctx "accounts" (:account-id bob)))))
+                   record-store
+                   "accounts"
+                   (fn [store]
+                     (SUT/save-record store (schema/Account->java alice))
+                     (SUT/write-changelog store "accounts" (:account-id alice))
+                     (SUT/save-record store (schema/Account->java bob))
+                     (SUT/write-changelog store "accounts" (:account-id bob))))
                   _ (SUT/process-changelog record-db
                                            record-store
                                            "test-consumer"
@@ -104,19 +107,22 @@
         bob {:name "Bob" :id 11 :email "bob@query.com" :phones []}
         record-db (system/instance sys [:fdb :record-db])]
     (testing "can query records by field value"
-      (nom-test> [_ (SUT/run
+      (nom-test> [_ (SUT/transact
                      record-db
-                     (fn [ctx]
-                       (let [store (record-store ctx "persons")]
-                         (SUT/save-record store (schema/Person->java alice))
-                         (SUT/save-record store (schema/Person->java bob)))))
-                  results (SUT/run record-db
-                                   (fn [ctx]
-                                     (SUT/query-records (record-store ctx
-                                                                      "persons")
-                                                        "Person"
-                                                        "email"
-                                                        "alice@query.com")))
+                     record-store
+                     "persons"
+                     (fn [store]
+                       (SUT/save-record store (schema/Person->java alice))
+                       (SUT/save-record store (schema/Person->java bob))))
+                  results (SUT/transact record-db
+                                        record-store
+                                        "persons"
+                                        (fn [store]
+                                          (SUT/query-records
+                                           store
+                                           "Person"
+                                           "email"
+                                           "alice@query.com")))
                   _ (is (= 1 (count results)))
                   retrieved (error/nom-> (first results) schema/pb->Person)
                   _ (is (= alice (utility/record->map retrieved)))]))))

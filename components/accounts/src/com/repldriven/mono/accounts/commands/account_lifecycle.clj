@@ -37,9 +37,9 @@
 
 (defn- save
   "Saves account to store, writes changelog entry, returns protobuf bytes."
-  [store ctx account]
+  [store account]
   (fdb/save-record store (schema/Account->java account))
-  (fdb/write-changelog ctx "accounts" (:account-id account))
+  (fdb/write-changelog store "accounts" (:account-id account))
   (schema/Account->pb account))
 
 (defn- update
@@ -47,12 +47,13 @@
   bytes, nil if not found, or anomaly on failure."
   [config account-id f]
   (let [{:keys [record-db record-store]} config]
-    (fdb/run record-db
-             (fn [ctx]
-               (let [store (record-store ctx "accounts")]
-                 (some->> (load store account-id)
-                          f
-                          (save store ctx)))))))
+    (fdb/transact record-db
+                  record-store
+                  "accounts"
+                  (fn [store]
+                    (some->> (load store account-id)
+                             f
+                             (save store))))))
 
 (defn- customer-exists?
   "Returns truthy if an account with the given customer-id
@@ -67,13 +68,14 @@
   (let [{:keys [record-db record-store]} config
         {:keys [customer-id name currency]} data
         account-id (str (utility/uuidv7))]
-    (fdb/run record-db
-             (fn [ctx]
-               (let [store (record-store ctx "accounts")]
-                 (when-not (customer-exists? store customer-id)
-                   (->>
-                     (domain/new-account account-id customer-id name currency)
-                     (save store ctx))))))))
+    (fdb/transact
+     record-db
+     record-store
+     "accounts"
+     (fn [store]
+       (when-not (customer-exists? store customer-id)
+         (->> (domain/new-account account-id customer-id name currency)
+              (save store)))))))
 
 (defn open
   "Inserts a new account record with status open."

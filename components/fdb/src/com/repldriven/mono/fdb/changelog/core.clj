@@ -40,12 +40,13 @@
 
 (defn write
   "Writes a versionstamped changelog entry for record-id and bumps the
-  sentinel for store-name within an existing FDBRecordContext. The
-  record-id is stored as the value so consumers can fetch the record
-  by id. Uses claimLocalVersion to assign a unique user version per
-  call within the same runion. For use inside run."
-  [ctx store-name ^String record-id]
-  (let [tr (.ensureActive ctx)
+  sentinel for store-name within an existing transaction. The record-id
+  is stored as the value so consumers can fetch the record by id. Uses
+  claimLocalVersion to assign a unique user version per call within the
+  same transaction. For use inside transact."
+  [store store-name ^String record-id]
+  (let [ctx (.getContext store)
+        tr (.ensureActive ctx)
         user-ver (.claimLocalVersion ctx)]
     (.mutate tr
              MutationType/SET_VERSIONSTAMPED_KEY

@@ -63,10 +63,24 @@
                           (record/open-store open-store-fn ctx store-name)
                           primary-key)))))
 
-(defn run
-  "Runs f within a single FDB Record Layer runion. f receives
-  the FDBRecordContext and should return the runion result."
-  [^FDBDatabase record-db f]
-  (error/try-nom :fdb/run
-                 "Failed to execute runion"
-                 (.run record-db ^Function f)))
+(defn transact
+  "Opens an FDB Record Layer store and runs f within a single
+  transaction. f receives the open FDBRecordStore and should
+  return the transaction result.
+
+  The 6-arg form accepts a custom nom category and message for
+  call-site-specific anomaly reporting."
+  ([^FDBDatabase record-db open-store-fn store-name f]
+   (transact record-db
+             open-store-fn
+             store-name
+             f
+             :fdb/transact
+             "Failed to execute transaction"))
+  ([^FDBDatabase record-db open-store-fn store-name f category message]
+   (error/try-nom
+    category
+    message
+    (.run record-db
+          ^Function
+          (fn [ctx] (f (record/open-store open-store-fn ctx store-name)))))))

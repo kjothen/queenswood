@@ -61,12 +61,12 @@
   [category message & body]
   `(try ~@body
         (catch Exception e#
-          (fail ~category
-                {:message ~message
-                 :exception e#
-                 :stack-trace
-                 (with-out-str
-                   (.printStackTrace e# (java.io.PrintWriter. *out* true)))}))))
+          (update (fail ~category ~message)
+                  2 assoc
+                  :exception e#
+                  :stack-trace
+                  (with-out-str
+                    (.printStackTrace e# (java.io.PrintWriter. *out* true)))))))
 
 (defmacro try-nom-ex
   "Like try-nom but catches a specific exception type."

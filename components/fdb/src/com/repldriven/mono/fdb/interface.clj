@@ -26,8 +26,8 @@
   (record/query store record-type field value))
 
 (defn write-changelog
-  [ctx store-name record-id]
-  (changelog/write ctx store-name record-id))
+  [store store-name record-id]
+  (changelog/write store store-name record-id))
 
 (defn process-changelog
   ([record-db open-store-fn consumer-id store-name handler]
@@ -40,4 +40,8 @@
                       handler
                       opts)))
 
-(defn run [record-db f] (core/run record-db f))
+(defn transact
+  ([record-db open-store-fn store-name f]
+   (core/transact record-db open-store-fn store-name f))
+  ([record-db open-store-fn store-name f category message]
+   (core/transact record-db open-store-fn store-name f category message)))
