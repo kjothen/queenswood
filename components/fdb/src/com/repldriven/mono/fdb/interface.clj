@@ -3,7 +3,6 @@
     com.repldriven.mono.fdb.system.core
 
     [com.repldriven.mono.fdb.changelog :as changelog]
-    [com.repldriven.mono.fdb.core :as core]
     [com.repldriven.mono.fdb.kv :as kv]
     [com.repldriven.mono.fdb.record :as record]))
 
@@ -44,6 +43,6 @@
 
 (defn transact
   ([record-db open-store-fn store-name f]
-   (core/transact record-db open-store-fn store-name f))
+   (record/transact record-db open-store-fn store-name f))
   ([record-db open-store-fn store-name f category message]
-   (core/transact record-db open-store-fn store-name f category message)))
+   (record/transact record-db open-store-fn store-name f category message)))

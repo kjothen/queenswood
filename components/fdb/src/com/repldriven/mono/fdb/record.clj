@@ -1,11 +1,15 @@
 (ns com.repldriven.mono.fdb.record
   (:refer-clojure :exclude [load])
+  (:require
+    [com.repldriven.mono.error.interface :as error])
   (:import
-    (com.apple.foundationdb.record.provider.foundationdb FDBStoreTimer$Waits)
+    (com.apple.foundationdb.record.provider.foundationdb FDBDatabase
+                                                         FDBStoreTimer$Waits)
     (com.apple.foundationdb.record.query RecordQuery)
     (com.apple.foundationdb.record.query.expressions Query)
     (com.apple.foundationdb.tuple Tuple)
-    (com.google.protobuf MessageLite)))
+    (com.google.protobuf MessageLite)
+    (java.util.function Function)))
 
 (defn open-store
   "Opens a record store by calling the store function (returned by
@@ -22,14 +26,14 @@
 
 (defn load
   "Loads a record by primary key from an open FDBRecordStore.
-  Returns serialized bytes or nil. For use inside run."
+  Returns serialized bytes or nil. For use inside transact."
   [store primary-key]
   (some-> (.loadRecord store (Tuple/from (into-array Object [primary-key])))
           record->bytes))
 
 (defn save
   "Saves a Java protobuf Message to an open FDBRecordStore.
-  For use inside run."
+  For use inside transact."
   [store ^MessageLite record]
   (.saveRecord store record)
   nil)
@@ -37,7 +41,7 @@
 (defn query
   "Queries an open FDBRecordStore where field equals value.
   Returns a vector of serialized byte arrays. For use inside
-  run."
+  transact."
   [store record-type field value]
   (let [q (-> (RecordQuery/newBuilder)
               (.setRecordType record-type)
@@ -49,3 +53,24 @@
          (.asyncToSync (.getContext store)
                        FDBStoreTimer$Waits/WAIT_EXECUTE_QUERY)
          (mapv record->bytes))))
+
+(defn transact
+  "Opens an FDB Record Layer store and runs f within a single
+  transaction. f receives the open FDBRecordStore and should
+  return the transaction result.
+
+  The 6-arg form accepts a custom nom category and message for
+  call-site-specific anomaly reporting."
+  ([^FDBDatabase record-db open-store-fn store-name f]
+   (transact record-db
+             open-store-fn
+             store-name
+             f
+             :fdb/transact
+             "Failed to execute transaction"))
+  ([^FDBDatabase record-db open-store-fn store-name f category message]
+   (error/try-nom
+    category
+    message
+    (.run record-db
+          ^Function (fn [ctx] (f (open-store open-store-fn ctx store-name)))))))
