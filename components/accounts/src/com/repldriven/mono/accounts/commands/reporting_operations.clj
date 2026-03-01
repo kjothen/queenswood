@@ -1,16 +1,14 @@
 (ns com.repldriven.mono.accounts.commands.reporting-operations
   (:require
-    [com.repldriven.mono.accounts.commands.response
-     :refer [->account-status]]
-
+    [com.repldriven.mono.avro.interface :as avro]
     [com.repldriven.mono.error.interface :as error]
     [com.repldriven.mono.fdb.interface :as fdb]
     [com.repldriven.mono.schema.interface :as schema]))
 
-(defn- ->data
-  "Converts a protojure account map to a keyword-keyed wire map."
-  [account]
-  {:account-id (:account-id account) :account-status (:status account)})
+(defn- ->account-status
+  [schemas status payload]
+  {:status status
+   :payload (avro/serialize (get schemas "account-status") payload)})
 
 (defn- ->response
   "Converts protobuf bytes to an account-status response. Returns
@@ -25,7 +23,6 @@
 
    :else
    (->> (schema/pb->Account result)
-        ->data
         (->account-status schemas "ACCEPTED"))))
 
 (defn get-account-status

@@ -1,13 +1,17 @@
 (ns com.repldriven.mono.accounts.commands.account-lifecycle
   (:refer-clojure :exclude [load update])
   (:require
-    [com.repldriven.mono.accounts.commands.response :refer [->account]]
     [com.repldriven.mono.accounts.domain :as domain]
 
+    [com.repldriven.mono.avro.interface :as avro]
     [com.repldriven.mono.error.interface :as error]
     [com.repldriven.mono.fdb.interface :as fdb]
     [com.repldriven.mono.schema.interface :as schema]
     [com.repldriven.mono.utility.interface :as utility]))
+
+(defn- ->account
+  [schemas status payload]
+  {:status status :payload (avro/serialize (get schemas "account") payload)})
 
 (defn- ->response
   "Converts protobuf bytes to an account response. Returns the
