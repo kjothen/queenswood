@@ -9,14 +9,6 @@
     [com.repldriven.mono.schema.interface :as schema]
     [com.repldriven.mono.utility.interface :as utility]))
 
-(defn- ->data
-  "Converts a protojure account map to a keyword-keyed wire map."
-  [account]
-  {:account-id (:account-id account)
-   :customer-id (:customer-id account)
-   :name (:name account)
-   :currency (:currency account)})
-
 (defn- ->response
   "Converts protobuf bytes to an account response. Returns the
   result unchanged if it is an anomaly, or a rejection if nil."
@@ -30,7 +22,6 @@
 
    :else
    (->> (schema/pb->Account result)
-        ->data
         (->account schemas "ACCEPTED"))))
 
 (defn- load
