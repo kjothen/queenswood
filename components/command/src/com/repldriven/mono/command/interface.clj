@@ -5,8 +5,7 @@
     [com.repldriven.mono.command.request :as request]
     [com.repldriven.mono.command.response :as response]
     [com.repldriven.mono.command.sender :as sender]
-    [clojure.edn :as edn]
-    [clojure.java.io :as io]))
+  ))
 
 (defn req->command-request
   "Build a command envelope from an HTTP request.
@@ -38,18 +37,6 @@
   On anomaly: status FAILED with error details."
   [command result]
   (response/command-response command result))
-
-(def specs
-  "Command Malli specs for request/response validation.
-
-  Includes:
-  - :command-envelope - Command envelope structure
-  - :command-request - HTTP request wrapper
-  - :command-response - HTTP response wrapper"
-  (delay (-> "schemas/command/command.edn"
-             io/resource
-             slurp
-             edn/read-string)))
 
 (defn process
   "Process command envelopes via message-bus.
