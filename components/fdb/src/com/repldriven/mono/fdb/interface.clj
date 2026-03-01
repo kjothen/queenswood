@@ -40,4 +40,4 @@
                       handler
                       opts)))
 
-(defn transact [record-db f] (core/transact record-db f))
+(defn run [record-db f] (core/run record-db f))

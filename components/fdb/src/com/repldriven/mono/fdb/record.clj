@@ -22,14 +22,14 @@
 
 (defn load
   "Loads a record by primary key from an open FDBRecordStore.
-  Returns serialized bytes or nil. For use inside transact."
+  Returns serialized bytes or nil. For use inside run."
   [store primary-key]
   (some-> (.loadRecord store (Tuple/from (into-array Object [primary-key])))
           record->bytes))
 
 (defn save
   "Saves a Java protobuf Message to an open FDBRecordStore.
-  For use inside transact."
+  For use inside run."
   [store ^MessageLite record]
   (.saveRecord store record)
   nil)
@@ -37,7 +37,7 @@
 (defn query
   "Queries an open FDBRecordStore where field equals value.
   Returns a vector of serialized byte arrays. For use inside
-  transact."
+  run."
   [store record-type field value]
   (let [q (-> (RecordQuery/newBuilder)
               (.setRecordType record-type)

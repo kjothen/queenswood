@@ -43,7 +43,7 @@
   sentinel for store-name within an existing FDBRecordContext. The
   record-id is stored as the value so consumers can fetch the record
   by id. Uses claimLocalVersion to assign a unique user version per
-  call within the same transaction. For use inside transact."
+  call within the same runion. For use inside run."
   [ctx store-name ^String record-id]
   (let [tr (.ensureActive ctx)
         user-ver (.claimLocalVersion ctx)]
@@ -89,7 +89,7 @@
   "Reads unprocessed changelog entries for consumer-id in store-name,
   calls (handler serialized-bytes) for each, and advances the
   checkpoint to the last versionstamp seen. All reads and the
-  checkpoint write occur in a single transaction.
+  checkpoint write occur in a single runion.
 
   Options:
     :deduplicate? (default true) — when true, only the latest entry
