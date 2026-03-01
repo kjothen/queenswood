@@ -22,7 +22,7 @@
                                                                  command-name
                                                                  payload)))]
         (cond
-         (= (:cognitect.anomalies/category result) :command/timeout)
+         (= (error/kind result) :command/timeout)
          {:status 408
           :body (command/req->command-response request result)}
 
