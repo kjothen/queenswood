@@ -290,11 +290,12 @@ that follows the Polylith architecture.
   time). Prefer pure functions that return the same value for the same inputs,
   with no observable side effects. Name functions after what they return, not
   what they do.
-- **Wire data uses string keys**: Message data from external systems (Pulsar,
-  MQTT, HTTP, JSON) is handled with string keys throughout. Do not convert
-  wire data to keyword keys — use `{:strs [...]}` destructuring and string
-  literals for map access. Converting between string and keyword keys at
-  different layers causes confusion about data provenance.
+- **Keyword keys throughout**: All data — including from external systems
+  (Pulsar, MQTT, HTTP, JSON) — uses kebab-case keyword keys. Avro
+  (Lancaster) and Protojure both use keyword keys natively. Muuntaja
+  decodes JSON request bodies with `keyword` decode-key-fn. Use
+  `{:keys [...]}` destructuring everywhere. Do not convert to or from
+  string keys at any layer.
 - **Naming**: Naming is hard, so try not to name at all by using thread macros.
   Names should be narrow. "Elements of Clojure" by Zachary Tellman gets _everything_
   right about names.
