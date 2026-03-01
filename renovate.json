@@ -65,6 +65,15 @@
       ]
     },
     {
+      "matchManagers": [
+        "deps-edn"
+      ],
+      "enabled": false,
+      "matchPackageNames": [
+        "io.opentelemetry:opentelemetry-sdk-testing"
+      ]
+    },
+    {
       "groupName": "opentelemetry",
       "matchManagers": [
         "deps-edn"
