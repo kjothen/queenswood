@@ -4,15 +4,16 @@
 
     [com.repldriven.mono.fdb.changelog.core :as changelog]
     [com.repldriven.mono.fdb.core :as core]
+    [com.repldriven.mono.fdb.kv :as kv]
     [com.repldriven.mono.fdb.record :as record]))
 
-(defn set-str [db key value] (core/set-str db key value))
+(defn set-str [db key value] (kv/set-str db key value))
 
-(defn get-str [db key] (core/get-str db key))
+(defn get-str [db key] (kv/get-str db key))
 
-(defn set-bytes [db key value] (core/set-bytes db key value))
+(defn set-bytes [db key value] (kv/set-bytes db key value))
 
-(defn get-bytes [db key] (core/get-bytes db key))
+(defn get-bytes [db key] (kv/get-bytes db key))
 
 (defn load-record
   ([store primary-key] (record/load store primary-key))
