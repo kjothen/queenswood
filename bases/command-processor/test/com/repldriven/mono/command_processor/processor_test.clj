@@ -17,16 +17,16 @@
 
 (defn send-command
   "Simulates Sender - Avro-serializes payload, sends a
-  command envelope via message-bus, and blocks until the
+  command envelope via dispatcher, and blocks until the
   result is received."
   [sys command-name data]
-  (let [bus (system/instance sys [:message-bus :bus])
+  (let [dispatcher (system/instance sys [:command :dispatcher])
         schemas (system/instance sys [:avro :serde])
         schema (get schemas command-name)
         payload (avro/serialize schema data)
         cmd-id (str (java.util.UUID/randomUUID))]
     (telemetry/with-span ["send-command" {}]
-                         (command/send bus
+                         (command/send dispatcher
                                        {:id cmd-id
                                         :command command-name
                                         :correlation-id cmd-id

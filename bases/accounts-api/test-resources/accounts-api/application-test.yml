@@ -1,4 +1,5 @@
 system:
   message-bus: !include accounts-api/message-bus-test.yml
   avro: !include avro/avro-test.yml
+  command: !include accounts-api/command-test.yml
   server: !include accounts-api/server-test.yml

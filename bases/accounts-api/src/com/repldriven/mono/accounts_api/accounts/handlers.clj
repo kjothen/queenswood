@@ -6,7 +6,7 @@
 
 (defn- send-command
   [request command-name data]
-  (let [bus (:message-bus request)
+  (let [dispatcher (:command-dispatcher request)
         schemas (:avro request)
         schema (get schemas command-name)]
     (if-not schema
@@ -17,7 +17,7 @@
                           {:message "No Avro schema for command"
                            :command command-name}))}
       (let [result (error/let-nom> [payload (avro/serialize schema data)]
-                     (command/send bus
+                     (command/send dispatcher
                                    (command/req->command-request request
                                                                  command-name
                                                                  payload)))]

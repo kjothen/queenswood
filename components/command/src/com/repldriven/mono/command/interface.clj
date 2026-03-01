@@ -1,11 +1,12 @@
 (ns com.repldriven.mono.command.interface
   (:refer-clojure :exclude [send])
   (:require
+    com.repldriven.mono.command.system
+
+    [com.repldriven.mono.command.dispatcher :as dispatcher]
     [com.repldriven.mono.command.processor :as processor]
     [com.repldriven.mono.command.request :as request]
-    [com.repldriven.mono.command.response :as response]
-    [com.repldriven.mono.command.sender :as sender]
-  ))
+    [com.repldriven.mono.command.response :as response]))
 
 (defn req->command-request
   "Build a command envelope from an HTTP request.
@@ -52,14 +53,14 @@
   ([bus process-fn opts] (processor/process bus process-fn opts)))
 
 (defn send
-  "Send a command via message-bus and wait for reply.
+  "Send a command via dispatcher and wait for reply.
 
   Args:
-  - bus: message-bus instance
+  - dispatcher: started dispatcher map
   - command: command envelope map
   - opts: optional map with keys:
     - :timeout-ms - timeout in milliseconds (default 10000)
 
   Returns: response map or anomaly"
-  ([bus command] (sender/send bus command))
-  ([bus command opts] (sender/send bus command opts)))
+  ([d command] (dispatcher/send d command))
+  ([d command opts] (dispatcher/send d command opts)))
