@@ -33,14 +33,17 @@
     components/utility {:local/root "components/utility"}
     components/vault {:local/root "components/vault"}
     bases/accounts-api {:local/root "bases/accounts-api"}
+    bases/accounts-monolith {:local/root "bases/accounts-monolith"}
     bases/build {:local/root "bases/build"}
     bases/external-test-runner {:local/root "bases/external-test-runner"}
     bases/iam-api {:local/root "bases/iam-api"}
     bases/command-processor {:local/root "bases/command-processor"}
     bases/symmetric-key-api {:local/root "bases/symmetric-key-api"}
+    ;; protojure brings protobuf-java 4.x which breaks FDB Record Layer
+    ;; at runtime — pin to 3.x for binary compatibility
+    com.google.protobuf/protobuf-java {:mvn/version "3.25.8"}
     org.clojure/clojure {:mvn/version "1.12.4"}
-    org.clojure/core.async {:mvn/version "1.8.741"}
-}
+    org.clojure/core.async {:mvn/version "1.8.741"}}
    :extra-paths ["development/resources"]
    :jvm-opts
    ["-Dclojure.tools.logging.factory=clojure.tools.logging.impl/slf4j-factory"]}
@@ -83,12 +86,14 @@
                        "components/vault/test-resources"
                        "bases/accounts-api/test"
                        "bases/accounts-api/test-resources"
+                       "bases/accounts-monolith/test"
+                       "bases/accounts-monolith/test-resources"
                        "bases/external-test-runner/test"
                        "bases/iam-api/test"
                        "bases/iam-api/test-resources"
                        "bases/symmetric-key-api/test"
                        "bases/symmetric-key-api/test-resources"]}
-:format/zprint {:extra-deps {zprint/zprint {:mvn/version "1.3.0"}}
+  :format/zprint {:extra-deps {zprint/zprint {:mvn/version "1.3.0"}}
                   :main-opts ["-m" "zprint.main"]}
   :lint/clj-kondo {:extra-deps {clj-kondo/clj-kondo {:mvn/version "2026.01.19"}}
                    :main-opts ["-m" "clj-kondo.main"]}

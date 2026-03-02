@@ -80,7 +80,15 @@
   [{:keys [encrypted iv algorithm]} {:keys [key]}]
   (codecs/bytes->str (crypto/decrypt encrypted key iv {:algorithm algorithm})))
 
+(defn generate-id
+  [prefix]
+  (let [label-bytes (codecs/str->bytes (str prefix "-"))
+        rand-bytes (nonce/random-bytes 14)
+        payload (byte-array (concat label-bytes rand-bytes))]
+    (str prefix "." (codecs/bytes->b64-str payload true))))
+
 (comment
+  (generate-id "ba")
   (create-aes-256-key)
   (create-rsa-512-key-pair)
   (create-key-pair {:algorithm "RSA" :key-size 512}))

@@ -33,8 +33,8 @@
   [causation-id correlation-id status payload error]
   {:id (str (utility/uuidv7))
    :correlation-id correlation-id
-   :causation-id causation-id
-   :traceparent (telemetry/inject-traceparent)
+   :causation-id (or causation-id "")
+   :traceparent (or (telemetry/inject-traceparent) "")
    :tracestate nil
    :status status
    :payload payload
@@ -54,9 +54,9 @@
   "Build a structured command response from a command
   envelope and its process-fn result.
 
-  On {:status :accepted :payload ...}: status ACCEPTED with payload.
-  On {:status :rejected :message ...}: status REJECTED with error.
-  On anomaly: status FAILED with error details."
+  On {:status \"ACCEPTED\" :payload ...}: ACCEPTED with payload.
+  On {:status \"REJECTED\" :message ...}: REJECTED with error.
+  On anomaly: FAILED with error details."
   [{:keys [id correlation-id]} result]
   (cond
    (error/anomaly? result)
@@ -73,7 +73,11 @@
                        (json/write-str {:message (:message result)}))
 
    :else
-   (->command-envelope id correlation-id "ACCEPTED" (:payload result) nil)))
+   (->command-envelope id
+                       correlation-id
+                       "ACCEPTED"
+                       (:payload result)
+                       nil)))
 
 (defn req->command-response
   "Build a command-response from an HTTP request and a

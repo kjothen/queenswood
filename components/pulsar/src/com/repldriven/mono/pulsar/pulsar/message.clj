@@ -2,7 +2,7 @@
   (:require
     [com.repldriven.mono.avro.interface :as avro]
     [com.repldriven.mono.error.interface :as error]
-    [clojure.walk :as walk])
+    [clojure.string :as str])
   (:import
     (java.util Optional)
     (org.apache.pulsar.client.api Message)
@@ -50,8 +50,14 @@
    :else
    (str v)))
 
+(defn- field-name->key
+  "Convert an Avro field name to a kebab-case keyword."
+  [s]
+  (keyword (str/replace s \_ \-)))
+
 (defn- generic-record->map
-  "Convert a Pulsar GenericRecord to a Clojure map."
+  "Convert a Pulsar GenericRecord to a Clojure map with
+  kebab-case keyword keys."
   [^GenericRecord record]
   (when record
     (let [fields (.getFields record)]
@@ -59,7 +65,7 @@
             (map (fn [field]
                    (let [field-name (.getName field)
                          value (.getField record field-name)]
-                     [field-name (coerce-value value)]))
+                     [(field-name->key field-name) (coerce-value value)]))
                  fields)))))
 
 (defn deserialize-same
@@ -74,4 +80,6 @@
       (if (instance? GenericRecord value)
         (generic-record->map value)
         (let [result (avro/deserialize-same schema (.getData msg))]
-          (if (error/anomaly? result) result (walk/stringify-keys result)))))))
+          (if (error/anomaly? result)
+            result
+            (into {} (map (fn [[k v]] [(field-name->key k) v])) result)))))))

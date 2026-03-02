@@ -21,8 +21,8 @@
          consumer-2 (system/instance sys [:pulsar :consumers :user-2])
          schemas (system/instance sys [:pulsar :schemas])
          schema (get-in schemas [:user :avro])
-         msgs [{"name" "Alice" "age" 30} {"name" "Bob" "age" 25}
-               {"name" "Charlie" "age" 35}]
+         msgs [{:name "Alice" :age 30} {:name "Bob" :age 25}
+               {:name "Charlie" :age 35}]
          props {"message" "user-msg"}]
      (testing "Consumer with correct tenant key reads from vault and decrypts"
        (doseq [msg msgs] (pulsar/send producer msg {"properties" props}))

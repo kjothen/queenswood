@@ -10,7 +10,8 @@
     [com.repldriven.mono.env.interface :as env]
     [com.repldriven.mono.error.interface :as error]
     [com.repldriven.mono.log.interface :as log]
-    [com.repldriven.mono.system.interface :as system])
+    [com.repldriven.mono.system.interface :as system]
+    [clojure.core :as c])
   (:gen-class))
 
 (defn start
@@ -36,3 +37,10 @@
                     (str "Failed to start [" (error/kind result)
                          "]: " (or (:message result) "Unknown error")))
           (log/info "System started successfully"))))))
+
+
+
+
+
+
+

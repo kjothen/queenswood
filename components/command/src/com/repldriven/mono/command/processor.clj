@@ -20,8 +20,7 @@
   Args:
   - bus: message-bus instance
   - process-fn: function that takes a command envelope
-    and returns a result map or anomaly. On success the
-    result should include a \"record_id\" key.
+    and returns a result map or anomaly
   - opts: optional map (reserved for future use)
 
   Returns: {:stop (fn [])} — call stop to unsubscribe"

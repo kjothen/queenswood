@@ -113,6 +113,7 @@
             fdbBinary
             pkgs.jdk21
             pkgs.just
+            pkgs.k6
             pkgs.openssl
             protocBinary
             protocGenClojure

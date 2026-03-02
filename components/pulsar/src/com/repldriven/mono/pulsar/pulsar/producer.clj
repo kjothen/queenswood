@@ -7,7 +7,8 @@
     [com.repldriven.mono.log.interface :as log]
 
     [clojure.data.json :as json]
-    [clojure.java.data :as j])
+    [clojure.java.data :as j]
+    [clojure.string :as str])
   (:import
     (java.util Map)
     (org.apache.pulsar.client.api Producer
@@ -49,6 +50,12 @@
           (some (fn [s] (when (= Schema$Type/ENUM (.getType s)) s))
                 (.getTypes field-schema)))))
 
+(defn- key->field-name
+  "Convert a Clojure key to an Avro field name by replacing
+  hyphens with underscores."
+  [k]
+  (str/replace (name k) \- \_))
+
 (defn- map->generic-record
   "Convert a Clojure map to an Avro GenericRecord using the
   provided Avro schema."
@@ -56,7 +63,7 @@
   (when (and avro-schema (map? data))
     (let [^GenericRecord record (GenericData$Record. avro-schema)]
       (doseq [[k v] data]
-        (let [n (name k)
+        (let [n (key->field-name k)
               f (.getField avro-schema n)
               es (when (and f (some? v)) (enum-schema (.schema f)))
               v (if es (GenericData$EnumSymbol. es (str v)) v)]

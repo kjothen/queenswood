@@ -9,3 +9,7 @@ jetty-adapter: !system/component
   system/component-kind: server/jetty-adapter
   handler: !system/ref server.handler
   interceptors: !system/ref server.interceptors
+  options:
+    port: !profile
+      dev: 8080
+      default: 0

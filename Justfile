@@ -7,7 +7,8 @@ list:
 
 # Start nREPL server for Conjure connection
 repl:
-    clj -M:dev:test:nrepl
+    find . -name .nrepl-port -not -path ./.nrepl-port -delete
+    clojure -M:dev:test:nrepl -Sforce -P
 
 # Start Rebel Readline REPL with colors and completion
 rebel:

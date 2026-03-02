@@ -4,6 +4,23 @@
     [com.repldriven.mono.command.interface :as command]
     [com.repldriven.mono.error.interface :as error]))
 
+(def ^:private response-schema
+  {"open-account" "account"
+   "close-account" "account"
+   "reopen-account" "account"
+   "suspend-account" "account"
+   "unsuspend-account" "account"
+   "archive-account" "account"
+   "get-account-status" "account-status"})
+
+(defn- decode-payload
+  [schemas command-name result]
+  (if-let [payload (:payload result)]
+    (let [schema (get schemas (get response-schema command-name))
+          decoded (avro/deserialize-same schema payload)]
+      (if (error/anomaly? decoded) decoded (assoc result :payload decoded)))
+    result))
+
 (defn- send-command
   [request command-name data]
   (let [dispatcher (:command-dispatcher request)
@@ -30,8 +47,12 @@
          {:status 500
           :body (command/req->command-response request result)}
 
+         (= "REJECTED" (:status result))
+         {:status 422 :body result}
+
          :else
-         {:status 200 :body result})))))
+         {:status 200
+          :body (decode-payload schemas command-name result)})))))
 
 (defn open-account
   [request]

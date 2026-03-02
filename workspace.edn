@@ -11,7 +11,11 @@
             "accounts-processor" {:alias "ap"
                                   :necessary ["schema" "test-resources"]}
             "iam-web" {:alias "iam" :necessary ["schema" "test-resources"]}
-            "keyring-web" {:alias "key" :necessary ["test-resources"]}}
+            "keyring-web" {:alias "key" :necessary ["test-resources"]}
+            "accounts-app" {:alias "aui"}
+            "accounts-monolith" {:alias "am"
+                                 :necessary ["schema"
+                                             "test-resources"]}}
  :tag-patterns {:release "v[0-9]*" :stable "stable-*"}
  :test {:create-test-runner
         com.repldriven.mono.external-test-runner.core/create}

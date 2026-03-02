@@ -25,8 +25,8 @@
          reader (system/instance sys [:pulsar :readers :user])
          schemas (system/instance sys [:pulsar :schemas])
          schema (get-in schemas [:user :avro])
-         msgs [{"name" "Alice" "age" 30} {"name" "Bob" "age" 25}
-               {"name" "Charlie" "age" 35}]
+         msgs [{:name "Alice" :age 30} {:name "Bob" :age 25}
+               {:name "Charlie" :age 35}]
          props {"message" "user-msg"}]
      (testing
        "Pulsar namespace configuration enforces encryption and topic schema"

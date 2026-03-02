@@ -4,10 +4,10 @@
     [com.repldriven.mono.accounts.domain :as domain]
 
     [com.repldriven.mono.avro.interface :as avro]
+    [com.repldriven.mono.encryption.interface :as encryption]
     [com.repldriven.mono.error.interface :as error]
     [com.repldriven.mono.fdb.interface :as fdb]
-    [com.repldriven.mono.schema.interface :as schema]
-    [com.repldriven.mono.utility.interface :as utility]))
+    [com.repldriven.mono.schema.interface :as schema]))
 
 (defn- ->account
   [schemas status payload]
@@ -67,7 +67,7 @@
   [config data]
   (let [{:keys [record-db record-store]} config
         {:keys [customer-id name currency]} data
-        account-id (str (utility/uuidv7))]
+        account-id (encryption/generate-id "ba")]
     (fdb/transact
      record-db
      record-store

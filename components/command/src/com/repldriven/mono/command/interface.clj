@@ -34,7 +34,7 @@
   "Build a structured command response from a command
   envelope and its process-fn result.
 
-  On success: status ACCEPTED, record_id from result.
+  On success: status ACCEPTED with payload.
   On anomaly: status FAILED with error details."
   [command result]
   (response/command-response command result))

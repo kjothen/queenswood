@@ -31,3 +31,5 @@
 (defn decrypt-str
   [encrypted symmetric-key]
   (core/decrypt-str encrypted symmetric-key))
+
+(defn generate-id [prefix] (core/generate-id prefix))
