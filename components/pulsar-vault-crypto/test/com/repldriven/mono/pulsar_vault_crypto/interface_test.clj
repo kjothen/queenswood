@@ -19,14 +19,12 @@
    (let [producer (system/instance sys [:pulsar :producers :user])
          consumer-1 (system/instance sys [:pulsar :consumers :user-1])
          consumer-2 (system/instance sys [:pulsar :consumers :user-2])
-         schemas (system/instance sys [:pulsar :schemas])
-         schema (get-in schemas [:user :avro])
          msgs [{:name "Alice" :age 30} {:name "Bob" :age 25}
                {:name "Charlie" :age 35}]
          props {"message" "user-msg"}]
      (testing "Consumer with correct tenant key reads from vault and decrypts"
        (doseq [msg msgs] (pulsar/send producer msg {"properties" props}))
-       (let [{:keys [c stop]} (pulsar/receive consumer-1 schema 50)
+       (let [{:keys [c stop]} (pulsar/receive consumer-1 50)
              timeout (async/timeout 10000)
              [recv-msgs _] (async/alts!! [(async/into []
                                                       (async/take (count msgs)
@@ -41,7 +39,7 @@
                "Messages should decrypt correctly"))))
      (testing "Consumer with wrong tenant (no vault key) cannot decrypt"
        (doseq [msg msgs] (pulsar/send producer msg {"properties" props}))
-       (let [{:keys [c stop]} (pulsar/receive consumer-2 schema 50)
+       (let [{:keys [c stop]} (pulsar/receive consumer-2 50)
              timeout (async/timeout 10000)
              [recv-msgs _] (async/alts!! [(async/into []
                                                       (async/take (count msgs)

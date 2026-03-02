@@ -23,8 +23,6 @@
          consumer-1 (system/instance sys [:pulsar :consumers :user-1])
          consumer-2 (system/instance sys [:pulsar :consumers :user-2])
          reader (system/instance sys [:pulsar :readers :user])
-         schemas (system/instance sys [:pulsar :schemas])
-         schema (get-in schemas [:user :avro])
          msgs [{:name "Alice" :age 30} {:name "Bob" :age 25}
                {:name "Charlie" :age 35}]
          props {"message" "user-msg"}]
@@ -45,7 +43,7 @@
              (is (= v (http/res->body res)))))))
      (testing "Pulsar consumer with a matching decryption key can consume"
        (doseq [msg msgs] (SUT/send producer msg {"properties" props}))
-       (let [{:keys [c stop]} (SUT/receive consumer-1 schema 50)
+       (let [{:keys [c stop]} (SUT/receive consumer-1 50)
              timeout (async/timeout 5000)
              [recv-msgs _] (async/alts!! [(async/into []
                                                       (async/take (count msgs)
@@ -59,7 +57,7 @@
            (is (= msgs (mapv :data recv-msgs)) "Messages don't match"))))
      (testing "Pulsar consumer with a mismatching decryption key cannot consume"
        (doseq [msg msgs] (SUT/send producer msg {"properties" props}))
-       (let [{:keys [c stop]} (SUT/receive consumer-2 schema 50)
+       (let [{:keys [c stop]} (SUT/receive consumer-2 50)
              timeout (async/timeout 5000)
              [recv-msgs _] (async/alts!! [(async/into []
                                                       (async/take (count msgs)
@@ -72,7 +70,7 @@
                  "Should return decrypt anomaly for mismatched key")))))
      (testing "Pulsar reader with a matching decryption key can receive"
        (doseq [msg msgs] (SUT/send producer msg {"properties" props}))
-       (let [{:keys [c stop]} (SUT/read reader schema 50)
+       (let [{:keys [c stop]} (SUT/read reader 50)
              timeout (async/timeout 5000)
              [recv-msgs _] (async/alts!! [(async/into []
                                                       (async/take (count msgs)

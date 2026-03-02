@@ -38,9 +38,10 @@
      (.subscribe builder-with-conf))))
 
 (defn receive
-  "Continuously receive messages from a Pulsar consumer and put them on a channel.
-   Returns {:c chan :stop chan}. Send anything to :stop to stop receiving."
-  [^Consumer consumer schema timeout-ms]
+  "Continuously receive messages from a Pulsar consumer
+  and put them on a channel. Returns {:c chan :stop chan}.
+  Send anything to :stop to stop receiving."
+  [^Consumer consumer timeout-ms]
   (let [c (async/chan)
         stop (async/chan 1)]
     (async/thread
@@ -67,8 +68,7 @@
                 ">!! stop :stop deadlock too.")
               (let [[_ p] (async/alts!! [[c
                                           {:message v
-                                           :data (message/deserialize-same
-                                                  schema
+                                           :data (message/deserialize
                                                   v)}] stop])]
                 (when (not= p stop) (recur))))
 

@@ -1,14 +1,14 @@
 (ns com.repldriven.mono.pulsar.pulsar.producer
   (:refer-clojure :exclude [send])
   (:require
+    [com.repldriven.mono.pulsar.pulsar.generic-record :as generic-record]
     [com.repldriven.mono.pulsar.pulsar.schemas :as schemas]
 
     [com.repldriven.mono.error.interface :as error]
     [com.repldriven.mono.log.interface :as log]
 
     [clojure.data.json :as json]
-    [clojure.java.data :as j]
-    [clojure.string :as str])
+    [clojure.java.data :as j])
   (:import
     (java.util Map)
     (org.apache.pulsar.client.api Producer
@@ -16,11 +16,7 @@
                                   PulsarClient
                                   PulsarClientException
                                   Schema)
-    (org.apache.pulsar.common.schema SchemaType)
-    (org.apache.pulsar.shade.org.apache.avro Schema$Type)
-    (org.apache.pulsar.shade.org.apache.avro.generic GenericData$EnumSymbol
-                                                     GenericData$Record
-                                                     GenericRecord)))
+    (org.apache.pulsar.common.schema SchemaType)))
 
 (defn- add-encryption-keys
   [^ProducerBuilder producer ks]
@@ -39,42 +35,11 @@
         json/write-str
         org.apache.pulsar.shade.org.apache.avro.Schema/parse)))
 
-(defn- enum-schema
-  "Return the Avro enum schema for a field schema, or nil.
-  Handles both direct ENUM and UNION containing an ENUM."
-  [field-schema]
-  (let [t (.getType field-schema)]
-    (cond (= t Schema$Type/ENUM)
-          field-schema
-          (= t Schema$Type/UNION)
-          (some (fn [s] (when (= Schema$Type/ENUM (.getType s)) s))
-                (.getTypes field-schema)))))
-
-(defn- key->field-name
-  "Convert a Clojure key to an Avro field name by replacing
-  hyphens with underscores."
-  [k]
-  (str/replace (name k) \- \_))
-
-(defn- map->generic-record
-  "Convert a Clojure map to an Avro GenericRecord using the
-  provided Avro schema."
-  [avro-schema data]
-  (when (and avro-schema (map? data))
-    (let [^GenericRecord record (GenericData$Record. avro-schema)]
-      (doseq [[k v] data]
-        (let [n (key->field-name k)
-              f (.getField avro-schema n)
-              es (when (and f (some? v)) (enum-schema (.schema f)))
-              v (if es (GenericData$EnumSymbol. es (str v)) v)]
-          (.put record n v)))
-      record)))
-
 (defn- serialize
   "Serialize data to Avro GenericRecord if schema is present, otherwise return as-is."
   [producer data]
   (let [{:keys [avro-schema]} producer]
-    (if avro-schema (map->generic-record avro-schema data) data)))
+    (if avro-schema (generic-record/serialize avro-schema data) data)))
 
 (defn create
   [{:keys [^PulsarClient client conf schemas] :as opts}]

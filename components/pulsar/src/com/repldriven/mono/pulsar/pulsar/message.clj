@@ -1,8 +1,8 @@
 (ns com.repldriven.mono.pulsar.pulsar.message
   (:require
-    [com.repldriven.mono.avro.interface :as avro]
-    [com.repldriven.mono.error.interface :as error]
-    [clojure.string :as str])
+    [com.repldriven.mono.pulsar.pulsar.generic-record :as generic-record]
+
+    [com.repldriven.mono.error.interface :as error])
   (:import
     (java.util Optional)
     (org.apache.pulsar.client.api Message)
@@ -16,70 +16,17 @@
     (and (.isPresent encryption-ctx)
          (.isEncrypted ^EncryptionContext (.get encryption-ctx)))))
 
-(declare generic-record->map)
+(defn deserialize
+  "Deserializes a Pulsar message to a Clojure map.
 
-(defn- coerce-value
-  "Coerce Avro-specific types (enum symbols, Utf8, ByteBuffer)
-  to plain Clojure/Java types."
-  [v]
-  (cond
-   (nil? v)
-   nil
-
-   (string? v)
-   v
-
-   (number? v)
-   v
-
-   (instance? Boolean v)
-   v
-
-   (bytes? v)
-   v
-
-   (instance? java.nio.ByteBuffer v)
-   (let [^java.nio.ByteBuffer buf (.duplicate v)
-         arr (byte-array (.remaining buf))]
-     (.get buf arr)
-     arr)
-
-   (instance? GenericRecord v)
-   (generic-record->map v)
-
-   :else
-   (str v)))
-
-(defn- field-name->key
-  "Convert an Avro field name to a kebab-case keyword."
-  [s]
-  (keyword (str/replace s \_ \-)))
-
-(defn- generic-record->map
-  "Convert a Pulsar GenericRecord to a Clojure map with
-  kebab-case keyword keys."
-  [^GenericRecord record]
-  (when record
-    (let [fields (.getFields record)]
-      (into {}
-            (map (fn [field]
-                   (let [field-name (.getName field)
-                         value (.getField record field-name)]
-                     [(field-name->key field-name) (coerce-value value)]))
-                 fields)))))
-
-(defn deserialize-same
-  "Deserializes a message or returns an anomaly if encrypted.
-   For schema-based messages (AUTO_CONSUME), uses Pulsar's automatic deserialization.
-   Falls back to manual Lancaster Avro deserialization for legacy messages.
-   Used internally by consumer and reader."
-  [schema ^Message msg]
+  Returns an anomaly if the message is encrypted or if the
+  value is not a GenericRecord (AUTO_CONSUME schema)."
+  [^Message msg]
   (if (encrypted? msg)
     (error/fail :pulsar/message-decrypt "Message cannot be decrypted")
     (let [value (.getValue msg)]
       (if (instance? GenericRecord value)
-        (generic-record->map value)
-        (let [result (avro/deserialize-same schema (.getData msg))]
-          (if (error/anomaly? result)
-            result
-            (into {} (map (fn [[k v]] [(field-name->key k) v])) result)))))))
+        (generic-record/deserialize value)
+        (error/fail :pulsar/message-format
+                    {:message "Expected GenericRecord"
+                     :actual (type value)})))))

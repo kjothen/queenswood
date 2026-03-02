@@ -265,7 +265,6 @@
                                     [k
                                      (message-bus/map->PulsarConsumer
                                       {:consumer consumer
-                                       :schema nil
                                        :timeout (or timeout 10000)
                                        :stop-ch (atom nil)})])
                                   config))))

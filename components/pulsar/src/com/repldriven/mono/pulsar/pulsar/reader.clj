@@ -40,9 +40,10 @@
      (.create builder-with-conf))))
 
 (defn read
-  "Continuously read messages from a Pulsar reader and put them on a channel.
-  Returns {:c chan :stop chan}. Send anything to :stop to stop reading."
-  [^Reader reader schema timeout-ms]
+  "Continuously read messages from a Pulsar reader and put
+  them on a channel. Returns {:c chan :stop chan}. Send
+  anything to :stop to stop reading."
+  [^Reader reader timeout-ms]
   (let [c (async/chan)
         stop (async/chan 1)]
     (async/thread
@@ -69,8 +70,7 @@
                 ">!! stop :stop deadlock too.")
               (let [[_ p] (async/alts!! [[c
                                           {:message v
-                                           :data (message/deserialize-same
-                                                  schema
+                                           :data (message/deserialize
                                                   v)}] stop])]
                 (when (not= p stop) (recur))))
 

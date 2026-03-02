@@ -16,14 +16,12 @@
   ([producer data opts] (producer/send-async producer data opts)))
 
 ;;;; consumer
-(defn receive
-  [consumer schema timeout-ms]
-  (consumer/receive consumer schema timeout-ms))
+(defn receive [consumer timeout-ms] (consumer/receive consumer timeout-ms))
 
 (defn acknowledge [consumer message] (consumer/acknowledge consumer message))
 
 ;;;; reader
-(defn read [reader schema timeout-ms] (reader/read reader schema timeout-ms))
+(defn read [reader timeout-ms] (reader/read reader timeout-ms))
 
 ;;;; admin
 (defn admin-namespace-url

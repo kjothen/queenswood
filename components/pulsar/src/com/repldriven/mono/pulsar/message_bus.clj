@@ -10,10 +10,10 @@
   message-bus/Producer
     (send [_ message] (pulsar/send producer message)))
 
-(defrecord PulsarConsumer [consumer schema timeout stop-ch]
+(defrecord PulsarConsumer [consumer timeout stop-ch]
   message-bus/Consumer
     (subscribe [_ handler-fn]
-      (let [{:keys [c stop]} (pulsar/receive consumer schema timeout)]
+      (let [{:keys [c stop]} (pulsar/receive consumer timeout)]
         (reset! stop-ch stop)
         (async/go-loop []
           (when-let [{:keys [message data]} (async/<! c)]
