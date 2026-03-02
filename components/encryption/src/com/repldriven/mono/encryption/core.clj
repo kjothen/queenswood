@@ -82,10 +82,7 @@
 
 (defn generate-id
   [prefix]
-  (let [label-bytes (codecs/str->bytes (str prefix "-"))
-        rand-bytes (nonce/random-bytes 14)
-        payload (byte-array (concat label-bytes rand-bytes))]
-    (str prefix "." (codecs/bytes->b64-str payload true))))
+  (str prefix "." (codecs/bytes->b64-str (nonce/random-bytes 16) true)))
 
 (comment
   (generate-id "ba")
