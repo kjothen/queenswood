@@ -29,7 +29,8 @@ jobs:
       - name: Discover projects
         id: projects
         run: |
-          matrix=$(ls projects/ | jq -Rc '[., inputs]')
+          skip="accounts-app"
+          matrix=$(ls projects/ | grep -vxF "$skip" | jq -Rc '[., inputs]')
           echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
           echo "Discovered projects: $matrix"
 

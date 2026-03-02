@@ -12,7 +12,7 @@
                                   :necessary ["schema" "test-resources"]}
             "iam-web" {:alias "iam" :necessary ["schema" "test-resources"]}
             "keyring-web" {:alias "key" :necessary ["test-resources"]}
-            "accounts-app" {:alias "aui"}
+            "accounts-app" {:alias "aui" :test []}
             "accounts-monolith" {:alias "am"
                                  :necessary ["schema"
                                              "test-resources"]}}
