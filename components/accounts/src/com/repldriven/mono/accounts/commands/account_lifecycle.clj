@@ -4,18 +4,14 @@
     [com.repldriven.mono.accounts.domain :as domain]
 
     [com.repldriven.mono.avro.interface :as avro]
-    [com.repldriven.mono.encryption.interface :as encryption]
     [com.repldriven.mono.error.interface :as error]
     [com.repldriven.mono.fdb.interface :as fdb]
     [com.repldriven.mono.schema.interface :as schema]))
 
-(defn- ->account
-  [schemas status payload]
-  {:status status :payload (avro/serialize (get schemas "account") payload)})
-
 (defn- ->response
-  "Converts protobuf bytes to an account response. Returns the
-  result unchanged if it is an anomaly, or a rejection if nil."
+  "Converts protobuf bytes to an account response. Returns
+  the result unchanged if it is an anomaly, or a rejection
+  if nil."
   [result schemas rejection]
   (cond
    (error/anomaly? result)
@@ -25,8 +21,9 @@
    {:status "REJECTED" :message rejection}
 
    :else
-   (->> (schema/pb->Account result)
-        (->account schemas "ACCEPTED"))))
+   {:status "ACCEPTED"
+    :payload (avro/serialize (get schemas "account")
+                             (schema/pb->Account result))}))
 
 (defn- load
   "Loads an account by id from the store, returning a Clojure
@@ -66,16 +63,14 @@
   bytes or nil if customer already exists."
   [config data]
   (let [{:keys [record-db record-store]} config
-        {:keys [customer-id name currency]} data
-        account-id (encryption/generate-id "ba")]
+        {:keys [customer-id]} data]
     (fdb/transact
      record-db
      record-store
      "accounts"
      (fn [store]
-       (when-not (customer-exists? store customer-id)
-         (->> (domain/new-account account-id customer-id name currency)
-              (save store)))))))
+       (some->> (domain/new-account (customer-exists? store customer-id) data)
+                (save store))))))
 
 (defn open
   "Inserts a new account record with status open."
