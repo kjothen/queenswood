@@ -10,7 +10,7 @@
 
 (defn- ->response
   "Converts protobuf bytes to an account response. Returns
-  the result unchanged if it is an anomaly, or a rejection
+  the result unchanged if it is an anomaly (FAILED), or a rejection
   if nil."
   [result schemas rejection]
   (cond
