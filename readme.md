@@ -17,11 +17,11 @@ framework magic.
 
 Three artifact types live in this repo:
 
-| Type | Location | Role |
-|---|---|---|
-| **Components** | `components/` | Reusable building blocks with a stable public interface |
-| **Bases** | `bases/` | Application entry points (`-main`, HTTP handlers, processors) |
-| **Projects** | `projects/` | Deployable applications — just `deps.edn`, no code |
+| Type           | Location      | Role                                                          |
+| -------------- | ------------- | ------------------------------------------------------------- |
+| **Components** | `components/` | Reusable building blocks with a stable public interface       |
+| **Bases**      | `bases/`      | Application entry points (`-main`, HTTP handlers, processors) |
+| **Projects**   | `projects/`   | Deployable applications — just `deps.edn`, no code            |
 
 Components expose a single `interface.clj`. Nothing in this repo reaches
 into another component's internals.
@@ -56,78 +56,78 @@ pipelines without defensive `try/catch` noise.
 
 ### Foundation
 
-| Component | Purpose |
-|---|---|
-| `system` | Lifecycle management wrapping `donut.system` |
-| `error` | Anomaly-based error handling (`nom` library) |
-| `env` | Configuration loading with `:dev`/`:test`/`:prod` profiles |
-| `log` | Structured logging |
-| `utility` | Deep merge, UUID v7, YAML conversion, collection helpers |
-| `spec` | Malli-based validation with human-readable errors |
+| Component | Purpose                                                    |
+| --------- | ---------------------------------------------------------- |
+| `system`  | Lifecycle management wrapping `donut.system`               |
+| `error`   | Anomaly-based error handling (`nom` library)               |
+| `env`     | Configuration loading with `:dev`/`:test`/`:prod` profiles |
+| `log`     | Structured logging                                         |
+| `utility` | Deep merge, UUID v7, YAML conversion, collection helpers   |
+| `spec`    | Malli-based validation with human-readable errors          |
 
 ### Persistence
 
-| Component | Purpose |
-|---|---|
-| `db` | PostgreSQL with connection pooling |
-| `sql` | HoneySQL query formatting |
-| `migrator` | Liquibase schema migrations |
-| `fdb` | FoundationDB — KV layer, record layer, changelog processing |
+| Component  | Purpose                                                     |
+| ---------- | ----------------------------------------------------------- |
+| `db`       | PostgreSQL with connection pooling                          |
+| `sql`      | HoneySQL query formatting                                   |
+| `migrator` | Liquibase schema migrations                                 |
+| `fdb`      | FoundationDB — KV layer, record layer, changelog processing |
 
 ### Messaging
 
-| Component | Purpose |
-|---|---|
-| `pulsar` | Apache Pulsar producer/consumer/reader with Avro |
-| `mqtt` | MQTT publish/subscribe |
-| `message-bus` | Protocol abstraction over messaging backends |
-| `command` | Request-reply and async command dispatch over message-bus |
+| Component     | Purpose                                                   |
+| ------------- | --------------------------------------------------------- |
+| `pulsar`      | Apache Pulsar producer/consumer/reader with Avro          |
+| `mqtt`        | MQTT publish/subscribe                                    |
+| `message-bus` | Protocol abstraction over messaging backends              |
+| `command`     | Request-reply and async command dispatch over message-bus |
 
 ### Web & HTTP
 
-| Component | Purpose |
-|---|---|
-| `server` | Jetty with interceptor-based dependency injection and OpenAPI |
-| `http-client` | HTTP client with anomaly-based error handling |
+| Component     | Purpose                                                       |
+| ------------- | ------------------------------------------------------------- |
+| `server`      | Jetty with interceptor-based dependency injection and OpenAPI |
+| `http-client` | HTTP client with anomaly-based error handling                 |
 
 ### Security & Cryptography
 
-| Component | Purpose |
-|---|---|
-| `vault` | HashiCorp Vault for secrets and key management |
-| `encryption` | AES-256, RSA, base64 |
+| Component             | Purpose                                           |
+| --------------------- | ------------------------------------------------- |
+| `vault`               | HashiCorp Vault for secrets and key management    |
+| `encryption`          | AES-256, RSA, base64                              |
 | `pulsar-vault-crypto` | Tenant-scoped Pulsar message encryption via Vault |
 
 ### Serialisation
 
-| Component | Purpose |
-|---|---|
-| `avro` | Apache Avro schema-based serialisation |
-| `schema` | Protobuf definitions (Person, AddressBook, Account) |
-| `json` | JSON read/write with anomaly errors |
+| Component | Purpose                                             |
+| --------- | --------------------------------------------------- |
+| `avro`    | Apache Avro schema-based serialisation              |
+| `schema`  | Protobuf definitions (Person, AddressBook, Account) |
+| `json`    | JSON read/write with anomaly errors                 |
 
 ### Observability
 
-| Component | Purpose |
-|---|---|
+| Component   | Purpose                                                |
+| ----------- | ------------------------------------------------------ |
 | `telemetry` | OpenTelemetry tracing with W3C traceparent propagation |
 
 ### Testing
 
-| Component | Purpose |
-|---|---|
-| `test-system` | `with-test-system` lifecycle macro, `nom-test>` assertions |
+| Component        | Purpose                                                    |
+| ---------------- | ---------------------------------------------------------- |
+| `test-system`    | `with-test-system` lifecycle macro, `nom-test>` assertions |
 | `testcontainers` | Declarative container infrastructure for integration tests |
-| `test-resources` | Shared test configuration |
+| `test-resources` | Shared test configuration                                  |
 
 ## Deployed Applications
 
-| Project | Base | Description |
-|---|---|---|
-| `accounts-web` | `accounts-api` | Account lifecycle API (open, close, suspend, …) |
-| `iam-web` | `iam-api` | Service account management |
-| `accounts-processor` | `command-processor` | Async command handler for account operations |
-| `keyring-web` | `symmetric-key-api` | Symmetric key management API |
+| Project              | Base                | Description                                     |
+| -------------------- | ------------------- | ----------------------------------------------- |
+| `accounts-web`       | `accounts-api`      | Account lifecycle API (open, close, suspend, …) |
+| `iam-web`            | `iam-api`           | Service account management                      |
+| `accounts-processor` | `command-processor` | Async command handler for account operations    |
+| `keyring-web`        | `symmetric-key-api` | Symmetric key management API                    |
 
 ## Getting Started
 
