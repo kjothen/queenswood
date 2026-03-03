@@ -48,3 +48,12 @@
    (record/transact record-db open-store-fn store-name f))
   ([record-db open-store-fn store-name f category message]
    (record/transact record-db open-store-fn store-name f category message)))
+
+(defn transact-multi
+  "Runs f within a single FDB transaction, passing a function
+  that opens stores by name. All writes across stores are
+  atomic."
+  ([record-db open-store-fn f]
+   (record/transact-multi record-db open-store-fn f))
+  ([record-db open-store-fn f category message]
+   (record/transact-multi record-db open-store-fn f category message)))

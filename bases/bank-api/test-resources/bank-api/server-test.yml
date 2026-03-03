@@ -2,6 +2,7 @@ handler: !system/required-component
 
 interceptors: !system/component
   system/component-kind: server/interceptors
+  admin-api-key: !env ADMIN_API_KEY
   command-dispatcher: !system/ref command.dispatcher
   avro: !system/ref avro.serde
 

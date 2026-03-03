@@ -7,6 +7,7 @@ lspconfig.yamlls.setup({
 	settings = {
 		yaml = {
 			customTags = {
+				"!env",
 				"!keyword",
 				"!include",
 				"!port",

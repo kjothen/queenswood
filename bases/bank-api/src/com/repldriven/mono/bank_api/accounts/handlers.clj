@@ -11,9 +11,7 @@
     (java.time Instant)))
 
 (def ^:private response-schema
-  {"open-account" "account"
-   "close-account" "account"
-   "get-account-status" "account-status"})
+  {"open-account" "account" "close-account" "account"})
 
 (defn- decode-payload
   [schemas command-name result]
@@ -62,17 +60,12 @@
 
 (defn open-account
   [request]
-  (send-command request "open-account" (:body-params request)))
+  (send-command request "open-account" (get-in request [:parameters :body])))
 
 (defn close-account
   [request]
-  (let [{:keys [account-id]} (:path-params request)]
+  (let [{:keys [account-id]} (get-in request [:parameters :path])]
     (send-command request "close-account" {:account-id account-id})))
-
-(defn get-account-status
-  [request]
-  (let [{:keys [account-id]} (:path-params request)]
-    (send-command request "get-account-status" {:account-id account-id})))
 
 (defn- millis->iso [ms] (when (pos? ms) (str (Instant/ofEpochMilli ms))))
 
@@ -115,10 +108,10 @@
 (defn list-accounts
   [request]
   (let [{:keys [record-db record-store]} request
-        query-params (:query-params request)
-        after-cursor (get query-params "page[after]")
-        before-cursor (get query-params "page[before]")
-        size (parse-page-size (get query-params "page[size]"))
+        query (get-in request [:parameters :query])
+        after-cursor (get query (keyword "page[after]"))
+        before-cursor (get query (keyword "page[before]"))
+        size (parse-page-size (get query (keyword "page[size]")))
         after-id (cursor/decode after-cursor)
         before-id (cursor/decode before-cursor)
         result (fdb/transact record-db

@@ -34,6 +34,8 @@
         (yaml/parse-stream {:key-fn key-fn :unknown-tag-fn yml-reader})
         util/yaml-collections->edn-collections)))
 
+(defmethod yml-reader :!env [{:keys [value]}] (System/getenv (name value)))
+
 (defmethod yml-reader :!keyword [{:keys [value]}] (keyword value))
 
 (defmethod yml-reader :!str [{:keys [value]}] (str "\"" (name value) "\""))

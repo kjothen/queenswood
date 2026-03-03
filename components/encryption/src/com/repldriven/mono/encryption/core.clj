@@ -2,6 +2,7 @@
   (:require
     [buddy.core.codecs :as codecs]
     [buddy.core.crypto :as crypto]
+    [buddy.core.hash :as hash]
     [buddy.core.nonce :as nonce]
 
     [clojure.string :as string])
@@ -84,8 +85,17 @@
   [prefix]
   (str prefix "." (codecs/bytes->b64-str (nonce/random-bytes 16) true)))
 
+(defn generate-api-key
+  [prefix]
+  (str prefix
+       (codecs/bytes->str (codecs/bytes->b64 (nonce/random-bytes 32) true))))
+
+(defn hash-api-key [raw-key] (codecs/bytes->hex (hash/sha256 raw-key)))
+
 (comment
   (generate-id "ba")
+  (generate-api-key "ak_live_")
+  (hash-api-key (generate-api-key "sk_"))
   (create-aes-256-key)
   (create-rsa-512-key-pair)
   (create-key-pair {:algorithm "RSA" :key-size 512}))

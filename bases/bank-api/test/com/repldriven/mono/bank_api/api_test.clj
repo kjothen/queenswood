@@ -67,3 +67,31 @@
                       actual (http/res->body res)
                       _ (is (= "ACCEPTED" (get actual "status")))])))
        (stop)))))
+
+(deftest openapi-spec-test
+  (testing "GET /openapi.json returns valid OpenAPI spec"
+    (with-test-system
+     [sys
+      ["classpath:bank-api/application-test.yml"
+       #(assoc-in % [:system/defs :server :handler] api/app)]]
+     (let [jetty (system/instance sys [:server :jetty-adapter])]
+       (binding [*base-url* (server/http-local-url jetty)]
+         (nom-test> [res (http/request {:method :get
+                                        :url (str *base-url* "/openapi.json")})
+                     _ (is (= 200 (:status res)))
+                     spec (http/res->body res)
+                     _ (is (= "3.1.0" (get spec "openapi")))
+                     _ (is (= "Bank API" (get-in spec ["info" "title"])))
+                     _ (is (some? (get-in spec
+                                          ["components"
+                                           "securitySchemes"
+                                           "adminAuth"])))
+                     _ (is (some? (get-in spec
+                                          ["components"
+                                           "securitySchemes"
+                                           "orgAuth"])))
+                     paths (get spec "paths")
+                     _ (is (some? (get paths "/v1/accounts")))
+                     _ (is (some? (get paths
+                                       "/v1/accounts/{account-id}/close")))
+                     _ (is (some? (get paths "/v1/organizations")))]))))))

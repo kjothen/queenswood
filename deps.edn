@@ -18,6 +18,7 @@
     components/message-bus {:local/root "components/message-bus"}
     components/processor {:local/root "components/processor"}
     components/mqtt {:local/root "components/mqtt"}
+    components/organizations {:local/root "components/organizations"}
     components/pulsar {:local/root "components/pulsar"}
     components/pulsar-vault-crypto {:local/root
                                     "components/pulsar-vault-crypto"}
@@ -69,6 +70,8 @@
                        "components/migrator/test-resources"
                        "components/mqtt/test"
                        "components/mqtt/test-resources"
+                       "components/organizations/test"
+                       "components/organizations/test-resources"
                        "components/pulsar/test"
                        "components/pulsar/test-resources"
                        "components/pulsar-vault-crypto/test"

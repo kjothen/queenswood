@@ -28,6 +28,16 @@ store: !system/component
       indexes:
         - name: customer_id_idx
           field: customer_id
+    organizations:
+      record-type: Organization
+      indexes: []
+    api-keys:
+      record-type: ApiKey
+      indexes:
+        - name: ApiKey_by_org
+          field: org_id
+        - name: ApiKey_by_hash
+          field: key_hash
 
 meta-store: !system/component
   system/component-kind: fdb/meta-store
@@ -45,3 +55,13 @@ meta-store: !system/component
       indexes:
         - name: customer_id_idx
           field: customer_id
+    organizations:
+      record-type: Organization
+      indexes: []
+    api-keys:
+      record-type: ApiKey
+      indexes:
+        - name: ApiKey_by_org
+          field: org_id
+        - name: ApiKey_by_hash
+          field: key_hash

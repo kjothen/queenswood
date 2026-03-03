@@ -33,3 +33,7 @@
   (core/decrypt-str encrypted symmetric-key))
 
 (defn generate-id [prefix] (core/generate-id prefix))
+
+(defn generate-api-key [prefix] (core/generate-api-key prefix))
+
+(defn hash-api-key [raw-key] (core/hash-api-key raw-key))

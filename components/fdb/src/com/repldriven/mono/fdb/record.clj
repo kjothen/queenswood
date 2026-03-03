@@ -79,6 +79,26 @@
     (.run record-db
           ^Function (fn [ctx] (f (open-store open-store-fn ctx store-name)))))))
 
+(defn transact-multi
+  "Runs f within a single FDB transaction, passing a function
+  that opens stores by name. f receives open-store and should
+  call (open-store \"store-name\") for each store it needs.
+  All writes across stores are atomic."
+  ([^FDBDatabase record-db open-store-fn f]
+   (transact-multi record-db
+                   open-store-fn
+                   f
+                   :fdb/transact
+                   "Failed to execute transaction"))
+  ([^FDBDatabase record-db open-store-fn f category message]
+   (error/try-nom category
+                  message
+                  (.run record-db
+                        ^Function
+                        (fn [ctx]
+                          (f (fn [store-name]
+                               (open-store open-store-fn ctx store-name))))))))
+
 (defn scan
   "Scans records by primary key order. Returns
   {:records [bytes ...] :has-more boolean}.

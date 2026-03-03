@@ -2,11 +2,14 @@
   (:require
     [com.repldriven.mono.schema.accounts :as accounts]
     [com.repldriven.mono.schema.addressbook :as addressbook]
+    [com.repldriven.mono.schema.organizations :as organizations]
     [com.repldriven.mono.schema.person :as person]
 
     [protojure.protobuf :as proto])
   (:import
     (com.repldriven.mono.schema.accounts AccountProto$Account)
+    (com.repldriven.mono.schema.organizations ApiKeyProto$ApiKey
+                                              OrganizationProto$Organization)
     (com.repldriven.mono.schema.person PersonProto$Person)))
 
 (def pb->Person person/pb->Person)
@@ -15,6 +18,16 @@
 
 (def pb->AddressBook addressbook/pb->AddressBook)
 (defn AddressBook->pb [m] (proto/->pb (addressbook/new-AddressBook m)))
+
+(def pb->ApiKey organizations/pb->ApiKey)
+(defn ApiKey->pb [m] (proto/->pb (organizations/new-ApiKey m)))
+(defn ApiKey->java [m] (ApiKeyProto$ApiKey/parseFrom (ApiKey->pb m)))
+
+(def pb->Organization organizations/pb->Organization)
+(defn Organization->pb [m] (proto/->pb (organizations/new-Organization m)))
+(defn Organization->java
+  [m]
+  (OrganizationProto$Organization/parseFrom (Organization->pb m)))
 
 (def pb->Account accounts/pb->Account)
 (defn Account->pb [m] (proto/->pb (accounts/new-Account m)))
