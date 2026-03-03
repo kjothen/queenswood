@@ -74,11 +74,13 @@
   (let [{:keys [account-id]} (:path-params request)]
     (send-command request "get-account-status" {:account-id account-id})))
 
+(defn- millis->iso [ms] (when (pos? ms) (str (Instant/ofEpochMilli ms))))
+
 (defn- format-timestamps
   [account]
   (-> account
-      (update :created-at-ms #(str (Instant/ofEpochMilli %)))
-      (update :updated-at-ms #(str (Instant/ofEpochMilli %)))))
+      (update :created-at-ms millis->iso)
+      (update :updated-at-ms millis->iso)))
 
 (def ^:private default-page-size 20)
 (def ^:private max-page-size 100)

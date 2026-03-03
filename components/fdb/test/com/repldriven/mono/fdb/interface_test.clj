@@ -71,12 +71,16 @@
                :customer-id "cust-1"
                :name "Alice"
                :currency "GBP"
-               :status "open"}
+               :status "open"
+               :created-at-ms 0
+               :updated-at-ms 0}
         bob {:account-id (encryption/generate-id "ba")
              :customer-id "cust-2"
              :name "Bob"
              :currency "USD"
-             :status "open"}
+             :status "open"
+             :created-at-ms 0
+             :updated-at-ms 0}
         record-db (system/instance sys [:fdb :record-db])
         received (atom [])]
     (testing
