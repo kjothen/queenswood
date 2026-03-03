@@ -21,10 +21,6 @@
         (case command
           "open-account" (account-lifecycle/open config data)
           "close-account" (account-lifecycle/close config data)
-          "reopen-account" (account-lifecycle/reopen config data)
-          "suspend-account" (account-lifecycle/suspend config data)
-          "unsuspend-account" (account-lifecycle/unsuspend config data)
-          "archive-account" (account-lifecycle/archive config data)
           "get-account-status" (reporting/get-account-status config data)
           {:status "REJECTED" :message (str "Unknown command: " command)})))))
 

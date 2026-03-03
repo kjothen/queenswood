@@ -118,7 +118,8 @@ system:
           schema: !pulsar/schema AUTO_CONSUME
           subscriptionName: accounts-monolith-command-response
           subscriptionType: !pulsar/subscription-type Shared
-          topicNames: ["persistent://tenant-1/namespace-1/topic-command-response"]
+          topicNames:
+            ["persistent://tenant-1/namespace-1/topic-command-response"]
         schemas: !system/local-ref schemas
 
     message-bus-producers: !system/component
@@ -172,5 +173,6 @@ system:
       system/component-kind: server/jetty-adapter
       handler: !system/ref server.handler
       interceptors: !system/ref server.interceptors
-      options:
-        port: 0
+      options: !profile
+        dev:
+          port: 8080

@@ -59,6 +59,9 @@
                    (instance? GenericRecord value)
                    (deserialize value)
 
+                   (instance? GenericData$EnumSymbol value)
+                   (str value)
+
                    (instance? java.nio.ByteBuffer value)
                    (let [^java.nio.ByteBuffer buf
                          (.duplicate value)

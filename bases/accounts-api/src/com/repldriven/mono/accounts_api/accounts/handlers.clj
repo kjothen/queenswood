@@ -93,10 +93,13 @@
   [{:keys [accounts has-more after before]}]
   (let [base "/v1/accounts"
         first-id (:account-id (first accounts))
-        last-id (:account-id (peek accounts))]
+        last-id (:account-id (peek accounts))
+        forward? (some? after)
+        backward? (some? before)]
     (cond-> {}
-      has-more (assoc :next (str base "?page[after]=" (cursor/encode last-id)))
-      (or after before)
+      (or (and (not backward?) has-more) backward?)
+      (assoc :next (str base "?page[after]=" (cursor/encode last-id)))
+      (or forward? (and backward? has-more))
       (assoc :prev (str base "?page[before]=" (cursor/encode first-id))))))
 
 (defn list-accounts

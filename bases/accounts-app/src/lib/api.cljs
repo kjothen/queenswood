@@ -13,3 +13,24 @@
                (-> (.json res)
                    (.then (fn [body]
                             #js {:http-status (.-status res) :body body})))))))
+
+(defn close-account
+  [account-id]
+  (-> (js/fetch (str "/v1/accounts/" account-id "/close")
+                #js {:method "POST"
+                     :headers #js {"Content-Type" "application/json"
+                                   "Idempotency-Key" (str (random-uuid))}})
+      (.then (fn [res]
+               (-> (.json res)
+                   (.then (fn [body]
+                            #js {:http-status (.-status res) :body body})))))))
+
+(defn list-accounts
+  [query-string]
+  (let [url (if query-string (str "/v1/accounts?" query-string) "/v1/accounts")]
+    (-> (js/fetch url)
+        (.then (fn [res]
+                 (-> (.json res)
+                     (.then (fn [body]
+                              #js {:http-status (.-status res)
+                                   :body body}))))))))

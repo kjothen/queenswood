@@ -4,6 +4,7 @@
 
     [com.repldriven.mono.fdb.interface :as SUT]
 
+    [com.repldriven.mono.encryption.interface :as encryption]
     [com.repldriven.mono.error.interface :as error]
     [com.repldriven.mono.schema.interface :as schema]
     [com.repldriven.mono.system.interface :as system]
@@ -66,12 +67,12 @@
 
 (defn- test-record-layer-consumer
   [sys record-store]
-  (let [alice {:account-id (str (utility/uuidv7))
+  (let [alice {:account-id (encryption/generate-id "ba")
                :customer-id "cust-1"
                :name "Alice"
                :currency "GBP"
                :status "open"}
-        bob {:account-id (str (utility/uuidv7))
+        bob {:account-id (encryption/generate-id "ba")
              :customer-id "cust-2"
              :name "Bob"
              :currency "USD"
@@ -94,7 +95,7 @@
                                            record-store
                                            "test-consumer"
                                            "accounts"
-                                           (fn [record]
+                                           (fn [_store record]
                                              (swap! received conj record)))
                   _ (is (= 2 (count @received)))
                   retrieved-alice (error/nom-> (first @received)
@@ -129,7 +130,6 @@
                   _ (is (= 1 (count results)))
                   retrieved (error/nom-> (first results) schema/pb->Person)
                   _ (is (= alice (utility/record->map retrieved)))]))))
-
 
 (deftest kv-test
   (with-test-system [sys "classpath:fdb/application-test.yml"]

@@ -48,7 +48,7 @@
           (some-> (.asyncToSync ctx
                                 FDBStoreTimer$Waits/WAIT_LOAD_SYSTEM_KEY
                                 (.get (.ensureActive ctx) checkpoint-key))
-                  (Versionstamp/complete)))))
+                  (Versionstamp/fromBytes)))))
 
 (defn- write-checkpoint
   "Stores the raw bytes of vs as the checkpoint at checkpoint-key
@@ -128,11 +128,9 @@
                (when (seq entries)
                  (doseq [kv (cond-> entries deduplicate? deduplicate)]
                    (let [record-id (String. (.getValue kv))
-                         record (record/load (record/open-store open-store-fn
-                                                                ctx
-                                                                store-name)
-                                             record-id)]
-                     (handler record)))
+                         store (record/open-store open-store-fn ctx store-name)
+                         record (record/load store record-id)]
+                     (handler store record)))
                  (let [subspace (changelog-subspace store-name)
                        last-vs (.getVersionstamp
                                 (.unpack subspace (.getKey (last entries)))
