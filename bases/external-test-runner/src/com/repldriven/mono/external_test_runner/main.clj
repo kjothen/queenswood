@@ -155,11 +155,14 @@
     (reset! cov/*covered* [])
     ;; 2. Require then instrument each src namespace
     (doseq [ns-sym src-ns-syms]
-      (require ns-sym)
-      (binding [cov/*instrumented-ns* ns-sym]
-        (inst/instrument #'cov/track-coverage ns-sym))
-      (cov/mark-loaded ns-sym)
-      (println "Instrumented" ns-sym))
+      (if-let [_ (try (require ns-sym)
+                      ns-sym
+                      (catch java.io.FileNotFoundException _ nil))]
+        (do (binding [cov/*instrumented-ns* ns-sym]
+              (inst/instrument #'cov/track-coverage ns-sym))
+            (cov/mark-loaded ns-sym)
+            (println "Instrumented" ns-sym))
+        (println "Skipping" ns-sym "(not found)")))
     ;; 3. Run tests via existing eftest runner
     (let [results (run-test-namespaces test-nses opts)
           ;; 4. Collect and report coverage
