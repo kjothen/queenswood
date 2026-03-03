@@ -32,8 +32,8 @@
     components/testcontainers {:local/root "components/testcontainers"}
     components/utility {:local/root "components/utility"}
     components/vault {:local/root "components/vault"}
-    bases/accounts-api {:local/root "bases/accounts-api"}
-    bases/accounts-monolith {:local/root "bases/accounts-monolith"}
+    bases/bank-api {:local/root "bases/bank-api"}
+    bases/bank-monolith {:local/root "bases/bank-monolith"}
     bases/build {:local/root "bases/build"}
     bases/external-test-runner {:local/root "bases/external-test-runner"}
     bases/iam-api {:local/root "bases/iam-api"}
@@ -84,10 +84,10 @@
                        "components/utility/test"
                        "components/vault/test"
                        "components/vault/test-resources"
-                       "bases/accounts-api/test"
-                       "bases/accounts-api/test-resources"
-                       "bases/accounts-monolith/test"
-                       "bases/accounts-monolith/test-resources"
+                       "bases/bank-api/test"
+                       "bases/bank-api/test-resources"
+                       "bases/bank-monolith/test"
+                       "bases/bank-monolith/test-resources"
                        "bases/external-test-runner/test"
                        "bases/iam-api/test"
                        "bases/iam-api/test-resources"

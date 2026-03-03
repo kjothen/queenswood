@@ -124,7 +124,7 @@ pipelines without defensive `try/catch` noise.
 
 | Project              | Base                | Description                                     |
 | -------------------- | ------------------- | ----------------------------------------------- |
-| `accounts-web`       | `accounts-api`      | Account lifecycle API (open, close, suspend, …) |
+| `bank-web`           | `bank-api`          | Account lifecycle API (open, close, suspend, …) |
 | `iam-web`            | `iam-api`           | Service account management                      |
 | `accounts-processor` | `command-processor` | Async command handler for account operations    |
 | `keyring-web`        | `symmetric-key-api` | Symmetric key management API                    |

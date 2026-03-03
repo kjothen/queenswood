@@ -1,0 +1,5 @@
+system:
+  message-bus: !include bank-api/message-bus-test.yml
+  avro: !include avro/avro-test.yml
+  command: !include bank-api/command-test.yml
+  server: !include bank-api/server-test.yml

@@ -6,16 +6,16 @@
             ;; and shared classpath resources (Testcontainers configs,
             ;; application-test.yml files). Polylith tracks source imports
             ;; only, so :necessary suppresses false-positive warnings.
-            "accounts-web" {:alias "aw"
-                             :necessary ["schema" "test-resources"]}
+            "bank-web" {:alias "aw"
+                        :necessary ["schema" "test-resources"]}
             "accounts-processor" {:alias "ap"
                                   :necessary ["schema" "test-resources"]}
             "iam-web" {:alias "iam" :necessary ["schema" "test-resources"]}
             "keyring-web" {:alias "key" :necessary ["test-resources"]}
-            "accounts-app" {:alias "aui" :test []}
-            "accounts-monolith" {:alias "am"
-                                 :necessary ["schema"
-                                             "test-resources"]}}
+            "bank-app" {:alias "aui" :test []}
+            "bank-monolith" {:alias "am"
+                             :necessary ["schema"
+                                         "test-resources"]}}
  :tag-patterns {:release "v[0-9]*" :stable "stable-*"}
  :test {:create-test-runner
         com.repldriven.mono.external-test-runner.core/create}

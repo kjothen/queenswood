@@ -1,0 +1,16 @@
+{
+  "name": "bank-app",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "npx squint watch & vite",
+    "build": "npx squint compile && vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "@sveltejs/vite-plugin-svelte": "^5.0.3",
+    "svelte": "^5.25.3",
+    "vite": "^6.2.2",
+    "squint-cljs": "^0.8.141"
+  }
+}
