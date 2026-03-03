@@ -26,6 +26,8 @@
   [store record-type field value]
   (record/query store record-type field value))
 
+(defn scan-records [store opts] (record/scan store opts))
+
 (defn write-changelog
   [store store-name record-id]
   (changelog/write store store-name record-id))

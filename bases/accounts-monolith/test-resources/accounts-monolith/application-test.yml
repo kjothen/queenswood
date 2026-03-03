@@ -160,4 +160,17 @@ system:
     dispatcher: !system/component
       system/component-kind: command/dispatcher
       bus: !system/ref message-bus.bus
-  server: !include accounts-api/server-test.yml
+  server:
+    handler: !system/required-component
+    interceptors: !system/component
+      system/component-kind: server/interceptors
+      command-dispatcher: !system/ref command.dispatcher
+      avro: !system/ref avro.serde
+      record-db: !system/ref fdb.record-db
+      record-store: !system/ref fdb.store
+    jetty-adapter: !system/component
+      system/component-kind: server/jetty-adapter
+      handler: !system/ref server.handler
+      interceptors: !system/ref server.interceptors
+      options:
+        port: 0
