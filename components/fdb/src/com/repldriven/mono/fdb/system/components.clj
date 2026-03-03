@@ -1,6 +1,7 @@
 (ns com.repldriven.mono.fdb.system.components
   (:require
     [com.repldriven.mono.fdb.keyspace :as keyspace]
+    [com.repldriven.mono.fdb.watcher :as watcher]
 
     [com.repldriven.mono.error.interface :as error]
     [com.repldriven.mono.log.interface :as log]
@@ -172,3 +173,19 @@
    :system/config-schema [:map [:record-db some?] [:path string?]
                           [:descriptor string?] [:record-types map?]]
    :system/instance-schema fn?})
+
+;; ---
+;; watcher
+;; ---
+
+(def watcher-component
+  {:system/start (fn [{:system/keys [config instance]}]
+                   (or instance (watcher/start config)))
+   :system/stop
+   (fn [{:system/keys [instance]}] (when instance ((:stop instance))) nil)
+   :system/config {:record-db system/required-component
+                   :record-store system/required-component
+                   :consumer-id system/required-component
+                   :store-name system/required-component
+                   :handler system/required-component}
+   :system/instance-schema some?})

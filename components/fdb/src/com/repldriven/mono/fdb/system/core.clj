@@ -9,4 +9,5 @@
                        :db components/db
                        :record-db components/record-db
                        :store components/store
-                       :meta-store components/meta-store})
+                       :meta-store components/meta-store
+                       :watcher components/watcher-component})

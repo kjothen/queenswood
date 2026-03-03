@@ -1,6 +1,6 @@
 (ns com.repldriven.mono.accounts-monolith.main
   (:require
-    com.repldriven.mono.accounts.interface
+    [com.repldriven.mono.accounts.interface :as accounts]
     com.repldriven.mono.command.interface
     com.repldriven.mono.fdb.interface
     com.repldriven.mono.message-bus.interface
@@ -23,6 +23,8 @@
   (let [sys (error/nom-> (env/config config-file profile)
                          system/defs
                          (assoc-in [:system/defs :server :handler] api/app)
+                         (assoc-in [:system/defs :command :watcher-handler]
+                          #'accounts/handle-changelog-change)
                          system/start)]
     (when-not (error/anomaly? sys) (processor/run sys))
     sys))
