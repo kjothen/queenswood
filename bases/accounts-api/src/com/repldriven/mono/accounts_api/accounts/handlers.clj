@@ -6,7 +6,9 @@
     [com.repldriven.mono.command.interface :as command]
     [com.repldriven.mono.error.interface :as error]
     [com.repldriven.mono.fdb.interface :as fdb]
-    [com.repldriven.mono.schema.interface :as schema]))
+    [com.repldriven.mono.schema.interface :as schema])
+  (:import
+    (java.time Instant)))
 
 (def ^:private response-schema
   {"open-account" "account"
@@ -72,6 +74,12 @@
   (let [{:keys [account-id]} (:path-params request)]
     (send-command request "get-account-status" {:account-id account-id})))
 
+(defn- format-timestamps
+  [account]
+  (-> account
+      (update :created-at-ms #(str (Instant/ofEpochMilli %)))
+      (update :updated-at-ms #(str (Instant/ofEpochMilli %)))))
+
 (def ^:private default-page-size 20)
 (def ^:private max-page-size 100)
 
@@ -121,7 +129,8 @@
                                                   :limit size})))]
     (if (error/anomaly? result)
       {:status 500 :body {:error "Failed to list accounts"}}
-      (let [accounts (mapv schema/pb->Account (:records result))
+      (let [accounts (mapv (comp format-timestamps schema/pb->Account)
+                           (:records result))
             links (when (seq accounts)
                     (build-links {:accounts accounts
                                   :has-more (:has-more result)

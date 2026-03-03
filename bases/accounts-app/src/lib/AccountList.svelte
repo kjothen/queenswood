@@ -70,12 +70,14 @@
         <th>Customer ID</th>
         <th>Currency</th>
         <th>Status</th>
+        <th>Created</th>
+        <th>Updated</th>
         <th>Action</th>
       </tr>
     </thead>
     <tbody>
       {#if accounts.length === 0 && !loading}
-        <tr><td colspan="5" class="empty">No accounts found</td></tr>
+        <tr><td colspan="7" class="empty">No accounts found</td></tr>
       {/if}
       {#each accounts as acct}
         <tr>
@@ -83,6 +85,8 @@
           <td>{acct["customer-id"]}</td>
           <td>{acct.currency}</td>
           <td>{acct.status}</td>
+          <td>{acct["created-at-ms"]}</td>
+          <td>{acct["updated-at-ms"]}</td>
           <td>
             {#if acct.status === "opened"}
               <button

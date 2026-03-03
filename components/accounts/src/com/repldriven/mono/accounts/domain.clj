@@ -7,12 +7,17 @@
   nil if customer-exists? is truthy."
   [customer-exists? data]
   (when-not customer-exists?
-    (assoc data :account-id (encryption/generate-id "ba") :status "opening")))
+    (let [now (System/currentTimeMillis)]
+      (assoc data
+             :account-id (encryption/generate-id "ba")
+             :status "opening"
+             :created-at-ms now
+             :updated-at-ms now))))
 
 (defn set-status
   "Returns account with updated status."
   [account status]
-  (assoc account :status status))
+  (assoc account :status status :updated-at-ms (System/currentTimeMillis)))
 
 (def ^:private transitions {"opening" "opened" "closing" "closed"})
 
@@ -21,4 +26,4 @@
   transition applies."
   [account]
   (when-let [next-status (transitions (:status account))]
-    (assoc account :status next-status)))
+    (set-status account next-status)))
