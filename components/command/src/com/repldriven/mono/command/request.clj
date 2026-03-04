@@ -16,10 +16,10 @@
   - req: HTTP request map (reads idempotency-key and
     correlation-id from headers)
   - command: command name string
-  - payload: Avro-serialized bytes or nil
 
-  Returns a command envelope map ready for message-bus."
-  [req command payload]
+  Returns a command envelope map. Assoc :payload before
+  sending."
+  [req command]
   (let [[idempotency-key correlation-id] (req->ids req)]
     {:command command
      :id idempotency-key
@@ -27,5 +27,5 @@
      :causation-id nil
      :traceparent (telemetry/inject-traceparent)
      :tracestate nil
-     :payload payload
+     :payload nil
      :reply-to nil}))

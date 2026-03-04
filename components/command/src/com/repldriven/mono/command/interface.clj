@@ -15,20 +15,11 @@
   - req: HTTP request map (reads idempotency-key and
     correlation-id from headers)
   - command: command name string
-  - payload: Avro-serialized bytes or nil
 
-  Returns a command envelope map ready for message-bus."
-  [req command payload]
-  (request/req->command-request req command payload))
-
-(defn req->command-response
-  "Build a command-response from an HTTP request and a
-  result.
-
-  If result is an anomaly, builds a FAILED response.
-  Otherwise passes the result through."
-  [req result]
-  (response/req->command-response req result))
+  Returns a command envelope map. Assoc :payload before
+  sending."
+  [req command]
+  (request/req->command-request req command))
 
 (defn command-response
   "Build a structured command response from a command
