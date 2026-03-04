@@ -10,5 +10,6 @@
             :parameters {:body [:ref "CreateOrganizationRequest"]}
             :responses {201 {:body [:ref "CreateOrganizationResponse"]}
                         401 {:body [:ref "ErrorResponse"]}
-                        403 {:body [:ref "ErrorResponse"]}}
+                        403 {:body [:ref "ErrorResponse"]}
+                        500 {:body [:ref "ErrorResponse"]}}
             :handler handlers/create-organization}}]])

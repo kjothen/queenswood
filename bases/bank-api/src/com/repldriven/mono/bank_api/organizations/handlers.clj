@@ -1,5 +1,7 @@
 (ns com.repldriven.mono.bank-api.organizations.handlers
   (:require
+    [com.repldriven.mono.bank-api.errors :as errors]
+
     [com.repldriven.mono.error.interface :as error]
     [com.repldriven.mono.organizations.interface :as organizations]))
 
@@ -7,10 +9,15 @@
   [request]
   (cond
    (nil? (:auth request))
-   {:status 401 :body {:error "Unauthorized"}}
+   {:status 401
+    :body (errors/error-response 401 "UNAUTHORIZED"
+                                 "unauthorized"
+                                 "Unauthorized")}
 
    (not= :admin (get-in request [:auth :role]))
-   {:status 403 :body {:error "Forbidden"}}
+   {:status 403
+    :body (errors/error-response 403 "UNAUTHORIZED"
+                                 "forbidden" "Forbidden")}
 
    :else
    (let [{:keys [record-db record-store]} request
@@ -19,7 +26,8 @@
                  {:record-db record-db :record-store record-store}
                  name)]
      (if (error/anomaly? result)
-       {:status 500 :body {:error "Failed to create organization"}}
+       {:status 500
+        :body (errors/error-response 500 result)}
        {:status 201
         :body {:organization (:organization result)
                :api-key {:id (get-in result [:api-key :id])

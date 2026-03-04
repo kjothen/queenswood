@@ -1,6 +1,8 @@
 (ns com.repldriven.mono.bank-api.commands
   (:refer-clojure :exclude [send])
   (:require
+    [com.repldriven.mono.bank-api.errors :as errors]
+
     [com.repldriven.mono.avro.interface :as avro]
     [com.repldriven.mono.command.interface :as command]
     [com.repldriven.mono.error.interface :as error]))
@@ -29,13 +31,15 @@
                  (command/send dispatcher (assoc envelope :payload payload)))]
     (cond
      (error/anomaly? result)
-     {:status (if (= (error/kind result) :command/timeout)
-                408
-                500)
-      :body (command/command-response envelope result)}
+     (let [status (if (= (error/kind result) :command/timeout)
+                    408
+                    500)]
+       {:status status
+        :body (errors/error-response status result)})
 
      (= "REJECTED" (:status result))
-     {:status 422 :body result}
+     {:status 422
+      :body (errors/error-response 422 result)}
 
      :else
      {:status 200

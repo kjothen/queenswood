@@ -1,6 +1,7 @@
 (ns com.repldriven.mono.bank-api.accounts.queries
   (:require
     [com.repldriven.mono.bank-api.accounts.cursor :as cursor]
+    [com.repldriven.mono.bank-api.errors :as errors]
 
     [com.repldriven.mono.error.interface :as error]
     [com.repldriven.mono.fdb.interface :as fdb]
@@ -64,7 +65,7 @@
                                                   :before before-id
                                                   :limit size})))]
     (if (error/anomaly? result)
-      {:status 500 :body {:error "Failed to list accounts"}}
+      {:status 500 :body (errors/error-response 500 result)}
       (let [accounts (mapv (comp format-timestamps schema/pb->Account)
                            (:records result))
             links (when (seq accounts)
@@ -83,15 +84,18 @@
         result (fdb/transact record-db
                              record-store
                              "accounts"
-                             (fn [store]
-                               (fdb/load-record store
-                                                account-id)))]
+                             (fn [store] (fdb/load-record store account-id)))]
     (cond
      (error/anomaly? result)
-     {:status 500 :body {:error "Failed to load account"}}
+     {:status 500
+      :body (errors/error-response 500 result)}
+
      (nil? result)
-     {:status 404 :body {:error "Account not found"}}
+     {:status 404
+      :body (errors/error-response 404 "FAILED"
+                                   "bank-api/not-found"
+                                   "Account not found")}
      :else
      {:status 200
       :body {:account (format-timestamps
-                        (schema/pb->Account result))}})))
+                       (schema/pb->Account result))}})))

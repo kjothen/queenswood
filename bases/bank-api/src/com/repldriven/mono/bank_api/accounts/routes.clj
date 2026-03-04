@@ -15,22 +15,31 @@
     {:get {:summary "List accounts"
            :openapi {:operationId "ListAccounts" :security [{"orgAuth" []}]}
            :parameters {:query list-accounts-query-schema}
-           :responses {200 {:body [:ref "AccountList"]}}
+           :responses {200 {:body [:ref "AccountList"]}
+                       500 {:body [:ref "ErrorResponse"]}}
            :handler queries/list-accounts}
      :post {:summary "Open a new account"
             :openapi {:operationId "OpenAccount" :security [{"orgAuth" []}]}
             :interceptors [telemetry/require-idempotency-key]
             :parameters {:body [:ref "OpenAccountRequest"]}
+            :responses {408 {:body [:ref "ErrorResponse"]}
+                        422 {:body [:ref "ErrorResponse"]}
+                        500 {:body [:ref "ErrorResponse"]}}
             :handler commands/open-account}}]
    ["/accounts/{account-id}"
     {:parameters {:path {:account-id [:ref "AccountId"]}}}
     [""
      {:get {:summary "Get an account"
             :openapi {:operationId "GetAccount" :security [{"orgAuth" []}]}
-            :responses {200 {:body [:ref "Account"]}}
+            :responses {200 {:body [:ref "Account"]}
+                        404 {:body [:ref "ErrorResponse"]}
+                        500 {:body [:ref "ErrorResponse"]}}
             :handler queries/get-account}}]
     ["/close"
      {:post {:summary "Close an account"
              :openapi {:operationId "CloseAccount" :security [{"orgAuth" []}]}
              :interceptors [telemetry/require-idempotency-key]
+             :responses {408 {:body [:ref "ErrorResponse"]}
+                         422 {:body [:ref "ErrorResponse"]}
+                         500 {:body [:ref "ErrorResponse"]}}
              :handler commands/close-account}}]]])

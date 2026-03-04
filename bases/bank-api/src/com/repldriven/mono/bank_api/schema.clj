@@ -31,7 +31,9 @@
   [:map [:organization [:ref "Organization"]]
    [:api-key [:ref "ApiKeyResponse"]]])
 
-(def ErrorResponse [:map [:error string?]])
+(def ErrorResponse
+  [:map [:title string?] [:type string?] [:status int?]
+   [:detail {:optional true} string?]])
 
 (def registry
   (array-map "AccountId" AccountId
