@@ -3,16 +3,24 @@
     [de.otto.nom.core :as nom]))
 
 (defn- error-anomaly? [x] (and (vector? x) (= :error/anomaly (first x))))
+(defn- rejection-anomaly?
+  [x]
+  (and (vector? x) (= :rejection/anomaly (first x))))
 
 (defmethod nom/abominable? error-anomaly? [_] true)
+(defmethod nom/abominable? rejection-anomaly? [_] true)
+
 (defmethod nom/adapt error-anomaly? [x] x)
+(defmethod nom/adapt rejection-anomaly? [x] x)
 
 ;; Predicates
-(defn anomaly? [x] (error-anomaly? x))
+(defn anomaly? [x] (or (error-anomaly? x) (rejection-anomaly? x)))
+(defn error? [x] (error-anomaly? x))
+(defn rejection? [x] (rejection-anomaly? x))
 
-;; Creation
-(defn fail
-  [category & more]
+;; Internal constructors
+(defn- anomaly
+  [tag category & more]
   (let [p (cond
            (map? (first more))
            (first more)
@@ -25,9 +33,14 @@
 
            :else
            {})]
-    [:error/anomaly category p]))
+    [tag category p]))
+
+;; Public constructors
+(defn fail [category & more] (apply anomaly :error/anomaly category more))
+(defn reject [category & more] (apply anomaly :rejection/anomaly category more))
 
 ;; Introspection
+(defn tag [x] (when (anomaly? x) (first x)))
 (defn kind [x] (when (anomaly? x) (second x)))
 (defn payload [x] (when (anomaly? x) (get x 2 {})))
 

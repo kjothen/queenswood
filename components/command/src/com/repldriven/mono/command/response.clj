@@ -2,9 +2,7 @@
   (:require
     [com.repldriven.mono.error.interface :as error]
     [com.repldriven.mono.telemetry.interface :as telemetry]
-    [com.repldriven.mono.utility.interface :as utility]
-
-    [clojure.data.json :as json]))
+    [com.repldriven.mono.utility.interface :as utility]))
 
 (defn- req->ids
   [req]
@@ -30,7 +28,7 @@
    {:message (str details)}))
 
 (defn- ->command-envelope
-  [causation-id correlation-id status payload error]
+  [causation-id correlation-id status payload reason message]
   {:id (str (utility/uuidv7))
    :correlation-id correlation-id
    :causation-id (or causation-id "")
@@ -38,7 +36,17 @@
    :tracestate nil
    :status status
    :payload payload
-   :error error})
+   :reason reason
+   :message message})
+
+(defn- ->command-rejection
+  [causation-id correlation-id category details]
+  (->command-envelope causation-id
+                      correlation-id
+                      "REJECTED"
+                      nil
+                      (str category)
+                      (:message (serializable-details details))))
 
 (defn- ->command-error
   [causation-id correlation-id category details]
@@ -46,50 +54,60 @@
                       correlation-id
                       "FAILED"
                       nil
-                      (json/write-str {:category (str category)
-                                       :details (serializable-details
-                                                 details)})))
+                      (str category)
+                      (:message (serializable-details details))))
 
 (defn command-response
   "Build a structured command response from a command
   envelope and its process-fn result.
 
-  On {:status \"ACCEPTED\" :payload ...}: ACCEPTED with payload.
-  On {:status \"REJECTED\" :message ...}: REJECTED with error.
-  On anomaly: FAILED with error details."
+  On rejection anomaly: REJECTED with reason and message.
+  On error anomaly: FAILED with reason and message.
+  On {:status \"ACCEPTED\" :payload ...}: ACCEPTED with
+    payload."
   [{:keys [id correlation-id]} result]
   (cond
-   (error/anomaly? result)
+   (error/rejection? result)
+   (->command-rejection id
+                        correlation-id
+                        (error/kind result)
+                        (error/payload result))
+
+   (error/error? result)
    (->command-error id
                     correlation-id
                     (error/kind result)
                     (error/payload result))
-
-   (= "REJECTED" (:status result))
-   (->command-envelope id
-                       correlation-id
-                       "REJECTED"
-                       nil
-                       (json/write-str {:message (:message result)}))
 
    :else
    (->command-envelope id
                        correlation-id
                        "ACCEPTED"
                        (:payload result)
+                       nil
                        nil)))
 
 (defn req->command-response
   "Build a command-response from an HTTP request and a
   result.
 
-  If result is an anomaly, builds a FAILED response.
+  If result is a rejection anomaly, builds a REJECTED
+  response. If an error anomaly, builds a FAILED response.
   Otherwise passes the result through."
   [req result]
   (let [[idempotency-key correlation-id] (req->ids req)]
-    (if (error/anomaly? result)
-      (->command-error idempotency-key
-                       correlation-id
-                       (error/kind result)
-                       (error/payload result))
-      result)))
+    (cond
+     (error/rejection? result)
+     (->command-rejection idempotency-key
+                          correlation-id
+                          (error/kind result)
+                          (error/payload result))
+
+     (error/error? result)
+     (->command-error idempotency-key
+                      correlation-id
+                      (error/kind result)
+                      (error/payload result))
+
+     :else
+     result)))

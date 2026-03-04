@@ -22,6 +22,10 @@
 
 (defn save-record [store record] (record/save store record))
 
+(defn load-records
+  [store record-type field value]
+  (record/query store record-type field value))
+
 (defn query-records
   [store record-type field value]
   (record/query store record-type field value))

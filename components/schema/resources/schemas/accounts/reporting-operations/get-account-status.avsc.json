@@ -1,8 +1,0 @@
-{
-  "type": "record",
-  "name": "GetAccountStatus",
-  "namespace": "com.repldriven.mono.accounts.reporting_operations",
-  "fields": [
-    {"name": "account_id",     "type": "string"}
-  ]
-}

@@ -1,5 +1,5 @@
 (ns com.repldriven.mono.accounts.commands.account-lifecycle
-  (:refer-clojure :exclude [load])
+  (:refer-clojure :exclude [get load read update])
   (:require
     [com.repldriven.mono.accounts.domain :as domain]
 
@@ -9,81 +9,89 @@
     [com.repldriven.mono.schema.interface :as schema]))
 
 (defn- ->response
-  "Converts protobuf bytes to an account response. Returns
-  the result unchanged if it is an anomaly (FAILED), or a
-  rejection if nil."
-  [result schemas rejection]
-  (cond
-   (error/anomaly? result)
-   result
-
-   (nil? result)
-   {:status "REJECTED" :message rejection}
-
-   :else
-   {:status "ACCEPTED"
-    :payload (avro/serialize (get schemas "account")
-                             (schema/pb->Account result))}))
+  "Converts a protobuf record to an ACCEPTED response.
+  Returns anomalies unchanged for the processor to handle."
+  [config result]
+  (if (error/anomaly? result)
+    result
+    (let [{:keys [schemas]} config]
+      {:status "ACCEPTED"
+       :payload (avro/serialize (schemas "account")
+                                (schema/pb->Account result))})))
 
 (defn- load
-  "Loads an account by id from the store, returning a
-  Clojure map or nil if not found."
+  "Loads a raw record by id from the store. Returns the
+  protobuf record or a rejection anomaly if not found."
   [store account-id]
-  (some-> (fdb/load-record store account-id)
-          schema/pb->Account))
+  (or (fdb/load-record store account-id)
+      (error/reject :account/not-found "Account not found")))
+
+(defn- load-customer-accounts
+  "Returns the existing accounts for a customer."
+  [store customer-id]
+  (fdb/load-records store "Account" "customer_id" customer-id))
 
 (defn- save
   "Saves account to store, writes changelog entry, returns
-  protobuf bytes."
+  protobuf record or anomaly."
   [store account]
-  (fdb/save-record store (schema/Account->java account))
-  (fdb/write-changelog store "accounts" (:account-id account))
-  (schema/Account->pb account))
+  (error/let-nom> [_ (fdb/save-record store (schema/Account->java account))
+                   _
+                   (fdb/write-changelog store "accounts" (:account-id account))]
+    (schema/Account->pb account)))
 
-(defn- update-status
-  "Loads account by id, sets status, saves back. Returns
-  protobuf bytes, nil if not found, or anomaly on failure."
-  [config account-id status]
+(defn- create
+  "Loads customer accounts, applies f, saves. Returns
+  protobuf record or anomaly."
+  [config data f]
+  (let [{:keys [record-db record-store]} config
+        {:keys [customer-id]} data]
+    (fdb/transact record-db
+                  record-store
+                  "accounts"
+                  (fn [store]
+                    (error/nom->> (load-customer-accounts store customer-id)
+                                  (map schema/pb->Account)
+                                  (f data)
+                                  (save store))))))
+
+(defn- read
+  "Loads account by id. Returns protobuf record or anomaly."
+  [config account-id]
+  (let [{:keys [record-db record-store]} config]
+    (fdb/transact record-db
+                  record-store
+                  "accounts"
+                  (fn [store] (load store account-id)))))
+
+(defn- update
+  "Loads account by id, applies f, saves back. Returns
+  protobuf record or anomaly."
+  [config account-id f]
   (let [{:keys [record-db record-store]} config]
     (fdb/transact record-db
                   record-store
                   "accounts"
                   (fn [store]
-                    (some->> (load store account-id)
-                             (#(domain/set-status % status))
-                             (save store))))))
-
-(defn- customer-exists?
-  "Returns truthy if an account with the given customer-id
-  already exists in the store."
-  [store customer-id]
-  (seq (fdb/query-records store "Account" "customer_id" customer-id)))
-
-(defn- create
-  "Creates account if customer-id is unique. Returns protobuf
-  bytes or nil if customer already exists."
-  [config data]
-  (let [{:keys [record-db record-store]} config
-        {:keys [customer-id]} data]
-    (fdb/transact
-     record-db
-     record-store
-     "accounts"
-     (fn [store]
-       (some->> (domain/new-account (customer-exists? store customer-id) data)
-                (save store))))))
+                    (error/nom->> (load store account-id)
+                                  schema/pb->Account
+                                  f
+                                  (save store))))))
 
 (defn open
-  "Inserts a new account record with status opening."
+  "Opens a new account."
   [config data]
-  (let [{:keys [schemas]} config]
-    (-> (create config data)
-        (->response schemas "Account already exists for customer"))))
+  (->response config (create config data domain/open-account)))
+
+(defn get
+  "Returns the current account or rejection anomaly."
+  [config data]
+  (let [{:keys [account-id]} data]
+    (->response config (read config account-id))))
 
 (defn close
-  "Sets account status to closing."
+  "Closes an account."
   [config data]
-  (let [{:keys [account-id]} data
-        {:keys [schemas]} config]
-    (-> (update-status config account-id "closing")
-        (->response schemas "Account not found"))))
+  (let [{:keys [account-id]} data]
+    (->response config (update config account-id domain/close-account))))
+

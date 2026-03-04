@@ -7,6 +7,7 @@
     {"name": "customer_id", "type": "string"},
     {"name": "name",        "type": "string"},
     {"name": "currency",    "type": "string"},
+    {"name": "status",      "type": "string"},
     {"name": "created_at_ms", "type": {"type": "long", "logicalType": "timestamp-millis"}},
     {"name": "updated_at_ms", "type": {"type": "long", "logicalType": "timestamp-millis"}}
   ]

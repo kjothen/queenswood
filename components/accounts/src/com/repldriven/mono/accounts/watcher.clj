@@ -10,5 +10,5 @@
   to the store within the process-changelog transaction."
   [store record]
   (let [account (schema/pb->Account record)]
-    (when-some [transitioned (domain/transition account)]
+    (when-some [transitioned (domain/transition-lifecyle account)]
       (fdb/save-record store (schema/Account->java transitioned)))))

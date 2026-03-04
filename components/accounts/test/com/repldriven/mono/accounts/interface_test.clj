@@ -26,16 +26,14 @@
   (avro/deserialize-same (get schemas schema-name) (:payload result)))
 
 (defn- poll-status
-  "Polls get-account-status until it matches expected, or
+  "Polls get-account until status matches expected, or
   times out after 5 s."
   [proc schemas account-id expected]
   (loop [attempts 50]
-    (let [result (send-command proc
-                               schemas
-                               "get-account-status"
-                               {:account-id account-id})
+    (let [result
+          (send-command proc schemas "get-account" {:account-id account-id})
           decoded (when (= "ACCEPTED" (:status result))
-                    (decode-payload schemas "account-status" result))]
+                    (decode-payload schemas "account" result))]
       (cond
        (= expected (:status decoded))
        decoded
@@ -87,47 +85,55 @@
                   polled-closed (poll-status proc schemas account-id "closed")
                   _ (is (= "closed" (:status polled-closed)))]))))
 
-(defn- test-get-account-status
+(defn- test-get-account
   [proc schemas]
-  (testing "get-account-status returns account status"
+  (testing "get-account returns account"
     (let [open-payload
           {:customer-id "cust-7" :name "Status Account" :currency "USD"}]
       (nom-test> [opened (send-command proc schemas "open-account" open-payload)
                   account (decode-payload schemas "account" opened)
                   account-id (select-keys account [:account-id])
-                  result
-                  (send-command proc schemas "get-account-status" account-id)
+                  result (send-command proc schemas "get-account" account-id)
                   _ (is (= "ACCEPTED" (:status result)))
-                  decoded (decode-payload schemas "account-status" result)
+                  decoded (decode-payload schemas "account" result)
                   _ (is (= (:account-id account) (:account-id decoded)))
                   _ (is (= "opening" (:status decoded)))]))))
 
 (defn- test-close-missing-account
   [proc schemas]
   (testing "close-account rejects missing account"
-    (is (= "REJECTED"
-           (:status (send-command proc
-                                  schemas
-                                  "close-account"
-                                  {:account-id "missing-id"}))))))
+    (let [result (send-command proc
+                               schemas
+                               "close-account"
+                               {:account-id "missing-id"})]
+      (is (error/rejection? result))
+      (is (= :account/not-found (error/kind result))))))
 
-(defn- test-open-existing-account
+(defn- test-open-multiple-accounts
   [proc schemas]
-  (testing "open-account rejects duplicate customer"
-    (let [open-payload
-          {:customer-id "cust-dup" :name "Duplicate Account" :currency "USD"}]
-      (nom-test> [_ (send-command proc schemas "open-account" open-payload)
-                  result (send-command proc schemas "open-account" open-payload)
-                  _ (is (= "REJECTED" (:status result)))]))))
+  (testing "open-account allows multiple accounts per customer"
+    (let [payload {:customer-id "cust-multi" :currency "USD"}]
+      (nom-test> [r1 (send-command proc
+                                   schemas
+                                   "open-account"
+                                   (assoc payload :name "Account A"))
+                  _ (is (= "ACCEPTED" (:status r1)))
+                  r2 (send-command proc
+                                   schemas
+                                   "open-account"
+                                   (assoc payload :name "Account B"))
+                  _ (is (= "ACCEPTED" (:status r2)))
+                  a1 (decode-payload schemas "account" r1)
+                  a2 (decode-payload schemas "account" r2)
+                  _ (is (not= (:account-id a1) (:account-id a2)))]))))
 
 (defn- test-unknown-command
   [proc schemas]
   (testing "unknown command returns rejection"
-    (is (= "REJECTED"
-           (:status (send-command proc
-                                  schemas
-                                  "unknown-command"
-                                  {:account-id "acc-8"}))))))
+    (let [result
+          (send-command proc schemas "unknown-command" {:account-id "acc-8"})]
+      (is (error/rejection? result))
+      (is (= :accounts/unknown-command (error/kind result))))))
 
 (deftest process-accounts-test
   (with-test-system [sys
@@ -140,7 +146,7 @@
                       (test-open-account proc schemas)
                       (test-close-account proc schemas)
                       (test-watcher-transitions proc schemas)
-                      (test-get-account-status proc schemas)
+                      (test-get-account proc schemas)
                       (test-close-missing-account proc schemas)
-                      (test-open-existing-account proc schemas)
+                      (test-open-multiple-accounts proc schemas)
                       (test-unknown-command proc schemas))))

@@ -1,6 +1,7 @@
 (ns com.repldriven.mono.bank-api.accounts.routes
   (:require
-    [com.repldriven.mono.bank-api.accounts.handlers :as handlers]
+    [com.repldriven.mono.bank-api.accounts.commands :as commands]
+    [com.repldriven.mono.bank-api.accounts.queries :as queries]
 
     [com.repldriven.mono.telemetry.interface :as telemetry]))
 
@@ -15,16 +16,21 @@
            :openapi {:operationId "ListAccounts" :security [{"orgAuth" []}]}
            :parameters {:query list-accounts-query-schema}
            :responses {200 {:body [:ref "AccountList"]}}
-           :handler handlers/list-accounts}
+           :handler queries/list-accounts}
      :post {:summary "Open a new account"
             :openapi {:operationId "OpenAccount" :security [{"orgAuth" []}]}
             :interceptors [telemetry/require-idempotency-key]
             :parameters {:body [:ref "OpenAccountRequest"]}
-            :handler handlers/open-account}}]
+            :handler commands/open-account}}]
    ["/accounts/{account-id}"
     {:parameters {:path {:account-id [:ref "AccountId"]}}}
+    [""
+     {:get {:summary "Get an account"
+            :openapi {:operationId "GetAccount" :security [{"orgAuth" []}]}
+            :responses {200 {:body [:ref "Account"]}}
+            :handler queries/get-account}}]
     ["/close"
      {:post {:summary "Close an account"
              :openapi {:operationId "CloseAccount" :security [{"orgAuth" []}]}
              :interceptors [telemetry/require-idempotency-key]
-             :handler handlers/close-account}}]]])
+             :handler commands/close-account}}]]])

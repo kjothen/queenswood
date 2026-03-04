@@ -2,7 +2,6 @@
   (:require
     [com.repldriven.mono.accounts.commands.account-lifecycle :as
      account-lifecycle]
-    [com.repldriven.mono.accounts.commands.reporting-operations :as reporting]
 
     [com.repldriven.mono.processor.interface :as processor]
 
@@ -21,8 +20,9 @@
         (case command
           "open-account" (account-lifecycle/open config data)
           "close-account" (account-lifecycle/close config data)
-          "get-account-status" (reporting/get-account-status config data)
-          {:status "REJECTED" :message (str "Unknown command: " command)})))))
+          "get-account" (account-lifecycle/get config data)
+          (error/reject :accounts/unknown-command
+                        (str "Unknown command: " command)))))))
 
 (defrecord AccountProcessor [config]
   processor/Processor
