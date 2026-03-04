@@ -1,4 +1,4 @@
-(ns com.repldriven.mono.accounts.commands.account-lifecycle
+(ns com.repldriven.mono.accounts.commands
   (:refer-clojure :exclude [get load read update])
   (:require
     [com.repldriven.mono.accounts.domain :as domain]

@@ -1,7 +1,6 @@
 (ns com.repldriven.mono.accounts.core
   (:require
-    [com.repldriven.mono.accounts.commands.account-lifecycle :as
-     account-lifecycle]
+    [com.repldriven.mono.accounts.commands :as commands]
 
     [com.repldriven.mono.processor.interface :as processor]
 
@@ -18,9 +17,9 @@
                   {:message "No schema found for command" :command command})
       (error/let-nom> [data (avro/deserialize-same schema payload)]
         (case command
-          "open-account" (account-lifecycle/open config data)
-          "close-account" (account-lifecycle/close config data)
-          "get-account" (account-lifecycle/get config data)
+          "open-account" (commands/open config data)
+          "close-account" (commands/close config data)
+          "get-account" (commands/get config data)
           (error/reject :accounts/unknown-command
                         (str "Unknown command: " command)))))))
 
