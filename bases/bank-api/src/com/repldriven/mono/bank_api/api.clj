@@ -2,6 +2,7 @@
   (:require
     [com.repldriven.mono.bank-api.accounts.routes :as accounts]
     [com.repldriven.mono.bank-api.auth :as auth]
+    [com.repldriven.mono.bank-api.errors :as errors]
     [com.repldriven.mono.bank-api.organizations.routes :as organizations]
     [com.repldriven.mono.bank-api.schema :as schema]
 
@@ -21,13 +22,15 @@
   {:reitit.coercion/request-coercion
    (fn [ex _req]
      {:status 400
-      :body {:type "request-validation"
-             :details (select-keys (ex-data ex) [:humanized :in])}})
+      :body (errors/error-response 400 "REJECTED"
+                                   "bank-api/request-validation"
+                                   (str (:humanized (ex-data ex))))})
    :reitit.coercion/response-coercion
    (fn [ex _req]
      {:status 500
-      :body {:type "response-coercion"
-             :details (select-keys (ex-data ex) [:humanized :in])}})})
+      :body (errors/error-response 500 "FAILED"
+                                   "bank-api/response-validation"
+                                   (str (:humanized (ex-data ex))))})})
 
 (defn- routes
   [ctx]

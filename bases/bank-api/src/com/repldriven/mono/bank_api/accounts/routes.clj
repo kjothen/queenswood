@@ -22,7 +22,8 @@
             :openapi {:operationId "OpenAccount" :security [{"orgAuth" []}]}
             :interceptors [telemetry/require-idempotency-key]
             :parameters {:body [:ref "OpenAccountRequest"]}
-            :responses {408 {:body [:ref "ErrorResponse"]}
+            :responses {200 {:body [:ref "Account"]}
+                        408 {:body [:ref "ErrorResponse"]}
                         422 {:body [:ref "ErrorResponse"]}
                         500 {:body [:ref "ErrorResponse"]}}
             :handler commands/open-account}}]
@@ -39,7 +40,8 @@
      {:post {:summary "Close an account"
              :openapi {:operationId "CloseAccount" :security [{"orgAuth" []}]}
              :interceptors [telemetry/require-idempotency-key]
-             :responses {408 {:body [:ref "ErrorResponse"]}
+             :responses {200 {:body [:ref "CloseAccountResponse"]}
+                         408 {:body [:ref "ErrorResponse"]}
                          422 {:body [:ref "ErrorResponse"]}
                          500 {:body [:ref "ErrorResponse"]}}
              :handler commands/close-account}}]]])

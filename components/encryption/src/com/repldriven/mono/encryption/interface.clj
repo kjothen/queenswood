@@ -1,6 +1,7 @@
 (ns com.repldriven.mono.encryption.interface
   (:require
     [com.repldriven.mono.encryption.api-key :as api-key]
+    [com.repldriven.mono.encryption.bytes :as bytes]
     [com.repldriven.mono.encryption.id :as id]
     [com.repldriven.mono.encryption.rsa :as rsa]))
 
@@ -23,3 +24,8 @@
 (defn generate-api-key [prefix] (api-key/generate prefix))
 
 (defn hash-api-key [raw-key] (api-key/hash-key raw-key))
+
+(defn bytes-equals?
+  "Constant-time comparison of two byte arrays."
+  [a b]
+  (bytes/equals? a b))

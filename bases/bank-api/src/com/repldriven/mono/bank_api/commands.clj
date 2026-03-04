@@ -16,10 +16,9 @@
 (defn- decode-payload
   [schemas response-schema result]
   (if-let [payload (:payload result)]
-    (let [schema (get schemas response-schema)
-          decoded (avro/deserialize-same schema payload)]
-      (if (error/anomaly? decoded) decoded (assoc result :payload decoded)))
-    result))
+    (let [schema (get schemas response-schema)]
+      (avro/deserialize-same schema payload))
+    {}))
 
 (defn send
   [request command-name response-schema data]
@@ -41,8 +40,13 @@
      {:status 422
       :body (errors/error-response 422 result)}
 
+     (= "FAILED" (:status result))
+     {:status 500
+      :body (errors/error-response 500 result)}
+
      :else
-     {:status 200
-      :body (decode-payload schemas
-                            response-schema
-                            result)})))
+     (let [body (decode-payload schemas response-schema result)]
+       (if (error/anomaly? body)
+         {:status 500
+          :body (errors/error-response 500 body)}
+         {:status 200 :body body})))))

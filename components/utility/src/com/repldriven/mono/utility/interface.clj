@@ -9,6 +9,7 @@
 (def record->map util.collections/record->map)
 
 ;; String utilities
+(def str->bytes util.string/str->bytes)
 (def string->stream util.string/string->stream)
 (def resolve-source util.string/resolve-source)
 (def prop-seq->kw-map util.string/prop-seq->kw-map)

@@ -62,13 +62,7 @@
        class:success={httpStatus >= 200 && httpStatus < 300}
        class:warning={httpStatus >= 400 && httpStatus < 500}
        class:error={httpStatus >= 500 || httpStatus === 0}>
-    <strong>{result.status}</strong>
-    {#if result.error}
-      <p>{typeof result.error === "string" ? result.error : JSON.stringify(result.error)}</p>
-    {/if}
-    {#if result.payload}
-      <pre>{JSON.stringify(result.payload, null, 2)}</pre>
-    {/if}
+    <pre>{JSON.stringify(result, null, 2)}</pre>
   </div>
 {/if}
 
