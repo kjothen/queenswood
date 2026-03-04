@@ -11,7 +11,6 @@
     components/error {:local/root "components/error"}
     components/fdb {:local/root "components/fdb"}
     components/http-client {:local/root "components/http-client"}
-    components/iam {:local/root "components/iam"}
     components/json {:local/root "components/json"}
     components/log {:local/root "components/log"}
     components/migrator {:local/root "components/migrator"}
@@ -37,9 +36,7 @@
     bases/bank-monolith {:local/root "bases/bank-monolith"}
     bases/build {:local/root "bases/build"}
     bases/external-test-runner {:local/root "bases/external-test-runner"}
-    bases/iam-api {:local/root "bases/iam-api"}
     bases/command-processor {:local/root "bases/command-processor"}
-    bases/symmetric-key-api {:local/root "bases/symmetric-key-api"}
     ;; protojure brings protobuf-java 4.x which breaks FDB Record Layer
     ;; at runtime — pin to 3.x for binary compatibility
     com.google.protobuf/protobuf-java {:mvn/version "3.25.8"}
@@ -61,8 +58,6 @@
                        "components/fdb/test"
                        "components/fdb/test-resources"
                        "components/http-client/test"
-                       "components/iam/test"
-                       "components/iam/test-resources"
                        "components/log/test"
                        "components/message-bus/test"
                        "components/message-bus/test-resources"
@@ -92,10 +87,7 @@
                        "bases/bank-monolith/test"
                        "bases/bank-monolith/test-resources"
                        "bases/external-test-runner/test"
-                       "bases/iam-api/test"
-                       "bases/iam-api/test-resources"
-                       "bases/symmetric-key-api/test"
-                       "bases/symmetric-key-api/test-resources"]}
+]}
   :format/zprint {:extra-deps {zprint/zprint {:mvn/version "1.3.0"}}
                   :main-opts ["-m" "zprint.main"]}
   :lint/clj-kondo {:extra-deps {clj-kondo/clj-kondo {:mvn/version "2026.01.19"}}

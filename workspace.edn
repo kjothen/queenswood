@@ -10,8 +10,6 @@
                         :necessary ["schema" "test-resources"]}
             "accounts-processor" {:alias "ap"
                                   :necessary ["schema" "test-resources"]}
-            "iam-web" {:alias "iam" :necessary ["schema" "test-resources"]}
-            "keyring-web" {:alias "key" :necessary ["test-resources"]}
             "bank-app" {:alias "aui" :test []}
             "bank-monolith" {:alias "am"
                              :necessary ["schema"
