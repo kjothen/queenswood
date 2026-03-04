@@ -1,26 +1,23 @@
 (ns com.repldriven.mono.schema.interface
   (:require
     [com.repldriven.mono.schema.accounts :as accounts]
-    [com.repldriven.mono.schema.addressbook :as addressbook]
+    [com.repldriven.mono.schema.keys :as keys]
     [com.repldriven.mono.schema.organizations :as organizations]
-    [com.repldriven.mono.schema.person :as person]
+    [com.repldriven.mono.schema.persons :as persons]
 
     [protojure.protobuf :as proto])
   (:import
     (com.repldriven.mono.schema.accounts AccountProto$Account)
-    (com.repldriven.mono.schema.organizations ApiKeyProto$ApiKey
-                                              OrganizationProto$Organization)
-    (com.repldriven.mono.schema.person PersonProto$Person)))
+    (com.repldriven.mono.schema.keys ApiKeyProto$ApiKey)
+    (com.repldriven.mono.schema.organizations OrganizationProto$Organization)
+    (com.repldriven.mono.schema.persons PersonProto$Person)))
 
-(def pb->Person person/pb->Person)
-(defn Person->pb [m] (proto/->pb (person/new-Person m)))
+(def pb->Person persons/pb->Person)
+(defn Person->pb [m] (proto/->pb (persons/new-Person m)))
 (defn Person->java [m] (PersonProto$Person/parseFrom (Person->pb m)))
 
-(def pb->AddressBook addressbook/pb->AddressBook)
-(defn AddressBook->pb [m] (proto/->pb (addressbook/new-AddressBook m)))
-
-(def pb->ApiKey organizations/pb->ApiKey)
-(defn ApiKey->pb [m] (proto/->pb (organizations/new-ApiKey m)))
+(def pb->ApiKey keys/pb->ApiKey)
+(defn ApiKey->pb [m] (proto/->pb (keys/new-ApiKey m)))
 (defn ApiKey->java [m] (ApiKeyProto$ApiKey/parseFrom (ApiKey->pb m)))
 
 (def pb->Organization organizations/pb->Organization)

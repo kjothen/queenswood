@@ -1,8 +1,8 @@
 serde: !system/component
   system/component-kind: avro/serde
   schemas:
-    open-account: schemas/accounts/account-lifecycle/open-account.avsc.json
-    close-account: schemas/accounts/account-lifecycle/close-account.avsc.json
-    get-account: schemas/accounts/account-lifecycle/get-account.avsc.json
-    account: schemas/accounts/account-lifecycle/account.avsc.json
-    unknown-command: schemas/accounts/account-lifecycle/close-account.avsc.json
+    open-account: schemas/accounts/open-account.avsc.json
+    close-account: schemas/accounts/close-account.avsc.json
+    get-account: schemas/accounts/get-account.avsc.json
+    account: schemas/accounts/account.avsc.json
+    unknown-command: schemas/accounts/close-account.avsc.json

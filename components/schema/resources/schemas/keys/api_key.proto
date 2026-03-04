@@ -1,6 +1,6 @@
 syntax = "proto2";
 
-package com.repldriven.mono.schema.organizations;
+package com.repldriven.mono.schema.keys;
 
 import "record_metadata_options.proto";
 

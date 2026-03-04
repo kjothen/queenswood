@@ -3,9 +3,9 @@ syntax = "proto2";
 package com.repldriven.mono.schema.schemas;
 
 import "schemas/accounts/account.proto";
-import "schemas/organizations/api_key.proto";
+import "schemas/keys/api_key.proto";
 import "schemas/organizations/organization.proto";
-import "schemas/person/person.proto";
+import "schemas/persons/person.proto";
 
 option java_outer_classname = "SchemaProto";
 
@@ -14,7 +14,7 @@ option java_outer_classname = "SchemaProto";
 // Layer recognises it without requiring proto annotations.
 message RecordTypeUnion {
   optional com.repldriven.mono.schema.accounts.Account _Account = 1;
-  optional com.repldriven.mono.schema.organizations.ApiKey _ApiKey = 4;
+  optional com.repldriven.mono.schema.keys.ApiKey _ApiKey = 4;
   optional com.repldriven.mono.schema.organizations.Organization _Organization = 3;
-  optional com.repldriven.mono.schema.person.Person _Person = 2;
+  optional com.repldriven.mono.schema.persons.Person _Person = 2;
 }

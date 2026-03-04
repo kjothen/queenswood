@@ -1,6 +1,6 @@
 syntax = "proto2";
 
-package com.repldriven.mono.schema.person;
+package com.repldriven.mono.schema.persons;
 
 import "record_metadata_options.proto";
 

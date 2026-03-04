@@ -28,22 +28,12 @@
                :id 1
                :email "alice@example.com"
                :phones [{:number "555-0100" :type :mobile}]}
-        bob {:name "Bob" :id 2 :email "bob@example.com" :phones []}
-        book {:people [alice bob]}
         db (system/instance sys [:fdb :db])]
-    (testing "can store and retrieve Person and AddressBook records as raw KV"
+    (testing "can store and retrieve Person records as raw KV"
       (nom-test> [_ (SUT/set-bytes db "person/1" (schema/Person->pb alice))
-                  _ (SUT/set-bytes db "person/2" (schema/Person->pb bob))
-                  _ (SUT/set-bytes db
-                                   "addressbook/main"
-                                   (schema/AddressBook->pb book))
                   retrieved-alice (error/nom-> (SUT/get-bytes db "person/1")
                                                schema/pb->Person)
-                  _ (is (= alice (utility/record->map retrieved-alice)))
-                  retrieved-book (error/nom-> (SUT/get-bytes db
-                                                             "addressbook/main")
-                                              schema/pb->AddressBook)
-                  _ (is (= book (utility/record->map retrieved-book)))]))))
+                  _ (is (= alice (utility/record->map retrieved-alice)))]))))
 
 (defn- test-record-layer
   [sys record-store]
