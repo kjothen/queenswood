@@ -6,8 +6,9 @@
     (org.slf4j.bridge SLF4JBridgeHandler)))
 
 ;; Install JUL to SLF4J bridge at namespace load time
-(SLF4JBridgeHandler/removeHandlersForRootLogger)
-(SLF4JBridgeHandler/install)
+(when-not *compile-files*
+  (SLF4JBridgeHandler/removeHandlersForRootLogger)
+  (SLF4JBridgeHandler/install))
 
 (defmacro debug [& args] `(log/debug ~@args))
 

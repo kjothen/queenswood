@@ -1,39 +1,25 @@
 (ns com.repldriven.mono.encryption.interface
   (:require
-    [com.repldriven.mono.encryption.core :as core]))
+    [com.repldriven.mono.encryption.api-key :as api-key]
+    [com.repldriven.mono.encryption.id :as id]
+    [com.repldriven.mono.encryption.rsa :as rsa]))
 
-(defn decode64 [s] (core/decode64 s))
-
-(defn encode64 [bytes] (core/encode64 bytes))
-
-(defn create-aes-256-key [] (core/create-aes-256-key))
-
-(defn create-rsa-512-key-pair [] (core/create-rsa-512-key-pair))
-
-(defn create-key-pair [opts] (core/create-key-pair opts))
+(defn create-key-pair [opts] (rsa/create-key-pair opts))
 
 (defn private-key-pkcs8-encoded->rsa
   [encoded-key]
-  (core/private-key-pkcs8-encoded->rsa encoded-key))
+  (rsa/pkcs8-encoded->private-key encoded-key))
 
 (defn public-key-x509-encoded->rsa
   [encoded-key]
-  (core/public-key-x509-encoded->rsa encoded-key))
+  (rsa/x509-encoded->public-key encoded-key))
 
-(defn public-key->der-string [k] (core/public-key->der-string k))
+(defn public-key->der-string [k] (rsa/public-key->der-string k))
 
-(defn private-key->der-string [k] (core/private-key->der-string k))
+(defn private-key->der-string [k] (rsa/private-key->der-string k))
 
-(defn encrypt-str
-  [s symmetric-key algorithm]
-  (core/encrypt-str s symmetric-key algorithm))
+(defn generate-id [prefix] (id/generate prefix))
 
-(defn decrypt-str
-  [encrypted symmetric-key]
-  (core/decrypt-str encrypted symmetric-key))
+(defn generate-api-key [prefix] (api-key/generate prefix))
 
-(defn generate-id [prefix] (core/generate-id prefix))
-
-(defn generate-api-key [prefix] (core/generate-api-key prefix))
-
-(defn hash-api-key [raw-key] (core/hash-api-key raw-key))
+(defn hash-api-key [raw-key] (api-key/hash-key raw-key))

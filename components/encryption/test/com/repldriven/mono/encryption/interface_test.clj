@@ -2,18 +2,32 @@
   (:require
     [com.repldriven.mono.encryption.interface :as SUT]
 
-    [clojure.test :as test :refer [deftest is testing]])
-  (:import
-    (clojure.lang ExceptionInfo)))
+    [clojure.test :refer [deftest is testing]]))
 
-(deftest symmetric-key-test
-  (testing
-    "A encrypted string can only be decrypted with the key used during its encryption"
-    (let [plain-text "Hello World"
-          encryption-key (SUT/create-aes-256-key)
-          unused-key (SUT/create-aes-256-key)
-          encrypted
-          (SUT/encrypt-str plain-text encryption-key :aes128-cbc-hmac-sha256)
-          decrypted (SUT/decrypt-str encrypted encryption-key)]
-      (is (= plain-text decrypted))
-      (is (thrown? ExceptionInfo (SUT/decrypt-str encrypted unused-key))))))
+(deftest generate-id-test
+  (testing "generates prefixed base64url ID"
+    (let [id (SUT/generate-id "ba")]
+      (is (string? id))
+      (is (.startsWith id "ba.")))))
+
+(deftest generate-api-key-test
+  (testing "generates prefixed API key"
+    (let [key (SUT/generate-api-key "sk_live_")]
+      (is (string? key))
+      (is (.startsWith key "sk_live_")))))
+
+(deftest hash-api-key-test
+  (testing "returns consistent hex SHA-256 hash"
+    (let [key "sk_live_test123"
+          h1 (SUT/hash-api-key key)
+          h2 (SUT/hash-api-key key)]
+      (is (string? h1))
+      (is (= 64 (count h1)))
+      (is (= h1 h2)))))
+
+(deftest create-key-pair-test
+  (testing "generates RSA 512-bit key pair"
+    (let [kp (SUT/create-key-pair {:algorithm "RSA" :key-size 512})]
+      (is (some? (:private-key kp)))
+      (is (some? (:public-key kp)))
+      (is (= "RSA" (:algorithm kp))))))
