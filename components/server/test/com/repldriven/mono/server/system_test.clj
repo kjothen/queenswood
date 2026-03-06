@@ -81,11 +81,13 @@
            (let [res (post! "/api/validate" {})
                  body (http-client/res->body res)]
              (is (= 400 (:status res)))
-             (is (= "request-validation" (get body "type")))
-             (is (contains? body "details"))))
+             (is (= "REJECTED" (get body "title")))
+             (is (= "mono/bad-request" (get body "type")))
+             (is (contains? body "detail"))))
          (testing "Invalid response body returns 500 with error type"
            (let [res (post! "/api/bad-response" {"name" "Alice"})
                  body (http-client/res->body res)]
              (is (= 500 (:status res)))
-             (is (= "response-coercion" (get body "type")))
-             (is (contains? body "details")))))))))
+             (is (= "FAILED" (get body "title")))
+             (is (= "mono/bad-response" (get body "type")))
+             (is (contains? body "detail")))))))))
