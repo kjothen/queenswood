@@ -5,35 +5,40 @@
 
     [clojure.test :refer [is]])
   (:import
+    (io.opentelemetry.api GlobalOpenTelemetry)
     (io.opentelemetry.api.trace Span)
     (io.opentelemetry.sdk.testing.exporter InMemorySpanExporter)
     (io.opentelemetry.sdk.trace.export SimpleSpanProcessor)))
 
-(defonce ^:private shared-exporter (InMemorySpanExporter/create))
+(defonce shared-exporter (InMemorySpanExporter/create))
 
-(defonce ^:private sdk-installed? (atom false))
+(defonce sdk-lock (Object.))
 
-(defn ensure-sdk!
-  "Idempotently installs the shared in-memory OTel SDK.
-  Returns the shared exporter."
+(defn install-sdk!
+  "Resets any existing global OTel SDK and installs the test
+  SDK with the shared in-memory exporter. Must be called
+  under sdk-lock."
   []
-  (when (compare-and-set! sdk-installed? false true)
-    (sdk/init-otel-sdk! "test"
-                        {:register-shutdown-hook false
-                         :tracer-provider {:span-processors
-                                           [(SimpleSpanProcessor/create
-                                             shared-exporter)]}}))
-  shared-exporter)
+  (GlobalOpenTelemetry/resetForTest)
+  (sdk/init-otel-sdk! "test"
+                      {:register-shutdown-hook false
+                       :tracer-provider
+                       {:span-processors
+                        [(SimpleSpanProcessor/create
+                          shared-exporter)]}})
+  (span/set-default-tracer! (span/get-tracer)))
 
 (defmacro with-span-tests
   "Run body under an in-memory OTel SDK, then automatically
   assert:
-   - Each name in expected-names has a corresponding finished span
+   - Each name in expected-names has a corresponding finished
+     span
    - All expected spans share the same trace ID
 
-  Creates a root span to establish a trace ID, then filters
-  collected spans by that trace ID. This isolates each test
-  from concurrent tests sharing the same in-memory exporter.
+  Resets and re-installs the test SDK before each invocation
+  to reclaim the global from any system component that may
+  have overwritten it. Creates a root span to establish a
+  trace ID, then filters collected spans by that trace ID.
 
   spans-sym is bound to a map of span-name -> SpanData after
   the body completes. Use _ if you don't need to inspect
@@ -43,14 +48,14 @@
     (with-span-tests [_ [\"process-command\"]]
       (do-work))"
   [[spans-sym expected-names] & body]
-  `(let [exporter# (ensure-sdk!)
-         trace-id# (atom nil)]
+  `(let [trace-id# (atom nil)]
+     (locking sdk-lock (install-sdk!))
      (span/with-span! ["test-root" {}]
                       (reset! trace-id# (.getTraceId (.getSpanContext
                                                       (Span/current))))
                       ~@body)
      (let [tid# @trace-id#
-           all-spans# (.getFinishedSpanItems exporter#)
+           all-spans# (.getFinishedSpanItems shared-exporter)
            test-spans# (filter #(= tid# (.getTraceId (.getSpanContext %)))
                                all-spans#)
            ~spans-sym (into {} (map (fn [s#] [(.getName s#) s#])) test-spans#)]
