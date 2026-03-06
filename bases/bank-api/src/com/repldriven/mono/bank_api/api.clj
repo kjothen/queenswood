@@ -8,7 +8,6 @@
      api-keys.components]
     [com.repldriven.mono.bank-api.api-keys.examples :as api-keys.examples]
     [com.repldriven.mono.bank-api.auth :as auth]
-    [com.repldriven.mono.bank-api.errors :as errors]
     [com.repldriven.mono.bank-api.examples :as examples]
     [com.repldriven.mono.bank-api.organizations.components :as
      organizations.components]
@@ -32,20 +31,6 @@
                                accounts.components/registry
                                api-keys.components/registry
                                organizations.components/registry)}}))
-
-(def ^:private exception-handlers
-  {:reitit.coercion/request-coercion
-   (fn [ex _req]
-     {:status 400
-      :body (errors/error-response 400 "REJECTED"
-                                   "queenswood/bad-request"
-                                   (str (:humanized (ex-data ex))))})
-   :reitit.coercion/response-coercion
-   (fn [ex _req]
-     {:status 500
-      :body (errors/error-response 500 "FAILED"
-                                   "queenswood/bad-response"
-                                   (str (:humanized (ex-data ex))))})})
 
 (defn- routes
   [ctx]
@@ -71,16 +56,17 @@
                                  (:interceptors ctx)
                                  [auth/authenticate])
            :responses
-           {401 (schema/ErrorResponse [#'examples/Unauthorized])
+           {400 (schema/ErrorResponse [#'examples/BadRequest])
+            401 (schema/ErrorResponse [#'examples/Unauthorized])
             403 (schema/ErrorResponse [#'examples/Forbidden])
-            500 (schema/ErrorResponse [#'examples/InternalServerError])}}]
+            500 (schema/ErrorResponse [#'examples/InternalServerError
+                                       #'examples/BadResponse])}}]
          (concat accounts/routes organizations/routes))])
 
 (defn app
   [ctx]
   (http/ring-handler (http/router (routes ctx)
-                                  (assoc-in (server/router-data
-                                             exception-handlers)
+                                  (assoc-in server/standard-router-data
                                    [:data :coercion]
                                    coercion))
                      (ring/routes (server/standard-openapi-ui-handler)

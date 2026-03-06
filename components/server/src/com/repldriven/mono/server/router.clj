@@ -22,20 +22,24 @@
 (def default-exception-handlers
   "Default exception handlers for Reitit router.
 
-  Handles Malli coercion failures for both request (400) and response (500),
-  returning structured JSON error bodies with type and details fields.
-  Falls back to reitit's default handler for all other exceptions."
+  Handles Malli coercion failures for both request (400) and
+  response (500), returning RFC 9457-shaped error bodies. Falls
+  back to reitit's default handler for all other exceptions."
   (merge exception/default-handlers
          {:reitit.coercion/request-coercion
           (fn [ex _req]
             {:status 400
-             :body {:type "request-validation"
-                    :details (select-keys (ex-data ex) [:humanized :in])}})
+             :body {:title "REJECTED"
+                    :type "mono/bad-request"
+                    :status 400
+                    :detail (str (:humanized (ex-data ex)))}})
           :reitit.coercion/response-coercion
           (fn [ex _req]
             {:status 500
-             :body {:type "response-coercion"
-                    :details (select-keys (ex-data ex) [:humanized :in])}})}))
+             :body {:title "FAILED"
+                    :type "mono/bad-response"
+                    :status 500
+                    :detail (str (:humanized (ex-data ex)))}})}))
 
 (defn router-data
   "Build Reitit router data, merging the given exception handlers with defaults.
