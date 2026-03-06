@@ -12,10 +12,12 @@
     [reitit.openapi :as openapi]))
 
 (def muuntaja-instance
-  "Muuntaja instance configured to decode JSON with keyword keys."
-  (m/create (assoc-in m/default-options
-             [:formats "application/json" :decoder-opts :decode-key-fn]
-             keyword)))
+  "Muuntaja instance configured for JSON only with keyword keys."
+  (m/create (-> m/default-options
+                (update :formats select-keys ["application/json"])
+                (assoc-in [:formats "application/json" :decoder-opts
+                           :decode-key-fn]
+                          keyword))))
 
 (def default-exception-handlers
   "Default exception handlers for Reitit router.

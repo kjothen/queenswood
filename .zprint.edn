@@ -8,7 +8,10 @@
           "nom-do>" :arg1
           "nom-let>" :binding
           "nom-test>" :binding
-          "cond" [:pair {:style :respect-nl}]}
+          "cond" [:pair {:style :respect-nl}]
+          "cond->" [:pair {:style :respect-nl}]
+          "defn" [:arg1-body {:style :respect-nl}]
+          "defn-" [:arg1-body {:style :respect-nl}]}
  :map {:comma? false
        :lift-ns? false
        :nl-separator? false
@@ -17,4 +20,4 @@
  :search-config? true
  :width 80
  :style :community
- :vector {:option-fn-first #(if (string? %2) {:vector {:respect-nl? true}})}}
+ :vector {:option-fn-first #(if (or (string? %2) (vector? %2) (keyword? %2)) {:vector {:respect-nl? true}})}}

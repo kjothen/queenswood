@@ -1,7 +1,7 @@
 (ns com.repldriven.mono.bank-api.accounts.queries
   (:require
     [com.repldriven.mono.bank-api.accounts.cursor :as cursor]
-    [com.repldriven.mono.bank-api.errors :as errors]
+    [com.repldriven.mono.bank-api.errors :refer [error-response]]
 
     [com.repldriven.mono.error.interface :as error]
     [com.repldriven.mono.fdb.interface :as fdb]
@@ -42,10 +42,11 @@
         forward? (some? after)
         backward? (some? before)]
     (cond-> {}
-      (or (and (not backward?) has-more) backward?)
-      (assoc :next (str base "?page[after]=" (cursor/encode last-id)))
-      (or forward? (and backward? has-more))
-      (assoc :prev (str base "?page[before]=" (cursor/encode first-id))))))
+            (or (and (not backward?) has-more) backward?)
+            (assoc :next (str base "?page[after]=" (cursor/encode last-id)))
+            (or forward? (and backward? has-more))
+            (assoc :prev
+                   (str base "?page[before]=" (cursor/encode first-id))))))
 
 (defn list-accounts
   [request]
@@ -65,7 +66,7 @@
                                                   :before before-id
                                                   :limit size})))]
     (if (error/anomaly? result)
-      {:status 500 :body (errors/error-response 500 result)}
+      {:status 500 :body (error-response 500 result)}
       (let [accounts (mapv (comp format-timestamps schema/pb->Account)
                            (:records result))
             links (when (seq accounts)
@@ -75,7 +76,8 @@
                                   :before before-id}))]
         {:status 200
          :body (cond-> {:accounts accounts}
-                 (seq links) (assoc :links links))}))))
+                       (seq links)
+                       (assoc :links links))}))))
 
 (defn get-account
   [request]
@@ -88,13 +90,13 @@
     (cond
      (error/anomaly? result)
      {:status 500
-      :body (errors/error-response 500 result)}
+      :body (error-response 500 result)}
 
      (nil? result)
      {:status 404
-      :body (errors/error-response 404 "FAILED"
-                                   "bank-api/not-found"
-                                   "Account not found")}
+      :body (error-response 404 "FAILED"
+                            "accounts/not-found"
+                            "Account not found")}
      :else
      {:status 200
       :body {:account (format-timestamps

@@ -1,8 +1,10 @@
 (ns com.repldriven.mono.utility.interface
+  (:refer-clojure :exclude [vars])
   (:require
     [com.repldriven.mono.utility.collections :as util.collections]
     [com.repldriven.mono.utility.string :as util.string]
-    [com.repldriven.mono.utility.uuid :as util.uuid]))
+    [com.repldriven.mono.utility.uuid :as util.uuid]
+    [com.repldriven.mono.utility.vars :as vars]))
 
 ;; Collection utilities
 (def deep-merge util.collections/deep-merge)
@@ -20,3 +22,9 @@
 
 ;; UUID utilities
 (def uuidv7 util.uuid/v7)
+
+;; Vars utilities
+(def vname vars/vname)
+
+
+

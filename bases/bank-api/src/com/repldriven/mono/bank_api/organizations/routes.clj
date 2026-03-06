@@ -8,8 +8,5 @@
             :openapi {:operationId "CreateOrganization"
                       :security [{"adminAuth" []}]}
             :parameters {:body [:ref "CreateOrganizationRequest"]}
-            :responses {201 {:body [:ref "CreateOrganizationResponse"]}
-                        401 {:body [:ref "ErrorResponse"]}
-                        403 {:body [:ref "ErrorResponse"]}
-                        500 {:body [:ref "ErrorResponse"]}}
+            :responses {201 {:body [:ref "CreateOrganizationResponse"]}}
             :handler handlers/create-organization}}]])

@@ -6,17 +6,27 @@
 (defn- rejection-anomaly?
   [x]
   (and (vector? x) (= :rejection/anomaly (first x))))
+(defn- unauthorized-anomaly?
+  [x]
+  (and (vector? x) (= :unauthorized/anomaly (first x))))
 
 (defmethod nom/abominable? error-anomaly? [_] true)
 (defmethod nom/abominable? rejection-anomaly? [_] true)
+(defmethod nom/abominable? unauthorized-anomaly? [_] true)
 
 (defmethod nom/adapt error-anomaly? [x] x)
 (defmethod nom/adapt rejection-anomaly? [x] x)
+(defmethod nom/adapt unauthorized-anomaly? [x] x)
 
 ;; Predicates
-(defn anomaly? [x] (or (error-anomaly? x) (rejection-anomaly? x)))
+(defn anomaly?
+  [x]
+  (or (error-anomaly? x)
+      (rejection-anomaly? x)
+      (unauthorized-anomaly? x)))
 (defn error? [x] (error-anomaly? x))
 (defn rejection? [x] (rejection-anomaly? x))
+(defn unauthorized? [x] (unauthorized-anomaly? x))
 
 ;; Internal constructors
 (defn- anomaly
@@ -38,6 +48,9 @@
 ;; Public constructors
 (defn fail [category & more] (apply anomaly :error/anomaly category more))
 (defn reject [category & more] (apply anomaly :rejection/anomaly category more))
+(defn unauthorized
+  [category & more]
+  (apply anomaly :unauthorized/anomaly category more))
 
 ;; Introspection
 (defn tag [x] (when (anomaly? x) (first x)))

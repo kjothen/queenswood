@@ -30,19 +30,16 @@
                  (command/send dispatcher (assoc envelope :payload payload)))]
     (cond
      (error/anomaly? result)
-     (let [status (if (= (error/kind result) :command/timeout)
-                    408
-                    500)]
-       {:status status
-        :body (errors/error-response status result)})
+     {:status 500
+      :body (errors/error-response 500 result)}
 
      (= "REJECTED" (:status result))
      {:status 422
-      :body (errors/error-response 422 result)}
+      :body (errors/error-response 422 "REJECTED" result)}
 
      (= "FAILED" (:status result))
      {:status 500
-      :body (errors/error-response 500 result)}
+      :body (errors/error-response 500 "FAILED" result)}
 
      :else
      (let [body (decode-payload schemas response-schema result)]

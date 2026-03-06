@@ -34,8 +34,8 @@
 (defn -main
   [& args]
   (log/info args)
-  (let [{:keys [options exit-message ok?]}
-        (cli/validate-args "bank-monolith" args)]
+  (let [{:keys [options exit-message ok?]} (cli/validate-args "bank-monolith"
+                                                              args)]
     (if exit-message
       (cli/exit ok? exit-message)
       (let [{:keys [config-file profile]} options

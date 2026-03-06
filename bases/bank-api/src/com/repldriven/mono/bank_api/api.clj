@@ -1,8 +1,19 @@
 (ns com.repldriven.mono.bank-api.api
   (:require
+    [com.repldriven.mono.bank-api.accounts.components :as
+     accounts.components]
+    [com.repldriven.mono.bank-api.accounts.examples :as accounts.examples]
     [com.repldriven.mono.bank-api.accounts.routes :as accounts]
+    [com.repldriven.mono.bank-api.api-keys.components :as
+     api-keys.components]
+    [com.repldriven.mono.bank-api.api-keys.examples :as api-keys.examples]
     [com.repldriven.mono.bank-api.auth :as auth]
     [com.repldriven.mono.bank-api.errors :as errors]
+    [com.repldriven.mono.bank-api.examples :as examples]
+    [com.repldriven.mono.bank-api.organizations.components :as
+     organizations.components]
+    [com.repldriven.mono.bank-api.organizations.examples :as
+     organizations.examples]
     [com.repldriven.mono.bank-api.organizations.routes :as organizations]
     [com.repldriven.mono.bank-api.schema :as schema]
 
@@ -15,40 +26,54 @@
     [reitit.ring :as ring]))
 
 (def ^:private coercion
-  (malli-coercion/create {:options {:registry (merge (m/default-schemas)
-                                                     schema/registry)}}))
+  (malli-coercion/create
+   {:options {:registry (merge (m/default-schemas)
+                               {"ErrorResponse" schema/ErrorResponseSchema}
+                               accounts.components/registry
+                               api-keys.components/registry
+                               organizations.components/registry)}}))
 
 (def ^:private exception-handlers
   {:reitit.coercion/request-coercion
    (fn [ex _req]
      {:status 400
       :body (errors/error-response 400 "REJECTED"
-                                   "bank-api/request-validation"
+                                   "queenswood/bad-request"
                                    (str (:humanized (ex-data ex))))})
    :reitit.coercion/response-coercion
    (fn [ex _req]
      {:status 500
       :body (errors/error-response 500 "FAILED"
-                                   "bank-api/response-validation"
+                                   "queenswood/bad-response"
                                    (str (:humanized (ex-data ex))))})})
 
 (defn- routes
   [ctx]
   [["/openapi.json"
-    {:get
-     {:no-doc true
-      :openapi
-      {:info {:title "Bank API" :description "Banking API" :version "1.0.0"}
-       :components
-       {:securitySchemes
-        {"adminAuth" {:type :http :scheme :bearer :description "Admin API key"}
-         "orgAuth"
-         {:type :http :scheme :bearer :description "Organization API key"}}}}
-      :handler (server/standard-openapi-handler)}}]
+    {:get {:no-doc true
+           :openapi
+           {:info {:title "Queenswood"
+                   :description "Queenswood Banking API"
+                   :version "1.0.0"}
+            :components
+            {:securitySchemes
+             {"adminAuth"
+              {:type :http :scheme :bearer :description "Admin API key"}
+              "orgAuth"
+              {:type :http :scheme :bearer :description "Organization API key"}}
+             :examples (merge examples/registry
+                              accounts.examples/registry
+                              api-keys.examples/registry
+                              organizations.examples/registry)}}
+           :handler (server/standard-openapi-handler)}}]
    (into ["/v1"
           {:interceptors (concat telemetry/trace-span
                                  (:interceptors ctx)
-                                 [auth/authenticate])}]
+                                 [auth/authenticate])
+           :responses
+           {401 (schema/ErrorResponse [#'examples/Unauthorized])
+            403 (schema/ErrorResponse [#'examples/Forbidden])
+            500 (schema/ErrorResponse [#'examples/InternalServerError])}}]
          (concat accounts/routes organizations/routes))])
 
 (defn app

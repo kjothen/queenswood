@@ -1,0 +1,36 @@
+(ns com.repldriven.mono.bank-api.accounts.examples
+  (:require
+    [com.repldriven.mono.bank-api.schema :refer [examples-registry]]))
+
+(def AccountNotFound
+  {:value {:title "REJECTED"
+           :type "accounts/not-found"
+           :status 404
+           :detail "Account not found"}})
+
+(def AccountAlreadyExists
+  {:value {:title "REJECTED"
+           :type "accounts/exists"
+           :status 422
+           :detail "Customer already has an account of this kind"}})
+
+(def registry (examples-registry [#'AccountNotFound #'AccountAlreadyExists]))
+
+(def Account
+  {:account-id "acc_01JMABC123DEF456"
+   :customer-id "cust_01JMABC"
+   :name "Jane Doe"
+   :currency "GBP"
+   :status "OPEN"})
+
+(def AccountId (:account-id Account))
+
+(def AccountList {:accounts [Account]})
+
+(def CreateAccountRequest (select-keys Account [:customer-id :name :currency]))
+
+(def CreateAccountResponse Account)
+
+(def CloseAccountResponse Account)
+
+
