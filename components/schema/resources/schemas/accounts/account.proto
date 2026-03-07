@@ -6,6 +6,19 @@ import "record_metadata_options.proto";
 
 option java_outer_classname = "AccountProto";
 
+message ScanAddress {
+  required string sort_code = 1;
+  required string account_number = 2;
+}
+
+message PaymentAddress {
+  required string scheme = 1;
+  oneof identifier {
+    ScanAddress scan = 2;
+    string value = 3;
+  }
+}
+
 message Account {
   option (com.apple.foundationdb.record.record).usage = RECORD;
 
@@ -16,4 +29,5 @@ message Account {
   optional string status = 5;
   optional int64 created_at_ms = 6;
   optional int64 updated_at_ms = 7;
+  repeated PaymentAddress payment_addresses = 10;
 }

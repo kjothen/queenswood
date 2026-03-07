@@ -8,6 +8,22 @@
     [com.repldriven.mono.fdb.interface :as fdb]
     [com.repldriven.mono.schema.interface :as schema]))
 
+(defn- payment-address-pb->avro
+  "Flattens protojure oneof :identifier wrapper to flat
+  Avro-compatible shape."
+  [{:keys [scheme identifier]}]
+  {:scheme scheme
+   :scan (:scan identifier)
+   :value (:value identifier)})
+
+(defn- account-pb->avro
+  "Converts protobuf Account to Avro-compatible map."
+  [pb]
+  (let [account (schema/pb->Account pb)]
+    (clojure.core/update account
+                         :payment-addresses
+                         #(mapv payment-address-pb->avro %))))
+
 (defn- ->response
   "Converts a protobuf record to an ACCEPTED response.
   Returns anomalies unchanged for the processor to handle."
@@ -17,7 +33,7 @@
     (let [{:keys [schemas]} config]
       {:status "ACCEPTED"
        :payload (avro/serialize (schemas "account")
-                                (schema/pb->Account result))})))
+                                (account-pb->avro result))})))
 
 (defn- load
   "Loads a raw record by id from the store. Returns the

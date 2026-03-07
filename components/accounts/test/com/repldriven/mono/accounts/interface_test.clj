@@ -78,6 +78,14 @@
                   account-id (:account-id account)
                   polled-opened (poll-status proc schemas account-id "opened")
                   _ (is (= "opened" (:status polled-opened)))
+                  _ (is (= "040004"
+                           (get-in polled-opened
+                                   [:payment-addresses 0
+                                    :scan :sort-code])))
+                  _ (is (some? (get-in polled-opened
+                                       [:payment-addresses 0
+                                        :scan
+                                        :account-number])))
                   _ (send-command proc
                                   schemas
                                   "close-account"

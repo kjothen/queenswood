@@ -23,6 +23,7 @@
    :customer-id "acc-test"
    :name "Test Account"
    :currency "GBP"
+   :payment-addresses []
    :status "OPENING"
    :created-at-ms 1700000000000
    :updated-at-ms 1700000000000})

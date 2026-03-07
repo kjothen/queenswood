@@ -3,6 +3,7 @@
     com.repldriven.mono.fdb.system.core
 
     [com.repldriven.mono.fdb.changelog :as changelog]
+    [com.repldriven.mono.fdb.counter :as counter]
     [com.repldriven.mono.fdb.kv :as kv]
     [com.repldriven.mono.fdb.record :as record]))
 
@@ -46,6 +47,10 @@
                       store-name
                       handler
                       opts)))
+
+(defn allocate-counter
+  [store & key-parts]
+  (apply counter/allocate store key-parts))
 
 (defn transact
   ([record-db open-store-fn store-name f]

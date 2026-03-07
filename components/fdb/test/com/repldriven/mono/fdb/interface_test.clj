@@ -50,8 +50,9 @@
                                                        record-store
                                                        "persons"
                                                        (fn [store]
-                                                         (SUT/load-record store
-                                                                          1)))
+                                                         (SUT/load-record
+                                                          store
+                                                          1)))
                                          schema/pb->Person)
                   _ (is (= alice (utility/record->map retrieved)))]))))
 
@@ -61,6 +62,7 @@
                :customer-id "cust-1"
                :name "Alice"
                :currency "GBP"
+               :payment-addresses []
                :status "open"
                :created-at-ms 0
                :updated-at-ms 0}
@@ -68,6 +70,7 @@
              :customer-id "cust-2"
              :name "Bob"
              :currency "USD"
+             :payment-addresses []
              :status "open"
              :created-at-ms 0
              :updated-at-ms 0}

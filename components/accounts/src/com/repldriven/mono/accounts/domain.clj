@@ -1,6 +1,7 @@
 (ns com.repldriven.mono.accounts.domain
   (:require
-    [com.repldriven.mono.encryption.interface :as encryption]))
+    [com.repldriven.mono.encryption.interface :as encryption]
+    [com.repldriven.mono.fdb.interface :as fdb]))
 
 (defn open-account
   "Creates a new account map with status opening.
@@ -24,11 +25,31 @@
   [account]
   (update-account-status "closing" account))
 
+(defn- uk-scan-address
+  [store]
+  (let [sort-code "040004"
+        account-number (format "%08d"
+                               (fdb/allocate-counter store
+                                                     "bank"
+                                                     "counters"
+                                                     sort-code))]
+    {:scheme "uk.scan"
+     :identifier {:scan {:sort-code sort-code
+                         :account-number account-number}}}))
+
+(defn- add-payment-addresses
+  [store account]
+  (assoc account :payment-addresses [(uk-scan-address store)]))
+
 (def ^:private lifecycle-transitions {"opening" "opened" "closing" "closed"})
 
 (defn transition-lifecyle
   "Returns account with next status, or nil if no
   transition applies."
-  [account]
+  [store account]
   (when-let [next-status (lifecycle-transitions (:status account))]
-    (update-account-status next-status account)))
+    (cond->
+     (update-account-status next-status account)
+
+     (= next-status "opened")
+     (as-> acc (add-payment-addresses store acc)))))
