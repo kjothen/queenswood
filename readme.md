@@ -103,7 +103,7 @@ pipelines without defensive `try/catch` noise.
 | Component | Purpose                                             |
 | --------- | --------------------------------------------------- |
 | `avro`    | Apache Avro schema-based serialisation              |
-| `schema`  | Protobuf definitions (Person, AddressBook, Account) |
+| `schemas` | Protobuf definitions (Person, Account, Organization, ApiKey) |
 | `json`    | JSON read/write with anomaly errors                 |
 
 ### Observability

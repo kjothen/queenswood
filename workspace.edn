@@ -7,12 +7,12 @@
             ;; application-test.yml files). Polylith tracks source imports
             ;; only, so :necessary suppresses false-positive warnings.
             "bank-web" {:alias "aw"
-                        :necessary ["schema" "test-resources"]}
+                        :necessary ["schemas" "test-schemas" "test-resources"]}
             "accounts-processor" {:alias "ap"
-                                  :necessary ["schema" "test-resources"]}
+                                  :necessary ["schemas" "test-schemas" "test-resources"]}
             "bank-app" {:alias "aui" :test []}
             "bank-monolith" {:alias "am"
-                             :necessary ["schema"
+                             :necessary ["schemas"
                                          "test-resources"]}}
  :tag-patterns {:release "v[0-9]*" :stable "stable-*"}
  :test {:create-test-runner

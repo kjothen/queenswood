@@ -3,7 +3,7 @@
     [com.repldriven.mono.accounts.domain :as domain]
 
     [com.repldriven.mono.fdb.interface :as fdb]
-    [com.repldriven.mono.schema.interface :as schema]))
+    [com.repldriven.mono.schemas.interface :as schema]))
 
 (defn handle-change
   "Transitions the account if applicable, saving directly

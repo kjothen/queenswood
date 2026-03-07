@@ -5,7 +5,7 @@
 
     [com.repldriven.mono.error.interface :as error]
     [com.repldriven.mono.fdb.interface :as fdb]
-    [com.repldriven.mono.schema.interface :as schema])
+    [com.repldriven.mono.schemas.interface :as schema])
   (:import
     (java.time Instant)))
 

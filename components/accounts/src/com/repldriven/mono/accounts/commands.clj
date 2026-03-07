@@ -6,7 +6,7 @@
     [com.repldriven.mono.avro.interface :as avro]
     [com.repldriven.mono.error.interface :as error]
     [com.repldriven.mono.fdb.interface :as fdb]
-    [com.repldriven.mono.schema.interface :as schema]))
+    [com.repldriven.mono.schemas.interface :as schema]))
 
 (defn- payment-address-pb->avro
   "Flattens protojure oneof :identifier wrapper to flat

@@ -42,8 +42,8 @@ schemas: !system/component
   command-response:
     schema: schemas/command/command-response.avsc.json
     type: AVRO
-  user:
-    schema: schemas/user/user.avsc.json
+  pet:
+    schema: schemas/pets/pet.avsc.json
     type: AVRO
 
 tenants: !system/component
@@ -84,9 +84,9 @@ topics: !system/component
     - topic: "persistent://tenant-1/namespace-1/topic-command-response"
       partitions: 1
       schema: !keyword command-response
-    - topic: "persistent://tenant-1/namespace-1/topic-user"
+    - topic: "persistent://tenant-1/namespace-1/topic-pet"
       partitions: 1
-      schema: !keyword user
+      schema: !keyword pet
 
 crypto-key-pair-file-readers: !system/component
   system/component-kind: pulsar/crypto-key-pair-file-readers
@@ -136,15 +136,15 @@ producers: !system/component
       schema: !keyword command-response
       topicName: "persistent://tenant-1/namespace-1/topic-command-response"
     schemas: !system/local-ref schemas
-  user:
+  pet:
     _: !system/local-ref topics
     client: !system/local-ref client
     conf:
       accessMode: !pulsar/access-mode Shared
       cryptoKeyReader: !system/local-ref crypto-key-readers.r1
       encryptionKeys: [tenant-key-1]
-      schema: !keyword user
-      topicName: "persistent://tenant-1/namespace-1/topic-user"
+      schema: !keyword pet
+      topicName: "persistent://tenant-1/namespace-1/topic-pet"
     schemas: !system/local-ref schemas
 
 readers: !system/component
@@ -159,7 +159,7 @@ readers: !system/component
       startMessageId: !pulsar/message-id earliest
       topicNames: ["persistent://tenant-1/namespace-1/topic-command"]
     schemas: !system/local-ref schemas
-  user:
+  pet:
     _: !system/local-ref topics
     client: !system/local-ref client
     conf:
@@ -167,7 +167,7 @@ readers: !system/component
       cryptoKeyReader: !system/local-ref crypto-key-readers.r1
       schema: !pulsar/schema AUTO_CONSUME
       startMessageId: !pulsar/message-id earliest
-      topicNames: ["persistent://tenant-1/namespace-1/topic-user"]
+      topicNames: ["persistent://tenant-1/namespace-1/topic-pet"]
     schemas: !system/local-ref schemas
 
 consumers: !system/component
@@ -194,7 +194,7 @@ consumers: !system/component
       subscriptionType: !pulsar/subscription-type Shared
       topicNames: ["persistent://tenant-1/namespace-1/topic-command-response"]
     schemas: !system/local-ref schemas
-  user-1:
+  pet-1:
     _: !system/local-ref topics
     client: !system/local-ref client
     conf:
@@ -203,9 +203,9 @@ consumers: !system/component
       schema: !pulsar/schema AUTO_CONSUME
       subscriptionName: tenant-1-subscriber-r1
       subscriptionType: !pulsar/subscription-type Shared
-      topicNames: ["persistent://tenant-1/namespace-1/topic-user"]
+      topicNames: ["persistent://tenant-1/namespace-1/topic-pet"]
     schemas: !system/local-ref schemas
-  user-2:
+  pet-2:
     _: !system/local-ref topics
     client: !system/local-ref client
     conf:
@@ -214,5 +214,5 @@ consumers: !system/component
       schema: !pulsar/schema AUTO_CONSUME
       subscriptionName: tenant-1-subscriber-r2
       subscriptionType: !pulsar/subscription-type Shared
-      topicNames: ["persistent://tenant-1/namespace-1/topic-user"]
+      topicNames: ["persistent://tenant-1/namespace-1/topic-pet"]
     schemas: !system/local-ref schemas

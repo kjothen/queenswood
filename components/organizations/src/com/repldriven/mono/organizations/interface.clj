@@ -4,7 +4,7 @@
 
     [com.repldriven.mono.error.interface :as error]
     [com.repldriven.mono.fdb.interface :as fdb]
-    [com.repldriven.mono.schema.interface :as schema]))
+    [com.repldriven.mono.schemas.interface :as schema]))
 
 (defn create-organization
   "Creates an organization and its initial API key atomically.

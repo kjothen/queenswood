@@ -16,13 +16,8 @@ record-db: !system/component
 
 store: !system/component
   system/component-kind: fdb/store
-  descriptor: com.repldriven.mono.schema.schemas.SchemaProto
+  descriptor: com.repldriven.mono.schemas.schemas.SchemaProto
   record-types: !strs
-    persons:
-      record-type: Person
-      indexes:
-        - name: email_idx
-          field: email
     accounts:
       record-type: Account
       indexes:
@@ -43,13 +38,8 @@ meta-store: !system/component
   system/component-kind: fdb/meta-store
   record-db: !system/local-ref record-db
   path: meta
-  descriptor: com.repldriven.mono.schema.schemas.SchemaProto
+  descriptor: com.repldriven.mono.schemas.schemas.SchemaProto
   record-types: !strs
-    persons:
-      record-type: Person
-      indexes:
-        - name: email_idx
-          field: email
     accounts:
       record-type: Account
       indexes:
@@ -65,3 +55,25 @@ meta-store: !system/component
           field: org_id
         - name: ApiKey_by_hash
           field: key_hash
+
+pet-store: !system/component
+  system/component-kind: fdb/store
+  descriptor: com.repldriven.mono.test_schemas.schemas.TestSchemaProto
+  record-types: !strs
+    pets:
+      record-type: Pet
+      indexes:
+        - name: species_idx
+          field: species
+
+pet-meta-store: !system/component
+  system/component-kind: fdb/meta-store
+  record-db: !system/local-ref record-db
+  path: pet-meta
+  descriptor: com.repldriven.mono.test_schemas.schemas.TestSchemaProto
+  record-types: !strs
+    pets:
+      record-type: Pet
+      indexes:
+        - name: species_idx
+          field: species

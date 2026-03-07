@@ -4,7 +4,7 @@
     com.repldriven.mono.command.interface
     com.repldriven.mono.fdb.interface
     com.repldriven.mono.message-bus.interface
-    com.repldriven.mono.schema.interface
+    com.repldriven.mono.schemas.interface
     com.repldriven.mono.pulsar.interface
     com.repldriven.mono.server.interface
 

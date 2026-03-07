@@ -1,0 +1,20 @@
+syntax = "proto2";
+
+package com.repldriven.mono.schemas.schemas;
+
+import "schemas/accounts/account.proto";
+import "schemas/keys/api_key.proto";
+import "schemas/organizations/organization.proto";
+import "schemas/persons/person.proto";
+
+option java_outer_classname = "SchemaProto";
+
+// RecordTypeUnion marks which messages are top-level record types
+// for the FDB Record Layer. Named RecordTypeUnion so the Record
+// Layer recognises it without requiring proto annotations.
+message RecordTypeUnion {
+  optional com.repldriven.mono.schemas.accounts.Account _Account = 1;
+  optional com.repldriven.mono.schemas.keys.ApiKey _ApiKey = 4;
+  optional com.repldriven.mono.schemas.organizations.Organization _Organization = 3;
+  optional com.repldriven.mono.schemas.persons.Person _Person = 2;
+}

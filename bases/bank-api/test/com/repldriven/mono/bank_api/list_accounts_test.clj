@@ -7,7 +7,7 @@
 
     [com.repldriven.mono.fdb.interface :as fdb]
     [com.repldriven.mono.http-client.interface :as http]
-    [com.repldriven.mono.schema.interface :as schema]
+    [com.repldriven.mono.schemas.interface :as schema]
     [com.repldriven.mono.server.interface :as server]
     [com.repldriven.mono.system.interface :as system]
     [com.repldriven.mono.test-system.interface :refer
@@ -30,7 +30,8 @@
 (defn- list-accounts-request
   [& [query-string]]
   (let [url (cond-> (str *base-url* "/v1/accounts")
-              query-string (str "?" query-string))]
+                    query-string
+                    (str "?" query-string))]
     (http/request {:method :get :url url})))
 
 (deftest list-accounts-test

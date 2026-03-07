@@ -1,14 +1,14 @@
 {:aliases
  {:build {:deps {bases/build {:local/root "../../bases/build"}}
-          :exec-args
-          {:lib 'com.repldriven.mono/bank-monolith
-           :main com.repldriven.mono.bank-monolith.main
-           :major-minor-version "0.0"}
+          :exec-args {:lib 'com.repldriven.mono/bank-monolith
+                      :main com.repldriven.mono.bank-monolith.main
+                      :major-minor-version "0.0"}
           :ns-default com.repldriven.mono.build.build}
   :test
   {:extra-deps
    {bases/external-test-runner {:local/root "../../bases/external-test-runner"}
     component/test-resources {:local/root "../../components/test-resources"}
+    component/test-schemas {:local/root "../../components/test-schemas"}
     component/test-system {:local/root "../../components/test-system"}
     component/testcontainers {:local/root "../../components/testcontainers"}}}}
  :deps {component/accounts {:local/root "../../components/accounts"}
@@ -25,7 +25,7 @@
         component/message-bus {:local/root "../../components/message-bus"}
         component/processor {:local/root "../../components/processor"}
         component/pulsar {:local/root "../../components/pulsar"}
-        component/schema {:local/root "../../components/schema"}
+        component/schemas {:local/root "../../components/schemas"}
         component/server {:local/root "../../components/server"}
         component/system {:local/root "../../components/system"}
         component/telemetry {:local/root "../../components/telemetry"}

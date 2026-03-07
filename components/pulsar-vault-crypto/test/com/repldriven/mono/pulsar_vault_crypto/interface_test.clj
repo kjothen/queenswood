@@ -16,12 +16,13 @@
 (deftest pulsar-vault-crypto-test
   (with-test-system
    [sys "classpath:pulsar-vault-crypto/application-test.yml"]
-   (let [producer (system/instance sys [:pulsar :producers :user])
-         consumer-1 (system/instance sys [:pulsar :consumers :user-1])
-         consumer-2 (system/instance sys [:pulsar :consumers :user-2])
-         msgs [{:name "Alice" :age 30} {:name "Bob" :age 25}
-               {:name "Charlie" :age 35}]
-         props {"message" "user-msg"}]
+   (let [producer (system/instance sys [:pulsar :producers :pet])
+         consumer-1 (system/instance sys [:pulsar :consumers :pet-1])
+         consumer-2 (system/instance sys [:pulsar :consumers :pet-2])
+         msgs [{:name "Whiskers" :species "cat" :age-months 24}
+               {:name "Rex" :species "dog" :age-months 36}
+               {:name "Tweety" :species "bird" :age-months 12}]
+         props {"message" "pet-msg"}]
      (testing "Consumer with correct tenant key reads from vault and decrypts"
        (doseq [msg msgs] (pulsar/send producer msg {"properties" props}))
        (let [{:keys [c stop]} (pulsar/receive consumer-1 50)
@@ -58,7 +59,7 @@
          "To test: write a new key to vault, send a message, consumer should decrypt it.")
        (let [_vault-client (system/instance sys [:vault :client])
              _new-pubkey (get-in (system/instance sys [:pulsar :schemas])
-                                 [:user]) ;; placeholder
+                                 [:pet]) ;; placeholder
             ]
          ;; rotation test to be implemented once vault write-secret is
          ;; available

@@ -1,16 +1,16 @@
-{:aliases {:build {:deps {bases/build {:local/root "../../bases/build"}}
-                   :exec-args {:lib 'com.repldriven.mono/bank-web
-                               :main com.repldriven.mono.bank-api.main
-                               :major-minor-version "0.0"}
-                   :ns-default com.repldriven.mono.build.build}
-           :test {:extra-deps {bases/external-test-runner
-                               {:local/root "../../bases/external-test-runner"}
-                               component/test-resources
-                               {:local/root "../../components/test-resources"}
-                               component/test-system
-                               {:local/root "../../components/test-system"}
-                               component/testcontainers
-                               {:local/root "../../components/testcontainers"}}}}
+{:aliases
+ {:build {:deps {bases/build {:local/root "../../bases/build"}}
+          :exec-args {:lib 'com.repldriven.mono/bank-web
+                      :main com.repldriven.mono.bank-api.main
+                      :major-minor-version "0.0"}
+          :ns-default com.repldriven.mono.build.build}
+  :test
+  {:extra-deps
+   {bases/external-test-runner {:local/root "../../bases/external-test-runner"}
+    component/test-resources {:local/root "../../components/test-resources"}
+    component/test-schemas {:local/root "../../components/test-schemas"}
+    component/test-system {:local/root "../../components/test-system"}
+    component/testcontainers {:local/root "../../components/testcontainers"}}}}
  :deps {component/avro {:local/root "../../components/avro"}
         component/cli {:local/root "../../components/cli"}
         component/command {:local/root "../../components/command"}
@@ -23,7 +23,7 @@
         component/organizations {:local/root "../../components/organizations"}
         component/message-bus {:local/root "../../components/message-bus"}
         component/pulsar {:local/root "../../components/pulsar"}
-        component/schema {:local/root "../../components/schema"}
+        component/schemas {:local/root "../../components/schemas"}
         component/server {:local/root "../../components/server"}
         component/system {:local/root "../../components/system"}
         component/telemetry {:local/root "../../components/telemetry"}

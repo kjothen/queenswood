@@ -4,10 +4,9 @@
 
     [com.repldriven.mono.fdb.interface :as SUT]
 
-    [com.repldriven.mono.encryption.interface :as encryption]
     [com.repldriven.mono.error.interface :as error]
-    [com.repldriven.mono.schema.interface :as schema]
     [com.repldriven.mono.system.interface :as system]
+    [com.repldriven.mono.test-schemas.interface :as test-schema]
     [com.repldriven.mono.test-system.interface :refer
      [with-test-system nom-test>]]
     [com.repldriven.mono.utility.interface :as utility]
@@ -24,109 +23,139 @@
 
 (defn- test-proto-kv
   [sys]
-  (let [alice {:name "Alice"
-               :id 1
-               :email "alice@example.com"
-               :phones [{:number "555-0100" :type :mobile}]}
+  (let [whiskers {:pet-id "pet-1"
+                  :name "Whiskers"
+                  :species "cat"
+                  :age-months 24}
         db (system/instance sys [:fdb :db])]
-    (testing "can store and retrieve Person records as raw KV"
-      (nom-test> [_ (SUT/set-bytes db "person/1" (schema/Person->pb alice))
-                  retrieved-alice (error/nom-> (SUT/get-bytes db "person/1")
-                                               schema/pb->Person)
-                  _ (is (= alice (utility/record->map retrieved-alice)))]))))
+    (testing "can store and retrieve Pet records as raw KV"
+      (nom-test>
+        [_ (SUT/set-bytes db
+                          "pet/1"
+                          (test-schema/Pet->pb whiskers))
+         retrieved (error/nom-> (SUT/get-bytes db "pet/1")
+                                test-schema/pb->Pet)
+         _ (is (= whiskers (utility/record->map retrieved)))]))))
 
 (defn- test-record-layer
-  [sys record-store]
-  (let [alice {:name "Alice" :id 1 :email "alice@example.com" :phones []}
+  [sys pet-store]
+  (let [whiskers {:pet-id "pet-1"
+                  :name "Whiskers"
+                  :species "cat"
+                  :age-months 24}
         record-db (system/instance sys [:fdb :record-db])]
-    (testing "can save and load Person records via FDB Record Layer"
-      (nom-test> [_ (SUT/transact
-                     record-db
-                     record-store
-                     "persons"
-                     (fn [store]
-                       (SUT/save-record store (schema/Person->java alice))))
-                  retrieved (error/nom-> (SUT/transact record-db
-                                                       record-store
-                                                       "persons"
-                                                       (fn [store]
-                                                         (SUT/load-record
-                                                          store
-                                                          1)))
-                                         schema/pb->Person)
-                  _ (is (= alice (utility/record->map retrieved)))]))))
+    (testing "can save and load Pet records via FDB Record Layer"
+      (nom-test>
+        [_ (SUT/transact
+            record-db
+            pet-store
+            "pets"
+            (fn [store]
+              (SUT/save-record
+               store
+               (test-schema/Pet->java whiskers))))
+         retrieved (error/nom->
+                    (SUT/transact record-db
+                                  pet-store
+                                  "pets"
+                                  (fn [store]
+                                    (SUT/load-record
+                                     store
+                                     "pet-1")))
+                    test-schema/pb->Pet)
+         _ (is (= whiskers
+                  (utility/record->map retrieved)))]))))
 
 (defn- test-record-layer-consumer
-  [sys record-store]
-  (let [alice {:account-id (encryption/generate-id "ba")
-               :customer-id "cust-1"
-               :name "Alice"
-               :currency "GBP"
-               :payment-addresses []
-               :status "open"
-               :created-at-ms 0
-               :updated-at-ms 0}
-        bob {:account-id (encryption/generate-id "ba")
-             :customer-id "cust-2"
-             :name "Bob"
-             :currency "USD"
-             :payment-addresses []
-             :status "open"
-             :created-at-ms 0
-             :updated-at-ms 0}
+  [sys pet-store]
+  (let [whiskers {:pet-id "pet-20"
+                  :name "Whiskers"
+                  :species "cat"
+                  :age-months 24}
+        rex {:pet-id "pet-21"
+             :name "Rex"
+             :species "dog"
+             :age-months 36}
         record-db (system/instance sys [:fdb :record-db])
         received (atom [])]
     (testing
-      "consumer reads changelog entries and calls handler with record bytes"
-      (nom-test> [_
-                  (SUT/transact
-                   record-db
-                   record-store
-                   "accounts"
-                   (fn [store]
-                     (SUT/save-record store (schema/Account->java alice))
-                     (SUT/write-changelog store "accounts" (:account-id alice))
-                     (SUT/save-record store (schema/Account->java bob))
-                     (SUT/write-changelog store "accounts" (:account-id bob))))
-                  _ (SUT/process-changelog record-db
-                                           record-store
-                                           "test-consumer"
-                                           "accounts"
-                                           (fn [_store record]
-                                             (swap! received conj record)))
-                  _ (is (= 2 (count @received)))
-                  retrieved-alice (error/nom-> (first @received)
-                                               schema/pb->Account)
-                  _ (is (= alice (utility/record->map retrieved-alice)))
-                  retrieved-bob (error/nom-> (second @received)
-                                             schema/pb->Account)
-                  _ (is (= bob (utility/record->map retrieved-bob)))]))))
+      "consumer reads changelog entries and calls handler with
+       record bytes"
+      (nom-test>
+        [_ (SUT/transact
+            record-db
+            pet-store
+            "pets"
+            (fn [store]
+              (SUT/save-record
+               store
+               (test-schema/Pet->java whiskers))
+              (SUT/write-changelog store
+                                   "pets"
+                                   (:pet-id whiskers))
+              (SUT/save-record
+               store
+               (test-schema/Pet->java rex))
+              (SUT/write-changelog store
+                                   "pets"
+                                   (:pet-id rex))))
+         _ (SUT/process-changelog record-db
+                                  pet-store
+                                  "test-consumer"
+                                  "pets"
+                                  (fn [_store record]
+                                    (swap! received conj record)))
+         _ (is (= 2 (count @received)))
+         retrieved-whiskers (error/nom-> (first @received)
+                                         test-schema/pb->Pet)
+         _ (is (= whiskers
+                  (utility/record->map
+                   retrieved-whiskers)))
+         retrieved-rex (error/nom-> (second @received)
+                                    test-schema/pb->Pet)
+         _ (is (= rex
+                  (utility/record->map
+                   retrieved-rex)))]))))
 
 (defn- test-query-records
-  [sys record-store]
-  (let [alice {:name "Alice" :id 10 :email "alice@query.com" :phones []}
-        bob {:name "Bob" :id 11 :email "bob@query.com" :phones []}
+  [sys pet-store]
+  (let [whiskers {:pet-id "pet-10"
+                  :name "Whiskers"
+                  :species "hamster"
+                  :age-months 6}
+        rex {:pet-id "pet-11"
+             :name "Rex"
+             :species "parrot"
+             :age-months 48}
         record-db (system/instance sys [:fdb :record-db])]
     (testing "can query records by field value"
-      (nom-test> [_ (SUT/transact
-                     record-db
-                     record-store
-                     "persons"
-                     (fn [store]
-                       (SUT/save-record store (schema/Person->java alice))
-                       (SUT/save-record store (schema/Person->java bob))))
-                  results (SUT/transact record-db
-                                        record-store
-                                        "persons"
-                                        (fn [store]
-                                          (SUT/query-records
-                                           store
-                                           "Person"
-                                           "email"
-                                           "alice@query.com")))
-                  _ (is (= 1 (count results)))
-                  retrieved (error/nom-> (first results) schema/pb->Person)
-                  _ (is (= alice (utility/record->map retrieved)))]))))
+      (nom-test>
+        [_ (SUT/transact
+            record-db
+            pet-store
+            "pets"
+            (fn [store]
+              (SUT/save-record
+               store
+               (test-schema/Pet->java whiskers))
+              (SUT/save-record
+               store
+               (test-schema/Pet->java rex))))
+         results (SUT/transact
+                  record-db
+                  pet-store
+                  "pets"
+                  (fn [store]
+                    (SUT/query-records
+                     store
+                     "Pet"
+                     "species"
+                     "hamster")))
+         _ (is (= 1 (count results)))
+         retrieved (error/nom-> (first results)
+                                test-schema/pb->Pet)
+         _ (is (= whiskers
+                  (utility/record->map retrieved)))]))))
 
 (deftest kv-test
   (with-test-system [sys "classpath:fdb/application-test.yml"]
@@ -135,14 +164,15 @@
 
 (deftest store-test
   (with-test-system [sys "classpath:fdb/application-test.yml"]
-                    (let [record-store (system/instance sys [:fdb :store])]
-                      (test-record-layer sys record-store)
-                      (test-query-records sys record-store)
-                      (test-record-layer-consumer sys record-store))))
+                    (let [pet-store (system/instance sys [:fdb :pet-store])]
+                      (test-record-layer sys pet-store)
+                      (test-query-records sys pet-store)
+                      (test-record-layer-consumer sys pet-store))))
 
 (deftest meta-store-test
   (with-test-system [sys "classpath:fdb/application-test.yml"]
-                    (let [record-store (system/instance sys [:fdb :meta-store])]
-                      (test-record-layer sys record-store)
-                      (test-query-records sys record-store)
-                      (test-record-layer-consumer sys record-store))))
+                    (let [pet-store (system/instance sys
+                                                     [:fdb :pet-meta-store])]
+                      (test-record-layer sys pet-store)
+                      (test-query-records sys pet-store)
+                      (test-record-layer-consumer sys pet-store))))

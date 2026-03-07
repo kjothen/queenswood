@@ -21,12 +21,13 @@
     components/pulsar {:local/root "components/pulsar"}
     components/pulsar-vault-crypto {:local/root
                                     "components/pulsar-vault-crypto"}
-    components/schema {:local/root "components/schema"}
+    components/schemas {:local/root "components/schemas"}
     components/server {:local/root "components/server"}
     components/spec {:local/root "components/spec"}
     components/sql {:local/root "components/sql"}
     components/system {:local/root "components/system"}
     components/telemetry {:local/root "components/telemetry"}
+    components/test-schemas {:local/root "components/test-schemas"}
     components/test-system {:local/root "components/test-system"}
     components/test-resources {:local/root "components/test-resources"}
     components/testcontainers {:local/root "components/testcontainers"}
@@ -71,7 +72,7 @@
                        "components/pulsar/test-resources"
                        "components/pulsar-vault-crypto/test"
                        "components/pulsar-vault-crypto/test-resources"
-                       "components/schema/test-resources"
+                       "components/schemas/test-resources"
                        "components/server/test"
                        "components/server/test-resources"
                        "components/spec/test"
