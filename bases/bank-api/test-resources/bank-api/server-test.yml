@@ -2,7 +2,7 @@ handler: !system/required-component
 
 interceptors: !system/component
   system/component-kind: server/interceptors
-  admin-api-key: !env ADMIN_API_KEY
+  admin-api-key: !env MONO_ADMIN_API_KEY
   dispatchers:
     accounts: !system/ref accounts.dispatcher
     parties: !system/ref parties.dispatcher

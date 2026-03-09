@@ -14,14 +14,15 @@
     [clojure.data.json :as json]
     [clojure.test :refer [deftest is testing]]))
 
-(def ^:private admin-api-key (System/getenv "ADMIN_API_KEY"))
+(def ^:private admin-api-key (System/getenv "MONO_ADMIN_API_KEY"))
 
 (defn- post-organization
   [base-url org-name token]
   (http/request {:method :post
                  :url (str base-url "/v1/organizations")
                  :headers (cond-> {"Content-Type" "application/json"}
-                            token (assoc "Authorization" (str "Bearer " token)))
+                                  token
+                                  (assoc "Authorization" (str "Bearer " token)))
                  :body (json/write-str {"name" org-name})}))
 
 (deftest create-organization-test

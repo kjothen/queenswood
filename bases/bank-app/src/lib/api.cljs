@@ -4,7 +4,7 @@
 
 (defn- admin-token
   []
-  (.-VITE_ADMIN_API_KEY (.-env js/import.meta)))
+  (.-VITE_MONO_ADMIN_API_KEY (.-env js/import.meta)))
 
 (defn- parse-response
   [res]
