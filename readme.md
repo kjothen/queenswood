@@ -32,6 +32,8 @@ library composes into a production-shaped system.
 5. **Account lifecycle** — accounts move through `opened` → `closing` →
    `closed`, driven by API calls and reactive watchers.
 
+[![Demo](thumbnail.png)](https://github.com/user-attachments/assets/ab471ac2-89e6-41f9-99c1-8b28ad959a81)
+
 ### How It Works
 
 Queenswood is assembled from the component library:
@@ -227,7 +229,8 @@ pipelines without defensive `try/catch` noise.
   nix profile install nixpkgs#direnv
   ```
 
-- Docker (for integration tests via Testcontainers)
+- Docker (for integration tests via Testcontainers). On Mac OS X, run
+  `just start-docker` to start Colima.
 
 Verify your setup with:
 
