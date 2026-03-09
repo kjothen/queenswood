@@ -1,8 +1,8 @@
 (ns ^:eftest/synchronized com.repldriven.mono.idv.interface-test
   (:require
-    com.repldriven.mono.testcontainers.interface
     com.repldriven.mono.fdb.interface
     com.repldriven.mono.idv.interface
+    com.repldriven.mono.testcontainers.interface
 
     [com.repldriven.mono.avro.interface :as avro]
     [com.repldriven.mono.error.interface :as error]

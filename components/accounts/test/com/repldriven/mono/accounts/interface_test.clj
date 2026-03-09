@@ -1,9 +1,7 @@
 (ns ^:eftest/synchronized com.repldriven.mono.accounts.interface-test
   (:require
+    com.repldriven.mono.accounts.interface
     com.repldriven.mono.testcontainers.interface
-
-    #_{:clj-kondo/ignore [:unused-namespace]}
-    [com.repldriven.mono.accounts.interface :as SUT]
 
     [com.repldriven.mono.avro.interface :as avro]
     [com.repldriven.mono.error.interface :as error]
