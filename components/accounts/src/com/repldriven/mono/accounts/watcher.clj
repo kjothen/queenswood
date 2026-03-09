@@ -5,7 +5,7 @@
     [com.repldriven.mono.fdb.interface :as fdb]
     [com.repldriven.mono.schemas.interface :as schema]))
 
-(defn make-handler
+(defn account-changelog-handler
   "Returns a watcher handler that transitions closing
   accounts to closed when their changelog reports
   status-after :closing."

@@ -14,8 +14,9 @@
    :system/instance-schema some?})
 
 (def ^:private watcher-handler
-  {:system/start (fn [{:system/keys [config instance]}]
-                   (or instance (watcher/make-handler (:record-store config))))
+  {:system/start
+   (fn [{:system/keys [config instance]}]
+     (or instance (watcher/account-changelog-handler (:record-store config))))
    :system/config {:record-store system/required-component}
    :system/instance-schema fn?})
 

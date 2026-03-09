@@ -15,7 +15,8 @@
 
 (def ^:private watcher-handler
   {:system/start (fn [{:system/keys [config instance]}]
-                   (or instance (watcher/make-handler (:record-store config))))
+                   (or instance
+                       (watcher/idv-changelog-handler (:record-store config))))
    :system/config {:record-store system/required-component}
    :system/instance-schema fn?})
 

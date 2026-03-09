@@ -5,7 +5,7 @@
     [com.repldriven.mono.fdb.interface :as fdb]
     [com.repldriven.mono.schemas.interface :as schema]))
 
-(defn make-handler
+(defn idv-changelog-handler
   "Returns a watcher handler that transitions parties from
   pending to active when their IDV is accepted. Captures
   record-store to open stores within the same transaction."
