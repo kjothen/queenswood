@@ -23,11 +23,19 @@ message Account {
   option (com.apple.foundationdb.record.record).usage = RECORD;
 
   required string account_id = 1 [(com.apple.foundationdb.record.field).primary_key = true];
-  optional string customer_id = 2;
+  optional string party_id = 2;
   optional string name = 3;
   optional string currency = 4;
-  optional string status = 5;
+  required AccountStatus account_status = 5;
   optional int64 created_at_ms = 6;
   optional int64 updated_at_ms = 7;
   repeated PaymentAddress payment_addresses = 10;
+
+  enum AccountStatus {
+    ACCOUNT_STATUS_UNKNOWN = 0;
+    OPENING = 1;
+    OPENED = 2;
+    CLOSING = 3;
+    CLOSED = 4;
+  }
 }

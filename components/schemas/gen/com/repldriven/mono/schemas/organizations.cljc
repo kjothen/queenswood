@@ -19,6 +19,9 @@
 ;;----------------------------------------------------------------------------------
 ;;----------------------------------------------------------------------------------
 
+(declare cis->OrganizationChangelog)
+(declare ecis->OrganizationChangelog)
+(declare new-OrganizationChangelog)
 (declare cis->Organization)
 (declare ecis->Organization)
 (declare new-Organization)
@@ -29,6 +32,79 @@
 ;; Message Implementations
 ;;----------------------------------------------------------------------------------
 ;;----------------------------------------------------------------------------------
+
+;-----------------------------------------------------------------------------
+; OrganizationChangelog
+;-----------------------------------------------------------------------------
+(defrecord OrganizationChangelog-record [organization-id status-before
+                                         status-after]
+  pb/Writer
+    (serialize [this os]
+      (serdes.core/write-String 1 {:optimize true} (:organization-id this) os)
+      (serdes.core/write-String 2 {:optimize true} (:status-before this) os)
+      (serdes.core/write-String 3 {:optimize true} (:status-after this) os))
+  pb/TypeReflection
+    (gettype [this]
+      "com.repldriven.mono.schemas.organizations.OrganizationChangelog"))
+
+(s/def
+  :com.repldriven.mono.schemas.organizations.OrganizationChangelog/organization-id
+  string?)
+(s/def
+  :com.repldriven.mono.schemas.organizations.OrganizationChangelog/status-before
+  string?)
+(s/def
+  :com.repldriven.mono.schemas.organizations.OrganizationChangelog/status-after
+  string?)
+(s/def ::OrganizationChangelog-spec
+  (s/keys
+   :opt-un
+   [:com.repldriven.mono.schemas.organizations.OrganizationChangelog/organization-id
+    :com.repldriven.mono.schemas.organizations.OrganizationChangelog/status-before
+    :com.repldriven.mono.schemas.organizations.OrganizationChangelog/status-after]))
+(def OrganizationChangelog-defaults
+  {:organization-id "" :status-before "" :status-after ""})
+
+(defn cis->OrganizationChangelog
+  "CodedInputStream to OrganizationChangelog"
+  [is]
+  (->> (tag-map OrganizationChangelog-defaults
+                (fn [tag index]
+                  (case index
+                    1 [:organization-id (serdes.core/cis->String is)]
+                    2 [:status-before (serdes.core/cis->String is)]
+                    3 [:status-after (serdes.core/cis->String is)]
+
+                    [index (serdes.core/cis->undefined tag is)]))
+                is)
+       (map->OrganizationChangelog-record)))
+
+(defn ecis->OrganizationChangelog
+  "Embedded CodedInputStream to OrganizationChangelog"
+  [is]
+  (serdes.core/cis->embedded cis->OrganizationChangelog is))
+
+(defn new-OrganizationChangelog
+  "Creates a new instance from a map, similar to map->OrganizationChangelog except that
+  it properly accounts for nested messages, when applicable.
+  "
+  [init]
+  {:pre [(if (s/valid? ::OrganizationChangelog-spec init)
+           true
+           (throw (ex-info "Invalid input"
+                           (s/explain-data ::OrganizationChangelog-spec
+                                           init))))]}
+  (-> (merge OrganizationChangelog-defaults init)
+      (map->OrganizationChangelog-record)))
+
+(defn pb->OrganizationChangelog
+  "Protobuf to OrganizationChangelog"
+  [input]
+  (cis->OrganizationChangelog (serdes.stream/new-cis input)))
+
+(def ^:protojure.protobuf.any/record OrganizationChangelog-meta
+  {:type "com.repldriven.mono.schemas.organizations.OrganizationChangelog"
+   :decoder pb->OrganizationChangelog})
 
 ;-----------------------------------------------------------------------------
 ; Organization

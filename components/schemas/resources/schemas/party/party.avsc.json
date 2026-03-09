@@ -1,0 +1,18 @@
+{
+  "type": "record",
+  "name": "Party",
+  "namespace": "com.repldriven.mono.party",
+  "fields": [
+    {"name": "party_id",     "type": "string"},
+    {"name": "type",         "type": {"type": "enum",
+                                       "name": "PartyType",
+                                       "symbols": ["PERSON"]}},
+    {"name": "display_name", "type": "string"},
+    {"name": "status",       "type": {"type": "enum",
+                                       "name": "PartyStatus",
+                                       "symbols": ["PENDING", "ACTIVE",
+                                                    "SUSPENDED", "CLOSED"]}},
+    {"name": "created_at", "type": {"type": "long", "logicalType": "timestamp-millis"}},
+    {"name": "updated_at", "type": {"type": "long", "logicalType": "timestamp-millis"}}
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "type": "record",
+  "name": "GetIdv",
+  "namespace": "com.repldriven.mono.idv",
+  "fields": [
+    {"name": "verification_id", "type": "string"}
+  ]
+}

@@ -42,34 +42,66 @@
   (or (fdb/load-record store account-id)
       (error/reject :account/not-found "Account not found")))
 
-(defn- load-customer-accounts
-  "Returns the existing accounts for a customer."
-  [store customer-id]
-  (fdb/load-records store "Account" "customer_id" customer-id))
+(defn- load-party-accounts
+  "Returns the existing accounts for a party."
+  [store party-id]
+  (fdb/load-records store "Account" "party_id" party-id))
 
 (defn- save
-  "Saves account to store, writes changelog entry, returns
-  protobuf record or anomaly."
-  [store account]
-  (error/let-nom> [_ (fdb/save-record store (schema/Account->java account))
-                   _
-                   (fdb/write-changelog store "accounts" (:account-id account))]
+  "Saves account to store, writes changelog entry with
+  serialized changelog proto, returns protobuf record or
+  anomaly."
+  [store account changelog]
+  (error/let-nom>
+    [_ (fdb/save-record store (schema/Account->java account))
+     _ (fdb/write-changelog store
+                            "accounts"
+                            (:account-id account)
+                            (schema/AccountChangelog->pb changelog))]
     (schema/Account->pb account)))
 
-(defn- create
-  "Loads customer accounts, applies f, saves. Returns
-  protobuf record or anomaly."
-  [config data f]
+(defn- party-status->rejection
+  "Returns a rejection anomaly for the given party status,
+  or nil if the party is active."
+  [status]
+  (when (not= :active status)
+    (let [s (name status)]
+      (error/reject (keyword "account"
+                             (str "party-" s))
+                    (str "Party is " s)))))
+
+(defn- open-account
+  "Opens an account within a multi-store transaction.
+  Validates the party is active, then creates the account
+  with opened status and payment addresses."
+  [config data]
   (let [{:keys [record-db record-store]} config
-        {:keys [customer-id]} data]
-    (fdb/transact record-db
-                  record-store
-                  "accounts"
-                  (fn [store]
-                    (error/nom->> (load-customer-accounts store customer-id)
-                                  (map schema/pb->Account)
-                                  (f data)
-                                  (save store))))))
+        {:keys [party-id]} data]
+    (fdb/transact-multi
+     record-db
+     record-store
+     (fn [open-store]
+       (let [party-store (open-store "parties")]
+         (if-some [party-rec (fdb/load-record party-store
+                                              party-id)]
+           (let [party (schema/pb->Party party-rec)]
+             (or (party-status->rejection (:status party))
+                 (let [acct-store (open-store "accounts")
+                       existing (->> (load-party-accounts
+                                      acct-store
+                                      party-id)
+                                     (map schema/pb->Account))
+                       account (domain/open-account
+                                acct-store
+                                data
+                                existing)]
+                   (save acct-store
+                         account
+                         {:account-id (:account-id account)
+                          :status-after
+                          (:account-status account)}))))
+           (error/reject :account/party-unknown
+                         "Party not found")))))))
 
 (defn- read
   "Loads account by id. Returns protobuf record or anomaly."
@@ -89,15 +121,22 @@
                   record-store
                   "accounts"
                   (fn [store]
-                    (error/nom->> (load store account-id)
-                                  schema/pb->Account
-                                  f
-                                  (save store))))))
+                    (error/let-nom>
+                      [loaded (error/nom->> (load store account-id)
+                                            schema/pb->Account)
+                       updated (f loaded)]
+                      (save store
+                            updated
+                            {:account-id account-id
+                             :status-before
+                             (:account-status loaded)
+                             :status-after
+                             (:account-status updated)}))))))
 
 (defn open
   "Opens a new account."
   [config data]
-  (->response config (create config data domain/open-account)))
+  (->response config (open-account config data)))
 
 (defn get
   "Returns the current account or rejection anomaly."

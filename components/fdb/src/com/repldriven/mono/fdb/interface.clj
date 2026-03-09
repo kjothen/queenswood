@@ -34,15 +34,14 @@
 (defn scan-records [store opts] (record/scan store opts))
 
 (defn write-changelog
-  [store store-name record-id]
-  (changelog/write store store-name record-id))
+  [store store-name record-id changelog-bytes]
+  (changelog/write store store-name record-id changelog-bytes))
 
 (defn process-changelog
-  ([record-db open-store-fn consumer-id store-name handler]
-   (changelog/process record-db open-store-fn consumer-id store-name handler))
-  ([record-db open-store-fn consumer-id store-name handler opts]
+  ([record-db consumer-id store-name handler]
+   (changelog/process record-db consumer-id store-name handler))
+  ([record-db consumer-id store-name handler opts]
    (changelog/process record-db
-                      open-store-fn
                       consumer-id
                       store-name
                       handler

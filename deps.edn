@@ -11,6 +11,7 @@
     components/error {:local/root "components/error"}
     components/fdb {:local/root "components/fdb"}
     components/http-client {:local/root "components/http-client"}
+    components/idv {:local/root "components/idv"}
     components/json {:local/root "components/json"}
     components/log {:local/root "components/log"}
     components/migrator {:local/root "components/migrator"}
@@ -18,6 +19,7 @@
     components/processor {:local/root "components/processor"}
     components/mqtt {:local/root "components/mqtt"}
     components/organizations {:local/root "components/organizations"}
+    components/party {:local/root "components/party"}
     components/pulsar {:local/root "components/pulsar"}
     components/pulsar-vault-crypto {:local/root
                                     "components/pulsar-vault-crypto"}
@@ -59,6 +61,8 @@
                        "components/fdb/test"
                        "components/fdb/test-resources"
                        "components/http-client/test"
+                       "components/idv/test"
+                       "components/idv/test-resources"
                        "components/log/test"
                        "components/message-bus/test"
                        "components/message-bus/test-resources"
@@ -68,6 +72,8 @@
                        "components/mqtt/test-resources"
                        "components/organizations/test"
                        "components/organizations/test-resources"
+                       "components/party/test"
+                       "components/party/test-resources"
                        "components/pulsar/test"
                        "components/pulsar/test-resources"
                        "components/pulsar-vault-crypto/test"

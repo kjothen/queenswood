@@ -92,30 +92,28 @@
                (test-schema/Pet->java whiskers))
               (SUT/write-changelog store
                                    "pets"
-                                   (:pet-id whiskers))
+                                   (:pet-id whiskers)
+                                   (.getBytes "whiskers-data"))
               (SUT/save-record
                store
                (test-schema/Pet->java rex))
               (SUT/write-changelog store
                                    "pets"
-                                   (:pet-id rex))))
+                                   (:pet-id rex)
+                                   (.getBytes "rex-data"))))
          _ (SUT/process-changelog record-db
-                                  pet-store
                                   "test-consumer"
                                   "pets"
-                                  (fn [_store record]
-                                    (swap! received conj record)))
+                                  (fn [_ctx changelog-bytes]
+                                    (swap! received
+                                      conj
+                                      changelog-bytes)))
          _ (is (= 2 (count @received)))
-         retrieved-whiskers (error/nom-> (first @received)
-                                         test-schema/pb->Pet)
-         _ (is (= whiskers
-                  (utility/record->map
-                   retrieved-whiskers)))
-         retrieved-rex (error/nom-> (second @received)
-                                    test-schema/pb->Pet)
-         _ (is (= rex
-                  (utility/record->map
-                   retrieved-rex)))]))))
+         _ (is (= "whiskers-data"
+                  (String. ^bytes (first @received))))
+         _ (is (= "rex-data"
+                  (String. ^bytes
+                           (second @received))))]))))
 
 (defn- test-query-records
   [sys pet-store]

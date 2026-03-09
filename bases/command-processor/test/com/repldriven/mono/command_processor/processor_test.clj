@@ -8,6 +8,8 @@
 
     [com.repldriven.mono.avro.interface :as avro]
     [com.repldriven.mono.command.interface :as command]
+    [com.repldriven.mono.fdb.interface :as fdb]
+    [com.repldriven.mono.schemas.interface :as schema]
     [com.repldriven.mono.system.interface :as system]
     [com.repldriven.mono.telemetry.interface :as telemetry]
     [com.repldriven.mono.test-system.interface :refer
@@ -37,17 +39,36 @@
                                         :payload payload
                                         :reply-to nil}))))
 
+(defn- seed-active-party
+  [record-db store-fn party-id]
+  (fdb/transact record-db
+                store-fn
+                "parties"
+                (fn [store]
+                  (fdb/save-record
+                   store
+                   (schema/Party->java
+                    {:party-id party-id
+                     :type :person
+                     :status :active
+                     :display-name "Test Party"
+                     :created-at (System/currentTimeMillis)
+                     :updated-at (System/currentTimeMillis)})))))
+
 (deftest process-command-test
   (testing "Commands sent are processed and replied to via message-bus"
     (with-test-system
      [sys "classpath:command-processor/application-test.yml"]
-     (let [{:keys [stop]} (SUT/run sys)]
+     (let [{:keys [stop]} (SUT/run sys)
+           record-db (system/instance sys [:fdb :record-db])
+           store-fn (system/instance sys [:fdb :store])]
+       (seed-active-party record-db store-fn "cust-api-test")
        (telemetry/with-span-tests
         [_ ["send-command" "process-command"]]
         (let [schemas (system/instance sys [:avro :serde])]
           (nom-test> [result (send-command sys
                                            "open-account"
-                                           {:customer-id "cust-api-test"
+                                           {:party-id "cust-api-test"
                                             :name "API Test Account"
                                             :currency "GBP"})
                       _ (is (= "ACCEPTED" (:status result)))

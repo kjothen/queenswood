@@ -21,10 +21,19 @@ store: !system/component
     accounts:
       record-type: Account
       indexes:
-        - name: customer_id_idx
-          field: customer_id
+        - name: party_id_idx
+          field: party_id
     organizations:
       record-type: Organization
+      indexes: []
+    parties:
+      record-type: Party
+      indexes: []
+    person-identifications:
+      record-type: PersonIdentification
+      indexes: []
+    idvs:
+      record-type: Idv
       indexes: []
     api-keys:
       record-type: ApiKey
@@ -43,10 +52,19 @@ meta-store: !system/component
     accounts:
       record-type: Account
       indexes:
-        - name: customer_id_idx
-          field: customer_id
+        - name: party_id_idx
+          field: party_id
     organizations:
       record-type: Organization
+      indexes: []
+    parties:
+      record-type: Party
+      indexes: []
+    person-identifications:
+      record-type: PersonIdentification
+      indexes: []
+    idvs:
+      record-type: Idv
       indexes: []
     api-keys:
       record-type: ApiKey

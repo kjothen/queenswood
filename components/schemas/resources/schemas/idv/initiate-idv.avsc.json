@@ -1,0 +1,8 @@
+{
+  "type": "record",
+  "name": "InitiateIdv",
+  "namespace": "com.repldriven.mono.idv",
+  "fields": [
+    {"name": "party_id", "type": "string"}
+  ]
+}

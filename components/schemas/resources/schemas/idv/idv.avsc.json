@@ -1,0 +1,17 @@
+{
+  "type": "record",
+  "name": "Idv",
+  "namespace": "com.repldriven.mono.idv",
+  "fields": [
+    {"name": "verification_id", "type": "string"},
+    {"name": "party_id",        "type": "string"},
+    {"name": "status",          "type": {"type": "enum",
+                                          "name": "IdvStatus",
+                                          "symbols": ["PENDING", "IN_REVIEW",
+                                                       "ACCEPTED", "REJECTED",
+                                                       "FAILED"]}},
+    {"name": "created_at",   "type": {"type": "long", "logicalType": "timestamp-millis"}},
+    {"name": "completed_at", "type": ["null", {"type": "long", "logicalType": "timestamp-millis"}], "default": null},
+    {"name": "updated_at",   "type": {"type": "long", "logicalType": "timestamp-millis"}}
+  ]
+}

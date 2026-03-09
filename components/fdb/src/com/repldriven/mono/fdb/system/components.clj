@@ -184,7 +184,6 @@
    :system/stop
    (fn [{:system/keys [instance]}] (when instance ((:stop instance))) nil)
    :system/config {:record-db system/required-component
-                   :record-store system/required-component
                    :consumer-id system/required-component
                    :store-name system/required-component
                    :handler system/required-component}

@@ -6,3 +6,10 @@ serde: !system/component
     get-account: schemas/accounts/get-account.avsc.json
     account: schemas/accounts/account.avsc.json
     unknown-command: schemas/accounts/close-account.avsc.json
+    create-party: schemas/party/create-party.avsc.json
+    party: schemas/party/party.avsc.json
+    unknown-party-command: schemas/party/create-party.avsc.json
+    initiate-idv: schemas/idv/initiate-idv.avsc.json
+    get-idv: schemas/idv/get-idv.avsc.json
+    idv: schemas/idv/idv.avsc.json
+    unknown-idv-command: schemas/idv/initiate-idv.avsc.json

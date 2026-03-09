@@ -1,7 +1,5 @@
 (ns com.repldriven.mono.fdb.changelog
   (:refer-clojure :exclude [read])
-  (:require
-    [com.repldriven.mono.fdb.record :as record])
   (:import
     (com.apple.foundationdb KeySelector MutationType)
     (com.apple.foundationdb.record.provider.foundationdb FDBDatabase
@@ -58,11 +56,12 @@
 
 (defn write
   "Writes a versionstamped changelog entry for record-id and bumps the
-  sentinel for store-name within an existing transaction. The record-id
-  is stored as the value so consumers can fetch the record by id. Uses
-  claimLocalVersion to assign a unique user version per call within the
-  same transaction. For use inside transact."
-  [store store-name ^String record-id]
+  sentinel for store-name within an existing transaction. The value is
+  a Tuple of (record-id, changelog-bytes) so consumers get rich
+  transition data without re-loading the entity. Uses claimLocalVersion
+  to assign a unique user version per call within the same transaction.
+  For use inside transact."
+  [store store-name ^String record-id ^bytes changelog-bytes]
   (let [ctx (.getContext store)
         tr (.ensureActive ctx)
         user-ver (.claimLocalVersion ctx)]
@@ -71,7 +70,8 @@
              (.packWithVersionstamp
               (changelog-subspace store-name)
               (Tuple/from (object-array [(Versionstamp/incomplete user-ver)])))
-             (.getBytes record-id))
+             (.pack (Tuple/from (object-array [record-id
+                                               changelog-bytes]))))
     (.mutate tr
              MutationType/ADD
              (sentinel-key store-name)
@@ -97,16 +97,18 @@
 (defn- deduplicate
   "Keeps only the latest changelog entry per record-id. Since entries
   are ordered by versionstamp, last within each group is the most
-  recent write for that record."
+  recent write for that record. Extracts record-id from position 0
+  of the Tuple value."
   [entries]
   (->> entries
-       (group-by (fn [kv] (String. (.getValue kv))))
+       (group-by (fn [kv]
+                   (.getString (Tuple/fromBytes (.getValue kv)) 0)))
        vals
        (map last)))
 
 (defn process
   "Reads unprocessed changelog entries for consumer-id in store-name,
-  calls (handler serialized-bytes) for each, and advances the
+  calls (handler ctx changelog-bytes) for each, and advances the
   checkpoint to the last versionstamp seen. All reads and the
   checkpoint write occur in a single transaction.
 
@@ -114,9 +116,9 @@
     :deduplicate? (default true) — when true, only the latest entry
     per record-id is processed. Set to false for audit consumers that
     need every write."
-  ([^FDBDatabase record-db open-store-fn consumer-id store-name handler]
-   (process record-db open-store-fn consumer-id store-name handler {}))
-  ([^FDBDatabase record-db open-store-fn consumer-id store-name handler opts]
+  ([^FDBDatabase record-db consumer-id store-name handler]
+   (process record-db consumer-id store-name handler {}))
+  ([^FDBDatabase record-db consumer-id store-name handler opts]
    (let [{:keys [deduplicate?] :or {deduplicate? true}} opts]
      (.run record-db
            ^Function
@@ -127,10 +129,9 @@
                    entries (scan ctx store-name cp)]
                (when (seq entries)
                  (doseq [kv (cond-> entries deduplicate? deduplicate)]
-                   (let [record-id (String. (.getValue kv))
-                         store (record/open-store open-store-fn ctx store-name)
-                         record (record/load store record-id)]
-                     (handler store record)))
+                   (let [tuple (Tuple/fromBytes (.getValue kv))
+                         changelog-bytes (.getBytes tuple 1)]
+                     (handler ctx changelog-bytes)))
                  (let [subspace (changelog-subspace store-name)
                        last-vs (.getVersionstamp
                                 (.unpack subspace (.getKey (last entries)))

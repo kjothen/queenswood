@@ -1,6 +1,7 @@
 (ns com.repldriven.mono.accounts.system
   (:require
     [com.repldriven.mono.accounts.core :as core]
+    [com.repldriven.mono.accounts.watcher :as watcher]
 
     [com.repldriven.mono.system.interface :as system]))
 
@@ -12,4 +13,11 @@
                    :schemas system/required-component}
    :system/instance-schema some?})
 
-(system/defcomponents :accounts {:processor processor})
+(def ^:private watcher-handler
+  {:system/start (fn [{:system/keys [config instance]}]
+                   (or instance (watcher/make-handler (:record-store config))))
+   :system/config {:record-store system/required-component}
+   :system/instance-schema fn?})
+
+(system/defcomponents :accounts
+                      {:processor processor :watcher-handler watcher-handler})

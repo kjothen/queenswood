@@ -10,6 +10,8 @@
     [protojure.protobuf.serdes.complex :as serdes.complex]
     [protojure.protobuf.serdes.utils :refer [tag-map]]
     [protojure.protobuf.serdes.stream :as serdes.stream]
+    [com.repldriven.mono.schemas.accounts :as
+     com.repldriven.mono.schemas.accounts]
     [clojure.set :as set]
     [clojure.spec.alpha :as s]))
 
@@ -28,6 +30,42 @@
 (declare cis->Account)
 (declare ecis->Account)
 (declare new-Account)
+(declare cis->AccountChangelog)
+(declare ecis->AccountChangelog)
+(declare new-AccountChangelog)
+
+;;----------------------------------------------------------------------------------
+;;----------------------------------------------------------------------------------
+;; Enumerations
+;;----------------------------------------------------------------------------------
+;;----------------------------------------------------------------------------------
+
+;-----------------------------------------------------------------------------
+; Account-AccountStatus
+;-----------------------------------------------------------------------------
+(def Account-AccountStatus-default :account-status-unknown)
+
+(def Account-AccountStatus-val2label
+  {0 :account-status-unknown 1 :opening 2 :opened 3 :closing 4 :closed})
+
+(def Account-AccountStatus-label2val
+  (set/map-invert Account-AccountStatus-val2label))
+
+(defn cis->Account-AccountStatus
+  [is]
+  (let [val (serdes.core/cis->Enum is)]
+    (get Account-AccountStatus-val2label val val)))
+
+(defn- get-Account-AccountStatus
+  [value]
+  {:pre [(or (int? value) (contains? Account-AccountStatus-label2val value))]}
+  (get Account-AccountStatus-label2val value value))
+
+(defn write-Account-AccountStatus
+  ([tag value os] (write-Account-AccountStatus tag {:optimize false} value os))
+  ([tag options value os]
+   (serdes.core/write-Enum tag options (get-Account-AccountStatus value) os)))
+
 
 ;;----------------------------------------------------------------------------------
 ;;----------------------------------------------------------------------------------
@@ -183,15 +221,15 @@
 ;-----------------------------------------------------------------------------
 ; Account
 ;-----------------------------------------------------------------------------
-(defrecord Account-record [account-id customer-id name currency status
+(defrecord Account-record [account-id party-id name currency account-status
                            created-at-ms updated-at-ms payment-addresses]
   pb/Writer
     (serialize [this os]
       (serdes.core/write-String 1 {:optimize true} (:account-id this) os)
-      (serdes.core/write-String 2 {:optimize true} (:customer-id this) os)
+      (serdes.core/write-String 2 {:optimize true} (:party-id this) os)
       (serdes.core/write-String 3 {:optimize true} (:name this) os)
       (serdes.core/write-String 4 {:optimize true} (:currency this) os)
-      (serdes.core/write-String 5 {:optimize true} (:status this) os)
+      (write-Account-AccountStatus 5 {:optimize true} (:account-status this) os)
       (serdes.core/write-Int64 6 {:optimize true} (:created-at-ms this) os)
       (serdes.core/write-Int64 7 {:optimize true} (:updated-at-ms this) os)
       (serdes.complex/write-repeated serdes.core/write-embedded
@@ -202,28 +240,30 @@
     (gettype [this] "com.repldriven.mono.schemas.accounts.Account"))
 
 (s/def :com.repldriven.mono.schemas.accounts.Account/account-id string?)
-(s/def :com.repldriven.mono.schemas.accounts.Account/customer-id string?)
+(s/def :com.repldriven.mono.schemas.accounts.Account/party-id string?)
 (s/def :com.repldriven.mono.schemas.accounts.Account/name string?)
 (s/def :com.repldriven.mono.schemas.accounts.Account/currency string?)
-(s/def :com.repldriven.mono.schemas.accounts.Account/status string?)
+(s/def :com.repldriven.mono.schemas.accounts.Account/account-status
+  (s/or :keyword keyword?
+        :int int?))
 (s/def :com.repldriven.mono.schemas.accounts.Account/created-at-ms int?)
 (s/def :com.repldriven.mono.schemas.accounts.Account/updated-at-ms int?)
 
 (s/def ::Account-spec
   (s/keys :opt-un
           [:com.repldriven.mono.schemas.accounts.Account/account-id
-           :com.repldriven.mono.schemas.accounts.Account/customer-id
+           :com.repldriven.mono.schemas.accounts.Account/party-id
            :com.repldriven.mono.schemas.accounts.Account/name
            :com.repldriven.mono.schemas.accounts.Account/currency
-           :com.repldriven.mono.schemas.accounts.Account/status
+           :com.repldriven.mono.schemas.accounts.Account/account-status
            :com.repldriven.mono.schemas.accounts.Account/created-at-ms
            :com.repldriven.mono.schemas.accounts.Account/updated-at-ms]))
 (def Account-defaults
   {:account-id ""
-   :customer-id ""
+   :party-id ""
    :name ""
    :currency ""
-   :status ""
+   :account-status Account-AccountStatus-default
    :created-at-ms 0
    :updated-at-ms 0
    :payment-addresses []})
@@ -235,10 +275,10 @@
                 (fn [tag index]
                   (case index
                     1 [:account-id (serdes.core/cis->String is)]
-                    2 [:customer-id (serdes.core/cis->String is)]
+                    2 [:party-id (serdes.core/cis->String is)]
                     3 [:name (serdes.core/cis->String is)]
                     4 [:currency (serdes.core/cis->String is)]
-                    5 [:status (serdes.core/cis->String is)]
+                    5 [:account-status (cis->Account-AccountStatus is)]
                     6 [:created-at-ms (serdes.core/cis->Int64 is)]
                     7 [:updated-at-ms (serdes.core/cis->Int64 is)]
                     10 [:payment-addresses
@@ -274,4 +314,75 @@
 
 (def ^:protojure.protobuf.any/record Account-meta
   {:type "com.repldriven.mono.schemas.accounts.Account" :decoder pb->Account})
+
+;-----------------------------------------------------------------------------
+; AccountChangelog
+;-----------------------------------------------------------------------------
+(defrecord AccountChangelog-record [account-id status-before status-after]
+  pb/Writer
+    (serialize [this os]
+      (serdes.core/write-String 1 {:optimize true} (:account-id this) os)
+      (write-Account-AccountStatus 2 {:optimize true} (:status-before this) os)
+      (write-Account-AccountStatus 3 {:optimize true} (:status-after this) os))
+  pb/TypeReflection
+    (gettype [this] "com.repldriven.mono.schemas.accounts.AccountChangelog"))
+
+(s/def :com.repldriven.mono.schemas.accounts.AccountChangelog/account-id
+  string?)
+(s/def :com.repldriven.mono.schemas.accounts.AccountChangelog/status-before
+  (s/or :keyword keyword?
+        :int int?))
+(s/def :com.repldriven.mono.schemas.accounts.AccountChangelog/status-after
+  (s/or :keyword keyword?
+        :int int?))
+(s/def ::AccountChangelog-spec
+  (s/keys
+   :opt-un
+   [:com.repldriven.mono.schemas.accounts.AccountChangelog/account-id
+    :com.repldriven.mono.schemas.accounts.AccountChangelog/status-before
+    :com.repldriven.mono.schemas.accounts.AccountChangelog/status-after]))
+(def AccountChangelog-defaults
+  {:account-id ""
+   :status-before Account-AccountStatus-default
+   :status-after Account-AccountStatus-default})
+
+(defn cis->AccountChangelog
+  "CodedInputStream to AccountChangelog"
+  [is]
+  (->> (tag-map AccountChangelog-defaults
+                (fn [tag index]
+                  (case index
+                    1 [:account-id (serdes.core/cis->String is)]
+                    2 [:status-before (cis->Account-AccountStatus is)]
+                    3 [:status-after (cis->Account-AccountStatus is)]
+
+                    [index (serdes.core/cis->undefined tag is)]))
+                is)
+       (map->AccountChangelog-record)))
+
+(defn ecis->AccountChangelog
+  "Embedded CodedInputStream to AccountChangelog"
+  [is]
+  (serdes.core/cis->embedded cis->AccountChangelog is))
+
+(defn new-AccountChangelog
+  "Creates a new instance from a map, similar to map->AccountChangelog except that
+  it properly accounts for nested messages, when applicable.
+  "
+  [init]
+  {:pre [(if (s/valid? ::AccountChangelog-spec init)
+           true
+           (throw (ex-info "Invalid input"
+                           (s/explain-data ::AccountChangelog-spec init))))]}
+  (-> (merge AccountChangelog-defaults init)
+      (map->AccountChangelog-record)))
+
+(defn pb->AccountChangelog
+  "Protobuf to AccountChangelog"
+  [input]
+  (cis->AccountChangelog (serdes.stream/new-cis input)))
+
+(def ^:protojure.protobuf.any/record AccountChangelog-meta
+  {:type "com.repldriven.mono.schemas.accounts.AccountChangelog"
+   :decoder pb->AccountChangelog})
 

@@ -20,15 +20,16 @@
 
 (def ^:private test-account-open
   {:account-id "acc-test-id"
-   :customer-id "acc-test"
+   :party-id "acc-test"
    :name "Test Account"
    :currency "GBP"
    :payment-addresses []
-   :status "OPENING"
+   :account-status :opened
    :created-at-ms 1700000000000
    :updated-at-ms 1700000000000})
 
-(def ^:private test-account-close (assoc test-account-open :status "CLOSING"))
+(def ^:private test-account-close
+  (assoc test-account-open :account-status :closing))
 
 (defn- command-processor
   "Simulates Processor — subscribes to command messages
@@ -48,12 +49,12 @@
     {:stop (fn [] (message-bus/unsubscribe bus :command))}))
 
 (defn- open-account-request
-  [customer-id name currency]
+  [party-id name currency]
   (http/request {:method :post
                  :url (str *base-url* "/v1/accounts")
                  :headers {"Content-Type" "application/json"
                            "Idempotency-Key" (str (util/uuidv7))}
-                 :body (json/write-str {"customer-id" customer-id
+                 :body (json/write-str {"party-id" party-id
                                         "name" name
                                         "currency" currency})}))
 
@@ -69,10 +70,15 @@
     (nom-test> [res (open-account-request "acc-test" "Test Account" "GBP")
                 _ (is (= 200 (:status res)))
                 body (http/res->edn res)
-                _ (is (= (select-keys test-account-open
-                                      [:account-id :customer-id :name :currency
-                                       :status])
-                         (dissoc body :created-at-ms :updated-at-ms)))])
+                _ (is (= (-> (select-keys test-account-open
+                                          [:account-id :party-id
+                                           :name :currency
+                                           :account-status])
+                             (update :account-status name))
+                         (select-keys body
+                                      [:account-id :party-id
+                                       :name :currency
+                                       :account-status])))])
     (stop)))
 
 (defn- test-close-account
@@ -81,10 +87,15 @@
     (nom-test> [res (close-account-request "acc-test-id")
                 _ (is (= 200 (:status res)))
                 body (http/res->edn res)
-                _ (is (= (select-keys test-account-close
-                                      [:account-id :customer-id :name :currency
-                                       :status])
-                         (dissoc body :created-at-ms :updated-at-ms)))])
+                _ (is (= (-> (select-keys test-account-close
+                                          [:account-id :party-id
+                                           :name :currency
+                                           :account-status])
+                             (update :account-status name))
+                         (select-keys body
+                                      [:account-id :party-id
+                                       :name :currency
+                                       :account-status])))])
     (stop)))
 
 (defn- test-open-api-spec

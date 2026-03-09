@@ -4,16 +4,15 @@
 
 (defn start
   "Starts a daemon thread polling process-changelog with the
-  given handler. Config keys: record-db, record-store,
-  consumer-id, store-name, handler (2-arity fn [store record]).
+  given handler. Config keys: record-db, consumer-id,
+  store-name, handler (2-arity fn [ctx changelog-bytes]).
   Returns {:stop fn}."
   [config]
   (let [running (atom true)
-        {:keys [record-db record-store consumer-id store-name handler]} config
+        {:keys [record-db consumer-id store-name handler]} config
         t (doto (Thread. (fn []
                            (while @running
                              (try (changelog/process record-db
-                                                     record-store
                                                      consumer-id
                                                      store-name
                                                      handler)

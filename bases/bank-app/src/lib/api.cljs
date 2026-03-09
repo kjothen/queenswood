@@ -26,13 +26,13 @@
              (let [raw-key (aget body "raw-key")] (reset! api-key raw-key))))))
 
 (defn create-account
-  [{:strs [customer-id name currency]}]
+  [{:strs [party-id name currency]}]
   (-> (js/fetch "/v1/accounts"
                 #js {:method "POST"
                      :headers #js {"Content-Type" "application/json"
                                    "Authorization" (str "Bearer " @api-key)
                                    "Idempotency-Key" (str (random-uuid))}
-                     :body (js/JSON.stringify #js {"customer-id" customer-id
+                     :body (js/JSON.stringify #js {"party-id" party-id
                                                    "name" name
                                                    "currency" currency})})
       (.then parse-response)))

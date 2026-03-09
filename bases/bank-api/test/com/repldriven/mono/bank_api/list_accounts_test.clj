@@ -45,10 +45,10 @@
          ids (mapv #(format "acct-%03d" %) (range 1 4))
          accounts (mapv (fn [id]
                           {:account-id id
-                           :customer-id (str "cust-" id)
+                           :party-id (str "cust-" id)
                            :name (str "Account " id)
                            :currency "GBP"
-                           :status "opened"})
+                           :account-status :opened})
                         ids)]
      (doseq [a accounts] (seed-account record-db record-store a))
      (binding [*base-url* (server/http-local-url jetty)]

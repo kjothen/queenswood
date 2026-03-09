@@ -18,16 +18,16 @@
 
 (def Account
   {:account-id "acc_01JMABC123DEF456"
-   :customer-id "cust_01JMABC"
+   :party-id "cust_01JMABC"
    :name "Jane Doe"
    :currency "GBP"
-   :status "OPEN"})
+   :account-status :opened})
 
 (def AccountId (:account-id Account))
 
 (def AccountList {:accounts [Account]})
 
-(def CreateAccountRequest (select-keys Account [:customer-id :name :currency]))
+(def CreateAccountRequest (select-keys Account [:party-id :name :currency]))
 
 (def CreateAccountResponse Account)
 

@@ -11,17 +11,17 @@
   [:map
    {:json-schema/example examples/Account}
    [:account-id [:ref "AccountId"]]
-   [:customer-id string?]
+   [:party-id string?]
    [:name string?]
    [:currency string?]
-   [:status string?]
+   [:account-status [:enum :opening :opened :closing :closed]]
    [:created-at {:optional true} [:maybe string?]]
    [:updated-at {:optional true} [:maybe string?]]])
 
 (def CreateAccountRequest
   [:map
    {:json-schema/example examples/CreateAccountRequest}
-   [:customer-id string?]
+   [:party-id string?]
    [:name string?]
    [:currency string?]])
 
