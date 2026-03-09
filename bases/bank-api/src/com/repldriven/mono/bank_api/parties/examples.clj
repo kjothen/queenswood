@@ -8,7 +8,14 @@
            :status 404
            :detail "Party not found"}})
 
-(def registry (examples-registry [#'PartyNotFound]))
+(def DuplicateNationalIdentifier
+  {:value {:title "REJECTED"
+           :type "party/duplicate-national-identifier"
+           :status 422
+           :detail "National identifier already exists"}})
+
+(def registry
+  (examples-registry [#'PartyNotFound #'DuplicateNationalIdentifier]))
 
 (def Party
   {:party-id "py_01JMABC123"
@@ -28,6 +35,8 @@
    :given-name "Jane"
    :family-name "Doe"
    :date-of-birth 19900115
-   :nationality "GB"})
+   :nationality "GB"
+   :national-identifier
+   {:type "NATIONAL_INSURANCE" :value "TN000001A" :issuing-country "GBR"}})
 
 (def CreatePartyResponse Party)

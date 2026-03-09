@@ -9,6 +9,9 @@
   let familyName = $state("Doe");
   let dateOfBirth = $state("1990-01-15");
   let nationality = $state("GB");
+  let niType = $state("NATIONAL_INSURANCE");
+  let niValue = $state("TN000001A");
+  let niCountry = $state("GBR");
   let result = $state(null);
   let httpStatus = $state(null);
   let submitting = $state(false);
@@ -30,6 +33,11 @@
         "family-name": familyName,
         "date-of-birth": dobToInt(dateOfBirth),
         "nationality": nationality,
+        "national-identifier": {
+          "type": niType,
+          "value": niValue,
+          "issuing-country": niCountry,
+        },
       });
       httpStatus = res["http-status"];
       result = res.body;
@@ -79,6 +87,29 @@
              placeholder="e.g. GB" />
     </label>
 
+    <fieldset>
+      <legend>National Identifier</legend>
+
+      <label>
+        Type
+        <select bind:value={niType} required>
+          <option value="NATIONAL_INSURANCE">National Insurance</option>
+        </select>
+      </label>
+
+      <label>
+        Value
+        <input type="text" bind:value={niValue} required
+               placeholder="e.g. TN000001A" />
+      </label>
+
+      <label>
+        Issuing Country
+        <input type="text" bind:value={niCountry} required maxlength="3"
+               placeholder="e.g. GBR" />
+      </label>
+    </fieldset>
+
     <button type="submit" disabled={submitting}>
       {submitting ? "Creating..." : "Create Party"}
     </button>
@@ -116,11 +147,25 @@
     font-weight: 500;
   }
 
-  input {
+  input, select {
     padding: 0.5rem;
     border: 1px solid #ccc;
     border-radius: 4px;
     font-size: 1rem;
+  }
+
+  fieldset {
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  legend {
+    font-weight: 600;
+    padding: 0 0.5rem;
   }
 
   button {

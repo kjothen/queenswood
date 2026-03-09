@@ -29,6 +29,13 @@ store: !system/component
     parties:
       record-type: Party
       indexes: []
+    party-national-identifiers:
+      record-type: PartyNationalIdentifier
+      primary-key: [party_id, type]
+      indexes:
+        - name: type_value_unique_idx
+          fields: [type, value]
+          unique: true
     person-identifications:
       record-type: PersonIdentification
       indexes: []
@@ -60,6 +67,13 @@ meta-store: !system/component
     parties:
       record-type: Party
       indexes: []
+    party-national-identifiers:
+      record-type: PartyNationalIdentifier
+      primary-key: [party_id, type]
+      indexes:
+        - name: type_value_unique_idx
+          fields: [type, value]
+          unique: true
     person-identifications:
       record-type: PersonIdentification
       indexes: []

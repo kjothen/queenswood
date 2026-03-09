@@ -30,9 +30,11 @@
 
 (defn load
   "Loads a record by primary key from an open FDBRecordStore.
-  Returns serialized bytes or nil. For use inside transact."
-  [store primary-key]
-  (some-> (.loadRecord store (Tuple/from (into-array Object [primary-key])))
+  Returns serialized bytes or nil. For use inside transact.
+  Accepts one or more primary key parts for composite keys."
+  [store & primary-key-parts]
+  (some-> (.loadRecord store
+                       (Tuple/from (into-array Object primary-key-parts)))
           record->bytes))
 
 (defn save
@@ -142,6 +144,8 @@
           (mapv record->bytes))
         has-more (> (count records) limit)
         page (cond-> (if has-more (subvec records 0 limit) records)
-               reverse? rseq
-               reverse? vec)]
+                     reverse?
+                     rseq
+                     reverse?
+                     vec)]
     {:records page :has-more has-more}))

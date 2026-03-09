@@ -1,0 +1,26 @@
+syntax = "proto2";
+
+package com.repldriven.mono.schemas.party;
+
+import "record_metadata_options.proto";
+
+option java_outer_classname = "PartyNationalIdentifierProto";
+
+message PartyNationalIdentifier {
+  option (com.apple.foundationdb.record.record).usage = RECORD;
+
+  required string party_id        = 1 [(com.apple.foundationdb.record.field).primary_key = true];
+  required IdentifierType type    = 2;
+  required string value           = 3;
+  required string issuing_country = 4;
+  required int64 created_at       = 5;
+
+  enum IdentifierType {
+    IDENTIFIER_TYPE_UNKNOWN = 0;
+    NATIONAL_INSURANCE      = 1;
+    PASSPORT                = 2;
+    DRIVING_LICENCE         = 3;
+    NATIONAL_ID_CARD        = 4;
+    TAX_ID                  = 5;
+  }
+}

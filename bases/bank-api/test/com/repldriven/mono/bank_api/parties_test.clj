@@ -57,7 +57,11 @@
                          "given-name" "Jane"
                          "family-name" "Doe"
                          "date-of-birth" 19900115
-                         "nationality" "GB"})}))
+                         "nationality" "GB"
+                         "national-identifier"
+                         {"type" "NATIONAL_INSURANCE"
+                          "value" "TN000001A"
+                          "issuing-country" "GBR"}})}))
 
 (deftest create-party-test
   (with-test-system [sys

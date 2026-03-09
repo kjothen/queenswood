@@ -19,7 +19,9 @@
 
 ;; Record layer
 
-(defn load-record [store primary-key] (record/load store primary-key))
+(defn load-record
+  [store & primary-key-parts]
+  (apply record/load store primary-key-parts))
 
 (defn save-record [store record] (record/save store record))
 

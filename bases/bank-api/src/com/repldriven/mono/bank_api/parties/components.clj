@@ -18,6 +18,12 @@
    [:created-at {:optional true} [:maybe string?]]
    [:updated-at {:optional true} [:maybe string?]]])
 
+(def NationalIdentifier
+  [:map
+   [:type string?]
+   [:value string?]
+   [:issuing-country string?]])
+
 (def CreatePartyRequest
   [:map
    {:json-schema/example examples/CreatePartyRequest}
@@ -27,7 +33,9 @@
    [:middle-names {:optional true} [:maybe string?]]
    [:family-name string?]
    [:date-of-birth int?]
-   [:nationality string?]])
+   [:nationality string?]
+   [:national-identifier {:optional true}
+    [:maybe [:ref "NationalIdentifier"]]]])
 
 (def CreatePartyResponse [:ref "Party"])
 
@@ -42,5 +50,6 @@
      [:prev {:optional true} string?]]]])
 
 (def registry
-  (components-registry [#'PartyId #'Party #'CreatePartyRequest
-                        #'CreatePartyResponse #'PartyList]))
+  (components-registry [#'PartyId #'Party #'NationalIdentifier
+                        #'CreatePartyRequest #'CreatePartyResponse
+                        #'PartyList]))

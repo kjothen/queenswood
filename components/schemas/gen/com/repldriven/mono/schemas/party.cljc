@@ -23,6 +23,9 @@
 (declare cis->Party)
 (declare ecis->Party)
 (declare new-Party)
+(declare cis->PartyNationalIdentifier)
+(declare ecis->PartyNationalIdentifier)
+(declare new-PartyNationalIdentifier)
 (declare cis->PartyChangelog)
 (declare ecis->PartyChangelog)
 (declare new-PartyChangelog)
@@ -81,6 +84,46 @@
   ([tag value os] (write-Party-PartyStatus tag {:optimize false} value os))
   ([tag options value os]
    (serdes.core/write-Enum tag options (get-Party-PartyStatus value) os)))
+
+;-----------------------------------------------------------------------------
+; PartyNationalIdentifier-IdentifierType
+;-----------------------------------------------------------------------------
+(def PartyNationalIdentifier-IdentifierType-default :identifier-type-unknown)
+
+(def PartyNationalIdentifier-IdentifierType-val2label
+  {0 :identifier-type-unknown
+   1 :national-insurance
+   2 :passport
+   3 :driving-licence
+   4 :national-id-card
+   5 :tax-id})
+
+(def PartyNationalIdentifier-IdentifierType-label2val
+  (set/map-invert PartyNationalIdentifier-IdentifierType-val2label))
+
+(defn cis->PartyNationalIdentifier-IdentifierType
+  [is]
+  (let [val (serdes.core/cis->Enum is)]
+    (get PartyNationalIdentifier-IdentifierType-val2label val val)))
+
+(defn- get-PartyNationalIdentifier-IdentifierType
+  [value]
+  {:pre [(or (int? value)
+             (contains? PartyNationalIdentifier-IdentifierType-label2val
+                        value))]}
+  (get PartyNationalIdentifier-IdentifierType-label2val value value))
+
+(defn write-PartyNationalIdentifier-IdentifierType
+  ([tag value os]
+   (write-PartyNationalIdentifier-IdentifierType tag
+                                                 {:optimize false}
+                                                 value
+                                                 os))
+  ([tag options value os]
+   (serdes.core/write-Enum tag
+                           options
+                           (get-PartyNationalIdentifier-IdentifierType value)
+                           os)))
 
 
 
@@ -172,6 +215,94 @@
 
 (def ^:protojure.protobuf.any/record Party-meta
   {:type "com.repldriven.mono.schemas.party.Party" :decoder pb->Party})
+
+;-----------------------------------------------------------------------------
+; PartyNationalIdentifier
+;-----------------------------------------------------------------------------
+(defrecord PartyNationalIdentifier-record [party-id type value issuing-country
+                                           created-at]
+  pb/Writer
+    (serialize [this os]
+      (serdes.core/write-String 1 {:optimize true} (:party-id this) os)
+      (write-PartyNationalIdentifier-IdentifierType 2
+                                                    {:optimize true}
+                                                    (:type this)
+                                                    os)
+      (serdes.core/write-String 3 {:optimize true} (:value this) os)
+      (serdes.core/write-String 4 {:optimize true} (:issuing-country this) os)
+      (serdes.core/write-Int64 5 {:optimize true} (:created-at this) os))
+  pb/TypeReflection
+    (gettype [this]
+      "com.repldriven.mono.schemas.party.PartyNationalIdentifier"))
+
+(s/def :com.repldriven.mono.schemas.party.PartyNationalIdentifier/party-id
+  string?)
+(s/def :com.repldriven.mono.schemas.party.PartyNationalIdentifier/type
+  (s/or :keyword keyword?
+        :int int?))
+(s/def :com.repldriven.mono.schemas.party.PartyNationalIdentifier/value string?)
+(s/def
+  :com.repldriven.mono.schemas.party.PartyNationalIdentifier/issuing-country
+  string?)
+(s/def :com.repldriven.mono.schemas.party.PartyNationalIdentifier/created-at
+  int?)
+(s/def ::PartyNationalIdentifier-spec
+  (s/keys
+   :opt-un
+   [:com.repldriven.mono.schemas.party.PartyNationalIdentifier/party-id
+    :com.repldriven.mono.schemas.party.PartyNationalIdentifier/type
+    :com.repldriven.mono.schemas.party.PartyNationalIdentifier/value
+    :com.repldriven.mono.schemas.party.PartyNationalIdentifier/issuing-country
+    :com.repldriven.mono.schemas.party.PartyNationalIdentifier/created-at]))
+(def PartyNationalIdentifier-defaults
+  {:party-id ""
+   :type PartyNationalIdentifier-IdentifierType-default
+   :value ""
+   :issuing-country ""
+   :created-at 0})
+
+(defn cis->PartyNationalIdentifier
+  "CodedInputStream to PartyNationalIdentifier"
+  [is]
+  (->> (tag-map PartyNationalIdentifier-defaults
+                (fn [tag index]
+                  (case index
+                    1 [:party-id (serdes.core/cis->String is)]
+                    2 [:type (cis->PartyNationalIdentifier-IdentifierType is)]
+                    3 [:value (serdes.core/cis->String is)]
+                    4 [:issuing-country (serdes.core/cis->String is)]
+                    5 [:created-at (serdes.core/cis->Int64 is)]
+
+                    [index (serdes.core/cis->undefined tag is)]))
+                is)
+       (map->PartyNationalIdentifier-record)))
+
+(defn ecis->PartyNationalIdentifier
+  "Embedded CodedInputStream to PartyNationalIdentifier"
+  [is]
+  (serdes.core/cis->embedded cis->PartyNationalIdentifier is))
+
+(defn new-PartyNationalIdentifier
+  "Creates a new instance from a map, similar to map->PartyNationalIdentifier except that
+  it properly accounts for nested messages, when applicable.
+  "
+  [init]
+  {:pre [(if (s/valid? ::PartyNationalIdentifier-spec init)
+           true
+           (throw (ex-info "Invalid input"
+                           (s/explain-data ::PartyNationalIdentifier-spec
+                                           init))))]}
+  (-> (merge PartyNationalIdentifier-defaults init)
+      (map->PartyNationalIdentifier-record)))
+
+(defn pb->PartyNationalIdentifier
+  "Protobuf to PartyNationalIdentifier"
+  [input]
+  (cis->PartyNationalIdentifier (serdes.stream/new-cis input)))
+
+(def ^:protojure.protobuf.any/record PartyNationalIdentifier-meta
+  {:type "com.repldriven.mono.schemas.party.PartyNationalIdentifier"
+   :decoder pb->PartyNationalIdentifier})
 
 ;-----------------------------------------------------------------------------
 ; PartyChangelog

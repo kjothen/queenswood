@@ -5,7 +5,10 @@
     [com.repldriven.mono.avro.interface :as avro]
     [com.repldriven.mono.error.interface :as error]
     [com.repldriven.mono.fdb.interface :as fdb]
-    [com.repldriven.mono.schemas.interface :as schema]))
+    [com.repldriven.mono.schemas.interface :as schema])
+  (:import
+    (com.apple.foundationdb.record
+     RecordIndexUniquenessViolation)))
 
 (defn- save-party
   "Saves party to store, writes changelog entry with
@@ -26,28 +29,68 @@
   (fdb/save-record store
                    (schema/PersonIdentification->java person-id)))
 
+(defn- save-party-national-identifier
+  "Saves party-national-identifier to store."
+  [store party-ni]
+  (fdb/save-record
+   store
+   (schema/PartyNationalIdentifier->java party-ni)))
+
+(defn- uniqueness-violation?
+  "Returns true if anomaly was caused by a
+  RecordIndexUniquenessViolation."
+  [anomaly]
+  (when (error/anomaly? anomaly)
+    (loop [ex (:exception (error/payload anomaly))]
+      (cond
+       (nil? ex)
+       false
+       (instance? RecordIndexUniquenessViolation ex)
+       true
+       :else
+       (recur (.getCause ex))))))
+
 (defn- create
-  "Creates a party and person-identification in a single
-  transaction. Returns protobuf party record or anomaly."
+  "Creates a party, person-identification, and optional
+  national-identifier in a single transaction. Returns
+  protobuf party record or anomaly."
   [config data]
-  (let [{:keys [record-db record-store]} config]
-    (fdb/transact-multi
-     record-db
-     record-store
-     (fn [open-store]
-       (let [party (domain/new-party data)
-             person-id (domain/new-person-identification
-                        data
-                        (:party-id party))
-             party-store (open-store "parties")
-             pid-store (open-store "person-identifications")]
-         (error/let-nom>
-           [_ (save-person-identification pid-store person-id)
-            result (save-party party-store
-                               party
-                               {:party-id (:party-id party)
-                                :status-after (:status party)})]
-           result))))))
+  (let [{:keys [record-db record-store]} config
+        result
+        (fdb/transact-multi
+         record-db
+         record-store
+         (fn [open-store]
+           (let [party (domain/new-party data)
+                 party-id (:party-id party)
+                 person-id (domain/new-person-identification
+                            data
+                            party-id)
+                 party-store (open-store "parties")
+                 pid-store (open-store
+                            "person-identifications")
+                 ni (:national-identifier data)]
+             (error/let-nom>
+               [_ (save-person-identification pid-store
+                                              person-id)
+                _ (if ni
+                    (save-party-national-identifier
+                     (open-store
+                      "party-national-identifiers")
+                     (domain/new-party-national-identifier
+                      ni
+                      party-id))
+                    nil)
+                result (save-party
+                        party-store
+                        party
+                        {:party-id party-id
+                         :status-after (:status party)})]
+               result))))]
+    (if (uniqueness-violation? result)
+      (error/reject :party/duplicate-national-identifier
+                    "National identifier already exists")
+      result)))
 
 (defn- ->response
   "Converts a protobuf record to an ACCEPTED response.

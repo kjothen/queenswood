@@ -9,7 +9,7 @@
   (:import
     (com.apple.foundationdb FDB)
     (com.apple.foundationdb.record RecordMetaData)
-    (com.apple.foundationdb.record.metadata Index Key$Expressions)
+    (com.apple.foundationdb.record.metadata Index IndexOptions Key$Expressions)
     (com.apple.foundationdb.record.provider.foundationdb APIVersion
                                                          FDBDatabaseFactory
                                                          FDBMetaDataStore
@@ -96,34 +96,61 @@
         method (.getMethod clazz "getDescriptor" (into-array Class []))]
     (.invoke method nil (into-array Object []))))
 
+(defn- build-index-expr
+  [{:strs [field fields]}]
+  (if fields
+    (Key$Expressions/concatenateFields ^java.util.List fields)
+    (Key$Expressions/field field)))
+
+(defn- set-primary-key
+  [b record-type primary-key]
+  (when primary-key
+    (.setPrimaryKey (.getRecordType b record-type)
+                    (Key$Expressions/concatenateFields
+                     ^java.util.List primary-key))))
+
+(defn- add-indexes
+  [b record-type indexes]
+  (doseq [{:strs [name unique] :as idx-cfg} indexes]
+    (let [expr (build-index-expr idx-cfg)
+          opts (if unique
+                 IndexOptions/UNIQUE_OPTIONS
+                 IndexOptions/EMPTY_OPTIONS)]
+      (.addIndex b
+                 record-type
+                 (Index. name expr "value" opts)))))
+
+(defn- apply-all-primary-keys
+  [b record-types]
+  (doseq [{:strs [record-type primary-key]} (vals record-types)]
+    (set-primary-key b record-type primary-key)))
+
+(defn- build-meta-data
+  [descriptor record-types]
+  (let [file-desc (resolve-descriptor descriptor)
+        b (-> (RecordMetaData/newBuilder)
+              (.setRecords file-desc))]
+    (apply-all-primary-keys b record-types)
+    (doseq [[_store-name {:strs [record-type indexes]}]
+            record-types]
+      (add-indexes b record-type indexes))
+    (.build b)))
+
 (def store
-  {:system/start
-   (fn [{:system/keys [config instance]}]
-     (or instance
-         (let [{:keys [descriptor record-types]} config
-               file-desc (resolve-descriptor descriptor)
-               registry (reduce-kv
-                         (fn [reg store-name record-type-cfg]
-                           (let [{:keys [record-type indexes]} record-type-cfg
-                                 b (-> (RecordMetaData/newBuilder)
-                                       (.setRecords file-desc))]
-                             (doseq [{:keys [name field]} indexes]
-                               (.addIndex
-                                b
-                                record-type
-                                (Index. name (Key$Expressions/field field))))
-                             (assoc reg store-name (.build b))))
-                         {}
-                         record-types)]
-           (fn [ctx store-name]
-             (let [meta (get registry store-name)]
-               (when-not meta
-                 (throw (ex-info "Unknown record store" {:store store-name})))
-               (-> (FDBRecordStore/newBuilder)
-                   (.setMetaDataProvider meta)
-                   (.setContext ctx)
-                   (.setKeySpacePath (keyspace/path store-name))
-                   .createOrOpen))))))
+  {:system/start (fn [{:system/keys [config instance]}]
+                   (or instance
+                       (let [{:keys [descriptor record-types]} config
+                             meta (build-meta-data descriptor record-types)
+                             store-names (set (keys record-types))]
+                         (fn [ctx store-name]
+                           (when-not (store-names store-name)
+                             (throw (ex-info "Unknown record store"
+                                             {:store store-name})))
+                           (-> (FDBRecordStore/newBuilder)
+                               (.setMetaDataProvider meta)
+                               (.setContext ctx)
+                               (.setKeySpacePath (keyspace/path store-name))
+                               .createOrOpen)))))
    :system/config {:descriptor system/required-component
                    :record-types system/required-component}
    :system/config-schema [:map [:descriptor string?] [:record-types map?]]
@@ -132,16 +159,6 @@
 ;; ---
 ;; meta-store
 ;; ---
-
-(defn- build-meta-data
-  [descriptor record-types]
-  (let [file-desc (resolve-descriptor descriptor)
-        b (-> (RecordMetaData/newBuilder)
-              (.setRecords file-desc))]
-    (doseq [[_store-name {:keys [record-type indexes]}] record-types]
-      (doseq [{:keys [name field]} indexes]
-        (.addIndex b record-type (Index. name (Key$Expressions/field field)))))
-    (.build b)))
 
 (def meta-store
   {:system/start

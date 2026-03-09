@@ -12,7 +12,10 @@
   "Creates a new party map with status pending."
   [data]
   (let [now (System/currentTimeMillis)]
-    (-> (apply dissoc data person-identification-keys)
+    (-> (apply dissoc
+               data
+               :national-identifier
+               person-identification-keys)
         (assoc :party-id (encryption/generate-id "py")
                :type (keyword (str/lower-case (:type data)))
                :status :pending
@@ -25,6 +28,18 @@
   (assoc party
          :status :active
          :updated-at (System/currentTimeMillis)))
+
+(defn new-party-national-identifier
+  "Creates a party-national-identifier map linked to
+  party-id."
+  [national-identifier party-id]
+  (let [{:keys [type value issuing-country]}
+        national-identifier]
+    {:party-id party-id
+     :type (keyword (str/replace (str/lower-case type) "_" "-"))
+     :value value
+     :issuing-country issuing-country
+     :created-at (System/currentTimeMillis)}))
 
 (defn new-person-identification
   "Creates a person-identification map linked to party-id."

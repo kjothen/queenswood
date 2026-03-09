@@ -222,7 +222,7 @@
 ; Account
 ;-----------------------------------------------------------------------------
 (defrecord Account-record [account-id party-id name currency account-status
-                           created-at-ms updated-at-ms payment-addresses]
+                           created-at updated-at payment-addresses]
   pb/Writer
     (serialize [this os]
       (serdes.core/write-String 1 {:optimize true} (:account-id this) os)
@@ -230,8 +230,8 @@
       (serdes.core/write-String 3 {:optimize true} (:name this) os)
       (serdes.core/write-String 4 {:optimize true} (:currency this) os)
       (write-Account-AccountStatus 5 {:optimize true} (:account-status this) os)
-      (serdes.core/write-Int64 6 {:optimize true} (:created-at-ms this) os)
-      (serdes.core/write-Int64 7 {:optimize true} (:updated-at-ms this) os)
+      (serdes.core/write-Int64 6 {:optimize true} (:created-at this) os)
+      (serdes.core/write-Int64 7 {:optimize true} (:updated-at this) os)
       (serdes.complex/write-repeated serdes.core/write-embedded
                                      10
                                      (:payment-addresses this)
@@ -246,26 +246,25 @@
 (s/def :com.repldriven.mono.schemas.accounts.Account/account-status
   (s/or :keyword keyword?
         :int int?))
-(s/def :com.repldriven.mono.schemas.accounts.Account/created-at-ms int?)
-(s/def :com.repldriven.mono.schemas.accounts.Account/updated-at-ms int?)
+(s/def :com.repldriven.mono.schemas.accounts.Account/created-at int?)
+(s/def :com.repldriven.mono.schemas.accounts.Account/updated-at int?)
 
 (s/def ::Account-spec
-  (s/keys :opt-un
-          [:com.repldriven.mono.schemas.accounts.Account/account-id
-           :com.repldriven.mono.schemas.accounts.Account/party-id
-           :com.repldriven.mono.schemas.accounts.Account/name
-           :com.repldriven.mono.schemas.accounts.Account/currency
-           :com.repldriven.mono.schemas.accounts.Account/account-status
-           :com.repldriven.mono.schemas.accounts.Account/created-at-ms
-           :com.repldriven.mono.schemas.accounts.Account/updated-at-ms]))
+  (s/keys :opt-un [:com.repldriven.mono.schemas.accounts.Account/account-id
+                   :com.repldriven.mono.schemas.accounts.Account/party-id
+                   :com.repldriven.mono.schemas.accounts.Account/name
+                   :com.repldriven.mono.schemas.accounts.Account/currency
+                   :com.repldriven.mono.schemas.accounts.Account/account-status
+                   :com.repldriven.mono.schemas.accounts.Account/created-at
+                   :com.repldriven.mono.schemas.accounts.Account/updated-at]))
 (def Account-defaults
   {:account-id ""
    :party-id ""
    :name ""
    :currency ""
    :account-status Account-AccountStatus-default
-   :created-at-ms 0
-   :updated-at-ms 0
+   :created-at 0
+   :updated-at 0
    :payment-addresses []})
 
 (defn cis->Account
@@ -279,8 +278,8 @@
                     3 [:name (serdes.core/cis->String is)]
                     4 [:currency (serdes.core/cis->String is)]
                     5 [:account-status (cis->Account-AccountStatus is)]
-                    6 [:created-at-ms (serdes.core/cis->Int64 is)]
-                    7 [:updated-at-ms (serdes.core/cis->Int64 is)]
+                    6 [:created-at (serdes.core/cis->Int64 is)]
+                    7 [:updated-at (serdes.core/cis->Int64 is)]
                     10 [:payment-addresses
                         (serdes.complex/cis->repeated ecis->PaymentAddress is)]
 

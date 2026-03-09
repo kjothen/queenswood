@@ -7,6 +7,7 @@ import "schemas/idv/idv.proto";
 import "schemas/keys/api_key.proto";
 import "schemas/organizations/organization.proto";
 import "schemas/party/party.proto";
+import "schemas/party/party-national-identifier.proto";
 import "schemas/person-identification/person-identification.proto";
 import "schemas/persons/person.proto";
 
@@ -23,4 +24,5 @@ message RecordTypeUnion {
   optional com.repldriven.mono.schemas.person_identification.PersonIdentification _PersonIdentification = 5;
   optional com.repldriven.mono.schemas.party.Party _Party = 6;
   optional com.repldriven.mono.schemas.idv.Idv _Idv = 7;
+  optional com.repldriven.mono.schemas.party.PartyNationalIdentifier _PartyNationalIdentifier = 8;
 }

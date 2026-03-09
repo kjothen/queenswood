@@ -109,15 +109,15 @@
 ;-----------------------------------------------------------------------------
 ; Organization
 ;-----------------------------------------------------------------------------
-(defrecord Organization-record [organization-id name status created-at-ms
-                                updated-at-ms]
+(defrecord Organization-record [organization-id name status created-at
+                                updated-at]
   pb/Writer
     (serialize [this os]
       (serdes.core/write-String 1 {:optimize true} (:organization-id this) os)
       (serdes.core/write-String 2 {:optimize true} (:name this) os)
       (serdes.core/write-String 3 {:optimize true} (:status this) os)
-      (serdes.core/write-Int64 4 {:optimize true} (:created-at-ms this) os)
-      (serdes.core/write-Int64 5 {:optimize true} (:updated-at-ms this) os))
+      (serdes.core/write-Int64 4 {:optimize true} (:created-at this) os)
+      (serdes.core/write-Int64 5 {:optimize true} (:updated-at this) os))
   pb/TypeReflection
     (gettype [this] "com.repldriven.mono.schemas.organizations.Organization"))
 
@@ -125,20 +125,18 @@
   string?)
 (s/def :com.repldriven.mono.schemas.organizations.Organization/name string?)
 (s/def :com.repldriven.mono.schemas.organizations.Organization/status string?)
-(s/def :com.repldriven.mono.schemas.organizations.Organization/created-at-ms
-  int?)
-(s/def :com.repldriven.mono.schemas.organizations.Organization/updated-at-ms
-  int?)
+(s/def :com.repldriven.mono.schemas.organizations.Organization/created-at int?)
+(s/def :com.repldriven.mono.schemas.organizations.Organization/updated-at int?)
 (s/def ::Organization-spec
   (s/keys
    :opt-un
    [:com.repldriven.mono.schemas.organizations.Organization/organization-id
     :com.repldriven.mono.schemas.organizations.Organization/name
     :com.repldriven.mono.schemas.organizations.Organization/status
-    :com.repldriven.mono.schemas.organizations.Organization/created-at-ms
-    :com.repldriven.mono.schemas.organizations.Organization/updated-at-ms]))
+    :com.repldriven.mono.schemas.organizations.Organization/created-at
+    :com.repldriven.mono.schemas.organizations.Organization/updated-at]))
 (def Organization-defaults
-  {:organization-id "" :name "" :status "" :created-at-ms 0 :updated-at-ms 0})
+  {:organization-id "" :name "" :status "" :created-at 0 :updated-at 0})
 
 (defn cis->Organization
   "CodedInputStream to Organization"
@@ -149,8 +147,8 @@
                     1 [:organization-id (serdes.core/cis->String is)]
                     2 [:name (serdes.core/cis->String is)]
                     3 [:status (serdes.core/cis->String is)]
-                    4 [:created-at-ms (serdes.core/cis->Int64 is)]
-                    5 [:updated-at-ms (serdes.core/cis->Int64 is)]
+                    4 [:created-at (serdes.core/cis->Int64 is)]
+                    5 [:updated-at (serdes.core/cis->Int64 is)]
 
                     [index (serdes.core/cis->undefined tag is)]))
                 is)

@@ -33,8 +33,8 @@
 ;-----------------------------------------------------------------------------
 ; ApiKey
 ;-----------------------------------------------------------------------------
-(defrecord ApiKey-record [id org-id key-hash key-prefix name created-at-ms
-                          revoked-at-ms]
+(defrecord ApiKey-record [id org-id key-hash key-prefix name created-at
+                          revoked-at]
   pb/Writer
     (serialize [this os]
       (serdes.core/write-String 1 {:optimize true} (:id this) os)
@@ -42,8 +42,8 @@
       (serdes.core/write-String 3 {:optimize true} (:key-hash this) os)
       (serdes.core/write-String 4 {:optimize true} (:key-prefix this) os)
       (serdes.core/write-String 5 {:optimize true} (:name this) os)
-      (serdes.core/write-Int64 6 {:optimize true} (:created-at-ms this) os)
-      (serdes.core/write-Int64 7 {:optimize true} (:revoked-at-ms this) os))
+      (serdes.core/write-Int64 6 {:optimize true} (:created-at this) os)
+      (serdes.core/write-Int64 7 {:optimize true} (:revoked-at this) os))
   pb/TypeReflection
     (gettype [this] "com.repldriven.mono.schemas.keys.ApiKey"))
 
@@ -52,24 +52,24 @@
 (s/def :com.repldriven.mono.schemas.keys.ApiKey/key-hash string?)
 (s/def :com.repldriven.mono.schemas.keys.ApiKey/key-prefix string?)
 (s/def :com.repldriven.mono.schemas.keys.ApiKey/name string?)
-(s/def :com.repldriven.mono.schemas.keys.ApiKey/created-at-ms int?)
-(s/def :com.repldriven.mono.schemas.keys.ApiKey/revoked-at-ms int?)
+(s/def :com.repldriven.mono.schemas.keys.ApiKey/created-at int?)
+(s/def :com.repldriven.mono.schemas.keys.ApiKey/revoked-at int?)
 (s/def ::ApiKey-spec
   (s/keys :opt-un [:com.repldriven.mono.schemas.keys.ApiKey/id
                    :com.repldriven.mono.schemas.keys.ApiKey/org-id
                    :com.repldriven.mono.schemas.keys.ApiKey/key-hash
                    :com.repldriven.mono.schemas.keys.ApiKey/key-prefix
                    :com.repldriven.mono.schemas.keys.ApiKey/name
-                   :com.repldriven.mono.schemas.keys.ApiKey/created-at-ms
-                   :com.repldriven.mono.schemas.keys.ApiKey/revoked-at-ms]))
+                   :com.repldriven.mono.schemas.keys.ApiKey/created-at
+                   :com.repldriven.mono.schemas.keys.ApiKey/revoked-at]))
 (def ApiKey-defaults
   {:id ""
    :org-id ""
    :key-hash ""
    :key-prefix ""
    :name ""
-   :created-at-ms 0
-   :revoked-at-ms 0})
+   :created-at 0
+   :revoked-at 0})
 
 (defn cis->ApiKey
   "CodedInputStream to ApiKey"
@@ -82,8 +82,8 @@
                     3 [:key-hash (serdes.core/cis->String is)]
                     4 [:key-prefix (serdes.core/cis->String is)]
                     5 [:name (serdes.core/cis->String is)]
-                    6 [:created-at-ms (serdes.core/cis->Int64 is)]
-                    7 [:revoked-at-ms (serdes.core/cis->Int64 is)]
+                    6 [:created-at (serdes.core/cis->Int64 is)]
+                    7 [:revoked-at (serdes.core/cis->Int64 is)]
 
                     [index (serdes.core/cis->undefined tag is)]))
                 is)

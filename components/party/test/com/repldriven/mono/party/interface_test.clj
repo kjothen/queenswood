@@ -87,7 +87,11 @@
                           :given-name "Jane"
                           :family-name "Doe"
                           :date-of-birth 19900115
-                          :nationality "GB"}]
+                          :nationality "GB"
+                          :national-identifier
+                          {:type "NATIONAL_INSURANCE"
+                           :value "AB123456C"
+                           :issuing-country "GB"}}]
       (nom-test>
         [result (send-command proc
                               schemas
@@ -99,6 +103,37 @@
          _ (is (= :pending (:status decoded)))
          _ (is (= :person (:type decoded)))
          _ (is (= "Jane Doe" (:display-name decoded)))]))))
+
+(defn- test-duplicate-national-identifier
+  [proc schemas]
+  (testing "duplicate national identifier returns rejection"
+    (let [ni {:type "NATIONAL_INSURANCE"
+              :value "ZZ999999D"
+              :issuing-country "GB"}
+          payload {:type "PERSON"
+                   :display-name "First"
+                   :given-name "First"
+                   :family-name "Person"
+                   :date-of-birth 19900101
+                   :nationality "GB"
+                   :national-identifier ni}]
+      (nom-test>
+        [result (send-command proc
+                              schemas
+                              "create-party"
+                              payload)
+         _ (is (= "ACCEPTED" (:status result)))])
+      (let [result (send-command proc
+                                 schemas
+                                 "create-party"
+                                 (assoc payload
+                                        :display-name
+                                        "Second"
+                                        :given-name
+                                        "Second"))]
+        (is (error/rejection? result))
+        (is (= :party/duplicate-national-identifier
+               (error/kind result)))))))
 
 (defn- test-watcher-transitions
   [proc schemas record-db store-fn]
@@ -146,5 +181,6 @@
                           record-db (system/instance sys [:fdb :record-db])
                           store-fn (system/instance sys [:fdb :store])]
                       (test-create-party proc schemas)
+                      (test-duplicate-national-identifier proc schemas)
                       (test-watcher-transitions proc schemas record-db store-fn)
                       (test-unknown-command proc schemas))))

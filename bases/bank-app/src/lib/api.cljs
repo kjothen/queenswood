@@ -38,7 +38,8 @@
 
 (defn create-party
   [{:strs [display-name given-name middle-names
-           family-name date-of-birth nationality]}]
+           family-name date-of-birth nationality
+           national-identifier]}]
   (let [body (cond-> {"type" "PERSON"
                       "display-name" display-name
                       "given-name" given-name
@@ -46,7 +47,10 @@
                       "date-of-birth" date-of-birth
                       "nationality" nationality}
                      middle-names
-                     (assoc "middle-names" middle-names))]
+                     (assoc "middle-names" middle-names)
+                     national-identifier
+                     (assoc "national-identifier"
+                            national-identifier))]
     (-> (js/fetch
          "/v1/parties"
          #js {:method "POST"

@@ -23,7 +23,8 @@
      OrganizationChangelogProto$OrganizationChangelog)
     (com.repldriven.mono.schemas.party
      PartyProto$Party
-     PartyChangelogProto$PartyChangelog)
+     PartyChangelogProto$PartyChangelog
+     PartyNationalIdentifierProto$PartyNationalIdentifier)
     (com.repldriven.mono.schemas.person_identification
      PersonIdentificationProto$PersonIdentification)
     (com.repldriven.mono.schemas.persons PersonProto$Person)))
@@ -47,6 +48,15 @@
 (defn Party->java
   [m]
   (PartyProto$Party/parseFrom (Party->pb m)))
+
+(def pb->PartyNationalIdentifier party/pb->PartyNationalIdentifier)
+(defn PartyNationalIdentifier->pb
+  [m]
+  (proto/->pb (party/new-PartyNationalIdentifier m)))
+(defn PartyNationalIdentifier->java
+  [m]
+  (PartyNationalIdentifierProto$PartyNationalIdentifier/parseFrom
+   (PartyNationalIdentifier->pb m)))
 
 (def pb->PersonIdentification person-identification/pb->PersonIdentification)
 (defn PersonIdentification->pb
