@@ -74,14 +74,14 @@ npm run dev
 
 ### API Surface
 
-| Endpoint                            | Description                        |
-| ----------------------------------- | ---------------------------------- |
-| `POST /v1/organizations`            | Create organisation + API key      |
-| `POST /v1/parties`                  | Register a customer                |
-| `GET /v1/parties[/{party-id}]`      | List / retrieve parties            |
-| `POST /v1/accounts`                 | Open an account for an active party|
-| `GET /v1/accounts[/{account-id}]`   | List / retrieve accounts           |
-| `POST /v1/accounts/{account-id}/close` | Initiate account closure        |
+| Endpoint                               | Description                         |
+| -------------------------------------- | ----------------------------------- |
+| `POST /v1/organizations`               | Create organisation + API key       |
+| `POST /v1/parties`                     | Register a customer                 |
+| `GET /v1/parties[/{party-id}]`         | List / retrieve parties             |
+| `POST /v1/accounts`                    | Open an account for an active party |
+| `GET /v1/accounts[/{account-id}]`      | List / retrieve accounts            |
+| `POST /v1/accounts/{account-id}/close` | Initiate account closure            |
 
 Interactive OpenAPI documentation is served at
 [http://localhost:8080](http://localhost:8080).
@@ -139,7 +139,7 @@ pipelines without defensive `try/catch` noise.
 | `log`     | Structured logging                                         |
 | `utility` | Deep merge, UUID v7, YAML conversion, collection helpers   |
 | `spec`    | Malli-based validation with human-readable errors          |
-| `cli`     | CLI argument validation and exit handling                   |
+| `cli`     | CLI argument validation and exit handling                  |
 
 ### Persistence
 
@@ -177,11 +177,11 @@ pipelines without defensive `try/catch` noise.
 
 ### Serialisation
 
-| Component | Purpose                                             |
-| --------- | --------------------------------------------------- |
-| `avro`    | Apache Avro schema-based serialisation              |
+| Component | Purpose                                                      |
+| --------- | ------------------------------------------------------------ |
+| `avro`    | Apache Avro schema-based serialisation                       |
 | `schemas` | Protobuf definitions (Person, Account, Organization, ApiKey) |
-| `json`    | JSON read/write with anomaly errors                 |
+| `json`    | JSON read/write with anomaly errors                          |
 
 ### Observability
 
@@ -191,12 +191,12 @@ pipelines without defensive `try/catch` noise.
 
 ### Domain
 
-| Component       | Purpose                                                |
-| --------------- | ------------------------------------------------------ |
-| `accounts`      | Account lifecycle — open, close, suspend, reopen, archive |
+| Component       | Purpose                                                                   |
+| --------------- | ------------------------------------------------------------------------- |
+| `accounts`      | Account lifecycle — open, close, suspend, reopen, archive                 |
 | `organizations` | Organisation management — create org, API key generation and verification |
-| `party`         | Party creation and management                          |
-| `idv`           | Identity verification processing                       |
+| `party`         | Party creation and management                                             |
+| `idv`           | Identity verification processing                                          |
 
 ### Testing
 
@@ -222,9 +222,11 @@ pipelines without defensive `try/catch` noise.
   development shell
 - [direnv](https://direnv.net/) — automatically loads the Nix environment when
   you `cd` into the repo. Install globally with:
+
   ```bash
   nix profile install nixpkgs#direnv
   ```
+
 - Docker (for integration tests via Testcontainers)
 
 Verify your setup with:
