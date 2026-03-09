@@ -11,6 +11,81 @@ Systems are described as data — YAML/EDN configuration files drive lifecycle,
 dependency injection, and environment management, with no global state and no
 framework magic.
 
+## Exemplar: Queenswood Bank
+
+The repo ships an end-to-end banking application — **Queenswood** — that
+onboards customers and manages accounts. It demonstrates how the component
+library composes into a production-shaped system.
+
+### Customer Onboarding Flow
+
+1. **Create an organisation** — an admin creates a tenant and receives an API
+   key (prefixed `sk_live_`, returned once, stored hashed).
+2. **Create a party** — the organisation uses its API key to register a
+   customer with personal details and a national identifier (uniqueness
+   enforced).
+3. **Identity verification** — an IDV record is automatically created and
+   accepted, triggering the party's transition from `pending` to `active`.
+4. **Open an account** — only active parties may open accounts. Each account
+   is assigned a UK SCAN payment address (sort code + sequential account
+   number).
+5. **Account lifecycle** — accounts move through `opened` → `closing` →
+   `closed`, driven by API calls and reactive watchers.
+
+### How It Works
+
+Queenswood is assembled from the component library:
+
+- **FoundationDB Record Layer** stores organisations, parties, accounts, and
+  IDV records with multi-store transactions for atomicity.
+- **Changelog watchers** on FDB drive the reactive flow — IDV acceptance
+  activates the party; account closing auto-transitions to closed.
+- **Apache Pulsar** carries commands between the HTTP API and processors,
+  with Avro-serialised messages and request-reply.
+- **Reitit + Malli** provide routing, schema validation, and OpenAPI spec
+  generation.
+- The whole system — containers, message brokers, databases — is declared in
+  YAML and started by the same lifecycle machinery used in tests.
+
+### Running It
+
+Start the backend from a REPL by evaluating the `comment` block in
+`bank-monolith`'s main namespace. This boots the full system — FDB, Pulsar,
+HTTP server — inside Testcontainers:
+
+```clojure
+;; In bases/bank-monolith/src/com/repldriven/mono/bank_monolith/main.clj
+(comment
+  (require '[com.repldriven.mono.testcontainers.interface])
+
+  (def sys
+    (start "classpath:bank-monolith/application-test.yml"
+           :dev))
+  (stop sys))
+```
+
+Then start the Svelte front-end, which proxies API requests to the running
+backend:
+
+```bash
+cd bases/bank-app
+npm run dev
+```
+
+### API Surface
+
+| Endpoint                            | Description                        |
+| ----------------------------------- | ---------------------------------- |
+| `POST /v1/organizations`            | Create organisation + API key      |
+| `POST /v1/parties`                  | Register a customer                |
+| `GET /v1/parties[/{party-id}]`      | List / retrieve parties            |
+| `POST /v1/accounts`                 | Open an account for an active party|
+| `GET /v1/accounts[/{account-id}]`   | List / retrieve accounts           |
+| `POST /v1/accounts/{account-id}/close` | Initiate account closure        |
+
+Interactive OpenAPI documentation is served at
+[http://localhost:8080](http://localhost:8080).
+
 ## Architecture
 
 ### Polylith
@@ -64,6 +139,7 @@ pipelines without defensive `try/catch` noise.
 | `log`     | Structured logging                                         |
 | `utility` | Deep merge, UUID v7, YAML conversion, collection helpers   |
 | `spec`    | Malli-based validation with human-readable errors          |
+| `cli`     | CLI argument validation and exit handling                   |
 
 ### Persistence
 
@@ -82,6 +158,7 @@ pipelines without defensive `try/catch` noise.
 | `mqtt`        | MQTT publish/subscribe                                    |
 | `message-bus` | Protocol abstraction over messaging backends              |
 | `command`     | Request-reply and async command dispatch over message-bus |
+| `processor`   | Message processor protocol and dispatch                   |
 
 ### Web & HTTP
 
@@ -112,6 +189,15 @@ pipelines without defensive `try/catch` noise.
 | ----------- | ------------------------------------------------------ |
 | `telemetry` | OpenTelemetry tracing with W3C traceparent propagation |
 
+### Domain
+
+| Component       | Purpose                                                |
+| --------------- | ------------------------------------------------------ |
+| `accounts`      | Account lifecycle — open, close, suspend, reopen, archive |
+| `organizations` | Organisation management — create org, API key generation and verification |
+| `party`         | Party creation and management                          |
+| `idv`           | Identity verification processing                       |
+
 ### Testing
 
 | Component        | Purpose                                                    |
@@ -119,6 +205,7 @@ pipelines without defensive `try/catch` noise.
 | `test-system`    | `with-test-system` lifecycle macro, `nom-test>` assertions |
 | `testcontainers` | Declarative container infrastructure for integration tests |
 | `test-resources` | Shared test configuration                                  |
+| `test-schemas`   | Protobuf test fixtures                                     |
 
 ## Deployed Applications
 
@@ -131,8 +218,20 @@ pipelines without defensive `try/catch` noise.
 
 ### Prerequisites
 
-- Clojure CLI
+- [Nix](https://nixos.org/) — all dependencies are managed through the Nix
+  development shell
+- [direnv](https://direnv.net/) — automatically loads the Nix environment when
+  you `cd` into the repo. Install globally with:
+  ```bash
+  nix profile install nixpkgs#direnv
+  ```
 - Docker (for integration tests via Testcontainers)
+
+Verify your setup with:
+
+```bash
+./scripts/check-setup.sh
+```
 
 ### Run all tests
 
@@ -168,9 +267,6 @@ clojure -M:lint/clj-kondo --lint bases components
 
 ## Key Patterns
 
-**Referential transparency** — functions return the same value for the same
-inputs. Side effects are pushed to the edges.
-
 **Keyword keys throughout** — all data, including from Pulsar, MQTT, and HTTP
 request bodies, uses kebab-case keyword keys.
 
@@ -180,7 +276,7 @@ request bodies, uses kebab-case keyword keys.
 and other dependencies through request context, not through dynamic vars or
 atoms.
 
-**Testcontainers as system components** — PostgreSQL, Pulsar, Vault, and other
+**Testcontainers as system components** — FoundationDB, Pulsar, Vault, and other
 infrastructure are declared in test YAML configs and managed by the same
 lifecycle machinery used in production.
 
