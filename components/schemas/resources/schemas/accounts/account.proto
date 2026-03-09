@@ -27,8 +27,8 @@ message Account {
   optional string name = 3;
   optional string currency = 4;
   required AccountStatus account_status = 5;
-  optional int64 created_at_ms = 6;
-  optional int64 updated_at_ms = 7;
+  optional int64 created_at = 6;
+  optional int64 updated_at = 7;
   repeated PaymentAddress payment_addresses = 10;
 
   enum AccountStatus {

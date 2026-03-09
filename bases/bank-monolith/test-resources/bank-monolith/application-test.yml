@@ -72,69 +72,122 @@ system:
       admin: !system/local-ref admin
       schemas: !system/local-ref schemas
       topics:
-        - topic: "persistent://tenant-1/namespace-1/topic-command"
+        - topic: "persistent://tenant-1/namespace-1/topic-accounts-command"
           partitions: 1
           schema: !keyword command
-        - topic: "persistent://tenant-1/namespace-1/topic-command-response"
+        - topic: "persistent://tenant-1/namespace-1/topic-accounts-command-response"
+          partitions: 1
+          schema: !keyword command-response
+        - topic: "persistent://tenant-1/namespace-1/topic-parties-command"
+          partitions: 1
+          schema: !keyword command
+        - topic: "persistent://tenant-1/namespace-1/topic-parties-command-response"
           partitions: 1
           schema: !keyword command-response
 
     producers: !system/component
       system/component-kind: pulsar/producers
-      command:
+      accounts-command:
         _: !system/local-ref topics
         client: !system/local-ref client
         conf:
           accessMode: !pulsar/access-mode Shared
           schema: !keyword command
-          topicName: "persistent://tenant-1/namespace-1/topic-command"
+          topicName: "persistent://tenant-1/namespace-1/topic-accounts-command"
         schemas: !system/local-ref schemas
-      command-response:
+      accounts-command-response:
         _: !system/local-ref topics
         client: !system/local-ref client
         conf:
           accessMode: !pulsar/access-mode Shared
           schema: !keyword command-response
-          topicName: "persistent://tenant-1/namespace-1/topic-command-response"
+          topicName: "persistent://tenant-1/namespace-1/topic-accounts-command-response"
+        schemas: !system/local-ref schemas
+      parties-command:
+        _: !system/local-ref topics
+        client: !system/local-ref client
+        conf:
+          accessMode: !pulsar/access-mode Shared
+          schema: !keyword command
+          topicName: "persistent://tenant-1/namespace-1/topic-parties-command"
+        schemas: !system/local-ref schemas
+      parties-command-response:
+        _: !system/local-ref topics
+        client: !system/local-ref client
+        conf:
+          accessMode: !pulsar/access-mode Shared
+          schema: !keyword command-response
+          topicName: "persistent://tenant-1/namespace-1/topic-parties-command-response"
         schemas: !system/local-ref schemas
 
     consumers: !system/component
       system/component-kind: pulsar/consumers
-      command:
+      accounts-command:
         _: !system/local-ref topics
         client: !system/local-ref client
         conf:
           cryptoFailureAction: !pulsar/crypto-failure-action CONSUME
           schema: !pulsar/schema AUTO_CONSUME
-          subscriptionName: bank-monolith-command
-          subscriptionType: !pulsar/subscription-type Shared
-          topicNames: ["persistent://tenant-1/namespace-1/topic-command"]
-        schemas: !system/local-ref schemas
-      command-response:
-        _: !system/local-ref topics
-        client: !system/local-ref client
-        conf:
-          cryptoFailureAction: !pulsar/crypto-failure-action CONSUME
-          schema: !pulsar/schema AUTO_CONSUME
-          subscriptionName: bank-monolith-command-response
+          subscriptionName: bank-monolith-accounts-command
           subscriptionType: !pulsar/subscription-type Shared
           topicNames:
-            ["persistent://tenant-1/namespace-1/topic-command-response"]
+            ["persistent://tenant-1/namespace-1/topic-accounts-command"]
+        schemas: !system/local-ref schemas
+      accounts-command-response:
+        _: !system/local-ref topics
+        client: !system/local-ref client
+        conf:
+          cryptoFailureAction: !pulsar/crypto-failure-action CONSUME
+          schema: !pulsar/schema AUTO_CONSUME
+          subscriptionName: bank-monolith-accounts-command-response
+          subscriptionType: !pulsar/subscription-type Shared
+          topicNames:
+            ["persistent://tenant-1/namespace-1/topic-accounts-command-response"]
+        schemas: !system/local-ref schemas
+      parties-command:
+        _: !system/local-ref topics
+        client: !system/local-ref client
+        conf:
+          cryptoFailureAction: !pulsar/crypto-failure-action CONSUME
+          schema: !pulsar/schema AUTO_CONSUME
+          subscriptionName: bank-monolith-parties-command
+          subscriptionType: !pulsar/subscription-type Shared
+          topicNames:
+            ["persistent://tenant-1/namespace-1/topic-parties-command"]
+        schemas: !system/local-ref schemas
+      parties-command-response:
+        _: !system/local-ref topics
+        client: !system/local-ref client
+        conf:
+          cryptoFailureAction: !pulsar/crypto-failure-action CONSUME
+          schema: !pulsar/schema AUTO_CONSUME
+          subscriptionName: bank-monolith-parties-command-response
+          subscriptionType: !pulsar/subscription-type Shared
+          topicNames:
+            ["persistent://tenant-1/namespace-1/topic-parties-command-response"]
         schemas: !system/local-ref schemas
 
     message-bus-producers: !system/component
       system/component-kind: pulsar/message-bus-producers
-      command:
-        producer: !system/local-ref producers.command
-      command-response:
-        producer: !system/local-ref producers.command-response
+      accounts-command:
+        producer: !system/local-ref producers.accounts-command
+      accounts-command-response:
+        producer: !system/local-ref producers.accounts-command-response
+      parties-command:
+        producer: !system/local-ref producers.parties-command
+      parties-command-response:
+        producer: !system/local-ref producers.parties-command-response
 
     message-bus-consumers: !system/component
       system/component-kind: pulsar/message-bus-consumers
-      command:
-        consumer: !system/local-ref consumers.command
-      command-response:
-        consumer: !system/local-ref consumers.command-response
+      accounts-command:
+        consumer: !system/local-ref consumers.accounts-command
+      accounts-command-response:
+        consumer: !system/local-ref consumers.accounts-command-response
+      parties-command:
+        consumer: !system/local-ref consumers.parties-command
+      parties-command-response:
+        consumer: !system/local-ref consumers.parties-command-response
 
   message-bus:
     bus: !system/component
@@ -144,7 +197,7 @@ system:
 
   fdb: !include testcontainers/fdb-test.yml
   avro: !include avro/avro-test.yml
-  command:
+  accounts:
     processor: !system/component
       system/component-kind: accounts/processor
       record-db: !system/ref fdb.record-db
@@ -162,12 +215,60 @@ system:
     dispatcher: !system/component
       system/component-kind: command/dispatcher
       bus: !system/ref message-bus.bus
+      command-channel: !keyword accounts-command
+      command-response-channel: !keyword accounts-command-response
+  parties:
+    processor: !system/component
+      system/component-kind: party/processor
+      record-db: !system/ref fdb.record-db
+      record-store: !system/ref fdb.store
+      schemas: !system/ref avro.serde
+    watcher-handler: !system/component
+      system/component-kind: party/watcher-handler
+      record-store: !system/ref fdb.store
+    watcher: !system/component
+      system/component-kind: fdb/watcher
+      record-db: !system/ref fdb.record-db
+      consumer-id: parties-watcher
+      store-name: idvs
+      handler: !system/local-ref watcher-handler
+    dispatcher: !system/component
+      system/component-kind: command/dispatcher
+      bus: !system/ref message-bus.bus
+      command-channel: !keyword parties-command
+      command-response-channel: !keyword parties-command-response
+  idv:
+    processor: !system/component
+      system/component-kind: idv/processor
+      record-db: !system/ref fdb.record-db
+      record-store: !system/ref fdb.store
+      schemas: !system/ref avro.serde
+    party-watcher-handler: !system/component
+      system/component-kind: idv/party-watcher-handler
+      record-store: !system/ref fdb.store
+    party-watcher: !system/component
+      system/component-kind: fdb/watcher
+      record-db: !system/ref fdb.record-db
+      consumer-id: idv-party-watcher
+      store-name: parties
+      handler: !system/local-ref party-watcher-handler
+    watcher-handler: !system/component
+      system/component-kind: idv/watcher-handler
+      record-store: !system/ref fdb.store
+    watcher: !system/component
+      system/component-kind: fdb/watcher
+      record-db: !system/ref fdb.record-db
+      consumer-id: idv-watcher
+      store-name: idvs
+      handler: !system/local-ref watcher-handler
   server:
     handler: !system/required-component
     interceptors: !system/component
       system/component-kind: server/interceptors
       admin-api-key: !env ADMIN_API_KEY
-      command-dispatcher: !system/ref command.dispatcher
+      dispatchers:
+        accounts: !system/ref accounts.dispatcher
+        parties: !system/ref parties.dispatcher
       avro: !system/ref avro.serde
       record-db: !system/ref fdb.record-db
       record-store: !system/ref fdb.store

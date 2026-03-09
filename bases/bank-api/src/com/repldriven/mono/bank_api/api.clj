@@ -14,6 +14,10 @@
     [com.repldriven.mono.bank-api.organizations.examples :as
      organizations.examples]
     [com.repldriven.mono.bank-api.organizations.routes :as organizations]
+    [com.repldriven.mono.bank-api.parties.components :as
+     parties.components]
+    [com.repldriven.mono.bank-api.parties.examples :as parties.examples]
+    [com.repldriven.mono.bank-api.parties.routes :as parties]
     [com.repldriven.mono.bank-api.schema :as schema]
 
     [com.repldriven.mono.server.interface :as server]
@@ -30,7 +34,8 @@
                                {"ErrorResponse" schema/ErrorResponseSchema}
                                accounts.components/registry
                                api-keys.components/registry
-                               organizations.components/registry)}}))
+                               organizations.components/registry
+                               parties.components/registry)}}))
 
 (defn- routes
   [ctx]
@@ -49,7 +54,8 @@
              :examples (merge examples/registry
                               accounts.examples/registry
                               api-keys.examples/registry
-                              organizations.examples/registry)}}
+                              organizations.examples/registry
+                              parties.examples/registry)}}
            :handler (server/standard-openapi-handler)}}]
    (into ["/v1"
           {:interceptors (concat telemetry/trace-span
@@ -61,7 +67,7 @@
             403 (schema/ErrorResponse [#'examples/Forbidden])
             500 (schema/ErrorResponse [#'examples/InternalServerError
                                        #'examples/BadResponse])}}]
-         (concat accounts/routes organizations/routes))])
+         (concat accounts/routes organizations/routes parties/routes))])
 
 (defn app
   [ctx]

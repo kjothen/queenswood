@@ -21,24 +21,43 @@
   - bus: message-bus instance
   - process-fn: function that takes a command envelope
     and returns a result map or anomaly
-  - opts: optional map (reserved for future use)
+  - opts: optional map with keys:
+    - :command-channel - keyword for receiving commands
+    - :command-response-channel - keyword for sending
+      responses
 
   Returns: {:stop (fn [])} — call stop to unsubscribe"
   ([bus process-fn] (process bus process-fn {}))
-  ([bus process-fn _opts]
-   (message-bus/subscribe
-    bus
-    :command
-    (fn [data]
-      (let [parent-ctx (telemetry/extract-parent-context data)]
-        (telemetry/with-span-parent
-         "process-command"
-         parent-ctx
-         (select-keys data [:id :command :correlation-id :causation-id])
-         (fn []
-           (let [resp (response/command-response data (process-fn data))]
-             (log/debugf "command.processor/process: [data=%s, response=%s]"
+  ([bus process-fn opts]
+   (let [{:keys [command-channel command-response-channel]
+          :or {command-channel :command
+               command-response-channel :command-response}}
+         opts]
+     (message-bus/subscribe
+      bus
+      command-channel
+      (fn [data]
+        (let [parent-ctx
+              (telemetry/extract-parent-context data)]
+          (telemetry/with-span-parent
+           "process-command"
+           parent-ctx
+           (select-keys data
+                        [:id :command
+                         :correlation-id :causation-id])
+           (fn []
+             (let [resp (response/command-response
                          data
-                         resp)
-             (message-bus/send bus :command-response resp)))))))
-   {:stop (fn [] (message-bus/unsubscribe bus :command))}))
+                         (process-fn data))]
+               (log/debugf
+                "command.processor/process: [data=%s, response=%s]"
+                data
+                resp)
+               (message-bus/send
+                bus
+                command-response-channel
+                resp)))))))
+     {:stop (fn []
+              (message-bus/unsubscribe
+               bus
+               command-channel))})))

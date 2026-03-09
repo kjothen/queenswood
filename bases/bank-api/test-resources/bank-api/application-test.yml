@@ -1,5 +1,16 @@
 system:
   message-bus: !include bank-api/message-bus-test.yml
   avro: !include avro/avro-test.yml
-  command: !include bank-api/command-test.yml
+  accounts:
+    dispatcher: !system/component
+      system/component-kind: command/dispatcher
+      bus: !system/ref message-bus.bus
+      command-channel: !keyword accounts-command
+      command-response-channel: !keyword accounts-command-response
+  parties:
+    dispatcher: !system/component
+      system/component-kind: command/dispatcher
+      bus: !system/ref message-bus.bus
+      command-channel: !keyword parties-command
+      command-response-channel: !keyword parties-command-response
   server: !include bank-api/server-test.yml

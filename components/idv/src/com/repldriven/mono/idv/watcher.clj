@@ -5,6 +5,24 @@
     [com.repldriven.mono.fdb.interface :as fdb]
     [com.repldriven.mono.schemas.interface :as schema]))
 
+(defn party-changelog-handler
+  "Returns a watcher handler that initiates IDV when a party
+  is created with pending status. Watches the parties store."
+  [record-store]
+  (fn [ctx changelog-bytes]
+    (let [changelog (schema/pb->PartyChangelog changelog-bytes)]
+      (when (= :pending (:status-after changelog))
+        (let [store (record-store ctx "idvs")
+              idv (domain/new-idv {:party-id (:party-id changelog)})]
+          (fdb/save-record store (schema/Idv->java idv))
+          (fdb/write-changelog
+           store
+           "idvs"
+           (:verification-id idv)
+           (schema/IdvChangelog->pb
+            {:verification-id (:verification-id idv)
+             :status-after :pending})))))))
+
 (defn idv-changelog-handler
   "Returns a watcher handler that transitions a pending IDV
   to accepted. Captures record-store to open the idvs store

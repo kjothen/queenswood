@@ -22,7 +22,7 @@
   command envelope via dispatcher, and blocks until the
   result is received."
   [sys command-name data]
-  (let [dispatcher (system/instance sys [:command :dispatcher])
+  (let [dispatcher (system/instance sys [:accounts :dispatcher])
         schemas (system/instance sys [:avro :serde])
         schema (get schemas command-name)
         payload (avro/serialize schema data)
@@ -59,7 +59,7 @@
   (testing "Commands sent are processed and replied to via message-bus"
     (with-test-system
      [sys "classpath:command-processor/application-test.yml"]
-     (let [{:keys [stop]} (SUT/run sys)
+     (let [{:keys [stop]} (SUT/run sys [:accounts])
            record-db (system/instance sys [:fdb :record-db])
            store-fn (system/instance sys [:fdb :store])]
        (seed-active-party record-db store-fn "cust-api-test")

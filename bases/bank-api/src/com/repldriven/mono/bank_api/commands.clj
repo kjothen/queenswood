@@ -21,9 +21,8 @@
     {}))
 
 (defn send
-  [request command-name response-schema data]
-  (let [dispatcher (:command-dispatcher request)
-        schemas (:avro request)
+  [dispatcher request command-name response-schema data]
+  (let [schemas (:avro request)
         envelope (command/req->command-request request command-name)
         result (error/let-nom> [schema (get-schema schemas command-name)
                                 payload (avro/serialize schema data)]

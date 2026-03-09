@@ -9,25 +9,30 @@
 (defn- format-timestamps
   [account]
   (-> account
-      (update :created-at-ms millis->iso)
-      (update :updated-at-ms millis->iso)))
+      (update :created-at millis->iso)
+      (update :updated-at millis->iso)))
 
 (defn- format-account-response
   [{:keys [status body] :as response}]
   (if (= 200 status) (assoc response :body (format-timestamps body)) response))
 
+(defn- dispatcher [request] (get-in request [:dispatchers :accounts]))
+
 (defn open-account
   [request]
-  (format-account-response (commands/send request
-                                          "open-account"
-                                          "account"
-                                          (get-in request
-                                                  [:parameters :body]))))
+  (format-account-response
+   (commands/send (dispatcher request)
+                  request
+                  "open-account"
+                  "account"
+                  (get-in request [:parameters :body]))))
 
 (defn close-account
   [request]
   (let [{:keys [account-id]} (get-in request [:parameters :path])]
-    (format-account-response (commands/send request
-                                            "close-account"
-                                            "account"
-                                            {:account-id account-id}))))
+    (format-account-response
+     (commands/send (dispatcher request)
+                    request
+                    "close-account"
+                    "account"
+                    {:account-id account-id}))))

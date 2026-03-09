@@ -20,6 +20,6 @@
       (is (not (error/anomaly? sys)) "System should start")
       (is (system/system? sys) "System should be valid")
       (when (system/system? sys)
-        (let [{:keys [stop]} (processor/run sys)]
+        (let [{:keys [stop]} (processor/run sys [:accounts])]
           (stop)
           (is (not (error/anomaly? (system/stop sys)))))))))

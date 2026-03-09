@@ -26,7 +26,7 @@
                    _ (is (= "Acme Corp" (:name org)))
                    _ (is (string? (:organization-id org)))
                    _ (is (= "active" (:status org)))
-                   _ (is (pos? (:created-at-ms org)))
+                   _ (is (pos? (:created-at org)))
                    api-key (:api-key result)
                    _ (is (= (:organization-id org) (:org-id api-key)))
                    _ (is (= "default" (:name api-key)))

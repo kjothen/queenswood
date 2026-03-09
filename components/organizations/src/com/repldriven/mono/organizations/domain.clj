@@ -12,8 +12,8 @@
     {:organization-id (encryption/generate-id "org")
      :name org-name
      :status "active"
-     :created-at-ms now
-     :updated-at-ms now}))
+     :created-at now
+     :updated-at now}))
 
 (defn generate-api-key
   "Generates an API key and returns {:raw-key ... :key-hash
@@ -34,7 +34,7 @@
      :key-hash (:key-hash key-data)
      :key-prefix (:key-prefix key-data)
      :name api-key-name
-     :created-at-ms now}))
+     :created-at now}))
 
 (defn hash-raw-key
   "Hashes a raw API key string."

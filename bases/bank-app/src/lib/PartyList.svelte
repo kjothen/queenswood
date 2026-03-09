@@ -1,8 +1,10 @@
 <script>
-  import { list_accounts, close_account } from "./api.mjs";
+  import { list_parties, open_account } from "./api.mjs";
   import { onMount } from "svelte";
 
-  let accounts = $state([]);
+  let { onAccountOpened } = $props();
+
+  let parties = $state([]);
   let links = $state({});
   let loading = $state(false);
   let error = $state(null);
@@ -18,33 +20,39 @@
     error = null;
     currentQuery = queryString ?? null;
     try {
-      const res = await list_accounts(queryString);
+      const res = await list_parties(queryString);
       if (res["http-status"] >= 200 && res["http-status"] < 300) {
-        accounts = res.body.accounts ?? [];
+        parties = res.body.parties ?? [];
         links = res.body.links ?? {};
       } else {
         error = res.body?.error ?? `HTTP ${res["http-status"]}`;
-        accounts = [];
+        parties = [];
         links = {};
       }
     } catch (err) {
       error = err.message;
-      accounts = [];
+      parties = [];
       links = {};
     } finally {
       loading = false;
     }
   }
 
-  let closing = $state({});
+  let opening = $state({});
 
-  async function handleClose(accountId) {
-    closing[accountId] = true;
+  async function handleOpenAccount(party) {
+    const partyId = party["party-id"];
+    opening[partyId] = true;
     try {
-      await close_account(accountId);
+      await open_account({
+        "party-id": partyId,
+        "name": party["display-name"],
+        "currency": "GBP",
+      });
       await load(currentQuery);
+      onAccountOpened?.();
     } finally {
-      delete closing[accountId];
+      delete opening[partyId];
     }
   }
 
@@ -53,7 +61,7 @@
 
 <section>
   <div class="header">
-    <h2>Accounts</h2>
+    <h2>Parties</h2>
     <button class="refresh" onclick={() => load(currentQuery)} disabled={loading}>
       {loading ? "Loading..." : "Refresh"}
     </button>
@@ -66,35 +74,29 @@
   <table>
     <thead>
       <tr>
-        <th>Account ID</th>
         <th>Party ID</th>
-        <th>Currency</th>
+        <th>Display Name</th>
         <th>Status</th>
-        <th>Created</th>
-        <th>Updated</th>
         <th>Action</th>
       </tr>
     </thead>
     <tbody>
-      {#if accounts.length === 0 && !loading}
-        <tr><td colspan="7" class="empty">No accounts found</td></tr>
+      {#if parties.length === 0 && !loading}
+        <tr><td colspan="4" class="empty">No parties found</td></tr>
       {/if}
-      {#each accounts as acct}
+      {#each parties as party}
         <tr>
-          <td class="mono">{acct["account-id"]}</td>
-          <td class="mono">{acct["party-id"]}</td>
-          <td>{acct.currency}</td>
-          <td>{acct["account-status"]}</td>
-          <td>{acct["created-at"]}</td>
-          <td>{acct["updated-at"]}</td>
+          <td class="mono">{party["party-id"]}</td>
+          <td>{party["display-name"]}</td>
+          <td>{party.status}</td>
           <td>
-            {#if acct["account-status"] === "opened"}
+            {#if party.status === "active"}
               <button
-                class="close-btn"
-                disabled={closing[acct["account-id"]]}
-                onclick={() => handleClose(acct["account-id"])}
+                class="action-btn"
+                disabled={opening[party["party-id"]]}
+                onclick={() => handleOpenAccount(party)}
               >
-                {closing[acct["account-id"]] ? "Closing..." : "Close"}
+                {opening[party["party-id"]] ? "Opening..." : "Open Account"}
               </button>
             {/if}
           </td>
@@ -215,9 +217,9 @@
     background: #e5e7eb;
   }
 
-  .close-btn {
+  .action-btn {
     padding: 0.25rem 0.6rem;
-    background: #dc2626;
+    background: #16a34a;
     color: white;
     border: none;
     border-radius: 4px;
@@ -225,12 +227,12 @@
     cursor: pointer;
   }
 
-  .close-btn:disabled {
+  .action-btn:disabled {
     opacity: 0.6;
     cursor: not-allowed;
   }
 
-  .close-btn:not(:disabled):hover {
-    background: #b91c1c;
+  .action-btn:not(:disabled):hover {
+    background: #15803d;
   }
 </style>

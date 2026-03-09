@@ -29,7 +29,7 @@
           (cli/exit false
                     (str "Failed to start [" (error/kind sys)
                          "]: " (or (:message sys) "Unknown error")))
-          (do (processor/run sys)
+          (do (processor/run sys [:accounts])
               (log/info "System started successfully")
               @(promise)))))))
 

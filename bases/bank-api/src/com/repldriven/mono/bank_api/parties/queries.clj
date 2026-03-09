@@ -1,4 +1,4 @@
-(ns com.repldriven.mono.bank-api.accounts.queries
+(ns com.repldriven.mono.bank-api.parties.queries
   (:require
     [com.repldriven.mono.bank-api.cursor :as cursor]
     [com.repldriven.mono.bank-api.errors :refer [error-response]]
@@ -12,8 +12,8 @@
 (defn- millis->iso [ms] (when (pos? ms) (str (Instant/ofEpochMilli ms))))
 
 (defn- format-timestamps
-  [account]
-  (-> account
+  [party]
+  (-> party
       (update :created-at millis->iso)
       (update :updated-at millis->iso)))
 
@@ -23,7 +23,8 @@
 (defn- parse-page-size
   [s]
   (let [n (when s
-            (try (Integer/parseInt s) (catch NumberFormatException _ nil)))]
+            (try (Integer/parseInt s)
+                 (catch NumberFormatException _ nil)))]
     (cond
      (nil? n)
      default-page-size
@@ -35,20 +36,23 @@
      n)))
 
 (defn- build-links
-  [{:keys [accounts has-more after before]}]
-  (let [base "/v1/accounts"
-        first-id (:account-id (first accounts))
-        last-id (:account-id (peek accounts))
+  [{:keys [parties has-more after before]}]
+  (let [base "/v1/parties"
+        first-id (:party-id (first parties))
+        last-id (:party-id (peek parties))
         forward? (some? after)
         backward? (some? before)]
     (cond-> {}
             (or (and (not backward?) has-more) backward?)
-            (assoc :next (str base "?page[after]=" (cursor/encode last-id)))
+            (assoc :next
+                   (str base "?page[after]=" (cursor/encode last-id)))
             (or forward? (and backward? has-more))
             (assoc :prev
-                   (str base "?page[before]=" (cursor/encode first-id))))))
+                   (str base
+                        "?page[before]="
+                        (cursor/encode first-id))))))
 
-(defn list-accounts
+(defn list-parties
   [request]
   (let [{:keys [record-db record-store]} request
         query (get-in request [:parameters :query])
@@ -59,7 +63,7 @@
         before-id (cursor/decode before-cursor)
         result (fdb/transact record-db
                              record-store
-                             "accounts"
+                             "parties"
                              (fn [store]
                                (fdb/scan-records store
                                                  {:after after-id
@@ -67,26 +71,27 @@
                                                   :limit size})))]
     (if (error/anomaly? result)
       {:status 500 :body (error-response 500 result)}
-      (let [accounts (mapv (comp format-timestamps schema/pb->Account)
-                           (:records result))
-            links (when (seq accounts)
-                    (build-links {:accounts accounts
+      (let [parties (mapv (comp format-timestamps schema/pb->Party)
+                          (:records result))
+            links (when (seq parties)
+                    (build-links {:parties parties
                                   :has-more (:has-more result)
                                   :after after-id
                                   :before before-id}))]
         {:status 200
-         :body (cond-> {:accounts accounts}
+         :body (cond-> {:parties parties}
                        (seq links)
                        (assoc :links links))}))))
 
-(defn get-account
+(defn get-party
   [request]
   (let [{:keys [record-db record-store]} request
-        {:keys [account-id]} (get-in request [:parameters :path])
+        {:keys [party-id]} (get-in request [:parameters :path])
         result (fdb/transact record-db
                              record-store
-                             "accounts"
-                             (fn [store] (fdb/load-record store account-id)))]
+                             "parties"
+                             (fn [store]
+                               (fdb/load-record store party-id)))]
     (cond
      (error/anomaly? result)
      {:status 500
@@ -95,9 +100,8 @@
      (nil? result)
      {:status 404
       :body (error-response 404 "FAILED"
-                            "accounts/not-found"
-                            "Account not found")}
+                            "party/not-found"
+                            "Party not found")}
      :else
      {:status 200
-      :body {:account (format-timestamps
-                       (schema/pb->Account result))}})))
+      :body (format-timestamps (schema/pb->Party result))})))

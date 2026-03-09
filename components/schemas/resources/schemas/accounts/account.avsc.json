@@ -11,8 +11,8 @@
                                           "name": "AccountStatus",
                                           "symbols": ["OPENING", "OPENED",
                                                        "CLOSING", "CLOSED"]}},
-    {"name": "created_at_ms", "type": {"type": "long", "logicalType": "timestamp-millis"}},
-    {"name": "updated_at_ms", "type": {"type": "long", "logicalType": "timestamp-millis"}},
+    {"name": "created_at", "type": {"type": "long", "logicalType": "timestamp-millis"}},
+    {"name": "updated_at", "type": {"type": "long", "logicalType": "timestamp-millis"}},
     {"name": "payment_addresses",
      "type": {"type": "array",
               "items": {

@@ -25,28 +25,28 @@
    :currency "GBP"
    :payment-addresses []
    :account-status :opened
-   :created-at-ms 1700000000000
-   :updated-at-ms 1700000000000})
+   :created-at 1700000000000
+   :updated-at 1700000000000})
 
 (def ^:private test-account-close
   (assoc test-account-open :account-status :closing))
 
 (defn- command-processor
-  "Simulates Processor — subscribes to command messages
-  and replies with a fixed account payload."
+  "Simulates Processor — subscribes to accounts-command
+  messages and replies with a fixed account payload."
   [sys account]
   (let [bus (system/instance sys [:message-bus :bus])
         schemas (system/instance sys [:avro :serde])
         payload (avro/serialize (get schemas "account") account)]
     (message-bus/subscribe
      bus
-     :command
+     :accounts-command
      (fn [data]
        (message-bus/send
         bus
-        :command-response
+        :accounts-command-response
         (command/command-response data {:status "ACCEPTED" :payload payload}))))
-    {:stop (fn [] (message-bus/unsubscribe bus :command))}))
+    {:stop (fn [] (message-bus/unsubscribe bus :accounts-command))}))
 
 (defn- open-account-request
   [party-id name currency]

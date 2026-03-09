@@ -20,5 +20,14 @@
    :system/config {:record-store system/required-component}
    :system/instance-schema fn?})
 
+(def ^:private party-watcher-handler
+  {:system/start
+   (fn [{:system/keys [config instance]}]
+     (or instance (watcher/party-changelog-handler (:record-store config))))
+   :system/config {:record-store system/required-component}
+   :system/instance-schema fn?})
+
 (system/defcomponents :idv
-                      {:processor processor :watcher-handler watcher-handler})
+                      {:processor processor
+                       :watcher-handler watcher-handler
+                       :party-watcher-handler party-watcher-handler})

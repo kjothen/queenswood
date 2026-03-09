@@ -14,6 +14,6 @@ message ApiKey {
   optional string key_hash   = 3;
   optional string key_prefix = 4;
   optional string name       = 5;
-  optional int64  created_at_ms = 6;
-  optional int64  revoked_at_ms = 7;
+  optional int64  created_at = 6;
+  optional int64  revoked_at = 7;
 }

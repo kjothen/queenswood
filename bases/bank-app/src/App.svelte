@@ -1,11 +1,14 @@
 <script>
   import { init } from "./lib/api.mjs";
-  import CreateAccount from "./lib/CreateAccount.svelte";
+  import CreateParty from "./lib/CreateParty.svelte";
+  import PartyList from "./lib/PartyList.svelte";
   import AccountList from "./lib/AccountList.svelte";
   import { onMount } from "svelte";
 
   let ready = $state(false);
   let error = $state(null);
+  let partyListRef = $state();
+  let accountListRef = $state();
 
   onMount(async () => {
     try {
@@ -21,9 +24,11 @@
   <p>Failed to initialize: {error}</p>
 {:else if ready}
   <main>
-    <h1>Accounts</h1>
-    <CreateAccount />
-    <AccountList />
+    <h1>Banking</h1>
+    <CreateParty onCreated={() => partyListRef?.load()} />
+    <PartyList bind:this={partyListRef}
+               onAccountOpened={() => accountListRef?.load()} />
+    <AccountList bind:this={accountListRef} />
   </main>
 {:else}
   <p>Initializing...</p>

@@ -3,7 +3,7 @@
     com.repldriven.mono.testcontainers.interface
 
     [com.repldriven.mono.bank-api.api :as api]
-    [com.repldriven.mono.bank-api.accounts.cursor :as cursor]
+    [com.repldriven.mono.bank-api.cursor :as cursor]
 
     [com.repldriven.mono.fdb.interface :as fdb]
     [com.repldriven.mono.http-client.interface :as http]

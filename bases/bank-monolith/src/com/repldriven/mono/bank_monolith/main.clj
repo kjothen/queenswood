@@ -3,7 +3,9 @@
     com.repldriven.mono.accounts.interface
     com.repldriven.mono.command.interface
     com.repldriven.mono.fdb.interface
+    com.repldriven.mono.idv.interface
     com.repldriven.mono.message-bus.interface
+    com.repldriven.mono.party.interface
     com.repldriven.mono.schemas.interface
     com.repldriven.mono.pulsar.interface
     com.repldriven.mono.server.interface
@@ -24,7 +26,8 @@
                          system/defs
                          (assoc-in [:system/defs :server :handler] api/app)
                          system/start)]
-    (when-not (error/anomaly? sys) (processor/run sys))
+    (when-not (error/anomaly? sys)
+      (processor/run sys [:accounts :parties]))
     sys))
 
 (defn stop [system] (system/stop system))

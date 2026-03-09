@@ -8,7 +8,7 @@
   [status account]
   (assoc account
          :account-status status
-         :updated-at-ms (System/currentTimeMillis)))
+         :updated-at (System/currentTimeMillis)))
 
 (defn close-account
   "Returns account with status closing."
@@ -42,8 +42,8 @@
      (assoc data
             :account-id (encryption/generate-id "ba")
             :account-status :opened
-            :created-at-ms now
-            :updated-at-ms now))))
+            :created-at now
+            :updated-at now))))
 
 (def ^:private lifecycle-transitions {:closing :closed})
 

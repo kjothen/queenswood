@@ -4,14 +4,33 @@
     [com.repldriven.mono.processor.interface :as processor]
     [com.repldriven.mono.system.interface :as system]))
 
+(defn- start-processor
+  [bus sys group]
+  (let [processor-instance (system/instance sys [group :processor])
+        command-ch (keyword (str (name group) "-command"))
+        response-ch (keyword
+                     (str (name group) "-command-response"))]
+    (command/process bus
+                     #(processor/process processor-instance %)
+                     {:command-channel command-ch
+                      :command-response-channel response-ch})))
+
 (defn run
   "Start command processing on the given system.
 
-  Extracts the message-bus and processor from the system and
-  starts the command processing loop.
+  Starts a processing loop for each domain group, each on
+  its own command/response channels.
 
-  Returns: {:stop (fn [])} — call stop to stop processing"
-  [sys]
+  Args:
+  - sys: started system
+  - groups: seq of domain group keywords
+    (e.g. [:accounts :parties])
+
+  Returns: {:stop (fn [])} — call stop to stop all"
+  [sys groups]
   (let [bus (system/instance sys [:message-bus :bus])
-        processor-instance (system/instance sys [:command :processor])]
-    (command/process bus #(processor/process processor-instance %))))
+        processors (mapv #(start-processor bus sys %)
+                         groups)]
+    {:stop (fn []
+             (doseq [{:keys [stop]} processors]
+               (stop)))}))
