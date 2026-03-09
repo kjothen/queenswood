@@ -88,6 +88,74 @@ npm run dev
 Interactive OpenAPI documentation is served at
 [http://localhost:8080](http://localhost:8080).
 
+### Command Request/Reply Flow
+
+Commands travel from the HTTP API through Pulsar to domain processors and back.
+Each flow follows the same pattern:
+
+```
+bank-api ─► Pulsar command topic ─► command-processor ─► domain processor
+                                                            ↓
+bank-api ◄─ Pulsar response topic ◄─ command response ◄─────┘
+```
+
+**Create a party** — `POST /v1/parties`
+
+```
+bank-api                    command-processor         PartyProcessor
+   │                              │                        │
+   ├── serialize body ──────────► │                        │
+   │   (parties-command topic)    ├── dispatch ──────────► │
+   │                              │   "create-party"       ├── create party (pending)
+   │                              │                        ├── create person-identification
+   │                              │                        ├── create national-identifier
+   │                              │                        │   (FDB transaction)
+   │  (parties-command-response)  │ ◄── ACCEPTED ──────────┤
+   ◄──────────────────────────────┤                        │
+   │                              │
+   │  ┌─── IDV watcher (async) ──────────────────────────────┐
+   │  │ FDB changelog fires when IDV status → accepted       │
+   │  │ Party transitions from pending → active              │
+   │  └──────────────────────────────────────────────────────┘
+```
+
+**Open an account** — `POST /v1/accounts` (requires active party)
+
+```
+bank-api                    command-processor         AccountProcessor
+   │                              │                        │
+   ├── serialize body ──────────► │                        │
+   │   (accounts-command topic)   ├── dispatch ──────────► │
+   │                              │   "open-account"       ├── verify party is active
+   │                              │                        ├── create account (opened)
+   │                              │                        ├── assign SCAN address
+   │                              │                        │   (FDB transaction)
+   │  (accounts-command-response) │ ◄── ACCEPTED ──────────┤
+   ◄──────────────────────────────┤                        │
+```
+
+**Close an account** — `POST /v1/accounts/{account-id}/close`
+
+```
+bank-api                    command-processor         AccountProcessor
+   │                              │                        │
+   ├── serialize body ──────────► │                        │
+   │   (accounts-command topic)   ├── dispatch ──────────► │
+   │                              │   "close-account"      ├── load account
+   │                              │                        ├── set status → closing
+   │                              │                        │   (FDB transaction)
+   │  (accounts-command-response) │ ◄── ACCEPTED ──────────┤
+   ◄──────────────────────────────┤                        │
+   │                              │
+   │  ┌─── Account watcher (async) ──────────────────────────┐
+   │  │ FDB changelog fires when status → closing            │
+   │  │ Account transitions from closing → closed            │
+   │  └──────────────────────────────────────────────────────┘
+```
+
+All commands are Avro-serialised. Responses use envelope statuses: `ACCEPTED`
+(2xx), `REJECTED` (4xx), or `FAILED` (5xx).
+
 ## Architecture
 
 ### Polylith
