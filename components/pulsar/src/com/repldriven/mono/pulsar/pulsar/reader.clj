@@ -13,6 +13,7 @@
     (org.apache.pulsar.client.api Message
                                   PulsarClient
                                   PulsarClientException
+                                  PulsarClientException$AlreadyClosedException
                                   Reader
                                   ReaderBuilder)
     (java.util Map)
@@ -35,8 +36,10 @@
          ^ReaderBuilder builder (.. instance (loadConf auto-conf))
          ^ReaderBuilder builder-with-conf
          (cond-> builder
-           (some? cryptoKeyReader) (.cryptoKeyReader cryptoKeyReader)
-           (some? startMessageId) (.startMessageId startMessageId))]
+                 (some? cryptoKeyReader)
+                 (.cryptoKeyReader cryptoKeyReader)
+                 (some? startMessageId)
+                 (.startMessageId startMessageId))]
      (.create builder-with-conf))))
 
 (defn read
@@ -49,16 +52,23 @@
     (async/thread
      (try
        (loop []
-         (let [[v port] (async/alts!! [stop
-                                       (async/thread
-                                        (when-let [^Message msg
-                                                   (.. reader
-                                                       (readNext
-                                                        timeout-ms
-                                                        TimeUnit/MILLISECONDS))]
-                                          msg))])]
+         (let [[v port] (async/alts!!
+                         [stop
+                          (async/thread
+                           (try
+                             (when-let
+                               [^Message msg
+                                (.. reader
+                                    (readNext
+                                     timeout-ms
+                                     TimeUnit/MILLISECONDS))]
+                               msg)
+                             (catch
+                               PulsarClientException$AlreadyClosedException
+                               _
+                               ::closed)))])]
            (cond
-            (= port stop)
+            (or (= port stop) (= v ::closed))
             nil
 
             (some? v)

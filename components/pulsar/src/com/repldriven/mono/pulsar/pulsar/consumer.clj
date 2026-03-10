@@ -11,11 +11,13 @@
   (:import
     (java.util Map)
     (java.util.concurrent TimeUnit)
-    (org.apache.pulsar.client.api Consumer
-                                  ConsumerBuilder
-                                  Message
-                                  PulsarClient
-                                  PulsarClientException)))
+    (org.apache.pulsar.client.api
+     Consumer
+     ConsumerBuilder
+     Message
+     PulsarClient
+     PulsarClientException
+     PulsarClientException$AlreadyClosedException)))
 
 (defn create
   ^Consumer [{:keys [^PulsarClient client conf schemas] :as opts}]
@@ -34,7 +36,8 @@
          ^ConsumerBuilder builder (.. instance (loadConf auto-conf))
          ^ConsumerBuilder builder-with-conf
          (cond-> builder
-           (some? cryptoKeyReader) (.cryptoKeyReader cryptoKeyReader))]
+                 (some? cryptoKeyReader)
+                 (.cryptoKeyReader cryptoKeyReader))]
      (.subscribe builder-with-conf))))
 
 (defn receive
@@ -47,16 +50,23 @@
     (async/thread
      (try
        (loop []
-         (let [[v port] (async/alts!! [stop
-                                       (async/thread
-                                        (when-let [^Message msg
-                                                   (.. consumer
-                                                       (receive
-                                                        timeout-ms
-                                                        TimeUnit/MILLISECONDS))]
-                                          msg))])]
+         (let [[v port] (async/alts!!
+                         [stop
+                          (async/thread
+                           (try
+                             (when-let
+                               [^Message msg
+                                (.. consumer
+                                    (receive
+                                     timeout-ms
+                                     TimeUnit/MILLISECONDS))]
+                               msg)
+                             (catch
+                               PulsarClientException$AlreadyClosedException
+                               _
+                               ::closed)))])]
            (cond
-            (= port stop)
+            (or (= port stop) (= v ::closed))
             nil
 
             (some? v)

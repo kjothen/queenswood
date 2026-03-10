@@ -117,3 +117,6 @@ start-docker:
 # Stop Docker via Colima
 stop-docker:
     colima stop
+
+start-bank-app:
+    cd {{ justfile_directory() }}/bases/bank-app && npm run dev

@@ -51,27 +51,23 @@ Queenswood is assembled from the component library:
 
 ### Running It
 
-Start the backend from a REPL by evaluating the `comment` block in
-`bank-monolith`'s main namespace. This boots the full system — FDB, Pulsar,
-HTTP server — inside Testcontainers:
+Start a REPL with `just repl` and connect your editor. The development
+entry point follows the standard Polylith pattern — a namespace under
+`development/src/dev/` that requires the base and Testcontainers:
 
 ```clojure
-;; In bases/bank-monolith/src/com/repldriven/mono/bank_monolith/main.clj
-(comment
-  (require '[com.repldriven.mono.testcontainers.interface])
-
-  (def sys
-    (start "classpath:bank-monolith/application-test.yml"
-           :dev))
-  (stop sys))
+;; development/src/dev/bank_monolith.clj — evaluate the comment block
+(def sys
+  (main/start "classpath:bank-monolith/application-test.yml"
+              :dev))
+(main/stop sys)
 ```
 
-Then start the Svelte front-end, which proxies API requests to the running
-backend:
+This boots the full system — FDB, Pulsar, HTTP server — inside
+Testcontainers. Then start the Svelte front-end:
 
 ```bash
-cd bases/bank-app
-npm run dev
+just start-bank-app
 ```
 
 ### API Surface
@@ -222,13 +218,14 @@ pipelines without defensive `try/catch` noise.
 
 ### Messaging
 
-| Component     | Purpose                                                   |
-| ------------- | --------------------------------------------------------- |
-| `pulsar`      | Apache Pulsar producer/consumer/reader with Avro          |
-| `mqtt`        | MQTT publish/subscribe                                    |
-| `message-bus` | Protocol abstraction over messaging backends              |
-| `command`     | Request-reply and async command dispatch over message-bus |
-| `processor`   | Message processor protocol and dispatch                   |
+| Component            | Purpose                                              |
+| -------------------- | ---------------------------------------------------- |
+| `pulsar`             | Apache Pulsar producer/consumer/reader with Avro     |
+| `mqtt`               | MQTT publish/subscribe                               |
+| `message-bus`        | Protocol abstraction over messaging backends         |
+| `command`            | Request-reply and async command dispatch over bus    |
+| `processor`          | Message processor protocol                           |
+| `command-processor`  | Bus-subscription lifecycle for domain processors     |
 
 ### Web & HTTP
 
@@ -282,7 +279,7 @@ pipelines without defensive `try/catch` noise.
 | Project              | Base                | Description                                     |
 | -------------------- | ------------------- | ----------------------------------------------- |
 | `bank-web`           | `bank-api`          | Account lifecycle API (open, close, suspend, …) |
-| `accounts-processor` | `command-processor` | Async command handler for account operations    |
+| `accounts-service`   | `service`           | Async command handler for account operations    |
 
 ## Getting Started
 

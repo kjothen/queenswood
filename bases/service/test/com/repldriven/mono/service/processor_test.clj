@@ -1,10 +1,9 @@
-(ns ^:eftest/synchronized com.repldriven.mono.command-processor.processor-test
+(ns ^:eftest/synchronized com.repldriven.mono.service.processor-test
   (:require
     com.repldriven.mono.message-bus.interface
     com.repldriven.mono.accounts.interface
+    com.repldriven.mono.command-processor.interface
     com.repldriven.mono.testcontainers.interface
-
-    [com.repldriven.mono.command-processor.processor :as SUT]
 
     [com.repldriven.mono.avro.interface :as avro]
     [com.repldriven.mono.command.interface :as command]
@@ -58,9 +57,8 @@
 (deftest process-command-test
   (testing "Commands sent are processed and replied to via message-bus"
     (with-test-system
-     [sys "classpath:command-processor/application-test.yml"]
-     (let [{:keys [stop]} (SUT/run sys [:accounts])
-           record-db (system/instance sys [:fdb :record-db])
+     [sys "classpath:service/application-test.yml"]
+     (let [record-db (system/instance sys [:fdb :record-db])
            store-fn (system/instance sys [:fdb :store])]
        (seed-active-party record-db store-fn "cust-api-test")
        (telemetry/with-span-tests
@@ -72,7 +70,7 @@
                                             :name "API Test Account"
                                             :currency "GBP"})
                       _ (is (= "ACCEPTED" (:status result)))
-                      decoded (avro/deserialize-same (get schemas "account")
-                                                     (:payload result))
-                      _ (is (some? (:account-id decoded)))])))
-       (stop)))))
+                      decoded (avro/deserialize-same
+                               (get schemas "account")
+                               (:payload result))
+                      _ (is (some? (:account-id decoded)))])))))))

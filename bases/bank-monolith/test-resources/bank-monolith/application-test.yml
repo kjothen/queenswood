@@ -203,6 +203,12 @@ system:
       record-db: !system/ref fdb.record-db
       record-store: !system/ref fdb.store
       schemas: !system/ref avro.serde
+    command-processor: !system/component
+      system/component-kind: command-processor/command-processor
+      bus: !system/ref message-bus.bus
+      processor: !system/local-ref processor
+      command-channel: !keyword accounts-command
+      command-response-channel: !keyword accounts-command-response
     watcher-handler: !system/component
       system/component-kind: accounts/watcher-handler
       record-store: !system/ref fdb.store
@@ -223,6 +229,12 @@ system:
       record-db: !system/ref fdb.record-db
       record-store: !system/ref fdb.store
       schemas: !system/ref avro.serde
+    command-processor: !system/component
+      system/component-kind: command-processor/command-processor
+      bus: !system/ref message-bus.bus
+      processor: !system/local-ref processor
+      command-channel: !keyword parties-command
+      command-response-channel: !keyword parties-command-response
     watcher-handler: !system/component
       system/component-kind: party/watcher-handler
       record-store: !system/ref fdb.store

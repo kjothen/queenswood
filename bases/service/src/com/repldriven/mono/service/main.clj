@@ -1,9 +1,8 @@
-(ns com.repldriven.mono.command-processor.main
+(ns com.repldriven.mono.service.main
   (:require
+    com.repldriven.mono.command-processor.interface
     com.repldriven.mono.message-bus.interface
     com.repldriven.mono.pulsar.interface
-
-    [com.repldriven.mono.command-processor.processor :as processor]
 
     [com.repldriven.mono.cli.interface :as cli]
     [com.repldriven.mono.env.interface :as env]
@@ -20,7 +19,7 @@
   [& args]
   (log/info args)
   (let [{:keys [options exit-message ok?]}
-        (cli/validate-args "command-processor" args)]
+        (cli/validate-args "service" args)]
     (if exit-message
       (cli/exit ok? exit-message)
       (let [{:keys [config-file profile]} options
@@ -29,7 +28,5 @@
           (cli/exit false
                     (str "Failed to start [" (error/kind sys)
                          "]: " (or (:message sys) "Unknown error")))
-          (do (processor/run sys [:accounts])
-              (log/info "System started successfully")
+          (do (log/info "System started successfully")
               @(promise)))))))
-

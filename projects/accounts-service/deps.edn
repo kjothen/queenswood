@@ -1,7 +1,7 @@
 {:aliases
  {:build {:deps {bases/build {:local/root "../../bases/build"}}
-          :exec-args {:lib 'com.repldriven.mono/accounts-processor
-                      :main com.repldriven.mono.command-processor.main
+          :exec-args {:lib 'com.repldriven.mono/accounts-service
+                      :main com.repldriven.mono.service.main
                       :major-minor-version "0.0"}
           :ns-default com.repldriven.mono.build.build}
   :test
@@ -15,6 +15,7 @@
         component/avro {:local/root "../../components/avro"}
         component/cli {:local/root "../../components/cli"}
         component/command {:local/root "../../components/command"}
+        component/command-processor {:local/root "../../components/command-processor"}
         component/fdb {:local/root "../../components/fdb"}
         component/message-bus {:local/root "../../components/message-bus"}
         component/processor {:local/root "../../components/processor"}
@@ -28,7 +29,7 @@
         component/system {:local/root "../../components/system"}
         component/telemetry {:local/root "../../components/telemetry"}
         component/utility {:local/root "../../components/utility"}
-        base/command-processor {:local/root "../../bases/command-processor"}
+        base/service {:local/root "../../bases/service"}
         ;; protojure brings protobuf-java 4.x which breaks FDB Record Layer
         ;; at runtime — pin to 3.x for binary compatibility
         com.google.protobuf/protobuf-java {:mvn/version "3.25.8"}

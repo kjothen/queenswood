@@ -16,6 +16,7 @@
     components/log {:local/root "components/log"}
     components/migrator {:local/root "components/migrator"}
     components/message-bus {:local/root "components/message-bus"}
+    components/command-processor {:local/root "components/command-processor"}
     components/processor {:local/root "components/processor"}
     components/mqtt {:local/root "components/mqtt"}
     components/organizations {:local/root "components/organizations"}
@@ -39,7 +40,7 @@
     bases/bank-monolith {:local/root "bases/bank-monolith"}
     bases/build {:local/root "bases/build"}
     bases/external-test-runner {:local/root "bases/external-test-runner"}
-    bases/command-processor {:local/root "bases/command-processor"}
+    bases/service {:local/root "bases/service"}
     ;; protojure brings protobuf-java 4.x which breaks FDB Record Layer
     ;; at runtime — pin to 3.x for binary compatibility
     com.google.protobuf/protobuf-java {:mvn/version "3.25.8"}
@@ -93,6 +94,8 @@
                        "bases/bank-api/test-resources"
                        "bases/bank-monolith/test"
                        "bases/bank-monolith/test-resources"
+                       "bases/service/test"
+                       "bases/service/test-resources"
                        "bases/external-test-runner/test"
 ]}
   :format/zprint {:extra-deps {zprint/zprint {:mvn/version "1.3.0"}}

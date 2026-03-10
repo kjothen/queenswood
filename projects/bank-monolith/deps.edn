@@ -15,6 +15,7 @@
         component/avro {:local/root "../../components/avro"}
         component/cli {:local/root "../../components/cli"}
         component/command {:local/root "../../components/command"}
+        component/command-processor {:local/root "../../components/command-processor"}
         component/encryption {:local/root "../../components/encryption"}
         component/env {:local/root "../../components/env"}
         component/error {:local/root "../../components/error"}
@@ -34,7 +35,7 @@
         component/utility {:local/root "../../components/utility"}
         base/bank-api {:local/root "../../bases/bank-api"}
         base/bank-monolith {:local/root "../../bases/bank-monolith"}
-        base/command-processor {:local/root "../../bases/command-processor"}
+        base/service {:local/root "../../bases/service"}
         ;; protojure brings protobuf-java 4.x which breaks FDB Record Layer
         ;; at runtime — pin to 3.x for binary compatibility
         com.google.protobuf/protobuf-java {:mvn/version "3.25.8"}

@@ -8,8 +8,8 @@
             ;; only, so :necessary suppresses false-positive warnings.
             "bank-web" {:alias "aw"
                         :necessary ["schemas" "test-schemas" "test-resources"]}
-            "accounts-processor" {:alias "ap"
-                                  :necessary ["schemas" "test-schemas" "test-resources"]}
+            "accounts-service" {:alias "as"
+                               :necessary ["schemas" "test-schemas" "test-resources"]}
             "bank-app" {:alias "aui" :test []}
             "bank-monolith" {:alias "am"
                              :necessary ["schemas"

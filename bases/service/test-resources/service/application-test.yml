@@ -1,5 +1,5 @@
 system:
-  message-bus: !include command-processor/message-bus-test.yml
+  message-bus: !include service/message-bus-test.yml
   fdb: !include testcontainers/fdb-test.yml
   avro: !include avro/avro-test.yml
   accounts:
@@ -8,6 +8,12 @@ system:
       record-db: !system/ref fdb.record-db
       record-store: !system/ref fdb.store
       schemas: !system/ref avro.serde
+    command-processor: !system/component
+      system/component-kind: command-processor/command-processor
+      bus: !system/ref message-bus.bus
+      processor: !system/local-ref processor
+      command-channel: !keyword accounts-command
+      command-response-channel: !keyword accounts-command-response
     dispatcher: !system/component
       system/component-kind: command/dispatcher
       bus: !system/ref message-bus.bus

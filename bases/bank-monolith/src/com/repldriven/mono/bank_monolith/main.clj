@@ -2,6 +2,7 @@
   (:require
     com.repldriven.mono.accounts.interface
     com.repldriven.mono.command.interface
+    com.repldriven.mono.command-processor.interface
     com.repldriven.mono.fdb.interface
     com.repldriven.mono.idv.interface
     com.repldriven.mono.message-bus.interface
@@ -11,7 +12,6 @@
     com.repldriven.mono.server.interface
 
     [com.repldriven.mono.bank-api.api :as api]
-    [com.repldriven.mono.command-processor.processor :as processor]
 
     [com.repldriven.mono.cli.interface :as cli]
     [com.repldriven.mono.env.interface :as env]
@@ -22,13 +22,10 @@
 
 (defn start
   [config-file profile]
-  (let [sys (error/nom-> (env/config config-file profile)
-                         system/defs
-                         (assoc-in [:system/defs :server :handler] api/app)
-                         system/start)]
-    (when-not (error/anomaly? sys)
-      (processor/run sys [:accounts :parties]))
-    sys))
+  (error/nom-> (env/config config-file profile)
+               system/defs
+               (assoc-in [:system/defs :server :handler] api/app)
+               system/start))
 
 (defn stop [system] (system/stop system))
 
@@ -46,12 +43,3 @@
                     (str "Failed to start [" (error/kind sys)
                          "]: " (or (:message sys) "Unknown error")))
           (do (log/info "System started successfully") @(promise)))))))
-
-(comment
-  (require '[com.repldriven.mono.testcontainers.interface])
-
-  (def sys
-    (start "classpath:bank-monolith/application-test.yml"
-           :dev))
-  (stop sys))
-;)
