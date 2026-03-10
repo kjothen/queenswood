@@ -1,6 +1,5 @@
 (ns dev.bank-monolith
   (:require
-    com.repldriven.mono.command-processor.interface
     com.repldriven.mono.testcontainers.interface
 
     [com.repldriven.mono.bank-monolith.main :as main]))
