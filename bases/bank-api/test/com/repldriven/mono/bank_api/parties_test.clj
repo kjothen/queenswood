@@ -19,7 +19,7 @@
 (def ^:dynamic *base-url* "http://localhost:{PORT}")
 
 (def ^:private test-party
-  {:party-id "py_01TEST123"
+  {:party-id "pty_01TEST123"
    :type :person
    :display-name "Jane Doe"
    :status :pending
@@ -64,18 +64,18 @@
                           "issuing-country" "GBR"}})}))
 
 (deftest create-party-test
-  (with-test-system [sys
-                     ["classpath:bank-api/application-test.yml"
-                      #(assoc-in % [:system/defs :server :handler] api/app)]]
-                    (let [jetty (system/instance sys [:server :jetty-adapter])
-                          {:keys [stop]} (command-processor sys test-party)]
-                      (binding [*base-url* (server/http-local-url jetty)]
-                        (testing "POST /v1/parties sends create-party command"
-                          (nom-test> [res (create-party-request)
-                                      _ (is (= 200 (:status res)))
-                                      body (http/res->edn res)
-                                      _ (is (= "py_01TEST123" (:party-id body)))
-                                      _ (is (= "person" (name (:type body))))
-                                      _ (is (= "Jane Doe"
-                                               (:display-name body)))])))
-                      (stop))))
+  (with-test-system
+   [sys
+    ["classpath:bank-api/application-test.yml"
+     #(assoc-in % [:system/defs :server :handler] api/app)]]
+   (let [jetty (system/instance sys [:server :jetty-adapter])
+         {:keys [stop]} (command-processor sys test-party)]
+     (binding [*base-url* (server/http-local-url jetty)]
+       (testing "POST /v1/parties sends create-party command"
+         (nom-test> [res (create-party-request)
+                     _ (is (= 200 (:status res)))
+                     body (http/res->edn res)
+                     _ (is (= "pty_01TEST123" (:party-id body)))
+                     _ (is (= "person" (name (:type body))))
+                     _ (is (= "Jane Doe" (:display-name body)))])))
+     (stop))))

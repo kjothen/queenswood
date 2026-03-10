@@ -18,7 +18,7 @@
 
 (def Account
   {:account-id "acc_01JMABC123DEF456"
-   :party-id "cust_01JMABC"
+   :party-id "pty_01JMABC"
    :name "Jane Doe"
    :currency "GBP"
    :account-status :opened})
