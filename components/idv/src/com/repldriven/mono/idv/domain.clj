@@ -7,7 +7,7 @@
   [data]
   (let [now (System/currentTimeMillis)]
     (assoc data
-           :verification-id (encryption/generate-id "iv")
+           :verification-id (encryption/generate-id "idv")
            :status :pending
            :created-at now
            :updated-at now)))

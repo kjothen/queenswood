@@ -49,7 +49,7 @@
 (defn- test-initiate-idv
   [proc schemas]
   (testing "initiate creates IDV with pending status"
-    (let [payload {:party-id "py.test-party-id"}]
+    (let [payload {:party-id "pty.test-party-id"}]
       (nom-test>
         [result (send-command proc
                               schemas
@@ -58,14 +58,14 @@
          _ (is (= "ACCEPTED" (:status result)))
          decoded (decode-payload schemas "idv" result)
          _ (is (some? (:verification-id decoded)))
-         _ (is (= "py.test-party-id" (:party-id decoded)))
+         _ (is (= "pty.test-party-id" (:party-id decoded)))
          _ (is (= :pending (:status decoded)))
          _ (is (nil? (:completed-at decoded)))]))))
 
 (defn- test-watcher-transitions
   [proc schemas]
   (testing "watcher transitions pending->accepted"
-    (let [payload {:party-id "py.watcher-test"}]
+    (let [payload {:party-id "pty.watcher-test"}]
       (nom-test>
         [result (send-command proc
                               schemas
@@ -87,7 +87,7 @@
           (send-command proc
                         schemas
                         "unknown-idv-command"
-                        {:party-id "py.x"})]
+                        {:party-id "pty.x"})]
       (is (error/rejection? result))
       (is (= :idv/unknown-command (error/kind result))))))
 

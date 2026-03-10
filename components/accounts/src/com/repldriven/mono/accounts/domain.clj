@@ -40,7 +40,7 @@
     (add-payment-addresses
      store
      (assoc data
-            :account-id (encryption/generate-id "ba")
+            :account-id (encryption/generate-id "acc")
             :account-status :opened
             :created-at now
             :updated-at now))))

@@ -29,7 +29,7 @@
   "Creates a new ApiKey record map (without the raw key)."
   [org-id api-key-name key-data]
   (let [now (System/currentTimeMillis)]
-    {:id (encryption/generate-id "ak")
+    {:id (encryption/generate-id "sk")
      :org-id org-id
      :key-hash (:key-hash key-data)
      :key-prefix (:key-prefix key-data)

@@ -6,9 +6,9 @@
 
 (deftest generate-id-test
   (testing "generates prefixed base64url ID"
-    (let [id (SUT/generate-id "ba")]
+    (let [id (SUT/generate-id "acc")]
       (is (string? id))
-      (is (.startsWith id "ba.")))))
+      (is (.startsWith id "acc.")))))
 
 (deftest generate-api-key-test
   (testing "generates prefixed API key"

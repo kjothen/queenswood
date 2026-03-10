@@ -16,7 +16,7 @@
                data
                :national-identifier
                person-identification-keys)
-        (assoc :party-id (encryption/generate-id "py")
+        (assoc :party-id (encryption/generate-id "pty")
                :type (keyword (str/lower-case (:type data)))
                :status :pending
                :created-at now
