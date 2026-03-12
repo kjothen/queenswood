@@ -3,6 +3,7 @@
   {:extra-deps
    {components/accounts {:local/root "components/accounts"}
     components/avro {:local/root "components/avro"}
+    components/cache {:local/root "components/cache"}
     components/cli {:local/root "components/cli"}
     components/command {:local/root "components/command"}
     components/db {:local/root "components/db"}
@@ -19,6 +20,7 @@
     components/command-processor {:local/root "components/command-processor"}
     components/processor {:local/root "components/processor"}
     components/mqtt {:local/root "components/mqtt"}
+    components/api-keys {:local/root "components/api-keys"}
     components/organizations {:local/root "components/organizations"}
     components/party {:local/root "components/party"}
     components/pulsar {:local/root "components/pulsar"}
@@ -52,6 +54,7 @@
   :test {:extra-paths ["components/accounts/test"
                        "components/accounts/test-resources"
                        "components/avro/test"
+                       "components/cache/test"
                        "components/cli/test"
                        "components/db/test"
                        "components/db/test-resources"
@@ -71,6 +74,8 @@
                        "components/migrator/test-resources"
                        "components/mqtt/test"
                        "components/mqtt/test-resources"
+                       "components/api-keys/test"
+                       "components/api-keys/test-resources"
                        "components/organizations/test"
                        "components/organizations/test-resources"
                        "components/party/test"

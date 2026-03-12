@@ -3,7 +3,19 @@
     [com.repldriven.mono.bank-api.errors :refer [error-response]]
 
     [com.repldriven.mono.error.interface :as error]
-    [com.repldriven.mono.organizations.interface :as organizations]))
+    [com.repldriven.mono.organizations.interface :as organizations])
+  (:import
+    (java.time Instant)))
+
+(defn- millis->iso
+  [ms]
+  (when (pos? ms) (str (Instant/ofEpochMilli ms))))
+
+(defn- format-timestamps
+  [m]
+  (-> m
+      (update :created-at millis->iso)
+      (update :updated-at millis->iso)))
 
 (defn create-organization
   [request]
@@ -32,8 +44,14 @@
      (if (error/anomaly? result)
        {:status 500
         :body (error-response 500 result)}
-       {:status 201
-        :body {:organization (:organization result)
-               :api-key {:id (get-in result [:api-key :id])
-                         :key-prefix (get-in result [:api-key :key-prefix])
-                         :raw-key (:raw-key result)}}}))))
+       (let [api-key (:api-key result)]
+         {:status 201
+          :body {:organization (format-timestamps
+                                (:organization result))
+                 :api-key {:id (:id api-key)
+                           :key-prefix (:key-prefix api-key)
+                           :name (:name api-key)
+                           :raw-key (:raw-key result)
+                           :created-at (millis->iso
+                                        (:created-at
+                                         api-key))}}})))))
