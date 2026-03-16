@@ -1,6 +1,6 @@
 <script>
   import { list_cash_accounts, close_cash_account } from "./api.mjs";
-  import { timeAgo } from "./time.mjs";
+  import { time_ago } from "./time.mjs";
   import { onMount } from "svelte";
 
   let accounts = $state([]);
@@ -105,8 +105,8 @@
               {acct["account-status"]}
             </span>
           </td>
-          <td title={acct["created-at"]}>{timeAgo(acct["created-at"])}</td>
-          <td title={acct["updated-at"]}>{timeAgo(acct["updated-at"])}</td>
+          <td title={acct["created-at"]}>{time_ago(acct["created-at"])}</td>
+          <td title={acct["updated-at"]}>{time_ago(acct["updated-at"])}</td>
           <td>
             {#if acct["account-status"] === "opened"}
               <button

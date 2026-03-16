@@ -111,7 +111,7 @@ force-prep:
 
 # Start Docker via Colima
 start-docker:
-    colima status 2>/dev/null || colima start --cpu 6 --memory 12 
+    colima status 2>/dev/null || colima start --arch aarch64 --vm-type vz --vz-rosetta --cpu 6 --memory 12 
     docker context use colima
 
 # Stop Docker via Colima
@@ -119,4 +119,4 @@ stop-docker:
     colima stop
 
 start-bank-app:
-    cd {{ justfile_directory() }}/bases/bank-app && npm run dev
+    cd {{ justfile_directory() }}/bases/bank-app && npm install && npm run dev

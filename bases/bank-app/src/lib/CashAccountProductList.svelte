@@ -1,6 +1,6 @@
 <script>
   import { list_cash_account_products, create_cash_account_product, publish_version } from "./api.mjs";
-  import { timeAgo } from "./time.mjs";
+  import { time_ago } from "./time.mjs";
   import { onMount } from "svelte";
 
   let versions = $state([]);
@@ -138,7 +138,7 @@
             </span>
           </td>
           <td>{(v["allowed-currencies"] ?? []).join(", ") || "Any"}</td>
-          <td title={v["created-at"]}>{timeAgo(v["created-at"])}</td>
+          <td title={v["created-at"]}>{time_ago(v["created-at"])}</td>
           <td>
             {#if v.status === "draft"}
               <button

@@ -1,6 +1,6 @@
 <script>
   import { create_organization, list_organizations } from "./api.mjs";
-  import { timeAgo } from "./time.mjs";
+  import { time_ago } from "./time.mjs";
   import { onMount } from "svelte";
 
   let { selectedOrgId, onSelectDefault, onCreated, onLoaded } = $props();
@@ -109,8 +109,8 @@
               {org.status}
             </span>
           </td>
-          <td title={org["created-at"]}>{timeAgo(org["created-at"])}</td>
-          <td title={org["updated-at"]}>{timeAgo(org["updated-at"])}</td>
+          <td title={org["created-at"]}>{time_ago(org["created-at"])}</td>
+          <td title={org["updated-at"]}>{time_ago(org["updated-at"])}</td>
           <td>
             {#if org["organization-id"] === selectedOrgId}
               <span class="default-badge">Default</span>

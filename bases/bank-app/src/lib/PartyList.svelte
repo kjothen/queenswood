@@ -1,6 +1,6 @@
 <script>
   import { list_parties, open_cash_account, list_cash_account_products } from "./api.mjs";
-  import { timeAgo } from "./time.mjs";
+  import { time_ago } from "./time.mjs";
   import { onMount } from "svelte";
 
   let { onAccountOpened } = $props();
@@ -126,8 +126,8 @@
               {party.status}
             </span>
           </td>
-          <td title={party["created-at"]}>{timeAgo(party["created-at"])}</td>
-          <td title={party["updated-at"]}>{timeAgo(party["updated-at"])}</td>
+          <td title={party["created-at"]}>{time_ago(party["created-at"])}</td>
+          <td title={party["updated-at"]}>{time_ago(party["updated-at"])}</td>
           <td>
             {#if party.status === "active"}
               {#if opening[party["party-id"]]}

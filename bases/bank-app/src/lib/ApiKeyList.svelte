@@ -1,6 +1,6 @@
 <script>
   import { list_api_keys } from "./api.mjs";
-  import { timeAgo } from "./time.mjs";
+  import { time_ago } from "./time.mjs";
   import { onMount } from "svelte";
 
   let apiKeys = $state([]);
@@ -57,7 +57,7 @@
         <tr>
           <td class="mono">{key["key-prefix"]}</td>
           <td>{key.name}</td>
-          <td title={key["created-at"]}>{timeAgo(key["created-at"])}</td>
+          <td title={key["created-at"]}>{time_ago(key["created-at"])}</td>
         </tr>
       {/each}
     </tbody>

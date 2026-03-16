@@ -122,6 +122,10 @@
           ];
 
           shellHook = ''
+            # Ensure pinned protoc (v25.8) takes precedence over any protoc
+            # inherited from parent direnv environments (e.g. buf's protoc)
+            export PATH="${protocBinary}/bin:$PATH"
+
             # Make libfdb_c findable by the JVM's JNI loader
             export LD_LIBRARY_PATH="${libPath}:$LD_LIBRARY_PATH"
             export DYLD_LIBRARY_PATH="${libPath}:$DYLD_LIBRARY_PATH"
