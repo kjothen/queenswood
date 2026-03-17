@@ -32,7 +32,7 @@ library composes into a production-shaped system.
 5. **Account lifecycle** — accounts move through `opened` → `closing` →
    `closed`, driven by API calls and reactive watchers.
 
-[![Account Opening Demo](thumbnail.png)](https://github.com/user-attachments/assets/671b9d87-6cb5-482d-a53c-578d086734e9)
+[![Account Opening Demo](thumbnail.png)](https://github.com/user-attachments/assets/60a15eea-263e-4ea0-ae60-093bffbbbde3)
 
 ### How It Works
 
