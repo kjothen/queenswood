@@ -1,7 +1,7 @@
 # mono
 
-A Clojure monorepo for building production-ready distributed systems, organised
-as a [Polylith](https://polylith.gitbook.io/polylith) workspace.
+A Clojure monorepo for building production-ready distributed systems,
+following the [Polylith](https://polylith.gitbook.io/polylith) software architecture.
 
 ## What It Is
 
@@ -21,16 +21,19 @@ library composes into a production-shaped system.
 
 1. **Create an organisation** — an admin creates a tenant and receives an API
    key (prefixed `sk_live_`, returned once, stored hashed).
-2. **Create a party** — the organisation uses its API key to register a
-   customer with personal details and a national identifier (uniqueness
-   enforced).
-3. **Identity verification** — an IDV record is automatically created and
+2. **Configure products** — draft a cash account product with balance products
+   (e.g. `available`, `current`), then publish a version to make it available
+   for account opening.
+3. **Create a party** — register a customer with personal details and a
+   national identifier (uniqueness enforced).
+4. **Identity verification** — an IDV record is automatically created and
    accepted, triggering the party's transition from `pending` to `active`.
-4. **Open an account** — only active parties may open accounts. Each account
-   is assigned a UK SCAN payment address (sort code + sequential account
-   number).
-5. **Account lifecycle** — accounts move through `opened` → `closing` →
-   `closed`, driven by API calls and reactive watchers.
+5. **Open an account** — only active parties may open accounts against a
+   published product. Each account is assigned a UK SCAN payment address
+   (sort code + sequential account number). Opening an account automatically
+   creates balances from the product's balance products.
+6. **Account lifecycle** — accounts move through `opening` → `opened` →
+   `closing` → `closed`, driven by API calls and reactive watchers.
 
 [![Account Opening Demo](thumbnail.png)](https://github.com/user-attachments/assets/60a15eea-263e-4ea0-ae60-093bffbbbde3)
 
@@ -38,8 +41,9 @@ library composes into a production-shaped system.
 
 Queenswood is assembled from the component library:
 
-- **FoundationDB Record Layer** stores organisations, parties, accounts, and
-  IDV records with multi-store transactions for atomicity.
+- **FoundationDB Record Layer** stores organisations, parties, accounts,
+  products, balances, and IDV records with multi-store transactions for
+  atomicity.
 - **Changelog watchers** on FDB drive the reactive flow — IDV acceptance
   activates the party; account closing auto-transitions to closed.
 - **Apache Pulsar** carries commands between the HTTP API and processors,
@@ -72,14 +76,23 @@ just start-bank-app
 
 ### API Surface
 
-| Endpoint                               | Description                         |
-| -------------------------------------- | ----------------------------------- |
-| `POST /v1/organizations`               | Create organisation + API key       |
-| `POST /v1/parties`                     | Register a customer                 |
-| `GET /v1/parties[/{party-id}]`         | List / retrieve parties             |
-| `POST /v1/accounts`                    | Open an account for an active party |
-| `GET /v1/accounts[/{account-id}]`      | List / retrieve accounts            |
-| `POST /v1/accounts/{account-id}/close` | Initiate account closure            |
+| Endpoint                                                                 | Description                           |
+| ------------------------------------------------------------------------ | ------------------------------------- |
+| `POST /v1/organizations`                                                 | Create organisation + API key         |
+| `POST /v1/cash-account-products`                                         | Draft a new product                   |
+| `GET /v1/cash-account-products[/{product-id}]`                           | List / retrieve products              |
+| `GET /v1/cash-account-products/{product-id}/versions[/{version-id}]`     | List / retrieve product versions      |
+| `POST /v1/cash-account-products/{product-id}/versions`                   | Draft a new version                   |
+| `POST /v1/…/versions/{version-id}/publish`                               | Publish a product version             |
+| `GET /v1/…/versions/{version-id}/balance-products`                       | Retrieve balance products for version |
+| `POST /v1/parties`                                                       | Register a customer                   |
+| `GET /v1/parties[/{party-id}]`                                           | List / retrieve parties               |
+| `POST /v1/cash-accounts`                                                 | Open an account for an active party   |
+| `GET /v1/cash-accounts[/{account-id}]`                                   | List / retrieve accounts              |
+| `POST /v1/cash-accounts/{account-id}/close`                              | Initiate account closure              |
+| `GET /v1/cash-accounts/{account-id}/balances`                            | Retrieve account balances             |
+| `POST /v1/cash-accounts/{account-id}/balances`                           | Create a balance                      |
+| `GET /v1/cash-accounts/{account-id}/balances/{type}/{currency}/{status}` | Retrieve a specific balance           |
 
 Interactive OpenAPI documentation is served at
 [http://localhost:8080](http://localhost:8080).
@@ -115,7 +128,7 @@ bank-api                    command-processor         PartyProcessor
    │  └──────────────────────────────────────────────────────┘
 ```
 
-**Open an account** — `POST /v1/accounts` (requires active party)
+**Open an account** — `POST /v1/cash-accounts` (requires active party)
 
 ```
 bank-api                    command-processor         AccountProcessor
@@ -123,14 +136,17 @@ bank-api                    command-processor         AccountProcessor
    ├── serialize body ──────────► │                        │
    │   (accounts-command topic)   ├── dispatch ──────────► │
    │                              │   "open-account"       ├── verify party is active
+   │                              │                        ├── verify product published
    │                              │                        ├── create account (opened)
    │                              │                        ├── assign SCAN address
+   │                              │                        ├── create balances from
+   │                              │                        │   product balance products
    │                              │                        │   (FDB transaction)
    │  (accounts-command-response) │ ◄── ACCEPTED ──────────┤
    ◄──────────────────────────────┤                        │
 ```
 
-**Close an account** — `POST /v1/accounts/{account-id}/close`
+**Close an account** — `POST /v1/cash-accounts/{account-id}/close`
 
 ```
 bank-api                    command-processor         AccountProcessor
@@ -215,6 +231,7 @@ pipelines without defensive `try/catch` noise.
 | `sql`      | HoneySQL query formatting                                   |
 | `migrator` | Liquibase schema migrations                                 |
 | `fdb`      | FoundationDB — KV layer, record layer, changelog processing |
+| `cache`    | In-memory caching                                           |
 
 ### Messaging
 
@@ -238,17 +255,18 @@ pipelines without defensive `try/catch` noise.
 
 | Component             | Purpose                                           |
 | --------------------- | ------------------------------------------------- |
+| `api-keys`            | API key generation, hashing, and verification     |
 | `vault`               | HashiCorp Vault for secrets and key management    |
 | `encryption`          | AES-256, RSA, base64                              |
 | `pulsar-vault-crypto` | Tenant-scoped Pulsar message encryption via Vault |
 
 ### Serialisation
 
-| Component | Purpose                                                      |
-| --------- | ------------------------------------------------------------ |
-| `avro`    | Apache Avro schema-based serialisation                       |
-| `schemas` | Protobuf definitions (Person, Account, Organization, ApiKey) |
-| `json`    | JSON read/write with anomaly errors                          |
+| Component | Purpose                                                                               |
+| --------- | ------------------------------------------------------------------------------------- |
+| `avro`    | Apache Avro schema-based serialisation                                                |
+| `schemas` | Protobuf definitions (Person, Account, Organization, ApiKey, Balance, AccountProduct) |
+| `json`    | JSON read/write with anomaly errors                                                   |
 
 ### Observability
 
@@ -258,12 +276,14 @@ pipelines without defensive `try/catch` noise.
 
 ### Domain
 
-| Component       | Purpose                                                                   |
-| --------------- | ------------------------------------------------------------------------- |
-| `accounts`      | Account lifecycle — open, close, suspend, reopen, archive                 |
-| `organizations` | Organisation management — create org, API key generation and verification |
-| `party`         | Party creation and management                                             |
-| `idv`           | Identity verification processing                                          |
+| Component               | Purpose                                                                   |
+| ----------------------- | ------------------------------------------------------------------------- |
+| `cash-accounts`         | Account lifecycle — open, close, suspend, reopen, archive                 |
+| `cash-account-products` | Product and version management — draft, publish, balance product config   |
+| `balances`              | Account balance management — create, query by type/currency/status        |
+| `organizations`         | Organisation management — create org, API key generation and verification |
+| `party`                 | Party creation and management                                             |
+| `idv`                   | Identity verification processing                                          |
 
 ### Testing
 
@@ -276,10 +296,12 @@ pipelines without defensive `try/catch` noise.
 
 ## Deployed Applications
 
-| Project            | Base       | Description                                     |
-| ------------------ | ---------- | ----------------------------------------------- |
-| `bank-web`         | `bank-api` | Account lifecycle API (open, close, suspend, …) |
-| `accounts-service` | `service`  | Async command handler for account operations    |
+| Project                 | Base            | Description                                   |
+| ----------------------- | --------------- | --------------------------------------------- |
+| `bank-monolith`         | `bank-monolith` | Full Queenswood system (API + processors)     |
+| `bank-web`              | `bank-api`      | HTTP API for accounts, products, and balances |
+| `bank-app`              | `bank-app`      | Svelte front-end for the banking application  |
+| `cash-accounts-service` | `service`       | Async command handler for account operations  |
 
 ## Getting Started
 
@@ -315,26 +337,6 @@ clojure -M:poly test project:dev
 clojure -M:poly test brick:command project:dev
 ```
 
-### REPL
-
-```bash
-clojure -M:dev:nrepl
-# or with Rebel Readline
-clojure -M:dev:rebel
-```
-
-### Code formatting
-
-```bash
-clojure -M:format/zprint --formatted path/to/file.clj
-```
-
-### Linting
-
-```bash
-clojure -M:lint/clj-kondo --lint bases components
-```
-
 ## Key Patterns
 
 **Keyword keys throughout** — all data, including from Pulsar, MQTT, and HTTP
@@ -354,6 +356,8 @@ lifecycle machinery used in production.
 
 - **[Polylith](https://polylith.gitbook.io/)** — workspace management and
   incremental testing
+- **[donut.system](https://github.com/donut-party/system)** — component
+  lifecycle and dependency injection
 - **[zprint](https://github.com/kkinnear/zprint)** — code formatting (80-char
   width, enforced by pre-commit hook)
 - **[clj-kondo](https://github.com/clj-kondo/clj-kondo)** — linting (enforced
