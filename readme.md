@@ -74,28 +74,12 @@ Testcontainers. Then start the Svelte front-end:
 just start-bank-app
 ```
 
-### API Surface
+### API Docs
 
-| Endpoint                                                                 | Description                           |
-| ------------------------------------------------------------------------ | ------------------------------------- |
-| `POST /v1/organizations`                                                 | Create organisation + API key         |
-| `POST /v1/cash-account-products`                                         | Draft a new product                   |
-| `GET /v1/cash-account-products[/{product-id}]`                           | List / retrieve products              |
-| `GET /v1/cash-account-products/{product-id}/versions[/{version-id}]`     | List / retrieve product versions      |
-| `POST /v1/cash-account-products/{product-id}/versions`                   | Draft a new version                   |
-| `POST /v1/…/versions/{version-id}/publish`                               | Publish a product version             |
-| `GET /v1/…/versions/{version-id}/balance-products`                       | Retrieve balance products for version |
-| `POST /v1/parties`                                                       | Register a customer                   |
-| `GET /v1/parties[/{party-id}]`                                           | List / retrieve parties               |
-| `POST /v1/cash-accounts`                                                 | Open an account for an active party   |
-| `GET /v1/cash-accounts[/{account-id}]`                                   | List / retrieve accounts              |
-| `POST /v1/cash-accounts/{account-id}/close`                              | Initiate account closure              |
-| `GET /v1/cash-accounts/{account-id}/balances`                            | Retrieve account balances             |
-| `POST /v1/cash-accounts/{account-id}/balances`                           | Create a balance                      |
-| `GET /v1/cash-accounts/{account-id}/balances/{type}/{currency}/{status}` | Retrieve a specific balance           |
-
-Interactive OpenAPI documentation is served at
-[http://localhost:8080](http://localhost:8080).
+Full API documentation is published at
+[https://kjothen.github.io/mono/](https://kjothen.github.io/mono/).
+Interactive OpenAPI documentation is also served locally at
+[http://localhost:8080](http://localhost:8080) when the server is running.
 
 ### Command Request/Reply Flow
 
