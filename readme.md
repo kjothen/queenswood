@@ -39,7 +39,13 @@ library composes into a production-shaped system.
    transfer — debiting the internal org's suspense balance and crediting the
    customer's default balance — via the transactions command processor.
 
-[![Account Opening Demo](thumbnail.png)](https://github.com/user-attachments/assets/60a15eea-263e-4ea0-ae60-093bffbbbde3)
+### Demos
+
+1. Open a cash account for a party in a new customer organization
+   [![Account Opening Demo](thumbnail.png)](https://github.com/user-attachments/assets/60a15eea-263e-4ea0-ae60-093bffbbbde3)
+
+1. Fund a customer organization's settlement account
+   [![Account Opening Demo](thumbnail.png)](https://github.com/user-attachments/assets/10092bdd-dd70-4499-af0f-f1aac4ec9d03)
 
 ### How It Works
 
@@ -270,11 +276,11 @@ pipelines without defensive `try/catch` noise.
 
 ### Serialisation
 
-| Component | Purpose                                                                               |
-| --------- | ------------------------------------------------------------------------------------- |
-| `avro`    | Apache Avro schema-based serialisation                                                |
+| Component     | Purpose                                                                                            |
+| ------------- | -------------------------------------------------------------------------------------------------- |
+| `avro`        | Apache Avro schema-based serialisation                                                             |
 | `bank-schema` | Protobuf definitions (Person, Account, Organization, ApiKey, Balance, AccountProduct, Transaction) |
-| `json`    | JSON read/write with anomaly errors                                                   |
+| `json`        | JSON read/write with anomaly errors                                                                |
 
 ### Observability
 
@@ -284,8 +290,8 @@ pipelines without defensive `try/catch` noise.
 
 ### Domain
 
-| Component               | Purpose                                                                   |
-| ----------------------- | ------------------------------------------------------------------------- |
+| Component                   | Purpose                                                                   |
+| --------------------------- | ------------------------------------------------------------------------- |
 | `bank-cash-account`         | Account lifecycle — open, close, suspend, reopen, archive                 |
 | `bank-cash-account-product` | Product and version management — draft, publish, balance product config   |
 | `bank-balance`              | Account balance management — create, query by type/currency/status        |
@@ -297,22 +303,22 @@ pipelines without defensive `try/catch` noise.
 
 ### Testing
 
-| Component        | Purpose                                                    |
-| ---------------- | ---------------------------------------------------------- |
-| `test-system`    | `with-test-system` lifecycle macro, `nom-test>` assertions |
-| `testcontainers` | Declarative container infrastructure for integration tests |
+| Component             | Purpose                                                     |
+| --------------------- | ----------------------------------------------------------- |
+| `test-system`         | `with-test-system` lifecycle macro, `nom-test>` assertions  |
+| `testcontainers`      | Declarative container infrastructure for integration tests  |
 | `bank-test-resources` | Bank-specific test configuration (FDB stores, Avro schemas) |
-| `test-resources` | Shared test configuration                                  |
-| `test-schema`    | Protobuf test fixtures and pet command processor           |
-| `command-schema` | Command Avro schemas (envelope, response, command)         |
+| `test-resources`      | Shared test configuration                                   |
+| `test-schema`         | Protobuf test fixtures and pet command processor            |
+| `command-schema`      | Command Avro schemas (envelope, response, command)          |
 
 ## Deployed Applications
 
-| Project                 | Base            | Description                                   |
-| ----------------------- | --------------- | --------------------------------------------- |
-| `bank-monolith`         | `bank-monolith` | Full Queenswood system (API + processors)     |
-| `bank-web`              | `bank-api`      | HTTP API for accounts, products, and balances |
-| `bank-app`              | `bank-app`      | Svelte front-end for the banking application  |
+| Project                     | Base            | Description                                   |
+| --------------------------- | --------------- | --------------------------------------------- |
+| `bank-monolith`             | `bank-monolith` | Full Queenswood system (API + processors)     |
+| `bank-web`                  | `bank-api`      | HTTP API for accounts, products, and balances |
+| `bank-app`                  | `bank-app`      | Svelte front-end for the banking application  |
 | `bank-cash-account-service` | `service`       | Async command handler for account operations  |
 
 ## Getting Started
