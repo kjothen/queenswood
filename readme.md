@@ -225,7 +225,7 @@ No exceptions cross component boundaries. All failure paths return anomalies:
 Macros — `try-nom`, `let-nom>`, `nom->`, `nom-do>` — compose anomaly-aware
 pipelines without defensive `try/catch` noise.
 
-## Components
+## Mono Components
 
 ### Foundation
 
@@ -278,38 +278,16 @@ pipelines without defensive `try/catch` noise.
 
 ### Serialisation
 
-| Component     | Purpose                                                                                            |
-| ------------- | -------------------------------------------------------------------------------------------------- |
-| `avro` | Apache Avro schema-based serialisation |
-| `json` | JSON read/write with anomaly errors   |
-
+| Component | Purpose                                |
+| --------- | -------------------------------------- |
+| `avro`    | Apache Avro schema-based serialisation |
+| `json`    | JSON read/write with anomaly errors    |
 
 ### Observability
 
 | Component   | Purpose                                                |
 | ----------- | ------------------------------------------------------ |
 | `telemetry` | OpenTelemetry tracing with W3C traceparent propagation |
-
-### Domain
-
-| Component                   | Purpose                                                                   |
-| --------------------------- | ------------------------------------------------------------------------- |
-| `bank-api-key`              | API key generation, hashing, and verification                             |
-| `bank-balance`              | Account balance management — create, query by type/currency/status        |
-| `bank-bootstrap`            | Internal organization bootstrap and seed data                             |
-| `bank-cash-account`         | Account lifecycle — open, close, suspend, reopen, archive                 |
-| `bank-cash-account-product` | Product and version management — draft, publish, balance product config   |
-| `bank-idv`                  | Identity verification processing                                          |
-| `bank-organization`         | Organisation management — create org, API key generation and verification |
-| `bank-party`                | Party creation and management                                             |
-| `bank-schema`               | Protobuf definitions (Person, Account, Organization, ApiKey, Balance, AccountProduct, Transaction) |
-| `bank-transaction`          | Transaction recording with double-entry legs                              |
-
-### Domain Testing
-
-| Component             | Purpose                                                     |
-| --------------------- | ----------------------------------------------------------- |
-| `bank-test-resources` | Bank-specific test configuration (FDB stores, Avro schemas) |
 
 ### Testing
 
@@ -320,7 +298,27 @@ pipelines without defensive `try/catch` noise.
 | `test-system`    | `with-test-system` lifecycle macro, `nom-test>` assertions |
 | `testcontainers` | Declarative container infrastructure for integration tests |
 
-## Deployed Applications
+## Domain Components
+
+### Bank
+
+| Component                   | Purpose                                                                                            |
+| --------------------------- | -------------------------------------------------------------------------------------------------- |
+| `bank-api-key`              | API key generation, hashing, and verification                                                      |
+| `bank-balance`              | Account balance management — create, query by type/currency/status                                 |
+| `bank-bootstrap`            | Internal organization bootstrap and seed data                                                      |
+| `bank-cash-account`         | Account lifecycle — open, close, suspend, reopen, archive                                          |
+| `bank-cash-account-product` | Product and version management — draft, publish, balance product config                            |
+| `bank-idv`                  | Identity verification processing                                                                   |
+| `bank-organization`         | Organisation management — create org, API key generation and verification                          |
+| `bank-party`                | Party creation and management                                                                      |
+| `bank-schema`               | Protobuf definitions (Person, Account, Organization, ApiKey, Balance, AccountProduct, Transaction) |
+| `bank-test-resources`       | Bank-specific test configuration (FDB stores, Avro schemas)                                        |
+| `bank-transaction`          | Transaction recording with double-entry legs                                                       |
+
+## Projects
+
+### Domain
 
 | Project                     | Base            | Description                                   |
 | --------------------------- | --------------- | --------------------------------------------- |
