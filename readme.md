@@ -259,6 +259,7 @@ pipelines without defensive `try/catch` noise.
 | `command`           | Request-reply and async command dispatch over bus |
 | `processor`         | Message processor protocol                        |
 | `command-processor` | Bus-subscription lifecycle for domain processors  |
+| `command-schema`    | Command Avro schemas (envelope, response, command)|
 
 ### Web & HTTP
 
@@ -303,16 +304,20 @@ pipelines without defensive `try/catch` noise.
 | `bank-bootstrap`            | Internal organization bootstrap and seed data                             |
 | `bank-transaction`          | Transaction recording with double-entry legs                              |
 
-### Testing
+### Domain Testing
 
 | Component             | Purpose                                                     |
 | --------------------- | ----------------------------------------------------------- |
-| `test-system`         | `with-test-system` lifecycle macro, `nom-test>` assertions  |
-| `testcontainers`      | Declarative container infrastructure for integration tests  |
 | `bank-test-resources` | Bank-specific test configuration (FDB stores, Avro schemas) |
-| `test-resources`      | Shared test configuration                                   |
-| `test-schema`         | Protobuf test fixtures and pet command processor            |
-| `command-schema`      | Command Avro schemas (envelope, response, command)          |
+
+### Testing
+
+| Component        | Purpose                                                    |
+| ---------------- | ---------------------------------------------------------- |
+| `test-system`    | `with-test-system` lifecycle macro, `nom-test>` assertions |
+| `testcontainers` | Declarative container infrastructure for integration tests |
+| `test-resources` | Shared test configuration                                  |
+| `test-schema`    | Protobuf test fixtures and pet command processor           |
 
 ## Deployed Applications
 
