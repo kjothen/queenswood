@@ -298,6 +298,14 @@ pipelines without defensive `try/catch` noise.
 | `test-system`    | `with-test-system` lifecycle macro, `nom-test>` assertions |
 | `testcontainers` | Declarative container infrastructure for integration tests |
 
+## Mono Bases
+
+| Base                   | Purpose                                              |
+| ---------------------- | ---------------------------------------------------- |
+| `build`                | Uberjar build tooling                                |
+| `external-test-runner` | Out-of-process test runner for Polylith              |
+| `service`              | Generic async command handler entry point            |
+
 ## Domain Components
 
 | Component &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | Purpose |
