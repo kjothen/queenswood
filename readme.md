@@ -300,19 +300,19 @@ pipelines without defensive `try/catch` noise.
 
 ## Domain Components
 
-| Component                   | Purpose                                                                                            |
-| --------------------------- | -------------------------------------------------------------------------------------------------- |
-| `bank-api-key`              | API key generation, hashing, and verification                                                      |
-| `bank-balance`              | Account balance management — create, query by type/currency/status                                 |
-| `bank-bootstrap`            | Internal organization bootstrap and seed data                                                      |
-| `bank-cash-account`         | Account lifecycle — open, close, suspend, reopen, archive                                          |
-| `bank-cash-account-product` | Product and version management — draft, publish, balance product config                            |
-| `bank-idv`                  | Identity verification processing                                                                   |
-| `bank-organization`         | Organisation management — create org, API key generation and verification                          |
-| `bank-party`                | Party creation and management                                                                      |
-| `bank-schema`               | Protobuf definitions (Person, Account, Organization, ApiKey, Balance, AccountProduct, Transaction) |
-| `bank-test-resources`       | Bank-specific test configuration (FDB stores, Avro schemas)                                        |
-| `bank-transaction`          | Transaction recording with double-entry legs                                                       |
+| Component &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | Purpose |
+| --- | --- |
+| `bank-api-key` | API key generation, hashing, and verification |
+| `bank-balance` | Account balance management — create, query by type/currency/status |
+| `bank-bootstrap` | Internal organization bootstrap and seed data |
+| `bank-cash-account` | Account lifecycle — open, close, suspend, reopen, archive |
+| `bank-cash-account-product` | Product and version management — draft, publish, balance product config |
+| `bank-idv` | Identity verification processing |
+| `bank-organization` | Organisation management — create org, API key generation and verification |
+| `bank-party` | Party creation and management |
+| `bank-schema` | Protobuf definitions (Person, Account, Organization, ApiKey, Balance, AccountProduct, Transaction) |
+| `bank-test-resources` | Bank-specific test configuration (FDB stores, Avro schemas) |
+| `bank-transaction` | Transaction recording with double-entry legs |
 
 ## Domain Projects
 
