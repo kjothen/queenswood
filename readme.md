@@ -231,51 +231,50 @@ pipelines without defensive `try/catch` noise.
 
 | Component | Purpose                                                    |
 | --------- | ---------------------------------------------------------- |
-| `system`  | Lifecycle management wrapping `donut.system`               |
-| `error`   | Anomaly-based error handling (`nom` library)               |
-| `env`     | Configuration loading with `:dev`/`:test`/`:prod` profiles |
-| `log`     | Structured logging                                         |
-| `utility` | Deep merge, UUID v7, YAML conversion, collection helpers   |
-| `spec`    | Malli-based validation with human-readable errors          |
 | `cli`     | CLI argument validation and exit handling                  |
+| `env`     | Configuration loading with `:dev`/`:test`/`:prod` profiles |
+| `error`   | Anomaly-based error handling (`nom` library)               |
+| `log`     | Structured logging                                         |
+| `spec`    | Malli-based validation with human-readable errors          |
+| `system`  | Lifecycle management wrapping `donut.system`               |
+| `utility` | Deep merge, UUID v7, YAML conversion, collection helpers   |
 
 ### Persistence
 
 | Component  | Purpose                                                     |
 | ---------- | ----------------------------------------------------------- |
-| `db`       | PostgreSQL with connection pooling                          |
-| `sql`      | HoneySQL query formatting                                   |
-| `migrator` | Liquibase schema migrations                                 |
-| `fdb`      | FoundationDB — KV layer, record layer, changelog processing |
 | `cache`    | In-memory caching                                           |
+| `db`       | PostgreSQL with connection pooling                          |
+| `fdb`      | FoundationDB — KV layer, record layer, changelog processing |
+| `migrator` | Liquibase schema migrations                                 |
+| `sql`      | HoneySQL query formatting                                   |
 
 ### Messaging
 
-| Component           | Purpose                                           |
-| ------------------- | ------------------------------------------------- |
-| `pulsar`            | Apache Pulsar producer/consumer/reader with Avro  |
-| `mqtt`              | MQTT publish/subscribe                            |
-| `message-bus`       | Protocol abstraction over messaging backends      |
-| `command`           | Request-reply and async command dispatch over bus |
-| `processor`         | Message processor protocol                        |
-| `command-processor` | Bus-subscription lifecycle for domain processors  |
-| `command-schema`    | Command Avro schemas (envelope, response, command)|
+| Component           | Purpose                                            |
+| ------------------- | -------------------------------------------------- |
+| `command`           | Request-reply and async command dispatch over bus  |
+| `command-processor` | Bus-subscription lifecycle for domain processors   |
+| `command-schema`    | Command Avro schemas (envelope, response, command) |
+| `message-bus`       | Protocol abstraction over messaging backends       |
+| `mqtt`              | MQTT publish/subscribe                             |
+| `processor`         | Message processor protocol                         |
+| `pulsar`            | Apache Pulsar producer/consumer/reader with Avro   |
 
 ### Web & HTTP
 
 | Component     | Purpose                                                       |
 | ------------- | ------------------------------------------------------------- |
-| `server`      | Jetty with interceptor-based dependency injection and OpenAPI |
 | `http-client` | HTTP client with anomaly-based error handling                 |
+| `server`      | Jetty with interceptor-based dependency injection and OpenAPI |
 
 ### Security & Cryptography
 
 | Component             | Purpose                                           |
 | --------------------- | ------------------------------------------------- |
-| `bank-api-key`        | API key generation, hashing, and verification     |
-| `vault`               | HashiCorp Vault for secrets and key management    |
 | `encryption`          | AES-256, RSA, base64                              |
 | `pulsar-vault-crypto` | Tenant-scoped Pulsar message encryption via Vault |
+| `vault`               | HashiCorp Vault for secrets and key management    |
 
 ### Serialisation
 
@@ -284,6 +283,7 @@ pipelines without defensive `try/catch` noise.
 | `avro`        | Apache Avro schema-based serialisation                                                             |
 | `bank-schema` | Protobuf definitions (Person, Account, Organization, ApiKey, Balance, AccountProduct, Transaction) |
 | `json`        | JSON read/write with anomaly errors                                                                |
+
 
 ### Observability
 
@@ -295,13 +295,14 @@ pipelines without defensive `try/catch` noise.
 
 | Component                   | Purpose                                                                   |
 | --------------------------- | ------------------------------------------------------------------------- |
+| `bank-api-key`              | API key generation, hashing, and verification                             |
+| `bank-balance`              | Account balance management — create, query by type/currency/status        |
+| `bank-bootstrap`            | Internal organization bootstrap and seed data                             |
 | `bank-cash-account`         | Account lifecycle — open, close, suspend, reopen, archive                 |
 | `bank-cash-account-product` | Product and version management — draft, publish, balance product config   |
-| `bank-balance`              | Account balance management — create, query by type/currency/status        |
+| `bank-idv`                  | Identity verification processing                                          |
 | `bank-organization`         | Organisation management — create org, API key generation and verification |
 | `bank-party`                | Party creation and management                                             |
-| `bank-idv`                  | Identity verification processing                                          |
-| `bank-bootstrap`            | Internal organization bootstrap and seed data                             |
 | `bank-transaction`          | Transaction recording with double-entry legs                              |
 
 ### Domain Testing
@@ -314,19 +315,19 @@ pipelines without defensive `try/catch` noise.
 
 | Component        | Purpose                                                    |
 | ---------------- | ---------------------------------------------------------- |
-| `test-system`    | `with-test-system` lifecycle macro, `nom-test>` assertions |
-| `testcontainers` | Declarative container infrastructure for integration tests |
 | `test-resources` | Shared test configuration                                  |
 | `test-schema`    | Protobuf test fixtures and pet command processor           |
+| `test-system`    | `with-test-system` lifecycle macro, `nom-test>` assertions |
+| `testcontainers` | Declarative container infrastructure for integration tests |
 
 ## Deployed Applications
 
 | Project                     | Base            | Description                                   |
 | --------------------------- | --------------- | --------------------------------------------- |
-| `bank-monolith`             | `bank-monolith` | Full Queenswood system (API + processors)     |
-| `bank-web`                  | `bank-api`      | HTTP API for accounts, products, and balances |
 | `bank-app`                  | `bank-app`      | Svelte front-end for the banking application  |
 | `bank-cash-account-service` | `service`       | Async command handler for account operations  |
+| `bank-monolith`             | `bank-monolith` | Full Queenswood system (API + processors)     |
+| `bank-web`                  | `bank-api`      | HTTP API for accounts, products, and balances |
 
 ## Getting Started
 
