@@ -300,8 +300,6 @@ pipelines without defensive `try/catch` noise.
 
 ## Domain Components
 
-### Bank
-
 | Component                   | Purpose                                                                                            |
 | --------------------------- | -------------------------------------------------------------------------------------------------- |
 | `bank-api-key`              | API key generation, hashing, and verification                                                      |
@@ -316,9 +314,7 @@ pipelines without defensive `try/catch` noise.
 | `bank-test-resources`       | Bank-specific test configuration (FDB stores, Avro schemas)                                        |
 | `bank-transaction`          | Transaction recording with double-entry legs                                                       |
 
-## Projects
-
-### Domain
+## Domain Projects
 
 | Project                     | Base            | Description                                   |
 | --------------------------- | --------------- | --------------------------------------------- |
