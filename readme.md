@@ -302,7 +302,7 @@ pipelines without defensive `try/catch` noise.
 
 | Base                   | Purpose                                              |
 | ---------------------- | ---------------------------------------------------- |
-| `build`                | Uberjar build tooling                                |
+| `build`                | Uberjar build tooling and Protobuf code generation   |
 | `external-test-runner` | Out-of-process test runner for Polylith              |
 | `service`              | Generic async command handler entry point            |
 
