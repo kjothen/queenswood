@@ -322,6 +322,14 @@ pipelines without defensive `try/catch` noise.
 | `bank-test-resources` | Bank-specific test configuration (FDB stores, Avro schemas) |
 | `bank-transaction` | Transaction recording with double-entry legs |
 
+## Domain Bases
+
+| Base             | Purpose                                              |
+| ---------------- | ---------------------------------------------------- |
+| `bank-api`       | HTTP API handlers, routes, and OpenAPI spec          |
+| `bank-app`       | Svelte front-end for the banking application         |
+| `bank-monolith`  | Full system entry point combining API and processors |
+
 ## Domain Projects
 
 | Project                     | Base            | Description                                   |
