@@ -280,9 +280,8 @@ pipelines without defensive `try/catch` noise.
 
 | Component     | Purpose                                                                                            |
 | ------------- | -------------------------------------------------------------------------------------------------- |
-| `avro`        | Apache Avro schema-based serialisation                                                             |
-| `bank-schema` | Protobuf definitions (Person, Account, Organization, ApiKey, Balance, AccountProduct, Transaction) |
-| `json`        | JSON read/write with anomaly errors                                                                |
+| `avro` | Apache Avro schema-based serialisation |
+| `json` | JSON read/write with anomaly errors   |
 
 
 ### Observability
@@ -303,6 +302,7 @@ pipelines without defensive `try/catch` noise.
 | `bank-idv`                  | Identity verification processing                                          |
 | `bank-organization`         | Organisation management — create org, API key generation and verification |
 | `bank-party`                | Party creation and management                                             |
+| `bank-schema`               | Protobuf definitions (Person, Account, Organization, ApiKey, Balance, AccountProduct, Transaction) |
 | `bank-transaction`          | Transaction recording with double-entry legs                              |
 
 ### Domain Testing
