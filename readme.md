@@ -42,10 +42,12 @@ library composes into a production-shaped system.
 ### Demos
 
 1. Open a cash account for a party in a new customer organization
-   [![Account Opening Demo](thumbnail.png)](https://github.com/user-attachments/assets/60a15eea-263e-4ea0-ae60-093bffbbbde3)
+
+   [![Open a Cash Account](thumbnail.png)](https://github.com/user-attachments/assets/60a15eea-263e-4ea0-ae60-093bffbbbde3)
 
 1. Fund a customer organization's settlement account
-   [![Account Opening Demo](thumbnail.png)](https://github.com/user-attachments/assets/10092bdd-dd70-4499-af0f-f1aac4ec9d03)
+
+   [![Fund Settlement Account](thumbnail.png)](https://github.com/user-attachments/assets/10092bdd-dd70-4499-af0f-f1aac4ec9d03)
 
 ### How It Works
 
