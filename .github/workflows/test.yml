@@ -137,3 +137,16 @@ jobs:
           name: coverage-report-${{ matrix.project }}
           path: target/coverage/${{ matrix.project }}/
           retention-days: 7
+
+  # Gate job for branch protection — produces a single required check
+  tests:
+    if: always()
+    needs: [test]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check test results
+        run: |
+          if [[ "${{ needs.test.result }}" != "success" ]]; then
+            echo "Tests failed or were cancelled"
+            exit 1
+          fi
