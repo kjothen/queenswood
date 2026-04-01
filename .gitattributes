@@ -1,3 +1,15 @@
+.clj-kondo/config.edn merge=ours-always 
+.github/workflows/** merge=ours-always
+
+Justfile merge=ours-always
+
 readme.md merge=ours-always
-workspace.edn merge=ours-always
+renovate.json
+
 deps.edn merge=ours-always
+workspace.edn merge=ours-always
+
+development/src/dev/** merge=ours-always
+docs/index.html merge=ours-always
+
+

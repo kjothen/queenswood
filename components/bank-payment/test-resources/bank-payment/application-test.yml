@@ -6,5 +6,5 @@ system:
     processor: !system/component
       system/component-kind: payment/processor
       record-db: !system/ref fdb.record-db
-      record-store: !system/ref fdb.store
+      record-store: !system/ref fdb.meta-store
       schemas: !system/ref avro.serde

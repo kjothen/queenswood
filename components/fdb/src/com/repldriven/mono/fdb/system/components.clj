@@ -9,6 +9,7 @@
     (com.apple.foundationdb FDB)
     (com.apple.foundationdb.record RecordMetaData)
     (com.apple.foundationdb.record.metadata Index IndexOptions Key$Expressions)
+    (com.apple.foundationdb.record.metadata.expressions KeyExpression$FanType)
     (com.apple.foundationdb.record.provider.foundationdb APIVersion
                                                          FDBDatabaseFactory
                                                          FDBMetaDataStore
@@ -104,10 +105,13 @@
     (.invoke method nil (into-array Object []))))
 
 (defn- build-index-expr
-  [{:strs [field fields]}]
+  [{:strs [field fields fan-out]}]
   (if fields
     (Key$Expressions/concatenateFields ^java.util.List fields)
-    (Key$Expressions/field field)))
+    (Key$Expressions/field field
+                           (if fan-out
+                             KeyExpression$FanType/FanOut
+                             KeyExpression$FanType/None))))
 
 (defn- set-primary-key
   [b record-type primary-key]
@@ -166,26 +170,45 @@
 (def meta-store
   {:system/start
    (fn [{:system/keys [config instance]}]
-     (or instance
-         (let [{:keys [record-db path descriptor record-types]} config
-               ks-path (keyspace/path path)
-               file-desc (resolve-descriptor descriptor)
-               meta-data (build-meta-data descriptor record-types)]
-           (log/info "FDB meta-store saving metadata to:" path)
-           (.run record-db
-                 ^Function
-                 (fn [ctx]
-                   (let [ms (FDBMetaDataStore. ctx ks-path)]
-                     (.saveRecordMetaData ms meta-data))
-                   nil))
-           (fn [ctx store-name]
-             (let [ms (doto (FDBMetaDataStore. ctx ks-path)
-                        (.setLocalFileDescriptor file-desc))]
-               (-> (FDBRecordStore/newBuilder)
-                   (.setMetaDataStore ms)
-                   (.setContext ctx)
-                   (.setKeySpacePath (keyspace/path store-name))
-                   .createOrOpen))))))
+     (or
+      instance
+      (let [{:keys [record-db path descriptor record-types]} config
+            ks-path (keyspace/path path)
+            file-desc (resolve-descriptor descriptor)
+            meta-data (build-meta-data descriptor record-types)
+            store-names (set (keys record-types))]
+        (log/info "FDB meta-store saving metadata to:" path)
+        (.run record-db
+              ^Function
+              (fn [ctx]
+                (let [ms (FDBMetaDataStore. ctx ks-path)]
+                  (.saveRecordMetaData ms meta-data))
+                nil))
+        ;; Eagerly open every store to warm the directory layer cache, each
+        ;; in its own transaction to avoid intra-transaction directory
+        ;; conflicts
+        (log/info "FDB meta-store warming directory layer cache for:"
+                  store-names)
+        (doseq [store-name store-names]
+          (.run record-db
+                ^Function
+                (fn [ctx]
+                  (let [ms (doto (FDBMetaDataStore. ctx ks-path)
+                             (.setLocalFileDescriptor file-desc))]
+                    (-> (FDBRecordStore/newBuilder)
+                        (.setMetaDataStore ms)
+                        (.setContext ctx)
+                        (.setKeySpacePath (keyspace/path store-name))
+                        .createOrOpen))
+                  nil)))
+        (fn [ctx store-name]
+          (let [ms (doto (FDBMetaDataStore. ctx ks-path)
+                     (.setLocalFileDescriptor file-desc))]
+            (-> (FDBRecordStore/newBuilder)
+                (.setMetaDataStore ms)
+                (.setContext ctx)
+                (.setKeySpacePath (keyspace/path store-name))
+                .createOrOpen))))))
    :system/config {:record-db system/required-component
                    :path system/required-component
                    :descriptor system/required-component

@@ -1,7 +1,7 @@
 processor: !system/component
   system/component-kind: cash-account/processor
   record-db: !system/ref fdb.record-db
-  record-store: !system/ref fdb.store
+  record-store: !system/ref fdb.meta-store
   schemas: !system/ref avro.serde
 command-processor: !system/component
   system/component-kind: command-processor/command-processor
@@ -16,7 +16,7 @@ dispatcher: !system/component
   command-response-channel: !keyword cash-accounts-command-response
 cash-account-watcher-handler: !system/component
   system/component-kind: cash-account/watcher-handler
-  record-store: !system/ref fdb.store
+  record-store: !system/ref fdb.meta-store
 watchers: !system/component
   system/component-kind: fdb/watchers
   cash-account:

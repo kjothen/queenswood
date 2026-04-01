@@ -197,7 +197,9 @@ system:
           subscriptionName: bank-monolith-cash-accounts-command
           subscriptionType: !pulsar/subscription-type Shared
           topicNames:
-            ["persistent://tenant-1/namespace-1/topic-cash-cash-accounts-command"]
+            [
+              "persistent://tenant-1/namespace-1/topic-cash-cash-accounts-command",
+            ]
         schemas: !system/local-ref schemas
       cash-accounts-command-response:
         _: !system/local-ref topics
@@ -208,7 +210,9 @@ system:
           subscriptionName: bank-monolith-cash-accounts-command-response
           subscriptionType: !pulsar/subscription-type Shared
           topicNames:
-            ["persistent://tenant-1/namespace-1/topic-cash-cash-accounts-command-response"]
+            [
+              "persistent://tenant-1/namespace-1/topic-cash-cash-accounts-command-response",
+            ]
         schemas: !system/local-ref schemas
       parties-command:
         _: !system/local-ref topics
@@ -252,7 +256,9 @@ system:
           subscriptionName: bank-monolith-transactions-command-response
           subscriptionType: !pulsar/subscription-type Shared
           topicNames:
-            ["persistent://tenant-1/namespace-1/topic-transactions-command-response"]
+            [
+              "persistent://tenant-1/namespace-1/topic-transactions-command-response",
+            ]
         schemas: !system/local-ref schemas
       payments-command:
         _: !system/local-ref topics
@@ -274,7 +280,9 @@ system:
           subscriptionName: bank-monolith-payments-command-response
           subscriptionType: !pulsar/subscription-type Shared
           topicNames:
-            ["persistent://tenant-1/namespace-1/topic-payments-command-response"]
+            [
+              "persistent://tenant-1/namespace-1/topic-payments-command-response",
+            ]
         schemas: !system/local-ref schemas
       interest-command:
         _: !system/local-ref topics
@@ -296,7 +304,9 @@ system:
           subscriptionName: bank-monolith-interest-command-response
           subscriptionType: !pulsar/subscription-type Shared
           topicNames:
-            ["persistent://tenant-1/namespace-1/topic-interest-command-response"]
+            [
+              "persistent://tenant-1/namespace-1/topic-interest-command-response",
+            ]
         schemas: !system/local-ref schemas
 
     message-bus-producers: !system/component
@@ -380,7 +390,7 @@ system:
         transactions: !system/ref transactions.dispatcher
       avro: !system/ref avro.serde
       record-db: !system/ref fdb.record-db
-      record-store: !system/ref fdb.store
+      record-store: !system/ref fdb.meta-store
     jetty-adapter: !system/component
       system/component-kind: server/jetty-adapter
       handler: !system/ref server.handler

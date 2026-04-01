@@ -1,7 +1,7 @@
 processor: !system/component
   system/component-kind: party/processor
   record-db: !system/ref fdb.record-db
-  record-store: !system/ref fdb.store
+  record-store: !system/ref fdb.meta-store
   schemas: !system/ref avro.serde
 command-processor: !system/component
   system/component-kind: command-processor/command-processor
@@ -11,7 +11,7 @@ command-processor: !system/component
   command-response-channel: !keyword parties-command-response
 watcher-handler: !system/component
   system/component-kind: party/watcher-handler
-  record-store: !system/ref fdb.store
+  record-store: !system/ref fdb.meta-store
 watchers: !system/component
   system/component-kind: fdb/watchers
   idvs:

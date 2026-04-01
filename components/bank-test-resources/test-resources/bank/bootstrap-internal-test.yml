@@ -1,7 +1,7 @@
 internal: !system/component
   system/component-kind: bootstrap/internal
   record-db: !system/ref fdb.record-db
-  record-store: !system/ref fdb.store
+  record-store: !system/ref fdb.meta-store
   organization-name: Queenswood
   currencies:
     - GBP
