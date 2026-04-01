@@ -1,3 +1,5 @@
 readme.md merge=ours-always
 workspace.edn merge=ours-always
 deps.edn merge=ours-always
+.clj-kondo/config.edn merge=ours-always
+
