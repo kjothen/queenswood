@@ -1,13 +1,12 @@
 (ns ^:eftest/synchronized
     com.repldriven.mono.bank-cash-account-product.interface-test
   (:require
-    com.repldriven.mono.testcontainers.interface
-    com.repldriven.mono.fdb.interface
-
     [com.repldriven.mono.bank-cash-account-product.interface :as SUT]
 
     [com.repldriven.mono.error.interface :as error]
+    [com.repldriven.mono.fdb.interface]
     [com.repldriven.mono.system.interface :as system]
+    [com.repldriven.mono.testcontainers.interface]
     [com.repldriven.mono.test-system.interface :refer
      [with-test-system nom-test>]]
 

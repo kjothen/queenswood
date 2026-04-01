@@ -1,14 +1,16 @@
 (ns ^:eftest/synchronized com.repldriven.mono.bank-idv.interface-test
   (:require
-    com.repldriven.mono.fdb.interface
-    com.repldriven.mono.bank-idv.interface
-    com.repldriven.mono.testcontainers.interface
+    [com.repldriven.mono.bank-idv.interface]
+
+    [com.repldriven.mono.fdb.interface]
     [com.repldriven.mono.avro.interface :as avro]
     [com.repldriven.mono.error.interface :as error]
     [com.repldriven.mono.processor.interface :as processor]
     [com.repldriven.mono.system.interface :as system]
+    [com.repldriven.mono.testcontainers.interface]
     [com.repldriven.mono.test-system.interface :refer
      [with-test-system nom-test>]]
+
     [clojure.test :refer [deftest is testing]]))
 
 (def ^:private test-org-id "org_test_idv")

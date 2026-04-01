@@ -5,11 +5,11 @@ system:
     processor: !system/component
       system/component-kind: idv/processor
       record-db: !system/ref fdb.record-db
-      record-store: !system/ref fdb.store
+      record-store: !system/ref fdb.meta-store
       schemas: !system/ref avro.serde
     watcher-handler: !system/component
       system/component-kind: idv/watcher-handler
-      record-store: !system/ref fdb.store
+      record-store: !system/ref fdb.meta-store
     watcher: !system/component
       system/component-kind: fdb/watcher
       record-db: !system/ref fdb.record-db

@@ -5,7 +5,7 @@ system:
     interceptors: !system/component
       system/component-kind: server/interceptors
       record-db: !system/ref fdb.record-db
-      record-store: !system/ref fdb.store
+      record-store: !system/ref fdb.meta-store
       auth:
         role: !keyword org
         organization-id: org_test_list_parties
