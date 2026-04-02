@@ -12,4 +12,5 @@ workspace.edn merge=ours-always
 development/src/dev/** merge=ours-always
 docs/index.html merge=ours-always
 
+scripts/bank/** merge=ours-always
 
