@@ -13,20 +13,26 @@ git ls-files -u | awk '{print $4}' | sort -u |
   grep -E '^(components|bases|projects)/bank-' |
   xargs -r git add
 
-echo "=== Restoring all queenswood-owned files from HEAD ==="
+echo "=== Restoring ours-always files from .gitattributes ==="
+grep 'merge=ours-always' .gitattributes | awk '{print $1}' | while read -r pattern; do
+  if [[ "$pattern" == *"*"* ]]; then
+    # Expand globs via ls-tree for files that exist in HEAD
+    git ls-tree -r --name-only HEAD | grep -E "^${pattern//\*\*/.*}" |
+      xargs -r git checkout HEAD -- 2>/dev/null || true
+  else
+    git checkout HEAD -- "$pattern" 2>/dev/null || true
+  fi
+done
+
+echo "=== Restoring queenswood-owned components/bases/projects ==="
 git ls-tree -r --name-only HEAD |
   grep -E '^(components|bases|projects)/(bank-|queenswood)' |
   xargs -r git checkout HEAD --
 
-git ls-tree -r --name-only HEAD |
-  grep -E '^(development|scripts)/' |
-  xargs -r git checkout HEAD --
-
-git checkout HEAD -- workspace.edn deps.edn .clj-kondo/config.edn
-git checkout HEAD -- .github/workflows/
-
-echo "=== Removing example-* ==="
+echo "=== Removing upstream-added example files ==="
+git ls-files | grep -E '(^|/)example[-_]' | xargs -r git rm -f
 rm -rf components/example-* bases/example-* projects/example-*
+
 git add -A
 
 echo "=== Status after resolve ==="
