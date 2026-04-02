@@ -1,19 +1,27 @@
-# scripts/sync-upstream.sh
 #!/usr/bin/env bash
 set -euo pipefail
 
 git fetch upstream
-git merge --no-commit --no-ff upstream/main
 
-# Restore queenswood-specific files from our pre-merge HEAD
-git ls-tree -r --name-only HEAD |
+set +e
+git merge --no-commit --no-ff upstream/main
+MERGE_EXIT=$?
+set -e
+
+echo "=== Unmerged bank- files (modify/delete conflicts) ==="
+git ls-files -u | awk '{print $4}' | sort -u | grep -E '^(components|bases|projects)/bank-' || echo "NONE"
+
+echo "=== Resolving conflicts in favour of HEAD ==="
+git ls-files -u | awk '{print $4}' | sort -u |
   grep -E '^(components|bases|projects)/bank-' |
-  xargs git checkout HEAD --
+  xargs -r git add
 
 git checkout HEAD -- workspace.edn deps.edn
 
-# Remove anything example-* upstream added
 rm -rf components/example-* bases/example-* projects/example-*
 git add -A
+
+echo "=== Status after resolve ==="
+git status --short | head -30
 
 # git commit --no-edit
