@@ -1,0 +1,5 @@
+system:
+  message-bus: !include bank-clearbank-webhook/message-bus-test.yml
+  avro: !include avro/avro-test.yml
+  event: !include bank-clearbank-webhook/event-test.yml
+  server: !include bank-clearbank-webhook/server-test.yml

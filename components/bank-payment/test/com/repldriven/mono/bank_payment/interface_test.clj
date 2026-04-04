@@ -93,6 +93,93 @@
                                :balance-status-posted)
          _ (is (= 500 (:credit creditor-balance)))]))))
 
+(defn- send-event
+  [proc schemas event-name data]
+  (let [payload (avro/serialize (get schemas event-name)
+                                data)]
+    (if (error/anomaly? payload)
+      payload
+      (processor/process proc
+                         {:event event-name
+                          :payload payload}))))
+
+(defn- test-settle-inbound-payment
+  [sys event-proc schemas]
+  (testing
+    "transaction-settled event creates inbound
+  payment and records transaction"
+    (let [config (fdb-config sys)
+          internal (system/instance sys [:bootstrap :internal])
+          settlement-account-id (:account-id internal)]
+      (nom-test>
+        [customer-org (organizations/new-organization
+                       config
+                       "Inbound Payment Customer"
+                       :organisation-type-customer
+                       ["GBP"])
+         customer-account
+         (get-in customer-org [:organization :accounts 0])
+         customer-account-id (:account-id customer-account)
+         bban (:bban customer-account)
+         _ (is (some? bban))
+         result (send-event
+                 event-proc
+                 schemas
+                 "transaction-settled"
+                 {:scheme-transaction-id "stx-001"
+                  :end-to-end-id "e2e-001"
+                  :scheme "FPS"
+                  :debit-credit-code :debit-credit-code-credit
+                  :amount 1000
+                  :currency "GBP"
+                  :creditor-bban bban
+                  :debtor-name "Jane Doe"
+                  :reference "Invoice 42"
+                  :timestamp-settled (System/currentTimeMillis)})
+         _ (is (some? (:payment-id result)))
+         _ (is (= "stx-001"
+                  (:scheme-transaction-id result)))
+         _ (is (= "e2e-001" (:end-to-end-id result)))
+         _ (is (= "FPS" (:scheme result)))
+         _ (is (= customer-account-id
+                  (:creditor-account-id result)))
+         _ (is (= "GBP" (:currency result)))
+         _ (is (= 1000 (:amount result)))
+         _ (is (some? (:transaction-id result)))
+         _ (is (= "Jane Doe" (:debtor-name result)))
+         _ (is (= "Invoice 42" (:reference result)))
+         creditor-balance
+         (balances/get-balance config
+                               customer-account-id
+                               :balance-type-default
+                               "GBP"
+                               :balance-status-posted)
+         _ (is (= 1000 (:credit creditor-balance)))
+         settlement-balance
+         (balances/get-balance config
+                               settlement-account-id
+                               :balance-type-suspense
+                               "GBP"
+                               :balance-status-posted)
+         _ (is (= 1000 (:debit settlement-balance)))
+         ;; idempotency: re-send same event
+         result2 (send-event
+                  event-proc
+                  schemas
+                  "transaction-settled"
+                  {:scheme-transaction-id "stx-001"
+                   :end-to-end-id "e2e-001"
+                   :scheme "FPS"
+                   :debit-credit-code :debit-credit-code-credit
+                   :amount 1000
+                   :currency "GBP"
+                   :creditor-bban bban
+                   :debtor-name "Jane Doe"
+                   :reference "Invoice 42"
+                   :timestamp-settled (System/currentTimeMillis)})
+         _ (is (= (:payment-id result)
+                  (:payment-id result2)))]))))
+
 (defn- test-unknown-command
   [proc schemas]
   (testing "unknown command returns rejection"
@@ -113,6 +200,9 @@
 (deftest process-payment-test
   (with-test-system [sys "classpath:bank-payment/application-test.yml"]
                     (let [proc (system/instance sys [:payment :processor])
+                          event-proc
+                          (system/instance sys [:payment :event-processor])
                           schemas (system/instance sys [:avro :serde])]
                       (test-submit-internal-payment sys proc schemas)
-                      (test-unknown-command proc schemas))))
+                      (test-unknown-command proc schemas)
+                      (test-settle-inbound-payment sys event-proc schemas))))

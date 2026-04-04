@@ -79,3 +79,21 @@
                      "account_type"
                      (schema/account-type->pb-enum
                       account-type)))))))
+
+(defn get-account-by-bban
+  "Returns account matching the given bban.
+  Uses the bban_idx secondary index."
+  [{:keys [record-db record-store]} bban]
+  (try-nom :cash-account/get-by-bban
+           "Failed to get account by bban"
+           (fdb/transact
+            record-db
+            record-store
+            "cash-accounts"
+            (fn [store]
+              (first (mapv schema/pb->CashAccount
+                           (fdb/query-records
+                            store
+                            "CashAccount"
+                            "bban"
+                            bban)))))))

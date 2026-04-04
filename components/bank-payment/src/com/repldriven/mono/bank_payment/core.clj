@@ -1,9 +1,11 @@
 (ns com.repldriven.mono.bank-payment.core
   (:require
     [com.repldriven.mono.bank-payment.commands :as commands]
+    [com.repldriven.mono.bank-payment.events :as events]
 
     [com.repldriven.mono.avro.interface :as avro]
     [com.repldriven.mono.error.interface :as error :refer [let-nom>]]
+    [com.repldriven.mono.log.interface :as log]
     [com.repldriven.mono.processor.interface :as processor]))
 
 (defn- dispatch
@@ -26,3 +28,22 @@
 (defrecord PaymentProcessor [config]
   processor/Processor
     (process [_ message] (dispatch config message)))
+
+(defn- dispatch-event
+  [config message]
+  (let [{:keys [event payload]} message
+        {:keys [schemas]} config
+        schema (get schemas event)]
+    (if-not schema
+      (do (log/warnf "No schema found for event: %s" event)
+          nil)
+      (let-nom> [data (avro/deserialize-same schema payload)]
+        (case event
+          "transaction-settled"
+          (events/settle-inbound config data)
+          (do (log/warnf "Unknown event: %s" event)
+              nil))))))
+
+(defrecord PaymentEventProcessor [config]
+  processor/Processor
+    (process [_ message] (dispatch-event config message)))

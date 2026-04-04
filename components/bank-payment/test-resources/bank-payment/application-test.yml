@@ -8,3 +8,9 @@ system:
       record-db: !system/ref fdb.record-db
       record-store: !system/ref fdb.meta-store
       schemas: !system/ref avro.serde
+    event-processor: !system/component
+      system/component-kind: payment/event-processor
+      record-db: !system/ref fdb.record-db
+      record-store: !system/ref fdb.meta-store
+      schemas: !system/ref avro.serde
+      settlement-account-id: !system/ref bootstrap.internal.account-id

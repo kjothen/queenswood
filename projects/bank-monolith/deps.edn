@@ -21,6 +21,10 @@
         component/command {:local/root "../../components/command"}
         component/command-processor {:local/root "../../components/command-processor"}
         component/command-schema {:local/root "../../components/command-schema"}
+        component/event {:local/root "../../components/event"}
+        component/event-processor {:local/root "../../components/event-processor"}
+        component/event-schema {:local/root "../../components/event-schema"}
+        component/bank-clearbank {:local/root "../../components/bank-clearbank"}
         component/encryption {:local/root "../../components/encryption"}
         component/env {:local/root "../../components/env"}
         component/error {:local/root "../../components/error"}
@@ -44,6 +48,8 @@
         component/telemetry {:local/root "../../components/telemetry"}
         component/utility {:local/root "../../components/utility"}
         base/bank-api {:local/root "../../bases/bank-api"}
+        base/bank-clearbank-simulator {:local/root "../../bases/bank-clearbank-simulator"}
+        base/bank-clearbank-webhook {:local/root "../../bases/bank-clearbank-webhook"}
         base/bank-monolith {:local/root "../../bases/bank-monolith"}
         base/service {:local/root "../../bases/service"}
         ;; protojure brings protobuf-java 4.x which breaks FDB Record Layer

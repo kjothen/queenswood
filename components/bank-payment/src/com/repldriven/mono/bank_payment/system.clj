@@ -12,4 +12,14 @@
                    :schemas system/required-component}
    :system/instance-schema some?})
 
-(system/defcomponents :payment {:processor processor})
+(def ^:private event-processor
+  {:system/start (fn [{:system/keys [config instance]}]
+                   (or instance (core/->PaymentEventProcessor config)))
+   :system/config {:record-db system/required-component
+                   :record-store system/required-component
+                   :schemas system/required-component
+                   :settlement-account-id system/required-component}
+   :system/instance-schema some?})
+
+(system/defcomponents :payment
+                      {:processor processor :event-processor event-processor})

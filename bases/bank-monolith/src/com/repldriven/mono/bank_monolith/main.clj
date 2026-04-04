@@ -11,10 +11,17 @@
     com.repldriven.mono.message-bus.interface
     com.repldriven.mono.bank-party.interface
     com.repldriven.mono.bank-bootstrap.interface
+    com.repldriven.mono.bank-clearbank.interface
+    com.repldriven.mono.bank-clearbank-webhook.system
     com.repldriven.mono.bank-schema.interface
+    com.repldriven.mono.event-processor.interface
     com.repldriven.mono.pulsar.interface
     com.repldriven.mono.server.interface
     [com.repldriven.mono.bank-api.api :as api]
+    [com.repldriven.mono.bank-clearbank-simulator.api
+     :as simulator-api]
+    [com.repldriven.mono.bank-clearbank-webhook.api
+     :as webhook-api]
     [com.repldriven.mono.cli.interface :as cli]
     [com.repldriven.mono.env.interface :as env]
     [com.repldriven.mono.error.interface :as error :refer [nom->]]
@@ -27,6 +34,12 @@
   (nom-> (env/config config-file profile)
          system/defs
          (assoc-in [:system/defs :server :handler] api/app)
+         (assoc-in [:system/defs :clearbank-simulator-server
+                    :handler]
+          simulator-api/app)
+         (assoc-in [:system/defs :clearbank-webhook-server
+                    :handler]
+          webhook-api/app)
          system/start))
 
 (defn stop [system] (system/stop system))
