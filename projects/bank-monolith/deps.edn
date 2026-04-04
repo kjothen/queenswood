@@ -32,6 +32,7 @@
         component/bank-idv {:local/root "../../components/bank-idv"}
         component/bank-interest {:local/root "../../components/bank-interest"}
         component/http-client {:local/root "../../components/http-client"}
+        component/json {:local/root "../../components/json"}
         component/log {:local/root "../../components/log"}
         component/bank-api-key {:local/root "../../components/bank-api-key"}
         component/bank-organization {:local/root "../../components/bank-organization"}
