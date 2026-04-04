@@ -11,3 +11,8 @@ internal: !system/component
       currency: GBP
       credit: 10000
       debit: 0
+    - balance-type: !keyword balance-type-suspense
+      balance-status: !keyword balance-status-posted
+      currency: GBP
+      credit: 0
+      debit: 0

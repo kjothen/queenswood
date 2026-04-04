@@ -40,6 +40,9 @@ system:
       command-response:
         schema: schemas/command/command-response.avsc.json
         type: AVRO
+      event:
+        schema: schemas/event/event-envelope.avsc.json
+        type: AVRO
 
     tenants: !system/component
       system/component-kind: pulsar/tenants
@@ -102,6 +105,9 @@ system:
         - topic: "persistent://tenant-1/namespace-1/topic-interest-command-response"
           partitions: 1
           schema: !keyword command-response
+        - topic: "persistent://tenant-1/namespace-1/topic-schemes-payments-event"
+          partitions: 1
+          schema: !keyword event
 
     producers: !system/component
       system/component-kind: pulsar/producers
@@ -184,6 +190,14 @@ system:
           accessMode: !pulsar/access-mode Shared
           schema: !keyword command-response
           topicName: "persistent://tenant-1/namespace-1/topic-interest-command-response"
+        schemas: !system/local-ref schemas
+      schemes-payments-event:
+        _: !system/local-ref topics
+        client: !system/local-ref client
+        conf:
+          accessMode: !pulsar/access-mode Shared
+          schema: !keyword event
+          topicName: "persistent://tenant-1/namespace-1/topic-schemes-payments-event"
         schemas: !system/local-ref schemas
 
     consumers: !system/component
@@ -308,6 +322,17 @@ system:
               "persistent://tenant-1/namespace-1/topic-interest-command-response",
             ]
         schemas: !system/local-ref schemas
+      schemes-payments-event:
+        _: !system/local-ref topics
+        client: !system/local-ref client
+        conf:
+          cryptoFailureAction: !pulsar/crypto-failure-action CONSUME
+          schema: !pulsar/schema AUTO_CONSUME
+          subscriptionName: bank-monolith-schemes-payments-event
+          subscriptionType: !pulsar/subscription-type Shared
+          topicNames:
+            ["persistent://tenant-1/namespace-1/topic-schemes-payments-event"]
+        schemas: !system/local-ref schemas
 
     message-bus-producers: !system/component
       system/component-kind: pulsar/message-bus-producers
@@ -331,6 +356,8 @@ system:
         producer: !system/local-ref producers.interest-command
       interest-command-response:
         producer: !system/local-ref producers.interest-command-response
+      schemes-payments-event:
+        producer: !system/local-ref producers.schemes-payments-event
 
     message-bus-consumers: !system/component
       system/component-kind: pulsar/message-bus-consumers
@@ -354,6 +381,8 @@ system:
         consumer: !system/local-ref consumers.interest-command
       interest-command-response:
         consumer: !system/local-ref consumers.interest-command-response
+      schemes-payments-event:
+        consumer: !system/local-ref consumers.schemes-payments-event
 
   message-bus:
     bus: !system/component
@@ -398,3 +427,41 @@ system:
       options: !profile
         dev:
           port: 8080
+  clearbank-simulator-server:
+    handler: !system/required-component
+    jetty-adapter: !system/component
+      system/component-kind: server/jetty-adapter
+      handler: !system/ref clearbank-simulator-server.handler
+      options: !profile
+        dev:
+          port: 8081
+    http-url: !system/component
+      system/component-kind: server/http-url
+      jetty-adapter: !system/local-ref jetty-adapter
+  clearbank-webhook-server:
+    handler: !system/required-component
+    interceptors: !system/component
+      system/component-kind: server/interceptors
+      bus: !system/ref message-bus.bus
+      avro: !system/ref avro.serde
+      event-channel: !keyword schemes-payments-event
+    jetty-adapter: !system/component
+      system/component-kind: server/jetty-adapter
+      handler: !system/ref clearbank-webhook-server.handler
+      interceptors: !system/ref clearbank-webhook-server.interceptors
+      options: !profile
+        dev:
+          port: 8082
+    http-url: !system/component
+      system/component-kind: server/http-url
+      jetty-adapter: !system/local-ref jetty-adapter
+  clearbank-webhook:
+    registrar: !system/component
+      system/component-kind: clearbank-webhook/registrar
+      simulator-url: !system/ref clearbank-simulator-server.http-url
+      webhook-url: !system/ref clearbank-webhook-server.http-url
+      webhooks:
+        - type: TransactionSettled
+          path: /webhooks/transaction-settled
+        - type: InboundHeldTransaction
+          path: /webhooks/inbound-held-transaction

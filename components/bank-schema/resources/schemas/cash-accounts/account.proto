@@ -35,6 +35,7 @@ message CashAccount {
   required string product_id = 11;
   required string version_id = 12;
   optional com.repldriven.mono.schemas.cash_account_products.AccountType account_type = 13;
+  optional string bban            = 14;  // denormalised for indexing: sort_code + account_number
 
   enum CashAccountStatus {
     CASH_ACCOUNT_STATUS_UNKNOWN = 0;

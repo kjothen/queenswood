@@ -24,6 +24,50 @@
              :side :leg-side-credit
              :amount amount}]}))
 
+(defn inbound-payment->transaction
+  "Builds the transaction data for an inbound payment.
+
+  Debits the settlement (suspense) account and credits
+  the customer account."
+  [data creditor-account-id settlement-account-id]
+  (let [{:keys [scheme-transaction-id currency amount
+                reference]}
+        data]
+    {:idempotency-key scheme-transaction-id
+     :transaction-type :transaction-type-inbound-transfer
+     :currency currency
+     :reference reference
+     :legs [{:account-id settlement-account-id
+             :balance-type :balance-type-suspense
+             :balance-status :balance-status-posted
+             :side :leg-side-debit
+             :amount amount}
+            {:account-id creditor-account-id
+             :balance-type :balance-type-default
+             :balance-status :balance-status-posted
+             :side :leg-side-credit
+             :amount amount}]}))
+
+(defn new-inbound-payment
+  "Creates a new inbound payment map."
+  [data creditor-account-id transaction-id]
+  (let [{:keys [scheme-transaction-id end-to-end-id scheme
+                currency amount debtor-name reference]}
+        data
+        now (System/currentTimeMillis)]
+    {:payment-id (encryption/generate-id "pmt")
+     :scheme-transaction-id scheme-transaction-id
+     :end-to-end-id end-to-end-id
+     :scheme scheme
+     :creditor-account-id creditor-account-id
+     :currency currency
+     :amount amount
+     :transaction-id transaction-id
+     :debtor-name debtor-name
+     :reference reference
+     :created-at now
+     :updated-at now}))
+
 (defn new-internal-payment
   "Creates a new internal payment map."
   [data transaction-id]

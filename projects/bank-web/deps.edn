@@ -20,6 +20,7 @@
         component/cli {:local/root "../../components/cli"}
         component/command {:local/root "../../components/command"}
         component/command-schema {:local/root "../../components/command-schema"}
+        component/event-schema {:local/root "../../components/event-schema"}
         component/encryption {:local/root "../../components/encryption"}
         component/env {:local/root "../../components/env"}
         component/error {:local/root "../../components/error"}

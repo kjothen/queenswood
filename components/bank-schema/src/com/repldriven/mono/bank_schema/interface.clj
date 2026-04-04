@@ -34,6 +34,7 @@
     (com.repldriven.mono.schemas.person_identification
      PersonIdentificationProto$PersonIdentification)
     (com.repldriven.mono.schemas.payments
+     InboundPaymentProto$InboundPayment
      InternalPaymentProto$InternalPayment)
     (com.repldriven.mono.schemas.transactions
      TransactionProto$Transaction
@@ -130,6 +131,15 @@
 (defn IdvChangelog->java
   [m]
   (IdvChangelogProto$IdvChangelog/parseFrom (IdvChangelog->pb m)))
+
+(def pb->InboundPayment payments/pb->InboundPayment)
+(defn InboundPayment->pb
+  [m]
+  (proto/->pb (payments/new-InboundPayment m)))
+(defn InboundPayment->java
+  [m]
+  (InboundPaymentProto$InboundPayment/parseFrom
+   (InboundPayment->pb m)))
 
 (def pb->InternalPayment payments/pb->InternalPayment)
 (defn InternalPayment->pb

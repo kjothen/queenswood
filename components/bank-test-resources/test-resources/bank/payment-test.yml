@@ -14,3 +14,14 @@ dispatcher: !system/component
   bus: !system/ref message-bus.bus
   command-channel: !keyword payments-command
   command-response-channel: !keyword payments-command-response
+event-processor-impl: !system/component
+  system/component-kind: payment/event-processor
+  record-db: !system/ref fdb.record-db
+  record-store: !system/ref fdb.meta-store
+  schemas: !system/ref avro.serde
+  settlement-account-id: !system/ref bootstrap.internal.account-id
+event-processor: !system/component
+  system/component-kind: event-processor/event-processor
+  bus: !system/ref message-bus.bus
+  processor: !system/local-ref event-processor-impl
+  event-channel: !keyword schemes-payments-event

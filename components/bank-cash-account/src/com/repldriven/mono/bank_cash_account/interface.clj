@@ -34,3 +34,9 @@
   Uses secondary index."
   [config account-type]
   (store/get-accounts-by-type config account-type))
+
+(defn get-account-by-bban
+  "Returns account matching the given BBAN.
+  Uses secondary index."
+  [config bban]
+  (store/get-account-by-bban config bban))

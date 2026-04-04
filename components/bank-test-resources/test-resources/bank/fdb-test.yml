@@ -1,4 +1,4 @@
-_record-types: &record-types !strs
+_record-types: !strs &record-types
   api-keys:
     record-type: ApiKey
     indexes:
@@ -24,6 +24,8 @@ _record-types: &record-types !strs
         field: party_id
       - name: account_type_idx
         field: account_type
+      - name: bban_idx
+        field: bban
   idvs:
     record-type: Idv
     primary-key: [organization_id, verification_id]
@@ -45,6 +47,11 @@ _record-types: &record-types !strs
   person-identifications:
     record-type: PersonIdentification
     indexes: []
+  inbound-payments:
+    record-type: InboundPayment
+    indexes:
+      - name: scheme_transaction_id_idx
+        field: scheme_transaction_id
   internal-payments:
     record-type: InternalPayment
     indexes:

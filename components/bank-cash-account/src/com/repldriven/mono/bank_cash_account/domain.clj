@@ -27,6 +27,10 @@
                       (str "Party is " s)))
       true)))
 
+(defn- scan->bban
+  [{:keys [sort-code account-number]}]
+  (str sort-code account-number))
+
 (defn- new-addresses
   [product address-fountain-fn]
   (let [{:keys [allowed-payment-address-schemes]} product]
@@ -63,7 +67,11 @@
       [_ (valid-currency? currency product)
        _ (valid-party? party)
        payment-addresses (new-addresses product address-fountain-fn)]
-      (let [now (System/currentTimeMillis)]
+      (let [now (System/currentTimeMillis)
+            bban (some (fn [{:keys [identifier]}]
+                         (when-let [scan (:scan identifier)]
+                           (scan->bban scan)))
+                       payment-addresses)]
         {:organization-id organization-id
          :party-id party-id
          :product-id product-id
@@ -74,6 +82,7 @@
          :account-type account-type
          :account-status :cash-account-status-opening
          :payment-addresses payment-addresses
+         :bban bban
          :created-at now
          :updated-at now}))))
 
