@@ -9,15 +9,17 @@
             "bank-web" {:alias "web",
                         :necessary ["bank-schema" "bank-test-resources"
                                     "test-schema" "command-schema"
-                                    "test-resources"]},
+                                    "event-schema" "test-resources"]},
             "bank-cash-account-service"
               {:alias "acc",
                :necessary ["bank-schema" "bank-test-resources" "test-schema"
-                           "command-schema" "test-resources"]},
+                           "command-schema" "event-schema"
+                           "test-resources"]},
             "bank-app" {:alias "app", :test []},
             "bank-monolith" {:alias "bank",
                              :necessary ["bank-schema" "bank-test-resources"
-                                         "command-schema" "test-resources"]}},
+                                         "command-schema" "event-schema"
+                                         "test-resources"]}},
  :tag-patterns {:release "v[0-9]*", :stable "stable-*"},
  :test {:create-test-runner
           com.repldriven.mono.external-test-runner.core/create},

@@ -46,5 +46,13 @@
    :system/config-schema [:map [:handler fn?]]
    :system/instance-schema some?})
 
-(system/defcomponents :server
-                      {:interceptors interceptors :jetty-adapter jetty-adapter})
+(def http-url
+  {:system/start (fn [{:system/keys [config instance]}]
+                   (or instance
+                       (server-jetty/http-local-url (:jetty-adapter config))))
+   :system/config {:jetty-adapter system/required-component}
+   :system/instance-schema string?})
+
+(system/defcomponents
+ :server
+ {:interceptors interceptors :jetty-adapter jetty-adapter :http-url http-url})

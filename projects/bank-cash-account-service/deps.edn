@@ -24,6 +24,7 @@
         component/command {:local/root "../../components/command"}
         component/command-processor {:local/root "../../components/command-processor"}
         component/command-schema {:local/root "../../components/command-schema"}
+        component/event-schema {:local/root "../../components/event-schema"}
         component/fdb {:local/root "../../components/fdb"}
         component/message-bus {:local/root "../../components/message-bus"}
         component/processor {:local/root "../../components/processor"}
