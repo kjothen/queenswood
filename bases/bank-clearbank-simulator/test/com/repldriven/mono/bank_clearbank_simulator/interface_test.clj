@@ -119,7 +119,7 @@
   []
   (nom-test>
     [res (post "/simulate/inbound-payment"
-               {:account-id "acc_01JMABC"
+               {:bban "04000412345678"
                 :amount 100.00
                 :currency "GBP"
                 :reference "Test inbound"})
