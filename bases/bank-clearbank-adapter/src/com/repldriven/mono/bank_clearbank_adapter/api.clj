@@ -2,7 +2,8 @@
   (:require
     [com.repldriven.mono.bank-clearbank-adapter.handlers :as handlers]
 
-    [com.repldriven.mono.bank-clearbank.interface :as clearbank]
+    [com.repldriven.mono.bank-clearbank-webhook.interface
+     :as clearbank-webhook]
 
     [com.repldriven.mono.server.interface :as server]
 
@@ -30,7 +31,7 @@
                    :string {:default (->provider (mt/string-transformer))}
                    :response {:default (->provider nil)}}
     :options {:registry (merge (m/default-schemas)
-                               clearbank/webhook-components-registry)}}))
+                               clearbank-webhook/component-registry)}}))
 
 (defn- routes
   [ctx]

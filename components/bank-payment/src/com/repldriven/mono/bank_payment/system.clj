@@ -9,7 +9,10 @@
                    (or instance (core/->PaymentProcessor config)))
    :system/config {:record-db system/required-component
                    :record-store system/required-component
-                   :schemas system/required-component}
+                   :schemas system/required-component
+                   :settlement-account-id nil
+                   :bus nil
+                   :scheme-payment-command-channel nil}
    :system/instance-schema some?})
 
 (def ^:private event-processor

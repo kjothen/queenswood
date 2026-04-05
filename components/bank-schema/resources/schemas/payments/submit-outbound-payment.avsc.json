@@ -3,6 +3,7 @@
   "name": "SubmitOutboundPayment",
   "namespace": "com.repldriven.mono.payments",
   "fields": [
+    {"name": "organization_id",   "type": "string"},
     {"name": "idempotency_key",   "type": "string"},
     {"name": "debtor_account_id", "type": "string"},
     {"name": "creditor_bban",     "type": "string"},

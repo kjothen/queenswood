@@ -1,5 +1,8 @@
 (ns com.repldriven.mono.bank-clearbank-adapter.system
   (:require
+    [com.repldriven.mono.bank-clearbank-adapter.commands
+     :as commands]
+
     [com.repldriven.mono.http-client.interface :as http]
     [com.repldriven.mono.json.interface :as json]
     [com.repldriven.mono.log.interface :as log]
@@ -32,4 +35,13 @@
                    :webhooks nil}
    :system/instance-schema some?})
 
-(system/defcomponents :clearbank-adapter {:registrar registrar})
+(def ^:private command-processor
+  {:system/start (fn [{:system/keys [config instance]}]
+                   (or instance (commands/->ClearBankCommandProcessor config)))
+   :system/config {:schemas system/required-component
+                   :clearbank-url system/required-component}
+   :system/instance-schema some?})
+
+(system/defcomponents :clearbank-adapter
+                      {:registrar registrar
+                       :command-processor command-processor})

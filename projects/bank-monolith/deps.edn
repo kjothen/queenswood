@@ -24,7 +24,7 @@
         component/event {:local/root "../../components/event"}
         component/event-processor {:local/root "../../components/event-processor"}
         component/event-schema {:local/root "../../components/event-schema"}
-        component/bank-clearbank {:local/root "../../components/bank-clearbank"}
+        component/bank-clearbank-webhook {:local/root "../../components/bank-clearbank-webhook"}
         component/encryption {:local/root "../../components/encryption"}
         component/env {:local/root "../../components/env"}
         component/error {:local/root "../../components/error"}

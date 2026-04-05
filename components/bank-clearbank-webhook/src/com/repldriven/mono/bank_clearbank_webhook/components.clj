@@ -1,6 +1,6 @@
-(ns com.repldriven.mono.bank-clearbank.webhook.components
+(ns com.repldriven.mono.bank-clearbank-webhook.components
   (:require
-    [com.repldriven.mono.bank-clearbank.webhook.examples
+    [com.repldriven.mono.bank-clearbank-webhook.examples
      :as examples]
     [com.repldriven.mono.utility.interface :refer [vname]]))
 
@@ -90,13 +90,13 @@
    [:Payload [:ref "TransactionRejectedPayload"]]
    [:Nonce int?]])
 
-(def webhook-components-registry
+(def component-registry
   (components-registry [#'AccountInfo #'CounterpartAccountInfo
                         #'TransactionSettledPayload #'TransactionRejectedPayload
                         #'TransactionSettledWebhook
                         #'TransactionRejectedWebhook]))
 
-(def webhook-examples-registry
+(def example-registry
   (examples-registry
    [#'examples/TransactionSettledWebhook #'examples/TransactionRejectedWebhook
     #'examples/TransactionSettledPayload #'examples/TransactionRejectedPayload

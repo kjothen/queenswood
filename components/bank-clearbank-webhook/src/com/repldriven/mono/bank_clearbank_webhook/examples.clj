@@ -1,4 +1,4 @@
-(ns com.repldriven.mono.bank-clearbank.webhook.examples)
+(ns com.repldriven.mono.bank-clearbank-webhook.examples)
 
 (def TransactionSettledWebhook
   {:Type "TransactionSettled"
