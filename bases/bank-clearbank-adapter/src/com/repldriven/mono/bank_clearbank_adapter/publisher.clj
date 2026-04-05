@@ -42,17 +42,25 @@
                     {:event-channel event-channel})))
 
 (defn publish-outbound-payment-settled
-  [_config payload]
-  (let [{:keys [EndToEndTransactionId TransactionId Amount
+  [config payload]
+  (let [{:keys [bus avro event-channel]} config
+        {:keys [EndToEndTransactionId TransactionId Amount
                 CurrencyCode Scheme TimestampSettled]}
         payload]
-    (log/info "TODO publish outbound-payment-settled"
-              {:end-to-end-id EndToEndTransactionId
-               :transaction-id TransactionId
-               :amount Amount
-               :currency CurrencyCode
-               :scheme Scheme
-               :timestamp TimestampSettled})))
+    (events/publish bus
+                    avro
+                    "transaction-settled"
+                    (str (utility/uuidv7))
+                    (str (utility/uuidv7))
+                    {:scheme-transaction-id TransactionId
+                     :end-to-end-id EndToEndTransactionId
+                     :scheme Scheme
+                     :debit-credit-code :debit-credit-code-debit
+                     :amount (amount->minor-units Amount)
+                     :currency CurrencyCode
+                     :timestamp-settled (iso->epoch-millis
+                                         TimestampSettled)}
+                    {:event-channel event-channel})))
 
 (defn publish-outbound-payment-rejected
   [_config payload]

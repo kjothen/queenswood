@@ -14,8 +14,7 @@
      {:post {:summary "Submit an internal payment"
              :openapi {:operationId "SubmitInternalPayment"}
              :interceptors [telemetry/require-idempotency-key]
-             :parameters {:body [:ref
-                                 "SubmitInternalPaymentRequest"]}
+             :parameters {:body [:ref "SubmitInternalPaymentRequest"]}
              :responses {200 {:body [:ref "InternalPayment"]}}
              :handler commands/submit-internal-payment}}]
     ["/internal/{payment-id}"
@@ -30,8 +29,7 @@
      {:post {:summary "Submit an outbound payment"
              :openapi {:operationId "SubmitOutboundPayment"}
              :interceptors [telemetry/require-idempotency-key]
-             :parameters {:body [:ref
-                                 "SubmitOutboundPaymentRequest"]}
+             :parameters {:body [:ref "SubmitOutboundPaymentRequest"]}
              :responses {200 {:body [:ref "OutboundPayment"]}}
              :handler commands/submit-outbound-payment}}]
     ["/outbound/{payment-id}"

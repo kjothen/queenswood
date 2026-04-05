@@ -1,5 +1,6 @@
 (ns com.repldriven.mono.bank-api.payment.components
   (:require
+    [com.repldriven.mono.bank-api.payment.coercion :as coercion]
     [com.repldriven.mono.bank-api.payment.examples :as examples]
     [com.repldriven.mono.bank-api.schema :refer [components-registry]]))
 
@@ -26,6 +27,10 @@
    [:created-at {:optional true} [:maybe [:ref "Timestamp"]]]
    [:updated-at {:optional true} [:maybe [:ref "Timestamp"]]]])
 
+(def OutboundPaymentStatus
+  (coercion/outbound-payment-status-enum-schema {:json-schema/example
+                                                 "pending"}))
+
 (def SubmitOutboundPaymentRequest
   [:map
    {:json-schema/example examples/SubmitOutboundPaymentRequest}
@@ -49,7 +54,7 @@
    [:creditor-name string?]
    [:currency [:ref "Currency"]]
    [:amount int?]
-   [:payment-status string?]
+   [:payment-status [:ref "OutboundPaymentStatus"]]
    [:transaction-id string?]
    [:reference {:optional true} [:maybe string?]]
    [:cancellation-code {:optional true} [:maybe string?]]
@@ -59,4 +64,5 @@
 
 (def registry
   (components-registry [#'SubmitInternalPaymentRequest #'InternalPayment
-                        #'SubmitOutboundPaymentRequest #'OutboundPayment]))
+                        #'OutboundPaymentStatus #'SubmitOutboundPaymentRequest
+                        #'OutboundPayment]))

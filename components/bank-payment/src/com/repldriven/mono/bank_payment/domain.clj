@@ -115,6 +115,12 @@
      :created-at now
      :updated-at now}))
 
+(defn completed-outbound-payment
+  [payment]
+  (assoc payment
+         :payment-status :outbound-payment-status-completed
+         :updated-at (System/currentTimeMillis)))
+
 (defn new-internal-payment
   "Creates a new internal payment map."
   [data transaction-id]

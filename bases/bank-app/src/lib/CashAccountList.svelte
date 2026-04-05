@@ -1,5 +1,5 @@
 <script>
-  import { list_cash_accounts, get_cash_account, close_cash_account, simulate_inbound_transfer, submit_internal_payment } from "./api.mjs";
+  import { list_cash_accounts, get_cash_account, close_cash_account, simulate_inbound_transfer, submit_internal_payment, submit_outbound_payment } from "./api.mjs";
   import { time_ago } from "./time.mjs";
   import { onMount, tick } from "svelte";
 
@@ -80,6 +80,18 @@
   let payInSubmitting = $state(false);
   let payInError = $state(null);
   let payInSiblings = $state([]);
+
+  let showPayOutDialog = $state(false);
+  let payOutDebtorId = $state(null);
+  let payOutAmount = $state("");
+  let payOutCurrency = $state("GBP");
+  let payOutSubmitting = $state(false);
+  let payOutError = $state(null);
+  let payOutCreditorName = $state("");
+  let payOutSortCode = $state("");
+  let payOutAccountNumber = $state("");
+  let payOutReference = $state("");
+  let payOutAvailable = $state(0);
 
   let { orgId } = $props();
 
@@ -218,6 +230,71 @@
       payInError = err.message;
     } finally {
       payInSubmitting = false;
+    }
+  }
+
+  function openPayOutDialog(acct) {
+    payOutDebtorId = acct["account-id"];
+    payOutAmount = "";
+    payOutCurrency = acct.currency ?? "GBP";
+    payOutCreditorName = "";
+    payOutSortCode = "";
+    payOutAccountNumber = "";
+    payOutReference = "";
+    payOutError = null;
+    payOutAvailable = acct["available-balance"]?.value ?? 0;
+    showPayOutDialog = true;
+  }
+
+  function closePayOutDialog() {
+    showPayOutDialog = false;
+  }
+
+  function payOutExceedsAvailable() {
+    const amount = inputToMinor(payOutAmount || "0");
+    return amount > payOutAvailable;
+  }
+
+  function payOutRemainingOrAvailable() {
+    const available = payOutAvailable;
+    const amount = inputToMinor(payOutAmount || "0");
+    if (amount === 0) return { value: available, label: "", exceeded: false };
+    if (amount > available) return { value: available, label: "available", exceeded: true };
+    return { value: available - amount, label: "remaining", exceeded: false };
+  }
+
+  function payOutFormValid() {
+    return inputValid(payOutAmount)
+      && !payOutExceedsAvailable()
+      && payOutCreditorName.trim().length > 0
+      && payOutSortCode.trim().length === 6
+      && payOutAccountNumber.trim().length === 8;
+  }
+
+  async function submitPayOut() {
+    payOutSubmitting = true;
+    payOutError = null;
+    try {
+      const bban = payOutSortCode.trim() + payOutAccountNumber.trim();
+      const res = await submit_outbound_payment(
+        payOutDebtorId,
+        bban,
+        payOutCreditorName.trim(),
+        payOutCurrency,
+        inputToMinor(payOutAmount),
+        "FPS",
+        payOutReference.trim() || null
+      );
+      if (res["http-status"] >= 200 && res["http-status"] < 300) {
+        showPayOutDialog = false;
+        await refreshAll();
+      } else {
+        payOutError = res.body?.detail ?? `HTTP ${res["http-status"]}`;
+      }
+    } catch (err) {
+      payOutError = err.message;
+    } finally {
+      payOutSubmitting = false;
     }
   }
 
@@ -384,6 +461,12 @@
                 </button>
               {/if}
               <button
+                class="payout-btn"
+                onclick={(e) => { e.stopPropagation(); openPayOutDialog(acct); }}
+              >
+                Pay Out
+              </button>
+              <button
                 class="reward-btn"
                 onclick={(e) => { e.stopPropagation(); openRewardDialog(acct); }}
               >
@@ -508,6 +591,61 @@
           <button class="cancel-btn" onclick={closeFundDialog} disabled={fundSubmitting}>Cancel</button>
           <button class="submit-btn" onclick={submitFund} disabled={fundSubmitting || !inputValid(fundAmount)}>
             {fundSubmitting ? "Submitting..." : "Submit"}
+          </button>
+        </div>
+      </div>
+    </div>
+  {/if}
+
+  {#if showPayOutDialog}
+    <!-- svelte-ignore a11y_click_events_have_key_events -->
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
+    <div class="dialog-overlay" onclick={closePayOutDialog}>
+      <div class="dialog" onclick={(e) => e.stopPropagation()}>
+        <h3>Pay Out</h3>
+        <p class="dialog-sub">Send from <span class="mono">{payOutDebtorId}</span></p>
+        {#if payOutError}
+          <div class="error-msg">{payOutError}</div>
+        {/if}
+        <label>
+          Full name
+          <input type="text" bind:value={payOutCreditorName} placeholder="Jane Doe" />
+        </label>
+        <div class="field-row">
+          <label class="field-half">
+            Sort code
+            <input type="text" bind:value={payOutSortCode} placeholder="040004" maxlength="6" />
+          </label>
+          <label class="field-half">
+            Account number
+            <input type="text" bind:value={payOutAccountNumber} placeholder="12345678" maxlength="8" />
+          </label>
+        </div>
+        {#if true}
+          {@const info = payOutRemainingOrAvailable()}
+          <span class="balance-info" class:exceeded={info.exceeded}>
+            {payOutCurrency} {toDisplay(info.value)}
+            {#if info.label}
+              <span class="balance-label">{info.label}</span>
+            {/if}
+          </span>
+        {/if}
+        <label>
+          Amount
+          <input type="text" inputmode="decimal" bind:value={payOutAmount} onkeydown={onAmountKey} oninput={formatAmount} />
+        </label>
+        <div class="field-group">
+          <span class="field-label">Currency</span>
+          <span class="currency-display">{payOutCurrency}</span>
+        </div>
+        <label>
+          Reference (optional)
+          <input type="text" bind:value={payOutReference} placeholder="Invoice 123" />
+        </label>
+        <div class="dialog-actions">
+          <button class="cancel-btn" onclick={closePayOutDialog} disabled={payOutSubmitting}>Cancel</button>
+          <button class="submit-btn" onclick={submitPayOut} disabled={payOutSubmitting || !payOutFormValid()}>
+            {payOutSubmitting ? "Submitting..." : "Submit"}
           </button>
         </div>
       </div>
@@ -854,6 +992,30 @@
 
   .payin-btn:hover {
     background: #1d4ed8;
+  }
+
+  .payout-btn {
+    padding: 0.25rem 0.6rem;
+    background: #dc2626;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    margin-right: 0.25rem;
+  }
+
+  .payout-btn:hover {
+    background: #b91c1c;
+  }
+
+  .field-row {
+    display: flex;
+    gap: 0.75rem;
+  }
+
+  .field-half {
+    flex: 1;
   }
 
   .reward-btn {

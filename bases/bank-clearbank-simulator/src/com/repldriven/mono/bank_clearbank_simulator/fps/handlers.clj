@@ -1,6 +1,9 @@
 (ns com.repldriven.mono.bank-clearbank-simulator.fps.handlers
   (:require
-    [com.repldriven.mono.bank-clearbank-simulator.webhook :as webhook]))
+    [com.repldriven.mono.bank-clearbank-simulator.webhook
+     :as webhook]
+
+    [com.repldriven.mono.utility.interface :refer [uuidv7]]))
 
 (defn payment
   [config]
@@ -8,22 +11,48 @@
     (let [{:keys [parameters]} request
           {:keys [body]} parameters
           {:keys [paymentInstructions]} body
-          {:keys [creditTransfers]} (first paymentInstructions)
-          {:keys [paymentIdentification creditor amount]} (first
-                                                           creditTransfers)
+          instruction (first paymentInstructions)
+          {:keys [creditTransfers]} instruction
+          transfer (first creditTransfers)
+          {:keys [paymentIdentification creditor
+                  creditorAccount amount
+                  remittanceInformation]}
+          transfer
           {:keys [endToEndIdentification]} paymentIdentification
           {:keys [name]} creditor
+          creditor-bban (get-in creditorAccount
+                                [:identification :other
+                                 :identification])
+          reference (get-in remittanceInformation
+                            [:unstructured
+                             :additionalReferenceInformation
+                             :reference])
           {:keys [instructedAmount currency]} amount
           {:keys [webhook-delay-ms]} config]
       (future
        (Thread/sleep (or webhook-delay-ms 2000))
        (if (= "REJECT" name)
-         (webhook/fire-transaction-rejected config endToEndIdentification)
-         (webhook/fire-transaction-settled config
-                                           endToEndIdentification
-                                           :debit
-                                           {:amount instructedAmount
-                                            :currency currency})))
+         (webhook/fire-transaction-rejected
+          config
+          endToEndIdentification)
+         (do
+           (webhook/fire-transaction-settled
+            config
+            endToEndIdentification
+            :debit
+            {:amount instructedAmount
+             :currency currency
+             :reference reference})
+           (Thread/sleep 500)
+           (webhook/fire-transaction-settled
+            config
+            (str (uuidv7))
+            :credit
+            {:amount instructedAmount
+             :currency currency
+             :creditor-bban creditor-bban
+             :debtor-name name
+             :reference reference}))))
       {:status 202
        :body
        {:transactions

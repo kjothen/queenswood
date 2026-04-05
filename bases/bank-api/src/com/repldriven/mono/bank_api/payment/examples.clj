@@ -50,7 +50,7 @@
    :creditor-name "Jane Doe"
    :currency "GBP"
    :amount 500
-   :payment-status "pending"
+   :payment-status :outbound-payment-status-pending
    :transaction-id "txn_02JMABC"
    :reference "Invoice 123"
    :created-at "2025-01-01T00:00:00Z"
