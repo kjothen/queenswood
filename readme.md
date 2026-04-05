@@ -30,12 +30,12 @@ graph TD
     ADAPTER["bank-clearbank-adapter<br/>(webhooks + FPS client)"]
     APP -->|HTTP API| API
 
-    subgraph sync ["Sync Direct (create/update/query)"]
+    subgraph sync ["Direct (create/update/query)"]
         SYNC_CU["organization<br/>api-key<br/>cash-account-product"]
         SYNC_Q["query: *"]
     end
 
-    subgraph async ["Async Message-Bus (create/update/simulate)"]
+    subgraph async ["Commands (create/update/simulate)"]
         CP["command-processor<br/>(Avro)"]
         CP --> PARTY[party]
         CP --> CASH[cash-account]
@@ -83,11 +83,11 @@ graph TD
     TXN --> fdb
 ```
 
-**Sync path** — low-volume activity, concerning organisations, products and
+**Direct path** — low-volume activity, concerning organisations, products and
 API keys are created/updated directly by the API handlers.
 All records are queried on-demand using FDB record primary key ordering.
 
-**Async path** — high volume activity, concerning parties,
+**Commands path** — high volume activity, concerning parties,
 cash accounts and payments are Avro-serialised commands
 sent through message bus to command processors.
 Processors write to FDB and reply via message bus.
