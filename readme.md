@@ -170,9 +170,6 @@ etc.) is documented in the
 | `bank-schema`                                                                                                                                              | Protobuf and Avro definitions for all record types and payment schemes                             |
 | `bank-test-resources`                                                                                                                                      | Bank-specific test configuration (FDB stores, Avro schemas)                                        |
 | `bank-transaction`                                                                                                                                         | Transaction recording with double-entry legs                                                       |
-| `event`                                                                                                                                                    | Fire-and-forget event publishing and processing via message-bus                                     |
-| `event-processor`                                                                                                                                          | System component wiring for event processor lifecycle                                              |
-| `event-schema`                                                                                                                                             | EventEnvelope Avro schema                                                                          |
 
 ## Bases
 
