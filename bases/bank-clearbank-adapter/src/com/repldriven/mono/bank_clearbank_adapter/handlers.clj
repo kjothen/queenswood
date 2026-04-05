@@ -1,7 +1,7 @@
-(ns com.repldriven.mono.bank-clearbank-webhook.handlers
+(ns com.repldriven.mono.bank-clearbank-adapter.handlers
   (:require
-    [com.repldriven.mono.bank-clearbank-webhook.nonce :as nonce]
-    [com.repldriven.mono.bank-clearbank-webhook.publisher :as publisher]
+    [com.repldriven.mono.bank-clearbank-adapter.nonce :as nonce]
+    [com.repldriven.mono.bank-clearbank-adapter.publisher :as publisher]
 
     [com.repldriven.mono.error.interface :as error]
     [com.repldriven.mono.log.interface :as log]))

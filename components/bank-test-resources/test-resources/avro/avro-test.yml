@@ -27,7 +27,9 @@ serde: !system/component
 
     inbound-payment: schemas/payments/inbound-payment.avsc.json
     internal-payment: schemas/payments/internal-payment.avsc.json
+    outbound-payment: schemas/payments/outbound-payment.avsc.json
     submit-internal-payment: schemas/payments/submit-internal-payment.avsc.json
+    submit-outbound-payment: schemas/payments/submit-outbound-payment.avsc.json
     unknown-payment-command: schemas/payments/submit-internal-payment.avsc.json
 
     transaction-settled: schemas/schemes/payments/transaction-settled.avsc.json

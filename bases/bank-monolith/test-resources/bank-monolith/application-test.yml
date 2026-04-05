@@ -438,7 +438,7 @@ system:
     http-url: !system/component
       system/component-kind: server/http-url
       jetty-adapter: !system/local-ref jetty-adapter
-  clearbank-webhook-server:
+  clearbank-adapter-server:
     handler: !system/required-component
     interceptors: !system/component
       system/component-kind: server/interceptors
@@ -447,19 +447,19 @@ system:
       event-channel: !keyword schemes-payments-event
     jetty-adapter: !system/component
       system/component-kind: server/jetty-adapter
-      handler: !system/ref clearbank-webhook-server.handler
-      interceptors: !system/ref clearbank-webhook-server.interceptors
+      handler: !system/ref clearbank-adapter-server.handler
+      interceptors: !system/ref clearbank-adapter-server.interceptors
       options: !profile
         dev:
           port: 8082
     http-url: !system/component
       system/component-kind: server/http-url
       jetty-adapter: !system/local-ref jetty-adapter
-  clearbank-webhook:
+  clearbank-adapter:
     registrar: !system/component
-      system/component-kind: clearbank-webhook/registrar
+      system/component-kind: clearbank-adapter/registrar
       simulator-url: !system/ref clearbank-simulator-server.http-url
-      webhook-url: !system/ref clearbank-webhook-server.http-url
+      webhook-url: !system/ref clearbank-adapter-server.http-url
       webhooks:
         - type: TransactionSettled
           path: /webhooks/transaction-settled

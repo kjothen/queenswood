@@ -1,4 +1,4 @@
-(ns com.repldriven.mono.bank-clearbank-webhook.system
+(ns com.repldriven.mono.bank-clearbank-adapter.system
   (:require
     [com.repldriven.mono.http-client.interface :as http]
     [com.repldriven.mono.json.interface :as json]
@@ -32,4 +32,4 @@
                    :webhooks nil}
    :system/instance-schema some?})
 
-(system/defcomponents :clearbank-webhook {:registrar registrar})
+(system/defcomponents :clearbank-adapter {:registrar registrar})

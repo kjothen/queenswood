@@ -1,8 +1,8 @@
 (ns ^:eftest/synchronized
-    com.repldriven.mono.bank-clearbank-webhook.interface-test
+    com.repldriven.mono.bank-clearbank-adapter.interface-test
   (:require
-    [com.repldriven.mono.bank-clearbank-webhook.api :as api]
-    [com.repldriven.mono.bank-clearbank-webhook.nonce :as nonce]
+    [com.repldriven.mono.bank-clearbank-adapter.api :as api]
+    [com.repldriven.mono.bank-clearbank-adapter.nonce :as nonce]
 
     [com.repldriven.mono.http-client.interface :as http]
     [com.repldriven.mono.server.interface :as server]
@@ -129,10 +129,10 @@
        body (http/res->edn res)
        _ (is (= nonce (:Nonce body)))])))
 
-(deftest clearbank-webhook-test
+(deftest clearbank-adapter-test
   (reset! nonce/nonces #{})
   (with-test-system [sys
-                     ["classpath:bank-clearbank-webhook/application-test.yml"
+                     ["classpath:bank-clearbank-adapter/application-test.yml"
                       #(assoc-in % [:system/defs :server :handler] api/app)]]
                     (let [jetty (system/instance sys [:server :jetty-adapter])]
                       (binding [*base-url* (server/http-local-url jetty)]

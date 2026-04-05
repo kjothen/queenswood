@@ -21,6 +21,8 @@
         (case command
           "submit-internal-payment"
           (commands/submit-internal config data)
+          "submit-outbound-payment"
+          (commands/submit-outbound config data)
           (error/reject :payment/unknown-command
                         (str "Unknown command: "
                              command)))))))

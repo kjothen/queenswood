@@ -1,8 +1,8 @@
-(ns com.repldriven.mono.bank-clearbank-webhook.main
+(ns com.repldriven.mono.bank-clearbank-adapter.main
   (:require
     com.repldriven.mono.server.interface
 
-    [com.repldriven.mono.bank-clearbank-webhook.api :as api]
+    [com.repldriven.mono.bank-clearbank-adapter.api :as api]
 
     [com.repldriven.mono.cli.interface :as cli]
     [com.repldriven.mono.env.interface :as env]
@@ -24,7 +24,7 @@
   [& args]
   (log/info args)
   (let [{:keys [options exit-message ok?]}
-        (cli/validate-args "bank-clearbank-webhook" args)]
+        (cli/validate-args "bank-clearbank-adapter" args)]
     (if exit-message
       (cli/exit ok? exit-message)
       (let [{:keys [config-file profile]} options

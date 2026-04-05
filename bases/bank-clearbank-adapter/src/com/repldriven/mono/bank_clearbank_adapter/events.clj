@@ -1,4 +1,4 @@
-(ns com.repldriven.mono.bank-clearbank-webhook.events
+(ns com.repldriven.mono.bank-clearbank-adapter.events
   (:require
     [com.repldriven.mono.avro.interface :as avro]
     [com.repldriven.mono.error.interface :as error :refer [let-nom>]]

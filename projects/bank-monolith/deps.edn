@@ -50,7 +50,7 @@
         component/utility {:local/root "../../components/utility"}
         base/bank-api {:local/root "../../bases/bank-api"}
         base/bank-clearbank-simulator {:local/root "../../bases/bank-clearbank-simulator"}
-        base/bank-clearbank-webhook {:local/root "../../bases/bank-clearbank-webhook"}
+        base/bank-clearbank-adapter {:local/root "../../bases/bank-clearbank-adapter"}
         base/bank-monolith {:local/root "../../bases/bank-monolith"}
         base/service {:local/root "../../bases/service"}
         ;; protojure brings protobuf-java 4.x which breaks FDB Record Layer

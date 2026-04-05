@@ -13,3 +13,11 @@
                  "submit-internal-payment"
                  "internal-payment"
                  (get-in request [:parameters :body])))
+
+(defn submit-outbound-payment
+  [request]
+  (commands/send (dispatcher request)
+                 request
+                 "submit-outbound-payment"
+                 "outbound-payment"
+                 (get-in request [:parameters :body])))

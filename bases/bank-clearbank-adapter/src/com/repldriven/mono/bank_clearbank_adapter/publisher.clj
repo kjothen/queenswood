@@ -1,6 +1,6 @@
-(ns com.repldriven.mono.bank-clearbank-webhook.publisher
+(ns com.repldriven.mono.bank-clearbank-adapter.publisher
   (:require
-    [com.repldriven.mono.bank-clearbank-webhook.events :as events]
+    [com.repldriven.mono.bank-clearbank-adapter.events :as events]
     [com.repldriven.mono.log.interface :as log]
     [com.repldriven.mono.utility.interface :as utility])
   (:import

@@ -1,6 +1,6 @@
-(ns com.repldriven.mono.bank-clearbank-webhook.api
+(ns com.repldriven.mono.bank-clearbank-adapter.api
   (:require
-    [com.repldriven.mono.bank-clearbank-webhook.handlers :as handlers]
+    [com.repldriven.mono.bank-clearbank-adapter.handlers :as handlers]
 
     [com.repldriven.mono.bank-clearbank.interface :as clearbank]
 

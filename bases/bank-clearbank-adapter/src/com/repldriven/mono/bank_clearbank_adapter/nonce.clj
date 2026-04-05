@@ -1,4 +1,4 @@
-(ns com.repldriven.mono.bank-clearbank-webhook.nonce)
+(ns com.repldriven.mono.bank-clearbank-adapter.nonce)
 
 (defonce nonces (atom #{}))
 

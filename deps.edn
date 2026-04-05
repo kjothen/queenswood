@@ -102,7 +102,7 @@
     components/bank-transaction {:local/root "components/bank-transaction"}
     bases/bank-api {:local/root "bases/bank-api"}
     bases/bank-clearbank-simulator {:local/root "bases/bank-clearbank-simulator"}
-    bases/bank-clearbank-webhook {:local/root "bases/bank-clearbank-webhook"}
+    bases/bank-clearbank-adapter {:local/root "bases/bank-clearbank-adapter"}
     bases/bank-monolith {:local/root "bases/bank-monolith"}}
    :extra-paths ["components/bank-api-key/test"
                   "components/bank-api-key/test-resources"
@@ -134,8 +134,8 @@
                   "bases/bank-api/test-resources"
                   "bases/bank-clearbank-simulator/test"
                   "bases/bank-clearbank-simulator/test-resources"
-                  "bases/bank-clearbank-webhook/test"
-                  "bases/bank-clearbank-webhook/test-resources"
+                  "bases/bank-clearbank-adapter/test"
+                  "bases/bank-clearbank-adapter/test-resources"
                   "bases/bank-monolith/test"
                   "bases/bank-monolith/test-resources"]}
   :format/zprint {:extra-deps {zprint/zprint {:mvn/version "1.3.0"}}
