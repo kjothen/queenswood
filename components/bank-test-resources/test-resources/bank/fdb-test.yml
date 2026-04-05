@@ -52,6 +52,16 @@ _record-types: !strs &record-types
     indexes:
       - name: scheme_transaction_id_idx
         field: scheme_transaction_id
+  outbound-payments:
+    record-type: OutboundPayment
+    indexes:
+      - name: OutboundPayment_by_idempotency_key
+        field: idempotency_key
+        unique: true
+      - name: OutboundPayment_by_end_to_end_id
+        field: end_to_end_id
+      - name: OutboundPayment_by_debtor_account_id
+        field: debtor_account_id
   internal-payments:
     record-type: InternalPayment
     indexes:

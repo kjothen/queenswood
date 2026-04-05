@@ -13,3 +13,13 @@
                  "submit-internal-payment"
                  "internal-payment"
                  (get-in request [:parameters :body])))
+
+(defn submit-outbound-payment
+  [request]
+  (commands/send (dispatcher request)
+                 request
+                 "submit-outbound-payment"
+                 "outbound-payment"
+                 (assoc (get-in request [:parameters :body])
+                        :organization-id
+                        (get-in request [:auth :organization-id]))))

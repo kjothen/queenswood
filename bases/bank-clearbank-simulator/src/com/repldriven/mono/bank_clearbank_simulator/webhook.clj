@@ -40,7 +40,9 @@
 
 (defn fire-transaction-settled
   [config e2e-id debit-credit-code body]
-  (let [{:keys [bban amount currency reference]} body]
+  (let [{:keys [bban amount currency reference
+                creditor-bban debtor-name]}
+        body]
     (fire config
           "TransactionSettled"
           {:TransactionId (str (uuidv7))
@@ -56,8 +58,9 @@
            :TimestampCreated (now)
            :Reference (or reference "")
            :IsReturn false
-           :Account {:BBAN bban}
-           :CounterpartAccount {:OwnerName "Simulated Debtor"}})))
+           :Account {:BBAN (or creditor-bban bban)}
+           :CounterpartAccount
+           {:OwnerName (or debtor-name "Simulated Debtor")}})))
 
 (defn fire-transaction-rejected
   [config e2e-id]

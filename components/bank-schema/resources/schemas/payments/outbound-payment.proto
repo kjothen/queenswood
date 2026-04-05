@@ -1,0 +1,35 @@
+syntax = "proto2";
+
+package com.repldriven.mono.schemas.payments;
+
+import "record_metadata_options.proto";
+
+option java_outer_classname = "OutboundPaymentProto";
+
+enum OutboundPaymentStatus {
+  OUTBOUND_PAYMENT_STATUS_UNKNOWN    = 0;
+  OUTBOUND_PAYMENT_STATUS_PENDING    = 1;
+  OUTBOUND_PAYMENT_STATUS_PROCESSING = 2;
+  OUTBOUND_PAYMENT_STATUS_COMPLETED  = 3;
+  OUTBOUND_PAYMENT_STATUS_FAILED     = 4;
+}
+
+message OutboundPayment {
+  option (com.apple.foundationdb.record.record).usage = RECORD;
+  required string                payment_id          = 1 [(com.apple.foundationdb.record.field).primary_key = true];
+  required string                idempotency_key     = 2;
+  required string                end_to_end_id       = 3;
+  required string                scheme              = 4;
+  required string                debtor_account_id   = 5;
+  required string                creditor_bban       = 6;
+  required string                creditor_name       = 7;
+  required string                currency            = 8;
+  required int64                 amount              = 9;
+  required OutboundPaymentStatus payment_status      = 10;
+  required string                transaction_id      = 11;
+  optional string                reference           = 12;
+  optional string                cancellation_code   = 13;
+  optional string                cancellation_reason = 14;
+  required int64                 created_at          = 15;
+  required int64                 updated_at          = 16;
+}

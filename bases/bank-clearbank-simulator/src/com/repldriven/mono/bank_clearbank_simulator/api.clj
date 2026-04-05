@@ -19,7 +19,8 @@
     [com.repldriven.mono.bank-clearbank-simulator.webhooks.routes
      :as webhooks]
 
-    [com.repldriven.mono.bank-clearbank.interface :as clearbank]
+    [com.repldriven.mono.bank-clearbank-webhook.interface
+     :as clearbank-webhook]
 
     [com.repldriven.mono.server.interface :as server]
 
@@ -51,7 +52,7 @@
                                fps.components/registry
                                simulate.components/registry
                                webhooks.components/registry
-                               clearbank/webhook-components-registry)}}))
+                               clearbank-webhook/component-registry)}}))
 
 (def ^:private simulator-config {:webhooks (atom {}) :webhook-delay-ms 2000})
 
@@ -69,7 +70,7 @@
             {:examples (merge fps.examples/registry
                               simulate.examples/registry
                               webhooks.examples/registry
-                              clearbank/webhook-examples-registry)}}
+                              clearbank-webhook/example-registry)}}
            :handler (server/standard-openapi-handler)}}]
    (into []
          (concat (fps/routes simulator-config)

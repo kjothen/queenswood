@@ -29,3 +29,29 @@
    :reference "Internal transfer"
    :created-at "2025-01-01T00:00:00Z"
    :updated-at "2025-01-01T00:00:00Z"})
+
+(def SubmitOutboundPaymentRequest
+  {:idempotency-key "idem-002"
+   :debtor-account-id "acc_01JMABC"
+   :creditor-bban "04000412345678"
+   :creditor-name "Jane Doe"
+   :currency "GBP"
+   :amount 500
+   :scheme "FPS"
+   :reference "Invoice 123"})
+
+(def OutboundPayment
+  {:payment-id "pmt_02JMABC"
+   :idempotency-key "idem-002"
+   :end-to-end-id "e2e-abc-123"
+   :scheme "FPS"
+   :debtor-account-id "acc_01JMABC"
+   :creditor-bban "04000412345678"
+   :creditor-name "Jane Doe"
+   :currency "GBP"
+   :amount 500
+   :payment-status :outbound-payment-status-pending
+   :transaction-id "txn_02JMABC"
+   :reference "Invoice 123"
+   :created-at "2025-01-01T00:00:00Z"
+   :updated-at "2025-01-01T00:00:00Z"})

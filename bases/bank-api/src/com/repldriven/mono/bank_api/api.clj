@@ -1,10 +1,16 @@
 (ns com.repldriven.mono.bank-api.api
   (:require
+    [com.repldriven.mono.bank-api.auth :as auth]
+    [com.repldriven.mono.bank-api.examples :as examples]
+    [com.repldriven.mono.bank-api.schema :as schema]
+
+    [com.repldriven.mono.bank-api.api-key.components :as api-key.components]
+    [com.repldriven.mono.bank-api.api-key.examples :as api-key.examples]
+    [com.repldriven.mono.bank-api.api-key.routes :as api-key]
     [com.repldriven.mono.bank-api.balance.components :as balance.components]
     [com.repldriven.mono.bank-api.balance.examples :as balance.examples]
     [com.repldriven.mono.bank-api.balance.routes :as balance]
-    [com.repldriven.mono.bank-api.currency.components :as
-     currency.components]
+    [com.repldriven.mono.bank-api.currency.components :as currency.components]
     [com.repldriven.mono.bank-api.cash-account-product.components :as
      cash-account-product.components]
     [com.repldriven.mono.bank-api.cash-account-product.examples :as
@@ -16,11 +22,6 @@
     [com.repldriven.mono.bank-api.cash-account.examples :as
      cash-account.examples]
     [com.repldriven.mono.bank-api.cash-account.routes :as cash-account]
-    [com.repldriven.mono.bank-api.api-key.components :as api-key.components]
-    [com.repldriven.mono.bank-api.api-key.examples :as api-key.examples]
-    [com.repldriven.mono.bank-api.api-key.routes :as api-key]
-    [com.repldriven.mono.bank-api.auth :as auth]
-    [com.repldriven.mono.bank-api.examples :as examples]
     [com.repldriven.mono.bank-api.organization.components :as
      organization.components]
     [com.repldriven.mono.bank-api.organization.examples :as
@@ -29,21 +30,18 @@
     [com.repldriven.mono.bank-api.party.components :as party.components]
     [com.repldriven.mono.bank-api.party.examples :as party.examples]
     [com.repldriven.mono.bank-api.party.routes :as party]
-    [com.repldriven.mono.bank-api.payment.components :as
-     payment.components]
-    [com.repldriven.mono.bank-api.payment.examples :as
-     payment.examples]
+    [com.repldriven.mono.bank-api.payment.components :as payment.components]
+    [com.repldriven.mono.bank-api.payment.examples :as payment.examples]
     [com.repldriven.mono.bank-api.payment.routes :as payment]
+    [com.repldriven.mono.bank-api.simulate.components :as simulate.components]
+    [com.repldriven.mono.bank-api.simulate.examples :as simulate.examples]
+    [com.repldriven.mono.bank-api.simulate.routes :as simulate]
     [com.repldriven.mono.bank-api.transaction.components :as
      transaction.components]
-    [com.repldriven.mono.bank-api.simulate.components :as
-     simulate.components]
-    [com.repldriven.mono.bank-api.simulate.examples :as
-     simulate.examples]
-    [com.repldriven.mono.bank-api.simulate.routes :as simulate]
-    [com.repldriven.mono.bank-api.schema :as schema]
+
     [com.repldriven.mono.server.interface :as server]
     [com.repldriven.mono.telemetry.interface :as telemetry]
+
     [malli.core :as m]
     [malli.transform :as mt]
     [reitit.coercion.malli :as malli-coercion]

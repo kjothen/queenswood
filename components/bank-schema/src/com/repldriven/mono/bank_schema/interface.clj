@@ -35,7 +35,8 @@
      PersonIdentificationProto$PersonIdentification)
     (com.repldriven.mono.schemas.payments
      InboundPaymentProto$InboundPayment
-     InternalPaymentProto$InternalPayment)
+     InternalPaymentProto$InternalPayment
+     OutboundPaymentProto$OutboundPayment)
     (com.repldriven.mono.schemas.transactions
      TransactionProto$Transaction
      TransactionProto$TransactionLeg)))
@@ -140,6 +141,15 @@
   [m]
   (InboundPaymentProto$InboundPayment/parseFrom
    (InboundPayment->pb m)))
+
+(def pb->OutboundPayment payments/pb->OutboundPayment)
+(defn OutboundPayment->pb
+  [m]
+  (proto/->pb (payments/new-OutboundPayment m)))
+(defn OutboundPayment->java
+  [m]
+  (OutboundPaymentProto$OutboundPayment/parseFrom
+   (OutboundPayment->pb m)))
 
 (def pb->InternalPayment payments/pb->InternalPayment)
 (defn InternalPayment->pb

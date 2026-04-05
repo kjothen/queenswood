@@ -1,0 +1,33 @@
+{
+  "type": "record",
+  "name": "OutboundPayment",
+  "namespace": "com.repldriven.mono.payments",
+  "fields": [
+    {"name": "payment_id",          "type": "string"},
+    {"name": "idempotency_key",     "type": "string"},
+    {"name": "end_to_end_id",       "type": "string"},
+    {"name": "scheme",              "type": "string"},
+    {"name": "debtor_account_id",   "type": "string"},
+    {"name": "creditor_bban",       "type": "string"},
+    {"name": "creditor_name",       "type": "string"},
+    {"name": "currency",            "type": "string"},
+    {"name": "amount",              "type": "long"},
+    {"name": "payment_status",      "type": {
+      "type": "enum",
+      "name": "OutboundPaymentStatus",
+      "symbols": [
+        "OUTBOUND_PAYMENT_STATUS_UNKNOWN",
+        "OUTBOUND_PAYMENT_STATUS_PENDING",
+        "OUTBOUND_PAYMENT_STATUS_PROCESSING",
+        "OUTBOUND_PAYMENT_STATUS_COMPLETED",
+        "OUTBOUND_PAYMENT_STATUS_FAILED"
+      ]
+    }},
+    {"name": "transaction_id",      "type": "string"},
+    {"name": "reference",           "type": ["null", "string"], "default": null},
+    {"name": "cancellation_code",   "type": ["null", "string"], "default": null},
+    {"name": "cancellation_reason", "type": ["null", "string"], "default": null},
+    {"name": "created_at", "type": {"type": "long", "logicalType": "timestamp-millis"}},
+    {"name": "updated_at", "type": {"type": "long", "logicalType": "timestamp-millis"}}
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "type": "record",
+  "name": "SubmitPayment",
+  "namespace": "com.repldriven.mono.schemes.payment",
+  "fields": [
+    {"name": "payment_id",      "type": "string"},
+    {"name": "end_to_end_id",   "type": "string"},
+    {"name": "debtor_bban",     "type": "string"},
+    {"name": "creditor_bban",   "type": "string"},
+    {"name": "creditor_name",   "type": "string"},
+    {"name": "amount",          "type": "long"},
+    {"name": "currency",        "type": "string"},
+    {"name": "reference",       "type": ["null", "string"], "default": null}
+  ]
+}

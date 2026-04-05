@@ -108,6 +108,12 @@ system:
         - topic: "persistent://tenant-1/namespace-1/topic-schemes-payments-event"
           partitions: 1
           schema: !keyword event
+        - topic: "persistent://tenant-1/namespace-1/topic-schemes-payment-command"
+          partitions: 1
+          schema: !keyword command
+        - topic: "persistent://tenant-1/namespace-1/topic-schemes-payment-command-response"
+          partitions: 1
+          schema: !keyword command-response
 
     producers: !system/component
       system/component-kind: pulsar/producers
@@ -198,6 +204,22 @@ system:
           accessMode: !pulsar/access-mode Shared
           schema: !keyword event
           topicName: "persistent://tenant-1/namespace-1/topic-schemes-payments-event"
+        schemas: !system/local-ref schemas
+      schemes-payment-command:
+        _: !system/local-ref topics
+        client: !system/local-ref client
+        conf:
+          accessMode: !pulsar/access-mode Shared
+          schema: !keyword command
+          topicName: "persistent://tenant-1/namespace-1/topic-schemes-payment-command"
+        schemas: !system/local-ref schemas
+      schemes-payment-command-response:
+        _: !system/local-ref topics
+        client: !system/local-ref client
+        conf:
+          accessMode: !pulsar/access-mode Shared
+          schema: !keyword command-response
+          topicName: "persistent://tenant-1/namespace-1/topic-schemes-payment-command-response"
         schemas: !system/local-ref schemas
 
     consumers: !system/component
@@ -333,6 +355,30 @@ system:
           topicNames:
             ["persistent://tenant-1/namespace-1/topic-schemes-payments-event"]
         schemas: !system/local-ref schemas
+      schemes-payment-command:
+        _: !system/local-ref topics
+        client: !system/local-ref client
+        conf:
+          cryptoFailureAction: !pulsar/crypto-failure-action CONSUME
+          schema: !pulsar/schema AUTO_CONSUME
+          subscriptionName: bank-monolith-schemes-payment-command
+          subscriptionType: !pulsar/subscription-type Shared
+          topicNames:
+            ["persistent://tenant-1/namespace-1/topic-schemes-payment-command"]
+        schemas: !system/local-ref schemas
+      schemes-payment-command-response:
+        _: !system/local-ref topics
+        client: !system/local-ref client
+        conf:
+          cryptoFailureAction: !pulsar/crypto-failure-action CONSUME
+          schema: !pulsar/schema AUTO_CONSUME
+          subscriptionName: bank-monolith-schemes-payment-command-response
+          subscriptionType: !pulsar/subscription-type Shared
+          topicNames:
+            [
+              "persistent://tenant-1/namespace-1/topic-schemes-payment-command-response",
+            ]
+        schemas: !system/local-ref schemas
 
     message-bus-producers: !system/component
       system/component-kind: pulsar/message-bus-producers
@@ -358,6 +404,10 @@ system:
         producer: !system/local-ref producers.interest-command-response
       schemes-payments-event:
         producer: !system/local-ref producers.schemes-payments-event
+      schemes-payment-command:
+        producer: !system/local-ref producers.schemes-payment-command
+      schemes-payment-command-response:
+        producer: !system/local-ref producers.schemes-payment-command-response
 
     message-bus-consumers: !system/component
       system/component-kind: pulsar/message-bus-consumers
@@ -383,6 +433,10 @@ system:
         consumer: !system/local-ref consumers.interest-command-response
       schemes-payments-event:
         consumer: !system/local-ref consumers.schemes-payments-event
+      schemes-payment-command:
+        consumer: !system/local-ref consumers.schemes-payment-command
+      schemes-payment-command-response:
+        consumer: !system/local-ref consumers.schemes-payment-command-response
 
   message-bus:
     bus: !system/component
@@ -438,7 +492,7 @@ system:
     http-url: !system/component
       system/component-kind: server/http-url
       jetty-adapter: !system/local-ref jetty-adapter
-  clearbank-webhook-server:
+  clearbank-adapter-server:
     handler: !system/required-component
     interceptors: !system/component
       system/component-kind: server/interceptors
@@ -447,21 +501,31 @@ system:
       event-channel: !keyword schemes-payments-event
     jetty-adapter: !system/component
       system/component-kind: server/jetty-adapter
-      handler: !system/ref clearbank-webhook-server.handler
-      interceptors: !system/ref clearbank-webhook-server.interceptors
+      handler: !system/ref clearbank-adapter-server.handler
+      interceptors: !system/ref clearbank-adapter-server.interceptors
       options: !profile
         dev:
           port: 8082
     http-url: !system/component
       system/component-kind: server/http-url
       jetty-adapter: !system/local-ref jetty-adapter
-  clearbank-webhook:
+  clearbank-adapter:
     registrar: !system/component
-      system/component-kind: clearbank-webhook/registrar
+      system/component-kind: clearbank-adapter/registrar
       simulator-url: !system/ref clearbank-simulator-server.http-url
-      webhook-url: !system/ref clearbank-webhook-server.http-url
+      webhook-url: !system/ref clearbank-adapter-server.http-url
       webhooks:
         - type: TransactionSettled
           path: /webhooks/transaction-settled
         - type: InboundHeldTransaction
           path: /webhooks/inbound-held-transaction
+    command-processor-impl: !system/component
+      system/component-kind: clearbank-adapter/command-processor
+      schemas: !system/ref avro.serde
+      clearbank-url: !system/ref clearbank-simulator-server.http-url
+    command-processor: !system/component
+      system/component-kind: command-processor/command-processor
+      bus: !system/ref message-bus.bus
+      processor: !system/local-ref command-processor-impl
+      command-channel: !keyword schemes-payment-command
+      command-response-channel: !keyword schemes-payment-command-response

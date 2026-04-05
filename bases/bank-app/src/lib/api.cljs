@@ -276,6 +276,28 @@
                                      (assoc "reference" reference))))})
       (.then parse-response)))
 
+(defn submit-outbound-payment
+  [debtor-account-id creditor-bban creditor-name
+   currency amount scheme reference]
+  (-> (js/fetch "/v1/payments/outbound"
+                #js {:method "POST"
+                     :headers #js {"Content-Type" "application/json"
+                                   "Authorization" (str "Bearer "
+                                                        @api-key)
+                                   "Idempotency-Key" (str (random-uuid))}
+                     :body (js/JSON.stringify
+                            (clj->js
+                             (cond-> {"debtor-account-id" debtor-account-id
+                                      "creditor-bban" creditor-bban
+                                      "creditor-name" creditor-name
+                                      "currency" currency
+                                      "amount" amount
+                                      "scheme" scheme
+                                      "idempotency-key" (str (random-uuid))}
+                                     reference
+                                     (assoc "reference" reference))))})
+      (.then parse-response)))
+
 (defn list-api-keys
   []
   (-> (js/fetch "/v1/api-keys"

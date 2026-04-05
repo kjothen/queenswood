@@ -88,3 +88,62 @@
                        (schema/InboundPayment->java
                         payment))]
                    payment))))))))))
+
+(defn- outbound-payment-by-e2e
+  "Returns existing OutboundPayment for the given
+  end-to-end-id, or nil if not found."
+  [{:keys [record-db record-store]} end-to-end-id]
+  (fdb/transact
+   record-db
+   record-store
+   "outbound-payments"
+   (fn [store]
+     (first (mapv schema/pb->OutboundPayment
+                  (fdb/query-records
+                   store
+                   "OutboundPayment"
+                   "end_to_end_id"
+                   end-to-end-id))))))
+
+(defn settle-outbound
+  "Processes an outbound payment settlement event.
+
+  Looks up OutboundPayment by end-to-end-id and updates
+  its status to completed."
+  [config data]
+  (let [{:keys [end-to-end-id]} data
+        {:keys [record-db record-store]} config
+        payment (outbound-payment-by-e2e config end-to-end-id)]
+    (cond
+     (error/anomaly? payment)
+     (do (log/error "settle-outbound: lookup failed"
+                    payment)
+         nil)
+
+     (nil? payment)
+     (do (log/warnf
+          "settle-outbound: no payment for e2e %s"
+          end-to-end-id)
+         nil)
+
+     (= :outbound-payment-status-completed
+        (:payment-status payment))
+     (do (log/info "settle-outbound: idempotent skip"
+                   {:end-to-end-id end-to-end-id})
+         payment)
+
+     :else
+     (let [updated (domain/completed-outbound-payment
+                    payment)]
+       (fdb/transact
+        record-db
+        record-store
+        "outbound-payments"
+        (fn [store]
+          (fdb/save-record
+           store
+           (schema/OutboundPayment->java updated))))
+       (log/info "settle-outbound: completed"
+                 {:payment-id (:payment-id payment)
+                  :end-to-end-id end-to-end-id})
+       updated))))

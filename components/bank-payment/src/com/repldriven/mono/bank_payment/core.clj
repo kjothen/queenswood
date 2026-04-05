@@ -21,6 +21,8 @@
         (case command
           "submit-internal-payment"
           (commands/submit-internal config data)
+          "submit-outbound-payment"
+          (commands/submit-outbound config data)
           (error/reject :payment/unknown-command
                         (str "Unknown command: "
                              command)))))))
@@ -40,7 +42,14 @@
       (let-nom> [data (avro/deserialize-same schema payload)]
         (case event
           "transaction-settled"
-          (events/settle-inbound config data)
+          (case (:debit-credit-code data)
+            :debit-credit-code-credit
+            (events/settle-inbound config data)
+            :debit-credit-code-debit
+            (events/settle-outbound config data)
+            (do (log/warnf "Unknown debit-credit-code: %s"
+                           (:debit-credit-code data))
+                nil))
           (do (log/warnf "Unknown event: %s" event)
               nil))))))
 

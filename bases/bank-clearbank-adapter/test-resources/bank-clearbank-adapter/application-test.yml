@@ -1,0 +1,5 @@
+system:
+  message-bus: !include bank-clearbank-adapter/message-bus-test.yml
+  avro: !include avro/avro-test.yml
+  event: !include bank-clearbank-adapter/event-test.yml
+  server: !include bank-clearbank-adapter/server-test.yml

@@ -28,3 +28,26 @@
           :else
           {:status 200
            :body (schema/pb->InternalPayment result)})))
+
+(defn get-outbound-payment
+  [request]
+  (let [{:keys [record-db record-store]} request
+        {:keys [payment-id]} (get-in request [:parameters :path])
+        result (fdb/transact record-db
+                             record-store
+                             "outbound-payments"
+                             (fn [store]
+                               (fdb/load-record store
+                                                payment-id)))]
+    (cond (error/anomaly? result)
+          {:status 500
+           :body (error-response 500 result)}
+          (nil? result)
+          {:status 404
+           :body (error-response
+                  404 "REJECTED"
+                  "payment/not-found"
+                  "Payment not found")}
+          :else
+          {:status 200
+           :body (schema/pb->OutboundPayment result)})))
