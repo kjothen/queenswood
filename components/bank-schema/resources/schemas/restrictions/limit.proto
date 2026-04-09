@@ -1,0 +1,46 @@
+syntax = "proto2";
+
+package com.repldriven.mono.schemas.restrictions;
+
+import "schemas/balances/balance.proto";
+import "schemas/cash-account-products/account-product.proto";
+import "schemas/organizations/organization.proto";
+
+option java_outer_classname = "LimitProto";
+
+enum LimitType {
+  LIMIT_TYPE_UNKNOWN = 0;
+  LIMIT_TYPE_MAX_INBOUND_PAYMENT_AMOUNT = 1;
+  LIMIT_TYPE_MAX_OUTBOUND_PAYMENT_AMOUNT = 2;
+  LIMIT_TYPE_MAX_INTERNAL_PAYMENT_AMOUNT = 3;
+  LIMIT_TYPE_MIN_INBOUND_PAYMENT_AMOUNT = 4;
+  LIMIT_TYPE_MIN_OUTBOUND_PAYMENT_AMOUNT = 5;
+  LIMIT_TYPE_MIN_INTERNAL_PAYMENT_AMOUNT = 6;
+  LIMIT_TYPE_MAX_INBOUND_PAYMENT_DAILY_AMOUNT = 7;
+  LIMIT_TYPE_MAX_OUTBOUND_PAYMENT_DAILY_AMOUNT = 8;
+  LIMIT_TYPE_MAX_INTERNAL_PAYMENT_DAILY_AMOUNT = 9;
+  LIMIT_TYPE_MAX_ACCOUNTS = 10;
+  LIMIT_TYPE_MAX_ACCOUNTS_PER_PARTY = 11;
+  LIMIT_TYPE_MIN_BALANCE = 12;
+  LIMIT_TYPE_MAX_BALANCE = 13;
+  LIMIT_TYPE_MAX_ORGANIZATIONS = 14;
+}
+
+message LimitKind {
+  oneof kind {
+    string currency = 1;
+    com.repldriven.mono.schemas.cash_account_products.AccountType account_type = 2;
+    com.repldriven.mono.schemas.balances.BalanceType balance_type = 3;
+    com.repldriven.mono.schemas.organizations.OrganizationType organization_type = 4;
+  }
+}
+
+message Limit {
+  required LimitType type = 1;
+  optional LimitKind kind = 2;
+  optional int64 upper = 3;
+  optional int64 lower = 4;
+  optional int64 value = 5;
+  optional int64 default = 6;
+  optional string reason = 7;
+}

@@ -1,9 +1,13 @@
 (ns com.repldriven.mono.bank-bootstrap.core
   (:require
     [com.repldriven.mono.bank-balance.interface :as balances]
-    [com.repldriven.mono.bank-organization.interface :as organizations]
+    [com.repldriven.mono.bank-organization.interface
+     :as organizations]
+    [com.repldriven.mono.bank-restriction.interface
+     :as restriction]
 
-    [com.repldriven.mono.error.interface :as error :refer [let-nom>]]
+    [com.repldriven.mono.error.interface :as error
+     :refer [let-nom>]]
     [com.repldriven.mono.log.interface :as log]))
 
 (defn- find-organization
@@ -43,6 +47,26 @@
           nil
           balances))
 
+(defn- ensure-restrictions
+  "Idempotent: creates restrictions for owner-id if none
+  exist."
+  [config owner-id organization-id restrictions]
+  (when (seq restrictions)
+    (let [existing (restriction/get-restrictions
+                    config
+                    owner-id)]
+      (if existing
+        (do (log/info "Restrictions exist for" owner-id)
+            existing)
+        (let [result (restriction/new-restrictions
+                      config
+                      owner-id
+                      (assoc restrictions
+                             :organization-id
+                             organization-id))]
+          (log/info "Created restrictions for" owner-id)
+          result)))))
+
 (def ^:private result-keys
   [:organization-id
    :party-id
@@ -63,13 +87,21 @@
 
 (defn bootstrap
   "Idempotent bootstrap: ensures internal organization,
-  account, and balances exist. Returns map of IDs or
-  anomaly."
+  account, balances, and restrictions exist. Returns map
+  of IDs or anomaly."
   [config seed]
   (log/info "Bootstrap starting")
-  (let [{:keys [organization-name currencies balances]} seed]
+  (let [{:keys [currencies balances]} seed
+        organization-name (get-in seed [:organization :name])
+        sys-restrictions (get-in seed [:system :restrictions])
+        org-restrictions (get-in seed
+                                 [:organization :restrictions])]
     (let-nom>
-      [existing (find-organization config organization-name)
+      [_ (ensure-restrictions config
+                              "system"
+                              "system"
+                              sys-restrictions)
+       existing (find-organization config organization-name)
        result
        (if existing
          (do (log/info "Bootstrap organization exists:"
@@ -79,7 +111,7 @@
            [created (organizations/new-organization
                      config
                      organization-name
-                     :organisation-type-internal
+                     :organization-type-internal
                      currencies)
             result (org->result (:organization created))
             _ (update-balances config
@@ -87,6 +119,10 @@
                                balances)]
            (log/info "Created bootstrap organization:"
                      (:organization-id result))
-           result))]
+           result))
+       _ (ensure-restrictions config
+                              (:organization-id result)
+                              (:organization-id result)
+                              org-restrictions)]
       (log/info "Bootstrap complete")
       (select-keys result result-keys))))

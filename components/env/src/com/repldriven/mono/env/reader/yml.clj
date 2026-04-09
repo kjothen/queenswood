@@ -37,6 +37,10 @@
 
 (defmethod yml-reader :!keyword [{:keys [value]}] (keyword value))
 
+(defmethod yml-reader :!keywords
+  [{:keys [value]}]
+  (util/val-strs->keywords value))
+
 (defmethod yml-reader :!str [{:keys [value]}] (str "\"" (name value) "\""))
 
 (defmethod yml-reader :!strs [{:keys [value]}] (util/keys->strs value))

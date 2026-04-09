@@ -6,6 +6,7 @@
     [com.repldriven.mono.bank-bootstrap.core :as core]
 
     [com.repldriven.mono.bank-balance.interface :as balances]
+    [com.repldriven.mono.bank-restriction.interface :as restriction]
     [com.repldriven.mono.system.interface :as system]
     [com.repldriven.mono.test-system.interface :refer
      [with-test-system nom-test>]]
@@ -14,7 +15,7 @@
 
 (defn- seed-config
   []
-  {:organization-name "Queenswood"
+  {:organization {:name "Queenswood"}
    :currencies ["GBP"]
    :balances [{:balance-type :balance-type-default
                :balance-status :balance-status-posted
@@ -46,6 +47,20 @@
                                                    "GBP"
                                                    :balance-status-posted)
                      _ (is (= 10000 (:credit balance)))])))
+     (testing "system restrictions are persisted"
+       (let [config (fdb-config sys)]
+         (nom-test> [sys-rst (restriction/get-restrictions config "system")
+                     _ (is (some? sys-rst))
+                     _ (is (seq (:policies sys-rst)))
+                     _ (is (seq (:limits sys-rst)))])))
+     (testing "organization restrictions are persisted"
+       (let [config (fdb-config sys)]
+         (nom-test> [org-rst (restriction/get-restrictions config
+                                                           (:organization-id
+                                                            result))
+                     _ (is (some? org-rst))
+                     _ (is (seq (:policies org-rst)))
+                     _ (is (seq (:limits org-rst)))])))
      (testing "bootstrap is idempotent on re-run"
        (let [config (fdb-config sys)
              seed (seed-config)]

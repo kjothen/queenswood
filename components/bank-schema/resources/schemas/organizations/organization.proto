@@ -6,6 +6,12 @@ import "record_metadata_options.proto";
 
 option java_outer_classname = "OrganizationProto";
 
+enum OrganizationType {
+  ORGANIZATION_TYPE_UNKNOWN = 0;
+  ORGANIZATION_TYPE_INTERNAL = 1;
+  ORGANIZATION_TYPE_CUSTOMER = 2;
+}
+
 message Organization {
   option (com.apple.foundationdb.record.record).usage = RECORD;
 
@@ -14,11 +20,5 @@ message Organization {
   optional string status = 3;
   optional int64 created_at = 4;
   optional int64 updated_at = 5;
-  required OrganisationType type = 6;
-
-  enum OrganisationType {
-    ORGANISATION_TYPE_UNKNOWN   = 0;
-    ORGANISATION_TYPE_INTERNAL  = 1;
-    ORGANISATION_TYPE_CUSTOMER  = 2;
-  }
+  required OrganizationType type = 6;
 }

@@ -2,9 +2,9 @@
   (:require
     [com.repldriven.mono.bank-api.coercion :as coercion]))
 
-(def ^:private organisation-type-enum
-  (coercion/enum-coercion {"internal" :organisation-type-internal
-                           "customer" :organisation-type-customer}
-                          :organisation-type-unknown))
+(def ^:private organization-type-enum
+  (coercion/enum-coercion {"internal" :organization-type-internal
+                           "customer" :organization-type-customer}
+                          :organization-type-unknown))
 
-(def organisation-type-enum-schema (:enum-schema organisation-type-enum))
+(def organization-type-enum-schema (:enum-schema organization-type-enum))

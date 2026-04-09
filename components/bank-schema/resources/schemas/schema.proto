@@ -14,6 +14,7 @@ import "schemas/person-identification/person-identification.proto";
 import "schemas/payments/inbound-payment.proto";
 import "schemas/payments/internal-payment.proto";
 import "schemas/payments/outbound-payment.proto";
+import "schemas/restrictions/restrictions.proto";
 import "schemas/transactions/transaction.proto";
 
 option java_outer_classname = "SchemaProto";
@@ -38,4 +39,5 @@ message RecordTypeUnion {
   optional com.repldriven.mono.schemas.payments.InternalPayment _InternalPayment = 14;
   optional com.repldriven.mono.schemas.payments.InboundPayment _InboundPayment = 15;
   optional com.repldriven.mono.schemas.payments.OutboundPayment _OutboundPayment = 16;
+  optional com.repldriven.mono.schemas.restrictions.Restrictions _Restrictions = 17;
 }

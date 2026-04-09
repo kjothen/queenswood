@@ -38,6 +38,7 @@
         component/bank-organization {:local/root "../../components/bank-organization"}
         component/bank-payment {:local/root "../../components/bank-payment"}
         component/bank-party {:local/root "../../components/bank-party"}
+        component/bank-restriction {:local/root "../../components/bank-restriction"}
         component/bank-bootstrap {:local/root "../../components/bank-bootstrap"}
         component/message-bus {:local/root "../../components/message-bus"}
         component/processor {:local/root "../../components/processor"}

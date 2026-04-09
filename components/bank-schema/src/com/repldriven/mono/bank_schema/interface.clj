@@ -11,6 +11,7 @@
     [com.repldriven.mono.schemas.payments :as payments]
     [com.repldriven.mono.schemas.person_identification :as
      person-identification]
+    [com.repldriven.mono.schemas.restrictions :as restrictions]
     [com.repldriven.mono.schemas.transactions :as transactions]
     [protojure.protobuf :as proto])
   (:import
@@ -37,6 +38,8 @@
      InboundPaymentProto$InboundPayment
      InternalPaymentProto$InternalPayment
      OutboundPaymentProto$OutboundPayment)
+    (com.repldriven.mono.schemas.restrictions
+     RestrictionsProto$Restrictions)
     (com.repldriven.mono.schemas.transactions
      TransactionProto$Transaction
      TransactionProto$TransactionLeg)))
@@ -45,8 +48,8 @@
 (defn Balance->pb [m] (proto/->pb (balances/new-Balance m)))
 (defn Balance->java [m] (BalanceProto$Balance/parseFrom (Balance->pb m)))
 
-(def balance-type->int balances/Balance-BalanceType-label2val)
-(def balance-status->int balances/Balance-BalanceStatus-label2val)
+(def balance-type->int balances/BalanceType-label2val)
+(def balance-status->int balances/BalanceStatus-label2val)
 
 (def account-type->int cash-account-products/AccountType-label2val)
 (def int->account-type cash-account-products/AccountType-val2label)
@@ -180,3 +183,12 @@
   [m]
   (OrganizationChangelogProto$OrganizationChangelog/parseFrom
    (OrganizationChangelog->pb m)))
+
+(def pb->Restrictions restrictions/pb->Restrictions)
+(defn Restrictions->pb
+  [m]
+  (proto/->pb (restrictions/new-Restrictions m)))
+(defn Restrictions->java
+  [m]
+  (RestrictionsProto$Restrictions/parseFrom
+   (Restrictions->pb m)))

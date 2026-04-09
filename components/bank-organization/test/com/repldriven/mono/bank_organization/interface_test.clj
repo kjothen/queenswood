@@ -22,11 +22,11 @@
      (testing "creates org with api-key, party, product, and accounts"
        (nom-test> [result (SUT/new-organization config
                                                 "Test Org"
-                                                :organisation-type-customer
+                                                :organization-type-customer
                                                 ["GBP" "USD"])
                    org (:organization result)
                    _ (is (= {:name "Test Org"
-                             :type :organisation-type-customer
+                             :type :organization-type-customer
                              :status "active"}
                             (select-keys org [:name :type :status])))
                    _ (is (.startsWith ^String (:key-secret result) "sk_live_"))

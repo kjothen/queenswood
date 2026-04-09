@@ -20,6 +20,15 @@
   [& values]
   (if (every? map? values) (apply merge-with deep-merge values) (last values)))
 
+(defn val-strs->keywords
+  "Convert all map string values to keywords recursively."
+  [form]
+  (postwalk
+   #(if (map? %)
+      (into (hash-map) (map (fn [[k v]] [k (if (string? v) (keyword v) v)]) %))
+      %)
+   form))
+
 (defn keys->strs
   "Convert all map keys to strings recursively."
   [form]

@@ -48,7 +48,7 @@
         [customer-org (organizations/new-organization
                        config
                        "Payment Test Customer"
-                       :organisation-type-customer
+                       :organization-type-customer
                        ["GBP"])
          customer-account-id
          (get-in customer-org
@@ -115,7 +115,7 @@
         [customer-org (organizations/new-organization
                        config
                        "Inbound Payment Customer"
-                       :organisation-type-customer
+                       :organization-type-customer
                        ["GBP"])
          customer-account
          (get-in customer-org [:organization :accounts 0])

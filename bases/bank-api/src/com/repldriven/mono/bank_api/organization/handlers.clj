@@ -21,14 +21,15 @@
      {:status 403 :body (error-response 403 result)})
    :else
    (let [{:keys [record-db record-store]} request
-         {:keys [name currencies]} (get-in request
-                                           [:parameters :body])
+         {:keys [name currencies policies limits]}
+         (get-in request [:parameters :body])
          config {:record-db record-db :record-store record-store}
          result (organizations/new-organization
                  config
                  name
-                 :organisation-type-customer
-                 currencies)]
+                 :organization-type-customer
+                 currencies
+                 {:policies policies :limits limits})]
      (if (error/anomaly? result)
        {:status 500 :body (error-response 500 result)}
        {:status 201

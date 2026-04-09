@@ -33,6 +33,12 @@
     [com.repldriven.mono.bank-api.payment.components :as payment.components]
     [com.repldriven.mono.bank-api.payment.examples :as payment.examples]
     [com.repldriven.mono.bank-api.payment.routes :as payment]
+    [com.repldriven.mono.bank-api.restriction.components
+     :as restriction.components]
+    [com.repldriven.mono.bank-api.restriction.examples
+     :as restriction.examples]
+    [com.repldriven.mono.bank-api.restriction.routes
+     :as restriction]
     [com.repldriven.mono.bank-api.simulate.components :as simulate.components]
     [com.repldriven.mono.bank-api.simulate.examples :as simulate.examples]
     [com.repldriven.mono.bank-api.simulate.routes :as simulate]
@@ -84,6 +90,7 @@
                                organization.components/registry
                                party.components/registry
                                payment.components/registry
+                               restriction.components/registry
                                transaction.components/registry
                                simulate.components/registry)}}))
 
@@ -110,6 +117,7 @@
                                        organization.examples/registry
                                        party.examples/registry
                                        payment.examples/registry
+                                       restriction.examples/registry
                                        simulate.examples/registry)}}
            :handler (server/standard-openapi-handler)}}]
    (into ["/v1"
@@ -128,6 +136,7 @@
                  organization/routes
                  party/routes
                  payment/routes
+                 restriction/routes
                  simulate/routes))])
 
 (defn app

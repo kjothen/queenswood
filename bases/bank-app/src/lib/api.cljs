@@ -30,7 +30,7 @@
   (reset! api-key (get (load-keys) org-id)))
 
 (defn create-organization
-  [org-name currencies]
+  [org-name currencies policies limits]
   (-> (js/fetch "/v1/organizations"
                 #js {:method "POST"
                      :headers #js {"Content-Type" "application/json"
@@ -38,7 +38,9 @@
                                                         (admin-token))}
                      :body (js/JSON.stringify
                             (clj->js {"name" org-name
-                                      "currencies" currencies}))})
+                                      "currencies" currencies
+                                      "policies" policies
+                                      "limits" limits}))})
       (.then parse-response)
       (.then (fn [res]
                (let [status (aget res "http-status")]
@@ -48,6 +50,20 @@
                          raw-key (aget body "api-key-secret")]
                      (save-key org-id raw-key))))
                res))))
+
+(defn get-organization-policies
+  []
+  (-> (js/fetch "/v1/restrictions/policies/organizations"
+                #js {:headers #js {"Authorization" (str "Bearer "
+                                                        (admin-token))}})
+      (.then parse-response)))
+
+(defn get-organization-limits
+  []
+  (-> (js/fetch "/v1/restrictions/limits/organizations"
+                #js {:headers #js {"Authorization" (str "Bearer "
+                                                        (admin-token))}})
+      (.then parse-response)))
 
 (defn list-organizations
   []

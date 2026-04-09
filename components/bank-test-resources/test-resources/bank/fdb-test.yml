@@ -68,6 +68,13 @@ _record-types: !strs &record-types
       - name: InternalPayment_by_idempotency_key
         field: idempotency_key
         unique: true
+  restrictions:
+    record-type: Restrictions
+    indexes:
+      - name: Restrictions_by_owner
+        field: owner_id
+      - name: Restrictions_by_organization
+        field: organization_id
   transaction-legs:
     record-type: TransactionLeg
     primary-key: [transaction_id, leg_id]

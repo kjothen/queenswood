@@ -10,27 +10,29 @@
     [com.repldriven.mono.bank-cash-account-product.interface
      :as products]
     [com.repldriven.mono.bank-party.interface :as party]
+    [com.repldriven.mono.bank-restriction.interface
+     :as restriction]
 
     [com.repldriven.mono.error.interface :as error :refer [let-nom>]]))
 
 (def ^:private org-type->party-type
-  {:organisation-type-internal :party-type-internal
-   :organisation-type-customer :party-type-organization})
+  {:organization-type-internal :party-type-internal
+   :organization-type-customer :party-type-organization})
 
 (def ^:private org-type->account-type
-  {:organisation-type-internal :account-type-internal
-   :organisation-type-customer :account-type-settlement})
+  {:organization-type-internal :account-type-internal
+   :organization-type-customer :account-type-settlement})
 
 (def ^:private org-type->product-name
-  {:organisation-type-internal "Internal Account"
-   :organisation-type-customer "Settlement Account"})
+  {:organization-type-internal "Internal Account"
+   :organization-type-customer "Settlement Account"})
 
 (def ^:private org-type->balance-products
-  {:organisation-type-internal [{:balance-type :balance-type-default
+  {:organization-type-internal [{:balance-type :balance-type-default
                                  :balance-status :balance-status-posted}
                                 {:balance-type :balance-type-suspense
                                  :balance-status :balance-status-posted}]
-   :organisation-type-customer [{:balance-type :balance-type-default
+   :organization-type-customer [{:balance-type :balance-type-default
                                  :balance-status :balance-status-posted}
                                 {:balance-type :balance-type-interest-payable
                                  :balance-status :balance-status-posted}]})
@@ -69,9 +71,10 @@
 
 (defn- get-organization
   "Enriches a flat organization map with party, accounts
-  (with balances), and api-key. When key-secret is provided
-  it is included in the result for one-time use at creation.
-  Returns rich organization map or anomaly."
+  (with balances), api-key, and restrictions. When
+  key-secret is provided it is included in the result for
+  one-time use at creation. Returns rich organization map
+  or anomaly."
   ([config org]
    (get-organization config org nil))
   ([config org key-secret]
@@ -81,13 +84,17 @@
         account-result (cash-accounts/get-accounts config org-id)
         enriched (enrich-accounts config
                                   (:accounts account-result))
-        api-keys (bank-api-key/get-api-keys config org-id)]
+        api-keys (bank-api-key/get-api-keys config org-id)
+        restrictions (restriction/get-restrictions config
+                                                   org-id)]
        (cond-> {:organization
                 (assoc org
                        :party (first parties)
                        :accounts enriched
                        :api-key (select-keys (first api-keys)
-                                             api-key-response-keys))}
+                                             api-key-response-keys)
+                       :policies (:policies restrictions)
+                       :limits (:limits restrictions))}
                key-secret
                (assoc :key-secret key-secret))))))
 
@@ -108,12 +115,16 @@
 (defn new-organization
   "Creates an organization with API key, internal party,
   product, and one cash account per currency. Returns map
-  or anomaly."
-  [config org-name org-type currencies]
+  or anomaly.
+
+  opts may include :policies and :limits to seed
+  organization-level restrictions."
+  [config org-name org-type currencies opts]
   (let [org (domain/new-organization org-name org-type)
         {:keys [api-key key-secret]} (bank-api-key/new-api-key
                                       (:organization-id org)
-                                      "default")]
+                                      "default")
+        {:keys [policies limits]} opts]
     (let-nom>
       [_ (store/create config org api-key)
        org-id (:organization-id org)
@@ -142,5 +153,12 @@
                         (:party-id created-party)
                         product-id
                         (org-type->product-name org-type)
-                        currencies)]
+                        currencies)
+       _ (when (or (seq policies) (seq limits))
+           (restriction/new-restrictions
+            config
+            org-id
+            {:organization-id org-id
+             :policies policies
+             :limits limits}))]
       (get-organization config org key-secret))))

@@ -25,7 +25,7 @@
        (nom-test> [result (organizations/new-organization
                            config
                            "Hash Org"
-                           :organisation-type-customer
+                           :organization-type-customer
                            ["GBP"])
                    org-id (get-in result
                                   [:organization
@@ -44,7 +44,7 @@
                         (nom-test> [result (organizations/new-organization
                                             config
                                             "List Org"
-                                            :organisation-type-customer
+                                            :organization-type-customer
                                             ["GBP"])
                                     org-id (:organization-id (:organization
                                                               result))

@@ -1,5 +1,5 @@
 <script>
-  import { create_organization, list_organizations, simulate_accrue, simulate_capitalize } from "./api.mjs";
+  import { create_organization, get_organization_policies, get_organization_limits, list_organizations, simulate_accrue, simulate_capitalize } from "./api.mjs";
   import { time_ago } from "./time.mjs";
   import { onMount } from "svelte";
   import Modal from "./Modal.svelte";
@@ -14,6 +14,60 @@
   let orgName = $state("Galactic Bank");
   let currencies = $state("GBP");
   let creating = $state(false);
+  let policies = $state([]);
+  let limits = $state([]);
+  let loadingDefaults = $state(false);
+
+  function prettyLabel(s) {
+    return String(s).replace(/^policy-capability-|^limit-type-/g, "").replace(/-/g, " ");
+  }
+
+  async function openCreateModal() {
+    modalOpen = true;
+    loadingDefaults = true;
+    try {
+      const [pRes, lRes] = await Promise.all([
+        get_organization_policies(),
+        get_organization_limits(),
+      ]);
+      if (pRes["http-status"] >= 200 && pRes["http-status"] < 300) {
+        policies = structuredClone(pRes.body ?? []);
+      }
+      if (lRes["http-status"] >= 200 && lRes["http-status"] < 300) {
+        limits = structuredClone(lRes.body ?? []);
+      }
+    } catch (err) {
+      showToast?.({ type: "error", message: err.message });
+    } finally {
+      loadingDefaults = false;
+    }
+  }
+
+  function togglePolicyEffect(idx) {
+    const cur = policies[idx].effect;
+    policies[idx].effect = cur === "allow" ? "deny" : "allow";
+  }
+
+  function clamp(n, lower, upper) {
+    let v = n;
+    if (lower != null && v < lower) v = lower;
+    if (upper != null && v > upper) v = upper;
+    return v;
+  }
+
+  function formatNumber(n) {
+    if (n == null || n === "") return "";
+    return Number(n).toLocaleString("en-GB");
+  }
+
+  function onLimitInput(idx, e) {
+    const raw = e.target.value.replace(/[^\d]/g, "");
+    const parsed = raw === "" ? 0 : parseInt(raw, 10);
+    const limit = limits[idx];
+    const n = clamp(parsed, limit.lower, limit.upper);
+    limits[idx].value = n;
+    e.target.value = formatNumber(n);
+  }
   let accruing = $state({});
   let capitalizing = $state({});
   let showDatePicker = $state(false);
@@ -78,7 +132,7 @@
     creating = true;
     try {
       const currencyList = currencies.split(",").map(c => c.trim().toUpperCase()).filter(c => c);
-      const res = await create_organization(orgName.trim(), currencyList);
+      const res = await create_organization(orgName.trim(), currencyList, policies, limits);
       if (res["http-status"] >= 200 && res["http-status"] < 300) {
         orgName = "";
         currencies = "GBP";
@@ -147,14 +201,14 @@
       Organizations
     </h2>
     <div class="header-actions">
-      <button class="new-btn" onclick={() => modalOpen = true}>+ New Organization</button>
+      <button class="new-btn" onclick={openCreateModal}>+ New Organization</button>
       <button class="refresh" onclick={() => load()} disabled={loading}>
         {loading ? "Loading..." : "Refresh"}
       </button>
     </div>
   </div>
 
-  <Modal open={modalOpen} onClose={() => modalOpen = false} title="New Organization">
+  <Modal open={modalOpen} onClose={() => modalOpen = false} title="New Organization" maxWidth="640px">
     <form onsubmit={handleCreate}>
       <label>
         Organization Name
@@ -176,7 +230,60 @@
           disabled={creating}
         />
       </label>
-      <button type="submit" disabled={creating || !orgName.trim()}>
+
+      <hr class="form-divider" />
+
+      <h4 class="form-section-title">Policies</h4>
+      {#if loadingDefaults}
+        <p class="form-loading">Loading defaults...</p>
+      {:else if policies.length === 0}
+        <p class="form-loading">No policies</p>
+      {:else}
+        <ul class="rules-list">
+          {#each policies as policy, idx}
+            <li class="rule-row">
+              <span class="rule-label">{prettyLabel(policy.capability)}</span>
+              <button
+                type="button"
+                class="effect-toggle"
+                class:allow={policy.effect === "allow"}
+                class:deny={policy.effect === "deny"}
+                onclick={() => togglePolicyEffect(idx)}
+                disabled={creating}
+              >
+                {policy.effect}
+              </button>
+            </li>
+          {/each}
+        </ul>
+      {/if}
+
+      <hr class="form-divider" />
+
+      <h4 class="form-section-title">Limits</h4>
+      {#if loadingDefaults}
+        <p class="form-loading">Loading defaults...</p>
+      {:else if limits.length === 0}
+        <p class="form-loading">No limits</p>
+      {:else}
+        <ul class="rules-list">
+          {#each limits as limit, idx}
+            <li class="rule-row">
+              <span class="rule-label">{prettyLabel(limit.type)}</span>
+              <input
+                type="text"
+                inputmode="numeric"
+                class="limit-value"
+                value={formatNumber(limit.value)}
+                oninput={(e) => onLimitInput(idx, e)}
+                disabled={creating}
+              />
+            </li>
+          {/each}
+        </ul>
+      {/if}
+
+      <button type="submit" disabled={creating || !orgName.trim() || loadingDefaults}>
         {creating ? "Creating..." : "Create Organization"}
       </button>
     </form>
@@ -361,6 +468,152 @@
   form button:disabled {
     opacity: 0.6;
     cursor: not-allowed;
+  }
+
+  .form-divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 0.5rem 0;
+  }
+
+  .form-section-title {
+    margin: 0 0 0.25rem;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--text-muted);
+  }
+
+  .tab-bar {
+    display: flex;
+    gap: 0.25rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .tab-btn {
+    padding: 0.3rem 0.8rem;
+    border: 1px solid var(--border-input);
+    border-radius: 4px;
+    background: var(--bg);
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    cursor: pointer;
+    text-transform: capitalize;
+  }
+
+  .tab-btn.active {
+    background: var(--bg-secondary);
+    color: var(--text);
+    font-weight: 600;
+  }
+
+  .tab-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .form-loading {
+    color: var(--text-faint);
+    font-size: 0.85rem;
+    margin: 0;
+  }
+
+  .rules-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+
+  .rule-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+
+  .rule-checkbox {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.5rem;
+    flex: 1;
+    font-weight: 400;
+    font-size: 0.85rem;
+    text-transform: capitalize;
+  }
+
+  .rule-checkbox input[type="checkbox"] {
+    width: auto;
+    margin: 0;
+  }
+
+  .rule-label {
+    flex: 1;
+  }
+
+  .effect-toggle {
+    padding: 0.2rem 0.6rem;
+    border: 1px solid var(--border-input);
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    cursor: pointer;
+    width: 60px;
+    text-align: center;
+  }
+
+  .effect-toggle.allow {
+    background: #dcfce7;
+    color: #166534;
+    border-color: #86efac;
+  }
+
+  .effect-toggle.deny {
+    background: #fee2e2;
+    color: #991b1b;
+    border-color: #fca5a5;
+  }
+
+  .effect-toggle:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .limit-value {
+    width: 110px !important;
+    padding: 0.3rem 0.5rem !important;
+    font-size: 0.85rem !important;
+    text-align: right;
+  }
+
+  .limit-value:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .limit-input-group {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  .limit-currency {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+  }
+
+  .rule-checkbox:has(input:not(:checked)) ~ .limit-input-group .limit-currency {
+    opacity: 0.5;
+  }
+
+  .rule-checkbox:has(input:not(:checked)) .rule-label {
+    opacity: 0.5;
   }
 
   .error-msg {
