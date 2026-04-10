@@ -22,7 +22,6 @@
   {:local/root "../../components/bank-cash-account-product"}
   component/bank-party {:local/root "../../components/bank-party"}
   component/bank-organization {:local/root "../../components/bank-organization"}
-  component/bank-restriction {:local/root "../../components/bank-restriction"}
   component/avro {:local/root "../../components/avro"}
   component/cli {:local/root "../../components/cli"}
   component/command {:local/root "../../components/command"}

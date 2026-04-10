@@ -10,8 +10,6 @@
     [com.repldriven.mono.bank-cash-account-product.interface
      :as products]
     [com.repldriven.mono.bank-party.interface :as party]
-    [com.repldriven.mono.bank-restriction.interface
-     :as restriction]
 
     [com.repldriven.mono.error.interface :as error :refer [let-nom>]]))
 
@@ -71,10 +69,9 @@
 
 (defn- get-organization
   "Enriches a flat organization map with party, accounts
-  (with balances), api-key, and restrictions. When
-  key-secret is provided it is included in the result for
-  one-time use at creation. Returns rich organization map
-  or anomaly."
+  (with balances), and api-key. When key-secret is
+  provided it is included in the result for one-time use
+  at creation. Returns rich organization map or anomaly."
   ([config org]
    (get-organization config org nil))
   ([config org key-secret]
@@ -84,17 +81,13 @@
         account-result (cash-accounts/get-accounts config org-id)
         enriched (enrich-accounts config
                                   (:accounts account-result))
-        api-keys (bank-api-key/get-api-keys config org-id)
-        restrictions (restriction/get-restrictions config
-                                                   org-id)]
+        api-keys (bank-api-key/get-api-keys config org-id)]
        (cond-> {:organization
                 (assoc org
                        :party (first parties)
                        :accounts enriched
                        :api-key (select-keys (first api-keys)
-                                             api-key-response-keys)
-                       :policies (:policies restrictions)
-                       :limits (:limits restrictions))}
+                                             api-key-response-keys))}
                key-secret
                (assoc :key-secret key-secret))))))
 
@@ -115,16 +108,13 @@
 (defn new-organization
   "Creates an organization with API key, internal party,
   product, and one cash account per currency. Returns map
-  or anomaly.
+  or anomaly."
 
-  opts may include :policies and :limits to seed
-  organization-level restrictions."
-  [config org-name org-type currencies opts]
+  [config org-name org-type currencies]
   (let [org (domain/new-organization org-name org-type)
         {:keys [api-key key-secret]} (bank-api-key/new-api-key
                                       (:organization-id org)
-                                      "default")
-        {:keys [policies limits]} opts]
+                                      "default")]
     (let-nom>
       [_ (store/create config org api-key)
        org-id (:organization-id org)
@@ -153,12 +143,5 @@
                         (:party-id created-party)
                         product-id
                         (org-type->product-name org-type)
-                        currencies)
-       _ (when (or (seq policies) (seq limits))
-           (restriction/new-restrictions
-            config
-            org-id
-            {:organization-id org-id
-             :policies policies
-             :limits limits}))]
+                        currencies)]
       (get-organization config org key-secret))))

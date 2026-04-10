@@ -96,7 +96,6 @@
     components/bank-interest {:local/root "components/bank-interest"}
     components/bank-organization {:local/root "components/bank-organization"}
     components/bank-party {:local/root "components/bank-party"}
-    components/bank-restriction {:local/root "components/bank-restriction"}
     components/bank-bootstrap {:local/root "components/bank-bootstrap"}
     components/bank-schema {:local/root "components/bank-schema"}
     components/bank-payment {:local/root "components/bank-payment"}

@@ -27,15 +27,7 @@
 
 (def OrganizationList {:organizations [Organization]})
 
-(def CreateOrganizationRequest
-  {:name "Galactic Bank"
-   :currencies ["GBP"]
-   :policies {:payment {:outbound-payments {:effect :policy-effect-allow
-                                            :active true}
-                        :overdraft {:effect :policy-effect-deny :active true}}}
-   :limits {:payment {:max-outbound-payment-amount
-                      {:value {:amount {:value 500000 :currency "GBP"}}
-                       :active true}}}})
+(def CreateOrganizationRequest {:name "Galactic Bank" :currencies ["GBP"]})
 
 (def CreateOrganizationResponse
   (assoc Organization :api-key-secret api-key-examples/ApiKeySecret))

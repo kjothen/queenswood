@@ -1,5 +1,5 @@
 <script>
-  import { create_organization, get_organization_policies, get_organization_limits, list_organizations, simulate_accrue, simulate_capitalize } from "./api.mjs";
+  import { create_organization, list_organizations, simulate_accrue, simulate_capitalize } from "./api.mjs";
   import { time_ago } from "./time.mjs";
   import { onMount } from "svelte";
   import Modal from "./Modal.svelte";
@@ -14,60 +14,6 @@
   let orgName = $state("Galactic Bank");
   let currencies = $state("GBP");
   let creating = $state(false);
-  let policies = $state([]);
-  let limits = $state([]);
-  let loadingDefaults = $state(false);
-
-  function prettyLabel(s) {
-    return String(s).replace(/^policy-capability-|^limit-type-/g, "").replace(/-/g, " ");
-  }
-
-  async function openCreateModal() {
-    modalOpen = true;
-    loadingDefaults = true;
-    try {
-      const [pRes, lRes] = await Promise.all([
-        get_organization_policies(),
-        get_organization_limits(),
-      ]);
-      if (pRes["http-status"] >= 200 && pRes["http-status"] < 300) {
-        policies = structuredClone(pRes.body ?? []);
-      }
-      if (lRes["http-status"] >= 200 && lRes["http-status"] < 300) {
-        limits = structuredClone(lRes.body ?? []);
-      }
-    } catch (err) {
-      showToast?.({ type: "error", message: err.message });
-    } finally {
-      loadingDefaults = false;
-    }
-  }
-
-  function togglePolicyEffect(idx) {
-    const cur = policies[idx].effect;
-    policies[idx].effect = cur === "allow" ? "deny" : "allow";
-  }
-
-  function clamp(n, lower, upper) {
-    let v = n;
-    if (lower != null && v < lower) v = lower;
-    if (upper != null && v > upper) v = upper;
-    return v;
-  }
-
-  function formatNumber(n) {
-    if (n == null || n === "") return "";
-    return Number(n).toLocaleString("en-GB");
-  }
-
-  function onLimitInput(idx, e) {
-    const raw = e.target.value.replace(/[^\d]/g, "");
-    const parsed = raw === "" ? 0 : parseInt(raw, 10);
-    const limit = limits[idx];
-    const n = clamp(parsed, limit.lower, limit.upper);
-    limits[idx].value = n;
-    e.target.value = formatNumber(n);
-  }
   let accruing = $state({});
   let capitalizing = $state({});
   let showDatePicker = $state(false);
@@ -132,7 +78,7 @@
     creating = true;
     try {
       const currencyList = currencies.split(",").map(c => c.trim().toUpperCase()).filter(c => c);
-      const res = await create_organization(orgName.trim(), currencyList, policies, limits);
+      const res = await create_organization(orgName.trim(), currencyList);
       if (res["http-status"] >= 200 && res["http-status"] < 300) {
         orgName = "";
         currencies = "GBP";
@@ -201,7 +147,7 @@
       Organizations
     </h2>
     <div class="header-actions">
-      <button class="new-btn" onclick={openCreateModal}>+ New Organization</button>
+      <button class="new-btn" onclick={() => modalOpen = true}>+ New Organization</button>
       <button class="refresh" onclick={() => load()} disabled={loading}>
         {loading ? "Loading..." : "Refresh"}
       </button>
@@ -231,59 +177,7 @@
         />
       </label>
 
-      <hr class="form-divider" />
-
-      <h4 class="form-section-title">Policies</h4>
-      {#if loadingDefaults}
-        <p class="form-loading">Loading defaults...</p>
-      {:else if policies.length === 0}
-        <p class="form-loading">No policies</p>
-      {:else}
-        <ul class="rules-list">
-          {#each policies as policy, idx}
-            <li class="rule-row">
-              <span class="rule-label">{prettyLabel(policy.capability)}</span>
-              <button
-                type="button"
-                class="effect-toggle"
-                class:allow={policy.effect === "allow"}
-                class:deny={policy.effect === "deny"}
-                onclick={() => togglePolicyEffect(idx)}
-                disabled={creating}
-              >
-                {policy.effect}
-              </button>
-            </li>
-          {/each}
-        </ul>
-      {/if}
-
-      <hr class="form-divider" />
-
-      <h4 class="form-section-title">Limits</h4>
-      {#if loadingDefaults}
-        <p class="form-loading">Loading defaults...</p>
-      {:else if limits.length === 0}
-        <p class="form-loading">No limits</p>
-      {:else}
-        <ul class="rules-list">
-          {#each limits as limit, idx}
-            <li class="rule-row">
-              <span class="rule-label">{prettyLabel(limit.type)}</span>
-              <input
-                type="text"
-                inputmode="numeric"
-                class="limit-value"
-                value={formatNumber(limit.value)}
-                oninput={(e) => onLimitInput(idx, e)}
-                disabled={creating}
-              />
-            </li>
-          {/each}
-        </ul>
-      {/if}
-
-      <button type="submit" disabled={creating || !orgName.trim() || loadingDefaults}>
+      <button type="submit" disabled={creating || !orgName.trim()}>
         {creating ? "Creating..." : "Create Organization"}
       </button>
     </form>
@@ -581,6 +475,12 @@
   .effect-toggle:disabled {
     opacity: 0.5;
     cursor: not-allowed;
+  }
+
+  .limit-kind {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    font-style: italic;
   }
 
   .limit-value {

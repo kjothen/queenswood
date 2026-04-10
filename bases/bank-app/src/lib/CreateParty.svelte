@@ -18,12 +18,8 @@
 
   function errorDetail(body) {
     if (!body) return null;
-    return (
-      body.message ??
-      body.error ??
-      body.detail ??
-      (typeof body === "string" ? body : JSON.stringify(body))
-    );
+    return body.message ?? body.error ?? body.detail
+           ?? (typeof body === "string" ? body : JSON.stringify(body));
   }
 
   function dobToInt(dateStr) {
@@ -50,18 +46,12 @@
       const status = res["http-status"];
       if (status >= 200 && status < 300) {
         open = false;
-        showToast?.({ type: "success", message: "Party created" });
+        showToast?.({ type: "success", message: "Person created" });
         onCreated?.();
       } else if (status >= 400 && status < 500) {
-        showToast?.({
-          type: "warning",
-          message: errorDetail(res.body) ?? `HTTP ${status}`,
-        });
+        showToast?.({ type: "warning", message: errorDetail(res.body) ?? `HTTP ${status}` });
       } else {
-        showToast?.({
-          type: "error",
-          message: errorDetail(res.body) ?? `HTTP ${status}`,
-        });
+        showToast?.({ type: "error", message: errorDetail(res.body) ?? `HTTP ${status}` });
       }
     } catch (err) {
       showToast?.({ type: "error", message: err.message });
@@ -71,150 +61,35 @@
   }
 </script>
 
-<button class="new-btn" onclick={() => (open = true)}>+ New Party</button>
+<button class="new-btn" onclick={() => (open = true)}>+ New Person</button>
 
-<Modal {open} onClose={() => (open = false)} title="New Party">
+<Modal {open} onClose={() => (open = false)} title="New Person">
   <form onsubmit={handleSubmit}>
-    <label>
-      Display Name
-      <input type="text" bind:value={displayName} required />
-    </label>
-
-    <label>
-      Given Name
-      <input type="text" bind:value={givenName} required />
-    </label>
-
-    <label>
-      Middle Names
-      <input type="text" bind:value={middleNames} />
-    </label>
-
-    <label>
-      Family Name
-      <input type="text" bind:value={familyName} required />
-    </label>
-
-    <label>
-      Date of Birth
-      <input type="date" bind:value={dateOfBirth} required />
-    </label>
-
-    <label>
-      Nationality
-      <input
-        type="text"
-        bind:value={nationality}
-        required
-        maxlength="2"
-        placeholder="e.g. GB"
-      />
-    </label>
-
+    <label>Display Name <input type="text" bind:value={displayName} required /></label>
+    <label>Given Name <input type="text" bind:value={givenName} required /></label>
+    <label>Middle Names <input type="text" bind:value={middleNames} /></label>
+    <label>Family Name <input type="text" bind:value={familyName} required /></label>
+    <label>Date of Birth <input type="date" bind:value={dateOfBirth} required /></label>
+    <label>Nationality <input type="text" bind:value={nationality} required maxlength="2" placeholder="e.g. GB" /></label>
     <fieldset>
       <legend>National Identifier</legend>
-
-      <label>
-        Type
-        <select bind:value={niType} required>
-          <option value="national-insurance">National Insurance</option>
-        </select>
-      </label>
-
-      <label>
-        Value
-        <input
-          type="text"
-          bind:value={niValue}
-          required
-          placeholder="e.g. TN000001A"
-        />
-      </label>
-
-      <label>
-        Issuing Country
-        <input
-          type="text"
-          bind:value={niCountry}
-          required
-          maxlength="3"
-          placeholder="e.g. GBR"
-        />
-      </label>
+      <label>Type <select bind:value={niType} required><option value="national-insurance">National Insurance</option></select></label>
+      <label>Value <input type="text" bind:value={niValue} required placeholder="e.g. TN000001A" /></label>
+      <label>Issuing Country <input type="text" bind:value={niCountry} required maxlength="3" placeholder="e.g. GBR" /></label>
     </fieldset>
-
-    <button type="submit" disabled={submitting}>
-      {submitting ? "Creating..." : "Create Party"}
-    </button>
+    <button type="submit" disabled={submitting}>{submitting ? "Creating..." : "Create Person"}</button>
   </form>
 </Modal>
 
 <style>
-  .new-btn {
-    padding: 0.5rem 1rem;
-    background: #16a34a;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    font-size: 0.85rem;
-    cursor: pointer;
-  }
-
-  .new-btn:hover {
-    background: #15803d;
-  }
-
-  form {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-  }
-
-  label {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-    font-weight: 500;
-  }
-
-  input,
-  select {
-    padding: 0.5rem;
-    border: 1px solid var(--border-input);
-    border-radius: 4px;
-    font-size: 1rem;
-    background: var(--bg-input);
-    color: var(--text);
-  }
-
-  fieldset {
-    border: 1px solid var(--border-input);
-    border-radius: 4px;
-    padding: 0.75rem 1rem 1rem;
-  }
-
-  fieldset label + label {
-    margin-top: 1rem;
-  }
-
-  legend {
-    font-weight: 500;
-    font-size: 0.9rem;
-    padding: 0 0.25rem;
-  }
-
-  button[type="submit"] {
-    padding: 0.6rem 1.2rem;
-    background: #2563eb;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    font-size: 1rem;
-    cursor: pointer;
-  }
-
-  button[type="submit"]:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-  }
+  .new-btn { padding: 0.5rem 1rem; background: #16a34a; color: white; border: none; border-radius: 4px; font-size: 0.85rem; cursor: pointer; }
+  .new-btn:hover { background: #15803d; }
+  form { display: flex; flex-direction: column; gap: 1rem; }
+  label { display: flex; flex-direction: column; gap: 0.25rem; font-weight: 500; }
+  input, select { padding: 0.5rem; border: 1px solid var(--border-input); border-radius: 4px; font-size: 1rem; background: var(--bg-input); color: var(--text); }
+  fieldset { border: 1px solid var(--border-input); border-radius: 4px; padding: 0.75rem 1rem 1rem; }
+  fieldset label + label { margin-top: 1rem; }
+  legend { font-weight: 500; font-size: 0.9rem; padding: 0 0.25rem; }
+  button[type="submit"] { padding: 0.6rem 1.2rem; background: #2563eb; color: white; border: none; border-radius: 4px; font-size: 1rem; cursor: pointer; }
+  button[type="submit"]:disabled { opacity: 0.6; cursor: not-allowed; }
 </style>

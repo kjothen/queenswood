@@ -1,0 +1,4 @@
+type: !keyword limit-type-max-accounts
+kind: { account-type: !keyword account-type-internal }
+value: 1
+reason: "MUST be one and only one internal account per system"

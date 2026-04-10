@@ -3,11 +3,12 @@
     [com.repldriven.mono.bank-balance.interface :as balances]
     [com.repldriven.mono.bank-organization.interface
      :as organizations]
-    [com.repldriven.mono.bank-restriction.interface
-     :as restriction]
+    [com.repldriven.mono.bank-schema.interface :as schema]
 
+    [com.repldriven.mono.encryption.interface :as encryption]
     [com.repldriven.mono.error.interface :as error
      :refer [let-nom>]]
+    [com.repldriven.mono.fdb.interface :as fdb]
     [com.repldriven.mono.log.interface :as log]))
 
 (defn- find-organization
@@ -47,25 +48,67 @@
           nil
           balances))
 
-(defn- ensure-restrictions
-  "Idempotent: creates restrictions for owner-id if none
-  exist."
-  [config owner-id organization-id restrictions]
-  (when (seq restrictions)
-    (let [existing (restriction/get-restrictions
-                    config
-                    owner-id)]
-      (if existing
-        (do (log/info "Restrictions exist for" owner-id)
-            existing)
-        (let [result (restriction/new-restrictions
-                      config
-                      owner-id
-                      (assoc restrictions
-                             :organization-id
-                             organization-id))]
-          (log/info "Created restrictions for" owner-id)
-          result)))))
+(def ^:private tier-type->keyword
+  {"system" :tier-type-system
+   "micro" :tier-type-micro
+   "standard" :tier-type-standard})
+
+(defn- find-tier
+  "Returns the Tier for the given tier-type keyword,
+  or nil."
+  [{:keys [record-db record-store]} tier-type]
+  (error/try-nom
+   :tier/find
+   "Failed to find tier"
+   (fdb/transact
+    record-db
+    record-store
+    "tiers"
+    (fn [store]
+      (first (mapv schema/pb->Tier
+                   (fdb/query-records store
+                                      "Tier"
+                                      "tier_type"
+                                      tier-type)))))))
+
+(defn- create-tier
+  "Creates a Tier record in FDB."
+  [{:keys [record-db record-store]} tier-type
+   {:keys [policies limits]}]
+  (let [now (System/currentTimeMillis)
+        record {:tier-id (encryption/generate-id "tier")
+                :tier-type tier-type
+                :policies (vec (or policies []))
+                :limits (vec (or limits []))
+                :created-at now
+                :updated-at now}]
+    (error/try-nom
+     :tier/create
+     "Failed to create tier"
+     (fdb/transact
+      record-db
+      record-store
+      "tiers"
+      (fn [store]
+        (fdb/save-record store
+                         (schema/Tier->java record))))
+     record)))
+
+(defn- ensure-tiers
+  "Idempotent: creates tiers from the seed config."
+  [config tiers-config]
+  (doseq [[tier-name tier-data] tiers-config]
+    (let [tier-type (or (tier-type->keyword (name tier-name))
+                        :tier-type-unknown)
+          existing (find-tier config tier-type)]
+      (if (and existing (not (error/anomaly? existing)))
+        (log/info "Tier exists:" (name tier-name))
+        (let [result (create-tier config tier-type tier-data)]
+          (if (error/anomaly? result)
+            (log/error "Failed to create tier:"
+                       (name tier-name)
+                       result)
+            (log/info "Created tier:" (name tier-name))))))))
 
 (def ^:private result-keys
   [:organization-id
@@ -86,22 +129,16 @@
      :account-id (:account-id account)}))
 
 (defn bootstrap
-  "Idempotent bootstrap: ensures internal organization,
-  account, balances, and restrictions exist. Returns map
-  of IDs or anomaly."
+  "Idempotent bootstrap: ensures tiers, internal
+  organization, account, and balances exist. Returns
+  map of IDs or anomaly."
   [config seed]
   (log/info "Bootstrap starting")
-  (let [{:keys [currencies balances]} seed
-        organization-name (get-in seed [:organization :name])
-        sys-restrictions (get-in seed [:system :restrictions])
-        org-restrictions (get-in seed
-                                 [:organization :restrictions])]
+  (let [{:keys [currencies balances tiers]} seed
+        organization-name (get-in seed [:organization :name])]
+    (ensure-tiers config tiers)
     (let-nom>
-      [_ (ensure-restrictions config
-                              "system"
-                              "system"
-                              sys-restrictions)
-       existing (find-organization config organization-name)
+      [existing (find-organization config organization-name)
        result
        (if existing
          (do (log/info "Bootstrap organization exists:"
@@ -119,10 +156,6 @@
                                balances)]
            (log/info "Created bootstrap organization:"
                      (:organization-id result))
-           result))
-       _ (ensure-restrictions config
-                              (:organization-id result)
-                              (:organization-id result)
-                              org-restrictions)]
+           result))]
       (log/info "Bootstrap complete")
       (select-keys result result-keys))))

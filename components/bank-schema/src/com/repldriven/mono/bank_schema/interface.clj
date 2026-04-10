@@ -11,7 +11,7 @@
     [com.repldriven.mono.schemas.payments :as payments]
     [com.repldriven.mono.schemas.person_identification :as
      person-identification]
-    [com.repldriven.mono.schemas.restrictions :as restrictions]
+    [com.repldriven.mono.schemas.tiers :as tiers]
     [com.repldriven.mono.schemas.transactions :as transactions]
     [protojure.protobuf :as proto])
   (:import
@@ -38,8 +38,7 @@
      InboundPaymentProto$InboundPayment
      InternalPaymentProto$InternalPayment
      OutboundPaymentProto$OutboundPayment)
-    (com.repldriven.mono.schemas.restrictions
-     RestrictionsProto$Restrictions)
+    (com.repldriven.mono.schemas.tiers TierProto$Tier)
     (com.repldriven.mono.schemas.transactions
      TransactionProto$Transaction
      TransactionProto$TransactionLeg)))
@@ -184,11 +183,8 @@
   (OrganizationChangelogProto$OrganizationChangelog/parseFrom
    (OrganizationChangelog->pb m)))
 
-(def pb->Restrictions restrictions/pb->Restrictions)
-(defn Restrictions->pb
+(def pb->Tier tiers/pb->Tier)
+(defn Tier->pb [m] (proto/->pb (tiers/new-Tier m)))
+(defn Tier->java
   [m]
-  (proto/->pb (restrictions/new-Restrictions m)))
-(defn Restrictions->java
-  [m]
-  (RestrictionsProto$Restrictions/parseFrom
-   (Restrictions->pb m)))
+  (TierProto$Tier/parseFrom (Tier->pb m)))

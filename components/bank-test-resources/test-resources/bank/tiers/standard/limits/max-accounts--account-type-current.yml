@@ -1,0 +1,4 @@
+type: !keyword limit-type-max-accounts
+kind: { account-type: !keyword account-type-current }
+value: 10000
+reason: "MUST not exceed 10,000 current accounts on standard tier"

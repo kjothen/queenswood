@@ -1,7 +1,0 @@
-- type: !keyword limit-type-max-organizations
-  kind: { account-type: !keyword organization-type-internal }
-  upper: 1
-  lower: 1
-  value: 1
-  default: 1
-  reason: "MUST be one and only one internal organization per system"
