@@ -12,6 +12,7 @@
 
   let modalOpen = $state(false);
   let orgName = $state("Galactic Bank");
+  let tierType = $state("micro");
   let currencies = $state("GBP");
   let creating = $state(false);
   let accruing = $state({});
@@ -78,9 +79,10 @@
     creating = true;
     try {
       const currencyList = currencies.split(",").map(c => c.trim().toUpperCase()).filter(c => c);
-      const res = await create_organization(orgName.trim(), currencyList);
+      const res = await create_organization(orgName.trim(), tierType, currencyList);
       if (res["http-status"] >= 200 && res["http-status"] < 300) {
         orgName = "";
+        tierType = "micro";
         currencies = "GBP";
         modalOpen = false;
         showToast?.({ type: "success", message: "Organization created" });
@@ -167,6 +169,13 @@
         />
       </label>
       <label>
+        Tier
+        <select bind:value={tierType} disabled={creating}>
+          <option value="micro">Micro</option>
+          <option value="standard">Standard</option>
+        </select>
+      </label>
+      <label>
         Currencies
         <input
           type="text"
@@ -213,6 +222,7 @@
         <th>ID</th>
         <th>Name</th>
         <th>Type</th>
+        <th>Tier</th>
         <th>Status</th>
         <th>Created</th>
         <th>Updated</th>
@@ -221,7 +231,7 @@
     </thead>
     <tbody>
       {#if organizations.length === 0 && !loading}
-        <tr><td colspan="7" class="empty">No organizations</td></tr>
+        <tr><td colspan="8" class="empty">No organizations</td></tr>
       {/if}
       {#each organizations as org}
         <tr>
@@ -231,6 +241,9 @@
             <span class="type-badge" class:internal={org.type === "internal"}>
               {org.type}
             </span>
+          </td>
+          <td>
+            <span class="tier-badge">{org["tier-type"] ?? ""}</span>
           </td>
           <td>
             <span class="status-badge"
@@ -340,7 +353,7 @@
     font-weight: 500;
   }
 
-  form input {
+  form input, form select {
     padding: 0.5rem;
     border: 1px solid var(--border-input);
     border-radius: 4px;
@@ -362,158 +375,6 @@
   form button:disabled {
     opacity: 0.6;
     cursor: not-allowed;
-  }
-
-  .form-divider {
-    border: none;
-    border-top: 1px solid var(--border);
-    margin: 0.5rem 0;
-  }
-
-  .form-section-title {
-    margin: 0 0 0.25rem;
-    font-size: 0.85rem;
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
-    color: var(--text-muted);
-  }
-
-  .tab-bar {
-    display: flex;
-    gap: 0.25rem;
-    margin-bottom: 0.5rem;
-  }
-
-  .tab-btn {
-    padding: 0.3rem 0.8rem;
-    border: 1px solid var(--border-input);
-    border-radius: 4px;
-    background: var(--bg);
-    color: var(--text-muted);
-    font-size: 0.8rem;
-    cursor: pointer;
-    text-transform: capitalize;
-  }
-
-  .tab-btn.active {
-    background: var(--bg-secondary);
-    color: var(--text);
-    font-weight: 600;
-  }
-
-  .tab-btn:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-
-  .form-loading {
-    color: var(--text-faint);
-    font-size: 0.85rem;
-    margin: 0;
-  }
-
-  .rules-list {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 0.4rem;
-  }
-
-  .rule-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.5rem;
-  }
-
-  .rule-checkbox {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    gap: 0.5rem;
-    flex: 1;
-    font-weight: 400;
-    font-size: 0.85rem;
-    text-transform: capitalize;
-  }
-
-  .rule-checkbox input[type="checkbox"] {
-    width: auto;
-    margin: 0;
-  }
-
-  .rule-label {
-    flex: 1;
-  }
-
-  .effect-toggle {
-    padding: 0.2rem 0.6rem;
-    border: 1px solid var(--border-input);
-    border-radius: 4px;
-    font-size: 0.75rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    cursor: pointer;
-    width: 60px;
-    text-align: center;
-  }
-
-  .effect-toggle.allow {
-    background: #dcfce7;
-    color: #166534;
-    border-color: #86efac;
-  }
-
-  .effect-toggle.deny {
-    background: #fee2e2;
-    color: #991b1b;
-    border-color: #fca5a5;
-  }
-
-  .effect-toggle:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-
-  .limit-kind {
-    font-size: 0.75rem;
-    color: var(--text-muted);
-    font-style: italic;
-  }
-
-  .limit-value {
-    width: 110px !important;
-    padding: 0.3rem 0.5rem !important;
-    font-size: 0.85rem !important;
-    text-align: right;
-  }
-
-  .limit-value:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-
-  .limit-input-group {
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
-  }
-
-  .limit-currency {
-    font-size: 0.75rem;
-    font-weight: 600;
-    color: var(--text-muted);
-    text-transform: uppercase;
-  }
-
-  .rule-checkbox:has(input:not(:checked)) ~ .limit-input-group .limit-currency {
-    opacity: 0.5;
-  }
-
-  .rule-checkbox:has(input:not(:checked)) .rule-label {
-    opacity: 0.5;
   }
 
   .error-msg {
@@ -569,6 +430,17 @@
   .type-badge.internal {
     background: #fef3c7;
     color: #92400e;
+  }
+
+  .tier-badge {
+    display: inline-block;
+    padding: 0.15rem 0.45rem;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    background: #f3e8ff;
+    color: #6b21a8;
+    text-transform: capitalize;
   }
 
   .status-badge {

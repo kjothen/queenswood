@@ -23,7 +23,7 @@
        (nom-test> [result (SUT/new-organization config
                                                 "Test Org"
                                                 :organization-type-customer
-                                                ["GBP" "USD"])
+                                                :tier-type-micro ["GBP" "USD"])
                    org (:organization result)
                    _ (is (= {:name "Test Org"
                              :type :organization-type-customer

@@ -135,7 +135,10 @@
   [config seed]
   (log/info "Bootstrap starting")
   (let [{:keys [currencies balances tiers]} seed
-        organization-name (get-in seed [:organization :name])]
+        organization-name (get-in seed [:organization :name])
+        tier-type (get-in seed
+                          [:organization :tier]
+                          :tier-type-system)]
     (ensure-tiers config tiers)
     (let-nom>
       [existing (find-organization config organization-name)
@@ -149,6 +152,7 @@
                      config
                      organization-name
                      :organization-type-internal
+                     tier-type
                      currencies)
             result (org->result (:organization created))
             _ (update-balances config

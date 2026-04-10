@@ -22,6 +22,7 @@
                                   (assoc "Authorization"
                                          (str "Bearer " token)))
                  :body (json/write-str {"name" org-name
+                                        "tier-type" "micro"
                                         "currencies" currencies})}))
 
 (deftest create-organization-test

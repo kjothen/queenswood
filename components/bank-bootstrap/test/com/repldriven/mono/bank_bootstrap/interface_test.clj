@@ -14,7 +14,8 @@
 
 (defn- seed-config
   []
-  {:organization {:name "Queenswood"}
+  {:organization {:name "Queenswood"
+                  :tier :tier-type-system}
    :currencies ["GBP"]
    :balances [{:balance-type :balance-type-default
                :balance-status :balance-status-posted

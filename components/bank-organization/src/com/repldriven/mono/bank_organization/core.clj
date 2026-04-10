@@ -110,8 +110,8 @@
   product, and one cash account per currency. Returns map
   or anomaly."
 
-  [config org-name org-type currencies]
-  (let [org (domain/new-organization org-name org-type)
+  [config org-name org-type tier-type currencies]
+  (let [org (domain/new-organization org-name org-type tier-type)
         {:keys [api-key key-secret]} (bank-api-key/new-api-key
                                       (:organization-id org)
                                       "default")]

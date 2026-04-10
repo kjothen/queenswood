@@ -107,6 +107,7 @@
                        fdb-config
                        "Test Customer"
                        :organization-type-customer
+                       :tier-type-micro
                        ["GBP"])
          customer-account-id (get-in customer-org
                                      [:organization :accounts

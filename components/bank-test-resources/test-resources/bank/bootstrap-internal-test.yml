@@ -14,7 +14,7 @@ internal: !system/component
       limits: !include bank/tiers/standard/limits.yml
   organization:
     name: Queenswood
-    tier: !keyword tier-type-micro
+    tier: !keyword tier-type-system
   currencies: [GBP]
   balances:
     - balance-type: !keyword balance-type-default

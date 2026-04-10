@@ -7,9 +7,15 @@
 (def OrganisationType
   (coercion/organization-type-enum-schema {:json-schema/example "customer"}))
 
+(def TierType (coercion/tier-type-enum-schema {:json-schema/example "micro"}))
+
+(def CustomerTierType
+  (coercion/customer-tier-type-enum-schema {:json-schema/example "micro"}))
+
 (def CreateOrganizationRequest
   [:map {:json-schema/example examples/CreateOrganizationRequest}
    [:name string?]
+   [:tier-type [:ref "CustomerTierType"]]
    [:currencies [:vector [:ref "Currency"]]]])
 
 (def Organization
@@ -17,6 +23,7 @@
    [:organization-id string?]
    [:name string?]
    [:type [:ref "OrganisationType"]]
+   [:tier-type [:ref "TierType"]]
    [:status string?]
    [:created-at {:optional true} [:maybe [:ref "Timestamp"]]]
    [:updated-at {:optional true} [:maybe [:ref "Timestamp"]]]
@@ -33,6 +40,7 @@
    [:organization-id string?]
    [:name string?]
    [:type [:ref "OrganisationType"]]
+   [:tier-type [:ref "TierType"]]
    [:status string?]
    [:created-at {:optional true} [:maybe [:ref "Timestamp"]]]
    [:updated-at {:optional true} [:maybe [:ref "Timestamp"]]]
@@ -42,6 +50,6 @@
    [:api-key-secret string?]])
 
 (def registry
-  (components-registry [#'OrganisationType #'CreateOrganizationRequest
-                        #'Organization #'OrganizationList
-                        #'CreateOrganizationResponse]))
+  (components-registry [#'OrganisationType #'TierType #'CustomerTierType
+                        #'CreateOrganizationRequest #'Organization
+                        #'OrganizationList #'CreateOrganizationResponse]))

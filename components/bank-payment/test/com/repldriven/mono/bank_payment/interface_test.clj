@@ -49,6 +49,7 @@
                        config
                        "Payment Test Customer"
                        :organization-type-customer
+                       :tier-type-micro
                        ["GBP"])
          customer-account-id
          (get-in customer-org
@@ -116,6 +117,7 @@
                        config
                        "Inbound Payment Customer"
                        :organization-type-customer
+                       :tier-type-micro
                        ["GBP"])
          customer-account
          (get-in customer-org [:organization :accounts 0])

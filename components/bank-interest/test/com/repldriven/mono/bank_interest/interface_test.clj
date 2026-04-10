@@ -75,6 +75,7 @@
                     config
                     org-name
                     :organization-type-customer
+                    :tier-type-micro
                     ["GBP"])
         org-id (get-in org-result
                        [:organization :organization-id])

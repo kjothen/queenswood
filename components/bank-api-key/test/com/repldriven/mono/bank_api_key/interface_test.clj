@@ -24,9 +24,8 @@
      (testing "finds key by hash"
        (nom-test> [result (organizations/new-organization
                            config
-                           "Hash Org"
-                           :organization-type-customer
-                           ["GBP"])
+                           "Hash Org" :organization-type-customer
+                           :tier-type-micro ["GBP"])
                    org-id (get-in result
                                   [:organization
                                    :organization-id])
@@ -38,19 +37,18 @@
                    _ (is (= org-id (:organization-id found)))])))))
 
 (deftest get-api-keys-test
-  (with-test-system [sys "classpath:bank-api-key/application-test.yml"]
-                    (let [config (fdb-config sys)]
-                      (testing "lists api keys for an organization"
-                        (nom-test> [result (organizations/new-organization
-                                            config
-                                            "List Org"
-                                            :organization-type-customer
-                                            ["GBP"])
-                                    org-id (:organization-id (:organization
-                                                              result))
-                                    keys (SUT/get-api-keys config org-id)
-                                    _ (is (= 1 (count keys)))
-                                    k (first keys)
-                                    _ (is (= org-id (:organization-id k)))
-                                    _ (is (= "default" (:name k)))
-                                    _ (is (string? (:key-prefix k)))])))))
+  (with-test-system
+   [sys "classpath:bank-api-key/application-test.yml"]
+   (let [config (fdb-config sys)]
+     (testing "lists api keys for an organization"
+       (nom-test> [result (organizations/new-organization
+                           config
+                           "List Org" :organization-type-customer
+                           :tier-type-micro ["GBP"])
+                   org-id (:organization-id (:organization result))
+                   keys (SUT/get-api-keys config org-id)
+                   _ (is (= 1 (count keys)))
+                   k (first keys)
+                   _ (is (= org-id (:organization-id k)))
+                   _ (is (= "default" (:name k)))
+                   _ (is (string? (:key-prefix k)))])))))
