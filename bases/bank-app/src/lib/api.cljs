@@ -30,7 +30,7 @@
   (reset! api-key (get (load-keys) org-id)))
 
 (defn create-organization
-  [org-name currencies]
+  [org-name tier-type currencies]
   (-> (js/fetch "/v1/organizations"
                 #js {:method "POST"
                      :headers #js {"Content-Type" "application/json"
@@ -38,6 +38,7 @@
                                                         (admin-token))}
                      :body (js/JSON.stringify
                             (clj->js {"name" org-name
+                                      "tier-type" tier-type
                                       "currencies" currencies}))})
       (.then parse-response)
       (.then (fn [res]

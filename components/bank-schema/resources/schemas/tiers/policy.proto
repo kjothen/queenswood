@@ -1,0 +1,26 @@
+syntax = "proto2";
+
+package com.repldriven.mono.schemas.tiers;
+
+option java_outer_classname = "PolicyProto";
+
+enum PolicyCapability {
+  POLICY_CAPABILITY_UNKNOWN = 0;
+  POLICY_CAPABILITY_ACCOUNT_OPENING = 1;
+  POLICY_CAPABILITY_ACCOUNT_CLOSURE = 2;
+  POLICY_CAPABILITY_INTERNAL_PAYMENTS = 3;
+  POLICY_CAPABILITY_INBOUND_PAYMENTS = 4;
+  POLICY_CAPABILITY_OUTBOUND_PAYMENTS = 5;
+}
+
+enum PolicyEffect {
+  POLICY_EFFECT_UNKNOWN = 0;
+  POLICY_EFFECT_ALLOW = 1;
+  POLICY_EFFECT_DENY = 2;
+}
+
+message Policy {
+  required PolicyCapability capability = 1;
+  required PolicyEffect effect = 2;
+  optional string reason = 3;
+}

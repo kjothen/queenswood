@@ -1,0 +1,4 @@
+type: !keyword limit-type-max-organizations
+kind: { organization-type: !keyword organization-type-internal }
+value: 1
+reason: "MUST be one and only one internal organization per system"

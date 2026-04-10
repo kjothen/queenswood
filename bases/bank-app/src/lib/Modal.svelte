@@ -1,5 +1,5 @@
 <script>
-  let { open = false, onClose, title, children } = $props();
+  let { open = false, onClose, title, children, maxWidth = "520px" } = $props();
   let dialogEl = $state();
 
   $effect(() => {
@@ -23,7 +23,7 @@
   }
 </script>
 
-<dialog bind:this={dialogEl} onclick={handleClick} oncancel={handleCancel}>
+<dialog bind:this={dialogEl} onclick={handleClick} oncancel={handleCancel} style="max-width: {maxWidth};">
   <div class="modal-content">
     <div class="modal-header">
       <h3>{title}</h3>

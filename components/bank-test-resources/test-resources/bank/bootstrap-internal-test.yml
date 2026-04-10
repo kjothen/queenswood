@@ -2,9 +2,20 @@ internal: !system/component
   system/component-kind: bootstrap/internal
   record-db: !system/ref fdb.record-db
   record-store: !system/ref fdb.meta-store
-  organization-name: Queenswood
-  currencies:
-    - GBP
+  tiers:
+    system:
+      policies: !include bank/tiers/system/policies.yml
+      limits: !include bank/tiers/system/limits.yml
+    micro:
+      policies: !include bank/tiers/micro/policies.yml
+      limits: !include bank/tiers/micro/limits.yml
+    standard:
+      policies: !include bank/tiers/standard/policies.yml
+      limits: !include bank/tiers/standard/limits.yml
+  organization:
+    name: Queenswood
+    tier: !keyword tier-type-system
+  currencies: [GBP]
   balances:
     - balance-type: !keyword balance-type-default
       balance-status: !keyword balance-status-posted

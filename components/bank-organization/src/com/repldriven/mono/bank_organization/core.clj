@@ -14,23 +14,23 @@
     [com.repldriven.mono.error.interface :as error :refer [let-nom>]]))
 
 (def ^:private org-type->party-type
-  {:organisation-type-internal :party-type-internal
-   :organisation-type-customer :party-type-organization})
+  {:organization-type-internal :party-type-internal
+   :organization-type-customer :party-type-organization})
 
 (def ^:private org-type->account-type
-  {:organisation-type-internal :account-type-internal
-   :organisation-type-customer :account-type-settlement})
+  {:organization-type-internal :account-type-internal
+   :organization-type-customer :account-type-settlement})
 
 (def ^:private org-type->product-name
-  {:organisation-type-internal "Internal Account"
-   :organisation-type-customer "Settlement Account"})
+  {:organization-type-internal "Internal Account"
+   :organization-type-customer "Settlement Account"})
 
 (def ^:private org-type->balance-products
-  {:organisation-type-internal [{:balance-type :balance-type-default
+  {:organization-type-internal [{:balance-type :balance-type-default
                                  :balance-status :balance-status-posted}
                                 {:balance-type :balance-type-suspense
                                  :balance-status :balance-status-posted}]
-   :organisation-type-customer [{:balance-type :balance-type-default
+   :organization-type-customer [{:balance-type :balance-type-default
                                  :balance-status :balance-status-posted}
                                 {:balance-type :balance-type-interest-payable
                                  :balance-status :balance-status-posted}]})
@@ -69,9 +69,9 @@
 
 (defn- get-organization
   "Enriches a flat organization map with party, accounts
-  (with balances), and api-key. When key-secret is provided
-  it is included in the result for one-time use at creation.
-  Returns rich organization map or anomaly."
+  (with balances), and api-key. When key-secret is
+  provided it is included in the result for one-time use
+  at creation. Returns rich organization map or anomaly."
   ([config org]
    (get-organization config org nil))
   ([config org key-secret]
@@ -109,8 +109,9 @@
   "Creates an organization with API key, internal party,
   product, and one cash account per currency. Returns map
   or anomaly."
-  [config org-name org-type currencies]
-  (let [org (domain/new-organization org-name org-type)
+
+  [config org-name org-type tier-type currencies]
+  (let [org (domain/new-organization org-name org-type tier-type)
         {:keys [api-key key-secret]} (bank-api-key/new-api-key
                                       (:organization-id org)
                                       "default")]

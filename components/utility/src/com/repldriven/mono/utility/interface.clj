@@ -19,6 +19,7 @@
 (def yaml-collections->edn-collections
   util.collections/yaml-collections->edn-collections)
 (def keys->strs util.collections/keys->strs)
+(def val-strs->keywords util.collections/val-strs->keywords)
 
 ;; UUID utilities
 (def uuidv7 util.uuid/v7)

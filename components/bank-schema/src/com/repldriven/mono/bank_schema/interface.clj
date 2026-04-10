@@ -11,6 +11,7 @@
     [com.repldriven.mono.schemas.payments :as payments]
     [com.repldriven.mono.schemas.person_identification :as
      person-identification]
+    [com.repldriven.mono.schemas.tiers :as tiers]
     [com.repldriven.mono.schemas.transactions :as transactions]
     [protojure.protobuf :as proto])
   (:import
@@ -37,6 +38,7 @@
      InboundPaymentProto$InboundPayment
      InternalPaymentProto$InternalPayment
      OutboundPaymentProto$OutboundPayment)
+    (com.repldriven.mono.schemas.tiers TierProto$Tier)
     (com.repldriven.mono.schemas.transactions
      TransactionProto$Transaction
      TransactionProto$TransactionLeg)))
@@ -45,8 +47,8 @@
 (defn Balance->pb [m] (proto/->pb (balances/new-Balance m)))
 (defn Balance->java [m] (BalanceProto$Balance/parseFrom (Balance->pb m)))
 
-(def balance-type->int balances/Balance-BalanceType-label2val)
-(def balance-status->int balances/Balance-BalanceStatus-label2val)
+(def balance-type->int balances/BalanceType-label2val)
+(def balance-status->int balances/BalanceStatus-label2val)
 
 (def account-type->int cash-account-products/AccountType-label2val)
 (def int->account-type cash-account-products/AccountType-val2label)
@@ -180,3 +182,9 @@
   [m]
   (OrganizationChangelogProto$OrganizationChangelog/parseFrom
    (OrganizationChangelog->pb m)))
+
+(def pb->Tier tiers/pb->Tier)
+(defn Tier->pb [m] (proto/->pb (tiers/new-Tier m)))
+(defn Tier->java
+  [m]
+  (TierProto$Tier/parseFrom (Tier->pb m)))

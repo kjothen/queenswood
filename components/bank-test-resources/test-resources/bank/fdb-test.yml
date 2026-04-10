@@ -68,6 +68,11 @@ _record-types: !strs &record-types
       - name: InternalPayment_by_idempotency_key
         field: idempotency_key
         unique: true
+  tiers:
+    record-type: Tier
+    indexes:
+      - name: Tier_by_type
+        field: tier_type
   transaction-legs:
     record-type: TransactionLeg
     primary-key: [transaction_id, leg_id]

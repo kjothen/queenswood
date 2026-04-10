@@ -12,6 +12,7 @@
 
   let modalOpen = $state(false);
   let orgName = $state("Galactic Bank");
+  let tierType = $state("micro");
   let currencies = $state("GBP");
   let creating = $state(false);
   let accruing = $state({});
@@ -78,9 +79,10 @@
     creating = true;
     try {
       const currencyList = currencies.split(",").map(c => c.trim().toUpperCase()).filter(c => c);
-      const res = await create_organization(orgName.trim(), currencyList);
+      const res = await create_organization(orgName.trim(), tierType, currencyList);
       if (res["http-status"] >= 200 && res["http-status"] < 300) {
         orgName = "";
+        tierType = "micro";
         currencies = "GBP";
         modalOpen = false;
         showToast?.({ type: "success", message: "Organization created" });
@@ -154,7 +156,7 @@
     </div>
   </div>
 
-  <Modal open={modalOpen} onClose={() => modalOpen = false} title="New Organization">
+  <Modal open={modalOpen} onClose={() => modalOpen = false} title="New Organization" maxWidth="640px">
     <form onsubmit={handleCreate}>
       <label>
         Organization Name
@@ -167,6 +169,13 @@
         />
       </label>
       <label>
+        Tier
+        <select bind:value={tierType} disabled={creating}>
+          <option value="micro">Micro</option>
+          <option value="standard">Standard</option>
+        </select>
+      </label>
+      <label>
         Currencies
         <input
           type="text"
@@ -176,6 +185,7 @@
           disabled={creating}
         />
       </label>
+
       <button type="submit" disabled={creating || !orgName.trim()}>
         {creating ? "Creating..." : "Create Organization"}
       </button>
@@ -212,6 +222,7 @@
         <th>ID</th>
         <th>Name</th>
         <th>Type</th>
+        <th>Tier</th>
         <th>Status</th>
         <th>Created</th>
         <th>Updated</th>
@@ -220,7 +231,7 @@
     </thead>
     <tbody>
       {#if organizations.length === 0 && !loading}
-        <tr><td colspan="7" class="empty">No organizations</td></tr>
+        <tr><td colspan="8" class="empty">No organizations</td></tr>
       {/if}
       {#each organizations as org}
         <tr>
@@ -230,6 +241,9 @@
             <span class="type-badge" class:internal={org.type === "internal"}>
               {org.type}
             </span>
+          </td>
+          <td>
+            <span class="tier-badge">{org["tier-type"] ?? ""}</span>
           </td>
           <td>
             <span class="status-badge"
@@ -339,7 +353,7 @@
     font-weight: 500;
   }
 
-  form input {
+  form input, form select {
     padding: 0.5rem;
     border: 1px solid var(--border-input);
     border-radius: 4px;
@@ -416,6 +430,17 @@
   .type-badge.internal {
     background: #fef3c7;
     color: #92400e;
+  }
+
+  .tier-badge {
+    display: inline-block;
+    padding: 0.15rem 0.45rem;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    background: #f3e8ff;
+    color: #6b21a8;
+    text-transform: capitalize;
   }
 
   .status-badge {

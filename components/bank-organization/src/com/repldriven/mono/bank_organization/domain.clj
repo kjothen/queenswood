@@ -4,11 +4,12 @@
 
 (defn new-organization
   "Creates a new Organization record map."
-  [org-name org-type]
+  [org-name org-type tier-type]
   (let [now (System/currentTimeMillis)]
     {:organization-id (encryption/generate-id "org")
      :name org-name
      :type org-type
+     :tier-type tier-type
      :status "active"
      :created-at now
      :updated-at now}))

@@ -106,7 +106,8 @@
         [customer-org (organizations/new-organization
                        fdb-config
                        "Test Customer"
-                       :organisation-type-customer
+                       :organization-type-customer
+                       :tier-type-micro
                        ["GBP"])
          customer-account-id (get-in customer-org
                                      [:organization :accounts

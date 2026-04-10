@@ -74,7 +74,8 @@
   (let [org-result (organizations/new-organization
                     config
                     org-name
-                    :organisation-type-customer
+                    :organization-type-customer
+                    :tier-type-micro
                     ["GBP"])
         org-id (get-in org-result
                        [:organization :organization-id])
