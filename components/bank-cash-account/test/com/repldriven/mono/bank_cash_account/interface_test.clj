@@ -48,6 +48,26 @@
             :else
             decoded))))
 
+(defn- seed-organization
+  "Seeds an organization record in the organizations
+  store."
+  [record-db store-fn]
+  (fdb/transact record-db
+                store-fn
+                "organizations"
+                (fn [store]
+                  (let [now (System/currentTimeMillis)
+                        org {:organization-id test-org-id
+                             :name "Test Org"
+                             :type :organization-type-customer
+                             :tier-type :tier-type-micro
+                             :status "active"
+                             :created-at now
+                             :updated-at now}]
+                    (fdb/save-record store
+                                     (schema/Organization->java
+                                      org))))))
+
 (defn- seed-active-party
   "Seeds an active party record in the parties store."
   [record-db store-fn party-id]
@@ -137,6 +157,7 @@
                         :currency "USD"
                         :product-id test-product-id}
           fdb-config {:record-db record-db :record-store store-fn}]
+      (seed-organization record-db store-fn)
       (seed-active-party record-db store-fn party-id)
       (seed-published-product-version record-db store-fn test-product-id)
       (nom-test>
@@ -167,6 +188,7 @@
   [proc schemas record-db store-fn]
   (testing "open-cash-account rejects when party is not active"
     (let [party-id "cust-pending"]
+      (seed-organization record-db store-fn)
       (seed-party record-db store-fn party-id :party-status-pending)
       (let [result (send-command proc
                                  schemas
@@ -202,6 +224,7 @@
                         :name "Account to Close"
                         :currency "USD"
                         :product-id test-product-id}]
+      (seed-organization record-db store-fn)
       (seed-active-party record-db store-fn party-id)
       (nom-test>
         [opened (send-command proc schemas "open-cash-account" open-payload)
@@ -221,6 +244,7 @@
                         :name "Watcher Account"
                         :currency "GBP"
                         :product-id test-product-id}]
+      (seed-organization record-db store-fn)
       (seed-active-party record-db store-fn party-id)
       (nom-test>
         [opening (send-command proc schemas "open-cash-account" open-payload)
@@ -251,6 +275,7 @@
                         :name "Status Account"
                         :currency "USD"
                         :product-id test-product-id}]
+      (seed-organization record-db store-fn)
       (seed-active-party record-db store-fn party-id)
       (nom-test> [opened
                   (send-command proc schemas "open-cash-account" open-payload)
@@ -282,6 +307,7 @@
                    :party-id party-id
                    :currency "USD"
                    :product-id test-product-id}]
+      (seed-organization record-db store-fn)
       (seed-active-party record-db store-fn party-id)
       (nom-test> [r1 (send-command proc
                                    schemas
@@ -318,6 +344,7 @@
   allowed-currencies"
     (let [party-id "cust-currency"
           product-id "prd_gbp_only"]
+      (seed-organization record-db store-fn)
       (seed-active-party record-db store-fn party-id)
       (seed-published-product-version record-db
                                       store-fn
@@ -341,6 +368,7 @@
   payment address schemes"
     (let [party-id "cust-no-schemes"
           product-id "prd_no_schemes"]
+      (seed-organization record-db store-fn)
       (seed-active-party record-db store-fn party-id)
       (seed-published-product-version
        record-db

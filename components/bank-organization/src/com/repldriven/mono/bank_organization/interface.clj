@@ -1,5 +1,7 @@
 (ns com.repldriven.mono.bank-organization.interface
   (:require
+    com.repldriven.mono.bank-organization.system
+
     [com.repldriven.mono.bank-organization.core :as core]))
 
 (defn new-organization
@@ -19,3 +21,9 @@
   anomaly."
   [config]
   (core/get-organizations config))
+
+(defn get-organizations-by-type
+  "Lists organizations matching the given type. Returns
+  a sequence of organization maps or anomaly."
+  [config org-type]
+  (core/get-organizations-by-type config org-type))

@@ -93,7 +93,7 @@
   let payOutReference = $state("");
   let payOutAvailable = $state(0);
 
-  let { orgId } = $props();
+  let { orgId, showToast } = $props();
 
   function customerAccounts() {
     return accounts.filter(a =>
@@ -331,8 +331,16 @@
   async function handleClose(accountId) {
     closing[accountId] = true;
     try {
-      await close_cash_account(accountId);
-      await refreshAll();
+      const res = await close_cash_account(accountId);
+      if (res["http-status"] >= 200 && res["http-status"] < 300) {
+        await refreshAll();
+      } else {
+        const body = res.body;
+        const detail = body?.detail ?? body?.message ?? body?.error ?? `HTTP ${res["http-status"]}`;
+        showToast?.({ type: "warning", message: detail });
+      }
+    } catch (err) {
+      showToast?.({ type: "error", message: err.message });
     } finally {
       delete closing[accountId];
     }

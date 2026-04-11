@@ -1,12 +1,12 @@
 (ns com.repldriven.mono.bank-cash-account.commands
-  (:refer-clojure :exclude [get load read update])
+  (:refer-clojure :exclude [load read update])
   (:require
     [com.repldriven.mono.bank-cash-account.domain :as domain]
 
     [com.repldriven.mono.bank-schema.interface :as schema]
 
     [com.repldriven.mono.avro.interface :as avro]
-    [com.repldriven.mono.error.interface :as error :refer [let-nom> nom->>]]
+    [com.repldriven.mono.error.interface :as error :refer [let-nom>]]
     [com.repldriven.mono.fdb.interface :as fdb]))
 
 (defn- payment-address-pb->avro
@@ -36,6 +36,29 @@
        :payload (avro/serialize (schemas "cash-account")
                                 (account-pb->avro result))})))
 
+(defn- load-tier
+  "Loads a tier by type and returns the deserialised 
+  map, or rejection anomaly if not found."
+  [store tier-type]
+  (let-nom> [record (or (fdb/load-record
+                         store
+                         (.getNumber
+                          (schema/tier-type->pb-enum
+                           tier-type)))
+                        (error/reject :cash-account/tier-unknown
+                                      "Tier not found"))]
+    (schema/pb->Tier record)))
+
+(defn- load-org
+  "Loads an organization and returns the deserialized
+  map, or rejection anomaly if not found."
+  [store organization-id]
+  (let-nom> [record (or (fdb/load-record store
+                                         organization-id)
+                        (error/reject :cash-account/org-unknown
+                                      "Organization not found"))]
+    (schema/pb->Organization record)))
+
 (defn- load
   "Loads a raw record by composite PK from the store.
   Returns the protobuf record or a rejection anomaly if
@@ -43,6 +66,13 @@
   [store organization-id account-id]
   (or (fdb/load-record store organization-id account-id)
       (error/reject :cash-account/not-found "Account not found")))
+
+(defn- load-account
+  "Loads a cash account and returns the deserialized
+  map, or rejection anomaly if not found."
+  [store organization-id account-id]
+  (let-nom> [record (load store organization-id account-id)]
+    (schema/pb->CashAccount record)))
 
 (defn- load-party
   "Loads a party by composite PK from the store. Returns
@@ -52,12 +82,6 @@
                         (error/reject :cash-account/party-unknown
                                       "Party not found"))]
     (schema/pb->Party record)))
-
-(defn- load-party-accounts
-  "Returns the existing accounts for a party."
-  [store party-id]
-  (mapv schema/pb->CashAccount
-        (fdb/load-records store "CashAccount" "party_id" party-id)))
 
 (defn- save
   "Saves account to store, writes changelog entry with
@@ -119,19 +143,32 @@
      record-store
      (fn [open-store]
        (let-nom>
-         [product-store (open-store "cash-account-product-versions")
+         [org-store (open-store "organizations")
+          {:keys [tier-type]} (load-org org-store organization-id)
+
+          tier-store (open-store "tiers")
+          tier (load-tier tier-store tier-type)
+
+          product-store (open-store "cash-account-product-versions")
           product (load-product product-store organization-id product-id)
 
           party-store (open-store "parties")
           party (load-party party-store organization-id party-id)
 
           account-store (open-store "cash-accounts")
-          accounts (load-party-accounts account-store party-id)
+          account-count (fdb/count-records
+                         account-store
+                         "org_account_type_count"
+                         [organization-id
+                          (.getNumber
+                           (schema/account-type->pb-enum
+                            (:account-type product)))])
           account (domain/opening-account
                    data
                    product
                    party
-                   accounts
+                   tier
+                   account-count
                    (partial payment-address-fountain account-store))
 
           balance-store (open-store "balances")
@@ -165,14 +202,14 @@
                   record-store
                   "cash-accounts"
                   (fn [store]
-                    (let-nom> [loaded (nom->>
-                                       (load store organization-id account-id)
-                                       schema/pb->CashAccount)
-                               updated (f loaded)]
+                    (let-nom> [account (load-account store
+                                                     organization-id
+                                                     account-id)
+                               updated (f account)]
                       (save store
                             updated
                             {:account-id account-id
-                             :status-before (:account-status loaded)
+                             :status-before (:account-status account)
                              :status-after (:account-status updated)}))))))
 
 (defn new-account
@@ -189,7 +226,27 @@
 (defn close-account
   "Closes an account."
   [config data]
-  (let [{:keys [organization-id account-id]} data]
+  (let [{:keys [organization-id account-id]} data
+        {:keys [record-db record-store]} config]
     (->response
      config
-     (update config organization-id account-id domain/closing-account))))
+     (fdb/transact-multi
+      record-db
+      record-store
+      (fn [open-store]
+        (let-nom>
+          [org-store (open-store "organizations")
+           {:keys [tier-type]} (load-org org-store organization-id)
+
+           tier-store (open-store "tiers")
+           tier (load-tier tier-store tier-type)
+
+           account-store (open-store "cash-accounts")
+           account (load-account account-store organization-id account-id)
+           updated (domain/closing-account tier account)]
+          (save account-store
+                updated
+                {:account-id account-id
+                 :status-before (:account-status account)
+                 :status-after (:account-status
+                                updated)})))))))

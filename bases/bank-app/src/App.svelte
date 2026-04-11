@@ -8,6 +8,7 @@
   import CashAccountList from "./lib/CashAccountList.svelte";
   import CashAccountProductList from "./lib/CashAccountProductList.svelte";
   import ApiKeyList from "./lib/ApiKeyList.svelte";
+  import TierList from "./lib/TierList.svelte";
   import Toast from "./lib/Toast.svelte";
 
   let currentPage = $state("organizations");
@@ -94,7 +95,7 @@
         {selectedOrgId}
         onSelect={(id) => selectOrg(id)}
       />
-      <CashAccountList bind:this={accountListRef} orgId={selectedOrgId} />
+      <CashAccountList bind:this={accountListRef} orgId={selectedOrgId} {showToast} />
     {:else if currentPage === "products"}
       <OrgSelector
         {organizations}
@@ -102,6 +103,8 @@
         onSelect={(id) => selectOrg(id)}
       />
       <CashAccountProductList bind:this={productListRef} {showToast} />
+    {:else if currentPage === "tiers"}
+      <TierList {showToast} />
     {:else if currentPage === "api-keys"}
       <OrgSelector
         {organizations}

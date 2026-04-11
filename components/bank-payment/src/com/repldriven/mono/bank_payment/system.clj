@@ -10,7 +10,7 @@
    :system/config {:record-db system/required-component
                    :record-store system/required-component
                    :schemas system/required-component
-                   :settlement-account-id nil
+                   :internal-account-id nil
                    :bus nil
                    :scheme-payment-command-channel nil}
    :system/instance-schema some?})
@@ -21,7 +21,7 @@
    :system/config {:record-db system/required-component
                    :record-store system/required-component
                    :schemas system/required-component
-                   :settlement-account-id system/required-component}
+                   :internal-account-id system/required-component}
    :system/instance-schema some?})
 
 (system/defcomponents :payment

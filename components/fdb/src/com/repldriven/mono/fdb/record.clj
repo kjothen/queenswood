@@ -10,6 +10,8 @@
     (com.apple.foundationdb.record.provider.foundationdb
      FDBDatabase
      FDBStoreTimer$Waits)
+    (com.apple.foundationdb.record.metadata IndexAggregateFunction
+                                            IndexTypes)
     (com.apple.foundationdb.record.query RecordQuery)
     (com.apple.foundationdb.record.query.expressions Query)
     (com.apple.foundationdb.tuple Tuple)
@@ -59,6 +61,51 @@
          (.asyncToSync (.getContext store)
                        FDBStoreTimer$Waits/WAIT_EXECUTE_QUERY)
          (mapv record->bytes))))
+
+(defn query-compound
+  "Queries an open FDBRecordStore where multiple fields
+  equal values. filters is a sequence of [field value]
+  pairs. Returns a vector of serialized byte arrays."
+  [store record-type filters]
+  (let [components (map (fn [[field value]]
+                          (-> (Query/field field)
+                              (.equalsValue value)))
+                        filters)
+        q (-> (RecordQuery/newBuilder)
+              (.setRecordType record-type)
+              (.setFilter (Query/and
+                           ^java.util.List
+                           (java.util.ArrayList. components)))
+              .build)]
+    (->> (.executeQuery store q)
+         .asList
+         (.asyncToSync (.getContext store)
+                       FDBStoreTimer$Waits/WAIT_EXECUTE_QUERY)
+         (mapv record->bytes))))
+
+(defn count-records
+  "Counts records using a COUNT index. index-name is the
+  name of the count index. key is the Tuple key to count
+  (e.g. a single value or vector of values for compound
+  keys). Uses evaluateAggregateFunction for O(1) lookup."
+  [store index-name key]
+  (let [key-tuple (if (vector? key)
+                    (Tuple/from (into-array Object key))
+                    (Tuple/from (into-array Object [key])))
+        index (.getIndex (.getRecordMetaData store)
+                         index-name)
+        agg-fn (IndexAggregateFunction.
+                IndexTypes/COUNT
+                (.getRootExpression index)
+                index-name)]
+    (-> (.evaluateAggregateFunction
+         store
+         (java.util.Collections/emptyList)
+         agg-fn
+         (TupleRange/allOf key-tuple)
+         com.apple.foundationdb.record.IsolationLevel/SERIALIZABLE)
+        (.join)
+        (.getLong 0))))
 
 (defn query-repeated
   "Queries an open FDBRecordStore where a repeated field

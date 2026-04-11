@@ -36,10 +36,9 @@
   [request]
   (require-admin
    request
-   (fn [{:keys [bootstrap] :as request}]
+   (fn [{:keys [internal-account-id] :as request}]
      (let [{:keys [account-id amount currency]}
-           (get-in request [:parameters :body])
-           internal-account-id (:account-id bootstrap)]
+           (get-in request [:parameters :body])]
        (commands/send
         (dispatcher request)
         request

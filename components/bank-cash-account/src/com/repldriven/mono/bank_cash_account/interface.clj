@@ -29,11 +29,17 @@
   ([config org-id opts]
    (store/get-accounts config org-id opts)))
 
+(defn count-accounts-by-type
+  "Returns the count of accounts matching the given
+  org-id and account-type. Uses count index."
+  [config org-id account-type]
+  (store/count-accounts-by-type config org-id account-type))
+
 (defn get-accounts-by-type
-  "Returns accounts matching the given account-type.
-  Uses secondary index."
-  [config account-type]
-  (store/get-accounts-by-type config account-type))
+  "Returns accounts matching the given org-id and
+  account-type. Uses compound secondary index."
+  [config org-id account-type]
+  (store/get-accounts-by-type config org-id account-type))
 
 (defn get-account-by-bban
   "Returns account matching the given BBAN.

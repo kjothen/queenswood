@@ -10,7 +10,6 @@
     com.repldriven.mono.bank-interest.interface
     com.repldriven.mono.message-bus.interface
     com.repldriven.mono.bank-party.interface
-    com.repldriven.mono.bank-bootstrap.interface
     com.repldriven.mono.bank-clearbank-webhook.interface
     com.repldriven.mono.bank-clearbank-adapter.system
     com.repldriven.mono.bank-schema.interface

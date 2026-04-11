@@ -1,2 +1,3 @@
 capability: !keyword policy-capability-account-closure
 effect: !keyword policy-effect-allow
+reason: "Policy prevents closing cash accounts"

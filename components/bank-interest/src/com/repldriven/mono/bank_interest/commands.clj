@@ -144,11 +144,10 @@
   [config organization-id]
   (let [result (cash-accounts/get-accounts-by-type
                 config
+                organization-id
                 :account-type-settlement)]
     (when-not (error/anomaly? result)
-      (first (filter #(= organization-id
-                         (:organization-id %))
-                     result)))))
+      (first result))))
 
 (defn- process-customer-accounts
   [config organization-id settlement-id as-of-date f]

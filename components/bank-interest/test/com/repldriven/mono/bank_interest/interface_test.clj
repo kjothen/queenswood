@@ -3,7 +3,6 @@
     [com.repldriven.mono.bank-interest.interface]
 
     [com.repldriven.mono.bank-balance.interface :as balances]
-    [com.repldriven.mono.bank-bootstrap.interface]
     [com.repldriven.mono.bank-cash-account.interface :as
      cash-accounts]
     [com.repldriven.mono.bank-cash-account-product.interface :as
@@ -150,9 +149,11 @@
   (testing "accrue-daily-interest accrues for accounts
   with interest rate"
     (let [config (fdb-config sys)
-          internal (system/instance sys
-                                    [:bootstrap :internal])
-          internal-id (:account-id internal)]
+          internal-org (system/instance sys
+                                        [:organizations :internal])
+          internal-id (get-in internal-org
+                              [:organization :accounts
+                               0 :account-id])]
       (nom-test>
         [customer (create-funded-customer
                    config
@@ -186,9 +187,11 @@
   (testing "capitalize-monthly-interest moves accrued
   to default"
     (let [config (fdb-config sys)
-          internal (system/instance sys
-                                    [:bootstrap :internal])
-          internal-id (:account-id internal)]
+          internal-org (system/instance sys
+                                        [:organizations :internal])
+          internal-id (get-in internal-org
+                              [:organization :accounts
+                               0 :account-id])]
       (nom-test>
         [customer (create-funded-customer
                    config

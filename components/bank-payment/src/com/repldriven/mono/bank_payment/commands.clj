@@ -98,7 +98,7 @@
   OutboundPayment record in pending status, and publishes
   a submit-payment command to the scheme adapter."
   [config data]
-  (let [{:keys [record-db record-store settlement-account-id]}
+  (let [{:keys [record-db record-store internal-account-id]}
         config
         end-to-end-id (str (utility/uuidv7))
         result
@@ -112,7 +112,7 @@
                                        "outbound-payments")
               txn-data (domain/outbound-payment->transaction
                         data
-                        settlement-account-id)
+                        internal-account-id)
               result (transactions/record-transaction
                       open-store
                       txn-data)

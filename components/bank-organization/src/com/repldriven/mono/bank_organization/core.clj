@@ -10,6 +10,7 @@
     [com.repldriven.mono.bank-cash-account-product.interface
      :as products]
     [com.repldriven.mono.bank-party.interface :as party]
+    [com.repldriven.mono.bank-tier.interface :as tiers]
 
     [com.repldriven.mono.error.interface :as error :refer [let-nom>]]))
 
@@ -105,43 +106,54 @@
             []
             orgs)))
 
-(defn new-organization
-  "Creates an organization with API key, internal party,
-  product, and one cash account per currency. Returns map
-  or anomaly."
+(defn get-organizations-by-type
+  "Lists organizations matching the given type. Returns
+  a sequence of organization maps or anomaly."
+  [config org-type]
+  (store/get-organizations-by-type config org-type))
 
+(defn new-organization
+  "Creates an organization with API key, party,
+  product, and one cash account per currency. Returns
+  map or anomaly."
   [config org-name org-type tier-type currencies]
-  (let [org (domain/new-organization org-name org-type tier-type)
-        {:keys [api-key key-secret]} (bank-api-key/new-api-key
-                                      (:organization-id org)
-                                      "default")]
-    (let-nom>
-      [_ (store/create config org api-key)
-       org-id (:organization-id org)
-       created-party (party/new-party
-                      config
-                      {:organization-id org-id
-                       :type (org-type->party-type org-type)
-                       :display-name org-name})
-       product (products/new-product
-                config
-                org-id
-                {:name (org-type->product-name org-type)
-                 :account-type (org-type->account-type org-type)
-                 :balance-sheet-side
-                 :balance-sheet-side-liability
-                 :allowed-currencies currencies
-                 :allowed-payment-address-schemes
-                 [:payment-address-scheme-scan]
-                 :balance-products
-                 (org-type->balance-products org-type)})
-       product-id (get-in product [:version :product-id])
-       version-id (get-in product [:version :version-id])
-       _ (products/publish config org-id product-id version-id)
-       _ (open-accounts config
-                        org-id
-                        (:party-id created-party)
-                        product-id
-                        (org-type->product-name org-type)
-                        currencies)]
-      (get-organization config org key-secret))))
+  (let-nom>
+    [tier (or (tiers/get-tier config tier-type)
+              (error/fail :tier/not-found
+                          {:message "Tier not found"
+                           :tier-type tier-type}))
+     org-count (store/count-organizations-by-type config org-type)
+     org (domain/new-organization org-name org-type tier org-count)
+     org-id (:organization-id org)
+     {:keys [api-key key-secret]} (bank-api-key/new-api-key org-id "default")
+     _ (store/create config org api-key)
+     {:keys [party-id]} (party/new-party config
+                                         {:organization-id org-id
+                                          :type (org-type->party-type org-type)
+                                          :display-name org-name})
+     product (products/new-product
+              config
+              org-id
+              {:name (org-type->product-name org-type)
+               :account-type (org-type->account-type org-type)
+               :balance-sheet-side
+               :balance-sheet-side-liability
+               :allowed-currencies currencies
+               :allowed-payment-address-schemes
+               [:payment-address-scheme-scan]
+               :balance-products
+               (org-type->balance-products org-type)})
+     product-id (get-in product [:version :product-id])
+     version-id (get-in product [:version :version-id])
+     _ (products/publish config
+                         org-id
+                         product-id
+                         version-id)
+     _ (open-accounts config
+                      org-id
+                      party-id
+                      product-id
+                      (org-type->product-name org-type)
+                      currencies)
+     result (get-organization config org key-secret)]
+    result))

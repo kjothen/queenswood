@@ -3,7 +3,6 @@
     [com.repldriven.mono.bank-payment.interface]
 
     [com.repldriven.mono.bank-balance.interface :as balances]
-    [com.repldriven.mono.bank-bootstrap.interface]
     [com.repldriven.mono.bank-organization.interface :as
      organizations]
 
@@ -42,8 +41,11 @@
   (testing "submit-internal-payment creates payment and
   records transaction"
     (let [config (fdb-config sys)
-          internal (system/instance sys [:bootstrap :internal])
-          internal-account-id (:account-id internal)]
+          internal-org (system/instance sys
+                                        [:organizations :internal])
+          internal-account-id (get-in internal-org
+                                      [:organization :accounts
+                                       0 :account-id])]
       (nom-test>
         [customer-org (organizations/new-organization
                        config
@@ -110,8 +112,11 @@
     "transaction-settled event creates inbound
   payment and records transaction"
     (let [config (fdb-config sys)
-          internal (system/instance sys [:bootstrap :internal])
-          settlement-account-id (:account-id internal)]
+          internal-org (system/instance sys
+                                        [:organizations :internal])
+          internal-account-id (get-in internal-org
+                                      [:organization :accounts
+                                       0 :account-id])]
       (nom-test>
         [customer-org (organizations/new-organization
                        config
@@ -157,13 +162,13 @@
                                "GBP"
                                :balance-status-posted)
          _ (is (= 1000 (:credit creditor-balance)))
-         settlement-balance
+         internal-balance
          (balances/get-balance config
-                               settlement-account-id
+                               internal-account-id
                                :balance-type-suspense
                                "GBP"
                                :balance-status-posted)
-         _ (is (= 1000 (:debit settlement-balance)))
+         _ (is (= 1000 (:debit internal-balance)))
          ;; idempotency: re-send same event
          result2 (send-event
                   event-proc

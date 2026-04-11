@@ -1,5 +1,6 @@
 system:
   fdb: !include bank/fdb-test.yml
+  tiers: !include bank/tier-test.yml
   server:
     handler: !system/required-component
     interceptors: !system/component

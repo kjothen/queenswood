@@ -4,6 +4,7 @@
 
     [com.repldriven.mono.bank-organization.interface :as organizations]
 
+    [com.repldriven.mono.bank-tier.interface]
     [com.repldriven.mono.fdb.interface]
     [com.repldriven.mono.system.interface :as system]
     [com.repldriven.mono.testcontainers.interface]

@@ -61,10 +61,31 @@
      :before before
      :after after}))
 
+(defn count-accounts-by-type
+  "Returns the count of accounts matching the given
+  org-id and account-type. Uses the
+  org_account_type_count count index."
+  [{:keys [record-db record-store]} org-id account-type]
+  (try-nom :cash-account/count-by-type
+           "Failed to count accounts by type"
+           (fdb/transact
+            record-db
+            record-store
+            "cash-accounts"
+            (fn [store]
+              (fdb/count-records
+               store
+               "org_account_type_count"
+               [org-id
+                (.getNumber
+                 (schema/account-type->pb-enum
+                  account-type))])))))
+
 (defn get-accounts-by-type
-  "Returns accounts matching the given account-type.
-  Uses the account_type_idx secondary index."
-  [{:keys [record-db record-store]} account-type]
+  "Returns accounts matching the given org-id and
+  account-type. Uses the org_account_type_idx
+  compound index."
+  [{:keys [record-db record-store]} org-id account-type]
   (try-nom :cash-account/list-by-type
            "Failed to list accounts by type"
            (fdb/transact
@@ -73,12 +94,13 @@
             "cash-accounts"
             (fn [store]
               (mapv schema/pb->CashAccount
-                    (fdb/query-records
+                    (fdb/query-records-compound
                      store
                      "CashAccount"
-                     "account_type"
-                     (schema/account-type->pb-enum
-                      account-type)))))))
+                     [["organization_id" org-id]
+                      ["account_type"
+                       (schema/account-type->pb-enum
+                        account-type)]]))))))
 
 (defn get-account-by-bban
   "Returns account matching the given bban.

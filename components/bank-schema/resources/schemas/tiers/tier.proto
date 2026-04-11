@@ -11,10 +11,9 @@ option java_outer_classname = "TierProto";
 
 message Tier {
   option (com.apple.foundationdb.record.record).usage = RECORD;
-  required string   tier_id    = 1 [(com.apple.foundationdb.record.field).primary_key = true];
-  required com.repldriven.mono.schemas.organizations.TierType tier_type  = 2;
-  repeated com.repldriven.mono.schemas.tiers.Policy policies = 3;
-  repeated com.repldriven.mono.schemas.tiers.Limit  limits   = 4;
-  required int64    created_at = 5;
-  required int64    updated_at = 6;
+  required com.repldriven.mono.schemas.organizations.TierType tier_type = 1 [(com.apple.foundationdb.record.field).primary_key = true];
+  repeated com.repldriven.mono.schemas.tiers.Policy policies = 2;
+  repeated com.repldriven.mono.schemas.tiers.Limit  limits   = 3;
+  required int64    created_at = 4;
+  required int64    updated_at = 5;
 }

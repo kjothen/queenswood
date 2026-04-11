@@ -1,5 +1,7 @@
 (ns ^:eftest/synchronized com.repldriven.mono.bank-organization.interface-test
   (:require
+    com.repldriven.mono.bank-tier.interface
+
     [com.repldriven.mono.bank-organization.interface :as SUT]
 
     [com.repldriven.mono.fdb.interface]

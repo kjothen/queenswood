@@ -41,7 +41,7 @@
                 scheme-transaction-id]}
         data
         {:keys [record-db record-store
-                settlement-account-id]}
+                internal-account-id]}
         config]
     (if (not= :debit-credit-code-credit debit-credit-code)
       (do (log/warnf "settle-inbound: ignoring non-credit: %s"
@@ -71,7 +71,7 @@
                    [txn-data (domain/inbound-payment->transaction
                               data
                               account-id
-                              settlement-account-id)
+                              internal-account-id)
                     result (transactions/record-transaction
                             open-store
                             txn-data)

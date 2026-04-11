@@ -20,10 +20,13 @@ _record-types: !strs &record-types
     record-type: CashAccount
     primary-key: [organization_id, account_id]
     indexes:
-      - name: party_id_idx
-        field: party_id
-      - name: account_type_idx
-        field: account_type
+      - name: org_party_id_idx
+        fields: [organization_id, party_id]
+      - name: org_account_type_idx
+        fields: [organization_id, account_type]
+      - name: org_account_type_count
+        fields: [organization_id, account_type]
+        type: count
       - name: bban_idx
         field: bban
   idvs:
@@ -32,7 +35,12 @@ _record-types: !strs &record-types
     indexes: []
   organizations:
     record-type: Organization
-    indexes: []
+    indexes:
+      - name: Organization_by_type
+        field: type
+      - name: Organization_count_by_type
+        field: type
+        type: count
   parties:
     record-type: Party
     primary-key: [organization_id, party_id]
@@ -70,9 +78,7 @@ _record-types: !strs &record-types
         unique: true
   tiers:
     record-type: Tier
-    indexes:
-      - name: Tier_by_type
-        field: tier_type
+    indexes: []
   transaction-legs:
     record-type: TransactionLeg
     primary-key: [transaction_id, leg_id]

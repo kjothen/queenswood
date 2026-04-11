@@ -3,7 +3,6 @@
     [com.repldriven.mono.bank-transaction.interface]
 
     [com.repldriven.mono.bank-balance.interface :as balances]
-    [com.repldriven.mono.bank-bootstrap.interface]
     [com.repldriven.mono.bank-organization.interface :as organizations]
 
     [com.repldriven.mono.avro.interface :as avro]
@@ -100,8 +99,11 @@
   ;; bank transfer funding the customer org's account
   [sys fdb-config proc schemas]
   (testing "simulate inbound transfer funding customer org account"
-    (let [internal (system/instance sys [:bootstrap :internal])
-          internal-account-id (:account-id internal)]
+    (let [internal-org (system/instance sys
+                                        [:organizations :internal])
+          internal-account-id (get-in internal-org
+                                      [:organization :accounts
+                                       0 :account-id])]
       (nom-test>
         [customer-org (organizations/new-organization
                        fdb-config

@@ -5,6 +5,24 @@
     [com.repldriven.mono.error.interface :refer [try-nom]]
     [com.repldriven.mono.fdb.interface :as fdb]))
 
+(defn count-organizations-by-type
+  "Returns the count of organizations matching the given
+  type. Uses the Organization_count_by_type count index."
+  [{:keys [record-db record-store]} org-type]
+  (try-nom :organization/count-by-type
+           "Failed to count organizations by type"
+           (fdb/transact
+            record-db
+            record-store
+            "organizations"
+            (fn [store]
+              (fdb/count-records
+               store
+               "Organization_count_by_type"
+               (.getNumber
+                (schema/organization-type->pb-enum
+                 org-type)))))))
+
 (defn create
   "Persists an organization and its initial API key
   atomically. Returns nil or anomaly."
@@ -35,3 +53,21 @@
                                  (:records
                                   (fdb/scan-records store
                                                     {:limit 100})))))))
+
+(defn get-organizations-by-type
+  "Lists organizations matching the given type. Returns
+  a sequence of organization maps or anomaly."
+  [{:keys [record-db record-store]} org-type]
+  (try-nom :organization/list-by-type
+           "Failed to list organizations by type"
+           (fdb/transact record-db
+                         record-store
+                         "organizations"
+                         (fn [store]
+                           (mapv schema/pb->Organization
+                                 (fdb/query-records
+                                  store
+                                  "Organization"
+                                  "type"
+                                  (schema/organization-type->pb-enum
+                                   org-type)))))))

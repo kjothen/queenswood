@@ -38,7 +38,7 @@
         component/bank-organization {:local/root "../../components/bank-organization"}
         component/bank-payment {:local/root "../../components/bank-payment"}
         component/bank-party {:local/root "../../components/bank-party"}
-        component/bank-bootstrap {:local/root "../../components/bank-bootstrap"}
+        component/bank-tier {:local/root "../../components/bank-tier"}
         component/message-bus {:local/root "../../components/message-bus"}
         component/processor {:local/root "../../components/processor"}
         component/pulsar {:local/root "../../components/pulsar"}

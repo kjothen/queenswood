@@ -36,6 +36,9 @@
     [com.repldriven.mono.bank-api.simulate.components :as simulate.components]
     [com.repldriven.mono.bank-api.simulate.examples :as simulate.examples]
     [com.repldriven.mono.bank-api.simulate.routes :as simulate]
+    [com.repldriven.mono.bank-api.tier.components :as tier.components]
+    [com.repldriven.mono.bank-api.tier.examples :as tier.examples]
+    [com.repldriven.mono.bank-api.tier.routes :as tier]
     [com.repldriven.mono.bank-api.transaction.components :as
      transaction.components]
 
@@ -85,7 +88,8 @@
                                party.components/registry
                                payment.components/registry
                                transaction.components/registry
-                               simulate.components/registry)}}))
+                               simulate.components/registry
+                               tier.components/registry)}}))
 
 (defn- routes
   [ctx]
@@ -110,7 +114,8 @@
                                        organization.examples/registry
                                        party.examples/registry
                                        payment.examples/registry
-                                       simulate.examples/registry)}}
+                                       simulate.examples/registry
+                                       tier.examples/registry)}}
            :handler (server/standard-openapi-handler)}}]
    (into ["/v1"
           {:interceptors (concat telemetry/trace-span
@@ -128,7 +133,8 @@
                  organization/routes
                  party/routes
                  payment/routes
-                 simulate/routes))])
+                 simulate/routes
+                 tier/routes))])
 
 (defn app
   [ctx]

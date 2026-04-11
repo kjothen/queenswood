@@ -1,6 +1,8 @@
 (ns com.repldriven.mono.bank-cash-account.domain
   (:refer-clojure :exclude [name])
   (:require
+    [com.repldriven.mono.bank-tier.interface :as tiers]
+
     [com.repldriven.mono.bank-schema.interface :as schema]
     [com.repldriven.mono.encryption.interface :as encryption]
     [com.repldriven.mono.error.interface :as error :refer [let-nom>]]))
@@ -54,18 +56,64 @@
               []
               allowed-payment-address-schemes))))
 
+(defn- policy-account-opening
+  "Checks the account-opening policy. Returns nil if
+  allowed, anomaly if denied or not found."
+  [tier]
+  (let [policy (tiers/policy tier :policy-capability-account-opening)]
+    (if (error/anomaly? policy)
+      policy
+      (when (= :policy-effect-deny (:effect policy))
+        (error/reject :cash-account/policy-denied
+                      {:message (if (seq (:reason policy))
+                                  (:reason policy)
+                                  "Account opening denied by policy")
+                       :capability :policy-capability-account-opening})))))
+
+(defn- policy-account-closing
+  "Checks the account-closing policy. Returns nil if
+  allowed, anomaly if denied or not found."
+  [tier]
+  (let [policy (tiers/policy tier :policy-capability-account-closure)]
+    (if (error/anomaly? policy)
+      policy
+      (when (= :policy-effect-deny (:effect policy))
+        (error/reject :cash-account/policy-denied
+                      {:message (if (seq (:reason policy))
+                                  (:reason policy)
+                                  "Account closing denied by policy")
+                       :capability :policy-capability-account-closure})))))
+
+(defn- limit-max-accounts
+  "Checks the max-accounts limit for the given
+  account-type against the current count. Returns nil
+  if under limit or no limit defined, anomaly if
+  exceeded."
+  [tier account-type account-count]
+  (when-let [{:keys [value reason]}
+             (tiers/limit tier
+                          :limit-type-max-accounts
+                          {:account-type account-type})]
+    (when (>= account-count value)
+      (error/reject :cash-account/limit-max-accounts
+                    {:message reason
+                     :kind account-type
+                     :limit value}))))
+
 (defn opening-account
   "Creates a new account map with status opened and payment
-  addresses. Validates currency against version and party
-  is active."
-  [data product party _accounts address-fountain-fn]
+  addresses. Validates currency against version, party
+  is active, and account count is within tier limits."
+  [data product party tier account-count address-fountain-fn]
   (let [{:keys [organization-id party-id product-id currency
                 name]}
         data
         {:keys [version-id account-type]} product]
     (let-nom>
-      [_ (valid-currency? currency product)
+      [_ (policy-account-opening tier)
+       _ (valid-currency? currency product)
        _ (valid-party? party)
+       _ (limit-max-accounts tier account-type account-count)
        payment-addresses (new-addresses product address-fountain-fn)]
       (let [now (System/currentTimeMillis)
             bban (some (fn [{:keys [identifier]}]
@@ -109,10 +157,12 @@
          :updated-at (System/currentTimeMillis)))
 
 (defn closing-account
-  [account]
-  (assoc account
-         :account-status :cash-account-status-closing
-         :updated-at (System/currentTimeMillis)))
+  [tier account]
+  (let-nom>
+    [_ (policy-account-closing tier)]
+    (assoc account
+           :account-status :cash-account-status-closing
+           :updated-at (System/currentTimeMillis))))
 
 (defn closed-account
   [account]

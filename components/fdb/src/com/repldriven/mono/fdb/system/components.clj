@@ -9,8 +9,12 @@
   (:import
     (com.apple.foundationdb FDB)
     (com.apple.foundationdb.record RecordMetaData)
-    (com.apple.foundationdb.record.metadata Index IndexOptions Key$Expressions)
-    (com.apple.foundationdb.record.metadata.expressions KeyExpression$FanType)
+    (com.apple.foundationdb.record.metadata Index
+                                            IndexOptions
+                                            IndexTypes
+                                            Key$Expressions)
+    (com.apple.foundationdb.record.metadata.expressions GroupingKeyExpression
+                                                        KeyExpression$FanType)
     (com.apple.foundationdb.record.provider.foundationdb APIVersion
                                                          FDBDatabaseFactory
                                                          FDBMetaDataStore
@@ -123,13 +127,25 @@
                              KeyExpression$FanType/FanOut
                              KeyExpression$FanType/None))))
 
+(def ^:private index-type->str {"count" IndexTypes/COUNT})
+
 (defn- add-indexes
   [builder record-type indexes]
-  (doseq [{:strs [name unique] :as idx-cfg} indexes]
+  (doseq [{:strs [name unique type] :as idx-cfg} indexes]
     (let [expr (key-expression idx-cfg)
-          opts
-          (if unique IndexOptions/UNIQUE_OPTIONS IndexOptions/EMPTY_OPTIONS)]
-      (.addIndex builder record-type (Index. name expr "value" opts)))))
+          idx-type (get index-type->str type "value")
+          grouped-expr (if (= idx-type IndexTypes/COUNT)
+                         (GroupingKeyExpression. expr 0)
+                         expr)
+          opts (if unique
+                 IndexOptions/UNIQUE_OPTIONS
+                 IndexOptions/EMPTY_OPTIONS)]
+      (.addIndex builder
+                 record-type
+                 (Index. name
+                         grouped-expr
+                         idx-type
+                         opts)))))
 
 (defn- resolve-descriptor
   [class-name]

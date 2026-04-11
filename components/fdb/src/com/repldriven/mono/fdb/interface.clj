@@ -32,6 +32,14 @@
   [store record-type field value]
   (record/query store record-type field value))
 
+(defn query-records-compound
+  [store record-type filters]
+  (record/query-compound store record-type filters))
+
+(defn count-records
+  [store index-name key]
+  (record/count-records store index-name key))
+
 (defn query-repeated-records
   [store record-type field value]
   (record/query-repeated store record-type field value))
