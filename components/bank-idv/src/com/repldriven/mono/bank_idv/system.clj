@@ -1,13 +1,13 @@
 (ns com.repldriven.mono.bank-idv.system
   (:require
-    [com.repldriven.mono.bank-idv.core :as core]
+    [com.repldriven.mono.bank-idv.commands :as commands]
     [com.repldriven.mono.bank-idv.watcher :as watcher]
 
     [com.repldriven.mono.system.interface :as system]))
 
 (def ^:private processor
   {:system/start (fn [{:system/keys [config instance]}]
-                   (or instance (core/->IdvProcessor config)))
+                   (or instance (commands/->IdvProcessor config)))
    :system/config {:record-db system/required-component
                    :record-store system/required-component
                    :schemas system/required-component}

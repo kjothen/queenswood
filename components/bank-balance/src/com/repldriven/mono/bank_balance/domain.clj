@@ -57,17 +57,28 @@
             default-posted)]
     {:value v :currency currency}))
 
+(defn apply-leg
+  "Applies a transaction leg to a balance. Debits add to
+  :debit, credits add to :credit. Returns the updated
+  balance."
+  [balance {:keys [side amount]}]
+  (let [field (if (= :leg-side-debit side) :debit :credit)]
+    (update balance field + amount)))
+
 (defn new-balance
   "Creates a new Balance record map. Credit and debit
   default to zero if not provided."
-  [{:keys [account-id balance-type balance-status currency
-           credit debit]}]
+  [{:keys [account-id account-type balance-type balance-status
+           currency credit debit credit-carry]}]
   (let [now (System/currentTimeMillis)]
-    {:account-id account-id
-     :balance-type balance-type
-     :balance-status balance-status
-     :currency currency
-     :credit (or credit 0)
-     :debit (or debit 0)
-     :created-at now
-     :updated-at now}))
+    (cond-> {:account-id account-id
+             :balance-type balance-type
+             :balance-status balance-status
+             :currency currency
+             :credit (or credit 0)
+             :debit (or debit 0)
+             :credit-carry (or credit-carry 0)
+             :created-at now
+             :updated-at now}
+            account-type
+            (assoc :account-type account-type))))

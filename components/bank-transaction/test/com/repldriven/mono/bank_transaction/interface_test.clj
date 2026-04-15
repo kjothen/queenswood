@@ -35,9 +35,19 @@
   (avro/deserialize-same (get schemas schema-name)
                          (:payload result)))
 
+(defn- seed-balance
+  [config account-id]
+  (balances/new-balance config
+                        {:account-id account-id
+                         :balance-type :balance-type-default
+                         :currency "GBP"
+                         :balance-status :balance-status-posted}))
+
 (defn- test-record-transaction
-  [proc schemas]
+  [config proc schemas]
   (testing "record-transaction creates transaction with legs"
+    (seed-balance config "acc_001")
+    (seed-balance config "acc_002")
     (let [data
           {:idempotency-key "idem-001"
            :transaction-type :transaction-type-inbound-transfer
@@ -160,6 +170,6 @@
    (let [proc (system/instance sys [:transactions :processor])
          schemas (system/instance sys [:avro :serde])
          config (fdb-config sys)]
-     (test-record-transaction proc schemas)
+     (test-record-transaction config proc schemas)
      (test-unknown-command proc schemas)
      (test-simulate-inbound-transfer-customer-org sys config proc schemas))))

@@ -8,26 +8,33 @@
 (defn get-tiers
   "Lists all tiers. Returns a sequence of tier maps or
   anomaly."
-  [config]
-  (core/get-tiers config))
+  [txn]
+  (core/get-tiers txn))
 
 (defn get-tier
   "Finds a Tier by tier-type keyword. Returns the Tier
-  map, nil if not found, or anomaly."
-  [config tier-type]
-  (core/get-tier config tier-type))
+  map or rejection anomaly if not found."
+  [txn tier-type]
+  (core/get-tier txn tier-type))
+
+(defn get-org-tier
+  "Loads the tier for the given organization. Returns the
+  Tier map or rejection anomaly if the org or tier is
+  not found."
+  [txn org-id]
+  (core/get-org-tier txn org-id))
 
 (defn new-tier
   "Creates a new Tier with the given type, policies, and
   limits. Returns the Tier map or anomaly."
-  [config tier-type policies limits]
-  (core/new-tier config tier-type policies limits))
+  [txn tier-type policies limits]
+  (core/new-tier txn tier-type policies limits))
 
 (defn update-tier
   "Updates a tier's policies and limits. Returns the
   updated tier map or anomaly."
-  [config tier-type policies limits]
-  (core/update-tier config tier-type policies limits))
+  [txn tier-type policies limits]
+  (core/update-tier txn tier-type policies limits))
 
 (defn policy
   "Returns the first policy matching capability, or nil."

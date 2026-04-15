@@ -2,24 +2,26 @@
   (:require
     [com.repldriven.mono.bank-cash-account-product.core :as core]))
 
-(defn new-product [config org-id data] (core/new-product config org-id data))
+(defn new-product
+  [txn org-id data]
+  (core/new-product txn org-id data))
 
 (defn new-version
-  [config org-id product-id data]
-  (core/new-version config org-id product-id data))
+  [txn org-id product-id data]
+  (core/new-version txn org-id product-id data))
 
 (defn get-version
-  [config org-id product-id version-id]
-  (core/get-version config org-id product-id version-id))
+  [txn org-id product-id version-id]
+  (core/get-version txn org-id product-id version-id))
 
 (defn get-versions
-  ([config org-id] (core/get-versions config org-id))
-  ([config org-id product-id] (core/get-versions config org-id product-id)))
+  ([txn org-id] (core/get-versions txn org-id))
+  ([txn org-id product-id] (core/get-versions txn org-id product-id)))
 
 (defn get-published
-  [config org-id product-id]
-  (core/get-published config org-id product-id))
+  [txn org-id product-id]
+  (core/get-published txn org-id product-id))
 
 (defn publish
-  [config org-id product-id version-id]
-  (core/publish config org-id product-id version-id))
+  [txn org-id product-id version-id]
+  (core/publish txn org-id product-id version-id))

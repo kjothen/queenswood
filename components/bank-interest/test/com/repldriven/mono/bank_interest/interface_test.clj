@@ -94,6 +94,10 @@
                    {:balance-type
                     :balance-type-interest-accrued
                     :balance-status
+                    :balance-status-posted}
+                   {:balance-type
+                    :balance-type-interest-paid
+                    :balance-status
                     :balance-status-posted}]
                   :allowed-payment-address-schemes
                   [:payment-address-scheme-scan]
@@ -114,8 +118,7 @@
           :product-id product-id})
         account-id (:account-id account)
         _ (poll-account-opened config org-id account-id)
-        _ (let [{:keys [record-db record-store]} config
-                txn-data
+        _ (let [txn-data
                 {:idempotency-key (str "fund-" org-name)
                  :transaction-type
                  :transaction-type-internal-transfer
@@ -132,16 +135,11 @@
                    :balance-status :balance-status-posted
                    :side :leg-side-credit
                    :amount fund-amount}]}]
-            (fdb/transact-multi
-             record-db
-             record-store
-             (fn [open-store]
-               (let [result (transactions/record-transaction
-                             open-store
-                             txn-data)]
-                 (balances/apply-legs
-                  (open-store "balances")
-                  (:legs result))))))]
+            (fdb/transact
+             config
+             (fn [txn]
+               (let [result (transactions/record-transaction txn txn-data)]
+                 (balances/apply-legs txn (:legs result))))))]
     {:organization-id org-id :account-id account-id}))
 
 (defn- test-accrue-daily-interest

@@ -21,13 +21,9 @@
                                     [:parameters :path])
         result (tiers/get-tier config tier-type)]
     (cond
+     (error/rejection? result)
+     {:status 404 :body (error-response 404 result)}
      (error/anomaly? result)
      {:status 500 :body (error-response 500 result)}
-     (nil? result)
-     {:status 404
-      :body (error-response
-             404
-             (error/fail :tier/not-found
-                         {:message "Tier not found"}))}
      :else
      {:status 200 :body result})))

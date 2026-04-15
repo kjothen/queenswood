@@ -17,15 +17,13 @@
 (defn- existing-payment
   "Returns existing InboundPayment for the given
   scheme-transaction-id, or nil if not found."
-  [{:keys [record-db record-store]} scheme-transaction-id]
+  [config scheme-transaction-id]
   (fdb/transact
-   record-db
-   record-store
-   "inbound-payments"
-   (fn [store]
+   config
+   (fn [txn]
      (first (mapv schema/pb->InboundPayment
                   (fdb/query-records
-                   store
+                   (fdb/open txn "inbound-payments")
                    "InboundPayment"
                    "scheme_transaction_id"
                    scheme-transaction-id))))))
@@ -40,67 +38,53 @@
   (let [{:keys [debit-credit-code creditor-bban
                 scheme-transaction-id]}
         data
-        {:keys [record-db record-store
-                internal-account-id]}
-        config]
+        {:keys [internal-account-id]} config]
     (if (not= :debit-credit-code-credit debit-credit-code)
       (do (log/warnf "settle-inbound: ignoring non-credit: %s"
                      debit-credit-code)
           nil)
       (let-nom>
-        [account (cash-accounts/get-account-by-bban
-                  config
-                  creditor-bban)
+        [account (cash-accounts/get-account-by-bban config creditor-bban)
          _ (when-not account
              (error/fail :payment/unknown-creditor
                          {:message "No account found for BBAN"
                           :bban creditor-bban}))]
-        (let [existing (existing-payment config
-                                         scheme-transaction-id)]
+        (let [existing (existing-payment config scheme-transaction-id)]
           (if existing
             (do (log/info "settle-inbound: idempotent skip"
-                          {:scheme-transaction-id
-                           scheme-transaction-id})
+                          {:scheme-transaction-id scheme-transaction-id})
                 existing)
             (let [{:keys [account-id]} account]
-              (fdb/transact-multi
-               record-db
-               record-store
-               (fn [open-store]
+              (fdb/transact
+               config
+               (fn [txn]
                  (let-nom>
                    [txn-data (domain/inbound-payment->transaction
                               data
                               account-id
                               internal-account-id)
-                    result (transactions/record-transaction
-                            open-store
-                            txn-data)
+                    result (transactions/record-transaction txn txn-data)
                     {:keys [transaction-id legs]} result
-                    balances-store (open-store "balances")
-                    _ (balances/apply-legs balances-store legs)
+                    _ (balances/apply-legs txn legs)
                     payment (domain/new-inbound-payment
                              data
                              account-id
                              transaction-id)
-                    inbound-store (open-store "inbound-payments")
                     _ (fdb/save-record
-                       inbound-store
-                       (schema/InboundPayment->java
-                        payment))]
+                       (fdb/open txn "inbound-payments")
+                       (schema/InboundPayment->java payment))]
                    payment))))))))))
 
 (defn- outbound-payment-by-e2e
   "Returns existing OutboundPayment for the given
   end-to-end-id, or nil if not found."
-  [{:keys [record-db record-store]} end-to-end-id]
+  [config end-to-end-id]
   (fdb/transact
-   record-db
-   record-store
-   "outbound-payments"
-   (fn [store]
+   config
+   (fn [txn]
      (first (mapv schema/pb->OutboundPayment
                   (fdb/query-records
-                   store
+                   (fdb/open txn "outbound-payments")
                    "OutboundPayment"
                    "end_to_end_id"
                    end-to-end-id))))))
@@ -112,7 +96,6 @@
   its status to completed."
   [config data]
   (let [{:keys [end-to-end-id]} data
-        {:keys [record-db record-store]} config
         payment (outbound-payment-by-e2e config end-to-end-id)]
     (cond
      (error/anomaly? payment)
@@ -133,15 +116,12 @@
          payment)
 
      :else
-     (let [updated (domain/completed-outbound-payment
-                    payment)]
+     (let [updated (domain/completed-outbound-payment payment)]
        (fdb/transact
-        record-db
-        record-store
-        "outbound-payments"
-        (fn [store]
+        config
+        (fn [txn]
           (fdb/save-record
-           store
+           (fdb/open txn "outbound-payments")
            (schema/OutboundPayment->java updated))))
        (log/info "settle-outbound: completed"
                  {:payment-id (:payment-id payment)

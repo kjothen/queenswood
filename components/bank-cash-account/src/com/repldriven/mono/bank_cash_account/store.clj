@@ -2,120 +2,132 @@
   (:require
     [com.repldriven.mono.bank-schema.interface :as schema]
 
-    [com.repldriven.mono.bank-balance.interface :as balances]
-    [com.repldriven.mono.bank-transaction.interface :as transactions]
-
-    [com.repldriven.mono.error.interface :as error :refer [let-nom> try-nom]]
+    [com.repldriven.mono.error.interface :as error :refer [let-nom>]]
     [com.repldriven.mono.fdb.interface :as fdb]))
 
-(defn- enrich-account
-  [config opts account]
-  (let [{:keys [account-id]} account]
-    (let-nom>
-      [bals (when (:embed-balances opts)
-              (balances/get-balances config account-id))
-       txns (when (:embed-transactions opts)
-              (transactions/get-transactions config account-id))]
-      (cond-> account
-              bals
-              (merge bals)
-              txns
-              (assoc :transactions txns)))))
+(def ^:private store-name "cash-accounts")
 
 (defn get-account
-  "Loads a single cash account by org-id and account-id.
-  Returns the account map, nil, or anomaly. opts supports
-  :embed-balances, :embed-transactions."
-  [{:keys [record-db record-store] :as config} org-id account-id opts]
-  (let-nom> [result (try-nom :cash-account/get
-                             "Failed to load account"
-                             (fdb/transact
-                              record-db
-                              record-store
-                              "cash-accounts"
-                              (fn [store]
-                                (fdb/load-record store org-id account-id))))]
-    (when result (enrich-account config opts (schema/pb->CashAccount result)))))
+  "Loads a cash account by composite PK. Returns the account
+  map or rejection anomaly if not found."
+  [txn org-id account-id]
+  (let-nom>
+    [result (fdb/transact
+             txn
+             (fn [txn]
+               (fdb/load-record (fdb/open txn store-name)
+                                org-id
+                                account-id))
+             :cash-account/get
+             "Failed to load account")]
+    (if result
+      (schema/pb->CashAccount result)
+      (error/reject :cash-account/not-found
+                    {:message "Account not found"
+                     :organization-id org-id
+                     :account-id account-id}))))
+
+(defn save-account
+  "Saves account to the cash-accounts store and writes a
+  changelog entry. Returns nil or anomaly."
+  [txn account changelog]
+  (fdb/transact
+   txn
+   (fn [txn]
+     (let [store (fdb/open txn store-name)]
+       (let-nom>
+         [_ (fdb/save-record store (schema/CashAccount->java account))
+          _ (fdb/write-changelog
+             store
+             store-name
+             (:account-id account)
+             (schema/CashAccountChangelog->pb
+              (assoc changelog
+                     :organization-id
+                     (:organization-id account))))]
+         nil)))
+   :cash-account/save
+   "Failed to save account"))
+
+(defn allocate-payment-address
+  "Allocates and formats the next payment-address number for
+  the given counter."
+  [txn counter]
+  (fdb/transact txn
+                (fn [txn]
+                  (format "%08d"
+                          (fdb/allocate-counter (fdb/open txn store-name)
+                                                "bank"
+                                                "counters"
+                                                counter)))
+                :cash-account/allocate-payment-address
+                "Failed to allocate payment address"))
 
 (defn get-accounts
   "Lists cash accounts for an organization. Returns
   {:accounts [maps] :before id|nil :after id|nil} or
-  anomaly. opts supports :after, :before, :limit,
-  :embed-balances, :embed-transactions."
-  [{:keys [record-db record-store] :as config} org-id opts]
-  (let-nom>
-    [result
-     (try-nom :cash-account/list
-              "Failed to list accounts"
-              (fdb/transact record-db
-                            record-store
-                            "cash-accounts"
-                            (fn [store]
-                              (fdb/scan-records
-                               store
-                               (merge {:prefix [org-id] :limit 100} opts)))))
-     {:keys [records before after]} result]
-    {:accounts (mapv (comp (partial enrich-account config opts)
-                           schema/pb->CashAccount)
-                     records)
-     :before before
-     :after after}))
+  anomaly. opts supports :after, :before, :limit."
+  ([txn org-id]
+   (get-accounts txn org-id nil))
+  ([txn org-id opts]
+   (let-nom>
+     [result (fdb/transact
+              txn
+              (fn [txn]
+                (fdb/scan-records
+                 (fdb/open txn store-name)
+                 (merge {:prefix [org-id] :limit 100}
+                        (select-keys opts [:after :before :limit]))))
+              :cash-account/list
+              "Failed to list accounts")
+      {:keys [records before after]} result]
+     {:accounts (mapv schema/pb->CashAccount records)
+      :before before
+      :after after})))
 
 (defn count-accounts-by-type
   "Returns the count of accounts matching the given
   org-id and account-type. Uses the
   org_account_type_count count index."
-  [{:keys [record-db record-store]} org-id account-type]
-  (try-nom :cash-account/count-by-type
-           "Failed to count accounts by type"
-           (fdb/transact
-            record-db
-            record-store
-            "cash-accounts"
-            (fn [store]
-              (fdb/count-records
-               store
-               "org_account_type_count"
-               [org-id
-                (.getNumber
-                 (schema/account-type->pb-enum
-                  account-type))])))))
+  [txn org-id account-type]
+  (fdb/transact txn
+                (fn [txn]
+                  (fdb/count-records
+                   (fdb/open txn store-name)
+                   "org_account_type_count"
+                   [org-id
+                    (.getNumber
+                     (schema/account-type->pb-enum account-type))]))
+                :cash-account/count-by-type
+                "Failed to count accounts by type"))
 
-(defn get-accounts-by-type
-  "Returns accounts matching the given org-id and
-  account-type. Uses the org_account_type_idx
-  compound index."
-  [{:keys [record-db record-store]} org-id account-type]
-  (try-nom :cash-account/list-by-type
-           "Failed to list accounts by type"
-           (fdb/transact
-            record-db
-            record-store
-            "cash-accounts"
-            (fn [store]
-              (mapv schema/pb->CashAccount
-                    (fdb/query-records-compound
-                     store
-                     "CashAccount"
-                     [["organization_id" org-id]
-                      ["account_type"
-                       (schema/account-type->pb-enum
-                        account-type)]]))))))
+(defn get-account-by-type
+  "Returns the first account matching the given org-id and
+  account-type, or nil. Uses the org_account_type_idx
+  compound index; caller should expect at most one result."
+  [txn org-id account-type]
+  (fdb/transact txn
+                (fn [txn]
+                  (some-> (fdb/query-record-compound
+                           (fdb/open txn store-name)
+                           "CashAccount"
+                           [["organization_id" org-id]
+                            ["account_type"
+                             (schema/account-type->pb-enum account-type)]])
+                          schema/pb->CashAccount))
+                :cash-account/get-by-type
+                "Failed to get account by type"))
 
 (defn get-account-by-bban
-  "Returns account matching the given bban.
+  "Returns the account matching the given bban, or nil.
   Uses the bban_idx secondary index."
-  [{:keys [record-db record-store]} bban]
-  (try-nom :cash-account/get-by-bban
-           "Failed to get account by bban"
-           (fdb/transact
-            record-db
-            record-store
-            "cash-accounts"
-            (fn [store]
-              (first (mapv schema/pb->CashAccount
-                           (fdb/query-records
-                            store
-                            "CashAccount"
-                            "bban"
-                            bban)))))))
+  [txn bban]
+  (fdb/transact txn
+                (fn [txn]
+                  (some-> (fdb/query-record (fdb/open txn store-name)
+                                            "CashAccount"
+                                            "bban"
+                                            bban)
+                          schema/pb->CashAccount))
+                :cash-account/get-by-bban
+                "Failed to get account by bban"))

@@ -46,42 +46,76 @@
   (.saveRecord store record)
   nil)
 
+(defn- field-filter
+  [[field value]]
+  (-> (Query/field field)
+      (.equalsValue value)))
+
+(defn- equals-query
+  [record-type field value]
+  (-> (RecordQuery/newBuilder)
+      (.setRecordType record-type)
+      (.setFilter (field-filter [field value]))
+      .build))
+
+(defn- and-query
+  [record-type filters]
+  (-> (RecordQuery/newBuilder)
+      (.setRecordType record-type)
+      (.setFilter (Query/and
+                   ^java.util.List
+                   (java.util.ArrayList. (map field-filter filters))))
+      .build))
+
+(defn- execute-query
+  [store q]
+  (->> (.executeQuery store q)
+       .asList
+       (.asyncToSync (.getContext store)
+                     FDBStoreTimer$Waits/WAIT_EXECUTE_QUERY)))
+
+(defn- execute-query-one
+  [store q]
+  (let [props (-> (ExecuteProperties/newBuilder)
+                  (.setReturnedRowLimit 1)
+                  .build)]
+    (->> (.executeQuery store q nil props)
+         .asList
+         (.asyncToSync (.getContext store)
+                       FDBStoreTimer$Waits/WAIT_EXECUTE_QUERY))))
+
 (defn query
   "Queries an open FDBRecordStore where field equals value.
   Returns a vector of serialized byte arrays. For use inside
   transact."
   [store record-type field value]
-  (let [q (-> (RecordQuery/newBuilder)
-              (.setRecordType record-type)
-              (.setFilter (-> (Query/field field)
-                              (.equalsValue value)))
-              .build)]
-    (->> (.executeQuery store q)
-         .asList
-         (.asyncToSync (.getContext store)
-                       FDBStoreTimer$Waits/WAIT_EXECUTE_QUERY)
-         (mapv record->bytes))))
+  (mapv record->bytes
+        (execute-query store (equals-query record-type field value))))
 
 (defn query-compound
   "Queries an open FDBRecordStore where multiple fields
   equal values. filters is a sequence of [field value]
   pairs. Returns a vector of serialized byte arrays."
   [store record-type filters]
-  (let [components (map (fn [[field value]]
-                          (-> (Query/field field)
-                              (.equalsValue value)))
-                        filters)
-        q (-> (RecordQuery/newBuilder)
-              (.setRecordType record-type)
-              (.setFilter (Query/and
-                           ^java.util.List
-                           (java.util.ArrayList. components)))
-              .build)]
-    (->> (.executeQuery store q)
-         .asList
-         (.asyncToSync (.getContext store)
-                       FDBStoreTimer$Waits/WAIT_EXECUTE_QUERY)
-         (mapv record->bytes))))
+  (mapv record->bytes (execute-query store (and-query record-type filters))))
+
+(defn query-one
+  "Queries an open FDBRecordStore where field equals value,
+  capping the planner at one result via ExecuteProperties.
+  Returns the first matching record bytes, or nil."
+  [store record-type field value]
+  (some-> (execute-query-one store (equals-query record-type field value))
+          first
+          record->bytes))
+
+(defn query-one-compound
+  "Queries an open FDBRecordStore where all of a sequence of
+  [field value] pairs match, capping the planner at one
+  result. Returns first matching record bytes, or nil."
+  [store record-type filters]
+  (some-> (execute-query-one store (and-query record-type filters))
+          first
+          record->bytes))
 
 (defn count-records
   "Counts records using a COUNT index. index-name is the
@@ -125,47 +159,42 @@
                        FDBStoreTimer$Waits/WAIT_EXECUTE_QUERY)
          (mapv record->bytes))))
 
+(defrecord Txn [open])
+
+(defn open
+  "Opens a named store within the transaction. Memoised for
+  the life of the txn so the same store name returns the same
+  FDBRecordStore."
+  [^Txn txn store-name]
+  ((:open txn) store-name))
+
 (defn transact
-  "Opens an FDB Record Layer store and runs f within a single
-  transaction. f receives the open FDBRecordStore and should
-  return the transaction result.
+  "Runs f within a transaction. f receives a Txn.
 
-  The 6-arg form accepts a custom nom category and message for
-  call-site-specific anomaly reporting."
-  ([^FDBDatabase record-db open-store-fn store-name f]
-   (transact record-db
-             open-store-fn
-             store-name
-             f
-             :fdb/transact
-             "Failed to execute transaction"))
-  ([^FDBDatabase record-db open-store-fn store-name f category message]
-   (try-nom category
-            message
-            (.run record-db
-                  ^Function
-                  (fn [ctx]
-                    (f (open-store open-store-fn ctx store-name)))))))
-
-(defn transact-multi
-  "Runs f within a single FDB transaction, passing a function
-  that opens stores by name. f receives open-store and should
-  call (open-store \"store-name\") for each store it needs.
-  All writes across stores are atomic."
-  ([^FDBDatabase record-db open-store-fn f]
-   (transact-multi record-db
-                   open-store-fn
-                   f
-                   :fdb/transact
-                   "Failed to execute transaction"))
-  ([^FDBDatabase record-db open-store-fn f category message]
-   (try-nom category
-            message
-            (.run record-db
-                  ^Function
-                  (fn [ctx]
-                    (f (fn [store-name]
-                         (open-store open-store-fn ctx store-name))))))))
+  - Given an existing Txn, reuses it (composition).
+  - Given a config map with :record-db and :record-store,
+    opens a fresh FDB transaction and wraps ctx in a new Txn
+    whose store-opening is memoised for this transaction."
+  ([txn-or-config f]
+   (transact txn-or-config f :fdb/transact "Failed to execute transaction"))
+  ([txn-or-config f category message]
+   (if (instance? Txn txn-or-config)
+     (try-nom category message (f txn-or-config))
+     (let [{:keys [record-db record-store]} txn-or-config]
+       (try-nom category
+                message
+                (.run ^FDBDatabase record-db
+                      ^Function
+                      (fn [ctx]
+                        (let [cache (atom {})
+                              open-fn (fn [store-name]
+                                        (or (get @cache store-name)
+                                            (let [s (open-store record-store
+                                                                ctx
+                                                                store-name)]
+                                              (swap! cache assoc store-name s)
+                                              s)))]
+                          (f (->Txn open-fn))))))))))
 
 (defn- prefix-range
   "Returns a TupleRange scoped to a prefix tuple."

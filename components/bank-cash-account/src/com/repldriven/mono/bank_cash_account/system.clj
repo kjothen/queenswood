@@ -1,13 +1,13 @@
 (ns com.repldriven.mono.bank-cash-account.system
   (:require
-    [com.repldriven.mono.bank-cash-account.core :as core]
+    [com.repldriven.mono.bank-cash-account.commands :as commands]
     [com.repldriven.mono.bank-cash-account.watcher :as watcher]
 
     [com.repldriven.mono.system.interface :as system]))
 
 (def ^:private processor
   {:system/start (fn [{:system/keys [config instance]}]
-                   (or instance (core/->CashAccountProcessor config)))
+                   (or instance (commands/->CashAccountProcessor config)))
    :system/config {:record-db system/required-component
                    :record-store system/required-component
                    :schemas system/required-component}

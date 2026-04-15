@@ -11,17 +11,19 @@
   "Calculates daily interest using integer micro-unit
   arithmetic. Returns {:whole-units n :carry c} where
   carry is in micro-minor-units (1 minor unit = 1e6
-  micro). existing-carry is the previous day's carry."
-  [balance interest-rate-bps existing-carry]
-  (let [net (net-balance balance)
-        total-micro (+ (* net
-                          interest-rate-bps
-                          (quot micro-scale 10000))
-                       (* existing-carry 365))
-        daily-micro (quot total-micro 365)
-        whole-units (quot daily-micro micro-scale)
-        new-carry (rem daily-micro micro-scale)]
-    {:whole-units whole-units :carry new-carry}))
+  micro)."
+  [balance interest-rate-bps]
+  (let [{:keys [credit-carry]} balance]
+    (when-not (zero? interest-rate-bps)
+      (let [net (net-balance balance)
+            total-micro (+ (* net
+                              interest-rate-bps
+                              (quot micro-scale 10000))
+                           (* credit-carry 365))
+            daily-micro (quot total-micro 365)
+            whole-units (quot daily-micro micro-scale)
+            new-carry (rem daily-micro micro-scale)]
+        {:whole-units whole-units :carry new-carry}))))
 
 (defn accrual-idempotency-key
   [account-id as-of-date]

@@ -38,8 +38,7 @@
 
 (defn list-parties
   [request]
-  (let [{:keys [record-db record-store]} request
-        org-id (get-in request [:auth :organization-id])
+  (let [org-id (get-in request [:auth :organization-id])
         query (get-in request [:parameters :query])
         after-id (cursor/decode
                   (get query (keyword "page[after]")))
@@ -47,12 +46,10 @@
                    (get query (keyword "page[before]")))
         size (parse-page-size
               (get query (keyword "page[size]")))
-        result (fdb/transact record-db
-                             record-store
-                             "parties"
-                             (fn [store]
+        result (fdb/transact request
+                             (fn [txn]
                                (fdb/scan-records
-                                store
+                                (fdb/open txn "parties")
                                 {:prefix [org-id]
                                  :after after-id
                                  :before before-id
@@ -73,14 +70,13 @@
 
 (defn get-party
   [request]
-  (let [{:keys [record-db record-store]} request
-        org-id (get-in request [:auth :organization-id])
+  (let [org-id (get-in request [:auth :organization-id])
         {:keys [party-id]} (get-in request [:parameters :path])
-        result (fdb/transact record-db
-                             record-store
-                             "parties"
-                             (fn [store]
-                               (fdb/load-record store org-id party-id)))]
+        result (fdb/transact request
+                             (fn [txn]
+                               (fdb/load-record (fdb/open txn "parties")
+                                                org-id
+                                                party-id)))]
     (cond (error/anomaly? result)
           {:status 500
            :body (error-response 500 result)}

@@ -12,7 +12,10 @@
     [com.repldriven.mono.bank-party.interface :as party]
     [com.repldriven.mono.bank-tier.interface :as tiers]
 
-    [com.repldriven.mono.error.interface :as error :refer [let-nom>]]))
+    [com.repldriven.mono.error.interface :as error :refer [let-nom>]]
+    [com.repldriven.mono.fdb.interface :as fdb]))
+
+(def ^:private api-key-response-keys [:id :key-prefix :name :created-at])
 
 (def ^:private org-type->party-type
   {:organization-type-internal :party-type-internal
@@ -39,10 +42,10 @@
 (defn- open-accounts
   "Opens one cash account per currency. Returns vector of
   accounts or anomaly."
-  [config org-id party-id product-id product-name currencies]
+  [txn org-id party-id product-id product-name currencies]
   (reduce (fn [acc currency]
             (let [result (cash-accounts/new-account
-                          config
+                          txn
                           {:organization-id org-id
                            :party-id party-id
                            :product-id product-id
@@ -57,49 +60,54 @@
 (defn- enrich-accounts
   "Attaches balances to each account. Returns enriched
   accounts or anomaly."
-  [config accounts]
+  [txn accounts]
   (reduce (fn [acc account]
-            (let [result (balances/get-balances config (:account-id account))]
+            (let [result (balances/get-balances txn (:account-id account))]
               (if (error/anomaly? result)
                 (reduced result)
                 (conj acc (merge account result)))))
           []
           accounts))
 
-(def ^:private api-key-response-keys [:id :key-prefix :name :created-at])
-
-(defn- get-organization
+(defn- enrich
   "Enriches a flat organization map with party, accounts
-  (with balances), and api-key. When key-secret is
-  provided it is included in the result for one-time use
-  at creation. Returns rich organization map or anomaly."
-  ([config org]
-   (get-organization config org nil))
-  ([config org key-secret]
-   (let [org-id (:organization-id org)]
-     (let-nom>
-       [parties (party/get-parties config org-id)
-        account-result (cash-accounts/get-accounts config org-id)
-        enriched (enrich-accounts config
-                                  (:accounts account-result))
-        api-keys (bank-api-key/get-api-keys config org-id)]
-       (cond-> {:organization
-                (assoc org
-                       :party (first parties)
-                       :accounts enriched
-                       :api-key (select-keys (first api-keys)
-                                             api-key-response-keys))}
-               key-secret
-               (assoc :key-secret key-secret))))))
+  (with balances), and api-key. Returns rich organization
+  map or anomaly. key-secret is included only when freshly
+  minted."
+  [txn org key-secret]
+  (let [org-id (:organization-id org)]
+    (let-nom>
+      [parties (party/get-parties txn org-id)
+       accounts (cash-accounts/get-accounts txn org-id)
+       enriched (enrich-accounts txn (:accounts accounts))
+       api-keys (bank-api-key/get-api-keys txn org-id)]
+      (cond->
+       {:organization
+        (assoc org
+               :party (first parties)
+               :accounts enriched
+               :api-key (select-keys (first api-keys) api-key-response-keys))}
+
+       key-secret
+       (assoc :key-secret key-secret)))))
+
+(defn get-organization
+  "Enriches a flat organization map with party, accounts
+  (with balances), and api-key. Returns rich organization
+  map or anomaly."
+  ([txn org]
+   (get-organization txn org nil))
+  ([txn org key-secret]
+   (fdb/transact txn (fn [txn] (enrich txn org key-secret)))))
 
 (defn get-organizations
   "Lists organizations enriched with party, accounts, and
   api-key. Returns sequence of rich organization maps or
   anomaly."
-  [config]
-  (let-nom> [orgs (store/get-organizations config)]
+  [txn]
+  (let-nom> [orgs (store/get-organizations txn)]
     (reduce (fn [acc org]
-              (let [result (get-organization config org)]
+              (let [result (get-organization txn org)]
                 (if (error/anomaly? result)
                   (reduced result)
                   (conj acc (:organization result)))))
@@ -109,51 +117,57 @@
 (defn get-organizations-by-type
   "Lists organizations matching the given type. Returns
   a sequence of organization maps or anomaly."
-  [config org-type]
-  (store/get-organizations-by-type config org-type))
+  [txn org-type]
+  (store/get-organizations-by-type txn org-type))
 
 (defn new-organization
   "Creates an organization with API key, party,
   product, and one cash account per currency. Returns
   map or anomaly."
-  [config org-name org-type tier-type currencies]
-  (let-nom>
-    [tier (or (tiers/get-tier config tier-type)
-              (error/fail :tier/not-found
-                          {:message "Tier not found"
-                           :tier-type tier-type}))
-     org-count (store/count-organizations-by-type config org-type)
-     org (domain/new-organization org-name org-type tier org-count)
-     org-id (:organization-id org)
-     {:keys [api-key key-secret]} (bank-api-key/new-api-key org-id "default")
-     _ (store/create config org api-key)
-     {:keys [party-id]} (party/new-party config
-                                         {:organization-id org-id
-                                          :type (org-type->party-type org-type)
-                                          :display-name org-name})
-     product (products/new-product
-              config
-              org-id
-              {:name (org-type->product-name org-type)
-               :account-type (org-type->account-type org-type)
-               :balance-sheet-side
-               :balance-sheet-side-liability
-               :allowed-currencies currencies
-               :allowed-payment-address-schemes
-               [:payment-address-scheme-scan]
-               :balance-products
-               (org-type->balance-products org-type)})
-     product-id (get-in product [:version :product-id])
-     version-id (get-in product [:version :version-id])
-     _ (products/publish config
+  [txn org-name org-type tier-type currencies]
+  (fdb/transact
+   txn
+   (fn [txn]
+     (let-nom>
+       [tier (tiers/get-tier txn tier-type)
+
+        org-count (store/count-organizations-by-type txn org-type)
+        org (domain/new-organization org-name org-type tier org-count)
+        org-id (:organization-id org)
+
+        {:keys [api-key key-secret]} (bank-api-key/new-api-key org-id
+                                                               "default")
+
+        _ (store/create txn org api-key)
+
+        {:keys [party-id]} (party/new-party
+                            txn
+                            {:organization-id org-id
+                             :type (org-type->party-type org-type)
+                             :display-name org-name})
+
+        product (products/new-product
+                 txn
+                 org-id
+                 {:name (org-type->product-name org-type)
+                  :account-type (org-type->account-type org-type)
+                  :balance-sheet-side :balance-sheet-side-liability
+                  :allowed-currencies currencies
+                  :allowed-payment-address-schemes
+                  domain/allowed-payment-address-schemes
+                  :balance-products (org-type->balance-products org-type)})
+        product-id (get-in product [:version :product-id])
+        version-id (get-in product [:version :version-id])
+        _ (products/publish txn org-id product-id version-id)
+
+        _ (open-accounts txn
                          org-id
+                         party-id
                          product-id
-                         version-id)
-     _ (open-accounts config
-                      org-id
-                      party-id
-                      product-id
-                      (org-type->product-name org-type)
-                      currencies)
-     result (get-organization config org key-secret)]
-    result))
+                         (org-type->product-name org-type)
+                         currencies)
+
+        result (get-organization txn org key-secret)]
+       result))
+   :organization/create
+   "Failed to create organization"))

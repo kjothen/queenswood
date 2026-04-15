@@ -2,18 +2,18 @@
   (:require
     com.repldriven.mono.bank-transaction.system
 
-    [com.repldriven.mono.bank-transaction.commands :as commands]
+    [com.repldriven.mono.bank-transaction.core :as core]
     [com.repldriven.mono.bank-transaction.store :as store]))
 
 (defn record-transaction
-  "Records a transaction and legs within an open-store
-  context. Does not update balances — callers must call
-  apply-legs separately."
-  [open-store data]
-  (commands/record open-store data))
+  "Records a transaction and legs within a transaction.
+  Does not update balances — callers must call apply-legs
+  separately."
+  [txn data]
+  (core/record txn data))
 
 (defn get-transactions
   "Returns transaction legs for an account, enriched
   with parent transaction type, status, and reference."
-  [config account-id]
-  (store/get-transactions config account-id))
+  [txn account-id]
+  (store/get-transactions txn account-id))

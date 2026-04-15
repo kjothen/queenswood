@@ -7,11 +7,8 @@
 
 (defn list-all-versions
   [request]
-  (let [{:keys [record-db record-store]} request
-        org-id (get-in request [:auth :organization-id])
-        result (cash-account-products/get-versions {:record-db record-db
-                                                    :record-store record-store}
-                                                   org-id)]
+  (let [org-id (get-in request [:auth :organization-id])
+        result (cash-account-products/get-versions request org-id)]
     (if (error/anomaly? result)
       {:status 500 :body (error-response 500 result)}
       {:status 200
@@ -19,13 +16,9 @@
 
 (defn get-published-version
   [request]
-  (let [{:keys [record-db record-store]} request
-        org-id (get-in request [:auth :organization-id])
+  (let [org-id (get-in request [:auth :organization-id])
         {:keys [product-id]} (get-in request [:parameters :path])
-        result (cash-account-products/get-published {:record-db record-db
-                                                     :record-store record-store}
-                                                    org-id
-                                                    product-id)]
+        result (cash-account-products/get-published request org-id product-id)]
     (cond (error/anomaly? result)
           {:status 500
            :body (error-response 500 result)}
@@ -40,13 +33,9 @@
 
 (defn list-versions
   [request]
-  (let [{:keys [record-db record-store]} request
-        org-id (get-in request [:auth :organization-id])
+  (let [org-id (get-in request [:auth :organization-id])
         {:keys [product-id]} (get-in request [:parameters :path])
-        result (cash-account-products/get-versions {:record-db record-db
-                                                    :record-store record-store}
-                                                   org-id
-                                                   product-id)]
+        result (cash-account-products/get-versions request org-id product-id)]
     (if (error/anomaly? result)
       {:status 500 :body (error-response 500 result)}
       {:status 200
@@ -54,11 +43,9 @@
 
 (defn get-version
   [request]
-  (let [{:keys [record-db record-store]} request
-        org-id (get-in request [:auth :organization-id])
+  (let [org-id (get-in request [:auth :organization-id])
         {:keys [product-id version-id]} (get-in request [:parameters :path])
-        result (cash-account-products/get-version {:record-db record-db
-                                                   :record-store record-store}
+        result (cash-account-products/get-version request
                                                   org-id
                                                   product-id
                                                   version-id)]

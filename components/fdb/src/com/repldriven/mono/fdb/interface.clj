@@ -36,6 +36,20 @@
   [store record-type filters]
   (record/query-compound store record-type filters))
 
+(defn query-record
+  "Queries an open FDBRecordStore where field equals value,
+  capping the planner at one result. Returns the first
+  matching record bytes, or nil."
+  [store record-type field value]
+  (record/query-one store record-type field value))
+
+(defn query-record-compound
+  "Queries an open FDBRecordStore where all [field value]
+  pairs match, capping the planner at one result. Returns
+  the first matching record bytes, or nil."
+  [store record-type filters]
+  (record/query-one-compound store record-type filters))
+
 (defn count-records
   [store index-name key]
   (record/count-records store index-name key))
@@ -61,16 +75,21 @@
   (apply counter/allocate store key-parts))
 
 (defn transact
-  ([record-db open-store-fn store-name f]
-   (record/transact record-db open-store-fn store-name f))
-  ([record-db open-store-fn store-name f category message]
-   (record/transact record-db open-store-fn store-name f category message)))
+  "Runs f within a transaction. f receives a Txn. Given an
+  existing Txn, reuses it; given a config map with
+  :record-db and :record-store, opens a fresh FDB
+  transaction."
+  ([txn-or-config f]
+   (record/transact txn-or-config f))
+  ([txn-or-config f category message]
+   (record/transact txn-or-config f category message)))
 
-(defn transact-multi
-  "Runs f within a single FDB transaction, passing a function
-  that opens stores by name. All writes across stores are
-  atomic."
-  ([record-db open-store-fn f]
-   (record/transact-multi record-db open-store-fn f))
-  ([record-db open-store-fn f category message]
-   (record/transact-multi record-db open-store-fn f category message)))
+(defn open
+  "Opens a named store within the transaction."
+  [txn store-name]
+  (record/open txn store-name))
+
+(defn txn?
+  "True if x is a Txn."
+  [x]
+  (instance? com.repldriven.mono.fdb.record.Txn x))

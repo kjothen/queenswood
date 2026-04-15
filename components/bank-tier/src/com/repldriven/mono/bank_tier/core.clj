@@ -3,42 +3,50 @@
     [com.repldriven.mono.bank-tier.domain :as domain]
     [com.repldriven.mono.bank-tier.store :as store]
 
+    [com.repldriven.mono.fdb.interface :as fdb]
     [com.repldriven.mono.error.interface :as error
      :refer [let-nom>]]))
 
 (defn get-tiers
   "Lists all tiers. Returns a sequence of tier maps or
   anomaly."
-  [config]
-  (store/get-tiers config))
+  [txn]
+  (store/get-tiers txn))
 
 (defn get-tier
   "Finds a Tier by tier-type keyword. Returns the Tier
-  map, nil if not found, or anomaly."
-  [config tier-type]
-  (store/get-tier config tier-type))
+  map or anomaly."
+  [txn tier-type]
+  (store/get-tier txn tier-type))
 
 (defn new-tier
   "Creates a new Tier with the given type, policies, and
   limits. Returns the Tier map or anomaly."
-  [config tier-type policies limits]
-  (let [tier (domain/new-tier tier-type policies limits)]
-    (let-nom> [_ (store/create config tier)
-               result (get-tier config tier-type)]
-      result)))
+  [txn tier-type policies limits]
+  (fdb/transact txn
+                (fn [txn]
+                  (let [tier (domain/new-tier tier-type policies limits)]
+                    (let-nom> [_ (store/create txn tier)
+                               result (get-tier txn tier-type)]
+                      result)))))
+
+(defn get-org-tier
+  "Loads the tier for the given organization. Returns the
+  Tier map or rejection anomaly."
+  [txn org-id]
+  (store/get-org-tier txn org-id))
 
 (defn update-tier
   "Updates a tier's policies and limits. Returns the
   updated tier map or anomaly."
-  [config tier-type policies limits]
-  (let-nom>
-    [existing (or (get-tier config tier-type)
-                  (error/fail :tier/not-found
-                              {:message "Tier not found"
-                               :tier-type tier-type}))
-     updated (assoc existing
-                    :policies (vec policies)
-                    :limits (vec limits)
-                    :updated-at (System/currentTimeMillis))
-     _ (store/save config updated)]
-    updated))
+  [txn tier-type policies limits]
+  (fdb/transact txn
+                (fn [txn]
+                  (let-nom>
+                    [existing (get-tier txn tier-type)
+                     updated (assoc existing
+                                    :policies (vec policies)
+                                    :limits (vec limits)
+                                    :updated-at (System/currentTimeMillis))
+                     _ (store/save txn updated)]
+                    updated))))

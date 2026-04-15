@@ -17,12 +17,11 @@
 
 (defn- seed-account
   "Inserts an account directly into FDB."
-  [record-db record-store account]
-  (fdb/transact record-db
-                record-store
-                "cash-accounts"
-                (fn [store]
-                  (fdb/save-record store (schema/CashAccount->java account)))))
+  [config account]
+  (fdb/transact config
+                (fn [txn]
+                  (fdb/save-record (fdb/open txn "cash-accounts")
+                                   (schema/CashAccount->java account)))))
 
 (defn- list-cash-accounts-request
   [& [query-string]]
@@ -36,8 +35,8 @@
    [sys
     ["classpath:bank-api/list-cash-accounts-test.yml"
      #(assoc-in % [:system/defs :server :handler] api/app)]]
-   (let [record-db (system/instance sys [:fdb :record-db])
-         record-store (system/instance sys [:fdb :store])
+   (let [config {:record-db (system/instance sys [:fdb :record-db])
+                 :record-store (system/instance sys [:fdb :store])}
          jetty (system/instance sys [:server :jetty-adapter])
          ids (mapv #(format "acct-%03d" %) (range 1 4))
          accounts (mapv (fn [id]
@@ -50,7 +49,7 @@
                            :version-id "prv_test_list"
                            :account-status :cash-account-status-opened})
                         ids)]
-     (doseq [a accounts] (seed-account record-db record-store a))
+     (doseq [a accounts] (seed-account config a))
      (binding [*base-url* (server/http-local-url jetty)]
        (testing "lists all accounts"
          (nom-test> [res (list-cash-accounts-request)

@@ -13,11 +13,11 @@
 (defn get-api-key
   "Looks up an API key by its hash. Returns the ApiKey map
   or nil."
-  [config key-hash]
-  (store/get-api-key config key-hash))
+  [txn key-hash]
+  (store/get-api-key txn key-hash))
 
 (defn get-api-keys
   "Lists all API keys for a given organization. Returns a
   sequence of ApiKey maps."
-  [config org-id]
-  (store/get-api-keys config org-id))
+  [txn org-id]
+  (store/get-api-keys txn org-id))
