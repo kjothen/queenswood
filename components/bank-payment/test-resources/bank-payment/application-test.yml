@@ -9,6 +9,7 @@ system:
       record-db: !system/ref fdb.record-db
       record-store: !system/ref fdb.meta-store
       schemas: !system/ref avro.serde
+      internal-account-id: !system/ref organizations.internal-account-id
     event-processor: !system/component
       system/component-kind: payment/event-processor
       record-db: !system/ref fdb.record-db

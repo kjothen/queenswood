@@ -6,6 +6,14 @@
     [com.repldriven.mono.error.interface :as error :refer [let-nom>]]
     [com.repldriven.mono.processor.interface :as processor]))
 
+(defn- ->response
+  [config result]
+  (if (error/anomaly? result)
+    result
+    (let [{:keys [schemas]} config]
+      (let-nom> [payload (avro/serialize (schemas "transaction") result)]
+        {:status "ACCEPTED" :payload payload}))))
+
 (defn- dispatch
   [config message]
   (let [{:keys [command payload]} message
@@ -18,7 +26,7 @@
       (let-nom> [data (avro/deserialize-same schema payload)]
         (case command
           "record-transaction"
-          (core/record-transaction config data)
+          (->response config (core/record-transaction config data))
           (error/reject
            :transaction/unknown-command
            (str "Unknown command: " command)))))))

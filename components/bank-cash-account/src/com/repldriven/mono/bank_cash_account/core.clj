@@ -10,7 +10,6 @@
     [com.repldriven.mono.bank-tier.interface :as tiers]
     [com.repldriven.mono.bank-transaction.interface :as transactions]
 
-    [com.repldriven.mono.fdb.interface :as fdb]
     [com.repldriven.mono.error.interface :as error :refer [let-nom>]]))
 
 (defn- enrich-account
@@ -46,7 +45,7 @@
   addresses, and balances from the product's balance-products.
   Returns account map or anomaly."
   [txn data]
-  (fdb/transact
+  (store/transact
    txn
    (fn [txn]
      (let [{:keys [organization-id party-id product-id currency]} data]
@@ -95,7 +94,7 @@
   ([txn org-id account-id]
    (get-account txn org-id account-id nil))
   ([txn org-id account-id opts]
-   (fdb/transact
+   (store/transact
     txn
     (fn [txn]
       (let-nom>
@@ -110,7 +109,7 @@
   ([txn org-id]
    (get-accounts txn org-id nil))
   ([txn org-id opts]
-   (fdb/transact
+   (store/transact
     txn
     (fn [txn]
       (let-nom>
@@ -138,7 +137,7 @@
 (defn close-account
   "Closes an account. Returns account map or anomaly."
   [txn data]
-  (fdb/transact
+  (store/transact
    txn
    (fn [txn]
      (let [{:keys [organization-id account-id]} data]

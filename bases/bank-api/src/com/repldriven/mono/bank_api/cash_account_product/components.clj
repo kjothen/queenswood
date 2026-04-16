@@ -15,6 +15,9 @@
 (def PaymentAddressScheme
   (coercion/payment-address-scheme-enum-schema {:json-schema/example "scan"}))
 
+(def VersionStatus
+  (coercion/version-status-enum-schema {:json-schema/example "draft"}))
+
 (def DraftCashAccountProductRequest
   [:map {:json-schema/example examples/DraftCashAccountProductRequest}
    [:name string?]
@@ -35,7 +38,7 @@
    [:product-id string?]
    [:version-id string?]
    [:version-number int?]
-   [:status string?]
+   [:status [:ref "VersionStatus"]]
    [:name {:optional true} [:maybe string?]]
    [:account-type {:optional true} [:maybe [:ref "AccountType"]]]
    [:balance-sheet-side {:optional true} [:maybe [:ref "BalanceSheetSide"]]]
@@ -70,6 +73,6 @@
 
 (def registry
   (components-registry
-   [#'AccountType #'BalanceSheetSide #'PaymentAddressScheme
+   [#'AccountType #'BalanceSheetSide #'PaymentAddressScheme #'VersionStatus
     #'DraftCashAccountProductRequest #'CashAccountProductVersion
     #'CashAccountProductVersionList #'DraftCashAccountProductVersionRequest]))

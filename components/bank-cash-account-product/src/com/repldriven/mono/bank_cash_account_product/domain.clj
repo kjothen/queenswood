@@ -16,7 +16,7 @@
              :product-id product-id
              :version-id (encryption/generate-id "prv")
              :version-number version-number
-             :status "draft"
+             :status :cash-account-product-version-status-draft
              :name name
              :account-type account-type
              :balance-sheet-side balance-sheet-side
@@ -44,5 +44,5 @@
   "Sets version status to published."
   [version]
   (assoc version
-         :status "published"
+         :status :cash-account-product-version-status-published
          :updated-at (System/currentTimeMillis)))

@@ -1,6 +1,7 @@
 (ns com.repldriven.mono.bank-interest.core
   (:require
     [com.repldriven.mono.bank-interest.domain :as domain]
+    [com.repldriven.mono.bank-interest.store :as store]
 
     [com.repldriven.mono.bank-balance.interface :as balances]
     [com.repldriven.mono.bank-cash-account.interface :as
@@ -12,8 +13,7 @@
 
     [com.repldriven.mono.cache.interface :as cache]
     [com.repldriven.mono.error.interface :as error
-     :refer [let-nom>]]
-    [com.repldriven.mono.fdb.interface :as fdb]))
+     :refer [let-nom>]]))
 
 (defn- customer-accounts
   [accounts]
@@ -44,7 +44,7 @@
   All in one FDB transaction."
   [config settlement-id account as-of-date]
   (let [{:keys [organization-id account-id currency]} account]
-    (fdb/transact
+    (store/transact
      config
      (fn [txn]
        (let-nom>
@@ -81,7 +81,7 @@
 (defn- capitalize-account
   [config settlement-id account as-of-date]
   (let [{:keys [account-id currency]} account]
-    (fdb/transact
+    (store/transact
      config
      (fn [txn]
        (let-nom>

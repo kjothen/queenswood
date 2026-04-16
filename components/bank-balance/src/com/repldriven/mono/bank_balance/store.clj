@@ -8,6 +8,8 @@
 
 (def ^:private store-name "balances")
 
+(def transact fdb/transact)
+
 (defn save-balance
   "Persists a balance. Returns nil or anomaly."
   [txn balance]

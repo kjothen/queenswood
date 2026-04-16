@@ -89,6 +89,20 @@
   [txn store-name]
   (record/open txn store-name))
 
+(defn ctx->txn
+  "Adapts a raw FDB context into a Txn so store fns can be
+  called from within a handler that owns its own ctx
+  (e.g. a changelog watcher). open-store-fn takes
+  [ctx store-name] and returns an opened FDBRecordStore;
+  opens are memoised for the life of the Txn."
+  [ctx open-store-fn]
+  (let [cache (atom {})]
+    (record/->Txn (fn [store-name]
+                    (or (get @cache store-name)
+                        (let [s (open-store-fn ctx store-name)]
+                          (swap! cache assoc store-name s)
+                          s))))))
+
 (defn txn?
   "True if x is a Txn."
   [x]

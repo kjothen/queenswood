@@ -4,6 +4,10 @@
 
     [com.repldriven.mono.fdb.interface :as fdb]))
 
+(def ^:private store-name "api-keys")
+
+(def transact fdb/transact)
+
 (defn get-api-key
   "Looks up an API key by its hash. Returns the ApiKey map
   or nil."
@@ -12,7 +16,7 @@
    txn
    (fn [txn]
      (first (map schema/pb->ApiKey
-                 (fdb/query-records (fdb/open txn "api-keys")
+                 (fdb/query-records (fdb/open txn store-name)
                                     "ApiKey"
                                     "key_hash"
                                     key-hash))))))
@@ -31,6 +35,6 @@
   [txn org-id]
   (fdb/transact txn
                 (fn [txn]
-                  (load-api-keys (fdb/open txn "api-keys") org-id))
+                  (load-api-keys (fdb/open txn store-name) org-id))
                 :api-key/list
                 "Failed to list API keys"))

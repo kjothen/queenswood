@@ -6,6 +6,11 @@
      :refer [let-nom>]]
     [com.repldriven.mono.fdb.interface :as fdb]))
 
+(def ^:private store-name "tiers")
+(def ^:private organizations-store-name "organizations")
+
+(def transact fdb/transact)
+
 (defn- load-tiers
   [store]
   (mapv schema/pb->Tier
@@ -35,7 +40,7 @@
   [txn tier]
   (fdb/transact txn
                 (fn [txn]
-                  (fdb/save-record (fdb/open txn "tiers")
+                  (fdb/save-record (fdb/open txn store-name)
                                    (schema/Tier->java tier)))
                 :tier/create
                 "Failed to create tier"))
@@ -46,7 +51,7 @@
   [txn tier]
   (fdb/transact txn
                 (fn [txn]
-                  (fdb/save-record (fdb/open txn "tiers")
+                  (fdb/save-record (fdb/open txn store-name)
                                    (schema/Tier->java tier)))
                 :tier/update
                 "Failed to update tier"))
@@ -57,7 +62,7 @@
   [txn]
   (fdb/transact txn
                 (fn [txn]
-                  (load-tiers (fdb/open txn "tiers")))
+                  (load-tiers (fdb/open txn store-name)))
                 :tier/list
                 "Failed to list tiers"))
 
@@ -67,7 +72,7 @@
   [txn tier-type]
   (fdb/transact txn
                 (fn [txn]
-                  (load-tier (fdb/open txn "tiers") tier-type))
+                  (load-tier (fdb/open txn store-name) tier-type))
                 :tier/retrieve
                 "Failed to retrieve tier"))
 
@@ -79,7 +84,8 @@
   (fdb/transact txn
                 (fn [txn]
                   (let-nom>
-                    [org (load-org (fdb/open txn "organizations") org-id)]
+                    [org (load-org (fdb/open txn organizations-store-name)
+                                   org-id)]
                     (get-tier txn (:tier-type org))))
                 :tier/load-org
                 "Failed to load organization"))

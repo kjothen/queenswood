@@ -7,25 +7,33 @@
 
 (def ^:private store-name "cash-accounts")
 
+(def transact fdb/transact)
+
+(defn find-account
+  "Loads a cash account by composite PK if it exists.
+  Returns the account map, nil, or anomaly on I/O failure.
+  For existence probes (e.g. watcher handlers)."
+  [txn org-id account-id]
+  (fdb/transact
+   txn
+   (fn [txn]
+     (some-> (fdb/load-record (fdb/open txn store-name)
+                              org-id
+                              account-id)
+             schema/pb->CashAccount))
+   :cash-account/find
+   "Failed to load account"))
+
 (defn get-account
   "Loads a cash account by composite PK. Returns the account
   map or rejection anomaly if not found."
   [txn org-id account-id]
-  (let-nom>
-    [result (fdb/transact
-             txn
-             (fn [txn]
-               (fdb/load-record (fdb/open txn store-name)
-                                org-id
-                                account-id))
-             :cash-account/get
-             "Failed to load account")]
-    (if result
-      (schema/pb->CashAccount result)
-      (error/reject :cash-account/not-found
-                    {:message "Account not found"
-                     :organization-id org-id
-                     :account-id account-id}))))
+  (let-nom> [account (find-account txn org-id account-id)]
+    (or account
+        (error/reject :cash-account/not-found
+                      {:message "Account not found"
+                       :organization-id org-id
+                       :account-id account-id}))))
 
 (defn save-account
   "Saves account to the cash-accounts store and writes a

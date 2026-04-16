@@ -28,7 +28,7 @@
    :product-id "prd_01JMABC123"
    :version-id "prv_01JMABC456"
    :version-number 1
-   :status "draft"
+   :status :draft
    :name "Current Account"
    :account-type :current
    :balance-sheet-side :liability

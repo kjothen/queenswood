@@ -1,75 +1,22 @@
 (ns com.repldriven.mono.bank-idv.core
-  (:refer-clojure :exclude [get read])
+  (:refer-clojure :exclude [get])
   (:require
     [com.repldriven.mono.bank-idv.domain :as domain]
+    [com.repldriven.mono.bank-idv.store :as store]
 
-    [com.repldriven.mono.bank-schema.interface :as schema]
-
-    [com.repldriven.mono.avro.interface :as avro]
-    [com.repldriven.mono.error.interface :as error :refer [let-nom>]]
-    [com.repldriven.mono.fdb.interface :as fdb]))
-
-(defn- idv-pb->avro
-  "Converts protobuf Idv to Avro-compatible map. Proto
-  optional int64 defaults to 0; Avro nullable expects nil."
-  [pb]
-  (let [idv (schema/pb->Idv pb)] (update idv :completed-at #(when (pos? %) %))))
-
-(defn- save
-  "Saves IDV to store, writes changelog entry with
-  serialized changelog proto, returns protobuf record or
-  anomaly."
-  [store idv changelog]
-  (let-nom> [_ (fdb/save-record store (schema/Idv->java idv))
-             _ (fdb/write-changelog store
-                                    "idvs"
-                                    (:verification-id idv)
-                                    (schema/IdvChangelog->pb
-                                     (assoc changelog
-                                            :organization-id
-                                            (:organization-id
-                                             idv))))]
-    (schema/Idv->pb idv)))
-
-(defn- create
-  "Creates a new IDV in a transaction. Returns protobuf
-  record or anomaly."
-  [config data]
-  (fdb/transact config
-                (fn [txn]
-                  (let-nom> [idv (domain/new-idv data)]
-                    (save (fdb/open txn "idvs")
-                          idv
-                          {:verification-id (:verification-id idv)
-                           :status-after (:status idv)})))))
-
-(defn- ->response
-  "Converts a protobuf record to an ACCEPTED response.
-  Returns anomalies unchanged for the processor to handle."
-  [config result]
-  (if (error/anomaly? result)
-    result
-    (let [{:keys [schemas]} config]
-      {:status "ACCEPTED"
-       :payload (avro/serialize (schemas "idv") (idv-pb->avro result))})))
-
-(defn- read
-  "Loads IDV by id. Returns protobuf record or anomaly."
-  [config organization-id verification-id]
-  (fdb/transact config
-                (fn [txn]
-                  (or (fdb/load-record (fdb/open txn "idvs")
-                                       organization-id
-                                       verification-id)
-                      (error/reject :idv/not-found "IDV not found")))))
+    [com.repldriven.mono.error.interface :refer [let-nom>]]))
 
 (defn initiate
-  "Initiates a new IDV."
-  [config data]
-  (->response config (create config data)))
+  "Initiates a new IDV. Returns the IDV map or anomaly."
+  [txn data]
+  (let-nom> [idv (domain/new-idv data)]
+    (store/save-idv txn
+                    idv
+                    {:verification-id (:verification-id idv)
+                     :status-after (:status idv)})))
 
 (defn get
   "Returns the current IDV or rejection anomaly."
-  [config data]
+  [txn data]
   (let [{:keys [organization-id verification-id]} data]
-    (->response config (read config organization-id verification-id))))
+    (store/get-idv txn organization-id verification-id)))

@@ -5,14 +5,13 @@
 
     [com.repldriven.mono.bank-schema.interface :as schema]
 
-    [com.repldriven.mono.fdb.interface :as fdb]
     [com.repldriven.mono.error.interface :as error :refer [let-nom>]]))
 
 (defn new-balance
   "Creates a new balance. Rejects if the balance already
   exists. Returns the balance or anomaly."
   [txn data]
-  (fdb/transact
+  (store/transact
    txn
    (fn [txn]
      (let [{:keys [account-id balance-type currency balance-status]} data]
@@ -38,7 +37,7 @@
   Short-circuits on the first anomaly. Returns the
   created balances or anomaly."
   [txn data]
-  (fdb/transact
+  (store/transact
    txn
    (fn [txn]
      (reduce (fn [acc item]
@@ -88,7 +87,7 @@
   assocs the new carry, saves. Returns the updated balance
   or anomaly."
   [txn account-id balance-type currency balance-status carry]
-  (fdb/transact
+  (store/transact
    txn
    (fn [txn]
      (let-nom>
@@ -105,7 +104,7 @@
   "Applies all legs to balances within a transaction.
   Returns nil or the first anomaly."
   [txn legs]
-  (fdb/transact
+  (store/transact
    txn
    (fn [txn]
      (reduce (fn [_ leg]

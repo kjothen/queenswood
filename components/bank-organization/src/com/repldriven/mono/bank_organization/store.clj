@@ -5,6 +5,11 @@
     [com.repldriven.mono.error.interface :as error]
     [com.repldriven.mono.fdb.interface :as fdb]))
 
+(def ^:private store-name "organizations")
+(def ^:private api-keys-store-name "api-keys")
+
+(def transact fdb/transact)
+
 (defn- load-organizations
   [store]
   (mapv schema/pb->Organization
@@ -33,7 +38,7 @@
   [txn org-id]
   (fdb/transact txn
                 (fn [txn]
-                  (load-organization-by-id (fdb/open txn "organizations")
+                  (load-organization-by-id (fdb/open txn store-name)
                                            org-id))
                 :organization/get
                 "Failed to load organization"))
@@ -45,7 +50,7 @@
   (fdb/transact txn
                 (fn [txn]
                   (fdb/count-records
-                   (fdb/open txn "organizations")
+                   (fdb/open txn store-name)
                    "Organization_count_by_type"
                    (.getNumber
                     (schema/organization-type->pb-enum org-type))))
@@ -58,9 +63,9 @@
   [txn org api-key]
   (fdb/transact txn
                 (fn [txn]
-                  (fdb/save-record (fdb/open txn "organizations")
+                  (fdb/save-record (fdb/open txn store-name)
                                    (schema/Organization->java org))
-                  (fdb/save-record (fdb/open txn "api-keys")
+                  (fdb/save-record (fdb/open txn api-keys-store-name)
                                    (schema/ApiKey->java api-key)))
                 :organization/create
                 "Failed to create organization"))
@@ -71,7 +76,7 @@
   [txn]
   (fdb/transact txn
                 (fn [txn]
-                  (load-organizations (fdb/open txn "organizations")))
+                  (load-organizations (fdb/open txn store-name)))
                 :organization/list
                 "Failed to list organizations"))
 
@@ -82,7 +87,7 @@
   (fdb/transact txn
                 (fn [txn]
                   (load-organizations-by-type
-                   (fdb/open txn "organizations")
+                   (fdb/open txn store-name)
                    org-type))
                 :organization/list-by-type
                 "Failed to list organizations by type"))

@@ -22,7 +22,14 @@
                            "ach" :payment-address-scheme-ach}
                           :payment-address-scheme-unknown))
 
+(def ^:private version-status-enum
+  (coercion/enum-coercion {"draft" :cash-account-product-version-status-draft
+                           "published"
+                           :cash-account-product-version-status-published}
+                          :cash-account-product-version-status-unknown))
+
 (def account-type-enum-schema (:enum-schema account-type-enum))
 (def balance-sheet-side-enum-schema (:enum-schema balance-sheet-side-enum))
 (def payment-address-scheme-enum-schema
   (:enum-schema payment-address-scheme-enum))
+(def version-status-enum-schema (:enum-schema version-status-enum))

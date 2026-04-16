@@ -12,8 +12,7 @@
     [com.repldriven.mono.bank-party.interface :as party]
     [com.repldriven.mono.bank-tier.interface :as tiers]
 
-    [com.repldriven.mono.error.interface :as error :refer [let-nom>]]
-    [com.repldriven.mono.fdb.interface :as fdb]))
+    [com.repldriven.mono.error.interface :as error :refer [let-nom>]]))
 
 (def ^:private api-key-response-keys [:id :key-prefix :name :created-at])
 
@@ -98,7 +97,7 @@
   ([txn org]
    (get-organization txn org nil))
   ([txn org key-secret]
-   (fdb/transact txn (fn [txn] (enrich txn org key-secret)))))
+   (store/transact txn (fn [txn] (enrich txn org key-secret)))))
 
 (defn get-organizations
   "Lists organizations enriched with party, accounts, and
@@ -125,7 +124,7 @@
   product, and one cash account per currency. Returns
   map or anomaly."
   [txn org-name org-type tier-type currencies]
-  (fdb/transact
+  (store/transact
    txn
    (fn [txn]
      (let-nom>

@@ -5,8 +5,15 @@
 
     [com.repldriven.mono.avro.interface :as avro]
     [com.repldriven.mono.error.interface :as error :refer [let-nom>]]
-    [com.repldriven.mono.log.interface :as log]
     [com.repldriven.mono.processor.interface :as processor]))
+
+(defn- ->response
+  [config schema-name result]
+  (if (error/anomaly? result)
+    result
+    (let [{:keys [schemas]} config]
+      (let-nom> [payload (avro/serialize (schemas schema-name) result)]
+        {:status "ACCEPTED" :payload payload}))))
 
 (defn- dispatch
   [config message]
@@ -20,9 +27,15 @@
       (let-nom> [data (avro/deserialize-same schema payload)]
         (case command
           "submit-internal-payment"
-          (core/submit-internal config data)
+          (->response config
+                      "internal-payment"
+                      (core/submit-internal config data))
+
           "submit-outbound-payment"
-          (core/submit-outbound config data)
+          (->response config
+                      "outbound-payment"
+                      (core/submit-outbound config data))
+
           (error/reject :payment/unknown-command
                         (str "Unknown command: " command)))))))
 
@@ -36,21 +49,27 @@
         {:keys [schemas]} config
         schema (get schemas event)]
     (if-not schema
-      (do (log/warnf "No schema found for event: %s" event)
-          nil)
-      (let-nom> [data (avro/deserialize-same schema payload)]
+      (error/fail :payment/schema-not-found
+                  {:message "Event schema not found"
+                   :event event})
+      (let-nom> [data (avro/deserialize-same schema payload)
+                 {:keys [debit-credit-code]} data]
         (case event
           "transaction-settled"
-          (case (:debit-credit-code data)
+          (case debit-credit-code
             :debit-credit-code-credit
             (events/settle-inbound config data)
+
             :debit-credit-code-debit
             (events/settle-outbound config data)
-            (do (log/warnf "Unknown debit-credit-code: %s"
-                           (:debit-credit-code data))
-                nil))
-          (do (log/warnf "Unknown event: %s" event)
-              nil))))))
+
+            (error/fail :payment/unknown-debit-credit-code
+                        {:message "Unknown debit-credit-code"
+                         :debit-credit-code debit-credit-code}))
+
+          (error/fail :payment/unknown-event
+                      {:message "Unknown event"
+                       :event event}))))))
 
 (defrecord PaymentEventProcessor [config]
   processor/Processor

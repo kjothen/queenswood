@@ -103,7 +103,7 @@
                     :product-id product-id
                     :version-id "prv_test_001"
                     :version-number 1
-                    :status "published"
+                    :status :cash-account-product-version-status-published
                     :account-type :account-type-current
                     :balance-sheet-side
                     :balance-sheet-side-liability
