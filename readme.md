@@ -31,7 +31,7 @@ graph TD
     APP -->|HTTP API| API
 
     subgraph sync ["Direct (create/update/query)"]
-        SYNC_CU["organization<br/>api-key<br/>cash-account-product"]
+        SYNC_CU["api-key<br/>cash-account-product<br/>organization<br/>tier"]
         SYNC_Q["query: *"]
     end
 
@@ -69,7 +69,7 @@ graph TD
     CASH --> W3
 
     subgraph fdb ["FoundationDB (Record Layer)"]
-        STORES["organizations · api-keys · parties · idvs<br/>cash-account-products · cash-accounts<br/>inbound-payments · outbound-payments<br/>internal-payments · transactions · balances"]
+        STORES["api-keys<br/>balances<br/>cash-account-products<br/>cash-accounts<br/>idvs<br/>inbound-payments<br/>internal-payments<br/>organizations<br/>outbound-payments<br/>parties<br/>tiers<br/>transactions"]
     end
 
     sync --> fdb
@@ -83,8 +83,8 @@ graph TD
     TXN --> fdb
 ```
 
-**Direct path** — low-volume activity, concerning organisations, products and
-API keys are created/updated directly by the API handlers.
+**Direct path** — low-volume activity, concerning organisations, products,
+tiers and API keys are created/updated directly by the API handlers.
 All records are queried on-demand using FDB record primary key ordering.
 
 **Commands path** — high volume activity, concerning parties,
@@ -158,7 +158,6 @@ etc.) is documented in the
 | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
 | `bank-api-key`                                                                                                                                             | API key generation, hashing, and verification                                                      |
 | `bank-balance`                                                                                                                                             | Account balance management — create, query by type/currency/status                                 |
-| `bank-bootstrap`                                                                                                                                           | Internal organization bootstrap and seed data                                                      |
 | `bank-cash-account`                                                                                                                                        | Account lifecycle — open, close, suspend, reopen, archive                                          |
 | `bank-cash-account-product`                                                                                                                                | Product and version management — draft, publish, balance product config                            |
 | `bank-clearbank-webhook`                                                                                                                                   | ClearBank webhook Malli schemas and OpenAPI examples                                               |
@@ -169,6 +168,7 @@ etc.) is documented in the
 | `bank-payment`                                                                                                                                             | Payment processing — internal, inbound (FPS credit), and outbound (FPS debit)                      |
 | `bank-schema`                                                                                                                                              | Protobuf and Avro definitions for all record types and payment schemes                             |
 | `bank-test-resources`                                                                                                                                      | Bank-specific test configuration (FDB stores, Avro schemas)                                        |
+| `bank-tier`                                                                                                                                                | Organisation tier system — policies and limits                                                     |
 | `bank-transaction`                                                                                                                                         | Transaction recording with double-entry legs                                                       |
 
 ## Bases
