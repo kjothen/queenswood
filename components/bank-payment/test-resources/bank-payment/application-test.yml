@@ -1,16 +1,18 @@
 system:
   fdb: !include bank/fdb-test.yml
   avro: !include avro/avro-test.yml
-  bootstrap: !include bank/bootstrap-internal-test.yml
+  tiers: !include bank/tier-test.yml
+  organizations: !include bank/organization-test.yml
   payment:
     processor: !system/component
       system/component-kind: payment/processor
       record-db: !system/ref fdb.record-db
       record-store: !system/ref fdb.meta-store
       schemas: !system/ref avro.serde
+      internal-account-id: !system/ref organizations.internal-account-id
     event-processor: !system/component
       system/component-kind: payment/event-processor
       record-db: !system/ref fdb.record-db
       record-store: !system/ref fdb.meta-store
       schemas: !system/ref avro.serde
-      settlement-account-id: !system/ref bootstrap.internal.account-id
+      internal-account-id: !system/ref organizations.internal-account-id

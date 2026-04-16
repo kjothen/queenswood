@@ -8,14 +8,12 @@
 
 (defn get-internal-payment
   [request]
-  (let [{:keys [record-db record-store]} request
-        {:keys [payment-id]} (get-in request [:parameters :path])
-        result (fdb/transact record-db
-                             record-store
-                             "internal-payments"
-                             (fn [store]
-                               (fdb/load-record store
-                                                payment-id)))]
+  (let [{:keys [payment-id]} (get-in request [:parameters :path])
+        result (fdb/transact
+                request
+                (fn [txn]
+                  (fdb/load-record (fdb/open txn "internal-payments")
+                                   payment-id)))]
     (cond (error/anomaly? result)
           {:status 500
            :body (error-response 500 result)}
@@ -31,14 +29,12 @@
 
 (defn get-outbound-payment
   [request]
-  (let [{:keys [record-db record-store]} request
-        {:keys [payment-id]} (get-in request [:parameters :path])
-        result (fdb/transact record-db
-                             record-store
-                             "outbound-payments"
-                             (fn [store]
-                               (fdb/load-record store
-                                                payment-id)))]
+  (let [{:keys [payment-id]} (get-in request [:parameters :path])
+        result (fdb/transact
+                request
+                (fn [txn]
+                  (fdb/load-record (fdb/open txn "outbound-payments")
+                                   payment-id)))]
     (cond (error/anomaly? result)
           {:status 500
            :body (error-response 500 result)}

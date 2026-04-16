@@ -1,0 +1,23 @@
+system: !system/component
+  system/component-kind: tiers/tier
+  record-db: !system/ref fdb.record-db
+  record-store: !system/ref fdb.meta-store
+  type: !keyword tier-type-system
+  policies: !include bank/tiers/system/policies.yml
+  limits: !include bank/tiers/system/limits.yml
+
+micro: !system/component
+  system/component-kind: tiers/tier
+  record-db: !system/ref fdb.record-db
+  record-store: !system/ref fdb.meta-store
+  type: !keyword tier-type-micro
+  policies: !include bank/tiers/micro/policies.yml
+  limits: !include bank/tiers/micro/limits.yml
+
+standard: !system/component
+  system/component-kind: tiers/tier
+  record-db: !system/ref fdb.record-db
+  record-store: !system/ref fdb.meta-store
+  type: !keyword tier-type-standard
+  policies: !include bank/tiers/standard/policies.yml
+  limits: !include bank/tiers/standard/limits.yml

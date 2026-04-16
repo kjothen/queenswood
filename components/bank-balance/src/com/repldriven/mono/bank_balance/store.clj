@@ -3,98 +3,71 @@
   (:require
     [com.repldriven.mono.bank-schema.interface :as schema]
 
-    [com.repldriven.mono.error.interface :as error
-     :refer [let-nom> try-nom]]
+    [com.repldriven.mono.error.interface :as error :refer [let-nom>]]
     [com.repldriven.mono.fdb.interface :as fdb]))
 
-(defn save
+(def ^:private store-name "balances")
+
+(def transact fdb/transact)
+
+(defn save-balance
   "Persists a balance. Returns nil or anomaly."
-  [{:keys [record-db record-store]} balance]
-  (try-nom :balance/save
-           "Failed to save balance"
-           (fdb/transact
-            record-db
-            record-store
-            "balances"
-            (fn [store]
-              (fdb/save-record store (schema/Balance->java balance))))))
+  [txn balance]
+  (fdb/transact
+   txn
+   (fn [txn]
+     (fdb/save-record (fdb/open txn store-name)
+                      (schema/Balance->java balance)))
+   :balance/save
+   "Failed to save balance"))
 
-(defn- load
-  "Loads a balance by its composite primary key. Returns
-  the balance record, nil if not found, or anomaly."
-  [{:keys [record-db record-store]} account-id balance-type currency
-   balance-status]
-  (try-nom :balance/load
-           "Failed to load balance"
-           (fdb/transact record-db
-                         record-store
-                         "balances"
-                         (fn [store]
-                           (fdb/load-record
-                            store
-                            account-id
-                            (schema/balance-type->int
-                             balance-type)
-                            currency
-                            (schema/balance-status->int
-                             balance-status))))))
-
-(defn get-balance
-  "Loads a balance by its composite primary key. Returns
-  the balance, nil if not found, or anomaly."
-  [config account-id balance-type currency
-   balance-status]
-  (let-nom> [result
-             (load config account-id balance-type currency balance-status)]
-    (when result (schema/pb->Balance result))))
-
-(defn- apply-leg
-  "Updates a balance for a transaction leg. Loads the
-  balance by composite key, increments credit or debit
-  based on side, saves. For use inside an open store."
-  [store leg]
-  (let [{:keys [account-id balance-type currency
-                balance-status side amount]}
-        leg
-        record (fdb/load-record
-                store
+(defn find-balance
+  "Loads a balance by its composite primary key if it
+  exists. Returns the balance map, nil (if none), or
+  anomaly on I/O failure. For existence probes."
+  [txn account-id balance-type currency balance-status]
+  (let-nom>
+    [result (fdb/transact
+             txn
+             (fn [txn]
+               (fdb/load-record
+                (fdb/open txn store-name)
                 account-id
                 (schema/balance-type->int balance-type)
                 currency
-                (schema/balance-status->int
-                 balance-status))]
-    (when record
-      (let [balance (schema/pb->Balance record)
-            field (if (= :leg-side-debit side)
-                    :debit
-                    :credit)
-            updated (update balance field + amount)]
-        (fdb/save-record store
-                         (schema/Balance->java updated))))))
+                (schema/balance-status->int balance-status)))
+             :balance/find
+             "Failed to load balance")]
+    (when result (schema/pb->Balance result))))
 
-(defn apply-legs
-  "Applies all legs to balances. For use inside an open
-  store. Returns nil or the first anomaly."
-  [store legs]
-  (reduce (fn [_ leg]
-            (let [result (apply-leg store leg)]
-              (when (error/anomaly? result)
-                (reduced result))))
-          nil
-          legs))
+(defn get-balance
+  "Loads a balance by its composite primary key. Returns
+  the balance map or a rejection anomaly if not found."
+  [txn account-id balance-type currency balance-status]
+  (let-nom>
+    [balance (find-balance txn
+                           account-id
+                           balance-type
+                           currency
+                           balance-status)]
+    (or balance
+        (error/reject :balance/not-found
+                      {:message "Balance not found"
+                       :account-id account-id
+                       :balance-type balance-type
+                       :currency currency
+                       :balance-status balance-status}))))
 
-(defn get-account-balances
+(defn get-balances
   "Lists balances for an account. Returns a sequence of
   balances or anomaly."
-  [{:keys [record-db record-store]} account-id]
-  (try-nom :balance/list
-           "Failed to list balances"
-           (fdb/transact record-db
-                         record-store
-                         "balances"
-                         (fn [store]
-                           (mapv schema/pb->Balance
-                                 (:records (fdb/scan-records
-                                            store
-                                            {:prefix [account-id]
-                                             :limit 100})))))))
+  [txn account-id]
+  (fdb/transact txn
+                (fn [txn]
+                  (mapv schema/pb->Balance
+                        (:records (fdb/scan-records
+                                   (fdb/open txn store-name)
+                                   {:prefix [account-id]
+                                    :limit 100}))))
+                :balance/list
+                "Failed to list balances"))

@@ -32,6 +32,28 @@
   [store record-type field value]
   (record/query store record-type field value))
 
+(defn query-records-compound
+  [store record-type filters]
+  (record/query-compound store record-type filters))
+
+(defn query-record
+  "Queries an open FDBRecordStore where field equals value,
+  capping the planner at one result. Returns the first
+  matching record bytes, or nil."
+  [store record-type field value]
+  (record/query-one store record-type field value))
+
+(defn query-record-compound
+  "Queries an open FDBRecordStore where all [field value]
+  pairs match, capping the planner at one result. Returns
+  the first matching record bytes, or nil."
+  [store record-type filters]
+  (record/query-one-compound store record-type filters))
+
+(defn count-records
+  [store index-name key]
+  (record/count-records store index-name key))
+
 (defn query-repeated-records
   [store record-type field value]
   (record/query-repeated store record-type field value))
@@ -53,16 +75,35 @@
   (apply counter/allocate store key-parts))
 
 (defn transact
-  ([record-db open-store-fn store-name f]
-   (record/transact record-db open-store-fn store-name f))
-  ([record-db open-store-fn store-name f category message]
-   (record/transact record-db open-store-fn store-name f category message)))
+  "Runs f within a transaction. f receives a Txn. Given an
+  existing Txn, reuses it; given a config map with
+  :record-db and :record-store, opens a fresh FDB
+  transaction."
+  ([txn-or-config f]
+   (record/transact txn-or-config f))
+  ([txn-or-config f category message]
+   (record/transact txn-or-config f category message)))
 
-(defn transact-multi
-  "Runs f within a single FDB transaction, passing a function
-  that opens stores by name. All writes across stores are
-  atomic."
-  ([record-db open-store-fn f]
-   (record/transact-multi record-db open-store-fn f))
-  ([record-db open-store-fn f category message]
-   (record/transact-multi record-db open-store-fn f category message)))
+(defn open
+  "Opens a named store within the transaction."
+  [txn store-name]
+  (record/open txn store-name))
+
+(defn ctx->txn
+  "Adapts a raw FDB context into a Txn so store fns can be
+  called from within a handler that owns its own ctx
+  (e.g. a changelog watcher). open-store-fn takes
+  [ctx store-name] and returns an opened FDBRecordStore;
+  opens are memoised for the life of the Txn."
+  [ctx open-store-fn]
+  (let [cache (atom {})]
+    (record/->Txn (fn [store-name]
+                    (or (get @cache store-name)
+                        (let [s (open-store-fn ctx store-name)]
+                          (swap! cache assoc store-name s)
+                          s))))))
+
+(defn txn?
+  "True if x is a Txn."
+  [x]
+  (instance? com.repldriven.mono.fdb.record.Txn x))

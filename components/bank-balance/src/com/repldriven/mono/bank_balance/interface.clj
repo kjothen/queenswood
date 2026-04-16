@@ -1,29 +1,27 @@
 (ns com.repldriven.mono.bank-balance.interface
   (:require
     [com.repldriven.mono.bank-balance.core :as core]
-    [com.repldriven.mono.bank-balance.domain :as domain]
-    [com.repldriven.mono.bank-balance.store :as store]
-    [com.repldriven.mono.bank-schema.interface :as schema]
-    [com.repldriven.mono.error.interface :as error]))
+    [com.repldriven.mono.bank-balance.store :as store]))
 
 (defn new-balance
   "Creates a new balance. Rejects if the balance already
   exists. Returns the balance or anomaly."
-  [config data]
-  (core/new-balance config data))
+  [txn data]
+  (core/new-balance txn data))
 
-(defn update-balance
-  "Updates an existing balance. Rejects if the balance
-  does not exist. Returns the updated balance or anomaly."
-  [config balance]
-  (core/update-balance config balance))
+(defn new-balances
+  "Creates multiple balances in a single transaction.
+  Short-circuits on the first anomaly. Returns the
+  created balances or anomaly."
+  [txn data]
+  (core/new-balances txn data))
 
 (defn get-balance
   "Loads a balance by account-id, balance-type, currency,
   and balance-status. Returns the balance, nil if not
   found, or anomaly."
-  [config account-id balance-type currency balance-status]
-  (store/get-balance config
+  [txn account-id balance-type currency balance-status]
+  (store/get-balance txn
                      account-id
                      balance-type
                      currency
@@ -33,20 +31,23 @@
   "Lists balances for an account. Returns
   {:balances [...] :posted-balance {...}
    :available-balance {...}} or anomaly."
-  [config account-id]
-  (let [result (store/get-account-balances config account-id)]
-    (if (error/anomaly? result)
-      result
-      (let [currency (:currency (first result) "")
-            account-type (schema/int->account-type (:account-type (first
-                                                                   result)))]
-        {:balances result
-         :posted-balance (domain/posted-balance result currency)
-         :available-balance
-         (domain/available-balance account-type result currency)}))))
+  [txn account-id]
+  (core/get-balances txn account-id))
 
 (defn apply-legs
-  "Applies all legs to balances. For use inside an open
-  store."
-  [store legs]
-  (store/apply-legs store legs))
+  "Applies all legs to balances within a transaction.
+  Returns nil or anomaly."
+  [txn legs]
+  (core/apply-legs txn legs))
+
+(defn set-carry
+  "Updates the :credit-carry on the balance identified by
+  the composite PK. Returns the updated balance or
+  anomaly."
+  [txn account-id balance-type currency balance-status carry]
+  (core/set-carry txn
+                  account-id
+                  balance-type
+                  currency
+                  balance-status
+                  carry))

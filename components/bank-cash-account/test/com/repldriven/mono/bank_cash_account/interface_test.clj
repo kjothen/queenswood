@@ -48,13 +48,28 @@
             :else
             decoded))))
 
+(defn- seed-organization
+  "Seeds an organization record in the organizations
+  store."
+  [config]
+  (fdb/transact config
+                (fn [txn]
+                  (let [now (System/currentTimeMillis)
+                        org {:organization-id test-org-id
+                             :name "Test Org"
+                             :type :organization-type-customer
+                             :tier-type :tier-type-micro
+                             :status "active"
+                             :created-at now
+                             :updated-at now}]
+                    (fdb/save-record (fdb/open txn "organizations")
+                                     (schema/Organization->java org))))))
+
 (defn- seed-active-party
   "Seeds an active party record in the parties store."
-  [record-db store-fn party-id]
-  (fdb/transact record-db
-                store-fn
-                "parties"
-                (fn [store]
+  [config party-id]
+  (fdb/transact config
+                (fn [txn]
                   (let [party {:organization-id test-org-id
                                :party-id party-id
                                :type :party-type-person
@@ -62,7 +77,8 @@
                                :display-name "Test Party"
                                :created-at (System/currentTimeMillis)
                                :updated-at (System/currentTimeMillis)}]
-                    (fdb/save-record store (schema/Party->java party))))))
+                    (fdb/save-record (fdb/open txn "parties")
+                                     (schema/Party->java party))))))
 
 (def ^:private default-balance-products
   [{:balance-type :balance-type-default :balance-status :balance-status-posted}
@@ -76,23 +92,18 @@
 (defn- seed-published-product-version
   "Seeds a published CashAccountProductVersion in the
   cash-account-product-versions store."
-  ([record-db store-fn product-id]
-   (seed-published-product-version record-db
-                                   store-fn
-                                   product-id
-                                   {}))
-  ([record-db store-fn product-id overrides]
+  ([config product-id]
+   (seed-published-product-version config product-id {}))
+  ([config product-id overrides]
    (fdb/transact
-    record-db
-    store-fn
-    "cash-account-product-versions"
-    (fn [store]
+    config
+    (fn [txn]
       (let [version
             (merge {:organization-id test-org-id
                     :product-id product-id
                     :version-id "prv_test_001"
                     :version-number 1
-                    :status "published"
+                    :status :cash-account-product-version-status-published
                     :account-type :account-type-current
                     :balance-sheet-side
                     :balance-sheet-side-liability
@@ -105,17 +116,14 @@
                     :updated-at (System/currentTimeMillis)}
                    overrides)]
         (fdb/save-record
-         store
-         (schema/CashAccountProductVersion->java
-          version)))))))
+         (fdb/open txn "cash-account-product-versions")
+         (schema/CashAccountProductVersion->java version)))))))
 
 (defn- seed-party
   "Seeds a party record with given status."
-  [record-db store-fn party-id status]
-  (fdb/transact record-db
-                store-fn
-                "parties"
-                (fn [store]
+  [config party-id status]
+  (fdb/transact config
+                (fn [txn]
                   (let [party {:organization-id test-org-id
                                :party-id party-id
                                :type :party-type-person
@@ -123,10 +131,11 @@
                                :display-name "Test Party"
                                :created-at (System/currentTimeMillis)
                                :updated-at (System/currentTimeMillis)}]
-                    (fdb/save-record store (schema/Party->java party))))))
+                    (fdb/save-record (fdb/open txn "parties")
+                                     (schema/Party->java party))))))
 
 (defn- test-open-account
-  [proc schemas record-db store-fn]
+  [proc schemas config]
   (testing
     "open-cash-account creates account with opened status,
   payment addresses, and balances from product"
@@ -135,10 +144,10 @@
                         :party-id party-id
                         :name "Test Account"
                         :currency "USD"
-                        :product-id test-product-id}
-          fdb-config {:record-db record-db :record-store store-fn}]
-      (seed-active-party record-db store-fn party-id)
-      (seed-published-product-version record-db store-fn test-product-id)
+                        :product-id test-product-id}]
+      (seed-organization config)
+      (seed-active-party config party-id)
+      (seed-published-product-version config test-product-id)
       (nom-test>
         [result (send-command proc schemas "open-cash-account" open-payload)
          _ (is (= "ACCEPTED" (:status result)))
@@ -152,7 +161,7 @@
                   (get-in decoded [:payment-addresses 0 :scan :sort-code])))
          _ (is (some? (get-in decoded
                               [:payment-addresses 0 :scan :account-number])))
-         balance-result (balances/get-balances fdb-config (:account-id decoded))
+         balance-result (balances/get-balances config (:account-id decoded))
          account-balances (:balances balance-result)
          _ (is (= 3 (count account-balances)))
          _ (is (= #{:balance-type-default}
@@ -164,10 +173,11 @@
          _ (is (every? #(= 0 (:credit %)) account-balances))]))))
 
 (defn- test-open-account-party-not-active
-  [proc schemas record-db store-fn]
+  [proc schemas config]
   (testing "open-cash-account rejects when party is not active"
     (let [party-id "cust-pending"]
-      (seed-party record-db store-fn party-id :party-status-pending)
+      (seed-organization config)
+      (seed-party config party-id :party-status-pending)
       (let [result (send-command proc
                                  schemas
                                  "open-cash-account"
@@ -177,7 +187,7 @@
                                   :currency "USD"
                                   :product-id test-product-id})]
         (is (error/rejection? result))
-        (is (= :cash-account/party-pending (error/kind result)))))))
+        (is (= :cash-account/party-status (error/kind result)))))))
 
 (defn- test-open-account-party-not-found
   [proc schemas]
@@ -191,10 +201,10 @@
                                 :currency "USD"
                                 :product-id test-product-id})]
       (is (error/rejection? result))
-      (is (= :cash-account/party-unknown (error/kind result))))))
+      (is (= :party/not-found (error/kind result))))))
 
 (defn- test-close-account
-  [proc schemas record-db store-fn]
+  [proc schemas config]
   (testing "close-cash-account sets status to closing"
     (let [party-id "cust-2"
           open-payload {:organization-id test-org-id
@@ -202,7 +212,8 @@
                         :name "Account to Close"
                         :currency "USD"
                         :product-id test-product-id}]
-      (seed-active-party record-db store-fn party-id)
+      (seed-organization config)
+      (seed-active-party config party-id)
       (nom-test>
         [opened (send-command proc schemas "open-cash-account" open-payload)
          account (decode-payload schemas "cash-account" opened)
@@ -213,7 +224,7 @@
          _ (is (= open-payload (select-keys decoded (keys open-payload))))]))))
 
 (defn- test-watcher-transitions
-  [proc schemas record-db store-fn]
+  [proc schemas config]
   (testing "watcher transitions opening->opened and closing->closed"
     (let [party-id "cust-watcher"
           open-payload {:organization-id test-org-id
@@ -221,7 +232,8 @@
                         :name "Watcher Account"
                         :currency "GBP"
                         :product-id test-product-id}]
-      (seed-active-party record-db store-fn party-id)
+      (seed-organization config)
+      (seed-active-party config party-id)
       (nom-test>
         [opening (send-command proc schemas "open-cash-account" open-payload)
          account (decode-payload schemas "cash-account" opening)
@@ -243,7 +255,7 @@
          _ (is (= :cash-account-status-closed (:account-status polled-closed)))]))))
 
 (defn- test-get-account
-  [proc schemas record-db store-fn]
+  [proc schemas config]
   (testing "get-cash-account returns account"
     (let [party-id "cust-7"
           open-payload {:organization-id test-org-id
@@ -251,7 +263,8 @@
                         :name "Status Account"
                         :currency "USD"
                         :product-id test-product-id}]
-      (seed-active-party record-db store-fn party-id)
+      (seed-organization config)
+      (seed-active-party config party-id)
       (nom-test> [opened
                   (send-command proc schemas "open-cash-account" open-payload)
                   account (decode-payload schemas "cash-account" opened)
@@ -275,14 +288,15 @@
       (is (= :cash-account/not-found (error/kind result))))))
 
 (defn- test-open-multiple-accounts
-  [proc schemas record-db store-fn]
+  [proc schemas config]
   (testing "open-cash-account allows multiple accounts per customer"
     (let [party-id "cust-multi"
           payload {:organization-id test-org-id
                    :party-id party-id
                    :currency "USD"
                    :product-id test-product-id}]
-      (seed-active-party record-db store-fn party-id)
+      (seed-organization config)
+      (seed-active-party config party-id)
       (nom-test> [r1 (send-command proc
                                    schemas
                                    "open-cash-account"
@@ -310,17 +324,17 @@
                                 :currency "USD"
                                 :product-id "prd_no_versions"})]
       (is (error/rejection? result))
-      (is (= :cash-account/product-not-published (error/kind result))))))
+      (is (= :cash-account-product/not-published (error/kind result))))))
 
 (defn- test-open-account-invalid-currency
-  [proc schemas record-db store-fn]
+  [proc schemas config]
   (testing "open-cash-account rejects when currency not in
   allowed-currencies"
     (let [party-id "cust-currency"
           product-id "prd_gbp_only"]
-      (seed-active-party record-db store-fn party-id)
-      (seed-published-product-version record-db
-                                      store-fn
+      (seed-organization config)
+      (seed-active-party config party-id)
+      (seed-published-product-version config
                                       product-id
                                       {:allowed-currencies ["GBP"]})
       (let [result (send-command proc
@@ -335,16 +349,16 @@
         (is (= :cash-account/invalid-currency (error/kind result)))))))
 
 (defn- test-open-account-no-payment-schemes
-  [proc schemas record-db store-fn]
+  [proc schemas config]
   (testing
     "open-cash-account rejects when product has no
   payment address schemes"
     (let [party-id "cust-no-schemes"
           product-id "prd_no_schemes"]
-      (seed-active-party record-db store-fn party-id)
+      (seed-organization config)
+      (seed-active-party config party-id)
       (seed-published-product-version
-       record-db
-       store-fn
+       config
        product-id
        {:allowed-payment-address-schemes []})
       (let [result
@@ -372,21 +386,21 @@
       (is (= :cash-account/unknown-command (error/kind result))))))
 
 (deftest process-cash-accounts-test
-  (with-test-system
-   [sys "classpath:bank-cash-account/application-test.yml"]
-   (let [proc (system/instance sys [:cash-account :processor])
-         schemas (system/instance sys [:avro :serde])
-         record-db (system/instance sys [:fdb :record-db])
-         store-fn (system/instance sys [:fdb :store])]
-     (test-open-account proc schemas record-db store-fn)
-     (test-open-account-party-not-active proc schemas record-db store-fn)
-     (test-open-account-party-not-found proc schemas)
-     (test-close-account proc schemas record-db store-fn)
-     (test-watcher-transitions proc schemas record-db store-fn)
-     (test-get-account proc schemas record-db store-fn)
-     (test-close-missing-account proc schemas)
-     (test-open-multiple-accounts proc schemas record-db store-fn)
-     (test-open-account-no-published-version proc schemas)
-     (test-open-account-invalid-currency proc schemas record-db store-fn)
-     (test-open-account-no-payment-schemes proc schemas record-db store-fn)
-     (test-unknown-command proc schemas))))
+  (with-test-system [sys "classpath:bank-cash-account/application-test.yml"]
+                    (let [proc (system/instance sys [:cash-account :processor])
+                          schemas (system/instance sys [:avro :serde])
+                          config
+                          {:record-db (system/instance sys [:fdb :record-db])
+                           :record-store (system/instance sys [:fdb :store])}]
+                      (test-open-account proc schemas config)
+                      (test-open-account-party-not-active proc schemas config)
+                      (test-open-account-party-not-found proc schemas)
+                      (test-close-account proc schemas config)
+                      (test-watcher-transitions proc schemas config)
+                      (test-get-account proc schemas config)
+                      (test-close-missing-account proc schemas)
+                      (test-open-multiple-accounts proc schemas config)
+                      (test-open-account-no-published-version proc schemas)
+                      (test-open-account-invalid-currency proc schemas config)
+                      (test-open-account-no-payment-schemes proc schemas config)
+                      (test-unknown-command proc schemas))))

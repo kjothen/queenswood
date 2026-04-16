@@ -30,6 +30,12 @@ enum PaymentAddressScheme {
   PAYMENT_ADDRESS_SCHEME_ACH     = 4;
 }
 
+enum CashAccountProductVersionStatus {
+  CASH_ACCOUNT_PRODUCT_VERSION_STATUS_UNKNOWN   = 0;
+  CASH_ACCOUNT_PRODUCT_VERSION_STATUS_DRAFT     = 1;
+  CASH_ACCOUNT_PRODUCT_VERSION_STATUS_PUBLISHED = 2;
+}
+
 message CashAccountProductVersion {
   option (com.apple.foundationdb.record.record).usage = RECORD;
 
@@ -37,7 +43,7 @@ message CashAccountProductVersion {
   required string product_id = 2;
   required string version_id = 3;
   optional int32 version_number = 4;
-  optional string status = 5;
+  optional CashAccountProductVersionStatus status = 5;
   optional AccountType account_type = 6;
   optional BalanceSheetSide balance_sheet_side = 7;
   optional string valid_from = 8;

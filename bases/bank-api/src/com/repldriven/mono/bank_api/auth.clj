@@ -33,12 +33,20 @@
             (let [request (:request ctx)
                   key-secret (extract-bearer request)
                   admin-api-key (:admin-api-key request)]
-              (cond (nil? key-secret)
-                    ctx
-                    (encryption/bytes-equals? (util/str->bytes key-secret)
-                                              (util/str->bytes admin-api-key))
-                    (assoc-in ctx [:request :auth] {:role :admin})
-                    :else
-                    (if-let [auth (verify-org-key request key-secret)]
-                      (assoc-in ctx [:request :auth] auth)
-                      ctx))))})
+              (cond
+               (nil? key-secret)
+               ctx
+
+               (encryption/bytes-equals? (util/str->bytes key-secret)
+                                         (util/str->bytes admin-api-key))
+               (assoc-in ctx
+                [:request :auth]
+                {:role :admin
+                 :organization-id
+                 (:internal-organization-id
+                  request)})
+
+               :else
+               (if-let [auth (verify-org-key request key-secret)]
+                 (assoc-in ctx [:request :auth] auth)
+                 ctx))))})

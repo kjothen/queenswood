@@ -96,7 +96,7 @@
     components/bank-interest {:local/root "components/bank-interest"}
     components/bank-organization {:local/root "components/bank-organization"}
     components/bank-party {:local/root "components/bank-party"}
-    components/bank-bootstrap {:local/root "components/bank-bootstrap"}
+    components/bank-tier {:local/root "components/bank-tier"}
     components/bank-schema {:local/root "components/bank-schema"}
     components/bank-payment {:local/root "components/bank-payment"}
     components/bank-transaction {:local/root "components/bank-transaction"}
@@ -122,8 +122,7 @@
                   "components/bank-organization/test-resources"
                   "components/bank-party/test"
                   "components/bank-party/test-resources"
-                  "components/bank-bootstrap/test"
-                  "components/bank-bootstrap/test-resources"
+                  "components/bank-tier/test"
                   "components/bank-schema/test-resources"
                   "components/bank-test-resources/test-resources"
                   "components/bank-payment/test"

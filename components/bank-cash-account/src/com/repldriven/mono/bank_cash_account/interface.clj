@@ -2,41 +2,42 @@
   (:require
     com.repldriven.mono.bank-cash-account.system
 
-    [com.repldriven.mono.bank-cash-account.core :as core]
-    [com.repldriven.mono.bank-cash-account.store :as store]))
+    [com.repldriven.mono.bank-cash-account.core :as core]))
 
 (defn new-account
   "Opens a cash account with balances. Returns account map or
   anomaly."
-  [config data]
-  (core/new-account config data))
+  [txn data]
+  (core/new-account txn data))
 
 (defn get-account
   "Loads a single cash account. Returns the account map,
   nil, or anomaly. opts supports :embed-balances,
   :embed-transactions."
-  ([config org-id account-id]
-   (store/get-account config org-id account-id {}))
-  ([config org-id account-id opts]
-   (store/get-account config org-id account-id opts)))
+  ([txn org-id account-id]
+   (core/get-account txn org-id account-id))
+  ([txn org-id account-id opts]
+   (core/get-account txn org-id account-id opts)))
 
 (defn get-accounts
   "Lists cash accounts for an organization. Returns
   {:accounts [maps] :before id|nil :after id|nil} or
-  anomaly. opts supports :after, :before, :limit."
-  ([config org-id]
-   (store/get-accounts config org-id {}))
-  ([config org-id opts]
-   (store/get-accounts config org-id opts)))
+  anomaly. opts supports :after, :before, :limit,
+  :embed-balances, :embed-transactions."
+  ([txn org-id]
+   (core/get-accounts txn org-id))
+  ([txn org-id opts]
+   (core/get-accounts txn org-id opts)))
 
-(defn get-accounts-by-type
-  "Returns accounts matching the given account-type.
-  Uses secondary index."
-  [config account-type]
-  (store/get-accounts-by-type config account-type))
+(defn get-account-by-type
+  "Returns the first account matching the given org-id and
+  account-type, or nil. Uses compound secondary index;
+  caller should expect at most one result."
+  [txn org-id account-type]
+  (core/get-account-by-type txn org-id account-type))
 
 (defn get-account-by-bban
   "Returns account matching the given BBAN.
   Uses secondary index."
-  [config bban]
-  (store/get-account-by-bban config bban))
+  [txn bban]
+  (core/get-account-by-bban txn bban))

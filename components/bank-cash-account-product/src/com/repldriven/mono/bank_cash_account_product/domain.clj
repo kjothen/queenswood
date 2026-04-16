@@ -16,10 +16,11 @@
              :product-id product-id
              :version-id (encryption/generate-id "prv")
              :version-number version-number
-             :status "draft"
+             :status :cash-account-product-version-status-draft
              :name name
              :account-type account-type
              :balance-sheet-side balance-sheet-side
+             :interest-rate-bps (or interest-rate-bps 0)
              :created-at now
              :updated-at now}
 
@@ -37,14 +38,11 @@
 
             (seq allowed-payment-address-schemes)
             (assoc :allowed-payment-address-schemes
-                   allowed-payment-address-schemes)
-
-            interest-rate-bps
-            (assoc :interest-rate-bps interest-rate-bps))))
+                   allowed-payment-address-schemes))))
 
 (defn publish
   "Sets version status to published."
   [version]
   (assoc version
-         :status "published"
+         :status :cash-account-product-version-status-published
          :updated-at (System/currentTimeMillis)))

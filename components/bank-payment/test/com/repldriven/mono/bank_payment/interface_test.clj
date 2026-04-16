@@ -3,7 +3,6 @@
     [com.repldriven.mono.bank-payment.interface]
 
     [com.repldriven.mono.bank-balance.interface :as balances]
-    [com.repldriven.mono.bank-bootstrap.interface]
     [com.repldriven.mono.bank-organization.interface :as
      organizations]
 
@@ -42,8 +41,11 @@
   (testing "submit-internal-payment creates payment and
   records transaction"
     (let [config (fdb-config sys)
-          internal (system/instance sys [:bootstrap :internal])
-          internal-account-id (:account-id internal)]
+          internal-org (system/instance sys
+                                        [:organizations :internal])
+          internal-account-id (get-in internal-org
+                                      [:organization :accounts
+                                       0 :account-id])]
       (nom-test>
         [customer-org (organizations/new-organization
                        config
@@ -110,8 +112,11 @@
     "transaction-settled event creates inbound
   payment and records transaction"
     (let [config (fdb-config sys)
-          internal (system/instance sys [:bootstrap :internal])
-          settlement-account-id (:account-id internal)]
+          internal-org (system/instance sys
+                                        [:organizations :internal])
+          internal-account-id (get-in internal-org
+                                      [:organization :accounts
+                                       0 :account-id])]
       (nom-test>
         [customer-org (organizations/new-organization
                        config
@@ -157,13 +162,13 @@
                                "GBP"
                                :balance-status-posted)
          _ (is (= 1000 (:credit creditor-balance)))
-         settlement-balance
+         internal-balance
          (balances/get-balance config
-                               settlement-account-id
+                               internal-account-id
                                :balance-type-suspense
                                "GBP"
                                :balance-status-posted)
-         _ (is (= 1000 (:debit settlement-balance)))
+         _ (is (= 1000 (:debit internal-balance)))
          ;; idempotency: re-send same event
          result2 (send-event
                   event-proc
@@ -181,6 +186,154 @@
                    :timestamp-settled (System/currentTimeMillis)})
          _ (is (= (:payment-id result)
                   (:payment-id result2)))]))))
+
+(defn- test-submit-outbound-payment
+  [sys proc schemas]
+  (testing
+    "submit-outbound-payment creates pending payment,
+  debits debtor and credits suspense"
+    (let [config (fdb-config sys)
+          internal-org (system/instance sys
+                                        [:organizations :internal])
+          internal-account-id (get-in internal-org
+                                      [:organization :accounts
+                                       0 :account-id])]
+      (nom-test>
+        [customer-org (organizations/new-organization
+                       config
+                       "Outbound Payment Customer"
+                       :organization-type-customer
+                       :tier-type-micro
+                       ["GBP"])
+         customer-organization-id
+         (get-in customer-org
+                 [:organization :organization-id])
+         customer-account-id
+         (get-in customer-org
+                 [:organization :accounts 0 :account-id])
+         result (send-command
+                 proc
+                 schemas
+                 "submit-outbound-payment"
+                 {:idempotency-key "pmt-ob-idem-001"
+                  :organization-id customer-organization-id
+                  :debtor-account-id customer-account-id
+                  :scheme "FPS"
+                  :creditor-bban "87654321"
+                  :creditor-name "External Recipient"
+                  :currency "GBP"
+                  :amount 500
+                  :reference "Outbound test"})
+         _ (is (= "ACCEPTED" (:status result)))
+         decoded (decode-payload schemas
+                                 "outbound-payment"
+                                 result)
+         _ (is (some? (:payment-id decoded)))
+         _ (is (some? (:end-to-end-id decoded)))
+         _ (is (= "pmt-ob-idem-001"
+                  (:idempotency-key decoded)))
+         _ (is (= customer-account-id
+                  (:debtor-account-id decoded)))
+         _ (is (= "87654321" (:creditor-bban decoded)))
+         _ (is (= "External Recipient"
+                  (:creditor-name decoded)))
+         _ (is (= "GBP" (:currency decoded)))
+         _ (is (= 500 (:amount decoded)))
+         _ (is (some? (:transaction-id decoded)))
+         _ (is (= "Outbound test" (:reference decoded)))
+         _ (is (= :outbound-payment-status-pending
+                  (:payment-status decoded)))
+         debtor-balance
+         (balances/get-balance config
+                               customer-account-id
+                               :balance-type-default
+                               "GBP"
+                               :balance-status-posted)
+         _ (is (= 500 (:debit debtor-balance)))
+         suspense-balance
+         (balances/get-balance config
+                               internal-account-id
+                               :balance-type-suspense
+                               "GBP"
+                               :balance-status-posted)
+         _ (is (= 500 (:credit suspense-balance)))]))))
+
+(defn- test-settle-outbound-payment
+  [sys proc event-proc schemas]
+  (testing
+    "transaction-settled event completes the outbound
+  payment settlement"
+    (let [config (fdb-config sys)]
+      (nom-test>
+        [customer-org (organizations/new-organization
+                       config
+                       "Outbound Settlement Customer"
+                       :organization-type-customer
+                       :tier-type-micro
+                       ["GBP"])
+         customer-organization-id
+         (get-in customer-org
+                 [:organization :organization-id])
+         customer-account-id
+         (get-in customer-org
+                 [:organization :accounts 0 :account-id])
+         submit (send-command
+                 proc
+                 schemas
+                 "submit-outbound-payment"
+                 {:idempotency-key "pmt-ob-idem-100"
+                  :organization-id customer-organization-id
+                  :debtor-account-id customer-account-id
+                  :scheme "FPS"
+                  :creditor-bban "87654321"
+                  :creditor-name "External Recipient"
+                  :currency "GBP"
+                  :amount 250
+                  :reference "Outbound settlement test"})
+         _ (is (= "ACCEPTED" (:status submit)))
+         pending (decode-payload schemas
+                                 "outbound-payment"
+                                 submit)
+         pending-payment-id (:payment-id pending)
+         end-to-end-id (:end-to-end-id pending)
+         _ (is (some? end-to-end-id))
+         _ (is (= :outbound-payment-status-pending
+                  (:payment-status pending)))
+         result (send-event
+                 event-proc
+                 schemas
+                 "transaction-settled"
+                 {:scheme-transaction-id "stx-ob-100"
+                  :end-to-end-id end-to-end-id
+                  :scheme "FPS"
+                  :debit-credit-code :debit-credit-code-debit
+                  :amount 250
+                  :currency "GBP"
+                  :creditor-bban "87654321"
+                  :debtor-name "Outbound Settlement Customer"
+                  :reference "Outbound settlement test"
+                  :timestamp-settled (System/currentTimeMillis)})
+         _ (is (= pending-payment-id (:payment-id result)))
+         _ (is (= :outbound-payment-status-completed
+                  (:payment-status result)))
+         ;; idempotency: re-send same event
+         result2 (send-event
+                  event-proc
+                  schemas
+                  "transaction-settled"
+                  {:scheme-transaction-id "stx-ob-100"
+                   :end-to-end-id end-to-end-id
+                   :scheme "FPS"
+                   :debit-credit-code :debit-credit-code-debit
+                   :amount 250
+                   :currency "GBP"
+                   :creditor-bban "87654321"
+                   :debtor-name "Outbound Settlement Customer"
+                   :reference "Outbound settlement test"
+                   :timestamp-settled (System/currentTimeMillis)})
+         _ (is (= pending-payment-id (:payment-id result2)))
+         _ (is (= :outbound-payment-status-completed
+                  (:payment-status result2)))]))))
 
 (defn- test-unknown-command
   [proc schemas]
@@ -200,11 +353,13 @@
              (error/kind result))))))
 
 (deftest process-payment-test
-  (with-test-system [sys "classpath:bank-payment/application-test.yml"]
-                    (let [proc (system/instance sys [:payment :processor])
-                          event-proc
-                          (system/instance sys [:payment :event-processor])
-                          schemas (system/instance sys [:avro :serde])]
-                      (test-submit-internal-payment sys proc schemas)
-                      (test-unknown-command proc schemas)
-                      (test-settle-inbound-payment sys event-proc schemas))))
+  (with-test-system
+   [sys "classpath:bank-payment/application-test.yml"]
+   (let [proc (system/instance sys [:payment :processor])
+         event-proc (system/instance sys [:payment :event-processor])
+         schemas (system/instance sys [:avro :serde])]
+     (test-submit-internal-payment sys proc schemas)
+     (test-submit-outbound-payment sys proc schemas)
+     (test-unknown-command proc schemas)
+     (test-settle-inbound-payment sys event-proc schemas)
+     (test-settle-outbound-payment sys proc event-proc schemas))))

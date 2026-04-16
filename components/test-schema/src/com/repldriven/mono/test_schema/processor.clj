@@ -26,16 +26,13 @@
 
 (defn- create
   [config data]
-  (let [{:keys [record-db record-store]} config
-        {:keys [name species age-months]} data
+  (let [{:keys [name species age-months]} data
         pet-id (str (java.util.UUID/randomUUID))]
     (fdb/transact
-     record-db
-     record-store
-     "pets"
-     (fn [store]
+     config
+     (fn [txn]
        (let-nom>
-         [_ (fdb/save-record store
+         [_ (fdb/save-record (fdb/open txn "pets")
                              (Pet->java {:pet-id pet-id
                                          :name name
                                          :species species

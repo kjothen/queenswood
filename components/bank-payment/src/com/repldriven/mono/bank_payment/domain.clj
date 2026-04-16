@@ -29,7 +29,7 @@
 
   Debits the settlement (suspense) account and credits
   the customer account."
-  [data creditor-account-id settlement-account-id]
+  [data creditor-account-id internal-account-id]
   (let [{:keys [scheme-transaction-id currency amount
                 reference]}
         data]
@@ -37,7 +37,7 @@
      :transaction-type :transaction-type-inbound-transfer
      :currency currency
      :reference reference
-     :legs [{:account-id settlement-account-id
+     :legs [{:account-id internal-account-id
              :balance-type :balance-type-suspense
              :balance-status :balance-status-posted
              :side :leg-side-debit
@@ -73,7 +73,7 @@
 
   Debits the customer account and credits the settlement
   (suspense) account."
-  [data settlement-account-id]
+  [data internal-account-id]
   (let [{:keys [idempotency-key debtor-account-id
                 currency amount reference]}
         data]
@@ -86,7 +86,7 @@
              :balance-status :balance-status-posted
              :side :leg-side-debit
              :amount amount}
-            {:account-id settlement-account-id
+            {:account-id internal-account-id
              :balance-type :balance-type-suspense
              :balance-status :balance-status-posted
              :side :leg-side-credit

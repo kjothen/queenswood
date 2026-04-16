@@ -31,12 +31,11 @@
 (defn- seed-accepted-idv
   "Seeds an accepted IDV record and writes a changelog entry
   to trigger the party watcher."
-  [record-db store-fn party-id]
-  (fdb/transact record-db
-                store-fn
-                "idvs"
-                (fn [store]
-                  (let [verification-id (str "iv-test-" party-id)
+  [config party-id]
+  (fdb/transact config
+                (fn [txn]
+                  (let [store (fdb/open txn "idvs")
+                        verification-id (str "iv-test-" party-id)
                         idv {:organization-id test-org-id
                              :verification-id verification-id
                              :party-id party-id
@@ -56,20 +55,20 @@
 
 (defn- load-party
   "Loads a party record by id."
-  [record-db store-fn party-id]
-  (fdb/transact record-db
-                store-fn
-                "parties"
-                (fn [store]
-                  (when-let [rec (fdb/load-record store test-org-id party-id)]
+  [config party-id]
+  (fdb/transact config
+                (fn [txn]
+                  (when-let [rec (fdb/load-record (fdb/open txn "parties")
+                                                  test-org-id
+                                                  party-id)]
                     (schema/pb->Party rec)))))
 
 (defn- poll-party-status
   "Polls party until status matches expected, or times out
   after 5 s."
-  [record-db store-fn party-id expected]
+  [config party-id expected]
   (loop [attempts 50]
-    (let [party (load-party record-db store-fn party-id)]
+    (let [party (load-party config party-id)]
       (cond (= expected (:status party))
             party
             (pos? attempts)
@@ -132,7 +131,7 @@
                (error/kind result)))))))
 
 (defn- test-watcher-transitions
-  [proc schemas record-db store-fn]
+  [proc schemas config]
   (testing "watcher transitions party pending->active on accepted IDV"
     (let [create-payload {:organization-id test-org-id
                           :type :party-type-person
@@ -149,9 +148,9 @@
          (decode-payload schemas "party" result)
          party-id (:party-id decoded)
          _
-         (seed-accepted-idv record-db store-fn party-id)
+         (seed-accepted-idv config party-id)
          polled
-         (poll-party-status record-db store-fn party-id :party-status-active)
+         (poll-party-status config party-id :party-status-active)
          _
          (is (= :party-status-active (:status polled)))]))))
 
@@ -175,9 +174,10 @@
   (with-test-system [sys "classpath:bank-party/application-test.yml"]
                     (let [proc (system/instance sys [:party :processor])
                           schemas (system/instance sys [:avro :serde])
-                          record-db (system/instance sys [:fdb :record-db])
-                          store-fn (system/instance sys [:fdb :store])]
+                          config
+                          {:record-db (system/instance sys [:fdb :record-db])
+                           :record-store (system/instance sys [:fdb :store])}]
                       (test-create-party proc schemas)
                       (test-duplicate-national-identifier proc schemas)
-                      (test-watcher-transitions proc schemas record-db store-fn)
+                      (test-watcher-transitions proc schemas config)
                       (test-unknown-command proc schemas))))

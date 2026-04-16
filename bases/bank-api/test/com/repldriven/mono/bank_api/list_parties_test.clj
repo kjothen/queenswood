@@ -18,13 +18,12 @@
 
 (defn- seed-party
   "Inserts a party directly into FDB, asserts success."
-  [record-db record-store party]
-  (let [result (fdb/transact record-db
-                             record-store
-                             "parties"
-                             (fn [store]
-                               (fdb/save-record store
-                                                (schema/Party->java party))))]
+  [config party]
+  (let [result (fdb/transact
+                config
+                (fn [txn]
+                  (fdb/save-record (fdb/open txn "parties")
+                                   (schema/Party->java party))))]
     (assert (not (error/anomaly? result))
             (str "seed-party failed: " (pr-str result)))))
 
@@ -44,8 +43,8 @@
    [sys
     ["classpath:bank-api/list-parties-test.yml"
      #(assoc-in % [:system/defs :server :handler] api/app)]]
-   (let [record-db (system/instance sys [:fdb :record-db])
-         record-store (system/instance sys [:fdb :store])
+   (let [config {:record-db (system/instance sys [:fdb :record-db])
+                 :record-store (system/instance sys [:fdb :store])}
          jetty (system/instance sys [:server :jetty-adapter])
          ids (mapv #(format "py-%03d" %) (range 1 4))
          parties (mapv (fn [id]
@@ -57,7 +56,7 @@
                           :created-at 1700000000000
                           :updated-at 1700000000000})
                        ids)]
-     (doseq [p parties] (seed-party record-db record-store p))
+     (doseq [p parties] (seed-party config p))
      (binding [*base-url* (server/http-local-url jetty)]
        (testing "lists all parties"
          (nom-test> [res (list-parties-request)

@@ -29,12 +29,13 @@
         component/log {:local/root "../../components/log"}
         component/bank-api-key {:local/root "../../components/bank-api-key"}
         component/bank-cash-account {:local/root "../../components/bank-cash-account"}
+        component/bank-idv {:local/root "../../components/bank-idv"}
         component/bank-organization {:local/root "../../components/bank-organization"}
         component/bank-party {:local/root "../../components/bank-party"}
         component/message-bus {:local/root "../../components/message-bus"}
         component/processor {:local/root "../../components/processor"}
         component/pulsar {:local/root "../../components/pulsar"}
-        component/bank-bootstrap {:local/root "../../components/bank-bootstrap"}
+        component/bank-tier {:local/root "../../components/bank-tier"}
         component/bank-payment {:local/root "../../components/bank-payment"}
         component/bank-schema {:local/root "../../components/bank-schema"}
         component/bank-transaction {:local/root "../../components/bank-transaction"}

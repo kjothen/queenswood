@@ -3,7 +3,6 @@
     [com.repldriven.mono.bank-interest.interface]
 
     [com.repldriven.mono.bank-balance.interface :as balances]
-    [com.repldriven.mono.bank-bootstrap.interface]
     [com.repldriven.mono.bank-cash-account.interface :as
      cash-accounts]
     [com.repldriven.mono.bank-cash-account-product.interface :as
@@ -95,6 +94,10 @@
                    {:balance-type
                     :balance-type-interest-accrued
                     :balance-status
+                    :balance-status-posted}
+                   {:balance-type
+                    :balance-type-interest-paid
+                    :balance-status
                     :balance-status-posted}]
                   :allowed-payment-address-schemes
                   [:payment-address-scheme-scan]
@@ -115,8 +118,7 @@
           :product-id product-id})
         account-id (:account-id account)
         _ (poll-account-opened config org-id account-id)
-        _ (let [{:keys [record-db record-store]} config
-                txn-data
+        _ (let [txn-data
                 {:idempotency-key (str "fund-" org-name)
                  :transaction-type
                  :transaction-type-internal-transfer
@@ -133,16 +135,11 @@
                    :balance-status :balance-status-posted
                    :side :leg-side-credit
                    :amount fund-amount}]}]
-            (fdb/transact-multi
-             record-db
-             record-store
-             (fn [open-store]
-               (let [result (transactions/record-transaction
-                             open-store
-                             txn-data)]
-                 (balances/apply-legs
-                  (open-store "balances")
-                  (:legs result))))))]
+            (fdb/transact
+             config
+             (fn [txn]
+               (let [result (transactions/record-transaction txn txn-data)]
+                 (balances/apply-legs txn (:legs result))))))]
     {:organization-id org-id :account-id account-id}))
 
 (defn- test-accrue-daily-interest
@@ -150,9 +147,11 @@
   (testing "accrue-daily-interest accrues for accounts
   with interest rate"
     (let [config (fdb-config sys)
-          internal (system/instance sys
-                                    [:bootstrap :internal])
-          internal-id (:account-id internal)]
+          internal-org (system/instance sys
+                                        [:organizations :internal])
+          internal-id (get-in internal-org
+                              [:organization :accounts
+                               0 :account-id])]
       (nom-test>
         [customer (create-funded-customer
                    config
@@ -186,9 +185,11 @@
   (testing "capitalize-monthly-interest moves accrued
   to default"
     (let [config (fdb-config sys)
-          internal (system/instance sys
-                                    [:bootstrap :internal])
-          internal-id (:account-id internal)]
+          internal-org (system/instance sys
+                                        [:organizations :internal])
+          internal-id (get-in internal-org
+                              [:organization :accounts
+                               0 :account-id])]
       (nom-test>
         [customer (create-funded-customer
                    config

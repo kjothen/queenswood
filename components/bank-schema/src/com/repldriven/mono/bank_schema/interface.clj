@@ -27,6 +27,8 @@
     (com.repldriven.mono.schemas.keys ApiKeyProto$ApiKey)
     (com.repldriven.mono.schemas.organizations
      OrganizationProto$Organization
+     OrganizationProto$OrganizationType
+     OrganizationProto$TierType
      OrganizationChangelogProto$OrganizationChangelog)
     (com.repldriven.mono.schemas.party
      PartyProto$Party
@@ -59,6 +61,24 @@
   [account-type]
   (CashAccountProductProto$AccountType/forNumber
    (account-type->int account-type)))
+
+(def tier-type->int organizations/TierType-label2val)
+
+(defn tier-type->pb-enum
+  "Converts a tier-type keyword to the protobuf enum
+  value for use in FDB queries."
+  [tier-type]
+  (OrganizationProto$TierType/forNumber
+   (tier-type->int tier-type)))
+
+(def organization-type->int organizations/OrganizationType-label2val)
+
+(defn organization-type->pb-enum
+  "Converts an organization-type keyword to the protobuf
+  enum value for use in FDB queries."
+  [org-type]
+  (OrganizationProto$OrganizationType/forNumber
+   (organization-type->int org-type)))
 
 (def pb->CashAccountProductVersion
   cash-account-products/pb->CashAccountProductVersion)

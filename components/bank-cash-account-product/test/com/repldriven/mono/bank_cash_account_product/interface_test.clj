@@ -35,7 +35,8 @@
                    _ (is (string? (:product-id version)))
                    _ (is (= org-id (:organization-id version)))
                    _ (is (= 1 (:version-number version)))
-                   _ (is (= "draft" (:status version)))
+                   _ (is (= :cash-account-product-version-status-draft
+                            (:status version)))
                    _ (is (= :account-type-current (:account-type version)))
                    _ (is (= :balance-sheet-side-liability
                             (:balance-sheet-side version)))
@@ -68,7 +69,8 @@
                    v2 (:version v2-result)
                    _ (is (= 2 (:version-number v2)))
                    _ (is (= "Term Deposit" (:name v2)))
-                   _ (is (= "draft" (:status v2)))
+                   _ (is (= :cash-account-product-version-status-draft
+                            (:status v2)))
                    _ (is (= "2025-01-01" (:valid-from v2)))]))
      (testing "reject new version when latest is draft"
        (nom-test> [result (SUT/new-product config
@@ -113,7 +115,8 @@
                    version-id (get-in result [:version :version-id])
                    product-id (get-in result [:version :product-id])
                    published (SUT/publish config org-id product-id version-id)
-                   _ (is (= "published" (:status published)))]))
+                   _ (is (= :cash-account-product-version-status-published
+                            (:status published)))]))
      (testing "reject double publish"
        (let [result (SUT/new-product config
                                      org-id
@@ -162,9 +165,11 @@
                                                :balance-sheet-side-liability})
                    current (SUT/get-published config org-id product-id)
                    _ (is (= 1 (:version-number current)))
-                   _ (is (= "published" (:status current)))
+                   _ (is (= :cash-account-product-version-status-published
+                            (:status current)))
                    v2-id (get-in v2-result [:version :version-id])
                    _ (SUT/publish config org-id product-id v2-id)
                    current2 (SUT/get-published config org-id product-id)
                    _ (is (= 2 (:version-number current2)))
-                   _ (is (= "published" (:status current2)))])))))
+                   _ (is (= :cash-account-product-version-status-published
+                            (:status current2)))])))))

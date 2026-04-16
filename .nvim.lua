@@ -9,6 +9,7 @@ lspconfig.yamlls.setup({
 			customTags = {
 				"!env",
 				"!keyword",
+				"!keywords",
 				"!include",
 				"!port",
 				"!profile mapping",

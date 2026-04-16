@@ -1,28 +1,41 @@
 (ns com.repldriven.mono.bank-transaction.core
   (:require
-    [com.repldriven.mono.bank-transaction.commands :as commands]
+    [com.repldriven.mono.bank-transaction.domain :as domain]
+    [com.repldriven.mono.bank-transaction.store :as store]
 
-    [com.repldriven.mono.avro.interface :as avro]
-    [com.repldriven.mono.error.interface :as error :refer [let-nom>]]
-    [com.repldriven.mono.processor.interface :as processor]))
+    [com.repldriven.mono.bank-balance.interface :as balances]
 
-(defn- dispatch
-  [config message]
-  (let [{:keys [command payload]} message
-        {:keys [schemas]} config
-        schema (get schemas command)]
-    (if-not schema
-      (error/fail :transaction/process-command
-                  {:message "No schema found for command"
-                   :command command})
-      (let-nom> [data (avro/deserialize-same schema payload)]
-        (case command
-          "record-transaction"
-          (commands/record-transaction config data)
-          (error/reject
-           :transaction/unknown-command
-           (str "Unknown command: " command)))))))
+    [com.repldriven.mono.error.interface :refer [let-nom>]]))
 
-(defrecord TransactionProcessor [config]
-  processor/Processor
-    (process [_ message] (dispatch config message)))
+(defn record
+  "Records a transaction and its legs. Does not update
+  balances — callers must call apply-legs separately.
+  Returns the transaction map (with :legs) or anomaly."
+  [txn data]
+  (store/transact
+   txn
+   (fn [txn]
+     (let [{:keys [legs]} data
+           transaction (domain/new-transaction data)
+           {:keys [transaction-id currency]} transaction
+           legs' (mapv (fn [leg]
+                         (domain/new-leg leg transaction-id currency))
+                       legs)]
+       (let-nom>
+         [_ (store/save-transaction txn transaction)
+          _ (store/save-legs txn legs')]
+         (assoc transaction :legs legs'))))))
+
+(defn record-transaction
+  "Records a transaction with its legs and applies legs to
+  balances in a single atomic transaction. Used by the
+  command processor. Returns the transaction map or
+  anomaly."
+  [txn data]
+  (store/transact
+   txn
+   (fn [txn]
+     (let-nom>
+       [result (record txn data)
+        _ (balances/apply-legs txn (:legs result))]
+       result))))

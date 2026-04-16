@@ -452,7 +452,8 @@ system:
   interest: !include bank/interest-test.yml
   transactions: !include bank/transaction-test.yml
   idv: !include bank/idv-test.yml
-  bootstrap: !include bank/bootstrap-internal-test.yml
+  tiers: !include bank/tier-test.yml
+  organizations: !include bank/organization-test.yml
   telemetry:
     otel-sdk: !profile
       dev: !system/component
@@ -464,7 +465,8 @@ system:
     interceptors: !system/component
       system/component-kind: server/interceptors
       admin-api-key: !env MONO_ADMIN_API_KEY
-      bootstrap: !system/ref bootstrap.internal
+      internal-organization-id: !system/ref organizations.internal.organization.organization-id
+      internal-account-id: !system/ref organizations.internal-account-id
       dispatchers:
         cash-accounts: !system/ref cash-accounts.dispatcher
         parties: !system/ref parties.dispatcher

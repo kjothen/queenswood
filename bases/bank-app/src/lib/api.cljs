@@ -25,9 +25,11 @@
               (js/JSON.stringify (clj->js keys-map)))))
 
 (defn set-org
-  "Switches the active API key to the one stored for org-id."
+  "Switches the active API key to the one stored for
+  org-id, falling back to the admin token."
   [org-id]
-  (reset! api-key (get (load-keys) org-id)))
+  (reset! api-key (or (get (load-keys) org-id)
+                      (admin-token))))
 
 (defn create-organization
   [org-name tier-type currencies]
@@ -303,4 +305,26 @@
   []
   (-> (js/fetch "/v1/api-keys"
                 #js {:headers #js {"Authorization" (str "Bearer " @api-key)}})
+      (.then parse-response)))
+
+(defn list-tiers
+  []
+  (-> (js/fetch "/v1/tiers"
+                #js {:headers #js {"Authorization"
+                                   (str "Bearer "
+                                        (admin-token))}})
+      (.then parse-response)))
+
+(defn replace-tier
+  [tier-type policies limits]
+  (-> (js/fetch (str "/v1/tiers/" tier-type)
+                #js {:method "PUT"
+                     :headers #js {"Content-Type"
+                                   "application/json"
+                                   "Authorization"
+                                   (str "Bearer "
+                                        (admin-token))}
+                     :body (js/JSON.stringify
+                            (clj->js {"policies" policies
+                                      "limits" limits}))})
       (.then parse-response)))

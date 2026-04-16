@@ -1,26 +1,22 @@
 (ns com.repldriven.mono.bank-idv.core
+  (:refer-clojure :exclude [get])
   (:require
-    [com.repldriven.mono.bank-idv.commands :as commands]
+    [com.repldriven.mono.bank-idv.domain :as domain]
+    [com.repldriven.mono.bank-idv.store :as store]
 
-    [com.repldriven.mono.avro.interface :as avro]
-    [com.repldriven.mono.error.interface :as error :refer [let-nom>]]
-    [com.repldriven.mono.processor.interface :as processor]))
+    [com.repldriven.mono.error.interface :refer [let-nom>]]))
 
-(defn- dispatch
-  [config message]
-  (let [{:keys [command payload]} message
-        {:keys [schemas]} config
-        schema (get schemas command)]
-    (if-not schema
-      (error/fail :idv/process-command
-                  {:message "No schema found for command" :command command})
-      (let-nom> [data (avro/deserialize-same schema payload)]
-        (case command
-          "initiate-idv" (commands/initiate config data)
-          "get-idv" (commands/get config data)
-          (error/reject :idv/unknown-command
-                        (str "Unknown command: " command)))))))
+(defn initiate
+  "Initiates a new IDV. Returns the IDV map or anomaly."
+  [txn data]
+  (let-nom> [idv (domain/new-idv data)]
+    (store/save-idv txn
+                    idv
+                    {:verification-id (:verification-id idv)
+                     :status-after (:status idv)})))
 
-(defrecord IdvProcessor [config]
-  processor/Processor
-    (process [_ message] (dispatch config message)))
+(defn get
+  "Returns the current IDV or rejection anomaly."
+  [txn data]
+  (let [{:keys [organization-id verification-id]} data]
+    (store/get-idv txn organization-id verification-id)))
