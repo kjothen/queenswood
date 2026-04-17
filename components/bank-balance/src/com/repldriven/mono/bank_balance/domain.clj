@@ -1,4 +1,8 @@
-(ns com.repldriven.mono.bank-balance.domain)
+(ns com.repldriven.mono.bank-balance.domain
+  (:require
+    [com.repldriven.mono.bank-balance.restriction :as restriction]
+
+    [com.repldriven.mono.error.interface :refer [let-nom>]]))
 
 (defn- net
   "Returns credit minus debit for a balance, defaulting
@@ -66,19 +70,24 @@
     (update balance field + amount)))
 
 (defn new-balance
-  "Creates a new Balance record map. Credit and debit
-  default to zero if not provided."
-  [{:keys [account-id account-type balance-type balance-status
-           currency credit debit credit-carry]}]
-  (let [now (System/currentTimeMillis)]
-    (cond-> {:account-id account-id
-             :balance-type balance-type
-             :balance-status balance-status
-             :currency currency
-             :credit (or credit 0)
-             :debit (or debit 0)
-             :credit-carry (or credit-carry 0)
-             :created-at now
-             :updated-at now}
-            account-type
-            (assoc :account-type account-type))))
+  "Creates a new Balance record map. Rejects if a balance
+  with the same composite key already exists. Credit and
+  debit default to zero if not provided."
+  [data exists?]
+  (let-nom>
+    [_ (restriction/check-unique? data exists?)]
+    (let [{:keys [account-id account-type balance-type balance-status
+                  currency credit debit credit-carry]}
+          data
+          now (System/currentTimeMillis)]
+      (cond-> {:account-id account-id
+               :balance-type balance-type
+               :balance-status balance-status
+               :currency currency
+               :credit (or credit 0)
+               :debit (or debit 0)
+               :credit-carry (or credit-carry 0)
+               :created-at now
+               :updated-at now}
+              account-type
+              (assoc :account-type account-type)))))

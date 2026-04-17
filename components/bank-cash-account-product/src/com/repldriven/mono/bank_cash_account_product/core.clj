@@ -6,6 +6,16 @@
     [com.repldriven.mono.encryption.interface :as encryption]
     [com.repldriven.mono.error.interface :as error :refer [let-nom>]]))
 
+(defn- draft?
+  [version]
+  (= :cash-account-product-version-status-draft (:status version)))
+
+(defn- latest-version
+  [versions]
+  (->> versions
+       (sort-by :version-number)
+       last))
+
 (defn new-product
   "Creates a cash account product as an initial draft v1.
   Returns {:version <map>} or anomaly."
@@ -15,11 +25,13 @@
     (let-nom> [_ (store/save-version txn version)]
       {:version version})))
 
-(defn new-version
-  "Creates a new draft version for a product. Computes the
-  next version-number from existing versions. Rejects if
-  the latest version is still a draft. Returns
-  {:version <map>} or anomaly."
+(defn upsert-draft
+  "Creates or updates the current draft for a product. If
+  the latest version is a draft, replaces its mutable
+  fields with version-data (preserving :version-id and
+  :version-number). If the latest version is published,
+  creates a new draft with the next version-number.
+  Returns {:version <map>} or anomaly."
   [txn org-id product-id version-data]
   (store/transact
    txn
@@ -28,21 +40,13 @@
        [versions (store/get-versions txn
                                      org-id
                                      {:product-id product-id})
-        latest (->> versions
-                    (sort-by :version-number)
-                    last)
-        _ (when (and latest
-                     (= :cash-account-product-version-status-draft
-                        (:status latest)))
-            (error/reject
-             :cash-account-product/draft-exists
-             {:message (str "Cannot create a new version while the "
-                            "latest version is still a draft")}))
-        next-num (inc (count versions))
-        version (domain/new-version org-id
-                                    product-id
-                                    next-num
-                                    version-data)
+        latest (latest-version versions)
+        version (if (draft? latest)
+                  (domain/update-version latest version-data)
+                  (domain/new-version org-id
+                                      product-id
+                                      (inc (count versions))
+                                      version-data))
         _ (store/save-version txn version)]
        {:version version}))))
 
@@ -67,9 +71,10 @@
                                             :limit 100})]
      {:versions versions})))
 
-(defn get-published
+(defn get-published-version
   "Returns the highest-version-number published version
-  for a product, or nil if none published."
+  for a product, or nil if none published. Rejects if
+  the product-id is unknown."
   [txn org-id product-id]
   (let-nom> [versions (store/get-versions txn
                                           org-id
@@ -81,19 +86,44 @@
          (sort-by :version-number)
          last)))
 
+(defn get-latest-version
+  "Returns the highest-version-number version (any status)
+  for a product. Rejects if the product-id is unknown."
+  [txn org-id product-id]
+  (let-nom> [versions (store/get-versions txn
+                                          org-id
+                                          {:product-id product-id})]
+    (latest-version versions)))
+
+(defn get-products
+  "Returns {:versions [<map> ...]} with the latest version
+  (any status) per product for the organization."
+  [txn org-id]
+  (let-nom> [versions (store/get-versions txn org-id)]
+    {:versions (->> versions
+                    (group-by :product-id)
+                    vals
+                    (mapv latest-version))}))
+
 (defn publish
-  "Publishes a draft version. Returns the published
-  version map or anomaly."
-  [txn org-id product-id version-id]
+  "Publishes the current draft for the product. Rejects
+  with :cash-account-product/no-draft if the latest
+  version is not a draft. Returns the published version
+  map or anomaly."
+  [txn org-id product-id]
   (store/transact
    txn
    (fn [txn]
      (let-nom>
-       [version (store/get-version txn org-id product-id version-id)
-        _ (when-not (= :cash-account-product-version-status-draft
-                       (:status version))
-            (error/reject :cash-account-product/not-draft
-                          {:message "Only draft versions can be published"}))
-        published (domain/publish version)
+       [versions (store/get-versions txn
+                                     org-id
+                                     {:product-id product-id})
+        latest (latest-version versions)
+        _ (when-not (draft? latest)
+            (error/reject :cash-account-product/no-draft
+                          {:message "No draft to publish"
+                           :organization-id org-id
+                           :product-id product-id}))
+        published (domain/publish latest)
         _ (store/save-version txn published)]
        published))))

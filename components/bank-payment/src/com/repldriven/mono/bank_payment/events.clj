@@ -60,21 +60,22 @@
 (defn settle-outbound
   "Processes an outbound payment settlement event.
 
-  Looks up OutboundPayment by end-to-end-id and updates
-  its status to completed."
+  Looks up OutboundPayment by payment-id (the scheme's
+  end-to-end-id IS our payment-id) and updates its status
+  to completed."
   [config data]
-  (let [{:keys [end-to-end-id]} data]
-    (let-nom> [payment (store/get-outbound-payment config end-to-end-id)]
+  (let [{payment-id :end-to-end-id} data]
+    (let-nom> [payment (store/get-outbound-payment config payment-id)]
       (cond
        (nil? payment)
        (error/fail
         :payment/settle-outbound
         {:message "Failed to find corresponding outbound payment for settlement"
-         :end-to-end-id end-to-end-id})
+         :payment-id payment-id})
 
        (= :outbound-payment-status-completed (:payment-status payment))
        (do (log/infof "Outbound payment settlement already completed: %s"
-                      end-to-end-id)
+                      payment-id)
            payment)
 
        :else
@@ -82,6 +83,5 @@
          [completed (domain/completed-outbound-payment payment)
           _ (store/save-outbound-payment config completed)]
          (log/infof "Outbound payment settlement now completed: %s"
-                    {:payment-id (:payment-id payment)
-                     :end-to-end-id end-to-end-id})
+                    {:payment-id payment-id})
          completed)))))

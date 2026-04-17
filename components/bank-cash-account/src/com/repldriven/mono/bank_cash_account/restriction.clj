@@ -4,6 +4,18 @@
 
     [com.repldriven.mono.error.interface :as error]))
 
+(defn valid-product?
+  "Returns true if the product version is published,
+  rejection anomaly otherwise."
+  [product]
+  (let [{:keys [status version-id]} product]
+    (if (not= :cash-account-product-version-status-published status)
+      (error/reject :cash-account-product/not-published
+                    {:message "Product version is not published"
+                     :version-id version-id
+                     :status status})
+      true)))
+
 (defn valid-currency?
   "Returns true if currency is allowed by product,
   rejection anomaly otherwise."

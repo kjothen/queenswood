@@ -93,26 +93,27 @@
       :before before
       :after after})))
 
-(defn count-accounts-by-type
+(defn count-party-accounts-by-type
   "Returns the count of accounts matching the given
-  org-id and account-type. Uses the
-  org_account_type_count count index."
-  [txn org-id account-type]
+  org-id, party-id and account-type. Uses the
+  org_party_account_type_count count index."
+  [txn org-id party-id account-type]
   (fdb/transact txn
                 (fn [txn]
                   (fdb/count-records
                    (fdb/open txn store-name)
-                   "org_account_type_count"
+                   "CashAccount_count_by_org_party_account_type"
                    [org-id
+                    party-id
                     (.getNumber
                      (schema/account-type->pb-enum account-type))]))
-                :cash-account/count-by-type
-                "Failed to count accounts by type"))
+                :cash-account/count-party-accounts-by-type
+                "Failed to count party accounts by type"))
 
 (defn get-account-by-type
   "Returns the first account matching the given org-id and
-  account-type, or nil. Uses the org_account_type_idx
-  compound index; caller should expect at most one result."
+  account-type, or nil. Pins the planner to the
+  org_account_type_idx compound index."
   [txn org-id account-type]
   (fdb/transact txn
                 (fn [txn]
@@ -121,21 +122,23 @@
                            "CashAccount"
                            [["organization_id" org-id]
                             ["account_type"
-                             (schema/account-type->pb-enum account-type)]])
+                             (schema/account-type->pb-enum account-type)]]
+                           {:index "CashAccount_by_org_account_type"})
                           schema/pb->CashAccount))
                 :cash-account/get-by-type
                 "Failed to get account by type"))
 
 (defn get-account-by-bban
   "Returns the account matching the given bban, or nil.
-  Uses the bban_idx secondary index."
+  Pins the planner to the bban_idx secondary index."
   [txn bban]
   (fdb/transact txn
                 (fn [txn]
                   (some-> (fdb/query-record (fdb/open txn store-name)
                                             "CashAccount"
                                             "bban"
-                                            bban)
+                                            bban
+                                            {:index "CashAccount_by_bban"})
                           schema/pb->CashAccount))
                 :cash-account/get-by-bban
                 "Failed to get account by bban"))

@@ -22,19 +22,10 @@
     try {
       const res = await list_cash_account_products();
       if (res["http-status"] >= 200 && res["http-status"] < 300) {
-        const published = (res.body.versions ?? [])
+        publishedProducts = (res.body.versions ?? [])
           .filter(v => v.status === "published"
                     && v["account-type"] !== "internal"
                     && v["account-type"] !== "settlement");
-        const latestByProduct = new Map();
-        for (const v of published) {
-          const pid = v["product-id"];
-          const existing = latestByProduct.get(pid);
-          if (!existing || v["version-number"] > existing["version-number"]) {
-            latestByProduct.set(pid, v);
-          }
-        }
-        publishedProducts = [...latestByProduct.values()];
       }
     } catch (_) { /* ignore */ }
   }

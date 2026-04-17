@@ -21,12 +21,14 @@
           (when account
             (let [transitioned
                   (case status-after
-                    :cash-account-status-opening (domain/opened-account account)
-                    :cash-account-status-closing (domain/closed-account
-                                                  account))]
-              (store/save-account txn
-                                  transitioned
-                                  {:account-id account-id
-                                   :status-before status-after
-                                   :status-after (:account-status
-                                                  transitioned)}))))))))
+                    :cash-account-status-opening
+                    (domain/opened-account account)
+
+                    :cash-account-status-closing
+                    (domain/closed-account account))]
+              (store/save-account
+               txn
+               transitioned
+               {:account-id account-id
+                :status-before status-after
+                :status-after (:account-status transitioned)}))))))))

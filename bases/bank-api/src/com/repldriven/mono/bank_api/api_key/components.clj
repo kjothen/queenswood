@@ -5,7 +5,7 @@
 
 (def ApiKey
   [:map {:json-schema/example examples/ApiKey}
-   [:id string?]
+   [:api-key-id string?]
    [:name string?]
    [:key-prefix string?]
    [:created-at {:optional true} [:maybe [:ref "Timestamp"]]]])
@@ -16,7 +16,7 @@
 
 (def CreateApiKeyResponse
   [:map {:json-schema/example examples/CreateApiKeyResponse}
-   [:id string?]
+   [:api-key-id string?]
    [:name string?]
    [:key-prefix string?]
    [:key-secret string?]

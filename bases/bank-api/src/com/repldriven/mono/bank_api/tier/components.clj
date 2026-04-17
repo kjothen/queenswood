@@ -23,7 +23,11 @@
 (def Limit
   [:map {:json-schema/example examples/Limit}
    [:type keyword?]
-   [:kind {:optional true} [:maybe map?]]
+   [:kind
+    {:optional true
+     :decode/api coercion/decode-limit-kind
+     :encode/api coercion/encode-limit-kind}
+    [:maybe map?]]
    [:value {:optional true} [:maybe int?]]
    [:reason {:optional true} [:maybe string?]]])
 

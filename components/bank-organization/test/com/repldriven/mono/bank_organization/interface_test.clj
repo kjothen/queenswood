@@ -22,10 +22,10 @@
    [sys "classpath:bank-organization/application-test.yml"]
    (let [config (fdb-config sys)]
      (testing "creates org with api-key, party, product, and accounts"
-       (nom-test> [result (SUT/new-organization config
-                                                "Test Org"
-                                                :organization-type-customer
-                                                :tier-type-micro ["GBP" "USD"])
+       (nom-test> [result
+                   (SUT/new-organization config
+                                         "Test Org" :organization-type-customer
+                                         :tier-type-standard ["GBP" "USD"])
                    org (:organization result)
                    _ (is (= {:name "Test Org"
                              :type :organization-type-customer

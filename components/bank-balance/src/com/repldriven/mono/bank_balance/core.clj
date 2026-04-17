@@ -21,14 +21,7 @@
                                        balance-type
                                        currency
                                        balance-status)
-          _ (when existing
-              (error/reject :balance/already-exists
-                            {:message "Balance already exists"
-                             :account-id account-id
-                             :balance-type balance-type
-                             :currency currency
-                             :balance-status balance-status}))
-          balance (domain/new-balance data)
+          balance (domain/new-balance data (some? existing))
           _ (store/save-balance txn balance)]
          balance)))))
 

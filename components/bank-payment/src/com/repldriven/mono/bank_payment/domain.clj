@@ -94,7 +94,7 @@
 
 (defn new-outbound-payment
   "Creates a new outbound payment map in pending status."
-  [data end-to-end-id transaction-id]
+  [data transaction-id]
   (let [{:keys [idempotency-key debtor-account-id
                 creditor-bban creditor-name scheme
                 currency amount reference]}
@@ -102,7 +102,6 @@
         now (System/currentTimeMillis)]
     {:payment-id (encryption/generate-id "pmt")
      :idempotency-key idempotency-key
-     :end-to-end-id end-to-end-id
      :scheme scheme
      :debtor-account-id debtor-account-id
      :creditor-bban creditor-bban

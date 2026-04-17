@@ -1,7 +1,6 @@
 (ns ^:eftest/synchronized com.repldriven.mono.bank-api.organizations-test
   (:require
     com.repldriven.mono.testcontainers.interface
-    com.repldriven.mono.fdb.interface
     [com.repldriven.mono.bank-api.api :as api]
     [com.repldriven.mono.http-client.interface :as http]
     [com.repldriven.mono.server.interface :as server]

@@ -1,14 +1,13 @@
 system:
   fdb: !include bank/fdb-test.yml
+  tiers: !include bank/tier-test.yml
   server:
     handler: !system/required-component
     interceptors: !system/component
       system/component-kind: server/interceptors
+      admin-api-key: !env MONO_ADMIN_API_KEY
       record-db: !system/ref fdb.record-db
       record-store: !system/ref fdb.meta-store
-      auth:
-        role: !keyword org
-        organization-id: org_test_list_parties
     jetty-adapter: !system/component
       system/component-kind: server/jetty-adapter
       handler: !system/ref server.handler

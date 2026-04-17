@@ -18,7 +18,7 @@ message OutboundPayment {
   option (com.apple.foundationdb.record.record).usage = RECORD;
   required string                payment_id          = 1 [(com.apple.foundationdb.record.field).primary_key = true];
   required string                idempotency_key     = 2;
-  required string                end_to_end_id       = 3;
+  reserved 3;
   required string                scheme              = 4;
   required string                debtor_account_id   = 5;
   required string                creditor_bban       = 6;

@@ -43,7 +43,6 @@
 (def OutboundPayment
   {:payment-id "pmt_02JMABC"
    :idempotency-key "idem-002"
-   :end-to-end-id "e2e-abc-123"
    :scheme "FPS"
    :debtor-account-id "acc_01JMABC"
    :creditor-bban "04000412345678"

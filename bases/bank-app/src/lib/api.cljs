@@ -164,19 +164,15 @@
                 #js {:headers #js {"Authorization" (str "Bearer " @api-key)}})
       (.then parse-response)))
 
-(defn publish-version
-  [product-id version-id]
-  (-> (js/fetch (str "/v1/cash-account-products/"
-                     product-id
-                     "/versions/"
-                     version-id
-                     "/publish")
+(defn publish-cash-account-product
+  [product-id]
+  (-> (js/fetch (str "/v1/cash-account-products/" product-id "/publish")
                 #js {:method "POST"
                      :headers #js {"Content-Type" "application/json"
                                    "Authorization" (str "Bearer " @api-key)}})
       (.then parse-response)))
 
-(defn create-cash-account-product-version
+(defn upsert-cash-account-product-draft
   [product-id data]
   (let [{:strs [name account-type balance-sheet-side allowed-currencies
                 balance-products allowed-payment-address-schemes
@@ -197,7 +193,7 @@
                      interest-rate-bps
                      (assoc "interest-rate-bps"
                             interest-rate-bps))]
-    (-> (js/fetch (str "/v1/cash-account-products/" product-id "/versions")
+    (-> (js/fetch (str "/v1/cash-account-products/" product-id "/draft")
                   #js {:method "POST"
                        :headers #js {"Content-Type" "application/json"
                                      "Authorization" (str "Bearer " @api-key)}

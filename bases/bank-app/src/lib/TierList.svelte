@@ -54,12 +54,13 @@
   }
 
   function formatKind(kind) {
-    if (!kind) return "";
+    if (!kind || typeof kind !== "object") return "";
     const entries = Object.entries(kind);
     if (entries.length === 0) return "";
     const [k, v] = entries[0];
+    if (v && typeof v === "object") return formatKind(v);
     const cleanKey = k.replace(/-/g, " ");
-    const cleanVal = (v ?? "").replace(/^[a-z-]+-type-/, "");
+    const cleanVal = String(v ?? "").replace(/^[a-z-]+-type-/, "");
     return `${cleanKey}: ${cleanVal}`;
   }
 

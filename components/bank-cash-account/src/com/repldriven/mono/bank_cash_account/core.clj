@@ -6,7 +6,6 @@
     [com.repldriven.mono.bank-balance.interface :as balances]
     [com.repldriven.mono.bank-cash-account-product.interface :as products]
     [com.repldriven.mono.bank-party.interface :as parties]
-    [com.repldriven.mono.bank-schema.interface :as schema]
     [com.repldriven.mono.bank-tier.interface :as tiers]
     [com.repldriven.mono.bank-transaction.interface :as transactions]
 
@@ -16,34 +15,25 @@
   [txn opts account]
   (let [{:keys [account-id]} account]
     (let-nom>
-      [bals (when (:embed-balances opts)
-              (balances/get-balances txn account-id))
-       txns (when (:embed-transactions opts)
-              (transactions/get-transactions txn account-id))]
+      [balances (when (:embed-balances opts)
+                  (balances/get-balances txn account-id))
+       transactions (when (:embed-transactions opts)
+                      (transactions/get-transactions txn account-id))]
       (cond-> account
-              bals
-              (merge bals)
-              txns
-              (assoc :transactions txns)))))
 
-(defn- balance-data
-  "Builds the per-balance data list from the account and
-  product's balance-products."
-  [account-id account-type currency balance-products]
-  (mapv (fn [{:keys [balance-type balance-status]}]
-          {:account-id account-id
-           :account-type (schema/account-type->int account-type)
-           :balance-type balance-type
-           :balance-status balance-status
-           :currency currency})
-        balance-products))
+              balances
+              (merge balances)
+
+              transactions
+              (assoc :transactions transactions)))))
 
 (defn open-account
-  "Opens an account within a transaction. Resolves published
-  product version, validates currency, validates the party is
-  active, then creates the account with opened status, payment
-  addresses, and balances from the product's balance-products.
-  Returns account map or anomaly."
+  "Opens an account within a transaction. Resolves the
+  latest product version and checks it's published,
+  validates currency, validates the party is active, then
+  creates the account with opened status, payment
+  addresses, and balances from the product's
+  balance-products. Returns account map or anomaly."
   [txn data]
   (store/transact
    txn
@@ -51,17 +41,19 @@
      (let [{:keys [organization-id party-id product-id currency]} data]
        (let-nom>
          [tier (tiers/get-org-tier txn organization-id)
-          product (products/get-published txn organization-id product-id)
-          _ (when-not product
-              (error/reject
-               :cash-account-product/not-published
-               {:message "No published product version found"
-                :organization-id organization-id
-                :product-id product-id}))
           party (parties/get-party txn organization-id party-id)
-          account-count (store/count-accounts-by-type txn
-                                                      organization-id
-                                                      (:account-type product))
+          product (products/get-published-version txn
+                                                  organization-id
+                                                  product-id)
+          _ (when (nil? product)
+              (error/reject :cash-account/open
+                            {:message "Product is not published"
+                             :product-id product-id}))
+          account-count (store/count-party-accounts-by-type
+                         txn
+                         organization-id
+                         party-id
+                         (:account-type product))
           account (domain/opening-account
                    data
                    product
@@ -70,11 +62,9 @@
                    account-count
                    (fn [counter]
                      (store/allocate-payment-address txn counter)))
-          _ (balances/new-balances txn
-                                   (balance-data (:account-id account)
-                                                 (:account-type account)
-                                                 currency
-                                                 (:balance-products product)))
+          _ (balances/new-balances
+             txn
+             (domain/opening-balances account currency product))
           _ (store/save-account txn
                                 account
                                 {:account-id (:account-id account)
@@ -113,8 +103,7 @@
     txn
     (fn [txn]
       (let-nom>
-        [{:keys [accounts before after]}
-         (store/get-accounts txn org-id opts)
+        [{:keys [accounts before after]} (store/get-accounts txn org-id opts)
          enriched (reduce (fn [acc account]
                             (let [result (enrich-account txn opts account)]
                               (if (error/anomaly? result)

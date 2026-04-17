@@ -2,32 +2,30 @@
   (:require
     [com.repldriven.mono.bank-schema.interface :as schema]
 
+    [com.repldriven.mono.error.interface :as error]
     [com.repldriven.mono.fdb.interface :as fdb]))
 
 (def ^:private store-name "api-keys")
 
 (def transact fdb/transact)
 
-(defn get-api-key
-  "Looks up an API key by its hash. Returns the ApiKey map
-  or nil."
-  [txn key-hash]
-  (fdb/transact
-   txn
-   (fn [txn]
-     (first (map schema/pb->ApiKey
-                 (fdb/query-records (fdb/open txn store-name)
-                                    "ApiKey"
-                                    "key_hash"
-                                    key-hash))))))
+(defn redact
+  [api-key]
+  (dissoc api-key :key-hash))
 
-(defn- load-api-keys
-  [store org-id]
-  (mapv schema/pb->ApiKey
-        (fdb/query-records store
-                           "ApiKey"
-                           "organization_id"
-                           org-id)))
+(defn get-api-key
+  "Loads an API key by its hash. Returns a redacted ApiKey 
+  map or rejection anomaly if not found."
+  [txn key-hash]
+  (fdb/transact txn
+                (fn [txn]
+                  (if-let [record (fdb/load-record (fdb/open txn store-name)
+                                                   key-hash)]
+                    (redact (schema/pb->ApiKey record))
+                    (error/reject :api-key/not-found
+                                  {:message "API Key not found"})))
+                :api-key/get
+                {:message "Failed to load API key"}))
 
 (defn get-api-keys
   "Lists all API keys for a given organization. Returns a
@@ -35,6 +33,14 @@
   [txn org-id]
   (fdb/transact txn
                 (fn [txn]
-                  (load-api-keys (fdb/open txn store-name) org-id))
+                  (mapv (comp redact schema/pb->ApiKey)
+                        (fdb/query-records
+                         (fdb/open txn store-name)
+                         "ApiKey"
+                         "organization_id"
+                         org-id
+                         {:index "ApiKey_by_org"})))
+
                 :api-key/list
-                "Failed to list API keys"))
+                {:message "Failed to list API keys"
+                 :organization-id org-id}))

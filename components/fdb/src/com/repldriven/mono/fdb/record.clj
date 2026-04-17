@@ -1,7 +1,7 @@
 (ns com.repldriven.mono.fdb.record
   (:refer-clojure :exclude [load])
   (:require
-    [com.repldriven.mono.error.interface :refer [try-nom]])
+    [com.repldriven.mono.error.interface :as error :refer [try-nom]])
   (:import
     (com.apple.foundationdb.record EndpointType
                                    ExecuteProperties
@@ -51,21 +51,38 @@
   (-> (Query/field field)
       (.equalsValue value)))
 
+(defn- apply-allowed-indexes
+  "Constrains the planner to the named index when
+  (:index opts) is provided. Returns the builder."
+  [builder opts]
+  (let [index (:index opts)]
+    (cond-> builder
+            index
+            (.setAllowedIndexes
+             ^java.util.List
+             (java.util.ArrayList. ^java.util.Collection [index])))))
+
 (defn- equals-query
-  [record-type field value]
-  (-> (RecordQuery/newBuilder)
-      (.setRecordType record-type)
-      (.setFilter (field-filter [field value]))
-      .build))
+  ([record-type field value]
+   (equals-query record-type field value nil))
+  ([record-type field value opts]
+   (-> (RecordQuery/newBuilder)
+       (.setRecordType record-type)
+       (.setFilter (field-filter [field value]))
+       (apply-allowed-indexes opts)
+       .build)))
 
 (defn- and-query
-  [record-type filters]
-  (-> (RecordQuery/newBuilder)
-      (.setRecordType record-type)
-      (.setFilter (Query/and
-                   ^java.util.List
-                   (java.util.ArrayList. (map field-filter filters))))
-      .build))
+  ([record-type filters]
+   (and-query record-type filters nil))
+  ([record-type filters opts]
+   (-> (RecordQuery/newBuilder)
+       (.setRecordType record-type)
+       (.setFilter (Query/and
+                    ^java.util.List
+                    (java.util.ArrayList. (map field-filter filters))))
+       (apply-allowed-indexes opts)
+       .build)))
 
 (defn- execute-query
   [store q]
@@ -87,35 +104,38 @@
 (defn query
   "Queries an open FDBRecordStore where field equals value.
   Returns a vector of serialized byte arrays. For use inside
-  transact."
-  [store record-type field value]
-  (mapv record->bytes
-        (execute-query store (equals-query record-type field value))))
-
-(defn query-compound
-  "Queries an open FDBRecordStore where multiple fields
-  equal values. filters is a sequence of [field value]
-  pairs. Returns a vector of serialized byte arrays."
-  [store record-type filters]
-  (mapv record->bytes (execute-query store (and-query record-type filters))))
+  transact. opts supports :index to pin the planner to a
+  named index."
+  ([store record-type field value]
+   (query store record-type field value nil))
+  ([store record-type field value opts]
+   (mapv record->bytes
+         (execute-query store (equals-query record-type field value opts)))))
 
 (defn query-one
   "Queries an open FDBRecordStore where field equals value,
   capping the planner at one result via ExecuteProperties.
-  Returns the first matching record bytes, or nil."
-  [store record-type field value]
-  (some-> (execute-query-one store (equals-query record-type field value))
-          first
-          record->bytes))
+  Returns the first matching record bytes, or nil. opts
+  supports :index to pin the planner to a named index."
+  ([store record-type field value]
+   (query-one store record-type field value nil))
+  ([store record-type field value opts]
+   (some-> (execute-query-one store
+                              (equals-query record-type field value opts))
+           first
+           record->bytes)))
 
 (defn query-one-compound
   "Queries an open FDBRecordStore where all of a sequence of
   [field value] pairs match, capping the planner at one
-  result. Returns first matching record bytes, or nil."
-  [store record-type filters]
-  (some-> (execute-query-one store (and-query record-type filters))
-          first
-          record->bytes))
+  result. Returns first matching record bytes, or nil.
+  opts supports :index to pin the planner to a named index."
+  ([store record-type filters]
+   (query-one-compound store record-type filters nil))
+  ([store record-type filters opts]
+   (some-> (execute-query-one store (and-query record-type filters opts))
+           first
+           record->bytes)))
 
 (defn count-records
   "Counts records using a COUNT index. index-name is the
@@ -141,24 +161,6 @@
         (.join)
         (.getLong 0))))
 
-(defn query-repeated
-  "Queries an open FDBRecordStore where a repeated field
-  contains value. Uses oneOfThem() semantics for fan-out
-  indexes. Returns a vector of serialized byte arrays.
-  For use inside transact."
-  [store record-type field value]
-  (let [q (-> (RecordQuery/newBuilder)
-              (.setRecordType record-type)
-              (.setFilter (-> (Query/field field)
-                              .oneOfThem
-                              (.equalsValue value)))
-              .build)]
-    (->> (.executeQuery store q)
-         .asList
-         (.asyncToSync (.getContext store)
-                       FDBStoreTimer$Waits/WAIT_EXECUTE_QUERY)
-         (mapv record->bytes))))
-
 (defrecord Txn [open])
 
 (defn open
@@ -174,27 +176,46 @@
   - Given an existing Txn, reuses it (composition).
   - Given a config map with :record-db and :record-store,
     opens a fresh FDB transaction and wraps ctx in a new Txn
-    whose store-opening is memoised for this transaction."
+    whose store-opening is memoised for this transaction.
+
+  If f returns an anomaly, the FDB transaction is aborted
+  (rolled back) and the anomaly is returned to the caller."
   ([txn-or-config f]
    (transact txn-or-config f :fdb/transact "Failed to execute transaction"))
   ([txn-or-config f category message]
    (if (instance? Txn txn-or-config)
      (try-nom category message (f txn-or-config))
      (let [{:keys [record-db record-store]} txn-or-config]
-       (try-nom category
-                message
-                (.run ^FDBDatabase record-db
-                      ^Function
-                      (fn [ctx]
-                        (let [cache (atom {})
-                              open-fn (fn [store-name]
-                                        (or (get @cache store-name)
-                                            (let [s (open-store record-store
-                                                                ctx
-                                                                store-name)]
-                                              (swap! cache assoc store-name s)
-                                              s)))]
-                          (f (->Txn open-fn))))))))))
+       (try
+         (.run ^FDBDatabase record-db
+               ^Function
+               (fn [ctx]
+                 (let [cache (atom {})
+                       open-fn (fn [store-name]
+                                 (or (get @cache store-name)
+                                     (let [s (open-store record-store
+                                                         ctx
+                                                         store-name)]
+                                       (swap! cache assoc store-name s)
+                                       s)))
+                       result (try-nom category
+                                       message
+                                       (f (->Txn open-fn)))]
+                   (if (error/anomaly? result)
+                     (throw (ex-info "Transaction rolled back"
+                                     {::anomaly result}))
+                     result))))
+         (catch Exception e
+           (or (::anomaly (ex-data e))
+               (error/fail category
+                           {:message message
+                            :exception e
+                            :stack-trace
+                            (with-out-str
+                              (.printStackTrace
+                               e
+                               (java.io.PrintWriter. *out*
+                                                     true)))}))))))))
 
 (defn- prefix-range
   "Returns a TupleRange scoped to a prefix tuple."

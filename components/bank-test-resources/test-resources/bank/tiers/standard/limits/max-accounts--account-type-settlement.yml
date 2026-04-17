@@ -1,4 +1,4 @@
 type: !keyword limit-type-max-accounts
 kind: { account-type: !keyword account-type-settlement }
-value: 1
+value: 3
 reason: "MUST be one and only one settlement account on standard tier"

@@ -59,7 +59,7 @@
       {/if}
       {#each apiKeys as key}
         <tr>
-          <td class="mono">{key.id ?? ""}</td>
+          <td class="mono">{key["api-key-id"] ?? ""}</td>
           <td class="mono">{key["key-prefix"]}</td>
           <td>{key.name}</td>
           <td title={key["created-at"]}>{time_ago(key["created-at"])}</td>

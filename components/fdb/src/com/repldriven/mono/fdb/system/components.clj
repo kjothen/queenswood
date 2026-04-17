@@ -109,9 +109,11 @@
 (defn- set-primary-key
   [b record-type primary-key]
   (when primary-key
-    (.setPrimaryKey (.getRecordType b record-type)
-                    (Key$Expressions/concatenateFields ^java.util.List
-                                                       primary-key))))
+    (let [expr (if (= 1 (count primary-key))
+                 (Key$Expressions/field (first primary-key))
+                 (Key$Expressions/concatenateFields ^java.util.List
+                                                    primary-key))]
+      (.setPrimaryKey (.getRecordType b record-type) expr))))
 
 (defn- set-primary-keys
   [b record-types]

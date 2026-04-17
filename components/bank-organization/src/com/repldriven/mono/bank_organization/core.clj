@@ -14,7 +14,8 @@
 
     [com.repldriven.mono.error.interface :as error :refer [let-nom>]]))
 
-(def ^:private api-key-response-keys [:id :key-prefix :name :created-at])
+(def ^:private api-key-response-keys
+  [:api-key-id :key-prefix :name :created-at])
 
 (def ^:private org-type->party-type
   {:organization-type-internal :party-type-internal
@@ -76,7 +77,7 @@
   [txn org key-secret]
   (let [org-id (:organization-id org)]
     (let-nom>
-      [parties (party/get-parties txn org-id)
+      [{:keys [parties]} (party/get-parties txn org-id)
        accounts (cash-accounts/get-accounts txn org-id)
        enriched (enrich-accounts txn (:accounts accounts))
        api-keys (bank-api-key/get-api-keys txn org-id)]
@@ -156,8 +157,7 @@
                   domain/allowed-payment-address-schemes
                   :balance-products (org-type->balance-products org-type)})
         product-id (get-in product [:version :product-id])
-        version-id (get-in product [:version :version-id])
-        _ (products/publish txn org-id product-id version-id)
+        _ (products/publish txn org-id product-id)
 
         _ (open-accounts txn
                          org-id
