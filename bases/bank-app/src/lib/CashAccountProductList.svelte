@@ -1,5 +1,5 @@
 <script>
-  import { list_cash_account_products, create_cash_account_product, create_cash_account_product_version, publish_version } from "./api.mjs";
+  import { list_cash_account_products, create_cash_account_product, upsert_cash_account_product_draft, publish_cash_account_product } from "./api.mjs";
   import { time_ago } from "./time.mjs";
   import { onMount } from "svelte";
   import Modal from "./Modal.svelte";
@@ -67,14 +67,6 @@
 
   let publishing = $state({});
 
-  function isLatestVersion(v) {
-    const pid = v["product-id"];
-    const maxVersion = Math.max(
-      ...versions.filter(x => x["product-id"] === pid).map(x => x["version-number"])
-    );
-    return v["version-number"] === maxVersion;
-  }
-
   let reviseModalOpen = $state(false);
   let reviseVersion = $state(null);
   let reviseName = $state("");
@@ -115,7 +107,7 @@
       const schemes = paymentAddressSchemes
         .filter((_, i) => reviseSelectedSchemes[i])
         .map(s => s.scheme);
-      const res = await create_cash_account_product_version(reviseVersion["product-id"], {
+      const res = await upsert_cash_account_product_draft(reviseVersion["product-id"], {
         "name": reviseName,
         "account-type": reviseAccountType,
         "balance-sheet-side": reviseBalanceSheetSide,
@@ -126,7 +118,7 @@
       });
       if (res["http-status"] >= 200 && res["http-status"] < 300) {
         reviseModalOpen = false;
-        showToast?.({ type: "success", message: "Version created" });
+        showToast?.({ type: "success", message: "Draft saved" });
         await load();
       } else {
         showToast?.({ type: "warning", message: errorDetail(res.body) ?? `HTTP ${res["http-status"]}` });
@@ -201,7 +193,7 @@
     const vid = version["version-id"];
     publishing[vid] = true;
     try {
-      await publish_version(version["product-id"], vid);
+      await publish_cash_account_product(version["product-id"]);
       await load();
     } finally {
       delete publishing[vid];
@@ -392,7 +384,7 @@
                 >
                   {publishing[v["version-id"]] ? "Publishing..." : "Publish"}
                 </button>
-              {:else if v.status === "published" && isLatestVersion(v)}
+              {:else if v.status === "published"}
                 <button class="action-btn" onclick={() => openReviseModal(v)}>
                   Revise
                 </button>

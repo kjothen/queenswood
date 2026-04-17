@@ -2,6 +2,12 @@
   (:require
     [com.repldriven.mono.bank-api.schema :refer [examples-registry]]))
 
+(def ProductNotFound
+  {:value {:title "REJECTED"
+           :type "cash-account-products/not-found"
+           :status 404
+           :detail "Product not found"}})
+
 (def VersionNotFound
   {:value {:title "REJECTED"
            :type "cash-account-products/version-not-found"
@@ -14,14 +20,15 @@
            :status 404
            :detail "No published version found"}})
 
-(def NotDraft
+(def NoDraft
   {:value {:title "REJECTED"
-           :type "cash-account-products/not-draft"
+           :type "cash-account-products/no-draft"
            :status 409
-           :detail "Only draft versions can be published"}})
+           :detail "No draft to publish"}})
 
 (def registry
-  (examples-registry [#'VersionNotFound #'NoPublishedVersion #'NotDraft]))
+  (examples-registry [#'ProductNotFound #'VersionNotFound #'NoPublishedVersion
+                      #'NoDraft]))
 
 (def CashAccountProductVersion
   {:organization-id "org_01JMABC"
@@ -44,17 +51,6 @@
 (def CashAccountProductVersionList {:versions [CashAccountProductVersion]})
 
 (def DraftCashAccountProductRequest
-  {:name "Current Account"
-   :account-type :current
-   :balance-sheet-side :liability
-   :allowed-currencies ["GBP" "EUR"]
-   :balance-products [{:balance-type :default :balance-status :posted}]
-   :allowed-payment-address-schemes [:scan]
-   :interest-rate-bps 0
-   :valid-from "2025-01-01"
-   :valid-to "2025-12-31"})
-
-(def DraftCashAccountProductVersionRequest
   {:name "Current Account"
    :account-type :current
    :balance-sheet-side :liability

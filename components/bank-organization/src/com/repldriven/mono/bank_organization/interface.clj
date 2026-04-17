@@ -11,19 +11,11 @@
   [txn org-name org-type tier-type currencies]
   (core/new-organization txn org-name org-type tier-type currencies))
 
-(defn get-organization-by-id
+(defn get-organization
   "Loads an organization by id. Returns the organization
   map or rejection anomaly if not found."
   [txn org-id]
-  (store/get-organization-by-id txn org-id))
-
-(defn get-organization
-  "Retrieves an organization enriched with party, accounts (with balances),
-  and api-key. Returns map or anomaly."
-  ([txn org]
-   (core/get-organization txn org))
-  ([txn org key-secret]
-   (core/get-organization txn org key-secret)))
+  (store/get-organization txn org-id))
 
 (defn get-organizations
   "Lists organizations enriched with party, accounts (with balances),

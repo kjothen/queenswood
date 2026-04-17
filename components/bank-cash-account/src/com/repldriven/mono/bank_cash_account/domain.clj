@@ -4,6 +4,8 @@
     [com.repldriven.mono.bank-cash-account.restriction
      :as restriction]
 
+    [com.repldriven.mono.bank-schema.interface :as schema]
+
     [com.repldriven.mono.encryption.interface :as encryption]
     [com.repldriven.mono.error.interface :as error :refer [let-nom>]]))
 
@@ -48,9 +50,10 @@
         {:keys [version-id account-type]} product]
     (let-nom>
       [_ (restriction/policy-account-opening tier)
+       _ (restriction/limit-max-accounts tier account-type account-count)
+       _ (restriction/valid-product? product)
        _ (restriction/valid-currency? currency product)
        _ (restriction/valid-party? party)
-       _ (restriction/limit-max-accounts tier account-type account-count)
        payment-addresses (new-addresses product address-fountain-fn)]
       (let [now (System/currentTimeMillis)
             bban (some (fn [{:keys [identifier]}]
@@ -70,6 +73,20 @@
          :bban bban
          :created-at now
          :updated-at now}))))
+
+(defn opening-balances
+  "Builds the per-balance data list for a newly-opened
+  account from the product's balance-products."
+  [account currency product]
+  (let [{:keys [account-id account-type]} account
+        {:keys [balance-products]} product]
+    (mapv (fn [{:keys [balance-type balance-status]}]
+            {:account-id account-id
+             :account-type (schema/account-type->int account-type)
+             :balance-type balance-type
+             :balance-status balance-status
+             :currency currency})
+          balance-products)))
 
 (defn opened-account
   [account]

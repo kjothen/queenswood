@@ -6,6 +6,7 @@
     [com.repldriven.mono.bank-idv.interface :as idv]
     [com.repldriven.mono.bank-schema.interface :as schema]
 
+    [com.repldriven.mono.error.interface :refer [let-nom>]]
     [com.repldriven.mono.fdb.interface :as fdb]))
 
 (defn idv-changelog-handler
@@ -14,19 +15,20 @@
   [record-store]
   (fn [ctx changelog-bytes]
     (let [changelog (schema/pb->IdvChangelog changelog-bytes)
-          {:keys [organization-id verification-id status-after]} changelog]
-      (when (= :idv-status-accepted status-after)
-        (let [txn (fdb/ctx->txn ctx record-store)
-              idv-record (idv/find-idv txn organization-id verification-id)]
-          (when idv-record
-            (let [party-id (:party-id idv-record)
-                  party (store/find-party txn organization-id party-id)]
-              (when (and party (= :party-status-pending (:status party)))
-                (let [activated (domain/activate-party party)]
-                  (store/save-party txn
-                                    activated
-                                    {:organization-id organization-id
-                                     :party-id party-id
-                                     :status-before :party-status-pending
-                                     :status-after
-                                     :party-status-active}))))))))))
+          {:keys [organization-id verification-id] status :status-after}
+          changelog]
+      (when (= :idv-status-accepted status)
+        (let-nom> [txn (fdb/ctx->txn ctx record-store)
+                   idv (idv/get-idv txn organization-id verification-id)
+                   {:keys [party-id]} idv
+                   party (store/get-party txn organization-id party-id)]
+          (when (= :party-status-pending (:status party))
+            (let [activated-party (domain/activate-party party)]
+              (store/save-party txn
+                                activated-party
+                                {:organization-id organization-id
+                                 :party-id party-id
+                                 :status-before (:status party)
+                                 :status-after (:status
+                                                activated-party)}))))))))
+

@@ -3,7 +3,7 @@
     [com.repldriven.mono.bank-api.schema :refer [examples-registry]]))
 
 (def ApiKey
-  {:id "sk_01JMABC123"
+  {:api-key-id "sk_01JMABC123"
    :name "default"
    :key-prefix "sk_live_abc1"
    :created-at "2025-01-01T00:00:00Z"})

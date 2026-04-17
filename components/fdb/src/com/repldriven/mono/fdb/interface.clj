@@ -2,6 +2,7 @@
   (:require
     com.repldriven.mono.fdb.system.core
     [com.repldriven.mono.fdb.changelog :as changelog]
+    [com.repldriven.mono.fdb.check :as check]
     [com.repldriven.mono.fdb.counter :as counter]
     [com.repldriven.mono.fdb.kv :as kv]
     [com.repldriven.mono.fdb.record :as record]))
@@ -24,39 +25,39 @@
 
 (defn save-record [store record] (record/save store record))
 
-(defn load-records
-  [store record-type field value]
-  (record/query store record-type field value))
-
 (defn query-records
-  [store record-type field value]
-  (record/query store record-type field value))
-
-(defn query-records-compound
-  [store record-type filters]
-  (record/query-compound store record-type filters))
+  "Queries an open FDBRecordStore where field equals value.
+  Returns a vector of serialized byte arrays. opts supports
+  :index to pin the planner to a named index."
+  ([store record-type field value]
+   (record/query store record-type field value))
+  ([store record-type field value opts]
+   (record/query store record-type field value opts)))
 
 (defn query-record
   "Queries an open FDBRecordStore where field equals value,
   capping the planner at one result. Returns the first
-  matching record bytes, or nil."
-  [store record-type field value]
-  (record/query-one store record-type field value))
+  matching record bytes, or nil. opts supports :index to
+  pin the planner to a named index."
+  ([store record-type field value]
+   (record/query-one store record-type field value))
+  ([store record-type field value opts]
+   (record/query-one store record-type field value opts)))
 
 (defn query-record-compound
   "Queries an open FDBRecordStore where all [field value]
   pairs match, capping the planner at one result. Returns
-  the first matching record bytes, or nil."
-  [store record-type filters]
-  (record/query-one-compound store record-type filters))
+  the first matching record bytes, or nil. opts supports
+  :index to pin the planner to a named index."
+  ([store record-type filters]
+   (record/query-one-compound store record-type filters))
+  ([store record-type filters opts]
+   (record/query-one-compound store record-type filters opts)))
 
 (defn count-records
   [store index-name key]
   (record/count-records store index-name key))
 
-(defn query-repeated-records
-  [store record-type field value]
-  (record/query-repeated store record-type field value))
 
 (defn scan-records [store opts] (record/scan store opts))
 
@@ -103,7 +104,6 @@
                           (swap! cache assoc store-name s)
                           s))))))
 
-(defn txn?
-  "True if x is a Txn."
-  [x]
-  (instance? com.repldriven.mono.fdb.record.Txn x))
+(def txn? check/txn?)
+
+(def uniqueness-violation? check/uniqueness-violation?)

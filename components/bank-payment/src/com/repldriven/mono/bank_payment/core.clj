@@ -38,7 +38,7 @@
   the scheme payment channel."
   [config payment data]
   (let [{:keys [bus schemas scheme-payment-command-channel]} config
-        {:keys [payment-id end-to-end-id]} payment
+        {:keys [payment-id]} payment
         {:keys [organization-id debtor-account-id
                 creditor-bban creditor-name
                 currency amount reference]}
@@ -53,12 +53,12 @@
     (when (and bus schema scheme-payment-command-channel)
       (let [payload (avro/serialize schema
                                     {:payment-id payment-id
-                                     :end-to-end-id end-to-end-id
+                                     :end-to-end-id payment-id
                                      :debtor-bban bban
                                      :creditor-bban creditor-bban
                                      :creditor-name creditor-name
                                      :amount amount
-                                     :currency (or currency "GBP")
+                                     :currency currency
                                      :reference reference})]
         (if (error/anomaly? payload)
           (log/error "Failed to serialize submit-payment"
@@ -80,21 +80,19 @@
   the payment map or anomaly."
   [config data]
   (let [{:keys [internal-account-id]} config
-        end-to-end-id (str (utility/uuidv7))
         result (store/transact
                 config
                 (fn [txn]
                   (let-nom>
-                    [txn-data (domain/outbound-payment->transaction
-                               data
-                               internal-account-id)
-                     result (transactions/record-transaction txn txn-data)
-                     {:keys [transaction-id legs]} result
+                    [transaction (domain/outbound-payment->transaction
+                                  data
+                                  internal-account-id)
+                     transaction+legs (transactions/record-transaction
+                                       txn
+                                       transaction)
+                     {:keys [transaction-id legs]} transaction+legs
                      _ (balances/apply-legs txn legs)
-                     payment (domain/new-outbound-payment
-                              data
-                              end-to-end-id
-                              transaction-id)
+                     payment (domain/new-outbound-payment data transaction-id)
                      _ (store/save-outbound-payment txn payment)]
                     payment)))]
     (when-not (error/anomaly? result)

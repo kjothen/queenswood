@@ -5,6 +5,7 @@
     [com.repldriven.mono.bank-organization.interface :as organizations]
 
     [com.repldriven.mono.bank-tier.interface]
+    [com.repldriven.mono.encryption.interface :as encryption]
     [com.repldriven.mono.fdb.interface]
     [com.repldriven.mono.system.interface :as system]
     [com.repldriven.mono.testcontainers.interface]
@@ -22,7 +23,7 @@
   (with-test-system
    [sys "classpath:bank-api-key/application-test.yml"]
    (let [config (fdb-config sys)]
-     (testing "finds key by hash"
+     (testing "finds key by hash computed from key-secret"
        (nom-test> [result (organizations/new-organization
                            config
                            "Hash Org" :organization-type-customer
@@ -30,12 +31,11 @@
                    org-id (get-in result
                                   [:organization
                                    :organization-id])
-                   keys (SUT/get-api-keys config org-id)
-                   api-key (first keys)
-                   found (SUT/get-api-key config (:key-hash api-key))
+                   key-hash (encryption/hash-token (:key-secret result))
+                   found (SUT/get-api-key config key-hash)
                    _ (is (some? found))
-                   _ (is (= (:id api-key) (:id found)))
-                   _ (is (= org-id (:organization-id found)))])))))
+                   _ (is (= org-id (:organization-id found)))
+                   _ (is (nil? (:key-hash found)))])))))
 
 (deftest get-api-keys-test
   (with-test-system
@@ -52,4 +52,5 @@
                    k (first keys)
                    _ (is (= org-id (:organization-id k)))
                    _ (is (= "default" (:name k)))
-                   _ (is (string? (:key-prefix k)))])))))
+                   _ (is (string? (:key-prefix k)))
+                   _ (is (nil? (:key-hash k)))])))))

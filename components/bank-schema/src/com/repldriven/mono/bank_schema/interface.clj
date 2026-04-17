@@ -203,8 +203,38 @@
   (OrganizationChangelogProto$OrganizationChangelog/parseFrom
    (OrganizationChangelog->pb m)))
 
-(def pb->Tier tiers/pb->Tier)
-(defn Tier->pb [m] (proto/->pb (tiers/new-Tier m)))
+(defn- unwrap-limit-kind
+  "Unwraps the protojure LimitKind oneof — the record's
+  :kind field holds the variant map (e.g.
+  {:account-type :account-type-settlement}). Callers see
+  the variant directly."
+  [limit]
+  (update limit
+          :kind
+          (fn [kind-record]
+            (when kind-record
+              (:kind kind-record)))))
+
+(defn- wrap-limit-kind
+  "Wraps a flat kind map into the {:kind ...} shape that
+  the protojure LimitKind oneof expects."
+  [limit]
+  (update limit
+          :kind
+          (fn [kind]
+            (when kind
+              {:kind kind}))))
+
+(defn pb->Tier
+  [input]
+  (let [tier (tiers/pb->Tier input)]
+    (update tier :limits (fn [limits] (mapv unwrap-limit-kind limits)))))
+
+(defn Tier->pb
+  [m]
+  (let [tier (update m :limits (fn [limits] (mapv wrap-limit-kind limits)))]
+    (proto/->pb (tiers/new-Tier tier))))
+
 (defn Tier->java
   [m]
   (TierProto$Tier/parseFrom (Tier->pb m)))

@@ -30,28 +30,20 @@
    :idv/save
    "Failed to save IDV"))
 
-(defn find-idv
-  "Loads an IDV by composite PK if it exists. Returns the
-  IDV map, nil, or anomaly on I/O failure. For existence
-  probes (e.g. watcher handlers)."
-  [txn organization-id verification-id]
-  (fdb/transact
-   txn
-   (fn [txn]
-     (some-> (fdb/load-record (fdb/open txn store-name)
-                              organization-id
-                              verification-id)
-             schema/pb->Idv))
-   :idv/find
-   "Failed to load IDV"))
-
 (defn get-idv
   "Loads an IDV by composite PK. Returns the IDV map or
   rejection anomaly if not found."
   [txn organization-id verification-id]
-  (let-nom> [idv (find-idv txn organization-id verification-id)]
-    (or idv
-        (error/reject :idv/not-found
-                      {:message "IDV not found"
-                       :organization-id organization-id
-                       :verification-id verification-id}))))
+  (fdb/transact
+   txn
+   (fn [txn]
+     (if-let [record (fdb/load-record (fdb/open txn store-name)
+                                      organization-id
+                                      verification-id)]
+       (schema/pb->Idv record)
+       (error/reject :idv/not-found
+                     {:message "IDV not found"
+                      :organization-id organization-id
+                      :verification-id verification-id})))
+   :idv/get
+   "Failed to load IDV"))

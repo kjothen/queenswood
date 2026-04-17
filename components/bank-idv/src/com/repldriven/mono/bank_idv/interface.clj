@@ -4,8 +4,8 @@
 
     [com.repldriven.mono.bank-idv.store :as store]))
 
-(defn find-idv
-  "Loads an IDV by composite PK if it exists. Returns the
-  IDV map, nil, or anomaly on I/O failure."
+(defn get-idv
+  "Loads an IDV by composite PK. Returns the
+  idv or anomaly if missing/failure."
   [txn organization-id verification-id]
-  (store/find-idv txn organization-id verification-id))
+  (store/get-idv txn organization-id verification-id))

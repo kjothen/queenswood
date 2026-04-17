@@ -6,9 +6,9 @@
   [txn org-id data]
   (core/new-product txn org-id data))
 
-(defn new-version
+(defn upsert-draft
   [txn org-id product-id data]
-  (core/new-version txn org-id product-id data))
+  (core/upsert-draft txn org-id product-id data))
 
 (defn get-version
   [txn org-id product-id version-id]
@@ -18,10 +18,18 @@
   ([txn org-id] (core/get-versions txn org-id))
   ([txn org-id product-id] (core/get-versions txn org-id product-id)))
 
-(defn get-published
+(defn get-published-version
   [txn org-id product-id]
-  (core/get-published txn org-id product-id))
+  (core/get-published-version txn org-id product-id))
+
+(defn get-latest-version
+  [txn org-id product-id]
+  (core/get-latest-version txn org-id product-id))
+
+(defn get-products
+  [txn org-id]
+  (core/get-products txn org-id))
 
 (defn publish
-  [txn org-id product-id version-id]
-  (core/publish txn org-id product-id version-id))
+  [txn org-id product-id]
+  (core/publish txn org-id product-id))

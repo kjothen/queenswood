@@ -4,8 +4,6 @@ _record-types: !strs &record-types
     indexes:
       - name: ApiKey_by_org
         field: organization_id
-      - name: ApiKey_by_hash
-        field: key_hash
   balances:
     record-type: Balance
     primary-key: [account_id, balance_type, currency, balance_status]
@@ -13,21 +11,16 @@ _record-types: !strs &record-types
   cash-account-product-versions:
     record-type: CashAccountProductVersion
     primary-key: [organization_id, product_id, version_id]
-    indexes:
-      - name: CashAccountProductVersion_by_org
-        field: organization_id
   cash-accounts:
     record-type: CashAccount
     primary-key: [organization_id, account_id]
     indexes:
-      - name: org_party_id_idx
-        fields: [organization_id, party_id]
-      - name: org_account_type_idx
+      - name: CashAccount_by_org_account_type
         fields: [organization_id, account_type]
-      - name: org_account_type_count
-        fields: [organization_id, account_type]
+      - name: CashAccount_count_by_org_party_account_type
+        fields: [organization_id, party_id, account_type]
         type: count
-      - name: bban_idx
+      - name: CashAccount_by_bban
         field: bban
   idvs:
     record-type: Idv
@@ -58,18 +51,12 @@ _record-types: !strs &record-types
   inbound-payments:
     record-type: InboundPayment
     indexes:
-      - name: scheme_transaction_id_idx
+      - name: InboundPayment_by_scheme_transaction_id
         field: scheme_transaction_id
+        unique: true
   outbound-payments:
     record-type: OutboundPayment
-    indexes:
-      - name: OutboundPayment_by_idempotency_key
-        field: idempotency_key
-        unique: true
-      - name: OutboundPayment_by_end_to_end_id
-        field: end_to_end_id
-      - name: OutboundPayment_by_debtor_account_id
-        field: debtor_account_id
+    indexes: []
   internal-payments:
     record-type: InternalPayment
     indexes:
@@ -81,10 +68,8 @@ _record-types: !strs &record-types
     indexes: []
   transaction-legs:
     record-type: TransactionLeg
-    primary-key: [transaction_id, leg_id]
-    indexes:
-      - name: TransactionLeg_by_account
-        field: account_id
+    primary-key: [account_id, transaction_id, leg_id]
+    indexes: []
   transactions:
     record-type: Transaction
     indexes:

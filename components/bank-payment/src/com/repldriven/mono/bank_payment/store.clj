@@ -46,6 +46,32 @@
    :payment/save-inbound-payment
    "Failed to save inbound payment"))
 
+(defn get-internal-payment
+  "Loads an internal payment by payment-id. Returns the
+  payment map or nil."
+  [txn payment-id]
+  (fdb/transact
+   txn
+   (fn [txn]
+     (some-> (fdb/load-record (fdb/open txn internal-payments-store-name)
+                              payment-id)
+             schema/pb->InternalPayment))
+   :payment/get-internal-payment
+   "Failed to get internal payment"))
+
+(defn get-outbound-payment
+  "Loads an outbound payment by payment-id. Returns the
+  payment map or nil."
+  [txn payment-id]
+  (fdb/transact
+   txn
+   (fn [txn]
+     (some-> (fdb/load-record (fdb/open txn outbound-payments-store-name)
+                              payment-id)
+             schema/pb->OutboundPayment))
+   :payment/get-outbound-payment
+   "Failed to get outbound payment"))
+
 (defn get-inbound-payment
   "Returns the inbound payment matching the given
   scheme-transaction-id, or nil."
@@ -57,23 +83,9 @@
               (fdb/open txn inbound-payments-store-name)
               "InboundPayment"
               "scheme_transaction_id"
-              scheme-transaction-id)
+              scheme-transaction-id
+              {:index "InboundPayment_by_scheme_transaction_id"})
              schema/pb->InboundPayment))
    :payment/get-inbound-payment
    "Failed to get inbound payment"))
 
-(defn get-outbound-payment
-  "Returns the outbound payment matching the given
-  end-to-end-id, or nil."
-  [txn end-to-end-id]
-  (fdb/transact
-   txn
-   (fn [txn]
-     (some-> (fdb/query-record
-              (fdb/open txn outbound-payments-store-name)
-              "OutboundPayment"
-              "end_to_end_id"
-              end-to-end-id)
-             schema/pb->OutboundPayment))
-   :payment/get-outbound-payment
-   "Failed to get outbound payment"))

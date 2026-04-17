@@ -5,7 +5,6 @@
   "fields": [
     {"name": "payment_id",          "type": "string"},
     {"name": "idempotency_key",     "type": "string"},
-    {"name": "end_to_end_id",       "type": "string"},
     {"name": "scheme",              "type": "string"},
     {"name": "debtor_account_id",   "type": "string"},
     {"name": "creditor_bban",       "type": "string"},

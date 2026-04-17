@@ -47,7 +47,6 @@
   [:map {:json-schema/example examples/OutboundPayment}
    [:payment-id string?]
    [:idempotency-key string?]
-   [:end-to-end-id string?]
    [:scheme string?]
    [:debtor-account-id string?]
    [:creditor-bban string?]

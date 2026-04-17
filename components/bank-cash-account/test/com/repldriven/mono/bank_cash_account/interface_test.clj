@@ -287,9 +287,11 @@
       (is (error/rejection? result))
       (is (= :cash-account/not-found (error/kind result))))))
 
-(defn- test-open-multiple-accounts
+(defn- test-open-multiple-accounts-per-party
   [proc schemas config]
-  (testing "open-cash-account allows multiple accounts per customer"
+  (testing
+    "open-cash-account allows multiple accounts for
+  the same party+type (max-accounts is per-party)"
     (let [party-id "cust-multi"
           payload {:organization-id test-org-id
                    :party-id party-id
@@ -311,10 +313,51 @@
                   a2 (decode-payload schemas "cash-account" r2)
                   _ (is (not= (:account-id a1) (:account-id a2)))]))))
 
-(defn- test-open-account-no-published-version
+(defn- test-open-accounts-independent-per-party
+  [proc schemas config]
+  (testing
+    "account counts are tracked independently per
+  party \u2014 one party's accounts don't count against another's"
+    (let [party-a "cust-independent-a"
+          party-b "cust-independent-b"
+          payload {:organization-id test-org-id
+                   :currency "USD"
+                   :product-id test-product-id}]
+      (seed-organization config)
+      (seed-active-party config party-a)
+      (seed-active-party config party-b)
+      (nom-test> [a1 (send-command proc
+                                   schemas
+                                   "open-cash-account"
+                                   (assoc payload
+                                          :party-id party-a
+                                          :name "A1"))
+                  _ (is (= "ACCEPTED" (:status a1)))
+                  b1 (send-command proc
+                                   schemas
+                                   "open-cash-account"
+                                   (assoc payload
+                                          :party-id party-b
+                                          :name "B1"))
+                  _ (is (= "ACCEPTED" (:status b1)))
+                  b2 (send-command proc
+                                   schemas
+                                   "open-cash-account"
+                                   (assoc payload
+                                          :party-id party-b
+                                          :name "B2"))
+                  _ (is (= "ACCEPTED" (:status b2)))
+                  da1 (decode-payload schemas "cash-account" a1)
+                  db1 (decode-payload schemas "cash-account" b1)
+                  db2 (decode-payload schemas "cash-account" b2)
+                  _ (is (= party-a (:party-id da1)))
+                  _ (is (= party-b (:party-id db1)))
+                  _ (is (= party-b (:party-id db2)))]))))
+
+(defn- test-open-account-unknown-product
   [proc schemas]
-  (testing "open-cash-account rejects when no published version
-  exists"
+  (testing "open-cash-account rejects when the product-id
+  has no versions"
     (let [result (send-command proc
                                schemas
                                "open-cash-account"
@@ -324,7 +367,7 @@
                                 :currency "USD"
                                 :product-id "prd_no_versions"})]
       (is (error/rejection? result))
-      (is (= :cash-account-product/not-published (error/kind result))))))
+      (is (= :cash-account-product/not-found (error/kind result))))))
 
 (defn- test-open-account-invalid-currency
   [proc schemas config]
@@ -386,21 +429,22 @@
       (is (= :cash-account/unknown-command (error/kind result))))))
 
 (deftest process-cash-accounts-test
-  (with-test-system [sys "classpath:bank-cash-account/application-test.yml"]
-                    (let [proc (system/instance sys [:cash-account :processor])
-                          schemas (system/instance sys [:avro :serde])
-                          config
-                          {:record-db (system/instance sys [:fdb :record-db])
-                           :record-store (system/instance sys [:fdb :store])}]
-                      (test-open-account proc schemas config)
-                      (test-open-account-party-not-active proc schemas config)
-                      (test-open-account-party-not-found proc schemas)
-                      (test-close-account proc schemas config)
-                      (test-watcher-transitions proc schemas config)
-                      (test-get-account proc schemas config)
-                      (test-close-missing-account proc schemas)
-                      (test-open-multiple-accounts proc schemas config)
-                      (test-open-account-no-published-version proc schemas)
-                      (test-open-account-invalid-currency proc schemas config)
-                      (test-open-account-no-payment-schemes proc schemas config)
-                      (test-unknown-command proc schemas))))
+  (with-test-system
+   [sys "classpath:bank-cash-account/application-test.yml"]
+   (let [proc (system/instance sys [:cash-account :processor])
+         schemas (system/instance sys [:avro :serde])
+         config {:record-db (system/instance sys [:fdb :record-db])
+                 :record-store (system/instance sys [:fdb :store])}]
+     (test-open-account proc schemas config)
+     (test-open-account-party-not-active proc schemas config)
+     (test-open-account-party-not-found proc schemas)
+     (test-close-account proc schemas config)
+     (test-watcher-transitions proc schemas config)
+     (test-get-account proc schemas config)
+     (test-close-missing-account proc schemas)
+     (test-open-multiple-accounts-per-party proc schemas config)
+     (test-open-accounts-independent-per-party proc schemas config)
+     (test-open-account-unknown-product proc schemas)
+     (test-open-account-invalid-currency proc schemas config)
+     (test-open-account-no-payment-schemes proc schemas config)
+     (test-unknown-command proc schemas))))

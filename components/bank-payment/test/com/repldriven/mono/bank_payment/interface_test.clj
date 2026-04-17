@@ -229,7 +229,6 @@
                                  "outbound-payment"
                                  result)
          _ (is (some? (:payment-id decoded)))
-         _ (is (some? (:end-to-end-id decoded)))
          _ (is (= "pmt-ob-idem-001"
                   (:idempotency-key decoded)))
          _ (is (= customer-account-id
@@ -295,8 +294,7 @@
                                  "outbound-payment"
                                  submit)
          pending-payment-id (:payment-id pending)
-         end-to-end-id (:end-to-end-id pending)
-         _ (is (some? end-to-end-id))
+         _ (is (some? pending-payment-id))
          _ (is (= :outbound-payment-status-pending
                   (:payment-status pending)))
          result (send-event
@@ -304,7 +302,7 @@
                  schemas
                  "transaction-settled"
                  {:scheme-transaction-id "stx-ob-100"
-                  :end-to-end-id end-to-end-id
+                  :end-to-end-id pending-payment-id
                   :scheme "FPS"
                   :debit-credit-code :debit-credit-code-debit
                   :amount 250
@@ -322,7 +320,7 @@
                   schemas
                   "transaction-settled"
                   {:scheme-transaction-id "stx-ob-100"
-                   :end-to-end-id end-to-end-id
+                   :end-to-end-id pending-payment-id
                    :scheme "FPS"
                    :debit-credit-code :debit-credit-code-debit
                    :amount 250

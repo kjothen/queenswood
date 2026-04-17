@@ -57,22 +57,8 @@
   [:map {:json-schema/example examples/CashAccountProductVersionList}
    [:versions [:vector [:ref "CashAccountProductVersion"]]]])
 
-(def DraftCashAccountProductVersionRequest
-  [:map {:json-schema/example examples/DraftCashAccountProductVersionRequest}
-   [:name string?]
-   [:account-type [:ref "AccountType"]]
-   [:balance-sheet-side [:ref "BalanceSheetSide"]]
-   [:allowed-currencies {:optional true} [:maybe [:vector [:ref "Currency"]]]]
-   [:balance-products {:optional true}
-    [:maybe [:vector [:ref "BalanceProductRequest"]]]]
-   [:allowed-payment-address-schemes {:optional true}
-    [:maybe [:vector [:ref "PaymentAddressScheme"]]]]
-   [:interest-rate-bps {:optional true} [:maybe int?]]
-   [:valid-from {:optional true} [:maybe [:ref "Timestamp"]]]
-   [:valid-to {:optional true} [:maybe [:ref "Timestamp"]]]])
-
 (def registry
-  (components-registry
-   [#'AccountType #'BalanceSheetSide #'PaymentAddressScheme #'VersionStatus
-    #'DraftCashAccountProductRequest #'CashAccountProductVersion
-    #'CashAccountProductVersionList #'DraftCashAccountProductVersionRequest]))
+  (components-registry [#'AccountType #'BalanceSheetSide #'PaymentAddressScheme
+                        #'VersionStatus #'DraftCashAccountProductRequest
+                        #'CashAccountProductVersion
+                        #'CashAccountProductVersionList]))

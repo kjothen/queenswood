@@ -43,7 +43,7 @@
 (defn get-transactions
   "Returns transaction legs for an account, enriched with
   the parent transaction's type, status, and reference.
-  Queries the TransactionLeg_by_account index."
+  Prefix-scans the legs store by account-id."
   [txn account-id]
   (fdb/transact
    txn
@@ -51,10 +51,10 @@
      (let [leg-store (fdb/open txn legs-store-name)
            txn-store (fdb/open txn store-name)
            legs (mapv schema/pb->TransactionLeg
-                      (fdb/query-records leg-store
-                                         "TransactionLeg"
-                                         "account_id"
-                                         account-id))]
+                      (:records (fdb/scan-records
+                                 leg-store
+                                 {:prefix [account-id]
+                                  :limit 1000})))]
        (mapv (fn [leg]
                (let [txn-record (fdb/load-record txn-store
                                                  (:transaction-id leg))

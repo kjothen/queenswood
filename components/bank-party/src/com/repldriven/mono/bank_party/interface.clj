@@ -21,7 +21,10 @@
   (store/get-party txn org-id party-id))
 
 (defn get-parties
-  "Lists parties for an organization. Returns sequence of
-  party maps or anomaly."
-  [txn org-id]
-  (store/get-parties txn org-id))
+  "Lists parties for an organization. Returns
+  {:parties [maps] :before id|nil :after id|nil} or
+  anomaly. opts supports :after, :before, :limit."
+  ([txn org-id]
+   (store/get-parties txn org-id))
+  ([txn org-id opts]
+   (store/get-parties txn org-id opts)))

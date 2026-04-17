@@ -15,7 +15,7 @@
         key-prefix
         (subs key-secret 0 (min api-key-display-prefix-len (count key-secret)))
         now (System/currentTimeMillis)]
-    {:api-key {:id (encryption/generate-id "sk")
+    {:api-key {:api-key-id (encryption/generate-id "sk")
                :organization-id org-id
                :key-hash key-hash
                :key-prefix key-prefix

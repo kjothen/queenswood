@@ -48,7 +48,31 @@
    [sys "classpath:bank-cash-account-product/application-test.yml"]
    (let [config (fdb-config sys)
          org-id "org_test_02"]
-     (testing "create additional version after publishing"
+     (testing "upsert-draft updates the existing draft in place"
+       (nom-test> [result (SUT/new-product config
+                                           org-id
+                                           {:name "Draft v1"
+                                            :account-type :account-type-current
+                                            :balance-sheet-side
+                                            :balance-sheet-side-asset})
+                   product-id (get-in result [:version :product-id])
+                   v1-id (get-in result [:version :version-id])
+                   updated (SUT/upsert-draft
+                            config
+                            org-id
+                            product-id
+                            {:name "Draft v1 renamed"
+                             :account-type :account-type-current
+                             :balance-sheet-side :balance-sheet-side-asset
+                             :valid-from "2025-02-01"})
+                   v (:version updated)
+                   _ (is (= v1-id (:version-id v)))
+                   _ (is (= 1 (:version-number v)))
+                   _ (is (= "Draft v1 renamed" (:name v)))
+                   _ (is (= "2025-02-01" (:valid-from v)))
+                   _ (is (= :cash-account-product-version-status-draft
+                            (:status v)))]))
+     (testing "upsert-draft after publish creates v2 as a new draft"
        (nom-test> [result (SUT/new-product
                            config
                            org-id
@@ -57,8 +81,8 @@
                             :balance-sheet-side :balance-sheet-side-liability})
                    product-id (get-in result [:version :product-id])
                    v1-id (get-in result [:version :version-id])
-                   _ (SUT/publish config org-id product-id v1-id)
-                   v2-result (SUT/new-version
+                   _ (SUT/publish config org-id product-id)
+                   v2-result (SUT/upsert-draft
                               config
                               org-id
                               product-id
@@ -68,29 +92,10 @@
                                :valid-from "2025-01-01"})
                    v2 (:version v2-result)
                    _ (is (= 2 (:version-number v2)))
-                   _ (is (= "Term Deposit" (:name v2)))
+                   _ (is (not= v1-id (:version-id v2)))
                    _ (is (= :cash-account-product-version-status-draft
                             (:status v2)))
                    _ (is (= "2025-01-01" (:valid-from v2)))]))
-     (testing "reject new version when latest is draft"
-       (nom-test> [result (SUT/new-product config
-                                           org-id
-                                           {:name "Draft Guard Test"
-                                            :account-type :account-type-current
-                                            :balance-sheet-side
-                                            :balance-sheet-side-asset})
-                   product-id (get-in result [:version :product-id])
-                   _ (let [rejected (SUT/new-version
-                                     config
-                                     org-id
-                                     product-id
-                                     {:name "Draft Guard Test"
-                                      :account-type :account-type-current
-                                      :balance-sheet-side
-                                      :balance-sheet-side-asset})]
-                       (is (error/anomaly? rejected))
-                       (is (= :cash-account-product/draft-exists
-                              (error/kind rejected))))]))
      (testing "get and list versions"
        (nom-test> [result (SUT/new-product config
                                            org-id
@@ -105,30 +110,68 @@
                    _ (is (= 1 (:version-number loaded)))
                    versions (SUT/get-versions config org-id product-id)
                    _ (is (= 1 (count (:versions versions))))]))
-     (testing "publish version"
+     (testing "publish flips the latest draft to published"
        (nom-test> [result (SUT/new-product config
                                            org-id
                                            {:name "Publish Test"
                                             :account-type :account-type-current
                                             :balance-sheet-side
                                             :balance-sheet-side-asset})
-                   version-id (get-in result [:version :version-id])
                    product-id (get-in result [:version :product-id])
-                   published (SUT/publish config org-id product-id version-id)
+                   published (SUT/publish config org-id product-id)
                    _ (is (= :cash-account-product-version-status-published
                             (:status published)))]))
-     (testing "reject double publish"
+     (testing "publish rejects with :no-draft when latest is published"
        (let [result (SUT/new-product config
                                      org-id
                                      {:name "Double Publish Test"
                                       :account-type :account-type-current
                                       :balance-sheet-side
                                       :balance-sheet-side-asset})
-             version-id (get-in result [:version :version-id])
              product-id (get-in result [:version :product-id])]
-         (SUT/publish config org-id product-id version-id)
-         (is (error/anomaly?
-              (SUT/publish config org-id product-id version-id))))))))
+         (SUT/publish config org-id product-id)
+         (let [rejected (SUT/publish config org-id product-id)]
+           (is (error/rejection? rejected))
+           (is (= :cash-account-product/no-draft (error/kind rejected)))))))))
+
+(deftest get-products-test
+  (with-test-system
+   [sys "classpath:bank-cash-account-product/application-test.yml"]
+   (let [config (fdb-config sys)
+         org-id "org_test_products"]
+     (testing "returns the latest version per product"
+       (nom-test> [p1 (SUT/new-product config
+                                       org-id
+                                       {:name "P1"
+                                        :account-type :account-type-current
+                                        :balance-sheet-side
+                                        :balance-sheet-side-asset})
+                   p1-id (get-in p1 [:version :product-id])
+                   _ (SUT/publish config org-id p1-id)
+                   _ (SUT/upsert-draft config
+                                       org-id
+                                       p1-id
+                                       {:name "P1 v2"
+                                        :account-type :account-type-current
+                                        :balance-sheet-side
+                                        :balance-sheet-side-asset})
+                   p2 (SUT/new-product config
+                                       org-id
+                                       {:name "P2"
+                                        :account-type :account-type-savings
+                                        :balance-sheet-side
+                                        :balance-sheet-side-liability})
+                   p2-id (get-in p2 [:version :product-id])
+                   {:keys [versions]} (SUT/get-products config org-id)
+                   by-product (into {}
+                                    (map (juxt :product-id identity) versions))
+                   _ (is (= 2 (count versions)))
+                   _ (is (= 2 (:version-number (by-product p1-id))))
+                   _ (is (= :cash-account-product-version-status-draft
+                            (:status (by-product p1-id))))
+                   _ (is (= 1 (:version-number (by-product p2-id))))
+                   _ (is (= :cash-account-product-version-status-draft
+                            (:status (by-product p2-id))))])))))
 
 (deftest get-published-version-test
   (with-test-system
@@ -143,7 +186,8 @@
                                             :balance-sheet-side
                                             :balance-sheet-side-asset})
                    product-id (get-in result [:version :product-id])
-                   published (SUT/get-published config org-id product-id)
+                   published
+                   (SUT/get-published-version config org-id product-id)
                    _ (is (nil? published))]))
      (testing "returns published v1, then published v2"
        (nom-test> [result (SUT/new-product config
@@ -153,23 +197,20 @@
                                             :balance-sheet-side
                                             :balance-sheet-side-liability})
                    product-id (get-in result [:version :product-id])
-                   v1-id (get-in result [:version :version-id])
-                   _ (SUT/publish config org-id product-id v1-id)
-                   v2-result (SUT/new-version config
-                                              org-id
-                                              product-id
-                                              {:name "Versioned Product"
-                                               :account-type
-                                               :account-type-current
-                                               :balance-sheet-side
-                                               :balance-sheet-side-liability})
-                   current (SUT/get-published config org-id product-id)
+                   _ (SUT/publish config org-id product-id)
+                   _ (SUT/upsert-draft config
+                                       org-id
+                                       product-id
+                                       {:name "Versioned Product"
+                                        :account-type :account-type-current
+                                        :balance-sheet-side
+                                        :balance-sheet-side-liability})
+                   current (SUT/get-published-version config org-id product-id)
                    _ (is (= 1 (:version-number current)))
                    _ (is (= :cash-account-product-version-status-published
                             (:status current)))
-                   v2-id (get-in v2-result [:version :version-id])
-                   _ (SUT/publish config org-id product-id v2-id)
-                   current2 (SUT/get-published config org-id product-id)
+                   _ (SUT/publish config org-id product-id)
+                   current2 (SUT/get-published-version config org-id product-id)
                    _ (is (= 2 (:version-number current2)))
                    _ (is (= :cash-account-product-version-status-published
                             (:status current2)))])))))

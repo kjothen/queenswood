@@ -40,6 +40,49 @@
             (assoc :allowed-payment-address-schemes
                    allowed-payment-address-schemes))))
 
+(defn update-version
+  "Replaces an existing draft's mutable fields with the
+  given data. Preserves :organization-id, :product-id,
+  :version-id, :version-number, :status and :created-at;
+  bumps :updated-at. Optional fields with no value are
+  omitted."
+  [existing data]
+  (let [{:keys [organization-id product-id version-id
+                version-number status created-at]}
+        existing
+        {:keys [name account-type balance-sheet-side
+                allowed-currencies balance-products
+                allowed-payment-address-schemes
+                interest-rate-bps valid-from valid-to]}
+        data]
+    (cond-> {:organization-id organization-id
+             :product-id product-id
+             :version-id version-id
+             :version-number version-number
+             :status status
+             :name name
+             :account-type account-type
+             :balance-sheet-side balance-sheet-side
+             :interest-rate-bps (or interest-rate-bps 0)
+             :created-at created-at
+             :updated-at (System/currentTimeMillis)}
+
+            (seq allowed-currencies)
+            (assoc :allowed-currencies allowed-currencies)
+
+            valid-from
+            (assoc :valid-from valid-from)
+
+            valid-to
+            (assoc :valid-to valid-to)
+
+            (seq balance-products)
+            (assoc :balance-products balance-products)
+
+            (seq allowed-payment-address-schemes)
+            (assoc :allowed-payment-address-schemes
+                   allowed-payment-address-schemes))))
+
 (defn publish
   "Sets version status to published."
   [version]

@@ -103,11 +103,7 @@
                   [:payment-address-scheme-scan]
                   :interest-rate-bps interest-rate-bps})
         product-id (get-in product [:version :product-id])
-        version-id (get-in product [:version :version-id])
-        _ (products/publish config
-                            org-id
-                            product-id
-                            version-id)
+        _ (products/publish config org-id product-id)
         account
         (cash-accounts/new-account
          config

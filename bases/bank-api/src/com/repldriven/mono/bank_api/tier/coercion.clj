@@ -27,3 +27,15 @@
                           :policy-effect-unknown))
 
 (def policy-effect-enum-schema (:enum-schema policy-effect-enum))
+
+(defn decode-limit-kind
+  [kind]
+  (if (map? kind)
+    (update-vals kind (fn [v] (if (string? v) (keyword v) v)))
+    kind))
+
+(defn encode-limit-kind
+  [kind]
+  (if (map? kind)
+    (update-vals kind (fn [v] (if (keyword? v) (name v) v)))
+    kind))
