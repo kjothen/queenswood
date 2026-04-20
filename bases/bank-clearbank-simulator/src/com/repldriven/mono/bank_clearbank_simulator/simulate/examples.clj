@@ -11,5 +11,15 @@
 
 (def InboundPaymentResponse {:endToEndIdentification "e2e-abc-123"})
 
+(def SimulateInboundCopRequest
+  {:accountDetails {:sortCode "040004" :accountNumber "12345678"}
+   :accountHolderName "Ford Perfect"
+   :accountType "Personal"
+   :requestingInstitution "Galactic Bank Limited"})
+
+(def SimulateInboundCopResponse {:requestId "cop-req-abc-123"})
+
 (def registry
-  (examples-registry [#'InboundPaymentRequest #'InboundPaymentResponse]))
+  (examples-registry [#'InboundPaymentRequest #'InboundPaymentResponse
+                      #'SimulateInboundCopRequest
+                      #'SimulateInboundCopResponse]))

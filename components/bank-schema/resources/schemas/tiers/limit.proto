@@ -29,7 +29,7 @@ enum LimitType {
 message LimitKind {
   oneof kind {
     string currency = 1;
-    com.repldriven.mono.schemas.cash_account_products.AccountType account_type = 2;
+    com.repldriven.mono.schemas.cash_account_products.ProductType product_type = 2;
     com.repldriven.mono.schemas.balances.BalanceType balance_type = 3;
     com.repldriven.mono.schemas.organizations.OrganizationType organization_type = 4;
   }

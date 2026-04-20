@@ -7,43 +7,48 @@
   :test
   {:extra-deps
    {bases/external-test-runner {:local/root "../../bases/external-test-runner"}
-    component/bank-test-resources {:local/root "../../components/bank-test-resources"}
+    component/bank-test-resources {:local/root
+                                   "../../components/bank-test-resources"}
     component/test-resources {:local/root "../../components/test-resources"}
     component/test-schema {:local/root "../../components/test-schema"}
     component/test-system {:local/root "../../components/test-system"}
     component/testcontainers {:local/root "../../components/testcontainers"}}}}
- :deps {component/bank-balance {:local/root "../../components/bank-balance"}
-        component/bank-cash-account-product {:local/root "../../components/bank-cash-account-product"}
-        component/bank-interest {:local/root "../../components/bank-interest"}
-        component/avro {:local/root "../../components/avro"}
-        component/cache {:local/root "../../components/cache"}
-        component/cli {:local/root "../../components/cli"}
-        component/command {:local/root "../../components/command"}
-        component/command-schema {:local/root "../../components/command-schema"}
-        component/event-schema {:local/root "../../components/event-schema"}
-        component/encryption {:local/root "../../components/encryption"}
-        component/env {:local/root "../../components/env"}
-        component/error {:local/root "../../components/error"}
-        component/fdb {:local/root "../../components/fdb"}
-        component/http-client {:local/root "../../components/http-client"}
-        component/log {:local/root "../../components/log"}
-        component/bank-api-key {:local/root "../../components/bank-api-key"}
-        component/bank-cash-account {:local/root "../../components/bank-cash-account"}
-        component/bank-idv {:local/root "../../components/bank-idv"}
-        component/bank-organization {:local/root "../../components/bank-organization"}
-        component/bank-party {:local/root "../../components/bank-party"}
-        component/message-bus {:local/root "../../components/message-bus"}
-        component/processor {:local/root "../../components/processor"}
-        component/pulsar {:local/root "../../components/pulsar"}
-        component/bank-tier {:local/root "../../components/bank-tier"}
-        component/bank-payment {:local/root "../../components/bank-payment"}
-        component/bank-schema {:local/root "../../components/bank-schema"}
-        component/bank-transaction {:local/root "../../components/bank-transaction"}
-        component/server {:local/root "../../components/server"}
-        component/system {:local/root "../../components/system"}
-        component/telemetry {:local/root "../../components/telemetry"}
-        component/utility {:local/root "../../components/utility"}
-        base/bank-api {:local/root "../../bases/bank-api"}
-        org.clojure/clojure {:mvn/version "1.12.4"}
-        org.clojure/core.async {:mvn/version "1.9.865"}}
+ :deps
+ {base/bank-api {:local/root "../../bases/bank-api"}
+  component/bank-api-key {:local/root "../../components/bank-api-key"}
+  component/bank-balance {:local/root "../../components/bank-balance"}
+  component/bank-cash-account {:local/root "../../components/bank-cash-account"}
+  component/bank-cash-account-product
+  {:local/root "../../components/bank-cash-account-product"}
+  component/bank-idv {:local/root "../../components/bank-idv"}
+  component/bank-interest {:local/root "../../components/bank-interest"}
+  component/bank-organization {:local/root "../../components/bank-organization"}
+  component/bank-payee-check {:local/root "../../components/bank-payee-check"}
+  component/bank-payment {:local/root "../../components/bank-payment"}
+  component/bank-schema {:local/root "../../components/bank-schema"}
+  component/bank-tier {:local/root "../../components/bank-tier"}
+  component/bank-transaction {:local/root "../../components/bank-transaction"}
+  component/avro {:local/root "../../components/avro"}
+  component/cache {:local/root "../../components/cache"}
+  component/cli {:local/root "../../components/cli"}
+  component/command {:local/root "../../components/command"}
+  component/command-schema {:local/root "../../components/command-schema"}
+  component/event-schema {:local/root "../../components/event-schema"}
+  component/encryption {:local/root "../../components/encryption"}
+  component/env {:local/root "../../components/env"}
+  component/error {:local/root "../../components/error"}
+  component/fdb {:local/root "../../components/fdb"}
+  component/http-client {:local/root "../../components/http-client"}
+  component/json {:local/root "../../components/json"}
+  component/log {:local/root "../../components/log"}
+  component/bank-party {:local/root "../../components/bank-party"}
+  component/message-bus {:local/root "../../components/message-bus"}
+  component/processor {:local/root "../../components/processor"}
+  component/pulsar {:local/root "../../components/pulsar"}
+  component/server {:local/root "../../components/server"}
+  component/system {:local/root "../../components/system"}
+  component/telemetry {:local/root "../../components/telemetry"}
+  component/utility {:local/root "../../components/utility"}
+  org.clojure/clojure {:mvn/version "1.12.4"}
+  org.clojure/core.async {:mvn/version "1.9.865"}}
  :paths ["resources"]}

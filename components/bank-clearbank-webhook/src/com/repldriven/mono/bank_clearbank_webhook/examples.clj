@@ -40,13 +40,27 @@
 (def AccountInfo
   {:IBAN "GB29NWBK60161331926819"
    :BBAN "NWBK60161331926819"
-   :OwnerName "Jane Doe"
-   :TransactionOwnerName "Jane Doe"
-   :InstitutionName "National Westminster Bank"})
+   :OwnerName "Arthur Dent"
+   :TransactionOwnerName "Arthur Dent"
+   :InstitutionName "Galactic Bank"})
 
 (def CounterpartAccountInfo
   {:IBAN "GB82WEST12345698765432"
    :BBAN "WEST12345698765432"
-   :OwnerName "John Smith"
-   :TransactionOwnerName "John Smith"
-   :InstitutionName "Westpac Banking Corporation"})
+   :OwnerName "Ford Prefect"
+   :TransactionOwnerName "Ford Prefect"
+   :InstitutionName "Sirius Cybernetics Corporation"})
+
+(def InboundCopRequestReceivedWebhook
+  {:Type "InboundCopRequestReceived"
+   :Version 1
+   :Payload {:RequestId "cop-req-abc-123"
+             :RequestingInstitution "Sirius Cybernetics Corporation"
+             :AccountHolderName "Ford Prefect"
+             :ProductType "Personal"
+             :AccountDetails {:SortCode "040004" :AccountNumber "69054500"}
+             :TimestampCreated "2026-04-17T14:23:00Z"}
+   :Nonce 987654321})
+
+(def InboundCopRequestReceivedPayload
+  (:Payload InboundCopRequestReceivedWebhook))

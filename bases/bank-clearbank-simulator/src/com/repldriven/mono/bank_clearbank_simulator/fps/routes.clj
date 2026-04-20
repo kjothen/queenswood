@@ -1,9 +1,9 @@
 (ns com.repldriven.mono.bank-clearbank-simulator.fps.routes
   (:require
-    [com.repldriven.mono.bank-clearbank-simulator.fps.handlers :as handlers]))
+    [com.repldriven.mono.bank-clearbank-simulator.fps.handlers
+     :as handlers]))
 
-(defn routes
-  [config]
+(def routes
   [["/v3/payments"
     {:openapi {:tags ["FPS"]}}
     ["/fps"
@@ -11,4 +11,4 @@
              :openapi {:operationId "SendFasterPayments"}
              :parameters {:body [:ref "FpsPaymentRequest"]}
              :responses {202 {:body [:ref "FpsPaymentResponse"]}}
-             :handler (handlers/payment config)}}]]])
+             :handler (handlers/payment nil)}}]]])

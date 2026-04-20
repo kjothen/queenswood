@@ -140,7 +140,7 @@
                   :amount 1000
                   :currency "GBP"
                   :creditor-bban bban
-                  :debtor-name "Jane Doe"
+                  :debtor-name "Arthur Dent"
                   :reference "Invoice 42"
                   :timestamp-settled (System/currentTimeMillis)})
          _ (is (some? (:payment-id result)))
@@ -153,7 +153,7 @@
          _ (is (= "GBP" (:currency result)))
          _ (is (= 1000 (:amount result)))
          _ (is (some? (:transaction-id result)))
-         _ (is (= "Jane Doe" (:debtor-name result)))
+         _ (is (= "Arthur Dent" (:debtor-name result)))
          _ (is (= "Invoice 42" (:reference result)))
          creditor-balance
          (balances/get-balance config
@@ -181,7 +181,7 @@
                    :amount 1000
                    :currency "GBP"
                    :creditor-bban bban
-                   :debtor-name "Jane Doe"
+                   :debtor-name "Arthur Dent"
                    :reference "Invoice 42"
                    :timestamp-settled (System/currentTimeMillis)})
          _ (is (= (:payment-id result)

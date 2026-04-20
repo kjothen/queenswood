@@ -6,7 +6,7 @@
   "Creates a new CashAccountProductVersion record map in
   draft status."
   [organization-id product-id version-number data]
-  (let [{:keys [name account-type balance-sheet-side
+  (let [{:keys [name product-type balance-sheet-side
                 allowed-currencies balance-products
                 allowed-payment-address-schemes
                 interest-rate-bps valid-from valid-to]}
@@ -18,7 +18,7 @@
              :version-number version-number
              :status :cash-account-product-version-status-draft
              :name name
-             :account-type account-type
+             :product-type product-type
              :balance-sheet-side balance-sheet-side
              :interest-rate-bps (or interest-rate-bps 0)
              :created-at now
@@ -50,7 +50,7 @@
   (let [{:keys [organization-id product-id version-id
                 version-number status created-at]}
         existing
-        {:keys [name account-type balance-sheet-side
+        {:keys [name product-type balance-sheet-side
                 allowed-currencies balance-products
                 allowed-payment-address-schemes
                 interest-rate-bps valid-from valid-to]}
@@ -61,7 +61,7 @@
              :version-number version-number
              :status status
              :name name
-             :account-type account-type
+             :product-type product-type
              :balance-sheet-side balance-sheet-side
              :interest-rate-bps (or interest-rate-bps 0)
              :created-at created-at

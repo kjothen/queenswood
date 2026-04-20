@@ -98,6 +98,7 @@
     components/bank-party {:local/root "components/bank-party"}
     components/bank-tier {:local/root "components/bank-tier"}
     components/bank-schema {:local/root "components/bank-schema"}
+    components/bank-payee-check {:local/root "components/bank-payee-check"}
     components/bank-payment {:local/root "components/bank-payment"}
     components/bank-transaction {:local/root "components/bank-transaction"}
     bases/bank-api {:local/root "bases/bank-api"}

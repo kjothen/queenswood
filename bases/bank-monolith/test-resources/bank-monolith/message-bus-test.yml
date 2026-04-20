@@ -1,0 +1,4 @@
+bus: !system/component
+  system/component-kind: message-bus/bus
+  producers: !system/ref pulsar.message-bus-producers
+  consumers: !system/ref pulsar.message-bus-consumers

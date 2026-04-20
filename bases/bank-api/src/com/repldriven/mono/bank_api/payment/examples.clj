@@ -34,7 +34,7 @@
   {:idempotency-key "idem-002"
    :debtor-account-id "acc_01JMABC"
    :creditor-bban "04000412345678"
-   :creditor-name "Jane Doe"
+   :creditor-name "Arthur Dent"
    :currency "GBP"
    :amount 500
    :scheme "FPS"
@@ -46,7 +46,7 @@
    :scheme "FPS"
    :debtor-account-id "acc_01JMABC"
    :creditor-bban "04000412345678"
-   :creditor-name "Jane Doe"
+   :creditor-name "Arthur Dent"
    :currency "GBP"
    :amount 500
    :payment-status :outbound-payment-status-pending

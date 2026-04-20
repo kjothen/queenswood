@@ -7,13 +7,13 @@ import "schemas/balances/balance.proto";
 
 option java_outer_classname = "CashAccountProductProto";
 
-enum AccountType {
-  ACCOUNT_TYPE_UNKNOWN         = 0;
-  ACCOUNT_TYPE_INTERNAL        = 1;
-  ACCOUNT_TYPE_SETTLEMENT      = 2;
-  ACCOUNT_TYPE_CURRENT         = 3;
-  ACCOUNT_TYPE_SAVINGS         = 4;
-  ACCOUNT_TYPE_TERM_DEPOSIT    = 5;
+enum ProductType {
+  PRODUCT_TYPE_UNKNOWN         = 0;
+  PRODUCT_TYPE_INTERNAL        = 1;
+  PRODUCT_TYPE_SETTLEMENT      = 2;
+  PRODUCT_TYPE_CURRENT         = 3;
+  PRODUCT_TYPE_SAVINGS         = 4;
+  PRODUCT_TYPE_TERM_DEPOSIT    = 5;
 }
 
 enum BalanceSheetSide {
@@ -44,7 +44,7 @@ message CashAccountProductVersion {
   required string version_id = 3;
   optional int32 version_number = 4;
   optional CashAccountProductVersionStatus status = 5;
-  optional AccountType account_type = 6;
+  optional ProductType product_type = 6;
   optional BalanceSheetSide balance_sheet_side = 7;
   optional string valid_from = 8;
   optional string valid_to = 9;

@@ -1,6 +1,12 @@
 (ns com.repldriven.mono.bank-clearbank-adapter.api
   (:require
-    [com.repldriven.mono.bank-clearbank-adapter.handlers :as handlers]
+    [com.repldriven.mono.bank-clearbank-adapter.cop.components :as
+     cop.components]
+    [com.repldriven.mono.bank-clearbank-adapter.cop.examples :as
+     cop.examples]
+    [com.repldriven.mono.bank-clearbank-adapter.cop.routes :as cop]
+    [com.repldriven.mono.bank-clearbank-adapter.webhook.routes
+     :as webhook]
 
     [com.repldriven.mono.bank-clearbank-webhook.interface
      :as clearbank-webhook]
@@ -31,52 +37,24 @@
                    :string {:default (->provider (mt/string-transformer))}
                    :response {:default (->provider nil)}}
     :options {:registry (merge (m/default-schemas)
-                               clearbank-webhook/component-registry)}}))
+                               clearbank-webhook/component-registry
+                               cop.components/registry)}}))
 
 (defn- routes
   [ctx]
-  [["/webhooks"
-    {:openapi {:tags ["Webhooks"]}
-     :interceptors (:interceptors ctx)}
-    ["/transaction-settled"
-     {:post
-      {:summary "Receive a TransactionSettled webhook from ClearBank"
-       :openapi {:operationId "TransactionSettled"}
-       :parameters {:body [:ref "TransactionSettledWebhook"]}
-       :responses {200 {:body [:map
-                               [:Nonce int?]]}}
-       :handler (handlers/transaction-settled nil)}}]
-    ["/transaction-rejected"
-     {:post
-      {:summary "Receive a TransactionRejected webhook from ClearBank"
-       :openapi {:operationId "TransactionRejected"}
-       :parameters {:body [:ref "TransactionRejectedWebhook"]}
-       :responses {200 {:body [:map
-                               [:Nonce int?]]}}
-       :handler (handlers/transaction-rejected nil)}}]
-    ["/payment-message-assessment-failed"
-     {:post
-      {:summary "Receive a PaymentMessageAssessmentFailed webhook"
-       :openapi {:operationId "PaymentMessageAssessmentFailed"}
-       :parameters {:body [:map
-                           [:Type string?]
-                           [:Version int?]
-                           [:Payload map?]
-                           [:Nonce int?]]}
-       :responses {200 {:body [:map [:Nonce int?]]}}
-       :handler (handlers/payment-message-assessment-failed nil)}}]
-    ["/inbound-held-transaction"
-     {:post
-      {:summary "Receive an InboundHeldTransaction webhook"
-       :openapi {:operationId "InboundHeldTransaction"}
-       :parameters {:body [:map
-                           [:Type string?]
-                           [:Version int?]
-                           [:Payload map?]
-                           [:Nonce int?]]}
-       :responses {200 {:body [:map
-                               [:Nonce int?]]}}
-       :handler (handlers/inbound-held-transaction nil)}}]]])
+  [["/openapi.json"
+    {:get {:no-doc true
+           :openapi
+           {:info {:title "ClearBank Adapter"
+                   :description
+                   "Adapts between Queenswood and ClearBank APIs"
+                   :version "1.0.0"}
+            :components
+            {:examples (merge cop.examples/registry
+                              clearbank-webhook/example-registry)}}
+           :handler (server/standard-openapi-handler)}}]
+   (into ["" {:interceptors (:interceptors ctx)}]
+         (concat cop/routes webhook/routes))])
 
 (defn app
   [ctx]
@@ -85,5 +63,6 @@
                 (assoc-in server/standard-router-data
                  [:data :coercion]
                  coercion))
-   (ring/routes (ring/create-default-handler))
+   (ring/routes (server/standard-openapi-ui-handler)
+                (ring/create-default-handler))
    server/standard-executor))

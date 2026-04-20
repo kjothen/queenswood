@@ -28,15 +28,15 @@
 (defn available-balance
   "Returns the available balance for the given account
   type."
-  [account-type balances currency]
+  [product-type balances currency]
   (let [default-posted
         (net (find-balance balances
                            :balance-type-default
                            :balance-status-posted))
-        v (case account-type
-            (:account-type-current
-             :account-type-savings
-             :account-type-term-deposit)
+        v (case product-type
+            (:product-type-current
+             :product-type-savings
+             :product-type-term-deposit)
             (+ default-posted
                (net (find-balance
                      balances
@@ -47,14 +47,14 @@
                      :balance-type-default
                      :balance-status-pending-outgoing)))
 
-            :account-type-settlement
+            :product-type-settlement
             (+ default-posted
                (net (find-balance
                      balances
                      :balance-type-interest-payable
                      :balance-status-posted)))
 
-            :account-type-internal
+            :product-type-internal
             default-posted
 
             ;; unknown type — just posted
@@ -76,7 +76,7 @@
   [data exists?]
   (let-nom>
     [_ (restriction/check-unique? data exists?)]
-    (let [{:keys [account-id account-type balance-type balance-status
+    (let [{:keys [account-id product-type balance-type balance-status
                   currency credit debit credit-carry]}
           data
           now (System/currentTimeMillis)]
@@ -89,5 +89,5 @@
                :credit-carry (or credit-carry 0)
                :created-at now
                :updated-at now}
-              account-type
-              (assoc :account-type account-type)))))
+              product-type
+              (assoc :product-type product-type)))))

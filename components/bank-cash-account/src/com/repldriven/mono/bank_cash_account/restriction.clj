@@ -80,16 +80,16 @@
 
 (defn limit-max-accounts
   "Checks the max-accounts limit for the given
-  account-type against the current count. Returns nil
+  product-type against the current count. Returns nil
   if under limit or no limit defined, anomaly if
   exceeded."
-  [tier account-type account-count]
+  [tier product-type account-count]
   (when-let [{:keys [value reason]}
              (tiers/limit tier
                           :limit-type-max-accounts
-                          {:account-type account-type})]
+                          {:product-type product-type})]
     (when (>= account-count value)
       (error/reject :cash-account/limit-max-accounts
                     {:message reason
-                     :kind account-type
+                     :kind product-type
                      :limit value}))))

@@ -24,6 +24,9 @@
 (def CashAccountStatus
   (coercion/cash-account-status-enum-schema {:json-schema/example "opened"}))
 
+(def AccountType
+  (coercion/account-type-enum-schema {:json-schema/example "personal"}))
+
 (def CashAccount
   [:map {:json-schema/example examples/CashAccount}
    [:organization-id {:optional true} [:maybe string?]]
@@ -33,6 +36,7 @@
    [:currency [:ref "Currency"]]
    [:product-id string?]
    [:version-id string?]
+   [:product-type {:optional true} [:maybe [:ref "ProductType"]]]
    [:account-type {:optional true} [:maybe [:ref "AccountType"]]]
    [:account-status [:ref "CashAccountStatus"]]
    [:payment-addresses {:optional true}
@@ -65,6 +69,6 @@
 
 (def registry
   (components-registry [#'CashAccountId #'ScanAddress #'PaymentAddress
-                        #'CashAccountStatus #'CashAccount
+                        #'CashAccountStatus #'AccountType #'CashAccount
                         #'CreateCashAccountRequest #'CreateCashAccountResponse
                         #'CashAccountList #'CloseCashAccountResponse]))

@@ -31,10 +31,10 @@
 
 (defn get-account-by-type
   "Returns the first account matching the given org-id and
-  account-type, or nil. Uses compound secondary index;
+  product-type, or nil. Uses compound secondary index;
   caller should expect at most one result."
-  [txn org-id account-type]
-  (core/get-account-by-type txn org-id account-type))
+  [txn org-id product-type]
+  (core/get-account-by-type txn org-id product-type))
 
 (defn get-account-by-bban
   "Returns account matching the given BBAN.

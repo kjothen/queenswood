@@ -16,7 +16,7 @@
      [{:paymentIdentification {:instructionIdentification "ct-001"
                                :endToEndIdentification "e2e-001"}
        :amount {:instructedAmount 100.00 :currency "GBP"}
-       :creditor {:name "Jane Doe"}
+       :creditor {:name "Arthur Dent"}
        :creditorAccount {:identification {:other {:identification "87654321"
                                                   :schemeName
                                                   {:proprietary

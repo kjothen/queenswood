@@ -38,7 +38,8 @@
    :currency "GBP"
    :product-id "prd_01JMABC"
    :version-id "prv_01JMABC"
-   :account-type :current
+   :product-type :current
+   :account-type :personal
    :account-status :opened
    :payment-addresses [{:scheme :scan
                         :identifier {:scan {:sort-code "040004"

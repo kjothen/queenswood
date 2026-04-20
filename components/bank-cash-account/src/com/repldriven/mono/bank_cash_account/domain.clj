@@ -41,16 +41,23 @@
               []
               allowed-payment-address-schemes))))
 
+(defn- party->account-type
+  [party]
+  (if (= :party-type-person (:type party))
+    :account-type-personal
+    :account-type-business))
+
 (defn opening-account
   "Creates a new account map with status opened and payment
   addresses. Validates currency against version, party
-  is active, and account count is within tier limits."
+  is active, and account count is within tier limits.
+  Derives account-type from the party type."
   [data product party tier account-count address-fountain-fn]
   (let [{:keys [organization-id party-id product-id currency name]} data
-        {:keys [version-id account-type]} product]
+        {:keys [version-id product-type]} product]
     (let-nom>
       [_ (restriction/policy-account-opening tier)
-       _ (restriction/limit-max-accounts tier account-type account-count)
+       _ (restriction/limit-max-accounts tier product-type account-count)
        _ (restriction/valid-product? product)
        _ (restriction/valid-currency? currency product)
        _ (restriction/valid-party? party)
@@ -67,7 +74,8 @@
          :currency currency
          :name name
          :account-id (encryption/generate-id "acc")
-         :account-type account-type
+         :product-type product-type
+         :account-type (party->account-type party)
          :account-status :cash-account-status-opening
          :payment-addresses payment-addresses
          :bban bban
@@ -78,11 +86,11 @@
   "Builds the per-balance data list for a newly-opened
   account from the product's balance-products."
   [account currency product]
-  (let [{:keys [account-id account-type]} account
+  (let [{:keys [account-id product-type]} account
         {:keys [balance-products]} product]
     (mapv (fn [{:keys [balance-type balance-status]}]
             {:account-id account-id
-             :account-type (schema/account-type->int account-type)
+             :product-type (schema/product-type->int product-type)
              :balance-type balance-type
              :balance-status balance-status
              :currency currency})

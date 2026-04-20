@@ -19,14 +19,14 @@
     {"name": "updated_at", "type": {"type": "long", "logicalType": "timestamp-millis"}},
     {"name": "product_id",  "type": "string"},
     {"name": "version_id", "type": "string"},
-    {"name": "account_type", 
+    {"name": "product_type",
       "type": {"type": "enum",
-               "name": "AccountType",
-               "symbols": ["ACCOUNT_TYPE_INTERNAL",
-                           "ACCOUNT_TYPE_SETTLEMENT",
-                           "ACCOUNT_TYPE_CURRENT",
-                           "ACCOUNT_TYPE_SAVINGS",
-                           "ACCOUNT_TYPE_TERM_DEPOSIT"]}},
+               "name": "ProductType",
+               "symbols": ["PRODUCT_TYPE_INTERNAL",
+                           "PRODUCT_TYPE_SETTLEMENT",
+                           "PRODUCT_TYPE_CURRENT",
+                           "PRODUCT_TYPE_SAVINGS",
+                           "PRODUCT_TYPE_TERM_DEPOSIT"]}},
     {"name": "payment_addresses",
      "type": {"type": "array",
               "items": {
@@ -53,6 +53,13 @@
                    "type": ["null", "string"],
                    "default": null}
                 ]}},
-     "default": []}
+     "default": []},
+    {"name": "account_type",
+      "type": ["null",
+               {"type": "enum",
+                "name": "AccountType",
+                "symbols": ["ACCOUNT_TYPE_PERSONAL",
+                             "ACCOUNT_TYPE_BUSINESS"]}],
+      "default": null}
   ]
 }

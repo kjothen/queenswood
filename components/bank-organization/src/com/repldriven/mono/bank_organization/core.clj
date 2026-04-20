@@ -21,9 +21,9 @@
   {:organization-type-internal :party-type-internal
    :organization-type-customer :party-type-organization})
 
-(def ^:private org-type->account-type
-  {:organization-type-internal :account-type-internal
-   :organization-type-customer :account-type-settlement})
+(def ^:private org-type->product-type
+  {:organization-type-internal :product-type-internal
+   :organization-type-customer :product-type-settlement})
 
 (def ^:private org-type->product-name
   {:organization-type-internal "Internal Account"
@@ -150,7 +150,7 @@
                  txn
                  org-id
                  {:name (org-type->product-name org-type)
-                  :account-type (org-type->account-type org-type)
+                  :product-type (org-type->product-type org-type)
                   :balance-sheet-side :balance-sheet-side-liability
                   :allowed-currencies currencies
                   :allowed-payment-address-schemes

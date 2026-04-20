@@ -11,13 +11,14 @@
     [com.repldriven.mono.schemas.payments :as payments]
     [com.repldriven.mono.schemas.person_identification :as
      person-identification]
+    [com.repldriven.mono.schemas.payee_check :as payee-check]
     [com.repldriven.mono.schemas.tiers :as tiers]
     [com.repldriven.mono.schemas.transactions :as transactions]
     [protojure.protobuf :as proto])
   (:import
     (com.repldriven.mono.schemas.balances BalanceProto$Balance)
     (com.repldriven.mono.schemas.cash_account_products
-     CashAccountProductProto$AccountType
+     CashAccountProductProto$ProductType
      CashAccountProductProto$CashAccountProductVersion)
     (com.repldriven.mono.schemas.cash_accounts
      CashAccountProto$CashAccount
@@ -40,6 +41,8 @@
      InboundPaymentProto$InboundPayment
      InternalPaymentProto$InternalPayment
      OutboundPaymentProto$OutboundPayment)
+    (com.repldriven.mono.schemas.payee_check
+     PayeeCheckProto$PayeeCheck)
     (com.repldriven.mono.schemas.tiers TierProto$Tier)
     (com.repldriven.mono.schemas.transactions
      TransactionProto$Transaction
@@ -52,15 +55,15 @@
 (def balance-type->int balances/BalanceType-label2val)
 (def balance-status->int balances/BalanceStatus-label2val)
 
-(def account-type->int cash-account-products/AccountType-label2val)
-(def int->account-type cash-account-products/AccountType-val2label)
+(def product-type->int cash-account-products/ProductType-label2val)
+(def int->product-type cash-account-products/ProductType-val2label)
 
-(defn account-type->pb-enum
-  "Converts an account-type keyword to the protobuf
+(defn product-type->pb-enum
+  "Converts an product-type keyword to the protobuf
   enum value for use in FDB queries."
-  [account-type]
-  (CashAccountProductProto$AccountType/forNumber
-   (account-type->int account-type)))
+  [product-type]
+  (CashAccountProductProto$ProductType/forNumber
+   (product-type->int product-type)))
 
 (def tier-type->int organizations/TierType-label2val)
 
@@ -206,7 +209,7 @@
 (defn- unwrap-limit-kind
   "Unwraps the protojure LimitKind oneof — the record's
   :kind field holds the variant map (e.g.
-  {:account-type :account-type-settlement}). Callers see
+  {:product-type :product-type-settlement}). Callers see
   the variant directly."
   [limit]
   (update limit
@@ -238,3 +241,11 @@
 (defn Tier->java
   [m]
   (TierProto$Tier/parseFrom (Tier->pb m)))
+
+(def pb->PayeeCheck payee-check/pb->PayeeCheck)
+(defn PayeeCheck->pb
+  [m]
+  (proto/->pb (payee-check/new-PayeeCheck m)))
+(defn PayeeCheck->java
+  [m]
+  (PayeeCheckProto$PayeeCheck/parseFrom (PayeeCheck->pb m)))

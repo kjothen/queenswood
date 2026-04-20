@@ -36,7 +36,7 @@ message Balance {
   optional int64 created_at = 7;
   optional int64 updated_at = 8;
   optional int64 credit_carry = 9;
-  optional int32 account_type = 10;
+  optional int32 product_type = 10;
 }
 
 message BalanceProduct {
