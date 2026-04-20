@@ -23,7 +23,7 @@
   let allowedCurrencies = $state("GBP");
   let interestRateBps = $state(265);
 
-  function onAccountTypeChange(e) {
+  function onProductTypeChange(e) {
     accountType = e.target.value;
     const defaults = accountTypeDefaults[accountType];
     if (defaults) {
@@ -70,7 +70,7 @@
   let reviseModalOpen = $state(false);
   let reviseVersion = $state(null);
   let reviseName = $state("");
-  let reviseAccountType = $state("current");
+  let reviseProductType = $state("current");
   let reviseBalanceSheetSide = $state("liability");
   let reviseAllowedCurrencies = $state("");
   let reviseSelectedBalanceProducts = $state(defaultBalanceProducts.map(() => true));
@@ -81,7 +81,7 @@
   function openReviseModal(v) {
     reviseVersion = v;
     reviseName = v.name;
-    reviseAccountType = v["account-type"] ?? "";
+    reviseProductType = v["product-type"] ?? "";
     reviseBalanceSheetSide = v["balance-sheet-side"] ?? "";
     reviseAllowedCurrencies = (v["allowed-currencies"] ?? []).join(", ");
     const existing = v["balance-products"] ?? [];
@@ -109,7 +109,7 @@
         .map(s => s.scheme);
       const res = await upsert_cash_account_product_draft(reviseVersion["product-id"], {
         "name": reviseName,
-        "account-type": reviseAccountType,
+        "product-type": reviseProductType,
         "balance-sheet-side": reviseBalanceSheetSide,
         "allowed-currencies": currencies.length > 0 ? currencies : undefined,
         "balance-products": bps.length > 0 ? bps : undefined,
@@ -168,7 +168,7 @@
         .map(s => s.scheme);
       const res = await create_cash_account_product({
         "name": name,
-        "account-type": accountType,
+        "product-type": accountType,
         "balance-sheet-side": balanceSheetSide,
         "allowed-currencies": currencies.length > 0 ? currencies : undefined,
         "balance-products": bps.length > 0 ? bps : undefined,
@@ -221,7 +221,7 @@
     <form onsubmit={handleCreate}>
       <label>
         Account Type
-        <select value={accountType} onchange={onAccountTypeChange} disabled={creating}>
+        <select value={accountType} onchange={onProductTypeChange} disabled={creating}>
           <option value="current">Current</option>
           <option value="savings">Savings</option>
           <option value="term-deposit">Term Deposit</option>
@@ -285,7 +285,7 @@
       </label>
       <label>
         Account Type
-        <select bind:value={reviseAccountType} disabled={revising}>
+        <select bind:value={reviseProductType} disabled={revising}>
           <option value="current">Current</option>
           <option value="savings">Savings</option>
           <option value="term-deposit">Term Deposit</option>
@@ -363,7 +363,7 @@
         <tr>
           <td class="mono">{v["product-id"]}</td>
           <td>{v.name}</td>
-          <td>{v["account-type"]}</td>
+          <td>{v["product-type"]}</td>
           <td>v{v["version-number"]}</td>
           <td>
             <span class="status-badge" class:published={v.status === "published"}
@@ -375,7 +375,7 @@
           <td>{(v["allowed-currencies"] ?? []).join(", ") || "Any"}</td>
           <td title={v["created-at"]}>{time_ago(v["created-at"])}</td>
           <td>
-            {#if v["account-type"] !== "internal" && v["account-type"] !== "settlement"}
+            {#if v["product-type"] !== "internal" && v["product-type"] !== "settlement"}
               {#if v.status === "draft"}
                 <button
                   class="action-btn"

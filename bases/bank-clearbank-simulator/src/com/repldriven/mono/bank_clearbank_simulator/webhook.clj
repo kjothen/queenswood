@@ -15,10 +15,13 @@
   (rand-int Integer/MAX_VALUE))
 
 (defn fire
-  [config type payload]
-  (let [url (get @(:webhooks config) type)]
+  [config sort-code type payload]
+  (let [url (get-in @(:webhooks config) [sort-code type])]
     (if-not url
-      (log/warn "No webhook registered for type:" type)
+      (do (log/warn "No webhook registered for"
+                    sort-code
+                    type)
+          nil)
       (let [body (json/write-str
                   {:Type type
                    :Version (case type
@@ -36,14 +39,16 @@
                   (and (:status res) (>= (:status res) 400)))
           (log/error "Webhook delivery failed for" type
                      "to" url
-                     ":" res))))))
+                     ":" res))
+        res))))
 
 (defn fire-transaction-settled
-  [config e2e-id debit-credit-code body]
+  [config sort-code e2e-id debit-credit-code body]
   (let [{:keys [bban amount currency reference
                 creditor-bban debtor-name]}
         body]
     (fire config
+          sort-code
           "TransactionSettled"
           {:TransactionId (str (uuidv7))
            :Status "Settled"
@@ -63,8 +68,9 @@
            {:OwnerName (or debtor-name "Simulated Debtor")}})))
 
 (defn fire-transaction-rejected
-  [config e2e-id]
+  [config sort-code e2e-id]
   (fire config
+        sort-code
         "TransactionRejected"
         {:TransactionId (str (uuidv7))
          :Status "Rejected"
@@ -76,3 +82,20 @@
          :IsReturn false
          :Account {}
          :CounterpartAccount {}}))
+
+(defn fire-inbound-cop-request
+  [config sort-code request-id body]
+  (let [{:keys [accountDetails accountHolderName
+                accountType requestingInstitution]}
+        body
+        {:keys [sortCode accountNumber]} accountDetails]
+    (fire config
+          sort-code
+          "InboundCopRequestReceived"
+          {:RequestId request-id
+           :RequestingInstitution (or requestingInstitution "")
+           :AccountHolderName accountHolderName
+           :ProductType accountType
+           :AccountDetails {:SortCode sortCode
+                            :AccountNumber accountNumber}
+           :TimestampCreated (now)})))

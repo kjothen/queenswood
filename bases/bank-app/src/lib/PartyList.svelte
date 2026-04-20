@@ -24,8 +24,8 @@
       if (res["http-status"] >= 200 && res["http-status"] < 300) {
         publishedProducts = (res.body.versions ?? [])
           .filter(v => v.status === "published"
-                    && v["account-type"] !== "internal"
-                    && v["account-type"] !== "settlement");
+                    && v["product-type"] !== "internal"
+                    && v["product-type"] !== "settlement");
       }
     } catch (_) { /* ignore */ }
   }
@@ -182,7 +182,7 @@
                           onclick={() => handleOpenAccount(party, product)}
                         >
                           {product.name}
-                          <span class="account-type">{product["account-type"]}</span>
+                          <span class="product-type">{product["product-type"]}</span>
                         </button>
                       {/each}
                     </div>
@@ -399,7 +399,7 @@
     background: var(--bg-secondary);
   }
 
-  .account-type {
+  .product-type {
     color: var(--text-muted);
     font-size: 0.75rem;
     text-transform: lowercase;

@@ -1,7 +1,17 @@
 handler: !system/required-component
 
+state: !system/component
+  system/component-kind: clearbank-simulator/state
+
+interceptors: !system/component
+  system/component-kind: server/interceptors
+  webhooks: !system/local-ref state
+  sort-code: "040004"
+  webhook-delay-ms: 0
+
 jetty-adapter: !system/component
   system/component-kind: server/jetty-adapter
   handler: !system/ref server.handler
+  interceptors: !system/ref server.interceptors
   options:
     port: 0

@@ -3,6 +3,7 @@
     com.repldriven.mono.bank-party.system
 
     [com.repldriven.mono.bank-party.core :as core]
+    [com.repldriven.mono.bank-party.domain :as domain]
     [com.repldriven.mono.bank-party.store :as store]
 
     [com.repldriven.mono.error.interface :refer [let-nom>]]
@@ -28,3 +29,9 @@
    (store/get-parties txn org-id))
   ([txn org-id opts]
    (store/get-parties txn org-id opts)))
+
+(defn match-name
+  "Compares party-name against query-name. Returns
+  :match, :close-match, or :no-match."
+  [party-name query-name]
+  (domain/match-name party-name query-name))

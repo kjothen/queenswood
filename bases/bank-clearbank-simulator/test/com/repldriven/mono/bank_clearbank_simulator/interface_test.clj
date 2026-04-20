@@ -2,6 +2,8 @@
     com.repldriven.mono.bank-clearbank-simulator.interface-test
   (:refer-clojure :exclude [get])
   (:require
+    com.repldriven.mono.bank-clearbank-simulator.system
+
     [com.repldriven.mono.bank-clearbank-simulator.api :as api]
 
     [com.repldriven.mono.http-client.interface :as http]
@@ -98,7 +100,7 @@
                      :endToEndIdentification "e2e-001"}
                     :amount {:instructedAmount 100.00
                              :currency "GBP"}
-                    :creditor {:name "Jane Doe"}
+                    :creditor {:name "Arthur Dent"}
                     :creditorAccount
                     {:identification
                      {:other

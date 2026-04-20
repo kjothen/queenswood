@@ -90,14 +90,42 @@
    [:Payload [:ref "TransactionRejectedPayload"]]
    [:Nonce int?]])
 
+(def InboundCopAccountDetails
+  [:map
+   {:json-schema/example (:AccountDetails
+                          examples/InboundCopRequestReceivedPayload)}
+   [:SortCode string?]
+   [:AccountNumber string?]])
+
+(def InboundCopRequestReceivedPayload
+  [:map
+   {:json-schema/example examples/InboundCopRequestReceivedPayload}
+   [:RequestId string?]
+   [:RequestingInstitution {:optional true} [:maybe string?]]
+   [:AccountHolderName string?]
+   [:ProductType [:enum "Personal" "Business"]]
+   [:AccountDetails [:ref "InboundCopAccountDetails"]]
+   [:TimestampCreated {:optional true} [:maybe string?]]])
+
+(def InboundCopRequestReceivedWebhook
+  [:map
+   {:json-schema/example examples/InboundCopRequestReceivedWebhook}
+   [:Type [:= "InboundCopRequestReceived"]]
+   [:Version int?]
+   [:Payload [:ref "InboundCopRequestReceivedPayload"]]
+   [:Nonce int?]])
+
 (def component-registry
-  (components-registry [#'AccountInfo #'CounterpartAccountInfo
-                        #'TransactionSettledPayload #'TransactionRejectedPayload
-                        #'TransactionSettledWebhook
-                        #'TransactionRejectedWebhook]))
+  (components-registry
+   [#'AccountInfo #'CounterpartAccountInfo #'TransactionSettledPayload
+    #'TransactionRejectedPayload #'TransactionSettledWebhook
+    #'TransactionRejectedWebhook #'InboundCopAccountDetails
+    #'InboundCopRequestReceivedPayload #'InboundCopRequestReceivedWebhook]))
 
 (def example-registry
   (examples-registry
    [#'examples/TransactionSettledWebhook #'examples/TransactionRejectedWebhook
     #'examples/TransactionSettledPayload #'examples/TransactionRejectedPayload
-    #'examples/AccountInfo #'examples/CounterpartAccountInfo]))
+    #'examples/AccountInfo #'examples/CounterpartAccountInfo
+    #'examples/InboundCopRequestReceivedWebhook
+    #'examples/InboundCopRequestReceivedPayload]))

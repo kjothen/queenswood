@@ -9,7 +9,7 @@
 
 (def Limit
   {:type :max-accounts
-   :kind {:account-type :current}
+   :kind {:product-type :current}
    :value 1000
    :reason "Maximum 1000 current accounts"})
 

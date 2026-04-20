@@ -1,4 +1,4 @@
 type: !keyword limit-type-max-accounts
-kind: { account-type: !keyword account-type-term-deposit }
+kind: { product-type: !keyword product-type-term-deposit }
 value: 1000
 reason: "MUST not exceed 1,000 term-deposit accounts on micro tier"

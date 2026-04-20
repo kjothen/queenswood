@@ -6,9 +6,10 @@
     [com.repldriven.mono.utility.interface :refer [uuidv7]]))
 
 (defn payment
-  [config]
+  [_config]
   (fn [request]
-    (let [{:keys [parameters]} request
+    (let [{:keys [webhooks sort-code webhook-delay-ms parameters]}
+          request
           {:keys [body]} parameters
           {:keys [paymentInstructions]} body
           instruction (first paymentInstructions)
@@ -28,16 +29,18 @@
                              :additionalReferenceInformation
                              :reference])
           {:keys [instructedAmount currency]} amount
-          {:keys [webhook-delay-ms]} config]
+          config {:webhooks webhooks}]
       (future
        (Thread/sleep (or webhook-delay-ms 2000))
        (if (= "REJECT" name)
          (webhook/fire-transaction-rejected
           config
+          sort-code
           endToEndIdentification)
          (do
            (webhook/fire-transaction-settled
             config
+            sort-code
             endToEndIdentification
             :debit
             {:amount instructedAmount
@@ -46,6 +49,7 @@
            (Thread/sleep 500)
            (webhook/fire-transaction-settled
             config
+            sort-code
             (str (uuidv7))
             :credit
             {:amount instructedAmount

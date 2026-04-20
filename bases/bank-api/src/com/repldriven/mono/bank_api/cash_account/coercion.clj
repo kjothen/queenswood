@@ -9,3 +9,10 @@
                            "closed" :cash-account-status-closed}))
 
 (def cash-account-status-enum-schema (:enum-schema cash-account-status-enum))
+
+(def ^:private account-type-enum
+  (coercion/enum-coercion {"personal" :account-type-personal
+                           "business" :account-type-business}
+                          :account-type-unknown))
+
+(def account-type-enum-schema (:enum-schema account-type-enum))

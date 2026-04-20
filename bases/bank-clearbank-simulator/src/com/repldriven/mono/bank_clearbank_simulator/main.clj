@@ -1,5 +1,7 @@
 (ns com.repldriven.mono.bank-clearbank-simulator.main
   (:require
+    com.repldriven.mono.bank-clearbank-simulator.system
+
     [com.repldriven.mono.bank-clearbank-simulator.api :as api]
 
     [com.repldriven.mono.cli.interface :as cli]

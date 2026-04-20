@@ -1,7 +1,9 @@
 (ns com.repldriven.mono.bank-party.domain
   (:refer-clojure :exclude [type])
   (:require
-    [com.repldriven.mono.encryption.interface :as encryption]))
+    [com.repldriven.mono.encryption.interface :as encryption]
+
+    [clojure.string :as str]))
 
 (defn new-party
   "Creates a new party map. Person parties start pending;
@@ -38,6 +40,39 @@
      :value value
      :issuing-country issuing-country
      :created-at (System/currentTimeMillis)}))
+
+(defn- normalize-name
+  [s]
+  (-> (or s "")
+      str/trim
+      str/lower-case
+      (str/replace #"\s+" " ")))
+
+(defn- tokenize
+  [s]
+  (set (str/split s #"\s+")))
+
+(defn match-name
+  "Compares party-name against query-name. Returns
+  :match (exact after normalisation), :close-match
+  (every token from the shorter name appears in the
+  longer), or :no-match."
+  [party-name query-name]
+  (let [a (normalize-name party-name)
+        b (normalize-name query-name)]
+    (cond
+     (= a b)
+     :match
+
+     (let [ta (tokenize a)
+           tb (tokenize b)
+           shorter (if (<= (count ta) (count tb)) ta tb)
+           longer (if (<= (count ta) (count tb)) tb ta)]
+       (every? longer shorter))
+     :close-match
+
+     :else
+     :no-match)))
 
 (defn new-person-identification
   "Creates a person-identification map linked to party-id."

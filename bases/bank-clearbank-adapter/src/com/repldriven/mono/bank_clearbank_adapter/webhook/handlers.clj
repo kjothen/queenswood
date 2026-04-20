@@ -1,7 +1,10 @@
-(ns com.repldriven.mono.bank-clearbank-adapter.handlers
+(ns com.repldriven.mono.bank-clearbank-adapter.webhook.handlers
   (:require
     [com.repldriven.mono.bank-clearbank-adapter.nonce :as nonce]
     [com.repldriven.mono.bank-clearbank-adapter.publisher :as publisher]
+
+    [com.repldriven.mono.bank-cash-account.interface :as cash-accounts]
+    [com.repldriven.mono.bank-party.interface :as parties]
 
     [com.repldriven.mono.error.interface :as error]
     [com.repldriven.mono.log.interface :as log]))
@@ -68,8 +71,60 @@
     (let [{:keys [parameters]} request
           {:keys [body]} parameters
           {:keys [Payload Nonce]} body]
-      (log/info "inbound-held-transaction webhook received" {:payload Payload})
+      (log/info "inbound-held-transaction webhook received"
+                {:payload Payload})
       (nonce/record Nonce)
       (publisher/publish-inbound-payment-held config Payload)
       {:status 200
        :body {:Nonce Nonce}})))
+
+(defn- cop-result
+  [match-keyword display-name]
+  (case match-keyword
+    :match
+    {:matchResult "Match"}
+
+    :close-match
+    {:matchResult "CloseMatch"
+     :actualName display-name
+     :reasonCode "PANM"
+     :reason "Partial name match"}
+
+    :no-match
+    {:matchResult "NoMatch"
+     :reasonCode "ANNM"
+     :reason "Account name does not match"}))
+
+(defn inbound-cop-request-received
+  [_config]
+  (fn [request]
+    (let [{:keys [parameters record-db record-store]} request
+          {:keys [body]} parameters
+          {:keys [Payload Nonce]} body
+          {:keys [RequestId AccountHolderName AccountDetails]} Payload
+          {:keys [SortCode AccountNumber]} AccountDetails
+          bban (str SortCode AccountNumber)
+          config {:record-db record-db
+                  :record-store record-store}]
+      (log/info "inbound-cop-request-received webhook"
+                {:request-id RequestId
+                 :bban bban
+                 :name AccountHolderName})
+      (nonce/record Nonce)
+      (let [account (cash-accounts/get-account-by-bban config bban)]
+        (if (or (nil? account) (error/anomaly? account))
+          {:status 200
+           :body {:matchResult "NoMatch"
+                  :reasonCode "ACNS"
+                  :reason "Account not found"}}
+          (let [{:keys [display-name]}
+                (let [party (parties/get-party config
+                                               (:organization-id account)
+                                               (:party-id account))]
+                  (when-not (error/anomaly? party) party))
+                result (if display-name
+                         (parties/match-name display-name
+                                             AccountHolderName)
+                         :no-match)]
+            {:status 200
+             :body (cop-result result display-name)}))))))

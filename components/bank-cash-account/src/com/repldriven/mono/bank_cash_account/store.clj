@@ -95,35 +95,35 @@
 
 (defn count-party-accounts-by-type
   "Returns the count of accounts matching the given
-  org-id, party-id and account-type. Uses the
-  org_party_account_type_count count index."
-  [txn org-id party-id account-type]
+  org-id, party-id and product-type. Uses the
+  org_party_product_type_count count index."
+  [txn org-id party-id product-type]
   (fdb/transact txn
                 (fn [txn]
                   (fdb/count-records
                    (fdb/open txn store-name)
-                   "CashAccount_count_by_org_party_account_type"
+                   "CashAccount_count_by_org_party_product_type"
                    [org-id
                     party-id
                     (.getNumber
-                     (schema/account-type->pb-enum account-type))]))
+                     (schema/product-type->pb-enum product-type))]))
                 :cash-account/count-party-accounts-by-type
                 "Failed to count party accounts by type"))
 
 (defn get-account-by-type
   "Returns the first account matching the given org-id and
-  account-type, or nil. Pins the planner to the
-  org_account_type_idx compound index."
-  [txn org-id account-type]
+  product-type, or nil. Pins the planner to the
+  org_product_type_idx compound index."
+  [txn org-id product-type]
   (fdb/transact txn
                 (fn [txn]
                   (some-> (fdb/query-record-compound
                            (fdb/open txn store-name)
                            "CashAccount"
                            [["organization_id" org-id]
-                            ["account_type"
-                             (schema/account-type->pb-enum account-type)]]
-                           {:index "CashAccount_by_org_account_type"})
+                            ["product_type"
+                             (schema/product-type->pb-enum product-type)]]
+                           {:index "CashAccount_by_org_product_type"})
                           schema/pb->CashAccount))
                 :cash-account/get-by-type
                 "Failed to get account by type"))

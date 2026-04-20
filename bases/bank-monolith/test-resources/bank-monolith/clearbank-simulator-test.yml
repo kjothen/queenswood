@@ -1,0 +1,24 @@
+handler: !system/required-component
+
+state: !system/component
+  system/component-kind: clearbank-simulator/state
+
+interceptors: !system/component
+  system/component-kind: server/interceptors
+  webhooks: !system/local-ref state
+  sort-code: "040004"
+  webhook-delay-ms: 2000
+
+jetty-adapter: !system/component
+  system/component-kind: server/jetty-adapter
+  handler: !system/ref clearbank-simulator-server.handler
+  interceptors: !system/ref clearbank-simulator-server.interceptors
+  options: !profile
+    dev:
+      port: 8081
+    default:
+      port: 0
+
+http-url: !system/component
+  system/component-kind: server/http-url
+  jetty-adapter: !system/local-ref jetty-adapter

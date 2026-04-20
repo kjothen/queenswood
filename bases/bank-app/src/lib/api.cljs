@@ -90,6 +90,15 @@
                   #js {:headers #js {"Authorization" (str "Bearer " @api-key)}})
         (.then parse-response))))
 
+(defn list-payee-checks
+  [query-string]
+  (let [url (if query-string
+              (str "/v1/payee-checks?" query-string)
+              "/v1/payee-checks")]
+    (-> (js/fetch url
+                  #js {:headers #js {"Authorization" (str "Bearer " @api-key)}})
+        (.then parse-response))))
+
 (defn open-cash-account
   [data]
   (let [{:strs [party-id name currency product-id]} (js->clj data)]
@@ -132,12 +141,12 @@
 
 (defn create-cash-account-product
   [data]
-  (let [{:strs [name account-type balance-sheet-side allowed-currencies
+  (let [{:strs [name product-type balance-sheet-side allowed-currencies
                 balance-products allowed-payment-address-schemes
                 interest-rate-bps]}
         (js->clj data)
         body (cond-> {"name" name
-                      "account-type" account-type
+                      "product-type" product-type
                       "balance-sheet-side" balance-sheet-side}
                      (seq allowed-currencies)
                      (assoc "allowed-currencies"
@@ -174,12 +183,12 @@
 
 (defn upsert-cash-account-product-draft
   [product-id data]
-  (let [{:strs [name account-type balance-sheet-side allowed-currencies
+  (let [{:strs [name product-type balance-sheet-side allowed-currencies
                 balance-products allowed-payment-address-schemes
                 interest-rate-bps]}
         (js->clj data)
         body (cond-> {"name" name
-                      "account-type" account-type
+                      "product-type" product-type
                       "balance-sheet-side" balance-sheet-side}
                      (seq allowed-currencies)
                      (assoc "allowed-currencies"
@@ -273,6 +282,21 @@
                                       "idempotency-key" (str (random-uuid))}
                                      reference
                                      (assoc "reference" reference))))})
+      (.then parse-response)))
+
+(defn check-payee
+  [creditor-name sort-code account-number account-type]
+  (-> (js/fetch "/v1/payee-checks"
+                #js {:method "POST"
+                     :headers #js {"Content-Type" "application/json"
+                                   "Authorization" (str "Bearer "
+                                                        @api-key)}
+                     :body (js/JSON.stringify
+                            (clj->js
+                             {"creditor-name" creditor-name
+                              "account" {"sort-code" sort-code
+                                         "account-number" account-number}
+                              "account-type" account-type}))})
       (.then parse-response)))
 
 (defn submit-outbound-payment

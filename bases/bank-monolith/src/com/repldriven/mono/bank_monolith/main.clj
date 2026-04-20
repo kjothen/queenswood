@@ -12,6 +12,7 @@
     com.repldriven.mono.bank-party.interface
     com.repldriven.mono.bank-clearbank-webhook.interface
     com.repldriven.mono.bank-clearbank-adapter.system
+    com.repldriven.mono.bank-clearbank-simulator.system
     com.repldriven.mono.bank-schema.interface
     com.repldriven.mono.event-processor.interface
     com.repldriven.mono.pulsar.interface

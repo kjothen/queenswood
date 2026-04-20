@@ -1,5 +1,10 @@
 (ns com.repldriven.mono.bank-clearbank-simulator.api
   (:require
+    [com.repldriven.mono.bank-clearbank-simulator.cop.components
+     :as cop.components]
+    [com.repldriven.mono.bank-clearbank-simulator.cop.examples
+     :as cop.examples]
+    [com.repldriven.mono.bank-clearbank-simulator.cop.routes :as cop]
     [com.repldriven.mono.bank-clearbank-simulator.fps.components
      :as fps.components]
     [com.repldriven.mono.bank-clearbank-simulator.fps.examples
@@ -49,15 +54,14 @@
                    :response {:default (->provider nil)}}
     :options {:registry (merge (m/default-schemas)
                                {"ErrorResponse" schema/ErrorResponseSchema}
+                               cop.components/registry
                                fps.components/registry
                                simulate.components/registry
                                webhooks.components/registry
                                clearbank-webhook/component-registry)}}))
 
-(def ^:private simulator-config {:webhooks (atom {}) :webhook-delay-ms 2000})
-
 (defn- routes
-  [_ctx]
+  [ctx]
   [["/openapi.json"
     {:get {:no-doc true
            :openapi
@@ -67,15 +71,17 @@
              "Simulates ClearBank payment APIs for testing"
              :version "1.0.0"}
             :components
-            {:examples (merge fps.examples/registry
+            {:examples (merge cop.examples/registry
+                              fps.examples/registry
                               simulate.examples/registry
                               webhooks.examples/registry
                               clearbank-webhook/example-registry)}}
            :handler (server/standard-openapi-handler)}}]
-   (into []
-         (concat (fps/routes simulator-config)
-                 (simulate/routes simulator-config)
-                 (webhooks/routes simulator-config)))])
+   (into ["" {:interceptors (:interceptors ctx)}]
+         (concat cop/routes
+                 fps/routes
+                 simulate/routes
+                 webhooks/routes))])
 
 (defn app
   [ctx]

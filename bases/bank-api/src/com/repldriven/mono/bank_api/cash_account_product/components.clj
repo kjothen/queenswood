@@ -6,8 +6,8 @@
      examples]
     [com.repldriven.mono.bank-api.schema :refer [components-registry]]))
 
-(def AccountType
-  (coercion/account-type-enum-schema {:json-schema/example "current"}))
+(def ProductType
+  (coercion/product-type-enum-schema {:json-schema/example "current"}))
 
 (def BalanceSheetSide
   (coercion/balance-sheet-side-enum-schema {:json-schema/example "liability"}))
@@ -21,7 +21,7 @@
 (def DraftCashAccountProductRequest
   [:map {:json-schema/example examples/DraftCashAccountProductRequest}
    [:name string?]
-   [:account-type [:ref "AccountType"]]
+   [:product-type [:ref "ProductType"]]
    [:balance-sheet-side [:ref "BalanceSheetSide"]]
    [:allowed-currencies {:optional true} [:maybe [:vector [:ref "Currency"]]]]
    [:balance-products {:optional true}
@@ -40,7 +40,7 @@
    [:version-number int?]
    [:status [:ref "VersionStatus"]]
    [:name {:optional true} [:maybe string?]]
-   [:account-type {:optional true} [:maybe [:ref "AccountType"]]]
+   [:product-type {:optional true} [:maybe [:ref "ProductType"]]]
    [:balance-sheet-side {:optional true} [:maybe [:ref "BalanceSheetSide"]]]
    [:allowed-currencies {:optional true} [:maybe [:vector [:ref "Currency"]]]]
    [:balance-products {:optional true}
@@ -58,7 +58,7 @@
    [:versions [:vector [:ref "CashAccountProductVersion"]]]])
 
 (def registry
-  (components-registry [#'AccountType #'BalanceSheetSide #'PaymentAddressScheme
+  (components-registry [#'ProductType #'BalanceSheetSide #'PaymentAddressScheme
                         #'VersionStatus #'DraftCashAccountProductRequest
                         #'CashAccountProductVersion
                         #'CashAccountProductVersionList]))

@@ -26,7 +26,7 @@
        (nom-test> [result (SUT/new-product config
                                            org-id
                                            {:name "Current Account"
-                                            :account-type :account-type-current
+                                            :product-type :product-type-current
                                             :balance-sheet-side
                                             :balance-sheet-side-liability
                                             :allowed-currencies ["GBP" "USD"]})
@@ -37,7 +37,7 @@
                    _ (is (= 1 (:version-number version)))
                    _ (is (= :cash-account-product-version-status-draft
                             (:status version)))
-                   _ (is (= :account-type-current (:account-type version)))
+                   _ (is (= :product-type-current (:product-type version)))
                    _ (is (= :balance-sheet-side-liability
                             (:balance-sheet-side version)))
                    _ (is (= ["GBP" "USD"] (:allowed-currencies version)))
@@ -52,7 +52,7 @@
        (nom-test> [result (SUT/new-product config
                                            org-id
                                            {:name "Draft v1"
-                                            :account-type :account-type-current
+                                            :product-type :product-type-current
                                             :balance-sheet-side
                                             :balance-sheet-side-asset})
                    product-id (get-in result [:version :product-id])
@@ -62,7 +62,7 @@
                             org-id
                             product-id
                             {:name "Draft v1 renamed"
-                             :account-type :account-type-current
+                             :product-type :product-type-current
                              :balance-sheet-side :balance-sheet-side-asset
                              :valid-from "2025-02-01"})
                    v (:version updated)
@@ -77,7 +77,7 @@
                            config
                            org-id
                            {:name "Term Deposit"
-                            :account-type :account-type-term-deposit
+                            :product-type :product-type-term-deposit
                             :balance-sheet-side :balance-sheet-side-liability})
                    product-id (get-in result [:version :product-id])
                    v1-id (get-in result [:version :version-id])
@@ -87,7 +87,7 @@
                               org-id
                               product-id
                               {:name "Term Deposit"
-                               :account-type :account-type-term-deposit
+                               :product-type :product-type-term-deposit
                                :balance-sheet-side :balance-sheet-side-liability
                                :valid-from "2025-01-01"})
                    v2 (:version v2-result)
@@ -100,13 +100,13 @@
        (nom-test> [result (SUT/new-product config
                                            org-id
                                            {:name "Get Version Test"
-                                            :account-type :account-type-current
+                                            :product-type :product-type-current
                                             :balance-sheet-side
                                             :balance-sheet-side-asset})
                    product-id (get-in result [:version :product-id])
                    version-id (get-in result [:version :version-id])
                    loaded (SUT/get-version config org-id product-id version-id)
-                   _ (is (= :account-type-current (:account-type loaded)))
+                   _ (is (= :product-type-current (:product-type loaded)))
                    _ (is (= 1 (:version-number loaded)))
                    versions (SUT/get-versions config org-id product-id)
                    _ (is (= 1 (count (:versions versions))))]))
@@ -114,7 +114,7 @@
        (nom-test> [result (SUT/new-product config
                                            org-id
                                            {:name "Publish Test"
-                                            :account-type :account-type-current
+                                            :product-type :product-type-current
                                             :balance-sheet-side
                                             :balance-sheet-side-asset})
                    product-id (get-in result [:version :product-id])
@@ -125,7 +125,7 @@
        (let [result (SUT/new-product config
                                      org-id
                                      {:name "Double Publish Test"
-                                      :account-type :account-type-current
+                                      :product-type :product-type-current
                                       :balance-sheet-side
                                       :balance-sheet-side-asset})
              product-id (get-in result [:version :product-id])]
@@ -143,7 +143,7 @@
        (nom-test> [p1 (SUT/new-product config
                                        org-id
                                        {:name "P1"
-                                        :account-type :account-type-current
+                                        :product-type :product-type-current
                                         :balance-sheet-side
                                         :balance-sheet-side-asset})
                    p1-id (get-in p1 [:version :product-id])
@@ -152,13 +152,13 @@
                                        org-id
                                        p1-id
                                        {:name "P1 v2"
-                                        :account-type :account-type-current
+                                        :product-type :product-type-current
                                         :balance-sheet-side
                                         :balance-sheet-side-asset})
                    p2 (SUT/new-product config
                                        org-id
                                        {:name "P2"
-                                        :account-type :account-type-savings
+                                        :product-type :product-type-savings
                                         :balance-sheet-side
                                         :balance-sheet-side-liability})
                    p2-id (get-in p2 [:version :product-id])
@@ -182,7 +182,7 @@
        (nom-test> [result (SUT/new-product config
                                            org-id
                                            {:name "Unpublished"
-                                            :account-type :account-type-current
+                                            :product-type :product-type-current
                                             :balance-sheet-side
                                             :balance-sheet-side-asset})
                    product-id (get-in result [:version :product-id])
@@ -193,7 +193,7 @@
        (nom-test> [result (SUT/new-product config
                                            org-id
                                            {:name "Versioned Product"
-                                            :account-type :account-type-current
+                                            :product-type :product-type-current
                                             :balance-sheet-side
                                             :balance-sheet-side-liability})
                    product-id (get-in result [:version :product-id])
@@ -202,7 +202,7 @@
                                        org-id
                                        product-id
                                        {:name "Versioned Product"
-                                        :account-type :account-type-current
+                                        :product-type :product-type-current
                                         :balance-sheet-side
                                         :balance-sheet-side-liability})
                    current (SUT/get-published-version config org-id product-id)

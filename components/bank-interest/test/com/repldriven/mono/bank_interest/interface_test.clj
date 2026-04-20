@@ -84,7 +84,7 @@
                  config
                  org-id
                  {:name "Savings Account"
-                  :account-type :account-type-savings
+                  :product-type :product-type-savings
                   :balance-sheet-side
                   :balance-sheet-side-liability
                   :allowed-currencies ["GBP"]

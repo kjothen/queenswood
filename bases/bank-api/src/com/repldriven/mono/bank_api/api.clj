@@ -36,6 +36,11 @@
     [com.repldriven.mono.bank-api.simulate.components :as simulate.components]
     [com.repldriven.mono.bank-api.simulate.examples :as simulate.examples]
     [com.repldriven.mono.bank-api.simulate.routes :as simulate]
+    [com.repldriven.mono.bank-api.payee-check.components :as
+     payee-check.components]
+    [com.repldriven.mono.bank-api.payee-check.examples :as
+     payee-check.examples]
+    [com.repldriven.mono.bank-api.payee-check.routes :as payee-check]
     [com.repldriven.mono.bank-api.tier.components :as tier.components]
     [com.repldriven.mono.bank-api.tier.examples :as tier.examples]
     [com.repldriven.mono.bank-api.tier.routes :as tier]
@@ -88,6 +93,7 @@
                                party.components/registry
                                payment.components/registry
                                transaction.components/registry
+                               payee-check.components/registry
                                simulate.components/registry
                                tier.components/registry)}}))
 
@@ -106,16 +112,18 @@
                        "orgAuth" {:type :http
                                   :scheme :bearer
                                   :description "Organization API key"}}
-                      :examples (merge examples/registry
-                                       balance.examples/registry
-                                       cash-account-product.examples/registry
-                                       cash-account.examples/registry
-                                       api-key.examples/registry
-                                       organization.examples/registry
-                                       party.examples/registry
-                                       payment.examples/registry
-                                       simulate.examples/registry
-                                       tier.examples/registry)}}
+                      :examples (merge
+                                 examples/registry
+                                 balance.examples/registry
+                                 cash-account-product.examples/registry
+                                 cash-account.examples/registry
+                                 api-key.examples/registry
+                                 organization.examples/registry
+                                 party.examples/registry
+                                 payee-check.examples/registry
+                                 payment.examples/registry
+                                 simulate.examples/registry
+                                 tier.examples/registry)}}
            :handler (server/standard-openapi-handler)}}]
    (into ["/v1"
           {:interceptors (concat telemetry/trace-span
@@ -132,6 +140,7 @@
                  api-key/routes
                  organization/routes
                  party/routes
+                 payee-check/routes
                  payment/routes
                  simulate/routes
                  tier/routes))])

@@ -20,6 +20,12 @@ message PaymentAddress {
   }
 }
 
+enum AccountType {
+  ACCOUNT_TYPE_UNKNOWN  = 0;
+  ACCOUNT_TYPE_PERSONAL = 1;
+  ACCOUNT_TYPE_BUSINESS = 2;
+}
+
 message CashAccount {
   option (com.apple.foundationdb.record.record).usage = RECORD;
 
@@ -34,8 +40,9 @@ message CashAccount {
   repeated PaymentAddress payment_addresses = 10;
   required string product_id = 11;
   required string version_id = 12;
-  optional com.repldriven.mono.schemas.cash_account_products.AccountType account_type = 13;
+  optional com.repldriven.mono.schemas.cash_account_products.ProductType product_type = 13;
   optional string bban            = 14;  // denormalised for indexing: sort_code + account_number
+  optional AccountType account_type = 15;
 
   enum CashAccountStatus {
     CASH_ACCOUNT_STATUS_UNKNOWN = 0;

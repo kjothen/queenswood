@@ -50,11 +50,11 @@
   (let-nom>
     [result (store/get-balances txn account-id)]
     (let [currency (:currency (first result) "")
-          account-type (schema/int->account-type
-                        (:account-type (first result)))]
+          product-type (schema/int->product-type
+                        (:product-type (first result)))]
       {:balances result
        :posted-balance (domain/posted-balance result currency)
-       :available-balance (domain/available-balance account-type
+       :available-balance (domain/available-balance product-type
                                                     result
                                                     currency)})))
 

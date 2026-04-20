@@ -1,5 +1,5 @@
 <script>
-  import { list_cash_accounts, get_cash_account, close_cash_account, simulate_inbound_transfer, submit_internal_payment, submit_outbound_payment } from "./api.mjs";
+  import { list_cash_accounts, get_cash_account, close_cash_account, simulate_inbound_transfer, submit_internal_payment, submit_outbound_payment, check_payee } from "./api.mjs";
   import { time_ago } from "./time.mjs";
   import { onMount, tick } from "svelte";
 
@@ -92,13 +92,18 @@
   let payOutAccountNumber = $state("");
   let payOutReference = $state("");
   let payOutAvailable = $state(0);
+  let payOutPartyId = $state(null);
+  let payOutStep = $state("details");
+  let payOutCheckResult = $state(null);
+  let payOutCheckId = $state(null);
+  let payOutChecking = $state(false);
 
   let { orgId, showToast } = $props();
 
   function customerAccounts() {
     return accounts.filter(a =>
-      a["account-type"] !== "internal" &&
-      a["account-type"] !== "settlement" &&
+      a["product-type"] !== "internal" &&
+      a["product-type"] !== "settlement" &&
       a["account-status"] === "opened");
   }
 
@@ -143,7 +148,7 @@
   }
 
   function settlementAccountId() {
-    const acct = accounts.find(a => a["account-type"] === "settlement");
+    const acct = accounts.find(a => a["product-type"] === "settlement");
     return acct?.["account-id"];
   }
 
@@ -235,6 +240,7 @@
 
   function openPayOutDialog(acct) {
     payOutDebtorId = acct["account-id"];
+    payOutPartyId = acct["party-id"];
     payOutAmount = "";
     payOutCurrency = acct.currency ?? "GBP";
     payOutCreditorName = "";
@@ -243,6 +249,10 @@
     payOutReference = "";
     payOutError = null;
     payOutAvailable = acct["available-balance"]?.value ?? 0;
+    payOutStep = "details";
+    payOutCheckResult = null;
+    payOutCheckId = null;
+    payOutChecking = false;
     showPayOutDialog = true;
   }
 
@@ -269,6 +279,37 @@
       && payOutCreditorName.trim().length > 0
       && payOutSortCode.trim().length === 6
       && payOutAccountNumber.trim().length === 8;
+  }
+
+  async function checkPayOut() {
+    payOutChecking = true;
+    payOutError = null;
+    try {
+      const res = await check_payee(
+        payOutCreditorName.trim(),
+        payOutSortCode.trim(),
+        payOutAccountNumber.trim(),
+        "personal"
+      );
+      if (res["http-status"] >= 200 && res["http-status"] < 300) {
+        payOutCheckResult = res.body?.result;
+        payOutCheckId = res.body?.["check-id"];
+        payOutStep = "confirm";
+      } else {
+        payOutError = res.body?.detail ?? `HTTP ${res["http-status"]}`;
+      }
+    } catch (err) {
+      payOutError = err.message;
+    } finally {
+      payOutChecking = false;
+    }
+  }
+
+  function payOutBackToDetails() {
+    payOutStep = "details";
+    payOutCheckResult = null;
+    payOutCheckId = null;
+    payOutError = null;
   }
 
   async function submitPayOut() {
@@ -423,7 +464,7 @@
             {acct["account-id"]}
           </td>
           <td>{acct.name ?? ""}</td>
-          <td>{acct["account-type"] ?? ""}</td>
+          <td>{acct["product-type"] ?? ""}</td>
           <td>{acct.currency}</td>
           <td class="mono">{scanOf(acct) ?? ""}</td>
           <td>
@@ -452,14 +493,14 @@
           <td title={acct["created-at"]}>{time_ago(acct["created-at"])}</td>
           <td title={acct["updated-at"]}>{time_ago(acct["updated-at"])}</td>
           <td>
-            {#if acct["account-status"] === "opened" && acct["account-type"] === "settlement"}
+            {#if acct["account-status"] === "opened" && acct["product-type"] === "settlement"}
               <button
                 class="fund-btn"
                 onclick={(e) => { e.stopPropagation(); openFundDialog(acct); }}
               >
                 Fund
               </button>
-            {:else if acct["account-status"] === "opened" && acct["account-type"] !== "internal" && acct["account-type"] !== "settlement"}
+            {:else if acct["account-status"] === "opened" && acct["product-type"] !== "internal" && acct["product-type"] !== "settlement"}
               {#if hasPayInSiblings(acct)}
                 <button
                   class="payin-btn"
@@ -615,47 +656,85 @@
         {#if payOutError}
           <div class="error-msg">{payOutError}</div>
         {/if}
-        <label>
-          Full name
-          <input type="text" bind:value={payOutCreditorName} placeholder="Jane Doe" />
-        </label>
-        <div class="field-row">
-          <label class="field-half">
-            Sort code
-            <input type="text" bind:value={payOutSortCode} placeholder="040004" maxlength="6" />
+
+        {#if payOutStep === "details"}
+          <label>
+            Full name
+            <input type="text" bind:value={payOutCreditorName} placeholder="Arthur Dent" />
           </label>
-          <label class="field-half">
-            Account number
-            <input type="text" bind:value={payOutAccountNumber} placeholder="12345678" maxlength="8" />
+          <div class="field-row">
+            <label class="field-half">
+              Sort code
+              <input type="text" bind:value={payOutSortCode} placeholder="040004" maxlength="6" />
+            </label>
+            <label class="field-half">
+              Account number
+              <input type="text" bind:value={payOutAccountNumber} placeholder="12345678" maxlength="8" />
+            </label>
+          </div>
+          {#if true}
+            {@const info = payOutRemainingOrAvailable()}
+            <span class="balance-info" class:exceeded={info.exceeded}>
+              {payOutCurrency} {toDisplay(info.value)}
+              {#if info.label}
+                <span class="balance-label">{info.label}</span>
+              {/if}
+            </span>
+          {/if}
+          <label>
+            Amount
+            <input type="text" inputmode="decimal" bind:value={payOutAmount} onkeydown={onAmountKey} oninput={formatAmount} />
           </label>
-        </div>
-        {#if true}
-          {@const info = payOutRemainingOrAvailable()}
-          <span class="balance-info" class:exceeded={info.exceeded}>
-            {payOutCurrency} {toDisplay(info.value)}
-            {#if info.label}
-              <span class="balance-label">{info.label}</span>
+          <div class="field-group">
+            <span class="field-label">Currency</span>
+            <span class="currency-display">{payOutCurrency}</span>
+          </div>
+          <label>
+            Reference (optional)
+            <input type="text" bind:value={payOutReference} placeholder="Invoice 123" />
+          </label>
+          <div class="dialog-actions">
+            <button class="cancel-btn" onclick={closePayOutDialog} disabled={payOutChecking}>Cancel</button>
+            <button class="submit-btn" onclick={checkPayOut} disabled={payOutChecking || !payOutFormValid()}>
+              {payOutChecking ? "Checking..." : "Continue"}
+            </button>
+          </div>
+        {:else}
+          <div class="cop-result cop-{payOutCheckResult?.['match-result'] ?? 'unavailable'}">
+            {#if payOutCheckResult?.["match-result"] === "match"}
+              <span class="cop-icon">&#10003;</span>
+              <span class="cop-text">Name matches account holder</span>
+            {:else if payOutCheckResult?.["match-result"] === "close-match"}
+              <span class="cop-icon">&#9888;</span>
+              <span class="cop-text">
+                Partial match — account holder is
+                <strong>{payOutCheckResult["actual-name"]}</strong>
+              </span>
+            {:else if payOutCheckResult?.["match-result"] === "no-match"}
+              <span class="cop-icon">&#10007;</span>
+              <span class="cop-text">Name does not match account holder</span>
+            {:else}
+              <span class="cop-icon">&#8505;</span>
+              <span class="cop-text">Unable to verify account holder name</span>
             {/if}
-          </span>
+          </div>
+
+          <div class="cop-summary">
+            <div class="cop-detail"><span class="cop-label">Payee</span> {payOutCreditorName}</div>
+            <div class="cop-detail"><span class="cop-label">Account</span> {payOutSortCode} / {payOutAccountNumber}</div>
+            <div class="cop-detail"><span class="cop-label">Amount</span> {payOutCurrency} {payOutAmount}</div>
+            {#if payOutReference}
+              <div class="cop-detail"><span class="cop-label">Reference</span> {payOutReference}</div>
+            {/if}
+          </div>
+
+          <div class="dialog-actions">
+            <button class="cancel-btn" onclick={payOutBackToDetails} disabled={payOutSubmitting}>Back</button>
+            <button class="submit-btn" onclick={submitPayOut} disabled={payOutSubmitting}>
+              {payOutSubmitting ? "Sending..." : payOutCheckResult?.["match-result"] === "match" ? "Send Payment" : "Send Anyway"}
+            </button>
+          </div>
         {/if}
-        <label>
-          Amount
-          <input type="text" inputmode="decimal" bind:value={payOutAmount} onkeydown={onAmountKey} oninput={formatAmount} />
-        </label>
-        <div class="field-group">
-          <span class="field-label">Currency</span>
-          <span class="currency-display">{payOutCurrency}</span>
-        </div>
-        <label>
-          Reference (optional)
-          <input type="text" bind:value={payOutReference} placeholder="Invoice 123" />
-        </label>
-        <div class="dialog-actions">
-          <button class="cancel-btn" onclick={closePayOutDialog} disabled={payOutSubmitting}>Cancel</button>
-          <button class="submit-btn" onclick={submitPayOut} disabled={payOutSubmitting || !payOutFormValid()}>
-            {payOutSubmitting ? "Submitting..." : "Submit"}
-          </button>
-        </div>
       </div>
     </div>
   {/if}
@@ -1175,5 +1254,66 @@
 
   .submit-btn:not(:disabled):hover {
     background: #1d4ed8;
+  }
+
+  .cop-result {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem;
+    border-radius: 4px;
+    margin-bottom: 1rem;
+    font-size: 0.9rem;
+  }
+
+  .cop-match {
+    background: #dcfce7;
+    border: 1px solid #86efac;
+    color: #166534;
+  }
+
+  .cop-close-match {
+    background: #fef9c3;
+    border: 1px solid #fde047;
+    color: #854d0e;
+  }
+
+  .cop-no-match {
+    background: #fee2e2;
+    border: 1px solid #fca5a5;
+    color: #991b1b;
+  }
+
+  .cop-unavailable {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+  }
+
+  .cop-icon {
+    font-size: 1.1rem;
+    flex-shrink: 0;
+  }
+
+  .cop-text {
+    line-height: 1.3;
+  }
+
+  .cop-summary {
+    margin-bottom: 1rem;
+    font-size: 0.88rem;
+  }
+
+  .cop-detail {
+    padding: 0.25rem 0;
+  }
+
+  .cop-label {
+    display: inline-block;
+    width: 5.5rem;
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
   }
 </style>

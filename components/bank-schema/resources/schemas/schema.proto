@@ -14,6 +14,7 @@ import "schemas/person-identification/person-identification.proto";
 import "schemas/payments/inbound-payment.proto";
 import "schemas/payments/internal-payment.proto";
 import "schemas/payments/outbound-payment.proto";
+import "schemas/payee-check/payee_check.proto";
 import "schemas/tiers/tier.proto";
 import "schemas/transactions/transaction.proto";
 
@@ -40,4 +41,5 @@ message RecordTypeUnion {
   optional com.repldriven.mono.schemas.payments.InboundPayment _InboundPayment = 15;
   optional com.repldriven.mono.schemas.payments.OutboundPayment _OutboundPayment = 16;
   optional com.repldriven.mono.schemas.tiers.Tier _Tier = 17;
+  optional com.repldriven.mono.schemas.payee_check.PayeeCheck _PayeeCheck = 18;
 }

@@ -53,7 +53,7 @@
                          txn
                          organization-id
                          party-id
-                         (:account-type product))
+                         (:product-type product))
           account (domain/opening-account
                    data
                    product
@@ -116,8 +116,8 @@
          :after after})))))
 
 (defn get-account-by-type
-  [txn org-id account-type]
-  (store/get-account-by-type txn org-id account-type))
+  [txn org-id product-type]
+  (store/get-account-by-type txn org-id product-type))
 
 (defn get-account-by-bban
   [txn bban]

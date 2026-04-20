@@ -1,0 +1,23 @@
+registrar: !system/component
+  system/component-kind: clearbank-adapter/registrar
+  simulator-url: !system/ref clearbank-simulator-server.http-url
+  webhook-url: !system/ref clearbank-adapter-server.http-url
+  webhooks:
+    - type: TransactionSettled
+      path: /webhooks/transaction-settled
+    - type: InboundHeldTransaction
+      path: /webhooks/inbound-held-transaction
+    - type: InboundCopRequestReceived
+      path: /webhooks/inbound-cop-request-received
+
+command-processor-impl: !system/component
+  system/component-kind: clearbank-adapter/command-processor
+  schemas: !system/ref avro.serde
+  clearbank-url: !system/ref clearbank-simulator-server.http-url
+
+command-processor: !system/component
+  system/component-kind: command-processor/command-processor
+  bus: !system/ref message-bus.bus
+  processor: !system/local-ref command-processor-impl
+  command-channel: !keyword schemes-payment-command
+  command-response-channel: !keyword schemes-payment-command-response

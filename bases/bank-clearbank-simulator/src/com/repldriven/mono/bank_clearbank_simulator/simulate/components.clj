@@ -18,5 +18,23 @@
    {:json-schema/example examples/InboundPaymentResponse}
    [:endToEndIdentification string?]])
 
+(def SimulateInboundCopRequest
+  [:map
+   {:json-schema/example examples/SimulateInboundCopRequest}
+   [:accountDetails
+    [:map
+     [:sortCode string?]
+     [:accountNumber string?]]]
+   [:accountHolderName string?]
+   [:accountType [:enum "Personal" "Business"]]
+   [:requestingInstitution string?]])
+
+(def SimulateInboundCopResponse
+  [:map
+   {:json-schema/example examples/SimulateInboundCopResponse}
+   [:requestId string?]])
+
 (def registry
-  (components-registry [#'InboundPaymentRequest #'InboundPaymentResponse]))
+  (components-registry [#'InboundPaymentRequest #'InboundPaymentResponse
+                        #'SimulateInboundCopRequest
+                        #'SimulateInboundCopResponse]))

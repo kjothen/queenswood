@@ -104,7 +104,7 @@
                     :version-id "prv_test_001"
                     :version-number 1
                     :status :cash-account-product-version-status-published
-                    :account-type :account-type-current
+                    :product-type :product-type-current
                     :balance-sheet-side
                     :balance-sheet-side-liability
                     :name "Test Product"

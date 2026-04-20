@@ -9,6 +9,7 @@
   import CashAccountProductList from "./lib/CashAccountProductList.svelte";
   import ApiKeyList from "./lib/ApiKeyList.svelte";
   import TierList from "./lib/TierList.svelte";
+  import PayeeCheckList from "./lib/PayeeCheckList.svelte";
   import Toast from "./lib/Toast.svelte";
 
   let currentPage = $state("organizations");
@@ -18,6 +19,7 @@
   let accountListRef = $state();
   let productListRef = $state();
   let apiKeyListRef = $state();
+  let copListRef = $state();
   let toastRef = $state();
 
   let hasApiKey = $derived(selectedOrgId != null);
@@ -33,6 +35,7 @@
     accountListRef?.load();
     productListRef?.load();
     apiKeyListRef?.load();
+    copListRef?.load();
   }
 
   function firstCustomerOrg(orgs) {
@@ -105,6 +108,13 @@
       <CashAccountProductList bind:this={productListRef} {showToast} />
     {:else if currentPage === "tiers"}
       <TierList {showToast} />
+    {:else if currentPage === "cop"}
+      <OrgSelector
+        {organizations}
+        {selectedOrgId}
+        onSelect={(id) => selectOrg(id)}
+      />
+      <PayeeCheckList bind:this={copListRef} />
     {:else if currentPage === "api-keys"}
       <OrgSelector
         {organizations}

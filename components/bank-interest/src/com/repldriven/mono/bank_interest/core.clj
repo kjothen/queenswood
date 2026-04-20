@@ -17,10 +17,10 @@
 
 (defn- customer-accounts
   [accounts]
-  (filter #(and (not= :account-type-internal
-                      (:account-type %))
-                (not= :account-type-settlement
-                      (:account-type %))
+  (filter #(and (not= :product-type-internal
+                      (:product-type %))
+                (not= :product-type-settlement
+                      (:product-type %))
                 (= :cash-account-status-opened
                    (:account-status %)))
           accounts))
@@ -107,7 +107,7 @@
   (let [result (cash-accounts/get-account-by-type
                 config
                 organization-id
-                :account-type-settlement)]
+                :product-type-settlement)]
     (when-not (error/anomaly? result) result)))
 
 (defn- process-customer-accounts

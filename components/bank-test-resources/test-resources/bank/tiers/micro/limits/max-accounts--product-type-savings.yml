@@ -1,4 +1,4 @@
 type: !keyword limit-type-max-accounts
-kind: { account-type: !keyword account-type-savings }
+kind: { product-type: !keyword product-type-savings }
 value: 1000
 reason: "MUST not exceed 1,000 savings accounts on micro tier"

@@ -15,10 +15,10 @@ _record-types: !strs &record-types
     record-type: CashAccount
     primary-key: [organization_id, account_id]
     indexes:
-      - name: CashAccount_by_org_account_type
-        fields: [organization_id, account_type]
-      - name: CashAccount_count_by_org_party_account_type
-        fields: [organization_id, party_id, account_type]
+      - name: CashAccount_by_org_product_type
+        fields: [organization_id, product_type]
+      - name: CashAccount_count_by_org_party_product_type
+        fields: [organization_id, party_id, product_type]
         type: count
       - name: CashAccount_by_bban
         field: bban
@@ -34,6 +34,10 @@ _record-types: !strs &record-types
       - name: Organization_count_by_type
         field: type
         type: count
+  payee-checks:
+    record-type: PayeeCheck
+    primary-key: [organization_id, check_id]
+    indexes: []
   parties:
     record-type: Party
     primary-key: [organization_id, party_id]

@@ -37,7 +37,7 @@
    :version-number 1
    :status :draft
    :name "Current Account"
-   :account-type :current
+   :product-type :current
    :balance-sheet-side :liability
    :allowed-currencies ["GBP" "EUR"]
    :balance-products [{:balance-type :default :balance-status :posted}]
@@ -52,7 +52,7 @@
 
 (def DraftCashAccountProductRequest
   {:name "Current Account"
-   :account-type :current
+   :product-type :current
    :balance-sheet-side :liability
    :allowed-currencies ["GBP" "EUR"]
    :balance-products [{:balance-type :default :balance-status :posted}]
