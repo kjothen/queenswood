@@ -45,7 +45,6 @@
     org.clojure/clojure {:mvn/version "1.12.4"}
     org.clojure/core.async {:mvn/version "1.9.865"}
     djblue/portal {:mvn/version "0.63.0"}}
-   :main-opts ["-e" "(require '[portal.nrepl :as portal])"]
    :extra-paths ["development/resources"]
    :jvm-opts
    ["-Dclojure.tools.logging.factory=clojure.tools.logging.impl/slf4j-factory"]}

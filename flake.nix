@@ -118,6 +118,7 @@
             protocBinary
             protocGenClojure
             pkgs.semgrep
+            pkgs.uv
             pkgs.zprint
           ];
 
