@@ -41,6 +41,7 @@
   (testing "submit-internal-payment creates payment and
   records transaction"
     (let [config (fdb-config sys)
+          tier-id (:tier-id (system/instance sys [:tiers :micro]))
           internal-org (system/instance sys
                                         [:organizations :internal])
           internal-account-id (get-in internal-org
@@ -51,7 +52,8 @@
                        config
                        "Payment Test Customer"
                        :organization-type-customer
-                       :tier-type-micro
+                       :organization-status-test
+                       tier-id
                        ["GBP"])
          customer-account-id
          (get-in customer-org
@@ -112,6 +114,7 @@
     "transaction-settled event creates inbound
   payment and records transaction"
     (let [config (fdb-config sys)
+          tier-id (:tier-id (system/instance sys [:tiers :micro]))
           internal-org (system/instance sys
                                         [:organizations :internal])
           internal-account-id (get-in internal-org
@@ -122,7 +125,8 @@
                        config
                        "Inbound Payment Customer"
                        :organization-type-customer
-                       :tier-type-micro
+                       :organization-status-test
+                       tier-id
                        ["GBP"])
          customer-account
          (get-in customer-org [:organization :accounts 0])
@@ -193,6 +197,7 @@
     "submit-outbound-payment creates pending payment,
   debits debtor and credits suspense"
     (let [config (fdb-config sys)
+          tier-id (:tier-id (system/instance sys [:tiers :micro]))
           internal-org (system/instance sys
                                         [:organizations :internal])
           internal-account-id (get-in internal-org
@@ -203,7 +208,8 @@
                        config
                        "Outbound Payment Customer"
                        :organization-type-customer
-                       :tier-type-micro
+                       :organization-status-test
+                       tier-id
                        ["GBP"])
          customer-organization-id
          (get-in customer-org
@@ -262,13 +268,15 @@
   (testing
     "transaction-settled event completes the outbound
   payment settlement"
-    (let [config (fdb-config sys)]
+    (let [config (fdb-config sys)
+          tier-id (:tier-id (system/instance sys [:tiers :micro]))]
       (nom-test>
         [customer-org (organizations/new-organization
                        config
                        "Outbound Settlement Customer"
                        :organization-type-customer
-                       :tier-type-micro
+                       :organization-status-test
+                       tier-id
                        ["GBP"])
          customer-organization-id
          (get-in customer-org

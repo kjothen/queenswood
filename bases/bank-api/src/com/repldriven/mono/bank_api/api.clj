@@ -3,6 +3,7 @@
     [com.repldriven.mono.bank-api.auth :as auth]
     [com.repldriven.mono.bank-api.examples :as examples]
     [com.repldriven.mono.bank-api.schema :as schema]
+    [com.repldriven.mono.bank-api.shared.components :as shared.components]
 
     [com.repldriven.mono.bank-api.api-key.components :as api-key.components]
     [com.repldriven.mono.bank-api.api-key.examples :as api-key.examples]
@@ -10,7 +11,6 @@
     [com.repldriven.mono.bank-api.balance.components :as balance.components]
     [com.repldriven.mono.bank-api.balance.examples :as balance.examples]
     [com.repldriven.mono.bank-api.balance.routes :as balance]
-    [com.repldriven.mono.bank-api.currency.components :as currency.components]
     [com.repldriven.mono.bank-api.cash-account-product.components :as
      cash-account-product.components]
     [com.repldriven.mono.bank-api.cash-account-product.examples :as
@@ -82,9 +82,8 @@
                    :string {:default (->provider (mt/string-transformer))}
                    :response {:default (->provider nil)}}
     :options {:registry (merge (m/default-schemas)
-                               {"Timestamp" schema/Timestamp
-                                "ErrorResponse" schema/ErrorResponseSchema}
-                               currency.components/registry
+                               {"ErrorResponse" schema/ErrorResponseSchema}
+                               shared.components/registry
                                balance.components/registry
                                cash-account-product.components/registry
                                cash-account.components/registry
@@ -128,7 +127,8 @@
    (into ["/v1"
           {:interceptors (concat telemetry/trace-span
                                  (:interceptors ctx)
-                                 [auth/authenticate])
+                                 [auth/authenticate
+                                  auth/authorize])
            :responses {400 (schema/ErrorResponse [#'examples/BadRequest])
                        401 (schema/ErrorResponse [#'examples/Unauthorized])
                        403 (schema/ErrorResponse [#'examples/Forbidden])
@@ -152,5 +152,5 @@
                                    [:data :coercion]
                                    coercion))
                      (ring/routes (server/standard-openapi-ui-handler)
-                                  (ring/create-default-handler))
+                                  (server/standard-default-handler))
                      server/standard-executor))

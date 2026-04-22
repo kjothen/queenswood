@@ -1,9 +1,13 @@
 (ns com.repldriven.mono.bank-api.transaction.components
   (:require
-    [com.repldriven.mono.bank-api.transaction.coercion :as
-     coercion]
-    [com.repldriven.mono.bank-api.schema :refer
-     [components-registry]]))
+    [com.repldriven.mono.bank-api.transaction.coercion :as coercion]
+    [com.repldriven.mono.bank-api.schema :as schema
+     :refer [components-registry]]))
+
+(def TransactionId
+  (schema/id-schema "TransactionId" "txn" "txn.01kprbmgcj35ptc8npmybhh4sb"))
+
+(def LegId (schema/id-schema "LegId" "leg" "leg.01kprbmgcj35ptc8npmybhh4sc"))
 
 (def TransactionStatus
   (coercion/transaction-status-enum-schema {:json-schema/example "posted"}))
@@ -16,26 +20,24 @@
 
 (def Transaction
   [:map
-   [:leg-id string?]
-   [:transaction-id string?]
-   [:account-id string?]
+   [:leg-id [:ref "LegId"]]
+   [:transaction-id [:ref "TransactionId"]]
+   [:transaction-type [:ref "TransactionType"]]
+   [:status [:ref "TransactionStatus"]]
+   [:account-id [:ref "CashAccountId"]]
    [:balance-type [:ref "BalanceType"]]
    [:balance-status [:ref "BalanceStatus"]]
    [:side [:ref "LegSide"]]
-   [:amount int?]
-   [:currency string?]
-   [:transaction-type {:optional true}
-    [:maybe [:ref "TransactionType"]]]
-   [:status {:optional true}
-    [:maybe [:ref "TransactionStatus"]]]
+   [:amount [:ref "MinorUnits"]]
+   [:currency [:ref "CurrencyCode"]]
    [:reference {:optional true} [:maybe string?]]
-   [:created-at {:optional true}
-    [:maybe [:ref "Timestamp"]]]])
+   [:created-at [:ref "Timestamp"]]])
 
 (def TransactionList
   [:map
    [:transactions [:vector [:ref "Transaction"]]]])
 
 (def registry
-  (components-registry [#'TransactionStatus #'TransactionType #'LegSide
-                        #'Transaction #'TransactionList]))
+  (components-registry [#'TransactionId #'LegId #'TransactionStatus
+                        #'TransactionType #'LegSide #'Transaction
+                        #'TransactionList]))

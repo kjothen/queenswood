@@ -3,6 +3,7 @@ syntax = "proto2";
 package com.repldriven.mono.schemas.balances;
 
 import "record_metadata_options.proto";
+import "schemas/types/product-type.proto";
 
 option java_outer_classname = "BalanceProto";
 
@@ -28,15 +29,15 @@ message Balance {
   option (com.apple.foundationdb.record.record).usage = RECORD;
 
   required string account_id = 1;
-  required BalanceType balance_type = 2;
-  required BalanceStatus balance_status = 3;
-  required string currency = 4;
-  optional int64 credit = 5;
-  optional int64 debit = 6;
-  optional int64 created_at = 7;
-  optional int64 updated_at = 8;
-  optional int64 credit_carry = 9;
-  optional int32 product_type = 10;
+  required com.repldriven.mono.schemas.types.ProductType product_type = 2;
+  required BalanceType balance_type = 3;
+  required BalanceStatus balance_status = 4;
+  required string currency = 5;
+  optional int64 credit = 6;
+  optional int64 debit = 7;
+  optional int64 credit_carry = 8;
+  required int64 created_at = 9;
+  required int64 updated_at = 10;
 }
 
 message BalanceProduct {

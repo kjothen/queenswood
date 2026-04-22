@@ -13,36 +13,36 @@
   let editedTiers = $state({});
   let saving = $state({});
 
-  function toggleExpanded(tierType) {
-    if (expandedTier === tierType) {
+  function toggleExpanded(tierId) {
+    if (expandedTier === tierId) {
       expandedTier = null;
     } else {
-      expandedTier = tierType;
-      if (!activeTab[tierType]) activeTab[tierType] = "policies";
-      if (!editedTiers[tierType]) initEdits(tierType);
+      expandedTier = tierId;
+      if (!activeTab[tierId]) activeTab[tierId] = "policies";
+      if (!editedTiers[tierId]) initEdits(tierId);
     }
   }
 
-  function switchTab(tierType, tab) {
-    activeTab[tierType] = tab;
+  function switchTab(tierId, tab) {
+    activeTab[tierId] = tab;
   }
 
-  function initEdits(tierType) {
-    const tier = tiers.find(t => t["tier-type"] === tierType);
+  function initEdits(tierId) {
+    const tier = tiers.find(t => t["tier-id"] === tierId);
     if (!tier) return;
-    editedTiers[tierType] = {
+    editedTiers[tierId] = {
       policies: tier.policies.map(p => ({...p})),
       limits: tier.limits.map(l => ({...l}))
     };
   }
 
-  function toggleEffect(tierType, idx) {
-    const p = editedTiers[tierType].policies[idx];
+  function toggleEffect(tierId, idx) {
+    const p = editedTiers[tierId].policies[idx];
     p.effect = p.effect === "allow" ? "deny" : "allow";
   }
 
-  function updateLimitValue(tierType, idx, value) {
-    editedTiers[tierType].limits[idx].value = parseInt(value) || 0;
+  function updateLimitValue(tierId, idx, value) {
+    editedTiers[tierId].limits[idx].value = parseInt(value) || 0;
   }
 
   function formatCapability(cap) {
@@ -81,23 +81,24 @@
     }
   }
 
-  async function saveTier(tierType) {
-    const edits = editedTiers[tierType];
+  async function saveTier(tierId) {
+    const edits = editedTiers[tierId];
     if (!edits) return;
-    saving[tierType] = true;
+    const name = tiers.find(t => t["tier-id"] === tierId)?.name ?? tierId;
+    saving[tierId] = true;
     try {
-      const res = await replace_tier(tierType, edits.policies, edits.limits);
+      const res = await replace_tier(tierId, edits.policies, edits.limits);
       if (res["http-status"] >= 200 && res["http-status"] < 300) {
-        showToast?.({ type: "success", message: `Tier ${tierType} updated` });
+        showToast?.({ type: "success", message: `Tier ${name} updated` });
         await load();
-        initEdits(tierType);
+        initEdits(tierId);
       } else {
         showToast?.({ type: "warning", message: res.body?.detail ?? `HTTP ${res["http-status"]}` });
       }
     } catch (err) {
       showToast?.({ type: "error", message: err.message });
     } finally {
-      delete saving[tierType];
+      delete saving[tierId];
     }
   }
 
@@ -124,7 +125,8 @@
   <table>
     <thead>
       <tr>
-        <th>Tier Type</th>
+        <th>Name</th>
+        <th>Tier ID</th>
         <th>Policies</th>
         <th>Limits</th>
         <th>Created</th>
@@ -133,40 +135,41 @@
     </thead>
     <tbody>
       {#if tiers.length === 0 && !loading}
-        <tr><td colspan="5" class="empty">No tiers</td></tr>
+        <tr><td colspan="6" class="empty">No tiers</td></tr>
       {/if}
       {#each tiers as tier}
-        <tr class="tier-row" onclick={() => toggleExpanded(tier["tier-type"])}>
+        <tr class="tier-row" onclick={() => toggleExpanded(tier["tier-id"])}>
           <td>
-            <span class="chevron">{expandedTier === tier["tier-type"] ? "\u25BC" : "\u25B6"}</span>
-            <span class="tier-badge">{tier["tier-type"]}</span>
+            <span class="chevron">{expandedTier === tier["tier-id"] ? "\u25BC" : "\u25B6"}</span>
+            <span class="tier-badge">{tier.name}</span>
           </td>
+          <td class="mono">{tier["tier-id"]}</td>
           <td>{tier.policies?.length ?? 0}</td>
           <td>{tier.limits?.length ?? 0}</td>
           <td title={tier["created-at"]}>{time_ago(tier["created-at"])}</td>
           <td title={tier["updated-at"]}>{time_ago(tier["updated-at"])}</td>
         </tr>
-        {#if expandedTier === tier["tier-type"]}
+        {#if expandedTier === tier["tier-id"]}
           <tr class="detail-row">
-            <td colspan="5">
+            <td colspan="6">
               <div class="tab-bar">
-                <button class="tab-btn" class:active={activeTab[tier["tier-type"]] === "policies"}
-                        onclick={(e) => { e.stopPropagation(); switchTab(tier["tier-type"], "policies"); }}>
+                <button class="tab-btn" class:active={activeTab[tier["tier-id"]] === "policies"}
+                        onclick={(e) => { e.stopPropagation(); switchTab(tier["tier-id"], "policies"); }}>
                   Policies
                 </button>
-                <button class="tab-btn" class:active={activeTab[tier["tier-type"]] === "limits"}
-                        onclick={(e) => { e.stopPropagation(); switchTab(tier["tier-type"], "limits"); }}>
+                <button class="tab-btn" class:active={activeTab[tier["tier-id"]] === "limits"}
+                        onclick={(e) => { e.stopPropagation(); switchTab(tier["tier-id"], "limits"); }}>
                   Limits
                 </button>
                 <button class="save-btn"
-                        disabled={saving[tier["tier-type"]]}
-                        onclick={(e) => { e.stopPropagation(); saveTier(tier["tier-type"]); }}>
-                  {saving[tier["tier-type"]] ? "Saving..." : "Save"}
+                        disabled={saving[tier["tier-id"]]}
+                        onclick={(e) => { e.stopPropagation(); saveTier(tier["tier-id"]); }}>
+                  {saving[tier["tier-id"]] ? "Saving..." : "Save"}
                 </button>
               </div>
 
-              {#if activeTab[tier["tier-type"]] === "policies"}
-                {#if (editedTiers[tier["tier-type"]]?.policies ?? []).length === 0}
+              {#if activeTab[tier["tier-id"]] === "policies"}
+                {#if (editedTiers[tier["tier-id"]]?.policies ?? []).length === 0}
                   <div class="detail-empty">No policies</div>
                 {:else}
                   <table class="detail-table">
@@ -178,14 +181,14 @@
                       </tr>
                     </thead>
                     <tbody>
-                      {#each editedTiers[tier["tier-type"]].policies as policy, idx}
+                      {#each editedTiers[tier["tier-id"]].policies as policy, idx}
                         <tr>
                           <td class="capitalize">{formatCapability(policy.capability)}</td>
                           <td>
                             <button class="effect-toggle"
                                     class:allow={policy.effect === "allow"}
                                     class:deny={policy.effect === "deny"}
-                                    onclick={(e) => { e.stopPropagation(); toggleEffect(tier["tier-type"], idx); }}>
+                                    onclick={(e) => { e.stopPropagation(); toggleEffect(tier["tier-id"], idx); }}>
                               {policy.effect === "allow" ? "Allow" : "Deny"}
                             </button>
                           </td>
@@ -195,8 +198,8 @@
                     </tbody>
                   </table>
                 {/if}
-              {:else if activeTab[tier["tier-type"]] === "limits"}
-                {#if (editedTiers[tier["tier-type"]]?.limits ?? []).length === 0}
+              {:else if activeTab[tier["tier-id"]] === "limits"}
+                {#if (editedTiers[tier["tier-id"]]?.limits ?? []).length === 0}
                   <div class="detail-empty">No limits</div>
                 {:else}
                   <table class="detail-table">
@@ -209,7 +212,7 @@
                       </tr>
                     </thead>
                     <tbody>
-                      {#each editedTiers[tier["tier-type"]].limits as limit, idx}
+                      {#each editedTiers[tier["tier-id"]].limits as limit, idx}
                         <tr>
                           <td class="capitalize">{formatLimitType(limit.type)}</td>
                           <td class="muted">{formatKind(limit.kind)}</td>
@@ -217,7 +220,7 @@
                             <input type="number" class="limit-input"
                                    value={limit.value ?? 0}
                                    onclick={(e) => e.stopPropagation()}
-                                   oninput={(e) => updateLimitValue(tier["tier-type"], idx, e.target.value)} />
+                                   oninput={(e) => updateLimitValue(tier["tier-id"], idx, e.target.value)} />
                           </td>
                           <td class="muted">{limit.reason ?? ""}</td>
                         </tr>
@@ -289,6 +292,8 @@
   }
 
   .empty { text-align: center; color: var(--text-faint); padding: 1.5rem; }
+
+  .mono { font-family: monospace; font-size: 0.8rem; }
 
   .tier-row { cursor: pointer; }
   .tier-row:hover { background: var(--bg-hover); }

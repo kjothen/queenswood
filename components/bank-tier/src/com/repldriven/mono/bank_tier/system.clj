@@ -7,10 +7,10 @@
 (def ^:private tier
   {:system/start (fn [{:system/keys [config instance]}]
                    (or instance
-                       (let [{:keys [type policies limits]} config]
+                       (let [{:keys [name policies limits]} config]
                          (core/new-tier {:record-db (:record-db config)
                                          :record-store (:record-store config)}
-                                        type
+                                        name
                                         policies
                                         limits))))
    :system/config {:record-db system/required-component

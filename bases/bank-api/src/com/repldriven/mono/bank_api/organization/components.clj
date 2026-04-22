@@ -2,34 +2,37 @@
   (:require
     [com.repldriven.mono.bank-api.organization.coercion :as coercion]
     [com.repldriven.mono.bank-api.organization.examples :as examples]
-    [com.repldriven.mono.bank-api.schema :refer [components-registry]]))
+    [com.repldriven.mono.bank-api.schema :as schema
+     :refer [components-registry]]))
+
+(def OrganizationId
+  (schema/id-schema "OrganizationId" "org" examples/OrganizationId))
 
 (def OrganisationType
   (coercion/organization-type-enum-schema {:json-schema/example "customer"}))
 
-(def TierType (coercion/tier-type-enum-schema {:json-schema/example "micro"}))
-
-(def CustomerTierType
-  (coercion/customer-tier-type-enum-schema {:json-schema/example "micro"}))
+(def OrganizationStatus
+  (coercion/organization-status-enum-schema {:json-schema/example "test"}))
 
 (def CreateOrganizationRequest
   [:map {:json-schema/example examples/CreateOrganizationRequest}
-   [:name string?]
-   [:tier-type [:ref "CustomerTierType"]]
+   [:name [:ref "Name"]]
+   [:status [:ref "OrganizationStatus"]]
+   [:tier-id [:ref "TierId"]]
    [:currencies [:vector [:ref "Currency"]]]])
 
 (def Organization
   [:map {:json-schema/example examples/Organization}
-   [:organization-id string?]
-   [:name string?]
+   [:organization-id [:ref "OrganizationId"]]
+   [:name [:ref "Name"]]
    [:type [:ref "OrganisationType"]]
-   [:tier-type [:ref "TierType"]]
-   [:status string?]
-   [:created-at {:optional true} [:maybe [:ref "Timestamp"]]]
-   [:updated-at {:optional true} [:maybe [:ref "Timestamp"]]]
+   [:status [:ref "OrganizationStatus"]]
+   [:tier-id [:ref "TierId"]]
    [:party [:ref "Party"]]
    [:accounts [:vector [:ref "CashAccount"]]]
-   [:api-key [:ref "ApiKey"]]])
+   [:api-key [:ref "ApiKey"]]
+   [:created-at [:ref "Timestamp"]]
+   [:updated-at [:ref "Timestamp"]]])
 
 (def OrganizationList
   [:map {:json-schema/example examples/OrganizationList}
@@ -37,19 +40,19 @@
 
 (def CreateOrganizationResponse
   [:map {:json-schema/example examples/CreateOrganizationResponse}
-   [:organization-id string?]
-   [:name string?]
+   [:organization-id [:ref "OrganizationId"]]
+   [:name [:ref "Name"]]
    [:type [:ref "OrganisationType"]]
-   [:tier-type [:ref "TierType"]]
-   [:status string?]
-   [:created-at {:optional true} [:maybe [:ref "Timestamp"]]]
-   [:updated-at {:optional true} [:maybe [:ref "Timestamp"]]]
+   [:status [:ref "OrganizationStatus"]]
+   [:tier-id [:ref "TierId"]]
    [:party [:ref "Party"]]
    [:accounts [:vector [:ref "CashAccount"]]]
    [:api-key [:ref "ApiKey"]]
-   [:api-key-secret string?]])
+   [:api-key-secret string?]
+   [:created-at [:ref "Timestamp"]]
+   [:updated-at [:ref "Timestamp"]]])
 
 (def registry
-  (components-registry [#'OrganisationType #'TierType #'CustomerTierType
+  (components-registry [#'OrganizationId #'OrganisationType #'OrganizationStatus
                         #'CreateOrganizationRequest #'Organization
                         #'OrganizationList #'CreateOrganizationResponse]))

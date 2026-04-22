@@ -1,12 +1,15 @@
 (ns com.repldriven.mono.bank-tier.domain
   (:require
-    [com.repldriven.mono.error.interface :as error]))
+    [com.repldriven.mono.error.interface :as error]
+    [com.repldriven.mono.utility.interface :as utility]))
 
 (defn new-tier
-  "Creates a new Tier record map."
-  [tier-type policies limits]
+  "Creates a new Tier record map with a freshly-minted
+  tier-id (`tie.<ulid>`)."
+  [name policies limits]
   (let [now (System/currentTimeMillis)]
-    {:tier-type tier-type
+    {:tier-id (utility/generate-id "tie")
+     :name name
      :policies (vec (or policies []))
      :limits (vec (or limits []))
      :created-at now
@@ -23,7 +26,7 @@
         (error/fail :tier/policy-not-found
                     {:message "Policy not found"
                      :capability capability
-                     :tier-type (:tier-type tier)}))))
+                     :tier-id (:tier-id tier)}))))
 
 (defn limit
   "Returns the first limit matching type and kind, or

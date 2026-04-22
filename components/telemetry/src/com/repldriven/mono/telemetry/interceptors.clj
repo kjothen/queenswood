@@ -1,7 +1,7 @@
 (ns com.repldriven.mono.telemetry.interceptors
   "Interceptors for distributed tracing and request validation."
   (:require
-    [com.repldriven.mono.log.interface :as log]
+    [sieppari.context :as sc]
     [steffan-westcott.clj-otel.api.trace.http :as trace-http]))
 
 (def require-idempotency-key
@@ -10,15 +10,15 @@
   Returns 400 Bad Request if the header is missing."
   {:name ::require-idempotency-key
    :enter (fn [ctx]
-            (log/debugf
-             "telemetry.interceptors/require-idempotency-key(enter): [headers=]"
-             (get-in ctx [:request :headers]))
             (if (some? (get-in ctx [:request :headers "idempotency-key"]))
               ctx
-              (assoc ctx
-                     :response
-                     {:status 400
-                      :body {:error "Missing Idempotency-Key header"}})))})
+              (sc/terminate ctx
+                            {:status 400
+                             :body {:title "REJECTED"
+                                    :type "mono/missing-idempotency-key"
+                                    :status 400
+                                    :detail
+                                    "Missing Idempotency-Key header"}})))})
 
 (def trace-span
   "Vector of interceptors that add OpenTelemetry server span support to HTTP requests.

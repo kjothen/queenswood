@@ -2,7 +2,10 @@
   (:require
     [com.repldriven.mono.bank-api.payee-check.coercion :as coercion]
     [com.repldriven.mono.bank-api.payee-check.examples :as examples]
-    [com.repldriven.mono.bank-api.schema :refer [components-registry]]))
+    [com.repldriven.mono.bank-api.schema :as schema
+     :refer [components-registry]]))
+
+(def CheckId (schema/id-schema "CheckId" "chk" examples/CheckId))
 
 (def PayeeCheckAccountType
   (coercion/account-type-enum-schema {:json-schema/example "personal"}))
@@ -12,13 +15,13 @@
 
 (def PayeeCheckAccount
   [:map
-   [:sort-code string?]
-   [:account-number string?]])
+   [:sort-code [:ref "SortCode"]]
+   [:account-number [:ref "AccountNumber"]]])
 
 (def PayeeCheckRequest
   [:map
    {:json-schema/example examples/PayeeCheckRequest}
-   [:creditor-name string?]
+   [:creditor-name [:ref "Name"]]
    [:account [:ref "PayeeCheckAccount"]]
    [:account-type [:ref "PayeeCheckAccountType"]]])
 
@@ -32,7 +35,7 @@
 (def PayeeCheck
   [:map
    {:json-schema/example examples/PayeeCheck}
-   [:check-id string?]
+   [:check-id [:ref "CheckId"]]
    [:request [:ref "PayeeCheckRequest"]]
    [:result [:ref "PayeeCheckResult"]]
    [:created-at string?]
@@ -50,7 +53,7 @@
    [:links {:optional true} [:ref "PayeeCheckLinks"]]])
 
 (def registry
-  (components-registry [#'PayeeCheckAccountType #'MatchResult
+  (components-registry [#'CheckId #'PayeeCheckAccountType #'MatchResult
                         #'PayeeCheckAccount #'PayeeCheckRequest
                         #'PayeeCheckResult #'PayeeCheck #'PayeeCheckLinks
                         #'PayeeCheckList]))

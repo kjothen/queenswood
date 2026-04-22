@@ -2,10 +2,10 @@
   (:require
     [com.repldriven.mono.bank-api.tier.coercion :as coercion]
     [com.repldriven.mono.bank-api.tier.examples :as examples]
-    [com.repldriven.mono.bank-api.schema :refer
-     [components-registry]]))
+    [com.repldriven.mono.bank-api.schema :as schema
+     :refer [components-registry]]))
 
-(def TierType (coercion/tier-type-enum-schema {:json-schema/example "micro"}))
+(def TierId (schema/id-schema "TierId" "tie" examples/TierId))
 
 (def PolicyCapability
   (coercion/policy-capability-enum-schema {:json-schema/example
@@ -13,6 +13,9 @@
 
 (def PolicyEffect
   (coercion/policy-effect-enum-schema {:json-schema/example "allow"}))
+
+(def LimitType
+  (coercion/limit-type-enum-schema {:json-schema/example "max-accounts"}))
 
 (def Policy
   [:map {:json-schema/example examples/Policy}
@@ -22,7 +25,7 @@
 
 (def Limit
   [:map {:json-schema/example examples/Limit}
-   [:type keyword?]
+   [:type [:ref "LimitType"]]
    [:kind
     {:optional true
      :decode/api coercion/decode-limit-kind
@@ -33,17 +36,22 @@
 
 (def Tier
   [:map {:json-schema/example examples/Tier}
-   [:tier-type [:ref "TierType"]]
+   [:tier-id [:ref "TierId"]]
+   [:name [:ref "Name"]]
    [:policies [:vector [:ref "Policy"]]]
    [:limits [:vector [:ref "Limit"]]]
-   [:created-at {:optional true}
-    [:maybe [:ref "Timestamp"]]]
-   [:updated-at {:optional true}
-    [:maybe [:ref "Timestamp"]]]])
+   [:created-at [:ref "Timestamp"]]
+   [:updated-at [:ref "Timestamp"]]])
 
 (def TierList
   [:map {:json-schema/example examples/TierList}
    [:tiers [:vector [:ref "Tier"]]]])
+
+(def CreateTierRequest
+  [:map {:json-schema/example examples/CreateTierRequest}
+   [:name [:ref "Name"]]
+   [:policies [:vector [:ref "Policy"]]]
+   [:limits [:vector [:ref "Limit"]]]])
 
 (def ReplaceTierRequest
   [:map {:json-schema/example examples/ReplaceTierRequest}
@@ -51,5 +59,6 @@
    [:limits [:vector [:ref "Limit"]]]])
 
 (def registry
-  (components-registry [#'TierType #'PolicyCapability #'PolicyEffect #'Policy
-                        #'Limit #'Tier #'TierList #'ReplaceTierRequest]))
+  (components-registry [#'TierId #'PolicyCapability #'PolicyEffect #'LimitType
+                        #'Policy #'Limit #'Tier #'TierList #'CreateTierRequest
+                        #'ReplaceTierRequest]))

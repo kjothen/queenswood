@@ -15,11 +15,12 @@
             :responses {200 {:body [:ref "CashAccountProductVersionList"]}}
             :handler queries/list-products}
       :post {:summary "Draft a new product"
-             :openapi {:operationId "CreateCashAccountProduct"}
+             :openapi {:operationId "CreateCashAccountProduct"
+                       :requestBody {:required true}}
              :parameters {:body [:ref "DraftCashAccountProductRequest"]}
              :responses {201 {:body [:ref "CashAccountProductVersion"]}}
              :handler handlers/create-product}}]
-    ["/{product-id}" {:parameters {:path {:product-id string?}}}
+    ["/{product-id}" {:parameters {:path {:product-id [:ref "ProductId"]}}}
      [""
       {:get {:summary "Retrieve latest product version"
              :openapi {:operationId "RetrieveCashAccountProduct"}
@@ -35,7 +36,8 @@
              :handler queries/get-published-version}}]
      ["/draft"
       {:post {:summary "Create or update the current draft"
-              :openapi {:operationId "UpsertCashAccountProductDraft"}
+              :openapi {:operationId "UpsertCashAccountProductDraft"
+                        :requestBody {:required true}}
               :parameters {:body [:ref "DraftCashAccountProductRequest"]}
               :responses {200 {:body [:ref "CashAccountProductVersion"]}
                           404 (ErrorResponse [#'ProductNotFound])}
@@ -54,7 +56,7 @@
               :responses {200 {:body [:ref "CashAccountProductVersionList"]}
                           404 (ErrorResponse [#'ProductNotFound])}
               :handler queries/list-versions}}]
-      ["/{version-id}" {:parameters {:path {:version-id string?}}}
+      ["/{version-id}" {:parameters {:path {:version-id [:ref "VersionId"]}}}
        {:get {:summary "Retrieve a specific product version"
               :openapi {:operationId "RetrieveCashAccountProductVersion"}
               :responses {200 {:body [:ref "CashAccountProductVersion"]}

@@ -80,14 +80,13 @@
                   currency credit debit credit-carry]}
           data
           now (System/currentTimeMillis)]
-      (cond-> {:account-id account-id
-               :balance-type balance-type
-               :balance-status balance-status
-               :currency currency
-               :credit (or credit 0)
-               :debit (or debit 0)
-               :credit-carry (or credit-carry 0)
-               :created-at now
-               :updated-at now}
-              product-type
-              (assoc :product-type product-type)))))
+      {:account-id account-id
+       :product-type product-type
+       :balance-type balance-type
+       :balance-status balance-status
+       :currency currency
+       :credit (or credit 0)
+       :debit (or debit 0)
+       :credit-carry (or credit-carry 0)
+       :created-at now
+       :updated-at now})))

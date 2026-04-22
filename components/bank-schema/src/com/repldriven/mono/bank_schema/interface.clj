@@ -14,12 +14,13 @@
     [com.repldriven.mono.schemas.payee_check :as payee-check]
     [com.repldriven.mono.schemas.tiers :as tiers]
     [com.repldriven.mono.schemas.transactions :as transactions]
+    [com.repldriven.mono.schemas.types :as types]
     [protojure.protobuf :as proto])
   (:import
     (com.repldriven.mono.schemas.balances BalanceProto$Balance)
     (com.repldriven.mono.schemas.cash_account_products
-     CashAccountProductProto$ProductType
      CashAccountProductProto$CashAccountProductVersion)
+    (com.repldriven.mono.schemas.types ProductTypeProto$ProductType)
     (com.repldriven.mono.schemas.cash_accounts
      CashAccountProto$CashAccount
      CashAccountChangelogProto$CashAccountChangelog)
@@ -29,7 +30,6 @@
     (com.repldriven.mono.schemas.organizations
      OrganizationProto$Organization
      OrganizationProto$OrganizationType
-     OrganizationProto$TierType
      OrganizationChangelogProto$OrganizationChangelog)
     (com.repldriven.mono.schemas.party
      PartyProto$Party
@@ -55,24 +55,16 @@
 (def balance-type->int balances/BalanceType-label2val)
 (def balance-status->int balances/BalanceStatus-label2val)
 
-(def product-type->int cash-account-products/ProductType-label2val)
-(def int->product-type cash-account-products/ProductType-val2label)
+(def product-type->int types/ProductType-label2val)
+(def int->product-type types/ProductType-val2label)
 
 (defn product-type->pb-enum
   "Converts an product-type keyword to the protobuf
   enum value for use in FDB queries."
   [product-type]
-  (CashAccountProductProto$ProductType/forNumber
+  (ProductTypeProto$ProductType/forNumber
    (product-type->int product-type)))
 
-(def tier-type->int organizations/TierType-label2val)
-
-(defn tier-type->pb-enum
-  "Converts a tier-type keyword to the protobuf enum
-  value for use in FDB queries."
-  [tier-type]
-  (OrganizationProto$TierType/forNumber
-   (tier-type->int tier-type)))
 
 (def organization-type->int organizations/OrganizationType-label2val)
 
@@ -83,8 +75,16 @@
   (OrganizationProto$OrganizationType/forNumber
    (organization-type->int org-type)))
 
-(def pb->CashAccountProductVersion
-  cash-account-products/pb->CashAccountProductVersion)
+(defn pb->CashAccountProductVersion
+  "Wraps the generated converter to strip the proto2 default `\"\"`
+  emitted for an unset `optional string valid_from`, so callers see
+  `:valid-from` only when it carries a real ISO date."
+  [input]
+  (let [version (cash-account-products/pb->CashAccountProductVersion input)]
+    (cond-> version
+            (not (seq (:valid-from version)))
+            (dissoc :valid-from))))
+
 (defn CashAccountProductVersion->pb
   [m]
   (proto/->pb (cash-account-products/new-CashAccountProductVersion m)))

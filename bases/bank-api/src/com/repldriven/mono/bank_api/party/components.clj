@@ -2,9 +2,10 @@
   (:require
     [com.repldriven.mono.bank-api.party.coercion :as coercion]
     [com.repldriven.mono.bank-api.party.examples :as examples]
-    [com.repldriven.mono.bank-api.schema :refer [components-registry]]))
+    [com.repldriven.mono.bank-api.schema :as schema
+     :refer [components-registry]]))
 
-(def PartyId [:string {:title "PartyId" :json-schema/example examples/PartyId}])
+(def PartyId (schema/id-schema "PartyId" "pty" examples/PartyId))
 
 (def PartyType
   (coercion/party-type-enum-schema {:json-schema/example "person"}))
@@ -17,19 +18,19 @@
 
 (def Party
   [:map {:json-schema/example examples/Party}
-   [:organization-id {:optional true} [:maybe string?]]
+   [:organization-id [:ref "OrganizationId"]]
    [:party-id [:ref "PartyId"]]
    [:type [:ref "PartyType"]]
-   [:display-name string?]
+   [:display-name [:ref "Name"]]
    [:status [:ref "PartyStatus"]]
-   [:created-at {:optional true} [:maybe [:ref "Timestamp"]]]
-   [:updated-at {:optional true} [:maybe [:ref "Timestamp"]]]])
+   [:created-at [:ref "Timestamp"]]
+   [:updated-at [:ref "Timestamp"]]])
 
 (def NationalIdentifier
   [:map
    [:type [:ref "IdentifierType"]]
    [:value string?]
-   [:issuing-country string?]])
+   [:issuing-country [:ref "CountryCode"]]])
 
 (def CreatePartyRequest
   [:map {:json-schema/example examples/CreatePartyRequest}
@@ -38,12 +39,13 @@
      {:json-schema coercion/party-type-json-schema
       :decode/api coercion/decode-party-type}
      :party-type-person]]
-   [:display-name string?] [:given-name string?]
-   [:middle-names {:optional true} [:maybe string?]]
-   [:family-name string?]
-   [:date-of-birth int?] [:nationality string?]
-   [:national-identifier {:optional true}
-    [:maybe [:ref "NationalIdentifier"]]]])
+   [:display-name [:ref "Name"]]
+   [:given-name [:ref "Name"]]
+   [:middle-names {:optional true} [:maybe [:ref "Name"]]]
+   [:family-name [:ref "Name"]]
+   [:date-of-birth [:ref "DateOfBirth"]]
+   [:nationality [:ref "CountryCode"]]
+   [:national-identifier [:ref "NationalIdentifier"]]])
 
 (def CreatePartyResponse [:ref "Party"])
 

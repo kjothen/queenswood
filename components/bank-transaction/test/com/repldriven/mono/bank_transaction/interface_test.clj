@@ -39,6 +39,7 @@
   [config account-id]
   (balances/new-balance config
                         {:account-id account-id
+                         :product-type :product-type-current
                          :balance-type :balance-type-default
                          :currency "GBP"
                          :balance-status :balance-status-posted}))
@@ -109,7 +110,8 @@
   ;; bank transfer funding the customer org's account
   [sys fdb-config proc schemas]
   (testing "simulate inbound transfer funding customer org account"
-    (let [internal-org (system/instance sys
+    (let [tier-id (:tier-id (system/instance sys [:tiers :micro]))
+          internal-org (system/instance sys
                                         [:organizations :internal])
           internal-account-id (get-in internal-org
                                       [:organization :accounts
@@ -119,7 +121,8 @@
                        fdb-config
                        "Test Customer"
                        :organization-type-customer
-                       :tier-type-micro
+                       :organization-status-test
+                       tier-id
                        ["GBP"])
          customer-account-id (get-in customer-org
                                      [:organization :accounts

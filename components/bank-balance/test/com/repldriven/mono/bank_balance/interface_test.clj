@@ -22,11 +22,13 @@
      (testing "creates a balance with zero totals"
        (nom-test> [balance (SUT/new-balance config
                                             {:account-id "acc_123"
+                                             :product-type :product-type-current
                                              :balance-type :balance-type-default
                                              :balance-status
                                              :balance-status-posted
                                              :currency "USD"})
                    _ (is (= "acc_123" (:account-id balance)))
+                   _ (is (= :product-type-current (:product-type balance)))
                    _ (is (= :balance-type-default (:balance-type balance)))
                    _ (is (= :balance-status-posted (:balance-status balance)))
                    _ (is (= "USD" (:currency balance)))
@@ -44,6 +46,7 @@
      (testing "lists balances by account"
        (nom-test> [_ (SUT/new-balance config
                                       {:account-id "acc_123"
+                                       :product-type :product-type-current
                                        :balance-type
                                        :balance-type-interest-accrued
                                        :balance-status :balance-status-posted

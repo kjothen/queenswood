@@ -143,3 +143,34 @@ start-telemetry:
 stop-telemetry:
   docker stop jaeger && docker rm jaeger
 
+# Run schemathesis API fuzzer against the running bank-api
+schemathesis base_url="http://127.0.0.1:8080":
+    #!/usr/bin/env zsh
+    set -e
+    echo "Picking a tier..."
+    tier_id=$(curl -s -H "Authorization: Bearer $MONO_ADMIN_API_KEY" \
+      "{{ base_url }}/v1/tiers" | jq -r '[.tiers[] | select(.name == "Standard")][0]["tier-id"]')
+    if [[ -z "$tier_id" || "$tier_id" == "null" ]]; then
+      echo "Failed to resolve Standard tier-id from /v1/tiers"
+      exit 1
+    fi
+    echo "Creating test organization on tier $tier_id..."
+    response=$(curl -s -X POST "{{ base_url }}/v1/organizations" \
+      -H "Content-Type: application/json" \
+      -H "Authorization: Bearer $MONO_ADMIN_API_KEY" \
+      -d '{"name": "Schemathesis Test Org", "status": "test", "tier-id": "'"$tier_id"'", "currencies": ["GBP"]}')
+    org_token=$(echo "$response" | jq -r '.["api-key-secret"]')
+    if [[ -z "$org_token" || "$org_token" == "null" ]]; then
+      echo "Failed to create organization: $response"
+      exit 1
+    fi
+    echo "Running schemathesis..."
+    ADMIN_TOKEN="$MONO_ADMIN_API_KEY" \
+    ORG_TOKEN="$org_token" \
+    PYTHONPATH="{{ justfile_directory() }}/scripts" \
+    SCHEMATHESIS_HOOKS=schemathesis_hooks \
+      uvx schemathesis run "{{ base_url }}/openapi.json" \
+        --output-sanitize false \
+        --max-examples 500 \
+        --continue-on-failure
+

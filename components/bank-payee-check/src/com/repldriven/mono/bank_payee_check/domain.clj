@@ -1,6 +1,6 @@
 (ns com.repldriven.mono.bank-payee-check.domain
   (:require
-    [com.repldriven.mono.encryption.interface :as encryption]))
+    [com.repldriven.mono.utility.interface :as utility]))
 
 (def ^:private ttl-hours 24)
 
@@ -25,7 +25,7 @@
   map, and result map. Generates check-id and timestamps."
   [organization-id request result]
   (let [created (now-rfc3339)]
-    {:check-id (encryption/generate-id "chk")
+    {:check-id (utility/generate-id "chk")
      :organization-id organization-id
      :request request
      :result (sanitize-result result)

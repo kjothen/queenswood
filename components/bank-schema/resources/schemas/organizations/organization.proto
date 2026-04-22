@@ -12,21 +12,20 @@ enum OrganizationType {
   ORGANIZATION_TYPE_CUSTOMER = 2;
 }
 
-enum TierType {
-  TIER_TYPE_UNKNOWN  = 0;
-  TIER_TYPE_SYSTEM   = 1;
-  TIER_TYPE_MICRO    = 2;
-  TIER_TYPE_STANDARD = 3;
+enum OrganizationStatus {
+  ORGANIZATION_STATUS_UNKNOWN = 0;
+  ORGANIZATION_STATUS_TEST = 1;
+  ORGANIZATION_STATUS_LIVE = 2;
 }
 
 message Organization {
   option (com.apple.foundationdb.record.record).usage = RECORD;
 
   required string organization_id = 1 [(com.apple.foundationdb.record.field).primary_key = true];
-  optional string name = 2;
-  optional string status = 3;
-  optional int64 created_at = 4;
-  optional int64 updated_at = 5;
-  required OrganizationType type = 6;
-  optional TierType tier_type = 7;
+  required OrganizationType type = 2;
+  required OrganizationStatus status = 3;
+  required string tier_id = 4;
+  required string name = 5;
+  required int64 created_at = 6;
+  required int64 updated_at = 7;
 }

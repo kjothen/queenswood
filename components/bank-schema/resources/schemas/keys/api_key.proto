@@ -10,10 +10,10 @@ message ApiKey {
   option (com.apple.foundationdb.record.record).usage = RECORD;
 
   required string api_key_id = 1;
-  optional string organization_id = 2;
-  optional string key_hash = 3 [(com.apple.foundationdb.record.field).primary_key = true];
-  optional string key_prefix = 4;
+  required string organization_id = 2;
+  required string key_hash = 3 [(com.apple.foundationdb.record.field).primary_key = true];
+  required string key_prefix = 4;
   optional string name = 5;
-  optional int64 created_at = 6;
+  required int64 created_at = 6;
   optional int64 revoked_at = 7;
 }

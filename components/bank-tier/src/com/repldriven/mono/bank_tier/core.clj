@@ -3,8 +3,7 @@
     [com.repldriven.mono.bank-tier.domain :as domain]
     [com.repldriven.mono.bank-tier.store :as store]
 
-    [com.repldriven.mono.error.interface :as error
-     :refer [let-nom>]]))
+    [com.repldriven.mono.error.interface :refer [let-nom>]]))
 
 (defn get-tiers
   "Lists all tiers. Returns a sequence of tier maps or
@@ -13,20 +12,20 @@
   (store/get-tiers txn))
 
 (defn get-tier
-  "Finds a Tier by tier-type keyword. Returns the Tier
-  map or anomaly."
-  [txn tier-type]
-  (store/get-tier txn tier-type))
+  "Finds a Tier by tier-id. Returns the Tier map or
+  anomaly."
+  [txn tier-id]
+  (store/get-tier txn tier-id))
 
 (defn new-tier
-  "Creates a new Tier with the given type, policies, and
-  limits. Returns the Tier map or anomaly."
-  [txn tier-type policies limits]
+  "Creates a new Tier with the given name, policies, and
+  limits. Returns the persisted tier or anomaly."
+  [txn name policies limits]
   (store/transact txn
                   (fn [txn]
-                    (let [tier (domain/new-tier tier-type policies limits)]
+                    (let [tier (domain/new-tier name policies limits)]
                       (let-nom> [_ (store/create txn tier)
-                                 result (get-tier txn tier-type)]
+                                 result (get-tier txn (:tier-id tier))]
                         result)))))
 
 (defn get-org-tier
@@ -38,11 +37,11 @@
 (defn update-tier
   "Updates a tier's policies and limits. Returns the
   updated tier map or anomaly."
-  [txn tier-type policies limits]
+  [txn tier-id policies limits]
   (store/transact txn
                   (fn [txn]
                     (let-nom>
-                      [existing (get-tier txn tier-type)
+                      [existing (get-tier txn tier-id)
                        updated (assoc existing
                                       :policies (vec policies)
                                       :limits (vec limits)

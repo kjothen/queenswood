@@ -3,10 +3,10 @@
     [com.repldriven.mono.bank-api.schema :refer [examples-registry]]))
 
 (def SimulateInboundTransferRequest
-  {:account-id "acc_01JMABC" :amount 1000 :currency "GBP"})
+  {:account-id "acc.01kprbmgcj35ptc8npmybhh4s8" :amount 1000 :currency "GBP"})
 
 (def SimulateInboundTransferResponse
-  {:transaction-id "txn_01JMABC"
+  {:transaction-id "txn.01kprbmgcj35ptc8npmybhh4sb"
    :idempotency-key "idem-001"
    :status "posted"
    :transaction-type "internal-transfer"
@@ -14,18 +14,18 @@
    :reference "Simulated inbound transfer"
    :created-at "2025-01-01T00:00:00Z"
    :updated-at "2025-01-01T00:00:00Z"
-   :legs [{:leg-id "leg_01JMABC"
-           :transaction-id "txn_01JMABC"
-           :account-id "acc_01JMABC"
+   :legs [{:leg-id "leg.01kprbmgcj35ptc8npmybhh4sc"
+           :transaction-id "txn.01kprbmgcj35ptc8npmybhh4sb"
+           :account-id "acc.01kprbmgcj35ptc8npmybhh4s8"
            :balance-type "suspense"
            :balance-status "posted"
            :side "debit"
            :amount 1000
            :currency "GBP"
            :created-at "2025-01-01T00:00:00Z"}
-          {:leg-id "leg_02JMABC"
-           :transaction-id "txn_01JMABC"
-           :account-id "acc_02JMABC"
+          {:leg-id "leg.01kprbmgcj35ptc8npmybhh4sd"
+           :transaction-id "txn.01kprbmgcj35ptc8npmybhh4sb"
+           :account-id "acc.01kprbmgcj35ptc8npmybhh4s9"
            :balance-type "default"
            :balance-status "posted"
            :side "credit"
@@ -36,6 +36,21 @@
 (def SimulateInterestRequest {:as-of-date 20260326})
 
 (def SimulateInterestResponse
-  {:organization-id "org_01JMABC" :as-of-date 20260326 :accounts-processed 5})
+  {:organization-id "org.01kprbmgcj35ptc8npmybhh4s7"
+   :as-of-date 20260326
+   :accounts-processed 5})
 
-(def registry (examples-registry []))
+(def SettlementAccountNotFound
+  {:value {:title "REJECTED"
+           :type ":interest/no-settlement"
+           :status 404
+           :detail "No settlement account found"}})
+
+(def BalanceNotFound
+  {:value {:title "REJECTED"
+           :type ":balance/not-found"
+           :status 404
+           :detail "Balance not found"}})
+
+(def registry
+  (examples-registry [#'SettlementAccountNotFound #'BalanceNotFound]))

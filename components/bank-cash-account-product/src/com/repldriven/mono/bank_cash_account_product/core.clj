@@ -3,8 +3,8 @@
     [com.repldriven.mono.bank-cash-account-product.domain :as domain]
     [com.repldriven.mono.bank-cash-account-product.store :as store]
 
-    [com.repldriven.mono.encryption.interface :as encryption]
-    [com.repldriven.mono.error.interface :as error :refer [let-nom>]]))
+    [com.repldriven.mono.error.interface :as error :refer [let-nom>]]
+    [com.repldriven.mono.utility.interface :as utility]))
 
 (defn- draft?
   [version]
@@ -20,7 +20,7 @@
   "Creates a cash account product as an initial draft v1.
   Returns {:version <map>} or anomaly."
   [txn org-id version-data]
-  (let [product-id (encryption/generate-id "prd")
+  (let [product-id (utility/generate-id "prd")
         version (domain/new-version org-id product-id 1 version-data)]
     (let-nom> [_ (store/save-version txn version)]
       {:version version})))

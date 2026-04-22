@@ -20,18 +20,21 @@
 (deftest new-organization-test
   (with-test-system
    [sys "classpath:bank-organization/application-test.yml"]
-   (let [config (fdb-config sys)]
+   (let [config (fdb-config sys)
+         standard-tier-id (:tier-id (system/instance sys [:tiers :standard]))]
      (testing "creates org with api-key, party, product, and accounts"
-       (nom-test> [result
-                   (SUT/new-organization config
-                                         "Test Org" :organization-type-customer
-                                         :tier-type-standard ["GBP" "USD"])
+       (nom-test> [result (SUT/new-organization config
+                                                "Test Org"
+                                                :organization-type-customer
+                                                :organization-status-live
+                                                standard-tier-id
+                                                ["GBP" "USD"])
                    org (:organization result)
                    _ (is (= {:name "Test Org"
                              :type :organization-type-customer
-                             :status "active"}
+                             :status :organization-status-live}
                             (select-keys org [:name :type :status])))
-                   _ (is (.startsWith ^String (:key-secret result) "sk_live_"))
+                   _ (is (.startsWith ^String (:key-secret result) "sk_live."))
                    _ (is (= {:type :party-type-organization
                              :status :party-status-active}
                             (select-keys (:party org) [:type :status])))

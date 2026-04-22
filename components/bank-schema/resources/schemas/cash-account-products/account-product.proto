@@ -4,17 +4,9 @@ package com.repldriven.mono.schemas.cash_account_products;
 
 import "record_metadata_options.proto";
 import "schemas/balances/balance.proto";
+import "schemas/types/product-type.proto";
 
 option java_outer_classname = "CashAccountProductProto";
-
-enum ProductType {
-  PRODUCT_TYPE_UNKNOWN         = 0;
-  PRODUCT_TYPE_INTERNAL        = 1;
-  PRODUCT_TYPE_SETTLEMENT      = 2;
-  PRODUCT_TYPE_CURRENT         = 3;
-  PRODUCT_TYPE_SAVINGS         = 4;
-  PRODUCT_TYPE_TERM_DEPOSIT    = 5;
-}
 
 enum BalanceSheetSide {
   BALANCE_SHEET_SIDE_UNKNOWN = 0;
@@ -24,15 +16,15 @@ enum BalanceSheetSide {
 
 enum PaymentAddressScheme {
   PAYMENT_ADDRESS_SCHEME_UNKNOWN = 0;
-  PAYMENT_ADDRESS_SCHEME_SCAN    = 1;
-  PAYMENT_ADDRESS_SCHEME_IBAN    = 2;
-  PAYMENT_ADDRESS_SCHEME_SWIFT   = 3;
-  PAYMENT_ADDRESS_SCHEME_ACH     = 4;
+  PAYMENT_ADDRESS_SCHEME_SCAN = 1;
+  PAYMENT_ADDRESS_SCHEME_IBAN = 2;
+  PAYMENT_ADDRESS_SCHEME_SWIFT = 3;
+  PAYMENT_ADDRESS_SCHEME_ACH = 4;
 }
 
 enum CashAccountProductVersionStatus {
-  CASH_ACCOUNT_PRODUCT_VERSION_STATUS_UNKNOWN   = 0;
-  CASH_ACCOUNT_PRODUCT_VERSION_STATUS_DRAFT     = 1;
+  CASH_ACCOUNT_PRODUCT_VERSION_STATUS_UNKNOWN = 0;
+  CASH_ACCOUNT_PRODUCT_VERSION_STATUS_DRAFT = 1;
   CASH_ACCOUNT_PRODUCT_VERSION_STATUS_PUBLISHED = 2;
 }
 
@@ -42,17 +34,16 @@ message CashAccountProductVersion {
   required string organization_id = 1;
   required string product_id = 2;
   required string version_id = 3;
-  optional int32 version_number = 4;
-  optional CashAccountProductVersionStatus status = 5;
-  optional ProductType product_type = 6;
-  optional BalanceSheetSide balance_sheet_side = 7;
-  optional string valid_from = 8;
-  optional string valid_to = 9;
-  optional int64 created_at = 10;
-  optional int64 updated_at = 11;
-  optional string name = 12;
-  repeated string allowed_currencies = 13;
-  repeated com.repldriven.mono.schemas.balances.BalanceProduct balance_products = 14;
-  repeated PaymentAddressScheme allowed_payment_address_schemes = 15;
-  optional int32 interest_rate_bps = 16;
+  required int32 version_number = 4;
+  required CashAccountProductVersionStatus status = 5;
+  required com.repldriven.mono.schemas.types.ProductType product_type = 6;
+  required BalanceSheetSide balance_sheet_side = 7;
+  required string name = 8;
+  optional string valid_from = 9;
+  repeated string allowed_currencies = 10;
+  repeated com.repldriven.mono.schemas.balances.BalanceProduct balance_products = 11;
+  repeated PaymentAddressScheme allowed_payment_address_schemes = 12;
+  optional int32 interest_rate_bps = 13;
+  required int64 created_at = 14;
+  required int64 updated_at = 15;
 }

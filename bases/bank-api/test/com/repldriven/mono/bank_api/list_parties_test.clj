@@ -35,12 +35,15 @@
      #(assoc-in % [:system/defs :server :handler] api/app)]]
    (let [config {:record-db (system/instance sys [:fdb :record-db])
                  :record-store (system/instance sys [:fdb :store])}
+         tier-id (:tier-id (system/instance sys [:tiers :micro]))
          base-url (server/http-local-url
                    (system/instance sys [:server :jetty-adapter]))
          org (organizations/new-organization config
                                              "Parties Test Org"
                                              :organization-type-customer
-                                             :tier-type-micro ["GBP"])
+                                             :organization-status-test
+                                             tier-id
+                                             ["GBP"])
          _ (assert (not (error/anomaly? org)) (str "setup failed: " org))
          org-id (get-in org [:organization :organization-id])
          token (:key-secret org)
@@ -93,5 +96,7 @@
                    body (http/res->body res)
                    _ (is (= (first ids) (get body "party-id")))]))
      (testing "get party returns 404 for unknown id"
-       (nom-test> [res (get-party-request base-url token "py-unknown")
+       (nom-test> [res (get-party-request base-url
+                                          token
+                                          "pty.00000000000000000000000000")
                    _ (is (= 404 (:status res)))])))))

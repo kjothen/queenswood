@@ -17,15 +17,12 @@
         (:records (fdb/scan-records store {:limit 100}))))
 
 (defn- load-tier
-  [store tier-type]
-  (if-let [record (fdb/load-record
-                   store
-                   (.getNumber
-                    (schema/tier-type->pb-enum tier-type)))]
+  [store tier-id]
+  (if-let [record (fdb/load-record store tier-id)]
     (schema/pb->Tier record)
     (error/reject :tier/not-found
                   {:message "Tier not found"
-                   :tier-type tier-type})))
+                   :tier-id tier-id})))
 
 (defn- load-org
   [store org-id]
@@ -67,25 +64,25 @@
                 "Failed to list tiers"))
 
 (defn get-tier
-  "Finds a Tier by tier-type. Returns the Tier map or
+  "Finds a Tier by tier-id. Returns the Tier map or
   rejection anomaly if not found."
-  [txn tier-type]
+  [txn tier-id]
   (fdb/transact txn
                 (fn [txn]
-                  (load-tier (fdb/open txn store-name) tier-type))
+                  (load-tier (fdb/open txn store-name) tier-id))
                 :tier/retrieve
                 "Failed to retrieve tier"))
 
 (defn get-org-tier
   "Loads the tier for the given organization. Opens the
-  organizations store to extract tier-type, then loads
-  the tier. Returns the Tier map or rejection anomaly."
+  organizations store to extract tier-id, then loads the
+  tier. Returns the Tier map or rejection anomaly."
   [txn org-id]
   (fdb/transact txn
                 (fn [txn]
                   (let-nom>
                     [org (load-org (fdb/open txn organizations-store-name)
                                    org-id)]
-                    (get-tier txn (:tier-type org))))
+                    (get-tier txn (:tier-id org))))
                 :tier/load-org
                 "Failed to load organization"))

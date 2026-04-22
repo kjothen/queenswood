@@ -1,6 +1,6 @@
 (ns com.repldriven.mono.bank-cash-account-product.domain
   (:require
-    [com.repldriven.mono.encryption.interface :as encryption]))
+    [com.repldriven.mono.utility.interface :as utility]))
 
 (defn new-version
   "Creates a new CashAccountProductVersion record map in
@@ -9,17 +9,18 @@
   (let [{:keys [name product-type balance-sheet-side
                 allowed-currencies balance-products
                 allowed-payment-address-schemes
-                interest-rate-bps valid-from valid-to]}
+                interest-rate-bps valid-from]}
         data
         now (System/currentTimeMillis)]
     (cond-> {:organization-id organization-id
              :product-id product-id
-             :version-id (encryption/generate-id "prv")
+             :version-id (utility/generate-id "prv")
              :version-number version-number
              :status :cash-account-product-version-status-draft
              :name name
              :product-type product-type
              :balance-sheet-side balance-sheet-side
+             :balance-products balance-products
              :interest-rate-bps (or interest-rate-bps 0)
              :created-at now
              :updated-at now}
@@ -29,12 +30,6 @@
 
             valid-from
             (assoc :valid-from valid-from)
-
-            valid-to
-            (assoc :valid-to valid-to)
-
-            (seq balance-products)
-            (assoc :balance-products balance-products)
 
             (seq allowed-payment-address-schemes)
             (assoc :allowed-payment-address-schemes
@@ -53,7 +48,7 @@
         {:keys [name product-type balance-sheet-side
                 allowed-currencies balance-products
                 allowed-payment-address-schemes
-                interest-rate-bps valid-from valid-to]}
+                interest-rate-bps valid-from]}
         data]
     (cond-> {:organization-id organization-id
              :product-id product-id
@@ -63,6 +58,7 @@
              :name name
              :product-type product-type
              :balance-sheet-side balance-sheet-side
+             :balance-products balance-products
              :interest-rate-bps (or interest-rate-bps 0)
              :created-at created-at
              :updated-at (System/currentTimeMillis)}
@@ -72,12 +68,6 @@
 
             valid-from
             (assoc :valid-from valid-from)
-
-            valid-to
-            (assoc :valid-to valid-to)
-
-            (seq balance-products)
-            (assoc :balance-products balance-products)
 
             (seq allowed-payment-address-schemes)
             (assoc :allowed-payment-address-schemes

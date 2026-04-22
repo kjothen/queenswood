@@ -64,5 +64,5 @@
                  [:data :coercion]
                  coercion))
    (ring/routes (server/standard-openapi-ui-handler)
-                (ring/create-default-handler))
+                (server/standard-default-handler))
    server/standard-executor))

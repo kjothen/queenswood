@@ -2,6 +2,7 @@
   (:refer-clojure :exclude [vars])
   (:require
     [com.repldriven.mono.utility.collections :as util.collections]
+    [com.repldriven.mono.utility.id :as util.id]
     [com.repldriven.mono.utility.string :as util.string]
     [com.repldriven.mono.utility.uuid :as util.uuid]
     [com.repldriven.mono.utility.vars :as vars]))
@@ -23,6 +24,9 @@
 
 ;; UUID utilities
 (def uuidv7 util.uuid/v7)
+
+;; ID utilities
+(def generate-id util.id/generate)
 
 ;; Vars utilities
 (def vname vars/vname)

@@ -15,9 +15,11 @@
 
 (def ^:dynamic *base-url* "http://localhost:{PORT}")
 
+(def ^:private test-party-id "pty.01kprbmgcj35ptc8npmybhh4s9")
+
 (def ^:private test-party
-  {:organization-id "org_test_api"
-   :party-id "pty_01TEST123"
+  {:organization-id "org.01kprbmgcj35ptc8npmybhh4s7"
+   :party-id test-party-id
    :type :party-type-person
    :display-name "Arthur Phillip Dent"
    :status :party-status-pending
@@ -52,26 +54,26 @@
                                         "display-name" "Arther Phillip Dent"
                                         "given-name" "Arthur"
                                         "family-name" "Dent"
-                                        "date-of-birth" 19500727
+                                        "date-of-birth" "1950-07-27"
                                         "nationality" "GB"
                                         "national-identifier"
                                         {"type" "national-insurance"
                                          "value" "TN000001A"
-                                         "issuing-country" "GBR"}})}))
+                                         "issuing-country" "GB"}})}))
 
 (deftest create-party-test
-  (with-test-system
-   [sys
-    ["classpath:bank-api/application-test.yml"
-     #(assoc-in % [:system/defs :server :handler] api/app)]]
-   (let [jetty (system/instance sys [:server :jetty-adapter])
-         {:keys [stop]} (command-processor sys test-party)]
-     (binding [*base-url* (server/http-local-url jetty)]
-       (testing "POST /v1/parties sends create-party command"
-         (nom-test> [res (create-party-request)
-                     _ (is (= 200 (:status res)))
-                     body (http/res->edn res)
-                     _ (is (= "pty_01TEST123" (:party-id body)))
-                     _ (is (= "person" (:type body)))
-                     _ (is (= "Arthur Phillip Dent" (:display-name body)))])))
-     (stop))))
+  (with-test-system [sys
+                     ["classpath:bank-api/application-test.yml"
+                      #(assoc-in % [:system/defs :server :handler] api/app)]]
+                    (let [jetty (system/instance sys [:server :jetty-adapter])
+                          {:keys [stop]} (command-processor sys test-party)]
+                      (binding [*base-url* (server/http-local-url jetty)]
+                        (testing "POST /v1/parties sends create-party command"
+                          (nom-test> [res (create-party-request)
+                                      _ (is (= 200 (:status res)))
+                                      body (http/res->edn res)
+                                      _ (is (= test-party-id (:party-id body)))
+                                      _ (is (= "person" (:type body)))
+                                      _ (is (= "Arthur Phillip Dent"
+                                               (:display-name body)))])))
+                      (stop))))

@@ -18,12 +18,13 @@
             :responses {200 {:body [:ref "PayeeCheckList"]}}
             :handler queries/list-checks}
       :post {:summary "Create a payee check"
-             :openapi {:operationId "CreatePayeeCheck"}
+             :openapi {:operationId "CreatePayeeCheck"
+                       :requestBody {:required true}}
              :parameters {:body [:ref "PayeeCheckRequest"]}
              :responses {201 {:body [:ref "PayeeCheck"]}}
              :handler handlers/create-check}}]
     ["/{check-id}"
-     {:parameters {:path {:check-id string?}}}
+     {:parameters {:path {:check-id [:ref "CheckId"]}}}
      [""
       {:get {:summary "Retrieve a payee check"
              :openapi {:operationId "GetPayeeCheck"}

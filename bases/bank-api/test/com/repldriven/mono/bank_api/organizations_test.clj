@@ -13,7 +13,7 @@
 (def ^:private admin-api-key (System/getenv "MONO_ADMIN_API_KEY"))
 
 (defn- post-organization
-  [base-url org-name currencies token]
+  [base-url org-name tier-id currencies token]
   (http/request {:method :post
                  :url (str base-url "/v1/organizations")
                  :headers (cond-> {"Content-Type" "application/json"}
@@ -21,7 +21,8 @@
                                   (assoc "Authorization"
                                          (str "Bearer " token)))
                  :body (json/write-str {"name" org-name
-                                        "tier-type" "micro"
+                                        "status" "live"
+                                        "tier-id" tier-id
                                         "currencies" currencies})}))
 
 (deftest create-organization-test
@@ -30,10 +31,12 @@
     ["classpath:bank-api/organizations-test.yml"
      #(assoc-in % [:system/defs :server :handler] api/app)]]
    (let [jetty (system/instance sys [:server :jetty-adapter])
-         base-url (server/http-local-url jetty)]
+         base-url (server/http-local-url jetty)
+         tier-id (:tier-id (system/instance sys [:tiers :micro]))]
      (testing "admin can create an organization"
        (nom-test> [res (post-organization base-url
                                           "Galactic Bank"
+                                          tier-id
                                           ["GBP"]
                                           admin-api-key)
                    _ (is (= 201 (:status res)))
@@ -42,7 +45,7 @@
                    _ (is (string? (get body "organization-id")))
                    _ (is (string? (get body "api-key-secret")))
                    _ (is (.startsWith ^String (get body "api-key-secret")
-                                      "sk_live_"))
+                                      "sk_live."))
                    api-key (get body "api-key")
                    _ (is (string? (get api-key "key-prefix")))
                    party (get body "party")
@@ -52,22 +55,31 @@
                    _ (is (string? (get (first accounts) "account-id")))
                    _ (is (seq (get (first accounts) "balances")))]))
      (testing "unauthenticated request returns 401"
-       (nom-test> [res (post-organization base-url "No Auth Org" ["GBP"] nil)
+       (nom-test> [res (post-organization base-url
+                                          "No Auth Org"
+                                          tier-id
+                                          ["GBP"]
+                                          nil)
                    _ (is (= 401 (:status res)))]))
      (testing "wrong key returns 401"
        (nom-test> [res (post-organization base-url
                                           "Bad Key Org"
+                                          tier-id
                                           ["GBP"]
                                           "wrong-key")
                    _ (is (= 401 (:status res)))]))
      (testing "org key returns 403 on admin endpoint"
        (nom-test> [res (post-organization base-url
                                           "First Org"
+                                          tier-id
                                           ["GBP"]
                                           admin-api-key)
                    _ (is (= 201 (:status res)))
                    body (http/res->body res)
                    org-key (get body "api-key-secret")
-                   res2
-                   (post-organization base-url "Second Org" ["GBP"] org-key)
+                   res2 (post-organization base-url
+                                           "Second Org"
+                                           tier-id
+                                           ["GBP"]
+                                           org-key)
                    _ (is (= 403 (:status res2)))])))))

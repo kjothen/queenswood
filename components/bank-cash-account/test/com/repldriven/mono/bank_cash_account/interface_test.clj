@@ -50,16 +50,17 @@
 
 (defn- seed-organization
   "Seeds an organization record in the organizations
-  store."
-  [config]
+  store. `config` must include `:tier-id` referencing a
+  persisted tier."
+  [{:keys [tier-id] :as config}]
   (fdb/transact config
                 (fn [txn]
                   (let [now (System/currentTimeMillis)
                         org {:organization-id test-org-id
                              :name "Test Org"
                              :type :organization-type-customer
-                             :tier-type :tier-type-micro
-                             :status "active"
+                             :tier-id tier-id
+                             :status :organization-status-test
                              :created-at now
                              :updated-at now}]
                     (fdb/save-record (fdb/open txn "organizations")
@@ -434,7 +435,8 @@
    (let [proc (system/instance sys [:cash-account :processor])
          schemas (system/instance sys [:avro :serde])
          config {:record-db (system/instance sys [:fdb :record-db])
-                 :record-store (system/instance sys [:fdb :store])}]
+                 :record-store (system/instance sys [:fdb :store])
+                 :tier-id (:tier-id (system/instance sys [:tiers :micro]))}]
      (test-open-account proc schemas config)
      (test-open-account-party-not-active proc schemas config)
      (test-open-account-party-not-found proc schemas)

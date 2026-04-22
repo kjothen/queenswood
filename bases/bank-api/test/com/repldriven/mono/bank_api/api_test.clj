@@ -15,17 +15,21 @@
 
 (def ^:dynamic *base-url* "http://localhost:{PORT}")
 
+(def ^:private test-account-id "acc.01kprbmgcj35ptc8npmybhh4s8")
+(def ^:private test-party-id "pty.01kprbmgcj35ptc8npmybhh4s9")
+
 (def ^:private test-account-open
-  {:organization-id "org_test_api"
-   :account-id "acc-test-id"
-   :party-id "acc-test"
+  {:organization-id "org.01kprbmgcj35ptc8npmybhh4s7"
+   :account-id test-account-id
+   :party-id test-party-id
    :name "Test Account"
    :currency "GBP"
-   :product-id "prd_test_api"
-   :version-id "prv_test_api"
+   :product-id "prd.01kprbmgcj35ptc8npmybhh4se"
+   :version-id "prv.01kprbmgcj35ptc8npmybhh4sf"
    :product-type :product-type-current
    :account-type :account-type-personal
    :payment-addresses []
+   :balances []
    :account-status :cash-account-status-opened
    :created-at 1700000000000
    :updated-at 1700000000000})
@@ -72,11 +76,14 @@
   [sys]
   (let [{:keys [stop]} (command-processor sys test-account-open)]
     (nom-test>
-      [res (open-account-request "acc-test" "Test Account" "GBP" "prd_test_api")
+      [res (open-account-request test-party-id
+                                 "Test Account"
+                                 "GBP"
+                                 "prd.01kprbmgcj35ptc8npmybhh4se")
        _ (is (= 200 (:status res)))
        body (http/res->edn res)
-       _ (is (= {:account-id "acc-test-id"
-                 :party-id "acc-test"
+       _ (is (= {:account-id test-account-id
+                 :party-id test-party-id
                  :name "Test Account"
                  :currency "GBP"
                  :account-status "opened"}
@@ -88,11 +95,11 @@
 (defn- test-close-account
   [sys]
   (let [{:keys [stop]} (command-processor sys test-account-close)]
-    (nom-test> [res (close-account-request "acc-test-id")
+    (nom-test> [res (close-account-request test-account-id)
                 _ (is (= 200 (:status res)))
                 body (http/res->edn res)
-                _ (is (= {:account-id "acc-test-id"
-                          :party-id "acc-test"
+                _ (is (= {:account-id test-account-id
+                          :party-id test-party-id
                           :name "Test Account"
                           :currency "GBP"
                           :account-status "closing"}

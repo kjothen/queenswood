@@ -72,6 +72,8 @@
         onLoaded={handleOrgsLoaded}
         {showToast}
       />
+    {:else if currentPage === "tiers"}
+      <TierList {showToast} />
     {:else if !hasApiKey}
       <div class="no-org">
         <p>Create an organization first.</p>
@@ -106,8 +108,6 @@
         onSelect={(id) => selectOrg(id)}
       />
       <CashAccountProductList bind:this={productListRef} {showToast} />
-    {:else if currentPage === "tiers"}
-      <TierList {showToast} />
     {:else if currentPage === "cop"}
       <OrgSelector
         {organizations}
