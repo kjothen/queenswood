@@ -30,10 +30,13 @@
   (examples-registry [#'ProductNotFound #'VersionNotFound #'NoPublishedVersion
                       #'NoDraft]))
 
+(def ProductId "prd.01kprbmgcj35ptc8npmybhh4se")
+(def VersionId "prv.01kprbmgcj35ptc8npmybhh4sf")
+
 (def CashAccountProductVersion
-  {:organization-id "org_01JMABC"
-   :product-id "prd_01JMABC123"
-   :version-id "prv_01JMABC456"
+  {:organization-id "org.01kprbmgcj35ptc8npmybhh4s7"
+   :product-id ProductId
+   :version-id VersionId
    :version-number 1
    :status :draft
    :name "Current Account"
@@ -44,7 +47,6 @@
    :allowed-payment-address-schemes [:scan]
    :interest-rate-bps 0
    :valid-from "2025-01-01"
-   :valid-to "2025-12-31"
    :created-at "2025-01-01T00:00:00Z"
    :updated-at "2025-01-01T00:00:00Z"})
 
@@ -58,5 +60,4 @@
    :balance-products [{:balance-type :default :balance-status :posted}]
    :allowed-payment-address-schemes [:scan]
    :interest-rate-bps 0
-   :valid-from "2025-01-01"
-   :valid-to "2025-12-31"})
+   :valid-from "2025-01-01"})

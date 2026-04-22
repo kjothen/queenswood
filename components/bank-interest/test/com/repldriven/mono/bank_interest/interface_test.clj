@@ -68,13 +68,14 @@
   given interest rate, opens an account, waits for opened
   status, and funds it. Returns {:organization-id
   :account-id}."
-  [config internal-account-id org-name
+  [config tier-id internal-account-id org-name
    interest-rate-bps fund-amount]
   (let [org-result (organizations/new-organization
                     config
                     org-name
                     :organization-type-customer
-                    :tier-type-micro
+                    :organization-status-test
+                    tier-id
                     ["GBP"])
         org-id (get-in org-result
                        [:organization :organization-id])
@@ -143,6 +144,7 @@
   (testing "accrue-daily-interest accrues for accounts
   with interest rate"
     (let [config (fdb-config sys)
+          tier-id (:tier-id (system/instance sys [:tiers :micro]))
           internal-org (system/instance sys
                                         [:organizations :internal])
           internal-id (get-in internal-org
@@ -151,6 +153,7 @@
       (nom-test>
         [customer (create-funded-customer
                    config
+                   tier-id
                    internal-id
                    "Accrue Customer"
                    500
@@ -181,6 +184,7 @@
   (testing "capitalize-monthly-interest moves accrued
   to default"
     (let [config (fdb-config sys)
+          tier-id (:tier-id (system/instance sys [:tiers :micro]))
           internal-org (system/instance sys
                                         [:organizations :internal])
           internal-id (get-in internal-org
@@ -189,6 +193,7 @@
       (nom-test>
         [customer (create-funded-customer
                    config
+                   tier-id
                    internal-id
                    "Cap Customer"
                    500

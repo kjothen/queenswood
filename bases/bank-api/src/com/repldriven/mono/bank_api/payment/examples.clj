@@ -8,31 +8,39 @@
            :status 404
            :detail "Payment not found"}})
 
-(def registry (examples-registry [#'PaymentNotFound]))
+(def BalanceNotFound
+  {:value {:title "REJECTED"
+           :type ":balance/not-found"
+           :status 404
+           :detail "Balance not found"}})
+
+(def registry (examples-registry [#'PaymentNotFound #'BalanceNotFound]))
+
+(def PaymentId "pmt.01kprbmgcj35ptc8npmybhh4s5")
 
 (def SubmitInternalPaymentRequest
   {:idempotency-key "idem-001"
-   :debtor-account-id "acc_01JMABC"
-   :creditor-account-id "acc_02JMABC"
+   :debtor-account-id "acc.01kprbmgcj35ptc8npmybhh4s8"
+   :creditor-account-id "acc.01kprbmgcj35ptc8npmybhh4s9"
    :currency "GBP"
    :amount 1000
    :reference "Internal transfer"})
 
 (def InternalPayment
-  {:payment-id "pmt_01JMABC"
+  {:payment-id PaymentId
    :idempotency-key "idem-001"
-   :debtor-account-id "acc_01JMABC"
-   :creditor-account-id "acc_02JMABC"
+   :debtor-account-id "acc.01kprbmgcj35ptc8npmybhh4s8"
+   :creditor-account-id "acc.01kprbmgcj35ptc8npmybhh4s9"
    :currency "GBP"
    :amount 1000
-   :transaction-id "txn_01JMABC"
+   :transaction-id "txn.01kprbmgcj35ptc8npmybhh4sb"
    :reference "Internal transfer"
    :created-at "2025-01-01T00:00:00Z"
    :updated-at "2025-01-01T00:00:00Z"})
 
 (def SubmitOutboundPaymentRequest
   {:idempotency-key "idem-002"
-   :debtor-account-id "acc_01JMABC"
+   :debtor-account-id "acc.01kprbmgcj35ptc8npmybhh4s8"
    :creditor-bban "04000412345678"
    :creditor-name "Arthur Dent"
    :currency "GBP"
@@ -41,16 +49,16 @@
    :reference "Invoice 123"})
 
 (def OutboundPayment
-  {:payment-id "pmt_02JMABC"
+  {:payment-id "pmt.01kprbmgcj35ptc8npmybhh4s6"
    :idempotency-key "idem-002"
    :scheme "FPS"
-   :debtor-account-id "acc_01JMABC"
+   :debtor-account-id "acc.01kprbmgcj35ptc8npmybhh4s8"
    :creditor-bban "04000412345678"
    :creditor-name "Arthur Dent"
    :currency "GBP"
    :amount 500
    :payment-status :outbound-payment-status-pending
-   :transaction-id "txn_02JMABC"
+   :transaction-id "txn.01kprbmgcj35ptc8npmybhh4sb"
    :reference "Invoice 123"
    :created-at "2025-01-01T00:00:00Z"
    :updated-at "2025-01-01T00:00:00Z"})

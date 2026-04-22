@@ -1,11 +1,11 @@
 internal: !system/component
   system/component-kind: organizations/organization
-  _: !system/ref tiers.system
+  tier: !system/ref tiers.system
   record-db: !system/ref fdb.record-db
   record-store: !system/ref fdb.meta-store
   name: Queenswood
   type: !keyword organization-type-internal
-  tier-type: !keyword tier-type-system
+  status: !keyword organization-status-live
   currencies: [GBP]
 
 internal-account-id: !system/component

@@ -22,12 +22,16 @@
 (deftest get-api-key-test
   (with-test-system
    [sys "classpath:bank-api-key/application-test.yml"]
-   (let [config (fdb-config sys)]
+   (let [config (fdb-config sys)
+         tier-id (:tier-id (system/instance sys [:tiers :micro]))]
      (testing "finds key by hash computed from key-secret"
        (nom-test> [result (organizations/new-organization
                            config
-                           "Hash Org" :organization-type-customer
-                           :tier-type-micro ["GBP"])
+                           "Hash Org"
+                           :organization-type-customer
+                           :organization-status-test
+                           tier-id
+                           ["GBP"])
                    org-id (get-in result
                                   [:organization
                                    :organization-id])
@@ -40,12 +44,16 @@
 (deftest get-api-keys-test
   (with-test-system
    [sys "classpath:bank-api-key/application-test.yml"]
-   (let [config (fdb-config sys)]
+   (let [config (fdb-config sys)
+         tier-id (:tier-id (system/instance sys [:tiers :micro]))]
      (testing "lists api keys for an organization"
        (nom-test> [result (organizations/new-organization
                            config
-                           "List Org" :organization-type-customer
-                           :tier-type-micro ["GBP"])
+                           "List Org"
+                           :organization-type-customer
+                           :organization-status-test
+                           tier-id
+                           ["GBP"])
                    org-id (:organization-id (:organization result))
                    keys (SUT/get-api-keys config org-id)
                    _ (is (= 1 (count keys)))

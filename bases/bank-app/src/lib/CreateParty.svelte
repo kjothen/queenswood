@@ -13,7 +13,7 @@
   let nationality = $state("GB");
   let niType = $state("national-insurance");
   let niValue = $state("TN000001A");
-  let niCountry = $state("GBR");
+  let niCountry = $state("GB");
   let submitting = $state(false);
 
   function errorDetail(body) {
@@ -75,7 +75,7 @@
       <legend>National Identifier</legend>
       <label>Type <select bind:value={niType} required><option value="national-insurance">National Insurance</option></select></label>
       <label>Value <input type="text" bind:value={niValue} required placeholder="e.g. TN000001A" /></label>
-      <label>Issuing Country <input type="text" bind:value={niCountry} required maxlength="3" placeholder="e.g. GBR" /></label>
+      <label>Issuing Country <input type="text" bind:value={niCountry} required maxlength="2" placeholder="e.g. GB" /></label>
     </fieldset>
     <button type="submit" disabled={submitting}>{submitting ? "Creating..." : "Create Person"}</button>
   </form>

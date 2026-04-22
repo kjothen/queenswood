@@ -28,13 +28,15 @@
      #(assoc-in % [:system/defs :server :handler] api/app)]]
    (let [config {:record-db (system/instance sys [:fdb :record-db])
                  :record-store (system/instance sys [:fdb :store])}
+         tier-id (:tier-id (system/instance sys [:tiers :standard]))
          base-url (server/http-local-url
                    (system/instance sys [:server :jetty-adapter]))
          org (organizations/new-organization config
                                              "Cash Accounts Test Org"
                                              :organization-type-customer
-                                             :tier-type-standard ["GBP" "USD"
-                                                                  "EUR"])
+                                             :organization-status-test
+                                             tier-id
+                                             ["GBP" "USD" "EUR"])
          _ (assert (not (error/anomaly? org)) (str "setup failed: " org))
          token (:key-secret org)
          accounts (get-in org [:organization :accounts])

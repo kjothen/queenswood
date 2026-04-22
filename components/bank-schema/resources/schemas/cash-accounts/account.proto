@@ -4,6 +4,7 @@ package com.repldriven.mono.schemas.cash_accounts;
 
 import "record_metadata_options.proto";
 import "schemas/cash-account-products/account-product.proto";
+import "schemas/types/product-type.proto";
 
 option java_outer_classname = "CashAccountProto";
 
@@ -21,7 +22,7 @@ message PaymentAddress {
 }
 
 enum AccountType {
-  ACCOUNT_TYPE_UNKNOWN  = 0;
+  ACCOUNT_TYPE_UNKNOWN = 0;
   ACCOUNT_TYPE_PERSONAL = 1;
   ACCOUNT_TYPE_BUSINESS = 2;
 }
@@ -29,20 +30,20 @@ enum AccountType {
 message CashAccount {
   option (com.apple.foundationdb.record.record).usage = RECORD;
 
-  required string organization_id = 8;
-  required string account_id = 1;
-  optional string party_id = 2;
-  optional string name = 3;
-  optional string currency = 4;
-  required CashAccountStatus account_status = 5;
-  optional int64 created_at = 6;
-  optional int64 updated_at = 7;
-  repeated PaymentAddress payment_addresses = 10;
-  required string product_id = 11;
-  required string version_id = 12;
-  optional com.repldriven.mono.schemas.cash_account_products.ProductType product_type = 13;
-  optional string bban            = 14;  // denormalised for indexing: sort_code + account_number
-  optional AccountType account_type = 15;
+  required string organization_id = 1;
+  required string account_id = 2;
+  required AccountType account_type = 3;
+  required string party_id = 4;
+  required string product_id = 5;
+  required string version_id = 6;
+  required com.repldriven.mono.schemas.types.ProductType product_type = 7;
+  required string name = 8;
+  required string currency = 9;
+  required CashAccountStatus account_status = 10;
+  repeated PaymentAddress payment_addresses = 11;
+  optional string bban = 12; // denormalised for indexing: sort_code + account_number
+  required int64 created_at = 13;
+  required int64 updated_at = 14;
 
   enum CashAccountStatus {
     CASH_ACCOUNT_STATUS_UNKNOWN = 0;

@@ -1,6 +1,6 @@
 (ns com.repldriven.mono.bank-api.cash-account-product.queries
   (:require
-    [com.repldriven.mono.bank-api.errors :refer [error-response]]
+    [com.repldriven.mono.bank-api.errors :as errors]
     [com.repldriven.mono.bank-cash-account-product.interface :as
      cash-account-products]
     [com.repldriven.mono.error.interface :as error]))
@@ -12,8 +12,9 @@
   (let [org-id (get-in request [:auth :organization-id])
         result (cash-account-products/get-products request org-id)]
     (if (error/anomaly? result)
-      {:status 500 :body (error-response 500 result)}
-      {:status 200 :body {:versions (:versions result)}})))
+      (errors/anomaly->response result)
+      {:status 200
+       :body {:versions (or (:versions result) [])}})))
 
 (defn get-latest-version
   "GET /cash-account-products/{product-id} — returns the
@@ -25,9 +26,7 @@
                                                          org-id
                                                          product-id)]
     (cond (error/anomaly? result)
-          (if (= :cash-account-product/not-found (error/kind result))
-            {:status 404 :body (error-response 404 result)}
-            {:status 500 :body (error-response 500 result)})
+          (errors/anomaly->response result)
           :else
           {:status 200 :body result})))
 
@@ -41,12 +40,10 @@
                                                             org-id
                                                             product-id)]
     (cond (error/anomaly? result)
-          (if (= :cash-account-product/not-found (error/kind result))
-            {:status 404 :body (error-response 404 result)}
-            {:status 500 :body (error-response 500 result)})
+          (errors/anomaly->response result)
           (nil? result)
           {:status 404
-           :body (error-response
+           :body (errors/error-response
                   404 "REJECTED"
                   "cash-account-products/no-published-version"
                   "No published version found")}
@@ -61,11 +58,10 @@
         {:keys [product-id]} (get-in request [:parameters :path])
         result (cash-account-products/get-versions request org-id product-id)]
     (cond (error/anomaly? result)
-          (if (= :cash-account-product/not-found (error/kind result))
-            {:status 404 :body (error-response 404 result)}
-            {:status 500 :body (error-response 500 result)})
+          (errors/anomaly->response result)
           :else
-          {:status 200 :body {:versions (:versions result)}})))
+          {:status 200
+           :body {:versions (or (:versions result) [])}})))
 
 (defn get-version
   "GET /cash-account-products/{product-id}/versions/{version-id}
@@ -78,8 +74,6 @@
                                                   product-id
                                                   version-id)]
     (cond (error/anomaly? result)
-          (if (= :cash-account-product/version-not-found (error/kind result))
-            {:status 404 :body (error-response 404 result)}
-            {:status 500 :body (error-response 500 result)})
+          (errors/anomaly->response result)
           :else
           {:status 200 :body result})))

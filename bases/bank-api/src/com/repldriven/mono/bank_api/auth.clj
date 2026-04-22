@@ -4,6 +4,9 @@
     [com.repldriven.mono.encryption.interface :as encryption]
     [com.repldriven.mono.bank-api-key.interface :as bank-api-key]
     [com.repldriven.mono.utility.interface :as util]
+
+    [sieppari.context :as sc]
+
     [clojure.string :as str]))
 
 (def ^:private api-key-cache (cache/create 60000))
@@ -50,3 +53,41 @@
                (if-let [auth (verify-org-key request key-secret)]
                  (assoc-in ctx [:request :auth] auth)
                  ctx))))})
+
+(def ^:private scheme->roles {"adminAuth" #{:admin} "orgAuth" #{:org :admin}})
+
+(def authorize
+  {:name ::authorize
+   :enter (fn [ctx]
+            (let [request (:request ctx)
+                  security (get-in request
+                                   [:reitit.core/match :data
+                                    :openapi :security])
+                  schemes (into #{} (mapcat keys) security)]
+              (if (empty? schemes)
+                ctx
+                (let [role (get-in request [:auth :role])
+                      allowed (into #{} (mapcat scheme->roles) schemes)]
+                  (cond
+                   (nil? role)
+                   (sc/terminate ctx
+                                 {:status 401
+                                  :headers
+                                  {"content-type" "application/json"}
+                                  :body {:title "UNAUTHORIZED"
+                                         :type "auth/unauthenticated"
+                                         :status 401
+                                         :detail
+                                         "Missing or invalid API key"}})
+                   (not (allowed role))
+                   (sc/terminate ctx
+                                 {:status 403
+                                  :headers
+                                  {"content-type" "application/json"}
+                                  :body {:title "FORBIDDEN"
+                                         :type "auth/forbidden"
+                                         :status 403
+                                         :detail
+                                         "Insufficient privileges"}})
+                   :else
+                   ctx)))))})

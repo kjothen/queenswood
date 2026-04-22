@@ -3,8 +3,8 @@ syntax = "proto2";
 package com.repldriven.mono.schemas.tiers;
 
 import "schemas/balances/balance.proto";
-import "schemas/cash-account-products/account-product.proto";
 import "schemas/organizations/organization.proto";
+import "schemas/types/product-type.proto";
 
 option java_outer_classname = "LimitProto";
 
@@ -29,7 +29,7 @@ enum LimitType {
 message LimitKind {
   oneof kind {
     string currency = 1;
-    com.repldriven.mono.schemas.cash_account_products.ProductType product_type = 2;
+    com.repldriven.mono.schemas.types.ProductType product_type = 2;
     com.repldriven.mono.schemas.balances.BalanceType balance_type = 3;
     com.repldriven.mono.schemas.organizations.OrganizationType organization_type = 4;
   }
@@ -37,7 +37,7 @@ message LimitKind {
 
 message Limit {
   required LimitType type = 1;
-  optional LimitKind kind = 2;
+  required LimitKind kind = 2;
   optional int64 value = 3;
   optional string reason = 4;
 }

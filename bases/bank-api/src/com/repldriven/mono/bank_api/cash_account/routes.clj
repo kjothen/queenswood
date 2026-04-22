@@ -4,8 +4,9 @@
     [com.repldriven.mono.bank-api.cash-account.queries :as queries]
     [com.repldriven.mono.bank-api.cash-account.examples :refer
      [CashAccountNotFound CashAccountAlreadyExists ProductNotPublished
-      InvalidCurrency]]
+      InvalidCurrency PartyNotFound ProductNotFound]]
     [com.repldriven.mono.bank-api.schema :refer [ErrorResponse]]
+    [com.repldriven.mono.bank-api.shared.components :as shared.components]
     [com.repldriven.mono.telemetry.interface :as telemetry]))
 
 (def ^:private list-cash-accounts-query-schema
@@ -25,10 +26,14 @@
             :responses {200 {:body [:ref "CashAccountList"]}}
             :handler queries/list-cash-accounts}
       :post {:summary "Open a new cash account"
-             :openapi {:operationId "CreateCashAccount"}
+             :openapi {:operationId "CreateCashAccount"
+                       :requestBody {:required true}}
              :interceptors [telemetry/require-idempotency-key]
-             :parameters {:body [:ref "CreateCashAccountRequest"]}
+             :parameters {:header shared.components/IdempotencyKeyHeader
+                          :body [:ref "CreateCashAccountRequest"]}
              :responses {200 {:body [:ref "CreateCashAccountResponse"]}
+                         404 (ErrorResponse [#'PartyNotFound
+                                             #'ProductNotFound])
                          422 (ErrorResponse [#'CashAccountAlreadyExists
                                              #'ProductNotPublished
                                              #'InvalidCurrency])}
@@ -53,6 +58,7 @@
       {:post {:summary "Close a cash account"
               :openapi {:operationId "CloseCashAccount"}
               :interceptors [telemetry/require-idempotency-key]
+              :parameters {:header shared.components/IdempotencyKeyHeader}
               :responses {200 {:body [:ref "CloseCashAccountResponse"]}
                           404 (ErrorResponse [#'CashAccountNotFound])}
               :handler commands/close-cash-account}}]]]])

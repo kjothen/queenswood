@@ -1,0 +1,14 @@
+syntax = "proto2";
+
+package com.repldriven.mono.schemas.types;
+
+option java_outer_classname = "ProductTypeProto";
+
+enum ProductType {
+  PRODUCT_TYPE_UNKNOWN = 0;
+  PRODUCT_TYPE_INTERNAL = 1;
+  PRODUCT_TYPE_SETTLEMENT = 2;
+  PRODUCT_TYPE_CURRENT = 3;
+  PRODUCT_TYPE_SAVINGS = 4;
+  PRODUCT_TYPE_TERM_DEPOSIT = 5;
+}

@@ -1,7 +1,7 @@
 (ns com.repldriven.mono.bank-api.payee-check.queries
   (:require
     [com.repldriven.mono.bank-api.cursor :as cursor]
-    [com.repldriven.mono.bank-api.errors :refer [error-response]]
+    [com.repldriven.mono.bank-api.errors :as errors]
     [com.repldriven.mono.bank-payee-check.interface :as payee-checks]
     [com.repldriven.mono.error.interface :as error]))
 
@@ -45,9 +45,7 @@
                                        organization-id
                                        check-id)]
     (cond (error/anomaly? result)
-          (if (= :payee-check/not-found (error/kind result))
-            {:status 404 :body (error-response 404 result)}
-            {:status 500 :body (error-response 500 result)})
+          (errors/anomaly->response result)
           :else
           {:status 200 :body result})))
 
@@ -69,7 +67,7 @@
                                           :before before-id
                                           :limit size})]
     (if (error/anomaly? result)
-      {:status 500 :body (error-response 500 result)}
+      (errors/anomaly->response result)
       (let [{:keys [items before after]} result
             links (when (seq items)
                     (build-links (when after-id before)

@@ -7,8 +7,10 @@
    :account {:sort-code "040062" :account-number "12345678"}
    :account-type :personal})
 
+(def CheckId "chk.01kprbmgcj35ptc8npmybhh4sa")
+
 (def PayeeCheck
-  {:check-id "pyc_01HX8K3N7QJVZR9YTBM2D6F4A1"
+  {:check-id CheckId
    :request {:creditor-name "Arthur Dent"
              :account {:sort-code "040062" :account-number "12345678"}
              :account-type :personal}

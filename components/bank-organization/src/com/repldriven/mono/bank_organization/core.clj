@@ -124,18 +124,23 @@
   "Creates an organization with API key, party,
   product, and one cash account per currency. Returns
   map or anomaly."
-  [txn org-name org-type tier-type currencies]
+  [txn org-name org-type org-status tier-id currencies]
   (store/transact
    txn
    (fn [txn]
      (let-nom>
-       [tier (tiers/get-tier txn tier-type)
+       [tier (tiers/get-tier txn tier-id)
 
         org-count (store/count-organizations-by-type txn org-type)
-        org (domain/new-organization org-name org-type tier org-count)
+        org (domain/new-organization org-name
+                                     org-type
+                                     org-status
+                                     tier
+                                     org-count)
         org-id (:organization-id org)
 
         {:keys [api-key key-secret]} (bank-api-key/new-api-key org-id
+                                                               org-status
                                                                "default")
 
         _ (store/create txn org api-key)

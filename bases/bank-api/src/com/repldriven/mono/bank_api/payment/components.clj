@@ -2,29 +2,32 @@
   (:require
     [com.repldriven.mono.bank-api.payment.coercion :as coercion]
     [com.repldriven.mono.bank-api.payment.examples :as examples]
-    [com.repldriven.mono.bank-api.schema :refer [components-registry]]))
+    [com.repldriven.mono.bank-api.schema :as schema
+     :refer [components-registry]]))
+
+(def PaymentId (schema/id-schema "PaymentId" "pmt" examples/PaymentId))
 
 (def SubmitInternalPaymentRequest
   [:map
    {:json-schema/example examples/SubmitInternalPaymentRequest}
-   [:idempotency-key string?]
-   [:debtor-account-id string?]
-   [:creditor-account-id string?]
+   [:idempotency-key [:ref "IdempotencyKey"]]
+   [:debtor-account-id [:ref "CashAccountId"]]
+   [:creditor-account-id [:ref "CashAccountId"]]
    [:currency [:ref "Currency"]]
-   [:amount int?]
+   [:amount [:ref "MinorUnits"]]
    [:reference {:optional true} [:maybe string?]]])
 
 (def InternalPayment
   [:map {:json-schema/example examples/InternalPayment}
-   [:payment-id string?]
-   [:idempotency-key string?]
-   [:debtor-account-id string?]
-   [:creditor-account-id string?]
+   [:payment-id [:ref "PaymentId"]]
+   [:idempotency-key [:ref "IdempotencyKey"]]
+   [:debtor-account-id [:ref "CashAccountId"]]
+   [:creditor-account-id [:ref "CashAccountId"]]
    [:currency [:ref "Currency"]]
-   [:amount int?]
-   [:transaction-id string?]
+   [:amount [:ref "MinorUnits"]]
+   [:transaction-id [:ref "TransactionId"]]
    [:reference {:optional true} [:maybe string?]]
-   [:created-at {:optional true} [:maybe [:ref "Timestamp"]]]
+   [:created-at [:ref "Timestamp"]]
    [:updated-at {:optional true} [:maybe [:ref "Timestamp"]]]])
 
 (def OutboundPaymentStatus
@@ -34,27 +37,27 @@
 (def SubmitOutboundPaymentRequest
   [:map
    {:json-schema/example examples/SubmitOutboundPaymentRequest}
-   [:idempotency-key string?]
-   [:debtor-account-id string?]
-   [:creditor-bban string?]
-   [:creditor-name string?]
+   [:idempotency-key [:ref "IdempotencyKey"]]
+   [:debtor-account-id [:ref "CashAccountId"]]
+   [:creditor-bban [:ref "Bban"]]
+   [:creditor-name [:ref "Name"]]
    [:currency [:ref "Currency"]]
-   [:amount int?]
+   [:amount [:ref "MinorUnits"]]
    [:scheme string?]
    [:reference {:optional true} [:maybe string?]]])
 
 (def OutboundPayment
   [:map {:json-schema/example examples/OutboundPayment}
-   [:payment-id string?]
-   [:idempotency-key string?]
+   [:payment-id [:ref "PaymentId"]]
+   [:idempotency-key [:ref "IdempotencyKey"]]
    [:scheme string?]
-   [:debtor-account-id string?]
-   [:creditor-bban string?]
-   [:creditor-name string?]
+   [:debtor-account-id [:ref "CashAccountId"]]
+   [:creditor-bban [:ref "Bban"]]
+   [:creditor-name [:ref "Name"]]
    [:currency [:ref "Currency"]]
-   [:amount int?]
+   [:amount [:ref "MinorUnits"]]
    [:payment-status [:ref "OutboundPaymentStatus"]]
-   [:transaction-id string?]
+   [:transaction-id [:ref "TransactionId"]]
    [:reference {:optional true} [:maybe string?]]
    [:cancellation-code {:optional true} [:maybe string?]]
    [:cancellation-reason {:optional true} [:maybe string?]]
@@ -62,6 +65,6 @@
    [:updated-at {:optional true} [:maybe [:ref "Timestamp"]]]])
 
 (def registry
-  (components-registry [#'SubmitInternalPaymentRequest #'InternalPayment
-                        #'OutboundPaymentStatus #'SubmitOutboundPaymentRequest
-                        #'OutboundPayment]))
+  (components-registry [#'PaymentId #'SubmitInternalPaymentRequest
+                        #'InternalPayment #'OutboundPaymentStatus
+                        #'SubmitOutboundPaymentRequest #'OutboundPayment]))

@@ -4,7 +4,28 @@
     [com.repldriven.mono.bank-api.errors :as errors]
     [com.repldriven.mono.avro.interface :as avro]
     [com.repldriven.mono.command.interface :as command]
-    [com.repldriven.mono.error.interface :as error :refer [let-nom>]]))
+    [com.repldriven.mono.error.interface :as error :refer [let-nom>]]
+
+    [clojure.string :as str]))
+
+(defn- reason->kind
+  "Parse the stringified keyword reason emitted by a command
+  processor back to a qualified keyword (e.g. \":x/y\" -> :x/y)."
+  [reason]
+  (when (and (string? reason) (str/starts-with? reason ":"))
+    (keyword (subs reason 1))))
+
+(defn- rejected-response
+  "Build a ring response for a REJECTED command response. Maps the
+  rejection reason to an appropriate status via `rejection-kind->status`
+  (falls back to 422 when the reason is absent or unparseable)."
+  [result]
+  (let [status (or (some-> (:reason result)
+                           reason->kind
+                           errors/rejection-kind->status)
+                   422)]
+    {:status status
+     :body (errors/error-response status "REJECTED" result)}))
 
 (defn- get-schema
   [schemas command-name]
@@ -29,14 +50,13 @@
                   (avro/serialize schema data)]
                  (command/send dispatcher (assoc envelope :payload payload)))]
     (cond (error/anomaly? result)
-          {:status 500
-           :body (errors/error-response 500 result)}
+          (errors/anomaly->response result)
           (= "REJECTED" (:status result))
-          {:status 422 :body (errors/error-response 422 "REJECTED" result)}
+          (rejected-response result)
           (= "FAILED" (:status result))
           {:status 500 :body (errors/error-response 500 "FAILED" result)}
           :else
           (let [body (decode-payload schemas response-schema result)]
             (if (error/anomaly? body)
-              {:status 500 :body (errors/error-response 500 body)}
+              (errors/anomaly->response body)
               {:status 200 :body body})))))

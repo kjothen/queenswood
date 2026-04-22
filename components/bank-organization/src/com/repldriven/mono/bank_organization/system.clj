@@ -7,16 +7,18 @@
 (def ^:private organization
   {:system/start (fn [{:system/keys [config instance]}]
                    (or instance
-                       (let [{:keys [name type tier-type currencies]} config]
-                         (core/new-organization {:record-db (:record-db config)
-                                                 :record-store (:record-store
-                                                                config)}
-                                                name
-                                                type
-                                                tier-type
-                                                currencies))))
+                       (let [{:keys [name type status tier currencies]} config]
+                         (core/new-organization
+                          {:record-db (:record-db config)
+                           :record-store (:record-store config)}
+                          name
+                          type
+                          (or status :organization-status-test)
+                          (:tier-id tier)
+                          currencies))))
    :system/config {:record-db system/required-component
-                   :record-store system/required-component}
+                   :record-store system/required-component
+                   :tier system/required-component}
    :system/instance-schema map?})
 
 (def ^:private internal-account-id

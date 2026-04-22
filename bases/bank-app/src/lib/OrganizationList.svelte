@@ -1,5 +1,5 @@
 <script>
-  import { create_organization, list_organizations, simulate_accrue, simulate_capitalize } from "./api.mjs";
+  import { create_organization, list_organizations, list_tiers, simulate_accrue, simulate_capitalize } from "./api.mjs";
   import { time_ago } from "./time.mjs";
   import { onMount } from "svelte";
   import Modal from "./Modal.svelte";
@@ -7,14 +7,20 @@
   let { selectedOrgId, onSelectDefault, onCreated, onLoaded, showToast } = $props();
 
   let organizations = $state([]);
+  let tiers = $state([]);
   let loading = $state(false);
   let error = $state(null);
 
   let modalOpen = $state(false);
   let orgName = $state("Galactic Bank");
-  let tierType = $state("micro");
+  let orgStatus = $state("test");
+  let tierId = $state("");
   let currencies = $state("GBP");
   let creating = $state(false);
+
+  let tiersById = $derived(
+    Object.fromEntries((tiers ?? []).map(t => [t["tier-id"], t]))
+  );
   let accruing = $state({});
   let capitalizing = $state({});
   let showDatePicker = $state(false);
@@ -73,16 +79,31 @@
     }
   }
 
+  async function loadTiers() {
+    try {
+      const res = await list_tiers();
+      if (res["http-status"] >= 200 && res["http-status"] < 300) {
+        tiers = res.body.tiers ?? [];
+        if (!tierId && tiers.length > 0) {
+          tierId = tiers[0]["tier-id"];
+        }
+      }
+    } catch (err) {
+      // silent — tier dropdown falls back to empty state
+    }
+  }
+
   async function handleCreate(e) {
     e.preventDefault();
-    if (!orgName.trim()) return;
+    if (!orgName.trim() || !tierId) return;
     creating = true;
     try {
       const currencyList = currencies.split(",").map(c => c.trim().toUpperCase()).filter(c => c);
-      const res = await create_organization(orgName.trim(), tierType, currencyList);
+      const res = await create_organization(orgName.trim(), orgStatus, tierId, currencyList);
       if (res["http-status"] >= 200 && res["http-status"] < 300) {
         orgName = "";
-        tierType = "micro";
+        orgStatus = "test";
+        tierId = tiers[0]?.["tier-id"] ?? "";
         currencies = "GBP";
         modalOpen = false;
         showToast?.({ type: "success", message: "Organization created" });
@@ -139,7 +160,7 @@
     }
   }
 
-  onMount(() => load());
+  onMount(() => { load(); loadTiers(); });
 </script>
 
 <section>
@@ -169,10 +190,22 @@
         />
       </label>
       <label>
+        Status
+        <select bind:value={orgStatus} disabled={creating}>
+          <option value="test">Test</option>
+          <option value="live">Live</option>
+        </select>
+      </label>
+      <label>
         Tier
-        <select bind:value={tierType} disabled={creating}>
-          <option value="micro">Micro</option>
-          <option value="standard">Standard</option>
+        <select bind:value={tierId} disabled={creating || tiers.length === 0}>
+          {#if tiers.length === 0}
+            <option value="">No tiers available</option>
+          {:else}
+            {#each tiers as tier}
+              <option value={tier["tier-id"]}>{tier.name}</option>
+            {/each}
+          {/if}
         </select>
       </label>
       <label>
@@ -186,7 +219,7 @@
         />
       </label>
 
-      <button type="submit" disabled={creating || !orgName.trim()}>
+      <button type="submit" disabled={creating || !orgName.trim() || !tierId}>
         {creating ? "Creating..." : "Create Organization"}
       </button>
     </form>
@@ -243,7 +276,9 @@
             </span>
           </td>
           <td>
-            <span class="tier-badge">{org["tier-type"] ?? ""}</span>
+            <span class="tier-badge" title={org["tier-id"] ?? ""}>
+              {tiersById[org["tier-id"]]?.name ?? org["tier-id"] ?? ""}
+            </span>
           </td>
           <td>
             <span class="status-badge"

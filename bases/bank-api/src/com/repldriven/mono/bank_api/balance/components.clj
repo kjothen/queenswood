@@ -12,25 +12,21 @@
 
 (def Balance
   [:map {:json-schema/example examples/Balance}
-   [:account-id string?]
+   [:account-id [:ref "CashAccountId"]]
+   [:product-type [:ref "ProductType"]]
    [:balance-type [:ref "BalanceType"]]
    [:balance-status [:ref "BalanceStatus"]]
-   [:currency [:ref "Currency"]]
-   [:credit int?]
-   [:debit int?]
-   [:created-at {:optional true} [:maybe [:ref "Timestamp"]]]
-   [:updated-at {:optional true} [:maybe [:ref "Timestamp"]]]])
-
-(def BalanceSummary
-  [:map
-   [:value int?]
-   [:currency string?]])
+   [:currency [:ref "CurrencyCode"]]
+   [:credit [:ref "MinorUnits"]]
+   [:debit [:ref "MinorUnits"]]
+   [:created-at [:ref "Timestamp"]]
+   [:updated-at [:ref "Timestamp"]]])
 
 (def BalanceList
   [:map {:json-schema/example examples/BalanceList}
    [:balances [:vector [:ref "Balance"]]]
-   [:posted-balance [:ref "BalanceSummary"]]
-   [:available-balance [:ref "BalanceSummary"]]])
+   [:posted-balance [:ref "SignedAmount"]]
+   [:available-balance [:ref "SignedAmount"]]])
 
 (def CreateBalanceRequest
   [:map {:json-schema/example examples/CreateBalanceRequest}
@@ -55,7 +51,7 @@
    [:balance-status [:ref "BalanceStatus"]]])
 
 (def registry
-  (components-registry [#'BalanceType #'BalanceStatus #'Balance #'BalanceSummary
-                        #'BalanceList #'CreateBalanceRequest
-                        #'CreateBalanceResponse #'BalanceProduct
-                        #'BalanceProductList #'BalanceProductRequest]))
+  (components-registry [#'BalanceType #'BalanceStatus #'Balance #'BalanceList
+                        #'CreateBalanceRequest #'CreateBalanceResponse
+                        #'BalanceProduct #'BalanceProductList
+                        #'BalanceProductRequest]))

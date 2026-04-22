@@ -5,6 +5,7 @@
     [com.repldriven.mono.bank-api.party.examples :refer
      [DuplicateNationalIdentifier PartyNotFound]]
     [com.repldriven.mono.bank-api.schema :refer [ErrorResponse]]
+    [com.repldriven.mono.bank-api.shared.components :as shared.components]
     [com.repldriven.mono.telemetry.interface :as telemetry]))
 
 (def ^:private list-parties-query-schema
@@ -21,9 +22,10 @@
             :responses {200 {:body [:ref "PartyList"]}}
             :handler queries/list-parties}
       :post {:summary "Create a new party"
-             :openapi {:operationId "CreateParty"}
+             :openapi {:operationId "CreateParty" :requestBody {:required true}}
              :interceptors [telemetry/require-idempotency-key]
-             :parameters {:body [:ref "CreatePartyRequest"]}
+             :parameters {:header shared.components/IdempotencyKeyHeader
+                          :body [:ref "CreatePartyRequest"]}
              :responses {200 {:body [:ref "CreatePartyResponse"]}
                          422 (ErrorResponse [#'DuplicateNationalIdentifier])}
              :handler commands/create-party}}]

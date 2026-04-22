@@ -1,7 +1,7 @@
 (ns com.repldriven.mono.bank-api.cash-account.queries
   (:require
     [com.repldriven.mono.bank-api.cursor :as cursor]
-    [com.repldriven.mono.bank-api.errors :refer [error-response]]
+    [com.repldriven.mono.bank-api.errors :as errors]
     [com.repldriven.mono.bank-cash-account.interface :as
      cash-accounts]
     [com.repldriven.mono.bank-transaction.interface :as
@@ -70,7 +70,7 @@
                 opts)]
 
     (if (error/anomaly? result)
-      {:status 500 :body (error-response 500 result)}
+      (errors/anomaly->response result)
       (let [{:keys [accounts before after]} result
             links (when (seq accounts)
                     (build-links "/v1/cash-accounts"
@@ -101,12 +101,12 @@
                         (some? embed-transactions)
                         (assoc :embed-transactions embed-transactions)))]
     (cond (error/anomaly? result)
-          {:status 500 :body (error-response 500 result)}
+          (errors/anomaly->response result)
           (nil? result)
           {:status 404
-           :body (error-response 404 "FAILED"
-                                 "cash-accounts/not-found"
-                                 "Cash account not found")}
+           :body (errors/error-response 404 "REJECTED"
+                                        "cash-accounts/not-found"
+                                        "Cash account not found")}
           :else
           {:status 200 :body result})))
 
@@ -120,5 +120,5 @@
                  :record-store record-store}
                 account-id)]
     (if (error/anomaly? result)
-      {:status 500 :body (error-response 500 result)}
-      {:status 200 :body {:transactions result}})))
+      (errors/anomaly->response result)
+      {:status 200 :body {:transactions (or result [])}})))

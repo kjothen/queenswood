@@ -1,6 +1,6 @@
 (ns com.repldriven.mono.bank-api.cash-account-product.handlers
   (:require
-    [com.repldriven.mono.bank-api.errors :refer [error-response]]
+    [com.repldriven.mono.bank-api.errors :as errors]
     [com.repldriven.mono.bank-cash-account-product.interface :as
      cash-account-products]
     [com.repldriven.mono.error.interface :as error]))
@@ -15,7 +15,7 @@
                                                   org-id
                                                   body)]
     (if (error/anomaly? result)
-      {:status 500 :body (error-response 500 result)}
+      (errors/anomaly->response result)
       {:status 201 :body (:version result)})))
 
 (defn upsert-draft
@@ -30,9 +30,7 @@
                 product-id
                 body)]
     (cond (error/anomaly? result)
-          (if (= :cash-account-product/not-found (error/kind result))
-            {:status 404 :body (error-response 404 result)}
-            {:status 500 :body (error-response 500 result)})
+          (errors/anomaly->response result)
           :else
           {:status 200 :body (:version result)})))
 
@@ -46,12 +44,6 @@
                 org-id
                 product-id)]
     (cond (error/anomaly? result)
-          (let [kind (error/kind result)]
-            (cond (= :cash-account-product/not-found kind)
-                  {:status 404 :body (error-response 404 result)}
-                  (= :cash-account-product/no-draft kind)
-                  {:status 409 :body (error-response 409 result)}
-                  :else
-                  {:status 500 :body (error-response 500 result)}))
+          (errors/anomaly->response result)
           :else
           {:status 200 :body result})))

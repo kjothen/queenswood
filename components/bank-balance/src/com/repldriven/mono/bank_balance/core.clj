@@ -3,8 +3,6 @@
     [com.repldriven.mono.bank-balance.domain :as domain]
     [com.repldriven.mono.bank-balance.store :as store]
 
-    [com.repldriven.mono.bank-schema.interface :as schema]
-
     [com.repldriven.mono.error.interface :as error :refer [let-nom>]]))
 
 (defn new-balance
@@ -50,8 +48,7 @@
   (let-nom>
     [result (store/get-balances txn account-id)]
     (let [currency (:currency (first result) "")
-          product-type (schema/int->product-type
-                        (:product-type (first result)))]
+          product-type (:product-type (first result))]
       {:balances result
        :posted-balance (domain/posted-balance result currency)
        :available-balance (domain/available-balance product-type

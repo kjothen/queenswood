@@ -5,7 +5,12 @@
     [com.repldriven.mono.system.interface :as system]
     [ring.adapter.jetty9 :as jetty])
   (:import
-    (org.eclipse.jetty.server Server)))
+    (java.nio ByteBuffer)
+    (java.nio.charset StandardCharsets)
+    (org.eclipse.jetty.http HttpFields$Mutable HttpHeader)
+    (org.eclipse.jetty.server Request Response Server)
+    (org.eclipse.jetty.server.handler ErrorHandler)
+    (org.eclipse.jetty.util Callback)))
 
 (defn- assoc-if-missing
   [m ks v]
@@ -26,6 +31,46 @@
    :system/config nil
    :system/instance-schema vector?})
 
+(defn- json-error-body
+  [status detail type]
+  (str "{\"title\":\"ERROR\""
+       ",\"type\":"
+       (pr-str type)
+       ",\"status\":"
+       status
+       ",\"detail\":"
+       (pr-str detail)
+       "}"))
+
+(defn- utf8-bytes
+  [^String s]
+  (.getBytes s StandardCharsets/UTF_8))
+
+(defn- json-error-handler
+  []
+  (proxy [ErrorHandler] []
+    (handle [^Request request ^Response response ^Callback callback]
+      (let [status (.getStatus response)
+            message (or (.getAttribute request
+                                       ErrorHandler/ERROR_MESSAGE)
+                        "Unknown error")
+            body (json-error-body status message "server/error")]
+        (.put ^HttpFields$Mutable (.getHeaders response)
+              HttpHeader/CONTENT_TYPE
+              "application/json")
+        (.write response
+                true
+                (ByteBuffer/wrap (utf8-bytes body))
+                callback)
+        true))
+    (badMessageError [status ^String reason ^HttpFields$Mutable fields]
+      (.put fields HttpHeader/CONTENT_TYPE "application/json")
+      (ByteBuffer/wrap
+       (utf8-bytes
+        (json-error-body status
+                         (or reason "Bad request")
+                         "server/bad-message"))))))
+
 (def default-jetty-adapter-options {:join? false :port 0})
 
 (def jetty-adapter
@@ -33,6 +78,10 @@
    (fn [{:system/keys [config instance]}]
      (or instance
          (let [{:keys [handler interceptors options]} config
+               options (assoc options
+                              :configurator
+                              (fn [^Server server]
+                                (.setErrorHandler server (json-error-handler))))
                _ (log/info "Starting jetty adapter")
                server (jetty/run-jetty (handler {:interceptors interceptors})
                                        options)]

@@ -2,16 +2,16 @@
   (:require
     [com.repldriven.mono.bank-api.cash-account.coercion :as coercion]
     [com.repldriven.mono.bank-api.cash-account.examples :as examples]
-    [com.repldriven.mono.bank-api.schema :refer [components-registry]]))
+    [com.repldriven.mono.bank-api.schema :as schema
+     :refer [components-registry]]))
 
 (def CashAccountId
-  [:string
-   {:title "CashAccountId" :json-schema/example examples/CashAccountId}])
+  (schema/id-schema "CashAccountId" "acc" examples/CashAccountId))
 
 (def ScanAddress
   [:map
-   [:sort-code string?]
-   [:account-number string?]])
+   [:sort-code [:ref "SortCode"]]
+   [:account-number [:ref "AccountNumber"]]])
 
 (def PaymentAddress
   [:map [:scheme [:ref "PaymentAddressScheme"]]
@@ -29,31 +29,30 @@
 
 (def CashAccount
   [:map {:json-schema/example examples/CashAccount}
-   [:organization-id {:optional true} [:maybe string?]]
+   [:organization-id [:ref "OrganizationId"]]
    [:account-id [:ref "CashAccountId"]]
-   [:party-id string?]
-   [:name string?]
+   [:party-id [:ref "PartyId"]]
+   [:name [:ref "Name"]]
    [:currency [:ref "Currency"]]
-   [:product-id string?]
-   [:version-id string?]
-   [:product-type {:optional true} [:maybe [:ref "ProductType"]]]
-   [:account-type {:optional true} [:maybe [:ref "AccountType"]]]
+   [:product-id [:ref "ProductId"]]
+   [:version-id [:ref "VersionId"]]
+   [:product-type [:ref "ProductType"]]
+   [:account-type [:ref "AccountType"]]
    [:account-status [:ref "CashAccountStatus"]]
-   [:payment-addresses {:optional true}
-    [:maybe [:vector [:ref "PaymentAddress"]]]]
-   [:balances {:optional true} [:maybe [:vector [:ref "Balance"]]]]
-   [:posted-balance {:optional true} [:maybe [:ref "BalanceSummary"]]]
-   [:available-balance {:optional true} [:maybe [:ref "BalanceSummary"]]]
-   [:transactions {:optional true} [:maybe [:vector [:ref "Transaction"]]]]
-   [:created-at {:optional true} [:maybe [:ref "Timestamp"]]]
-   [:updated-at {:optional true} [:maybe [:ref "Timestamp"]]]])
+   [:payment-addresses [:vector [:ref "PaymentAddress"]]]
+   [:balances {:optional true} [:vector [:ref "Balance"]]]
+   [:posted-balance {:optional true} [:ref "SignedAmount"]]
+   [:available-balance {:optional true} [:ref "SignedAmount"]]
+   [:transactions {:optional true} [:vector [:ref "Transaction"]]]
+   [:created-at [:ref "Timestamp"]]
+   [:updated-at [:ref "Timestamp"]]])
 
 (def CreateCashAccountRequest
   [:map {:json-schema/example examples/CreateCashAccountRequest}
-   [:party-id string?]
-   [:name string?]
+   [:party-id [:ref "PartyId"]]
+   [:name [:ref "Name"]]
    [:currency [:ref "Currency"]]
-   [:product-id string?]])
+   [:product-id [:ref "ProductId"]]])
 
 (def CreateCashAccountResponse [:ref "CashAccount"])
 

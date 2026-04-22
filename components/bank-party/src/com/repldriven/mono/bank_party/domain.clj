@@ -1,7 +1,7 @@
 (ns com.repldriven.mono.bank-party.domain
   (:refer-clojure :exclude [type])
   (:require
-    [com.repldriven.mono.encryption.interface :as encryption]
+    [com.repldriven.mono.utility.interface :as utility]
 
     [clojure.string :as str]))
 
@@ -15,7 +15,7 @@
                  :party-status-pending
                  :party-status-active)]
     {:organization-id organization-id
-     :party-id (encryption/generate-id "pty")
+     :party-id (utility/generate-id "pty")
      :type type
      :display-name display-name
      :status status

@@ -5,7 +5,11 @@
   "fields": [
     {"name": "organization_id", "type": "string"},
     {"name": "name",            "type": "string"},
-    {"name": "status",          "type": "string"},
+    {"name": "status",          "type": {"type": "enum",
+                                         "name": "OrganizationStatus",
+                                         "symbols": ["ORGANIZATION_STATUS_UNKNOWN",
+                                                     "ORGANIZATION_STATUS_TEST",
+                                                     "ORGANIZATION_STATUS_LIVE"]}},
     {"name": "created_at", "type": {"type": "long", "logicalType": "timestamp-millis"}},
     {"name": "updated_at", "type": {"type": "long", "logicalType": "timestamp-millis"}}
   ]

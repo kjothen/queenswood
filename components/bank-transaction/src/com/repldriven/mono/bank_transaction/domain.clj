@@ -1,6 +1,6 @@
 (ns com.repldriven.mono.bank-transaction.domain
   (:require
-    [com.repldriven.mono.encryption.interface :as encryption]))
+    [com.repldriven.mono.utility.interface :as utility]))
 
 (def ^:private type->status
   {:transaction-type-internal-transfer :transaction-status-posted})
@@ -16,7 +16,7 @@
         status (get type->status
                     transaction-type
                     :transaction-status-pending)]
-    {:transaction-id (encryption/generate-id "txn")
+    {:transaction-id (utility/generate-id "txn")
      :idempotency-key idempotency-key
      :transaction-type transaction-type
      :currency currency
@@ -32,7 +32,7 @@
   (let [{:keys [account-id balance-type balance-status
                 side amount]}
         leg]
-    {:leg-id (encryption/generate-id "leg")
+    {:leg-id (utility/generate-id "leg")
      :transaction-id transaction-id
      :account-id account-id
      :balance-type balance-type

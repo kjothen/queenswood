@@ -26,18 +26,31 @@
            :status 422
            :detail "Currency not allowed for this product"}})
 
+(def PartyNotFound
+  {:value {:title "REJECTED"
+           :type ":party/not-found"
+           :status 404
+           :detail "Party not found"}})
+
+(def ProductNotFound
+  {:value {:title "REJECTED"
+           :type ":cash-account-product/not-found"
+           :status 404
+           :detail "Product not found"}})
+
 (def registry
   (examples-registry [#'CashAccountNotFound #'CashAccountAlreadyExists
-                      #'ProductNotPublished #'InvalidCurrency]))
+                      #'ProductNotPublished #'InvalidCurrency #'PartyNotFound
+                      #'ProductNotFound]))
 
 (def CashAccount
-  {:organization-id "org_01JMABC"
-   :account-id "acc_01JMABC123DEF456"
-   :party-id "pty_01JMABC"
+  {:organization-id "org.01kprbmgcj35ptc8npmybhh4s7"
+   :account-id "acc.01kprbmgcj35ptc8npmybhh4s8"
+   :party-id "pty.01kprbmgcj35ptc8npmybhh4s9"
    :name "Arthur Phillip Dent - Current Account"
    :currency "GBP"
-   :product-id "prd_01JMABC"
-   :version-id "prv_01JMABC"
+   :product-id "prd.01kprbmgcj35ptc8npmybhh4se"
+   :version-id "prv.01kprbmgcj35ptc8npmybhh4sf"
    :product-type :current
    :account-type :personal
    :account-status :opened

@@ -1,36 +1,32 @@
 (ns com.repldriven.mono.bank-api.tier.handlers
   (:require
-    [com.repldriven.mono.bank-api.errors :refer [error-response]]
+    [com.repldriven.mono.bank-api.errors :as errors]
+
     [com.repldriven.mono.error.interface :as error]
     [com.repldriven.mono.bank-tier.interface :as tiers]))
 
+(defn create-tier
+  [request]
+  (let [{:keys [record-db record-store parameters]} request
+        {:keys [body]} parameters
+        {:keys [name policies limits]} body
+        config {:record-db record-db :record-store record-store}
+        result (tiers/new-tier config name policies limits)]
+    (if (error/anomaly? result)
+      (errors/anomaly->response result)
+      {:status 201 :body result})))
+
 (defn replace-tier
   [request]
-  (cond
-   (nil? (:auth request))
-   {:status 401
-    :body (error-response
-           401
-           (error/unauthorized :auth/unauthenticated
-                               "Missing or invalid API key"))}
-   (not= :admin (get-in request [:auth :role]))
-   {:status 403
-    :body (error-response
-           403
-           (error/unauthorized
-            :auth/forbidden
-            "Insufficient privileges"))}
-   :else
-   (let [config {:record-db (:record-db request)
-                 :record-store (:record-store request)}
-         {:keys [tier-type]} (get-in request
-                                     [:parameters :path])
-         {:keys [policies limits]} (get-in request
-                                           [:parameters :body])
-         result (tiers/update-tier config
-                                   tier-type
-                                   policies
-                                   limits)]
-     (if (error/anomaly? result)
-       {:status 500 :body (error-response 500 result)}
-       {:status 200 :body result}))))
+  (let [{:keys [record-db record-store parameters]} request
+        {:keys [path body]} parameters
+        {:keys [tier-id]} path
+        {:keys [policies limits]} body
+        config {:record-db record-db :record-store record-store}
+        result (tiers/update-tier config
+                                  tier-id
+                                  policies
+                                  limits)]
+    (if (error/anomaly? result)
+      (errors/anomaly->response result)
+      {:status 200 :body result})))

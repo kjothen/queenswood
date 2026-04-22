@@ -2,9 +2,10 @@
   (:require
     [com.repldriven.mono.bank-api.payment.commands :as commands]
     [com.repldriven.mono.bank-api.payment.examples :refer
-     [PaymentNotFound]]
+     [BalanceNotFound PaymentNotFound]]
     [com.repldriven.mono.bank-api.payment.queries :as queries]
     [com.repldriven.mono.bank-api.schema :refer [ErrorResponse]]
+    [com.repldriven.mono.bank-api.shared.components :as shared.components]
     [com.repldriven.mono.telemetry.interface :as telemetry]))
 
 (def routes
@@ -12,13 +13,16 @@
     {:openapi {:tags ["Payments"] :security [{"orgAuth" []}]}}
     ["/internal"
      {:post {:summary "Submit an internal payment"
-             :openapi {:operationId "SubmitInternalPayment"}
+             :openapi {:operationId "SubmitInternalPayment"
+                       :requestBody {:required true}}
              :interceptors [telemetry/require-idempotency-key]
-             :parameters {:body [:ref "SubmitInternalPaymentRequest"]}
-             :responses {200 {:body [:ref "InternalPayment"]}}
+             :parameters {:header shared.components/IdempotencyKeyHeader
+                          :body [:ref "SubmitInternalPaymentRequest"]}
+             :responses {200 {:body [:ref "InternalPayment"]}
+                         404 (ErrorResponse [#'BalanceNotFound])}
              :handler commands/submit-internal-payment}}]
     ["/internal/{payment-id}"
-     {:parameters {:path {:payment-id string?}}}
+     {:parameters {:path {:payment-id [:ref "PaymentId"]}}}
      [""
       {:get {:summary "Retrieve an internal payment"
              :openapi {:operationId "RetrieveInternalPayment"}
@@ -27,13 +31,16 @@
              :handler queries/get-internal-payment}}]]
     ["/outbound"
      {:post {:summary "Submit an outbound payment"
-             :openapi {:operationId "SubmitOutboundPayment"}
+             :openapi {:operationId "SubmitOutboundPayment"
+                       :requestBody {:required true}}
              :interceptors [telemetry/require-idempotency-key]
-             :parameters {:body [:ref "SubmitOutboundPaymentRequest"]}
-             :responses {200 {:body [:ref "OutboundPayment"]}}
+             :parameters {:header shared.components/IdempotencyKeyHeader
+                          :body [:ref "SubmitOutboundPaymentRequest"]}
+             :responses {200 {:body [:ref "OutboundPayment"]}
+                         404 (ErrorResponse [#'BalanceNotFound])}
              :handler commands/submit-outbound-payment}}]
     ["/outbound/{payment-id}"
-     {:parameters {:path {:payment-id string?}}}
+     {:parameters {:path {:payment-id [:ref "PaymentId"]}}}
      [""
       {:get {:summary "Retrieve an outbound payment"
              :openapi {:operationId "RetrieveOutboundPayment"}

@@ -18,8 +18,8 @@
   (examples-registry [#'PartyNotFound #'DuplicateNationalIdentifier]))
 
 (def Party
-  {:organization-id "org_01JMABC"
-   :party-id "pty_01JMABC123"
+  {:organization-id "org.01kprbmgcj35ptc8npmybhh4s7"
+   :party-id "pty.01kprbmgcj35ptc8npmybhh4s9"
    :type :person
    :display-name "Arthur Phillip Dent"
    :status :pending
@@ -35,9 +35,9 @@
    :display-name "Arthur Phillip Dent"
    :given-name "Arthur"
    :family-name "Dent"
-   :date-of-birth 19500727
+   :date-of-birth "1950-07-27"
    :nationality "GB"
    :national-identifier
-   {:type :national-insurance :value "TN000001A" :issuing-country "GBR"}})
+   {:type :national-insurance :value "TN000001A" :issuing-country "GB"}})
 
 (def CreatePartyResponse Party)

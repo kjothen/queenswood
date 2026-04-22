@@ -1,6 +1,6 @@
 (ns com.repldriven.mono.bank-payment.domain
   (:require
-    [com.repldriven.mono.encryption.interface :as encryption]))
+    [com.repldriven.mono.utility.interface :as utility]))
 
 (defn internal-payment->transaction
   "Builds the transaction data for an internal payment."
@@ -55,7 +55,7 @@
                 currency amount debtor-name reference]}
         data
         now (System/currentTimeMillis)]
-    {:payment-id (encryption/generate-id "pmt")
+    {:payment-id (utility/generate-id "pmt")
      :scheme-transaction-id scheme-transaction-id
      :end-to-end-id end-to-end-id
      :scheme scheme
@@ -100,7 +100,7 @@
                 currency amount reference]}
         data
         now (System/currentTimeMillis)]
-    {:payment-id (encryption/generate-id "pmt")
+    {:payment-id (utility/generate-id "pmt")
      :idempotency-key idempotency-key
      :scheme scheme
      :debtor-account-id debtor-account-id
@@ -128,7 +128,7 @@
                 reference]}
         data
         now (System/currentTimeMillis)]
-    {:payment-id (encryption/generate-id "pmt")
+    {:payment-id (utility/generate-id "pmt")
      :idempotency-key idempotency-key
      :debtor-account-id debtor-account-id
      :creditor-account-id creditor-account-id

@@ -11,6 +11,8 @@
   ([] (core/router-data))
   ([exception-handlers] (core/router-data exception-handlers)))
 
+(defn standard-default-handler [] (core/standard-default-handler))
+
 (defn standard-openapi-handler [] (core/standard-openapi-handler))
 
 (defn standard-openapi-ui-handler [] (core/standard-openapi-ui-handler))

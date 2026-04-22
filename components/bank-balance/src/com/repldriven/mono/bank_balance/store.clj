@@ -51,7 +51,7 @@
                            currency
                            balance-status)]
     (or balance
-        (error/reject :balance/get
+        (error/reject :balance/not-found
                       {:message "Balance not found"
                        :account-id account-id
                        :balance-type balance-type

@@ -1,6 +1,6 @@
 (ns com.repldriven.mono.bank-api.payee-check.handlers
   (:require
-    [com.repldriven.mono.bank-api.errors :refer [error-response]]
+    [com.repldriven.mono.bank-api.errors :as errors]
 
     [com.repldriven.mono.bank-payee-check.interface :as payee-checks]
 
@@ -53,5 +53,5 @@
                                          body
                                          cop-result)]
     (if (error/anomaly? result)
-      {:status 500 :body (error-response 500 result)}
+      (errors/anomaly->response result)
       {:status 201 :body result})))

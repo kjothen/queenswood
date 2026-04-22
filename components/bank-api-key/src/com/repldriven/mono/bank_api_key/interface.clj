@@ -6,9 +6,11 @@
 (defn new-api-key
   "Creates a new ApiKey record map and its key secret.
   Returns {:api-key <map> :key-secret <string>}. The
-  key-secret is only available at creation time."
-  [org-id key-name]
-  (domain/new-api-key org-id key-name))
+  key-secret is only available at creation time. `status`
+  is the owning organization's status keyword (live / test)
+  and selects the key prefix."
+  [org-id status key-name]
+  (domain/new-api-key org-id status key-name))
 
 (defn get-api-key
   "Looks up an API key by its hash. Returns the ApiKey map

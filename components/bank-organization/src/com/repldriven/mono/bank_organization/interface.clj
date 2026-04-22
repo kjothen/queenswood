@@ -7,9 +7,19 @@
 
 (defn new-organization
   "Creates an organization with API key, party, product,
-  and one cash account per currency. Returns map or anomaly."
-  [txn org-name org-type tier-type currencies]
-  (core/new-organization txn org-name org-type tier-type currencies))
+  and one cash account per currency. Returns map or anomaly.
+
+  `org-status` is an `:organization-status-*` keyword; the
+  minted API key's prefix (`sk_live.` / `sk_test.`) is
+  chosen from it. `tier-id` identifies the tier whose
+  policies and limits apply."
+  [txn org-name org-type org-status tier-id currencies]
+  (core/new-organization txn
+                         org-name
+                         org-type
+                         org-status
+                         tier-id
+                         currencies))
 
 (defn get-organization
   "Loads an organization by id. Returns the organization

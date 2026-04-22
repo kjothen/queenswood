@@ -1,6 +1,6 @@
 (ns com.repldriven.mono.bank-api.organization.queries
   (:require
-    [com.repldriven.mono.bank-api.errors :refer [error-response]]
+    [com.repldriven.mono.bank-api.errors :as errors]
     [com.repldriven.mono.error.interface :as error]
     [com.repldriven.mono.bank-organization.interface :as organizations]))
 
@@ -10,6 +10,6 @@
                 :record-store (:record-store request)}
         result (organizations/get-organizations config)]
     (if (error/anomaly? result)
-      {:status 500 :body (error-response 500 result)}
+      (errors/anomaly->response result)
       {:status 200
-       :body {:organizations result}})))
+       :body {:organizations (or result [])}})))

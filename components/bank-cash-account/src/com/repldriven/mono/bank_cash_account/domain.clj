@@ -4,10 +4,8 @@
     [com.repldriven.mono.bank-cash-account.restriction
      :as restriction]
 
-    [com.repldriven.mono.bank-schema.interface :as schema]
-
-    [com.repldriven.mono.encryption.interface :as encryption]
-    [com.repldriven.mono.error.interface :as error :refer [let-nom>]]))
+    [com.repldriven.mono.error.interface :as error :refer [let-nom>]]
+    [com.repldriven.mono.utility.interface :as utility]))
 
 (def default-sort-code "040004")
 
@@ -73,7 +71,7 @@
          :version-id version-id
          :currency currency
          :name name
-         :account-id (encryption/generate-id "acc")
+         :account-id (utility/generate-id "acc")
          :product-type product-type
          :account-type (party->account-type party)
          :account-status :cash-account-status-opening
@@ -90,7 +88,7 @@
         {:keys [balance-products]} product]
     (mapv (fn [{:keys [balance-type balance-status]}]
             {:account-id account-id
-             :product-type (schema/product-type->int product-type)
+             :product-type product-type
              :balance-type balance-type
              :balance-status balance-status
              :currency currency})
