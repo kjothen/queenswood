@@ -5,29 +5,29 @@
     [com.repldriven.mono.bank-api.party.examples :refer
      [DuplicateNationalIdentifier PartyNotFound]]
     [com.repldriven.mono.bank-api.schema :refer [ErrorResponse]]
-    [com.repldriven.mono.bank-api.shared.components :as shared.components]
+    [com.repldriven.mono.bank-api.shared.parameters :as shared.parameters]
     [com.repldriven.mono.telemetry.interface :as telemetry]))
 
 (def ^:private list-parties-query-schema
-  [:map [(keyword "page[after]") {:optional true} string?]
-   [(keyword "page[before]") {:optional true} string?]
-   [(keyword "page[size]") {:optional true} string?]])
+  [:map {:closed true} [:page {:optional true} [:ref "PageQuery"]]])
 
 (def routes
   [["/parties" {:openapi {:tags ["Parties"] :security [{"orgAuth" []}]}}
     [""
      {:get {:summary "Retrieve parties"
-            :openapi {:operationId "RetrieveParties"}
+            :openapi {:operationId "RetrieveParties"
+                      :parameters shared.parameters/ref-page}
             :parameters {:query list-parties-query-schema}
             :responses {200 {:body [:ref "PartyList"]}}
             :handler queries/list-parties}
       :post {:summary "Create a new party"
-             :openapi {:operationId "CreateParty" :requestBody {:required true}}
+             :openapi {:operationId "CreateParty"
+                       :requestBody {:required true}
+                       :parameters shared.parameters/ref-idempotency-key}
              :interceptors [telemetry/require-idempotency-key]
-             :parameters {:header shared.components/IdempotencyKeyHeader
-                          :body [:ref "CreatePartyRequest"]}
+             :parameters {:body [:ref "CreatePartyRequest"]}
              :responses {200 {:body [:ref "CreatePartyResponse"]}
-                         422 (ErrorResponse [#'DuplicateNationalIdentifier])}
+                         409 (ErrorResponse [#'DuplicateNationalIdentifier])}
              :handler commands/create-party}}]
     ["/{party-id}" {:parameters {:path {:party-id [:ref "PartyId"]}}}
      [""

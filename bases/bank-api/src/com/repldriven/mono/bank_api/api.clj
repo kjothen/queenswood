@@ -3,7 +3,6 @@
     [com.repldriven.mono.bank-api.auth :as auth]
     [com.repldriven.mono.bank-api.examples :as examples]
     [com.repldriven.mono.bank-api.schema :as schema]
-    [com.repldriven.mono.bank-api.shared.components :as shared.components]
 
     [com.repldriven.mono.bank-api.api-key.components :as api-key.components]
     [com.repldriven.mono.bank-api.api-key.examples :as api-key.examples]
@@ -33,6 +32,9 @@
     [com.repldriven.mono.bank-api.payment.components :as payment.components]
     [com.repldriven.mono.bank-api.payment.examples :as payment.examples]
     [com.repldriven.mono.bank-api.payment.routes :as payment]
+    [com.repldriven.mono.bank-api.shared.components :as shared.components]
+    [com.repldriven.mono.bank-api.shared.interceptors :as shared.interceptors]
+    [com.repldriven.mono.bank-api.shared.parameters :as shared.parameters]
     [com.repldriven.mono.bank-api.simulate.components :as simulate.components]
     [com.repldriven.mono.bank-api.simulate.examples :as simulate.examples]
     [com.repldriven.mono.bank-api.simulate.routes :as simulate]
@@ -81,20 +83,30 @@
    {:transformers {:body {:default (->provider (mt/json-transformer))}
                    :string {:default (->provider (mt/string-transformer))}
                    :response {:default (->provider nil)}}
+    ;; Keep `:compile mu/closed-schema` (reitit default) effective by
+    ;; turning off `:strip-extra-keys`; otherwise the strip transformer
+    ;; removes unknown keys before validation runs, so closed maps
+    ;; never reject them. We want 400s for unexpected fields on both
+    ;; query-params and request bodies.
+    :strip-extra-keys false
     :options {:registry (merge (m/default-schemas)
-                               {"ErrorResponse" schema/ErrorResponseSchema}
-                               shared.components/registry
+                               {:unique-vector
+                                shared.components/unique-vector-schema
+                                :unique-vector-lax
+                                shared.components/unique-vector-lax-schema
+                                "ErrorResponse" schema/ErrorResponseSchema}
+                               api-key.components/registry
                                balance.components/registry
                                cash-account-product.components/registry
                                cash-account.components/registry
-                               api-key.components/registry
                                organization.components/registry
                                party.components/registry
-                               payment.components/registry
-                               transaction.components/registry
                                payee-check.components/registry
+                               payment.components/registry
+                               shared.components/registry
                                simulate.components/registry
-                               tier.components/registry)}}))
+                               tier.components/registry
+                               transaction.components/registry)}}))
 
 (defn- routes
   [ctx]
@@ -111,6 +123,7 @@
                        "orgAuth" {:type :http
                                   :scheme :bearer
                                   :description "Organization API key"}}
+                      :parameters shared.parameters/registry
                       :examples (merge
                                  examples/registry
                                  balance.examples/registry
@@ -145,12 +158,29 @@
                  simulate/routes
                  tier/routes))])
 
+(defn- add-interceptor-before-coerce
+  "Splices `icept` into the router's global interceptor chain just
+  before the coerce-request interceptor, so it can rewrite the
+  query-params before malli sees them."
+  [router-data icept]
+  (update-in router-data
+             [:data :interceptors]
+             (fn [xs]
+               (vec (mapcat (fn [i]
+                              (if (= :reitit.http.coercion/coerce-request
+                                     (:name i))
+                                [icept i]
+                                [i]))
+                     xs)))))
+
 (defn app
   [ctx]
-  (http/ring-handler (http/router (routes ctx)
-                                  (assoc-in server/standard-router-data
-                                   [:data :coercion]
-                                   coercion))
-                     (ring/routes (server/standard-openapi-ui-handler)
-                                  (server/standard-default-handler))
-                     server/standard-executor))
+  (http/ring-handler
+   (http/router (routes ctx)
+                (-> server/standard-router-data
+                    (assoc-in [:data :coercion] coercion)
+                    (add-interceptor-before-coerce
+                     shared.interceptors/nest-bracket-query-params)))
+   (ring/routes (server/standard-openapi-ui-handler)
+                (server/standard-default-handler))
+   server/standard-executor))

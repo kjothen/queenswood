@@ -22,7 +22,15 @@
            :status 404
            :detail "Tier not found"}})
 
-(def registry (examples-registry [#'OrganizationLimitExceeded #'TierNotFound]))
+(def OrganizationNotFound
+  {:value {:title "REJECTED"
+           :type ":organization/not-found"
+           :status 404
+           :detail "Organization not found"}})
+
+(def registry
+  (examples-registry [#'OrganizationLimitExceeded #'TierNotFound
+                      #'OrganizationNotFound]))
 
 (def OrganizationId "org.01kprbmgcj35ptc8npmybhh4s7")
 

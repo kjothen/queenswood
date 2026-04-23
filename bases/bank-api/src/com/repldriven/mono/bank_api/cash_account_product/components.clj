@@ -28,10 +28,10 @@
    [:name [:ref "Name"]]
    [:product-type [:ref "ProductType"]]
    [:balance-sheet-side [:ref "BalanceSheetSide"]]
-   [:allowed-currencies [:set {:min 1} [:ref "Currency"]]]
-   [:balance-products [:set {:min 1} [:ref "BalanceProductRequest"]]]
+   [:allowed-currencies [:unique-vector {:min 1} [:ref "Currency"]]]
+   [:balance-products [:unique-vector {:min 1} [:ref "BalanceProduct"]]]
    [:allowed-payment-address-schemes
-    [:set {:min 1} [:ref "PaymentAddressScheme"]]]
+    [:unique-vector {:min 1} [:ref "PaymentAddressScheme"]]]
    [:interest-rate-bps {:optional true} [:ref "SignedBasisPoints"]]
    [:valid-from {:optional true} [:ref "Date"]]])
 
@@ -45,14 +45,14 @@
    [:name {:optional true} [:ref "Name"]]
    [:product-type [:ref "ProductType"]]
    [:balance-sheet-side [:ref "BalanceSheetSide"]]
-   [:allowed-currencies [:set {:min 1} [:ref "Currency"]]]
-   [:balance-products [:set {:min 1} [:ref "BalanceProductRequest"]]]
+   [:allowed-currencies [:unique-vector-lax {:min 1} [:ref "Currency"]]]
+   [:balance-products [:unique-vector-lax {:min 1} [:ref "BalanceProduct"]]]
    [:allowed-payment-address-schemes
-    [:set {:min 1} [:ref "PaymentAddressScheme"]]]
+    [:unique-vector-lax {:min 1} [:ref "PaymentAddressScheme"]]]
    [:interest-rate-bps {:optional true} [:ref "SignedBasisPoints"]]
    [:valid-from {:optional true} [:maybe [:ref "Date"]]]
-   [:created-at {:optional true} [:maybe [:ref "Timestamp"]]]
-   [:updated-at {:optional true} [:maybe [:ref "Timestamp"]]]])
+   [:created-at [:ref "Timestamp"]]
+   [:updated-at [:ref "Timestamp"]]])
 
 (def CashAccountProductVersionList
   [:map {:json-schema/example examples/CashAccountProductVersionList}

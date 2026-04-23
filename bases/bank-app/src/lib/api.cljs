@@ -279,8 +279,7 @@
                              (cond-> {"debtor-account-id" debtor-account-id
                                       "creditor-account-id" creditor-account-id
                                       "currency" currency
-                                      "amount" amount
-                                      "idempotency-key" (str (random-uuid))}
+                                      "amount" amount}
                                      reference
                                      (assoc "reference" reference))))})
       (.then parse-response)))
@@ -316,8 +315,7 @@
                                       "creditor-name" creditor-name
                                       "currency" currency
                                       "amount" amount
-                                      "scheme" scheme
-                                      "idempotency-key" (str (random-uuid))}
+                                      "scheme" scheme}
                                      reference
                                      (assoc "reference" reference))))})
       (.then parse-response)))

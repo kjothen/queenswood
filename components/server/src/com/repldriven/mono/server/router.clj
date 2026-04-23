@@ -24,6 +24,22 @@
                            :decode-key-fn]
                           keyword))))
 
+(defn- explain->detail
+  "Turns a reitit coercion `ex-data` map into a `:detail` string.
+  Prefers `malli.error/humanize`, but that throws
+  `IllegalArgumentException: Key must be integer` when an error's
+  `:in` path contains a non-integer segment (e.g. a bad element
+  inside a `:set`). On that failure, fall back to a compact list of
+  `{:in :value :schema}` fragments derived from `:errors`."
+  [{:keys [schema value errors]}]
+  (try (pr-str (me/humanize {:schema schema :value value :errors errors}))
+       (catch Exception _
+         (pr-str (mapv (fn [e]
+                         {:in (:in e)
+                          :value (:value e)
+                          :schema (pr-str (:schema e))})
+                       errors)))))
+
 (def default-exception-handlers
   "Default exception handlers for Reitit router. Every handler returns an
   RFC 9457-shaped body. Only the catch-all `::exception/default` logs — the
@@ -51,26 +67,20 @@
                                :type "mono/malformed-body"
                                :status 400
                                :detail "Malformed JSON request body"}})
-    :reitit.coercion/request-coercion
-    (fn [ex _req]
-      (let [{:keys [schema value errors]} (ex-data ex)
-            humanized (me/humanize
-                       {:schema schema :value value :errors errors})]
-        {:status 400
-         :body {:title "REJECTED"
-                :type "mono/bad-request"
-                :status 400
-                :detail (str humanized)}}))
-    :reitit.coercion/response-coercion
-    (fn [ex _req]
-      (let [{:keys [schema value errors]} (ex-data ex)
-            humanized (me/humanize
-                       {:schema schema :value value :errors errors})]
-        {:status 500
-         :body {:title "FAILED"
-                :type "mono/bad-response"
-                :status 500
-                :detail (str humanized)}}))}))
+    :reitit.coercion/request-coercion (fn [ex _req]
+                                        {:status 400
+                                         :body {:title "REJECTED"
+                                                :type "mono/bad-request"
+                                                :status 400
+                                                :detail (explain->detail
+                                                         (ex-data ex))}})
+    :reitit.coercion/response-coercion (fn [ex _req]
+                                         {:status 500
+                                          :body {:title "FAILED"
+                                                 :type "mono/bad-response"
+                                                 :status 500
+                                                 :detail (explain->detail
+                                                          (ex-data ex))}})}))
 
 (def ^:private request-log
   {:name ::request-log

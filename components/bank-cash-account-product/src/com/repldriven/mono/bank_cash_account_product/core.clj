@@ -17,21 +17,26 @@
        last))
 
 (defn new-product
-  "Creates a cash account product as an initial draft v1.
-  Returns {:version <map>} or anomaly."
+  "Creates a cash account product as an initial draft v1. Returns
+  {:version <map>} or anomaly — `domain/new-version` rejects with
+  `:cash-account-product/duplicate-items` when the data's
+  repeated-value fields contain duplicates."
   [txn org-id version-data]
-  (let [product-id (utility/generate-id "prd")
-        version (domain/new-version org-id product-id 1 version-data)]
-    (let-nom> [_ (store/save-version txn version)]
+  (let [product-id (utility/generate-id "prd")]
+    (let-nom>
+      [version (domain/new-version org-id product-id 1 version-data)
+       _ (store/save-version txn version)]
       {:version version})))
 
 (defn upsert-draft
-  "Creates or updates the current draft for a product. If
-  the latest version is a draft, replaces its mutable
-  fields with version-data (preserving :version-id and
-  :version-number). If the latest version is published,
-  creates a new draft with the next version-number.
-  Returns {:version <map>} or anomaly."
+  "Creates or updates the current draft for a product. If the
+  latest version is a draft, replaces its mutable fields with
+  version-data (preserving :version-id and :version-number). If
+  the latest version is published, creates a new draft with the
+  next version-number. Returns {:version <map>} or anomaly —
+  `domain/new-version` / `domain/update-version` reject with
+  `:cash-account-product/duplicate-items` when the data's
+  repeated-value fields contain duplicates."
   [txn org-id product-id version-data]
   (store/transact
    txn

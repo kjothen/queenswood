@@ -19,8 +19,7 @@
 (def PaymentId "pmt.01kprbmgcj35ptc8npmybhh4s5")
 
 (def SubmitInternalPaymentRequest
-  {:idempotency-key "idem-001"
-   :debtor-account-id "acc.01kprbmgcj35ptc8npmybhh4s8"
+  {:debtor-account-id "acc.01kprbmgcj35ptc8npmybhh4s8"
    :creditor-account-id "acc.01kprbmgcj35ptc8npmybhh4s9"
    :currency "GBP"
    :amount 1000
@@ -28,7 +27,6 @@
 
 (def InternalPayment
   {:payment-id PaymentId
-   :idempotency-key "idem-001"
    :debtor-account-id "acc.01kprbmgcj35ptc8npmybhh4s8"
    :creditor-account-id "acc.01kprbmgcj35ptc8npmybhh4s9"
    :currency "GBP"
@@ -39,8 +37,7 @@
    :updated-at "2025-01-01T00:00:00Z"})
 
 (def SubmitOutboundPaymentRequest
-  {:idempotency-key "idem-002"
-   :debtor-account-id "acc.01kprbmgcj35ptc8npmybhh4s8"
+  {:debtor-account-id "acc.01kprbmgcj35ptc8npmybhh4s8"
    :creditor-bban "04000412345678"
    :creditor-name "Arthur Dent"
    :currency "GBP"
@@ -50,7 +47,6 @@
 
 (def OutboundPayment
   {:payment-id "pmt.01kprbmgcj35ptc8npmybhh4s6"
-   :idempotency-key "idem-002"
    :scheme "FPS"
    :debtor-account-id "acc.01kprbmgcj35ptc8npmybhh4s8"
    :creditor-bban "04000412345678"

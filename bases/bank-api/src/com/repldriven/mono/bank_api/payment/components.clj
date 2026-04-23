@@ -10,7 +10,6 @@
 (def SubmitInternalPaymentRequest
   [:map
    {:json-schema/example examples/SubmitInternalPaymentRequest}
-   [:idempotency-key [:ref "IdempotencyKey"]]
    [:debtor-account-id [:ref "CashAccountId"]]
    [:creditor-account-id [:ref "CashAccountId"]]
    [:currency [:ref "Currency"]]
@@ -20,7 +19,6 @@
 (def InternalPayment
   [:map {:json-schema/example examples/InternalPayment}
    [:payment-id [:ref "PaymentId"]]
-   [:idempotency-key [:ref "IdempotencyKey"]]
    [:debtor-account-id [:ref "CashAccountId"]]
    [:creditor-account-id [:ref "CashAccountId"]]
    [:currency [:ref "Currency"]]
@@ -37,7 +35,6 @@
 (def SubmitOutboundPaymentRequest
   [:map
    {:json-schema/example examples/SubmitOutboundPaymentRequest}
-   [:idempotency-key [:ref "IdempotencyKey"]]
    [:debtor-account-id [:ref "CashAccountId"]]
    [:creditor-bban [:ref "Bban"]]
    [:creditor-name [:ref "Name"]]
@@ -49,7 +46,6 @@
 (def OutboundPayment
   [:map {:json-schema/example examples/OutboundPayment}
    [:payment-id [:ref "PaymentId"]]
-   [:idempotency-key [:ref "IdempotencyKey"]]
    [:scheme string?]
    [:debtor-account-id [:ref "CashAccountId"]]
    [:creditor-bban [:ref "Bban"]]

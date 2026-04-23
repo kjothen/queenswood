@@ -9,15 +9,16 @@
   (schema/id-schema "CashAccountId" "acc" examples/CashAccountId))
 
 (def ScanAddress
-  [:map
+  [:map {:closed true}
    [:sort-code [:ref "SortCode"]]
    [:account-number [:ref "AccountNumber"]]])
 
 (def PaymentAddress
-  [:map [:scheme [:ref "PaymentAddressScheme"]]
+  [:map {:closed true}
+   [:scheme [:ref "PaymentAddressScheme"]]
    [:identifier {:optional true}
     [:maybe
-     [:map
+     [:map {:closed true}
       [:scan {:optional true} [:maybe [:ref "ScanAddress"]]]
       [:value {:optional true} [:maybe string?]]]]]])
 

@@ -37,21 +37,11 @@
 (def CreateBalanceResponse [:ref "Balance"])
 
 (def BalanceProduct
-  [:map {:json-schema/example examples/BalanceProduct}
-   [:balance-type [:ref "BalanceType"]]
-   [:balance-status [:ref "BalanceStatus"]]])
-
-(def BalanceProductList
-  [:map {:json-schema/example examples/BalanceProductList}
-   [:balance-products [:vector [:ref "BalanceProduct"]]]])
-
-(def BalanceProductRequest
-  [:map {:json-schema/example examples/BalanceProduct}
+  [:map {:closed true :json-schema/example examples/BalanceProduct}
    [:balance-type [:ref "BalanceType"]]
    [:balance-status [:ref "BalanceStatus"]]])
 
 (def registry
   (components-registry [#'BalanceType #'BalanceStatus #'Balance #'BalanceList
                         #'CreateBalanceRequest #'CreateBalanceResponse
-                        #'BalanceProduct #'BalanceProductList
-                        #'BalanceProductRequest]))
+                        #'BalanceProduct]))

@@ -21,13 +21,16 @@
    :record-store (system/instance sys [:fdb :store])})
 
 (defn- send-command
+  "Serialises `data` via the command schema and dispatches through
+  the processor, hoisting `:idempotency-key` from `data` onto the
+  envelope as `:id` (mirrors the wire behaviour)."
   [proc schemas command-name data]
-  (let [payload (avro/serialize (get schemas command-name)
-                                data)]
+  (let [payload (avro/serialize (get schemas command-name) data)]
     (if (error/anomaly? payload)
       payload
       (processor/process proc
                          {:command command-name
+                          :id (:idempotency-key data)
                           :payload payload}))))
 
 (defn- decode-payload

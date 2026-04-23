@@ -1,5 +1,7 @@
 (ns com.repldriven.mono.bank-api.organization.routes
   (:require
+    [com.repldriven.mono.bank-api.cash-account-product.examples :refer
+     [DuplicateItems]]
     [com.repldriven.mono.bank-api.organization.examples :refer
      [OrganizationLimitExceeded TierNotFound]]
     [com.repldriven.mono.bank-api.organization.handlers :as handlers]
@@ -20,5 +22,6 @@
              :parameters {:body [:ref "CreateOrganizationRequest"]}
              :responses {201 {:body [:ref "CreateOrganizationResponse"]}
                          404 (ErrorResponse [#'TierNotFound])
+                         409 (ErrorResponse [#'DuplicateItems])
                          422 (ErrorResponse [#'OrganizationLimitExceeded])}
              :handler handlers/create-organization}}]]])

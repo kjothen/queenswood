@@ -10,8 +10,8 @@
 
 (def DuplicateNationalIdentifier
   {:value {:title "REJECTED"
-           :type "party/duplicate-national-identifier"
-           :status 422
+           :type ":party/duplicate-national-identifier"
+           :status 409
            :detail "National identifier already exists"}})
 
 (def registry

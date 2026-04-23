@@ -3,7 +3,8 @@
     [com.repldriven.mono.bank-schema.interface :as schema]
 
     [com.repldriven.mono.error.interface :as error]
-    [com.repldriven.mono.fdb.interface :as fdb]))
+    [com.repldriven.mono.fdb.interface :as fdb]
+    [com.repldriven.mono.log.interface :as log]))
 
 (def ^:private store-name "cash-account-product-versions")
 
@@ -12,6 +13,17 @@
 (defn save-version
   "Saves a product version. Returns nil or anomaly."
   [txn version]
+  ;; TEMP DEBUG — revert once the duplicates mystery is solved. Logs
+  ;; every save with the version-id and balance-products so we can
+  ;; see whether duplicates ever reach FDB (and, if so, what shape).
+  (let [bps (:balance-products version)]
+    (log/info (str "save-version"
+                   " product-id=" (:product-id version)
+                   " version-id=" (:version-id version)
+                   " status=" (:status version)
+                   " bp-count=" (count bps)
+                   " bp-distinct?=" (or (empty? bps) (apply distinct? bps))
+                   " bp=" (pr-str bps))))
   (fdb/transact
    txn
    (fn [txn]

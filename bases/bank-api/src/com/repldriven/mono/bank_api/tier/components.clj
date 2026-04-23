@@ -18,13 +18,13 @@
   (coercion/limit-type-enum-schema {:json-schema/example "max-accounts"}))
 
 (def Policy
-  [:map {:json-schema/example examples/Policy}
+  [:map {:closed true :json-schema/example examples/Policy}
    [:capability [:ref "PolicyCapability"]]
    [:effect [:ref "PolicyEffect"]]
    [:reason {:optional true} [:maybe string?]]])
 
 (def Limit
-  [:map {:json-schema/example examples/Limit}
+  [:map {:closed true :json-schema/example examples/Limit}
    [:type [:ref "LimitType"]]
    [:kind
     {:optional true

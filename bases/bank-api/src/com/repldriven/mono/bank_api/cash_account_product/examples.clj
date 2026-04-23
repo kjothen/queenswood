@@ -26,9 +26,15 @@
            :status 409
            :detail "No draft to publish"}})
 
+(def DuplicateItems
+  {:value {:title "REJECTED"
+           :type ":cash-account-product/duplicate-items"
+           :status 409
+           :detail "Duplicate items in: balance-products"}})
+
 (def registry
   (examples-registry [#'ProductNotFound #'VersionNotFound #'NoPublishedVersion
-                      #'NoDraft]))
+                      #'NoDraft #'DuplicateItems]))
 
 (def ProductId "prd.01kprbmgcj35ptc8npmybhh4se")
 (def VersionId "prv.01kprbmgcj35ptc8npmybhh4sf")

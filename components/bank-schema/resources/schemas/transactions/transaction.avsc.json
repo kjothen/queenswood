@@ -4,7 +4,6 @@
   "namespace": "com.repldriven.mono.transactions",
   "fields": [
     {"name": "transaction_id",   "type": "string"},
-    {"name": "idempotency_key",  "type": "string"},
     {"name": "status",           "type": {"type": "enum",
                                            "name": "TransactionStatus",
                                            "symbols": ["TRANSACTION_STATUS_PENDING",

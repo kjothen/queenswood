@@ -4,20 +4,115 @@
   the idempotency-key header. Registered globally in `api.clj` so any
   `[:ref \"X\"]` resolves the same definition everywhere."
   (:require
-    [com.repldriven.mono.bank-api.schema :refer [components-registry]])
+    [com.repldriven.mono.bank-api.schema :refer [components-registry]]
+
+    [malli.core :as m]
+    [malli.json-schema :as mjs])
   (:import
     (java.time Instant LocalDate ZoneOffset)
     (java.time.format DateTimeParseException)))
 
+;; Custom malli schema type: :unique-vector behaves like :vector but
+;; rejects arrays that contain duplicate items. Same OpenAPI shape as
+;; :set (`{type:array, items:..., minItems:..., uniqueItems:true}`),
+;; without :set's silent dedup at decode time. Emitted via
+;; `malli.json-schema/accept` so consumers see uniqueItems:true.
+
+;; Two flavours of the custom schema, both emitting the same
+;; `{type:array, items:..., uniqueItems:true}` in OpenAPI:
+;;
+;;   :unique-vector      — strict. Rejects duplicate items at
+;;                         validation. Use on *request* bodies so
+;;                         clients get a 400 for non-unique arrays.
+;;
+;;   :unique-vector-lax  — shape-only. Accepts duplicates at
+;;                         runtime. Use on *response* bodies where
+;;                         stored records may contain duplicates
+;;                         (e.g. from historical writes); we still
+;;                         advertise `uniqueItems:true` to clients.
+;;
+;; Why the split: the strict pred runs on raw pre-decode data, so
+;; two different invalid enum strings can sneak through (both
+;; decoding to the `:x-unknown` sentinel) and end up as duplicates
+;; in storage. Rather than chase every decoder edge-case, we just
+;; tolerate duplicates on the read path.
+
+(def unique-vector-schema
+  (m/-collection-schema
+   {:type :unique-vector
+    ;; `sequential?` not `vector?` — JSON-decoded request bodies
+    ;; arrive as vectors, but protojure returns `repeated` fields as
+    ;; lazy seqs on the response path.
+    :pred (fn [v] (and (sequential? v) (or (empty? v) (apply distinct? v))))
+    :empty []}))
+
+(def unique-vector-lax-schema
+  (m/-collection-schema {:type :unique-vector-lax :pred sequential? :empty []}))
+
+(defn- -unique-vector-apidocs
+  [schema children]
+  (let [{:keys [min max]} (m/properties schema)]
+    (cond-> {:type "array"
+             :items (first children)
+             :uniqueItems true}
+            min
+            (assoc :minItems min)
+            max
+            (assoc :maxItems max))))
+
+(defmethod mjs/accept :unique-vector
+  [_ schema children _]
+  (-unique-vector-apidocs schema children))
+
+(defmethod mjs/accept :unique-vector-lax
+  [_ schema children _]
+  (-unique-vector-apidocs schema children))
+
 (defn- iso-date->yyyymmdd
+  "Packs a strict ISO-8601 calendar date (validated by
+  `java.time.LocalDate/parse`) into a YYYYMMDD int. Returns nil when
+  `s` isn't a real calendar date — so month/day combinations the
+  shape regex lets through (Nov 31, Feb 30, non-leap Feb 29) are
+  rejected here too."
   [s]
-  (when-let [[_ y mo d]
-             (re-matches
-              #"^([0-9]{4})-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$"
-              s)]
-    (+ (* (Integer/parseInt y) 10000)
-       (* (Integer/parseInt mo) 100)
-       (Integer/parseInt d))))
+  (when (string? s)
+    (try
+      (let [d (LocalDate/parse ^String s)]
+        (+ (* (.getYear d) 10000)
+           (* (.getMonthValue d) 100)
+           (.getDayOfMonth d)))
+      (catch DateTimeParseException _ nil))))
+
+(defn- valid-iso-date?
+  "True when `s` parses as a real ISO-8601 calendar date — catches
+  month/day combinations the regex alone can't (Nov 31, Feb 30,
+  non-leap Feb 29)."
+  [s]
+  (and (string? s)
+       (try (some? (LocalDate/parse ^String s))
+            (catch DateTimeParseException _ false))))
+
+(defn- valid-yyyymmdd?
+  "True when `n` decomposes into a real calendar date — year
+  `(quot n 10000)`, month `(mod (quot n 100) 100)`, day `(mod n 100)`.
+  Rejects nonsense ints like 0 or 99999999 that the int-type alone
+  lets through."
+  [n]
+  (and (int? n)
+       (try (some? (LocalDate/of (int (quot n 10000))
+                                 (int (mod (quot n 100) 100))
+                                 (int (mod n 100))))
+            (catch Exception _ false))))
+
+(defn- past-yyyymmdd?
+  "True when the packed-YYYYMMDD int decomposes into a real calendar
+  date that is strictly before today (UTC)."
+  [n]
+  (and (valid-yyyymmdd? n)
+       (.isBefore (LocalDate/of (int (quot n 10000))
+                                (int (mod (quot n 100) 100))
+                                (int (mod n 100)))
+                  (LocalDate/now ZoneOffset/UTC))))
 
 (defn- parse-timestamp
   [s]
@@ -45,7 +140,7 @@
   "Monetary amount paired with its currency — mirrors the `Amount`
   proto in `schemas/amounts/amount.proto` (int64 minor units + ISO
   4217 currency)."
-  [:map
+  [:map {:closed true}
    [:value [:ref "MinorUnits"]]
    [:currency [:ref "Currency"]]])
 
@@ -79,36 +174,52 @@
    #"^[A-Z]{3}$"])
 
 (def Date
-  "ISO 8601 calendar date (YYYY-MM-DD). Kept as a string end-to-end —
-  distinct from Timestamp, which carries epoch-millis and encodes to
-  a date-time string only at the API boundary.
+  "ISO 8601 calendar date (YYYY-MM-DD). Kept as a string end-to-end
+  — distinct from Timestamp, which carries epoch-millis and encodes
+  to a date-time string only at the API boundary.
 
-  Pattern enforces month 01-12 and day 01-31 so boundary values like
-  `0000-00-00` are rejected at coercion. Month-specific day counts
-  (Feb 30, Apr 31) are not validated by the regex; validators that
-  honour `format: date` pick up the stricter semantic check."
-  [:re
-   {:title "Date" :json-schema/format "date" :json-schema/example "2025-01-01"}
-   #"^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$"])
+  Combines a regex gate (correct shape, month 01-12, day 01-31) with
+  a `java.time.LocalDate/parse` predicate so month-specific day
+  counts (Nov 31, Feb 30, non-leap Feb 29) are rejected at coercion
+  as well."
+  [:and
+   [:re
+    {:title "Date" :json-schema/format "date" :json-schema/example "2025-01-01"}
+    #"^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$"]
+   [:fn {:error/message "must be a valid calendar date"} valid-iso-date?]])
 
 (def DateOfBirth
   "ISO 8601 calendar date at the API boundary, stored as a packed
   `YYYYMMDD` integer internally (matches the `int32` field on the
   `PersonIdentification` proto). Decoded/encoded via `:api` so the
-  storage format never leaks to clients."
-  [:int
-   {:decode/api (fn [v]
-                  (cond (int? v)
-                        v
-                        (string? v)
-                        (or (iso-date->yyyymmdd v) v)
-                        :else
-                        v))
-    :encode/api (fn [n] (when (int? n) (yyyymmdd->iso-date n)))
-    :json-schema {:type "string"
+  storage format never leaks to clients. The `:fn valid-yyyymmdd?`
+  predicate rejects raw-int payloads (e.g. `0`) that happen to
+  satisfy `[:int]` but don't decompose into a real calendar date."
+  [:and
+   {:json-schema {:type "string"
                   :format "date"
                   :pattern "^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$"
-                  :example "1950-07-27"}}])
+                  :example "1950-07-27"}}
+   [:int
+    {:decode/api (fn [v]
+                   (cond (int? v)
+                         v
+                         (string? v)
+                         (or (iso-date->yyyymmdd v) v)
+                         :else
+                         v))
+     :encode/api (fn [n] (when (int? n) (yyyymmdd->iso-date n)))}]
+   [:fn {:error/message "must be a valid calendar date in the past"}
+    past-yyyymmdd?]])
+
+(def EmbedQuery
+  "Nested `embed` deepObject query parameter. Wire form is
+  `embed[balances]=true&embed[transactions]=false`, nested into
+  `{:balances …, :transactions …}` by the `nest-bracket-query-params`
+  interceptor before malli validation runs."
+  [:map {:closed true}
+   [:balances {:optional true} boolean?]
+   [:transactions {:optional true} boolean?]])
 
 (def IdempotencyKey
   "Client-generated idempotency key. 16-255 chars of URL-safe ASCII
@@ -121,16 +232,6 @@
      :json-schema/format "idempotency-key"}]
    [:re #"^[A-Za-z0-9_\-]+$"]])
 
-(def IdempotencyKeyHeader
-  "Header schema fragment declaring a required `Idempotency-Key`.
-  Attach via `:parameters {:header IdempotencyKeyHeader ...}` on any
-  route that also uses the `require-idempotency-key` interceptor so
-  OpenAPI documents the requirement for clients and fuzzers."
-  [:map
-   [:idempotency-key
-    {:json-schema {:example "01jsx6k7h0abfdv8qpm2ytn3we"}}
-    [:ref "IdempotencyKey"]]])
-
 (def MinorUnits
   [:int
    {:min 0
@@ -138,6 +239,23 @@
     :json-schema/format "int64"
     :description
     "Monetary quantity in the smallest denomination of the associated currency."}])
+
+(def PageQuery
+  "Nested `page` deepObject query parameter. Wire form is
+  `page[after]=…&page[size]=20`, nested into
+  `{:after …, :before …, :size …}` by the `nest-bracket-query-params`
+  interceptor before malli validation runs.
+
+  `size` is declared as a bounded integer so clients (and fuzzers)
+  can't slip through non-numeric or out-of-range values — the
+  string-transformer coerces the incoming query-string digits to an
+  int, and validation rejects anything outside `[1, 100]`. Cursor
+  fields are opaque strings with a min length so blanks are rejected
+  at validation rather than being silently treated as \"no cursor\"."
+  [:map {:closed true}
+   [:after {:optional true} [:string {:min 1 :max 200}]]
+   [:before {:optional true} [:string {:min 1 :max 200}]]
+   [:size {:optional true} [:int {:min 1 :max 100}]]])
 
 (def Name
   "Non-empty printable text up to 140 chars. Used wherever the
@@ -153,11 +271,23 @@
    {:title "Name" :json-schema/example "Arthur Dent"}
    #"^(?!\s*$)[^\x00-\x1F\x7F-\x9F]{1,140}$"])
 
+(def NationalIdentifierValue
+  "Opaque national-identifier value (e.g. UK NI number, passport
+  number, tax id). Format differs per `IdentifierType` / issuing
+  country, so we don't regex-validate the shape — just enforce
+  non-empty and an upper bound to block empty-string collisions on
+  the `(organization, type, value)` uniqueness index."
+  [:string
+   {:title "NationalIdentifierValue"
+    :min 1
+    :max 64
+    :json-schema/example "ZZ999999D"}])
+
 (def SignedAmount
   "Signed monetary amount paired with its currency — same shape as
   `Amount` but permits negative values (e.g. available balances that
   may dip below zero)."
-  [:map
+  [:map {:closed true}
    [:value [:ref "SignedMinorUnits"]]
    [:currency [:ref "Currency"]]])
 
@@ -194,8 +324,8 @@
     :json-schema {:type "string" :format "date-time"}}])
 
 (def registry
-  (components-registry [#'AccountNumber #'Amount #'Bban #'CountryCode #'Currency
-                        #'CurrencyCode #'Date #'DateOfBirth #'IdempotencyKey
-                        #'IdempotencyKeyHeader #'MinorUnits #'Name
-                        #'SignedAmount #'SignedBasisPoints #'SignedMinorUnits
-                        #'SortCode #'Timestamp]))
+  (components-registry
+   [#'AccountNumber #'Amount #'Bban #'CountryCode #'Currency #'CurrencyCode
+    #'Date #'DateOfBirth #'EmbedQuery #'IdempotencyKey #'MinorUnits #'Name
+    #'NationalIdentifierValue #'PageQuery #'SignedAmount #'SignedBasisPoints
+    #'SignedMinorUnits #'SortCode #'Timestamp]))
