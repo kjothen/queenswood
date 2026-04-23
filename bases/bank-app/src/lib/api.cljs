@@ -140,33 +140,34 @@
                 #js {:headers #js {"Authorization" (str "Bearer " @api-key)}})
       (.then parse-response)))
 
-(defn create-cash-account-product
+(defn- product-request-body
   [data]
   (let [{:strs [name product-type balance-sheet-side allowed-currencies
                 balance-products allowed-payment-address-schemes
                 interest-rate-bps]}
-        (js->clj data)
-        body (cond-> {"name" name
-                      "product-type" product-type
-                      "balance-sheet-side" balance-sheet-side}
-                     (seq allowed-currencies)
-                     (assoc "allowed-currencies"
-                            allowed-currencies)
-                     (seq balance-products)
-                     (assoc "balance-products"
-                            balance-products)
-                     (seq allowed-payment-address-schemes)
-                     (assoc "allowed-payment-address-schemes"
-                            allowed-payment-address-schemes)
-                     interest-rate-bps
-                     (assoc "interest-rate-bps"
-                            interest-rate-bps))]
-    (-> (js/fetch "/v1/cash-account-products"
-                  #js {:method "POST"
-                       :headers #js {"Content-Type" "application/json"
-                                     "Authorization" (str "Bearer " @api-key)}
-                       :body (js/JSON.stringify (clj->js body))})
-        (.then parse-response))))
+        (js->clj data)]
+    (cond-> {"name" name
+             "product-type" product-type
+             "balance-sheet-side" balance-sheet-side}
+            (seq allowed-currencies)
+            (assoc "allowed-currencies" allowed-currencies)
+            (seq balance-products)
+            (assoc "balance-products" balance-products)
+            (seq allowed-payment-address-schemes)
+            (assoc "allowed-payment-address-schemes"
+                   allowed-payment-address-schemes)
+            interest-rate-bps
+            (assoc "interest-rate-bps" interest-rate-bps))))
+
+(defn create-cash-account-product
+  [data]
+  (-> (js/fetch "/v1/cash-account-products"
+                #js {:method "POST"
+                     :headers #js {"Content-Type" "application/json"
+                                   "Authorization" (str "Bearer " @api-key)}
+                     :body (js/JSON.stringify
+                            (clj->js (product-request-body data)))})
+      (.then parse-response)))
 
 (defn list-cash-account-products
   []
@@ -175,40 +176,49 @@
       (.then parse-response)))
 
 (defn publish-cash-account-product
-  [product-id]
-  (-> (js/fetch (str "/v1/cash-account-products/" product-id "/publish")
+  [product-id version-id]
+  (-> (js/fetch (str "/v1/cash-account-products/"
+                     product-id
+                     "/versions/"
+                     version-id
+                     "/publish")
                 #js {:method "POST"
                      :headers #js {"Content-Type" "application/json"
                                    "Authorization" (str "Bearer " @api-key)}})
       (.then parse-response)))
 
-(defn upsert-cash-account-product-draft
+(defn open-cash-account-product-draft
   [product-id data]
-  (let [{:strs [name product-type balance-sheet-side allowed-currencies
-                balance-products allowed-payment-address-schemes
-                interest-rate-bps]}
-        (js->clj data)
-        body (cond-> {"name" name
-                      "product-type" product-type
-                      "balance-sheet-side" balance-sheet-side}
-                     (seq allowed-currencies)
-                     (assoc "allowed-currencies"
-                            allowed-currencies)
-                     (seq balance-products)
-                     (assoc "balance-products"
-                            balance-products)
-                     (seq allowed-payment-address-schemes)
-                     (assoc "allowed-payment-address-schemes"
-                            allowed-payment-address-schemes)
-                     interest-rate-bps
-                     (assoc "interest-rate-bps"
-                            interest-rate-bps))]
-    (-> (js/fetch (str "/v1/cash-account-products/" product-id "/draft")
-                  #js {:method "POST"
-                       :headers #js {"Content-Type" "application/json"
-                                     "Authorization" (str "Bearer " @api-key)}
-                       :body (js/JSON.stringify (clj->js body))})
-        (.then parse-response))))
+  (-> (js/fetch (str "/v1/cash-account-products/" product-id "/versions")
+                #js {:method "POST"
+                     :headers #js {"Content-Type" "application/json"
+                                   "Authorization" (str "Bearer " @api-key)}
+                     :body (js/JSON.stringify
+                            (clj->js (product-request-body data)))})
+      (.then parse-response)))
+
+(defn update-cash-account-product-draft
+  [product-id version-id data]
+  (-> (js/fetch (str "/v1/cash-account-products/"
+                     product-id
+                     "/versions/"
+                     version-id)
+                #js {:method "PUT"
+                     :headers #js {"Content-Type" "application/json"
+                                   "Authorization" (str "Bearer " @api-key)}
+                     :body (js/JSON.stringify
+                            (clj->js (product-request-body data)))})
+      (.then parse-response)))
+
+(defn discard-cash-account-product-draft
+  [product-id version-id]
+  (-> (js/fetch (str "/v1/cash-account-products/"
+                     product-id
+                     "/versions/"
+                     version-id)
+                #js {:method "DELETE"
+                     :headers #js {"Authorization" (str "Bearer " @api-key)}})
+      (.then parse-response)))
 
 (defn list-balances
   [account-id]
@@ -279,8 +289,7 @@
                              (cond-> {"debtor-account-id" debtor-account-id
                                       "creditor-account-id" creditor-account-id
                                       "currency" currency
-                                      "amount" amount
-                                      "idempotency-key" (str (random-uuid))}
+                                      "amount" amount}
                                      reference
                                      (assoc "reference" reference))))})
       (.then parse-response)))
@@ -316,8 +325,7 @@
                                       "creditor-name" creditor-name
                                       "currency" currency
                                       "amount" amount
-                                      "scheme" scheme
-                                      "idempotency-key" (str (random-uuid))}
+                                      "scheme" scheme}
                                      reference
                                      (assoc "reference" reference))))})
       (.then parse-response)))

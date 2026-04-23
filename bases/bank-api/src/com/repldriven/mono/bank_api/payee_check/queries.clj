@@ -6,21 +6,6 @@
     [com.repldriven.mono.error.interface :as error]))
 
 (def ^:private default-page-size 20)
-(def ^:private max-page-size 100)
-
-(defn- parse-page-size
-  [s]
-  (let [n (when s
-            (try (Integer/parseInt s)
-                 (catch NumberFormatException _ nil)))]
-    (cond (nil? n)
-          default-page-size
-          (< n 1)
-          1
-          (> n max-page-size)
-          max-page-size
-          :else
-          n)))
 
 (defn- build-links
   [before-cursor after-cursor]
@@ -53,19 +38,17 @@
   [request]
   (let [{:keys [record-db record-store auth parameters]} request
         {:keys [query]} parameters
+        {:keys [page]} query
         {:keys [organization-id]} auth
-        after-id (cursor/decode
-                  (get query (keyword "page[after]")))
-        before-id (cursor/decode
-                   (get query (keyword "page[before]")))
-        size (parse-page-size
-              (get query (keyword "page[size]")))
+        after-id (cursor/decode (:after page))
+        before-id (cursor/decode (:before page))
+        size (or (:size page) default-page-size)
         config {:record-db record-db :record-store record-store}
-        result (payee-checks/list-checks config
-                                         organization-id
-                                         {:after after-id
-                                          :before before-id
-                                          :limit size})]
+        result (payee-checks/get-checks config
+                                        organization-id
+                                        {:after after-id
+                                         :before before-id
+                                         :limit size})]
     (if (error/anomaly? result)
       (errors/anomaly->response result)
       (let [{:keys [items before after]} result

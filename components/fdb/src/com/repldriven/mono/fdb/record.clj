@@ -237,41 +237,63 @@
 
 (defn scan
   "Scans records by primary key order. Returns
-  {:records [bytes ...] :before cursor|nil :after cursor|nil}.
+  `{:records [bytes ...] :before cursor|nil :after cursor|nil}`,
+  where `:records` is in the requested display order.
 
-  :after is the cursor for the next forward page (nil when
-  no more records). :before is the first record's cursor
-  (nil when empty).
+  `:before` is the cursor of the first record in the page (what the
+  client should send back as `:before` to page *previous*). `:after`
+  is the cursor of the last record — only set when more rows exist
+  beyond the page — for the client to send back as `:after` to page
+  *next*. Both are phrased in the client's display direction, so
+  `page[after]` / `page[before]` always mean next / prev regardless
+  of whether the natural order is ascending or descending.
 
   opts:
     :prefix  vector of leading PK parts to scope the scan
-    :after   cursor, exclusive lower bound (forward)
-    :before  cursor, exclusive upper bound (reverse)
+    :after   cursor, client's \"next page\" boundary
+    :before  cursor, client's \"previous page\" boundary
     :limit   int, page size
+    :order   `:asc` (default) or `:desc` — selects the display
+             direction; in `:desc` the first page (no cursor)
+             returns the highest-keyed records first
 
-  When :prefix is given, the scan is constrained to records
-  whose PK starts with those values. Cursors are the PK
-  element at the position after the prefix."
-  [store {:keys [prefix after before limit]}]
-  (let [reverse? (some? before)
+  When `:prefix` is given, the scan is constrained to records whose
+  PK starts with those values. Cursors are the PK element at the
+  position after the prefix."
+  [store {:keys [prefix after before limit order]}]
+  (let [descending? (= :desc order)
+        ;; Translate client-oriented cursors into native range bounds.
+        ;; In asc, `:after X` is a low exclusive bound (forward from X+ε);
+        ;; `:before X` is a high exclusive bound (reverse to X-ε). In
+        ;; desc, the roles swap — "next after X" now means "keys less
+        ;; than X", and "prev before X" means "keys greater than X".
+        low-cursor (if descending? before after)
+        high-cursor (if descending? after before)
+        ;; Scan backward when the natural traversal opposes key order:
+        ;; asc + `:before` (paginating back from a higher cursor), or
+        ;; desc without a low-cursor (default desc scan runs from the
+        ;; end down).
+        reverse-scan? (if descending?
+                        (nil? low-cursor)
+                        (some? high-cursor))
         prefix-size (count (or prefix []))
         prefix-tuple (when (seq prefix)
                        (Tuple/from (into-array Object prefix)))
         base-range (when prefix-tuple
                      (prefix-range prefix-tuple))
         range (cond
-               (and prefix-tuple after)
+               (and prefix-tuple low-cursor)
                (TupleRange.
-                (cursor-tuple prefix after)
+                (cursor-tuple prefix low-cursor)
                 (.getHigh ^TupleRange base-range)
                 EndpointType/RANGE_EXCLUSIVE
                 (.getHighEndpoint ^TupleRange
                                   base-range))
 
-               (and prefix-tuple before)
+               (and prefix-tuple high-cursor)
                (TupleRange.
                 (.getLow ^TupleRange base-range)
-                (cursor-tuple prefix before)
+                (cursor-tuple prefix high-cursor)
                 (.getLowEndpoint ^TupleRange
                                  base-range)
                 EndpointType/RANGE_EXCLUSIVE)
@@ -279,17 +301,17 @@
                prefix-tuple
                base-range
 
-               after
+               low-cursor
                (TupleRange.
-                (Tuple/from (into-array Object [after]))
+                (Tuple/from (into-array Object [low-cursor]))
                 nil
                 EndpointType/RANGE_EXCLUSIVE
                 EndpointType/TREE_END)
 
-               before
+               high-cursor
                (TupleRange.
                 nil
-                (Tuple/from (into-array Object [before]))
+                (Tuple/from (into-array Object [high-cursor]))
                 EndpointType/TREE_START
                 EndpointType/RANGE_EXCLUSIVE)
 
@@ -298,7 +320,7 @@
         execute-props (-> (ExecuteProperties/newBuilder)
                           (.setReturnedRowLimit (inc limit))
                           .build)
-        scan-props (ScanProperties. execute-props reverse?)
+        scan-props (ScanProperties. execute-props reverse-scan?)
         raw (->> (.scanRecords store
                                ^TupleRange range
                                nil
@@ -309,15 +331,13 @@
                   FDBStoreTimer$Waits/WAIT_SCAN_RECORDS)
                  vec)
         more? (> (count raw) limit)
-        page (cond->
-              raw
-
-              more?
-              (subvec 0 limit)
-
-              reverse?
-              (-> rseq
-                  vec))]
+        trimmed (cond-> raw more? (subvec 0 limit))
+        ;; Native scan produces records low-to-high on forward and
+        ;; high-to-low on reverse. Flip only when the scan direction
+        ;; disagrees with the display direction.
+        page (if (= reverse-scan? descending?)
+               trimmed
+               (vec (rseq trimmed)))]
     {:records (mapv record->bytes page)
      :before (when (seq page)
                (cursor (first page) prefix-size))

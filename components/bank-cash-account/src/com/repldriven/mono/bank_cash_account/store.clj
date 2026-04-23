@@ -74,24 +74,31 @@
 (defn get-accounts
   "Lists cash accounts for an organization. Returns
   {:accounts [maps] :before id|nil :after id|nil} or
-  anomaly. opts supports :after, :before, :limit."
+  anomaly. opts supports :after, :before, :limit, :order
+  (`:desc` default — clients show newest-first)."
   ([txn org-id]
    (get-accounts txn org-id nil))
   ([txn org-id opts]
-   (let-nom>
-     [result (fdb/transact
-              txn
-              (fn [txn]
-                (fdb/scan-records
-                 (fdb/open txn store-name)
-                 (merge {:prefix [org-id] :limit 100}
-                        (select-keys opts [:after :before :limit]))))
-              :cash-account/list
-              "Failed to list accounts")
-      {:keys [records before after]} result]
-     {:accounts (mapv schema/pb->CashAccount records)
-      :before before
-      :after after})))
+   (let [{:keys [after before limit order]
+          :or {limit 100 order :desc}}
+         opts]
+     (let-nom>
+       [result (fdb/transact
+                txn
+                (fn [txn]
+                  (fdb/scan-records
+                   (fdb/open txn store-name)
+                   {:prefix [org-id]
+                    :after after
+                    :before before
+                    :limit limit
+                    :order order}))
+                :cash-account/list
+                "Failed to list accounts")
+        {:keys [records before after]} result]
+       {:accounts (mapv schema/pb->CashAccount records)
+        :before before
+        :after after}))))
 
 (defn count-party-accounts-by-type
   "Returns the count of accounts matching the given

@@ -3,6 +3,8 @@
     [com.repldriven.mono.bank-payment.interface]
 
     [com.repldriven.mono.bank-balance.interface :as balances]
+    [com.repldriven.mono.bank-cash-account.interface :as cash-accounts]
+    [com.repldriven.mono.bank-cash-account-product.interface :as products]
     [com.repldriven.mono.bank-organization.interface :as
      organizations]
 
@@ -17,13 +19,17 @@
     [clojure.test :refer [deftest is testing]]))
 
 (defn- send-command
+  "Serialises `data` via the command schema and dispatches through
+  the processor. Pulls `:idempotency-key` off `data` and hoists it
+  onto the envelope as `:id` (the wire puts it on the envelope
+  automatically — this mirrors that in tests)."
   [proc schemas command-name data]
-  (let [payload (avro/serialize (get schemas command-name)
-                                data)]
+  (let [payload (avro/serialize (get schemas command-name) data)]
     (if (error/anomaly? payload)
       payload
       (processor/process proc
                          {:command command-name
+                          :id (:idempotency-key data)
                           :payload payload}))))
 
 (defn- decode-payload
@@ -41,12 +47,7 @@
   (testing "submit-internal-payment creates payment and
   records transaction"
     (let [config (fdb-config sys)
-          tier-id (:tier-id (system/instance sys [:tiers :micro]))
-          internal-org (system/instance sys
-                                        [:organizations :internal])
-          internal-account-id (get-in internal-org
-                                      [:organization :accounts
-                                       0 :account-id])]
+          tier-id (:tier-id (system/instance sys [:tiers :micro]))]
       (nom-test>
         [customer-org (organizations/new-organization
                        config
@@ -55,16 +56,39 @@
                        :organization-status-test
                        tier-id
                        ["GBP"])
-         customer-account-id
-         (get-in customer-org
-                 [:organization :accounts 0 :account-id])
+         org-id (get-in customer-org [:organization :organization-id])
+         party-id (get-in customer-org [:organization :party :party-id])
+         debtor-account-id (get-in customer-org
+                                   [:organization :accounts 0 :account-id])
+         product (products/new-product
+                  config
+                  org-id
+                  {:name "Current Account"
+                   :product-type :product-type-current
+                   :balance-sheet-side :balance-sheet-side-liability
+                   :allowed-currencies ["GBP"]
+                   :balance-products [{:balance-type :balance-type-default
+                                       :balance-status :balance-status-posted}]
+                   :allowed-payment-address-schemes
+                   [:payment-address-scheme-scan]})
+         product-id (:product-id product)
+         _ (products/publish config org-id product-id (:version-id product))
+         creditor-account (cash-accounts/new-account
+                           config
+                           {:organization-id org-id
+                            :party-id party-id
+                            :name "Payment Test Current"
+                            :currency "GBP"
+                            :product-id product-id})
+         creditor-account-id (:account-id creditor-account)
          result (send-command
                  proc
                  schemas
                  "submit-internal-payment"
                  {:idempotency-key "pmt-idem-001"
-                  :debtor-account-id internal-account-id
-                  :creditor-account-id customer-account-id
+                  :organization-id org-id
+                  :debtor-account-id debtor-account-id
+                  :creditor-account-id creditor-account-id
                   :currency "GBP"
                   :amount 500
                   :reference "Test internal payment"})
@@ -73,29 +97,23 @@
                                  "internal-payment"
                                  result)
          _ (is (some? (:payment-id decoded)))
-         _ (is (= "pmt-idem-001" (:idempotency-key decoded)))
-         _ (is (= internal-account-id
-                  (:debtor-account-id decoded)))
-         _ (is (= customer-account-id
-                  (:creditor-account-id decoded)))
+         _ (is (= debtor-account-id (:debtor-account-id decoded)))
+         _ (is (= creditor-account-id (:creditor-account-id decoded)))
          _ (is (= "GBP" (:currency decoded)))
          _ (is (= 500 (:amount decoded)))
          _ (is (some? (:transaction-id decoded)))
-         _ (is (= "Test internal payment"
-                  (:reference decoded)))
-         debtor-balance
-         (balances/get-balance config
-                               internal-account-id
-                               :balance-type-default
-                               "GBP"
-                               :balance-status-posted)
+         _ (is (= "Test internal payment" (:reference decoded)))
+         debtor-balance (balances/get-balance config
+                                              debtor-account-id
+                                              :balance-type-default
+                                              "GBP"
+                                              :balance-status-posted)
          _ (is (= 500 (:debit debtor-balance)))
-         creditor-balance
-         (balances/get-balance config
-                               customer-account-id
-                               :balance-type-default
-                               "GBP"
-                               :balance-status-posted)
+         creditor-balance (balances/get-balance config
+                                                creditor-account-id
+                                                :balance-type-default
+                                                "GBP"
+                                                :balance-status-posted)
          _ (is (= 500 (:credit creditor-balance)))]))))
 
 (defn- send-event
@@ -235,8 +253,6 @@
                                  "outbound-payment"
                                  result)
          _ (is (some? (:payment-id decoded)))
-         _ (is (= "pmt-ob-idem-001"
-                  (:idempotency-key decoded)))
          _ (is (= customer-account-id
                   (:debtor-account-id decoded)))
          _ (is (= "87654321" (:creditor-bban decoded)))
@@ -350,6 +366,7 @@
            schemas
            "unknown-payment-command"
            {:idempotency-key "pmt-idem-999"
+            :organization-id "org-1"
             :debtor-account-id "acc-1"
             :creditor-account-id "acc-2"
             :currency "GBP"

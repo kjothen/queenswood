@@ -23,15 +23,15 @@
 (def VersionStatus
   (coercion/version-status-enum-schema {:json-schema/example "draft"}))
 
-(def DraftCashAccountProductRequest
-  [:map {:json-schema/example examples/DraftCashAccountProductRequest}
+(def CashAccountProductRequest
+  [:map {:closed true :json-schema/example examples/CashAccountProductRequest}
    [:name [:ref "Name"]]
    [:product-type [:ref "ProductType"]]
    [:balance-sheet-side [:ref "BalanceSheetSide"]]
-   [:allowed-currencies [:set {:min 1} [:ref "Currency"]]]
-   [:balance-products [:set {:min 1} [:ref "BalanceProductRequest"]]]
+   [:allowed-currencies [:unique-vector {:min 1} [:ref "Currency"]]]
+   [:balance-products [:unique-vector {:min 1} [:ref "BalanceProduct"]]]
    [:allowed-payment-address-schemes
-    [:set {:min 1} [:ref "PaymentAddressScheme"]]]
+    [:unique-vector {:min 1} [:ref "PaymentAddressScheme"]]]
    [:interest-rate-bps {:optional true} [:ref "SignedBasisPoints"]]
    [:valid-from {:optional true} [:ref "Date"]]])
 
@@ -45,21 +45,34 @@
    [:name {:optional true} [:ref "Name"]]
    [:product-type [:ref "ProductType"]]
    [:balance-sheet-side [:ref "BalanceSheetSide"]]
-   [:allowed-currencies [:set {:min 1} [:ref "Currency"]]]
-   [:balance-products [:set {:min 1} [:ref "BalanceProductRequest"]]]
+   [:allowed-currencies [:unique-vector-lax {:min 1} [:ref "Currency"]]]
+   [:balance-products [:unique-vector-lax {:min 1} [:ref "BalanceProduct"]]]
    [:allowed-payment-address-schemes
-    [:set {:min 1} [:ref "PaymentAddressScheme"]]]
+    [:unique-vector-lax {:min 1} [:ref "PaymentAddressScheme"]]]
    [:interest-rate-bps {:optional true} [:ref "SignedBasisPoints"]]
    [:valid-from {:optional true} [:maybe [:ref "Date"]]]
-   [:created-at {:optional true} [:maybe [:ref "Timestamp"]]]
-   [:updated-at {:optional true} [:maybe [:ref "Timestamp"]]]])
+   [:created-at [:ref "Timestamp"]]
+   [:updated-at [:ref "Timestamp"]]
+   [:discarded-at {:optional true} [:ref "Timestamp"]]])
 
-(def CashAccountProductVersionList
-  [:map {:json-schema/example examples/CashAccountProductVersionList}
+(def CashAccountProduct
+  [:map {:json-schema/example examples/CashAccountProduct}
+   [:product-id [:ref "ProductId"]]
    [:versions [:vector [:ref "CashAccountProductVersion"]]]])
 
+(def CashAccountProductListLinks
+  [:map
+   [:next {:optional true} string?]
+   [:prev {:optional true} string?]])
+
+(def CashAccountProductList
+  [:map {:json-schema/example examples/CashAccountProductList}
+   [:items [:vector [:ref "CashAccountProduct"]]]
+   [:links {:optional true} [:ref "CashAccountProductListLinks"]]])
+
 (def registry
-  (components-registry
-   [#'ProductId #'VersionId #'ProductType #'BalanceSheetSide
-    #'PaymentAddressScheme #'VersionStatus #'DraftCashAccountProductRequest
-    #'CashAccountProductVersion #'CashAccountProductVersionList]))
+  (components-registry [#'ProductId #'VersionId #'ProductType #'BalanceSheetSide
+                        #'PaymentAddressScheme #'VersionStatus
+                        #'CashAccountProductRequest #'CashAccountProductVersion
+                        #'CashAccountProduct #'CashAccountProductListLinks
+                        #'CashAccountProductList]))

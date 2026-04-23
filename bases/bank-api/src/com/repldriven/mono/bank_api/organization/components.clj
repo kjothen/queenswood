@@ -15,11 +15,11 @@
   (coercion/organization-status-enum-schema {:json-schema/example "test"}))
 
 (def CreateOrganizationRequest
-  [:map {:json-schema/example examples/CreateOrganizationRequest}
+  [:map {:closed true :json-schema/example examples/CreateOrganizationRequest}
    [:name [:ref "Name"]]
    [:status [:ref "OrganizationStatus"]]
    [:tier-id [:ref "TierId"]]
-   [:currencies [:vector [:ref "Currency"]]]])
+   [:currencies [:unique-vector {:min 1} [:ref "Currency"]]]])
 
 (def Organization
   [:map {:json-schema/example examples/Organization}

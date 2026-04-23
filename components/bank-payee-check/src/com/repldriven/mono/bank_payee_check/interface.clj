@@ -14,11 +14,11 @@
   [txn org-id check-id]
   (core/get-check txn org-id check-id))
 
-(defn list-checks
+(defn get-checks
   "Lists payee checks for an organization with pagination.
   Returns {:items [...] :before id|nil :after id|nil} or
   anomaly."
   ([txn org-id]
-   (core/list-checks txn org-id))
+   (core/get-checks txn org-id))
   ([txn org-id opts]
-   (core/list-checks txn org-id opts)))
+   (core/get-checks txn org-id opts)))

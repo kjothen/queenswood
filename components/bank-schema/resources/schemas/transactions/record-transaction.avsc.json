@@ -3,7 +3,6 @@
   "name": "RecordTransaction",
   "namespace": "com.repldriven.mono.transactions",
   "fields": [
-    {"name": "idempotency_key",   "type": "string"},
     {"name": "transaction_type",  "type": {"type": "enum",
                                             "name": "TransactionType",
                                             "symbols": ["TRANSACTION_TYPE_INTERNAL_TRANSFER",

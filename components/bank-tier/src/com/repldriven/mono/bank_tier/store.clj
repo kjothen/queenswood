@@ -12,9 +12,9 @@
 (def transact fdb/transact)
 
 (defn- load-tiers
-  [store]
+  [store {:keys [limit order] :or {limit 100 order :desc}}]
   (mapv schema/pb->Tier
-        (:records (fdb/scan-records store {:limit 100}))))
+        (:records (fdb/scan-records store {:limit limit :order order}))))
 
 (defn- load-tier
   [store tier-id]
@@ -55,13 +55,15 @@
 
 (defn get-tiers
   "Lists all tiers. Returns a sequence of tier maps or
-  anomaly."
-  [txn]
-  (fdb/transact txn
-                (fn [txn]
-                  (load-tiers (fdb/open txn store-name)))
-                :tier/list
-                "Failed to list tiers"))
+  anomaly. opts supports :limit and :order (`:desc` default
+  — clients show newest-first)."
+  ([txn] (get-tiers txn nil))
+  ([txn opts]
+   (fdb/transact txn
+                 (fn [txn]
+                   (load-tiers (fdb/open txn store-name) opts))
+                 :tier/list
+                 "Failed to list tiers")))
 
 (defn get-tier
   "Finds a Tier by tier-id. Returns the Tier map or

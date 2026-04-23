@@ -27,9 +27,9 @@
    [:updated-at [:ref "Timestamp"]]])
 
 (def NationalIdentifier
-  [:map
+  [:map {:closed true}
    [:type [:ref "IdentifierType"]]
-   [:value string?]
+   [:value [:ref "NationalIdentifierValue"]]
    [:issuing-country [:ref "CountryCode"]]])
 
 (def CreatePartyRequest

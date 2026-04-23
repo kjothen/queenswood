@@ -6,20 +6,6 @@
     [com.repldriven.mono.error.interface :as error]))
 
 (def ^:private default-page-size 20)
-(def ^:private max-page-size 100)
-
-(defn- parse-page-size
-  [s]
-  (let [n (when s
-            (try (Integer/parseInt s) (catch NumberFormatException _ nil)))]
-    (cond (nil? n)
-          default-page-size
-          (< n 1)
-          1
-          (> n max-page-size)
-          max-page-size
-          :else
-          n)))
 
 (defn- build-links
   [base before-cursor after-cursor]
@@ -39,12 +25,10 @@
   [request]
   (let [org-id (get-in request [:auth :organization-id])
         query (get-in request [:parameters :query])
-        after-id (cursor/decode
-                  (get query (keyword "page[after]")))
-        before-id (cursor/decode
-                   (get query (keyword "page[before]")))
-        size (parse-page-size
-              (get query (keyword "page[size]")))
+        {:keys [page]} query
+        after-id (cursor/decode (:after page))
+        before-id (cursor/decode (:before page))
+        size (or (:size page) default-page-size)
         result (parties/get-parties request
                                     org-id
                                     {:after after-id

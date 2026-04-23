@@ -24,7 +24,6 @@
 (def SimulateInboundTransferResponse
   [:map {:json-schema/example examples/SimulateInboundTransferResponse}
    [:transaction-id [:ref "TransactionId"]]
-   [:idempotency-key [:ref "IdempotencyKey"]]
    [:status [:ref "TransactionStatus"]]
    [:transaction-type [:ref "TransactionType"]]
    [:currency [:ref "Currency"]]

@@ -9,21 +9,6 @@
     [com.repldriven.mono.error.interface :as error]))
 
 (def ^:private default-page-size 20)
-(def ^:private max-page-size 100)
-
-(defn- parse-page-size
-  [s]
-  (let [n (when s
-            (try (Integer/parseInt s)
-                 (catch NumberFormatException _ nil)))]
-    (cond (nil? n)
-          default-page-size
-          (< n 1)
-          1
-          (> n max-page-size)
-          max-page-size
-          :else
-          n)))
 
 (defn- build-links
   [base before-id after-id]
@@ -44,11 +29,12 @@
   (let [{:keys [record-db record-store]} request
         org-id (get-in request [:auth :organization-id])
         query (get-in request [:parameters :query])
-        after-id (cursor/decode (get query (keyword "page[after]")))
-        before-id (cursor/decode (get query (keyword "page[before]")))
-        size (parse-page-size (get query (keyword "page[size]")))
-        embed-balances (get query (keyword "embed[balances]"))
-        embed-transactions (get query (keyword "embed[transactions]"))
+        {:keys [page embed]} query
+        after-id (cursor/decode (:after page))
+        before-id (cursor/decode (:before page))
+        size (or (:size page) default-page-size)
+        embed-balances (:balances embed)
+        embed-transactions (:transactions embed)
         opts (cond->
               {:limit size}
 
@@ -89,8 +75,9 @@
         org-id (get-in request [:auth :organization-id])
         {:keys [account-id]} (get-in request [:parameters :path])
         query (get-in request [:parameters :query])
-        embed-balances (get query (keyword "embed[balances]"))
-        embed-transactions (get query (keyword "embed[transactions]"))
+        {:keys [embed]} query
+        embed-balances (:balances embed)
+        embed-transactions (:transactions embed)
         result (cash-accounts/get-account
                 {:record-db record-db :record-store record-store}
                 org-id
@@ -112,13 +99,16 @@
 
 (defn list-transactions
   [request]
-  (let [{:keys [record-db record-store]} request
-        account-id (get-in request
-                           [:parameters :path :account-id])
-        result (transactions/get-transactions
-                {:record-db record-db
-                 :record-store record-store}
-                account-id)]
+  (let [{:keys [record-db record-store auth parameters]} request
+        {:keys [organization-id]} auth
+        {:keys [account-id]} (:path parameters)
+        config {:record-db record-db :record-store record-store}
+        result (error/let-nom>
+                 [_ (cash-accounts/get-account config
+                                               organization-id
+                                               account-id)
+                  txns (transactions/get-transactions config account-id)]
+                 txns)]
     (if (error/anomaly? result)
       (errors/anomaly->response result)
       {:status 200 :body {:transactions (or result [])}})))

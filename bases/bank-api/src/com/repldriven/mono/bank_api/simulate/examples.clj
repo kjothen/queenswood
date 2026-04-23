@@ -7,7 +7,6 @@
 
 (def SimulateInboundTransferResponse
   {:transaction-id "txn.01kprbmgcj35ptc8npmybhh4sb"
-   :idempotency-key "idem-001"
    :status "posted"
    :transaction-type "internal-transfer"
    :currency "GBP"

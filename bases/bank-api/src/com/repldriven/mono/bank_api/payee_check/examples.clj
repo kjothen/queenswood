@@ -24,4 +24,11 @@
 (def PayeeCheckList
   {:items [PayeeCheck] :links {:next "/v1/payee-checks?page[after]=djE6..."}})
 
-(def registry (examples-registry [#'PayeeCheck #'PayeeCheckList]))
+(def PayeeCheckNotFound
+  {:value {:title "REJECTED"
+           :type ":payee-check/not-found"
+           :status 404
+           :detail "Payee check not found"}})
+
+(def registry
+  (examples-registry [#'PayeeCheck #'PayeeCheckList #'PayeeCheckNotFound]))

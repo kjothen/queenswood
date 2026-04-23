@@ -16,14 +16,15 @@
 
 (defn- dispatch
   [config message]
-  (let [{:keys [command payload]} message
+  (let [{:keys [command id payload]} message
         {:keys [schemas]} config
         schema (get schemas command)]
     (if-not schema
       (error/fail :transaction/process-command
                   {:message "No schema found for command"
                    :command command})
-      (let-nom> [data (avro/deserialize-same schema payload)]
+      (let-nom> [raw (avro/deserialize-same schema payload)
+                 data (assoc raw :idempotency-key id)]
         (case command
           "record-transaction"
           (->response config (core/record-transaction config data))

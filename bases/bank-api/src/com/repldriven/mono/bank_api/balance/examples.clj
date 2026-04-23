@@ -36,5 +36,3 @@
   {:balance-type :default :balance-status :posted :currency "GBP"})
 
 (def BalanceProduct {:balance-type :default :balance-status :posted})
-
-(def BalanceProductList {:balance-products [BalanceProduct]})

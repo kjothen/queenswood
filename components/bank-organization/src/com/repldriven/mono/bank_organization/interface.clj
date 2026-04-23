@@ -28,10 +28,11 @@
   (store/get-organization txn org-id))
 
 (defn get-organizations
-  "Lists organizations enriched with party, accounts (with balances),
-  and api-key. Returns a sequence of maps or anomaly."
-  [txn]
-  (core/get-organizations txn))
+  "Lists organizations enriched with party, accounts (with
+  balances), and api-key. Returns a sequence of maps or
+  anomaly."
+  ([txn] (core/get-organizations txn))
+  ([txn opts] (core/get-organizations txn opts)))
 
 (defn get-organizations-by-type
   "Lists organizations matching the given type. Returns

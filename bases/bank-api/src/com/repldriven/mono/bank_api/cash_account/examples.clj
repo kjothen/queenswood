@@ -34,7 +34,7 @@
 
 (def ProductNotFound
   {:value {:title "REJECTED"
-           :type ":cash-account-product/not-found"
+           :type ":cash-account-product/product-not-found"
            :status 404
            :detail "Product not found"}})
 
@@ -55,8 +55,8 @@
    :account-type :personal
    :account-status :opened
    :payment-addresses [{:scheme :scan
-                        :identifier {:scan {:sort-code "040004"
-                                            :account-number "12345678"}}}]})
+                        :scan {:sort-code "040004"
+                               :account-number "12345678"}}]})
 
 (def CashAccountId (:account-id CashAccount))
 

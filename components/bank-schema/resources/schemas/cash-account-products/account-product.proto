@@ -26,6 +26,7 @@ enum CashAccountProductVersionStatus {
   CASH_ACCOUNT_PRODUCT_VERSION_STATUS_UNKNOWN = 0;
   CASH_ACCOUNT_PRODUCT_VERSION_STATUS_DRAFT = 1;
   CASH_ACCOUNT_PRODUCT_VERSION_STATUS_PUBLISHED = 2;
+  CASH_ACCOUNT_PRODUCT_VERSION_STATUS_DISCARDED = 3;
 }
 
 message CashAccountProductVersion {
@@ -46,4 +47,5 @@ message CashAccountProductVersion {
   optional int32 interest_rate_bps = 13;
   required int64 created_at = 14;
   required int64 updated_at = 15;
+  optional int64 discarded_at = 16;
 }

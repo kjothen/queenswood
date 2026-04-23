@@ -56,8 +56,8 @@
                    _ (is (= 2 (count (get body "cash-accounts"))))
                    _ (is (some? (get-in body ["links" "next"])))
                    _ (is (nil? (get-in body ["links" "prev"])))]))
-     (testing "paginates forward with page[after]"
-       (let [after-cursor (cursor/encode (first ids))]
+     (testing "paginates forward with page[after] (desc: keys less than cursor)"
+       (let [after-cursor (cursor/encode (last ids))]
          (nom-test> [res (list-cash-accounts-request base-url
                                                      token
                                                      (str "page[after]="
@@ -66,8 +66,9 @@
                      body (http/res->body res)
                      _ (is (= 2 (count (get body "cash-accounts"))))
                      _ (is (some? (get-in body ["links" "prev"])))])))
-     (testing "paginates backward with page[before]"
-       (let [before-cursor (cursor/encode (last ids))]
+     (testing
+       "paginates backward with page[before] (desc: keys greater than cursor)"
+       (let [before-cursor (cursor/encode (first ids))]
          (nom-test> [res (list-cash-accounts-request base-url
                                                      token
                                                      (str "page[before]="
@@ -76,7 +77,7 @@
                      body (http/res->body res)
                      _ (is (= 2 (count (get body "cash-accounts"))))])))
      (testing "returns empty when no accounts match"
-       (let [after-cursor (cursor/encode "acct-999")]
+       (let [after-cursor (cursor/encode "a")]
          (nom-test> [res (list-cash-accounts-request base-url
                                                      token
                                                      (str "page[after]="

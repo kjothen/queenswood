@@ -1,5 +1,12 @@
 <script>
-  import { list_cash_account_products, create_cash_account_product, upsert_cash_account_product_draft, publish_cash_account_product } from "./api.mjs";
+  import {
+    list_cash_account_products,
+    create_cash_account_product,
+    open_cash_account_product_draft,
+    update_cash_account_product_draft,
+    discard_cash_account_product_draft,
+    publish_cash_account_product,
+  } from "./api.mjs";
   import { time_ago } from "./time.mjs";
   import { onMount } from "svelte";
   import Modal from "./Modal.svelte";
@@ -107,7 +114,7 @@
       const schemes = paymentAddressSchemes
         .filter((_, i) => reviseSelectedSchemes[i])
         .map(s => s.scheme);
-      const res = await upsert_cash_account_product_draft(reviseVersion["product-id"], {
+      const body = {
         "name": reviseName,
         "product-type": reviseProductType,
         "balance-sheet-side": reviseBalanceSheetSide,
@@ -115,7 +122,14 @@
         "balance-products": bps.length > 0 ? bps : undefined,
         "allowed-payment-address-schemes": schemes.length > 0 ? schemes : undefined,
         "interest-rate-bps": reviseInterestRateBps,
-      });
+      };
+      // On a published version the "revise" action opens a fresh draft;
+      // on an existing draft it updates that draft in place.
+      const pid = reviseVersion["product-id"];
+      const vid = reviseVersion["version-id"];
+      const res = reviseVersion.status === "draft"
+        ? await update_cash_account_product_draft(pid, vid, body)
+        : await open_cash_account_product_draft(pid, body);
       if (res["http-status"] >= 200 && res["http-status"] < 300) {
         reviseModalOpen = false;
         showToast?.({ type: "success", message: "Draft saved" });
@@ -142,7 +156,23 @@
     try {
       const res = await list_cash_account_products();
       if (res["http-status"] >= 200 && res["http-status"] < 300) {
-        versions = res.body.versions ?? [];
+        // New shape: {items: [{product-id, versions: [...]}, ...]}.
+        // Flatten to one row per version; the aggregate is newest-first
+        // per product. Compute which single row (if any) should carry
+        // the Revise action: skip drafts (they get their own actions),
+        // skip discarded versions (nothing to revise on a tombstone) —
+        // and pick the most recent :published version. All-discarded
+        // products have no Revise target.
+        const items = res.body.items ?? [];
+        versions = items.flatMap(item => {
+          const vs = item.versions ?? [];
+          const hasDraft = vs.some(v => v.status === "draft");
+          const reviseTarget = hasDraft
+            ? null
+            : vs.find(v => v.status === "published");
+          const reviseId = reviseTarget?.["version-id"] ?? null;
+          return vs.map(v => ({ ...v, canRevise: v["version-id"] === reviseId }));
+        });
       } else {
         error = res.body?.error ?? `HTTP ${res["http-status"]}`;
         versions = [];
@@ -193,10 +223,40 @@
     const vid = version["version-id"];
     publishing[vid] = true;
     try {
-      await publish_cash_account_product(version["product-id"]);
+      const res = await publish_cash_account_product(
+        version["product-id"],
+        vid,
+      );
+      if (res["http-status"] >= 200 && res["http-status"] < 300) {
+        showToast?.({ type: "success", message: "Version published" });
+      } else {
+        showToast?.({ type: "warning", message: errorDetail(res.body) ?? `HTTP ${res["http-status"]}` });
+      }
       await load();
     } finally {
       delete publishing[vid];
+    }
+  }
+
+  let discarding = $state({});
+
+  async function handleDiscard(version) {
+    const vid = version["version-id"];
+    if (!confirm(`Discard draft v${version["version-number"]}?`)) return;
+    discarding[vid] = true;
+    try {
+      const res = await discard_cash_account_product_draft(
+        version["product-id"],
+        vid,
+      );
+      if (res["http-status"] >= 200 && res["http-status"] < 300) {
+        showToast?.({ type: "success", message: "Draft discarded" });
+      } else {
+        showToast?.({ type: "warning", message: errorDetail(res.body) ?? `HTTP ${res["http-status"]}` });
+      }
+      await load();
+    } finally {
+      delete discarding[vid];
     }
   }
 
@@ -367,7 +427,8 @@
           <td>v{v["version-number"]}</td>
           <td>
             <span class="status-badge" class:published={v.status === "published"}
-                  class:draft={v.status === "draft"}>
+                  class:draft={v.status === "draft"}
+                  class:discarded={v.status === "discarded"}>
               {v.status}
             </span>
           </td>
@@ -377,14 +438,30 @@
           <td>
             {#if v["product-type"] !== "internal" && v["product-type"] !== "settlement"}
               {#if v.status === "draft"}
-                <button
-                  class="action-btn"
-                  disabled={publishing[v["version-id"]]}
-                  onclick={() => handlePublish(v)}
-                >
-                  {publishing[v["version-id"]] ? "Publishing..." : "Publish"}
-                </button>
-              {:else if v.status === "published"}
+                <div class="action-group">
+                  <button
+                    class="action-btn"
+                    disabled={publishing[v["version-id"]] || discarding[v["version-id"]]}
+                    onclick={() => handlePublish(v)}
+                  >
+                    {publishing[v["version-id"]] ? "Publishing..." : "Publish"}
+                  </button>
+                  <button
+                    class="action-btn secondary"
+                    disabled={publishing[v["version-id"]] || discarding[v["version-id"]]}
+                    onclick={() => openReviseModal(v)}
+                  >
+                    Edit
+                  </button>
+                  <button
+                    class="action-btn danger"
+                    disabled={publishing[v["version-id"]] || discarding[v["version-id"]]}
+                    onclick={() => handleDiscard(v)}
+                  >
+                    {discarding[v["version-id"]] ? "Discarding..." : "Discard"}
+                  </button>
+                </div>
+              {:else if v.canRevise}
                 <button class="action-btn" onclick={() => openReviseModal(v)}>
                   Revise
                 </button>
@@ -602,6 +679,34 @@
   .status-badge.draft {
     background: #fef9c3;
     color: #854d0e;
+  }
+
+  .status-badge.discarded {
+    background: #e5e7eb;
+    color: #4b5563;
+    text-decoration: line-through;
+  }
+
+  .action-group {
+    display: flex;
+    gap: 0.25rem;
+    flex-wrap: wrap;
+  }
+
+  .action-btn.secondary {
+    background: #6b7280;
+  }
+
+  .action-btn.secondary:not(:disabled):hover {
+    background: #4b5563;
+  }
+
+  .action-btn.danger {
+    background: #dc2626;
+  }
+
+  .action-btn.danger:not(:disabled):hover {
+    background: #b91c1c;
   }
 
   .action-btn {

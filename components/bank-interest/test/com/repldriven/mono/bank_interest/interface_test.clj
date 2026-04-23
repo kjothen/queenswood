@@ -24,13 +24,16 @@
     [clojure.test :refer [deftest is testing]]))
 
 (defn- send-command
+  "Serialises `data` via the command schema and dispatches through
+  the processor, hoisting `:idempotency-key` from `data` onto the
+  envelope as `:id` (mirrors the wire behaviour)."
   [proc schemas command-name data]
-  (let [payload (avro/serialize (get schemas command-name)
-                                data)]
+  (let [payload (avro/serialize (get schemas command-name) data)]
     (if (error/anomaly? payload)
       payload
       (processor/process proc
                          {:command command-name
+                          :id (:idempotency-key data)
                           :payload payload}))))
 
 (defn- decode-payload
@@ -103,8 +106,8 @@
                   :allowed-payment-address-schemes
                   [:payment-address-scheme-scan]
                   :interest-rate-bps interest-rate-bps})
-        product-id (get-in product [:version :product-id])
-        _ (products/publish config org-id product-id)
+        product-id (:product-id product)
+        _ (products/publish config org-id product-id (:version-id product))
         account
         (cash-accounts/new-account
          config

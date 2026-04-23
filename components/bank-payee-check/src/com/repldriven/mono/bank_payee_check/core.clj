@@ -18,9 +18,9 @@
   [txn org-id check-id]
   (store/get-check txn org-id check-id))
 
-(defn list-checks
+(defn get-checks
   "Lists payee checks for an organization with pagination."
   ([txn org-id]
-   (store/list-checks txn org-id))
+   (store/get-checks txn org-id))
   ([txn org-id opts]
-   (store/list-checks txn org-id opts)))
+   (store/get-checks txn org-id opts)))

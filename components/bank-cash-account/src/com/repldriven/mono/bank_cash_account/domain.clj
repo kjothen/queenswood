@@ -1,8 +1,8 @@
 (ns com.repldriven.mono.bank-cash-account.domain
   (:refer-clojure :exclude [name])
   (:require
-    [com.repldriven.mono.bank-cash-account.restriction
-     :as restriction]
+    [com.repldriven.mono.bank-cash-account.restriction :as restriction]
+    [com.repldriven.mono.bank-cash-account.validation :as validation]
 
     [com.repldriven.mono.error.interface :as error :refer [let-nom>]]
     [com.repldriven.mono.utility.interface :as utility]))
@@ -12,10 +12,6 @@
 (defn- scan->bban
   [{:keys [sort-code account-number]}]
   (str sort-code account-number))
-
-(defn- ->scan
-  [sort-code account-number]
-  {:scan {:sort-code sort-code :account-number account-number}})
 
 (defn- new-addresses
   [product address-fountain-fn]
@@ -30,7 +26,8 @@
                         account-number (address-fountain-fn sort-code)]
                     (conj addresses
                           {:scheme :payment-address-scheme-scan
-                           :identifier (->scan sort-code account-number)}))
+                           :scan {:sort-code sort-code
+                                  :account-number account-number}}))
 
                   (reduced (error/reject :cash-account/unsupported-scheme
                                          (str
@@ -54,16 +51,14 @@
   (let [{:keys [organization-id party-id product-id currency name]} data
         {:keys [version-id product-type]} product]
     (let-nom>
-      [_ (restriction/policy-account-opening tier)
+      [_ (validation/valid-product? product)
+       _ (validation/valid-currency? currency product)
+       _ (validation/valid-party? party)
+       _ (restriction/policy-account-opening tier)
        _ (restriction/limit-max-accounts tier product-type account-count)
-       _ (restriction/valid-product? product)
-       _ (restriction/valid-currency? currency product)
-       _ (restriction/valid-party? party)
        payment-addresses (new-addresses product address-fountain-fn)]
       (let [now (System/currentTimeMillis)
-            bban (some (fn [{:keys [identifier]}]
-                         (when-let [scan (:scan identifier)]
-                           (scan->bban scan)))
+            bban (some (fn [{:keys [scan]}] (when scan (scan->bban scan)))
                        payment-addresses)]
         {:organization-id organization-id
          :party-id party-id

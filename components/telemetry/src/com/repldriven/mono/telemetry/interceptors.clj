@@ -4,21 +4,37 @@
     [sieppari.context :as sc]
     [steffan-westcott.clj-otel.api.trace.http :as trace-http]))
 
-(def require-idempotency-key
-  "Interceptor that validates Idempotency-Key header is present.
+(def ^:private idempotency-key-re #"^[A-Za-z0-9_\-]{16,255}$")
 
-  Returns 400 Bad Request if the header is missing."
+(def require-idempotency-key
+  "Interceptor that validates the `Idempotency-Key` header is present
+  and syntactically well-formed (16-255 URL-safe ASCII chars).
+
+  Returns 400 Bad Request with an RFC-9457 body if the header is
+  missing or malformed."
   {:name ::require-idempotency-key
    :enter (fn [ctx]
-            (if (some? (get-in ctx [:request :headers "idempotency-key"]))
-              ctx
-              (sc/terminate ctx
-                            {:status 400
-                             :body {:title "REJECTED"
-                                    :type "mono/missing-idempotency-key"
-                                    :status 400
-                                    :detail
-                                    "Missing Idempotency-Key header"}})))})
+            (let [key (get-in ctx [:request :headers "idempotency-key"])]
+              (cond (nil? key)
+                    (sc/terminate ctx
+                                  {:status 400
+                                   :body {:title "REJECTED"
+                                          :type "mono/missing-idempotency-key"
+                                          :status 400
+                                          :detail
+                                          "Missing Idempotency-Key header"}})
+                    (not (re-matches idempotency-key-re key))
+                    (sc/terminate
+                     ctx
+                     {:status 400
+                      :body
+                      {:title "REJECTED"
+                       :type "mono/invalid-idempotency-key"
+                       :status 400
+                       :detail
+                       "Idempotency-Key must be 16-255 URL-safe ASCII chars"}})
+                    :else
+                    ctx)))})
 
 (def trace-span
   "Vector of interceptors that add OpenTelemetry server span support to HTTP requests.

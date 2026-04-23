@@ -21,8 +21,8 @@
    "Failed to save product version"))
 
 (defn get-version
-  "Loads a version by composite PK. Returns the version
-  map or rejection anomaly if not found."
+  "Loads a version by composite PK. Returns the version map or
+  rejection anomaly if not found."
   [txn org-id product-id version-id]
   (fdb/transact
    txn
@@ -44,27 +44,33 @@
   "Scans product versions. opts supports:
     :product-id - restricts the scan to a single product
     :limit      - row cap (default 1000)
+    :order      - `:asc` or `:desc` (default); `:desc` returns versions
+                  newest-first by primary-key order — that's the shape
+                  this component's callers want (clients display version
+                  history newest-first)
 
-  Returns a vector of version maps or anomaly. When
-  :product-id is supplied, rejects if the scan returns
-  no versions — every product is created with v1, so a
-  product-id that resolves to zero versions is an unknown
-  product."
+  Returns a vector of version maps or anomaly. When :product-id is
+  supplied, rejects with `:cash-account-product/product-not-found`
+  if the scan returns no versions — every product is created with
+  v1, so a product-id that resolves to zero versions is unknown."
   ([txn org-id]
    (get-versions txn org-id nil))
   ([txn org-id opts]
    (fdb/transact
     txn
     (fn [txn]
-      (let [{:keys [product-id limit]} opts
+      (let [{:keys [product-id limit order]
+             :or {limit 1000 order :desc}}
+            opts
             prefix (if product-id [org-id product-id] [org-id])
             versions
             (mapv schema/pb->CashAccountProductVersion
                   (:records (fdb/scan-records (fdb/open txn store-name)
                                               {:prefix prefix
-                                               :limit (or limit 1000)})))]
+                                               :limit limit
+                                               :order order})))]
         (if (and product-id (empty? versions))
-          (error/reject :cash-account-product/not-found
+          (error/reject :cash-account-product/product-not-found
                         {:message "Product not found"
                          :organization-id org-id
                          :product-id product-id})

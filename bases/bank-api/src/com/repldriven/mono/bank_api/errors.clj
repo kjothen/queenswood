@@ -35,9 +35,7 @@
 (def ^:private rejection-status-overrides
   "Explicit status overrides for rejection categories whose names
   don't fit the default heuristics."
-  {:cash-account-product/no-draft 409
-   :cash-account-product/no-published-version 404
-   :interest/no-settlement 404})
+  {:cash-account-product/version-immutable 409 :interest/no-settlement 404})
 
 (defn rejection-kind->status
   "Pick an HTTP status code for a rejection kind keyword.

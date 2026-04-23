@@ -17,21 +17,34 @@
     [com.repldriven.mono.utility.interface :as utility]))
 
 (defn submit-internal
-  "Submits an internal payment. Records the underlying
-  transaction and persists the payment record atomically.
-  Returns the payment map or anomaly."
+  "Submits an internal payment. Resolves and verifies both
+  debtor and creditor accounts exist in the caller's
+  organization, records the underlying transaction, and
+  persists the payment record atomically. Returns the
+  payment map or anomaly (`:cash-account/not-found` for a
+  missing account)."
   [config data]
   (store/transact
    config
    (fn [txn]
-     (let-nom>
-       [payment-transaction (domain/internal-payment->transaction data)
-        transaction (transactions/record-transaction txn payment-transaction)
-        {:keys [transaction-id legs]} transaction
-        _ (balances/apply-legs txn legs)
-        payment (domain/new-internal-payment data transaction-id)
-        _ (store/save-internal-payment txn payment)]
-       payment))))
+     (let [{:keys [organization-id debtor-account-id
+                   creditor-account-id]}
+           data]
+       (let-nom>
+         [_ (cash-accounts/get-account txn
+                                       organization-id
+                                       debtor-account-id)
+          _ (cash-accounts/get-account txn
+                                       organization-id
+                                       creditor-account-id)
+          payment-transaction (domain/internal-payment->transaction data)
+          transaction (transactions/record-transaction txn
+                                                       payment-transaction)
+          {:keys [transaction-id legs]} transaction
+          _ (balances/apply-legs txn legs)
+          payment (domain/new-internal-payment data transaction-id)
+          _ (store/save-internal-payment txn payment)]
+         payment)))))
 
 (defn- publish-scheme-command
   "Fire-and-forget: publishes a submit-payment command to
@@ -73,18 +86,24 @@
                               envelope)))))))
 
 (defn submit-outbound
-  "Submits an outbound payment. Debits the customer
+  "Submits an outbound payment. Verifies the debtor account
+  exists in the caller's organization, debits the customer
   account, credits the settlement suspense, persists the
   OutboundPayment record in pending status, and publishes
   a submit-payment command to the scheme adapter. Returns
-  the payment map or anomaly."
+  the payment map or anomaly
+  (`:cash-account/not-found` for a missing debtor)."
   [config data]
   (let [{:keys [internal-account-id]} config
+        {:keys [organization-id debtor-account-id]} data
         result (store/transact
                 config
                 (fn [txn]
                   (let-nom>
-                    [transaction (domain/outbound-payment->transaction
+                    [_ (cash-accounts/get-account txn
+                                                  organization-id
+                                                  debtor-account-id)
+                     transaction (domain/outbound-payment->transaction
                                   data
                                   internal-account-id)
                      transaction+legs (transactions/record-transaction

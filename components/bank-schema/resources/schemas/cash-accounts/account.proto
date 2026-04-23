@@ -15,10 +15,13 @@ message ScanAddress {
 
 message PaymentAddress {
   required com.repldriven.mono.schemas.cash_account_products.PaymentAddressScheme scheme = 1;
-  oneof identifier {
-    ScanAddress scan = 2;
-    string value = 3;
-  }
+  // Sibling optional variants (no proto `oneof` wrapper) so the
+  // protojure-deserialised Clojure shape matches the Avro response
+  // shape directly — `{scheme, scan, value}`. Field tags 2/3 are
+  // preserved for wire compatibility with any previously-written
+  // records. Domain code is responsible for setting at most one.
+  optional ScanAddress scan = 2;
+  optional string value = 3;
 }
 
 enum AccountType {
