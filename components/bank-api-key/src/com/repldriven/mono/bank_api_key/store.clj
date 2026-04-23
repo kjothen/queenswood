@@ -29,18 +29,26 @@
 
 (defn get-api-keys
   "Lists all API keys for a given organization. Returns a
-  sequence of ApiKey maps."
-  [txn org-id]
-  (fdb/transact txn
-                (fn [txn]
-                  (mapv (comp redact schema/pb->ApiKey)
-                        (fdb/query-records
-                         (fdb/open txn store-name)
-                         "ApiKey"
-                         "organization_id"
-                         org-id
-                         {:index "ApiKey_by_org"})))
-
-                :api-key/list
-                {:message "Failed to list API keys"
-                 :organization-id org-id}))
+  sequence of ApiKey maps. opts supports :order (`:desc`
+  default — clients show newest-first). The underlying
+  index query has no native sort option, so ordering is
+  applied in memory over the result."
+  ([txn org-id] (get-api-keys txn org-id nil))
+  ([txn org-id opts]
+   (let [{:keys [order] :or {order :desc}} opts
+         sort-fn (if (= :desc order)
+                   (fn [ks] (vec (sort-by (fn [k] (- (:created-at k 0))) ks)))
+                   (fn [ks] (vec (sort-by :created-at ks))))]
+     (fdb/transact
+      txn
+      (fn [txn]
+        (sort-fn (mapv (comp redact schema/pb->ApiKey)
+                       (fdb/query-records
+                        (fdb/open txn store-name)
+                        "ApiKey"
+                        "organization_id"
+                        org-id
+                        {:index "ApiKey_by_org"}))))
+      :api-key/list
+      {:message "Failed to list API keys"
+       :organization-id org-id}))))

@@ -13,7 +13,9 @@
   (core/record txn data))
 
 (defn get-transactions
-  "Returns transaction legs for an account, enriched
-  with parent transaction type, status, and reference."
-  [txn account-id]
-  (store/get-transactions txn account-id))
+  "Returns transaction legs for an account, enriched with
+  parent transaction type, status, and reference."
+  ([txn account-id]
+   (store/get-transactions txn account-id))
+  ([txn account-id opts]
+   (store/get-transactions txn account-id opts)))

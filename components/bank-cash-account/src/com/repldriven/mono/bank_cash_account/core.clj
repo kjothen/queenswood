@@ -11,6 +11,17 @@
 
     [com.repldriven.mono.error.interface :as error :refer [let-nom>]]))
 
+(defn- current-published-version
+  "Returns the highest-version-number `:published` version in a
+  product aggregate, or nil if none. Relies on `get-product`
+  returning versions sorted newest-first."
+  [{:keys [versions]}]
+  (->> versions
+       (filter (fn [v]
+                 (= :cash-account-product-version-status-published
+                    (:status v))))
+       first))
+
 (defn- enrich-account
   [txn opts account]
   (let [{:keys [account-id]} account]
@@ -42,9 +53,10 @@
        (let-nom>
          [tier (tiers/get-org-tier txn organization-id)
           party (parties/get-party txn organization-id party-id)
-          product (products/get-published-version txn
-                                                  organization-id
-                                                  product-id)
+          aggregate (products/get-product txn
+                                          organization-id
+                                          product-id)
+          product (current-published-version aggregate)
           _ (when (nil? product)
               (error/reject :cash-account/open
                             {:message "Product is not published"

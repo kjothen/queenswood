@@ -52,3 +52,10 @@ projects/**/.lsp
 
 # Generated OpenAPI spec
 docs/openapi.yaml
+
+# Local runtime artifacts
+*.log
+log.txt
+result.json
+__pycache__/
+**/__pycache__/

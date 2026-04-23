@@ -40,16 +40,21 @@
 
 (defn get-organizations
   "Lists organizations. Returns a sequence of organization
-  maps or anomaly."
-  [txn]
-  (fdb/transact txn
-                (fn [txn]
-                  (mapv schema/pb->Organization
-                        (:records (fdb/scan-records
-                                   (fdb/open txn store-name)
-                                   {:limit 100}))))
-                :organization/list
-                "Failed to list organizations"))
+  maps or anomaly. opts supports :limit and :order (`:desc`
+  default — clients show newest-first)."
+  ([txn]
+   (get-organizations txn nil))
+  ([txn opts]
+   (fdb/transact
+    txn
+    (fn [txn]
+      (let [{:keys [limit order] :or {limit 100 order :desc}} opts]
+        (mapv schema/pb->Organization
+              (:records (fdb/scan-records
+                         (fdb/open txn store-name)
+                         {:limit limit :order order})))))
+    :organization/list
+    "Failed to list organizations")))
 
 (defn count-organizations-by-type
   "Returns the count of organizations matching the given

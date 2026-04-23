@@ -368,7 +368,8 @@
                                 :currency "USD"
                                 :product-id "prd_no_versions"})]
       (is (error/rejection? result))
-      (is (= :cash-account-product/not-found (error/kind result))))))
+      (is (= :cash-account-product/product-not-found
+             (error/kind result))))))
 
 (defn- test-open-account-invalid-currency
   [proc schemas config]

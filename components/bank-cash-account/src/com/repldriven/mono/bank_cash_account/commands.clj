@@ -7,31 +7,18 @@
      :refer [let-nom>]]
     [com.repldriven.mono.processor.interface :as processor]))
 
-(defn- payment-address->avro
-  "Flattens protojure oneof :identifier wrapper to flat
-  Avro-compatible shape."
-  [{:keys [scheme identifier]}]
-  {:scheme scheme
-   :scan (:scan identifier)
-   :value (:value identifier)})
-
-(defn- account->avro
-  "Reshapes a CashAccount map for Avro serialization."
-  [account]
-  (update account
-          :payment-addresses
-          (fn [addresses] (mapv payment-address->avro addresses))))
-
 (defn- ->response
-  "Converts an account map to an ACCEPTED response.
-  Returns anomalies unchanged for the processor to handle."
+  "Converts an account map to an ACCEPTED response. Returns anomalies
+  unchanged for the processor to handle. The account's
+  `:payment-addresses` shape — `{:scheme :scan :value}` — matches the
+  Avro schema directly since the proto `PaymentAddress` dropped its
+  `oneof identifier` wrapper, so no reshaping is needed here."
   [config result]
   (if (error/anomaly? result)
     result
     (let [{:keys [schemas]} config]
       {:status "ACCEPTED"
-       :payload (avro/serialize (schemas "cash-account")
-                                (account->avro result))})))
+       :payload (avro/serialize (schemas "cash-account") result)})))
 
 (defn- dispatch
   [config message]

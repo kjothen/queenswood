@@ -22,8 +22,14 @@
     try {
       const res = await list_cash_account_products();
       if (res["http-status"] >= 200 && res["http-status"] < 300) {
-        publishedProducts = (res.body.versions ?? [])
-          .filter(v => v.status === "published"
+        // New shape: {items: [{product-id, versions: [...]}, ...]}.
+        // For each product, pick the current published version — the
+        // first `:published` in newest-first `versions[]`.
+        const items = res.body.items ?? [];
+        publishedProducts = items
+          .map(item => (item.versions ?? [])
+            .find(v => v.status === "published"))
+          .filter(v => v
                     && v["product-type"] !== "internal"
                     && v["product-type"] !== "settlement");
       }

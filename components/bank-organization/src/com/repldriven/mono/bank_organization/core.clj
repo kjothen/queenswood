@@ -103,16 +103,18 @@
 (defn get-organizations
   "Lists organizations enriched with party, accounts, and
   api-key. Returns sequence of rich organization maps or
-  anomaly."
-  [txn]
-  (let-nom> [orgs (store/get-organizations txn)]
-    (reduce (fn [acc org]
-              (let [result (get-organization txn org)]
-                (if (error/anomaly? result)
-                  (reduced result)
-                  (conj acc (:organization result)))))
-            []
-            orgs)))
+  anomaly. opts supports :limit and :order (defaults to
+  `:desc` via the store)."
+  ([txn] (get-organizations txn nil))
+  ([txn opts]
+   (let-nom> [orgs (store/get-organizations txn opts)]
+     (reduce (fn [acc org]
+               (let [result (get-organization txn org)]
+                 (if (error/anomaly? result)
+                   (reduced result)
+                   (conj acc (:organization result)))))
+             []
+             orgs))))
 
 (defn get-organizations-by-type
   "Lists organizations matching the given type. Returns
@@ -151,7 +153,7 @@
                              :type (org-type->party-type org-type)
                              :display-name org-name})
 
-        product (products/new-product
+        version (products/new-product
                  txn
                  org-id
                  {:name (org-type->product-name org-type)
@@ -161,8 +163,8 @@
                   :allowed-payment-address-schemes
                   domain/allowed-payment-address-schemes
                   :balance-products (org-type->balance-products org-type)})
-        product-id (get-in product [:version :product-id])
-        _ (products/publish txn org-id product-id)
+        product-id (:product-id version)
+        _ (products/publish txn org-id product-id (:version-id version))
 
         _ (open-accounts txn
                          org-id

@@ -71,8 +71,8 @@
                                        :balance-status :balance-status-posted}]
                    :allowed-payment-address-schemes
                    [:payment-address-scheme-scan]})
-         product-id (get-in product [:version :product-id])
-         _ (products/publish config org-id product-id)
+         product-id (:product-id product)
+         _ (products/publish config org-id product-id (:version-id product))
          creditor-account (cash-accounts/new-account
                            config
                            {:organization-id org-id

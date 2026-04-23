@@ -13,10 +13,6 @@
   [{:keys [sort-code account-number]}]
   (str sort-code account-number))
 
-(defn- ->scan
-  [sort-code account-number]
-  {:scan {:sort-code sort-code :account-number account-number}})
-
 (defn- new-addresses
   [product address-fountain-fn]
   (let [{:keys [allowed-payment-address-schemes]} product]
@@ -30,7 +26,8 @@
                         account-number (address-fountain-fn sort-code)]
                     (conj addresses
                           {:scheme :payment-address-scheme-scan
-                           :identifier (->scan sort-code account-number)}))
+                           :scan {:sort-code sort-code
+                                  :account-number account-number}}))
 
                   (reduced (error/reject :cash-account/unsupported-scheme
                                          (str
@@ -61,9 +58,7 @@
        _ (restriction/limit-max-accounts tier product-type account-count)
        payment-addresses (new-addresses product address-fountain-fn)]
       (let [now (System/currentTimeMillis)
-            bban (some (fn [{:keys [identifier]}]
-                         (when-let [scan (:scan identifier)]
-                           (scan->bban scan)))
+            bban (some (fn [{:keys [scan]}] (when scan (scan->bban scan)))
                        payment-addresses)]
         {:organization-id organization-id
          :party-id party-id

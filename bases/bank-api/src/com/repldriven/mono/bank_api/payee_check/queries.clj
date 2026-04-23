@@ -44,11 +44,11 @@
         before-id (cursor/decode (:before page))
         size (or (:size page) default-page-size)
         config {:record-db record-db :record-store record-store}
-        result (payee-checks/list-checks config
-                                         organization-id
-                                         {:after after-id
-                                          :before before-id
-                                          :limit size})]
+        result (payee-checks/get-checks config
+                                        organization-id
+                                        {:after after-id
+                                         :before before-id
+                                         :limit size})]
     (if (error/anomaly? result)
       (errors/anomaly->response result)
       (let [{:keys [items before after]} result

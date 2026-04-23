@@ -14,13 +14,15 @@
    [:account-number [:ref "AccountNumber"]]])
 
 (def PaymentAddress
+  "Wire shape emitted by the command-response Avro serializer in
+  `bank-cash-account/commands.clj:payment-address->avro` — the
+  protojure `oneof identifier { ScanAddress scan; string value; }`
+  is flattened into sibling `:scan` / `:value` fields alongside
+  `:scheme`."
   [:map {:closed true}
    [:scheme [:ref "PaymentAddressScheme"]]
-   [:identifier {:optional true}
-    [:maybe
-     [:map {:closed true}
-      [:scan {:optional true} [:maybe [:ref "ScanAddress"]]]
-      [:value {:optional true} [:maybe string?]]]]]])
+   [:scan {:optional true} [:maybe [:ref "ScanAddress"]]]
+   [:value {:optional true} [:maybe string?]]])
 
 (def CashAccountStatus
   (coercion/cash-account-status-enum-schema {:json-schema/example "opened"}))

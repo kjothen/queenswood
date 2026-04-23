@@ -21,5 +21,5 @@
 (defn get-api-keys
   "Lists all API keys for a given organization. Returns a
   sequence of ApiKey maps."
-  [txn org-id]
-  (store/get-api-keys txn org-id))
+  ([txn org-id] (store/get-api-keys txn org-id))
+  ([txn org-id opts] (store/get-api-keys txn org-id opts)))

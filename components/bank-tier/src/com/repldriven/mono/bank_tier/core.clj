@@ -8,8 +8,8 @@
 (defn get-tiers
   "Lists all tiers. Returns a sequence of tier maps or
   anomaly."
-  [txn]
-  (store/get-tiers txn))
+  ([txn] (store/get-tiers txn))
+  ([txn opts] (store/get-tiers txn opts)))
 
 (defn get-tier
   "Finds a Tier by tier-id. Returns the Tier map or

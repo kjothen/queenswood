@@ -4,7 +4,7 @@
 
 (def ProductNotFound
   {:value {:title "REJECTED"
-           :type "cash-account-products/not-found"
+           :type "cash-account-products/product-not-found"
            :status 404
            :detail "Product not found"}})
 
@@ -14,17 +14,17 @@
            :status 404
            :detail "Version not found"}})
 
-(def NoPublishedVersion
+(def DraftAlreadyExists
   {:value {:title "REJECTED"
-           :type "cash-account-products/no-published-version"
-           :status 404
-           :detail "No published version found"}})
-
-(def NoDraft
-  {:value {:title "REJECTED"
-           :type "cash-account-products/no-draft"
+           :type "cash-account-products/draft-already-exists"
            :status 409
-           :detail "No draft to publish"}})
+           :detail "A draft already exists"}})
+
+(def VersionImmutable
+  {:value {:title "REJECTED"
+           :type "cash-account-products/version-immutable"
+           :status 409
+           :detail "Version is not a draft and cannot be modified"}})
 
 (def DuplicateItems
   {:value {:title "REJECTED"
@@ -33,8 +33,8 @@
            :detail "Duplicate items in: balance-products"}})
 
 (def registry
-  (examples-registry [#'ProductNotFound #'VersionNotFound #'NoPublishedVersion
-                      #'NoDraft #'DuplicateItems]))
+  (examples-registry [#'ProductNotFound #'VersionNotFound #'DraftAlreadyExists
+                      #'VersionImmutable #'DuplicateItems]))
 
 (def ProductId "prd.01kprbmgcj35ptc8npmybhh4se")
 (def VersionId "prv.01kprbmgcj35ptc8npmybhh4sf")
@@ -56,9 +56,12 @@
    :created-at "2025-01-01T00:00:00Z"
    :updated-at "2025-01-01T00:00:00Z"})
 
-(def CashAccountProductVersionList {:versions [CashAccountProductVersion]})
+(def CashAccountProduct
+  {:product-id ProductId :versions [CashAccountProductVersion]})
 
-(def DraftCashAccountProductRequest
+(def CashAccountProductList {:items [CashAccountProduct]})
+
+(def CashAccountProductRequest
   {:name "Current Account"
    :product-type :current
    :balance-sheet-side :liability

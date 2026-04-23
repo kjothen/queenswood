@@ -88,3 +88,13 @@
   (assoc version
          :status :cash-account-product-version-status-published
          :updated-at (System/currentTimeMillis)))
+
+(defn discard
+  "Sets version status to discarded; stamps :discarded-at and bumps
+  :updated-at."
+  [version]
+  (let [now (System/currentTimeMillis)]
+    (assoc version
+           :status :cash-account-product-version-status-discarded
+           :discarded-at now
+           :updated-at now)))

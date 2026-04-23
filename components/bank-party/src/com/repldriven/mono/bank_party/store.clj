@@ -77,19 +77,26 @@
 (defn get-parties
   "Lists parties for an organization. Returns
   {:parties [maps] :before id|nil :after id|nil} or
-  anomaly. opts supports :after, :before, :limit."
+  anomaly. opts supports :after, :before, :limit, :order
+  (`:desc` default — clients show newest-first)."
   ([txn org-id]
    (get-parties txn org-id nil))
   ([txn org-id opts]
-   (fdb/transact txn
-                 (fn [txn]
-                   (let [result (fdb/scan-records
-                                 (fdb/open txn store-name)
-                                 (merge {:prefix [org-id] :limit 100}
-                                        (select-keys opts
-                                                     [:after :before :limit])))]
-                     {:parties (mapv schema/pb->Party (:records result))
-                      :before (:before result)
-                      :after (:after result)}))
-                 :party/list
-                 "Failed to list parties")))
+   (fdb/transact
+    txn
+    (fn [txn]
+      (let [{:keys [after before limit order]
+             :or {limit 100 order :desc}}
+            opts
+            result (fdb/scan-records
+                    (fdb/open txn store-name)
+                    {:prefix [org-id]
+                     :after after
+                     :before before
+                     :limit limit
+                     :order order})]
+        {:parties (mapv schema/pb->Party (:records result))
+         :before (:before result)
+         :after (:after result)}))
+    :party/list
+    "Failed to list parties")))

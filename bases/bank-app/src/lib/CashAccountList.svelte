@@ -368,6 +368,15 @@
   }
 
   let closing = $state({});
+  let openMenuAccountId = $state(null);
+
+  function toggleActionsMenu(accountId) {
+    openMenuAccountId = openMenuAccountId === accountId ? null : accountId;
+  }
+
+  function closeActionsMenu() {
+    openMenuAccountId = null;
+  }
 
   async function handleClose(accountId) {
     closing[accountId] = true;
@@ -413,13 +422,25 @@
   }
 
   function scanOf(acct) {
+    // Wire shape: {scheme, scan, value} — proto `oneof identifier` was
+    // flattened so `scan` is a sibling of `scheme` now, not nested
+    // under `:identifier`.
     const addr = (acct["payment-addresses"] ?? [])[0];
-    const scan = addr?.identifier?.scan;
+    const scan = addr?.scan;
     if (!scan) return null;
     return `${scan["sort-code"]} ${scan["account-number"]}`;
   }
 
-  onMount(() => load());
+  onMount(() => {
+    load();
+    const onDocClick = (e) => {
+      if (openMenuAccountId && !e.target.closest(".actions-menu-wrap")) {
+        openMenuAccountId = null;
+      }
+    };
+    document.addEventListener("click", onDocClick);
+    return () => document.removeEventListener("click", onDocClick);
+  });
 </script>
 
 <section>
@@ -501,33 +522,47 @@
                 Fund
               </button>
             {:else if acct["account-status"] === "opened" && acct["product-type"] !== "internal" && acct["product-type"] !== "settlement"}
-              {#if hasPayInSiblings(acct)}
+              <div class="actions-menu-wrap">
                 <button
-                  class="payin-btn"
-                  onclick={(e) => { e.stopPropagation(); openPayInDialog(acct); }}
+                  class="actions-btn"
+                  class:open={openMenuAccountId === acct["account-id"]}
+                  onclick={(e) => { e.stopPropagation(); toggleActionsMenu(acct["account-id"]); }}
                 >
-                  Pay In
+                  Actions <span class="caret">&#9662;</span>
                 </button>
-              {/if}
-              <button
-                class="payout-btn"
-                onclick={(e) => { e.stopPropagation(); openPayOutDialog(acct); }}
-              >
-                Pay Out
-              </button>
-              <button
-                class="reward-btn"
-                onclick={(e) => { e.stopPropagation(); openRewardDialog(acct); }}
-              >
-                Reward
-              </button>
-              <button
-                class="close-btn"
-                disabled={closing[acct["account-id"]]}
-                onclick={(e) => { e.stopPropagation(); handleClose(acct["account-id"]); }}
-              >
-                {closing[acct["account-id"]] ? "Closing..." : "Close"}
-              </button>
+                {#if openMenuAccountId === acct["account-id"]}
+                  <div class="actions-menu" onclick={(e) => e.stopPropagation()}>
+                    {#if hasPayInSiblings(acct)}
+                      <button
+                        class="menu-item"
+                        onclick={() => { closeActionsMenu(); openPayInDialog(acct); }}
+                      >
+                        Pay In
+                      </button>
+                    {/if}
+                    <button
+                      class="menu-item"
+                      onclick={() => { closeActionsMenu(); openPayOutDialog(acct); }}
+                    >
+                      Pay Out
+                    </button>
+                    <button
+                      class="menu-item"
+                      onclick={() => { closeActionsMenu(); openRewardDialog(acct); }}
+                    >
+                      Reward
+                    </button>
+                    <div class="menu-divider"></div>
+                    <button
+                      class="menu-item danger"
+                      disabled={closing[acct["account-id"]]}
+                      onclick={() => { closeActionsMenu(); handleClose(acct["account-id"]); }}
+                    >
+                      {closing[acct["account-id"]] ? "Closing..." : "Close"}
+                    </button>
+                  </div>
+                {/if}
+              </div>
             {/if}
           </td>
         </tr>
@@ -970,25 +1005,6 @@
     color: #991b1b;
   }
 
-  .close-btn {
-    padding: 0.25rem 0.6rem;
-    background: #dc2626;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    font-size: 0.8rem;
-    cursor: pointer;
-  }
-
-  .close-btn:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-  }
-
-  .close-btn:not(:disabled):hover {
-    background: #b91c1c;
-  }
-
   .account-row {
     cursor: pointer;
   }
@@ -1066,36 +1082,6 @@
     font-size: 0.85rem;
   }
 
-  .payin-btn {
-    padding: 0.25rem 0.6rem;
-    background: #2563eb;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    font-size: 0.8rem;
-    cursor: pointer;
-    margin-right: 0.25rem;
-  }
-
-  .payin-btn:hover {
-    background: #1d4ed8;
-  }
-
-  .payout-btn {
-    padding: 0.25rem 0.6rem;
-    background: #dc2626;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    font-size: 0.8rem;
-    cursor: pointer;
-    margin-right: 0.25rem;
-  }
-
-  .payout-btn:hover {
-    background: #b91c1c;
-  }
-
   .field-row {
     display: flex;
     gap: 0.75rem;
@@ -1103,21 +1089,6 @@
 
   .field-half {
     flex: 1;
-  }
-
-  .reward-btn {
-    padding: 0.25rem 0.6rem;
-    background: #16a34a;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    font-size: 0.8rem;
-    cursor: pointer;
-    margin-right: 0.25rem;
-  }
-
-  .reward-btn:hover {
-    background: #15803d;
   }
 
   .currency-display {
@@ -1157,6 +1128,86 @@
 
   .fund-btn:hover {
     background: #1d4ed8;
+  }
+
+  .actions-menu-wrap {
+    position: relative;
+    display: inline-block;
+  }
+
+  .actions-btn {
+    padding: 0.25rem 0.6rem;
+    background: var(--bg-secondary);
+    color: var(--text);
+    border: 1px solid var(--border-input);
+    border-radius: 4px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    white-space: nowrap;
+  }
+
+  .actions-btn:hover,
+  .actions-btn.open {
+    background: var(--bg-hover);
+    border-color: var(--text-muted);
+  }
+
+  .caret {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    line-height: 1;
+  }
+
+  .actions-menu {
+    position: absolute;
+    top: calc(100% + 4px);
+    right: 0;
+    min-width: 140px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+    z-index: 50;
+    padding: 0.25rem 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .menu-item {
+    appearance: none;
+    background: transparent;
+    border: none;
+    text-align: left;
+    padding: 0.4rem 0.75rem;
+    font-size: 0.85rem;
+    color: var(--text);
+    cursor: pointer;
+  }
+
+  .menu-item:hover:not(:disabled) {
+    background: var(--bg-hover);
+  }
+
+  .menu-item:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .menu-item.danger {
+    color: #dc2626;
+  }
+
+  .menu-item.danger:hover:not(:disabled) {
+    background: #fee2e2;
+  }
+
+  .menu-divider {
+    height: 1px;
+    background: var(--border);
+    margin: 0.25rem 0;
   }
 
   .dialog-overlay {

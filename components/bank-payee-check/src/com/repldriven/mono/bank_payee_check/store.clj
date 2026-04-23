@@ -37,21 +37,27 @@
    :payee-check/get
    "Failed to load payee check"))
 
-(defn list-checks
+(defn get-checks
   "Lists payee checks for an organization. Returns
   {:items [maps] :before id|nil :after id|nil} or anomaly.
-  opts supports :after, :before, :limit."
+  opts supports :after, :before, :limit, :order (`:desc`
+  default — clients show newest-first)."
   ([txn org-id]
-   (list-checks txn org-id nil))
+   (get-checks txn org-id nil))
   ([txn org-id opts]
    (fdb/transact
     txn
     (fn [txn]
-      (let [result (fdb/scan-records
+      (let [{:keys [after before limit order]
+             :or {limit 20 order :desc}}
+            opts
+            result (fdb/scan-records
                     (fdb/open txn store-name)
-                    (merge {:prefix [org-id] :limit 20}
-                           (select-keys opts
-                                        [:after :before :limit])))]
+                    {:prefix [org-id]
+                     :after after
+                     :before before
+                     :limit limit
+                     :order order})]
         {:items (mapv schema/pb->PayeeCheck (:records result))
          :before (:before result)
          :after (:after result)}))

@@ -130,9 +130,15 @@ start-docker:
 stop-docker:
     colima stop
 
+# Install bank-app deps and run the Vite dev server against the local bank-api
 start-bank-app:
     cd {{ justfile_directory() }}/bases/bank-app && npm install && npm run dev
 
+# Run the bank-monolith against its test application.yml, teeing stdout/stderr to server.log
+start-bank-monolith:
+    clj -M{{ DOMAIN_ALIASES }}:dev:test -e "(require 'com.repldriven.mono.testcontainers.interface)" -m com.repldriven.mono.bank-monolith.main -c "classpath:bank-monolith/application-test.yml" -p "dev" 2>&1 | tee server.log
+
+# Start a local Jaeger container for OTLP traces (UI on :16686, OTLP/http on :4318)
 start-telemetry:
   docker run -d --name jaeger \
     -p 16686:16686 \
@@ -140,6 +146,7 @@ start-telemetry:
     jaegertracing/jaeger:latest \
     --set receivers.otlp.protocols.http.endpoint=0.0.0.0:4318
 
+# Stop and remove the local Jaeger container
 stop-telemetry:
   docker stop jaeger && docker rm jaeger
 
