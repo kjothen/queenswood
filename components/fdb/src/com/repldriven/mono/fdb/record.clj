@@ -5,11 +5,13 @@
   (:import
     (com.apple.foundationdb.record EndpointType
                                    ExecuteProperties
+                                   IndexScanType
                                    ScanProperties
                                    TupleRange)
     (com.apple.foundationdb.record.provider.foundationdb
      FDBDatabase
-     FDBStoreTimer$Waits)
+     FDBStoreTimer$Waits
+     IndexScanRange)
     (com.apple.foundationdb.record.metadata IndexAggregateFunction
                                             IndexTypes)
     (com.apple.foundationdb.record.query RecordQuery)
@@ -136,6 +138,55 @@
    (some-> (execute-query-one store (and-query record-type filters opts))
            first
            record->bytes)))
+
+(defn- map-entry-query
+  [record-type map-field map-key map-value opts]
+  (-> (RecordQuery/newBuilder)
+      (.setRecordType record-type)
+      (.setFilter
+       (-> (Query/field map-field)
+           .oneOfThem
+           (.matches
+            (Query/and ^java.util.List
+                       (java.util.ArrayList.
+                        [(.equalsValue (Query/field "key") map-key)
+                         (.equalsValue (Query/field "value") map-value)])))))
+      (apply-allowed-indexes opts)
+      .build))
+
+(defn query-by-map-entry
+  "Queries records where a proto map<K,V> field has at least
+  one entry matching `map-key`/`map-value`. Returns a vector
+  of serialized byte arrays. opts supports :index to pin the
+  planner to a named index."
+  ([store record-type map-field map-key map-value]
+   (query-by-map-entry store record-type map-field map-key map-value nil))
+  ([store record-type map-field map-key map-value opts]
+   (mapv record->bytes
+         (execute-query store
+                        (map-entry-query record-type
+                                         map-field
+                                         map-key
+                                         map-value
+                                         opts)))))
+
+(defn count-groups
+  "Counts unique grouping-key entries in a COUNT index whose
+  group key starts with `prefix`. Returns the number of
+  distinct groups, not the sum of per-group counts. Uses a
+  `BY_GROUP` index scan: FDB iterates the index range
+  server-side and streams one entry per group; only index
+  entries cross the wire."
+  [store index-name prefix]
+  (let [index (.getIndex (.getRecordMetaData store) index-name)
+        prefix-tuple (if (vector? prefix)
+                       (Tuple/from (into-array Object prefix))
+                       (Tuple/from (into-array Object [prefix])))
+        bounds (IndexScanRange. IndexScanType/BY_GROUP
+                                (TupleRange/allOf prefix-tuple))]
+    (-> (.scanIndex store index bounds nil ScanProperties/FORWARD_SCAN)
+        .getCount
+        .join)))
 
 (defn count-records
   "Counts records using a COUNT index. index-name is the

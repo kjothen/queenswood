@@ -6,6 +6,7 @@
     [com.repldriven.mono.bank-balance.interface :as balances]
     [com.repldriven.mono.bank-cash-account-product.interface :as products]
     [com.repldriven.mono.bank-party.interface :as parties]
+    [com.repldriven.mono.bank-policy.interface :as policy]
     [com.repldriven.mono.bank-tier.interface :as tiers]
     [com.repldriven.mono.bank-transaction.interface :as transactions]
 
@@ -18,7 +19,7 @@
   [{:keys [versions]}]
   (->> versions
        (filter (fn [v]
-                 (= :cash-account-product-version-status-published
+                 (= :cash-account-product-status-published
                     (:status v))))
        first))
 
@@ -85,9 +86,20 @@
 
 (defn new-account
   "Opens a cash account with balances. Returns account map
-  or anomaly."
-  [txn data]
-  (open-account txn data))
+  or anomaly. opts supports `:policies` to override policy
+  resolution for the capability check."
+  ([txn data]
+   (new-account txn data {}))
+  ([txn data opts]
+   (let-nom>
+     [policies (or (:policies opts)
+                   (policy/get-effective-policies
+                    txn
+                    {:organization-id (:organization-id data)}))
+      _ (policy/check-capability policies
+                                 :cash-account
+                                 {:action :cash-account-action-open})]
+     (open-account txn data))))
 
 (defn get-account
   "Loads a single cash account, optionally embedding

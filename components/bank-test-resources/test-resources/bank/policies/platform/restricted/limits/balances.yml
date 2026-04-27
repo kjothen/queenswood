@@ -1,0 +1,16 @@
+- kind:
+    balance:
+      kind:
+        computed:
+          name: available
+  bound:
+    kind:
+      min:
+        aggregate:
+          kind:
+            amount:
+              value:
+                value: 0
+                currency: GBP
+              window: !keyword time-window-instant
+  reason: "Platform-restricted - available balance must stay non-negative"

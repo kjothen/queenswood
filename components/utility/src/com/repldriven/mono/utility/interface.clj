@@ -4,6 +4,7 @@
     [com.repldriven.mono.utility.collections :as util.collections]
     [com.repldriven.mono.utility.id :as util.id]
     [com.repldriven.mono.utility.string :as util.string]
+    [com.repldriven.mono.utility.time :as util.time]
     [com.repldriven.mono.utility.uuid :as util.uuid]
     [com.repldriven.mono.utility.vars :as vars]))
 
@@ -27,6 +28,10 @@
 
 ;; ID utilities
 (def generate-id util.id/generate)
+
+;; Time utilities
+(def now util.time/now)
+(def now-rfc3339 util.time/now-rfc3339)
 
 ;; Vars utilities
 (def vname vars/vname)

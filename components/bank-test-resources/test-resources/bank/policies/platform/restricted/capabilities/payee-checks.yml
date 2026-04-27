@@ -1,0 +1,5 @@
+- effect: !keyword effect-allow
+  reason: "Allow performing payee checks"
+  kind:
+    payee-check:
+      action: !keyword payee-check-action-check

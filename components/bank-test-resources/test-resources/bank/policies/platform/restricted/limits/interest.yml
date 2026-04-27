@@ -1,0 +1,11 @@
+- kind:
+    interest: {}
+  bound:
+    kind:
+      max:
+        aggregate:
+          kind:
+            count:
+              value: 1
+              window: !keyword time-window-daily
+  reason: "Platform-restricted - at most one interest accrual run per day"

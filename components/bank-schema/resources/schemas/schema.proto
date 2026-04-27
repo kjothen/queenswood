@@ -8,13 +8,14 @@ import "schemas/cash-accounts/account.proto";
 import "schemas/idv/idv.proto";
 import "schemas/keys/api_key.proto";
 import "schemas/organizations/organization.proto";
-import "schemas/party/party.proto";
 import "schemas/party/party-national-identifier.proto";
-import "schemas/person-identification/person-identification.proto";
+import "schemas/party/party.proto";
+import "schemas/payee-check/payee_check.proto";
 import "schemas/payments/inbound-payment.proto";
 import "schemas/payments/internal-payment.proto";
 import "schemas/payments/outbound-payment.proto";
-import "schemas/payee-check/payee_check.proto";
+import "schemas/person-identification/person-identification.proto";
+import "schemas/policies/policy.proto";
 import "schemas/tiers/tier.proto";
 import "schemas/transactions/transaction.proto";
 
@@ -33,7 +34,7 @@ message RecordTypeUnion {
   optional com.repldriven.mono.schemas.idv.Idv _Idv = 7;
   optional com.repldriven.mono.schemas.party.PartyNationalIdentifier _PartyNationalIdentifier = 8;
   reserved 9;
-  optional com.repldriven.mono.schemas.cash_account_products.CashAccountProductVersion _CashAccountProductVersion = 10;
+  optional com.repldriven.mono.schemas.cash_account_products.CashAccountProduct _CashAccountProduct = 10;
   optional com.repldriven.mono.schemas.balances.Balance _Balance = 11;
   optional com.repldriven.mono.schemas.transactions.Transaction _Transaction = 12;
   optional com.repldriven.mono.schemas.transactions.TransactionLeg _TransactionLeg = 13;
@@ -42,4 +43,6 @@ message RecordTypeUnion {
   optional com.repldriven.mono.schemas.payments.OutboundPayment _OutboundPayment = 16;
   optional com.repldriven.mono.schemas.tiers.Tier _Tier = 17;
   optional com.repldriven.mono.schemas.payee_check.PayeeCheck _PayeeCheck = 18;
+  optional com.repldriven.mono.schemas.policies.Policy _Policy = 19;
+  optional com.repldriven.mono.schemas.policies.PolicyBinding _PolicyBinding = 20;
 }

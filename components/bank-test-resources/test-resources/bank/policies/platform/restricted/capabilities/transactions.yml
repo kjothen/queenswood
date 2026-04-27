@@ -1,0 +1,5 @@
+- effect: !keyword effect-allow
+  reason: "Allow creating transactions"
+  kind:
+    transaction:
+      action: !keyword transaction-action-create

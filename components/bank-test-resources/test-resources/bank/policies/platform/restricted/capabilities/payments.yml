@@ -1,0 +1,15 @@
+- effect: !keyword effect-allow
+  reason: "Allow internal payments"
+  kind:
+    internal-payment:
+      action: !keyword internal-payment-action-submit
+- effect: !keyword effect-allow
+  reason: "Allow inbound payments"
+  kind:
+    inbound-payment:
+      action: !keyword inbound-payment-action-receive
+- effect: !keyword effect-allow
+  reason: "Allow outbound payments"
+  kind:
+    outbound-payment:
+      action: !keyword outbound-payment-action-send

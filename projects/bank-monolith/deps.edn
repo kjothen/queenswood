@@ -39,6 +39,7 @@
         component/bank-payee-check {:local/root "../../components/bank-payee-check"}
         component/bank-payment {:local/root "../../components/bank-payment"}
         component/bank-party {:local/root "../../components/bank-party"}
+        component/bank-policy {:local/root "../../components/bank-policy"}
         component/bank-tier {:local/root "../../components/bank-tier"}
         component/message-bus {:local/root "../../components/message-bus"}
         component/processor {:local/root "../../components/processor"}

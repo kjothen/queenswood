@@ -1,0 +1,11 @@
+internal-platform: !system/component
+  system/component-kind: policies/binding
+  record-db: !system/ref fdb.record-db
+  record-store: !system/ref fdb.meta-store
+  binding:
+    policy-id: !system/ref policies.platform.policy-id
+    target:
+      kind:
+        organization:
+          organization-id: !system/ref organizations.internal.organization.organization-id
+    reason: "Apply platform policy to the internal organization"

@@ -1,0 +1,29 @@
+- kind:
+    organization:
+      type: !keyword organization-type-customer
+  bound:
+    kind:
+      max:
+        aggregate:
+          kind:
+            count:
+              value: 100
+              window: !keyword time-window-instant
+  reason: "Platform-restricted - max 100 customer organizations"
+- kind:
+    organization:
+      type: !keyword organization-type-internal
+  bound:
+    kind:
+      range:
+        min:
+          kind:
+            count:
+              value: 1
+              window: !keyword time-window-instant
+        max:
+          kind:
+            count:
+              value: 1
+              window: !keyword time-window-instant
+  reason: "Platform-restricted - exactly one internal organization"

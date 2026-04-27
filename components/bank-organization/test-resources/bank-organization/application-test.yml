@@ -1,3 +1,4 @@
 system:
   fdb: !include bank/fdb-test.yml
   tiers: !include bank/tier-test.yml
+  policies: !include bank/policy-test.yml

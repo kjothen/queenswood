@@ -1,0 +1,256 @@
+(ns ^:eftest/synchronized com.repldriven.mono.bank-policy.interface-test
+  (:require
+    [com.repldriven.mono.bank-policy.interface :as SUT]
+
+    [com.repldriven.mono.error.interface :as error]
+    [com.repldriven.mono.fdb.interface]
+    [com.repldriven.mono.system.interface :as system]
+    [com.repldriven.mono.testcontainers.interface]
+    [com.repldriven.mono.test-system.interface :refer
+     [with-test-system nom-test>]]
+
+    [clojure.test :refer [deftest is testing]]))
+
+(defn- fdb-config
+  [sys]
+  {:record-db (system/instance sys [:fdb :record-db])
+   :record-store (system/instance sys [:fdb :store])})
+
+(defn- policy
+  [capabilities & {:keys [enabled] :or {enabled true}}]
+  {:enabled enabled
+   :capabilities capabilities})
+
+(defn- allow
+  ([kind] (allow kind nil))
+  ([kind reason]
+   (cond-> {:effect :effect-allow :kind kind}
+           reason
+           (assoc :reason reason))))
+
+(defn- deny
+  ([kind] (deny kind nil))
+  ([kind reason]
+   (cond-> {:effect :effect-deny :kind kind}
+           reason
+           (assoc :reason reason))))
+
+(deftest check-capability-test
+  (testing "exact action allow"
+    (let [policies [(policy [(allow {:organization
+                                     {:action :organization-action-create}})])]]
+      (is (true? (SUT/check-capability policies
+                                       :organization
+                                       {:action
+                                        :organization-action-create})))))
+  (testing "wildcard filter (nil) allows specific request"
+    (let [policies [(policy [(allow {:organization {:action
+                                                    :organization-action-create
+                                                    :type nil
+                                                    :status nil}})])]]
+      (is (true? (SUT/check-capability policies
+                                       :organization
+                                       {:action :organization-action-create
+                                        :type :organization-type-internal
+                                        :status :organization-status-live})))))
+  (testing "wildcard filter (:*-unknown) allows specific request"
+    (let [policies [(policy [(allow {:organization
+                                     {:action :organization-action-create
+                                      :type :organization-type-unknown
+                                      :status
+                                      :organization-status-unknown}})])]]
+      (is (true? (SUT/check-capability policies
+                                       :organization
+                                       {:action :organization-action-create
+                                        :type :organization-type-internal
+                                        :status :organization-status-live})))))
+  (testing "filter mismatch denies"
+    (let [policies [(policy [(allow {:organization
+                                     {:action :organization-action-create
+                                      :type :organization-type-internal}})])]
+          result (SUT/check-capability policies
+                                       :organization
+                                       {:action :organization-action-create
+                                        :type :organization-type-customer})]
+      (is (error/unauthorized? result))
+      (is (= :policy/denied (error/kind result)))))
+  (testing "deny wins over allow on same request"
+    (let [kind {:organization {:action :organization-action-create}}
+          policies [(policy [(allow kind) (deny kind "explicitly forbidden")])]
+          result (SUT/check-capability policies
+                                       :organization
+                                       {:action :organization-action-create})]
+      (is (error/unauthorized? result))
+      (is (= "explicitly forbidden" (:message (error/payload result))))))
+  (testing "variant mismatch denies"
+    (let [policies [(policy [(allow {:cash-account
+                                     {:action :cash-account-action-open}})])]
+          result (SUT/check-capability policies
+                                       :organization
+                                       {:action :organization-action-create})]
+      (is (error/unauthorized? result))))
+  (testing "disabled policy is ignored"
+    (let [policies [(policy [(allow {:organization
+                                     {:action :organization-action-create}})]
+                            :enabled
+                            false)]
+          result (SUT/check-capability policies
+                                       :organization
+                                       {:action :organization-action-create})]
+      (is (error/unauthorized? result))))
+  (testing "empty policies denies"
+    (let [result (SUT/check-capability []
+                                       :organization
+                                       {:action :organization-action-create})]
+      (is (error/unauthorized? result)))))
+
+(defn- limit-policy
+  [limits & {:keys [enabled] :or {enabled true}}]
+  {:enabled enabled :limits limits})
+
+(defn- limit
+  ([kind bound] (limit kind bound nil))
+  ([kind bound reason]
+   (cond-> {:kind kind :bound bound}
+           reason
+           (assoc :reason reason))))
+
+(defn- max-bound
+  [agg-kind value window]
+  {:kind {:max {:aggregate
+                {:kind {agg-kind {:value value :window window}}}}}})
+
+(defn- min-bound
+  [agg-kind value window]
+  {:kind {:min {:aggregate
+                {:kind {agg-kind {:value value :window window}}}}}})
+
+(defn- range-bound
+  [agg-kind min-value max-value window]
+  {:kind {:range
+          {:min {:kind {agg-kind {:value min-value :window window}}}
+           :max {:kind {agg-kind {:value max-value :window window}}}}}})
+
+(deftest check-limit-test
+  (testing "empty policies => true"
+    (is (true? (SUT/check-limit
+                []
+                :api-key
+                {:aggregate :count :window :instant :value 1}))))
+  (testing "no matching limit kind => true"
+    (let [policies [(limit-policy
+                     [(limit {:cash-account {}}
+                             (max-bound :count 1 :time-window-instant))])]]
+      (is (true? (SUT/check-limit
+                  policies
+                  :api-key
+                  {:aggregate :count :window :instant :value 999})))))
+  (testing "max bound at value passes"
+    (let [policies [(limit-policy
+                     [(limit {:api-key {}}
+                             (max-bound :count 5 :time-window-instant))])]]
+      (is (true? (SUT/check-limit
+                  policies
+                  :api-key
+                  {:aggregate :count :window :instant :value 5})))))
+  (testing "max bound exceeded => unauthorized with reason"
+    (let [policies [(limit-policy [(limit
+                                    {:api-key {}}
+                                    (max-bound :count 5 :time-window-instant)
+                                    "max 5 keys")])]
+          result (SUT/check-limit
+                  policies
+                  :api-key
+                  {:aggregate :count :window :instant :value 6})]
+      (is (error/unauthorized? result))
+      (is (= :policy/limit-exceeded (error/kind result)))
+      (is (= "max 5 keys" (:message (error/payload result))))))
+  (testing "min bound violated => unauthorized"
+    (let [policies [(limit-policy
+                     [(limit {:cash-account {}}
+                             (min-bound :count 1 :time-window-instant))])]
+          result (SUT/check-limit
+                  policies
+                  :cash-account
+                  {:aggregate :count :window :instant :value 0})]
+      (is (error/unauthorized? result))))
+  (testing "range bound max exceeded => unauthorized"
+    (let [policies [(limit-policy
+                     [(limit {:cash-account {}}
+                             (range-bound :count 1 1 :time-window-instant))])]
+          result (SUT/check-limit
+                  policies
+                  :cash-account
+                  {:aggregate :count :window :instant :value 2})]
+      (is (error/unauthorized? result))))
+  (testing "aggregate kind mismatch is skipped (count req vs amount limit)"
+    (let [policies [(limit-policy
+                     [(limit {:api-key {}}
+                             (max-bound :amount 5 :time-window-instant))])]]
+      (is (true? (SUT/check-limit
+                  policies
+                  :api-key
+                  {:aggregate :count :window :instant :value 999})))))
+  (testing "window mismatch is skipped"
+    (let [policies [(limit-policy [(limit
+                                    {:api-key {}}
+                                    (max-bound :count 5 :time-window-daily))])]]
+      (is (true? (SUT/check-limit
+                  policies
+                  :api-key
+                  {:aggregate :count :window :instant :value 999})))))
+  (testing "disabled policy is ignored"
+    (let [policies [(limit-policy [(limit
+                                    {:api-key {}}
+                                    (max-bound :count 5 :time-window-instant))]
+                                  :enabled
+                                  false)]]
+      (is (true? (SUT/check-limit
+                  policies
+                  :api-key
+                  {:aggregate :count :window :instant :value 999})))))
+  (testing "kind filter mismatch skips the limit"
+    (let [policies [(limit-policy [(limit
+                                    {:cash-account {:account-type
+                                                    :account-type-personal}}
+                                    (max-bound :count 0 :time-window-instant)
+                                    "no personal accounts")])]]
+      (is (true? (SUT/check-limit policies
+                                  :cash-account
+                                  {:aggregate :count
+                                   :window :instant
+                                   :value 1
+                                   :account-type :account-type-business}))))))
+
+(deftest labels-roundtrip-test
+  (with-test-system
+   [sys "classpath:bank-policy/application-test.yml"]
+   (let [config (fdb-config sys)]
+     (testing "labels roundtrip via new-policy + get-policy"
+       (nom-test> [{:keys [policy-id]} (SUT/new-policy
+                                        config
+                                        {:name "Roundtrip"
+                                         :enabled true
+                                         :category :policy-category-standard
+                                         :capabilities []
+                                         :limits []
+                                         :labels {"tier" "test-tier"}})
+                   loaded (SUT/get-policy config policy-id)
+                   _ (is (= {"tier" "test-tier"} (:labels loaded)))])))))
+
+(deftest get-effective-policies-test
+  (with-test-system
+   [sys "classpath:bank-policy/application-test.yml"]
+   (let [config (fdb-config sys)]
+     (testing "scan returns the platform policy with labels populated"
+       (nom-test> [{:keys [items]} (SUT/get-policies config)
+                   p (first (filter (fn [p] (= "Platform policy" (:name p)))
+                                    items))
+                   _ (is (some? p))
+                   _ (is (= {"tier" "platform"} (:labels p)))]))
+     (testing "returns the platform policy via Policy_by_label index"
+       (nom-test> [policies (SUT/get-effective-policies config {})
+                   _ (is (= 1 (count policies)))
+                   p (first policies)
+                   _ (is (= "Platform policy" (:name p)))
+                   _ (is (= "platform" (get-in p [:labels "tier"])))])))))

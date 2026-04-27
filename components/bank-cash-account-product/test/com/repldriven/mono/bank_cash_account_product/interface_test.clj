@@ -38,8 +38,7 @@
                    _ (is (string? (:version-id v)))
                    _ (is (= org-id (:organization-id v)))
                    _ (is (= 1 (:version-number v)))
-                   _ (is (= :cash-account-product-version-status-draft
-                            (:status v)))
+                   _ (is (= :cash-account-product-status-draft (:status v)))
                    _ (is (pos? (:created-at v)))])))))
 
 (deftest open-draft-test
@@ -61,8 +60,7 @@
                    v2 (SUT/open-draft config org-id (:product-id v1) draft-data)
                    _ (is (= 2 (:version-number v2)))
                    _ (is (not= (:version-id v1) (:version-id v2)))
-                   _ (is (= :cash-account-product-version-status-draft
-                            (:status v2)))]))
+                   _ (is (= :cash-account-product-status-draft (:status v2)))]))
      (testing "opens v2 after v1 is discarded"
        (nom-test> [v1 (SUT/new-product config org-id asset-draft-data)
                    _ (SUT/discard-draft config
@@ -74,8 +72,7 @@
                                       (:product-id v1)
                                       asset-draft-data)
                    _ (is (= 2 (:version-number v2)))
-                   _ (is (= :cash-account-product-version-status-draft
-                            (:status v2)))])))))
+                   _ (is (= :cash-account-product-status-draft (:status v2)))])))))
 
 (deftest update-draft-test
   (with-test-system
@@ -95,7 +92,7 @@
                    _ (is (= 1 (:version-number updated)))
                    _ (is (= "Renamed" (:name updated)))
                    _ (is (= "2025-02-01" (:valid-from updated)))
-                   _ (is (= :cash-account-product-version-status-draft
+                   _ (is (= :cash-account-product-status-draft
                             (:status updated)))]))
      (testing "404 when the version-id is unknown"
        (let [v1 (SUT/new-product config org-id draft-data)
@@ -142,14 +139,14 @@
                                                 org-id
                                                 (:product-id v1)
                                                 (:version-id v1))
-                   _ (is (= :cash-account-product-version-status-discarded
+                   _ (is (= :cash-account-product-status-discarded
                             (:status discarded)))
                    _ (is (pos? (:discarded-at discarded)))
                    reloaded (SUT/get-version config
                                              org-id
                                              (:product-id v1)
                                              (:version-id v1))
-                   _ (is (= :cash-account-product-version-status-discarded
+                   _ (is (= :cash-account-product-status-discarded
                             (:status reloaded)))]))
      (testing "409 when the version is published"
        (let [v1 (SUT/new-product config org-id draft-data)
@@ -171,7 +168,7 @@
        (nom-test> [v1 (SUT/new-product config org-id draft-data)
                    published
                    (SUT/publish config org-id (:product-id v1) (:version-id v1))
-                   _ (is (= :cash-account-product-version-status-published
+                   _ (is (= :cash-account-product-status-published
                             (:status published)))]))
      (testing "404 when the version-id is unknown"
        (let [v1 (SUT/new-product config org-id draft-data)
@@ -200,11 +197,11 @@
                    (SUT/publish config org-id (:product-id v2) (:version-id v2))
                    {:keys [versions]}
                    (SUT/get-product config org-id (:product-id v1))
-                   published
-                   (filterv (fn [v]
-                              (= :cash-account-product-version-status-published
-                                 (:status v)))
-                            versions)
+                   published (filterv (fn [v]
+                                        (=
+                                         :cash-account-product-status-published
+                                         (:status v)))
+                                      versions)
                    _ (is (= 2 (count published)))])))))
 
 (deftest get-product-test

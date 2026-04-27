@@ -1,0 +1,11 @@
+- kind:
+    idv: {}
+  bound:
+    kind:
+      max:
+        aggregate:
+          kind:
+            count:
+              value: 100
+              window: !keyword time-window-daily
+  reason: "Platform-restricted - max 100 IDV submissions per day"

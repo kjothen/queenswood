@@ -1,0 +1,10 @@
+- effect: !keyword effect-allow
+  reason: "Allow accruing interest"
+  kind:
+    interest:
+      action: !keyword interest-action-accrue
+- effect: !keyword effect-allow
+  reason: "Allow capitalizing interest"
+  kind:
+    interest:
+      action: !keyword interest-action-capitalize

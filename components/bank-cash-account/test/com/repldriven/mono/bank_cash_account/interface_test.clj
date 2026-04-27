@@ -91,8 +91,8 @@
 (def ^:private default-payment-address-schemes [:payment-address-scheme-scan])
 
 (defn- seed-published-product-version
-  "Seeds a published CashAccountProductVersion in the
-  cash-account-product-versions store."
+  "Seeds a published CashAccountProduct in the
+  cash-account-products store."
   ([config product-id]
    (seed-published-product-version config product-id {}))
   ([config product-id overrides]
@@ -104,7 +104,7 @@
                     :product-id product-id
                     :version-id "prv_test_001"
                     :version-number 1
-                    :status :cash-account-product-version-status-published
+                    :status :cash-account-product-status-published
                     :product-type :product-type-current
                     :balance-sheet-side
                     :balance-sheet-side-liability
@@ -117,8 +117,8 @@
                     :updated-at (System/currentTimeMillis)}
                    overrides)]
         (fdb/save-record
-         (fdb/open txn "cash-account-product-versions")
-         (schema/CashAccountProductVersion->java version)))))))
+         (fdb/open txn "cash-account-products")
+         (schema/CashAccountProduct->java version)))))))
 
 (defn- seed-party
   "Seeds a party record with given status."

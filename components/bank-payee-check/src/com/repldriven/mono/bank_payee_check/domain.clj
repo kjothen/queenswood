@@ -4,10 +4,6 @@
 
 (def ^:private ttl-hours 24)
 
-(defn- now-rfc3339
-  []
-  (str (java.time.Instant/now)))
-
 (defn- expires-rfc3339
   [created-at]
   (str (.plus (java.time.Instant/parse created-at)
@@ -24,7 +20,7 @@
   "Builds a PayeeCheck map from an organization-id, request
   map, and result map. Generates check-id and timestamps."
   [organization-id request result]
-  (let [created (now-rfc3339)]
+  (let [created (utility/now-rfc3339)]
     {:check-id (utility/generate-id "chk")
      :organization-id organization-id
      :request request

@@ -12,6 +12,7 @@
     [com.repldriven.mono.schemas.person_identification :as
      person-identification]
     [com.repldriven.mono.schemas.payee_check :as payee-check]
+    [com.repldriven.mono.schemas.policies :as policies]
     [com.repldriven.mono.schemas.tiers :as tiers]
     [com.repldriven.mono.schemas.transactions :as transactions]
     [com.repldriven.mono.schemas.types :as types]
@@ -19,7 +20,7 @@
   (:import
     (com.repldriven.mono.schemas.balances BalanceProto$Balance)
     (com.repldriven.mono.schemas.cash_account_products
-     CashAccountProductProto$CashAccountProductVersion)
+     CashAccountProductProto$CashAccountProduct)
     (com.repldriven.mono.schemas.types ProductTypeProto$ProductType)
     (com.repldriven.mono.schemas.cash_accounts
      CashAccountProto$CashAccount
@@ -43,6 +44,9 @@
      OutboundPaymentProto$OutboundPayment)
     (com.repldriven.mono.schemas.payee_check
      PayeeCheckProto$PayeeCheck)
+    (com.repldriven.mono.schemas.policies
+     PolicyProto$Policy
+     PolicyProto$PolicyBinding)
     (com.repldriven.mono.schemas.tiers TierProto$Tier)
     (com.repldriven.mono.schemas.transactions
      TransactionProto$Transaction
@@ -75,23 +79,23 @@
   (OrganizationProto$OrganizationType/forNumber
    (organization-type->int org-type)))
 
-(defn pb->CashAccountProductVersion
+(defn pb->CashAccountProduct
   "Wraps the generated converter to strip the proto2 default `\"\"`
   emitted for an unset `optional string valid_from`, so callers see
   `:valid-from` only when it carries a real ISO date."
   [input]
-  (let [version (cash-account-products/pb->CashAccountProductVersion input)]
+  (let [version (cash-account-products/pb->CashAccountProduct input)]
     (cond-> version
             (not (seq (:valid-from version)))
             (dissoc :valid-from))))
 
-(defn CashAccountProductVersion->pb
+(defn CashAccountProduct->pb
   [m]
-  (proto/->pb (cash-account-products/new-CashAccountProductVersion m)))
-(defn CashAccountProductVersion->java
+  (proto/->pb (cash-account-products/new-CashAccountProduct m)))
+(defn CashAccountProduct->java
   [m]
-  (CashAccountProductProto$CashAccountProductVersion/parseFrom
-   (CashAccountProductVersion->pb m)))
+  (CashAccountProductProto$CashAccountProduct/parseFrom
+   (CashAccountProduct->pb m)))
 
 (def pb->ApiKey keys/pb->ApiKey)
 (defn ApiKey->pb [m] (proto/->pb (keys/new-ApiKey m)))
@@ -249,3 +253,13 @@
 (defn PayeeCheck->java
   [m]
   (PayeeCheckProto$PayeeCheck/parseFrom (PayeeCheck->pb m)))
+
+(def pb->Policy policies/pb->Policy)
+(defn Policy->pb [m] (proto/->pb (policies/new-Policy m)))
+(defn Policy->java [m] (PolicyProto$Policy/parseFrom (Policy->pb m)))
+
+(def pb->PolicyBinding policies/pb->PolicyBinding)
+(defn PolicyBinding->pb [m] (proto/->pb (policies/new-PolicyBinding m)))
+(defn PolicyBinding->java
+  [m]
+  (PolicyProto$PolicyBinding/parseFrom (PolicyBinding->pb m)))

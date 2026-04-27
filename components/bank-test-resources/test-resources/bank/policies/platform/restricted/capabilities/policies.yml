@@ -1,0 +1,10 @@
+- effect: !keyword effect-allow
+  reason: "Allow creating policies"
+  kind:
+    policy:
+      action: !keyword policy-action-create
+- effect: !keyword effect-allow
+  reason: "Allow binding policies"
+  kind:
+    policy:
+      action: !keyword policy-action-bind

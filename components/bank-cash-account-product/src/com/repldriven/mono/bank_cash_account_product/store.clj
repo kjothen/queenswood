@@ -5,7 +5,7 @@
     [com.repldriven.mono.error.interface :as error]
     [com.repldriven.mono.fdb.interface :as fdb]))
 
-(def ^:private store-name "cash-account-product-versions")
+(def ^:private store-name "cash-account-products")
 
 (def transact fdb/transact)
 
@@ -16,7 +16,7 @@
    txn
    (fn [txn]
      (fdb/save-record (fdb/open txn store-name)
-                      (schema/CashAccountProductVersion->java version)))
+                      (schema/CashAccountProduct->java version)))
    :cash-account-product/save-version
    "Failed to save product version"))
 
@@ -31,7 +31,7 @@
                                       org-id
                                       product-id
                                       version-id)]
-       (schema/pb->CashAccountProductVersion record)
+       (schema/pb->CashAccountProduct record)
        (error/reject :cash-account-product/version-not-found
                      {:message "Version not found"
                       :organization-id org-id
@@ -39,6 +39,20 @@
                       :version-id version-id})))
    :cash-account-product/get-version
    "Failed to load product version"))
+
+(defn count-by-org
+  "Returns the number of distinct products for an organization.
+  Uses the CashAccountProduct_count_by_org group index."
+  [txn org-id]
+  (fdb/transact
+   txn
+   (fn [txn]
+     (fdb/count-groups (fdb/open txn store-name)
+                       "CashAccountProduct_count_by_org"
+                       [org-id]))
+   :cash-account-product/count-by-org
+   {:message "Failed to count products by org"
+    :organization-id org-id}))
 
 (defn get-versions
   "Scans product versions. opts supports:
@@ -64,7 +78,7 @@
             opts
             prefix (if product-id [org-id product-id] [org-id])
             versions
-            (mapv schema/pb->CashAccountProductVersion
+            (mapv schema/pb->CashAccountProduct
                   (:records (fdb/scan-records (fdb/open txn store-name)
                                               {:prefix prefix
                                                :limit limit

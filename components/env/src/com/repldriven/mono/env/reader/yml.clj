@@ -45,6 +45,12 @@
 
 (defmethod yml-reader :!strs [{:keys [value]}] (util/keys->strs value))
 
+;; `!concat` flattens a sequence of sequences into one sequence — handy
+;; for splicing several `!include`d lists (e.g. per-domain capability
+;; files) into a single parent list, since plain YAML can't merge
+;; sequences across `!include` boundaries.
+(defmethod yml-reader :!concat [{:keys [value]}] (vec (apply concat value)))
+
 (defn- key-fn
   [{:keys [key]}]
   (if (and (str/starts-with? key "\"") (str/ends-with? key "\""))

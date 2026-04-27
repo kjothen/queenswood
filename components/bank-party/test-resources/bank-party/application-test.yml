@@ -1,6 +1,7 @@
 system:
   fdb: !include bank/fdb-test.yml
   avro: !include avro/avro-test.yml
+  policies: !include bank/policy-test.yml
   party:
     processor: !system/component
       system/component-kind: party/processor

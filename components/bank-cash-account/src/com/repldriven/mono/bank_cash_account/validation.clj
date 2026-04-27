@@ -12,7 +12,7 @@
   anomaly otherwise."
   [product]
   (let [{:keys [status version-id]} product]
-    (if (not= :cash-account-product-version-status-published status)
+    (if (not= :cash-account-product-status-published status)
       (error/reject :cash-account-product/not-published
                     {:message "Product version is not published"
                      :version-id version-id

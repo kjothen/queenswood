@@ -4,13 +4,20 @@ _record-types: !strs &record-types
     indexes:
       - name: ApiKey_by_org
         field: organization_id
+      - name: ApiKey_count_by_org
+        field: organization_id
+        type: count
   balances:
     record-type: Balance
     primary-key: [account_id, balance_type, currency, balance_status]
     indexes: []
-  cash-account-product-versions:
-    record-type: CashAccountProductVersion
+  cash-account-products:
+    record-type: CashAccountProduct
     primary-key: [organization_id, product_id, version_id]
+    indexes:
+      - name: CashAccountProduct_count_by_org
+        fields: [organization_id, product_id]
+        type: count
   cash-accounts:
     record-type: CashAccount
     primary-key: [organization_id, account_id]
@@ -67,6 +74,17 @@ _record-types: !strs &record-types
       - name: InternalPayment_by_idempotency_key
         field: idempotency_key
         unique: true
+  policies:
+    record-type: Policy
+    indexes:
+      - name: Policy_by_label
+        field: labels
+        fan-out: true
+        nest:
+          fields: [key, value]
+  policy-bindings:
+    record-type: PolicyBinding
+    indexes: []
   tiers:
     record-type: Tier
     indexes: []

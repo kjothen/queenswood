@@ -1,0 +1,31 @@
+- kind:
+    cash-account:
+      product-type: !keyword product-type-settlement
+      account-type: !keyword account-type-personal
+  bound:
+    kind:
+      max:
+        aggregate:
+          kind:
+            count:
+              value: 0
+              window: !keyword time-window-instant
+  reason: "Platform-restricted - no personal settlement accounts"
+- kind:
+    cash-account:
+      product-type: !keyword product-type-settlement
+      account-type: !keyword account-type-business
+  bound:
+    kind:
+      range:
+        min:
+          kind:
+            count:
+              value: 1
+              window: !keyword time-window-instant
+        max:
+          kind:
+            count:
+              value: 1
+              window: !keyword time-window-instant
+  reason: "Platform-restricted - exactly one business settlement account"

@@ -1,0 +1,5 @@
+- effect: !keyword effect-allow
+  reason: "Allow creating balances"
+  kind:
+    balance:
+      action: !keyword balance-action-create

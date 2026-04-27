@@ -1,0 +1,48 @@
+name: Standard policy
+description: Standard policy - maintained by customer
+enabled: true
+category: !keyword policy-category-standard
+capabilities:
+limits:
+  - kind:
+      cash-account:
+        product-type: !keyword product-type-current
+        account-type: !keyword account-type-personal
+    bound:
+      kind:
+        max:
+          aggregate:
+            kind:
+              count:
+                value: 1
+                window: !keyword time-window-instant
+    reason: "Standard limit - maximum number of personal current accounts"
+  - kind:
+      cash-account:
+        product-type: !keyword product-type-savings
+        account-type: !keyword account-type-personal
+    bound:
+      kind:
+        max:
+          aggregate:
+            kind:
+              count:
+                value: 1
+                window: !keyword time-window-instant
+    reason: "Standard limit - maximum number of personal savings accounts"
+  - kind:
+      balance:
+        kind:
+          computed:
+            name: available
+    bound:
+      kind:
+        min:
+          aggregate:
+            kind:
+              amount:
+                value:
+                  value: 0
+                  currency: GBP
+                window: !keyword time-window-instant
+    reason: "Standard limit - minimum available GBP balance"

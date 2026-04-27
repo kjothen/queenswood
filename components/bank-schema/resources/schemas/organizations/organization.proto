@@ -24,7 +24,7 @@ message Organization {
   required string organization_id = 1 [(com.apple.foundationdb.record.field).primary_key = true];
   required OrganizationType type = 2;
   required OrganizationStatus status = 3;
-  required string tier_id = 4;
+  optional string tier_id = 4;
   required string name = 5;
   required int64 created_at = 6;
   required int64 updated_at = 7;

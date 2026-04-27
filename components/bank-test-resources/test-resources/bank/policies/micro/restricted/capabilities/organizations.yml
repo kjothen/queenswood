@@ -1,0 +1,6 @@
+- effect: !keyword effect-allow
+  reason: "Allow creating customer test organizations"
+  kind:
+    organization:
+      action: !keyword organization-action-create
+      type: !keyword organization-type-customer

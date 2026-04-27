@@ -27,6 +27,19 @@
                 :api-key/get
                 {:message "Failed to load API key"}))
 
+(defn count-api-keys-by-org
+  "Returns the count of API keys for an organization. Uses
+  the ApiKey_count_by_org count index."
+  [txn org-id]
+  (fdb/transact txn
+                (fn [txn]
+                  (fdb/count-records (fdb/open txn store-name)
+                                     "ApiKey_count_by_org"
+                                     org-id))
+                :api-key/count-by-org
+                {:message "Failed to count API keys by org"
+                 :organization-id org-id}))
+
 (defn get-api-keys
   "Lists all API keys for a given organization. Returns a
   sequence of ApiKey maps. opts supports :order (`:desc`

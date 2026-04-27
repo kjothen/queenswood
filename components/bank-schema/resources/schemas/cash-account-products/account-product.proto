@@ -22,21 +22,21 @@ enum PaymentAddressScheme {
   PAYMENT_ADDRESS_SCHEME_ACH = 4;
 }
 
-enum CashAccountProductVersionStatus {
-  CASH_ACCOUNT_PRODUCT_VERSION_STATUS_UNKNOWN = 0;
-  CASH_ACCOUNT_PRODUCT_VERSION_STATUS_DRAFT = 1;
-  CASH_ACCOUNT_PRODUCT_VERSION_STATUS_PUBLISHED = 2;
-  CASH_ACCOUNT_PRODUCT_VERSION_STATUS_DISCARDED = 3;
+enum CashAccountProductStatus {
+  CASH_ACCOUNT_PRODUCT_STATUS_UNKNOWN = 0;
+  CASH_ACCOUNT_PRODUCT_STATUS_DRAFT = 1;
+  CASH_ACCOUNT_PRODUCT_STATUS_PUBLISHED = 2;
+  CASH_ACCOUNT_PRODUCT_STATUS_DISCARDED = 3;
 }
 
-message CashAccountProductVersion {
+message CashAccountProduct {
   option (com.apple.foundationdb.record.record).usage = RECORD;
 
   required string organization_id = 1;
   required string product_id = 2;
   required string version_id = 3;
   required int32 version_number = 4;
-  required CashAccountProductVersionStatus status = 5;
+  required CashAccountProductStatus status = 5;
   required com.repldriven.mono.schemas.types.ProductType product_type = 6;
   required BalanceSheetSide balance_sheet_side = 7;
   required string name = 8;

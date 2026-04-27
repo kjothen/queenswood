@@ -2,6 +2,7 @@ system:
   fdb: !include bank/fdb-test.yml
   avro: !include avro/avro-test.yml
   tiers: !include bank/tier-test.yml
+  policies: !include bank/policy-test.yml
   organizations: !include bank/organization-test.yml
   cash-account:
     processor: !system/component
