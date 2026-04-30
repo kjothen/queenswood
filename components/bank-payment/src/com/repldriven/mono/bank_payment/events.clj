@@ -48,8 +48,9 @@
                   transaction+legs (transactions/record-transaction
                                     txn
                                     transaction)
-                  {:keys [transaction-id legs]} transaction+legs
-                  _ (balances/apply-legs txn legs)
+                  {:keys [transaction-id transaction-type legs]}
+                  transaction+legs
+                  _ (balances/apply-legs txn legs transaction-type)
                   payment (domain/new-inbound-payment
                            data
                            account-id

@@ -16,12 +16,6 @@
            :status 422
            :detail "Tier limit exceeded for this organization"}})
 
-(def TierNotFound
-  {:value {:title "REJECTED"
-           :type ":tier/not-found"
-           :status 404
-           :detail "Tier not found"}})
-
 (def OrganizationNotFound
   {:value {:title "REJECTED"
            :type ":organization/not-found"
@@ -29,8 +23,7 @@
            :detail "Organization not found"}})
 
 (def registry
-  (examples-registry [#'OrganizationLimitExceeded #'TierNotFound
-                      #'OrganizationNotFound]))
+  (examples-registry [#'OrganizationLimitExceeded #'OrganizationNotFound]))
 
 (def OrganizationId "org.01kprbmgcj35ptc8npmybhh4s7")
 
@@ -39,7 +32,6 @@
    :name "Galactic Bank"
    :type :customer
    :status :test
-   :tier-id "tie.01kprbmgcj35ptc8npmybhh4t0"
    :created-at "2025-01-01T00:00:00Z"
    :updated-at "2025-01-01T00:00:00Z"
    :party (assoc party-examples/Party :type :organization)
@@ -51,10 +43,7 @@
 (def OrganizationList {:organizations [Organization]})
 
 (def CreateOrganizationRequest
-  {:name "Galactic Bank"
-   :status :test
-   :tier-id "tie.01kprbmgcj35ptc8npmybhh4t0"
-   :currencies ["GBP"]})
+  {:name "Galactic Bank" :status :test :tier "micro" :currencies ["GBP"]})
 
 (def CreateOrganizationResponse
   (assoc Organization :api-key-secret api-key-examples/ApiKeySecret))

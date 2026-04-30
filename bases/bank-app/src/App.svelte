@@ -9,6 +9,7 @@
   import CashAccountProductList from "./lib/CashAccountProductList.svelte";
   import ApiKeyList from "./lib/ApiKeyList.svelte";
   import TierList from "./lib/TierList.svelte";
+  import PolicyList from "./lib/PolicyList.svelte";
   import PayeeCheckList from "./lib/PayeeCheckList.svelte";
   import Toast from "./lib/Toast.svelte";
 
@@ -74,6 +75,8 @@
       />
     {:else if currentPage === "tiers"}
       <TierList {showToast} />
+    {:else if currentPage === "policies"}
+      <PolicyList {showToast} />
     {:else if !hasApiKey}
       <div class="no-org">
         <p>Create an organization first.</p>

@@ -11,7 +11,6 @@
      :as products]
     [com.repldriven.mono.bank-party.interface :as party]
     [com.repldriven.mono.bank-policy.interface :as policy]
-    [com.repldriven.mono.bank-tier.interface :as tiers]
 
     [com.repldriven.mono.error.interface :as error :refer [let-nom>]]))
 
@@ -138,35 +137,47 @@
   [txn org-type]
   (store/get-organizations-by-type txn org-type))
 
+(defn- counts
+  "Builds the organization aggregates map for the limit checks
+  in `domain/new-organization`. Each entry is keyed by the set
+  of dimensions the count is grouped on."
+  [txn org-type]
+  (let-nom>
+    [total (store/count-organizations-by-type txn org-type)]
+    {:organization {#{:type} total}}))
+
 (defn new-organization
-  "Creates an organization with API key, party,
-  product, and one cash account per currency. Returns
-  map or anomaly. opts supports `:policies` to override
-  policy resolution for the capability check."
-  ([txn org-name org-type org-status tier-id currencies]
+  "Creates an organization with API key, party, product, and
+  one cash account per currency. Capability and limit checks
+  use the effective platform policies; the chosen `tier` (a
+  string identifying a `tier=<name>` policy label) selects the
+  tier-specific policies that get bound to the new
+  organization. opts supports `:policies` to override the
+  platform policies used for the checks."
+  ([txn org-name org-type org-status tier currencies]
    (new-organization txn
                      org-name
                      org-type
                      org-status
-                     tier-id
+                     tier
                      currencies
                      {}))
-  ([txn org-name org-type org-status tier-id currencies opts]
+  ([txn org-name org-type org-status tier currencies opts]
    (store/transact
     txn
     (fn [txn]
       (let-nom>
-        [tier (tiers/get-tier txn tier-id)
-         policies (or (:policies opts)
+        [policies (or (:policies opts)
                       (policy/get-effective-policies txn {}))
-
-         org-count (store/count-organizations-by-type txn org-type)
+         tier-policies (if (some? tier)
+                         (policy/get-policies-by-tier txn tier)
+                         [])
+         aggregates (counts txn org-type)
          org (domain/new-organization org-name
                                       org-type
                                       org-status
-                                      tier
-                                      policies
-                                      {:organization {:count org-count}})
+                                      aggregates
+                                      policies)
          org-id (:organization-id org)
 
          {:keys [api-key key-secret]} (bank-api-key/new-api-key
@@ -211,7 +222,7 @@
                           currencies
                           policies)
 
-         _ (bind-policies txn org-id policies)
+         _ (bind-policies txn org-id tier-policies)
 
          result (get-organization txn org key-secret)]
         result))

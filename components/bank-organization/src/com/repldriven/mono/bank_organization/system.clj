@@ -14,12 +14,11 @@
                                   name
                                   type
                                   (or status :organization-status-test)
-                                  (:tier-id tier)
+                                  tier
                                   currencies
                                   {:policies [policy]}))))
    :system/config {:record-db system/required-component
                    :record-store system/required-component
-                   :tier system/required-component
                    :policy system/required-component}
    :system/instance-schema map?})
 

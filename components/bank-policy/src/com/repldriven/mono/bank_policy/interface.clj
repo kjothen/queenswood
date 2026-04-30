@@ -2,8 +2,9 @@
   (:require
     com.repldriven.mono.bank-policy.system
 
-    [com.repldriven.mono.bank-policy.check :as check]
-    [com.repldriven.mono.bank-policy.core :as core]))
+    [com.repldriven.mono.bank-policy.capability :as capability]
+    [com.repldriven.mono.bank-policy.core :as core]
+    [com.repldriven.mono.bank-policy.limit :as limit]))
 
 (defn new-policy
   "Persists a policy. Returns the policy map or anomaly."
@@ -49,7 +50,7 @@
   `(kind, request)`. Returns an `:unauthorized/policy-denied`
   anomaly otherwise."
   [policies kind request]
-  (check/check-capability policies kind request))
+  (capability/check policies kind request))
 
 (defn check-limit
   "Returns `true` when `policies` impose no violated limit on the
@@ -61,7 +62,7 @@
      :window    :instant|:daily|:weekly|:monthly|:rolling
      :value     <number>}"
   [policies kind request]
-  (check/check-limit policies kind request))
+  (limit/check policies kind request))
 
 (defn get-effective-policies
   "Returns the policies effective for the given binding target
@@ -71,3 +72,17 @@
   reserved for binding resolution in a later round."
   [txn selectors]
   (core/get-effective-policies txn selectors))
+
+(defn get-policies-by-tier
+  "Returns the list of policies whose `tier=<tier>` label
+  matches. Bound to a new organization at creation time."
+  [txn tier]
+  (core/get-policies-by-tier txn tier))
+
+(defn get-tiers
+  "Returns the distinct set of tier label values across all
+  policies as `[{:tier <name> :description <description>}]`.
+  Description is taken from the first policy carrying the
+  label."
+  [txn]
+  (core/get-tiers txn))

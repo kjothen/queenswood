@@ -32,6 +32,9 @@
     [com.repldriven.mono.bank-api.payment.components :as payment.components]
     [com.repldriven.mono.bank-api.payment.examples :as payment.examples]
     [com.repldriven.mono.bank-api.payment.routes :as payment]
+    [com.repldriven.mono.bank-api.policy.components :as policy.components]
+    [com.repldriven.mono.bank-api.policy.examples :as policy.examples]
+    [com.repldriven.mono.bank-api.policy.routes :as policy]
     [com.repldriven.mono.bank-api.shared.components :as shared.components]
     [com.repldriven.mono.bank-api.shared.interceptors :as shared.interceptors]
     [com.repldriven.mono.bank-api.shared.parameters :as shared.parameters]
@@ -103,6 +106,7 @@
                                party.components/registry
                                payee-check.components/registry
                                payment.components/registry
+                               policy.components/registry
                                shared.components/registry
                                simulate.components/registry
                                tier.components/registry
@@ -134,6 +138,7 @@
                                  party.examples/registry
                                  payee-check.examples/registry
                                  payment.examples/registry
+                                 policy.examples/registry
                                  simulate.examples/registry
                                  tier.examples/registry)}}
            :handler (server/standard-openapi-handler)}}]
@@ -155,6 +160,7 @@
                  party/routes
                  payee-check/routes
                  payment/routes
+                 policy/routes
                  simulate/routes
                  tier/routes))])
 

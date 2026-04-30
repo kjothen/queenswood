@@ -69,7 +69,9 @@
                                                          as-of-date)
                  transaction+legs (transactions/record-transaction txn
                                                                    transaction)
-                 _ (balances/apply-legs txn (:legs transaction+legs))]))
+                 _ (balances/apply-legs txn
+                                        (:legs transaction+legs)
+                                        (:transaction-type transaction+legs))]))
           _ (when carry
               (balances/set-carry txn
                                   account-id
@@ -96,11 +98,14 @@
                        currency
                        balance
                        as-of-date)
-          _ (when transaction
-              (let-nom>
-                [transaction+legs (transactions/record-transaction txn
-                                                                   transaction)
-                 _ (balances/apply-legs txn (:legs transaction+legs))]))])))))
+          _
+          (when transaction
+            (let-nom>
+              [transaction+legs (transactions/record-transaction txn
+                                                                 transaction)
+               _ (balances/apply-legs txn
+                                      (:legs transaction+legs)
+                                      (:transaction-type transaction+legs))]))])))))
 
 (defn- get-settlement-account
   [config organization-id]

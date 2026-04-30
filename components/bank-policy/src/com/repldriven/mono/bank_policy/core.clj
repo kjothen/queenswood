@@ -51,3 +51,29 @@
   will resolve PolicyBindings in a later round."
   [txn _selectors]
   (store/get-policies-by-label txn "tier" "platform"))
+
+(defn get-policies-by-tier
+  "Returns the list of policies whose `tier=<tier>` label
+  matches. Used at organization-creation time to bind the
+  selected tier's policies to the new organization."
+  [txn tier]
+  (store/get-policies-by-label txn "tier" tier))
+
+(defn get-tiers
+  "Returns the distinct set of tier label values across all
+  policies as `[{:tier <name> :description <first-policy-desc>}]`.
+  The description is taken from the first policy carrying that
+  label — sufficient for surfacing to the admin UI; if multiple
+  policies share a tier the rest are ignored."
+  [txn]
+  (let-nom> [{:keys [items]} (store/get-policies txn {:limit 1000})]
+    (->> items
+         (keep (fn [{:keys [labels description]}]
+                 (when-let [tier (get labels "tier")]
+                   {:tier tier :description (or description "")})))
+         (reduce (fn [acc {:keys [tier] :as t}]
+                   (if (some (fn [x] (= (:tier x) tier)) acc)
+                     acc
+                     (conj acc t)))
+                 [])
+         vec)))

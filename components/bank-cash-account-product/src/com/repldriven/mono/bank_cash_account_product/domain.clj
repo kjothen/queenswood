@@ -29,8 +29,8 @@
                             :product-type product-type}))
 
 (defn- check-limit
-  [aggregate window aggregates policies]
-  (let [value (inc (get-in aggregates [:cash-account-product aggregate] 0))]
+  [aggregate window dimensions aggregates policies]
+  (let [value (inc (get-in aggregates [:cash-account-product dimensions]))]
     (policy/check-limit policies
                         :cash-account-product
                         {:aggregate aggregate
@@ -88,7 +88,7 @@
   fresh product-id and produces v1."
   [organization-id data aggregates policies]
   (let-nom>
-    [_ (check-limit :count :instant aggregates policies)]
+    [_ (check-limit :count :instant #{:organization-id} aggregates policies)]
     (new-version organization-id
                  (utility/generate-id "prd")
                  []

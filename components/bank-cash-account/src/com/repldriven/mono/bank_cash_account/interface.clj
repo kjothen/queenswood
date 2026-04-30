@@ -9,9 +9,9 @@
   anomaly. opts supports `:policies` to override policy
   resolution for the capability check."
   ([txn data]
-   (core/new-account txn data))
+   (core/open-account txn data))
   ([txn data opts]
-   (core/new-account txn data opts)))
+   (core/open-account txn data opts)))
 
 (defn get-account
   "Loads a single cash account. Returns the account map,

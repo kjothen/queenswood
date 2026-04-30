@@ -23,12 +23,12 @@
     [_ (policy/check-capability policies
                                 :api-key
                                 {:action :api-key-action-issue})
-     _ (policy/check-limit policies
-                           :api-key
-                           {:aggregate :count
-                            :window :instant
-                            :value (inc
-                                    (get-in aggregates [:api-key :count] 0))})]
+     _ (policy/check-limit
+        policies
+        :api-key
+        {:aggregate :count
+         :window :instant
+         :value (inc (get-in aggregates [:api-key #{:organization-id}]))})]
 
     (let [api-key-prefix (get status->api-key-prefix
                               status

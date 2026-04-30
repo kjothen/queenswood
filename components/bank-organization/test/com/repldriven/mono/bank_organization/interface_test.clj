@@ -1,7 +1,5 @@
 (ns ^:eftest/synchronized com.repldriven.mono.bank-organization.interface-test
   (:require
-    com.repldriven.mono.bank-tier.interface
-
     [com.repldriven.mono.bank-organization.interface :as SUT]
 
     [com.repldriven.mono.fdb.interface]
@@ -20,15 +18,13 @@
 (deftest new-organization-test
   (with-test-system
    [sys "classpath:bank-organization/application-test.yml"]
-   (let [config (fdb-config sys)
-         standard-tier-id (:tier-id (system/instance sys [:tiers :standard]))]
+   (let [config (fdb-config sys)]
      (testing "creates org with api-key, party, product, and accounts"
        (nom-test> [result (SUT/new-organization config
                                                 "Test Org"
                                                 :organization-type-customer
                                                 :organization-status-live
-                                                standard-tier-id
-                                                ["GBP" "USD"])
+                                                "micro" ["GBP" "USD"])
                    org (:organization result)
                    _ (is (= {:name "Test Org"
                              :type :organization-type-customer

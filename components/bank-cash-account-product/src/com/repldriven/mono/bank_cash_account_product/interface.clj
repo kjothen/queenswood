@@ -43,3 +43,14 @@
 (defn get-products
   ([txn org-id] (core/get-products txn org-id))
   ([txn org-id opts] (core/get-products txn org-id opts)))
+
+(defn published-version
+  "Returns the highest-version-number `:published` version in a
+  product aggregate (as returned by `get-product`), or nil if
+  none. Relies on the aggregate's `:versions` being sorted
+  newest-first."
+  [{:keys [versions]}]
+  (->> versions
+       (filter (fn [v]
+                 (= :cash-account-product-status-published (:status v))))
+       first))

@@ -1,3 +1,0 @@
-capability: !keyword policy-capability-internal-payments
-effect: !keyword policy-effect-allow
-reason: "Policy prevents internal payments"

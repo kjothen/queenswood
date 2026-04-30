@@ -32,7 +32,7 @@
                       (admin-token))))
 
 (defn create-organization
-  [org-name org-status tier-id currencies]
+  [org-name org-status tier currencies]
   (-> (js/fetch "/v1/organizations"
                 #js {:method "POST"
                      :headers #js {"Content-Type" "application/json"
@@ -41,7 +41,7 @@
                      :body (js/JSON.stringify
                             (clj->js {"name" org-name
                                       "status" org-status
-                                      "tier-id" tier-id
+                                      "tier" tier
                                       "currencies" currencies}))})
       (.then parse-response)
       (.then (fn [res]
@@ -344,16 +344,18 @@
                                         (admin-token))}})
       (.then parse-response)))
 
-(defn replace-tier
-  [tier-id policies limits]
-  (-> (js/fetch (str "/v1/tiers/" tier-id)
-                #js {:method "PUT"
-                     :headers #js {"Content-Type"
-                                   "application/json"
-                                   "Authorization"
+(defn list-policies
+  []
+  (-> (js/fetch "/v1/policies"
+                #js {:headers #js {"Authorization"
                                    (str "Bearer "
-                                        (admin-token))}
-                     :body (js/JSON.stringify
-                            (clj->js {"policies" policies
-                                      "limits" limits}))})
+                                        (admin-token))}})
+      (.then parse-response)))
+
+(defn get-policy
+  [policy-id]
+  (-> (js/fetch (str "/v1/policies/" policy-id)
+                #js {:headers #js {"Authorization"
+                                   (str "Bearer "
+                                        (admin-token))}})
       (.then parse-response)))

@@ -1,7 +1,8 @@
 - kind:
     cash-account:
-      product-type: !keyword product-type-settlement
-      account-type: !keyword account-type-personal
+      filters:
+        - product-type: !keyword product-type-settlement
+          account-type: !keyword account-type-personal
   bound:
     kind:
       max:
@@ -13,8 +14,9 @@
   reason: "Platform-restricted - no personal settlement accounts"
 - kind:
     cash-account:
-      product-type: !keyword product-type-settlement
-      account-type: !keyword account-type-business
+      filters:
+        - product-type: !keyword product-type-settlement
+          account-type: !keyword account-type-business
   bound:
     kind:
       range:
@@ -29,3 +31,14 @@
               value: 1
               window: !keyword time-window-instant
   reason: "Platform-restricted - exactly one business settlement account"
+- kind:
+    cash-account: {}
+  bound:
+    kind:
+      max:
+        aggregate:
+          kind:
+            count:
+              value: 1000000
+              window: !keyword time-window-instant
+  reason: "Platform-restricted - 1,000,000 accounts"

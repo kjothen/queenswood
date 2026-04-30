@@ -4,7 +4,6 @@
 
     [com.repldriven.mono.bank-organization.interface :as organizations]
 
-    [com.repldriven.mono.bank-tier.interface]
     [com.repldriven.mono.encryption.interface :as encryption]
     [com.repldriven.mono.fdb.interface]
     [com.repldriven.mono.system.interface :as system]
@@ -22,16 +21,13 @@
 (deftest get-api-key-test
   (with-test-system
    [sys "classpath:bank-api-key/application-test.yml"]
-   (let [config (fdb-config sys)
-         tier-id (:tier-id (system/instance sys [:tiers :micro]))]
+   (let [config (fdb-config sys)]
      (testing "finds key by hash computed from key-secret"
        (nom-test> [result (organizations/new-organization
                            config
                            "Hash Org"
-                           :organization-type-customer
-                           :organization-status-test
-                           tier-id
-                           ["GBP"])
+                           :organization-type-customer :organization-status-test
+                           "micro" ["GBP"])
                    org-id (get-in result
                                   [:organization
                                    :organization-id])
@@ -44,16 +40,13 @@
 (deftest get-api-keys-test
   (with-test-system
    [sys "classpath:bank-api-key/application-test.yml"]
-   (let [config (fdb-config sys)
-         tier-id (:tier-id (system/instance sys [:tiers :micro]))]
+   (let [config (fdb-config sys)]
      (testing "lists api keys for an organization"
        (nom-test> [result (organizations/new-organization
                            config
                            "List Org"
-                           :organization-type-customer
-                           :organization-status-test
-                           tier-id
-                           ["GBP"])
+                           :organization-type-customer :organization-status-test
+                           "micro" ["GBP"])
                    org-id (:organization-id (:organization result))
                    keys (SUT/get-api-keys config org-id)
                    _ (is (= 1 (count keys)))

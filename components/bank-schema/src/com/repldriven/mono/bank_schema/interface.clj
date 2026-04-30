@@ -13,7 +13,6 @@
      person-identification]
     [com.repldriven.mono.schemas.payee_check :as payee-check]
     [com.repldriven.mono.schemas.policies :as policies]
-    [com.repldriven.mono.schemas.tiers :as tiers]
     [com.repldriven.mono.schemas.transactions :as transactions]
     [com.repldriven.mono.schemas.types :as types]
     [protojure.protobuf :as proto])
@@ -47,7 +46,6 @@
     (com.repldriven.mono.schemas.policies
      PolicyProto$Policy
      PolicyProto$PolicyBinding)
-    (com.repldriven.mono.schemas.tiers TierProto$Tier)
     (com.repldriven.mono.schemas.transactions
      TransactionProto$Transaction
      TransactionProto$TransactionLeg)))
@@ -68,6 +66,8 @@
   [product-type]
   (ProductTypeProto$ProductType/forNumber
    (product-type->int product-type)))
+
+(def account-type->int cash-accounts/AccountType-label2val)
 
 
 (def organization-type->int organizations/OrganizationType-label2val)
@@ -209,42 +209,6 @@
   [m]
   (OrganizationChangelogProto$OrganizationChangelog/parseFrom
    (OrganizationChangelog->pb m)))
-
-(defn- unwrap-limit-kind
-  "Unwraps the protojure LimitKind oneof — the record's
-  :kind field holds the variant map (e.g.
-  {:product-type :product-type-settlement}). Callers see
-  the variant directly."
-  [limit]
-  (update limit
-          :kind
-          (fn [kind-record]
-            (when kind-record
-              (:kind kind-record)))))
-
-(defn- wrap-limit-kind
-  "Wraps a flat kind map into the {:kind ...} shape that
-  the protojure LimitKind oneof expects."
-  [limit]
-  (update limit
-          :kind
-          (fn [kind]
-            (when kind
-              {:kind kind}))))
-
-(defn pb->Tier
-  [input]
-  (let [tier (tiers/pb->Tier input)]
-    (update tier :limits (fn [limits] (mapv unwrap-limit-kind limits)))))
-
-(defn Tier->pb
-  [m]
-  (let [tier (update m :limits (fn [limits] (mapv wrap-limit-kind limits)))]
-    (proto/->pb (tiers/new-Tier tier))))
-
-(defn Tier->java
-  [m]
-  (TierProto$Tier/parseFrom (Tier->pb m)))
 
 (def pb->PayeeCheck payee-check/pb->PayeeCheck)
 (defn PayeeCheck->pb

@@ -3,4 +3,5 @@
   kind:
     organization:
       action: !keyword organization-action-create
-      type: !keyword organization-type-customer
+      filters:
+        - type: !keyword organization-type-customer

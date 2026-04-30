@@ -1,8 +1,8 @@
 - kind:
     balance:
-      kind:
-        computed:
-          name: available
+      filters:
+        - computed:
+            name: available
   bound:
     kind:
       min:
@@ -14,3 +14,4 @@
                 currency: GBP
               window: !keyword time-window-instant
   reason: "Platform-restricted - available balance must stay non-negative"
+  allow: !keyword limit-allow-improving

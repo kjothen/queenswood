@@ -10,14 +10,14 @@
   [request]
   (let [{:keys [record-db record-store parameters]} request
         {:keys [body]} parameters
-        {:keys [name status tier-id currencies]} body
+        {:keys [name status tier currencies]} body
         config {:record-db record-db :record-store record-store}
         result (organizations/new-organization
                 config
                 name
                 :organization-type-customer
                 status
-                tier-id
+                tier
                 currencies)]
     (if (error/anomaly? result)
       (errors/anomaly->response result)

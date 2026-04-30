@@ -36,44 +36,76 @@
            (assoc :reason reason))))
 
 (deftest check-capability-test
-  (testing "exact action allow"
+  (testing "exact action allow with no filter"
     (let [policies [(policy [(allow {:organization
                                      {:action :organization-action-create}})])]]
       (is (true? (SUT/check-capability policies
                                        :organization
                                        {:action
                                         :organization-action-create})))))
-  (testing "wildcard filter (nil) allows specific request"
+  (testing "empty filter list matches any request"
     (let [policies [(policy [(allow {:organization {:action
                                                     :organization-action-create
-                                                    :type nil
-                                                    :status nil}})])]]
+                                                    :filters []}})])]]
       (is (true? (SUT/check-capability policies
                                        :organization
                                        {:action :organization-action-create
                                         :type :organization-type-internal
                                         :status :organization-status-live})))))
-  (testing "wildcard filter (:*-unknown) allows specific request"
+  (testing "tuple with unset (nil) slots does not constrain"
     (let [policies [(policy [(allow {:organization
                                      {:action :organization-action-create
-                                      :type :organization-type-unknown
-                                      :status
-                                      :organization-status-unknown}})])]]
+                                      :filters [{:type nil :status nil}]}})])]]
       (is (true? (SUT/check-capability policies
                                        :organization
                                        {:action :organization-action-create
                                         :type :organization-type-internal
                                         :status :organization-status-live})))))
-  (testing "filter mismatch denies"
+  (testing "tuple with unset (:*-unknown) enum slots does not constrain"
     (let [policies [(policy [(allow {:organization
                                      {:action :organization-action-create
-                                      :type :organization-type-internal}})])]
+                                      :filters
+                                      [{:type :organization-type-unknown
+                                        :status
+                                        :organization-status-unknown}]}})])]]
+      (is (true? (SUT/check-capability policies
+                                       :organization
+                                       {:action :organization-action-create
+                                        :type :organization-type-internal
+                                        :status :organization-status-live})))))
+  (testing "single-tuple match — all populated slots agree"
+    (let [policies [(policy [(allow {:organization
+                                     {:action :organization-action-create
+                                      :filters
+                                      [{:type
+                                        :organization-type-customer}]}})])]]
+      (is (true? (SUT/check-capability policies
+                                       :organization
+                                       {:action :organization-action-create
+                                        :type :organization-type-customer})))))
+  (testing "single-tuple miss — populated slot disagrees"
+    (let [policies [(policy [(allow {:organization
+                                     {:action :organization-action-create
+                                      :filters
+                                      [{:type
+                                        :organization-type-internal}]}})])]
           result (SUT/check-capability policies
                                        :organization
                                        {:action :organization-action-create
                                         :type :organization-type-customer})]
       (is (error/unauthorized? result))
       (is (= :policy/denied (error/kind result)))))
+  (testing "multi-tuple OR — request matches one of two tuples"
+    (let [policies [(policy [(allow {:organization
+                                     {:action :organization-action-create
+                                      :filters
+                                      [{:type :organization-type-customer}
+                                       {:type
+                                        :organization-type-internal}]}})])]]
+      (is (true? (SUT/check-capability policies
+                                       :organization
+                                       {:action :organization-action-create
+                                        :type :organization-type-internal})))))
   (testing "deny wins over allow on same request"
     (let [kind {:organization {:action :organization-action-create}}
           policies [(policy [(allow kind) (deny kind "explicitly forbidden")])]
@@ -110,10 +142,13 @@
 
 (defn- limit
   ([kind bound] (limit kind bound nil))
-  ([kind bound reason]
+  ([kind bound reason] (limit kind bound reason nil))
+  ([kind bound reason allow]
    (cond-> {:kind kind :bound bound}
            reason
-           (assoc :reason reason))))
+           (assoc :reason reason)
+           allow
+           (assoc :allow allow))))
 
 (defn- max-bound
   [agg-kind value window]
@@ -209,10 +244,11 @@
                   policies
                   :api-key
                   {:aggregate :count :window :instant :value 999})))))
-  (testing "kind filter mismatch skips the limit"
+  (testing "tuple-filter mismatch skips the limit"
     (let [policies [(limit-policy [(limit
-                                    {:cash-account {:account-type
-                                                    :account-type-personal}}
+                                    {:cash-account {:filters
+                                                    [{:account-type
+                                                      :account-type-personal}]}}
                                     (max-bound :count 0 :time-window-instant)
                                     "no personal accounts")])]]
       (is (true? (SUT/check-limit policies
@@ -220,7 +256,191 @@
                                   {:aggregate :count
                                    :window :instant
                                    :value 1
-                                   :account-type :account-type-business}))))))
+                                   :account-type :account-type-business})))))
+  (testing "tuple-filter match — limit applies and bound is checked"
+    (let [policies [(limit-policy [(limit
+                                    {:cash-account
+                                     {:filters
+                                      [{:product-type :product-type-settlement
+                                        :account-type :account-type-business}]}}
+                                    (max-bound :count 1 :time-window-instant)
+                                    "max 1 business settlement")])]
+          result (SUT/check-limit policies
+                                  :cash-account
+                                  {:aggregate :count
+                                   :window :instant
+                                   :value 2
+                                   :product-type :product-type-settlement
+                                   :account-type :account-type-business})]
+      (is (error/unauthorized? result))))
+  (testing "multi-tuple OR — limit applies when any tuple matches"
+    (let [policies [(limit-policy
+                     [(limit {:organization
+                              {:filters [{:type :organization-type-customer}
+                                         {:type :organization-type-internal}]}}
+                             (max-bound :count 1 :time-window-instant)
+                             "max 1")])]
+          result (SUT/check-limit policies
+                                  :organization
+                                  {:aggregate :count
+                                   :window :instant
+                                   :value 2
+                                   :type :organization-type-internal})]
+      (is (error/unauthorized? result))))
+  (testing "tuple unset slot does not constrain"
+    (let [policies [(limit-policy [(limit
+                                    {:organization {:filters [{:type nil}]}}
+                                    (max-bound :count 0 :time-window-instant)
+                                    "max 0 of any type")])]
+          result (SUT/check-limit policies
+                                  :organization
+                                  {:aggregate :count
+                                   :window :instant
+                                   :value 1
+                                   :type :organization-type-customer})]
+      (is (error/unauthorized? result))))
+  (testing "BalanceLimit filter without transaction-type fires for any type"
+    (let [policies [(limit-policy [(limit {:balance {:filters
+                                                     [{:kind {:computed
+                                                              {:name
+                                                               "available"}}}]}}
+                                          (min-bound :amount
+                                                     {:value 0 :currency "GBP"}
+                                                     :time-window-instant)
+                                          "available >= 0")])]
+          result (SUT/check-limit policies
+                                  :balance
+                                  {:kind {:computed {:name "available"}}
+                                   :transaction-type
+                                   :transaction-type-interest-accrual
+                                   :aggregate :amount
+                                   :window :instant
+                                   :value {:value -10 :currency "GBP"}})]
+      (is (error/unauthorized? result))))
+  (testing "BalanceLimit filter with transaction-type scopes the limit"
+    (let [policies [(limit-policy
+                     [(limit {:balance
+                              {:filters
+                               [{:kind {:computed {:name "available"}}
+                                 :transaction-type
+                                 :transaction-type-internal-transfer}]}}
+                             (min-bound :amount
+                                        {:value 0 :currency "GBP"}
+                                        :time-window-instant)
+                             "user transfers must keep available >= 0")])]]
+      (testing "matching transaction-type triggers the limit"
+        (let [result (SUT/check-limit policies
+                                      :balance
+                                      {:kind {:computed {:name "available"}}
+                                       :transaction-type
+                                       :transaction-type-internal-transfer
+                                       :aggregate :amount
+                                       :window :instant
+                                       :value {:value -10 :currency "GBP"}})]
+          (is (error/unauthorized? result))))
+      (testing "non-matching transaction-type skips the limit"
+        (is (true? (SUT/check-limit policies
+                                    :balance
+                                    {:kind {:computed {:name "available"}}
+                                     :transaction-type
+                                     :transaction-type-interest-accrual
+                                     :aggregate :amount
+                                     :window :instant
+                                     :value {:value -10 :currency "GBP"}}))))))
+  (testing "allow-improving — pre out-of-bound, post no worse, passes"
+    (let [policies [(limit-policy [(limit {:balance {:filters
+                                                     [{:kind {:computed
+                                                              {:name
+                                                               "available"}}}]}}
+                                          (min-bound :amount
+                                                     {:value 0 :currency "GBP"}
+                                                     :time-window-instant)
+                                          "available >= 0"
+                                          :limit-allow-improving)])]]
+      (is (true? (SUT/check-limit policies
+                                  :balance
+                                  {:kind {:computed {:name "available"}}
+                                   :aggregate :amount
+                                   :window :instant
+                                   :pre-value {:value -50 :currency "GBP"}
+                                   :value {:value -50 :currency "GBP"}})))
+      (is (true? (SUT/check-limit policies
+                                  :balance
+                                  {:kind {:computed {:name "available"}}
+                                   :aggregate :amount
+                                   :window :instant
+                                   :pre-value {:value -50 :currency "GBP"}
+                                   :value {:value -40 :currency "GBP"}})))))
+  (testing "allow-improving — pre out-of-bound, post worse, fails"
+    (let [policies [(limit-policy [(limit {:balance {:filters
+                                                     [{:kind {:computed
+                                                              {:name
+                                                               "available"}}}]}}
+                                          (min-bound :amount
+                                                     {:value 0 :currency "GBP"}
+                                                     :time-window-instant)
+                                          "available >= 0"
+                                          :limit-allow-improving)])]
+          result (SUT/check-limit policies
+                                  :balance
+                                  {:kind {:computed {:name "available"}}
+                                   :aggregate :amount
+                                   :window :instant
+                                   :pre-value {:value -50 :currency "GBP"}
+                                   :value {:value -60 :currency "GBP"}})]
+      (is (error/unauthorized? result))))
+  (testing "allow-improving — pre in-bound, post out-of-bound, fails"
+    (let [policies [(limit-policy [(limit {:balance {:filters
+                                                     [{:kind {:computed
+                                                              {:name
+                                                               "available"}}}]}}
+                                          (min-bound :amount
+                                                     {:value 0 :currency "GBP"}
+                                                     :time-window-instant)
+                                          "available >= 0"
+                                          :limit-allow-improving)])]
+          result (SUT/check-limit policies
+                                  :balance
+                                  {:kind {:computed {:name "available"}}
+                                   :aggregate :amount
+                                   :window :instant
+                                   :pre-value {:value 10 :currency "GBP"}
+                                   :value {:value -1 :currency "GBP"}})]
+      (is (error/unauthorized? result))))
+  (testing "allow-improving — post in-bound passes regardless of pre"
+    (let [policies [(limit-policy [(limit {:balance {:filters
+                                                     [{:kind {:computed
+                                                              {:name
+                                                               "available"}}}]}}
+                                          (min-bound :amount
+                                                     {:value 0 :currency "GBP"}
+                                                     :time-window-instant)
+                                          "available >= 0"
+                                          :limit-allow-improving)])]]
+      (is (true? (SUT/check-limit policies
+                                  :balance
+                                  {:kind {:computed {:name "available"}}
+                                   :aggregate :amount
+                                   :window :instant
+                                   :pre-value {:value -50 :currency "GBP"}
+                                   :value {:value 1 :currency "GBP"}})))))
+  (testing "strict default — pre out-of-bound, post no worse, still fails"
+    (let [policies [(limit-policy [(limit {:balance {:filters
+                                                     [{:kind {:computed
+                                                              {:name
+                                                               "available"}}}]}}
+                                          (min-bound :amount
+                                                     {:value 0 :currency "GBP"}
+                                                     :time-window-instant)
+                                          "available >= 0")])]
+          result (SUT/check-limit policies
+                                  :balance
+                                  {:kind {:computed {:name "available"}}
+                                   :aggregate :amount
+                                   :window :instant
+                                   :pre-value {:value -50 :currency "GBP"}
+                                   :value {:value -40 :currency "GBP"}})]
+      (is (error/unauthorized? result)))))
 
 (deftest labels-roundtrip-test
   (with-test-system

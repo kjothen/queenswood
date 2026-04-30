@@ -10,6 +10,7 @@ import "schemas/cash-accounts/account.proto";
 import "schemas/organizations/organization.proto";
 import "schemas/party/party.proto";
 import "schemas/schemes/scheme.proto";
+import "schemas/transactions/transaction.proto";
 import "schemas/types/product-type.proto";
 
 option java_outer_classname = "PolicyProto";
@@ -41,12 +42,17 @@ message ApiKeyCapability {
 enum BalanceAction {
   BALANCE_ACTION_UNKNOWN = 0;
   BALANCE_ACTION_CREATE = 1;
+  BALANCE_ACTION_APPLY = 2;
+}
+
+message BalanceCapabilityFilter {
+  optional com.repldriven.mono.schemas.balances.BalanceType balance_type = 1;
+  optional com.repldriven.mono.schemas.balances.BalanceStatus balance_status = 2;
 }
 
 message BalanceCapability {
   required BalanceAction action = 1;
-  optional com.repldriven.mono.schemas.balances.BalanceType balance_type = 2;
-  optional com.repldriven.mono.schemas.balances.BalanceStatus balance_status = 3;
+  repeated BalanceCapabilityFilter filters = 2;
 }
 
 enum CashAccountAction {
@@ -55,9 +61,13 @@ enum CashAccountAction {
   CASH_ACCOUNT_ACTION_CLOSE = 2;
 }
 
+message CashAccountCapabilityFilter {
+  optional com.repldriven.mono.schemas.cash_accounts.AccountType account_type = 1;
+}
+
 message CashAccountCapability {
   required CashAccountAction action = 1;
-  optional com.repldriven.mono.schemas.cash_accounts.AccountType account_type = 2;
+  repeated CashAccountCapabilityFilter filters = 2;
 }
 
 enum CashAccountProductAction {
@@ -66,9 +76,13 @@ enum CashAccountProductAction {
   CASH_ACCOUNT_PRODUCT_ACTION_PUBLISH = 2;
 }
 
+message CashAccountProductCapabilityFilter {
+  optional com.repldriven.mono.schemas.types.ProductType product_type = 1;
+}
+
 message CashAccountProductCapability {
   required CashAccountProductAction action = 1;
-  optional com.repldriven.mono.schemas.types.ProductType product_type = 2;
+  repeated CashAccountProductCapabilityFilter filters = 2;
 }
 
 enum IdvAction {
@@ -85,9 +99,13 @@ enum InboundPaymentAction {
   INBOUND_PAYMENT_ACTION_RECEIVE = 1;
 }
 
+message InboundPaymentCapabilityFilter {
+  optional com.repldriven.mono.schemas.schemes.SchemeType scheme = 1;
+}
+
 message InboundPaymentCapability {
   required InboundPaymentAction action = 1;
-  optional com.repldriven.mono.schemas.schemes.SchemeType scheme = 2;
+  repeated InboundPaymentCapabilityFilter filters = 2;
 }
 
 enum InternalPaymentAction {
@@ -114,10 +132,14 @@ enum OrganizationAction {
   ORGANIZATION_ACTION_CREATE = 1;
 }
 
+message OrganizationCapabilityFilter {
+  optional com.repldriven.mono.schemas.organizations.OrganizationType type = 1;
+  optional com.repldriven.mono.schemas.organizations.OrganizationStatus status = 2;
+}
+
 message OrganizationCapability {
   required OrganizationAction action = 1;
-  optional com.repldriven.mono.schemas.organizations.OrganizationType type = 2;
-  optional com.repldriven.mono.schemas.organizations.OrganizationStatus status = 3;
+  repeated OrganizationCapabilityFilter filters = 2;
 }
 
 enum OutboundPaymentAction {
@@ -125,9 +147,13 @@ enum OutboundPaymentAction {
   OUTBOUND_PAYMENT_ACTION_SEND = 1;
 }
 
+message OutboundPaymentCapabilityFilter {
+  optional com.repldriven.mono.schemas.schemes.SchemeType scheme = 1;
+}
+
 message OutboundPaymentCapability {
   required OutboundPaymentAction action = 1;
-  optional com.repldriven.mono.schemas.schemes.SchemeType scheme = 2;
+  repeated OutboundPaymentCapabilityFilter filters = 2;
 }
 
 enum PartyAction {
@@ -135,10 +161,14 @@ enum PartyAction {
   PARTY_ACTION_CREATE = 1;
 }
 
+message PartyCapabilityFilter {
+  optional com.repldriven.mono.schemas.party.Party.PartyType type = 1;
+  optional com.repldriven.mono.schemas.party.Party.PartyStatus status = 2;
+}
+
 message PartyCapability {
   required PartyAction action = 1;
-  optional com.repldriven.mono.schemas.party.Party.PartyType type = 2;
-  optional com.repldriven.mono.schemas.party.Party.PartyStatus status = 3;
+  repeated PartyCapabilityFilter filters = 2;
 }
 
 enum PayeeCheckAction {
@@ -156,9 +186,13 @@ enum PolicyAction {
   POLICY_ACTION_BIND = 2;
 }
 
+message PolicyCapabilityFilter {
+  optional PolicyCategory category = 1;
+}
+
 message PolicyCapability {
   required PolicyAction action = 1;
-  optional PolicyCategory category = 2;
+  repeated PolicyCapabilityFilter filters = 2;
 }
 
 enum TransactionAction {
@@ -249,6 +283,11 @@ message Bound {
   }
 }
 
+enum LimitAllow {
+  LIMIT_ALLOW_UNKNOWN = 0;
+  LIMIT_ALLOW_IMPROVING = 1;
+}
+
 // --- Limit kinds (one per Capability variant) ---
 
 message ApiKeyLimit {}
@@ -262,50 +301,84 @@ message ComputedBalance {
   required string name = 1;
 }
 
-message BalanceLimit {
+message BalanceLimitFilter {
   oneof kind {
     ActualBalance actual = 1;
     ComputedBalance computed = 2;
   }
+  optional com.repldriven.mono.schemas.transactions.TransactionType transaction_type = 3;
+}
+
+message BalanceLimit {
+  repeated BalanceLimitFilter filters = 1;
+}
+
+message CashAccountLimitFilter {
+  optional com.repldriven.mono.schemas.types.ProductType product_type = 1;
+  optional com.repldriven.mono.schemas.cash_accounts.AccountType account_type = 2;
+  optional string currency = 3;
 }
 
 message CashAccountLimit {
+  repeated CashAccountLimitFilter filters = 1;
+}
+
+message CashAccountProductLimitFilter {
   optional com.repldriven.mono.schemas.types.ProductType product_type = 1;
-  optional com.repldriven.mono.schemas.cash_accounts.AccountType account_type = 2;
 }
 
 message CashAccountProductLimit {
-  optional com.repldriven.mono.schemas.types.ProductType product_type = 1;
+  repeated CashAccountProductLimitFilter filters = 1;
 }
 
 message IdvLimit {}
 
-message InboundPaymentLimit {
+message InboundPaymentLimitFilter {
   optional com.repldriven.mono.schemas.schemes.SchemeType scheme = 1;
+}
+
+message InboundPaymentLimit {
+  repeated InboundPaymentLimitFilter filters = 1;
 }
 
 message InternalPaymentLimit {}
 
 message InterestLimit {}
 
-message OrganizationLimit {
+message OrganizationLimitFilter {
   optional com.repldriven.mono.schemas.organizations.OrganizationType type = 1;
   optional com.repldriven.mono.schemas.organizations.OrganizationStatus status = 2;
 }
 
-message OutboundPaymentLimit {
+message OrganizationLimit {
+  repeated OrganizationLimitFilter filters = 1;
+}
+
+message OutboundPaymentLimitFilter {
   optional com.repldriven.mono.schemas.schemes.SchemeType scheme = 1;
 }
 
-message PartyLimit {
+message OutboundPaymentLimit {
+  repeated OutboundPaymentLimitFilter filters = 1;
+}
+
+message PartyLimitFilter {
   optional com.repldriven.mono.schemas.party.Party.PartyType type = 1;
   optional com.repldriven.mono.schemas.party.Party.PartyStatus status = 2;
 }
 
+message PartyLimit {
+  repeated PartyLimitFilter filters = 1;
+}
+
 message PayeeCheckLimit {}
 
-message PolicyLimit {
+message PolicyLimitFilter {
   optional PolicyCategory category = 1;
+}
+
+message PolicyLimit {
+  repeated PolicyLimitFilter filters = 1;
 }
 
 message TransactionLimit {}
@@ -330,6 +403,7 @@ message Limit {
 
   required Bound bound = 15;
   optional string reason = 16;
+  optional LimitAllow allow = 17;
 }
 
 // ==========================================================================

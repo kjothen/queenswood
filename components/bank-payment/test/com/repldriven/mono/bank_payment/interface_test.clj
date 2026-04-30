@@ -42,24 +42,59 @@
   {:record-db (system/instance sys [:fdb :record-db])
    :record-store (system/instance sys [:fdb :store])})
 
+(defn- send-event
+  [proc schemas event-name data]
+  (let [payload (avro/serialize (get schemas event-name)
+                                data)]
+    (if (error/anomaly? payload)
+      payload
+      (processor/process proc
+                         {:event event-name
+                          :payload payload}))))
+
+(defn- fund-via-inbound
+  "Funds `creditor-bban`'s default-posted with `amount` GBP by
+  simulating an inbound settlement event — keeps the platform
+  `available >= 0` limit happy on tests that subsequently debit
+  the account."
+  [event-proc schemas creditor-bban amount key-suffix]
+  (send-event event-proc
+              schemas
+              "transaction-settled"
+              {:scheme-transaction-id (str "fund-stx-" key-suffix)
+               :end-to-end-id (str "fund-e2e-" key-suffix)
+               :scheme "FPS"
+               :debit-credit-code :debit-credit-code-credit
+               :amount amount
+               :currency "GBP"
+               :creditor-bban creditor-bban
+               :debtor-name "Test Funder"
+               :reference (str "Test fund " key-suffix)
+               :timestamp-settled (System/currentTimeMillis)}))
+
 (defn- test-submit-internal-payment
-  [sys proc schemas]
+  [sys proc event-proc schemas]
   (testing "submit-internal-payment creates payment and
   records transaction"
     (let [config (fdb-config sys)
-          tier-id (:tier-id (system/instance sys [:tiers :micro]))]
+          tier "micro"]
       (nom-test>
         [customer-org (organizations/new-organization
                        config
                        "Payment Test Customer"
                        :organization-type-customer
                        :organization-status-test
-                       tier-id
+                       tier
                        ["GBP"])
          org-id (get-in customer-org [:organization :organization-id])
          party-id (get-in customer-org [:organization :party :party-id])
-         debtor-account-id (get-in customer-org
-                                   [:organization :accounts 0 :account-id])
+         debtor-account (get-in customer-org [:organization :accounts 0])
+         debtor-account-id (:account-id debtor-account)
+         _ (fund-via-inbound event-proc
+                             schemas
+                             (:bban debtor-account)
+                             1000
+                             "internal-001")
          product (products/new-product
                   config
                   org-id
@@ -116,23 +151,13 @@
                                                 :balance-status-posted)
          _ (is (= 500 (:credit creditor-balance)))]))))
 
-(defn- send-event
-  [proc schemas event-name data]
-  (let [payload (avro/serialize (get schemas event-name)
-                                data)]
-    (if (error/anomaly? payload)
-      payload
-      (processor/process proc
-                         {:event event-name
-                          :payload payload}))))
-
 (defn- test-settle-inbound-payment
   [sys event-proc schemas]
   (testing
     "transaction-settled event creates inbound
   payment and records transaction"
     (let [config (fdb-config sys)
-          tier-id (:tier-id (system/instance sys [:tiers :micro]))
+          tier "micro"
           internal-org (system/instance sys
                                         [:organizations :internal])
           internal-account-id (get-in internal-org
@@ -144,13 +169,24 @@
                        "Inbound Payment Customer"
                        :organization-type-customer
                        :organization-status-test
-                       tier-id
+                       tier
                        ["GBP"])
          customer-account
          (get-in customer-org [:organization :accounts 0])
          customer-account-id (:account-id customer-account)
          bban (:bban customer-account)
          _ (is (some? bban))
+         ;; capture the shared internal/suspense debit before this
+         ;; test runs so the assertion below can be delta-based —
+         ;; earlier sub-tests pre-fund their debtors via the same
+         ;; mechanism, accumulating debits on this account.
+         pre-internal
+         (balances/get-balance config
+                               internal-account-id
+                               :balance-type-suspense
+                               "GBP"
+                               :balance-status-posted)
+         pre-debit (or (:debit pre-internal) 0)
          result (send-event
                  event-proc
                  schemas
@@ -190,7 +226,7 @@
                                :balance-type-suspense
                                "GBP"
                                :balance-status-posted)
-         _ (is (= 1000 (:debit internal-balance)))
+         _ (is (= 1000 (- (:debit internal-balance) pre-debit)))
          ;; idempotency: re-send same event
          result2 (send-event
                   event-proc
@@ -210,12 +246,12 @@
                   (:payment-id result2)))]))))
 
 (defn- test-submit-outbound-payment
-  [sys proc schemas]
+  [sys proc event-proc schemas]
   (testing
     "submit-outbound-payment creates pending payment,
   debits debtor and credits suspense"
     (let [config (fdb-config sys)
-          tier-id (:tier-id (system/instance sys [:tiers :micro]))
+          tier "micro"
           internal-org (system/instance sys
                                         [:organizations :internal])
           internal-account-id (get-in internal-org
@@ -227,14 +263,19 @@
                        "Outbound Payment Customer"
                        :organization-type-customer
                        :organization-status-test
-                       tier-id
+                       tier
                        ["GBP"])
          customer-organization-id
          (get-in customer-org
                  [:organization :organization-id])
-         customer-account-id
-         (get-in customer-org
-                 [:organization :accounts 0 :account-id])
+         customer-account
+         (get-in customer-org [:organization :accounts 0])
+         customer-account-id (:account-id customer-account)
+         _ (fund-via-inbound event-proc
+                             schemas
+                             (:bban customer-account)
+                             1000
+                             "outbound-001")
          result (send-command
                  proc
                  schemas
@@ -285,21 +326,26 @@
     "transaction-settled event completes the outbound
   payment settlement"
     (let [config (fdb-config sys)
-          tier-id (:tier-id (system/instance sys [:tiers :micro]))]
+          tier "micro"]
       (nom-test>
         [customer-org (organizations/new-organization
                        config
                        "Outbound Settlement Customer"
                        :organization-type-customer
                        :organization-status-test
-                       tier-id
+                       tier
                        ["GBP"])
          customer-organization-id
          (get-in customer-org
                  [:organization :organization-id])
-         customer-account-id
-         (get-in customer-org
-                 [:organization :accounts 0 :account-id])
+         customer-account
+         (get-in customer-org [:organization :accounts 0])
+         customer-account-id (:account-id customer-account)
+         _ (fund-via-inbound event-proc
+                             schemas
+                             (:bban customer-account)
+                             1000
+                             "outbound-settle-001")
          submit (send-command
                  proc
                  schemas
@@ -381,8 +427,8 @@
    (let [proc (system/instance sys [:payment :processor])
          event-proc (system/instance sys [:payment :event-processor])
          schemas (system/instance sys [:avro :serde])]
-     (test-submit-internal-payment sys proc schemas)
-     (test-submit-outbound-payment sys proc schemas)
+     (test-submit-internal-payment sys proc event-proc schemas)
+     (test-submit-outbound-payment sys proc event-proc schemas)
      (test-unknown-command proc schemas)
      (test-settle-inbound-payment sys event-proc schemas)
      (test-settle-outbound-payment sys proc event-proc schemas))))

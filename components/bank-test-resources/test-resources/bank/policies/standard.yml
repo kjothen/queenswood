@@ -6,8 +6,9 @@ capabilities:
 limits:
   - kind:
       cash-account:
-        product-type: !keyword product-type-current
-        account-type: !keyword account-type-personal
+        filters:
+          - product-type: !keyword product-type-current
+            account-type: !keyword account-type-personal
     bound:
       kind:
         max:
@@ -19,8 +20,9 @@ limits:
     reason: "Standard limit - maximum number of personal current accounts"
   - kind:
       cash-account:
-        product-type: !keyword product-type-savings
-        account-type: !keyword account-type-personal
+        filters:
+          - product-type: !keyword product-type-savings
+            account-type: !keyword account-type-personal
     bound:
       kind:
         max:

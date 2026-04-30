@@ -16,6 +16,15 @@
                                       {:organization-id org-id
                                        :cash-product-id product-id}))))
 
+(defn- counts
+  "Builds the cash-account-product aggregates map for the limit
+  checks in `domain/new-product`. Each entry is keyed by the
+  set of dimensions the count is grouped on."
+  [txn org-id]
+  (let-nom>
+    [total (store/count-by-org txn org-id)]
+    {:cash-account-product {#{:organization-id} total}}))
+
 (defn new-product
   "Creates a product as an initial draft v1. opts supports
   `:policies` to override policy resolution."
@@ -24,12 +33,8 @@
   ([txn org-id data opts]
    (let-nom>
      [policies (get-policies txn org-id opts)
-      product-count (store/count-by-org txn org-id)
-      version (domain/new-product
-               org-id
-               data
-               {:cash-account-product {:count product-count}}
-               policies)
+      aggregates (counts txn org-id)
+      version (domain/new-product org-id data aggregates policies)
       _ (store/save-version txn version)]
      version)))
 

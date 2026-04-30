@@ -66,24 +66,63 @@
             :else
             account))))
 
+(defn- fund-account
+  "Records and applies a fund transaction (debit internal
+  suspense, credit `account-id` default). Source is
+  internal/suspense so internal's `available` (default-only)
+  is unaffected."
+  [config internal-account-id account-id amount idempotency-key]
+  (fdb/transact
+   config
+   (fn [txn]
+     (let [result (transactions/record-transaction
+                   txn
+                   {:idempotency-key idempotency-key
+                    :transaction-type :transaction-type-internal-transfer
+                    :currency "GBP"
+                    :reference "Fund"
+                    :legs [{:account-id internal-account-id
+                            :balance-type :balance-type-suspense
+                            :balance-status :balance-status-posted
+                            :side :leg-side-debit
+                            :amount amount}
+                           {:account-id account-id
+                            :balance-type :balance-type-default
+                            :balance-status :balance-status-posted
+                            :side :leg-side-credit
+                            :amount amount}]})]
+       (balances/apply-legs txn
+                            (:legs result)
+                            (:transaction-type result))))))
+
 (defn- create-funded-customer
   "Creates a customer org with a savings product at the
   given interest rate, opens an account, waits for opened
-  status, and funds it. Returns {:organization-id
-  :account-id}."
-  [config tier-id internal-account-id org-name
+  status, and funds it. Also funds the customer's settlement
+  account so interest accrual/capitalization (which debits
+  settlement balances) doesn't trip the platform `available
+  >= 0` limit. Returns {:organization-id :account-id}."
+  [config tier internal-account-id org-name
    interest-rate-bps fund-amount]
   (let [org-result (organizations/new-organization
                     config
                     org-name
                     :organization-type-customer
                     :organization-status-test
-                    tier-id
+                    tier
                     ["GBP"])
         org-id (get-in org-result
                        [:organization :organization-id])
         party-id (get-in org-result
                          [:organization :party :party-id])
+        settlement-id (get-in org-result
+                              [:organization :accounts
+                               0 :account-id])
+        _ (fund-account config
+                        internal-account-id
+                        settlement-id
+                        fund-amount
+                        (str "fund-settle-" org-name))
         product (products/new-product
                  config
                  org-id
@@ -139,7 +178,9 @@
              config
              (fn [txn]
                (let [result (transactions/record-transaction txn txn-data)]
-                 (balances/apply-legs txn (:legs result))))))]
+                 (balances/apply-legs txn
+                                      (:legs result)
+                                      (:transaction-type result))))))]
     {:organization-id org-id :account-id account-id}))
 
 (defn- test-accrue-daily-interest
@@ -147,7 +188,7 @@
   (testing "accrue-daily-interest accrues for accounts
   with interest rate"
     (let [config (fdb-config sys)
-          tier-id (:tier-id (system/instance sys [:tiers :micro]))
+          tier "micro"
           internal-org (system/instance sys
                                         [:organizations :internal])
           internal-id (get-in internal-org
@@ -156,7 +197,7 @@
       (nom-test>
         [customer (create-funded-customer
                    config
-                   tier-id
+                   tier
                    internal-id
                    "Accrue Customer"
                    500
@@ -187,7 +228,7 @@
   (testing "capitalize-monthly-interest moves accrued
   to default"
     (let [config (fdb-config sys)
-          tier-id (:tier-id (system/instance sys [:tiers :micro]))
+          tier "micro"
           internal-org (system/instance sys
                                         [:organizations :internal])
           internal-id (get-in internal-org
@@ -196,7 +237,7 @@
       (nom-test>
         [customer (create-funded-customer
                    config
-                   tier-id
+                   tier
                    internal-id
                    "Cap Customer"
                    500

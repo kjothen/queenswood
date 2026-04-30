@@ -1,6 +1,7 @@
 - kind:
     organization:
-      type: !keyword organization-type-customer
+      filters:
+        - type: !keyword organization-type-customer
   bound:
     kind:
       max:
@@ -12,7 +13,8 @@
   reason: "Platform-restricted - max 100 customer organizations"
 - kind:
     organization:
-      type: !keyword organization-type-internal
+      filters:
+        - type: !keyword organization-type-internal
   bound:
     kind:
       range:

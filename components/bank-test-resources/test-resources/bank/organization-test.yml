@@ -1,6 +1,6 @@
 internal: !system/component
   system/component-kind: organizations/organization
-  tier: !system/ref tiers.system
+  tier: platform
   policy: !system/ref policies.platform
   record-db: !system/ref fdb.record-db
   record-store: !system/ref fdb.meta-store

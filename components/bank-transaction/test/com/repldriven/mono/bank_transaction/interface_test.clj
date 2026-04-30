@@ -39,31 +39,35 @@
                          (:payload result)))
 
 (defn- seed-balance
-  [config account-id]
+  [config account-id balance-type]
   (balances/new-balance config
                         {:account-id account-id
                          :product-type :product-type-current
-                         :balance-type :balance-type-default
+                         :balance-type balance-type
                          :currency "GBP"
                          :balance-status :balance-status-posted}))
 
 (defn- test-record-transaction
   [config proc schemas]
   (testing "record-transaction creates transaction with legs"
-    (seed-balance config "acc_001")
-    (seed-balance config "acc_002")
+    ;; Use :balance-type-suspense — for product-type-current, available =
+    ;; default-posted + pending-incoming + pending-outgoing
+    ;; (suspense is excluded), so debiting suspense doesn't trip the
+    ;; platform `available >= 0` limit on the seeded account.
+    (seed-balance config "acc_001" :balance-type-suspense)
+    (seed-balance config "acc_002" :balance-type-suspense)
     (let [data
           {:idempotency-key "idem-001"
            :transaction-type :transaction-type-inbound-transfer
            :currency "GBP"
            :reference "Test transfer"
            :legs [{:account-id "acc_001"
-                   :balance-type :balance-type-default
+                   :balance-type :balance-type-suspense
                    :balance-status :balance-status-posted
                    :side :leg-side-debit
                    :amount 1000}
                   {:account-id "acc_002"
-                   :balance-type :balance-type-default
+                   :balance-type :balance-type-suspense
                    :balance-status :balance-status-posted
                    :side :leg-side-credit
                    :amount 1000}]}]
@@ -113,8 +117,7 @@
   ;; bank transfer funding the customer org's account
   [sys fdb-config proc schemas]
   (testing "simulate inbound transfer funding customer org account"
-    (let [tier-id (:tier-id (system/instance sys [:tiers :micro]))
-          internal-org (system/instance sys
+    (let [internal-org (system/instance sys
                                         [:organizations :internal])
           internal-account-id (get-in internal-org
                                       [:organization :accounts
@@ -125,7 +128,7 @@
                        "Test Customer"
                        :organization-type-customer
                        :organization-status-test
-                       tier-id
+                       "micro"
                        ["GBP"])
          customer-account-id (get-in customer-org
                                      [:organization :accounts

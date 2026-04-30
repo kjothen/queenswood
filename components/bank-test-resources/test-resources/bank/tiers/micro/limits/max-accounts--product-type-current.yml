@@ -1,4 +1,0 @@
-type: !keyword limit-type-max-accounts
-kind: { product-type: !keyword product-type-current }
-value: 1000
-reason: "MUST not exceed 1,000 current accounts on micro tier"

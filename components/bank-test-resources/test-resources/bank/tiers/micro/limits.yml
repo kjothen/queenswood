@@ -1,4 +1,0 @@
-- !include bank/tiers/micro/limits/max-accounts--product-type-current.yml
-- !include bank/tiers/micro/limits/max-accounts--product-type-savings.yml
-- !include bank/tiers/micro/limits/max-accounts--product-type-term-deposit.yml
-- !include bank/tiers/micro/limits/max-accounts--product-type-settlement.yml

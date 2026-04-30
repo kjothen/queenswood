@@ -31,8 +31,9 @@ capabilities:
 limits:
   - kind:
       cash-account:
-        product-type: !keyword product-type-settlement
-        account-type: !keyword account-type-personal
+        filters:
+          - product-type: !keyword product-type-settlement
+            account-type: !keyword account-type-personal
     bound:
       kind:
         max:
@@ -44,8 +45,9 @@ limits:
     reason: "Restricted limit - maximum number of personal settlement accounts"
   - kind:
       cash-account:
-        product-type: !keyword product-type-settlement
-        account-type: !keyword account-type-business
+        filters:
+          - product-type: !keyword product-type-settlement
+            account-type: !keyword account-type-business
     bound:
       kind:
         range:

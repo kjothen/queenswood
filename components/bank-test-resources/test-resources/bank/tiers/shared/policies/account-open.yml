@@ -1,3 +1,0 @@
-capability: !keyword policy-capability-account-opening
-effect: !keyword policy-effect-allow
-reason: "Policy prevents opening cash accounts"

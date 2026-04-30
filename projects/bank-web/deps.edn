@@ -27,7 +27,6 @@
   component/bank-payment {:local/root "../../components/bank-payment"}
   component/bank-policy {:local/root "../../components/bank-policy"}
   component/bank-schema {:local/root "../../components/bank-schema"}
-  component/bank-tier {:local/root "../../components/bank-tier"}
   component/bank-transaction {:local/root "../../components/bank-transaction"}
   component/avro {:local/root "../../components/avro"}
   component/cache {:local/root "../../components/cache"}
