@@ -1,0 +1,33 @@
+- kind:
+    inbound-payment: {}
+  bound:
+    kind:
+      max:
+        aggregate:
+          kind:
+            count:
+              value: 100000
+              window: !keyword time-window-daily
+  reason: "Platform-restricted - max 100,000 inbound payments per day"
+- kind:
+    internal-payment: {}
+  bound:
+    kind:
+      max:
+        aggregate:
+          kind:
+            count:
+              value: 100000
+              window: !keyword time-window-daily
+  reason: "Platform-restricted - max 100,000 internal payments per day"
+- kind:
+    outbound-payment: {}
+  bound:
+    kind:
+      max:
+        aggregate:
+          kind:
+            count:
+              value: 100000
+              window: !keyword time-window-daily
+  reason: "Platform-restricted - max 100,000 outbound payments per day"

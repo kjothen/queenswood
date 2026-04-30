@@ -1,3 +1,0 @@
-capability: !keyword policy-capability-inbound-payments
-effect: !keyword policy-effect-allow
-reason: "Policy prevents inbound payments"

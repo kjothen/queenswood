@@ -1,0 +1,5 @@
+- effect: !keyword effect-allow
+  reason: "Allow issuing API keys"
+  kind:
+    api-key:
+      action: !keyword api-key-action-issue

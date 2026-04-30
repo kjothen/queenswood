@@ -23,11 +23,10 @@
                           :payment-address-scheme-unknown))
 
 (def ^:private version-status-enum
-  (coercion/enum-coercion
-   {"draft" :cash-account-product-version-status-draft
-    "published" :cash-account-product-version-status-published
-    "discarded" :cash-account-product-version-status-discarded}
-   :cash-account-product-version-status-unknown))
+  (coercion/enum-coercion {"draft" :cash-account-product-status-draft
+                           "published" :cash-account-product-status-published
+                           "discarded" :cash-account-product-status-discarded}
+                          :cash-account-product-status-unknown))
 
 (def product-type-enum-schema (:enum-schema product-type-enum))
 (def balance-sheet-side-enum-schema (:enum-schema balance-sheet-side-enum))

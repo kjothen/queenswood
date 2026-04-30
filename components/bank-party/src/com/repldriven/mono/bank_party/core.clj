@@ -3,6 +3,7 @@
     [com.repldriven.mono.bank-party.domain :as domain]
     [com.repldriven.mono.bank-party.store :as store]
 
+    [com.repldriven.mono.bank-policy.interface :as policy]
     [com.repldriven.mono.error.interface :as error :refer [let-nom>]]))
 
 (defn- create-person
@@ -53,12 +54,24 @@
   "Creates a party. Person parties include
   person-identification and optional national-identifier.
   Internal and organization parties skip both. Returns
-  protobuf party record or anomaly."
-  [txn data]
-  (let [result (if (= :party-type-person (:type data))
-                 (create-person txn data)
-                 (create-internal txn data))]
-    (if (store/uniqueness-violation? result)
-      (error/reject :party/duplicate-national-identifier
-                    "National identifier already exists")
-      result)))
+  protobuf party record or anomaly. opts supports `:policies`
+  to override policy resolution for the capability check."
+  ([txn data]
+   (new-party txn data {}))
+  ([txn data opts]
+   (let-nom>
+     [policies (or (:policies opts)
+                   (policy/get-effective-policies
+                    txn
+                    {:organization-id (:organization-id data)}))
+      _ (policy/check-capability policies
+                                 :party
+                                 {:action :party-action-create
+                                  :type (:type data)})]
+     (let [result (if (= :party-type-person (:type data))
+                    (create-person txn data)
+                    (create-internal txn data))]
+       (if (store/uniqueness-violation? result)
+         (error/reject :party/duplicate-national-identifier
+                       "National identifier already exists")
+         result)))))

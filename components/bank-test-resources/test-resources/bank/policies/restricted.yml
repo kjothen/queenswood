@@ -1,0 +1,64 @@
+name: Restricted policy
+description: Restricted policy - maintained by Queenswood
+enabled: true
+category: !keyword policy-category-restricted
+capabilities:
+  - effect: !keyword effect-allow
+    reason: "Allow opening cash accounts"
+    kind:
+      cash-account:
+        action: !keyword cash-account-action-open
+  - effect: !keyword effect-allow
+    reason: "Allow closing cash accounts"
+    kind:
+      cash-account:
+        action: !keyword cash-account-action-close
+  - effect: !keyword effect-allow
+    reason: "Allow internal payments"
+    kind:
+      internal-payment:
+        action: !keyword internal-payment-action-submit
+  - effect: !keyword effect-allow
+    reason: "Allow inbound payments"
+    kind:
+      inbound-payment:
+        action: !keyword inbound-payment-action-receive
+  - effect: !keyword effect-allow
+    reason: "Allow outbound payments"
+    kind:
+      outbound-payment:
+        action: !keyword outbound-payment-action-send
+limits:
+  - kind:
+      cash-account:
+        filters:
+          - product-type: !keyword product-type-settlement
+            account-type: !keyword account-type-personal
+    bound:
+      kind:
+        max:
+          aggregate:
+            kind:
+              count:
+                value: 0
+                window: !keyword time-window-instant
+    reason: "Restricted limit - maximum number of personal settlement accounts"
+  - kind:
+      cash-account:
+        filters:
+          - product-type: !keyword product-type-settlement
+            account-type: !keyword account-type-business
+    bound:
+      kind:
+        range:
+          min:
+            kind:
+              count:
+                value: 1
+                window: !keyword time-window-instant
+          max:
+            kind:
+              count:
+                value: 1
+                window: !keyword time-window-instant
+    reason: "Restricted limit - minimum/maximum number of business settlement accounts"

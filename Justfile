@@ -172,6 +172,13 @@ schemathesis base_url="http://127.0.0.1:8080":
       exit 1
     fi
     echo "Running schemathesis..."
+    # `stateful` is excluded because schemathesis's LinkInferencer
+    # builds a werkzeug routing Map from the spec's paths, and werkzeug
+    # rejects hyphens in <name> path converters — our `{account-id}` /
+    # `{product-id}` templates trip it. The explicit `:links` we emit
+    # still render in Scalar for docs / humans; we just skip link-driven
+    # stateful test generation until either schemathesis tolerates
+    # hyphenated names or we rename path params.
     ADMIN_TOKEN="$MONO_ADMIN_API_KEY" \
     ORG_TOKEN="$org_token" \
     PYTHONPATH="{{ justfile_directory() }}/scripts" \
@@ -179,5 +186,6 @@ schemathesis base_url="http://127.0.0.1:8080":
       uvx schemathesis run "{{ base_url }}/openapi.json" \
         --output-sanitize false \
         --max-examples 500 \
+        --phases=examples,coverage,fuzzing \
         --continue-on-failure
 

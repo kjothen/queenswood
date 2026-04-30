@@ -35,15 +35,13 @@
      #(assoc-in % [:system/defs :server :handler] api/app)]]
    (let [config {:record-db (system/instance sys [:fdb :record-db])
                  :record-store (system/instance sys [:fdb :store])}
-         tier-id (:tier-id (system/instance sys [:tiers :micro]))
          base-url (server/http-local-url
                    (system/instance sys [:server :jetty-adapter]))
          org (organizations/new-organization config
                                              "Parties Test Org"
                                              :organization-type-customer
                                              :organization-status-test
-                                             tier-id
-                                             ["GBP"])
+                                             "micro" ["GBP"])
          _ (assert (not (error/anomaly? org)) (str "setup failed: " org))
          org-id (get-in org [:organization :organization-id])
          token (:key-secret org)

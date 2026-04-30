@@ -6,21 +6,20 @@
     [com.repldriven.mono.bank-balance.interface :as balances]
     [com.repldriven.mono.bank-cash-account-product.interface :as products]
     [com.repldriven.mono.bank-party.interface :as parties]
-    [com.repldriven.mono.bank-tier.interface :as tiers]
+    [com.repldriven.mono.bank-policy.interface :as policy]
     [com.repldriven.mono.bank-transaction.interface :as transactions]
 
     [com.repldriven.mono.error.interface :as error :refer [let-nom>]]))
 
-(defn- current-published-version
-  "Returns the highest-version-number `:published` version in a
-  product aggregate, or nil if none. Relies on `get-product`
-  returning versions sorted newest-first."
-  [{:keys [versions]}]
-  (->> versions
-       (filter (fn [v]
-                 (= :cash-account-product-version-status-published
-                    (:status v))))
-       first))
+(defn- get-policies
+  ([txn org-id opts]
+   (or (:policies opts)
+       (policy/get-effective-policies txn {:organization-id org-id})))
+  ([txn org-id account-id opts]
+   (or (:policies opts)
+       (policy/get-effective-policies txn
+                                      {:organization-id org-id
+                                       :account-id account-id}))))
 
 (defn- enrich-account
   [txn opts account]
@@ -38,56 +37,71 @@
               transactions
               (assoc :transactions transactions)))))
 
-(defn open-account
-  "Opens an account within a transaction. Resolves the
-  latest product version and checks it's published,
-  validates currency, validates the party is active, then
-  creates the account with opened status, payment
-  addresses, and balances from the product's
-  balance-products. Returns account map or anomaly."
-  [txn data]
-  (store/transact
-   txn
-   (fn [txn]
-     (let [{:keys [organization-id party-id product-id currency]} data]
-       (let-nom>
-         [tier (tiers/get-org-tier txn organization-id)
-          party (parties/get-party txn organization-id party-id)
-          aggregate (products/get-product txn
-                                          organization-id
-                                          product-id)
-          product (current-published-version aggregate)
-          _ (when (nil? product)
-              (error/reject :cash-account/open
-                            {:message "Product is not published"
-                             :product-id product-id}))
-          account-count (store/count-party-accounts-by-type
-                         txn
-                         organization-id
-                         party-id
-                         (:product-type product))
-          account (domain/opening-account
-                   data
-                   product
-                   party
-                   tier
-                   account-count
-                   (fn [counter]
-                     (store/allocate-payment-address txn counter)))
-          _ (balances/new-balances
-             txn
-             (domain/opening-balances account currency product))
-          _ (store/save-account txn
-                                account
-                                {:account-id (:account-id account)
-                                 :status-after (:account-status account)})]
-         account)))))
+(defn- party->account-type
+  [party]
+  (if (= :party-type-person (:type party))
+    :account-type-personal
+    :account-type-business))
 
-(defn new-account
-  "Opens a cash account with balances. Returns account map
-  or anomaly."
-  [txn data]
-  (open-account txn data))
+(defn- counts
+  "Builds the cash-account aggregates map for the limit checks
+  in `domain/open-account`. Each entry is keyed by the set of
+  dimensions the count is grouped on."
+  [txn org-id product-type account-type currency]
+  (let-nom>
+    [total (store/count-by-org txn org-id)
+     subtotal (store/count-by-org-product-account-type-currency
+               txn
+               org-id
+               product-type
+               account-type
+               currency)]
+    {:cash-account
+     {#{:organization-id} total
+      #{:organization-id :product-type :account-type :currency} subtotal}}))
+
+(defn open-account
+  "Opens a cash account with balances. opts supports
+  `:policies` to override policy resolution."
+  ([txn data]
+   (open-account txn data {}))
+  ([txn data opts]
+   (store/transact
+    txn
+    (fn [txn]
+      (let [{:keys [organization-id party-id product-id currency]} data]
+        (let-nom>
+          [policies (get-policies txn organization-id opts)
+           party (parties/get-party txn organization-id party-id)
+           product (products/get-product txn
+                                         organization-id
+                                         product-id)
+           product-version (products/published-version product)
+           _ (when (nil? product-version)
+               (error/reject :cash-account/open
+                             {:message "Product is not published"
+                              :product-id product-id}))
+           aggregates (counts txn
+                              organization-id
+                              (:product-type product-version)
+                              (party->account-type party)
+                              currency)
+           account (domain/open-account
+                    data
+                    product-version
+                    party
+                    (fn [counter]
+                      (store/allocate-payment-address txn counter))
+                    aggregates
+                    policies)
+           _ (balances/new-balances
+              txn
+              (domain/opening-balances account currency product-version))
+           _ (store/save-account txn
+                                 account
+                                 {:account-id (:account-id account)
+                                  :status-after (:account-status account)})]
+          account))))))
 
 (defn get-account
   "Loads a single cash account, optionally embedding
@@ -136,19 +150,22 @@
   (store/get-account-by-bban txn bban))
 
 (defn close-account
-  "Closes an account. Returns account map or anomaly."
-  [txn data]
-  (store/transact
-   txn
-   (fn [txn]
-     (let [{:keys [organization-id account-id]} data]
-       (let-nom>
-         [tier (tiers/get-org-tier txn organization-id)
-          account (get-account txn organization-id account-id)
-          updated (domain/closing-account tier account)
-          _ (store/save-account txn
-                                updated
-                                {:account-id account-id
-                                 :status-before (:account-status account)
-                                 :status-after (:account-status updated)})]
-         updated)))))
+  "Closes an account. opts supports `:policies` to override
+  policy resolution."
+  ([txn data]
+   (close-account txn data {}))
+  ([txn data opts]
+   (store/transact
+    txn
+    (fn [txn]
+      (let [{:keys [organization-id account-id]} data]
+        (let-nom>
+          [policies (get-policies txn organization-id account-id opts)
+           account (get-account txn organization-id account-id)
+           updated (domain/close-account account policies)
+           _ (store/save-account txn
+                                 updated
+                                 {:account-id account-id
+                                  :status-before (:account-status account)
+                                  :status-after (:account-status updated)})]
+          updated))))))

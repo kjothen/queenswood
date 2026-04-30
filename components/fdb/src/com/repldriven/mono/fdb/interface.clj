@@ -54,9 +54,31 @@
   ([store record-type filters opts]
    (record/query-one-compound store record-type filters opts)))
 
+(defn query-records-by-map-entry
+  "Queries records where a proto map field has at least one
+  entry matching `map-key`/`map-value`. Returns a vector of
+  serialized byte arrays. opts supports :index to pin the
+  planner to a named index."
+  ([store record-type map-field map-key map-value]
+   (record/query-by-map-entry store record-type map-field map-key map-value))
+  ([store record-type map-field map-key map-value opts]
+   (record/query-by-map-entry store
+                              record-type
+                              map-field
+                              map-key
+                              map-value
+                              opts)))
+
 (defn count-records
   [store index-name key]
   (record/count-records store index-name key))
+
+(defn count-groups
+  "Counts distinct grouping-key entries in a COUNT index whose
+  group key starts with `prefix` — one per group, not the sum
+  of per-group counts."
+  [store index-name prefix]
+  (record/count-groups store index-name prefix))
 
 
 (defn scan-records [store opts] (record/scan store opts))

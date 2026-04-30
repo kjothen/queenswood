@@ -100,22 +100,42 @@
         :before before
         :after after}))))
 
-(defn count-party-accounts-by-type
-  "Returns the count of accounts matching the given
-  org-id, party-id and product-type. Uses the
-  org_party_product_type_count count index."
-  [txn org-id party-id product-type]
+(defn count-by-org
+  "Returns the count of accounts for an organization. Uses
+  the CashAccount_count_by_org count index."
+  [txn org-id]
   (fdb/transact txn
                 (fn [txn]
-                  (fdb/count-records
-                   (fdb/open txn store-name)
-                   "CashAccount_count_by_org_party_product_type"
-                   [org-id
-                    party-id
-                    (.getNumber
-                     (schema/product-type->pb-enum product-type))]))
-                :cash-account/count-party-accounts-by-type
-                "Failed to count party accounts by type"))
+                  (fdb/count-records (fdb/open txn store-name)
+                                     "CashAccount_count_by_org"
+                                     org-id))
+                :cash-account/count-by-org
+                {:message "Failed to count accounts by org"
+                 :organization-id org-id}))
+
+(defn count-by-org-product-account-type-currency
+  "Returns the count of accounts for an organization,
+  product-type, account-type, and currency. Uses the
+  CashAccount_count_by_org_product_account_type_currency
+  count index."
+  [txn org-id product-type account-type currency]
+  (fdb/transact
+   txn
+   (fn [txn]
+     (fdb/count-records
+      (fdb/open txn store-name)
+      "CashAccount_count_by_org_product_account_type_currency"
+      [org-id
+       (schema/product-type->int product-type)
+       (schema/account-type->int account-type)
+       currency]))
+   :cash-account/count-by-org-product-account-type-currency
+   {:message
+    "Failed to count accounts by org/product/account type/currency"
+    :organization-id org-id
+    :product-type product-type
+    :account-type account-type
+    :currency currency}))
 
 (defn get-account-by-type
   "Returns the first account matching the given org-id and

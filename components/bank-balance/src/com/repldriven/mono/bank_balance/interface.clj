@@ -5,16 +5,21 @@
 
 (defn new-balance
   "Creates a new balance. Rejects if the balance already
-  exists. Returns the balance or anomaly."
-  [txn data]
-  (core/new-balance txn data))
+  exists. opts supports `:policies` to override policy
+  resolution."
+  ([txn data]
+   (core/new-balance txn data))
+  ([txn data opts]
+   (core/new-balance txn data opts)))
 
 (defn new-balances
   "Creates multiple balances in a single transaction.
-  Short-circuits on the first anomaly. Returns the
-  created balances or anomaly."
-  [txn data]
-  (core/new-balances txn data))
+  Short-circuits on the first anomaly. opts supports
+  `:policies` to override policy resolution."
+  ([txn data]
+   (core/new-balances txn data))
+  ([txn data opts]
+   (core/new-balances txn data opts)))
 
 (defn get-balance
   "Loads a balance by account-id, balance-type, currency,
@@ -36,9 +41,15 @@
 
 (defn apply-legs
   "Applies all legs to balances within a transaction.
-  Returns nil or anomaly."
-  [txn legs]
-  (core/apply-legs txn legs))
+  `transaction-type` is required (e.g.
+  `:transaction-type-internal-transfer`) and is used by the
+  computed `:available` limit's `transaction-type` filter to
+  scope which limits fire. opts supports `:policies` to
+  override policy resolution."
+  ([txn legs transaction-type]
+   (core/apply-legs txn legs transaction-type))
+  ([txn legs transaction-type opts]
+   (core/apply-legs txn legs transaction-type opts)))
 
 (defn set-carry
   "Updates the :credit-carry on the balance identified by

@@ -40,8 +40,8 @@
           payment-transaction (domain/internal-payment->transaction data)
           transaction (transactions/record-transaction txn
                                                        payment-transaction)
-          {:keys [transaction-id legs]} transaction
-          _ (balances/apply-legs txn legs)
+          {:keys [transaction-id transaction-type legs]} transaction
+          _ (balances/apply-legs txn legs transaction-type)
           payment (domain/new-internal-payment data transaction-id)
           _ (store/save-internal-payment txn payment)]
          payment)))))
@@ -109,8 +109,9 @@
                      transaction+legs (transactions/record-transaction
                                        txn
                                        transaction)
-                     {:keys [transaction-id legs]} transaction+legs
-                     _ (balances/apply-legs txn legs)
+                     {:keys [transaction-id transaction-type legs]}
+                     transaction+legs
+                     _ (balances/apply-legs txn legs transaction-type)
                      payment (domain/new-outbound-payment data transaction-id)
                      _ (store/save-outbound-payment txn payment)]
                     payment)))]

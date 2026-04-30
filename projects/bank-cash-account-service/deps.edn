@@ -16,7 +16,7 @@
  :deps
  {component/bank-balance {:local/root "../../components/bank-balance"}
   component/bank-api-key {:local/root "../../components/bank-api-key"}
-  component/bank-tier {:local/root "../../components/bank-tier"}
+  component/bank-policy {:local/root "../../components/bank-policy"}
   component/bank-cash-account {:local/root "../../components/bank-cash-account"}
   component/bank-cash-account-product
   {:local/root "../../components/bank-cash-account-product"}

@@ -18,7 +18,7 @@
   [:map {:closed true :json-schema/example examples/CreateOrganizationRequest}
    [:name [:ref "Name"]]
    [:status [:ref "OrganizationStatus"]]
-   [:tier-id [:ref "TierId"]]
+   [:tier [:ref "Name"]]
    [:currencies [:unique-vector {:min 1} [:ref "Currency"]]]])
 
 (def Organization
@@ -27,7 +27,6 @@
    [:name [:ref "Name"]]
    [:type [:ref "OrganisationType"]]
    [:status [:ref "OrganizationStatus"]]
-   [:tier-id [:ref "TierId"]]
    [:party [:ref "Party"]]
    [:accounts [:vector [:ref "CashAccount"]]]
    [:api-key [:ref "ApiKey"]]
@@ -44,7 +43,6 @@
    [:name [:ref "Name"]]
    [:type [:ref "OrganisationType"]]
    [:status [:ref "OrganizationStatus"]]
-   [:tier-id [:ref "TierId"]]
    [:party [:ref "Party"]]
    [:accounts [:vector [:ref "CashAccount"]]]
    [:api-key [:ref "ApiKey"]]

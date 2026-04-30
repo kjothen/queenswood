@@ -121,13 +121,23 @@
     (set-primary-key b record-type primary-key)))
 
 (defn- key-expression
-  [{:strs [field fields fan-out]}]
-  (if fields
-    (Key$Expressions/concatenateFields ^java.util.List fields)
-    (Key$Expressions/field field
-                           (if fan-out
-                             KeyExpression$FanType/FanOut
-                             KeyExpression$FanType/None))))
+  [{:strs [field fields fan-out nest]}]
+  (cond
+   fields
+   (Key$Expressions/concatenateFields ^java.util.List fields)
+
+   nest
+   (.nest (Key$Expressions/field field
+                                 (if fan-out
+                                   KeyExpression$FanType/FanOut
+                                   KeyExpression$FanType/None))
+          (key-expression nest))
+
+   :else
+   (Key$Expressions/field field
+                          (if fan-out
+                            KeyExpression$FanType/FanOut
+                            KeyExpression$FanType/None))))
 
 (def ^:private index-type->str {"count" IndexTypes/COUNT})
 

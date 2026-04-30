@@ -1,3 +1,0 @@
-capability: !keyword policy-capability-outbound-payments
-effect: !keyword policy-effect-allow
-reason: "Policy prevents outbound payments"

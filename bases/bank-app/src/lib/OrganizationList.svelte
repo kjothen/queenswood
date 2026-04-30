@@ -14,12 +14,14 @@
   let modalOpen = $state(false);
   let orgName = $state("Galactic Bank");
   let orgStatus = $state("test");
-  let tierId = $state("");
+  let tier = $state("");
   let currencies = $state("GBP");
   let creating = $state(false);
 
-  let tiersById = $derived(
-    Object.fromEntries((tiers ?? []).map(t => [t["tier-id"], t]))
+  // The "platform" tier is always-on (loaded as the baseline by the
+  // server) — hide it from the create-org dropdown.
+  let selectableTiers = $derived(
+    (tiers ?? []).filter(t => t.tier !== "platform")
   );
   let accruing = $state({});
   let capitalizing = $state({});
@@ -84,8 +86,8 @@
       const res = await list_tiers();
       if (res["http-status"] >= 200 && res["http-status"] < 300) {
         tiers = res.body.tiers ?? [];
-        if (!tierId && tiers.length > 0) {
-          tierId = tiers[0]["tier-id"];
+        if (!tier) {
+          tier = selectableTiers[0]?.tier ?? "";
         }
       }
     } catch (err) {
@@ -95,15 +97,15 @@
 
   async function handleCreate(e) {
     e.preventDefault();
-    if (!orgName.trim() || !tierId) return;
+    if (!orgName.trim() || !tier) return;
     creating = true;
     try {
       const currencyList = currencies.split(",").map(c => c.trim().toUpperCase()).filter(c => c);
-      const res = await create_organization(orgName.trim(), orgStatus, tierId, currencyList);
+      const res = await create_organization(orgName.trim(), orgStatus, tier, currencyList);
       if (res["http-status"] >= 200 && res["http-status"] < 300) {
         orgName = "";
         orgStatus = "test";
-        tierId = tiers[0]?.["tier-id"] ?? "";
+        tier = selectableTiers[0]?.tier ?? "";
         currencies = "GBP";
         modalOpen = false;
         showToast?.({ type: "success", message: "Organization created" });
@@ -198,12 +200,12 @@
       </label>
       <label>
         Tier
-        <select bind:value={tierId} disabled={creating || tiers.length === 0}>
-          {#if tiers.length === 0}
+        <select bind:value={tier} disabled={creating || selectableTiers.length === 0}>
+          {#if selectableTiers.length === 0}
             <option value="">No tiers available</option>
           {:else}
-            {#each tiers as tier}
-              <option value={tier["tier-id"]}>{tier.name}</option>
+            {#each selectableTiers as t}
+              <option value={t.tier}>{t.tier}</option>
             {/each}
           {/if}
         </select>
@@ -219,7 +221,7 @@
         />
       </label>
 
-      <button type="submit" disabled={creating || !orgName.trim() || !tierId}>
+      <button type="submit" disabled={creating || !orgName.trim() || !tier}>
         {creating ? "Creating..." : "Create Organization"}
       </button>
     </form>
@@ -255,7 +257,6 @@
         <th>ID</th>
         <th>Name</th>
         <th>Type</th>
-        <th>Tier</th>
         <th>Status</th>
         <th>Created</th>
         <th>Updated</th>
@@ -264,7 +265,7 @@
     </thead>
     <tbody>
       {#if organizations.length === 0 && !loading}
-        <tr><td colspan="8" class="empty">No organizations</td></tr>
+        <tr><td colspan="7" class="empty">No organizations</td></tr>
       {/if}
       {#each organizations as org}
         <tr>
@@ -273,11 +274,6 @@
           <td>
             <span class="type-badge" class:internal={org.type === "internal"}>
               {org.type}
-            </span>
-          </td>
-          <td>
-            <span class="tier-badge" title={org["tier-id"] ?? ""}>
-              {tiersById[org["tier-id"]]?.name ?? org["tier-id"] ?? ""}
             </span>
           </td>
           <td>

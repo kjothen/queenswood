@@ -1,4 +1,0 @@
-type: !keyword limit-type-max-accounts
-kind: { product-type: !keyword product-type-current }
-value: 10000
-reason: "MUST not exceed 10,000 current accounts on standard tier"

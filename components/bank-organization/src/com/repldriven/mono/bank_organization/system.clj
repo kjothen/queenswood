@@ -5,20 +5,21 @@
     [com.repldriven.mono.system.interface :as system]))
 
 (def ^:private organization
-  {:system/start (fn [{:system/keys [config instance]}]
-                   (or instance
-                       (let [{:keys [name type status tier currencies]} config]
-                         (core/new-organization
-                          {:record-db (:record-db config)
-                           :record-store (:record-store config)}
-                          name
-                          type
-                          (or status :organization-status-test)
-                          (:tier-id tier)
-                          currencies))))
+  {:system/start
+   (fn [{:system/keys [config instance]}]
+     (or instance
+         (let [{:keys [name type status tier policy currencies]} config]
+           (core/new-organization {:record-db (:record-db config)
+                                   :record-store (:record-store config)}
+                                  name
+                                  type
+                                  (or status :organization-status-test)
+                                  tier
+                                  currencies
+                                  {:policies [policy]}))))
    :system/config {:record-db system/required-component
                    :record-store system/required-component
-                   :tier system/required-component}
+                   :policy system/required-component}
    :system/instance-schema map?})
 
 (def ^:private internal-account-id

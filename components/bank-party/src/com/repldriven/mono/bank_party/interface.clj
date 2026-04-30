@@ -10,10 +10,14 @@
     [com.repldriven.mono.bank-schema.interface :as schema]))
 
 (defn new-party
-  "Creates a party. Returns party map or anomaly."
-  [txn data]
-  (let-nom> [pb (core/new-party txn data)]
-    (schema/pb->Party pb)))
+  "Creates a party. Returns party map or anomaly. opts
+  supports `:policies` to override policy resolution for the
+  capability check."
+  ([txn data]
+   (new-party txn data {}))
+  ([txn data opts]
+   (let-nom> [pb (core/new-party txn data opts)]
+     (schema/pb->Party pb))))
 
 (defn get-party
   "Loads a party by org-id and party-id. Returns party

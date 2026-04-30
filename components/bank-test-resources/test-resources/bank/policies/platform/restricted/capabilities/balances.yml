@@ -1,0 +1,10 @@
+- effect: !keyword effect-allow
+  reason: "Allow creating balances"
+  kind:
+    balance:
+      action: !keyword balance-action-create
+- effect: !keyword effect-allow
+  reason: "Allow applying transaction legs to balances"
+  kind:
+    balance:
+      action: !keyword balance-action-apply

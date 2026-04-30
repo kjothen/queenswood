@@ -12,14 +12,14 @@
     [com.repldriven.mono.schemas.person_identification :as
      person-identification]
     [com.repldriven.mono.schemas.payee_check :as payee-check]
-    [com.repldriven.mono.schemas.tiers :as tiers]
+    [com.repldriven.mono.schemas.policies :as policies]
     [com.repldriven.mono.schemas.transactions :as transactions]
     [com.repldriven.mono.schemas.types :as types]
     [protojure.protobuf :as proto])
   (:import
     (com.repldriven.mono.schemas.balances BalanceProto$Balance)
     (com.repldriven.mono.schemas.cash_account_products
-     CashAccountProductProto$CashAccountProductVersion)
+     CashAccountProductProto$CashAccountProduct)
     (com.repldriven.mono.schemas.types ProductTypeProto$ProductType)
     (com.repldriven.mono.schemas.cash_accounts
      CashAccountProto$CashAccount
@@ -43,7 +43,9 @@
      OutboundPaymentProto$OutboundPayment)
     (com.repldriven.mono.schemas.payee_check
      PayeeCheckProto$PayeeCheck)
-    (com.repldriven.mono.schemas.tiers TierProto$Tier)
+    (com.repldriven.mono.schemas.policies
+     PolicyProto$Policy
+     PolicyProto$PolicyBinding)
     (com.repldriven.mono.schemas.transactions
      TransactionProto$Transaction
      TransactionProto$TransactionLeg)))
@@ -65,6 +67,8 @@
   (ProductTypeProto$ProductType/forNumber
    (product-type->int product-type)))
 
+(def account-type->int cash-accounts/AccountType-label2val)
+
 
 (def organization-type->int organizations/OrganizationType-label2val)
 
@@ -75,23 +79,23 @@
   (OrganizationProto$OrganizationType/forNumber
    (organization-type->int org-type)))
 
-(defn pb->CashAccountProductVersion
+(defn pb->CashAccountProduct
   "Wraps the generated converter to strip the proto2 default `\"\"`
   emitted for an unset `optional string valid_from`, so callers see
   `:valid-from` only when it carries a real ISO date."
   [input]
-  (let [version (cash-account-products/pb->CashAccountProductVersion input)]
+  (let [version (cash-account-products/pb->CashAccountProduct input)]
     (cond-> version
             (not (seq (:valid-from version)))
             (dissoc :valid-from))))
 
-(defn CashAccountProductVersion->pb
+(defn CashAccountProduct->pb
   [m]
-  (proto/->pb (cash-account-products/new-CashAccountProductVersion m)))
-(defn CashAccountProductVersion->java
+  (proto/->pb (cash-account-products/new-CashAccountProduct m)))
+(defn CashAccountProduct->java
   [m]
-  (CashAccountProductProto$CashAccountProductVersion/parseFrom
-   (CashAccountProductVersion->pb m)))
+  (CashAccountProductProto$CashAccountProduct/parseFrom
+   (CashAccountProduct->pb m)))
 
 (def pb->ApiKey keys/pb->ApiKey)
 (defn ApiKey->pb [m] (proto/->pb (keys/new-ApiKey m)))
@@ -206,42 +210,6 @@
   (OrganizationChangelogProto$OrganizationChangelog/parseFrom
    (OrganizationChangelog->pb m)))
 
-(defn- unwrap-limit-kind
-  "Unwraps the protojure LimitKind oneof — the record's
-  :kind field holds the variant map (e.g.
-  {:product-type :product-type-settlement}). Callers see
-  the variant directly."
-  [limit]
-  (update limit
-          :kind
-          (fn [kind-record]
-            (when kind-record
-              (:kind kind-record)))))
-
-(defn- wrap-limit-kind
-  "Wraps a flat kind map into the {:kind ...} shape that
-  the protojure LimitKind oneof expects."
-  [limit]
-  (update limit
-          :kind
-          (fn [kind]
-            (when kind
-              {:kind kind}))))
-
-(defn pb->Tier
-  [input]
-  (let [tier (tiers/pb->Tier input)]
-    (update tier :limits (fn [limits] (mapv unwrap-limit-kind limits)))))
-
-(defn Tier->pb
-  [m]
-  (let [tier (update m :limits (fn [limits] (mapv wrap-limit-kind limits)))]
-    (proto/->pb (tiers/new-Tier tier))))
-
-(defn Tier->java
-  [m]
-  (TierProto$Tier/parseFrom (Tier->pb m)))
-
 (def pb->PayeeCheck payee-check/pb->PayeeCheck)
 (defn PayeeCheck->pb
   [m]
@@ -249,3 +217,13 @@
 (defn PayeeCheck->java
   [m]
   (PayeeCheckProto$PayeeCheck/parseFrom (PayeeCheck->pb m)))
+
+(def pb->Policy policies/pb->Policy)
+(defn Policy->pb [m] (proto/->pb (policies/new-Policy m)))
+(defn Policy->java [m] (PolicyProto$Policy/parseFrom (Policy->pb m)))
+
+(def pb->PolicyBinding policies/pb->PolicyBinding)
+(defn PolicyBinding->pb [m] (proto/->pb (policies/new-PolicyBinding m)))
+(defn PolicyBinding->java
+  [m]
+  (PolicyProto$PolicyBinding/parseFrom (PolicyBinding->pb m)))

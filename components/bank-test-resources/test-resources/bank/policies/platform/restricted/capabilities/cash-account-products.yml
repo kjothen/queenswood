@@ -1,0 +1,10 @@
+- effect: !keyword effect-allow
+  reason: "Allow drafting cash account products"
+  kind:
+    cash-account-product:
+      action: !keyword cash-account-product-action-draft
+- effect: !keyword effect-allow
+  reason: "Allow publishing cash account products"
+  kind:
+    cash-account-product:
+      action: !keyword cash-account-product-action-publish

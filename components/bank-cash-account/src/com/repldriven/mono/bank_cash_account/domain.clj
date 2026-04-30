@@ -1,13 +1,26 @@
 (ns com.repldriven.mono.bank-cash-account.domain
   (:refer-clojure :exclude [name])
   (:require
-    [com.repldriven.mono.bank-cash-account.restriction :as restriction]
     [com.repldriven.mono.bank-cash-account.validation :as validation]
 
+    [com.repldriven.mono.bank-policy.interface :as policy]
     [com.repldriven.mono.error.interface :as error :refer [let-nom>]]
     [com.repldriven.mono.utility.interface :as utility]))
 
 (def default-sort-code "040004")
+
+(defn- party->account-type
+  [party]
+  (if (= :party-type-person (:type party))
+    :account-type-personal
+    :account-type-business))
+
+(defn- check-capability
+  [action account-type policies]
+  (policy/check-capability policies
+                           :cash-account
+                           {:action action
+                            :account-type account-type}))
 
 (defn- scan->bban
   [{:keys [sort-code account-number]}]
@@ -36,28 +49,43 @@
               []
               allowed-payment-address-schemes))))
 
-(defn- party->account-type
-  [party]
-  (if (= :party-type-person (:type party))
-    :account-type-personal
-    :account-type-business))
-
-(defn opening-account
-  "Creates a new account map with status opened and payment
-  addresses. Validates currency against version, party
-  is active, and account count is within tier limits.
-  Derives account-type from the party type."
-  [data product party tier account-count address-fountain-fn]
+(defn open-account
+  "Requires the `:cash-account-action-open` capability and
+  the per-org / per-(org, product-type, account-type) count
+  limits. Validates currency against version and party is
+  active. Derives account-type from the party type."
+  [data product party address-fountain-fn aggregates policies]
   (let [{:keys [organization-id party-id product-id currency name]} data
-        {:keys [version-id product-type]} product]
+        {:keys [version-id product-type]} product
+        account-type (party->account-type party)]
     (let-nom>
       [_ (validation/valid-product? product)
        _ (validation/valid-currency? currency product)
        _ (validation/valid-party? party)
-       _ (restriction/policy-account-opening tier)
-       _ (restriction/limit-max-accounts tier product-type account-count)
+       _ (check-capability :cash-account-action-open
+                           account-type
+                           policies)
+       _ (policy/check-limit
+          policies
+          :cash-account
+          {:aggregate :count
+           :window :instant
+           :value (inc (get-in aggregates
+                               [:cash-account #{:organization-id}]))})
+       _ (policy/check-limit
+          policies
+          :cash-account
+          {:aggregate :count
+           :window :instant
+           :product-type product-type
+           :account-type account-type
+           :currency currency
+           :value (inc (get-in aggregates
+                               [:cash-account
+                                #{:organization-id :product-type
+                                  :account-type :currency}]))})
        payment-addresses (new-addresses product address-fountain-fn)]
-      (let [now (System/currentTimeMillis)
+      (let [now (utility/now)
             bban (some (fn [{:keys [scan]}] (when scan (scan->bban scan)))
                        payment-addresses)]
         {:organization-id organization-id
@@ -68,7 +96,7 @@
          :name name
          :account-id (utility/generate-id "acc")
          :product-type product-type
-         :account-type (party->account-type party)
+         :account-type account-type
          :account-status :cash-account-status-opening
          :payment-addresses payment-addresses
          :bban bban
@@ -93,18 +121,20 @@
   [account]
   (assoc account
          :account-status :cash-account-status-opened
-         :updated-at (System/currentTimeMillis)))
+         :updated-at (utility/now)))
 
-(defn closing-account
-  [tier account]
+(defn close-account
+  [account policies]
   (let-nom>
-    [_ (restriction/policy-account-closing tier)]
+    [_ (check-capability :cash-account-action-close
+                         (:account-type account)
+                         policies)]
     (assoc account
            :account-status :cash-account-status-closing
-           :updated-at (System/currentTimeMillis))))
+           :updated-at (utility/now))))
 
 (defn closed-account
   [account]
   (assoc account
          :account-status :cash-account-status-closed
-         :updated-at (System/currentTimeMillis)))
+         :updated-at (utility/now)))

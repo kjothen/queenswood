@@ -37,5 +37,7 @@
    (fn [txn]
      (let-nom>
        [result (record txn data)
-        _ (balances/apply-legs txn (:legs result))]
+        _ (balances/apply-legs txn
+                               (:legs result)
+                               (:transaction-type result))]
        result))))

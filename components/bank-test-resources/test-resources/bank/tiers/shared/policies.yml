@@ -1,5 +1,0 @@
-- !include bank/tiers/shared/policies/account-close.yml
-- !include bank/tiers/shared/policies/account-open.yml
-- !include bank/tiers/shared/policies/payment-inbound.yml
-- !include bank/tiers/shared/policies/payment-internal.yml
-- !include bank/tiers/shared/policies/payment-outbound.yml

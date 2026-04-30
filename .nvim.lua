@@ -1,34 +1,9 @@
 -- .nvim.lua
 ---@diagnostic disable: undefined-global
-local lspconfig = require("lspconfig")
 
--- Customize yamlls settings
-lspconfig.yamlls.setup({
-	settings = {
-		yaml = {
-			customTags = {
-				"!env",
-				"!keyword",
-				"!keywords",
-				"!include",
-				"!port",
-				"!profile mapping",
-				"!strs mapping",
-
-				"!pulsar/access-mode",
-				"!pulsar/crypto-failure-action",
-				"!pulsar/message-id",
-				"!pulsar/schema",
-				"!pulsar/subscription-type",
-
-				"!system/component mapping",
-				"!system/local-ref",
-				"!system/ref",
-				"!system/required-component",
-			},
-		},
-	},
-})
+-- yamlls customTags for this project's YAML shorthand live globally at
+-- ~/.config/nvim/lua/plugins/yamlls.lua — LazyVim's nvim-lspconfig
+-- would otherwise clobber an in-project lspconfig.yamlls.setup call.
 
 -- Format Clojure files with zprint on save (using fast babashka script)
 vim.api.nvim_create_autocmd("BufWritePost", {

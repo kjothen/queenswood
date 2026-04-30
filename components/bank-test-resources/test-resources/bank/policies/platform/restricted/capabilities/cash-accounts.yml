@@ -1,0 +1,10 @@
+- effect: !keyword effect-allow
+  reason: "Allow opening cash accounts"
+  kind:
+    cash-account:
+      action: !keyword cash-account-action-open
+- effect: !keyword effect-allow
+  reason: "Allow closing cash accounts"
+  kind:
+    cash-account:
+      action: !keyword cash-account-action-close

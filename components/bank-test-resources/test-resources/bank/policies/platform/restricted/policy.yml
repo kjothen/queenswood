@@ -1,0 +1,32 @@
+name: Platform policy
+description: Platform policy - all capabilities and safety limits
+enabled: true
+labels: !strs
+  tier: platform
+category: !keyword policy-category-restricted
+capabilities: !concat
+  - !include bank/policies/platform/restricted/capabilities/api-keys.yml
+  - !include bank/policies/platform/restricted/capabilities/balances.yml
+  - !include bank/policies/platform/restricted/capabilities/cash-account-products.yml
+  - !include bank/policies/platform/restricted/capabilities/cash-accounts.yml
+  - !include bank/policies/platform/restricted/capabilities/idvs.yml
+  - !include bank/policies/platform/restricted/capabilities/interest.yml
+  - !include bank/policies/platform/restricted/capabilities/organizations.yml
+  - !include bank/policies/platform/restricted/capabilities/parties.yml
+  - !include bank/policies/platform/restricted/capabilities/payee-checks.yml
+  - !include bank/policies/platform/restricted/capabilities/payments.yml
+  - !include bank/policies/platform/restricted/capabilities/policies.yml
+  - !include bank/policies/platform/restricted/capabilities/transactions.yml
+limits: !concat
+  - !include bank/policies/platform/restricted/limits/api-keys.yml
+  - !include bank/policies/platform/restricted/limits/balances.yml
+  - !include bank/policies/platform/restricted/limits/cash-account-products.yml
+  - !include bank/policies/platform/restricted/limits/cash-accounts.yml
+  - !include bank/policies/platform/restricted/limits/idvs.yml
+  - !include bank/policies/platform/restricted/limits/interest.yml
+  - !include bank/policies/platform/restricted/limits/organizations.yml
+  - !include bank/policies/platform/restricted/limits/parties.yml
+  - !include bank/policies/platform/restricted/limits/payee-checks.yml
+  - !include bank/policies/platform/restricted/limits/payments.yml
+  - !include bank/policies/platform/restricted/limits/policies.yml
+  - !include bank/policies/platform/restricted/limits/transactions.yml

@@ -11,15 +11,25 @@
 
   `org-status` is an `:organization-status-*` keyword; the
   minted API key's prefix (`sk_live.` / `sk_test.`) is
-  chosen from it. `tier-id` identifies the tier whose
-  policies and limits apply."
-  [txn org-name org-type org-status tier-id currencies]
-  (core/new-organization txn
-                         org-name
-                         org-type
-                         org-status
-                         tier-id
-                         currencies))
+  chosen from it. `tier` is a string naming the tier whose
+  `tier=<name>`-labelled policies are bound to the new
+  organization. opts supports `:policies` to override the
+  platform policies used for the capability check."
+  ([txn org-name org-type org-status tier currencies]
+   (core/new-organization txn
+                          org-name
+                          org-type
+                          org-status
+                          tier
+                          currencies))
+  ([txn org-name org-type org-status tier currencies opts]
+   (core/new-organization txn
+                          org-name
+                          org-type
+                          org-status
+                          tier
+                          currencies
+                          opts)))
 
 (defn get-organization
   "Loads an organization by id. Returns the organization

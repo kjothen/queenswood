@@ -10,7 +10,7 @@
     [com.repldriven.mono.bank-cash-account-product.interface
      :as products]
     [com.repldriven.mono.bank-party.interface :as party]
-    [com.repldriven.mono.bank-tier.interface :as tiers]
+    [com.repldriven.mono.bank-policy.interface :as policy]
 
     [com.repldriven.mono.error.interface :as error :refer [let-nom>]]))
 
@@ -42,7 +42,7 @@
 (defn- open-accounts
   "Opens one cash account per currency. Returns vector of
   accounts or anomaly."
-  [txn org-id party-id product-id product-name currencies]
+  [txn org-id party-id product-id product-name currencies policies]
   (reduce (fn [acc currency]
             (let [result (cash-accounts/new-account
                           txn
@@ -50,12 +50,27 @@
                            :party-id party-id
                            :product-id product-id
                            :name product-name
-                           :currency currency})]
+                           :currency currency}
+                          {:policies policies})]
               (if (error/anomaly? result)
                 (reduced result)
                 (conj acc result))))
           []
           currencies))
+
+(defn- bind-policies
+  "Binds each policy to the organization. Returns nil or
+  the first anomaly encountered."
+  [txn org-id policies]
+  (reduce (fn [_ {:keys [policy-id]}]
+            (let [result (policy/new-binding
+                          txn
+                          {:policy-id policy-id
+                           :target {:kind {:organization
+                                           {:organization-id org-id}}}})]
+              (if (error/anomaly? result) (reduced result) nil)))
+          nil
+          policies))
 
 (defn- enrich-accounts
   "Attaches balances to each account. Returns enriched
@@ -122,58 +137,94 @@
   [txn org-type]
   (store/get-organizations-by-type txn org-type))
 
+(defn- counts
+  "Builds the organization aggregates map for the limit checks
+  in `domain/new-organization`. Each entry is keyed by the set
+  of dimensions the count is grouped on."
+  [txn org-type]
+  (let-nom>
+    [total (store/count-organizations-by-type txn org-type)]
+    {:organization {#{:type} total}}))
+
 (defn new-organization
-  "Creates an organization with API key, party,
-  product, and one cash account per currency. Returns
-  map or anomaly."
-  [txn org-name org-type org-status tier-id currencies]
-  (store/transact
-   txn
-   (fn [txn]
-     (let-nom>
-       [tier (tiers/get-tier txn tier-id)
+  "Creates an organization with API key, party, product, and
+  one cash account per currency. Capability and limit checks
+  use the effective platform policies; the chosen `tier` (a
+  string identifying a `tier=<name>` policy label) selects the
+  tier-specific policies that get bound to the new
+  organization. opts supports `:policies` to override the
+  platform policies used for the checks."
+  ([txn org-name org-type org-status tier currencies]
+   (new-organization txn
+                     org-name
+                     org-type
+                     org-status
+                     tier
+                     currencies
+                     {}))
+  ([txn org-name org-type org-status tier currencies opts]
+   (store/transact
+    txn
+    (fn [txn]
+      (let-nom>
+        [policies (or (:policies opts)
+                      (policy/get-effective-policies txn {}))
+         tier-policies (if (some? tier)
+                         (policy/get-policies-by-tier txn tier)
+                         [])
+         aggregates (counts txn org-type)
+         org (domain/new-organization org-name
+                                      org-type
+                                      org-status
+                                      aggregates
+                                      policies)
+         org-id (:organization-id org)
 
-        org-count (store/count-organizations-by-type txn org-type)
-        org (domain/new-organization org-name
-                                     org-type
-                                     org-status
-                                     tier
-                                     org-count)
-        org-id (:organization-id org)
+         {:keys [api-key key-secret]} (bank-api-key/new-api-key
+                                       txn
+                                       org-id
+                                       org-status
+                                       "default"
+                                       {:policies policies})
 
-        {:keys [api-key key-secret]} (bank-api-key/new-api-key org-id
-                                                               org-status
-                                                               "default")
+         _ (store/create txn org api-key)
 
-        _ (store/create txn org api-key)
+         {:keys [party-id]} (party/new-party
+                             txn
+                             {:organization-id org-id
+                              :type (org-type->party-type org-type)
+                              :display-name org-name}
+                             {:policies policies})
 
-        {:keys [party-id]} (party/new-party
-                            txn
-                            {:organization-id org-id
-                             :type (org-type->party-type org-type)
-                             :display-name org-name})
+         version (products/new-product
+                  txn
+                  org-id
+                  {:name (org-type->product-name org-type)
+                   :product-type (org-type->product-type org-type)
+                   :balance-sheet-side :balance-sheet-side-liability
+                   :allowed-currencies currencies
+                   :allowed-payment-address-schemes
+                   domain/allowed-payment-address-schemes
+                   :balance-products (org-type->balance-products org-type)}
+                  {:policies policies})
+         product-id (:product-id version)
+         _ (products/publish txn
+                             org-id
+                             product-id
+                             (:version-id version)
+                             {:policies policies})
 
-        version (products/new-product
-                 txn
-                 org-id
-                 {:name (org-type->product-name org-type)
-                  :product-type (org-type->product-type org-type)
-                  :balance-sheet-side :balance-sheet-side-liability
-                  :allowed-currencies currencies
-                  :allowed-payment-address-schemes
-                  domain/allowed-payment-address-schemes
-                  :balance-products (org-type->balance-products org-type)})
-        product-id (:product-id version)
-        _ (products/publish txn org-id product-id (:version-id version))
+         _ (open-accounts txn
+                          org-id
+                          party-id
+                          product-id
+                          (org-type->product-name org-type)
+                          currencies
+                          policies)
 
-        _ (open-accounts txn
-                         org-id
-                         party-id
-                         product-id
-                         (org-type->product-name org-type)
-                         currencies)
+         _ (bind-policies txn org-id tier-policies)
 
-        result (get-organization txn org key-secret)]
-       result))
-   :organization/create
-   "Failed to create organization"))
+         result (get-organization txn org key-secret)]
+        result))
+    :organization/create
+    "Failed to create organization")))
