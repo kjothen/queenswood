@@ -88,9 +88,6 @@ _record-types: !strs &record-types
   policy-bindings:
     record-type: PolicyBinding
     indexes: []
-  tiers:
-    record-type: Tier
-    indexes: []
   transaction-legs:
     record-type: TransactionLeg
     primary-key: [account_id, transaction_id, leg_id]
