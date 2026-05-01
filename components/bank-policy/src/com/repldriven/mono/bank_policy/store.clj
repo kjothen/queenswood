@@ -3,12 +3,28 @@
     [com.repldriven.mono.bank-schema.interface :as schema]
 
     [com.repldriven.mono.error.interface :as error]
-    [com.repldriven.mono.fdb.interface :as fdb]))
+    [com.repldriven.mono.fdb.interface :as fdb]
+    [com.repldriven.mono.utility.interface :as util]))
 
 (def ^:private store-name "policies")
 (def ^:private bindings-store-name "policy-bindings")
 
 (def transact fdb/transact)
+
+(defn- pb->Policy
+  "Reads a policy from FDB and normalises its proto records to plain
+  Clojure maps. Downstream code (`bank-policy/match`, etc.) compares
+  via `=`, which treats records and content-equal maps as unequal —
+  so the round-trip leaves nested records (e.g. `ComputedBalance`
+  inside a `BalanceLimitFilter`) silently mismatching the runtime
+  request. Strip records here once at the read boundary."
+  [record]
+  (util/record->map (schema/pb->Policy record)))
+
+(defn- pb->PolicyBinding
+  "Same as `pb->Policy` for `PolicyBinding`."
+  [record]
+  (util/record->map (schema/pb->PolicyBinding record)))
 
 (defn save-policy
   "Saves a policy. Returns nil or anomaly."
@@ -30,7 +46,7 @@
    (fn [txn]
      (if-let [record (fdb/load-record (fdb/open txn store-name)
                                       policy-id)]
-       (schema/pb->Policy record)
+       (pb->Policy record)
        (error/reject :policy/not-found
                      {:message "Policy not found"
                       :policy-id policy-id})))
@@ -57,7 +73,7 @@
                      :before before
                      :limit limit
                      :order order})]
-        {:items (mapv schema/pb->Policy (:records result))
+        {:items (mapv pb->Policy (:records result))
          :before (:before result)
          :after (:after result)}))
     :policy/list
@@ -71,7 +87,7 @@
   (fdb/transact
    txn
    (fn [txn]
-     (mapv schema/pb->Policy
+     (mapv pb->Policy
            (fdb/query-records-by-map-entry (fdb/open txn store-name)
                                            "Policy"
                                            "labels"
@@ -103,7 +119,7 @@
    (fn [txn]
      (if-let [record (fdb/load-record (fdb/open txn bindings-store-name)
                                       binding-id)]
-       (schema/pb->PolicyBinding record)
+       (pb->PolicyBinding record)
        (error/reject :policy-binding/not-found
                      {:message "Policy binding not found"
                       :binding-id binding-id})))
@@ -130,7 +146,7 @@
                      :before before
                      :limit limit
                      :order order})]
-        {:items (mapv schema/pb->PolicyBinding (:records result))
+        {:items (mapv pb->PolicyBinding (:records result))
          :before (:before result)
          :after (:after result)}))
     :policy-binding/list
