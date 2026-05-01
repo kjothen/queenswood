@@ -9,11 +9,12 @@ inherited from upstream.
 ## Where to find things
 
 - [docs/adr/](docs/adr/) — architecture decisions (the *why* behind
-  every load-bearing choice). Twelve records covering mono-reuse,
+  every load-bearing choice). Fourteen records covering mono-reuse,
   FoundationDB, the message-bus abstraction, Avro payloads, error
   handling, kebab-case keys, system-as-data, changelog watchers,
-  model-equality testing, code generation, library wrapping, and
-  pre-commit hooks.
+  model-equality testing, code generation, library wrapping,
+  pre-commit hooks, the single unified API, and OpenAPI 3.x
+  compliance.
 - [docs/recipes/](docs/recipes/) — task-oriented recipes
   (Problem / Solution / Rules / Discussion / References). Read the
   relevant recipe before doing any non-trivial task. Twelve recipes:
@@ -21,7 +22,11 @@ inherited from upstream.
   system-configurations, testcontainers, error-handling, testing,
   code-style, code-generation, common-helpers, git-workflow.
 - [docs/tdd/](docs/tdd/) — technical design documents (one per
-  capability or subsystem). Currently: scenario testing.
+  capability or subsystem). Fourteen TDDs covering api-keys,
+  cash-account-products, cash-accounts, idempotency, interest,
+  organizations, parties, payments, policy-evaluation,
+  scenario-testing, service-apis, traceability,
+  transaction-processing, and transactions-and-balances.
 - [docs/plan/](docs/plan/) — implementation plans for in-flight work.
 
 ## Common commands
