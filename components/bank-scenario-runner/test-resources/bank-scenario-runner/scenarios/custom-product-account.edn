@@ -1,0 +1,22 @@
+{:name "Custom product: create, publish, open an account, transfer"
+ :tags #{:products :lifecycle}
+
+ ;; Models the production flow: an org creates a draft cash-account
+ ;; product, publishes it, then opens a customer account against
+ ;; that newly-published product. Transfers between the org's
+ ;; original (settlement) account and the new custom-product account
+ ;; exercise the full create → publish → add-account chain.
+ :given
+ [{:command :open-account     :args []}                         ; org-0, prod-0, party-0, acct-0
+  {:command :create-product   :args [:org-0]}                   ; prod-1 (draft)
+  {:command :publish-product  :args [:prod-1]}                  ; prod-1 published
+  {:command :add-account      :args [:org-0 :party-0 :prod-1]}  ; acct-1 on prod-1
+  {:command :inbound-transfer :args [:acct-0 500]}]
+
+ :when
+ [{:command :internal-transfer :args [:acct-0 :acct-1 200]}]
+
+ :then
+ [{:command :assert-no-anomaly :args []}
+  {:command :assert-balance    :args [:acct-0 300]}
+  {:command :assert-balance    :args [:acct-1 200]}]}

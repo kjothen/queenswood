@@ -90,7 +90,7 @@ Polylith enforces this: if a production component starts importing
 from `bank-test-*`, the build complains.
 
 The architecture is documented in detail at
-[docs/design/scenario-testing.md](../design/scenario-testing.md);
+[docs/tdd/scenario-testing.md](../tdd/scenario-testing.md);
 this ADR captures the decision and the rejected alternatives.
 
 ## Consequences

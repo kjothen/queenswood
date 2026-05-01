@@ -1,19 +1,14 @@
-{:name "Fee drives breach; improving inbound permitted"
+{:name "Fee drives breach; outbound denied; improving inbound permitted"
  :tags #{:policies :curative}
 
- ;; Customer is opened, funded to +100, then a 250 fee drives them
- ;; to -150. The available-balance rule's `:improving` allowance
- ;; permits an inbound that strictly reduces the breach (-150 →
- ;; -50). This is the load-bearing scenario: if the policy
- ;; evaluator rejects the second inbound, the customer can never
- ;; recover from a fee-driven breach.
  :given
  [{:command :open-account     :args []}
   {:command :inbound-transfer :args [:acct-0 100]}
   {:command :apply-fee        :args [:acct-0 250]}]
 
  :when
- [{:command :inbound-transfer :args [:acct-0 100]}]
+ [{:command :outbound-transfer :args [:acct-0 50]}
+  {:command :inbound-transfer  :args [:acct-0 100]}]
 
  :then
  [{:command :assert-outcome :args [:succeeded]}

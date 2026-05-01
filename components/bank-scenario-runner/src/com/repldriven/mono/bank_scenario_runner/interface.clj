@@ -11,18 +11,31 @@
     [com.repldriven.mono.bank-scenario-runner.scenario :as scenario]
     [com.repldriven.mono.bank-scenario-runner.verbs :as verbs]
 
-    [com.repldriven.mono.error.interface :as error]))
+    [com.repldriven.mono.error.interface :as error]
+    [com.repldriven.mono.utility.interface :as util]))
 
 (defn fresh-context
   "Initial context for one command-sequence run. `bank` is the FDB
   config map (`:record-db` / `:record-store`); `internal-account-id`
   is the platform's internal/suspense account, used as the
-  counter-leg for transfers and fees."
+  counter-leg for transfers and fees. The `:run-id` (a fresh
+  uuidv7) prefixes idempotency keys so multiple runs against the
+  same bank don't collide on the dedup index."
   [bank internal-account-id]
   {:bank bank
    :internal-account-id internal-account-id
    :id-mapping id-mapping/init
+   :orgs {}
+   :products {}
+   :parties {}
+   :accounts {}
+   :payments {}
    :next-model-id 0
+   :next-org-id 0
+   :next-product-id 0
+   :next-party-id 0
+   :next-payment-id 0
+   :run-id (str (util/uuidv7))
    :counter 0
    :outcomes []})
 

@@ -8,9 +8,9 @@
         aggregate:
           kind:
             count:
-              value: 100
+              value: 100000
               window: !keyword time-window-instant
-  reason: "Platform-restricted - max 100 customer organizations"
+  reason: "Platform-restricted - max 100,000 customer organizations (test value; production would set lower)"
 - kind:
     organization:
       filters:

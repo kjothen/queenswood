@@ -39,3 +39,27 @@
   :match, :close-match, or :no-match."
   [party-name query-name]
   (domain/match-name party-name query-name))
+
+(defn seed-active-party
+  "Test/admin shortcut: marks `party-id` active by writing the
+  status transition directly to the store, bypassing the IDV →
+  changelog-watcher path that activates parties in production.
+
+  This exists because there's no IDV simulator yet (in the same
+  spirit as `bank-clearbank-simulator`); harnesses that need an
+  active person-party use this as a transitional shim. Delete it
+  when an IDV simulator lands and tests can drive the real
+  pending → IDV-accepted → active flow.
+
+  Returns the active party (pb record) or anomaly."
+  [txn organization-id party-id]
+  (let-nom>
+    [party (store/get-party txn organization-id party-id)
+     activated (domain/activate-party party)
+     saved (store/save-party txn
+                             activated
+                             {:organization-id organization-id
+                              :party-id party-id
+                              :status-before (:status party)
+                              :status-after (:status activated)})]
+    saved))

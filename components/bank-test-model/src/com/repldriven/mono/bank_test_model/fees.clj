@@ -11,12 +11,15 @@
 
 (def apply-fee
   "Debits an existing account by a positive amount, bypassing the
-  policy check. Always advances state."
+  policy check. Always advances state. Bumps `:transaction-legs`
+  on the account."
   {:run? (fn [state] (seq (state/known-accounts state)))
    :args (fn [state]
            (gen/tuple (gen/elements (state/known-accounts state))
                       (gen/choose 1 10000)))
-   :next-state
-   (fn [state {[acct amount] :args}]
-     (update-in state [:accounts acct :available] (fnil - 0) amount))
+   :next-state (fn [state {[acct amount] :args}]
+                 (-> state
+                     (update-in [:accounts acct :available] (fnil - 0) amount)
+                     (update-in [:accounts acct :transaction-legs]
+                                (fnil inc 0))))
    :valid? (fn [state {[acct] :args}] (contains? (:accounts state) acct))})

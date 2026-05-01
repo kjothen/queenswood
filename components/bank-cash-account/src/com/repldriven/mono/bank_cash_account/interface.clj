@@ -2,7 +2,11 @@
   (:require
     com.repldriven.mono.bank-cash-account.system
 
-    [com.repldriven.mono.bank-cash-account.core :as core]))
+    [com.repldriven.mono.bank-cash-account.core :as core]
+    [com.repldriven.mono.bank-cash-account.domain :as domain]
+    [com.repldriven.mono.bank-cash-account.store :as store]
+
+    [com.repldriven.mono.error.interface :refer [let-nom>]]))
 
 (defn new-account
   "Opens a cash account with balances. Returns account map or
@@ -44,3 +48,28 @@
   Uses secondary index."
   [txn bban]
   (core/get-account-by-bban txn bban))
+
+(defn seed-opened-account
+  "Test/admin shortcut: flips an account from
+  `:cash-account-status-opening` to `:cash-account-status-opened`
+  by writing the transition straight to the store, bypassing the
+  changelog-watcher that runs the transition in production.
+
+  Same spirit as `bank-party/seed-active-party`: there's no
+  in-process watcher in the scenario-runner test system yet, so
+  freshly-opened accounts stay in `:opening` and downstream
+  features that filter on `:opened` (interest accrual, etc.)
+  silently skip them. Delete this when a watcher-driven test
+  harness lands.
+
+  Returns the opened account or anomaly."
+  [txn organization-id account-id]
+  (let-nom>
+    [account (store/get-account txn organization-id account-id)
+     opened (domain/opened-account account)
+     saved (store/save-account txn
+                               opened
+                               {:account-id account-id
+                                :status-before (:account-status account)
+                                :status-after (:account-status opened)})]
+    saved))

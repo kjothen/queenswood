@@ -20,8 +20,8 @@ inherited from upstream.
   components, bases, projects, system-components,
   system-configurations, testcontainers, error-handling, testing,
   code-style, code-generation, common-helpers, git-workflow.
-- [docs/design/](docs/design/) — long-form architecture deep dives
-  (currently: scenario testing).
+- [docs/tdd/](docs/tdd/) — technical design documents (one per
+  capability or subsystem). Currently: scenario testing.
 - [docs/plan/](docs/plan/) — implementation plans for in-flight work.
 
 ## Common commands

@@ -1,3 +1,7 @@
 {:paths ["src"]
- :deps {}
- :aliases {:test {:extra-paths ["test" "test-resources"]}}}
+ :deps {io.vouch/fugato
+        {:git/url "https://github.com/vouch-opensource/fugato.git"
+         :git/sha "4c1f687bca84f1f7777f347acdaafd49c182eae0"}
+        org.clojure/test.check {:mvn/version "1.1.1"}}
+ :aliases {:test {:extra-paths ["test" "test-resources"]
+                  :extra-deps {}}}}

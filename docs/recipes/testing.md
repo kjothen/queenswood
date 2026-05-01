@@ -49,7 +49,7 @@ Don't write `deftest`-style integration tests against the
 command pipeline. The scenario runner is the only sanctioned
 path for system-level tests. See
 [ADR-0009](../adr/0009-model-equality-property-testing.md) and
-[docs/design/scenario-testing.md](../design/scenario-testing.md)
+[docs/tdd/scenario-testing.md](../tdd/scenario-testing.md)
 for the architecture.
 
 ### with-test-system
@@ -198,7 +198,7 @@ parallelism on cheap tests where it actually helps.
 
 - [ADR-0009](../adr/0009-model-equality-property-testing.md) —
   Model-equality property testing
-- [docs/design/scenario-testing.md](../design/scenario-testing.md)
+- [docs/tdd/scenario-testing.md](../tdd/scenario-testing.md)
 - [error-handling.md](error-handling.md)
 - [system-configurations.md](system-configurations.md)
 - `test-system` brick (provides `with-test-system`, `nom-test>`)
