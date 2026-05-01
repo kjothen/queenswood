@@ -1,0 +1,18 @@
+{:name "Internal transfer between two customer accounts"
+ :tags #{:transfers :internal}
+
+ ;; Two accounts opened, one funded. Internal-transfer moves a chunk
+ ;; from the funded one to the empty one. Both legs apply atomically;
+ ;; both balances must reflect the move.
+ :given
+ [{:command :open-account     :args []}
+  {:command :open-account     :args []}
+  {:command :inbound-transfer :args [:acct-0 1000]}]
+
+ :when
+ [{:command :internal-transfer :args [:acct-0 :acct-1 400]}]
+
+ :then
+ [{:command :assert-no-anomaly :args []}
+  {:command :assert-balance    :args [:acct-0 600]}
+  {:command :assert-balance    :args [:acct-1 400]}]}

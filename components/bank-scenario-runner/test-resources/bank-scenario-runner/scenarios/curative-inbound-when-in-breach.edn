@@ -1,0 +1,15 @@
+{:name "Fee drives breach; outbound denied; improving inbound permitted"
+ :tags #{:policies :curative}
+
+ :given
+ [{:command :open-account     :args []}
+  {:command :inbound-transfer :args [:acct-0 100]}
+  {:command :apply-fee        :args [:acct-0 250]}]
+
+ :when
+ [{:command :outbound-transfer :args [:acct-0 50]}
+  {:command :inbound-transfer  :args [:acct-0 100]}]
+
+ :then
+ [{:command :assert-outcome :args [:succeeded]}
+  {:command :assert-balance :args [:acct-0 -50]}]}

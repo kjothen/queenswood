@@ -1,8 +1,18 @@
 - kind:
     balance:
       filters:
-        - computed:
-            name: available
+        - kind:
+            computed:
+              name: available
+          transaction-type: !keyword transaction-type-internal-transfer
+        - kind:
+            computed:
+              name: available
+          transaction-type: !keyword transaction-type-inbound-transfer
+        - kind:
+            computed:
+              name: available
+          transaction-type: !keyword transaction-type-outbound-transfer
   bound:
     kind:
       min:
@@ -13,5 +23,5 @@
                 value: 0
                 currency: GBP
               window: !keyword time-window-instant
-  reason: "Platform-restricted - available balance must stay non-negative"
+  reason: "Platform-restricted - available balance must stay non-negative on user-driven transfers"
   allow: !keyword limit-allow-improving
