@@ -26,20 +26,9 @@
 (def ^:private asset-draft-data
   (assoc draft-data :balance-sheet-side :balance-sheet-side-asset))
 
-(deftest new-product-test
-  (with-test-system
-   [sys "classpath:bank-cash-account-product/application-test.yml"]
-   (let [config (fdb-config sys)
-         org-id "org_test_new_product"]
-     (testing "creates product as initial draft v1"
-       (nom-test> [v (SUT/new-product config org-id draft-data)
-                   _ (is (= "Current Account" (:name v)))
-                   _ (is (string? (:product-id v)))
-                   _ (is (string? (:version-id v)))
-                   _ (is (= org-id (:organization-id v)))
-                   _ (is (= 1 (:version-number v)))
-                   _ (is (= :cash-account-product-status-draft (:status v)))
-                   _ (is (pos? (:created-at v)))])))))
+;; new-product-test removed — happy-path "creates draft v1" is
+;; covered end-to-end by every `:create-product` /
+;; `:create-savings-product` step in the scenario-runner suite.
 
 (deftest open-draft-test
   (with-test-system
@@ -164,12 +153,9 @@
    [sys "classpath:bank-cash-account-product/application-test.yml"]
    (let [config (fdb-config sys)
          org-id "org_test_publish"]
-     (testing "transitions draft to published"
-       (nom-test> [v1 (SUT/new-product config org-id draft-data)
-                   published
-                   (SUT/publish config org-id (:product-id v1) (:version-id v1))
-                   _ (is (= :cash-account-product-status-published
-                            (:status published)))]))
+     ;; happy-path "draft → published" status flip removed —
+     ;; covered end-to-end by every `:publish-product` step in
+     ;; the scenario-runner suite.
      (testing "404 when the version-id is unknown"
        (let [v1 (SUT/new-product config org-id draft-data)
              rejected
