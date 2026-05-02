@@ -48,13 +48,16 @@
 (defn- customer-account?
   "Production filters customer accounts as
   `:product-type != :internal AND :product-type != :settlement
-   AND :account-status = :opened`. The model has no
-  account-status (the runner seeds them all to `:opened`); the
-  product-type check is enough."
+   AND :account-status = :opened`. The model mirrors all three
+  checks: product-type and account `:status :open` (closed
+  accounts are skipped)."
   [state acct]
-  (let [product (get-in state [:accounts acct :product])
+  (let [account (get-in state [:accounts acct])
+        product (:product account)
         ptype (get-in state [:products product :product-type])]
-    (and ptype (not (#{:settlement :internal} ptype)))))
+    (and ptype
+         (not (#{:settlement :internal} ptype))
+         (= :open (:status account)))))
 
 (defn- accrue-account
   [state settlement-acct customer-acct]

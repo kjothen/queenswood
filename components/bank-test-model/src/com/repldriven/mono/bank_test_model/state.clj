@@ -81,6 +81,15 @@
   [state]
   (vec (keys (:accounts state))))
 
+(defn open-accounts
+  "Accounts currently in `:open` status, as a vector. Used by
+  `:close-account`'s args generator and by any command that should
+  refuse to operate on a closed account."
+  [state]
+  (vec (for [[acct-id a] (:accounts state)
+             :when (= :open (:status a))]
+         acct-id)))
+
 (defn known-orgs
   "Orgs the model knows about, as a vector of synthetic ids."
   [state]

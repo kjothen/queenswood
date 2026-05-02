@@ -20,6 +20,7 @@
   `:valid?` — see `docs/tdd/scenario-testing.md`."
   {:open-account balances/open-account
    :add-account balances/add-account
+   :close-account balances/close-account
    :create-product products/create-product
    :create-savings-product products/create-savings-product
    :publish-product products/publish-product

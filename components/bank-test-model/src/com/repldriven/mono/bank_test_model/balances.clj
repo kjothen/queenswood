@@ -37,6 +37,7 @@
                                  {:available 0
                                   :credit-carry 0
                                   :interest-accrued 0
+                                  :status :open
                                   :org org-id
                                   :product prod-id
                                   :party party-id})
@@ -74,6 +75,7 @@
                                  {:available 0
                                   :credit-carry 0
                                   :interest-accrued 0
+                                  :status :open
                                   :org org-id
                                   :product prod-id
                                   :party party-id})
@@ -86,3 +88,17 @@
           (contains? (set (get-in state [:orgs org-id :products])) prod-id)
           (= :active (get-in state [:parties party-id :status]))
           (contains? (set (get-in state [:orgs org-id :parties])) party-id)))})
+
+(def close-account
+  "Closes an open account. Args are `[acct-id]`. Eligible only when
+  at least one open account exists; the args generator picks one.
+  Closed accounts are skipped by `:accrue-interest` /
+  `:capitalize-interest` (which already filter to `:open`) but
+  still appear in projections — closure flips status, not
+  membership."
+  {:run? (fn [state] (seq (state/open-accounts state)))
+   :args (fn [state] (gen/tuple (gen/elements (state/open-accounts state))))
+   :next-state (fn [state {[acct-id] :args}]
+                 (assoc-in state [:accounts acct-id :status] :closed))
+   :valid? (fn [state {[acct-id] :args}]
+             (= :open (get-in state [:accounts acct-id :status])))})

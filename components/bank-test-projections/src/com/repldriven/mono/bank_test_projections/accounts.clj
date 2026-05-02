@@ -13,11 +13,25 @@
   [m]
   (into {} (map (fn [[mid {:keys [real-id]}]] [real-id mid])) m))
 
+(defn- normalise-status
+  "Maps the real `:cash-account-status-*` enum to the model's
+  two-state `:open` / `:closed`. The real status machine has
+  `:opening` (pre-watcher) and `:closing` (pre-watcher) staging
+  states the model collapses; the runner uses `seed-opened` /
+  `seed-closed` to skip them."
+  [status]
+  (case status
+    :cash-account-status-opening :open
+    :cash-account-status-opened :open
+    :cash-account-status-closing :closed
+    :cash-account-status-closed :closed))
+
 (defn project-accounts
   "For each account the runner has tracked in `:id-mapping`, fetches
   the real account and reports its `:org` / `:product` / `:party`
-  associations as model-ids. Returns
-  `{model-acct-id {:org :model-org :product :model-prod :party :model-party}}`.
+  associations and normalised `:status` as model-ids/enum. Returns
+  `{model-acct-id {:org :model-org :product :model-prod
+                   :party :model-party :status :open|:closed}}`.
 
   The runner's `:accounts` side-table already records `:org` per
   model-acct, but reading from the real bank ensures we catch
@@ -39,14 +53,20 @@
                   [model-acct-id
                    {:org (org-real->model (:organization-id account))
                     :product (prod-real->model (:product-id account))
-                    :party (party-real->model (:party-id account))}])))
+                    :party (party-real->model (:party-id account))
+                    :status (normalise-status (:account-status account))}])))
          (into {}))))
 
 (defn project-model-accounts
   "Reads the same shape from the model state. Returns
-  `{model-acct-id {:org :model-org :product :model-prod :party :model-party}}`."
+  `{model-acct-id {:org :model-org :product :model-prod
+                   :party :model-party :status :open|:closed}}`."
   [model-state]
   (->> (:accounts model-state)
-       (map (fn [[acct-id {:keys [org product party]}]]
-              [acct-id {:org org :product product :party party}]))
+       (map (fn [[acct-id {:keys [org product party status]}]]
+              [acct-id
+               {:org org
+                :product product
+                :party party
+                :status status}]))
        (into {})))

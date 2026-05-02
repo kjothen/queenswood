@@ -116,38 +116,6 @@
          (fdb/open txn "cash-account-products")
          (schema/CashAccountProduct->java version)))))))
 
-(defn- seed-party
-  "Seeds a party record with given status."
-  [config party-id status]
-  (fdb/transact config
-                (fn [txn]
-                  (let [party {:organization-id test-org-id
-                               :party-id party-id
-                               :type :party-type-person
-                               :status status
-                               :display-name "Test Party"
-                               :created-at (System/currentTimeMillis)
-                               :updated-at (System/currentTimeMillis)}]
-                    (fdb/save-record (fdb/open txn "parties")
-                                     (schema/Party->java party))))))
-
-(defn- test-open-account-party-not-active
-  [proc schemas config]
-  (testing "open-cash-account rejects when party is not active"
-    (let [party-id "cust-pending"]
-      (seed-organization config)
-      (seed-party config party-id :party-status-pending)
-      (let [result (send-command proc
-                                 schemas
-                                 "open-cash-account"
-                                 {:organization-id test-org-id
-                                  :party-id party-id
-                                  :name "Pending Account"
-                                  :currency "USD"
-                                  :product-id test-product-id})]
-        (is (error/rejection? result))
-        (is (= :cash-account/party-status (error/kind result)))))))
-
 (defn- test-open-account-party-not-found
   [proc schemas]
   (testing "open-cash-account rejects when party not found"
@@ -161,26 +129,6 @@
                                 :product-id test-product-id})]
       (is (error/rejection? result))
       (is (= :party/not-found (error/kind result))))))
-
-(defn- test-close-account
-  [proc schemas config]
-  (testing "close-cash-account sets status to closing"
-    (let [party-id "cust-2"
-          open-payload {:organization-id test-org-id
-                        :party-id party-id
-                        :name "Account to Close"
-                        :currency "USD"
-                        :product-id test-product-id}]
-      (seed-organization config)
-      (seed-active-party config party-id)
-      (nom-test>
-        [opened (send-command proc schemas "open-cash-account" open-payload)
-         account (decode-payload schemas "cash-account" opened)
-         close-data (select-keys account [:organization-id :account-id])
-         result (send-command proc schemas "close-cash-account" close-data)
-         _ (is (= "ACCEPTED" (:status result)))
-         decoded (decode-payload schemas "cash-account" result)
-         _ (is (= open-payload (select-keys decoded (keys open-payload))))]))))
 
 (defn- test-watcher-transitions
   [proc schemas config]
@@ -240,28 +188,6 @@
       (is (= :cash-account-product/product-not-found
              (error/kind result))))))
 
-(defn- test-open-account-invalid-currency
-  [proc schemas config]
-  (testing "open-cash-account rejects when currency not in
-  allowed-currencies"
-    (let [party-id "cust-currency"
-          product-id "prd_gbp_only"]
-      (seed-organization config)
-      (seed-active-party config party-id)
-      (seed-published-product-version config
-                                      product-id
-                                      {:allowed-currencies ["GBP"]})
-      (let [result (send-command proc
-                                 schemas
-                                 "open-cash-account"
-                                 {:organization-id test-org-id
-                                  :party-id party-id
-                                  :name "Wrong Currency"
-                                  :currency "USD"
-                                  :product-id product-id})]
-        (is (error/rejection? result))
-        (is (= :cash-account/invalid-currency (error/kind result)))))))
-
 (defn- test-open-account-no-payment-schemes
   [proc schemas config]
   (testing
@@ -315,12 +241,9 @@
                       (seed-organization config)
                       (seed-active-party config "cust-1")
                       (seed-published-product-version config test-product-id)
-                      (test-open-account-party-not-active proc schemas config)
                       (test-open-account-party-not-found proc schemas)
-                      (test-close-account proc schemas config)
                       (test-watcher-transitions proc schemas config)
                       (test-close-missing-account proc schemas)
                       (test-open-account-unknown-product proc schemas)
-                      (test-open-account-invalid-currency proc schemas config)
                       (test-open-account-no-payment-schemes proc schemas config)
                       (test-unknown-command proc schemas))))

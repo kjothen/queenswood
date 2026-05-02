@@ -68,6 +68,12 @@
   [bank org-real-id real-acct-id]
   (cash-accounts/seed-opened-account bank org-real-id real-acct-id))
 
+(defn- seed-closed
+  "Flips a freshly-closing account from `:closing` to `:closed`,
+  bypassing the changelog-watcher. Counterpart to `seed-opened`."
+  [bank org-real-id real-acct-id]
+  (cash-accounts/seed-closed-account bank org-real-id real-acct-id))
+
 (defn- track
   "Records the outcome of a side-effecting step on the context.
   `:last-rejection-kind` is the anomaly kind on denial, or nil on
@@ -249,6 +255,20 @@
                        (id-mapping/add id-mapping model-acct real-acct-id)))
         (assoc-in [:accounts model-acct] {:org model-org})
         (update :next-model-id inc)
+        (update :counter inc)
+        (track result))))
+
+(defmethod dispatch :close-account
+  [{:keys [bank id-mapping accounts orgs] :as ctx} {[model-acct] :args}]
+  (let [model-org (get-in accounts [model-acct :org])
+        org-real-id (get-in orgs [model-org :real-id])
+        real-acct-id (get-in id-mapping [:model->real model-acct])
+        result (cash-accounts/close-account bank
+                                            {:organization-id org-real-id
+                                             :account-id real-acct-id})
+        _ (when-not (error/anomaly? result)
+            (seed-closed bank org-real-id real-acct-id))]
+    (-> ctx
         (update :counter inc)
         (track result))))
 
