@@ -20,30 +20,37 @@
       {:status "ACCEPTED"
        :payload (avro/serialize (schemas "cash-account") result)})))
 
+(def ^:private command-handlers
+  "Map of command-name → `(fn [config data] response)`. Lifting the
+  registry out of the dispatcher's `case` lets unknown-command
+  rejection fire BEFORE schema lookup or Avro deserialization, so
+  a pure unit test can exercise the rejection path without
+  spinning up the system."
+  {"open-cash-account" (fn [config data]
+                         (->response config (core/open-account config data)))
+   "close-cash-account" (fn [config data]
+                          (->response config (core/close-account config data)))
+   "get-cash-account"
+   (fn [config data]
+     (let [{:keys [organization-id account-id]} data]
+       (->response config
+                   (core/get-account config organization-id account-id))))})
+
 (defn- dispatch
   [config message]
   (let [{:keys [command payload]} message
-        {:keys [schemas]} config
-        schema (get schemas command)]
-    (if-not schema
-      (error/fail :cash-account/process-command
-                  {:message "No schema found for command"
-                   :command command})
-      (let-nom> [data (avro/deserialize-same schema payload)]
-        (case command
-          "open-cash-account"
-          (->response config (core/open-account config data))
-
-          "close-cash-account"
-          (->response config (core/close-account config data))
-
-          "get-cash-account"
-          (let [{:keys [organization-id account-id]} data]
-            (->response config
-                        (core/get-account config organization-id account-id)))
-
-          (error/reject :cash-account/unknown-command
-                        (str "Unknown command: " command)))))))
+        handler (get command-handlers command)]
+    (if (nil? handler)
+      (error/reject :cash-account/unknown-command
+                    (str "Unknown command: " command))
+      (let [{:keys [schemas]} config
+            schema (get schemas command)]
+        (if-not schema
+          (error/fail :cash-account/process-command
+                      {:message "No schema found for command"
+                       :command command})
+          (let-nom> [data (avro/deserialize-same schema payload)]
+            (handler config data)))))))
 
 (defrecord CashAccountProcessor [config]
   processor/Processor

@@ -1,5 +1,6 @@
 (ns ^:eftest/synchronized com.repldriven.mono.bank-party.interface-test
   (:require
+    [com.repldriven.mono.bank-party.commands :as commands]
     [com.repldriven.mono.bank-party.interface]
 
     [com.repldriven.mono.bank-schema.interface :as schema]
@@ -14,6 +15,14 @@
      [with-test-system nom-test>]]
 
     [clojure.test :refer [deftest is testing]]))
+
+(deftest unknown-command-test
+  (testing "dispatch rejects command names not in the handler registry"
+    (let [result (#'commands/dispatch
+                  {:schemas {}}
+                  {:command "unknown-party-command" :payload nil})]
+      (is (error/rejection? result))
+      (is (= :party/unknown-command (error/kind result))))))
 
 (def ^:private test-org-id "org_test_party")
 
@@ -100,22 +109,6 @@
          _
          (is (= :party-status-active (:status polled)))]))))
 
-(defn- test-unknown-command
-  [proc schemas]
-  (testing "unknown command returns rejection"
-    (let [result (send-command proc
-                               schemas
-                               "unknown-party-command"
-                               {:organization-id test-org-id
-                                :type :party-type-person
-                                :display-name "X"
-                                :given-name "X"
-                                :family-name "Y"
-                                :date-of-birth 20000101
-                                :nationality "US"})]
-      (is (error/rejection? result))
-      (is (= :party/unknown-command (error/kind result))))))
-
 (deftest process-party-test
   (with-test-system [sys "classpath:bank-party/application-test.yml"]
                     (let [proc (system/instance sys [:party :processor])
@@ -123,5 +116,4 @@
                           config
                           {:record-db (system/instance sys [:fdb :record-db])
                            :record-store (system/instance sys [:fdb :store])}]
-                      (test-watcher-transitions proc schemas config)
-                      (test-unknown-command proc schemas))))
+                      (test-watcher-transitions proc schemas config))))

@@ -1,5 +1,6 @@
 (ns ^:eftest/synchronized com.repldriven.mono.bank-idv.interface-test
   (:require
+    [com.repldriven.mono.bank-idv.commands :as commands]
     [com.repldriven.mono.bank-idv.interface]
 
     [com.repldriven.mono.fdb.interface]
@@ -12,6 +13,14 @@
      [with-test-system nom-test>]]
 
     [clojure.test :refer [deftest is testing]]))
+
+(deftest unknown-command-test
+  (testing "dispatch rejects command names not in the handler registry"
+    (let [result (#'commands/dispatch
+                  {:schemas {}}
+                  {:command "unknown-idv-command" :payload nil})]
+      (is (error/rejection? result))
+      (is (= :idv/unknown-command (error/kind result))))))
 
 (def ^:private test-org-id "org_test_idv")
 
@@ -82,21 +91,9 @@
                   _
                   (is (= :idv-status-accepted (:status polled)))]))))
 
-(defn- test-unknown-command
-  [proc schemas]
-  (testing "unknown command returns rejection"
-    (let [result (send-command proc
-                               schemas
-                               "unknown-idv-command"
-                               {:organization-id test-org-id
-                                :party-id "pty.x"})]
-      (is (error/rejection? result))
-      (is (= :idv/unknown-command (error/kind result))))))
-
 (deftest process-idv-test
   (with-test-system [sys "classpath:bank-idv/application-test.yml"]
                     (let [proc (system/instance sys [:idv :processor])
                           schemas (system/instance sys [:avro :serde])]
                       (test-initiate-idv proc schemas)
-                      (test-watcher-transitions proc schemas)
-                      (test-unknown-command proc schemas))))
+                      (test-watcher-transitions proc schemas))))

@@ -1,49 +1,29 @@
-(ns ^:eftest/synchronized com.repldriven.mono.bank-payment.interface-test
-  "Last surviving integration test for bank-payment — the dispatcher
-  rejection on unknown command names. Settlement-event behaviour
-  (inbound credit posting + outbound status flip + scheme-tx-id
-  idempotency) lives in the scenario layer now: every property-
-  test trial routes :inbound-transfer through `settle-inbound`
-  and exercises :settle-outbound-payment when pending payments
-  are available, and the payment-event-idempotency.edn scenario
-  pins the re-delivery contract for both directions."
+(ns com.repldriven.mono.bank-payment.interface-test
+  "Pure unit test for the dispatcher's unknown-command rejection.
+  The settlement-event handlers and happy-path command paths are
+  covered by the scenario suite (payment-event-idempotency.edn,
+  outbound-payment.edn, intra-org-internal-transfer.edn) and the
+  500-trial property test in bank-scenario-runner — no system boot
+  is needed at the brick layer."
   (:require
-    [com.repldriven.mono.bank-payment.interface]
+    [com.repldriven.mono.bank-payment.commands :as commands]
 
-    [com.repldriven.mono.avro.interface :as avro]
     [com.repldriven.mono.error.interface :as error]
-    [com.repldriven.mono.processor.interface :as processor]
-    [com.repldriven.mono.system.interface :as system]
-    [com.repldriven.mono.testcontainers.interface]
-    [com.repldriven.mono.test-system.interface :refer
-     [with-test-system]]
 
     [clojure.test :refer [deftest is testing]]))
 
-(defn- send-command
-  [proc schemas command-name data]
-  (let [payload (avro/serialize (get schemas command-name) data)]
-    (if (error/anomaly? payload)
-      payload
-      (processor/process proc
-                         {:command command-name
-                          :id (:idempotency-key data)
-                          :payload payload}))))
-
 (deftest unknown-command-test
-  (with-test-system
-   [sys "classpath:bank-payment/application-test.yml"]
-   (let [proc (system/instance sys [:payment :processor])
-         schemas (system/instance sys [:avro :serde])]
-     (testing "unknown command returns rejection"
-       (let [result (send-command proc
-                                  schemas
-                                  "unknown-payment-command"
-                                  {:idempotency-key "pmt-idem-999"
-                                   :organization-id "org-1"
-                                   :debtor-account-id "acc-1"
-                                   :creditor-account-id "acc-2"
-                                   :currency "GBP"
-                                   :amount 100})]
-         (is (error/rejection? result))
-         (is (= :payment/unknown-command (error/kind result))))))))
+  (testing "dispatch rejects command names not in the handler registry"
+    (let [result (#'commands/dispatch
+                  {:schemas {}}
+                  {:command "unknown-payment-command" :id "x" :payload nil})]
+      (is (error/rejection? result))
+      (is (= :payment/unknown-command (error/kind result)))))
+  (testing
+    "rejection happens before schema lookup — even a populated
+            schema map for OTHER commands doesn't change the result"
+    (let [result (#'commands/dispatch
+                  {:schemas {"submit-internal-payment" :placeholder}}
+                  {:command "unknown-payment-command" :id "x" :payload nil})]
+      (is (error/rejection? result))
+      (is (= :payment/unknown-command (error/kind result))))))
