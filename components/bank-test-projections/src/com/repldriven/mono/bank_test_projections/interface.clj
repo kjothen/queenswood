@@ -36,3 +36,6 @@
 
 (def project-outbound-payments payments/project-outbound-payments)
 (def project-model-outbound-payments payments/project-model-outbound-payments)
+
+(def project-inbound-payments payments/project-inbound-payments)
+(def project-model-inbound-payments payments/project-model-inbound-payments)

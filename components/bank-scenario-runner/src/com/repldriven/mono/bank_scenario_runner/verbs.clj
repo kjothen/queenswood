@@ -148,7 +148,8 @@
                                :number 1}]})
         (assoc-in [:parties model-party]
                   {:real-id (get-in org [:party :party-id]) :org model-org})
-        (assoc-in [:accounts model-acct] {:org model-org})
+        (assoc-in [:accounts model-acct]
+                  {:org model-org :bban (get-in org [:accounts 0 :bban])})
         (update :next-model-id inc)
         (update :next-org-id inc)
         (update :next-product-id inc)
@@ -362,7 +363,7 @@
         (cond-> real-acct-id
                 (assoc :id-mapping
                        (id-mapping/add id-mapping model-acct real-acct-id)))
-        (assoc-in [:accounts model-acct] {:org model-org})
+        (assoc-in [:accounts model-acct] {:org model-org :bban (:bban result)})
         (update :next-model-id inc)
         (update :counter inc)
         (track result))))
@@ -403,21 +404,30 @@
            :amount amount}]})
 
 (defmethod dispatch :inbound-transfer
-  [{:keys [bank counter id-mapping internal-account-id run-id] :as ctx}
-   {[model-id amount] :args}]
-  (let [real-id (id-mapping/real id-mapping model-id)
-        result (record-and-apply
-                bank
-                (transfer-tx
-                 {:transaction-type :transaction-type-inbound-transfer
-                  :idempotency-key (str "scen-in-" run-id "-" counter)
-                  :reference (str "scenario inbound " counter)
-                  :customer-id real-id
-                  :internal-account-id internal-account-id
-                  :amount amount
-                  :customer-side :leg-side-credit
-                  :internal-side :leg-side-debit}))]
+  ;; Drives bank-payment's settle-inbound event handler — the same
+  ;; path production takes when a `transaction-settled` credit
+  ;; webhook arrives. The runner mirrors the model's
+  ;; `:next-inbound-id` counter to derive a deterministic
+  ;; scheme-transaction-id, so projections can look up by stx-id.
+  [{:keys [bank accounts internal-account-id next-inbound-id run-id] :as ctx}
+   {[model-acct amount] :args}]
+  (let [bban (get-in accounts [model-acct :bban])
+        marker (keyword (str "in-" next-inbound-id))
+        stx-id (str "scen-in-" run-id "-" (name marker))
+        result (payment/settle-inbound
+                (assoc bank :internal-account-id internal-account-id)
+                {:scheme-transaction-id stx-id
+                 :end-to-end-id stx-id
+                 :scheme "FPS"
+                 :debit-credit-code :debit-credit-code-credit
+                 :amount amount
+                 :currency "GBP"
+                 :creditor-bban bban
+                 :debtor-name "Scenario Funder"
+                 :reference (str "scenario inbound " (name marker))
+                 :timestamp-settled (System/currentTimeMillis)})]
     (-> ctx
+        (update :next-inbound-id inc)
         (update :counter inc)
         (track result))))
 
@@ -489,6 +499,57 @@
         (cond-> real-pmt-id
                 (assoc-in [:payments model-pmt] {:real-id real-pmt-id}))
         (cond-> real-pmt-id (update :next-payment-id inc))
+        (update :counter inc)
+        (track result))))
+
+(defmethod dispatch :settle-inbound-event
+  ;; Non-modelled — drives bank-payment's settle-inbound with an
+  ;; explicit `:scheme-transaction-id`, so EDN scenarios can re-
+  ;; deliver the same event to assert idempotency. The model's
+  ;; :inbound-transfer auto-generates stx-ids and tracks them in
+  ;; `:inbound-payments`; this verb leaves model state alone.
+  [{:keys [bank accounts internal-account-id] :as ctx}
+   {[model-acct amount stx-id] :args}]
+  (let [bban (get-in accounts [model-acct :bban])
+        result (payment/settle-inbound
+                (assoc bank :internal-account-id internal-account-id)
+                {:scheme-transaction-id stx-id
+                 :end-to-end-id stx-id
+                 :scheme "FPS"
+                 :debit-credit-code :debit-credit-code-credit
+                 :amount amount
+                 :currency "GBP"
+                 :creditor-bban bban
+                 :debtor-name "Scenario Funder"
+                 :reference (str "scenario inbound " stx-id)
+                 :timestamp-settled (System/currentTimeMillis)})]
+    (-> ctx
+        (update :counter inc)
+        (track result))))
+
+(defmethod dispatch :settle-outbound-payment
+  ;; Drives bank-payment's settle-outbound event handler with a
+  ;; `transaction-settled` debit event whose `:end-to-end-id`
+  ;; matches our outbound payment's `:payment-id`. Production
+  ;; receives this from the scheme adapter; here the runner
+  ;; synthesises it. No balance change at settlement — the customer
+  ;; debit and suspense credit posted at submit time.
+  [{:keys [bank counter internal-account-id payments run-id] :as ctx}
+   {[model-pmt] :args}]
+  (let [real-pmt-id (get-in payments [model-pmt :real-id])
+        result (payment/settle-outbound
+                (assoc bank :internal-account-id internal-account-id)
+                {:scheme-transaction-id (str "scen-stl-" run-id "-" counter)
+                 :end-to-end-id real-pmt-id
+                 :scheme "FPS"
+                 :debit-credit-code :debit-credit-code-debit
+                 :amount 0
+                 :currency "GBP"
+                 :creditor-bban "040004000000001"
+                 :debtor-name "Scenario Settler"
+                 :reference (str "scenario settlement " counter)
+                 :timestamp-settled (System/currentTimeMillis)})]
+    (-> ctx
         (update :counter inc)
         (track result))))
 

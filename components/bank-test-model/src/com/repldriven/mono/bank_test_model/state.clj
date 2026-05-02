@@ -29,6 +29,7 @@
    :products {}
    :parties {}
    :payments {}
+   :inbound-payments #{}
    :nis-by-org {}
    :policies {:available {:min 0 :improving? true}}
    :next-id 0
@@ -36,6 +37,7 @@
    :next-product-id 0
    :next-party-id 0
    :next-payment-id 0
+   :next-inbound-id 0
    :next-ni-id 0
    ;; Each :accrue-interest / :capitalize-interest call consumes
    ;; the current value and increments — so every interest command
@@ -73,6 +75,21 @@
   not advance the counter."
   [state]
   (keyword (str "pmt-" (:next-payment-id state))))
+
+(defn next-inbound-id
+  "The next synthetic inbound-payment marker, given current state.
+  Pure — does not advance the counter. The runner translates
+  `:in-N` into a real `scheme-transaction-id` of `\"scen-in-<run>-N\"`."
+  [state]
+  (keyword (str "in-" (:next-inbound-id state))))
+
+(defn pending-payments
+  "Outbound payment ids whose model status is `:pending`. Used by
+  `:settle-outbound-payment`'s args generator."
+  [state]
+  (vec (for [[pmt-id p] (:payments state)
+             :when (= :pending (:status p))]
+         pmt-id)))
 
 (defn next-ni-id
   "The next synthetic national-identifier marker, given current

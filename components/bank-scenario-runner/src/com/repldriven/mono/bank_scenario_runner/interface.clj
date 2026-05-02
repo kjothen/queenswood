@@ -35,6 +35,7 @@
    :next-product-id 0
    :next-party-id 0
    :next-payment-id 0
+   :next-inbound-id 0
    :run-id (str (util/uuidv7))
    :counter 0
    :outcomes []})

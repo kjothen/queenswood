@@ -31,6 +31,7 @@
    :inbound-transfer transfers/inbound-transfer
    :outbound-transfer transfers/outbound-transfer
    :outbound-payment transfers/outbound-payment
+   :settle-outbound-payment transfers/settle-outbound-payment
    :internal-transfer transfers/internal-transfer
    :apply-fee fees/apply-fee
    :accrue-interest interest/accrue-interest
