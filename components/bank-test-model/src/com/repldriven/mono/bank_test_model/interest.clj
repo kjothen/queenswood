@@ -101,15 +101,18 @@
 
 (def accrue-interest
   "Accrues daily interest for every customer account in the org.
-  Args are `[org-id as-of-date]`. `:run?` is `false` because
-  fugato shouldn't generate interest commands until idempotency
-  is modelled (date-keyed dedup); EDN scenarios drive these
-  explicitly."
-  {:run? (fn [_state] false)
+  Args are `[org-id as-of-date]`. The args generator pulls the
+  next sequential date from `:next-interest-date` and `:next-state`
+  advances it, so every accrue/capitalize call is on a fresh date —
+  the brick's date-keyed idempotency never fires."
+  {:run? (fn [state] (seq (state/known-orgs state)))
    :args (fn [state]
            (gen/tuple (gen/elements (state/known-orgs state))
-                      (gen/return 20260501)))
-   :next-state (fn [state {[org-id _date] :args}] (accrue-org state org-id))
+                      (gen/return (state/next-interest-date state))))
+   :next-state (fn [state {[org-id _date] :args}]
+                 (-> state
+                     (accrue-org org-id)
+                     (update :next-interest-date inc)))
    :valid? (fn [state {[org-id] :args}] (contains? (:orgs state) org-id))})
 
 (defn- capitalize-account
@@ -149,11 +152,15 @@
 
 (def capitalize-interest
   "Capitalises every customer account's accrued interest in the
-  org. Args are `[org-id as-of-date]`. `:run?` false (see
-  `accrue-interest`)."
-  {:run? (fn [_state] false)
+  org. Args are `[org-id as-of-date]`. Shares the
+  `:next-interest-date` counter with `accrue-interest`, so dates
+  are unique across both commands."
+  {:run? (fn [state] (seq (state/known-orgs state)))
    :args (fn [state]
            (gen/tuple (gen/elements (state/known-orgs state))
-                      (gen/return 20260501)))
-   :next-state (fn [state {[org-id _date] :args}] (capitalize-org state org-id))
+                      (gen/return (state/next-interest-date state))))
+   :next-state (fn [state {[org-id _date] :args}]
+                 (-> state
+                     (capitalize-org org-id)
+                     (update :next-interest-date inc)))
    :valid? (fn [state {[org-id] :args}] (contains? (:orgs state) org-id))})

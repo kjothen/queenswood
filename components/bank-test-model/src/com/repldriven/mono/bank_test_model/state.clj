@@ -37,6 +37,11 @@
    :next-party-id 0
    :next-payment-id 0
    :next-ni-id 0
+   ;; Each :accrue-interest / :capitalize-interest call consumes
+   ;; the current value and increments — so every interest command
+   ;; is on a fresh date and the brick's date-keyed idempotency
+   ;; doesn't kick in. Format `YYYYMMDD`.
+   :next-interest-date 20260501
    :now 0})
 
 (defn next-id
@@ -75,6 +80,13 @@
   `:ni-N` into a real NI value of `\"ni-N\"`."
   [state]
   (keyword (str "ni-" (:next-ni-id state))))
+
+(defn next-interest-date
+  "The next `as-of-date` for an interest command, given current
+  state. Pure — does not advance the counter. Returned as `YYYYMMDD`
+  to match the wire format the brick expects."
+  [state]
+  (:next-interest-date state))
 
 (defn known-accounts
   "Accounts the model knows about, as a vector of synthetic ids."
