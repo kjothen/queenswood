@@ -523,6 +523,32 @@
         (update :counter inc)
         (track result))))
 
+(def ^:private bogus-version-id "prv.unknown-scenario-version")
+(def ^:private bogus-product-id "prd.unknown-scenario-product")
+
+(defmethod dispatch :try-product-op-with-bogus-id
+  ;; Non-modelled — drives the brick's not-found anomaly kinds for
+  ;; cash-account-product operations. `op` selects which call to
+  ;; make against `model-prod`'s real org/product, substituting a
+  ;; deliberately-unknown version-id (or product-id, for :get-
+  ;; product). The `track` helper captures :last-rejection-kind so
+  ;; :assert-rejection-kind can pin the contractual anomaly.
+  [{:keys [bank orgs products] :as ctx} {[op model-prod] :args}]
+  (let [{:keys [real-id org]} (get products model-prod)
+        org-real-id (get-in orgs [org :real-id])
+        result
+        (case op
+          :update-draft
+          (products/update-draft bank org-real-id real-id bogus-version-id {})
+          :publish (products/publish bank org-real-id real-id bogus-version-id)
+          :get-version
+          (products/get-version bank org-real-id real-id bogus-version-id)
+          :get-product
+          (products/get-product bank org-real-id bogus-product-id))]
+    (-> ctx
+        (update :counter inc)
+        (track result))))
+
 (defmethod dispatch :assert-balance
   [{:keys [bank id-mapping] :as ctx} {[model-id expected] :args}]
   (let [actual (get (projections/project-balances bank

@@ -1,0 +1,43 @@
+{:name "cash-account-product not-found rejections pin contractual kinds"
+ :tags #{:rejection :products}
+
+ ;; Pins the four 404 anomaly kinds the brick surfaces when an
+ ;; operation references a product or version that doesn't exist.
+ ;; The property test never generates these — its args generators
+ ;; only pick from known products/versions. Each op uses the
+ ;; runner's :try-product-op-with-bogus-id verb, which substitutes
+ ;; a deliberately-unknown version-id (or product-id, for
+ ;; :get-product). The `:assert-rejection-kind` after each op
+ ;; checks the kind that downstream API responses depend on.
+
+ :given
+ [{:command :open-account     :args []}
+  {:command :create-product   :args [:org-0]}
+  {:command :assert-no-anomaly :args []}]
+
+ :when []
+
+ :then
+ [;; publish + bogus version-id → :version-not-found
+  {:command :try-product-op-with-bogus-id :args [:publish :prod-1]}
+  {:command :assert-outcome :args [:denied]}
+  {:command :assert-rejection-kind
+   :args [:cash-account-product/version-not-found]}
+
+  ;; update-draft + bogus version-id → :version-not-found
+  {:command :try-product-op-with-bogus-id :args [:update-draft :prod-1]}
+  {:command :assert-outcome :args [:denied]}
+  {:command :assert-rejection-kind
+   :args [:cash-account-product/version-not-found]}
+
+  ;; get-version + bogus version-id → :version-not-found
+  {:command :try-product-op-with-bogus-id :args [:get-version :prod-1]}
+  {:command :assert-outcome :args [:denied]}
+  {:command :assert-rejection-kind
+   :args [:cash-account-product/version-not-found]}
+
+  ;; get-product + bogus product-id → :product-not-found
+  {:command :try-product-op-with-bogus-id :args [:get-product :prod-1]}
+  {:command :assert-outcome :args [:denied]}
+  {:command :assert-rejection-kind
+   :args [:cash-account-product/product-not-found]}]}
