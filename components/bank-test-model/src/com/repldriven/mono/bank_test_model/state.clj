@@ -107,27 +107,54 @@
   [state]
   (vec (keys (:orgs state))))
 
+(defn latest-version
+  "Returns the highest-numbered version map of `prod-id`, or nil
+  if the product has none. Versions are appended in order so the
+  last entry is always the latest."
+  [state prod-id]
+  (peek (get-in state [:products prod-id :versions])))
+
+(defn has-published-version?
+  "True if `prod-id` has at least one `:published` version. The
+  real bank's `published-version` helper picks the highest such
+  version-number, so any product with a published version can
+  back new accounts."
+  [state prod-id]
+  (boolean (some (fn [v] (= :published (:status v)))
+                 (get-in state [:products prod-id :versions]))))
+
 (defn add-account-options
   "All `[org-id party-id prod-id]` triples eligible for
   `:add-account`: party belongs to org, party is active, prod
-  belongs to org, and prod is published. Used by
-  `add-account`'s args generator."
+  belongs to org, and prod has at least one published version.
+  Used by `add-account`'s args generator."
   [state]
   (vec (for [[org-id org] (:orgs state)
              prod-id (:products org)
              party-id (:parties org)
-             :when (and (= :published
-                           (get-in state [:products prod-id :status]))
+             :when (and (has-published-version? state prod-id)
                         (= :active
                            (get-in state [:parties party-id :status])))]
          [org-id party-id prod-id])))
 
 (defn drafts
-  "Product ids currently in `:draft` status. Used by
-  `publish-product`'s args generator."
+  "Product ids whose latest version is currently `:draft`. Used by
+  `:publish-product` and `:discard-draft` (both act on the latest
+  draft)."
   [state]
-  (vec (for [[prod-id prod] (:products state)
-             :when (= :draft (:status prod))]
+  (vec (for [[prod-id _] (:products state)
+             :when (= :draft (:status (latest-version state prod-id)))]
+         prod-id)))
+
+(defn open-draftable
+  "Product ids whose latest version is NOT `:draft` — i.e., where
+  `:open-draft` may run because there's no live draft to collide
+  with. Includes products whose latest version is `:published` or
+  `:discarded`."
+  [state]
+  (vec (for [[prod-id _] (:products state)
+             :let [latest (latest-version state prod-id)]
+             :when (and latest (not= :draft (:status latest)))]
          prod-id)))
 
 (defn pending-parties

@@ -133,10 +133,14 @@
         (assoc :id-mapping (id-mapping/add id-mapping model-acct real-acct-id))
         (assoc-in [:orgs model-org] {:real-id real-org-id :currency "GBP"})
         (assoc-in [:products model-prod]
-                  ;; auto-product is already published; no draft
-                  ;; version-id needed for our flow
+                  ;; auto-settlement product is created already-published;
+                  ;; track v1 as :published so open-draft / publish-product
+                  ;; eligibility match the model.
                   {:real-id (get-in org [:accounts 0 :product-id])
-                   :org model-org})
+                   :org model-org
+                   :versions [{:real-id (get-in org [:accounts 0 :version-id])
+                               :status :published
+                               :number 1}]})
         (assoc-in [:parties model-party]
                   {:real-id (get-in org [:party :party-id]) :org model-org})
         (assoc-in [:accounts model-acct] {:org model-org})
@@ -161,36 +165,109 @@
    {:balance-type :balance-type-interest-paid
     :balance-status :balance-status-posted}])
 
+(defn- product-payload
+  "The :balance-products / scheme defaults the runner uses for any
+  generated custom product."
+  [product-name product-type & [extras]]
+  (merge {:name product-name
+          :product-type product-type
+          :balance-sheet-side :balance-sheet-side-liability
+          :allowed-currencies ["GBP"]
+          :allowed-payment-address-schemes [:payment-address-scheme-scan]
+          :balance-products default-balance-products}
+         extras))
+
+(defn- record-fresh-product
+  "Records a freshly-created product (v1 draft) on the runner ctx
+  when `result` is non-anomalous. Skips on anomaly."
+  [ctx model-prod model-org result]
+  (cond-> ctx
+          (not (error/anomaly? result))
+          (assoc-in [:products model-prod]
+           {:real-id (:product-id result)
+            :org model-org
+            :versions [{:real-id (:version-id result)
+                        :status :draft
+                        :number 1}]})))
+
 (defmethod dispatch :create-product
   [{:keys [bank counter next-product-id orgs] :as ctx} {[model-org] :args}]
   (let [model-prod (model-id-for-next-product next-product-id)
         {:keys [real-id]} (get orgs model-org)
-        result (products/new-product
-                bank
-                real-id
-                {:name (str "Custom Product " counter)
-                 :product-type :product-type-current
-                 :balance-sheet-side :balance-sheet-side-liability
-                 :allowed-currencies ["GBP"]
-                 :allowed-payment-address-schemes [:payment-address-scheme-scan]
-                 :balance-products default-balance-products})]
+        result (products/new-product bank
+                                     real-id
+                                     (product-payload (str "Custom Product "
+                                                           counter)
+                                                      :product-type-current))]
     (-> ctx
-        (cond->
-         (not (error/anomaly? result))
-         (assoc-in [:products model-prod]
-          {:real-id (:product-id result)
-           :version-id (:version-id result)
-           :org model-org}))
+        (record-fresh-product model-prod model-org result)
         (update :next-product-id inc)
         (update :counter inc)
         (track result))))
 
+(defn- latest-version
+  "Returns the latest (highest-number) version map from a runner
+  product's `:versions`."
+  [product]
+  (peek (:versions product)))
+
+(defn- update-latest-version
+  "Updates the latest version of `model-prod` in ctx by applying
+  `f` to it. Used after a publish/discard succeeds to mirror the
+  state change."
+  [ctx model-prod f]
+  (update-in ctx
+             [:products model-prod :versions]
+             (fn [versions] (conj (pop versions) (f (peek versions))))))
+
 (defmethod dispatch :publish-product
   [{:keys [bank orgs products] :as ctx} {[model-prod] :args}]
-  (let [{:keys [real-id version-id org]} (get products model-prod)
+  (let [product (get products model-prod)
+        {:keys [real-id org]} product
+        {version-real-id :real-id} (latest-version product)
         org-real-id (get-in orgs [org :real-id])
-        result (products/publish bank org-real-id real-id version-id)]
+        result (products/publish bank org-real-id real-id version-real-id)]
     (-> ctx
+        (cond-> (not (error/anomaly? result))
+                (update-latest-version model-prod
+                                       (fn [v] (assoc v :status :published))))
+        (update :counter inc)
+        (track result))))
+
+(defmethod dispatch :open-draft
+  [{:keys [bank orgs products] :as ctx} {[model-prod] :args}]
+  (let [product (get products model-prod)
+        {:keys [real-id org]} product
+        org-real-id (get-in orgs [org :real-id])
+        next-number (inc (:number (latest-version product)))
+        result (products/open-draft bank
+                                    org-real-id
+                                    real-id
+                                    (product-payload (str "Draft Version "
+                                                          next-number)
+                                                     :product-type-current))]
+    (-> ctx
+        (cond-> (not (error/anomaly? result))
+                (update-in [:products model-prod :versions]
+                           conj
+                           {:real-id (:version-id result)
+                            :status :draft
+                            :number next-number}))
+        (update :counter inc)
+        (track result))))
+
+(defmethod dispatch :discard-draft
+  [{:keys [bank orgs products] :as ctx} {[model-prod] :args}]
+  (let [product (get products model-prod)
+        {:keys [real-id org]} product
+        {version-real-id :real-id} (latest-version product)
+        org-real-id (get-in orgs [org :real-id])
+        result
+        (products/discard-draft bank org-real-id real-id version-real-id)]
+    (-> ctx
+        (cond-> (not (error/anomaly? result))
+                (update-latest-version model-prod
+                                       (fn [v] (assoc v :status :discarded))))
         (update :counter inc)
         (track result))))
 
@@ -403,31 +480,20 @@
         (track result))))
 
 (defmethod dispatch :create-savings-product
-  ;; EDN-only — interest-bearing variant of :create-product. Args
-  ;; `[:org rate-bps]`; everything else mirrors :create-product. Not
-  ;; in the model because interest math isn't either; reserve for
-  ;; hand-authored scenarios with explicit balance assertions.
+  ;; Interest-bearing variant of :create-product. Args `[:org rate-bps]`;
+  ;; everything else mirrors :create-product.
   [{:keys [bank counter next-product-id orgs] :as ctx}
    {[model-org rate-bps] :args}]
   (let [model-prod (model-id-for-next-product next-product-id)
         {org-real-id :real-id} (get orgs model-org)
-        result (products/new-product
-                bank
-                org-real-id
-                {:name (str "Savings Product " counter)
-                 :product-type :product-type-savings
-                 :balance-sheet-side :balance-sheet-side-liability
-                 :allowed-currencies ["GBP"]
-                 :allowed-payment-address-schemes [:payment-address-scheme-scan]
-                 :balance-products default-balance-products
-                 :interest-rate-bps rate-bps})]
+        result (products/new-product bank
+                                     org-real-id
+                                     (product-payload
+                                      (str "Savings Product " counter)
+                                      :product-type-savings
+                                      {:interest-rate-bps rate-bps}))]
     (-> ctx
-        (cond->
-         (not (error/anomaly? result))
-         (assoc-in [:products model-prod]
-          {:real-id (:product-id result)
-           :version-id (:version-id result)
-           :org model-org}))
+        (record-fresh-product model-prod model-org result)
         (update :next-product-id inc)
         (update :counter inc)
         (track result))))

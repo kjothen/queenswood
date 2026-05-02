@@ -30,165 +30,43 @@
 ;; covered end-to-end by every `:create-product` /
 ;; `:create-savings-product` step in the scenario-runner suite.
 
-(deftest open-draft-test
-  (with-test-system
-   [sys "classpath:bank-cash-account-product/application-test.yml"]
-   (let [config (fdb-config sys)
-         org-id "org_test_open_draft"]
-     (testing "409 when a draft already exists"
-       (let [v1 (SUT/new-product config org-id draft-data)
-             rejected
-             (SUT/open-draft config org-id (:product-id v1) draft-data)]
-         (is (error/rejection? rejected))
-         (is (= :cash-account-product/draft-already-exists
-                (error/kind rejected)))))
-     (testing "opens v2 after v1 is published"
-       (nom-test> [v1 (SUT/new-product config org-id draft-data)
-                   _
-                   (SUT/publish config org-id (:product-id v1) (:version-id v1))
-                   v2 (SUT/open-draft config org-id (:product-id v1) draft-data)
-                   _ (is (= 2 (:version-number v2)))
-                   _ (is (not= (:version-id v1) (:version-id v2)))
-                   _ (is (= :cash-account-product-status-draft (:status v2)))]))
-     (testing "opens v2 after v1 is discarded"
-       (nom-test> [v1 (SUT/new-product config org-id asset-draft-data)
-                   _ (SUT/discard-draft config
-                                        org-id
-                                        (:product-id v1)
-                                        (:version-id v1))
-                   v2 (SUT/open-draft config
-                                      org-id
-                                      (:product-id v1)
-                                      asset-draft-data)
-                   _ (is (= 2 (:version-number v2)))
-                   _ (is (= :cash-account-product-status-draft (:status v2)))])))))
+;; The 409 lifecycle rejections (version-immutable, draft-already-
+;; exists) are pinned in domain_test.clj as pure-function tests.
+;; Multi-version state-machine happy paths (open-draft v2 after
+;; publish/discard, two consecutive publishes, draft → discarded
+;; with `:discarded-at`) are exercised on every property-test trial
+;; via :open-draft / :discard-draft / :publish-product. What stays
+;; here are the 404 paths that genuinely round-trip through the
+;; FDB store.
 
-(deftest update-draft-test
-  (with-test-system
-   [sys "classpath:bank-cash-account-product/application-test.yml"]
-   (let [config (fdb-config sys)
-         org-id "org_test_update_draft"]
-     (testing "updates existing draft in place, preserving vid and number"
-       (nom-test> [v1 (SUT/new-product config org-id draft-data)
-                   updated (SUT/update-draft config
-                                             org-id
-                                             (:product-id v1)
-                                             (:version-id v1)
-                                             (assoc draft-data
-                                                    :name "Renamed"
-                                                    :valid-from "2025-02-01"))
-                   _ (is (= (:version-id v1) (:version-id updated)))
-                   _ (is (= 1 (:version-number updated)))
-                   _ (is (= "Renamed" (:name updated)))
-                   _ (is (= "2025-02-01" (:valid-from updated)))
-                   _ (is (= :cash-account-product-status-draft
-                            (:status updated)))]))
-     (testing "404 when the version-id is unknown"
-       (let [v1 (SUT/new-product config org-id draft-data)
-             rejected (SUT/update-draft config
-                                        org-id
-                                        (:product-id v1)
-                                        "prv.unknown"
-                                        draft-data)]
-         (is (error/rejection? rejected))
-         (is (= :cash-account-product/version-not-found
-                (error/kind rejected)))))
-     (testing "409 when the version is published"
-       (let [v1 (SUT/new-product config org-id draft-data)
-             _ (SUT/publish config org-id (:product-id v1) (:version-id v1))
-             rejected (SUT/update-draft config
-                                        org-id
-                                        (:product-id v1)
-                                        (:version-id v1)
-                                        draft-data)]
-         (is (error/rejection? rejected))
-         (is (= :cash-account-product/version-immutable
-                (error/kind rejected)))))
-     (testing "409 when the version is discarded"
-       (let [v1 (SUT/new-product config org-id asset-draft-data)
-             _
-             (SUT/discard-draft config org-id (:product-id v1) (:version-id v1))
-             rejected (SUT/update-draft config
-                                        org-id
-                                        (:product-id v1)
-                                        (:version-id v1)
-                                        asset-draft-data)]
-         (is (error/rejection? rejected))
-         (is (= :cash-account-product/version-immutable
-                (error/kind rejected))))))))
+(deftest update-draft-404-test
+  (with-test-system [sys
+                     "classpath:bank-cash-account-product/application-test.yml"]
+                    (let [config (fdb-config sys)
+                          org-id "org_test_update_404"]
+                      (testing "404 when the version-id is unknown"
+                        (let [v1 (SUT/new-product config org-id draft-data)
+                              rejected (SUT/update-draft config
+                                                         org-id
+                                                         (:product-id v1)
+                                                         "prv.unknown"
+                                                         draft-data)]
+                          (is (error/rejection? rejected))
+                          (is (= :cash-account-product/version-not-found
+                                 (error/kind rejected))))))))
 
-(deftest discard-draft-test
+(deftest publish-404-test
   (with-test-system
    [sys "classpath:bank-cash-account-product/application-test.yml"]
    (let [config (fdb-config sys)
-         org-id "org_test_discard_draft"]
-     (testing "transitions draft to discarded and stamps :discarded-at"
-       (nom-test> [v1 (SUT/new-product config org-id draft-data)
-                   discarded (SUT/discard-draft config
-                                                org-id
-                                                (:product-id v1)
-                                                (:version-id v1))
-                   _ (is (= :cash-account-product-status-discarded
-                            (:status discarded)))
-                   _ (is (pos? (:discarded-at discarded)))
-                   reloaded (SUT/get-version config
-                                             org-id
-                                             (:product-id v1)
-                                             (:version-id v1))
-                   _ (is (= :cash-account-product-status-discarded
-                            (:status reloaded)))]))
-     (testing "409 when the version is published"
-       (let [v1 (SUT/new-product config org-id draft-data)
-             _ (SUT/publish config org-id (:product-id v1) (:version-id v1))
-             rejected (SUT/discard-draft config
-                                         org-id
-                                         (:product-id v1)
-                                         (:version-id v1))]
-         (is (error/rejection? rejected))
-         (is (= :cash-account-product/version-immutable
-                (error/kind rejected))))))))
-
-(deftest publish-test
-  (with-test-system
-   [sys "classpath:bank-cash-account-product/application-test.yml"]
-   (let [config (fdb-config sys)
-         org-id "org_test_publish"]
-     ;; happy-path "draft → published" status flip removed —
-     ;; covered end-to-end by every `:publish-product` step in
-     ;; the scenario-runner suite.
+         org-id "org_test_publish_404"]
      (testing "404 when the version-id is unknown"
        (let [v1 (SUT/new-product config org-id draft-data)
              rejected
              (SUT/publish config org-id (:product-id v1) "prv.unknown")]
          (is (error/rejection? rejected))
          (is (= :cash-account-product/version-not-found
-                (error/kind rejected)))))
-     (testing "409 republishing the same version"
-       (let [v1 (SUT/new-product config org-id draft-data)
-             _ (SUT/publish config org-id (:product-id v1) (:version-id v1))
-             rejected
-             (SUT/publish config org-id (:product-id v1) (:version-id v1))]
-         (is (error/rejection? rejected))
-         (is (= :cash-account-product/version-immutable
-                (error/kind rejected)))))
-     (testing "two consecutive publishes produce two published versions"
-       (nom-test> [v1 (SUT/new-product config org-id asset-draft-data)
-                   _
-                   (SUT/publish config org-id (:product-id v1) (:version-id v1))
-                   v2 (SUT/open-draft config
-                                      org-id
-                                      (:product-id v1)
-                                      asset-draft-data)
-                   _
-                   (SUT/publish config org-id (:product-id v2) (:version-id v2))
-                   {:keys [versions]}
-                   (SUT/get-product config org-id (:product-id v1))
-                   published (filterv (fn [v]
-                                        (=
-                                         :cash-account-product-status-published
-                                         (:status v)))
-                                      versions)
-                   _ (is (= 2 (count published)))])))))
+                (error/kind rejected))))))))
 
 (deftest get-product-test
   (with-test-system
@@ -231,19 +109,15 @@
                    _ (is (= [2 1] (mapv :version-number (:versions p1-agg))))
                    _ (is (= 1 (count (:versions p2-agg))))])))))
 
-(deftest get-version-test
+(deftest get-version-404-test
+  ;; Happy-path PK lookup is exercised indirectly on every
+  ;; :add-account in the scenario runner (cash-accounts/new-account
+  ;; resolves the published version via get-version). What's
+  ;; unique here is the 404 anomaly kind.
   (with-test-system
    [sys "classpath:bank-cash-account-product/application-test.yml"]
    (let [config (fdb-config sys)
-         org-id "org_test_get_version"]
-     (testing "returns the version by composite PK"
-       (nom-test> [v1 (SUT/new-product config org-id draft-data)
-                   loaded (SUT/get-version config
-                                           org-id
-                                           (:product-id v1)
-                                           (:version-id v1))
-                   _ (is (= (:version-id v1) (:version-id loaded)))
-                   _ (is (= 1 (:version-number loaded)))]))
+         org-id "org_test_get_version_404"]
      (testing "404 when the version-id is unknown"
        (let [v1 (SUT/new-product config org-id draft-data)
              rejected

@@ -26,7 +26,8 @@
       (is (= [:acct-0] (get-in s [:orgs :org-0 :accounts])))
       (is (= [:prod-0] (get-in s [:orgs :org-0 :products])))
       (is (= [:party-0] (get-in s [:orgs :org-0 :parties])))
-      (is (= :published (get-in s [:products :prod-0 :status])))
+      (is (= [{:status :published :number 1}]
+             (get-in s [:products :prod-0 :versions])))
       (is (= :active (get-in s [:parties :party-0 :status])))
       (is (= :organization (get-in s [:parties :party-0 :type])))
       (is (= 1 (:next-id s)))
@@ -73,18 +74,20 @@
 
 (deftest create-and-publish-product-test
   (let [s0 (step SUT/init-state :open-account [])]
-    (testing "create-product opens a draft attached to an org"
+    (testing "create-product opens v1 as draft, attached to an org"
       (let [s1 (step s0 :create-product [:org-0])]
         (is (= 1 (:next-product-id s0))
             "prod-0 was already taken by the auto settlement product")
-        (is (= :draft (get-in s1 [:products :prod-1 :status])))
+        (is (= [{:status :draft :number 1}]
+               (get-in s1 [:products :prod-1 :versions])))
         (is (= :org-0 (get-in s1 [:products :prod-1 :org])))
         (is (= [:prod-0 :prod-1] (get-in s1 [:orgs :org-0 :products])))))
-    (testing "publish-product flips a draft to published"
+    (testing "publish-product flips the latest draft to published"
       (let [s2 (-> s0
                    (step :create-product [:org-0])
                    (step :publish-product [:prod-1]))]
-        (is (= :published (get-in s2 [:products :prod-1 :status])))))
+        (is (= [{:status :published :number 1}]
+               (get-in s2 [:products :prod-1 :versions])))))
     (testing "add-account against a draft is rejected by :valid?"
       (let [s3 (step s0 :create-product [:org-0])
             spec (get SUT/model :add-account)]
@@ -95,7 +98,27 @@
                    (step :create-product [:org-0])
                    (step :publish-product [:prod-1])
                    (step :add-account [:org-0 :party-0 :prod-1]))]
-        (is (= :prod-1 (get-in s4 [:accounts :acct-1 :product])))))))
+        (is (= :prod-1 (get-in s4 [:accounts :acct-1 :product])))))
+    (testing "open-draft after publish appends v2 in :draft"
+      (let [s5 (-> s0
+                   (step :create-product [:org-0])
+                   (step :publish-product [:prod-1])
+                   (step :open-draft [:prod-1]))]
+        (is (= [{:status :published :number 1} {:status :draft :number 2}]
+               (get-in s5 [:products :prod-1 :versions])))))
+    (testing "discard-draft flips the latest draft to discarded"
+      (let [s6 (-> s0
+                   (step :create-product [:org-0])
+                   (step :discard-draft [:prod-1]))]
+        (is (= [{:status :discarded :number 1}]
+               (get-in s6 [:products :prod-1 :versions])))))
+    (testing "open-draft after discard appends v2 in :draft"
+      (let [s7 (-> s0
+                   (step :create-product [:org-0])
+                   (step :discard-draft [:prod-1])
+                   (step :open-draft [:prod-1]))]
+        (is (= [{:status :discarded :number 1} {:status :draft :number 2}]
+               (get-in s7 [:products :prod-1 :versions])))))))
 
 (deftest inbound-transfer-test
   (let [s (-> SUT/init-state

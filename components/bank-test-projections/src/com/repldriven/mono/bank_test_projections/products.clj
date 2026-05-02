@@ -1,46 +1,54 @@
 (ns com.repldriven.mono.bank-test-projections.products
-  "Product-status projections for the scenario runner. Reads each
-  tracked product from the real bank and reports its status as
-  `:draft` or `:published`, keyed by model-prod-id. The model side
-  reads the same shape from `:products` in the model state.
+  "Product version-history projection. Each tracked product is
+  projected as its sequence of `{:status :draft|:published|
+  :discarded :number n}` versions, sorted by `:number` ascending,
+  letting the property test catch any drift between model intent
+  and real-side reality — including out-of-order publishes, missed
+  drafts, or stale discarded versions.
 
-  These let the property test catch cases where the runner thinks
-  a product was created/published but the real bank never did
-  (or vice-versa) — divergences that would otherwise only surface
-  later via failed `:add-account` calls."
+  Reads through `bank-cash-account-product/get-product`, the same
+  query path the API uses."
   (:require
     [com.repldriven.mono.bank-cash-account-product.interface :as products]))
 
-(defn- status
-  "Reads the latest status of `product-id` in `org-id` from the
-  real bank. Returns `:published` if any version is published,
-  `:draft` otherwise (or the keyword for an explicit other state),
-  or `nil` if the product doesn't exist."
+(defn- normalise-status
+  "Maps the real `:cash-account-product-status-*` enum to the
+  model's three-state `:draft` / `:published` / `:discarded`."
+  [status]
+  (case status
+    :cash-account-product-status-draft :draft
+    :cash-account-product-status-published :published
+    :cash-account-product-status-discarded :discarded))
+
+(defn- versions-from-real
+  "Reads versions from the real bank and reduces each to the
+  model's projection shape. Sorted ascending by version-number so
+  the projection has a canonical order regardless of the store's
+  scan direction."
   [bank org-id product-id]
   (let [product (products/get-product bank org-id product-id)]
-    (cond
-     (nil? product)
-     nil
-     (some (fn [v]
-             (= :cash-account-product-status-published (:status v)))
-           (:versions product))
-     :published
-     :else
-     :draft)))
+    (->> (:versions product)
+         (mapv (fn [v]
+                 {:status (normalise-status (:status v))
+                  :number (:version-number v)}))
+         (sort-by :number)
+         vec)))
 
 (defn project-products
-  "For each entry in `model->real`, reads its product from the real
-  bank and reports `:draft` or `:published`. `model->real` is
+  "For each entry in `model->real`, reads the product from the
+  real bank and reports its versions list. `model->real` is
   `{model-prod-id {:real-id <id> :org-real-id <org>}}`. Returns
-  `{model-prod-id :draft|:published}`."
+  `{model-prod-id [{:status ... :number n} ...]}`."
   [bank model->real]
   (->> model->real
        (map (fn [[model-id {:keys [real-id org-real-id]}]]
-              [model-id (status bank org-real-id real-id)]))
+              [model-id (versions-from-real bank org-real-id real-id)]))
        (into {})))
 
 (defn project-model-products
-  "Reads product statuses out of model state. Returns
-  `{model-prod-id :draft|:published}`."
+  "Reads the same shape from model state. Versions are stored in
+  insertion order (which matches `:number` ascending) so no
+  re-sorting is needed."
   [model-state]
-  (update-vals (:products model-state) :status))
+  (update-vals (:products model-state)
+               (fn [prod] (vec (:versions prod)))))

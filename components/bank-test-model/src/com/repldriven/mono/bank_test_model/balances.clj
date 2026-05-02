@@ -48,9 +48,9 @@
                                   :settlement-account acct-id})
                        (assoc-in [:products prod-id]
                                  {:org org-id
-                                  :status :published
                                   :product-type :settlement
-                                  :interest-rate-bps 0})
+                                  :interest-rate-bps 0
+                                  :versions [{:status :published :number 1}]})
                        (assoc-in
                         [:parties party-id]
                         {:org org-id :type :organization :status :active})
@@ -84,7 +84,7 @@
    :valid?
    (fn [state {[org-id party-id prod-id] :args}]
      (and (contains? (:orgs state) org-id)
-          (= :published (get-in state [:products prod-id :status]))
+          (state/has-published-version? state prod-id)
           (contains? (set (get-in state [:orgs org-id :products])) prod-id)
           (= :active (get-in state [:parties party-id :status]))
           (contains? (set (get-in state [:orgs org-id :parties])) party-id)))})

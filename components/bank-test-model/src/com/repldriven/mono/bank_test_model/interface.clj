@@ -24,6 +24,8 @@
    :create-product products/create-product
    :create-savings-product products/create-savings-product
    :publish-product products/publish-product
+   :open-draft products/open-draft
+   :discard-draft products/discard-draft
    :create-person-party parties/create-person-party
    :activate-party parties/activate-party
    :inbound-transfer transfers/inbound-transfer
