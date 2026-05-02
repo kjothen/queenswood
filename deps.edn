@@ -92,6 +92,7 @@
     components/bank-cash-account {:local/root "components/bank-cash-account"}
     components/bank-clearbank-webhook {:local/root "components/bank-clearbank-webhook"}
     components/bank-idv {:local/root "components/bank-idv"}
+    components/bank-idv-onfido-webhook {:local/root "components/bank-idv-onfido-webhook"}
     components/bank-interest {:local/root "components/bank-interest"}
     components/bank-organization {:local/root "components/bank-organization"}
     components/bank-party {:local/root "components/bank-party"}
@@ -108,6 +109,8 @@
     bases/bank-api {:local/root "bases/bank-api"}
     bases/bank-clearbank-simulator {:local/root "bases/bank-clearbank-simulator"}
     bases/bank-clearbank-adapter {:local/root "bases/bank-clearbank-adapter"}
+    bases/bank-idv-onfido-simulator {:local/root "bases/bank-idv-onfido-simulator"}
+    bases/bank-idv-onfido-adapter {:local/root "bases/bank-idv-onfido-adapter"}
     bases/bank-monolith {:local/root "bases/bank-monolith"}}
    :extra-paths ["components/bank-api-key/test"
                   "components/bank-api-key/test-resources"
@@ -121,6 +124,7 @@
                   "components/bank-clearbank-webhook/test-resources"
                   "components/bank-idv/test"
                   "components/bank-idv/test-resources"
+                  "components/bank-idv-onfido-webhook/test"
                   "components/bank-interest/test"
                   "components/bank-interest/test-resources"
                   "components/bank-organization/test"
@@ -144,6 +148,10 @@
                   "bases/bank-clearbank-simulator/test-resources"
                   "bases/bank-clearbank-adapter/test"
                   "bases/bank-clearbank-adapter/test-resources"
+                  "bases/bank-idv-onfido-simulator/test"
+                  "bases/bank-idv-onfido-simulator/test-resources"
+                  "bases/bank-idv-onfido-adapter/test"
+                  "bases/bank-idv-onfido-adapter/test-resources"
                   "bases/bank-monolith/test"
                   "bases/bank-monolith/test-resources"]}
   :format/zprint {:extra-deps {zprint/zprint {:mvn/version "1.3.0"}}

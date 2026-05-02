@@ -3,11 +3,20 @@ processor: !system/component
   record-db: !system/ref fdb.record-db
   record-store: !system/ref fdb.meta-store
   schemas: !system/ref avro.serde
+
+event-processor-impl: !system/component
+  system/component-kind: idv/event-processor
+  record-db: !system/ref fdb.record-db
+  record-store: !system/ref fdb.meta-store
+  schemas: !system/ref avro.serde
+
 party-watcher-handler: !system/component
   system/component-kind: idv/party-watcher-handler
   record-store: !system/ref fdb.meta-store
+
 idv-watcher-handler: !system/component
-  system/component-kind: idv/watcher-handler
+  system/component-kind: idv/idv-watcher-handler
+  record-db: !system/ref fdb.record-db
   record-store: !system/ref fdb.meta-store
 watchers: !system/component
   system/component-kind: fdb/watchers

@@ -14,6 +14,8 @@ serde: !system/component
     idv: schemas/idv/idv.avsc.json
     initiate-idv: schemas/idv/initiate-idv.avsc.json
     get-idv: schemas/idv/get-idv.avsc.json
+    submit-idv-check: schemas/idv/submit-idv-check.avsc.json
+    idv-completed: schemas/idv/idv-completed.avsc.json
     unknown-idv-command: schemas/idv/initiate-idv.avsc.json
 
     transaction: schemas/transactions/transaction.avsc.json

@@ -19,4 +19,13 @@
   [idv]
   (assoc idv
          :status :idv-status-accepted
+         :completed-at (System/currentTimeMillis)
+         :updated-at (System/currentTimeMillis)))
+
+(defn rejected-idv
+  "Returns IDV with status rejected."
+  [idv]
+  (assoc idv
+         :status :idv-status-rejected
+         :completed-at (System/currentTimeMillis)
          :updated-at (System/currentTimeMillis)))

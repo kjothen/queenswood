@@ -35,25 +35,6 @@
   [schemas schema-name result]
   (avro/deserialize-same (get schemas schema-name) (:payload result)))
 
-(defn- poll-status
-  "Polls IDV until status matches expected, or times out
-  after 5 s."
-  [proc schemas verification-id expected]
-  (loop [attempts 50]
-    (let [result (send-command proc
-                               schemas
-                               "get-idv"
-                               {:organization-id test-org-id
-                                :verification-id verification-id})
-          decoded (when (= "ACCEPTED" (:status result))
-                    (decode-payload schemas "idv" result))]
-      (cond (= expected (:status decoded))
-            decoded
-            (pos? attempts)
-            (do (Thread/sleep 100) (recur (dec attempts)))
-            :else
-            decoded))))
-
 (defn- test-initiate-idv
   [proc schemas]
   (testing "initiate creates IDV with pending status"
@@ -72,28 +53,14 @@
                   _
                   (is (nil? (:completed-at decoded)))]))))
 
-(defn- test-watcher-transitions
-  [proc schemas]
-  (testing "watcher transitions pending->accepted"
-    (let [payload {:organization-id test-org-id :party-id "pty.watcher-test"}]
-      (nom-test> [result (send-command proc schemas "initiate-idv" payload)
-                  _
-                  (is (= "ACCEPTED" (:status result)))
-                  decoded
-                  (decode-payload schemas "idv" result)
-                  verification-id
-                  (:verification-id decoded)
-                  polled
-                  (poll-status proc
-                               schemas
-                               verification-id
-                               :idv-status-accepted)
-                  _
-                  (is (= :idv-status-accepted (:status polled)))]))))
+;; pending → accepted is no longer driven by an unconditional flip
+;; in this brick; it now flows through the IDV-provider adapter
+;; (bank-idv-onfido-adapter) and the message-bus event handler in
+;; `bank-idv.events`. The full chain is exercised by the monolith
+;; integration test `idv_test.clj`.
 
 (deftest process-idv-test
   (with-test-system [sys "classpath:bank-idv/application-test.yml"]
                     (let [proc (system/instance sys [:idv :processor])
                           schemas (system/instance sys [:avro :serde])]
-                      (test-initiate-idv proc schemas)
-                      (test-watcher-transitions proc schemas))))
+                      (test-initiate-idv proc schemas))))
