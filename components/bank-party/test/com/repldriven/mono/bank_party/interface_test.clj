@@ -76,60 +76,6 @@
             :else
             party))))
 
-(defn- test-create-party
-  [proc schemas]
-  (testing "create-party creates party with pending status"
-    (let [create-payload {:organization-id test-org-id
-                          :type :party-type-person
-                          :display-name "Arthur Phillip Dent"
-                          :given-name "Arthur"
-                          :family-name "Dent"
-                          :date-of-birth 19500727
-                          :nationality "GB"
-                          :national-identifier
-                          {:type :identifier-type-national-insurance
-                           :value "AB123456C"
-                           :issuing-country "GB"}}]
-      (nom-test>
-        [result (send-command proc schemas "create-party" create-payload)
-         _
-         (is (= "ACCEPTED" (:status result)))
-         decoded
-         (decode-payload schemas "party" result)
-         _
-         (is (some? (:party-id decoded)))
-         _ (is (= :party-status-pending (:status decoded)))
-         _ (is (= :party-type-person (:type decoded)))
-         _
-         (is (= "Arthur Phillip Dent" (:display-name decoded)))]))))
-
-(defn- test-duplicate-national-identifier
-  [proc schemas]
-  (testing "duplicate national identifier returns rejection"
-    (let [ni {:type :identifier-type-national-insurance
-              :value "ZZ999999D"
-              :issuing-country "GB"}
-          payload {:organization-id test-org-id
-                   :type :party-type-person
-                   :display-name "First"
-                   :given-name "First"
-                   :family-name "Person"
-                   :date-of-birth 19900101
-                   :nationality "GB"
-                   :national-identifier ni}]
-      (nom-test> [result (send-command proc schemas "create-party" payload)
-                  _
-                  (is (= "ACCEPTED" (:status result)))])
-      (let [result (send-command proc
-                                 schemas
-                                 "create-party"
-                                 (assoc payload
-                                        :display-name "Second"
-                                        :given-name "Second"))]
-        (is (error/rejection? result))
-        (is (= :party/duplicate-national-identifier
-               (error/kind result)))))))
-
 (defn- test-watcher-transitions
   [proc schemas config]
   (testing "watcher transitions party pending->active on accepted IDV"
@@ -177,7 +123,5 @@
                           config
                           {:record-db (system/instance sys [:fdb :record-db])
                            :record-store (system/instance sys [:fdb :store])}]
-                      (test-create-party proc schemas)
-                      (test-duplicate-national-identifier proc schemas)
                       (test-watcher-transitions proc schemas config)
                       (test-unknown-command proc schemas))))

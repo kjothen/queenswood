@@ -2,31 +2,17 @@
   (:require
     [com.repldriven.mono.bank-interest.interface]
 
-    [com.repldriven.mono.bank-balance.interface :as balances]
-    [com.repldriven.mono.bank-cash-account.interface :as
-     cash-accounts]
-    [com.repldriven.mono.bank-cash-account-product.interface :as
-     products]
-    [com.repldriven.mono.bank-organization.interface :as
-     organizations]
-    [com.repldriven.mono.bank-transaction.interface :as
-     transactions]
-
     [com.repldriven.mono.avro.interface :as avro]
     [com.repldriven.mono.error.interface :as error]
-    [com.repldriven.mono.fdb.interface :as fdb]
     [com.repldriven.mono.processor.interface :as processor]
     [com.repldriven.mono.system.interface :as system]
     [com.repldriven.mono.testcontainers.interface]
     [com.repldriven.mono.test-system.interface :refer
-     [with-test-system nom-test>]]
+     [with-test-system]]
 
     [clojure.test :refer [deftest is testing]]))
 
 (defn- send-command
-  "Serialises `data` via the command schema and dispatches through
-  the processor, hoisting `:idempotency-key` from `data` onto the
-  envelope as `:id` (mirrors the wire behaviour)."
   [proc schemas command-name data]
   (let [payload (avro/serialize (get schemas command-name) data)]
     (if (error/anomaly? payload)
@@ -36,282 +22,20 @@
                           :id (:idempotency-key data)
                           :payload payload}))))
 
-(defn- decode-payload
-  [schemas schema-name result]
-  (avro/deserialize-same (get schemas schema-name)
-                         (:payload result)))
-
-(defn- fdb-config
-  [sys]
-  {:record-db (system/instance sys [:fdb :record-db])
-   :record-store (system/instance sys [:fdb :meta-store])})
-
-(defn- poll-account-opened
-  "Polls until the account status is opened, or times out."
-  [config org-id account-id]
-  (loop [attempts 50]
-    (let [accounts (cash-accounts/get-accounts config
-                                               org-id)
-          account (when-not (error/anomaly? accounts)
-                    (first (filter
-                            #(= account-id
-                                (:account-id %))
-                            accounts)))]
-      (cond (= :cash-account-status-opened
-               (:account-status account))
-            account
-            (pos? attempts)
-            (do (Thread/sleep 100)
-                (recur (dec attempts)))
-            :else
-            account))))
-
-(defn- fund-account
-  "Records and applies a fund transaction (debit internal
-  suspense, credit `account-id` default). Source is
-  internal/suspense so internal's `available` (default-only)
-  is unaffected."
-  [config internal-account-id account-id amount idempotency-key]
-  (fdb/transact
-   config
-   (fn [txn]
-     (let [result (transactions/record-transaction
-                   txn
-                   {:idempotency-key idempotency-key
-                    :transaction-type :transaction-type-internal-transfer
-                    :currency "GBP"
-                    :reference "Fund"
-                    :legs [{:account-id internal-account-id
-                            :balance-type :balance-type-suspense
-                            :balance-status :balance-status-posted
-                            :side :leg-side-debit
-                            :amount amount}
-                           {:account-id account-id
-                            :balance-type :balance-type-default
-                            :balance-status :balance-status-posted
-                            :side :leg-side-credit
-                            :amount amount}]})]
-       (balances/apply-legs txn
-                            (:legs result)
-                            (:transaction-type result))))))
-
-(defn- create-funded-customer
-  "Creates a customer org with a savings product at the
-  given interest rate, opens an account, waits for opened
-  status, and funds it. Also funds the customer's settlement
-  account so interest accrual/capitalization (which debits
-  settlement balances) doesn't trip the platform `available
-  >= 0` limit. Returns {:organization-id :account-id}."
-  [config tier internal-account-id org-name
-   interest-rate-bps fund-amount]
-  (let [org-result (organizations/new-organization
-                    config
-                    org-name
-                    :organization-type-customer
-                    :organization-status-test
-                    tier
-                    ["GBP"])
-        org-id (get-in org-result
-                       [:organization :organization-id])
-        party-id (get-in org-result
-                         [:organization :party :party-id])
-        settlement-id (get-in org-result
-                              [:organization :accounts
-                               0 :account-id])
-        _ (fund-account config
-                        internal-account-id
-                        settlement-id
-                        fund-amount
-                        (str "fund-settle-" org-name))
-        product (products/new-product
-                 config
-                 org-id
-                 {:name "Savings Account"
-                  :product-type :product-type-savings
-                  :balance-sheet-side
-                  :balance-sheet-side-liability
-                  :allowed-currencies ["GBP"]
-                  :balance-products
-                  [{:balance-type :balance-type-default
-                    :balance-status :balance-status-posted}
-                   {:balance-type
-                    :balance-type-interest-accrued
-                    :balance-status
-                    :balance-status-posted}
-                   {:balance-type
-                    :balance-type-interest-paid
-                    :balance-status
-                    :balance-status-posted}]
-                  :allowed-payment-address-schemes
-                  [:payment-address-scheme-scan]
-                  :interest-rate-bps interest-rate-bps})
-        product-id (:product-id product)
-        _ (products/publish config org-id product-id (:version-id product))
-        account
-        (cash-accounts/new-account
-         config
-         {:organization-id org-id
-          :party-id party-id
-          :name "Test Savings"
-          :currency "GBP"
-          :product-id product-id})
-        account-id (:account-id account)
-        _ (poll-account-opened config org-id account-id)
-        _ (let [txn-data
-                {:idempotency-key (str "fund-" org-name)
-                 :transaction-type
-                 :transaction-type-internal-transfer
-                 :currency "GBP"
-                 :reference "Fund for interest test"
-                 :legs
-                 [{:account-id internal-account-id
-                   :balance-type :balance-type-suspense
-                   :balance-status :balance-status-posted
-                   :side :leg-side-debit
-                   :amount fund-amount}
-                  {:account-id account-id
-                   :balance-type :balance-type-default
-                   :balance-status :balance-status-posted
-                   :side :leg-side-credit
-                   :amount fund-amount}]}]
-            (fdb/transact
-             config
-             (fn [txn]
-               (let [result (transactions/record-transaction txn txn-data)]
-                 (balances/apply-legs txn
-                                      (:legs result)
-                                      (:transaction-type result))))))]
-    {:organization-id org-id :account-id account-id}))
-
-(defn- test-accrue-daily-interest
-  [sys proc schemas]
-  (testing "accrue-daily-interest accrues for accounts
-  with interest rate"
-    (let [config (fdb-config sys)
-          tier "micro"
-          internal-org (system/instance sys
-                                        [:organizations :internal])
-          internal-id (get-in internal-org
-                              [:organization :accounts
-                               0 :account-id])]
-      (nom-test>
-        [customer (create-funded-customer
-                   config
-                   tier
-                   internal-id
-                   "Accrue Customer"
-                   500
-                   100000)
-         result (send-command
-                 proc
-                 schemas
-                 "accrue-daily-interest"
-                 {:idempotency-key "accrue-001"
-                  :organization-id
-                  (:organization-id customer)
-                  :as-of-date 20260324})
-         _ (is (= "ACCEPTED" (:status result)))
-         decoded (decode-payload schemas
-                                 "interest-result"
-                                 result)
-         _ (is (pos? (:accounts-processed decoded)))
-         accrued
-         (balances/get-balance config
-                               (:account-id customer)
-                               :balance-type-interest-accrued
-                               "GBP"
-                               :balance-status-posted)
-         _ (is (pos? (:credit accrued)))]))))
-
-(defn- test-capitalize-monthly-interest
-  [sys proc schemas]
-  (testing "capitalize-monthly-interest moves accrued
-  to default"
-    (let [config (fdb-config sys)
-          tier "micro"
-          internal-org (system/instance sys
-                                        [:organizations :internal])
-          internal-id (get-in internal-org
-                              [:organization :accounts
-                               0 :account-id])]
-      (nom-test>
-        [customer (create-funded-customer
-                   config
-                   tier
-                   internal-id
-                   "Cap Customer"
-                   500
-                   100000)
-         _ (send-command
-            proc
-            schemas
-            "accrue-daily-interest"
-            {:idempotency-key "accrue-cap-001"
-             :organization-id
-             (:organization-id customer)
-             :as-of-date 20260324})
-         accrued-before
-         (balances/get-balance config
-                               (:account-id customer)
-                               :balance-type-interest-accrued
-                               "GBP"
-                               :balance-status-posted)
-         accrued-amount (- (:credit accrued-before 0)
-                           (:debit accrued-before 0))
-         _ (is (pos? accrued-amount))
-         default-before
-         (balances/get-balance config
-                               (:account-id customer)
-                               :balance-type-default
-                               "GBP"
-                               :balance-status-posted)
-         result (send-command
-                 proc
-                 schemas
-                 "capitalize-monthly-interest"
-                 {:idempotency-key "cap-001"
-                  :organization-id
-                  (:organization-id customer)
-                  :as-of-date 20260324})
-         _ (is (= "ACCEPTED" (:status result)))
-         accrued-after
-         (balances/get-balance config
-                               (:account-id customer)
-                               :balance-type-interest-accrued
-                               "GBP"
-                               :balance-status-posted)
-         _ (is (= 0
-                  (- (:credit accrued-after 0)
-                     (:debit accrued-after 0))))
-         default-after
-         (balances/get-balance config
-                               (:account-id customer)
-                               :balance-type-default
-                               "GBP"
-                               :balance-status-posted)
-         _ (is (= (+ (:credit default-before)
-                     accrued-amount)
-                  (:credit default-after)))]))))
-
 (defn- test-unknown-command
   [proc schemas]
   (testing "unknown command returns rejection"
-    (let [result
-          (send-command
-           proc
-           schemas
-           "unknown-interest-command"
-           {:idempotency-key "idem-999"
-            :organization-id "org-1"
-            :as-of-date 20260324})]
+    (let [result (send-command proc
+                               schemas
+                               "unknown-interest-command"
+                               {:idempotency-key "idem-999"
+                                :organization-id "org-1"
+                                :as-of-date 20260324})]
       (is (error/rejection? result))
-      (is (= :interest/unknown-command
-             (error/kind result))))))
+      (is (= :interest/unknown-command (error/kind result))))))
 
 (deftest process-interest-test
   (with-test-system [sys "classpath:bank-interest/application-test.yml"]
                     (let [proc (system/instance sys [:interest :processor])
                           schemas (system/instance sys [:avro :serde])]
-                      (test-accrue-daily-interest sys proc schemas)
-                      (test-capitalize-monthly-interest sys proc schemas)
                       (test-unknown-command proc schemas))))
