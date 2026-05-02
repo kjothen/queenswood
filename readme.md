@@ -153,25 +153,30 @@ See [ADR-0008](docs/adr/0008-changelog-watchers.md).
 
 The bank is documented:
 
-- **[docs/adr/](docs/adr/)** — fourteen architecture decision
-  records (mono fork, FoundationDB, message-bus abstraction,
-  Avro, anomalies, kebab-case keys, system-as-data, changelog
-  watchers, model-equality testing, code generation via
-  prep-lib, one-component-per-library, pre-commit hooks, single
-  unified API, OpenAPI 3.x compliance).
+- **[docs/prd/](docs/prd/)** — eight product requirements
+  documents: a platform-wide umbrella plus one per capability
+  (onboarding, parties, cash-account-products, cash-accounts,
+  payments, interest, policies). The *what and why* — intended
+  scope, users, and domain rules — companion to the TDDs' *how*.
 - **[docs/tdd/](docs/tdd/)** — fourteen technical design
   documents covering the substrate (transaction processing,
   transactions and balances, traceability, scenario testing,
   idempotency proposal), the API surface and auth (service-apis,
   api-keys), the policy engine, and every domain (organisations,
   parties, products, accounts, payments, interest).
+- **[docs/adr/](docs/adr/)** — fourteen architecture decision
+  records (mono fork, FoundationDB, message-bus abstraction,
+  Avro, anomalies, kebab-case keys, system-as-data, changelog
+  watchers, model-equality testing, code generation via
+  prep-lib, one-component-per-library, pre-commit hooks, single
+  unified API, OpenAPI 3.x compliance).
+- **[docs/slides/](docs/slides/)** — a slidev walk-through of how
+  systems-as-data assembles a running system.
 - **[docs/recipes/](docs/recipes/)** — twelve task-oriented
   recipes (Problem / Solution / Rules / Discussion / References)
   for components, bases, projects, system-components,
   system-configurations, testcontainers, error-handling, testing,
   code-style, code-generation, common-helpers, git-workflow.
-- **[docs/slides/](docs/slides/)** — a slidev walk-through of how
-  systems-as-data assembles a running system.
 
 ## Running
 
