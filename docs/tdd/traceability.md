@@ -140,7 +140,7 @@ sequenceDiagram
     HTTP->>B: command envelope
     B->>P: consume
     P->>P: extract-parent-context<br/>with-span-parent → C<br/>(child of B)
-    P->>P: commit; build event
+    P->>P: commit, build event
     P->>P: inject-traceparent<br/>(refs C)
     P->>B: event envelope
     B->>S: fan-out

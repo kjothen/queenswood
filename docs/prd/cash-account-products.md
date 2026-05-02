@@ -229,7 +229,7 @@ sequenceDiagram
     participant T as Tenant engineer
     participant Q as Queenswood
 
-    Note over T,Q: v1 is published; some accounts already exist
+    Note over T,Q: v1 is published — some accounts already exist
     T->>Q: open new draft on product
     Q-->>T: v2 in draft (blank)
     T->>Q: update draft (new rate, new terms)

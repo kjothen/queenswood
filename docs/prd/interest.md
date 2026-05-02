@@ -287,7 +287,7 @@ sequenceDiagram
 
     Note over E,Q: day 1: balance £5,000, rate 5% APR
     Q->>Q: accrue ~68p (5000 × 0.05 ÷ 365)
-    Note over E,Q: day 2..30: accrue daily; carry handles fractions
+    Note over E,Q: day 2..30 — accrue daily, carry handles fractions
     Q->>Q: each day's interest accumulates in *accrued* bucket
     Note over E,Q: end of month: capitalisation
     Q->>E: spendable balance grows by the month's accrued

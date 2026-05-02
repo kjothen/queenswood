@@ -20,14 +20,18 @@
   `:valid?` — see `docs/tdd/scenario-testing.md`."
   {:open-account balances/open-account
    :add-account balances/add-account
+   :close-account balances/close-account
    :create-product products/create-product
    :create-savings-product products/create-savings-product
    :publish-product products/publish-product
+   :open-draft products/open-draft
+   :discard-draft products/discard-draft
    :create-person-party parties/create-person-party
    :activate-party parties/activate-party
    :inbound-transfer transfers/inbound-transfer
    :outbound-transfer transfers/outbound-transfer
    :outbound-payment transfers/outbound-payment
+   :settle-outbound-payment transfers/settle-outbound-payment
    :internal-transfer transfers/internal-transfer
    :apply-fee fees/apply-fee
    :accrue-interest interest/accrue-interest

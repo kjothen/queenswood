@@ -286,13 +286,13 @@ sequenceDiagram
     participant T as Tenant engineer
     participant Q as Queenswood
 
-    Note over T,Q: tenant has 9,999 accounts;<br/>limit is 10,000
+    Note over T,Q: tenant has 9,999 accounts —<br/>limit is 10,000
     T->>Q: open one more account
     Q->>Q: check capability + limit
     Q-->>T: allowed (now at 10,000)
     T->>Q: open another account
     Q->>Q: check capability + limit
-    Q-->>T: denied (would be 10,001;<br/>over the per-tenant cap)
+    Q-->>T: denied (would be 10,001 —<br/>over the per-tenant cap)
 ```
 
 The tenant runs into the limit on the next request after
@@ -307,12 +307,12 @@ sequenceDiagram
     participant T as Tenant
     participant Q as Queenswood
 
-    Note over E,Q: account at -£100;<br/>min balance limit £0 (curative)
+    Note over E,Q: account at -£100 —<br/>min balance limit £0 (curative)
     E->>T: deposits £50
     T->>Q: submit inbound transfer (£50)
     Q->>Q: check limit:<br/>pre=-£100 (breach), post=-£50 (better)
     Q-->>T: permitted (curative)
-    Note over E,Q: balance now -£50;<br/>still in breach but improving
+    Note over E,Q: balance now -£50 —<br/>still in breach but improving
 ```
 
 The customer's deposit is permitted because it improves
@@ -332,7 +332,7 @@ sequenceDiagram
     Q-->>O: enabled = true
     O->>Q: update policy (enabled = false)
     Q-->>O: paused
-    Note over O,Q: policy is no longer evaluated;<br/>everything else still applies
+    Note over O,Q: policy is no longer evaluated —<br/>everything else still applies
     Note over O,Q: later
     O->>Q: update policy (enabled = true)
     Q-->>O: re-enabled

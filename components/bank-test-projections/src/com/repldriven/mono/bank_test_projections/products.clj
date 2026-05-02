@@ -1,46 +1,66 @@
 (ns com.repldriven.mono.bank-test-projections.products
-  "Product-status projections for the scenario runner. Reads each
-  tracked product from the real bank and reports its status as
-  `:draft` or `:published`, keyed by model-prod-id. The model side
-  reads the same shape from `:products` in the model state.
+  "Product version-history projection. For each tracked product
+  emits the full sequence of `{:status :draft|:published|
+  :discarded :number n}` versions in descending order — matching
+  the real bank's `get-products` scan and pinning that contract
+  on every trial. The model side reverses its (ascending)
+  insertion order to align.
 
-  These let the property test catch cases where the runner thinks
-  a product was created/published but the real bank never did
-  (or vice-versa) — divergences that would otherwise only surface
-  later via failed `:add-account` calls."
+  Reads through `bank-cash-account-product/get-products` (one
+  call per org), so the property test exercises that read path
+  comprehensively in addition to per-product `get-product`."
   (:require
     [com.repldriven.mono.bank-cash-account-product.interface :as products]))
 
-(defn- status
-  "Reads the latest status of `product-id` in `org-id` from the
-  real bank. Returns `:published` if any version is published,
-  `:draft` otherwise (or the keyword for an explicit other state),
-  or `nil` if the product doesn't exist."
-  [bank org-id product-id]
-  (let [product (products/get-product bank org-id product-id)]
-    (cond
-     (nil? product)
-     nil
-     (some (fn [v]
-             (= :cash-account-product-status-published (:status v)))
-           (:versions product))
-     :published
-     :else
-     :draft)))
+(defn- normalise-status
+  "Maps the real `:cash-account-product-status-*` enum to the
+  model's three-state `:draft` / `:published` / `:discarded`."
+  [status]
+  (case status
+    :cash-account-product-status-draft :draft
+    :cash-account-product-status-published :published
+    :cash-account-product-status-discarded :discarded))
+
+(defn- versions-from-aggregate
+  "Reduces a real-side product aggregate's `:versions` to the
+  projection shape, preserving the order returned by the API
+  (descending by version-number)."
+  [aggregate]
+  (mapv (fn [v]
+          {:status (normalise-status (:status v))
+           :number (:version-number v)})
+        (:versions aggregate)))
 
 (defn project-products
-  "For each entry in `model->real`, reads its product from the real
-  bank and reports `:draft` or `:published`. `model->real` is
-  `{model-prod-id {:real-id <id> :org-real-id <org>}}`. Returns
-  `{model-prod-id :draft|:published}`."
+  "Reads each org's products via `get-products` (one call per
+  unique org in `model->real`), then matches each tracked
+  product-id and emits its versions list. Returns
+  `{model-prod-id [{:status ... :number n} ...]}` — order is
+  descending by `:number` to mirror the real API.
+
+  `model->real` is `{model-prod-id {:real-id <id>
+                                     :org-real-id <org>}}`."
   [bank model->real]
-  (->> model->real
-       (map (fn [[model-id {:keys [real-id org-real-id]}]]
-              [model-id (status bank org-real-id real-id)]))
-       (into {})))
+  (let [by-org (group-by (fn [[_ entry]] (:org-real-id entry))
+                         model->real)]
+    (->> by-org
+         (mapcat (fn [[org-real-id entries]]
+                   (let [{:keys [items]} (products/get-products bank
+                                                                org-real-id)
+                         items-by-id (into {}
+                                           (map (juxt :product-id identity))
+                                           items)]
+                     (map (fn [[model-id {:keys [real-id]}]]
+                            [model-id
+                             (versions-from-aggregate
+                              (get items-by-id real-id))])
+                          entries))))
+         (into {}))))
 
 (defn project-model-products
-  "Reads product statuses out of model state. Returns
-  `{model-prod-id :draft|:published}`."
+  "Reads the same shape from model state. Versions are stored in
+  insertion order (which matches `:number` ascending), so reverse
+  to produce descending output that matches the real projection."
   [model-state]
-  (update-vals (:products model-state) :status))
+  (update-vals (:products model-state)
+               (fn [prod] (vec (reverse (:versions prod))))))

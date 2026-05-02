@@ -1,5 +1,6 @@
 (ns ^:eftest/synchronized com.repldriven.mono.bank-cash-account.interface-test
   (:require
+    [com.repldriven.mono.bank-cash-account.commands :as commands]
     [com.repldriven.mono.bank-cash-account.interface]
 
     [com.repldriven.mono.bank-schema.interface :as schema]
@@ -13,6 +14,14 @@
     [com.repldriven.mono.test-system.interface :refer
      [with-test-system nom-test>]]
     [clojure.test :refer [deftest is testing]]))
+
+(deftest unknown-command-test
+  (testing "dispatch rejects command names not in the handler registry"
+    (let [result (#'commands/dispatch
+                  {:schemas {}}
+                  {:command "unknown-cash-account-command" :payload nil})]
+      (is (error/rejection? result))
+      (is (= :cash-account/unknown-command (error/kind result))))))
 
 (def ^:private test-org-id "org_test_cash_accounts")
 (def ^:private test-product-id "prd_test_cash_accounts")
@@ -116,38 +125,6 @@
          (fdb/open txn "cash-account-products")
          (schema/CashAccountProduct->java version)))))))
 
-(defn- seed-party
-  "Seeds a party record with given status."
-  [config party-id status]
-  (fdb/transact config
-                (fn [txn]
-                  (let [party {:organization-id test-org-id
-                               :party-id party-id
-                               :type :party-type-person
-                               :status status
-                               :display-name "Test Party"
-                               :created-at (System/currentTimeMillis)
-                               :updated-at (System/currentTimeMillis)}]
-                    (fdb/save-record (fdb/open txn "parties")
-                                     (schema/Party->java party))))))
-
-(defn- test-open-account-party-not-active
-  [proc schemas config]
-  (testing "open-cash-account rejects when party is not active"
-    (let [party-id "cust-pending"]
-      (seed-organization config)
-      (seed-party config party-id :party-status-pending)
-      (let [result (send-command proc
-                                 schemas
-                                 "open-cash-account"
-                                 {:organization-id test-org-id
-                                  :party-id party-id
-                                  :name "Pending Account"
-                                  :currency "USD"
-                                  :product-id test-product-id})]
-        (is (error/rejection? result))
-        (is (= :cash-account/party-status (error/kind result)))))))
-
 (defn- test-open-account-party-not-found
   [proc schemas]
   (testing "open-cash-account rejects when party not found"
@@ -161,26 +138,6 @@
                                 :product-id test-product-id})]
       (is (error/rejection? result))
       (is (= :party/not-found (error/kind result))))))
-
-(defn- test-close-account
-  [proc schemas config]
-  (testing "close-cash-account sets status to closing"
-    (let [party-id "cust-2"
-          open-payload {:organization-id test-org-id
-                        :party-id party-id
-                        :name "Account to Close"
-                        :currency "USD"
-                        :product-id test-product-id}]
-      (seed-organization config)
-      (seed-active-party config party-id)
-      (nom-test>
-        [opened (send-command proc schemas "open-cash-account" open-payload)
-         account (decode-payload schemas "cash-account" opened)
-         close-data (select-keys account [:organization-id :account-id])
-         result (send-command proc schemas "close-cash-account" close-data)
-         _ (is (= "ACCEPTED" (:status result)))
-         decoded (decode-payload schemas "cash-account" result)
-         _ (is (= open-payload (select-keys decoded (keys open-payload))))]))))
 
 (defn- test-watcher-transitions
   [proc schemas config]
@@ -240,28 +197,6 @@
       (is (= :cash-account-product/product-not-found
              (error/kind result))))))
 
-(defn- test-open-account-invalid-currency
-  [proc schemas config]
-  (testing "open-cash-account rejects when currency not in
-  allowed-currencies"
-    (let [party-id "cust-currency"
-          product-id "prd_gbp_only"]
-      (seed-organization config)
-      (seed-active-party config party-id)
-      (seed-published-product-version config
-                                      product-id
-                                      {:allowed-currencies ["GBP"]})
-      (let [result (send-command proc
-                                 schemas
-                                 "open-cash-account"
-                                 {:organization-id test-org-id
-                                  :party-id party-id
-                                  :name "Wrong Currency"
-                                  :currency "USD"
-                                  :product-id product-id})]
-        (is (error/rejection? result))
-        (is (= :cash-account/invalid-currency (error/kind result)))))))
-
 (defn- test-open-account-no-payment-schemes
   [proc schemas config]
   (testing
@@ -288,39 +223,24 @@
         (is (= :cash-account/no-payment-schemes
                (error/kind result)))))))
 
-(defn- test-unknown-command
-  [proc schemas]
-  (testing "unknown command returns rejection"
-    (let [result (send-command proc
-                               schemas
-                               "unknown-command"
-                               {:organization-id test-org-id
-                                :account-id "acc-8"})]
-      (is (error/rejection? result))
-      (is (= :cash-account/unknown-command (error/kind result))))))
-
 (deftest process-cash-accounts-test
-  (with-test-system [sys "classpath:bank-cash-account/application-test.yml"]
-                    (let [proc (system/instance sys [:cash-account :processor])
-                          schemas (system/instance sys [:avro :serde])
-                          config
-                          {:record-db (system/instance sys [:fdb :record-db])
-                           :record-store (system/instance sys [:fdb :store])}]
-                      ;; Subtests that open an account share a single
-                      ;; published product seeded once here; tests that
-                      ;; need a different product (no-payment-schemes,
-                      ;; invalid-currency) seed their own. The shared
-                      ;; org and a "cust-1" active party are similarly
-                      ;; pre-seeded for tests that don't seed their own.
-                      (seed-organization config)
-                      (seed-active-party config "cust-1")
-                      (seed-published-product-version config test-product-id)
-                      (test-open-account-party-not-active proc schemas config)
-                      (test-open-account-party-not-found proc schemas)
-                      (test-close-account proc schemas config)
-                      (test-watcher-transitions proc schemas config)
-                      (test-close-missing-account proc schemas)
-                      (test-open-account-unknown-product proc schemas)
-                      (test-open-account-invalid-currency proc schemas config)
-                      (test-open-account-no-payment-schemes proc schemas config)
-                      (test-unknown-command proc schemas))))
+  (with-test-system
+   [sys "classpath:bank-cash-account/application-test.yml"]
+   (let [proc (system/instance sys [:cash-account :processor])
+         schemas (system/instance sys [:avro :serde])
+         config {:record-db (system/instance sys [:fdb :record-db])
+                 :record-store (system/instance sys [:fdb :store])}]
+     ;; Subtests that open an account share a single
+     ;; published product seeded once here; tests that
+     ;; need a different product (no-payment-schemes,
+     ;; invalid-currency) seed their own. The shared
+     ;; org and a "cust-1" active party are similarly
+     ;; pre-seeded for tests that don't seed their own.
+     (seed-organization config)
+     (seed-active-party config "cust-1")
+     (seed-published-product-version config test-product-id)
+     (test-open-account-party-not-found proc schemas)
+     (test-watcher-transitions proc schemas config)
+     (test-close-missing-account proc schemas)
+     (test-open-account-unknown-product proc schemas)
+     (test-open-account-no-payment-schemes proc schemas config))))

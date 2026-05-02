@@ -212,8 +212,8 @@ sequenceDiagram
 
     P->>S: FPS payment to account's SCAN
     S->>Q: settlement notification (amount, BBAN)
-    Q->>Q: idempotent lookup;<br/>record transaction
-    Q->>Q: credit posted balance;<br/>save inbound payment
+    Q->>Q: idempotent lookup,<br/>record transaction
+    Q->>Q: credit posted balance,<br/>save inbound payment
     Q-->>S: acknowledge
 ```
 
@@ -233,7 +233,7 @@ sequenceDiagram
     Sch->>Q: accrue daily interest (organisation, as-of-date)
     loop Each customer account
         Q->>Q: compute daily interest<br/>with sub-minor-unit carry
-        Q->>Q: post if whole-units > 0;<br/>update carry
+        Q->>Q: post if whole-units > 0,<br/>update carry
     end
 
     Note over Sch,Q: At capitalisation cadence

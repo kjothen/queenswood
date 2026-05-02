@@ -15,8 +15,11 @@
        {:org-0 {:real-id  \"org.<ulid>\"
                 :currency \"GBP\"}}
      :products             ; model-prod-id → real-side product metadata
-       {:prod-0 {:real-id    \"prod.<ulid>\"
-                 :version-id \"v.<ulid>\"}}
+       {:prod-0 {:real-id  \"prod.<ulid>\"
+                 :org      :org-0
+                 :versions [{:real-id \"prv.<ulid>\"
+                             :status  :draft|:published|:discarded
+                             :number  1}]}}
      :parties              ; model-party-id → real-side party metadata
        {:party-0 {:real-id \"party.<ulid>\"  ; auto-created org party
                   :org     :org-0}}
@@ -32,6 +35,8 @@
      :run-id               \"01J...\"  ; per-context idempotency-key prefix
      :counter              0  ; per-step suffix on idempotency keys
      :last-outcome         :succeeded | :denied | nil
+     :last-rejection-kind  ::ns/kind | nil  ; anomaly kind on denial,
+                                            ; read by :assert-rejection-kind
      :outcomes             [:succeeded :denied ...]}"
   (:require
     [com.repldriven.mono.bank-scenario-runner.id-mapping :as id-mapping]
@@ -67,6 +72,12 @@
   of `bank-party/seed-active-party`."
   [bank org-real-id real-acct-id]
   (cash-accounts/seed-opened-account bank org-real-id real-acct-id))
+
+(defn- seed-closed
+  "Flips a freshly-closing account from `:closing` to `:closed`,
+  bypassing the changelog-watcher. Counterpart to `seed-opened`."
+  [bank org-real-id real-acct-id]
+  (cash-accounts/seed-closed-account bank org-real-id real-acct-id))
 
 (defn- track
   "Records the outcome of a side-effecting step on the context.
@@ -127,13 +138,18 @@
         (assoc :id-mapping (id-mapping/add id-mapping model-acct real-acct-id))
         (assoc-in [:orgs model-org] {:real-id real-org-id :currency "GBP"})
         (assoc-in [:products model-prod]
-                  ;; auto-product is already published; no draft
-                  ;; version-id needed for our flow
+                  ;; auto-settlement product is created already-published;
+                  ;; track v1 as :published so open-draft / publish-product
+                  ;; eligibility match the model.
                   {:real-id (get-in org [:accounts 0 :product-id])
-                   :org model-org})
+                   :org model-org
+                   :versions [{:real-id (get-in org [:accounts 0 :version-id])
+                               :status :published
+                               :number 1}]})
         (assoc-in [:parties model-party]
                   {:real-id (get-in org [:party :party-id]) :org model-org})
-        (assoc-in [:accounts model-acct] {:org model-org})
+        (assoc-in [:accounts model-acct]
+                  {:org model-org :bban (get-in org [:accounts 0 :bban])})
         (update :next-model-id inc)
         (update :next-org-id inc)
         (update :next-product-id inc)
@@ -155,36 +171,136 @@
    {:balance-type :balance-type-interest-paid
     :balance-status :balance-status-posted}])
 
+(defn- product-payload
+  "The :balance-products / scheme defaults the runner uses for any
+  generated custom product."
+  [product-name product-type & [extras]]
+  (merge {:name product-name
+          :product-type product-type
+          :balance-sheet-side :balance-sheet-side-liability
+          :allowed-currencies ["GBP"]
+          :allowed-payment-address-schemes [:payment-address-scheme-scan]
+          :balance-products default-balance-products}
+         extras))
+
+(defn- record-fresh-product
+  "Records a freshly-created product (v1 draft) on the runner ctx
+  when `result` is non-anomalous. Skips on anomaly."
+  [ctx model-prod model-org result]
+  (cond-> ctx
+          (not (error/anomaly? result))
+          (assoc-in [:products model-prod]
+           {:real-id (:product-id result)
+            :org model-org
+            :versions [{:real-id (:version-id result)
+                        :status :draft
+                        :number 1}]})))
+
 (defmethod dispatch :create-product
   [{:keys [bank counter next-product-id orgs] :as ctx} {[model-org] :args}]
   (let [model-prod (model-id-for-next-product next-product-id)
         {:keys [real-id]} (get orgs model-org)
-        result (products/new-product
-                bank
-                real-id
-                {:name (str "Custom Product " counter)
-                 :product-type :product-type-current
-                 :balance-sheet-side :balance-sheet-side-liability
-                 :allowed-currencies ["GBP"]
-                 :allowed-payment-address-schemes [:payment-address-scheme-scan]
-                 :balance-products default-balance-products})]
+        result (products/new-product bank
+                                     real-id
+                                     (product-payload (str "Custom Product "
+                                                           counter)
+                                                      :product-type-current))]
     (-> ctx
-        (cond->
-         (not (error/anomaly? result))
-         (assoc-in [:products model-prod]
-          {:real-id (:product-id result)
-           :version-id (:version-id result)
-           :org model-org}))
+        (record-fresh-product model-prod model-org result)
         (update :next-product-id inc)
         (update :counter inc)
         (track result))))
 
+(defn- latest-version
+  "Returns the latest (highest-number) version map from a runner
+  product's `:versions`."
+  [product]
+  (peek (:versions product)))
+
+(defn- update-latest-version
+  "Updates the latest version of `model-prod` in ctx by applying
+  `f` to it. Used after a publish/discard succeeds to mirror the
+  state change."
+  [ctx model-prod f]
+  (update-in ctx
+             [:products model-prod :versions]
+             (fn [versions] (conj (pop versions) (f (peek versions))))))
+
+(defn- resolve-product-id
+  "Lets scenarios pass either a tracked model-prod keyword
+  (resolved through the runner's products map) or a literal
+  product-id string (for negative tests against unknown ids)."
+  [products product-ref]
+  (if (keyword? product-ref)
+    (get-in products [product-ref :real-id])
+    product-ref))
+
 (defmethod dispatch :publish-product
+  ;; Two arg shapes:
+  ;;   `[model-prod]` — model form. Targets the latest draft of a
+  ;;     tracked product and mirrors the version-status flip into
+  ;;     ctx so projections agree.
+  ;;   `[model-org product-ref version-id]` — scenario-direct form.
+  ;;     Calls publish with explicit ids (any of which may be
+  ;;     deliberately bogus); doesn't mutate ctx versions because
+  ;;     the targeted version isn't necessarily a tracked one.
+  [{:keys [bank orgs products] :as ctx} {args :args}]
+  (case (count args)
+    1 (let [[model-prod] args
+            product (get products model-prod)
+            {:keys [real-id org]} product
+            {version-real-id :real-id} (latest-version product)
+            org-real-id (get-in orgs [org :real-id])
+            result (products/publish bank org-real-id real-id version-real-id)]
+        (-> ctx
+            (cond-> (not (error/anomaly? result))
+                    (update-latest-version model-prod
+                                           (fn [v]
+                                             (assoc v :status :published))))
+            (update :counter inc)
+            (track result)))
+    3 (let [[model-org product-ref version-id] args
+            org-real-id (get-in orgs [model-org :real-id])
+            product-id (resolve-product-id products product-ref)
+            result (products/publish bank org-real-id product-id version-id)]
+        (-> ctx
+            (update :counter inc)
+            (track result)))))
+
+(defmethod dispatch :open-draft
   [{:keys [bank orgs products] :as ctx} {[model-prod] :args}]
-  (let [{:keys [real-id version-id org]} (get products model-prod)
+  (let [product (get products model-prod)
+        {:keys [real-id org]} product
         org-real-id (get-in orgs [org :real-id])
-        result (products/publish bank org-real-id real-id version-id)]
+        next-number (inc (:number (latest-version product)))
+        result (products/open-draft bank
+                                    org-real-id
+                                    real-id
+                                    (product-payload (str "Draft Version "
+                                                          next-number)
+                                                     :product-type-current))]
     (-> ctx
+        (cond-> (not (error/anomaly? result))
+                (update-in [:products model-prod :versions]
+                           conj
+                           {:real-id (:version-id result)
+                            :status :draft
+                            :number next-number}))
+        (update :counter inc)
+        (track result))))
+
+(defmethod dispatch :discard-draft
+  [{:keys [bank orgs products] :as ctx} {[model-prod] :args}]
+  (let [product (get products model-prod)
+        {:keys [real-id org]} product
+        {version-real-id :real-id} (latest-version product)
+        org-real-id (get-in orgs [org :real-id])
+        result
+        (products/discard-draft bank org-real-id real-id version-real-id)]
+    (-> ctx
+        (cond-> (not (error/anomaly? result))
+                (update-latest-version model-prod
+                                       (fn [v] (assoc v :status :discarded))))
         (update :counter inc)
         (track result))))
 
@@ -247,8 +363,22 @@
         (cond-> real-acct-id
                 (assoc :id-mapping
                        (id-mapping/add id-mapping model-acct real-acct-id)))
-        (assoc-in [:accounts model-acct] {:org model-org})
+        (assoc-in [:accounts model-acct] {:org model-org :bban (:bban result)})
         (update :next-model-id inc)
+        (update :counter inc)
+        (track result))))
+
+(defmethod dispatch :close-account
+  [{:keys [bank id-mapping accounts orgs] :as ctx} {[model-acct] :args}]
+  (let [model-org (get-in accounts [model-acct :org])
+        org-real-id (get-in orgs [model-org :real-id])
+        real-acct-id (get-in id-mapping [:model->real model-acct])
+        result (cash-accounts/close-account bank
+                                            {:organization-id org-real-id
+                                             :account-id real-acct-id})
+        _ (when-not (error/anomaly? result)
+            (seed-closed bank org-real-id real-acct-id))]
+    (-> ctx
         (update :counter inc)
         (track result))))
 
@@ -274,21 +404,30 @@
            :amount amount}]})
 
 (defmethod dispatch :inbound-transfer
-  [{:keys [bank counter id-mapping internal-account-id run-id] :as ctx}
-   {[model-id amount] :args}]
-  (let [real-id (id-mapping/real id-mapping model-id)
-        result (record-and-apply
-                bank
-                (transfer-tx
-                 {:transaction-type :transaction-type-inbound-transfer
-                  :idempotency-key (str "scen-in-" run-id "-" counter)
-                  :reference (str "scenario inbound " counter)
-                  :customer-id real-id
-                  :internal-account-id internal-account-id
-                  :amount amount
-                  :customer-side :leg-side-credit
-                  :internal-side :leg-side-debit}))]
+  ;; Drives bank-payment's settle-inbound event handler — the same
+  ;; path production takes when a `transaction-settled` credit
+  ;; webhook arrives. The runner mirrors the model's
+  ;; `:next-inbound-id` counter to derive a deterministic
+  ;; scheme-transaction-id, so projections can look up by stx-id.
+  [{:keys [bank accounts internal-account-id next-inbound-id run-id] :as ctx}
+   {[model-acct amount] :args}]
+  (let [bban (get-in accounts [model-acct :bban])
+        marker (keyword (str "in-" next-inbound-id))
+        stx-id (str "scen-in-" run-id "-" (name marker))
+        result (payment/settle-inbound
+                (assoc bank :internal-account-id internal-account-id)
+                {:scheme-transaction-id stx-id
+                 :end-to-end-id stx-id
+                 :scheme "FPS"
+                 :debit-credit-code :debit-credit-code-credit
+                 :amount amount
+                 :currency "GBP"
+                 :creditor-bban bban
+                 :debtor-name "Scenario Funder"
+                 :reference (str "scenario inbound " (name marker))
+                 :timestamp-settled (System/currentTimeMillis)})]
     (-> ctx
+        (update :next-inbound-id inc)
         (update :counter inc)
         (track result))))
 
@@ -363,6 +502,57 @@
         (update :counter inc)
         (track result))))
 
+(defmethod dispatch :settle-inbound-event
+  ;; Non-modelled — drives bank-payment's settle-inbound with an
+  ;; explicit `:scheme-transaction-id`, so EDN scenarios can re-
+  ;; deliver the same event to assert idempotency. The model's
+  ;; :inbound-transfer auto-generates stx-ids and tracks them in
+  ;; `:inbound-payments`; this verb leaves model state alone.
+  [{:keys [bank accounts internal-account-id] :as ctx}
+   {[model-acct amount stx-id] :args}]
+  (let [bban (get-in accounts [model-acct :bban])
+        result (payment/settle-inbound
+                (assoc bank :internal-account-id internal-account-id)
+                {:scheme-transaction-id stx-id
+                 :end-to-end-id stx-id
+                 :scheme "FPS"
+                 :debit-credit-code :debit-credit-code-credit
+                 :amount amount
+                 :currency "GBP"
+                 :creditor-bban bban
+                 :debtor-name "Scenario Funder"
+                 :reference (str "scenario inbound " stx-id)
+                 :timestamp-settled (System/currentTimeMillis)})]
+    (-> ctx
+        (update :counter inc)
+        (track result))))
+
+(defmethod dispatch :settle-outbound-payment
+  ;; Drives bank-payment's settle-outbound event handler with a
+  ;; `transaction-settled` debit event whose `:end-to-end-id`
+  ;; matches our outbound payment's `:payment-id`. Production
+  ;; receives this from the scheme adapter; here the runner
+  ;; synthesises it. No balance change at settlement — the customer
+  ;; debit and suspense credit posted at submit time.
+  [{:keys [bank counter internal-account-id payments run-id] :as ctx}
+   {[model-pmt] :args}]
+  (let [real-pmt-id (get-in payments [model-pmt :real-id])
+        result (payment/settle-outbound
+                (assoc bank :internal-account-id internal-account-id)
+                {:scheme-transaction-id (str "scen-stl-" run-id "-" counter)
+                 :end-to-end-id real-pmt-id
+                 :scheme "FPS"
+                 :debit-credit-code :debit-credit-code-debit
+                 :amount 0
+                 :currency "GBP"
+                 :creditor-bban "040004000000001"
+                 :debtor-name "Scenario Settler"
+                 :reference (str "scenario settlement " counter)
+                 :timestamp-settled (System/currentTimeMillis)})]
+    (-> ctx
+        (update :counter inc)
+        (track result))))
+
 (defmethod dispatch :apply-fee
   [{:keys [bank counter id-mapping internal-account-id run-id] :as ctx}
    {[model-id amount] :args}]
@@ -383,31 +573,20 @@
         (track result))))
 
 (defmethod dispatch :create-savings-product
-  ;; EDN-only — interest-bearing variant of :create-product. Args
-  ;; `[:org rate-bps]`; everything else mirrors :create-product. Not
-  ;; in the model because interest math isn't either; reserve for
-  ;; hand-authored scenarios with explicit balance assertions.
+  ;; Interest-bearing variant of :create-product. Args `[:org rate-bps]`;
+  ;; everything else mirrors :create-product.
   [{:keys [bank counter next-product-id orgs] :as ctx}
    {[model-org rate-bps] :args}]
   (let [model-prod (model-id-for-next-product next-product-id)
         {org-real-id :real-id} (get orgs model-org)
-        result (products/new-product
-                bank
-                org-real-id
-                {:name (str "Savings Product " counter)
-                 :product-type :product-type-savings
-                 :balance-sheet-side :balance-sheet-side-liability
-                 :allowed-currencies ["GBP"]
-                 :allowed-payment-address-schemes [:payment-address-scheme-scan]
-                 :balance-products default-balance-products
-                 :interest-rate-bps rate-bps})]
+        result (products/new-product bank
+                                     org-real-id
+                                     (product-payload
+                                      (str "Savings Product " counter)
+                                      :product-type-savings
+                                      {:interest-rate-bps rate-bps}))]
     (-> ctx
-        (cond->
-         (not (error/anomaly? result))
-         (assoc-in [:products model-prod]
-          {:real-id (:product-id result)
-           :version-id (:version-id result)
-           :org model-org}))
+        (record-fresh-product model-prod model-org result)
         (update :next-product-id inc)
         (update :counter inc)
         (track result))))
@@ -428,6 +607,48 @@
         result (interest/capitalize-monthly bank
                                             {:organization-id org-real-id
                                              :as-of-date as-of-date})]
+    (-> ctx
+        (update :counter inc)
+        (track result))))
+
+(defmethod dispatch :get-product
+  ;; Non-modelled — direct brick read. `product-ref` may be a
+  ;; tracked model-prod keyword or a literal product-id string
+  ;; (for not-found assertions).
+  [{:keys [bank orgs products] :as ctx} {[model-org product-ref] :args}]
+  (let [org-real-id (get-in orgs [model-org :real-id])
+        product-id (resolve-product-id products product-ref)
+        result (products/get-product bank org-real-id product-id)]
+    (-> ctx
+        (update :counter inc)
+        (track result))))
+
+(defmethod dispatch :get-product-version
+  ;; Non-modelled — direct brick read for a specific version.
+  ;; `version-id` is always a literal string; `product-ref` may be
+  ;; a model-prod keyword or a literal.
+  [{:keys [bank orgs products] :as ctx}
+   {[model-org product-ref version-id] :args}]
+  (let [org-real-id (get-in orgs [model-org :real-id])
+        product-id (resolve-product-id products product-ref)
+        result (products/get-version bank org-real-id product-id version-id)]
+    (-> ctx
+        (update :counter inc)
+        (track result))))
+
+(defmethod dispatch :update-product-draft
+  ;; Non-modelled — scenario-direct edit of a draft. Update fields
+  ;; aren't tracked by the model (no observable for name / valid-
+  ;; from / etc.), so this verb exists purely for scenarios that
+  ;; need to assert outcomes on the brick's update-draft path
+  ;; (404 unknown, 409 immutable). Empty `data` is fine for
+  ;; not-found tests; populated maps work for happy-path edits.
+  [{:keys [bank orgs products] :as ctx}
+   {[model-org product-ref version-id data] :args :or {data {}}}]
+  (let [org-real-id (get-in orgs [model-org :real-id])
+        product-id (resolve-product-id products product-ref)
+        result
+        (products/update-draft bank org-real-id product-id version-id data)]
     (-> ctx
         (update :counter inc)
         (track result))))

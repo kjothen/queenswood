@@ -1,0 +1,42 @@
+{:name "cash-account-product not-found rejections pin contractual kinds"
+ :tags #{:rejection :products}
+
+ ;; Pins the four 404 anomaly kinds the brick surfaces when a
+ ;; lookup references a product or version that doesn't exist.
+ ;; The property test never generates these — its args generators
+ ;; only pick from known products/versions. Each step calls a
+ ;; brick op directly with deliberately-unknown ids and asserts
+ ;; the contractual anomaly kind that downstream API responses
+ ;; depend on.
+
+ :given
+ [{:command :open-account     :args []}
+  {:command :create-product   :args [:org-0]}
+  {:command :assert-no-anomaly :args []}]
+
+ :when []
+
+ :then
+ [;; get-product on an unknown product-id
+  {:command :get-product :args [:org-0 "prd.unknown"]}
+  {:command :assert-outcome :args [:denied]}
+  {:command :assert-rejection-kind
+   :args [:cash-account-product/product-not-found]}
+
+  ;; get-product-version on a known product but unknown version-id
+  {:command :get-product-version :args [:org-0 :prod-1 "prv.unknown"]}
+  {:command :assert-outcome :args [:denied]}
+  {:command :assert-rejection-kind
+   :args [:cash-account-product/version-not-found]}
+
+  ;; publish-product targeted at a known product but unknown version-id
+  {:command :publish-product :args [:org-0 :prod-1 "prv.unknown"]}
+  {:command :assert-outcome :args [:denied]}
+  {:command :assert-rejection-kind
+   :args [:cash-account-product/version-not-found]}
+
+  ;; update-product-draft on a known product but unknown version-id
+  {:command :update-product-draft :args [:org-0 :prod-1 "prv.unknown"]}
+  {:command :assert-outcome :args [:denied]}
+  {:command :assert-rejection-kind
+   :args [:cash-account-product/version-not-found]}]}

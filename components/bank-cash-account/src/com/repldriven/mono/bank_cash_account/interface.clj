@@ -49,6 +49,15 @@
   [txn bban]
   (core/get-account-by-bban txn bban))
 
+(defn close-account
+  "Closes an account. Returns the updated (`:closing`) account or
+  anomaly. opts supports `:policies` to override policy resolution
+  for the capability check."
+  ([txn data]
+   (core/close-account txn data))
+  ([txn data opts]
+   (core/close-account txn data opts)))
+
 (defn seed-opened-account
   "Test/admin shortcut: flips an account from
   `:cash-account-status-opening` to `:cash-account-status-opened`
@@ -72,4 +81,20 @@
                                {:account-id account-id
                                 :status-before (:account-status account)
                                 :status-after (:account-status opened)})]
+    saved))
+
+(defn seed-closed-account
+  "Test/admin shortcut: flips an account from
+  `:cash-account-status-closing` to `:cash-account-status-closed`,
+  bypassing the changelog-watcher. Counterpart to
+  `seed-opened-account`. Returns the closed account or anomaly."
+  [txn organization-id account-id]
+  (let-nom>
+    [account (store/get-account txn organization-id account-id)
+     closed (domain/closed-account account)
+     saved (store/save-account txn
+                               closed
+                               {:account-id account-id
+                                :status-before (:account-status account)
+                                :status-after (:account-status closed)})]
     saved))

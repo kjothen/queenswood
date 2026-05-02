@@ -69,7 +69,12 @@
      :transactions (projections/project-transactions bank real->model)
      :outbound-payments (projections/project-outbound-payments
                          bank
-                         (:payments ctx))}))
+                         (:payments ctx))
+     :inbound-payments (projections/project-inbound-payments
+                        bank
+                        (:run-id ctx)
+                        (set (map (fn [n] (keyword (str "in-" n)))
+                                  (range (:next-inbound-id ctx)))))}))
 
 (defn- project-model
   [model-state]
@@ -80,7 +85,9 @@
    :accounts (projections/project-model-accounts model-state)
    :transactions (projections/project-model-transactions model-state)
    :outbound-payments (projections/project-model-outbound-payments
-                       model-state)})
+                       model-state)
+   :inbound-payments (projections/project-model-inbound-payments
+                      model-state)})
 
 (defn- run-and-compare
   "Drives `cmds` through both reality and the model, then compares
