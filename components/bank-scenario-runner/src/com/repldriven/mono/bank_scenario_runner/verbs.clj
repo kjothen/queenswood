@@ -15,8 +15,11 @@
        {:org-0 {:real-id  \"org.<ulid>\"
                 :currency \"GBP\"}}
      :products             ; model-prod-id → real-side product metadata
-       {:prod-0 {:real-id    \"prod.<ulid>\"
-                 :version-id \"v.<ulid>\"}}
+       {:prod-0 {:real-id  \"prod.<ulid>\"
+                 :org      :org-0
+                 :versions [{:real-id \"prv.<ulid>\"
+                             :status  :draft|:published|:discarded
+                             :number  1}]}}
      :parties              ; model-party-id → real-side party metadata
        {:party-0 {:real-id \"party.<ulid>\"  ; auto-created org party
                   :org     :org-0}}
@@ -32,6 +35,8 @@
      :run-id               \"01J...\"  ; per-context idempotency-key prefix
      :counter              0  ; per-step suffix on idempotency keys
      :last-outcome         :succeeded | :denied | nil
+     :last-rejection-kind  ::ns/kind | nil  ; anomaly kind on denial,
+                                            ; read by :assert-rejection-kind
      :outcomes             [:succeeded :denied ...]}"
   (:require
     [com.repldriven.mono.bank-scenario-runner.id-mapping :as id-mapping]
