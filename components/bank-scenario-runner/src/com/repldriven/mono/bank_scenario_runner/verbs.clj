@@ -69,11 +69,15 @@
   (cash-accounts/seed-opened-account bank org-real-id real-acct-id))
 
 (defn- track
-  "Records the outcome of a side-effecting step on the context."
+  "Records the outcome of a side-effecting step on the context.
+  `:last-rejection-kind` is the anomaly kind on denial, or nil on
+  success — `:assert-rejection-kind` reads it."
   [ctx result]
-  (let [outcome (if (error/anomaly? result) :denied :succeeded)]
+  (let [denied? (error/anomaly? result)
+        outcome (if denied? :denied :succeeded)]
     (-> ctx
         (assoc :last-outcome outcome)
+        (assoc :last-rejection-kind (when denied? (error/kind result)))
         (update :outcomes (fnil conj []) outcome))))
 
 (defn- model-id-for-next-account
@@ -185,17 +189,25 @@
         (track result))))
 
 (defmethod dispatch :create-person-party
-  [{:keys [bank counter next-party-id orgs] :as ctx} {[model-org] :args}]
+  [{:keys [bank counter next-party-id orgs] :as ctx}
+   {[model-org ni-marker] :args}]
   (let [model-party (model-id-for-next-party next-party-id)
         {org-real-id :real-id} (get orgs model-org)
-        result (party/new-party bank
-                                {:organization-id org-real-id
-                                 :type :party-type-person
-                                 :display-name (str "Scenario Person " counter)
-                                 :given-name "Scenario"
-                                 :family-name (str "Person" counter)
-                                 :date-of-birth 19700101
-                                 :nationality "GB"})]
+        ni (when ni-marker
+             {:type :identifier-type-national-insurance
+              :value (name ni-marker)
+              :issuing-country "GB"})
+        payload (cond-> {:organization-id org-real-id
+                         :type :party-type-person
+                         :display-name (str "Scenario Person " counter)
+                         :given-name "Scenario"
+                         :family-name (str "Person" counter)
+                         :date-of-birth 19700101
+                         :nationality "GB"}
+
+                        ni
+                        (assoc :national-identifier ni))
+        result (party/new-party bank payload)]
     (-> ctx
         (cond->
          (not (error/anomaly? result))
@@ -431,6 +443,13 @@
 (defmethod dispatch :assert-outcome
   [{:keys [last-outcome] :as ctx} {[expected] :args}]
   (is (= expected last-outcome) (str "last step outcome — expected " expected))
+  ctx)
+
+(defmethod dispatch :assert-rejection-kind
+  [{:keys [last-rejection-kind] :as ctx} {[expected] :args}]
+  (is (= expected last-rejection-kind)
+      (str "last step rejection kind — expected " expected
+           " but got " last-rejection-kind))
   ctx)
 
 (defmethod dispatch :assert-no-anomaly

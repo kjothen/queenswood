@@ -128,25 +128,30 @@
                                                           (/ cnt n))}]))
                                  by-command)})))
 
+(def ^:private num-tests 500)
+(def ^:private max-size 30)
+
 (deftest model-eq-reality
-  ;; 50 trials, sequence length capped at 30. One FDB container
-  ;; serves all trials; isolation comes from per-trial fresh runner
-  ;; contexts (own id-mapping, own `:run-id` salt for idempotency
-  ;; keys). The model resets per trial via `fugato/execute`
-  ;; reducing from `init-state`; the bank accumulates accounts
-  ;; across trials but the projection is keyed by the trial's
+  ;; One FDB container serves all trials; isolation comes from per-
+  ;; trial fresh runner contexts (own id-mapping, own `:run-id` salt
+  ;; for idempotency keys). The model resets per trial via
+  ;; `fugato/execute` reducing from `init-state`; the bank accumulates
+  ;; accounts across trials but the projection is keyed by the trial's
   ;; id-mapping so prior trials' accounts are invisible.
   (with-test-system
    [sys "classpath:bank-scenario-runner/application-test.yml"]
    (let [bank (fdb-config sys)
          internal (internal-account sys)
          stats (atom {:trials 0 :total-commands 0 :by-command {} :lengths []})
-         _ (log/info "model-eq-reality starting" {:num-tests 50 :max-size 30})
+         _ (log/info "model-eq-reality starting"
+                     {:num-tests num-tests :max-size max-size})
          result (tc/quick-check
-                 50 (prop/for-all
-                     [cmds (fugato/commands model/model model/init-state)]
-                     (swap! stats record-trial cmds)
-                     (run-and-compare bank internal cmds))
-                 :max-size 30)]
+                 num-tests
+                 (prop/for-all [cmds
+                                (fugato/commands model/model model/init-state)]
+                               (swap! stats record-trial cmds)
+                               (run-and-compare bank internal cmds))
+                 :max-size
+                 max-size)]
      (summarise @stats)
      (is (:result result) (str "shrunk failure: " (pr-str result))))))

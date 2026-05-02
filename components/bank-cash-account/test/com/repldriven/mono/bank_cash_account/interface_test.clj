@@ -2,7 +2,6 @@
   (:require
     [com.repldriven.mono.bank-cash-account.interface]
 
-    [com.repldriven.mono.bank-balance.interface :as balances]
     [com.repldriven.mono.bank-schema.interface :as schema]
 
     [com.repldriven.mono.avro.interface :as avro]
@@ -132,44 +131,6 @@
                     (fdb/save-record (fdb/open txn "parties")
                                      (schema/Party->java party))))))
 
-(defn- test-open-account
-  [proc schemas config]
-  (testing
-    "open-cash-account creates account with opened status,
-  payment addresses, and balances from product"
-    (let [party-id "cust-1"
-          open-payload {:organization-id test-org-id
-                        :party-id party-id
-                        :name "Test Account"
-                        :currency "USD"
-                        :product-id test-product-id}]
-      (seed-organization config)
-      (seed-active-party config party-id)
-      (seed-published-product-version config test-product-id)
-      (nom-test>
-        [result (send-command proc schemas "open-cash-account" open-payload)
-         _ (is (= "ACCEPTED" (:status result)))
-         decoded (decode-payload schemas "cash-account" result)
-         _ (is (some? (:account-id decoded)))
-         _ (is (= :cash-account-status-opening (:account-status decoded)))
-         _ (is (= test-product-id (:product-id decoded)))
-         _ (is (string? (:version-id decoded)))
-         _ (is (= open-payload (select-keys decoded (keys open-payload))))
-         _ (is (= "040004"
-                  (get-in decoded [:payment-addresses 0 :scan :sort-code])))
-         _ (is (some? (get-in decoded
-                              [:payment-addresses 0 :scan :account-number])))
-         balance-result (balances/get-balances config (:account-id decoded))
-         account-balances (:balances balance-result)
-         _ (is (= 3 (count account-balances)))
-         _ (is (= #{:balance-type-default}
-                  (set (map :balance-type account-balances))))
-         _ (is (= #{:balance-status-posted :balance-status-pending-incoming
-                    :balance-status-pending-outgoing}
-                  (set (map :balance-status account-balances))))
-         _ (is (every? #(= "USD" (:currency %)) account-balances))
-         _ (is (every? #(= 0 (:credit %)) account-balances))]))))
-
 (defn- test-open-account-party-not-active
   [proc schemas config]
   (testing "open-cash-account rejects when party is not active"
@@ -252,28 +213,6 @@
          (poll-status proc schemas account-id :cash-account-status-closed)
          _ (is (= :cash-account-status-closed (:account-status polled-closed)))]))))
 
-(defn- test-get-account
-  [proc schemas config]
-  (testing "get-cash-account returns account"
-    (let [party-id "cust-7"
-          open-payload {:organization-id test-org-id
-                        :party-id party-id
-                        :name "Status Account"
-                        :currency "USD"
-                        :product-id test-product-id}]
-      (seed-organization config)
-      (seed-active-party config party-id)
-      (nom-test> [opened
-                  (send-command proc schemas "open-cash-account" open-payload)
-                  account (decode-payload schemas "cash-account" opened)
-                  get-data (select-keys account [:organization-id :account-id])
-                  result (send-command proc schemas "get-cash-account" get-data)
-                  _ (is (= "ACCEPTED" (:status result)))
-                  decoded (decode-payload schemas "cash-account" result)
-                  _ (is (= (:account-id account) (:account-id decoded)))
-                  _ (is (= :cash-account-status-opening
-                           (:account-status decoded)))]))))
-
 (defn- test-close-missing-account
   [proc schemas]
   (testing "close-cash-account rejects missing account"
@@ -284,58 +223,6 @@
                                 :account-id "missing-id"})]
       (is (error/rejection? result))
       (is (= :cash-account/not-found (error/kind result))))))
-
-;; test-open-multiple-accounts-per-party removed — only asserted
-;; that two openings :ACCEPTED. The scenario runner's full-happy-
-;; path opens four customer accounts per org across two parties,
-;; which exercises the same path. The test name implied
-;; per-party-count partitioning but never asserted it.
-
-;; test-open-accounts-independent-per-party removed — the test
-;; name implied count-partitioning across parties but the body only
-;; asserted that openings :ACCEPTED and party-ids round-tripped.
-;; full-happy-path covers the same shape (two parties, multiple
-;; accounts each).
-#_(defn- test-open-accounts-independent-per-party
-    [proc schemas config]
-    (testing
-      "account counts are tracked independently per
-  party \u2014 one party's accounts don't count against another's"
-      (let [party-a "cust-independent-a"
-            party-b "cust-independent-b"
-            payload {:organization-id test-org-id
-                     :currency "USD"
-                     :product-id test-product-id}]
-        (seed-organization config)
-        (seed-active-party config party-a)
-        (seed-active-party config party-b)
-        (nom-test> [a1 (send-command proc
-                                     schemas
-                                     "open-cash-account"
-                                     (assoc payload
-                                            :party-id party-a
-                                            :name "A1"))
-                    _ (is (= "ACCEPTED" (:status a1)))
-                    b1 (send-command proc
-                                     schemas
-                                     "open-cash-account"
-                                     (assoc payload
-                                            :party-id party-b
-                                            :name "B1"))
-                    _ (is (= "ACCEPTED" (:status b1)))
-                    b2 (send-command proc
-                                     schemas
-                                     "open-cash-account"
-                                     (assoc payload
-                                            :party-id party-b
-                                            :name "B2"))
-                    _ (is (= "ACCEPTED" (:status b2)))
-                    da1 (decode-payload schemas "cash-account" a1)
-                    db1 (decode-payload schemas "cash-account" b1)
-                    db2 (decode-payload schemas "cash-account" b2)
-                    _ (is (= party-a (:party-id da1)))
-                    _ (is (= party-b (:party-id db1)))
-                    _ (is (= party-b (:party-id db2)))]))))
 
 (defn- test-open-account-unknown-product
   [proc schemas]
@@ -419,12 +306,19 @@
                           config
                           {:record-db (system/instance sys [:fdb :record-db])
                            :record-store (system/instance sys [:fdb :store])}]
-                      (test-open-account proc schemas config)
+                      ;; Subtests that open an account share a single
+                      ;; published product seeded once here; tests that
+                      ;; need a different product (no-payment-schemes,
+                      ;; invalid-currency) seed their own. The shared
+                      ;; org and a "cust-1" active party are similarly
+                      ;; pre-seeded for tests that don't seed their own.
+                      (seed-organization config)
+                      (seed-active-party config "cust-1")
+                      (seed-published-product-version config test-product-id)
                       (test-open-account-party-not-active proc schemas config)
                       (test-open-account-party-not-found proc schemas)
                       (test-close-account proc schemas config)
                       (test-watcher-transitions proc schemas config)
-                      (test-get-account proc schemas config)
                       (test-close-missing-account proc schemas)
                       (test-open-account-unknown-product proc schemas)
                       (test-open-account-invalid-currency proc schemas config)

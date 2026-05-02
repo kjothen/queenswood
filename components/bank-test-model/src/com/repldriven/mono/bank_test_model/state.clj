@@ -29,12 +29,14 @@
    :products {}
    :parties {}
    :payments {}
+   :nis-by-org {}
    :policies {:available {:min 0 :improving? true}}
    :next-id 0
    :next-org-id 0
    :next-product-id 0
    :next-party-id 0
    :next-payment-id 0
+   :next-ni-id 0
    :now 0})
 
 (defn next-id
@@ -66,6 +68,13 @@
   not advance the counter."
   [state]
   (keyword (str "pmt-" (:next-payment-id state))))
+
+(defn next-ni-id
+  "The next synthetic national-identifier marker, given current
+  state. Pure — does not advance the counter. The runner translates
+  `:ni-N` into a real NI value of `\"ni-N\"`."
+  [state]
+  (keyword (str "ni-" (:next-ni-id state))))
 
 (defn known-accounts
   "Accounts the model knows about, as a vector of synthetic ids."

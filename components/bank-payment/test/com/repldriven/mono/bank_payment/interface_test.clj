@@ -3,8 +3,6 @@
     [com.repldriven.mono.bank-payment.interface]
 
     [com.repldriven.mono.bank-balance.interface :as balances]
-    [com.repldriven.mono.bank-cash-account.interface :as cash-accounts]
-    [com.repldriven.mono.bank-cash-account-product.interface :as products]
     [com.repldriven.mono.bank-organization.interface :as
      organizations]
 
@@ -71,85 +69,6 @@
                :debtor-name "Test Funder"
                :reference (str "Test fund " key-suffix)
                :timestamp-settled (System/currentTimeMillis)}))
-
-(defn- test-submit-internal-payment
-  [sys proc event-proc schemas]
-  (testing "submit-internal-payment creates payment and
-  records transaction"
-    (let [config (fdb-config sys)
-          tier "micro"]
-      (nom-test>
-        [customer-org (organizations/new-organization
-                       config
-                       "Payment Test Customer"
-                       :organization-type-customer
-                       :organization-status-test
-                       tier
-                       ["GBP"])
-         org-id (get-in customer-org [:organization :organization-id])
-         party-id (get-in customer-org [:organization :party :party-id])
-         debtor-account (get-in customer-org [:organization :accounts 0])
-         debtor-account-id (:account-id debtor-account)
-         _ (fund-via-inbound event-proc
-                             schemas
-                             (:bban debtor-account)
-                             1000
-                             "internal-001")
-         product (products/new-product
-                  config
-                  org-id
-                  {:name "Current Account"
-                   :product-type :product-type-current
-                   :balance-sheet-side :balance-sheet-side-liability
-                   :allowed-currencies ["GBP"]
-                   :balance-products [{:balance-type :balance-type-default
-                                       :balance-status :balance-status-posted}]
-                   :allowed-payment-address-schemes
-                   [:payment-address-scheme-scan]})
-         product-id (:product-id product)
-         _ (products/publish config org-id product-id (:version-id product))
-         creditor-account (cash-accounts/new-account
-                           config
-                           {:organization-id org-id
-                            :party-id party-id
-                            :name "Payment Test Current"
-                            :currency "GBP"
-                            :product-id product-id})
-         creditor-account-id (:account-id creditor-account)
-         result (send-command
-                 proc
-                 schemas
-                 "submit-internal-payment"
-                 {:idempotency-key "pmt-idem-001"
-                  :organization-id org-id
-                  :debtor-account-id debtor-account-id
-                  :creditor-account-id creditor-account-id
-                  :currency "GBP"
-                  :amount 500
-                  :reference "Test internal payment"})
-         _ (is (= "ACCEPTED" (:status result)))
-         decoded (decode-payload schemas
-                                 "internal-payment"
-                                 result)
-         _ (is (some? (:payment-id decoded)))
-         _ (is (= debtor-account-id (:debtor-account-id decoded)))
-         _ (is (= creditor-account-id (:creditor-account-id decoded)))
-         _ (is (= "GBP" (:currency decoded)))
-         _ (is (= 500 (:amount decoded)))
-         _ (is (some? (:transaction-id decoded)))
-         _ (is (= "Test internal payment" (:reference decoded)))
-         debtor-balance (balances/get-balance config
-                                              debtor-account-id
-                                              :balance-type-default
-                                              "GBP"
-                                              :balance-status-posted)
-         _ (is (= 500 (:debit debtor-balance)))
-         creditor-balance (balances/get-balance config
-                                                creditor-account-id
-                                                :balance-type-default
-                                                "GBP"
-                                                :balance-status-posted)
-         _ (is (= 500 (:credit creditor-balance)))]))))
 
 (defn- test-settle-inbound-payment
   [sys event-proc schemas]
@@ -244,81 +163,6 @@
                    :timestamp-settled (System/currentTimeMillis)})
          _ (is (= (:payment-id result)
                   (:payment-id result2)))]))))
-
-(defn- test-submit-outbound-payment
-  [sys proc event-proc schemas]
-  (testing
-    "submit-outbound-payment creates pending payment,
-  debits debtor and credits suspense"
-    (let [config (fdb-config sys)
-          tier "micro"
-          internal-org (system/instance sys
-                                        [:organizations :internal])
-          internal-account-id (get-in internal-org
-                                      [:organization :accounts
-                                       0 :account-id])]
-      (nom-test>
-        [customer-org (organizations/new-organization
-                       config
-                       "Outbound Payment Customer"
-                       :organization-type-customer
-                       :organization-status-test
-                       tier
-                       ["GBP"])
-         customer-organization-id
-         (get-in customer-org
-                 [:organization :organization-id])
-         customer-account
-         (get-in customer-org [:organization :accounts 0])
-         customer-account-id (:account-id customer-account)
-         _ (fund-via-inbound event-proc
-                             schemas
-                             (:bban customer-account)
-                             1000
-                             "outbound-001")
-         result (send-command
-                 proc
-                 schemas
-                 "submit-outbound-payment"
-                 {:idempotency-key "pmt-ob-idem-001"
-                  :organization-id customer-organization-id
-                  :debtor-account-id customer-account-id
-                  :scheme "FPS"
-                  :creditor-bban "87654321"
-                  :creditor-name "External Recipient"
-                  :currency "GBP"
-                  :amount 500
-                  :reference "Outbound test"})
-         _ (is (= "ACCEPTED" (:status result)))
-         decoded (decode-payload schemas
-                                 "outbound-payment"
-                                 result)
-         _ (is (some? (:payment-id decoded)))
-         _ (is (= customer-account-id
-                  (:debtor-account-id decoded)))
-         _ (is (= "87654321" (:creditor-bban decoded)))
-         _ (is (= "External Recipient"
-                  (:creditor-name decoded)))
-         _ (is (= "GBP" (:currency decoded)))
-         _ (is (= 500 (:amount decoded)))
-         _ (is (some? (:transaction-id decoded)))
-         _ (is (= "Outbound test" (:reference decoded)))
-         _ (is (= :outbound-payment-status-pending
-                  (:payment-status decoded)))
-         debtor-balance
-         (balances/get-balance config
-                               customer-account-id
-                               :balance-type-default
-                               "GBP"
-                               :balance-status-posted)
-         _ (is (= 500 (:debit debtor-balance)))
-         suspense-balance
-         (balances/get-balance config
-                               internal-account-id
-                               :balance-type-suspense
-                               "GBP"
-                               :balance-status-posted)
-         _ (is (= 500 (:credit suspense-balance)))]))))
 
 (defn- test-settle-outbound-payment
   [sys proc event-proc schemas]
@@ -427,8 +271,6 @@
    (let [proc (system/instance sys [:payment :processor])
          event-proc (system/instance sys [:payment :event-processor])
          schemas (system/instance sys [:avro :serde])]
-     (test-submit-internal-payment sys proc event-proc schemas)
-     (test-submit-outbound-payment sys proc event-proc schemas)
      (test-unknown-command proc schemas)
      (test-settle-inbound-payment sys event-proc schemas)
      (test-settle-outbound-payment sys proc event-proc schemas))))
