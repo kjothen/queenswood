@@ -225,19 +225,46 @@
              [:products model-prod :versions]
              (fn [versions] (conj (pop versions) (f (peek versions))))))
 
+(defn- resolve-product-id
+  "Lets scenarios pass either a tracked model-prod keyword
+  (resolved through the runner's products map) or a literal
+  product-id string (for negative tests against unknown ids)."
+  [products product-ref]
+  (if (keyword? product-ref)
+    (get-in products [product-ref :real-id])
+    product-ref))
+
 (defmethod dispatch :publish-product
-  [{:keys [bank orgs products] :as ctx} {[model-prod] :args}]
-  (let [product (get products model-prod)
-        {:keys [real-id org]} product
-        {version-real-id :real-id} (latest-version product)
-        org-real-id (get-in orgs [org :real-id])
-        result (products/publish bank org-real-id real-id version-real-id)]
-    (-> ctx
-        (cond-> (not (error/anomaly? result))
-                (update-latest-version model-prod
-                                       (fn [v] (assoc v :status :published))))
-        (update :counter inc)
-        (track result))))
+  ;; Two arg shapes:
+  ;;   `[model-prod]` — model form. Targets the latest draft of a
+  ;;     tracked product and mirrors the version-status flip into
+  ;;     ctx so projections agree.
+  ;;   `[model-org product-ref version-id]` — scenario-direct form.
+  ;;     Calls publish with explicit ids (any of which may be
+  ;;     deliberately bogus); doesn't mutate ctx versions because
+  ;;     the targeted version isn't necessarily a tracked one.
+  [{:keys [bank orgs products] :as ctx} {args :args}]
+  (case (count args)
+    1 (let [[model-prod] args
+            product (get products model-prod)
+            {:keys [real-id org]} product
+            {version-real-id :real-id} (latest-version product)
+            org-real-id (get-in orgs [org :real-id])
+            result (products/publish bank org-real-id real-id version-real-id)]
+        (-> ctx
+            (cond-> (not (error/anomaly? result))
+                    (update-latest-version model-prod
+                                           (fn [v]
+                                             (assoc v :status :published))))
+            (update :counter inc)
+            (track result)))
+    3 (let [[model-org product-ref version-id] args
+            org-real-id (get-in orgs [model-org :real-id])
+            product-id (resolve-product-id products product-ref)
+            result (products/publish bank org-real-id product-id version-id)]
+        (-> ctx
+            (update :counter inc)
+            (track result)))))
 
 (defmethod dispatch :open-draft
   [{:keys [bank orgs products] :as ctx} {[model-prod] :args}]
@@ -523,28 +550,44 @@
         (update :counter inc)
         (track result))))
 
-(def ^:private bogus-version-id "prv.unknown-scenario-version")
-(def ^:private bogus-product-id "prd.unknown-scenario-product")
+(defmethod dispatch :get-product
+  ;; Non-modelled — direct brick read. `product-ref` may be a
+  ;; tracked model-prod keyword or a literal product-id string
+  ;; (for not-found assertions).
+  [{:keys [bank orgs products] :as ctx} {[model-org product-ref] :args}]
+  (let [org-real-id (get-in orgs [model-org :real-id])
+        product-id (resolve-product-id products product-ref)
+        result (products/get-product bank org-real-id product-id)]
+    (-> ctx
+        (update :counter inc)
+        (track result))))
 
-(defmethod dispatch :try-product-op-with-bogus-id
-  ;; Non-modelled — drives the brick's not-found anomaly kinds for
-  ;; cash-account-product operations. `op` selects which call to
-  ;; make against `model-prod`'s real org/product, substituting a
-  ;; deliberately-unknown version-id (or product-id, for :get-
-  ;; product). The `track` helper captures :last-rejection-kind so
-  ;; :assert-rejection-kind can pin the contractual anomaly.
-  [{:keys [bank orgs products] :as ctx} {[op model-prod] :args}]
-  (let [{:keys [real-id org]} (get products model-prod)
-        org-real-id (get-in orgs [org :real-id])
+(defmethod dispatch :get-product-version
+  ;; Non-modelled — direct brick read for a specific version.
+  ;; `version-id` is always a literal string; `product-ref` may be
+  ;; a model-prod keyword or a literal.
+  [{:keys [bank orgs products] :as ctx}
+   {[model-org product-ref version-id] :args}]
+  (let [org-real-id (get-in orgs [model-org :real-id])
+        product-id (resolve-product-id products product-ref)
+        result (products/get-version bank org-real-id product-id version-id)]
+    (-> ctx
+        (update :counter inc)
+        (track result))))
+
+(defmethod dispatch :update-product-draft
+  ;; Non-modelled — scenario-direct edit of a draft. Update fields
+  ;; aren't tracked by the model (no observable for name / valid-
+  ;; from / etc.), so this verb exists purely for scenarios that
+  ;; need to assert outcomes on the brick's update-draft path
+  ;; (404 unknown, 409 immutable). Empty `data` is fine for
+  ;; not-found tests; populated maps work for happy-path edits.
+  [{:keys [bank orgs products] :as ctx}
+   {[model-org product-ref version-id data] :args :or {data {}}}]
+  (let [org-real-id (get-in orgs [model-org :real-id])
+        product-id (resolve-product-id products product-ref)
         result
-        (case op
-          :update-draft
-          (products/update-draft bank org-real-id real-id bogus-version-id {})
-          :publish (products/publish bank org-real-id real-id bogus-version-id)
-          :get-version
-          (products/get-version bank org-real-id real-id bogus-version-id)
-          :get-product
-          (products/get-product bank org-real-id bogus-product-id))]
+        (products/update-draft bank org-real-id product-id version-id data)]
     (-> ctx
         (update :counter inc)
         (track result))))
