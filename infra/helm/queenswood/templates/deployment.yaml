@@ -1,0 +1,168 @@
+{{- range $svcName, $svc := .Values.services }}
+{{- if $svc.enabled }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $.Release.Name }}-{{ $svcName }}
+  labels:
+    {{- include "queenswood.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: {{ $svcName }}
+spec:
+  replicas: {{ default 1 $svc.replicas }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ $.Release.Name }}
+      app.kubernetes.io/component: {{ $svcName }}
+  template:
+    metadata:
+      labels:
+        {{- include "queenswood.labels" $ | nindent 8 }}
+        app.kubernetes.io/component: {{ $svcName }}
+    spec:
+      {{- with $.Values.image.pullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      initContainers:
+        # Fetch the FDB-operator-written cluster-file via the API
+        # and write it to an emptyDir. See job-bootstrap.yaml for
+        # the rationale (kubelet ConfigMap refresh races + the
+        # operator's two-step create-then-populate ConfigMap).
+        - name: wait-for-fdb-cluster
+          image: alpine/k8s:1.30.14
+          command:
+            - sh
+            - -c
+            - |
+              # Poll the K8s API directly with curl rather than
+              # kubectl in a loop — each kubectl invocation opens
+              # an fsnotify watcher on its kubeconfig, and many
+              # service pods polling at once exhausts the node's
+              # fs.inotify.max_user_instances.
+              TOKEN=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)
+              NS=$(cat /var/run/secrets/kubernetes.io/serviceaccount/namespace)
+              CA=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+              URL="https://kubernetes.default.svc/api/v1/namespaces/$NS/configmaps/{{ include "queenswood.fdbClusterConfigMap" $ }}"
+              for i in $(seq 1 120); do
+                content=$(curl -sS --cacert "$CA" \
+                  -H "Authorization: Bearer $TOKEN" "$URL" 2>/dev/null \
+                  | jq -r '.data["cluster-file"] // ""')
+                if [ -n "$content" ]; then
+                  echo "FDB cluster file ready: $content"
+                  printf '%s\n' "$content" > /etc/fdb/fdb.cluster
+                  exit 0
+                fi
+                echo "Waiting for FDB cluster-file content..."
+                sleep 5
+              done
+              echo "FDB cluster-file did not appear in time" >&2
+              exit 1
+          volumeMounts:
+            - name: fdb-cluster-file
+              mountPath: /etc/fdb
+        {{- if $.Values.bootstrap.enabled }}
+        # Block until the bootstrap Job has applied FDB metadata,
+        # Pulsar topology, and the internal-organization seed.
+        # Services discover the seeded org from FDB at startup.
+        - name: wait-for-bootstrap
+          image: alpine/k8s:1.30.14
+          command:
+            - sh
+            - -c
+            - |
+              kubectl wait --for=condition=complete --timeout=10m \
+                job/{{ $.Release.Name }}-bank-bootstrap-{{ $.Values.image.tag }}
+        {{- end }}
+        {{- range $dep := $svc.waitFor }}
+        # Cross-pod startup dependency. Polls the target service's
+        # Spring-Boot-Actuator liveness endpoint until 200, so the
+        # main container only starts after its dependency is up.
+        # Adapters use this to wait for their simulator before the
+        # async webhook registration kicks off.
+        - name: wait-for-{{ $dep.service }}
+          image: alpine/k8s:1.30.14
+          command:
+            - sh
+            - -c
+            - |
+              URL="http://{{ $.Release.Name }}-{{ $dep.service }}:{{ $dep.port }}/actuator/health/liveness"
+              for i in $(seq 1 120); do
+                code=$(curl -s -o /dev/null -w '%{http_code}' "$URL" || echo 000)
+                if [ "$code" = "200" ]; then
+                  echo "{{ $dep.service }} ready"
+                  exit 0
+                fi
+                echo "Waiting for {{ $dep.service }} (last status $code)..."
+                sleep 5
+              done
+              echo "{{ $dep.service }} did not become ready in time" >&2
+              exit 1
+        {{- end }}
+      containers:
+        - name: {{ $svcName }}
+          image: "{{ $.Values.image.registry }}/{{ $svcName }}:{{ $.Values.image.tag }}"
+          imagePullPolicy: {{ $.Values.image.pullPolicy }}
+          {{- if and $svc.http $svc.port }}
+          ports:
+            - name: http
+              containerPort: {{ $svc.port }}
+              protocol: TCP
+          # Spring Boot Actuator-style endpoints. Generous startup
+          # window for FDB/Pulsar wiring + initial webhook
+          # registration on adapters (~2 min worst case); liveness
+          # only restarts a hung process; readiness drives Service
+          # routing — adapters stay DOWN until registration
+          # succeeds, simulators/bank-api flip UP immediately.
+          startupProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: http
+            periodSeconds: 5
+            failureThreshold: 60
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: http
+            periodSeconds: 30
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: http
+            periodSeconds: 5
+            failureThreshold: 3
+          {{- end }}
+          env:
+            - name: SERVICE_NAME
+              value: {{ $svcName | quote }}
+            - name: PULSAR_SERVICE_URL
+              value: {{ include "queenswood.pulsarServiceUrl" $ | quote }}
+            - name: PULSAR_ADMIN_URL
+              value: {{ include "queenswood.pulsarAdminUrl" $ | quote }}
+            - name: FDB_CLUSTER_FILE
+              value: "/etc/fdb/fdb.cluster"
+            - name: OTEL_ENDPOINT
+              value: {{ default "" $.Values.otel.endpoint | quote }}
+            - name: MONO_ADMIN_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $.Release.Name }}-admin-api-key
+                  key: MONO_ADMIN_API_KEY
+            {{- range $k, $v := $svc.extraEnv }}
+            - name: {{ $k }}
+              value: {{ tpl $v $ | quote }}
+            {{- end }}
+          volumeMounts:
+            - name: fdb-cluster-file
+              mountPath: /etc/fdb
+              readOnly: true
+          {{- with $svc.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+      volumes:
+        - name: fdb-cluster-file
+          emptyDir: {}
+{{- end }}
+{{- end }}

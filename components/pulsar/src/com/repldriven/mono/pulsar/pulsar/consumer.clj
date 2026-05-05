@@ -54,14 +54,37 @@
                (async/alts!!
                 [stop
                  (async/thread
-                  (try (when-let [^Message msg
-                                  (.. consumer
-                                      (receive timeout-ms
-                                               TimeUnit/MILLISECONDS))]
-                         msg)
-                       (catch PulsarClientException$AlreadyClosedException
-                         _
-                         ::closed)))])]
+                  (try
+                    (when-let [^Message msg
+                               (.. consumer
+                                   (receive timeout-ms
+                                            TimeUnit/MILLISECONDS))]
+                      msg)
+                    (catch PulsarClientException$AlreadyClosedException
+                      _
+                      ::closed)
+                    ;; Anything else would otherwise kill this
+                    ;; thread silently (the JVM default handler
+                    ;; prints `Exception in thread async-mixed-N
+                    ;; …` and the inner channel closes empty);
+                    ;; the outer loop would still recur, but the
+                    ;; underlying consumer state may be wedged so
+                    ;; we never publish to `c` again — services
+                    ;; appear to hang. Log loudly with the
+                    ;; exception class + message (the JIT folds
+                    ;; the stack on repeat throws, so `t` alone
+                    ;; produces a one-line ClassCastException),
+                    ;; back off for a beat to rate-limit the
+                    ;; log spam, and return nil so the loop
+                    ;; continues without papering over the fault.
+                    (catch Throwable t
+                      (log/error
+                       t
+                       "Pulsar consumer.receive threw; recurring"
+                       {:exception-class (.getName (class t))
+                        :message (.getMessage t)})
+                      (Thread/sleep 500)
+                      nil)))])]
            (cond
             (or (= port stop) (= v ::closed))
             nil

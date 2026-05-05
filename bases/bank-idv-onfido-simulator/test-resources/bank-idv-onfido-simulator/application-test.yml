@@ -1,2 +1,0 @@
-system:
-  server: !include bank-idv-onfido-simulator/server-test.yml

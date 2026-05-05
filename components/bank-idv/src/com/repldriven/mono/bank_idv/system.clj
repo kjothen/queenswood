@@ -11,7 +11,9 @@
                    (or instance (commands/->IdvProcessor config)))
    :system/config {:record-db system/required-component
                    :record-store system/required-component
-                   :schemas system/required-component}
+                   :schemas system/required-component
+                   :bus nil
+                   :idv-command-channel nil}
    :system/instance-schema some?})
 
 (def ^:private event-processor
@@ -25,21 +27,14 @@
 (def ^:private party-watcher-handler
   {:system/start (fn [{:system/keys [config instance]}]
                    (or instance (watcher/party-changelog-handler config)))
-   :system/config {:record-store system/required-component}
-   :system/instance-schema fn?})
-
-(def ^:private idv-watcher-handler
-  {:system/start (fn [{:system/keys [config instance]}]
-                   (or instance (watcher/idv-changelog-handler config)))
    :system/config {:record-db system/required-component
                    :record-store system/required-component
+                   :schemas system/required-component
                    :bus nil
-                   :schemas nil
-                   :command-channel nil}
+                   :idv-command-channel nil}
    :system/instance-schema fn?})
 
 (system/defcomponents :idv
                       {:processor processor
                        :event-processor event-processor
-                       :party-watcher-handler party-watcher-handler
-                       :idv-watcher-handler idv-watcher-handler})
+                       :party-watcher-handler party-watcher-handler})

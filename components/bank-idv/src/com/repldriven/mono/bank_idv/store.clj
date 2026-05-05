@@ -47,3 +47,21 @@
                       :verification-id verification-id})))
    :idv/get
    "Failed to load IDV"))
+
+(defn get-idv-by-party
+  "Returns the IDV record for a party (any status), or nil if
+  none exists. Pinned to the unique `Idv_by_party` index — one
+  IDV per party. Used by the watcher to make IDV initiation
+  idempotent against changelog replay."
+  [txn party-id]
+  (fdb/transact
+   txn
+   (fn [txn]
+     (some-> (fdb/query-record (fdb/open txn store-name)
+                               "Idv"
+                               "party_id"
+                               party-id
+                               {:index "Idv_by_party"})
+             schema/pb->Idv))
+   :idv/get-by-party
+   "Failed to look up IDV by party"))

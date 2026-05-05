@@ -1,20 +1,32 @@
 (ns ^:eftest/synchronized
     com.repldriven.mono.bank-scenario-runner.interface-test
   (:require
+    com.repldriven.mono.bank-scenario-runner.system
+
     [com.repldriven.mono.bank-scenario-runner.interface :as SUT]
+
+    [com.repldriven.mono.bank-onfido-adapter.api :as onfido-adapter]
+    [com.repldriven.mono.bank-onfido-simulator.api :as onfido-simulator]
 
     [com.repldriven.mono.bank-test-model.interface :as model]
     [com.repldriven.mono.bank-test-projections.interface :as projections]
 
     [com.repldriven.mono.log.interface :as log]
     [com.repldriven.mono.system.interface :as system]
-    [com.repldriven.mono.testcontainers.interface]
     [com.repldriven.mono.test-system.interface :refer
      [with-test-system nom-test>]]
 
     [clojure.java.io :as io]
     [clojure.test :refer [deftest is testing]]
     [fugato.core :as fugato]))
+
+(defn- patch-handlers
+  [defs]
+  (-> defs
+      (assoc-in [:system/defs :onfido-simulator-server :handler]
+                onfido-simulator/app)
+      (assoc-in [:system/defs :onfido-adapter-server :handler]
+                onfido-adapter/app)))
 
 (defn- fdb-config
   [sys]
@@ -128,12 +140,19 @@
       (assoc stats :ctx ctx))))
 
 (deftest scenarios-test
+  ;; One test system serves every scenario. Per-scenario isolation
+  ;; comes from `fresh-context` (own id-mapping, fresh `:run-id`
+  ;; salting idempotency keys) and per-scenario projections (keyed
+  ;; on the scenario's own model→real map, so prior scenarios'
+  ;; records are invisible). Sharing the boot drops total scenario
+  ;; runtime by ~6s × N scenarios.
   (let [files (scenario-files)]
     (is (seq files) "expected scenarios on the classpath")
     (log/info "scenarios starting" {:count (count files)})
-    (doseq [f files]
-      (with-test-system
-       [sys "classpath:bank-scenario-runner/application-test.yml"]
+    (with-test-system
+     [sys
+      ["classpath:bank-scenario-runner/application-test.yml" patch-handlers]]
+     (doseq [f files]
        (let [resource-path (str "bank-scenario-runner/scenarios/" (.getName f))]
          (nom-test> [loaded (SUT/from-resource resource-path)
                      steps (SUT/steps loaded)

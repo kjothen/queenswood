@@ -73,10 +73,10 @@ topics: !system/component
   admin: !system/local-ref admin
   schemas: !system/local-ref schemas
   topics:
-    - topic: "persistent://tenant-1/namespace-1/topic-cash-cash-accounts-command"
+    - topic: "persistent://tenant-1/namespace-1/topic-cash-accounts-command"
       partitions: 1
       schema: !keyword command
-    - topic: "persistent://tenant-1/namespace-1/topic-cash-cash-accounts-command-response"
+    - topic: "persistent://tenant-1/namespace-1/topic-cash-accounts-command-response"
       partitions: 1
       schema: !keyword command-response
     - topic: "persistent://tenant-1/namespace-1/topic-parties-command"
@@ -112,6 +112,15 @@ topics: !system/component
     - topic: "persistent://tenant-1/namespace-1/topic-schemes-payment-command-response"
       partitions: 1
       schema: !keyword command-response
+    - topic: "persistent://tenant-1/namespace-1/topic-idv-command"
+      partitions: 1
+      schema: !keyword command
+    - topic: "persistent://tenant-1/namespace-1/topic-idv-command-response"
+      partitions: 1
+      schema: !keyword command-response
+    - topic: "persistent://tenant-1/namespace-1/topic-idv-event"
+      partitions: 1
+      schema: !keyword event
 
 producers: !system/component
   system/component-kind: pulsar/producers
@@ -121,7 +130,7 @@ producers: !system/component
     conf:
       accessMode: !pulsar/access-mode Shared
       schema: !keyword command
-      topicName: "persistent://tenant-1/namespace-1/topic-cash-cash-accounts-command"
+      topicName: "persistent://tenant-1/namespace-1/topic-cash-accounts-command"
     schemas: !system/local-ref schemas
   cash-accounts-command-response:
     _: !system/local-ref topics
@@ -129,7 +138,7 @@ producers: !system/component
     conf:
       accessMode: !pulsar/access-mode Shared
       schema: !keyword command-response
-      topicName: "persistent://tenant-1/namespace-1/topic-cash-cash-accounts-command-response"
+      topicName: "persistent://tenant-1/namespace-1/topic-cash-accounts-command-response"
     schemas: !system/local-ref schemas
   parties-command:
     _: !system/local-ref topics
@@ -219,6 +228,30 @@ producers: !system/component
       schema: !keyword command-response
       topicName: "persistent://tenant-1/namespace-1/topic-schemes-payment-command-response"
     schemas: !system/local-ref schemas
+  idv-command:
+    _: !system/local-ref topics
+    client: !system/local-ref client
+    conf:
+      accessMode: !pulsar/access-mode Shared
+      schema: !keyword command
+      topicName: "persistent://tenant-1/namespace-1/topic-idv-command"
+    schemas: !system/local-ref schemas
+  idv-command-response:
+    _: !system/local-ref topics
+    client: !system/local-ref client
+    conf:
+      accessMode: !pulsar/access-mode Shared
+      schema: !keyword command-response
+      topicName: "persistent://tenant-1/namespace-1/topic-idv-command-response"
+    schemas: !system/local-ref schemas
+  idv-event:
+    _: !system/local-ref topics
+    client: !system/local-ref client
+    conf:
+      accessMode: !pulsar/access-mode Shared
+      schema: !keyword event
+      topicName: "persistent://tenant-1/namespace-1/topic-idv-event"
+    schemas: !system/local-ref schemas
 
 consumers: !system/component
   system/component-kind: pulsar/consumers
@@ -232,7 +265,7 @@ consumers: !system/component
       subscriptionType: !pulsar/subscription-type Shared
       topicNames:
         [
-          "persistent://tenant-1/namespace-1/topic-cash-cash-accounts-command",
+          "persistent://tenant-1/namespace-1/topic-cash-accounts-command",
         ]
     schemas: !system/local-ref schemas
   cash-accounts-command-response:
@@ -245,7 +278,7 @@ consumers: !system/component
       subscriptionType: !pulsar/subscription-type Shared
       topicNames:
         [
-          "persistent://tenant-1/namespace-1/topic-cash-cash-accounts-command-response",
+          "persistent://tenant-1/namespace-1/topic-cash-accounts-command-response",
         ]
     schemas: !system/local-ref schemas
   parties-command:
@@ -377,6 +410,39 @@ consumers: !system/component
           "persistent://tenant-1/namespace-1/topic-schemes-payment-command-response",
         ]
     schemas: !system/local-ref schemas
+  idv-command:
+    _: !system/local-ref topics
+    client: !system/local-ref client
+    conf:
+      cryptoFailureAction: !pulsar/crypto-failure-action CONSUME
+      schema: !pulsar/schema AUTO_CONSUME
+      subscriptionName: bank-monolith-idv-command
+      subscriptionType: !pulsar/subscription-type Shared
+      topicNames:
+        ["persistent://tenant-1/namespace-1/topic-idv-command"]
+    schemas: !system/local-ref schemas
+  idv-command-response:
+    _: !system/local-ref topics
+    client: !system/local-ref client
+    conf:
+      cryptoFailureAction: !pulsar/crypto-failure-action CONSUME
+      schema: !pulsar/schema AUTO_CONSUME
+      subscriptionName: bank-monolith-idv-command-response
+      subscriptionType: !pulsar/subscription-type Shared
+      topicNames:
+        ["persistent://tenant-1/namespace-1/topic-idv-command-response"]
+    schemas: !system/local-ref schemas
+  idv-event:
+    _: !system/local-ref topics
+    client: !system/local-ref client
+    conf:
+      cryptoFailureAction: !pulsar/crypto-failure-action CONSUME
+      schema: !pulsar/schema AUTO_CONSUME
+      subscriptionName: bank-monolith-idv-event
+      subscriptionType: !pulsar/subscription-type Shared
+      topicNames:
+        ["persistent://tenant-1/namespace-1/topic-idv-event"]
+    schemas: !system/local-ref schemas
 
 message-bus-producers: !system/component
   system/component-kind: pulsar/message-bus-producers
@@ -406,6 +472,12 @@ message-bus-producers: !system/component
     producer: !system/local-ref producers.schemes-payment-command
   schemes-payment-command-response:
     producer: !system/local-ref producers.schemes-payment-command-response
+  idv-command:
+    producer: !system/local-ref producers.idv-command
+  idv-command-response:
+    producer: !system/local-ref producers.idv-command-response
+  idv-event:
+    producer: !system/local-ref producers.idv-event
 
 message-bus-consumers: !system/component
   system/component-kind: pulsar/message-bus-consumers
@@ -435,3 +507,9 @@ message-bus-consumers: !system/component
     consumer: !system/local-ref consumers.schemes-payment-command
   schemes-payment-command-response:
     consumer: !system/local-ref consumers.schemes-payment-command-response
+  idv-command:
+    consumer: !system/local-ref consumers.idv-command
+  idv-command-response:
+    consumer: !system/local-ref consumers.idv-command-response
+  idv-event:
+    consumer: !system/local-ref consumers.idv-event

@@ -1,0 +1,28 @@
+processor: !system/component
+  system/component-kind: payment/processor
+  record-db: !system/ref fdb.record-db
+  record-store: !system/ref fdb.meta-store
+  schemas: !system/ref avro.serde
+  internal-account-id: !system/ref organizations.internal-account-id
+  bus: !system/ref message-bus.bus
+  scheme-payment-command-channel: !keyword schemes-payment-command
+
+command-processor: !system/component
+  system/component-kind: command-processor/command-processor
+  bus: !system/ref message-bus.bus
+  processor: !system/local-ref processor
+  command-channel: !keyword payments-command
+  command-response-channel: !keyword payments-command-response
+
+event-processor-impl: !system/component
+  system/component-kind: payment/event-processor
+  record-db: !system/ref fdb.record-db
+  record-store: !system/ref fdb.meta-store
+  schemas: !system/ref avro.serde
+  internal-account-id: !system/ref organizations.internal-account-id
+
+event-processor: !system/component
+  system/component-kind: event-processor/event-processor
+  bus: !system/ref message-bus.bus
+  processor: !system/local-ref event-processor-impl
+  event-channel: !keyword schemes-payments-event

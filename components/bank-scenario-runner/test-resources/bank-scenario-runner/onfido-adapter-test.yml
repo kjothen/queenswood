@@ -1,0 +1,16 @@
+registrar: !system/component
+  system/component-kind: onfido-adapter/registrar
+  onfido-url: !system/ref onfido-simulator-server.http-url
+  adapter-url: !system/ref onfido-adapter-server.http-url
+
+command-processor-impl: !system/component
+  system/component-kind: onfido-adapter/command-processor
+  schemas: !system/ref avro.serde
+  onfido-url: !system/ref onfido-simulator-server.http-url
+
+command-processor: !system/component
+  system/component-kind: command-processor/command-processor
+  bus: !system/ref message-bus.bus
+  processor: !system/local-ref command-processor-impl
+  command-channel: !keyword idv-command
+  command-response-channel: !keyword idv-command-response

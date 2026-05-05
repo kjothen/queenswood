@@ -114,55 +114,58 @@
 
 (defn- routes
   [ctx]
-  [["/openapi.json"
-    {:get {:no-doc true
-           :openapi {:info {:title "Queenswood"
-                            :description "Queenswood Banking API"
-                            :version "1.0.0"}
-                     :components
-                     {:securitySchemes
-                      {"adminAuth" {:type :http
-                                    :scheme :bearer
-                                    :description "Admin API key"}
-                       "orgAuth" {:type :http
-                                  :scheme :bearer
-                                  :description "Organization API key"}}
-                      :parameters shared.parameters/registry
-                      :examples (merge
-                                 examples/registry
-                                 balance.examples/registry
-                                 cash-account-product.examples/registry
-                                 cash-account.examples/registry
-                                 api-key.examples/registry
-                                 organization.examples/registry
-                                 party.examples/registry
-                                 payee-check.examples/registry
-                                 payment.examples/registry
-                                 policy.examples/registry
-                                 simulate.examples/registry
-                                 tier.examples/registry)}}
-           :handler (server/standard-openapi-handler)}}]
-   (into ["/v1"
-          {:interceptors (concat telemetry/trace-span
-                                 (:interceptors ctx)
-                                 [auth/authenticate
-                                  auth/authorize])
-           :responses {400 (schema/ErrorResponse [#'examples/BadRequest])
-                       401 (schema/ErrorResponse [#'examples/Unauthorized])
-                       403 (schema/ErrorResponse [#'examples/Forbidden])
-                       500 (schema/ErrorResponse [#'examples/InternalServerError
-                                                  #'examples/BadResponse])}}]
-         (concat balance/routes
-                 cash-account-product/routes
-                 cash-account/routes
-                 api-key/routes
-                 organization/routes
-                 party/routes
-                 payee-check/routes
-                 payment/routes
-                 policy/routes
-                 simulate/routes
-                 tier/routes))])
+  (into
+   (server/health-routes ctx)
+   [["/openapi.json"
+     {:get {:no-doc true
+            :openapi {:info {:title "Queenswood"
+                             :description "Queenswood Banking API"
+                             :version "1.0.0"}
+                      :components
+                      {:securitySchemes
+                       {"adminAuth" {:type :http
+                                     :scheme :bearer
+                                     :description "Admin API key"}
+                        "orgAuth" {:type :http
+                                   :scheme :bearer
+                                   :description "Organization API key"}}
+                       :parameters shared.parameters/registry
+                       :examples (merge
+                                  examples/registry
+                                  balance.examples/registry
+                                  cash-account-product.examples/registry
+                                  cash-account.examples/registry
+                                  api-key.examples/registry
+                                  organization.examples/registry
+                                  party.examples/registry
+                                  payee-check.examples/registry
+                                  payment.examples/registry
+                                  policy.examples/registry
+                                  simulate.examples/registry
+                                  tier.examples/registry)}}
+            :handler (server/standard-openapi-handler)}}]
+    (into ["/v1"
+           {:interceptors (concat telemetry/trace-span
+                                  (:interceptors ctx)
+                                  [auth/authenticate
+                                   auth/authorize])
+            :responses {400 (schema/ErrorResponse [#'examples/BadRequest])
+                        401 (schema/ErrorResponse [#'examples/Unauthorized])
+                        403 (schema/ErrorResponse [#'examples/Forbidden])
+                        500 (schema/ErrorResponse
+                             [#'examples/InternalServerError
+                              #'examples/BadResponse])}}]
+          (concat balance/routes
+                  cash-account-product/routes
+                  cash-account/routes
+                  api-key/routes
+                  organization/routes
+                  party/routes
+                  payee-check/routes
+                  payment/routes
+                  policy/routes
+                  simulate/routes
+                  tier/routes))]))
 
 (defn- add-interceptor-before-coerce
   "Splices `icept` into the router's global interceptor chain just

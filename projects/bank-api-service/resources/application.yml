@@ -1,0 +1,202 @@
+system:
+  pulsar:
+    client: !system/component
+      system/component-kind: pulsar/client
+      service-url: !env PULSAR_SERVICE_URL
+    admin: !system/component
+      system/component-kind: pulsar/admin
+      service-http-url: !env PULSAR_ADMIN_URL
+    schemas: !system/component
+      system/component-kind: pulsar/schemas
+      command:
+        schema: schemas/command/command-envelope.avsc.json
+        type: AVRO
+      command-response:
+        schema: schemas/command/command-response.avsc.json
+        type: AVRO
+      event:
+        schema: schemas/event/event-envelope.avsc.json
+        type: AVRO
+    producers: !system/component
+      system/component-kind: pulsar/producers
+      cash-accounts-command:
+        client: !system/local-ref client
+        conf:
+          accessMode: !pulsar/access-mode Shared
+          schema: !keyword command
+          topicName: "persistent://tenant-1/namespace-1/topic-cash-accounts-command"
+        schemas: !system/local-ref schemas
+      parties-command:
+        client: !system/local-ref client
+        conf:
+          accessMode: !pulsar/access-mode Shared
+          schema: !keyword command
+          topicName: "persistent://tenant-1/namespace-1/topic-parties-command"
+        schemas: !system/local-ref schemas
+      payments-command:
+        client: !system/local-ref client
+        conf:
+          accessMode: !pulsar/access-mode Shared
+          schema: !keyword command
+          topicName: "persistent://tenant-1/namespace-1/topic-payments-command"
+        schemas: !system/local-ref schemas
+      transactions-command:
+        client: !system/local-ref client
+        conf:
+          accessMode: !pulsar/access-mode Shared
+          schema: !keyword command
+          topicName: "persistent://tenant-1/namespace-1/topic-transactions-command"
+        schemas: !system/local-ref schemas
+      interest-command:
+        client: !system/local-ref client
+        conf:
+          accessMode: !pulsar/access-mode Shared
+          schema: !keyword command
+          topicName: "persistent://tenant-1/namespace-1/topic-interest-command"
+        schemas: !system/local-ref schemas
+    consumers: !system/component
+      system/component-kind: pulsar/consumers
+      cash-accounts-command-response:
+        client: !system/local-ref client
+        conf:
+          cryptoFailureAction: !pulsar/crypto-failure-action CONSUME
+          schema: !pulsar/schema AUTO_CONSUME
+          subscriptionName: bank-api-service-cash-accounts-command-response
+          subscriptionType: !pulsar/subscription-type Shared
+          topicNames:
+            ["persistent://tenant-1/namespace-1/topic-cash-accounts-command-response"]
+        schemas: !system/local-ref schemas
+      parties-command-response:
+        client: !system/local-ref client
+        conf:
+          cryptoFailureAction: !pulsar/crypto-failure-action CONSUME
+          schema: !pulsar/schema AUTO_CONSUME
+          subscriptionName: bank-api-service-parties-command-response
+          subscriptionType: !pulsar/subscription-type Shared
+          topicNames:
+            ["persistent://tenant-1/namespace-1/topic-parties-command-response"]
+        schemas: !system/local-ref schemas
+      payments-command-response:
+        client: !system/local-ref client
+        conf:
+          cryptoFailureAction: !pulsar/crypto-failure-action CONSUME
+          schema: !pulsar/schema AUTO_CONSUME
+          subscriptionName: bank-api-service-payments-command-response
+          subscriptionType: !pulsar/subscription-type Shared
+          topicNames:
+            ["persistent://tenant-1/namespace-1/topic-payments-command-response"]
+        schemas: !system/local-ref schemas
+      transactions-command-response:
+        client: !system/local-ref client
+        conf:
+          cryptoFailureAction: !pulsar/crypto-failure-action CONSUME
+          schema: !pulsar/schema AUTO_CONSUME
+          subscriptionName: bank-api-service-transactions-command-response
+          subscriptionType: !pulsar/subscription-type Shared
+          topicNames:
+            ["persistent://tenant-1/namespace-1/topic-transactions-command-response"]
+        schemas: !system/local-ref schemas
+      interest-command-response:
+        client: !system/local-ref client
+        conf:
+          cryptoFailureAction: !pulsar/crypto-failure-action CONSUME
+          schema: !pulsar/schema AUTO_CONSUME
+          subscriptionName: bank-api-service-interest-command-response
+          subscriptionType: !pulsar/subscription-type Shared
+          topicNames:
+            ["persistent://tenant-1/namespace-1/topic-interest-command-response"]
+        schemas: !system/local-ref schemas
+    message-bus-producers: !system/component
+      system/component-kind: pulsar/message-bus-producers
+      cash-accounts-command:
+        producer: !system/local-ref producers.cash-accounts-command
+      parties-command:
+        producer: !system/local-ref producers.parties-command
+      payments-command:
+        producer: !system/local-ref producers.payments-command
+      transactions-command:
+        producer: !system/local-ref producers.transactions-command
+      interest-command:
+        producer: !system/local-ref producers.interest-command
+    message-bus-consumers: !system/component
+      system/component-kind: pulsar/message-bus-consumers
+      cash-accounts-command-response:
+        consumer: !system/local-ref consumers.cash-accounts-command-response
+      parties-command-response:
+        consumer: !system/local-ref consumers.parties-command-response
+      payments-command-response:
+        consumer: !system/local-ref consumers.payments-command-response
+      transactions-command-response:
+        consumer: !system/local-ref consumers.transactions-command-response
+      interest-command-response:
+        consumer: !system/local-ref consumers.interest-command-response
+  message-bus: !include bank/message-bus.yml
+  fdb: !include bank/fdb.yml
+  avro: !include bank/avro.yml
+  organizations:
+    internal: !system/component
+      system/component-kind: organizations/organization-from-fdb
+      record-db: !system/ref fdb.record-db
+      record-store: !system/ref fdb.meta-store
+      type: !keyword organization-type-internal
+    internal-account-id: !system/component
+      system/component-kind: organizations/internal-account-id
+      organization: !system/local-ref internal
+  cash-accounts:
+    dispatcher: !system/component
+      system/component-kind: command/dispatcher
+      bus: !system/ref message-bus.bus
+      command-channel: !keyword cash-accounts-command
+      command-response-channel: !keyword cash-accounts-command-response
+  parties:
+    dispatcher: !system/component
+      system/component-kind: command/dispatcher
+      bus: !system/ref message-bus.bus
+      command-channel: !keyword parties-command
+      command-response-channel: !keyword parties-command-response
+  payments:
+    dispatcher: !system/component
+      system/component-kind: command/dispatcher
+      bus: !system/ref message-bus.bus
+      command-channel: !keyword payments-command
+      command-response-channel: !keyword payments-command-response
+  transactions:
+    dispatcher: !system/component
+      system/component-kind: command/dispatcher
+      bus: !system/ref message-bus.bus
+      command-channel: !keyword transactions-command
+      command-response-channel: !keyword transactions-command-response
+  interest:
+    dispatcher: !system/component
+      system/component-kind: command/dispatcher
+      bus: !system/ref message-bus.bus
+      command-channel: !keyword interest-command
+      command-response-channel: !keyword interest-command-response
+  telemetry:
+    otel-sdk: !system/component
+      system/component-kind: telemetry/otel-sdk
+      service-name: !env SERVICE_NAME
+      endpoint: !env OTEL_ENDPOINT
+  server:
+    handler: !system/required-component
+    interceptors: !system/component
+      system/component-kind: server/interceptors
+      admin-api-key: !env MONO_ADMIN_API_KEY
+      internal-organization-id: !system/ref organizations.internal.organization.organization-id
+      internal-account-id: !system/ref organizations.internal-account-id
+      dispatchers:
+        cash-accounts: !system/ref cash-accounts.dispatcher
+        parties: !system/ref parties.dispatcher
+        payments: !system/ref payments.dispatcher
+        interest: !system/ref interest.dispatcher
+        transactions: !system/ref transactions.dispatcher
+      avro: !system/ref avro.serde
+      record-db: !system/ref fdb.record-db
+      record-store: !system/ref fdb.meta-store
+      clearbank-adapter-url: !env CLEARBANK_ADAPTER_URL
+    jetty-adapter: !system/component
+      system/component-kind: server/jetty-adapter
+      handler: !system/ref server.handler
+      interceptors: !system/ref server.interceptors
+      options:
+        port: 8080

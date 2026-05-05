@@ -1,7 +1,7 @@
 (ns com.repldriven.mono.bank-idv.events
   "Consumes `idv-completed` events from the message bus and
   flips the matching IDV record's status. The event is published
-  by the IDV-provider adapter (e.g. bank-idv-onfido-adapter)
+  by the IDV-provider adapter (e.g. bank-onfido-adapter)
   after a check-completed webhook arrives. Once the IDV record
   is updated, bank-party's idv-changelog-handler reacts to the
   status flip and activates the party."

@@ -1,9 +1,10 @@
-{:name "Interest accrual + capitalisation on a savings account"
+{:name "Interest accrual + capitalisation on a customer savings account"
  :tags #{:interest :savings :edn-only}
 
- ;; Sets up a savings product with a non-zero interest rate, opens
- ;; a savings account, funds it from settlement, then runs accrue
- ;; and capitalise. Both steps post real transactions:
+ ;; Tenant onboards a person-party, defines and publishes a savings
+ ;; product with a non-zero interest rate, opens a customer savings
+ ;; account, funds it from settlement, then runs accrue and capitalise.
+ ;; Both steps post real transactions:
  ;;
  ;;   accrual     debits  settlement.interest-payable
  ;;               credits customer.interest-accrued
@@ -20,12 +21,13 @@
  ;; task 6.x); this scenario checks the wiring runs without an
  ;; anomaly.
  :given
- [{:command :open-account            :args []}                         ; org-0, prod-0 (settlement), party-0, acct-0
-  {:command :create-savings-product  :args [:org-0 3650]}              ; prod-1 (savings, draft, 36.5% AER)
-  {:command :publish-product         :args [:prod-1]}                  ; prod-1 published
-  {:command :add-account             :args [:org-0 :party-0 :prod-1]}  ; acct-1 (savings)
-  {:command :inbound-transfer        :args [:acct-0 100000]}           ; £1,000 into settlement
-  {:command :internal-transfer       :args [:acct-0 :acct-1 100000]}]  ; settlement → savings
+ [{:command :create-org           :args []}                         ; org-0, prod-0 (settlement), party-0 (org), acct-0
+  {:command :create-product       :args [:org-0 :savings 3650]}     ; prod-1 (savings, draft, 36.5% AER)
+  {:command :publish-product      :args [:prod-1]}                  ; prod-1 published
+  {:command :create-person-party  :args [:org-0]}                   ; party-1 (person, auto-active)
+  {:command :open-account         :args [:org-0 :party-1 :prod-1]}  ; acct-1 (savings, customer)
+  {:command :inbound-transfer     :args [:acct-0 100000]}           ; £1,000 into settlement
+  {:command :internal-transfer    :args [:acct-0 :acct-1 100000]}]  ; settlement → savings
 
  :when
  [{:command :accrue-interest     :args [:org-0 20260501]}

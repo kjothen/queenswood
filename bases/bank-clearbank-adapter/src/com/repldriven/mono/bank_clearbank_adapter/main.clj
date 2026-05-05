@@ -1,6 +1,15 @@
 (ns com.repldriven.mono.bank-clearbank-adapter.main
   (:require
+    com.repldriven.mono.avro.interface
+    com.repldriven.mono.bank-clearbank-adapter.system
+    com.repldriven.mono.bank-clearbank-webhook.interface
+    com.repldriven.mono.bank-schema.interface
+    com.repldriven.mono.command-processor.interface
+    com.repldriven.mono.fdb.interface
+    com.repldriven.mono.message-bus.interface
+    com.repldriven.mono.pulsar.interface
     com.repldriven.mono.server.interface
+    com.repldriven.mono.telemetry.interface
 
     [com.repldriven.mono.bank-clearbank-adapter.api :as api]
 
@@ -15,7 +24,7 @@
   [config-file profile]
   (nom-> (env/config config-file profile)
          system/defs
-         (assoc-in [:system/defs :server :handler] api/app)
+         (assoc-in [:system/defs :clearbank-adapter-server :handler] api/app)
          system/start))
 
 (defn stop [system] (system/stop system))
@@ -30,8 +39,5 @@
       (let [{:keys [config-file profile]} options
             result (start config-file (keyword profile))]
         (if (error/anomaly? result)
-          (cli/exit
-           false
-           (str "Failed to start [" (error/kind result)
-                "]: " (or (:message result) "Unknown error")))
+          (cli/exit false result)
           (log/info "System started successfully"))))))

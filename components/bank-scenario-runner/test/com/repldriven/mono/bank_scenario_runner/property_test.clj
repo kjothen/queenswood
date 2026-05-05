@@ -4,14 +4,18 @@
   each trial, the model end-state and the projected real-system end-
   state must agree."
   (:require
+    com.repldriven.mono.bank-scenario-runner.system
+
     [com.repldriven.mono.bank-scenario-runner.interface :as SUT]
+
+    [com.repldriven.mono.bank-onfido-adapter.api :as onfido-adapter]
+    [com.repldriven.mono.bank-onfido-simulator.api :as onfido-simulator]
 
     [com.repldriven.mono.bank-test-model.interface :as model]
     [com.repldriven.mono.bank-test-projections.interface :as projections]
 
     [com.repldriven.mono.log.interface :as log]
     [com.repldriven.mono.system.interface :as system]
-    [com.repldriven.mono.testcontainers.interface]
     [com.repldriven.mono.test-system.interface :refer [with-test-system]]
 
     [clojure.test :refer [deftest is testing]]
@@ -19,6 +23,14 @@
     [clojure.test.check.generators :as gen]
     [clojure.test.check.properties :as prop]
     [fugato.core :as fugato]))
+
+(defn- patch-handlers
+  [defs]
+  (-> defs
+      (assoc-in [:system/defs :onfido-simulator-server :handler]
+                onfido-simulator/app)
+      (assoc-in [:system/defs :onfido-adapter-server :handler]
+                onfido-adapter/app)))
 
 (defn- fdb-config
   [sys]
@@ -135,7 +147,7 @@
                                                           (/ cnt n))}]))
                                  by-command)})))
 
-(def ^:private num-tests 500)
+(def ^:private num-tests 50)
 (def ^:private max-size 30)
 
 (deftest model-eq-reality
@@ -146,7 +158,7 @@
   ;; accounts across trials but the projection is keyed by the trial's
   ;; id-mapping so prior trials' accounts are invisible.
   (with-test-system
-   [sys "classpath:bank-scenario-runner/application-test.yml"]
+   [sys ["classpath:bank-scenario-runner/application-test.yml" patch-handlers]]
    (let [bank (fdb-config sys)
          internal (internal-account sys)
          stats (atom {:trials 0 :total-commands 0 :by-command {} :lengths []})

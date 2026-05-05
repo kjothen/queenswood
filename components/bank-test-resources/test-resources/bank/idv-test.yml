@@ -3,6 +3,8 @@ processor: !system/component
   record-db: !system/ref fdb.record-db
   record-store: !system/ref fdb.meta-store
   schemas: !system/ref avro.serde
+  bus: !system/ref message-bus.bus
+  idv-command-channel: !keyword idv-command
 
 event-processor-impl: !system/component
   system/component-kind: idv/event-processor
@@ -10,14 +12,20 @@ event-processor-impl: !system/component
   record-store: !system/ref fdb.meta-store
   schemas: !system/ref avro.serde
 
+event-processor: !system/component
+  system/component-kind: event-processor/event-processor
+  bus: !system/ref message-bus.bus
+  processor: !system/local-ref event-processor-impl
+  event-channel: !keyword idv-event
+
 party-watcher-handler: !system/component
   system/component-kind: idv/party-watcher-handler
-  record-store: !system/ref fdb.meta-store
-
-idv-watcher-handler: !system/component
-  system/component-kind: idv/idv-watcher-handler
   record-db: !system/ref fdb.record-db
   record-store: !system/ref fdb.meta-store
+  schemas: !system/ref avro.serde
+  bus: !system/ref message-bus.bus
+  idv-command-channel: !keyword idv-command
+
 watchers: !system/component
   system/component-kind: fdb/watchers
   party:
@@ -25,8 +33,3 @@ watchers: !system/component
     consumer-id: idv-party-watcher
     store-name: parties
     handler: !system/local-ref party-watcher-handler
-  idv:
-    record-db: !system/ref fdb.record-db
-    consumer-id: idv-watcher
-    store-name: idvs
-    handler: !system/local-ref idv-watcher-handler

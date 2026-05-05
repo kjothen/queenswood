@@ -1,10 +1,14 @@
 (ns com.repldriven.mono.bank-test-model.parties
-  "Party lifecycle command specs. `:create-person-party` makes a
-  pending person-party in an org; `:activate-party` flips a pending
-  party to active. The model treats parties as opaque ids carrying a
-  `:type` (`:organization` or `:person`) and a `:status` (`:active`
-  or `:pending`); the runner translates those into real
-  `bank-party/new-party` and `bank-party/seed-active-party` calls."
+  "Party lifecycle command specs. `:create-person-party` creates a
+  person-party that immediately becomes `:active` — in production
+  this happens via the IDV chain (party-pending → bank-idv watcher
+  → onfido check → idv-completed event → bank-party activates), but
+  for scenarios using the default `\"Scenario\"` given-name the
+  outcome is deterministic ACCEPTED, so the model collapses the
+  two-step view into one. `:activate-party` is retained as a
+  no-op-on-active so EDN scenarios that emit it still execute,
+  but fugato never selects it (its `:run?` looks for pending
+  parties and there are none)."
   (:require
     [com.repldriven.mono.bank-test-model.state :as state]
 
@@ -63,15 +67,17 @@
         (-> (assoc-in [:parties party-id]
                       {:org org-id
                        :type :person
-                       :status :pending})
+                       :status :active})
             (update-in [:orgs org-id :parties]
                        (fnil conj [])
                        party-id)))))
    :valid? (fn [state {[org-id] :args}] (contains? (:orgs state) org-id))})
 
 (def activate-party
-  "Transitions a pending party to `:active`. Args are `[party-id]`.
-  Eligible only when at least one pending party exists."
+  "Retained for EDN-scenario compatibility — `:next-state` is
+  idempotent on parties already `:active`. Fugato never picks
+  this verb because no parties enter `:pending` (see ns docstring),
+  so `state/pending-parties` is always empty."
   {:run? (fn [state] (seq (state/pending-parties state)))
    :args (fn [state] (gen/tuple (gen/elements (state/pending-parties state))))
    :next-state (fn [state {[party-id] :args}]

@@ -1,0 +1,97 @@
+system:
+  pulsar:
+    client: !system/component
+      system/component-kind: pulsar/client
+      service-url: !env PULSAR_SERVICE_URL
+    admin: !system/component
+      system/component-kind: pulsar/admin
+      service-http-url: !env PULSAR_ADMIN_URL
+    schemas: !system/component
+      system/component-kind: pulsar/schemas
+      command:
+        schema: schemas/command/command-envelope.avsc.json
+        type: AVRO
+      command-response:
+        schema: schemas/command/command-response.avsc.json
+        type: AVRO
+      event:
+        schema: schemas/event/event-envelope.avsc.json
+        type: AVRO
+    producers: !system/component
+      system/component-kind: pulsar/producers
+      idv-command-response:
+        client: !system/local-ref client
+        conf:
+          accessMode: !pulsar/access-mode Shared
+          schema: !keyword command-response
+          topicName: "persistent://tenant-1/namespace-1/topic-idv-command-response"
+        schemas: !system/local-ref schemas
+      idv-event:
+        client: !system/local-ref client
+        conf:
+          accessMode: !pulsar/access-mode Shared
+          schema: !keyword event
+          topicName: "persistent://tenant-1/namespace-1/topic-idv-event"
+        schemas: !system/local-ref schemas
+    consumers: !system/component
+      system/component-kind: pulsar/consumers
+      idv-command:
+        client: !system/local-ref client
+        conf:
+          cryptoFailureAction: !pulsar/crypto-failure-action CONSUME
+          schema: !pulsar/schema AUTO_CONSUME
+          subscriptionName: bank-onfido-adapter-service-idv-command
+          subscriptionType: !pulsar/subscription-type Shared
+          topicNames:
+            ["persistent://tenant-1/namespace-1/topic-idv-command"]
+        schemas: !system/local-ref schemas
+    message-bus-producers: !system/component
+      system/component-kind: pulsar/message-bus-producers
+      idv-command-response:
+        producer: !system/local-ref producers.idv-command-response
+      idv-event:
+        producer: !system/local-ref producers.idv-event
+    message-bus-consumers: !system/component
+      system/component-kind: pulsar/message-bus-consumers
+      idv-command:
+        consumer: !system/local-ref consumers.idv-command
+  message-bus: !include bank/message-bus.yml
+  fdb: !include bank/fdb.yml
+  avro: !include bank/avro.yml
+  telemetry:
+    otel-sdk: !system/component
+      system/component-kind: telemetry/otel-sdk
+      service-name: !env SERVICE_NAME
+      endpoint: !env OTEL_ENDPOINT
+  onfido-adapter:
+    registrar: !system/component
+      system/component-kind: onfido-adapter/registrar
+      onfido-url: !env ONFIDO_URL
+      adapter-url: !env IDV_ONFIDO_ADAPTER_PUBLIC_URL
+    command-processor-impl: !system/component
+      system/component-kind: onfido-adapter/command-processor
+      schemas: !system/ref avro.serde
+      onfido-url: !env ONFIDO_URL
+    command-processor: !system/component
+      system/component-kind: command-processor/command-processor
+      bus: !system/ref message-bus.bus
+      processor: !system/local-ref command-processor-impl
+      command-channel: !keyword idv-command
+      command-response-channel: !keyword idv-command-response
+  onfido-adapter-server:
+    handler: !system/required-component
+    interceptors: !system/component
+      system/component-kind: server/interceptors
+      bus: !system/ref message-bus.bus
+      avro: !system/ref avro.serde
+      event-channel: !keyword idv-event
+    jetty-adapter: !system/component
+      system/component-kind: server/jetty-adapter
+      handler: !system/ref onfido-adapter-server.handler
+      interceptors: !system/ref onfido-adapter-server.interceptors
+      ready-fn: !system/ref onfido-adapter.registrar
+      options:
+        port: 8084
+    http-url: !system/component
+      system/component-kind: server/http-url
+      jetty-adapter: !system/local-ref jetty-adapter

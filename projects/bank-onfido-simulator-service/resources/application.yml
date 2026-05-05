@@ -1,0 +1,23 @@
+system:
+  telemetry:
+    otel-sdk: !system/component
+      system/component-kind: telemetry/otel-sdk
+      service-name: !env SERVICE_NAME
+      endpoint: !env OTEL_ENDPOINT
+  onfido-simulator-server:
+    handler: !system/required-component
+    state: !system/component
+      system/component-kind: onfido-simulator/state
+    interceptors: !system/component
+      system/component-kind: server/interceptors
+      state: !system/local-ref state
+      webhook-delay-ms: 10
+    jetty-adapter: !system/component
+      system/component-kind: server/jetty-adapter
+      handler: !system/ref onfido-simulator-server.handler
+      interceptors: !system/ref onfido-simulator-server.interceptors
+      options:
+        port: 8083
+    http-url: !system/component
+      system/component-kind: server/http-url
+      jetty-adapter: !system/local-ref jetty-adapter

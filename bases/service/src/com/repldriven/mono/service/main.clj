@@ -23,7 +23,5 @@
       (let [{:keys [config-file profile]} options
             sys (start config-file (keyword profile))]
         (if (error/anomaly? sys)
-          (cli/exit false
-                    (str "Failed to start [" (error/kind sys)
-                         "]: " (or (:message sys) "Unknown error")))
+          (cli/exit false sys)
           (do (log/info "System started successfully") @(promise)))))))

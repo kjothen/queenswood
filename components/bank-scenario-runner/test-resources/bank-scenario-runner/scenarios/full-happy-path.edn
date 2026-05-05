@@ -25,32 +25,32 @@
  [;; --- Org setup --------------------------------------------------
   ;; org-0, prod-0 (settlement, published), party-0 (org-party,
   ;; active), acct-0 (settlement)
-  {:command :open-account           :args []}
+  {:command :create-org           :args []}
   {:command :assert-no-anomaly      :args []}
 
   ;; --- Products ---------------------------------------------------
   ;; prod-1 = current (rate 0), prod-2 = savings (rate 3650 bps)
-  {:command :create-product         :args [:org-0]}
-  {:command :create-savings-product :args [:org-0 3650]}
+  {:command :create-product         :args [:org-0 :current 0]}
+  {:command :create-product :args [:org-0 :savings 3650]}
   {:command :publish-product        :args [:prod-1]}
   {:command :publish-product        :args [:prod-2]}
   {:command :assert-no-anomaly      :args []}
 
   ;; --- Parties ----------------------------------------------------
-  ;; Arthur Dent → party-1, Ford Prefect → party-2 (both active)
+  ;; Arthur Dent → party-1, Ford Prefect → party-2 (both auto-active
+  ;; via the IDV chain — `:create-person-party` waits for the chain
+  ;; to settle before the next verb runs).
   {:command :create-person-party    :args [:org-0]}
-  {:command :activate-party         :args [:party-1]}
   {:command :create-person-party    :args [:org-0]}
-  {:command :activate-party         :args [:party-2]}
   {:command :assert-no-anomaly      :args []}
 
   ;; --- Customer accounts ------------------------------------------
   ;; acct-1 = Arthur current  acct-2 = Arthur savings
   ;; acct-3 = Ford   current  acct-4 = Ford   savings
-  {:command :add-account            :args [:org-0 :party-1 :prod-1]}
-  {:command :add-account            :args [:org-0 :party-1 :prod-2]}
-  {:command :add-account            :args [:org-0 :party-2 :prod-1]}
-  {:command :add-account            :args [:org-0 :party-2 :prod-2]}
+  {:command :open-account            :args [:org-0 :party-1 :prod-1]}
+  {:command :open-account            :args [:org-0 :party-1 :prod-2]}
+  {:command :open-account            :args [:org-0 :party-2 :prod-1]}
+  {:command :open-account            :args [:org-0 :party-2 :prod-2]}
   {:command :assert-no-anomaly      :args []}
 
   ;; --- Money in ---------------------------------------------------

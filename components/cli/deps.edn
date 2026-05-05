@@ -1,3 +1,5 @@
 {:aliases {:test {:extra-deps {} :extra-paths ["test"]}}
- :deps {org.clojure/tools.cli {:mvn/version "1.4.256"}}
+ :deps {component/error {:local/root "../error"}
+        component/log {:local/root "../log"}
+        org.clojure/tools.cli {:mvn/version "1.4.256"}}
  :paths ["src"]}

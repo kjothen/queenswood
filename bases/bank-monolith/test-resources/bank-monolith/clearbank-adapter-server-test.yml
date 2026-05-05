@@ -13,6 +13,7 @@ jetty-adapter: !system/component
   system/component-kind: server/jetty-adapter
   handler: !system/ref clearbank-adapter-server.handler
   interceptors: !system/ref clearbank-adapter-server.interceptors
+  ready-fn: !system/ref clearbank-adapter.registrar
   options: !profile
     dev:
       port: 8082

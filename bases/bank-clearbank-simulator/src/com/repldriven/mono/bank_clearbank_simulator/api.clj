@@ -62,26 +62,28 @@
 
 (defn- routes
   [ctx]
-  [["/openapi.json"
-    {:get {:no-doc true
-           :openapi
-           {:info
-            {:title "ClearBank Simulator"
-             :description
-             "Simulates ClearBank payment APIs for testing"
-             :version "1.0.0"}
-            :components
-            {:examples (merge cop.examples/registry
-                              fps.examples/registry
-                              simulate.examples/registry
-                              webhooks.examples/registry
-                              clearbank-webhook/example-registry)}}
-           :handler (server/standard-openapi-handler)}}]
-   (into ["" {:interceptors (:interceptors ctx)}]
-         (concat cop/routes
-                 fps/routes
-                 simulate/routes
-                 webhooks/routes))])
+  (into
+   (server/health-routes ctx)
+   [["/openapi.json"
+     {:get {:no-doc true
+            :openapi
+            {:info
+             {:title "ClearBank Simulator"
+              :description
+              "Simulates ClearBank payment APIs for testing"
+              :version "1.0.0"}
+             :components
+             {:examples (merge cop.examples/registry
+                               fps.examples/registry
+                               simulate.examples/registry
+                               webhooks.examples/registry
+                               clearbank-webhook/example-registry)}}
+            :handler (server/standard-openapi-handler)}}]
+    (into ["" {:interceptors (:interceptors ctx)}]
+          (concat cop/routes
+                  fps/routes
+                  simulate/routes
+                  webhooks/routes))]))
 
 (defn app
   [ctx]

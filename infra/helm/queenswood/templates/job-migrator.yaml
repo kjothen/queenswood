@@ -1,0 +1,94 @@
+{{- if .Values.migrator.enabled }}
+---
+# One-shot Job: applies FDB record metadata (via fdb/meta-store with
+# `migrate: true` enabled by FDB_MIGRATE=true) and declares the
+# Pulsar topology (tenants/namespaces/topics/schemas). Runs first;
+# bank-bootstrap-service Job runs after this one and handles the
+# internal-organization seed + policy records.
+#
+# Job name embeds .Values.image.tag so each helm upgrade with a new
+# tag creates a fresh Job rather than failing on the immutable spec;
+# old Jobs age out via ttlSecondsAfterFinished.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ .Release.Name }}-bank-migrator-{{ .Values.image.tag }}
+  labels:
+    {{- include "queenswood.labels" . | nindent 4 }}
+    app.kubernetes.io/component: bank-migrator
+spec:
+  backoffLimit: 6
+  ttlSecondsAfterFinished: 86400
+  template:
+    metadata:
+      labels:
+        {{- include "queenswood.labels" . | nindent 8 }}
+        app.kubernetes.io/component: bank-migrator
+    spec:
+      {{- with .Values.image.pullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      restartPolicy: OnFailure
+      initContainers:
+        - name: wait-for-fdb-cluster
+          image: alpine/k8s:1.30.14
+          command:
+            - sh
+            - -c
+            - |
+              TOKEN=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)
+              NS=$(cat /var/run/secrets/kubernetes.io/serviceaccount/namespace)
+              CA=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+              URL="https://kubernetes.default.svc/api/v1/namespaces/$NS/configmaps/{{ include "queenswood.fdbClusterConfigMap" . }}"
+              for i in $(seq 1 120); do
+                content=$(curl -sS --cacert "$CA" \
+                  -H "Authorization: Bearer $TOKEN" "$URL" 2>/dev/null \
+                  | jq -r '.data["cluster-file"] // ""')
+                if [ -n "$content" ]; then
+                  echo "FDB cluster file ready: $content"
+                  printf '%s\n' "$content" > /etc/fdb/fdb.cluster
+                  exit 0
+                fi
+                echo "Waiting for FDB cluster-file content..."
+                sleep 5
+              done
+              echo "FDB cluster-file did not appear in time" >&2
+              exit 1
+          volumeMounts:
+            - name: fdb-cluster-file
+              mountPath: /etc/fdb
+      containers:
+        - name: bank-migrator
+          image: "{{ .Values.image.registry }}/bank-migrator-service:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            - name: SERVICE_NAME
+              value: "bank-migrator-service"
+            - name: PULSAR_SERVICE_URL
+              value: {{ include "queenswood.pulsarServiceUrl" . | quote }}
+            - name: PULSAR_ADMIN_URL
+              value: {{ include "queenswood.pulsarAdminUrl" . | quote }}
+            - name: PULSAR_CLUSTER
+              value: {{ include "queenswood.pulsarCluster" . | quote }}
+            - name: FDB_CLUSTER_FILE
+              value: "/etc/fdb/fdb.cluster"
+            # Enables `fdb/meta-store` schema-write at start. Only
+            # the migrator Job sets this; services run with the
+            # default (empty/unset → falsy → read-only mode).
+            - name: FDB_MIGRATE
+              value: "true"
+            - name: OTEL_ENDPOINT
+              value: {{ default "" .Values.otel.endpoint | quote }}
+          volumeMounts:
+            - name: fdb-cluster-file
+              mountPath: /etc/fdb
+              readOnly: true
+          {{- with .Values.migrator.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+      volumes:
+        - name: fdb-cluster-file
+          emptyDir: {}
+{{- end }}

@@ -1,0 +1,23 @@
+registrar: !system/component
+  system/component-kind: onfido-adapter/registrar
+  onfido-url: !system/ref onfido-simulator-server.http-url
+  # Hardcoded. `!system/ref onfido-adapter-server.http-url` would
+  # close a donut.system cycle: jetty-adapter waits on registrar
+  # (via ready-fn), registrar waits on http-url, http-url waits on
+  # jetty-adapter. In real deployments this is `!env
+  # IDV_ONFIDO_ADAPTER_PUBLIC_URL` (the k8s Service DNS, set
+  # externally); in monolith mode the dev profile pins the port to
+  # 8084 so the URL is known up front.
+  adapter-url: http://localhost:8084
+
+command-processor-impl: !system/component
+  system/component-kind: onfido-adapter/command-processor
+  schemas: !system/ref avro.serde
+  onfido-url: !system/ref onfido-simulator-server.http-url
+
+command-processor: !system/component
+  system/component-kind: command-processor/command-processor
+  bus: !system/ref message-bus.bus
+  processor: !system/local-ref command-processor-impl
+  command-channel: !keyword idv-command
+  command-response-channel: !keyword idv-command-response

@@ -140,20 +140,6 @@
   (boolean (some (fn [v] (= :published (:status v)))
                  (get-in state [:products prod-id :versions]))))
 
-(defn add-account-options
-  "All `[org-id party-id prod-id]` triples eligible for
-  `:add-account`: party belongs to org, party is active, prod
-  belongs to org, and prod has at least one published version.
-  Used by `add-account`'s args generator."
-  [state]
-  (vec (for [[org-id org] (:orgs state)
-             prod-id (:products org)
-             party-id (:parties org)
-             :when (and (has-published-version? state prod-id)
-                        (= :active
-                           (get-in state [:parties party-id :status])))]
-         [org-id party-id prod-id])))
-
 (defn drafts
   "Product ids whose latest version is currently `:draft`. Used by
   `:publish-product` and `:discard-draft` (both act on the latest

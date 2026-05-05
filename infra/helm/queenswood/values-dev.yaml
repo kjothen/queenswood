@@ -1,0 +1,28 @@
+# Dev overrides for kind + Tilt.
+#
+# Tilt rewrites every image ref in the rendered manifest to the tag
+# of the image it just built, so `image.tag` here is only a
+# placeholder. `pullPolicy: Never` keeps kubelet from racing Tilt to
+# pull from ghcr.io; Tilt loads the freshly built image into kind
+# directly.
+
+image:
+  tag: "dev"
+  pullPolicy: Never
+
+# Required by the chart's secret template; not a real credential.
+secrets:
+  adminApiKey: "dev"
+
+# Dev runs only FDB 7.3.x — drop the 7.1 / 7.4 init-container
+# entries the operator chart ships by default. Saves two image
+# pulls and the containerd snapshot space for them in kind.
+# Alias is `fdbOperator` (camelCase) per the parent Chart.yaml
+# `dependencies` declaration; subchart-internal name is fdb-operator.
+fdbOperator:
+  initContainers:
+    7.3:
+      image:
+        repository: foundationdb/fdb-kubernetes-monitor
+        tag: 7.3.63
+        pullPolicy: IfNotPresent

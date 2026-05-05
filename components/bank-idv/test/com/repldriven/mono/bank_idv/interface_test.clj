@@ -55,7 +55,7 @@
 
 ;; pending → accepted is no longer driven by an unconditional flip
 ;; in this brick; it now flows through the IDV-provider adapter
-;; (bank-idv-onfido-adapter) and the message-bus event handler in
+;; (bank-onfido-adapter) and the message-bus event handler in
 ;; `bank-idv.events`. The full chain is exercised by the monolith
 ;; integration test `idv_test.clj`.
 

@@ -1,0 +1,34 @@
+{:aliases
+ {:build {:deps {bases/build {:local/root "../../bases/build"}}
+          :exec-args {:lib 'com.repldriven.mono/bank-onfido-simulator-service
+                      :main com.repldriven.mono.bank-onfido-simulator.main
+                      :major-minor-version "0.0"}
+          :ns-default com.repldriven.mono.build.build}
+  :test
+  {:extra-deps
+   {bases/external-test-runner {:local/root "../../bases/external-test-runner"}
+    component/bank-test-resources {:local/root
+                                   "../../components/bank-test-resources"}
+    component/test-resources {:local/root "../../components/test-resources"}
+    component/test-schema {:local/root "../../components/test-schema"}
+    component/test-system {:local/root "../../components/test-system"}
+    component/testcontainers {:local/root "../../components/testcontainers"}}}}
+ :deps
+ {component/bank-onfido-webhook
+  {:local/root "../../components/bank-onfido-webhook"}
+  component/cli {:local/root "../../components/cli"}
+  component/env {:local/root "../../components/env"}
+  component/error {:local/root "../../components/error"}
+  component/http-client {:local/root "../../components/http-client"}
+  component/json {:local/root "../../components/json"}
+  component/log {:local/root "../../components/log"}
+  component/server {:local/root "../../components/server"}
+  component/system {:local/root "../../components/system"}
+  component/telemetry {:local/root "../../components/telemetry"}
+  component/utility {:local/root "../../components/utility"}
+  base/bank-onfido-simulator
+  {:local/root "../../bases/bank-onfido-simulator"}
+  com.google.protobuf/protobuf-java {:mvn/version "3.25.8"}
+  org.clojure/clojure {:mvn/version "1.12.4"}
+  org.clojure/core.async {:mvn/version "1.9.865"}}
+ :paths ["resources"]}

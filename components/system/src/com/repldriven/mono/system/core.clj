@@ -14,6 +14,30 @@
 
 (defn- schema-key-name? [k] (and (keyword? k) (.endsWith (name k) "-schema")))
 
+(defn- find-nested-anomaly
+  "Walk a value looking for an anomaly buried inside a map/seq/set
+  (e.g. the `{key Consumer-or-anomaly}` map returned by Pulsar's
+  `consumers` component). Returns `[path anomaly]` of the first one
+  found, or nil. `error/anomaly?` short-circuits at every level so we
+  never recurse INTO the anomaly's own payload."
+  [v]
+  (cond (error/anomaly? v)
+        [[] v]
+        (map? v)
+        (some (fn [[k vv]]
+                (when-let [[p a] (find-nested-anomaly vv)]
+                  [(into [k] p) a]))
+              v)
+        (sequential? v)
+        (some (fn [[i vv]]
+                (when-let [[p a] (find-nested-anomaly vv)]
+                  [(into [i] p) a]))
+              (map-indexed vector v))
+        (set? v)
+        (some (fn [vv] (find-nested-anomaly vv)) v)
+        :else
+        nil))
+
 (defn- wrap-fn
   [f from-ns to-ns]
   (fn [to-ns-map]
@@ -24,8 +48,25 @@
                                      k)
                                    v))
                           {}
-                          to-ns-map)]
-      (f args))))
+                          to-ns-map)
+          result (f args)]
+      ;; Component start/stop fns sometimes return anomalies via
+      ;; `try-nom`. donut.system has no notion of anomaly, so it
+      ;; would otherwise persist the anomaly as the component's
+      ;; instance and silently continue. The deep walk also catches
+      ;; the multi-resource case (e.g. `{key Consumer-or-anomaly}`
+      ;; from Pulsar's `consumers`/`producers`/`readers`) — without
+      ;; it, a buried anomaly would later surface as an opaque
+      ;; ClassCastException when downstream code tried to use the
+      ;; vector as the expected resource type.
+      (if-let [[path anomaly] (find-nested-anomaly result)]
+        (throw (ex-info (or (:message (error/payload anomaly))
+                            "Component lifecycle returned an anomaly")
+                        {:kind (error/kind anomaly)
+                         :path path
+                         :anomaly anomaly
+                         :payload (error/payload anomaly)}))
+        result))))
 
 (defn- nsmap->nsmap
   [m from-ns to-ns]

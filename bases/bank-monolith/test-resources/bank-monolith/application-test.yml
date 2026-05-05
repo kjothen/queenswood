@@ -47,3 +47,6 @@ system:
   clearbank-simulator-server: !include bank-monolith/clearbank-simulator-test.yml
   clearbank-adapter-server: !include bank-monolith/clearbank-adapter-server-test.yml
   clearbank-adapter: !include bank-monolith/clearbank-adapter-test.yml
+  onfido-simulator-server: !include bank-monolith/onfido-simulator-test.yml
+  onfido-adapter-server: !include bank-monolith/onfido-adapter-server-test.yml
+  onfido-adapter: !include bank-monolith/onfido-adapter-test.yml

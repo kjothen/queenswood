@@ -77,20 +77,25 @@
   {:system/start
    (fn [{:system/keys [config instance]}]
      (or instance
-         (let [{:keys [handler interceptors options]} config
+         (let [{:keys [handler interceptors ready-fn options]} config
                options (assoc options
                               :configurator
                               (fn [^Server server]
                                 (.setErrorHandler server (json-error-handler))))
+               ;; Pass ready-fn through to the API ctx so /ready can
+               ;; report registration state. Defaults to constantly
+               ;; true for services without an external dep.
+               ctx {:interceptors interceptors
+                    :ready-fn (or ready-fn (constantly true))}
                _ (log/info "Starting jetty adapter")
-               server (jetty/run-jetty (handler {:interceptors interceptors})
-                                       options)]
+               server (jetty/run-jetty (handler ctx) options)]
            (log/info "Jetty listening on" (server-jetty/http-local-url server))
            server)))
    :system/stop (fn [{:system/keys [^Server instance]}]
                   (when (some? instance) (.stop instance)))
    :system/config {:handler system/required-component
                    :interceptors nil
+                   :ready-fn nil
                    :options default-jetty-adapter-options}
    :system/config-schema [:map [:handler fn?]]
    :system/instance-schema some?})

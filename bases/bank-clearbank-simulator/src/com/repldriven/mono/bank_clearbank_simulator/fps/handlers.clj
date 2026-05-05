@@ -31,7 +31,8 @@
           {:keys [instructedAmount currency]} amount
           config {:webhooks webhooks}]
       (future
-       (Thread/sleep (or webhook-delay-ms 2000))
+       (when (pos? (or webhook-delay-ms 0))
+         (Thread/sleep webhook-delay-ms))
        (if (= "REJECT" name)
          (webhook/fire-transaction-rejected
           config
@@ -46,7 +47,8 @@
             {:amount instructedAmount
              :currency currency
              :reference reference})
-           (Thread/sleep 500)
+           (when (pos? (or webhook-delay-ms 0))
+             (Thread/sleep webhook-delay-ms))
            (webhook/fire-transaction-settled
             config
             sort-code
