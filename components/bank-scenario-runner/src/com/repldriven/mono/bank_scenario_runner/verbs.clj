@@ -40,14 +40,19 @@
      :outcomes             [:succeeded :denied ...]}"
   (:require
     [com.repldriven.mono.bank-scenario-runner.id-mapping :as id-mapping]
+    [com.repldriven.mono.bank-scenario-runner.quiescence :as quiescence]
 
+    [com.repldriven.mono.bank-api-key.interface :as api-key]
     [com.repldriven.mono.bank-balance.interface :as balances]
     [com.repldriven.mono.bank-cash-account-product.interface :as products]
     [com.repldriven.mono.bank-cash-account.interface :as cash-accounts]
+    [com.repldriven.mono.bank-idv.interface :as idv]
     [com.repldriven.mono.bank-interest.interface :as interest]
     [com.repldriven.mono.bank-organization.interface :as organizations]
     [com.repldriven.mono.bank-party.interface :as party]
+    [com.repldriven.mono.bank-payee-check.interface :as payee-check]
     [com.repldriven.mono.bank-payment.interface :as payment]
+    [com.repldriven.mono.bank-policy.interface :as policy]
     [com.repldriven.mono.bank-test-projections.interface :as projections]
     [com.repldriven.mono.bank-transaction.interface :as transactions]
 
@@ -68,8 +73,10 @@
 (defn- seed-opened
   "Flips a freshly-opened account from `:opening` to `:opened`,
   bypassing the changelog-watcher that does this in production.
-  Returns the result for tracking. Same spirit as the runner's use
-  of `bank-party/seed-active-party`."
+  Returns the result for tracking. The party-side equivalent —
+  `seed-active-party` — was retired once the rig started booting
+  the real bank-idv → onfido chain; the analogous account-side
+  retirement is a follow-up."
   [bank org-real-id real-acct-id]
   (cash-accounts/seed-opened-account bank org-real-id real-acct-id))
 
@@ -116,7 +123,7 @@
   context."
   (fn [_ctx command] (:command command)))
 
-(defmethod dispatch :open-account
+(defmethod dispatch :create-org
   [{:keys [bank counter next-model-id next-org-id next-product-id next-party-id
            id-mapping]
     :as ctx} _command]
@@ -196,15 +203,24 @@
                         :status :draft
                         :number 1}]})))
 
+(def ^:private product-type->kind
+  {:current :product-type-current :savings :product-type-savings})
+
 (defmethod dispatch :create-product
-  [{:keys [bank counter next-product-id orgs] :as ctx} {[model-org] :args}]
+  ;; Args: `[org-id type rate-bps]`. `type` is `:current` or
+  ;; `:savings`. `rate-bps` flows through to the brick when
+  ;; non-nil — `:current` callers can omit / pass 0.
+  [{:keys [bank counter next-product-id orgs] :as ctx}
+   {[model-org type rate-bps] :args}]
   (let [model-prod (model-id-for-next-product next-product-id)
         {:keys [real-id]} (get orgs model-org)
-        result (products/new-product bank
-                                     real-id
-                                     (product-payload (str "Custom Product "
-                                                           counter)
-                                                      :product-type-current))]
+        kind (get product-type->kind type :product-type-current)
+        name
+        (str (if (= :savings type) "Savings" "Current") " Product " counter)
+        extras (when (and rate-bps (pos? rate-bps))
+                 {:interest-rate-bps rate-bps})
+        result
+        (products/new-product bank real-id (product-payload name kind extras))]
     (-> ctx
         (record-fresh-product model-prod model-org result)
         (update :next-product-id inc)
@@ -323,27 +339,48 @@
 
                         ni
                         (assoc :national-identifier ni))
-        result (party/new-party bank payload)]
+        result (party/new-party bank payload)
+        ;; Reality: bank-idv watcher → onfido chain → bank-party
+        ;; activates. Wait until reality catches up to the model
+        ;; before the next verb fires. "Scenario" given-name routes
+        ;; the simulator outcome to clear → ACCEPTED, so every
+        ;; non-anomaly party reaches :active.
+        result' (if (error/anomaly? result)
+                  result
+                  (let [q (quiescence/wait-for-party-active bank
+                                                            org-real-id
+                                                            (:party-id result))]
+                    (if (error/anomaly? q) q result)))]
     (-> ctx
         (cond->
-         (not (error/anomaly? result))
+         (not (error/anomaly? result'))
          (assoc-in [:parties model-party]
           {:real-id (:party-id result)
            :org model-org}))
         (update :next-party-id inc)
         (update :counter inc)
-        (track result))))
+        (track result'))))
 
 (defmethod dispatch :activate-party
   [{:keys [bank orgs parties] :as ctx} {[model-party] :args}]
+  ;; The IDV chain auto-activates a "Scenario"-named party, so
+  ;; this verb degrades to a wait-and-verify. Kept for EDN
+  ;; scenarios that emit it; fugato never selects it because
+  ;; no parties enter pending in the model.
   (let [{party-real-id :real-id :keys [org]} (get parties model-party)
         org-real-id (get-in orgs [org :real-id])
-        result (party/seed-active-party bank org-real-id party-real-id)]
+        result
+        (quiescence/wait-for-party-active bank org-real-id party-real-id)]
     (-> ctx
         (update :counter inc)
         (track result))))
 
-(defmethod dispatch :add-account
+(defmethod dispatch :open-account
+  ;; Opens a customer account against an existing org's published
+  ;; product, owned by an active party. Not in the fugato model —
+  ;; the precondition chain (active party + published product +
+  ;; org) is heavy for the marginal coverage on top of the
+  ;; settlement account. EDN scenarios drive this directly.
   [{:keys [bank counter next-model-id id-mapping orgs products parties] :as ctx}
    {[model-org model-party model-prod] :args}]
   (let [model-acct (model-id-for-next-account next-model-id)
@@ -572,25 +609,6 @@
         (update :counter inc)
         (track result))))
 
-(defmethod dispatch :create-savings-product
-  ;; Interest-bearing variant of :create-product. Args `[:org rate-bps]`;
-  ;; everything else mirrors :create-product.
-  [{:keys [bank counter next-product-id orgs] :as ctx}
-   {[model-org rate-bps] :args}]
-  (let [model-prod (model-id-for-next-product next-product-id)
-        {org-real-id :real-id} (get orgs model-org)
-        result (products/new-product bank
-                                     org-real-id
-                                     (product-payload
-                                      (str "Savings Product " counter)
-                                      :product-type-savings
-                                      {:interest-rate-bps rate-bps}))]
-    (-> ctx
-        (record-fresh-product model-prod model-org result)
-        (update :next-product-id inc)
-        (update :counter inc)
-        (track result))))
-
 (defmethod dispatch :accrue-interest
   [{:keys [bank orgs] :as ctx} {[model-org as-of-date] :args}]
   (let [{org-real-id :real-id} (get orgs model-org)
@@ -632,6 +650,117 @@
   (let [org-real-id (get-in orgs [model-org :real-id])
         product-id (resolve-product-id products product-ref)
         result (products/get-version bank org-real-id product-id version-id)]
+    (-> ctx
+        (update :counter inc)
+        (track result))))
+
+(defn- resolve-real-id
+  "Lifts a model keyword to its tracked real-id, or returns
+  the literal if it's already a string. Lets a single verb
+  handle both happy-path lookups (model-keyword) and
+  not-found pinning (literal `\"prd.unknown\"`)."
+  [side-table key-or-literal]
+  (if (keyword? key-or-literal)
+    (get-in side-table [key-or-literal :real-id])
+    key-or-literal))
+
+(defmethod dispatch :get-account
+  ;; Direct brick read. `account-ref` is either a model-acct
+  ;; keyword (resolved through `:id-mapping`) or a literal
+  ;; account-id string for not-found assertions.
+  [{:keys [bank orgs id-mapping] :as ctx} {[model-org account-ref] :args}]
+  (let [org-real-id (get-in orgs [model-org :real-id])
+        account-id (if (keyword? account-ref)
+                     (get-in id-mapping [:model->real account-ref])
+                     account-ref)
+        result (cash-accounts/get-account bank org-real-id account-id)]
+    (-> ctx
+        (update :counter inc)
+        (track result))))
+
+(defmethod dispatch :get-party
+  ;; Direct brick read. `party-ref` is either a tracked
+  ;; model-party keyword or a literal party-id string.
+  [{:keys [bank orgs parties] :as ctx} {[model-org party-ref] :args}]
+  (let [org-real-id (get-in orgs [model-org :real-id])
+        party-id (resolve-real-id parties party-ref)
+        result (party/get-party bank org-real-id party-id)]
+    (-> ctx
+        (update :counter inc)
+        (track result))))
+
+(defmethod dispatch :get-organization
+  ;; Direct brick read. `org-ref` is either a tracked model-org
+  ;; keyword or a literal organization-id string.
+  [{:keys [bank orgs] :as ctx} {[org-ref] :args}]
+  (let [org-id (resolve-real-id orgs org-ref)
+        result (organizations/get-organization bank org-id)]
+    (-> ctx
+        (update :counter inc)
+        (track result))))
+
+(defmethod dispatch :get-idv
+  ;; Direct brick read. `verification-id` is always a literal
+  ;; string — the runner doesn't yet track IDV records by model
+  ;; key.
+  [{:keys [bank orgs] :as ctx} {[model-org verification-id] :args}]
+  (let [org-real-id (get-in orgs [model-org :real-id])
+        result (idv/get-idv bank org-real-id verification-id)]
+    (-> ctx
+        (update :counter inc)
+        (track result))))
+
+(defmethod dispatch :get-payee-check
+  ;; Direct brick read. `check-id` is a literal string — the
+  ;; runner doesn't yet track payee-checks by model key.
+  [{:keys [bank orgs] :as ctx} {[model-org check-id] :args}]
+  (let [org-real-id (get-in orgs [model-org :real-id])
+        result (payee-check/get-check bank org-real-id check-id)]
+    (-> ctx
+        (update :counter inc)
+        (track result))))
+
+(defmethod dispatch :get-policy
+  ;; Direct brick read. `policy-id` is a literal string —
+  ;; policies are platform-level and not org-scoped here.
+  [{:keys [bank] :as ctx} {[policy-id] :args}]
+  (let [result (policy/get-policy bank policy-id)]
+    (-> ctx
+        (update :counter inc)
+        (track result))))
+
+(defmethod dispatch :get-policy-binding
+  ;; Direct brick read. `binding-id` is a literal string.
+  [{:keys [bank] :as ctx} {[binding-id] :args}]
+  (let [result (policy/get-binding bank binding-id)]
+    (-> ctx
+        (update :counter inc)
+        (track result))))
+
+(defmethod dispatch :get-api-key
+  ;; Direct brick read. `key-hash` is a literal string — api-keys are
+  ;; looked up by their hash, not org-scoped here.
+  [{:keys [bank] :as ctx} {[key-hash] :args}]
+  (let [result (api-key/get-api-key bank key-hash)]
+    (-> ctx
+        (update :counter inc)
+        (track result))))
+
+(defmethod dispatch :get-balance
+  ;; Direct brick read. `account-ref` is either a model-acct
+  ;; keyword (via `:id-mapping`) or a literal account-id
+  ;; string for not-found pinning. The other three args are
+  ;; the balance's composite-key components.
+  [{:keys [bank id-mapping] :as ctx}
+   {[account-ref balance-type currency balance-status] :args}]
+  (let [account-id (if (keyword? account-ref)
+                     (get-in id-mapping [:model->real account-ref])
+                     account-ref)
+        result (balances/get-balance bank
+                                     account-id
+                                     balance-type
+                                     currency
+                                     balance-status)]
     (-> ctx
         (update :counter inc)
         (track result))))

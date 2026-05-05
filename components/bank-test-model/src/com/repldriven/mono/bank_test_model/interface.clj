@@ -17,12 +17,17 @@
 (def model
   "Fugato-shape model: a map keyed by command keyword. Each entry
   carries `:run?`, `:args`, `:next-state`, and (where helpful)
-  `:valid?` — see `docs/tdd/scenario-testing.md`."
-  {:open-account balances/open-account
-   :add-account balances/add-account
+  `:valid?` — see `docs/tdd/scenario-testing.md`.
+
+  `:open-account` (open an end-customer account) is intentionally
+  absent: the production preconditions (active person party +
+  published tenant product) are heavy for the marginal coverage
+  on top of the settlement account that ships with `:create-org`.
+  EDN scenarios still drive it explicitly when they need a second
+  account."
+  {:create-org balances/create-org
    :close-account balances/close-account
    :create-product products/create-product
-   :create-savings-product products/create-savings-product
    :publish-product products/publish-product
    :open-draft products/open-draft
    :discard-draft products/discard-draft

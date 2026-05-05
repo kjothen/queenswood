@@ -11,10 +11,10 @@
   (let [spec (get SUT/model command)]
     ((:next-state spec) state {:args args})))
 
-(deftest open-account-test
+(deftest create-org-test
   (testing
-    "open-account allocates an org, settlement product, org-party, and first account"
-    (let [s (step SUT/init-state :open-account [])]
+    "create-org allocates an org, settlement product, org-party, and settlement account"
+    (let [s (step SUT/init-state :create-org [])]
       (is (= [:acct-0] (SUT/known-accounts s)))
       (is (= [:org-0] (keys (:orgs s))))
       (is (= [:prod-0] (keys (:products s))))
@@ -34,10 +34,11 @@
       (is (= 1 (:next-org-id s)))
       (is (= 1 (:next-product-id s)))
       (is (= 1 (:next-party-id s)))))
-  (testing "successive opens make distinct orgs, products, and parties"
+  (testing
+    "successive create-org calls make distinct orgs, products, and parties"
     (let [s (-> SUT/init-state
-                (step :open-account [])
-                (step :open-account []))]
+                (step :create-org [])
+                (step :create-org []))]
       (is (= #{:acct-0 :acct-1} (set (SUT/known-accounts s))))
       (is (= #{:org-0 :org-1} (set (keys (:orgs s)))))
       (is (= #{:prod-0 :prod-1} (set (keys (:products s)))))
@@ -47,74 +48,43 @@
       (is (= :party-0 (get-in s [:accounts :acct-0 :party])))
       (is (= :party-1 (get-in s [:accounts :acct-1 :party]))))))
 
-(deftest add-account-test
-  (testing "add-account opens a second account using the same party + product"
-    (let [s (-> SUT/init-state
-                (step :open-account [])
-                (step :add-account [:org-0 :party-0 :prod-0]))]
-      (is (= [:acct-0 :acct-1] (sort (SUT/known-accounts s))))
-      (is (= 1 (count (:orgs s))))
-      (is (= :org-0 (get-in s [:accounts :acct-1 :org])))
-      (is (= :prod-0 (get-in s [:accounts :acct-1 :product])))
-      (is (= :party-0 (get-in s [:accounts :acct-1 :party])))
-      (is (= [:acct-0 :acct-1] (get-in s [:orgs :org-0 :accounts])))))
-  (testing ":valid? rejects unknown orgs, cross-org products, cross-org parties"
-    (let [spec (get SUT/model :add-account)
-          s (-> SUT/init-state
-                (step :open-account [])
-                (step :open-account []))]
-      (is (true? ((:valid? spec) s {:args [:org-0 :party-0 :prod-0]})))
-      (is (false? ((:valid? spec) s {:args [:org-0 :party-0 :prod-1]}))
-          "prod-1 belongs to org-1, not org-0")
-      (is (false? ((:valid? spec) s {:args [:org-0 :party-1 :prod-0]}))
-          "party-1 belongs to org-1, not org-0")
-      (is (false? ((:valid? spec) s {:args [:org-99 :party-0 :prod-0]})))
-      (is (false? ((:valid? spec) s {:args [:org-0 :party-99 :prod-0]})))
-      (is (false? ((:valid? spec) s {:args [:org-0 :party-0 :prod-99]}))))))
-
 (deftest create-and-publish-product-test
-  (let [s0 (step SUT/init-state :open-account [])]
+  (let [s0 (step SUT/init-state :create-org [])]
     (testing "create-product opens v1 as draft, attached to an org"
-      (let [s1 (step s0 :create-product [:org-0])]
+      (let [s1 (step s0 :create-product [:org-0 :current 0])]
         (is (= 1 (:next-product-id s0))
             "prod-0 was already taken by the auto settlement product")
         (is (= [{:status :draft :number 1}]
                (get-in s1 [:products :prod-1 :versions])))
         (is (= :org-0 (get-in s1 [:products :prod-1 :org])))
+        (is (= :current (get-in s1 [:products :prod-1 :product-type])))
         (is (= [:prod-0 :prod-1] (get-in s1 [:orgs :org-0 :products])))))
+    (testing "create-product :savings carries the rate-bps"
+      (let [s1 (step s0 :create-product [:org-0 :savings 250])]
+        (is (= :savings (get-in s1 [:products :prod-1 :product-type])))
+        (is (= 250 (get-in s1 [:products :prod-1 :interest-rate-bps])))))
     (testing "publish-product flips the latest draft to published"
       (let [s2 (-> s0
-                   (step :create-product [:org-0])
+                   (step :create-product [:org-0 :current 0])
                    (step :publish-product [:prod-1]))]
         (is (= [{:status :published :number 1}]
                (get-in s2 [:products :prod-1 :versions])))))
-    (testing "add-account against a draft is rejected by :valid?"
-      (let [s3 (step s0 :create-product [:org-0])
-            spec (get SUT/model :add-account)]
-        (is (false? ((:valid? spec) s3 {:args [:org-0 :party-0 :prod-1]}))
-            "draft products can't host accounts")))
-    (testing "add-account against a freshly-published custom product works"
-      (let [s4 (-> s0
-                   (step :create-product [:org-0])
-                   (step :publish-product [:prod-1])
-                   (step :add-account [:org-0 :party-0 :prod-1]))]
-        (is (= :prod-1 (get-in s4 [:accounts :acct-1 :product])))))
     (testing "open-draft after publish appends v2 in :draft"
       (let [s5 (-> s0
-                   (step :create-product [:org-0])
+                   (step :create-product [:org-0 :current 0])
                    (step :publish-product [:prod-1])
                    (step :open-draft [:prod-1]))]
         (is (= [{:status :published :number 1} {:status :draft :number 2}]
                (get-in s5 [:products :prod-1 :versions])))))
     (testing "discard-draft flips the latest draft to discarded"
       (let [s6 (-> s0
-                   (step :create-product [:org-0])
+                   (step :create-product [:org-0 :current 0])
                    (step :discard-draft [:prod-1]))]
         (is (= [{:status :discarded :number 1}]
                (get-in s6 [:products :prod-1 :versions])))))
     (testing "open-draft after discard appends v2 in :draft"
       (let [s7 (-> s0
-                   (step :create-product [:org-0])
+                   (step :create-product [:org-0 :current 0])
                    (step :discard-draft [:prod-1])
                    (step :open-draft [:prod-1]))]
         (is (= [{:status :discarded :number 1} {:status :draft :number 2}]
@@ -122,7 +92,7 @@
 
 (deftest inbound-transfer-test
   (let [s (-> SUT/init-state
-              (step :open-account []))]
+              (step :create-org []))]
     (testing "credits a fresh account"
       (let [s' (step s :inbound-transfer [:acct-0 500])]
         (is (= 500 (SUT/balance s' :acct-0)))))
@@ -138,7 +108,7 @@
 
 (deftest outbound-transfer-test
   (let [s (-> SUT/init-state
-              (step :open-account []))]
+              (step :create-org []))]
     (testing "debit on a zero account is denied (would go negative)"
       (let [s' (step s :outbound-transfer [:acct-0 100])]
         (is (= 0 (SUT/balance s' :acct-0)) "policy denies — state unchanged")))
@@ -153,8 +123,8 @@
 
 (deftest internal-transfer-test
   (let [s (-> SUT/init-state
-              (step :open-account [])
-              (step :open-account []))]
+              (step :create-org [])
+              (step :create-org []))]
     (testing "two-leg transfer between funded and zero account"
       (let [funded (assoc-in s [:accounts :acct-0 :available] 1000)
             s' (step funded :internal-transfer [:acct-0 :acct-1 400])]
@@ -173,35 +143,21 @@
         (is (= -50 (SUT/balance s' :acct-0)) "improving — permitted")
         (is (= 150 (SUT/balance s' :acct-1)))))))
 
-(deftest create-and-activate-person-party-test
-  (let [s0 (step SUT/init-state :open-account [])]
-    (testing "create-person-party adds a pending person-party to the org"
+(deftest create-person-party-test
+  (let [s0 (step SUT/init-state :create-org [])]
+    (testing "create-person-party records a person-party as :active"
+      ;; The model treats the IDV chain as deterministic — the
+      ;; default `\"Scenario\"` given-name routes to clear, so the
+      ;; party is :active by the time the next verb runs.
       (let [s (step s0 :create-person-party [:org-0])]
-        (is (= :pending (get-in s [:parties :party-1 :status])))
+        (is (= :active (get-in s [:parties :party-1 :status])))
         (is (= :person (get-in s [:parties :party-1 :type])))
         (is (= :org-0 (get-in s [:parties :party-1 :org])))
-        (is (= [:party-0 :party-1] (get-in s [:orgs :org-0 :parties])))))
-    (testing "activate-party flips pending → active"
-      (let [s (-> s0
-                  (step :create-person-party [:org-0])
-                  (step :activate-party [:party-1]))]
-        (is (= :active (get-in s [:parties :party-1 :status])))))
-    (testing "add-account against a pending party is rejected by :valid?"
-      (let [s (step s0 :create-person-party [:org-0])
-            spec (get SUT/model :add-account)]
-        (is (false? ((:valid? spec) s {:args [:org-0 :party-1 :prod-0]}))
-            "person-party hasn't been activated yet")))
-    (testing "after activation, accounts open against the person-party"
-      (let [s (-> s0
-                  (step :create-person-party [:org-0])
-                  (step :activate-party [:party-1])
-                  (step :add-account [:org-0 :party-1 :prod-0]))]
-        (is (= :party-1 (get-in s [:accounts :acct-1 :party])))
-        (is (= :prod-0 (get-in s [:accounts :acct-1 :product])))))))
+        (is (= [:party-0 :party-1] (get-in s [:orgs :org-0 :parties])))))))
 
 (deftest apply-fee-test
   (let [s (-> SUT/init-state
-              (step :open-account []))]
+              (step :create-org []))]
     (testing "fee posts on a positive account"
       (let [funded (assoc-in s [:accounts :acct-0 :available] 100)
             s' (step funded :apply-fee [:acct-0 30])]

@@ -1,0 +1,215 @@
+# -- Container image registry + tag shared by every Queenswood service.
+# The image NAME is taken from the service entry's key in `services` below
+# (e.g. {{ image.registry }}/bank-api-service:{{ image.tag }}).
+image:
+  registry: ghcr.io/kjothen
+  tag: "0.0.0"
+  pullPolicy: IfNotPresent
+  pullSecrets: []
+
+# -- Required secrets. adminApiKey is REQUIRED to be set at install time:
+#   helm install ... --set secrets.adminApiKey=$(openssl rand -hex 16)
+secrets:
+  adminApiKey: ""
+
+# -- OpenTelemetry collector endpoint (gets passed as OTEL_ENDPOINT env
+# to every service). Leave empty to disable.
+otel:
+  endpoint: ""
+
+# -- One-shot migrator Job. Applies FDB record metadata (via
+# fdb/meta-store-write) and declares the Pulsar topology
+# (tenants/namespaces/topics/schemas). Runs first; bootstrap Job
+# waits on its completion before seeding domain records.
+migrator:
+  enabled: true
+  resources:
+    limits: { cpu: "1000m", memory: "1Gi" }
+    requests: { cpu: "100m", memory: "512Mi" }
+
+# -- One-shot bootstrap Job. Idempotently seeds the singleton
+# internal Queenswood organization + platform/micro Policy records.
+# Runs after the migrator Job; service Deployments block on this
+# Job (kubectl wait) before starting their main container, so the
+# whole chain is migrator → bootstrap → services.
+bootstrap:
+  enabled: true
+  resources:
+    limits: { cpu: "1000m", memory: "1Gi" }
+    requests: { cpu: "100m", memory: "512Mi" }
+
+# -- Optional ingress for bank-api-service.
+ingress:
+  enabled: false
+  className: ""
+  host: bank-api.local
+  annotations: {}
+  tls: []
+
+# ---------------------------------------------------------------------
+# Per-service settings. Each key maps to one Deployment + (if http=true)
+# one Service. Set enabled: false to skip a service.
+# Image name is the same as the key.
+# ---------------------------------------------------------------------
+services:
+  bank-api-service:
+    enabled: true
+    http: true
+    port: 8080
+    replicas: 1
+    resources:
+      limits: { cpu: "1000m", memory: "1500Mi" }
+      requests: { cpu: "200m", memory: "768Mi" }
+    extraEnv:
+      CLEARBANK_ADAPTER_URL: "http://{{ .Release.Name }}-bank-clearbank-adapter-service:8082"
+
+  bank-cash-account-processor-service:
+    enabled: true
+    replicas: 1
+    resources:
+      limits: { cpu: "750m", memory: "1Gi" }
+      requests: { cpu: "100m", memory: "512Mi" }
+
+  bank-party-processor-service:
+    enabled: true
+    replicas: 1
+
+  bank-payment-processor-service:
+    enabled: true
+    replicas: 1
+
+  bank-interest-processor-service:
+    enabled: true
+    replicas: 1
+
+  bank-transaction-processor-service:
+    enabled: true
+    replicas: 1
+
+  bank-idv-processor-service:
+    enabled: true
+    replicas: 1
+
+  bank-clearbank-adapter-service:
+    enabled: true
+    http: true
+    port: 8082
+    replicas: 1
+    waitFor:
+      - service: bank-clearbank-simulator-service
+        port: 8081
+    extraEnv:
+      CLEARBANK_SIMULATOR_URL: "http://{{ .Release.Name }}-bank-clearbank-simulator-service:8081"
+      CLEARBANK_ADAPTER_PUBLIC_URL: "http://{{ .Release.Name }}-bank-clearbank-adapter-service:8082"
+
+  bank-clearbank-simulator-service:
+    # Disabled in production values; enable for dev/non-prod.
+    enabled: true
+    http: true
+    port: 8081
+    replicas: 1
+
+  bank-onfido-adapter-service:
+    enabled: true
+    http: true
+    port: 8084
+    replicas: 1
+    waitFor:
+      - service: bank-onfido-simulator-service
+        port: 8083
+    extraEnv:
+      ONFIDO_URL: "http://{{ .Release.Name }}-bank-onfido-simulator-service:8083"
+      IDV_ONFIDO_ADAPTER_PUBLIC_URL: "http://{{ .Release.Name }}-bank-onfido-adapter-service:8084"
+
+  bank-onfido-simulator-service:
+    enabled: true
+    http: true
+    port: 8083
+    replicas: 1
+
+# ---------------------------------------------------------------------
+# FDB cluster managed by the FDB Kubernetes operator. The version MUST
+# match the FDB client (libfdb_c) baked into the service image (7.3.75).
+# Defaults are sized for a single-node dev cluster (kind/k3s); raise
+# processCounts and resources for production.
+# ---------------------------------------------------------------------
+fdb:
+  enabled: true
+  version: "7.3.75"
+  storageEngine: "ssd-redwood-1"
+  processCounts:
+    cluster_controller: 1
+    storage: 1
+    log: 1
+    stateless: -1
+  storage:
+    storageClass: ""
+    size: "4Gi"
+  # Per-process resource caps. The operator default is ~8Gi per pod,
+  # which doesn't fit a kind/k3s single-node cluster. Bump for prod.
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "512Mi"
+    limits:
+      cpu: "1000m"
+      memory: "1Gi"
+
+# Sub-chart: FDB Kubernetes Operator (CRDs + controller).
+# nameOverride forces lowercase resource names — the chart derives
+# them from `.Chart.Name` which (because we alias the dependency as
+# `fdbOperator`) would otherwise produce mixed-case names that fail
+# RFC-1123 validation on apply.
+fdbOperator:
+  enabled: true
+  nameOverride: fdb-operator
+
+# ---------------------------------------------------------------------
+# Sub-chart: Apache Pulsar. Override anything from
+# https://github.com/apache/pulsar-helm-chart/blob/master/charts/pulsar/values.yaml
+# ---------------------------------------------------------------------
+pulsar:
+  enabled: true
+  initialize: true
+  components:
+    bookkeeper: true
+    broker: true
+    zookeeper: true
+    proxy: false
+    autorecovery: false
+    functions: false
+    pulsar_manager: false
+    toolset: true
+  # Skip the kube-prometheus-stack sub-subchart (Prometheus + Grafana
+  # + alerting) — adds ~3Gi of memory pressure unsuited for dev. The
+  # Pulsar chart references it as `kube-prometheus-stack.*`. Re-enable
+  # for non-trivial environments.
+  kube-prometheus-stack:
+    enabled: false
+  prometheus-node-exporter:
+    enabled: false
+  # Per-component PodMonitor objects depend on the kube-prometheus-stack
+  # CRDs; disabling the stack means we must skip these too or helm
+  # install fails on `no matches for kind PodMonitor`.
+  zookeeper:
+    replicaCount: 1
+    persistence: false
+    podMonitor: { enabled: false }
+  bookkeeper:
+    replicaCount: 1
+    persistence: false
+    podMonitor: { enabled: false }
+  broker:
+    replicaCount: 1
+    podMonitor: { enabled: false }
+    configData:
+      managedLedgerDefaultEnsembleSize: "1"
+      managedLedgerDefaultWriteQuorum: "1"
+      managedLedgerDefaultAckQuorum: "1"
+      allowAutoTopicCreation: "false"
+      isAllowAutoUpdateSchemaEnabled: "false"
+      isSchemaValidationEnforced: "true"
+  proxy:
+    podMonitor: { enabled: false }
+  autorecovery:
+    podMonitor: { enabled: false }

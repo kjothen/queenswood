@@ -1,0 +1,36 @@
+{{- if .Values.bootstrap.enabled }}
+---
+# Service deployments use a `kubectl wait --for=condition=complete
+# job/...` initContainer to gate startup on bootstrap success. That
+# container needs `get`/`watch` on Jobs in the release namespace.
+# Bind the perms to the namespace's default ServiceAccount (which
+# every service pod inherits unless explicitly overridden).
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ .Release.Name }}-bootstrap-wait
+  labels:
+    {{- include "queenswood.labels" . | nindent 4 }}
+rules:
+  - apiGroups: ["batch"]
+    resources: ["jobs"]
+    verbs: ["get", "watch", "list"]
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get", "watch", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ .Release.Name }}-bootstrap-wait
+  labels:
+    {{- include "queenswood.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ .Release.Name }}-bootstrap-wait
+subjects:
+  - kind: ServiceAccount
+    name: default
+    namespace: {{ .Release.Namespace }}
+{{- end }}

@@ -40,7 +40,7 @@ A project's `deps.edn` typically has three sections:
   tests need (`test-resources`, `test-system`, `testcontainers`,
   `external-test-runner`).
 
-Adapted from `projects/bank-monolith/deps.edn`:
+Adapted from `projects/bank-api-service/deps.edn`:
 
 ```clojure
 {:deps {component/bank-cash-account
@@ -48,8 +48,8 @@ Adapted from `projects/bank-monolith/deps.edn`:
         component/bank-payment
         {:local/root "../../components/bank-payment"}
         ;; ... (every component the project ships)
-        base/bank-monolith
-        {:local/root "../../bases/bank-monolith"}
+        base/bank-api
+        {:local/root "../../bases/bank-api"}
         ;; ... (every base the project ships)
 
         ;; Project-level pins
@@ -80,12 +80,11 @@ Adapted from `projects/bank-monolith/deps.edn`:
 ### Project-level library pinning
 
 Some libraries need to be pinned at the project level rather
-than inside a component, typically for binary compatibility. The
-`bank-monolith` project pins
-`com.google.protobuf/protobuf-java` to 3.x because protojure
-transitively brings 4.x, which breaks the FDB Record Layer at
-runtime. This kind of pin lives in the project's `:deps`, not
-in any single component.
+than inside a component, typically for binary compatibility.
+Service projects pin `com.google.protobuf/protobuf-java` to 3.x
+because protojure transitively brings 4.x, which breaks the FDB
+Record Layer at runtime. This kind of pin lives in the project's
+`:deps`, not in any single component.
 
 ## Rules
 

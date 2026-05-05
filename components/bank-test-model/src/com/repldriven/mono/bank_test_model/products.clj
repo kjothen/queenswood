@@ -5,8 +5,10 @@
   brick allows opening a fresh draft once the current one is
   resolved (published or discarded). Commands:
 
-  - `:create-product` / `:create-savings-product` — allocates a
-    new product with v1 in `:draft`.
+  - `:create-product` — allocates a new product with v1 in
+    `:draft`. Args are `[org-id type rate-bps]` where `type` is
+    `:current` (rate ignored) or `:savings` (rate flows through
+    to `:accrue-interest`'s `daily-interest` calculation).
   - `:publish-product` — flips the latest draft to `:published`.
   - `:open-draft` — appends a new draft when the latest version
     is no longer a draft (published or discarded). Models the
@@ -33,36 +35,26 @@
    :versions [{:status :draft :number 1}]})
 
 (def create-product
-  "Creates a draft `:current` product (rate 0) in an existing org.
-  Args are `[org-id]`. Always eligible once at least one org
-  exists."
-  {:run? (fn [state] (seq (state/known-orgs state)))
-   :args (fn [state] (gen/tuple (gen/elements (state/known-orgs state))))
-   :next-state
-   (fn [state {[org-id] :args}]
-     (let [prod-id (state/next-product-id state)]
-       (-> state
-           (assoc-in [:products prod-id] (new-product-state org-id :current 0))
-           (update-in [:orgs org-id :products] (fnil conj []) prod-id)
-           (update :next-product-id inc))))
-   :valid? (fn [state {[org-id] :args}] (contains? (:orgs state) org-id))})
+  "Creates a draft product in an existing org. Args are
+  `[org-id type rate-bps]`:
+  - `type` is `:current` or `:savings`.
+  - `rate-bps` is the daily interest rate in basis points;
+    ignored for `:current` (the runner overrides to 0).
 
-(def create-savings-product
-  "Creates a draft `:savings` product carrying the given
-  interest-rate-bps. Args are `[org-id rate-bps]`. The rate
-  flows through to `:accrue-interest`'s `daily-interest`
-  calculation."
+  Always eligible once at least one org exists; args generator
+  picks an org and a type, and synthesises a rate for `:savings`."
   {:run? (fn [state] (seq (state/known-orgs state)))
    :args (fn [state]
            (gen/let [org (gen/elements (state/known-orgs state))
+                     type (gen/elements [:current :savings])
                      rate (gen/choose 100 10000)]
-             [org rate]))
-   :next-state (fn [state {[org-id rate-bps] :args}]
+             [org type (if (= :savings type) rate 0)]))
+   :next-state (fn [state {[org-id type rate-bps] :args}]
                  (let [prod-id (state/next-product-id state)]
                    (->
                      state
                      (assoc-in [:products prod-id]
-                               (new-product-state org-id :savings rate-bps))
+                               (new-product-state org-id type rate-bps))
                      (update-in [:orgs org-id :products] (fnil conj []) prod-id)
                      (update :next-product-id inc))))
    :valid? (fn [state {[org-id] :args}] (contains? (:orgs state) org-id))})

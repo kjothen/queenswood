@@ -1,0 +1,18 @@
+handler: !system/required-component
+
+interceptors: !system/component
+  system/component-kind: server/interceptors
+  bus: !system/ref message-bus.bus
+  avro: !system/ref avro.serde
+  event-channel: !keyword idv-event
+
+jetty-adapter: !system/component
+  system/component-kind: server/jetty-adapter
+  handler: !system/ref onfido-adapter-server.handler
+  interceptors: !system/ref onfido-adapter-server.interceptors
+  options:
+    port: 0
+
+http-url: !system/component
+  system/component-kind: server/http-url
+  jetty-adapter: !system/local-ref jetty-adapter

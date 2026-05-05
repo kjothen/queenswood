@@ -1,14 +1,14 @@
-{:name "Internal transfer between two accounts in the same org"
+{:name "Internal transfer between settlement and customer account in one org"
  :tags #{:transfers :internal :intra-org}
 
- ;; One customer org with two accounts both opened against the org's
- ;; auto-published settlement product (:prod-0) and auto-active
- ;; organization party (:party-0). Funds flow into the first account,
- ;; then a portion is moved to the second.
+ ;; Tenant onboards a person-party and opens a customer account on
+ ;; the auto-published settlement product. Funds flow into the org's
+ ;; settlement account and a portion is then moved to the customer one.
  :given
- [{:command :open-account     :args []}                         ; org-0, prod-0, party-0, acct-0
-  {:command :add-account      :args [:org-0 :party-0 :prod-0]}  ; acct-1
-  {:command :inbound-transfer :args [:acct-0 1000]}]
+ [{:command :create-org           :args []}                         ; org-0, prod-0, party-0 (org), acct-0
+  {:command :create-person-party  :args [:org-0]}                   ; party-1 (person, auto-active)
+  {:command :open-account         :args [:org-0 :party-1 :prod-0]}  ; acct-1 (customer)
+  {:command :inbound-transfer     :args [:acct-0 1000]}]
 
  :when
  [{:command :internal-transfer :args [:acct-0 :acct-1 400]}]

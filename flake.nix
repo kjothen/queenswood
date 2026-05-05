@@ -114,10 +114,13 @@
             pkgs.jdk21
             pkgs.just
             pkgs.k6
+            pkgs.kind
+            pkgs.kubernetes-helm
             pkgs.openssl
             protocBinary
             protocGenClojure
             pkgs.semgrep
+            pkgs.tilt
             pkgs.uv
             pkgs.zprint
           ];

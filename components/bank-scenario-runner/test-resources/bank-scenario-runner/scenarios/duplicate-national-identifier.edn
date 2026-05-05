@@ -9,7 +9,7 @@
  ;; covered by the property test, so it isn't repeated here.
 
  :given
- [{:command :open-account       :args []}
+ [{:command :create-org       :args []}
   {:command :create-person-party :args [:org-0 :ni-shared]}
   {:command :assert-no-anomaly  :args []}]
 

@@ -1,0 +1,57 @@
+{:aliases
+ {:build {:deps {bases/build {:local/root "../../bases/build"}}
+          :exec-args {:lib 'com.repldriven.mono/bank-payment-processor-service
+                      :main com.repldriven.mono.bank-payment-processor.main
+                      :major-minor-version "0.0"}
+          :ns-default com.repldriven.mono.build.build}
+  :test
+  {:extra-deps
+   {bases/external-test-runner {:local/root "../../bases/external-test-runner"}
+    component/bank-test-resources {:local/root
+                                   "../../components/bank-test-resources"}
+    component/test-resources {:local/root "../../components/test-resources"}
+    component/test-schema {:local/root "../../components/test-schema"}
+    component/test-system {:local/root "../../components/test-system"}
+    component/testcontainers {:local/root "../../components/testcontainers"}}}}
+ :deps
+ {component/bank-fdb-resources {:local/root
+                                "../../components/bank-fdb-resources"}
+  component/bank-pulsar-resources {:local/root
+                                   "../../components/bank-pulsar-resources"}
+  component/bank-payment {:local/root "../../components/bank-payment"}
+  component/bank-idv {:local/root "../../components/bank-idv"}
+  component/bank-balance {:local/root "../../components/bank-balance"}
+  component/bank-cash-account {:local/root "../../components/bank-cash-account"}
+  component/bank-cash-account-product
+  {:local/root "../../components/bank-cash-account-product"}
+  component/bank-organization {:local/root "../../components/bank-organization"}
+  component/bank-party {:local/root "../../components/bank-party"}
+  component/bank-policy {:local/root "../../components/bank-policy"}
+  component/bank-api-key {:local/root "../../components/bank-api-key"}
+  component/bank-transaction {:local/root "../../components/bank-transaction"}
+  component/avro {:local/root "../../components/avro"}
+  component/cli {:local/root "../../components/cli"}
+  component/command {:local/root "../../components/command"}
+  component/command-processor {:local/root "../../components/command-processor"}
+  component/command-schema {:local/root "../../components/command-schema"}
+  component/event {:local/root "../../components/event"}
+  component/event-processor {:local/root "../../components/event-processor"}
+  component/event-schema {:local/root "../../components/event-schema"}
+  component/fdb {:local/root "../../components/fdb"}
+  component/message-bus {:local/root "../../components/message-bus"}
+  component/processor {:local/root "../../components/processor"}
+  component/encryption {:local/root "../../components/encryption"}
+  component/env {:local/root "../../components/env"}
+  component/error {:local/root "../../components/error"}
+  component/http-client {:local/root "../../components/http-client"}
+  component/log {:local/root "../../components/log"}
+  component/pulsar {:local/root "../../components/pulsar"}
+  component/bank-schema {:local/root "../../components/bank-schema"}
+  component/system {:local/root "../../components/system"}
+  component/telemetry {:local/root "../../components/telemetry"}
+  component/utility {:local/root "../../components/utility"}
+  base/bank-payment-processor {:local/root "../../bases/bank-payment-processor"}
+  com.google.protobuf/protobuf-java {:mvn/version "3.25.8"}
+  org.clojure/clojure {:mvn/version "1.12.4"}
+  org.clojure/core.async {:mvn/version "1.9.865"}}
+ :paths ["resources"]}

@@ -1,5 +1,6 @@
 (ns com.repldriven.mono.cli.core
   (:require
+    [com.repldriven.mono.error.interface :as error]
     [com.repldriven.mono.log.interface :as log]
     [clojure.java.io :as io]
     [clojure.string :as string]
@@ -39,9 +40,14 @@
           {:options options})))
 
 (defn exit
+  "Logs `msg` and terminates the process. When `msg` is an anomaly,
+  it is rendered via `error/format-anomaly` so the kind, the payload
+  message, the underlying exception, and the captured stack trace
+  all reach the log instead of being collapsed to 'Unknown error'."
   [ok? msg]
-  (if ok? (log/info msg) (log/error msg))
-  (System/exit (if ok? 0 1)))
+  (let [text (if (error/anomaly? msg) (error/format-anomaly msg) (str msg))]
+    (if ok? (log/info text) (log/error text))
+    (System/exit (if ok? 0 1))))
 
 
 (comment

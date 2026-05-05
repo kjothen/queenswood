@@ -64,7 +64,6 @@
   (log/info "Loading Pulsar schema file:" filename)
   (-> filename
       io/resource
-      io/file
       slurp
       json/read-str))
 

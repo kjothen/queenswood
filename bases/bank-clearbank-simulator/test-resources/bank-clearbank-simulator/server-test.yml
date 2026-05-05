@@ -7,7 +7,7 @@ interceptors: !system/component
   system/component-kind: server/interceptors
   webhooks: !system/local-ref state
   sort-code: "040004"
-  webhook-delay-ms: 0
+  webhook-delay-ms: 10
 
 jetty-adapter: !system/component
   system/component-kind: server/jetty-adapter

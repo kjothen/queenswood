@@ -1,8 +1,8 @@
 (ns com.repldriven.mono.bank-test-projections.parties
   "Party-status projections — `:active` vs `:pending` per model-party-
-  id. The auto-organization-party from `:open-account` is born
+  id. The auto-organization-party from `:create-org` is born
   active; a person-party from `:create-person-party` is born
-  pending and only flips to `:active` after `:activate-party`."
+  pending and flips to `:active` once the IDV chain settles."
   (:require
     [com.repldriven.mono.bank-party.interface :as party]))
 

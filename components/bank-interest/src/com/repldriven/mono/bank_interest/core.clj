@@ -40,7 +40,7 @@
 (defn- accrue-account
   "Accrues daily interest for a single account. Reads the
   default/posted balance, calculates interest with carry,
-  conditionally records an accrual transaction, updates carry. 
+  conditionally records an accrual transaction, updates carry.
   All in one FDB transaction."
   [config settlement-id account as-of-date]
   (let [{:keys [organization-id account-id currency]} account]
@@ -60,14 +60,23 @@
           {:keys [whole-units carry]} (domain/daily-interest
                                        balance
                                        interest-rate-bps)
-          _ (when whole-units
+          ;; `daily-interest` returns nil when the product's
+          ;; rate is 0; otherwise it returns a map whose
+          ;; `:whole-units` may itself be 0 (sub-unit accrual,
+          ;; only carry to record). `accrual-transaction`
+          ;; returns nil in that whole-units=0 case, so we must
+          ;; guard the save on the transaction VALUE — not on
+          ;; whole-units' truthiness, since 0 is truthy in
+          ;; Clojure. Mirror the pattern in `capitalize-account`.
+          transaction (when whole-units
+                        (domain/accrual-transaction settlement-id
+                                                    account-id
+                                                    currency
+                                                    whole-units
+                                                    as-of-date))
+          _ (when transaction
               (let-nom>
-                [transaction (domain/accrual-transaction settlement-id
-                                                         account-id
-                                                         currency
-                                                         whole-units
-                                                         as-of-date)
-                 transaction+legs (transactions/record-transaction txn
+                [transaction+legs (transactions/record-transaction txn
                                                                    transaction)
                  _ (balances/apply-legs txn
                                         (:legs transaction+legs)

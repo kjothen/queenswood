@@ -1,0 +1,51 @@
+{{- if .Values.fdb.enabled }}
+apiVersion: apps.foundationdb.org/v1beta2
+kind: FoundationDBCluster
+metadata:
+  name: {{ .Release.Name }}-fdb
+  labels:
+    {{- include "queenswood.labels" . | nindent 4 }}
+spec:
+  version: {{ .Values.fdb.version | quote }}
+  databaseConfiguration:
+    storage_engine: {{ .Values.fdb.storageEngine | quote }}
+    redundancy_mode: single
+  processCounts:
+    {{- toYaml .Values.fdb.processCounts | nindent 4 }}
+  processes:
+    general:
+      volumeClaimTemplate:
+        spec:
+          accessModes: ["ReadWriteOnce"]
+          {{- with .Values.fdb.storage.storageClass }}
+          storageClassName: {{ . | quote }}
+          {{- end }}
+          resources:
+            requests:
+              storage: {{ .Values.fdb.storage.size | quote }}
+      podTemplate:
+        spec:
+          # The FDB sidecar uses this SA to patch its own pod's
+          # locality annotations; without it the operator never
+          # finds an eligible coordinator. RBAC is in
+          # rbac-fdb-pod.yaml.
+          serviceAccountName: {{ .Release.Name }}-fdb-pod
+          {{- with .Values.fdb.resources }}
+          # Per-process resource caps. The FDB operator's default
+          # request is ~8Gi per pod which doesn't fit a kind node;
+          # override per environment via `fdb.resources` in values.
+          containers:
+            - name: foundationdb
+              resources:
+                {{- toYaml . | nindent 16 }}
+            - name: foundationdb-kubernetes-sidecar
+              resources:
+                {{- toYaml . | nindent 16 }}
+          initContainers:
+            - name: foundationdb-kubernetes-init
+              resources:
+                {{- toYaml . | nindent 16 }}
+          {{- end }}
+  routing:
+    headlessService: true
+{{- end }}

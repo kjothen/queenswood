@@ -1,0 +1,29 @@
+system:
+  fdb: !include bank/fdb.yml
+  policies:
+    platform: !system/component
+      system/component-kind: policies/policy
+      record-db: !system/ref fdb.record-db
+      record-store: !system/ref fdb.meta-store
+      policy: !include bank/policies/platform/restricted/policy.yml
+    micro: !system/component
+      system/component-kind: policies/policy
+      record-db: !system/ref fdb.record-db
+      record-store: !system/ref fdb.meta-store
+      policy: !include bank/policies/micro/restricted/policy.yml
+  organizations:
+    internal: !system/component
+      system/component-kind: organizations/organization
+      tier: platform
+      policy: !system/ref policies.platform
+      record-db: !system/ref fdb.record-db
+      record-store: !system/ref fdb.meta-store
+      name: Queenswood
+      type: !keyword organization-type-internal
+      status: !keyword organization-status-live
+      currencies: [GBP]
+  telemetry:
+    otel-sdk: !system/component
+      system/component-kind: telemetry/otel-sdk
+      service-name: !env SERVICE_NAME
+      endpoint: !env OTEL_ENDPOINT

@@ -35,7 +35,10 @@ _record-types: !strs &record-types
   idvs:
     record-type: Idv
     primary-key: [organization_id, verification_id]
-    indexes: []
+    indexes:
+      - name: Idv_by_party
+        field: party_id
+        unique: true
   organizations:
     record-type: Organization
     indexes:
@@ -102,9 +105,13 @@ _record-types: !strs &record-types
 container: !system/component
   system/component-kind: fdb/container
 
+container-cluster-file-path: !system/component
+  system/component-kind: fdb/container-cluster-file-path
+  container: !system/local-ref container
+
 cluster-file-path: !system/component
   system/component-kind: fdb/cluster-file-path
-  container: !system/local-ref container
+  path: !system/local-ref container-cluster-file-path
 
 db: !system/component
   system/component-kind: fdb/db
@@ -126,3 +133,7 @@ meta-store: !system/component
   path: meta
   descriptor: com.repldriven.mono.schemas.schemas.SchemaProto
   record-types: *record-types
+  # Persist the test schema into the testcontainer FDB at start so
+  # the monolith's downstream record-store consumers can read it
+  # (no separate migrator process in monolith mode).
+  migrate: true

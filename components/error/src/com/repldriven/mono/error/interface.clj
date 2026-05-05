@@ -1,5 +1,6 @@
 (ns com.repldriven.mono.error.interface
   (:require
+    [clojure.string :as str]
     [de.otto.nom.core :as nom]))
 
 (defn- error-anomaly? [x] (and (vector? x) (= :error/anomaly (first x))))
@@ -54,6 +55,23 @@
 (defn tag [x] (when (anomaly? x) (first x)))
 (defn kind [x] (when (anomaly? x) (second x)))
 (defn payload [x] (when (anomaly? x) (get x 2 {})))
+
+(defn format-anomaly
+  "Renders an anomaly for human-readable error logs: category,
+  payload :message, the underlying exception's message (if any
+  and not a duplicate of :message), and any captured stack trace.
+  Returns a multi-line string."
+  [anomaly]
+  (let [{:keys [message exception stack-trace]} (payload anomaly)
+        ex-msg (when exception (.getMessage ^Throwable exception))]
+    (->> [(str "[" (kind anomaly)
+               "]"
+               (when message (str " " message)))
+          (when (and ex-msg (not= ex-msg message))
+            (str "  caused by: " ex-msg))
+          stack-trace]
+         (remove nil?)
+         (str/join "\n"))))
 
 ;; Threading macros
 (defmacro nom->

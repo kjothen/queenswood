@@ -6,6 +6,8 @@
     [com.repldriven.mono.bank-clearbank-adapter.api :as adapter]
     [com.repldriven.mono.bank-clearbank-simulator.api
      :as simulator]
+    [com.repldriven.mono.bank-onfido-adapter.api :as onfido-adapter]
+    [com.repldriven.mono.bank-onfido-simulator.api :as onfido-simulator]
 
     [com.repldriven.mono.http-client.interface :as http]
     [com.repldriven.mono.server.interface :as server]
@@ -47,6 +49,10 @@
                 simulator/app)
       (assoc-in [:system/defs :clearbank-adapter-server :handler]
                 adapter/app)
+      (assoc-in [:system/defs :onfido-simulator-server :handler]
+                onfido-simulator/app)
+      (assoc-in [:system/defs :onfido-adapter-server :handler]
+                onfido-adapter/app)
       (assoc-in [:system/defs :server :handler] api/app)
       (assoc-in [:system/defs :server :interceptors
                  :system/config :auth]

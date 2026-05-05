@@ -5,6 +5,9 @@
     com.repldriven.mono.bank-clearbank-simulator.system
     com.repldriven.mono.bank-clearbank-webhook.interface
     com.repldriven.mono.bank-idv.interface
+    com.repldriven.mono.bank-onfido-adapter.system
+    com.repldriven.mono.bank-onfido-simulator.system
+    com.repldriven.mono.bank-onfido-webhook.interface
     com.repldriven.mono.bank-interest.interface
     com.repldriven.mono.bank-party.interface
     com.repldriven.mono.bank-payment.interface

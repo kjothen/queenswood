@@ -35,9 +35,110 @@ build snapshot="true":
         (cd "$project" && clojure -X:build uber :snapshot {{ snapshot }})
     done
 
+# Container registry for Queenswood service images
+DOCKER_REGISTRY := "ghcr.io/kjothen"
+
+# Build a single service Docker image: `just docker-build bank-api-service dev`
+docker-build project tag="dev":
+    docker buildx build \
+      --build-arg PROJECT_NAME={{ project }} \
+      -t {{ DOCKER_REGISTRY }}/{{ project }}:{{ tag }} \
+      -f infra/docker/service/Dockerfile \
+      --load \
+      .
+
+# Build every Queenswood service image in parallel via
+# `docker buildx bake`. Targets are declared in
+# infra/docker/bake.hcl; the Clojure base layer is shared
+# across all targets, so this is dramatically faster than
+# the per-image loop.
+docker-build-all tag="dev":
+    REGISTRY={{ DOCKER_REGISTRY }} TAG={{ tag }} \
+      docker buildx bake -f infra/docker/bake.hcl
+
+# Render the Helm chart locally (does not install)
+helm-template tag="dev":
+    helm dependency update infra/helm/queenswood
+    helm template bank infra/helm/queenswood \
+      --set image.tag={{ tag }} \
+      --set secrets.adminApiKey=template-render
+
+# Install/upgrade the chart into the current kubectl context.
+# Reuses the existing Secret value on subsequent installs so the
+# admin API key is stable across deploys; pass `admin_key=...` to
+# rotate. A fresh key is generated only when no Secret exists yet.
+helm-install tag="dev" admin_key="":
+    #!/usr/bin/env zsh
+    set -e
+    key={{ admin_key }}
+    if [[ -z "$key" ]]; then
+      key=$(kubectl get secret bank-admin-api-key \
+        -o jsonpath='{.data.MONO_ADMIN_API_KEY}' 2>/dev/null \
+        | base64 -d || true)
+      [[ -z "$key" ]] && key=$(openssl rand -hex 16)
+    fi
+    helm dependency update infra/helm/queenswood
+    helm upgrade --install bank infra/helm/queenswood \
+      --set image.tag={{ tag }} \
+      --set secrets.adminApiKey=$key \
+      --wait --timeout 10m
+
+# Spin up a kind cluster, load all images, install the chart end-to-end
+kind-up tag="dev":
+    #!/usr/bin/env zsh
+    set -e
+    kind get clusters | grep -q queenswood || kind create cluster --name queenswood
+    just docker-build-all {{ tag }}
+    for project in projects/*-service/; do
+      svc=${project:t}
+      kind load docker-image --name queenswood {{ DOCKER_REGISTRY }}/$svc:{{ tag }}
+    done
+    just helm-install {{ tag }}
+
+# Tear down the kind cluster
+kind-down:
+    kind delete cluster --name queenswood
+
+# Create the kind cluster if missing, refresh the chart's subchart
+# deps once (so Tilt's helm() watcher doesn't see Chart.lock /
+# charts/*.tgz appearing mid-session and loop forever), then hand
+# off to Tilt for the interactive dev loop. Prereq: `just start-docker`.
+tilt-up:
+    #!/usr/bin/env zsh
+    set -e
+    kind get clusters | grep -q queenswood || kind create cluster --name queenswood
+    helm dependency update infra/helm/queenswood
+    tilt up
+
+# Tear down Tilt-managed resources. Leaves the kind cluster in
+# place — use `just kind-down` if you also want to nuke it.
+tilt-down:
+    tilt down
+
+# Prune all Tilt-built images. Tilt rewrites every rebuild's
+# manifest to point at a fresh `:tilt-<hex>` tag, so per-edit
+# rebuilds accumulate dozens of orphan images on the host Docker
+# daemon and inside the kind node's containerd. This recipe
+# nukes both. Safe vs your `:dev` / version tags — the glob only
+# matches `*:tilt-*`.
+tilt-prune:
+    #!/usr/bin/env zsh
+    set -e
+    images=$(docker images --filter 'reference=ghcr.io/kjothen/*:tilt-*' -q | sort -u)
+    if [[ -n "$images" ]]; then
+      echo "$images" | xargs docker rmi -f
+    else
+      echo "No host-side Tilt images to prune."
+    fi
+    if docker ps --format '{{ "{{" }}.Names{{ "}}" }}' | grep -q '^queenswood-control-plane$'; then
+      docker exec queenswood-control-plane crictl rmi --prune || true
+    else
+      echo "kind node 'queenswood-control-plane' not running — skipping containerd prune."
+    fi
+
 
 # Run all polylith project tests
-test: start-docker
+test: docker-start
     SKIP_META=repl clojure -M:poly test :all
 
 # Check test failures from last test run
@@ -122,24 +223,45 @@ force-prep:
     clj -X:deps prep :aliases '[{{ DOMAIN_ALIASES }} :dev]' :force true
 
 # Start Docker via Colima
-start-docker:
-    colima status 2>/dev/null || colima start --arch aarch64 --vm-type vz --vz-rosetta --cpu 6 --memory 12 
+docker-start:
+    colima status 2>/dev/null || colima start --arch aarch64 --vm-type vz --vz-rosetta --cpu 6 --memory 24 --disk 100
+    # Raise inotify limits — kind nodes plus per-pod kubectl/curl
+    # polling exhaust the defaults (128 instances, 8192 watches)
+    # and surface as "too many open files" in init containers.
+    colima ssh -- sudo sysctl -w fs.inotify.max_user_instances=8192 fs.inotify.max_user_watches=524288
     docker context use colima
+    docker system prune -af --volumes
 
 # Stop Docker via Colima
-stop-docker:
+docker-stop:
     colima stop
 
-# Install bank-app deps and run the Vite dev server against the local bank-api
-start-bank-app:
-    cd {{ justfile_directory() }}/bases/bank-app && npm install && npm run dev
+# Install bank-app deps and run the Vite dev server against the local bank-api.
+# With use-kube-secret=true, fetch MONO_ADMIN_API_KEY from the
+# `bank-admin-api-key` Secret in the current kube context and expose it
+# to Vite via VITE_MONO_ADMIN_API_KEY (default: rely on a local .env or
+# whatever the shell already has).
+bank-app-start use-kube-secret="false":
+    #!/usr/bin/env zsh
+    set -euo pipefail
+    cd {{ justfile_directory() }}/bases/bank-app
+    if [[ "{{ use-kube-secret }}" == "true" ]]; then
+      VITE_MONO_ADMIN_API_KEY=$(kubectl get secret bank-admin-api-key \
+        -o jsonpath='{.data.MONO_ADMIN_API_KEY}' | base64 -d)
+      if [[ -z "$VITE_MONO_ADMIN_API_KEY" ]]; then
+        echo "kubectl returned empty MONO_ADMIN_API_KEY — is the cluster up and the chart installed?" >&2
+        exit 1
+      fi
+      export VITE_MONO_ADMIN_API_KEY
+    fi
+    npm install && npm run dev
 
 # Run the bank-monolith against its test application.yml, teeing stdout/stderr to server.log
-start-bank-monolith:
+bank-monolith-start:
     clj -M{{ DOMAIN_ALIASES }}:dev:test -e "(require 'com.repldriven.mono.testcontainers.interface)" -m com.repldriven.mono.bank-monolith.main -c "classpath:bank-monolith/application-test.yml" -p "dev" 2>&1 | tee server.log
 
 # Start a local Jaeger container for OTLP traces (UI on :16686, OTLP/http on :4318)
-start-telemetry:
+telemetry-start:
   docker run -d --name jaeger \
     -p 16686:16686 \
     -p 4318:4318 \
@@ -147,7 +269,7 @@ start-telemetry:
     --set receivers.otlp.protocols.http.endpoint=0.0.0.0:4318
 
 # Stop and remove the local Jaeger container
-stop-telemetry:
+telemetry-stop:
   docker stop jaeger && docker rm jaeger
 
 # Run schemathesis API fuzzer against the running bank-api

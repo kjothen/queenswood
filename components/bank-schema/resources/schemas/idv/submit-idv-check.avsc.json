@@ -1,0 +1,13 @@
+{
+  "type": "record",
+  "name": "SubmitIdvCheck",
+  "namespace": "com.repldriven.mono.idv",
+  "fields": [
+    {"name": "organization_id", "type": "string"},
+    {"name": "verification_id", "type": "string"},
+    {"name": "party_id",        "type": "string"},
+    {"name": "first_name",      "type": "string"},
+    {"name": "last_name",       "type": "string"},
+    {"name": "date_of_birth",   "type": ["null", "string"], "default": null}
+  ]
+}

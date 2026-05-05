@@ -1,0 +1,26 @@
+apiVersion: v2
+name: queenswood
+description: |
+  Queenswood core-banking platform: bank-api, message processors, and
+  HTTP adapters/simulators, on top of Apache Pulsar (subchart) and a
+  FoundationDB cluster managed by the FDB Kubernetes operator.
+type: application
+version: 0.1.0
+appVersion: "0.0.0"
+icon: https://avatars.githubusercontent.com/kjothen
+kubeVersion: ">=1.27.0"
+
+dependencies:
+  - name: pulsar
+    version: "3.5.0"
+    repository: "https://pulsar.apache.org/charts"
+    condition: pulsar.enabled
+  # Vendored from FoundationDB/fdb-kubernetes-operator main@charts/fdb-operator
+  # — upstream does not publish a Helm repo, so the chart lives in
+  # `charts/fdb-operator/` and is referenced by file:// URL.
+  # Refresh by re-syncing the upstream tree into charts/fdb-operator.
+  - name: fdb-operator
+    version: "0.3.0"
+    repository: "file://charts/fdb-operator"
+    alias: fdbOperator
+    condition: fdbOperator.enabled
