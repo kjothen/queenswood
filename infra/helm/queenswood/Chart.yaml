@@ -12,7 +12,7 @@ kubeVersion: ">=1.27.0"
 
 dependencies:
   - name: pulsar
-    version: "3.5.0"
+    version: "4.6.0"
     repository: "https://pulsar.apache.org/charts"
     condition: pulsar.enabled
   # Vendored from FoundationDB/fdb-kubernetes-operator main@charts/fdb-operator

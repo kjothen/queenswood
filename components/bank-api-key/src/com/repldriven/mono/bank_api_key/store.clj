@@ -14,8 +14,6 @@
   (dissoc api-key :key-hash))
 
 (defn get-api-key
-  "Loads an API key by its hash. Returns a redacted ApiKey 
-  map or rejection anomaly if not found."
   [txn key-hash]
   (fdb/transact txn
                 (fn [txn]
@@ -28,8 +26,6 @@
                 {:message "Failed to load API key"}))
 
 (defn count-api-keys-by-org
-  "Returns the count of API keys for an organization. Uses
-  the ApiKey_count_by_org count index."
   [txn org-id]
   (fdb/transact txn
                 (fn [txn]
@@ -41,11 +37,6 @@
                  :organization-id org-id}))
 
 (defn get-api-keys
-  "Lists all API keys for a given organization. Returns a
-  sequence of ApiKey maps. opts supports :order (`:desc`
-  default — clients show newest-first). The underlying
-  index query has no native sort option, so ordering is
-  applied in memory over the result."
   ([txn org-id] (get-api-keys txn org-id nil))
   ([txn org-id opts]
    (let [{:keys [order] :or {order :desc}} opts

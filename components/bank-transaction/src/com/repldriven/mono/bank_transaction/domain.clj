@@ -6,8 +6,6 @@
   {:transaction-type-internal-transfer :transaction-status-posted})
 
 (defn new-transaction
-  "Creates a new transaction map. Internal transfers are
-  posted immediately; all others start pending."
   [data]
   (let [{:keys [idempotency-key transaction-type currency
                 reference]}
@@ -26,8 +24,6 @@
      :updated-at now}))
 
 (defn new-leg
-  "Creates a new transaction leg map from input leg data,
-  linking it to the given transaction-id and currency."
   [leg transaction-id currency]
   (let [{:keys [account-id balance-type balance-status
                 side amount]}

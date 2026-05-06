@@ -19,13 +19,13 @@ formula and carry mechanism, accrual and capitalisation
 postings, the run pattern that processes an organisation's
 customer accounts.
 
-Out of scope: rate setting and product configuration (see
-forthcoming cash-account-product TDD); the substrate that
-records and applies legs (covered in
-[transactions-and-balances.md](transactions-and-balances.md));
+Out of scope: rate setting and product configuration —
+see [cash-account-products.md](cash-account-products.md);
+the substrate that records and applies legs, covered in
+[transactions-and-balances.md](transactions-and-balances.md);
 the policy filters that scope limit checks to specific
-transaction types
-([policy-evaluation.md](policy-evaluation.md)).
+transaction types — see
+[policy-evaluation.md](policy-evaluation.md).
 
 ## Background
 
@@ -291,8 +291,8 @@ The `as-of-date` is part of the per-account idempotency key:
 Re-running a date is safe — the second pass finds the
 existing accrual transactions via the idempotency key and
 either skips (today's per-domain pattern) or returns the
-prior outcome (under the proposed universal idempotency
-design, [idempotency.md](idempotency.md)).
+prior outcome under the proposed universal idempotency
+design; see [idempotency.md](idempotency.md).
 
 ### Per-account atomicity, cross-account resumability
 

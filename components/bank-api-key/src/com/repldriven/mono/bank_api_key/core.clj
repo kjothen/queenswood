@@ -12,9 +12,6 @@
       (policy/get-effective-policies txn {:organization-id org-id})))
 
 (defn- counts
-  "Builds the api-key aggregates map for the limit checks in
-  `domain/new-api-key`. Each entry is keyed by the set of
-  dimensions the count is grouped on."
   [txn org-id]
   (let-nom>
     [total (store/count-api-keys-by-org txn org-id)]

@@ -1,24 +1,12 @@
 (ns com.repldriven.mono.bank-test-projections.accounts
-  "Per-account associations — `:org`, `:product`, `:party` —
-  reverse-mapped to model-ids. Catches the case where an account
-  exists in real but is registered against a different org, party,
-  or product than the model expects (or vice versa). The balance
-  itself is covered by `bank-test-projections.balances/project-
-  balances`; this projection is about *who owns what*."
   (:require
     [com.repldriven.mono.bank-cash-account.interface :as cash-accounts]))
 
 (defn- reverse-by-real-id
-  "From `model-id → {:real-id ...}`, builds `real-id → model-id`."
   [m]
   (into {} (map (fn [[mid {:keys [real-id]}]] [real-id mid])) m))
 
 (defn- normalise-status
-  "Maps the real `:cash-account-status-*` enum to the model's
-  two-state `:open` / `:closed`. The real status machine has
-  `:opening` (pre-watcher) and `:closing` (pre-watcher) staging
-  states the model collapses; the runner uses `seed-opened` /
-  `seed-closed` to skip them."
   [status]
   (case status
     :cash-account-status-opening :open
@@ -27,17 +15,6 @@
     :cash-account-status-closed :closed))
 
 (defn project-accounts
-  "For each account the runner has tracked in `:id-mapping`, fetches
-  the real account and reports its `:org` / `:product` / `:party`
-  associations and normalised `:status` as model-ids/enum. Returns
-  `{model-acct-id {:org :model-org :product :model-prod
-                   :party :model-party :status :open|:closed}}`.
-
-  The runner's `:accounts` side-table already records `:org` per
-  model-acct, but reading from the real bank ensures we catch
-  cases where the runner's intent and reality drifted (e.g. the
-  account was opened against a different product after a partial
-  failure)."
   [bank ctx]
   (let [{:keys [id-mapping accounts orgs products parties]} ctx
         org-real->model (reverse-by-real-id orgs)
@@ -58,9 +35,6 @@
          (into {}))))
 
 (defn project-model-accounts
-  "Reads the same shape from the model state. Returns
-  `{model-acct-id {:org :model-org :product :model-prod
-                   :party :model-party :status :open|:closed}}`."
   [model-state]
   (->> (:accounts model-state)
        (map (fn [[acct-id {:keys [org product party status]}]]

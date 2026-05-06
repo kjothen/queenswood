@@ -11,9 +11,9 @@ organisations, API keys, parties, identity verification, cash
 account products, cash accounts, balances, transactions,
 internal/inbound/outbound payments, interest, and policies. Each
 is implemented internally by a dedicated processor on the
-command pipeline (see the transaction-processing TDD at
-[docs/tdd/transaction-processing.md](../tdd/transaction-processing.md)),
-so the *internal* shape is naturally domain-decomposed.
+command pipeline — see the transaction-processing TDD at
+[docs/tdd/transaction-processing.md](../tdd/transaction-processing.md).
+So the *internal* shape is naturally domain-decomposed.
 
 The question this ADR answers is: should the *external* shape
 mirror that internal decomposition? Do consumers of Queenswood

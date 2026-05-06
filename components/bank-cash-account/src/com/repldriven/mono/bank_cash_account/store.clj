@@ -10,9 +10,6 @@
 (def transact fdb/transact)
 
 (defn find-account
-  "Loads a cash account by composite PK if it exists.
-  Returns the account map, nil, or anomaly on I/O failure.
-  For existence probes (e.g. watcher handlers)."
   [txn org-id account-id]
   (fdb/transact
    txn
@@ -25,8 +22,6 @@
    "Failed to load account"))
 
 (defn get-account
-  "Loads a cash account by composite PK. Returns the account
-  map or rejection anomaly if not found."
   [txn org-id account-id]
   (let-nom> [account (find-account txn org-id account-id)]
     (or account
@@ -36,8 +31,6 @@
                        :account-id account-id}))))
 
 (defn save-account
-  "Saves account to the cash-accounts store and writes a
-  changelog entry. Returns nil or anomaly."
   [txn account changelog]
   (fdb/transact
    txn
@@ -58,8 +51,6 @@
    "Failed to save account"))
 
 (defn allocate-payment-address
-  "Allocates and formats the next payment-address number for
-  the given counter."
   [txn counter]
   (fdb/transact txn
                 (fn [txn]
@@ -72,10 +63,6 @@
                 "Failed to allocate payment address"))
 
 (defn get-accounts
-  "Lists cash accounts for an organization. Returns
-  {:accounts [maps] :before id|nil :after id|nil} or
-  anomaly. opts supports :after, :before, :limit, :order
-  (`:desc` default — clients show newest-first)."
   ([txn org-id]
    (get-accounts txn org-id nil))
   ([txn org-id opts]
@@ -101,8 +88,6 @@
         :after after}))))
 
 (defn count-by-org
-  "Returns the count of accounts for an organization. Uses
-  the CashAccount_count_by_org count index."
   [txn org-id]
   (fdb/transact txn
                 (fn [txn]
@@ -114,10 +99,6 @@
                  :organization-id org-id}))
 
 (defn count-by-org-product-account-type-currency
-  "Returns the count of accounts for an organization,
-  product-type, account-type, and currency. Uses the
-  CashAccount_count_by_org_product_account_type_currency
-  count index."
   [txn org-id product-type account-type currency]
   (fdb/transact
    txn
@@ -138,9 +119,6 @@
     :currency currency}))
 
 (defn get-account-by-type
-  "Returns the first account matching the given org-id and
-  product-type, or nil. Pins the planner to the
-  org_product_type_idx compound index."
   [txn org-id product-type]
   (fdb/transact txn
                 (fn [txn]
@@ -156,8 +134,6 @@
                 "Failed to get account by type"))
 
 (defn get-account-by-bban
-  "Returns the account matching the given bban, or nil.
-  Pins the planner to the bban_idx secondary index."
   [txn bban]
   (fdb/transact txn
                 (fn [txn]

@@ -12,12 +12,6 @@
 (def ^:private api-key-display-prefix-len 12)
 
 (defn new-api-key
-  "Creates a new ApiKey record map and its key secret.
-  Returns {:api-key <map> :key-secret <string>} or an
-  unauthorized anomaly when `policies` deny issuing keys.
-  The key-secret is only available at creation time. The
-  key prefix tracks the organization's `status` — `sk_live.`
-  for live orgs, `sk_test.` otherwise."
   [org-id status key-name aggregates policies]
   (let-nom>
     [_ (policy/check-capability policies

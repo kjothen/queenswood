@@ -7,8 +7,6 @@
     [com.repldriven.mono.error.interface :as error :refer [let-nom>]]))
 
 (defn- create-person
-  "Creates a person party with person-identification and
-  optional national-identifier in a single transaction."
   [txn data]
   (store/transact
    txn
@@ -35,8 +33,6 @@
          result)))))
 
 (defn- create-internal
-  "Creates an internal party — no person-identification or
-  national-identifier."
   [txn data]
   (store/transact
    txn
@@ -51,11 +47,6 @@
          :status-after status})))))
 
 (defn new-party
-  "Creates a party. Person parties include
-  person-identification and optional national-identifier.
-  Internal and organization parties skip both. Returns
-  protobuf party record or anomaly. opts supports `:policies`
-  to override policy resolution for the capability check."
   ([txn data]
    (new-party txn data {}))
   ([txn data opts]

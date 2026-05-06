@@ -47,7 +47,7 @@ Three test-only components, picked up by the existing test
 pipeline (the `external-test-runner` base and each brick's `test/`
 paths under `project:dev`). They are **not** Polylith projects —
 there's no deployable artifact here. If the scenario runner ever
-needs a CLI entrypoint, it'll be a `bases/bank-scenario-runner`
+needs a CLI entrypoint, it'll be a `bases/bank-test-scenarios`
 base. Namespaces follow the repo's `com.repldriven.mono.*`
 convention:
 
@@ -69,8 +69,8 @@ components/
       balances.clj             ; project-balances
       [later: accounts.clj, limits.clj, ...]
 
-  bank-scenario-runner/
-    src/com/repldriven/mono/bank_scenario_runner/
+  bank-test-scenarios/
+    src/com/repldriven/mono/bank_test_scenarios/
       interface.clj            ; run-commands, run-scenario
       runner.clj               ; the step dispatcher
       verbs.clj                ; verb -> action mapping
@@ -91,7 +91,7 @@ components/
   hand-written re-implementation of the policy rules it needs
   (see `policy.clj`); when the production policy semantics change,
   the model's `policy.clj` is updated to match.
-- `bank-scenario-runner` depends on `bank-test-model`,
+- `bank-test-scenarios` depends on `bank-test-model`,
   `bank-test-projections`, and the production components it needs
   to drive (command-submission interfaces, primarily).
 - The arrow only ever points test → production. If a production
@@ -286,7 +286,7 @@ The property:
 
 ## The runner
 
-`bank-scenario-runner` is a **component** (library code), not a
+`bank-test-scenarios` is a **component** (library code), not a
 base. Tests that exercise the runner — Phase 3 hand-built
 sequences, Phase 4 EDN scenarios, Phase 5 fugato property tests —
 live in the runner brick's own `test/`, mirroring how every other
@@ -297,10 +297,10 @@ would be wrong.
 If a CLI entrypoint to run a single scenario outside the polylith
 test machinery turns out to be useful (hand-debugging, replaying a
 shrunk fugato sequence one step at a time), add a thin
-`bases/bank-scenario-runner` later that wraps the component with a
+`bases/bank-test-scenarios` later that wraps the component with a
 `-main`. That's orthogonal to where the tests live.
 
-`bank-scenario-runner` owns command dispatch, ID mapping,
+`bank-test-scenarios` owns command dispatch, ID mapping,
 quiescence, and comparison.
 
 ### Command dispatch
@@ -364,8 +364,8 @@ EDN-loaded scenarios. Same dispatch, same projections, same
 comparison. The only difference is the source.
 
 EDN scenarios live under the runner brick's test-resources, at
-`bank-scenario-runner/scenarios/*.edn` on the test classpath
-(see `components/bank-scenario-runner/test-resources/`). Each is
+`bank-test-scenarios/scenarios/*.edn` on the test classpath
+(see `components/bank-test-scenarios/test-resources/`). Each is
 a map with `:given`, `:when`, `:then` sections, all of which are
 sequences of the same step shape —
 `{:command <kw> :args [...]}` — as fugato emits, plus assertion

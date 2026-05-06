@@ -21,11 +21,11 @@ version data model; lifecycle operations
 `discard-draft` / `publish`); policy integration on draft
 creation; the link from account to version.
 
-Out of scope: cash account opening (forthcoming
-cash-accounts TDD — accounts consume product versions);
-interest accrual reading the rate
-([interest.md](interest.md)); the policy machinery itself
-([policy-evaluation.md](policy-evaluation.md)).
+Out of scope: cash account opening — see
+[cash-accounts.md](cash-accounts.md), where accounts consume
+product versions; interest accrual reading the rate, see
+[interest.md](interest.md); the policy machinery itself, see
+[policy-evaluation.md](policy-evaluation.md).
 
 ## Background
 
@@ -172,8 +172,8 @@ domain check.
 Cash accounts hold a `:product-id` + `:version-id`
 reference. Interest accrual reads the account's version to
 find the rate; available-balance derivation uses the
-product-type from the version (per
-[transactions-and-balances.md](transactions-and-balances.md));
+product-type from the version per
+[transactions-and-balances.md](transactions-and-balances.md);
 allowed-currencies is read off the version when validating
 deposits.
 
@@ -212,8 +212,8 @@ Two policy checks apply at draft creation and update:
   Caps the number of products an org can have.
 
 Both flow through the same engine as every other domain
-operation
-([policy-evaluation.md](policy-evaluation.md)).
+operation — see
+[policy-evaluation.md](policy-evaluation.md).
 
 ### Connection to accounts
 
@@ -232,9 +232,9 @@ version. This is what gives the cohort property: accounts
 are pinned to the version they were opened under, and the
 pinning is immutable as long as the version itself is.
 
-The product-version cache (60-second TTL, see
-[interest.md](interest.md)) sits in front of these reads on
-hot paths.
+The product-version cache — 60-second TTL, see
+[interest.md](interest.md) — sits in front of these reads
+on hot paths.
 
 ## Alternatives Considered
 

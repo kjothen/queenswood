@@ -1,14 +1,4 @@
-(ns com.repldriven.mono.bank-scenario-runner.quiescence
-  "Read-side catch-up helpers. Verbs that trigger asynchronous
-  watcher chains (currently `:create-person-party` and
-  `:activate-party` — both depend on the bank-idv → bank-onfido
-  chain to flip the party to `:active`) call into here to wait
-  until production has caught up to the model's expected state
-  before the next verb runs.
-
-  Synchronous verbs (`:create-org`, `:create-product`,
-  `:outbound-payment`, etc.) are committed-then-returned and don't
-  need quiescence."
+(ns com.repldriven.mono.bank-test-scenarios.quiescence
   (:require
     [com.repldriven.mono.bank-party.interface :as party]
 
@@ -18,11 +8,6 @@
 (def ^:private poll-interval-ms 25)
 
 (defn wait-for-party-active
-  "Polls `(party/get-party bank organization-id party-id)` until
-  the party reaches `:party-status-active`, or `deadline-ms` is
-  hit. Returns `:quiescent` on success, an
-  `(error/fail :scenario/quiescence-timeout)` anomaly on timeout.
-  Used by verbs that drive the IDV chain."
   ([bank organization-id party-id]
    (wait-for-party-active bank organization-id party-id default-deadline-ms))
   ([bank organization-id party-id deadline-ms]
@@ -45,8 +30,5 @@
           (do (Thread/sleep poll-interval-ms) (recur))))))))
 
 (defn wait
-  "End-of-trial catch-up hook. The per-verb waits in `verbs.clj`
-  already settle the IDV chain so this is a no-op for now —
-  reserved as a hook for future async verbs."
   [_bank]
   :quiescent)

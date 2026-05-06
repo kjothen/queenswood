@@ -11,23 +11,18 @@
 
 (def transact fdb/transact)
 
+;; Strip records here once at the read boundary: downstream
+;; (`bank-policy/match`, etc.) compares via `=`, which treats
+;; defrecords and content-equal maps as unequal.
 (defn- pb->Policy
-  "Reads a policy from FDB and normalises its proto records to plain
-  Clojure maps. Downstream code (`bank-policy/match`, etc.) compares
-  via `=`, which treats records and content-equal maps as unequal —
-  so the round-trip leaves nested records (e.g. `ComputedBalance`
-  inside a `BalanceLimitFilter`) silently mismatching the runtime
-  request. Strip records here once at the read boundary."
   [record]
   (util/record->map (schema/pb->Policy record)))
 
 (defn- pb->PolicyBinding
-  "Same as `pb->Policy` for `PolicyBinding`."
   [record]
   (util/record->map (schema/pb->PolicyBinding record)))
 
 (defn save-policy
-  "Saves a policy. Returns nil or anomaly."
   [txn policy]
   (fdb/transact
    txn
@@ -38,8 +33,6 @@
    "Failed to save policy"))
 
 (defn get-policy
-  "Loads a policy by policy-id. Returns the policy map or
-  rejection anomaly if not found."
   [txn policy-id]
   (fdb/transact
    txn
@@ -54,10 +47,6 @@
    "Failed to load policy"))
 
 (defn get-policies
-  "Lists policies. Returns
-  {:items [maps] :before id|nil :after id|nil} or anomaly.
-  opts supports :after, :before, :limit, :order (`:desc`
-  default — clients show newest-first)."
   ([txn]
    (get-policies txn nil))
   ([txn opts]
@@ -80,9 +69,6 @@
     "Failed to list policies")))
 
 (defn get-policies-by-label
-  "Loads all policies whose `labels` map contains an entry
-  matching the given key/value. Uses the Policy_by_label
-  index."
   [txn label-key label-value]
   (fdb/transact
    txn
@@ -100,7 +86,6 @@
     :label-value label-value}))
 
 (defn save-binding
-  "Saves a policy binding. Returns nil or anomaly."
   [txn binding]
   (fdb/transact
    txn
@@ -111,8 +96,6 @@
    "Failed to save policy binding"))
 
 (defn get-binding
-  "Loads a binding by binding-id. Returns the binding map
-  or rejection anomaly if not found."
   [txn binding-id]
   (fdb/transact
    txn
@@ -127,10 +110,6 @@
    "Failed to load policy binding"))
 
 (defn get-bindings
-  "Lists policy bindings. Returns
-  {:items [maps] :before id|nil :after id|nil} or anomaly.
-  opts supports :after, :before, :limit, :order (`:desc`
-  default — clients show newest-first)."
   ([txn]
    (get-bindings txn nil))
   ([txn opts]

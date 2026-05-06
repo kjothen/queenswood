@@ -62,9 +62,13 @@ platform takes on.
 
 ## Non-goals
 
-- **Real identity verification provider.** The platform
-  exposes the IDV concept and lifecycle, but doesn't ship a
-  production-grade IDV integration. See Open questions.
+- **Production identity-verification provider.** The
+  platform integrates with an Onfido-shaped provider via a
+  pluggable adapter. A simulator standing in for the
+  provider covers development and tests; pointing the
+  adapter at production Onfido (real credentials, real
+  webhook URL, signature verification) isn't a deployment
+  the platform ships today. See Open questions.
 - **Periodic re-verification.** Once active, a person party
   stays active. No periodic KYC refresh, no sanctions
   re-screening, no address-change-triggered re-verification.
@@ -117,13 +121,21 @@ completes.
 
 ### Identity verification (person parties)
 
-When a person party is registered, the platform begins an
-identity check in the background. The tenant doesn't wait
-for it — the registration call returns straight away with a
-pending party. Once the check completes, the party is
-activated and is then ready to hold accounts and appear on
-transactions. The tenant sees the new status the next time
-they read the party.
+When a person party is registered, the platform sends the
+person's details to an Onfido-shaped IDV provider (or a
+simulator standing in for one) and begins an identity
+check in the background. The tenant doesn't wait for it —
+the registration call returns straight away with a pending
+party. The provider does its checks asynchronously and
+notifies the platform when it's done; the platform then
+flips the party to active (or rejected) and the tenant
+sees the new status the next time they read the party.
+
+A check can take anywhere from seconds to minutes for an
+automated outcome, or hours to days for a human-review
+case. The platform doesn't impose a timeout — the IDV
+record stays pending until the provider's notification
+arrives.
 
 ### Identifiers
 
@@ -164,22 +176,26 @@ banking API.
 sequenceDiagram
     participant T as Tenant engineer
     participant Q as Queenswood
+    participant I as IDV provider<br/>(or simulator)
 
     T->>Q: register person party (name, identifiers)
     Q->>Q: create party (status pending)
+    Q->>I: submit identity check
     Q-->>T: pending party
-    Note over Q: identity check runs in the background
-    Q->>Q: identity check accepts
-    Q->>Q: party becomes active
+    Note over I: provider runs the check
+    I-->>Q: check completed (accepted or rejected)
+    Q->>Q: update IDV record, then party
     T->>Q: read party
-    Q-->>T: active party
+    Q-->>T: active party (or rejected)
 ```
 
 The tenant registers a person party for one of their
-customers. The party starts as pending, the identity check
-runs in the background, and the party becomes active. The
-tenant sees the new status the next time they read the
-party.
+customers. The platform submits an identity check to the
+IDV provider in the background and returns a pending party
+straight away. When the provider notifies the platform
+that the check is complete, the party becomes active (or
+rejected). The tenant sees the new status the next time
+they read the party.
 
 ### 2. Tenant registers an organisation party
 
@@ -228,18 +244,26 @@ name comparison belongs here.
 
 ## Open questions
 
-- **Real IDV provider integration.** Today IDV
-  unconditionally auto-accepts. Production needs an
-  integration with a real provider (Onfido, Persona,
-  Veriff, ComplyAdvantage, Stripe Identity) or a
-  configurable simulator base — in the spirit of the FPS
-  scheme simulator. Until that lands, the platform is not
-  enforcing real KYC.
-- **IDV outcomes beyond accept.** Today the only outcome
-  modelled is acceptance. Real IDV produces rejected,
-  manual-review, expired, and partial outcomes. Each needs
-  product semantics: what does the tenant see, what's the
-  retry path, who's notified.
+- **Production IDV provider deployment.** The IDV adapter
+  speaks Onfido's HTTP API and runs against a simulator in
+  development and tests. Pointing it at production Onfido
+  needs real credentials, a production webhook URL,
+  signature verification keys, and operator runbooks —
+  none of which are deployed today. Until that's in place,
+  the platform isn't enforcing real KYC, even though the
+  shape of the integration is real.
+- **Simulator outcomes are deterministic, not realistic.**
+  The IDV simulator routes outcomes off the applicant's
+  first name (`Reject` rejects, anything else accepts).
+  It doesn't model partial outcomes, manual-review queues,
+  document-quality failures, or rate limits. Useful for
+  end-to-end tests; not a stand-in for production
+  behaviour.
+- **IDV outcomes beyond accept and reject.** Today the
+  platform models *accepted* and *rejected* only. Real IDV
+  produces manual-review, expired, and partially-completed
+  outcomes too. Each needs product semantics: what does
+  the tenant see, what's the retry path, who's notified.
 - **Periodic re-verification.** Compliance regimes
   increasingly require periodic re-KYC, sanctions
   re-screening, and re-verification on material change

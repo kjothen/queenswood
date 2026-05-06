@@ -1,4 +1,8 @@
 (ns com.repldriven.mono.event.interface
+  "Event envelope construction, publishing, and processing on top of
+  the message-bus. Envelopes carry trace context so consumers resume
+  a parent span; `process` wraps the handler in a child span and
+  funnels exceptions into `:event/process` anomalies."
   (:require
     [com.repldriven.mono.event.publisher :as publisher]
     [com.repldriven.mono.event.processor :as processor]))

@@ -13,8 +13,6 @@
                             :balance-status balance-status}))
 
 (defn- net
-  "Returns credit minus debit for a balance, defaulting
-  to zero."
   [balance]
   (if balance (- (:credit balance 0) (:debit balance 0)) 0))
 
@@ -25,7 +23,6 @@
                  balances)))
 
 (defn posted-balance
-  "Returns the net default/posted balance."
   [balances currency]
   (let [b (find-balance balances
                         :balance-type-default
@@ -34,8 +31,6 @@
      :currency currency}))
 
 (defn available-balance
-  "Returns the available balance for the given account
-  type."
   [product-type balances currency]
   (let [default-posted
         (net (find-balance balances
@@ -65,13 +60,10 @@
             :product-type-internal
             default-posted
 
-            ;; unknown type — just posted
             default-posted)]
     {:value v :currency currency}))
 
 (defn- apply-leg
-  "Applies a single leg to its balance. Debits add to
-  `:debit`, credits to `:credit`."
   [balance {:keys [side amount]} policies]
   (let-nom>
     [_ (check-capability :balance-action-apply
@@ -90,10 +82,6 @@
         (map-indexed vector balances)))
 
 (defn- update-balance
-  "Finds the balance matching `balance-type`/`balance-status`
-  in `balances` and replaces it with `(f balance)`. Returns
-  the updated vector, an `f`-supplied anomaly, or a
-  `:balance/not-found` rejection."
   [balances balance-type balance-status f]
   (if-let [idx (find-balance-index balances balance-type balance-status)]
     (let-nom> [updated (f (nth balances idx))]
@@ -111,8 +99,6 @@
                   (fn [b] (apply-leg b leg policies))))
 
 (defn- apply-legs-to-balances
-  "Applies each leg in `legs` (which must all target the same
-  account) to `balances`. Returns the updated vector or anomaly."
   [balances legs policies]
   (reduce (fn [bs leg]
             (let [r (apply-leg-to-balances bs leg policies)]
@@ -137,22 +123,12 @@
                                  :currency currency}})))
 
 (defn- changed
-  "The entries from `new` whose value differs at the same
-  index in `old`."
   [old new]
   (->> (map vector old new)
        (keep (fn [[a b]] (when (not= a b) b)))
        vec))
 
 (defn apply-legs
-  "Applies each leg to its target balance (each with the
-  `:balance-action-apply` capability check), then runs the
-  computed `:available` limit check per affected account.
-  `transaction-type` scopes the `:available` limit's
-  `transaction-type` filter. `account-balances` is the
-  pre-leg snapshot keyed by account-id. Returns a vector of
-  the changed balances ready for the caller to persist, or
-  an unauthorized anomaly."
   [account-balances legs transaction-type policies]
   (reduce
    (fn [acc [account-id account-legs]]
@@ -168,9 +144,6 @@
    (group-by :account-id legs)))
 
 (defn new-balance
-  "Requires the `:balance-action-create` capability. Rejects
-  if a balance with the same composite key already exists.
-  Credit and debit default to zero if not provided."
   [data exists? policies]
   (let-nom>
     [_ (check-capability :balance-action-create

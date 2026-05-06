@@ -98,8 +98,8 @@
     components/bank-party {:local/root "components/bank-party"}
     components/bank-policy {:local/root "components/bank-policy"}
     components/bank-schema {:local/root "components/bank-schema"}
-    components/bank-scenario-runner {:local/root
-                                     "components/bank-scenario-runner"}
+    components/bank-test-scenarios {:local/root
+                                     "components/bank-test-scenarios"}
     components/bank-test-model {:local/root "components/bank-test-model"}
     components/bank-test-projections {:local/root
                                       "components/bank-test-projections"}
@@ -121,22 +121,19 @@
                   "components/bank-cash-account/test"
                   "components/bank-cash-account/test-resources"
                   "components/bank-clearbank-webhook/test"
-                  "components/bank-clearbank-webhook/test-resources"
                   "components/bank-idv/test"
                   "components/bank-idv/test-resources"
                   "components/bank-onfido-webhook/test"
                   "components/bank-interest/test"
                   "components/bank-interest/test-resources"
-                  "components/bank-organization/test"
                   "components/bank-party/test"
                   "components/bank-party/test-resources"
                   "components/bank-policy/test"
                   "components/bank-policy/test-resources"
-                  "components/bank-scenario-runner/test"
-                  "components/bank-scenario-runner/test-resources"
+                  "components/bank-test-scenarios/test"
+                  "components/bank-test-scenarios/test-resources"
                   "components/bank-test-model/test"
                   "components/bank-test-projections/test"
-                  "components/bank-schema/test-resources"
                   "components/bank-test-resources/test-resources"
                   "components/bank-payment/test"
                   "components/bank-payment/test-resources"

@@ -64,10 +64,13 @@ system:
       service-name: !env SERVICE_NAME
       endpoint: !env OTEL_ENDPOINT
   onfido-adapter:
+    readiness: !system/component
+      system/component-kind: onfido-adapter/readiness
     registrar: !system/component
       system/component-kind: onfido-adapter/registrar
       onfido-url: !env ONFIDO_URL
       adapter-url: !env IDV_ONFIDO_ADAPTER_PUBLIC_URL
+      readiness: !system/ref onfido-adapter.readiness
     command-processor-impl: !system/component
       system/component-kind: onfido-adapter/command-processor
       schemas: !system/ref avro.serde
@@ -89,7 +92,7 @@ system:
       system/component-kind: server/jetty-adapter
       handler: !system/ref onfido-adapter-server.handler
       interceptors: !system/ref onfido-adapter-server.interceptors
-      ready-fn: !system/ref onfido-adapter.registrar
+      ready-fn: !system/ref onfido-adapter.readiness
       options:
         port: 8084
     http-url: !system/component

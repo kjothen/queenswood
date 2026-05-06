@@ -26,8 +26,8 @@ storage, the hash-only persistence model, the prefix
 convention, the policy integration on issuance, the
 verification path at the API edge.
 
-Out of scope: the HTTP-edge auth interceptor itself (covered
-in [service-apis.md](service-apis.md)); organisation
+Out of scope: the HTTP-edge auth interceptor itself —
+covered in [service-apis.md](service-apis.md); organisation
 onboarding and lifecycle (forthcoming organisations TDD);
 the encryption brick's primitives.
 
@@ -61,8 +61,8 @@ Issuance is policy-gated: a policy can deny issuance under
 certain conditions (a limit on keys per organisation, a deny
 under specific organisation states, and so on). The
 authorisation flows through the same engine as every other
-domain operation
-([policy-evaluation.md](policy-evaluation.md)).
+domain operation — see
+[policy-evaluation.md](policy-evaluation.md).
 
 ## Proposed Solution
 
@@ -177,7 +177,7 @@ and re-issue.
 
 ### Verification flow
 
-At the API edge (per [service-apis.md](service-apis.md)),
+At the API edge — per [service-apis.md](service-apis.md) —
 the auth interceptor:
 
 1. Extracts the Bearer token from the `Authorization`
@@ -204,8 +204,8 @@ amortised over many requests within the cache window.
 Two tiers of bearer credential coexist:
 
 - **Admin key** — a single shared secret configured at boot
-  via `!env MONO_ADMIN_API_KEY` (see
-  [system-configurations.md](system-configurations.md)).
+  via `!env MONO_ADMIN_API_KEY`; see
+  [system-configurations.md](system-configurations.md).
   Compared at auth time using `encryption/bytes-equals?`
   (constant-time). Resolves to
   `{:role :admin :organization-id <internal-org-id>}`.

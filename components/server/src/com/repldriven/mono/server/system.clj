@@ -82,11 +82,13 @@
                               :configurator
                               (fn [^Server server]
                                 (.setErrorHandler server (json-error-handler))))
-               ;; Pass ready-fn through to the API ctx so /ready can
-               ;; report registration state. Defaults to constantly
-               ;; true for services without an external dep.
-               ctx {:interceptors interceptors
-                    :ready-fn (or ready-fn (constantly true))}
+               ready-thunk (cond (fn? ready-fn)
+                                 ready-fn
+                                 (instance? clojure.lang.IDeref ready-fn)
+                                 (fn [] @ready-fn)
+                                 :else
+                                 (constantly true))
+               ctx {:interceptors interceptors :ready-fn ready-thunk}
                _ (log/info "Starting jetty adapter")
                server (jetty/run-jetty (handler ctx) options)]
            (log/info "Jetty listening on" (server-jetty/http-local-url server))

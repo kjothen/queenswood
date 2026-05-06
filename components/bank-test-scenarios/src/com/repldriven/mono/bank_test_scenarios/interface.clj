@@ -1,0 +1,91 @@
+(ns com.repldriven.mono.bank-test-scenarios.interface
+  "Drives a model command sequence (from fugato or an EDN scenario)
+  against a real bank, threading a runner context through each step
+  and waiting for read-side quiescence before returning. Returns the
+  final context map; the caller pulls `:id-mapping` out of it to feed
+  into a projection for equality checks."
+  (:require
+    [com.repldriven.mono.bank-test-scenarios.id-mapping :as id-mapping]
+    [com.repldriven.mono.bank-test-scenarios.quiescence :as quiescence]
+    [com.repldriven.mono.bank-test-scenarios.scenario :as scenario]
+    [com.repldriven.mono.bank-test-scenarios.verbs :as verbs]
+
+    [com.repldriven.mono.error.interface :as error]
+    [com.repldriven.mono.utility.interface :as util]))
+
+(defn fresh-context
+  "Build the initial runner context for one command-sequence run.
+  The fresh `:run-id` (a uuidv7) prefixes idempotency keys so
+  multiple runs against the same bank don't collide on the dedup
+  index.
+
+  Args:
+  - bank: FDB config map (`:record-db` / `:record-store`).
+  - internal-account-id: platform internal/suspense account, used
+    as the counter-leg for transfers and fees."
+  [bank internal-account-id]
+  {:bank bank
+   :internal-account-id internal-account-id
+   :id-mapping id-mapping/init
+   :orgs {}
+   :products {}
+   :parties {}
+   :accounts {}
+   :payments {}
+   :next-model-id 0
+   :next-org-id 0
+   :next-product-id 0
+   :next-party-id 0
+   :next-payment-id 0
+   :next-inbound-id 0
+   :run-id (str (util/uuidv7))
+   :counter 0
+   :outcomes []})
+
+(defn run-commands
+  "Dispatch each command in `commands` against the real bank,
+  threading the runner context through. Waits for read-side
+  quiescence before returning the final context.
+
+  Args:
+  - ctx: runner context (typically from `fresh-context`).
+  - commands: sequence of `{:command kw :args [...]}` maps."
+  [ctx commands]
+  (let [final (reduce verbs/dispatch ctx commands)]
+    (quiescence/wait (:bank final))
+    final))
+
+(defn run-scenario
+  "Load and validate the EDN scenario at `resource-path`, then run
+  every step through the same dispatch as `run-commands`. Returns
+  the final context, or an anomaly if loading or schema validation
+  fails. Assertion steps inside the scenario fire `clojure.test/is`
+  on dispatch.
+
+  Args:
+  - bank: FDB config map.
+  - internal-account-id: platform internal/suspense account.
+  - resource-path: classpath path to the scenario EDN file."
+  [bank internal-account-id resource-path]
+  (let [loaded (scenario/from-resource resource-path)]
+    (if (error/anomaly? loaded)
+      loaded
+      (run-commands (fresh-context bank internal-account-id)
+                    (scenario/steps loaded)))))
+
+(def
+  ^{:doc
+    "Read and validate an EDN scenario at a classpath path.
+  Returns the parsed scenario map or a
+  `:bank-test-scenarios/scenario` anomaly. Args:
+  - resource-path: classpath path to the scenario EDN."}
+  from-resource
+  scenario/from-resource)
+
+(def
+  ^{:doc
+    "Concatenated `:given`/`:when`/`:then` steps from a
+  scenario map, in order, ready for the runner. Args:
+  - scenario: parsed scenario map."}
+  steps
+  scenario/steps)

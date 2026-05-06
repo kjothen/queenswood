@@ -46,6 +46,47 @@ real and needs human resolution.
 Renovate runs on a weekly schedule and opens PRs that
 auto-merge once CI passes.
 
+### Staging deletions and moves
+
+When `git status` shows files as `deleted:` (already gone from
+the working tree), stage that with `git add -u <path>` or
+`git add -A`. Don't run `git rm` — it's redundant and reads as
+"I'm initiating a deletion" when in fact the user has already
+removed the file. If a corresponding new path exists (e.g.
+`docs/slides/` after `slides/` was deleted), it's a move and
+should be committed as a rename: stage both ends with
+`git add` and let git's rename detection do its job.
+
+Reach for `git rm` only when *initiating* a deletion as part
+of the current task. Before staging deletions, check whether
+the missing files are (a) the user's intentional moves or
+removals, already done in the working tree, or (b) something
+you're starting yourself. The framing matters:
+`git rm` reads as a fresh destructive op; `git add` reads as
+recording the user's existing changes.
+
+### Working with untracked drafts
+
+The user may have untracked work-in-progress in the working
+tree — draft service projects, draft resource components,
+local plans. Two rules cover collaboration with those drafts:
+
+- **Don't develop in the user's drafts.** No new features,
+  no scope creep into their WIP. Drafts are the user's
+  active line; advancing them beyond what they've staged is
+  out of scope.
+- **Do maintain consistency through workspace operations.**
+  Renames, dead-code cleanup, schema regenerations, and
+  similar workspace-wide ops apply to draft files too.
+  Refusing to touch drafts and asking the user to remember
+  every place to follow up leaves the workspace inconsistent;
+  they won't remember and the next operation breaks.
+
+The line is between "keeping drafts consistent" (do) and
+"advancing drafts beyond what they've staged" (don't). When
+unsure, do the maintenance and report what was touched in
+drafts in the summary so the user can spot-check.
+
 ### When you genuinely need a version bump
 
 If you need a dependency version Renovate hasn't yet picked
@@ -65,12 +106,22 @@ you've just discovered):
 - Pull/merge from `main` before committing.
 - Resolve conflicts with Renovate-managed files (`deps.edn`,
   `.github/workflows/*`) before pushing.
+- Stage user-initiated deletions and moves with `git add` —
+  not `git rm`.
 
 **MUST NOT:**
 
 - Manually bump dependency versions Renovate manages, except
   when a real need requires a version Renovate hasn't yet
   caught up to.
+- Develop new features inside the user's untracked drafts.
+
+**SHOULD:**
+
+- Include the user's untracked drafts in workspace-wide
+  operations (rename, dead-code cleanup, regeneration) so
+  the tree stays consistent. Report what was touched in
+  drafts.
 
 ## Discussion
 

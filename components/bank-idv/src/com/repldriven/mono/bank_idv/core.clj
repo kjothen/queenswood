@@ -11,9 +11,6 @@
     [com.repldriven.mono.utility.interface :as utility]))
 
 (defn- publish-submit-idv-check
-  "Fire-and-forget: publishes a `submit-idv-check` command on
-  the IDV-provider command channel. No-ops when the bus, schema,
-  or channel is missing — lets brick tests run without a bus."
   [config idv data]
   (let [{:keys [bus schemas idv-command-channel]} config
         {:keys [organization-id verification-id party-id]} idv
@@ -39,19 +36,6 @@
             (message-bus/send bus idv-command-channel envelope)))))))
 
 (defn initiate
-  "Initiates IDV: writes the IDV record (status pending) and
-  publishes a `submit-idv-check` command on the IDV-provider
-  channel. Mirrors `bank-payment.core/submit-outbound` — a domain
-  write followed by a fire-and-forget publish to the upstream
-  adapter.
-
-  `config` carries both the FDB seam (`:record-db`,
-  `:record-store`, or a Txn for composition with an outer
-  transaction) and the bus seam (`:bus`, `:schemas`,
-  `:idv-command-channel`). The publish is skipped silently when
-  any of those are absent.
-
-  Returns the saved IDV map or anomaly."
   [config data]
   (let-nom>
     [idv (domain/new-idv data)
@@ -63,7 +47,6 @@
     saved))
 
 (defn get
-  "Returns the current IDV or rejection anomaly."
   [txn data]
   (let [{:keys [organization-id verification-id]} data]
     (store/get-idv txn organization-id verification-id)))

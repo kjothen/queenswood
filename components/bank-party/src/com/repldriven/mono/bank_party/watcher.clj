@@ -10,8 +10,6 @@
     [com.repldriven.mono.fdb.interface :as fdb]))
 
 (defn idv-changelog-handler
-  "Returns a watcher handler that transitions parties from
-  pending to active when their IDV is accepted."
   [record-store]
   (fn [ctx changelog-bytes]
     (let [changelog (schema/pb->IdvChangelog changelog-bytes)
@@ -31,4 +29,3 @@
                                  :status-before (:status party)
                                  :status-after (:status
                                                 activated-party)}))))))))
-

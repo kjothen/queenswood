@@ -11,11 +11,6 @@
     [com.repldriven.mono.log.interface :as log]))
 
 (defn settle-inbound
-  "Processes an inbound payment settlement event.
-
-  Validates credit direction, looks up creditor account
-  by BBAN, checks idempotency, then atomically records
-  the transaction and persists the InboundPayment."
   [config data]
   (let [{:keys [debit-credit-code creditor-bban scheme-transaction-id]} data
         {:keys [internal-account-id]} config]
@@ -59,11 +54,6 @@
                  payment)))))))))
 
 (defn settle-outbound
-  "Processes an outbound payment settlement event.
-
-  Looks up OutboundPayment by payment-id (the scheme's
-  end-to-end-id IS our payment-id) and updates its status
-  to completed."
   [config data]
   (let [{payment-id :end-to-end-id} data]
     (let-nom> [payment (store/get-outbound-payment config payment-id)]

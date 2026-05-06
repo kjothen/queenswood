@@ -8,11 +8,6 @@
     [com.repldriven.mono.processor.interface :as processor]))
 
 (defn- ->response
-  "Converts an account map to an ACCEPTED response. Returns anomalies
-  unchanged for the processor to handle. The account's
-  `:payment-addresses` shape — `{:scheme :scan :value}` — matches the
-  Avro schema directly since the proto `PaymentAddress` dropped its
-  `oneof identifier` wrapper, so no reshaping is needed here."
   [config result]
   (if (error/anomaly? result)
     result
@@ -21,11 +16,6 @@
        :payload (avro/serialize (schemas "cash-account") result)})))
 
 (def ^:private command-handlers
-  "Map of command-name → `(fn [config data] response)`. Lifting the
-  registry out of the dispatcher's `case` lets unknown-command
-  rejection fire BEFORE schema lookup or Avro deserialization, so
-  a pure unit test can exercise the rejection path without
-  spinning up the system."
   {"open-cash-account" (fn [config data]
                          (->response config (core/open-account config data)))
    "close-cash-account" (fn [config data]

@@ -5,16 +5,6 @@
     [com.repldriven.mono.error.interface :as error]))
 
 (defn check
-  "Returns `true` when the requested capability `(kind, request)` is
-  allowed by `policies`. Returns an `:unauthorized/policy-denied`
-  anomaly otherwise.
-
-  Disabled policies are skipped. A capability matches when its `:kind`
-  variant equals `kind`, every top-level field equals the request's
-  corresponding slot, and — if `:filters` is non-empty — at least one
-  filter's set fields all agree with the request (unset fields inside
-  a filter do not constrain). `:effect-deny` wins; otherwise at least
-  one `:effect-allow` is required."
   [policies kind request]
   (let [matching (->> policies
                       (filter :enabled)

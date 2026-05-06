@@ -22,13 +22,12 @@ enums; the multi-brick atomic create flow; the tier label
 and policy-binding choreography; the enrich-on-read pattern.
 
 Out of scope: each foundational brick's own mechanics —
-api-key generation
-([api-keys.md](api-keys.md)), party creation
-([parties.md](parties.md)), product publish
-([cash-account-products.md](cash-account-products.md)),
-account opening
-([cash-accounts.md](cash-accounts.md)), policy bindings
-([policy-evaluation.md](policy-evaluation.md)).
+api-key generation [api-keys.md](api-keys.md), party
+creation [parties.md](parties.md), product publish
+[cash-account-products.md](cash-account-products.md),
+account opening [cash-accounts.md](cash-accounts.md), and
+policy bindings
+[policy-evaluation.md](policy-evaluation.md).
 
 ## Background
 
@@ -124,8 +123,8 @@ An internal organisation's accounts hold the bank's own
 bookkeeping (P&L, suspense). A customer organisation's
 settlement accounts hold the bank's
 **interest-payable to that customer's customers** — the
-liability side of accrued interest before capitalisation
-(see [interest.md](interest.md)).
+liability side of accrued interest before capitalisation;
+see [interest.md](interest.md).
 
 ### Status and the API key prefix
 
@@ -135,7 +134,7 @@ liability side of accrued interest before capitalisation
 ```
 
 Status flows through to the freshly-minted API key's prefix
-(see [api-keys.md](api-keys.md)) — `sk_live.` for live,
+— see [api-keys.md](api-keys.md). `sk_live.` for live,
 `sk_test.` for test. The visible prefix is how operators
 recognise live vs test traffic at a glance.
 
@@ -173,8 +172,8 @@ transaction:
 9. **Open one cash account per currency** —
    `bank-cash-account/new-account` per entry in
    `currencies`. Each opens in `:cash-account-status-opening`
-   state (the watcher transitions to `:opened` after commit
-   — see [cash-accounts.md](cash-accounts.md)).
+   state; the watcher transitions to `:opened` after commit
+   — see [cash-accounts.md](cash-accounts.md).
 10. **Bind tier policies** — for each tier policy,
     `policy/new-binding` with selectors
     `{:organization-id <new-id>}`.
@@ -184,8 +183,8 @@ transaction:
     {...}} :key-secret <plaintext>}`.
 
 The `:key-secret` is returned only here — same one-time
-delivery pattern api-keys uses (see
-[api-keys.md](api-keys.md)). The caller (typically a
+delivery pattern api-keys uses; see
+[api-keys.md](api-keys.md). The caller (typically a
 platform admin) is responsible for forwarding it to the
 new tenant.
 
@@ -343,8 +342,8 @@ attribute system fees against).
   point if the platform-tier rules ever needed to know the
   about-to-be-created organisation.
 - **The create is admin-only by convention, not by code.**
-  The route requires the admin auth scheme (per
-  [service-apis.md](service-apis.md)), but
+  The route requires the admin auth scheme — see
+  [service-apis.md](service-apis.md) — but
   `new-organization` itself doesn't check the principal.
   Calling it directly from non-admin code paths would
   bypass the intended gate.

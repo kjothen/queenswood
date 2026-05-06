@@ -17,11 +17,12 @@ In scope: the `command`, `command-processor`, `event`, and
 `event-processor` bricks; envelope shape; status semantics;
 correlation; reply round-trip.
 
-Out of scope: the message-bus abstraction
-([ADR-0003](../adr/0003-message-bus-abstraction.md)), Avro
-encoding ([ADR-0004](../adr/0004-avro-for-message-payloads.md)),
-FDB changelog mechanics
-([ADR-0008](../adr/0008-changelog-watchers.md)).
+Out of scope: the message-bus abstraction per
+[ADR-0003](../adr/0003-message-bus-abstraction.md), Avro
+encoding per
+[ADR-0004](../adr/0004-avro-for-message-payloads.md), and
+FDB changelog mechanics per
+[ADR-0008](../adr/0008-changelog-watchers.md).
 
 ## Background
 
@@ -47,11 +48,12 @@ bus:
 - **Events** — facts emitted from committed writes that any
   number of subscribers can react to ("transaction settled").
 
-The shared substrate is the message-bus abstraction
-([ADR-0003](../adr/0003-message-bus-abstraction.md)) with Avro
-payloads ([ADR-0004](../adr/0004-avro-for-message-payloads.md)).
-Anomalies at component boundaries
-([ADR-0005](../adr/0005-error-handling-with-anomalies.md))
+The shared substrate is the message-bus abstraction per
+[ADR-0003](../adr/0003-message-bus-abstraction.md) with Avro
+payloads per
+[ADR-0004](../adr/0004-avro-for-message-payloads.md).
+Anomalies at component boundaries per
+[ADR-0005](../adr/0005-error-handling-with-anomalies.md)
 provide the typed-failure semantics that map directly to
 envelope statuses.
 
@@ -282,8 +284,8 @@ rationale and the brick organisation.
   redelivery semantics. The Pulsar backend acks on success;
   the channel-based backend has different semantics. Test- and
   prod-shape behaviour can diverge here; covered by scenario
-  testing
-  ([ADR-0009](../adr/0009-model-equality-property-testing.md)).
+  testing — see
+  [ADR-0009](../adr/0009-model-equality-property-testing.md).
 - **Authorisation is not pipeline-aware.** The auth interceptor
   short-circuits before commands are dispatched; the pipeline
   treats every received command as already-authorised. If a

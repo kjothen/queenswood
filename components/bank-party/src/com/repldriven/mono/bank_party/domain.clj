@@ -6,8 +6,6 @@
     [clojure.string :as str]))
 
 (defn new-party
-  "Creates a new party map. Person parties start pending;
-  internal and organization parties start active."
   [data]
   (let [{:keys [organization-id type display-name]} data
         now (System/currentTimeMillis)
@@ -23,15 +21,12 @@
      :updated-at now}))
 
 (defn activate-party
-  "Returns party with status active."
   [party]
   (assoc party
          :status :party-status-active
          :updated-at (System/currentTimeMillis)))
 
 (defn new-party-national-identifier
-  "Creates a party-national-identifier map linked to
-  organization-id and party-id."
   [national-identifier organization-id party-id]
   (let [{:keys [type value issuing-country]} national-identifier]
     {:organization-id organization-id
@@ -53,10 +48,6 @@
   (set (str/split s #"\s+")))
 
 (defn match-name
-  "Compares party-name against query-name. Returns
-  :match (exact after normalisation), :close-match
-  (every token from the shorter name appears in the
-  longer), or :no-match."
   [party-name query-name]
   (let [a (normalize-name party-name)
         b (normalize-name query-name)]
@@ -75,7 +66,6 @@
      :no-match)))
 
 (defn new-person-identification
-  "Creates a person-identification map linked to party-id."
   [data party-id]
   (let [{:keys [given-name middle-names family-name
                 date-of-birth nationality]}

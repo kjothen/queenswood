@@ -68,6 +68,29 @@ Boundary handling:
   keys *locally* and convert before handing the data to anything
   else.
 
+The rule is about *map keys*, not all values. Some values
+deliberately stay string-typed because they are external
+standard codes used at every wire boundary:
+
+- **Currency codes.** ISO 4217 strings (`"GBP"`, `"USD"`,
+  `"EUR"`), not keywords (`:currency-gbp`). ClearBank, FX
+  libraries, OpenAPI consumers all expect the three-letter
+  string; a keyword form would force translation at every
+  wire boundary.
+
+```clojure
+;; OK
+{:account-id "..." :currency "GBP" :amount 1000}
+
+;; Not OK
+{:account-id "..." :currency :currency-gbp :amount 1000}
+```
+
+Proto enums (`:transaction-type-internal-transfer`,
+`:balance-type-default`, etc.) keep the keyword form because
+they're internal enum variants, not external standard codes.
+Currency is the deliberate exception, not the rule.
+
 ## Consequences
 
 Easier:

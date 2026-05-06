@@ -50,10 +50,6 @@
               allowed-payment-address-schemes))))
 
 (defn open-account
-  "Requires the `:cash-account-action-open` capability and
-  the per-org / per-(org, product-type, account-type) count
-  limits. Validates currency against version and party is
-  active. Derives account-type from the party type."
   [data product party address-fountain-fn aggregates policies]
   (let [{:keys [organization-id party-id product-id currency name]} data
         {:keys [version-id product-type]} product
@@ -104,8 +100,6 @@
          :updated-at now}))))
 
 (defn opening-balances
-  "Builds the per-balance data list for a newly-opened
-  account from the product's balance-products."
   [account currency product]
   (let [{:keys [account-id product-type]} account
         {:keys [balance-products]} product]

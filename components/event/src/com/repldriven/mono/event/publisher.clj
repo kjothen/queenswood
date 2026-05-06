@@ -5,10 +5,6 @@
     [com.repldriven.mono.utility.interface :as utility]))
 
 (defn envelope
-  "Build a skeleton event envelope.
-
-  Caller should assoc :payload (as bytes or nil) before
-  publishing."
   [event-name causation-id correlation-id]
   {:id (str (utility/uuidv7))
    :correlation-id correlation-id
@@ -19,10 +15,6 @@
    :tracestate nil})
 
 (defn publish
-  "Publish an event envelope to the event channel.
-
-  Returns the result of message-bus/send, which may be
-  an anomaly."
   ([bus envelope] (publish bus envelope {}))
   ([bus envelope opts]
    (let [{:keys [event-channel]

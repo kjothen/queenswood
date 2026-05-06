@@ -12,8 +12,6 @@
       (policy/get-effective-policies txn {:account-id account-id})))
 
 (defn new-balance
-  "Creates a new balance. opts supports `:policies` to override
-  policy resolution."
   ([txn data]
    (new-balance txn data {}))
   ([txn data opts]
@@ -33,9 +31,6 @@
           balance))))))
 
 (defn new-balances
-  "Creates multiple balances in a single transaction.
-  Short-circuits on the first anomaly. opts supports
-  `:policies` to override policy resolution."
   ([txn data]
    (new-balances txn data {}))
   ([txn data opts]
@@ -53,10 +48,6 @@
                 data))))))
 
 (defn get-balances
-  "Lists balances for an account, enriched with the
-  derived posted-balance and available-balance. Returns
-  {:balances [...] :posted-balance {...}
-   :available-balance {...}} or anomaly."
   [txn account-id]
   (let-nom>
     [result (store/get-balances txn account-id)]
@@ -69,10 +60,6 @@
                                                     currency)})))
 
 (defn set-carry
-  "Updates the :credit-carry on the balance identified by
-  the composite PK. Loads the balance (rejects if missing),
-  assocs the new carry, saves. Returns the updated balance
-  or anomaly."
   [txn account-id balance-type currency balance-status carry]
   (store/transact
    txn
@@ -88,8 +75,6 @@
        updated))))
 
 (defn- load-account-balances
-  "Returns a map of account-id → vector of balances for the
-  distinct account-ids referenced by legs."
   [txn legs]
   (reduce (fn [acc account-id]
             (let [result (store/get-balances txn account-id)]
@@ -100,10 +85,6 @@
           (distinct (map :account-id legs))))
 
 (defn apply-legs
-  "Applies all legs to balances within a transaction.
-  `transaction-type` is required and threaded into the
-  computed `:available` limit check. opts supports
-  `:policies` to override policy resolution."
   ([txn legs transaction-type]
    (apply-legs txn legs transaction-type {}))
   ([txn legs transaction-type opts]

@@ -31,9 +31,6 @@
               (:currency (:value request))))))
 
 (defn- improving?
-  "Whether `post` is no worse than `pre` for the given `side`.
-  For `:max` bounds smaller is better; for `:min` bounds larger
-  is better."
   [side pre post]
   (case side
     :max (<= post pre)
@@ -74,33 +71,6 @@
       nil)))
 
 (defn check
-  "Returns `true` when `policies` impose no violated limit on the
-  request `(kind, request)`. Returns an
-  `:unauthorized/policy-limit-exceeded` anomaly otherwise.
-
-  `request` shape:
-    {:aggregate :count | :amount
-     :window    :instant | :daily | :weekly | :monthly | :rolling
-     :value     <number-or-amount>     ;; post-state value
-     :pre-value <number-or-amount>}    ;; optional, pre-state value
-
-  Decision rule:
-
-  - Disabled policies are skipped.
-  - A limit applies when its `:kind` variant equals `kind`, every
-    top-level field equals the request's corresponding slot, and —
-    if `:filters` is non-empty — at least one filter's set fields
-    all agree with the request (unset fields inside a filter do not
-    constrain).
-  - For applicable limits, the bound's aggregate must match the
-    request's `:aggregate` variant and `:window` to be evaluated;
-    non-matching aggregates are silently skipped.
-  - When the limit's `:allow` is `:limit-allow-improving` and
-    `:pre-value` is provided, an out-of-bound `:value` is permitted
-    iff the pre state was already out-of-bound and post is no worse
-    than pre. Otherwise the bound is enforced strictly.
-  - The first violation short-circuits; no matching limits is
-    permissive."
   [policies kind request]
   (let [matching (->> policies
                       (filter :enabled)

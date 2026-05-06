@@ -11,7 +11,6 @@
 (def transact fdb/transact)
 
 (defn save-transaction
-  "Saves a transaction record. Returns nil or anomaly."
   [txn transaction]
   (fdb/transact
    txn
@@ -22,8 +21,6 @@
    "Failed to save transaction"))
 
 (defn save-legs
-  "Saves transaction legs. Short-circuits on the first
-  anomaly. Returns nil or anomaly."
   [txn legs]
   (fdb/transact
    txn
@@ -41,11 +38,6 @@
    "Failed to save transaction legs"))
 
 (defn get-transactions
-  "Returns transaction legs for an account, enriched with
-  the parent transaction's type, status, and reference.
-  Prefix-scans the legs store by account-id. opts supports
-  :limit and :order (`:desc` default — clients show
-  newest-first)."
   ([txn account-id]
    (get-transactions txn account-id nil))
   ([txn account-id opts]

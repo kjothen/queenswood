@@ -3,7 +3,6 @@
     [com.repldriven.mono.utility.interface :as utility]))
 
 (defn new-idv
-  "Creates a new IDV map with status pending."
   [data]
   (let [{:keys [organization-id party-id]} data
         now (System/currentTimeMillis)]
@@ -15,7 +14,6 @@
      :updated-at now}))
 
 (defn accepted-idv
-  "Returns IDV with status accepted."
   [idv]
   (assoc idv
          :status :idv-status-accepted
@@ -23,7 +21,6 @@
          :updated-at (System/currentTimeMillis)))
 
 (defn rejected-idv
-  "Returns IDV with status rejected."
   [idv]
   (assoc idv
          :status :idv-status-rejected

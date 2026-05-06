@@ -59,41 +59,60 @@ docker-build-all tag="dev":
 # Render the Helm chart locally (does not install)
 helm-template tag="dev":
     helm dependency update infra/helm/queenswood
-    helm template bank infra/helm/queenswood \
+    helm template queenswood infra/helm/queenswood \
       --set image.tag={{ tag }} \
       --set secrets.adminApiKey=template-render
+
+# Static Helm validation: lint + template + kubeconform schema check.
+# No cluster, no images, runs in seconds. CRDs (FoundationDBCluster
+# etc.) are skipped via -ignore-missing-schemas.
+helm-validate tag="dev":
+    helm dependency update infra/helm/queenswood
+    helm lint infra/helm/queenswood --set secrets.adminApiKey=lint
+    helm template queenswood infra/helm/queenswood \
+      --set image.tag={{ tag }} \
+      --set secrets.adminApiKey=template-render \
+      | kubeconform -strict -ignore-missing-schemas -summary
 
 # Install/upgrade the chart into the current kubectl context.
 # Reuses the existing Secret value on subsequent installs so the
 # admin API key is stable across deploys; pass `admin_key=...` to
 # rotate. A fresh key is generated only when no Secret exists yet.
-helm-install tag="dev" admin_key="":
+# `registry` overrides the chart's image registry — `kind-up` passes
+# the kind-side local registry so containerd pulls from there.
+helm-install tag="dev" admin_key="" registry="ghcr.io/kjothen":
     #!/usr/bin/env zsh
     set -e
     key={{ admin_key }}
     if [[ -z "$key" ]]; then
-      key=$(kubectl get secret bank-admin-api-key \
+      key=$(kubectl get secret queenswood-admin-api-key \
         -o jsonpath='{.data.MONO_ADMIN_API_KEY}' 2>/dev/null \
         | base64 -d || true)
       [[ -z "$key" ]] && key=$(openssl rand -hex 16)
     fi
     helm dependency update infra/helm/queenswood
-    helm upgrade --install bank infra/helm/queenswood \
+    helm upgrade --install queenswood infra/helm/queenswood \
       --set image.tag={{ tag }} \
+      --set image.registry={{ registry }} \
       --set secrets.adminApiKey=$key \
       --wait --timeout 10m
 
-# Spin up a kind cluster, load all images, install the chart end-to-end
+# Spin up a kind cluster wired to a host-side Docker registry, build
+# every service image, push to the registry, and install the chart.
+# The registry deduplicates layers across rebuilds, so the second
+# `kind-up` (or any single-service rebuild) is dramatically faster
+# than the per-image `kind load docker-image` flow it replaces.
 kind-up tag="dev":
     #!/usr/bin/env zsh
     set -e
-    kind get clusters | grep -q queenswood || kind create cluster --name queenswood
+    bash {{ justfile_directory() }}/infra/kind/with-registry.sh queenswood
     just docker-build-all {{ tag }}
     for project in projects/*-service/; do
       svc=${project:t}
-      kind load docker-image --name queenswood {{ DOCKER_REGISTRY }}/$svc:{{ tag }}
+      docker tag {{ DOCKER_REGISTRY }}/$svc:{{ tag }} localhost:5001/$svc:{{ tag }}
+      docker push localhost:5001/$svc:{{ tag }}
     done
-    just helm-install {{ tag }}
+    just helm-install {{ tag }} "" localhost:5001
 
 # Tear down the kind cluster
 kind-down:
@@ -139,7 +158,7 @@ tilt-prune:
 
 # Run all polylith project tests
 test: docker-start
-    SKIP_META=repl clojure -M:poly test :all
+    clojure -M:poly test :all
 
 # Check test failures from last test run
 poly-test-check:
@@ -236,25 +255,35 @@ docker-start:
 docker-stop:
     colima stop
 
-# Install bank-app deps and run the Vite dev server against the local bank-api.
-# With use-kube-secret=true, fetch MONO_ADMIN_API_KEY from the
-# `bank-admin-api-key` Secret in the current kube context and expose it
-# to Vite via VITE_MONO_ADMIN_API_KEY (default: rely on a local .env or
-# whatever the shell already has).
-bank-app-start use-kube-secret="false":
+# Install bank-app deps and run the Vite dev server against bank-api.
+# Vite reads VITE_MONO_ADMIN_API_KEY from the parent process's env at
+# startup. To talk to the kube-installed bank-api, compose at the
+# shell prompt with `kube-admin-key`:
+#
+#   VITE_MONO_ADMIN_API_KEY=$(just kube-admin-key) just bank-app-start
+#
+# Setting the env var inside this recipe (via `export` or inline on
+# the npm line, or via a written .env.local) didn't reliably reach
+# Vite — a kube-installed VITE_* env var on the parent `just` is the
+# only path that consistently works.
+bank-app-start:
+    cd {{ justfile_directory() }}/bases/bank-app && \
+      npm install && npm run dev
+
+# Print the admin API key from the cluster's
+# `queenswood-admin-api-key` Secret on stdout (no trailing newline).
+# Designed to be composed with `bank-app-start` via command
+# substitution. Errors out if the Secret is missing or empty.
+kube-admin-key:
     #!/usr/bin/env zsh
     set -euo pipefail
-    cd {{ justfile_directory() }}/bases/bank-app
-    if [[ "{{ use-kube-secret }}" == "true" ]]; then
-      VITE_MONO_ADMIN_API_KEY=$(kubectl get secret bank-admin-api-key \
-        -o jsonpath='{.data.MONO_ADMIN_API_KEY}' | base64 -d)
-      if [[ -z "$VITE_MONO_ADMIN_API_KEY" ]]; then
-        echo "kubectl returned empty MONO_ADMIN_API_KEY — is the cluster up and the chart installed?" >&2
-        exit 1
-      fi
-      export VITE_MONO_ADMIN_API_KEY
+    key=$(kubectl get secret queenswood-admin-api-key \
+      -o jsonpath='{.data.MONO_ADMIN_API_KEY}' | base64 -d)
+    if [[ -z "$key" ]]; then
+      echo "queenswood-admin-api-key Secret missing or empty — is the cluster up and the chart installed?" >&2
+      exit 1
     fi
-    npm install && npm run dev
+    printf '%s' "$key"
 
 # Run the bank-monolith against its test application.yml, teeing stdout/stderr to server.log
 bank-monolith-start:

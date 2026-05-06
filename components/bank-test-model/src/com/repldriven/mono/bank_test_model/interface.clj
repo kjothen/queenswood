@@ -1,10 +1,8 @@
 (ns com.repldriven.mono.bank-test-model.interface
-  "Pure-functional model of the bank's domain rules. Re-implementation
-  of the relevant production logic in plain Clojure data, used by the
-  scenario runner to compare model state against real-system state.
-
-  Imports nothing from production components. See
-  `docs/design/scenario-testing.md`."
+  "Pure-functional model of the bank's domain rules. Re-implements
+  the relevant production logic in plain Clojure data so the
+  scenario runner can compare model state against real-system state.
+  Imports nothing from production components."
   (:require
     [com.repldriven.mono.bank-test-model.balances :as balances]
     [com.repldriven.mono.bank-test-model.fees :as fees]
@@ -14,17 +12,17 @@
     [com.repldriven.mono.bank-test-model.state :as state]
     [com.repldriven.mono.bank-test-model.transfers :as transfers]))
 
-(def model
-  "Fugato-shape model: a map keyed by command keyword. Each entry
-  carries `:run?`, `:args`, `:next-state`, and (where helpful)
-  `:valid?` — see `docs/tdd/scenario-testing.md`.
-
-  `:open-account` (open an end-customer account) is intentionally
-  absent: the production preconditions (active person party +
-  published tenant product) are heavy for the marginal coverage
-  on top of the settlement account that ships with `:create-org`.
-  EDN scenarios still drive it explicitly when they need a second
-  account."
+(def
+  ^{:doc
+    "Fugato-shape model: a map keyed by command keyword.
+  Each entry carries `:run?`, `:args`, `:next-state`, and (where
+  helpful) `:valid?`. `:open-account` (open an end-customer
+  account) is intentionally absent — its preconditions (active
+  person party + published tenant product) are heavy for the
+  marginal coverage on top of the settlement account that ships
+  with `:create-org`. EDN scenarios still drive `:open-account`
+  explicitly when they need a second account."}
+  model
   {:create-org balances/create-org
    :close-account balances/close-account
    :create-product products/create-product
@@ -42,10 +40,35 @@
    :accrue-interest interest/accrue-interest
    :capitalize-interest interest/capitalize-interest})
 
-(def init-state state/init-state)
+(def
+  ^{:doc
+    "Empty bank state. The `:policies` map carries the
+  production policy set in model shape; counters track the next
+  synthetic id for each entity kind. Args:
+  - (none) — used as the starting value for a model run."}
+  init-state
+  state/init-state)
 
-(def known-accounts state/known-accounts)
+(def
+  ^{:doc
+    "Synthetic account ids the model knows about, as a
+  vector. Args:
+  - state: model state map."}
+  known-accounts
+  state/known-accounts)
 
-(def known-orgs state/known-orgs)
+(def
+  ^{:doc
+    "Synthetic org ids the model knows about, as a vector.
+  Args:
+  - state: model state map."}
+  known-orgs
+  state/known-orgs)
 
-(def balance state/balance)
+(def
+  ^{:doc
+    "Available balance for `acct`, or 0 if unknown. Args:
+  - state: model state map.
+  - acct: synthetic account id keyword."}
+  balance
+  state/balance)

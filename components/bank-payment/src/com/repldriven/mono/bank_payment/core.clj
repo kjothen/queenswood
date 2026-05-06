@@ -17,12 +17,6 @@
     [com.repldriven.mono.utility.interface :as utility]))
 
 (defn submit-internal
-  "Submits an internal payment. Resolves and verifies both
-  debtor and creditor accounts exist in the caller's
-  organization, records the underlying transaction, and
-  persists the payment record atomically. Returns the
-  payment map or anomaly (`:cash-account/not-found` for a
-  missing account)."
   [config data]
   (store/transact
    config
@@ -47,8 +41,6 @@
          payment)))))
 
 (defn- publish-scheme-command
-  "Fire-and-forget: publishes a submit-payment command to
-  the scheme payment channel."
   [config payment data]
   (let [{:keys [bus schemas scheme-payment-command-channel]} config
         {:keys [payment-id]} payment
@@ -86,13 +78,6 @@
                               envelope)))))))
 
 (defn submit-outbound
-  "Submits an outbound payment. Verifies the debtor account
-  exists in the caller's organization, debits the customer
-  account, credits the settlement suspense, persists the
-  OutboundPayment record in pending status, and publishes
-  a submit-payment command to the scheme adapter. Returns
-  the payment map or anomaly
-  (`:cash-account/not-found` for a missing debtor)."
   [config data]
   (let [{:keys [internal-account-id]} config
         {:keys [organization-id debtor-account-id]} data

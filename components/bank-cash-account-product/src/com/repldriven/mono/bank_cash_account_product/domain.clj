@@ -38,9 +38,6 @@
                          :value value})))
 
 (defn new-version
-  "Requires the `:cash-account-product-action-draft` capability.
-  `versions` is the existing version history (empty for a new
-  product)."
   [organization-id product-id versions data policies]
   (let [{:keys [name product-type balance-sheet-side
                 allowed-currencies balance-products
@@ -83,9 +80,6 @@
                      allowed-payment-address-schemes)))))
 
 (defn new-product
-  "Requires the `:cash-account-product-action-draft` capability
-  and the `:cash-account-product` count limit. Generates a
-  fresh product-id and produces v1."
   [organization-id data aggregates policies]
   (let-nom>
     [_ (check-limit :count :instant #{:organization-id} aggregates policies)]
@@ -96,9 +90,6 @@
                  policies)))
 
 (defn update-version
-  "Replaces `existing`'s mutable fields with `data`. Requires
-  the `:cash-account-product-action-draft` capability and
-  `existing` to be in draft state."
   [existing data policies]
   (let [{:keys [organization-id product-id version-id
                 version-number status created-at]}
@@ -138,8 +129,6 @@
                      allowed-payment-address-schemes)))))
 
 (defn publish
-  "Requires the `:cash-account-product-action-publish` capability
-  and `existing` to be in draft state."
   [existing policies]
   (let [{:keys [product-type]} existing]
     (let-nom>
@@ -152,8 +141,6 @@
              :updated-at (utility/now)))))
 
 (defn discard
-  "Requires the `:cash-account-product-action-draft` capability
-  and `existing` to be in draft state."
   [existing policies]
   (let [{:keys [product-type]} existing]
     (let-nom>

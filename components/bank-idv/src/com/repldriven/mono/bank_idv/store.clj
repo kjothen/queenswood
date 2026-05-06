@@ -10,8 +10,6 @@
 (def transact fdb/transact)
 
 (defn save-idv
-  "Saves an IDV and writes a changelog entry. Returns the
-  IDV map or anomaly."
   [txn idv changelog]
   (fdb/transact
    txn
@@ -31,8 +29,6 @@
    "Failed to save IDV"))
 
 (defn get-idv
-  "Loads an IDV by composite PK. Returns the IDV map or
-  rejection anomaly if not found."
   [txn organization-id verification-id]
   (fdb/transact
    txn
@@ -49,10 +45,6 @@
    "Failed to load IDV"))
 
 (defn get-idv-by-party
-  "Returns the IDV record for a party (any status), or nil if
-  none exists. Pinned to the unique `Idv_by_party` index — one
-  IDV per party. Used by the watcher to make IDV initiation
-  idempotent against changelog replay."
   [txn party-id]
   (fdb/transact
    txn

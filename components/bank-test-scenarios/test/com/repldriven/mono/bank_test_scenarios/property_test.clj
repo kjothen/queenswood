@@ -1,12 +1,12 @@
-(ns ^:eftest/synchronized com.repldriven.mono.bank-scenario-runner.property-test
+(ns ^:eftest/synchronized com.repldriven.mono.bank-test-scenarios.property-test
   "Fugato-driven model-equality property test. The same runner that
   drives EDN scenarios drives generated command sequences here; on
   each trial, the model end-state and the projected real-system end-
   state must agree."
   (:require
-    com.repldriven.mono.bank-scenario-runner.system
+    com.repldriven.mono.bank-test-scenarios.system
 
-    [com.repldriven.mono.bank-scenario-runner.interface :as SUT]
+    [com.repldriven.mono.bank-test-scenarios.interface :as SUT]
 
     [com.repldriven.mono.bank-onfido-adapter.api :as onfido-adapter]
     [com.repldriven.mono.bank-onfido-simulator.api :as onfido-simulator]
@@ -158,7 +158,7 @@
   ;; accounts across trials but the projection is keyed by the trial's
   ;; id-mapping so prior trials' accounts are invisible.
   (with-test-system
-   [sys ["classpath:bank-scenario-runner/application-test.yml" patch-handlers]]
+   [sys ["classpath:bank-test-scenarios/application-test.yml" patch-handlers]]
    (let [bank (fdb-config sys)
          internal (internal-account sys)
          stats (atom {:trials 0 :total-commands 0 :by-command {} :lengths []})

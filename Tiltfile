@@ -7,9 +7,9 @@
 # bank-bootstrap-service) from the shared parameterised Dockerfile
 # (`infra/docker/service/Dockerfile`, PROJECT_NAME build-arg),
 # renders the Helm chart at `infra/helm/queenswood` under release
-# name `bank` (matching the Justfile + README so resource names
-# don't diverge between the two flows), and applies it to the
-# current kind context.
+# name `queenswood` (matching the Justfile + README so resource
+# names don't diverge between the two flows), and applies it to
+# the current kind context.
 #
 # Ordering: bank-bootstrap-service runs first as a Job (applies
 # FDB metadata + Pulsar tenant/namespace/topics/schemas + seeds
@@ -36,10 +36,10 @@
 allow_k8s_contexts(['kind-kind', 'kind-queenswood'])
 
 # Helm release name. Must match the one Justfile's `helm-install`
-# uses (`bank`); diverging here would mean Tilt's resource names
-# all start with a different prefix and your kubectl muscle
+# uses (`queenswood`); diverging here would mean Tilt's resource
+# names all start with a different prefix and your kubectl muscle
 # memory wouldn't translate.
-RELEASE = 'bank'
+RELEASE = 'queenswood'
 
 SERVICES = [
     'bank-migrator-service',

@@ -37,8 +37,6 @@
   component/command {:local/root "../../components/command"}
   component/command-processor {:local/root "../../components/command-processor"}
   component/command-schema {:local/root "../../components/command-schema"}
-  component/event {:local/root "../../components/event"}
-  component/event-processor {:local/root "../../components/event-processor"}
   component/event-schema {:local/root "../../components/event-schema"}
   component/encryption {:local/root "../../components/encryption"}
   component/env {:local/root "../../components/env"}

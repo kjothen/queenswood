@@ -144,6 +144,25 @@ The brick's `interface.clj` bare-requires `system.core`:
 Don't promote a `system.clj` into a folder until you actually
 have a second cluster.
 
+### Naming shared resource components
+
+Don't bake an environment name (`prod`, `dev`, `staging`,
+`demo`) into a shared resource component or its config. Name
+the component by the concern it represents:
+
+- OK: `bank-fdb-resources`, `bank-pulsar-resources`,
+  `bank-infra-resources`.
+- Not OK: `bank-fdb-prod-resources`,
+  `bank-pulsar-staging-resources`.
+
+The same artefact gets deployed to multiple environments. An
+env-in-the-name component reads as "this is only valid in
+that environment", which encourages duplicate components when
+a second environment shows up. Discriminate environments via
+env vars and Helm values, not via component names. The
+existing `*-test-resources` exception is fine — `test` here
+is the runtime mode, not a deployment environment.
+
 ### Bundling system requires for tests
 
 A base or project whose tests need many bricks' components
@@ -214,6 +233,9 @@ functions on it.
 - Call `defcomponents` directly from `interface.clj` (use
   `system.clj` or `system/core.clj`).
 - Use the unbracketed bare-require form (deprecated convention).
+- Bake an environment name (`prod`, `dev`, `staging`) into a
+  shared resource component or config. Name by concern
+  (`bank-fdb-resources`, `bank-pulsar-resources`).
 
 **SHOULD:**
 

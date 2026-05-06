@@ -51,6 +51,45 @@ job — read the changelog, publish to the message bus — at which
 point downstream consumers move to the message-bus subscriber
 model. We have not needed to do this yet.
 
+### Brick boundaries: react, don't orchestrate
+
+Watchers also encode a rule about cross-brick coordination.
+When a flow needs N bricks to react to one HTTP request, the
+shape is N watchers — each in the consuming brick — not one
+HTTP-layer orchestrator that chains commands across bricks.
+
+- The HTTP layer (`bank-api`) stays ignorant of downstream
+  effects. POST `/v1/parties` dispatches `create-party` and
+  returns. It does not know IDV exists, does not chain
+  commands, does not coordinate.
+- Cross-brick reactions go through the changelog. Brick X
+  writes its records; FDB emits a changelog entry; brick Y's
+  watcher reads it and acts on its *own* records. Brick X
+  does not reach into brick Y; brick Y does not write
+  brick X's records.
+- A watcher must be **idempotent** — check existing state
+  before acting, so changelog replay or duplicate triggers
+  don't create duplicate records.
+
+Bricks are the unit of independence in the Polylith. If
+`bank-api` chains commands across bricks, every new brick adds
+an HTTP-layer change. If brick X writes brick Y's records, the
+dependency graph cycles. Watcher-on-changelog keeps the
+contract narrow: "I publish my changes; you decide what to do."
+
+The trade-off — no end-to-end reply path, harder to audit a
+single request's full effect — is a known and accepted cost.
+The HTTP request acks only its immediate effect; the rest
+unfolds asynchronously.
+
+Synchronous in-handler work is appropriate when the caller
+genuinely needs the effect to be on disk before the 200
+returns — payment booking is the canonical example, where
+the debit and the suspense write are atomic with the
+response. Settlement is then *one* downstream watcher. IDV
+and party activation don't have that constraint, so they stay
+watcher-driven all the way down.
+
 ## Consequences
 
 Easier:

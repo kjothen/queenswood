@@ -29,7 +29,13 @@ jobs:
       - name: Discover projects
         id: projects
         run: |
-          matrix=$(ls projects/ | jq -Rc '[., inputs]')
+          # Every service project under projects/ plus a `dev` entry
+          # that runs only the dev-only bricks (bank-test-scenarios,
+          # bank-monolith, bank-test-model, bank-test-projections).
+          # Those bricks don't belong to any deployable service but
+          # carry the end-to-end and model-equality coverage; without
+          # this entry the matrix would never exercise them.
+          matrix=$(ls projects/ | jq -Rc '[., inputs] + ["dev"]')
           echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
           echo "Discovered projects: $matrix"
 
@@ -100,7 +106,13 @@ jobs:
           COVERAGE_THRESHOLD: "50"
         run: |
           clojure -X:deps prep :aliases '[:dev :+bank]'
-          clojure -M:poly test project:${{ matrix.project }} :all
+          if [[ "${{ matrix.project }}" == "dev" ]]; then
+            clojure -M:poly test project:dev \
+              brick:bank-test-scenarios:bank-monolith:bank-test-model:bank-test-projections \
+              :all
+          else
+            clojure -M:poly test project:${{ matrix.project }} :all
+          fi
 
       - name: Publish test report
         uses: dorny/test-reporter@v3
@@ -137,15 +149,54 @@ jobs:
           path: target/coverage/${{ matrix.project }}/
           retention-days: 7
 
+  helm:
+    runs-on: ubuntu-latest
+    name: helm validate
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: latest
+
+      - name: Install kubeconform
+        run: |
+          version=v0.7.0
+          curl -L \
+            "https://github.com/yannh/kubeconform/releases/download/$version/kubeconform-linux-amd64.tar.gz" \
+            | tar xz kubeconform
+          sudo mv kubeconform /usr/local/bin/
+          kubeconform -v
+
+      - name: Validate chart
+        run: |
+          # Static-only: helm lint + helm template piped through
+          # kubeconform. No cluster, no image builds. CRDs from the
+          # vendored FDB operator subchart bypass kubeconform via
+          # -ignore-missing-schemas.
+          helm dependency update infra/helm/queenswood
+          helm lint infra/helm/queenswood --set secrets.adminApiKey=lint
+          helm template queenswood infra/helm/queenswood \
+            --set image.tag=ci \
+            --set secrets.adminApiKey=template-render \
+            | kubeconform -strict -ignore-missing-schemas -summary
+
   # Gate job for branch protection — produces a single required check
   tests:
     if: always()
-    needs: [test]
+    needs: [test, helm]
     runs-on: ubuntu-latest
     steps:
-      - name: Check test results
+      - name: Check results
         run: |
           if [[ "${{ needs.test.result }}" != "success" ]]; then
             echo "Tests failed or were cancelled"
+            exit 1
+          fi
+          if [[ "${{ needs.helm.result }}" != "success" ]]; then
+            echo "Helm validation failed or was cancelled"
             exit 1
           fi

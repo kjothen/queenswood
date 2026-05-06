@@ -119,20 +119,17 @@
     (.setName "clearbank-webhook-re-register")
     (.start)))
 
+(def ^:private readiness
+  {:system/start (fn [{:system/keys [instance]}] (or instance (atom false)))
+   :system/instance-schema some?})
+
 (def ^:private registrar
   {:system/start
    (fn [{:system/keys [config instance]}]
      (or instance
-         (let [{:keys [simulator-url webhook-url webhooks]} config
-               ready? (atom false)]
+         (let [{:keys [simulator-url webhook-url webhooks readiness]} config]
            (log/info "Registering ClearBank webhooks (async)"
                      {:simulator simulator-url :webhook webhook-url})
-           ;; Run registration in a future so system/start returns
-           ;; promptly. The returned `ready-fn` closure is wired
-           ;; into the API ctx via jetty-adapter; /ready returns
-           ;; 503 until every webhook registration succeeds. After
-           ;; initial success, kick off a daemon thread that polls
-           ;; the simulator and re-registers if any webhook drops.
            (future (let [results (doall (map (fn [webhook]
                                                (register-webhook-with-retry
                                                 simulator-url
@@ -140,18 +137,19 @@
                                                 webhook))
                                              webhooks))]
                      (when (every? ok-response? results)
-                       (reset! ready? true)
+                       (reset! readiness true)
                        (log/info
                         "ClearBank webhook registration complete; pod ready")
                        (start-re-register-loop simulator-url
                                                webhook-url
                                                webhooks
                                                re-register-poll-ms))))
-           (fn [] @ready?))))
+           :running)))
    :system/config {:simulator-url system/required-component
                    :webhook-url system/required-component
-                   :webhooks nil}
-   :system/instance-schema fn?})
+                   :webhooks nil
+                   :readiness system/required-component}
+   :system/instance-schema keyword?})
 
 (def ^:private command-processor
   {:system/start (fn [{:system/keys [config instance]}]
@@ -161,5 +159,6 @@
    :system/instance-schema some?})
 
 (system/defcomponents :clearbank-adapter
-                      {:registrar registrar
+                      {:readiness readiness
+                       :registrar registrar
                        :command-processor command-processor})

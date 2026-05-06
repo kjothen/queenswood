@@ -44,9 +44,6 @@
     :account-type-business))
 
 (defn- counts
-  "Builds the cash-account aggregates map for the limit checks
-  in `domain/open-account`. Each entry is keyed by the set of
-  dimensions the count is grouped on."
   [txn org-id product-type account-type currency]
   (let-nom>
     [total (store/count-by-org txn org-id)
@@ -61,8 +58,6 @@
       #{:organization-id :product-type :account-type :currency} subtotal}}))
 
 (defn open-account
-  "Opens a cash account with balances. opts supports
-  `:policies` to override policy resolution."
   ([txn data]
    (open-account txn data {}))
   ([txn data opts]
@@ -104,9 +99,6 @@
           account))))))
 
 (defn get-account
-  "Loads a single cash account, optionally embedding
-  balances and transactions. Returns the account map
-  or rejection anomaly if not found."
   ([txn org-id account-id]
    (get-account txn org-id account-id nil))
   ([txn org-id account-id opts]
@@ -118,10 +110,6 @@
         (enrich-account txn opts account))))))
 
 (defn get-accounts
-  "Lists cash accounts for an organization, optionally
-  embedding balances and transactions. Returns
-  {:accounts [maps] :before id|nil :after id|nil} or
-  anomaly."
   ([txn org-id]
    (get-accounts txn org-id nil))
   ([txn org-id opts]
@@ -150,8 +138,6 @@
   (store/get-account-by-bban txn bban))
 
 (defn close-account
-  "Closes an account. opts supports `:policies` to override
-  policy resolution."
   ([txn data]
    (close-account txn data {}))
   ([txn data opts]

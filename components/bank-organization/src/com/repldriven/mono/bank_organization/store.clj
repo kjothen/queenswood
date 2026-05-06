@@ -11,8 +11,6 @@
 (def transact fdb/transact)
 
 (defn create
-  "Persists an organization and its initial API key
-  atomically. Returns nil or anomaly."
   [txn org api-key]
   (fdb/transact txn
                 (fn [txn]
@@ -24,8 +22,6 @@
                 "Failed to create organization"))
 
 (defn get-organization
-  "Loads an organization by id. Returns the organization
-  map or rejection anomaly if not found."
   [txn org-id]
   (fdb/transact txn
                 (fn [txn]
@@ -39,9 +35,6 @@
                 "Failed to load organization"))
 
 (defn get-organizations
-  "Lists organizations. Returns a sequence of organization
-  maps or anomaly. opts supports :limit and :order (`:desc`
-  default — clients show newest-first)."
   ([txn]
    (get-organizations txn nil))
   ([txn opts]
@@ -57,8 +50,6 @@
     "Failed to list organizations")))
 
 (defn count-organizations-by-type
-  "Returns the count of organizations matching the given
-  type. Uses the Organization_count_by_type count index."
   [txn org-type]
   (fdb/transact txn
                 (fn [txn]
@@ -71,9 +62,6 @@
                 "Failed to count organizations by type"))
 
 (defn get-organizations-by-type
-  "Lists organizations matching the given type. Pins the
-  planner to the Organization_by_type index. Returns a
-  sequence of organization maps or anomaly."
   [txn org-type]
   (fdb/transact txn
                 (fn [txn]

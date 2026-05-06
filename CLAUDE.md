@@ -6,34 +6,143 @@ workspace and built as a domain fork of
 are Queenswood-specific; everything else is shared infrastructure
 inherited from upstream.
 
-## Where to find things
+## Topic router
 
-- [docs/adr/](docs/adr/) — architecture decisions (the *why* behind
-  every load-bearing choice). Fourteen records covering mono-reuse,
-  FoundationDB, the message-bus abstraction, Avro payloads, error
-  handling, kebab-case keys, system-as-data, changelog watchers,
-  model-equality testing, code generation, library wrapping,
-  pre-commit hooks, the single unified API, and OpenAPI 3.x
-  compliance.
-- [docs/recipes/](docs/recipes/) — task-oriented recipes
-  (Problem / Solution / Rules / Discussion / References). Read the
-  relevant recipe before doing any non-trivial task. Twelve recipes:
-  components, bases, projects, system-components,
-  system-configurations, testcontainers, error-handling, testing,
-  code-style, code-generation, common-helpers, git-workflow.
-- [docs/tdd/](docs/tdd/) — technical design documents (one per
-  capability or subsystem). Fourteen TDDs covering api-keys,
-  cash-account-products, cash-accounts, idempotency, interest,
-  organizations, parties, payments, policy-evaluation,
-  scenario-testing, service-apis, traceability,
-  transaction-processing, and transactions-and-balances.
-- [docs/plan/](docs/plan/) — implementation plans for in-flight work.
+Before doing non-trivial work, open the doc that owns the topic and
+work from it. CLAUDE.md is the routing layer; the rules and
+rationale live in the docs.
+
+### Code
+
+- **Clojure code style** — naming, requires, destructuring, anon
+  fns, `cond->`, `let`-binding format, ID generation (`util/uuidv7`),
+  timestamps (`util/now`), interceptor short-circuit
+  (`sieppari.context/terminate`).
+  See [recipes/code-style.md](docs/recipes/code-style.md).
+- **Common helpers** — when to add a helper to `utility`, when to
+  re-export from a library (medley etc.), the convergence rule.
+  See [recipes/common-helpers.md](docs/recipes/common-helpers.md).
+- **Component interfaces and docstrings** — `interface.clj` is the
+  documentation surface; impl files stay bare.
+  See [ADR-0015](docs/adr/0015-comments-and-docstrings.md) and
+  [recipes/components.md](docs/recipes/components.md).
+- **Error handling** — anomalies at component boundaries; never
+  throw from `interface.clj`; `error/try-nom` and `error/nom->` at
+  library edges. See
+  [ADR-0005](docs/adr/0005-error-handling-with-anomalies.md) and
+  [recipes/error-handling.md](docs/recipes/error-handling.md).
+- **Data shapes** — kebab-case keyword keys throughout, with
+  string-typed currency (ISO 4217) as a deliberate exception.
+  See [ADR-0006](docs/adr/0006-kebab-case-keyword-keys.md).
+
+### Architecture
+
+- **System wiring** — `system/defcomponents`, `system.clj` vs
+  `system/` folder, the test-bundle pattern, naming shared
+  resource components without baking environment names in.
+  See [recipes/system-components.md](docs/recipes/system-components.md)
+  and [ADR-0007](docs/adr/0007-system-as-data.md).
+- **Brick boundaries** — bricks react via changelog watchers
+  rather than orchestrating across each other; `bank-api` stays
+  ignorant of cross-brick effects.
+  See [ADR-0008](docs/adr/0008-changelog-watchers.md) and
+  [recipes/components.md](docs/recipes/components.md).
+- **Bases and projects** — entry points, per-service projects,
+  the development project that includes everything.
+  See [recipes/bases.md](docs/recipes/bases.md) and
+  [recipes/projects.md](docs/recipes/projects.md).
+- **System configurations** — YAML system definitions, profiles,
+  `!system/component` / `!system/ref` / `!env`.
+  See [recipes/system-configurations.md](docs/recipes/system-configurations.md).
+- **Service APIs** — Reitit + Sieppari + Muuntaja, RFC 9457
+  problem details, two-tier auth, OpenAPI assembly. The API style
+  is resource-based, not CRUD-shaped.
+  See [tdd/service-apis.md](docs/tdd/service-apis.md),
+  [ADR-0013](docs/adr/0013-single-unified-api.md),
+  [ADR-0014](docs/adr/0014-openapi-3x-compliance.md).
+
+### Tests
+
+- **General testing** — `with-test-system`, `nom-test>`, no
+  `use-fixtures`, brick-level vs project-level test runs.
+  See [recipes/testing.md](docs/recipes/testing.md).
+- **Testcontainers** — FDB and Pulsar containers, reuse, image
+  selection. See
+  [recipes/testcontainers.md](docs/recipes/testcontainers.md).
+- **Scenario testing** — model-equality scenarios run via
+  `bank-test-scenarios` against the dev project.
+  See [tdd/scenario-testing.md](docs/tdd/scenario-testing.md).
+
+### Writing docs
+
+- **Markdown formatting, mermaid, tone, PRD register** — wrap at
+  80, link hygiene, no semicolons in mermaid labels, no maturity
+  overclaim, no competitor names, PRDs use product language and
+  describe what users do via "the banking API" rather than
+  naming operations. See
+  [recipes/writing-docs.md](docs/recipes/writing-docs.md).
+
+### Operations
+
+- **Git workflow** — merge `main` before committing (Renovate
+  auto-merges deps weekly), stage user-initiated deletions and
+  moves with `git add` not `git rm`, include the user's
+  untracked drafts in workspace-wide ops.
+  See [recipes/git-workflow.md](docs/recipes/git-workflow.md).
+- **Code generation** — protoc + protojure for protobuf, Lancaster
+  for Avro, prep alias for the bank profile.
+  See [recipes/code-generation.md](docs/recipes/code-generation.md)
+  and [ADR-0010](docs/adr/0010-code-generation-via-prep-lib.md).
+- **Deployment** — Helm chart, Tilt + kind dev loop, per-service
+  Docker images. See
+  [recipes/deployment.md](docs/recipes/deployment.md).
+- **Pre-commit hooks** — zprint, clj-kondo, before-commit
+  formatting. See
+  [ADR-0012](docs/adr/0012-pre-commit-hooks.md).
+
+### Domain reference
+
+- **Per-capability designs** — `docs/tdd/` has one TDD per
+  capability or subsystem (api-keys, cash-account-products,
+  cash-accounts, idempotency, interest, organizations, parties,
+  payments, policy-evaluation, scenario-testing, service-apis,
+  traceability, transaction-processing, transactions-and-balances).
+- **Per-capability requirements** — `docs/prd/` has the
+  product-shaped requirements (cash-account-products,
+  cash-accounts, interest, onboarding, parties, payments,
+  platform, policies).
+- **In-flight implementation plans** — `docs/plan/`.
+
+## Critical guardrails
+
+These four are the rules most load-bearing across the codebase.
+Detail and rationale live in the referenced docs.
+
+- **No throwing from `interface.clj`.** Component interfaces
+  return a value or an anomaly; they never raise. Use
+  `error/try-nom` or `error/try-nom-ex` to convert exceptions
+  at library boundaries.
+  See [recipes/error-handling.md](docs/recipes/error-handling.md).
+- **Use the `utility` brick.** `util/uuidv7` for IDs, `util/now`
+  for timestamps; never `random-uuid`,
+  `(System/currentTimeMillis)`, or `(Instant/now)` directly. For
+  any helper not in `clojure.core`, check `utility` first.
+  See [recipes/common-helpers.md](docs/recipes/common-helpers.md).
+- **No `use-fixtures` in tests.** Manage system lifecycle with
+  `with-test-system`; assert anomaly-freeness with `nom-test>`.
+  See [recipes/testing.md](docs/recipes/testing.md).
+- **Pull/merge from `main` before committing.** Renovate
+  auto-merges dependency updates weekly.
+  See [recipes/git-workflow.md](docs/recipes/git-workflow.md).
 
 ## Common commands
 
 ```bash
-# Run all tests (default project)
-clojure -M:poly test project:dev
+# Run the full polylith test matrix (per service project)
+clojure -M:poly test :all
+
+# Run the development project (every brick — includes scenarios)
+clojure -M:poly test project:dev :all
 
 # Run tests for one or more bricks
 clojure -M:poly test brick:<brick-name> project:dev
@@ -49,25 +158,3 @@ clj -X:deps prep :aliases '[:+bank :dev]' :force true
 cp scripts/hooks/pre-commit .git/hooks/pre-commit
 chmod +x .git/hooks/pre-commit
 ```
-
-## Critical guardrails
-
-The rules most load-bearing across the codebase. Detail and
-rationale live in the referenced recipes.
-
-- **No throwing from `interface.clj`.** Component interfaces return
-  a value or an anomaly; they never raise. Use `error/try-nom` or
-  `error/try-nom-ex` to convert exceptions at library boundaries.
-  See [docs/recipes/error-handling.md](docs/recipes/error-handling.md).
-- **Use the `utility` brick.** `util/uuidv7` for IDs, `util/now` for
-  timestamps; never `random-uuid`, `(System/currentTimeMillis)`, or
-  `(Instant/now)` directly. For any helper not in `clojure.core`,
-  check `utility` first. See
-  [docs/recipes/code-style.md](docs/recipes/code-style.md) and
-  [docs/recipes/common-helpers.md](docs/recipes/common-helpers.md).
-- **No `use-fixtures` in tests.** Manage system lifecycle with
-  `with-test-system`; assert anomaly-freeness with `nom-test>`. See
-  [docs/recipes/testing.md](docs/recipes/testing.md).
-- **Pull/merge from `main` before committing.** Renovate auto-merges
-  dependency updates weekly. See
-  [docs/recipes/git-workflow.md](docs/recipes/git-workflow.md).

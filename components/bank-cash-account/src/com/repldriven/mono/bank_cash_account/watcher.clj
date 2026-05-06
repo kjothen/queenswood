@@ -8,8 +8,6 @@
     [com.repldriven.mono.fdb.interface :as fdb]))
 
 (defn cash-account-changelog-handler
-  "Returns a watcher handler that transitions an opening
-  account to opened, or a closing account to closed."
   [record-store]
   (fn [ctx changelog-bytes]
     (let [changelog (schema/pb->CashAccountChangelog changelog-bytes)

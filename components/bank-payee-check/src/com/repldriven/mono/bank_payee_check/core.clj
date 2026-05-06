@@ -6,20 +6,16 @@
     [com.repldriven.mono.error.interface :refer [let-nom>]]))
 
 (defn check-payee
-  "Persists a payee check for an organization. Returns the
-  check map or anomaly."
   [config organization-id request result]
   (let [check (domain/new-check organization-id request result)]
     (let-nom> [_ (store/save-check config check)]
       check)))
 
 (defn get-check
-  "Loads a payee check by org-id and check-id."
   [txn org-id check-id]
   (store/get-check txn org-id check-id))
 
 (defn get-checks
-  "Lists payee checks for an organization with pagination."
   ([txn org-id]
    (store/get-checks txn org-id))
   ([txn org-id opts]
