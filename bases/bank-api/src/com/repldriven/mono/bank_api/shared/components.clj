@@ -286,9 +286,10 @@
 (def SignedAmount
   "Signed monetary amount paired with its currency — same shape as
   `Amount` but permits negative values (e.g. available balances that
-  may dip below zero)."
+  may dip below zero). The value is unbounded because it represents
+  an accumulated running total, not a single transaction amount."
   [:map {:closed true}
-   [:value [:ref "SignedMinorUnits"]]
+   [:value [:int {:json-schema/format "int64"}]]
    [:currency [:ref "Currency"]]])
 
 (def SignedBasisPoints

@@ -1,9 +1,23 @@
 (ns com.repldriven.mono.bank-api.shared.parameters
-  "Reusable OpenAPI `components.parameters` entries. Header parameters
-  can't be produced as `$ref`s by reitit's malli expansion, so they
-  live here as raw OpenAPI fragments, registered once in `api.clj`
-  under `:components {:parameters parameters/registry}` and referenced
-  per-route via `:openapi {:parameters parameters/ref-...}`."
+  "Reusable OpenAPI `components.parameters` entries and `$ref` maps.
+
+  Component definitions (`IdempotencyKey`, `PageQuery`, etc.) are raw
+  OpenAPI fragment maps, registered once in `api.clj` under
+  `:components {:parameters parameters/registry}`.
+
+  The `ref-*` vars are bare `{:$ref \"...\"}` maps. Compose them at the
+  call site with `^:replace [ref-a ref-b ...]` on the `:openapi
+  {:parameters ...}` key. The `^:replace` metadata is required: without
+  it, reitit's meta-merge would also splice in auto-generated duplicates
+  from the malli `:parameters :query` / `:parameters :path` schema walk.
+  It must appear at the call site (not on the var) so that multiple refs
+  can be combined freely.
+
+  Path parameters share this problem: when an operation sets
+  `:openapi {:parameters ^:replace [...]}`, the replacement wipes any
+  path params reitit would have auto-generated from `:parameters :path`.
+  Routes that need both a path param and a query/header override must
+  include `ref-account-id` / `ref-org-id` alongside the other refs."
   (:require
     [com.repldriven.mono.bank-api.shared.components :as shared.components]
 
@@ -20,12 +34,6 @@
    :required true
    :schema (mjs/transform shared.components/IdempotencyKey)
    :example "01jsx6k7h0abfdv8qpm2ytn3we"})
-
-(def ref-idempotency-key
-  "Splice into `:openapi {:parameters ...}` on any route that uses
-  `require-idempotency-key`. Carries `^:replace` meta so meta-merge
-  discards any auto-generated parameter of the same name."
-  ^:replace [{:$ref "#/components/parameters/IdempotencyKey"}])
 
 (def PageQuery
   "Cursor-paginated `page` query parameter. Uses OpenAPI 3's
@@ -74,32 +82,105 @@
                          :transactions {:type "boolean"
                                         :description "Embed transactions"}}}})
 
-(def ref-page
-  "Splice into `:openapi {:parameters ...}` for list-style endpoints
-  that accept cursor pagination via `page[*]`. Carries `^:replace`
-  meta so meta-merge drops the auto-walked `page` parameter reitit
-  would otherwise emit from the malli schema."
-  ^:replace [{:$ref "#/components/parameters/PageQuery"}])
+(def AccountId
+  "`components.parameters` entry for the `account-id` path parameter.
+  Schema references the auto-walked `CashAccountId` component, so no
+  inlining needed (unlike `IdempotencyKey`)."
+  {:name "account-id"
+   :in "path"
+   :required true
+   :schema {:$ref "#/components/schemas/CashAccountId"}})
 
-(def ref-embed
-  "Splice into `:openapi {:parameters ...}` for cash-account GETs
-  that support `embed[*]` sub-resource expansion. Carries `^:replace`
-  meta so meta-merge drops the auto-walked `embed` parameter reitit
-  would otherwise emit from the malli schema."
-  ^:replace [{:$ref "#/components/parameters/EmbedQuery"}])
+(def OrgId
+  "`components.parameters` entry for the `org-id` path parameter."
+  {:name "org-id"
+   :in "path"
+   :required true
+   :schema {:$ref "#/components/schemas/OrganizationId"}})
 
-(def ref-page-and-embed
-  "Combined `$ref` splice for list-style endpoints that accept both
-  `page` and `embed` deepObject params (e.g. `GET /v1/cash-accounts`).
-  Carries `^:replace` meta — `into` would otherwise strip the metadata
-  from `ref-page` via `transient`."
-  ^:replace
-  [{:$ref "#/components/parameters/PageQuery"}
-   {:$ref "#/components/parameters/EmbedQuery"}])
+(def PartyId
+  {:name "party-id"
+   :in "path"
+   :required true
+   :schema {:$ref "#/components/schemas/PartyId"}})
+
+(def ProductId
+  {:name "product-id"
+   :in "path"
+   :required true
+   :schema {:$ref "#/components/schemas/ProductId"}})
+
+(def VersionId
+  {:name "version-id"
+   :in "path"
+   :required true
+   :schema {:$ref "#/components/schemas/VersionId"}})
+
+(def CheckId
+  {:name "check-id"
+   :in "path"
+   :required true
+   :schema {:$ref "#/components/schemas/CheckId"}})
+
+(def PaymentId
+  {:name "payment-id"
+   :in "path"
+   :required true
+   :schema {:$ref "#/components/schemas/PaymentId"}})
+
+(def PolicyId
+  {:name "policy-id"
+   :in "path"
+   :required true
+   :schema {:$ref "#/components/schemas/PolicyId"}})
+
+(def BalanceType
+  {:name "balance-type"
+   :in "path"
+   :required true
+   :schema {:$ref "#/components/schemas/BalanceType"}})
+
+(def Currency
+  {:name "currency"
+   :in "path"
+   :required true
+   :schema {:$ref "#/components/schemas/Currency"}})
+
+(def BalanceStatus
+  {:name "balance-status"
+   :in "path"
+   :required true
+   :schema {:$ref "#/components/schemas/BalanceStatus"}})
+
+(def ref-idempotency-key {:$ref "#/components/parameters/IdempotencyKey"})
+(def ref-page {:$ref "#/components/parameters/PageQuery"})
+(def ref-embed {:$ref "#/components/parameters/EmbedQuery"})
+(def ref-account-id {:$ref "#/components/parameters/AccountId"})
+(def ref-org-id {:$ref "#/components/parameters/OrgId"})
+(def ref-party-id {:$ref "#/components/parameters/PartyId"})
+(def ref-product-id {:$ref "#/components/parameters/ProductId"})
+(def ref-version-id {:$ref "#/components/parameters/VersionId"})
+(def ref-check-id {:$ref "#/components/parameters/CheckId"})
+(def ref-payment-id {:$ref "#/components/parameters/PaymentId"})
+(def ref-policy-id {:$ref "#/components/parameters/PolicyId"})
+(def ref-balance-type {:$ref "#/components/parameters/BalanceType"})
+(def ref-currency {:$ref "#/components/parameters/Currency"})
+(def ref-balance-status {:$ref "#/components/parameters/BalanceStatus"})
 
 (def registry
   "Map of OpenAPI parameter component name → parameter object. Merged
   into the top-level OpenAPI `:components :parameters` in `api.clj`."
   {"IdempotencyKey" IdempotencyKey
    "PageQuery" PageQuery
-   "EmbedQuery" EmbedQuery})
+   "EmbedQuery" EmbedQuery
+   "AccountId" AccountId
+   "OrgId" OrgId
+   "PartyId" PartyId
+   "ProductId" ProductId
+   "VersionId" VersionId
+   "CheckId" CheckId
+   "PaymentId" PaymentId
+   "PolicyId" PolicyId
+   "BalanceType" BalanceType
+   "Currency" Currency
+   "BalanceStatus" BalanceStatus})

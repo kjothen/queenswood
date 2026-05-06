@@ -18,27 +18,34 @@
 
 (defn submit-internal
   [config data]
-  (store/transact
-   config
-   (fn [txn]
-     (let [{:keys [organization-id debtor-account-id
-                   creditor-account-id]}
-           data]
-       (let-nom>
-         [_ (cash-accounts/get-account txn
-                                       organization-id
-                                       debtor-account-id)
-          _ (cash-accounts/get-account txn
-                                       organization-id
-                                       creditor-account-id)
-          payment-transaction (domain/internal-payment->transaction data)
-          transaction (transactions/record-transaction txn
-                                                       payment-transaction)
-          {:keys [transaction-id transaction-type legs]} transaction
-          _ (balances/apply-legs txn legs transaction-type)
-          payment (domain/new-internal-payment data transaction-id)
-          _ (store/save-internal-payment txn payment)]
-         payment)))))
+  (let [result
+        (store/transact
+         config
+         (fn [txn]
+           (let [{:keys [organization-id debtor-account-id
+                         creditor-account-id]}
+                 data]
+             (let-nom>
+               [_ (cash-accounts/get-account txn
+                                             organization-id
+                                             debtor-account-id)
+                _ (cash-accounts/get-account txn
+                                             organization-id
+                                             creditor-account-id)
+                payment-transaction (domain/internal-payment->transaction data)
+                transaction (transactions/record-transaction
+                             txn
+                             payment-transaction)
+                {:keys [transaction-id transaction-type legs]} transaction
+                _ (balances/apply-legs txn legs transaction-type)
+                payment (domain/new-internal-payment data transaction-id)
+                _ (store/save-internal-payment txn payment)]
+               payment))))
+        result (if (store/uniqueness-violation? result)
+                 (error/reject :payment/already-submitted
+                               "Payment already submitted")
+                 result)]
+    result))
 
 (defn- publish-scheme-command
   [config payment data]
@@ -99,7 +106,11 @@
                      _ (balances/apply-legs txn legs transaction-type)
                      payment (domain/new-outbound-payment data transaction-id)
                      _ (store/save-outbound-payment txn payment)]
-                    payment)))]
+                    payment)))
+        result (if (store/uniqueness-violation? result)
+                 (error/reject :payment/already-submitted
+                               "Payment already submitted")
+                 result)]
     (when-not (error/anomaly? result)
       (publish-scheme-command config result data))
     result))

@@ -22,7 +22,7 @@
     [""
      {:get {:summary "List products with their version histories inline"
             :openapi {:operationId "ListCashAccountProducts"
-                      :parameters shared.parameters/ref-page}
+                      :parameters ^:replace [shared.parameters/ref-page]}
             :parameters {:query list-products-query-schema}
             :responses {200 {:body [:ref "CashAccountProductList"]}}
             :handler queries/list-products}
@@ -33,7 +33,7 @@
              :responses {201 {:body [:ref "CashAccountProductVersion"]
                               :openapi {:headers {"Location" location-header}
                                         :links links/from-draft}}
-                         409 (ErrorResponse [#'DuplicateItems])}
+                         422 (ErrorResponse [#'DuplicateItems])}
              :handler handlers/create-product}}]
     ["/{product-id}" {:parameters {:path {:product-id [:ref "ProductId"]}}}
      [""
@@ -52,8 +52,8 @@
                                :openapi {:headers {"Location" location-header}
                                          :links links/from-draft}}
                           404 (ErrorResponse [#'ProductNotFound])
-                          409 (ErrorResponse [#'DraftAlreadyExists
-                                              #'DuplicateItems])}
+                          409 (ErrorResponse [#'DraftAlreadyExists])
+                          422 (ErrorResponse [#'DuplicateItems])}
               :handler handlers/open-draft}}]
      ["/versions/{version-id}"
       {:parameters {:path {:version-id [:ref "VersionId"]}}}
@@ -72,8 +72,8 @@
               :responses {200 {:body [:ref "CashAccountProductVersion"]
                                :openapi {:links links/from-draft}}
                           404 (ErrorResponse [#'VersionNotFound])
-                          409 (ErrorResponse [#'VersionImmutable
-                                              #'DuplicateItems])}
+                          409 (ErrorResponse [#'VersionImmutable])
+                          422 (ErrorResponse [#'DuplicateItems])}
               :handler handlers/update-draft}
         :delete {:summary "Discard the draft version (draft state only)"
                  :openapi {:operationId "DiscardCashAccountProductDraft"}

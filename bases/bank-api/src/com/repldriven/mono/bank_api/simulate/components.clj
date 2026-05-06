@@ -4,7 +4,8 @@
     [com.repldriven.mono.bank-api.schema :refer [components-registry]]))
 
 (def SimulateInboundTransferRequest
-  [:map {:json-schema/example examples/SimulateInboundTransferRequest}
+  [:map
+   {:closed true :json-schema/example examples/SimulateInboundTransferRequest}
    [:account-id [:ref "CashAccountId"]]
    [:amount [:ref "MinorUnits"]]
    [:currency [:ref "Currency"]]])
@@ -33,7 +34,7 @@
    [:legs [:vector [:ref "TransactionLeg"]]]])
 
 (def SimulateInterestRequest
-  [:map {:json-schema/example examples/SimulateInterestRequest}
+  [:map {:closed true :json-schema/example examples/SimulateInterestRequest}
    [:as-of-date int?]])
 
 (def SimulateInterestResponse

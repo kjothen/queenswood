@@ -7,6 +7,9 @@
 
 (def PaymentId (schema/id-schema "PaymentId" "pmt" examples/PaymentId))
 
+(def PaymentScheme
+  (coercion/payment-scheme-enum-schema {:json-schema/example "fps"}))
+
 (def SubmitInternalPaymentRequest
   [:map
    {:json-schema/example examples/SubmitInternalPaymentRequest}
@@ -40,13 +43,13 @@
    [:creditor-name [:ref "Name"]]
    [:currency [:ref "Currency"]]
    [:amount [:ref "MinorUnits"]]
-   [:scheme string?]
+   [:scheme [:ref "PaymentScheme"]]
    [:reference {:optional true} [:maybe string?]]])
 
 (def OutboundPayment
   [:map {:json-schema/example examples/OutboundPayment}
    [:payment-id [:ref "PaymentId"]]
-   [:scheme string?]
+   [:scheme [:ref "PaymentScheme"]]
    [:debtor-account-id [:ref "CashAccountId"]]
    [:creditor-bban [:ref "Bban"]]
    [:creditor-name [:ref "Name"]]
@@ -61,6 +64,6 @@
    [:updated-at {:optional true} [:maybe [:ref "Timestamp"]]]])
 
 (def registry
-  (components-registry [#'PaymentId #'SubmitInternalPaymentRequest
-                        #'InternalPayment #'OutboundPaymentStatus
-                        #'SubmitOutboundPaymentRequest #'OutboundPayment]))
+  (components-registry
+   [#'PaymentId #'PaymentScheme #'SubmitInternalPaymentRequest #'InternalPayment
+    #'OutboundPaymentStatus #'SubmitOutboundPaymentRequest #'OutboundPayment]))

@@ -17,8 +17,8 @@
    [:balance-type [:ref "BalanceType"]]
    [:balance-status [:ref "BalanceStatus"]]
    [:currency [:ref "CurrencyCode"]]
-   [:credit [:ref "MinorUnits"]]
-   [:debit [:ref "MinorUnits"]]
+   [:credit nat-int?]
+   [:debit nat-int?]
    [:created-at [:ref "Timestamp"]]
    [:updated-at [:ref "Timestamp"]]])
 

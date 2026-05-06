@@ -6,6 +6,7 @@
      [CashAccountNotFound CashAccountAlreadyExists ProductNotPublished
       InvalidCurrency PartyNotFound ProductNotFound]]
     [com.repldriven.mono.bank-api.schema :refer [ErrorResponse]]
+    [com.repldriven.mono.bank-api.cash-account.links :as links]
     [com.repldriven.mono.bank-api.shared.parameters :as shared.parameters]
     [com.repldriven.mono.telemetry.interface :as telemetry]))
 
@@ -24,17 +25,21 @@
     [""
      {:get {:summary "Retrieve cash accounts"
             :openapi {:operationId "RetrieveCashAccounts"
-                      :parameters shared.parameters/ref-page-and-embed}
+                      :parameters ^:replace
+                                  [shared.parameters/ref-page
+                                   shared.parameters/ref-embed]}
             :parameters {:query list-cash-accounts-query-schema}
             :responses {200 {:body [:ref "CashAccountList"]}}
             :handler queries/list-cash-accounts}
       :post {:summary "Open a new cash account"
              :openapi {:operationId "CreateCashAccount"
                        :requestBody {:required true}
-                       :parameters shared.parameters/ref-idempotency-key}
+                       :parameters ^:replace
+                                   [shared.parameters/ref-idempotency-key]}
              :interceptors [telemetry/require-idempotency-key]
              :parameters {:body [:ref "CreateCashAccountRequest"]}
-             :responses {200 {:body [:ref "CreateCashAccountResponse"]}
+             :responses {200 {:body [:ref "CreateCashAccountResponse"]
+                              :openapi {:links links/from-account}}
                          404 (ErrorResponse [#'PartyNotFound
                                              #'ProductNotFound])
                          422 (ErrorResponse [#'CashAccountAlreadyExists
@@ -45,7 +50,9 @@
      [""
       {:get {:summary "Retrieve a cash account"
              :openapi {:operationId "RetrieveCashAccount"
-                       :parameters shared.parameters/ref-embed}
+                       :parameters ^:replace
+                                   [shared.parameters/ref-account-id
+                                    shared.parameters/ref-embed]}
              :parameters {:query get-cash-account-query-schema}
              :responses {200 {:body [:ref "CashAccount"]}
                          404 (ErrorResponse [#'CashAccountNotFound])}
@@ -59,8 +66,11 @@
      ["/close"
       {:post {:summary "Close a cash account"
               :openapi {:operationId "CloseCashAccount"
-                        :parameters shared.parameters/ref-idempotency-key}
+                        :parameters ^:replace
+                                    [shared.parameters/ref-account-id
+                                     shared.parameters/ref-idempotency-key]}
               :interceptors [telemetry/require-idempotency-key]
-              :responses {200 {:body [:ref "CloseCashAccountResponse"]}
+              :responses {200 {:body [:ref "CloseCashAccountResponse"]
+                               :openapi {:links links/from-account}}
                           404 (ErrorResponse [#'CashAccountNotFound])}
               :handler commands/close-cash-account}}]]]])

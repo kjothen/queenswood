@@ -8,40 +8,44 @@
                 creditor-account-id currency amount
                 reference]}
         data]
-    {:idempotency-key idempotency-key
-     :transaction-type :transaction-type-internal-transfer
-     :currency currency
-     :reference reference
-     :legs [{:account-id debtor-account-id
-             :balance-type :balance-type-default
-             :balance-status :balance-status-posted
-             :side :leg-side-debit
-             :amount amount}
-            {:account-id creditor-account-id
-             :balance-type :balance-type-default
-             :balance-status :balance-status-posted
-             :side :leg-side-credit
-             :amount amount}]}))
+    (utility/assoc-some
+     {:idempotency-key idempotency-key
+      :transaction-type :transaction-type-internal-transfer
+      :currency currency
+      :legs [{:account-id debtor-account-id
+              :balance-type :balance-type-default
+              :balance-status :balance-status-posted
+              :side :leg-side-debit
+              :amount amount}
+             {:account-id creditor-account-id
+              :balance-type :balance-type-default
+              :balance-status :balance-status-posted
+              :side :leg-side-credit
+              :amount amount}]}
+     :reference
+     reference)))
 
 (defn inbound-payment->transaction
   [data creditor-account-id internal-account-id]
   (let [{:keys [scheme-transaction-id currency amount
                 reference]}
         data]
-    {:idempotency-key scheme-transaction-id
-     :transaction-type :transaction-type-inbound-transfer
-     :currency currency
-     :reference reference
-     :legs [{:account-id internal-account-id
-             :balance-type :balance-type-suspense
-             :balance-status :balance-status-posted
-             :side :leg-side-debit
-             :amount amount}
-            {:account-id creditor-account-id
-             :balance-type :balance-type-default
-             :balance-status :balance-status-posted
-             :side :leg-side-credit
-             :amount amount}]}))
+    (utility/assoc-some
+     {:idempotency-key scheme-transaction-id
+      :transaction-type :transaction-type-inbound-transfer
+      :currency currency
+      :legs [{:account-id internal-account-id
+              :balance-type :balance-type-suspense
+              :balance-status :balance-status-posted
+              :side :leg-side-debit
+              :amount amount}
+             {:account-id creditor-account-id
+              :balance-type :balance-type-default
+              :balance-status :balance-status-posted
+              :side :leg-side-credit
+              :amount amount}]}
+     :reference
+     reference)))
 
 (defn new-inbound-payment
   [data creditor-account-id transaction-id]
@@ -49,38 +53,42 @@
                 currency amount debtor-name reference]}
         data
         now (System/currentTimeMillis)]
-    {:payment-id (utility/generate-id "pmt")
-     :scheme-transaction-id scheme-transaction-id
-     :end-to-end-id end-to-end-id
-     :scheme scheme
-     :creditor-account-id creditor-account-id
-     :currency currency
-     :amount amount
-     :transaction-id transaction-id
-     :debtor-name debtor-name
-     :reference reference
-     :created-at now
-     :updated-at now}))
+    (utility/assoc-some
+     {:payment-id (utility/generate-id "pmt")
+      :scheme-transaction-id scheme-transaction-id
+      :end-to-end-id end-to-end-id
+      :scheme scheme
+      :creditor-account-id creditor-account-id
+      :currency currency
+      :amount amount
+      :transaction-id transaction-id
+      :debtor-name debtor-name
+      :created-at now
+      :updated-at now}
+     :reference
+     reference)))
 
 (defn outbound-payment->transaction
   [data internal-account-id]
   (let [{:keys [idempotency-key debtor-account-id
                 currency amount reference]}
         data]
-    {:idempotency-key idempotency-key
-     :transaction-type :transaction-type-outbound-transfer
-     :currency currency
-     :reference reference
-     :legs [{:account-id debtor-account-id
-             :balance-type :balance-type-default
-             :balance-status :balance-status-posted
-             :side :leg-side-debit
-             :amount amount}
-            {:account-id internal-account-id
-             :balance-type :balance-type-suspense
-             :balance-status :balance-status-posted
-             :side :leg-side-credit
-             :amount amount}]}))
+    (utility/assoc-some
+     {:idempotency-key idempotency-key
+      :transaction-type :transaction-type-outbound-transfer
+      :currency currency
+      :legs [{:account-id debtor-account-id
+              :balance-type :balance-type-default
+              :balance-status :balance-status-posted
+              :side :leg-side-debit
+              :amount amount}
+             {:account-id internal-account-id
+              :balance-type :balance-type-suspense
+              :balance-status :balance-status-posted
+              :side :leg-side-credit
+              :amount amount}]}
+     :reference
+     reference)))
 
 (defn new-outbound-payment
   [data transaction-id]
@@ -89,19 +97,21 @@
                 currency amount reference]}
         data
         now (System/currentTimeMillis)]
-    {:payment-id (utility/generate-id "pmt")
-     :idempotency-key idempotency-key
-     :scheme scheme
-     :debtor-account-id debtor-account-id
-     :creditor-bban creditor-bban
-     :creditor-name creditor-name
-     :currency currency
-     :amount amount
-     :payment-status :outbound-payment-status-pending
-     :transaction-id transaction-id
-     :reference reference
-     :created-at now
-     :updated-at now}))
+    (utility/assoc-some
+     {:payment-id (utility/generate-id "pmt")
+      :idempotency-key idempotency-key
+      :scheme scheme
+      :debtor-account-id debtor-account-id
+      :creditor-bban creditor-bban
+      :creditor-name creditor-name
+      :currency currency
+      :amount amount
+      :payment-status :outbound-payment-status-pending
+      :transaction-id transaction-id
+      :created-at now
+      :updated-at now}
+     :reference
+     reference)))
 
 (defn completed-outbound-payment
   [payment]
@@ -116,13 +126,15 @@
                 reference]}
         data
         now (System/currentTimeMillis)]
-    {:payment-id (utility/generate-id "pmt")
-     :idempotency-key idempotency-key
-     :debtor-account-id debtor-account-id
-     :creditor-account-id creditor-account-id
-     :currency currency
-     :amount amount
-     :transaction-id transaction-id
-     :reference reference
-     :created-at now
-     :updated-at now}))
+    (utility/assoc-some
+     {:payment-id (utility/generate-id "pmt")
+      :idempotency-key idempotency-key
+      :debtor-account-id debtor-account-id
+      :creditor-account-id creditor-account-id
+      :currency currency
+      :amount amount
+      :transaction-id transaction-id
+      :created-at now
+      :updated-at now}
+     :reference
+     reference)))

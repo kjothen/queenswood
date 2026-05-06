@@ -5,6 +5,7 @@
     [com.repldriven.mono.bank-api.payee-check.handlers :as handlers]
     [com.repldriven.mono.bank-api.payee-check.queries :as queries]
     [com.repldriven.mono.bank-api.schema :refer [ErrorResponse]]
+    [com.repldriven.mono.bank-api.payee-check.links :as links]
     [com.repldriven.mono.bank-api.shared.parameters :as shared.parameters]))
 
 (def ^:private list-query-schema
@@ -16,7 +17,7 @@
     [""
      {:get {:summary "List payee checks"
             :openapi {:operationId "ListPayeeChecks"
-                      :parameters shared.parameters/ref-page}
+                      :parameters ^:replace [shared.parameters/ref-page]}
             :parameters {:query list-query-schema}
             :responses {200 {:body [:ref "PayeeCheckList"]}}
             :handler queries/list-checks}
@@ -24,7 +25,8 @@
              :openapi {:operationId "CreatePayeeCheck"
                        :requestBody {:required true}}
              :parameters {:body [:ref "PayeeCheckRequest"]}
-             :responses {201 {:body [:ref "PayeeCheck"]}}
+             :responses {201 {:body [:ref "PayeeCheck"]
+                              :openapi {:links links/from-check}}}
              :handler handlers/create-check}}]
     ["/{check-id}"
      {:parameters {:path {:check-id [:ref "CheckId"]}}}

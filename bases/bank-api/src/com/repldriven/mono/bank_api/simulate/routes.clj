@@ -18,7 +18,9 @@
       {:post {:summary "Simulate an inbound transfer"
               :openapi {:operationId "SimulateInboundTransfer"
                         :requestBody {:required true}
-                        :parameters shared.parameters/ref-idempotency-key}
+                        :parameters ^:replace
+                                    [shared.parameters/ref-org-id
+                                     shared.parameters/ref-idempotency-key]}
               :parameters {:body [:ref "SimulateInboundTransferRequest"]}
               :interceptors [telemetry/require-idempotency-key]
               :responses {200 {:body [:ref
@@ -30,7 +32,9 @@
       {:post {:summary "Accrue daily interest"
               :openapi {:operationId "SimulateAccrue"
                         :requestBody {:required true}
-                        :parameters shared.parameters/ref-idempotency-key}
+                        :parameters ^:replace
+                                    [shared.parameters/ref-org-id
+                                     shared.parameters/ref-idempotency-key]}
               :parameters {:body [:ref "SimulateInterestRequest"]}
               :interceptors [telemetry/require-idempotency-key]
               :responses {200 {:body [:ref
@@ -42,7 +46,9 @@
       {:post {:summary "Capitalize monthly interest"
               :openapi {:operationId "SimulateCapitalize"
                         :requestBody {:required true}
-                        :parameters shared.parameters/ref-idempotency-key}
+                        :parameters ^:replace
+                                    [shared.parameters/ref-org-id
+                                     shared.parameters/ref-idempotency-key]}
               :parameters {:body [:ref "SimulateInterestRequest"]}
               :interceptors [telemetry/require-idempotency-key]
               :responses {200 {:body [:ref
