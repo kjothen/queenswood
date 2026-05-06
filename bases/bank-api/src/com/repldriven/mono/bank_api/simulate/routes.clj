@@ -29,7 +29,7 @@
                                               #'BalanceNotFound])}
               :handler handlers/inbound-transfer}}]
      ["/accrue"
-      {:post {:summary "Accrue daily interest"
+      {:post {:summary "Accrue interest"
               :openapi {:operationId "SimulateAccrue"
                         :requestBody {:required true}
                         :parameters ^:replace
@@ -43,7 +43,7 @@
                                               #'SettlementAccountNotFound])}
               :handler handlers/accrue}}]
      ["/capitalize"
-      {:post {:summary "Capitalize monthly interest"
+      {:post {:summary "Capitalize interest"
               :openapi {:operationId "SimulateCapitalize"
                         :requestBody {:required true}
                         :parameters ^:replace
