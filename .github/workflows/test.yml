@@ -131,30 +131,27 @@ jobs:
           path: target/test-results/**/*.xml
           retention-days: 7
 
-      # Coverage runs only for the per-service matrix entries. The
-      # `dev` entry tests dev-only bricks (bank-test-scenarios,
-      # bank-monolith, bank-test-model, bank-test-projections) which
-      # are test fixtures — production bricks already get coverage
-      # via the per-service runs. Polylith also writes coverage to
-      # `target/coverage/development/` (project NAME) rather than
-      # `target/coverage/dev/` (alias), so the path here wouldn't
-      # match anyway.
+      # Polylith writes coverage to `target/coverage/<project-name>/`
+      # using the project NAME, not its alias. For the dev matrix
+      # entry the path is therefore `target/coverage/development/`,
+      # not `target/coverage/dev/`. The ternary keeps a single
+      # workflow expression for every entry.
       - name: Report coverage
-        if: always() && matrix.project != 'dev'
+        if: always()
         uses: zgosalvez/github-actions-report-lcov@v7.0.8
         with:
-          coverage-files: target/coverage/${{ matrix.project }}/lcov.info
+          coverage-files: target/coverage/${{ matrix.project == 'dev' && 'development' || matrix.project }}/lcov.info
           minimum-coverage: 50
           github-token: ${{ secrets.GITHUB_TOKEN }}
           update-comment: true
           title-prefix: "[${{ matrix.project }}]"
 
       - name: Upload coverage report
-        if: always() && matrix.project != 'dev'
+        if: always()
         uses: actions/upload-artifact@v7
         with:
           name: coverage-report-${{ matrix.project }}
-          path: target/coverage/${{ matrix.project }}/
+          path: target/coverage/${{ matrix.project == 'dev' && 'development' || matrix.project }}/
           retention-days: 7
 
   helm:
