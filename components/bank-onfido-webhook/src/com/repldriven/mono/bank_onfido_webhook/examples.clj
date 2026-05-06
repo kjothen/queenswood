@@ -1,7 +1,4 @@
-(ns com.repldriven.mono.bank-onfido-webhook.examples
-  "Worked examples for the Onfido-shaped webhook payloads. Used by
-  Malli `:json-schema/example` annotations so the OpenAPI spec
-  surfaces realistic samples.")
+(ns com.repldriven.mono.bank-onfido-webhook.examples)
 
 (def CheckCompletedObject
   {:id "9b6e8d8f-5b9a-4f4f-9f4d-1234567890ab"

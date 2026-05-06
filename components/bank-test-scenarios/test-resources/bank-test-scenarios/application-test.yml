@@ -1,0 +1,12 @@
+system:
+  pulsar: !include bank-test-scenarios/pulsar-test.yml
+  message-bus: !include bank-test-scenarios/message-bus-test.yml
+  fdb: !include bank/fdb-test.yml
+  avro: !include avro/avro-test.yml
+  policies: !include bank/policy-test.yml
+  organizations: !include bank/organization-test.yml
+  idv: !include bank/idv-test.yml
+  parties: !include bank-test-scenarios/party-test.yml
+  onfido-simulator-server: !include bank-test-scenarios/onfido-simulator-test.yml
+  onfido-adapter-server: !include bank-test-scenarios/onfido-adapter-server-test.yml
+  onfido-adapter: !include bank-test-scenarios/onfido-adapter-test.yml

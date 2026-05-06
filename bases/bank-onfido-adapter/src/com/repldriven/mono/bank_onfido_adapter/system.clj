@@ -115,33 +115,30 @@
     (.setName "onfido-webhook-re-register")
     (.start)))
 
+(def ^:private readiness
+  {:system/start (fn [{:system/keys [instance]}] (or instance (atom false)))
+   :system/instance-schema some?})
+
 (def ^:private registrar
   {:system/start
    (fn [{:system/keys [config instance]}]
      (or instance
-         (let [{:keys [onfido-url adapter-url]} config
-               ready? (atom false)]
+         (let [{:keys [onfido-url adapter-url readiness]} config]
            (log/info "Registering Onfido webhook (async)"
                      {:onfido onfido-url :adapter adapter-url})
-           ;; Run registration in a future so system/start returns
-           ;; promptly. The returned `ready-fn` closure exposes the
-           ;; atom to the API's /ready route via jetty-adapter
-           ;; config; pods stay 503 until registration succeeds.
-           ;; After the initial registration succeeds, kick off a
-           ;; daemon thread that polls the simulator and re-registers
-           ;; if our URL has dropped from its registry.
            (future
             (let [res (register-webhook-with-retry onfido-url adapter-url)]
               (when (ok-response? res)
-                (reset! ready? true)
+                (reset! readiness true)
                 (log/info "Onfido webhook registration complete; pod ready")
                 (start-re-register-loop onfido-url
                                         adapter-url
                                         re-register-poll-ms))))
-           (fn [] @ready?))))
+           :running)))
    :system/config {:onfido-url system/required-component
-                   :adapter-url system/required-component}
-   :system/instance-schema fn?})
+                   :adapter-url system/required-component
+                   :readiness system/required-component}
+   :system/instance-schema keyword?})
 
 (def ^:private command-processor
   {:system/start (fn [{:system/keys [config instance]}]
@@ -151,5 +148,6 @@
    :system/instance-schema some?})
 
 (system/defcomponents :onfido-adapter
-                      {:registrar registrar
+                      {:readiness readiness
+                       :registrar registrar
                        :command-processor command-processor})

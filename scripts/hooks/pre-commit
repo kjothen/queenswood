@@ -13,3 +13,20 @@ if [ -n "$files" ]; then
   echo "Linting Clojure files..."
   echo "$files" | xargs clojure -M:lint/clj-kondo --lint
 fi
+
+helm_files=$(git diff --cached --name-only --diff-filter=ACM \
+  | grep -E '^infra/helm/queenswood/' || true)
+
+if [ -n "$helm_files" ]; then
+  # Skip `helm dependency update` — it adds ~5s of network I/O. The
+  # developer's local `charts/` is populated by any prior `just helm-*`
+  # recipe; if it isn't, helm template will fail fast with a clear
+  # "missing in charts/ directory" message and they can run
+  # `just helm-validate` once to sync.
+  echo "Validating Helm chart..."
+  helm lint infra/helm/queenswood --set secrets.adminApiKey=lint >/dev/null
+  helm template queenswood infra/helm/queenswood \
+    --set image.tag=dev \
+    --set secrets.adminApiKey=template-render \
+    | kubeconform -strict -ignore-missing-schemas -summary
+fi

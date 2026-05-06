@@ -1,4 +1,10 @@
 (ns com.repldriven.mono.bank-cash-account.interface
+  "Cash account lifecycle (open, close, lookup) for organizations.
+  Open allocates payment addresses, derives account-type from the
+  party, validates the chosen product version, and seeds the
+  product's balance buckets. Status transitions are driven via the
+  changelog watcher; `seed-opened-account` and `seed-closed-account`
+  are admin/test shortcuts that bypass it."
   (:require
     com.repldriven.mono.bank-cash-account.system
 
@@ -9,69 +15,96 @@
     [com.repldriven.mono.error.interface :refer [let-nom>]]))
 
 (defn new-account
-  "Opens a cash account with balances. Returns account map or
-  anomaly. opts supports `:policies` to override policy
-  resolution for the capability check."
+  "Open a cash account, seeding the product's balance buckets.
+  Returns the account map (`:cash-account-status-opening`) or an
+  anomaly.
+
+  Args:
+  - txn: FDB transaction or db handle.
+  - data: map with `:organization-id`, `:party-id`, `:product-id`,
+    `:currency`, `:name`.
+  - opts (optional): map; `:policies` overrides policy resolution
+    for the capability and limit checks."
   ([txn data]
    (core/open-account txn data))
   ([txn data opts]
    (core/open-account txn data opts)))
 
 (defn get-account
-  "Loads a single cash account. Returns the account map,
-  nil, or anomaly. opts supports :embed-balances,
-  :embed-transactions."
+  "Load a single cash account. Returns the account map or a
+  `:cash-account/not-found` rejection anomaly.
+
+  Args:
+  - txn: FDB transaction or db handle.
+  - org-id: owning organization id.
+  - account-id: account id.
+  - opts (optional): map; `:embed-balances` and
+    `:embed-transactions` enrich the result."
   ([txn org-id account-id]
    (core/get-account txn org-id account-id))
   ([txn org-id account-id opts]
    (core/get-account txn org-id account-id opts)))
 
 (defn get-accounts
-  "Lists cash accounts for an organization. Returns
-  {:accounts [maps] :before id|nil :after id|nil} or
-  anomaly. opts supports :after, :before, :limit,
-  :embed-balances, :embed-transactions."
+  "List cash accounts for an organization. Returns
+  `{:accounts [...] :before id|nil :after id|nil}` or an anomaly.
+
+  Args:
+  - txn: FDB transaction or db handle.
+  - org-id: owning organization id.
+  - opts (optional): map; `:after`, `:before`, `:limit`,
+    `:embed-balances`, `:embed-transactions`."
   ([txn org-id]
    (core/get-accounts txn org-id))
   ([txn org-id opts]
    (core/get-accounts txn org-id opts)))
 
 (defn get-account-by-type
-  "Returns the first account matching the given org-id and
-  product-type, or nil. Uses compound secondary index;
-  caller should expect at most one result."
+  "Return the first account matching the given org and product-type,
+  or nil. Caller should expect at most one result.
+
+  Args:
+  - txn: FDB transaction or db handle.
+  - org-id: owning organization id.
+  - product-type: product-type keyword."
   [txn org-id product-type]
   (core/get-account-by-type txn org-id product-type))
 
 (defn get-account-by-bban
-  "Returns account matching the given BBAN.
-  Uses secondary index."
+  "Return the account matching the given BBAN, or nil.
+
+  Args:
+  - txn: FDB transaction or db handle.
+  - bban: basic bank account number string."
   [txn bban]
   (core/get-account-by-bban txn bban))
 
 (defn close-account
-  "Closes an account. Returns the updated (`:closing`) account or
-  anomaly. opts supports `:policies` to override policy resolution
-  for the capability check."
+  "Close an account. Returns the updated account
+  (`:cash-account-status-closing`) or an anomaly.
+
+  Args:
+  - txn: FDB transaction or db handle.
+  - data: map with `:organization-id` and `:account-id`.
+  - opts (optional): map; `:policies` overrides policy resolution."
   ([txn data]
    (core/close-account txn data))
   ([txn data opts]
    (core/close-account txn data opts)))
 
 (defn seed-opened-account
-  "Test/admin shortcut: flips an account from
+  "Test/admin shortcut: flip an account from
   `:cash-account-status-opening` to `:cash-account-status-opened`
   by writing the transition straight to the store, bypassing the
-  changelog-watcher that runs the transition in production.
+  changelog watcher that runs the transition in production. Same
+  spirit as `bank-party/seed-active-party`. Delete when a
+  watcher-driven test harness lands. Returns the opened account or
+  an anomaly.
 
-  Same spirit as `bank-party/seed-active-party`: there's no
-  in-process watcher in the scenario-runner test system yet, so
-  freshly-opened accounts stay in `:opening` and downstream
-  features that filter on `:opened` (interest accrual, etc.)
-  silently skip them. Delete this when a watcher-driven test
-  harness lands.
-
-  Returns the opened account or anomaly."
+  Args:
+  - txn: FDB transaction or db handle.
+  - organization-id: owning organization id.
+  - account-id: account id."
   [txn organization-id account-id]
   (let-nom>
     [account (store/get-account txn organization-id account-id)
@@ -84,10 +117,15 @@
     saved))
 
 (defn seed-closed-account
-  "Test/admin shortcut: flips an account from
+  "Test/admin shortcut: flip an account from
   `:cash-account-status-closing` to `:cash-account-status-closed`,
-  bypassing the changelog-watcher. Counterpart to
-  `seed-opened-account`. Returns the closed account or anomaly."
+  bypassing the changelog watcher. Counterpart to
+  `seed-opened-account`. Returns the closed account or an anomaly.
+
+  Args:
+  - txn: FDB transaction or db handle.
+  - organization-id: owning organization id.
+  - account-id: account id."
   [txn organization-id account-id]
   (let-nom>
     [account (store/get-account txn organization-id account-id)

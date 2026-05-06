@@ -5,11 +5,6 @@
     [com.repldriven.mono.error.interface :as error :refer [let-nom>]]
     [com.repldriven.mono.system.interface :as system]))
 
-;; Idempotent in-process seeder. On first start it provisions the
-;; organization (with API key, party, product, accounts); subsequent
-;; starts (or any start where an organization of `type` already
-;; exists) re-enrich and return the existing record. Used by
-;; bank-monolith and the bank-bootstrap-service Job.
 (def ^:private organization
   {:system/start
    (fn [{:system/keys [config instance]}]
@@ -33,10 +28,6 @@
                    :policy system/required-component}
    :system/instance-schema map?})
 
-;; Read-only discovery of an existing organization from FDB. Used
-;; by services that run after bank-bootstrap has seeded the
-;; internal organization. Fails on start if no organization of
-;; `type` exists.
 (def ^:private organization-from-fdb
   {:system/start
    (fn [{:system/keys [config instance]}]

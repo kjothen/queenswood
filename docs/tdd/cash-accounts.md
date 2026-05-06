@@ -4,9 +4,9 @@
 
 A **cash account** is what a party holds and transacts
 through. It's pinned to a published version of a product
-([cash-account-products.md](cash-account-products.md)), set
-in a specific currency, owned by an active party
-([parties.md](parties.md)), and addressable via one or more
+per [cash-account-products.md](cash-account-products.md),
+set in a specific currency, owned by an active party per
+[parties.md](parties.md), and addressable via one or more
 payment-address schemes (today: SCAN — UK Sort Code +
 Account Number). Opening and closing are watcher-driven
 lifecycle transitions; balances and transactions live in
@@ -23,11 +23,11 @@ opening and closing flow; watcher-driven status transitions;
 SCAN address generation; lookups (by id, by BBAN, by type);
 balance-bucket creation at open time.
 
-Out of scope: balances themselves (covered in
-[transactions-and-balances.md](transactions-and-balances.md));
-the legs that affect them
-([payments.md](payments.md),
-[interest.md](interest.md));
+Out of scope: balances themselves, covered in
+[transactions-and-balances.md](transactions-and-balances.md);
+the legs that affect them, covered in
+[payments.md](payments.md) and
+[interest.md](interest.md);
 the payment-address scheme details (FPS / SCAN / BBAN
 specifics belong in the payments TDD).
 
@@ -63,8 +63,8 @@ The lifecycle is two-step at both ends. Opening writes the
 account in `:opening` status; a changelog watcher then
 transitions it to `:opened`. Closing writes `:closing`; the
 same watcher transitions to `:closed`. The pattern is the
-same reactive choreography parties use for IDV
-([parties.md](parties.md)) — and exactly the use case
+same reactive choreography parties use for IDV — see
+[parties.md](parties.md) — and exactly the use case
 ADR-0008 describes.
 
 ## Proposed Solution
@@ -79,9 +79,9 @@ ADR-0008 describes.
   account-id; secondary indices on BBAN and on (org,
   product-type) for lookups.
 - `core.clj` — orchestration of open, get, list.
-- `commands.clj` — command-pipeline handlers (the brick is
-  command-processed; see
-  [transaction-processing.md](transaction-processing.md)).
+- `commands.clj` — command-pipeline handlers; the brick is
+  command-processed, see
+  [transaction-processing.md](transaction-processing.md).
 - `watcher.clj` — the changelog handler that flips
   opening → opened and closing → closed.
 - `validation.clj` — Malli schemas for incoming data.
@@ -231,8 +231,8 @@ Three indexed reads on the store:
   to identify the creditor.
 - **`get-account-by-type`** by `(organization-id,
   product-type)` — used by the interest brick to find the
-  organisation's settlement account
-  ([interest.md](interest.md)).
+  organisation's settlement account; see
+  [interest.md](interest.md).
 
 The `get-account-by-type` index is documented as "caller
 should expect at most one result" — it's the bank's *one*

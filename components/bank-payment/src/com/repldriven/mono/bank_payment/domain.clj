@@ -3,7 +3,6 @@
     [com.repldriven.mono.utility.interface :as utility]))
 
 (defn internal-payment->transaction
-  "Builds the transaction data for an internal payment."
   [data]
   (let [{:keys [idempotency-key debtor-account-id
                 creditor-account-id currency amount
@@ -25,10 +24,6 @@
              :amount amount}]}))
 
 (defn inbound-payment->transaction
-  "Builds the transaction data for an inbound payment.
-
-  Debits the settlement (suspense) account and credits
-  the customer account."
   [data creditor-account-id internal-account-id]
   (let [{:keys [scheme-transaction-id currency amount
                 reference]}
@@ -49,7 +44,6 @@
              :amount amount}]}))
 
 (defn new-inbound-payment
-  "Creates a new inbound payment map."
   [data creditor-account-id transaction-id]
   (let [{:keys [scheme-transaction-id end-to-end-id scheme
                 currency amount debtor-name reference]}
@@ -69,10 +63,6 @@
      :updated-at now}))
 
 (defn outbound-payment->transaction
-  "Builds the transaction data for an outbound payment.
-
-  Debits the customer account and credits the settlement
-  (suspense) account."
   [data internal-account-id]
   (let [{:keys [idempotency-key debtor-account-id
                 currency amount reference]}
@@ -93,7 +83,6 @@
              :amount amount}]}))
 
 (defn new-outbound-payment
-  "Creates a new outbound payment map in pending status."
   [data transaction-id]
   (let [{:keys [idempotency-key debtor-account-id
                 creditor-bban creditor-name scheme
@@ -121,7 +110,6 @@
          :updated-at (System/currentTimeMillis)))
 
 (defn new-internal-payment
-  "Creates a new internal payment map."
   [data transaction-id]
   (let [{:keys [idempotency-key debtor-account-id
                 creditor-account-id currency amount

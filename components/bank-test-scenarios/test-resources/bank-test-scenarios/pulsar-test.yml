@@ -118,7 +118,7 @@ consumers: !system/component
     conf:
       cryptoFailureAction: !pulsar/crypto-failure-action CONSUME
       schema: !pulsar/schema AUTO_CONSUME
-      subscriptionName: bank-scenario-runner-idv-command
+      subscriptionName: bank-test-scenarios-idv-command
       subscriptionType: !pulsar/subscription-type Shared
       topicNames:
         ["persistent://tenant-1/namespace-1/topic-idv-command"]
@@ -129,7 +129,7 @@ consumers: !system/component
     conf:
       cryptoFailureAction: !pulsar/crypto-failure-action CONSUME
       schema: !pulsar/schema AUTO_CONSUME
-      subscriptionName: bank-scenario-runner-idv-command-response
+      subscriptionName: bank-test-scenarios-idv-command-response
       subscriptionType: !pulsar/subscription-type Shared
       topicNames:
         ["persistent://tenant-1/namespace-1/topic-idv-command-response"]
@@ -140,7 +140,7 @@ consumers: !system/component
     conf:
       cryptoFailureAction: !pulsar/crypto-failure-action CONSUME
       schema: !pulsar/schema AUTO_CONSUME
-      subscriptionName: bank-scenario-runner-idv-event
+      subscriptionName: bank-test-scenarios-idv-event
       subscriptionType: !pulsar/subscription-type Shared
       topicNames:
         ["persistent://tenant-1/namespace-1/topic-idv-event"]

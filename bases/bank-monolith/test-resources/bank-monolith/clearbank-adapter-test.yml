@@ -1,13 +1,11 @@
+readiness: !system/component
+  system/component-kind: clearbank-adapter/readiness
+
 registrar: !system/component
   system/component-kind: clearbank-adapter/registrar
   simulator-url: !system/ref clearbank-simulator-server.http-url
-  # Hardcoded. `!system/ref clearbank-adapter-server.http-url`
-  # would close a donut.system cycle: jetty-adapter waits on
-  # registrar (via ready-fn), registrar waits on http-url, http-url
-  # waits on jetty-adapter. In real deployments this is `!env
-  # CLEARBANK_ADAPTER_PUBLIC_URL`; in monolith mode the dev profile
-  # pins the port to 8082.
-  webhook-url: http://localhost:8082
+  webhook-url: !system/ref clearbank-adapter-server.http-url
+  readiness: !system/ref clearbank-adapter.readiness
   webhooks:
     - type: TransactionSettled
       path: /webhooks/transaction-settled

@@ -40,8 +40,6 @@
                                  :balance-status :balance-status-posted}]})
 
 (defn- open-accounts
-  "Opens one cash account per currency. Returns vector of
-  accounts or anomaly."
   [txn org-id party-id product-id product-name currencies policies]
   (reduce (fn [acc currency]
             (let [result (cash-accounts/new-account
@@ -59,8 +57,6 @@
           currencies))
 
 (defn- bind-policies
-  "Binds each policy to the organization. Returns nil or
-  the first anomaly encountered."
   [txn org-id policies]
   (reduce (fn [_ {:keys [policy-id]}]
             (let [result (policy/new-binding
@@ -73,8 +69,6 @@
           policies))
 
 (defn- enrich-accounts
-  "Attaches balances to each account. Returns enriched
-  accounts or anomaly."
   [txn accounts]
   (reduce (fn [acc account]
             (let [result (balances/get-balances txn (:account-id account))]
@@ -85,10 +79,6 @@
           accounts))
 
 (defn- enrich
-  "Enriches a flat organization map with party, accounts
-  (with balances), and api-key. Returns rich organization
-  map or anomaly. key-secret is included only when freshly
-  minted."
   [txn org key-secret]
   (let [org-id (:organization-id org)]
     (let-nom>
@@ -107,19 +97,12 @@
        (assoc :key-secret key-secret)))))
 
 (defn get-organization
-  "Enriches a flat organization map with party, accounts
-  (with balances), and api-key. Returns rich organization
-  map or anomaly."
   ([txn org]
    (get-organization txn org nil))
   ([txn org key-secret]
    (store/transact txn (fn [txn] (enrich txn org key-secret)))))
 
 (defn get-organizations
-  "Lists organizations enriched with party, accounts, and
-  api-key. Returns sequence of rich organization maps or
-  anomaly. opts supports :limit and :order (defaults to
-  `:desc` via the store)."
   ([txn] (get-organizations txn nil))
   ([txn opts]
    (let-nom> [orgs (store/get-organizations txn opts)]
@@ -132,28 +115,16 @@
              orgs))))
 
 (defn get-organizations-by-type
-  "Lists organizations matching the given type. Returns
-  a sequence of organization maps or anomaly."
   [txn org-type]
   (store/get-organizations-by-type txn org-type))
 
 (defn- counts
-  "Builds the organization aggregates map for the limit checks
-  in `domain/new-organization`. Each entry is keyed by the set
-  of dimensions the count is grouped on."
   [txn org-type]
   (let-nom>
     [total (store/count-organizations-by-type txn org-type)]
     {:organization {#{:type} total}}))
 
 (defn new-organization
-  "Creates an organization with API key, party, product, and
-  one cash account per currency. Capability and limit checks
-  use the effective platform policies; the chosen `tier` (a
-  string identifying a `tier=<name>` policy label) selects the
-  tier-specific policies that get bound to the new
-  organization. opts supports `:policies` to override the
-  platform policies used for the checks."
   ([txn org-name org-type org-status tier currencies]
    (new-organization txn
                      org-name

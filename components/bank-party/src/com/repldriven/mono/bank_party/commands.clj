@@ -9,8 +9,6 @@
     [com.repldriven.mono.error.interface :as error :refer [let-nom>]]))
 
 (defn- ->response
-  "Converts a protobuf record to an ACCEPTED response.
-  Returns anomalies unchanged for the processor to handle."
   [config result]
   (if (error/anomaly? result)
     result
@@ -19,11 +17,6 @@
        :payload (avro/serialize (schemas "party") (schema/pb->Party result))})))
 
 (def ^:private command-handlers
-  "Map of command-name → `(fn [config data] response)`. Lifting the
-  registry out of the dispatcher's `case` lets unknown-command
-  rejection fire BEFORE schema lookup or Avro deserialization, so
-  a pure unit test can exercise the rejection path without
-  spinning up the system."
   {"create-party" (fn [config data]
                     (->response config (core/new-party config data)))})
 

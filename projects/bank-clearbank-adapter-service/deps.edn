@@ -30,7 +30,6 @@
   component/bank-transaction {:local/root "../../components/bank-transaction"}
   component/bank-organization {:local/root "../../components/bank-organization"}
   component/bank-api-key {:local/root "../../components/bank-api-key"}
-  component/bank-payee-check {:local/root "../../components/bank-payee-check"}
   component/bank-schema {:local/root "../../components/bank-schema"}
   component/avro {:local/root "../../components/avro"}
   component/cli {:local/root "../../components/cli"}

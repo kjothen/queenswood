@@ -1,7 +1,11 @@
+readiness: !system/component
+  system/component-kind: onfido-adapter/readiness
+
 registrar: !system/component
   system/component-kind: onfido-adapter/registrar
   onfido-url: !system/ref onfido-simulator-server.http-url
   adapter-url: !system/ref onfido-adapter-server.http-url
+  readiness: !system/ref onfido-adapter.readiness
 
 command-processor-impl: !system/component
   system/component-kind: onfido-adapter/command-processor

@@ -14,8 +14,6 @@
 (def uniqueness-violation? fdb/uniqueness-violation?)
 
 (defn save-party
-  "Saves party and writes a changelog entry. Returns the pb
-  record or anomaly."
   [txn party changelog]
   (fdb/transact
    txn
@@ -32,7 +30,6 @@
    "Failed to save party"))
 
 (defn save-person-identification
-  "Saves a person identification. Returns nil or anomaly."
   [txn person-identification]
   (fdb/transact
    txn
@@ -44,8 +41,6 @@
    "Failed to save person identification"))
 
 (defn save-party-national-identifier
-  "Saves a party national identifier. Returns nil or
-  anomaly."
   [txn party-national-identifier]
   (fdb/transact
    txn
@@ -57,8 +52,6 @@
    "Failed to save party national identifier"))
 
 (defn get-party
-  "Loads a party by org-id and party-id. Returns the
-  party map or rejection anomaly if not found."
   [txn org-id party-id]
   (fdb/transact
    txn
@@ -75,10 +68,6 @@
    "Failed to load party"))
 
 (defn get-parties
-  "Lists parties for an organization. Returns
-  {:parties [maps] :before id|nil :after id|nil} or
-  anomaly. opts supports :after, :before, :limit, :order
-  (`:desc` default — clients show newest-first)."
   ([txn org-id]
    (get-parties txn org-id nil))
   ([txn org-id opts]

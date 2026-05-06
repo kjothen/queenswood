@@ -7,9 +7,6 @@
     [com.repldriven.mono.processor.interface :as processor]))
 
 (defn- idv->avro
-  "Normalizes the IDV map for Avro: :completed-at is
-  nullable in the Avro schema, so proto's 0 default (or
-  an unset key) becomes nil."
   [idv]
   (update idv :completed-at (fn [t] (when (and t (pos? t)) t))))
 
@@ -22,11 +19,6 @@
        :payload (avro/serialize (schemas "idv") (idv->avro result))})))
 
 (def ^:private command-handlers
-  "Map of command-name → `(fn [config data] response)`. Lifting the
-  registry out of the dispatcher's `case` lets unknown-command
-  rejection fire BEFORE schema lookup or Avro deserialization, so
-  a pure unit test can exercise the rejection path without
-  spinning up the system."
   {"initiate-idv" (fn [config data]
                     (->response config (core/initiate config data)))
    "get-idv" (fn [config data] (->response config (core/get config data)))})

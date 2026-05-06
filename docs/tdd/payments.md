@@ -16,10 +16,10 @@ In scope: the `bank-payment` brick, the
 the three payment flows, settlement via webhook → event →
 event processor.
 
-Out of scope: the underlying double-entry mechanics (see
-[transactions-and-balances.md](transactions-and-balances.md));
-idempotency mechanics
-([idempotency.md](idempotency.md)); fee semantics; the
+Out of scope: the underlying double-entry mechanics, see
+[transactions-and-balances.md](transactions-and-balances.md);
+idempotency mechanics, see
+[idempotency.md](idempotency.md); fee semantics; the
 specific FPS scheme rules and messages (ClearBank documents
 these).
 
@@ -57,9 +57,10 @@ The two settlement patterns:
   pending bucket is the "intent registered, value not yet
   spendable" state.
 
-The choreography sits on the message-bus
-([ADR-0003](../adr/0003-message-bus-abstraction.md)) and Avro
-payloads ([ADR-0004](../adr/0004-avro-for-message-payloads.md)).
+The choreography sits on the message-bus per
+[ADR-0003](../adr/0003-message-bus-abstraction.md) and Avro
+payloads per
+[ADR-0004](../adr/0004-avro-for-message-payloads.md).
 ClearBank itself is interfaced through a dedicated adapter
 base, with a simulator for development and tests.
 

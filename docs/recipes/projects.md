@@ -16,16 +16,29 @@ handle that).
 ### File layout
 
 ```
-projects/<project-name>/
+projects/<project-name>-service/
   deps.edn
-  resources/                  ; optional, deployment-scoped
-    logback-test.xml          ; (currently) log filtering for tests
+  resources/                  ; deployment-scoped
+    application.yml           ; the system definition the base loads
+    logback.xml               ; production log config
+    logback-test.xml          ; test log config
+    bank/                     ; per-service domain config (optional)
+      <domain>.yml            ; e.g. cash-account.yml on the
+                              ;      cash-account processor service
 ```
 
-The system YAML config the base loads at startup does **not**
-live here. It lives in the relevant component's or base's
-`test-resources/` (or `resources/`) folder, loaded by classpath
-URL — for example `classpath:bank-monolith/application-test.yml`.
+For deployable services, the system YAML the base loads at
+startup lives **here** — the runtime container picks it up
+via `-c classpath:application.yml -p default`. The
+`bank/<domain>.yml` files are domain-scoped includes
+referenced from `application.yml` for processor services.
+
+The test-only fall-through is different: the `bank-monolith`
+base (which bundles every component for in-process
+end-to-end tests) loads its config from
+`bases/bank-monolith/test-resources/bank-monolith/application-test.yml`,
+not from a project's `resources/`. See
+[system-configurations.md](system-configurations.md).
 
 ### deps.edn pattern
 
@@ -105,32 +118,54 @@ Record Layer at runtime. This kind of pin lives in the project's
 **MAY:**
 
 - Projects have a `resources/` folder for deployment-scoped
-  resources such as logback configuration. The system YAML
-  config the base loads at startup does not belong here.
+  resources: `application.yml` (the system definition),
+  `logback.xml` and `logback-test.xml`, and an optional
+  `bank/` subfolder of domain-scoped includes referenced
+  from `application.yml`.
 
 ## Discussion
 
 Projects exist so the same components can be assembled into
-different deployables. The `bank-web` project pulls in the
-bank-api base for an HTTP-only service; `bank-monolith` pulls
-in several bases for an everything-in-one process. The
-components are reused; only the project-level shape differs.
+different deployables. Today's deployables come in three
+shapes:
 
-Keeping projects code-free has two benefits. First, a project
-review reads like a deployment manifest, not a programming
-exercise. Second, library version pins live in one obvious
-place per deployable; a component never has to know which
-project it's running in.
+- **HTTP services** — `bank-api-service`, the
+  `bank-clearbank-{adapter,simulator}-service` pair, the
+  `bank-onfido-{adapter,simulator}-service` pair, each
+  pulling in its corresponding base.
+- **Pulsar processor services** — one per command
+  processor: cash-account, party, payment, interest,
+  transaction, idv.
+- **One-shots** — `bank-migrator-service` and
+  `bank-bootstrap-service` for the cold-start chain.
 
-The project's optional `resources/` folder is on the classpath
-at runtime and holds deployment-scoped resources — currently
-just `logback-test.xml` for log filtering. The system YAML
-configuration the base loads at startup is not here; it lives
-in the relevant component's or base's `resources/` or
-`test-resources/` folder and is loaded via a classpath URL
-(for example `classpath:bank-monolith/application-test.yml`).
-Profiles (`:dev`, `:test`, `:prod`) are encoded inside that
-YAML via `aero` `!profile` tags, not through separate files.
+Plus a test-only outlier: the `bank-monolith` base bundles
+every component into one in-process system for end-to-end
+tests. It has no corresponding deployable project; it's
+booted under Testcontainers from a test harness.
+
+Keeping projects code-free has two benefits. First, a
+project review reads like a deployment manifest, not a
+programming exercise. Second, library version pins live in
+one obvious place per deployable — a component never has to
+know which project it's running in.
+
+The project's `resources/` folder is on the classpath at
+runtime. For deployable services it holds `application.yml`
+(the system definition the base loads at startup, picked up
+via `-c classpath:application.yml -p default`),
+`logback.xml` for production log config, `logback-test.xml`
+for tests, and an optional `bank/` subfolder of
+domain-scoped includes that `application.yml` references.
+Profiles (`:dev`, `:test`, `:prod`) are encoded inside the
+YAML via `aero` `!profile` tags, not through separate
+files.
+
+The single shared Dockerfile parameterised by
+`PROJECT_NAME` makes the per-service split tractable —
+adding a service is a project, a base, and a chart entry,
+not a fresh image-build pipeline. See
+[deployment.md](deployment.md) for the full story.
 
 ## References
 
@@ -138,5 +173,7 @@ YAML via `aero` `!profile` tags, not through separate files.
 - [ADR-0007 — System-as-data](../adr/0007-system-as-data.md)
 - [bases.md](bases.md)
 - [components.md](components.md)
+- [deployment.md](deployment.md)
 - [system-components.md](system-components.md)
+- [system-configurations.md](system-configurations.md)
 - [Polylith documentation](https://polylith.gitbook.io/polylith)

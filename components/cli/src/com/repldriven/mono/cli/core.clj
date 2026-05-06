@@ -26,9 +26,6 @@
        (string/join \newline errors)))
 
 (defn validate-args
-  "Validate command line arguments. Either return a map indicating the program
-  should exit (with an error message, and optional ok status), or a map
-  indicating the action the program should take and the options provided."
   [program-name args]
   (let [{:keys [options errors summary]} (cli/parse-opts args cli-options)]
     (cond (:help options)
@@ -40,15 +37,7 @@
           {:options options})))
 
 (defn exit
-  "Logs `msg` and terminates the process. When `msg` is an anomaly,
-  it is rendered via `error/format-anomaly` so the kind, the payload
-  message, the underlying exception, and the captured stack trace
-  all reach the log instead of being collapsed to 'Unknown error'."
   [ok? msg]
   (let [text (if (error/anomaly? msg) (error/format-anomaly msg) (str msg))]
     (if ok? (log/info text) (log/error text))
     (System/exit (if ok? 0 1))))
-
-
-(comment
-  {:a "1" :b "2"})

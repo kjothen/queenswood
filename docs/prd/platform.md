@@ -171,18 +171,22 @@ their tier.
 sequenceDiagram
     participant T as Tenant engineer
     participant Q as Queenswood
+    participant I as IDV provider<br/>(or simulator)
     participant E as End customer<br/>(via tenant's app)
 
     E->>T: signs up with personal details
     T->>Q: register party (type=person, identifiers)
-    Q->>Q: party pending → identity check pending
-    Q->>Q: identity check accepted → party active
+    Q->>Q: party pending — IDV pending
+    Q->>I: submit identity check
+    I-->>Q: check completed
+    Q->>Q: IDV accepted — party active
     Q-->>T: party active and ready to hold accounts
 ```
 
 Person parties go through identity verification before they
-can transact. The check runs in the background; the tenant
-sees the active status the next time they read the party.
+can transact. The check runs in the background through an
+Onfido-shaped provider (or simulator); the tenant sees the
+active status the next time they read the party.
 
 ### 3. Account opening
 
@@ -253,9 +257,12 @@ days, so no pennies are lost over time.
 
 Things deliberately left unresolved or future work.
 
-- **Real identity-verification provider.** The IDV flow today
-  auto-accepts; production use needs a real provider
-  integration or a configurable simulator base.
+- **Production identity-verification provider.** The IDV
+  adapter speaks Onfido's HTTP API and runs against a
+  simulator today. Pointing it at production Onfido needs
+  real credentials, a production webhook URL, and signature
+  verification. The architecture is pluggable; the
+  production deployment isn't yet there.
 - **Real scheme adapter.** UK FPS settlement is wired through
   a simulator today; the production target is a clearing-bank
   partner with scheme API access. The architecture is

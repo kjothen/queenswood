@@ -15,11 +15,6 @@
         {:status "ACCEPTED" :payload payload}))))
 
 (def ^:private command-handlers
-  "Map of command-name → `(fn [config data] response)`. Lifting the
-  registry out of the dispatcher's `case` lets unknown-command
-  rejection fire BEFORE schema lookup or Avro deserialization, so
-  a pure unit test can exercise the rejection path without
-  spinning up the system."
   {"record-transaction" (fn [config data]
                           (->response config
                                       (core/record-transaction config data)))})

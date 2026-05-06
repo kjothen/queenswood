@@ -112,9 +112,14 @@ code, that code belongs in a component.
 
 Bases are the runnable parts of the system. The split between
 "base provides `-main` and bootstrap" and "project picks the
-components" lets the same code run in different deployments —
-the bank-api base for an HTTP-only project, the bank-monolith
-base for an everything-in-one project.
+components" lets the same code run in different deployments
+— a thin processor base for one-Pulsar-consumer-per-domain
+deployables, the `bank-api` base for the HTTP service, and
+the `bank-monolith` base (test-only) bundling every
+component into one in-process system for end-to-end tests
+under Testcontainers. See [deployment.md](deployment.md)
+for the per-service split that the production deployables
+follow.
 
 The no-base-depends-on-base rule keeps the dep graph clean. If
 two bases need shared logic, hoisting it into a component is the
@@ -134,6 +139,7 @@ contrast, can consolidate these into a single
 - [ADR-0001](../adr/0001-reuse-mono-as-upstream.md) — Reuse mono as upstream
 - [ADR-0007 — System-as-data](../adr/0007-system-as-data.md)
 - [components.md](components.md)
+- [deployment.md](deployment.md)
 - [projects.md](projects.md)
 - [system-components.md](system-components.md)
 - [Polylith documentation](https://polylith.gitbook.io/polylith)

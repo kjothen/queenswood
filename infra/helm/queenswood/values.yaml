@@ -180,17 +180,21 @@ pulsar:
     functions: false
     pulsar_manager: false
     toolset: true
-  # Skip the kube-prometheus-stack sub-subchart (Prometheus + Grafana
-  # + alerting) — adds ~3Gi of memory pressure unsuited for dev. The
-  # Pulsar chart references it as `kube-prometheus-stack.*`. Re-enable
-  # for non-trivial environments.
-  kube-prometheus-stack:
+  # Skip the victoria-metrics-k8s-stack sub-subchart (VMSingle, VMAgent,
+  # VMRule, VMServiceScrape, VMNodeScrape, plus operator + node-exporter)
+  # — adds significant memory pressure unsuited for dev. Pulsar chart
+  # 3.7.x switched its monitoring stack from Prometheus operator
+  # (kube-prometheus-stack) to VictoriaMetrics; the older
+  # `kube-prometheus-stack.*` keys are now no-ops. Re-enable for
+  # non-trivial environments.
+  victoria-metrics-k8s-stack:
     enabled: false
   prometheus-node-exporter:
     enabled: false
-  # Per-component PodMonitor objects depend on the kube-prometheus-stack
-  # CRDs; disabling the stack means we must skip these too or helm
-  # install fails on `no matches for kind PodMonitor`.
+  # Per-component scrape objects (PodMonitor pre-3.7, VMServiceScrape
+  # post-3.7) depend on the monitoring stack's CRDs; disabling the stack
+  # means we must skip these too or helm install fails on `no matches
+  # for kind ...`.
   zookeeper:
     replicaCount: 1
     persistence: false

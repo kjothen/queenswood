@@ -17,17 +17,12 @@
                                        :cash-product-id product-id}))))
 
 (defn- counts
-  "Builds the cash-account-product aggregates map for the limit
-  checks in `domain/new-product`. Each entry is keyed by the
-  set of dimensions the count is grouped on."
   [txn org-id]
   (let-nom>
     [total (store/count-by-org txn org-id)]
     {:cash-account-product {#{:organization-id} total}}))
 
 (defn new-product
-  "Creates a product as an initial draft v1. opts supports
-  `:policies` to override policy resolution."
   ([txn org-id data]
    (new-product txn org-id data {}))
   ([txn org-id data opts]
@@ -39,8 +34,6 @@
      version)))
 
 (defn open-draft
-  "Opens a new draft version for an existing product. opts
-  supports `:policies` to override policy resolution."
   ([txn org-id product-id data]
    (open-draft txn org-id product-id data {}))
   ([txn org-id product-id data opts]
@@ -61,8 +54,6 @@
         version)))))
 
 (defn update-draft
-  "Updates an existing draft version in place. opts supports
-  `:policies` to override policy resolution."
   ([txn org-id product-id version-id data]
    (update-draft txn org-id product-id version-id data {}))
   ([txn org-id product-id version-id data opts]
@@ -77,8 +68,6 @@
         version)))))
 
 (defn discard-draft
-  "Discards an existing draft version. opts supports
-  `:policies` to override policy resolution."
   ([txn org-id product-id version-id]
    (discard-draft txn org-id product-id version-id {}))
   ([txn org-id product-id version-id opts]
@@ -93,8 +82,6 @@
         discarded)))))
 
 (defn publish
-  "Publishes an existing draft version. opts supports
-  `:policies` to override policy resolution."
   ([txn org-id product-id version-id]
    (publish txn org-id product-id version-id {}))
   ([txn org-id product-id version-id opts]
@@ -109,12 +96,10 @@
         published)))))
 
 (defn get-version
-  "Loads a single version."
   [txn org-id product-id version-id]
   (store/get-version txn org-id product-id version-id))
 
 (defn get-product
-  "Returns `{:product-id <pid> :versions [...]}` for one product."
   [txn org-id product-id]
   (let-nom>
     [versions (store/get-versions txn
@@ -124,8 +109,6 @@
      :versions versions}))
 
 (defn get-products
-  "Returns `{:items [{:product-id ... :versions [...]} ...]}`,
-  grouped by product-id in scan order."
   ([txn org-id]
    (get-products txn org-id nil))
   ([txn org-id opts]

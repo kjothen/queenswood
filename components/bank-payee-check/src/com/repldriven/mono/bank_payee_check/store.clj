@@ -10,7 +10,6 @@
 (def transact fdb/transact)
 
 (defn save-check
-  "Saves a payee check. Returns nil or anomaly."
   [txn check]
   (fdb/transact
    txn
@@ -21,8 +20,6 @@
    "Failed to save payee check"))
 
 (defn get-check
-  "Loads a payee check by composite PK. Returns the check
-  map or rejection anomaly if not found."
   [txn org-id check-id]
   (fdb/transact
    txn
@@ -38,10 +35,6 @@
    "Failed to load payee check"))
 
 (defn get-checks
-  "Lists payee checks for an organization. Returns
-  {:items [maps] :before id|nil :after id|nil} or anomaly.
-  opts supports :after, :before, :limit, :order (`:desc`
-  default — clients show newest-first)."
   ([txn org-id]
    (get-checks txn org-id nil))
   ([txn org-id opts]

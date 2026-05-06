@@ -8,9 +8,6 @@
     [com.repldriven.mono.error.interface :refer [let-nom>]]))
 
 (defn record
-  "Records a transaction and its legs. Does not update
-  balances — callers must call apply-legs separately.
-  Returns the transaction map (with :legs) or anomaly."
   [txn data]
   (store/transact
    txn
@@ -27,10 +24,6 @@
          (assoc transaction :legs legs'))))))
 
 (defn record-transaction
-  "Records a transaction with its legs and applies legs to
-  balances in a single atomic transaction. Used by the
-  command processor. Returns the transaction map or
-  anomaly."
   [txn data]
   (store/transact
    txn

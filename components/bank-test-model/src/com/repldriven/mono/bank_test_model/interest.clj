@@ -1,29 +1,4 @@
 (ns com.repldriven.mono.bank-test-model.interest
-  "Daily-interest math + accrue/capitalize command specs. Pure
-  re-implementation of `bank-interest.domain/daily-interest` and
-  the surrounding accrual/capitalisation transactions.
-
-  The math is integer-only with a per-account `:credit-carry` (in
-  micro-minor-units) carried forward day-to-day, mirroring the
-  production formula exactly. The legs the production transaction
-  posts are summarised in the model state as four moves:
-
-    accrue, per customer account with rate > 0:
-      - account.interest-accrued += whole-units
-      - account.credit-carry     := new-carry
-      - settlement.available     -= whole-units (mirrors
-        settlement.interest-payable going negative)
-
-    capitalize, per customer account with accrued > 0:
-      - account.available        += accrued
-      - account.interest-accrued := 0
-      (settlement.default decreases by accrued, settlement.interest-
-       payable increases by the same amount → net zero on
-       settlement.available)
-
-  Both verbs also bump `:transaction-legs` consistent with how
-  `bank-transaction/get-transactions` would count legs touching
-  each account."
   (:require
     [com.repldriven.mono.bank-test-model.state :as state]
 
@@ -32,9 +7,6 @@
 (def ^:private micro-scale 1000000)
 
 (defn daily-interest
-  "Pure mirror of `bank-interest.domain/daily-interest`. `account`
-  is `{:available <net> :credit-carry <micro>}`. Returns
-  `{:whole-units :carry}` or nil if `interest-rate-bps` is zero."
   [{:keys [available credit-carry] :or {credit-carry 0}} interest-rate-bps]
   (when-not (zero? interest-rate-bps)
     (let [net available
@@ -46,11 +18,6 @@
       {:whole-units whole-units :carry new-carry})))
 
 (defn- customer-account?
-  "Production filters customer accounts as
-  `:product-type != :internal AND :product-type != :settlement
-   AND :account-status = :opened`. The model mirrors all three
-  checks: product-type and account `:status :open` (closed
-  accounts are skipped)."
   [state acct]
   (let [account (get-in state [:accounts acct])
         product (:product account)
@@ -66,16 +33,12 @@
         rate (get-in state [:products product-id :interest-rate-bps] 0)
         result (daily-interest account rate)]
     (cond
-     ;; Rate is zero — production's daily-interest returns nil and
-     ;; nothing is posted.
      (nil? result)
      state
 
-     ;; Whole-units rounds to zero — production updates carry only.
      (zero? (:whole-units result))
      (assoc-in state [:accounts customer-acct :credit-carry] (:carry result))
 
-     ;; Whole-units is positive — full accrual transaction posts.
      :else
      (let [{:keys [whole-units carry]} result]
        (-> state
@@ -100,11 +63,6 @@
     (reduce (fn [s a] (accrue-account s settlement a)) state custs)))
 
 (def accrue-interest
-  "Accrues daily interest for every customer account in the org.
-  Args are `[org-id as-of-date]`. The args generator pulls the
-  next sequential date from `:next-interest-date` and `:next-state`
-  advances it, so every accrue/capitalize call is on a fresh date —
-  the brick's date-keyed idempotency never fires."
   {:run? (fn [state] (seq (state/known-orgs state)))
    :args (fn [state]
            (gen/tuple (gen/elements (state/known-orgs state))
@@ -151,10 +109,6 @@
                    (* 2 (count capitalised))))))
 
 (def capitalize-interest
-  "Capitalises every customer account's accrued interest in the
-  org. Args are `[org-id as-of-date]`. Shares the
-  `:next-interest-date` counter with `accrue-interest`, so dates
-  are unique across both commands."
   {:run? (fn [state] (seq (state/known-orgs state)))
    :args (fn [state]
            (gen/tuple (gen/elements (state/known-orgs state))

@@ -14,7 +14,7 @@ onboarding with IDV.
 | **Interest**                 | Daily accrual and monthly capitalisation with fractional carry at sub-minor-unit precision                                                                        |
 | **Cash Accounts**            | Open accounts against published products, assigned UK SCAN payment addresses (sort code + account number). Lifecycle: `opening` → `opened` → `closing` → `closed` |
 | **Cash Account Products**    | Draft products with balance configurations, publish versioned releases                                                                                            |
-| **Parties & Identity**       | Register customers with national identifiers; automatic IDV triggers `pending` → `active`                                                                         |
+| **Parties & Identity**       | Register customers with national identifiers; Onfido-shaped IDV via pluggable adapter drives `pending` → `active` (or rejected)                                   |
 | **Organisations & API Keys** | Multi-tenant onboarding — create a tenant, issue API keys (returned once, stored hashed)                                                                          |
 
 API documentation:
@@ -62,121 +62,159 @@ the doc that goes deep on it:
 
 ## Architecture
 
+Per-domain deployable services on two substrates — Apache Pulsar
+for command and event flow, FoundationDB Record Layer for
+storage and changelog. Adapter/simulator pairs front the two
+external integrations (UK Faster Payments via ClearBank, IDV
+via Onfido); the simulators stand in for the production
+providers in development and tests.
+
 ```mermaid
-graph TD
-    APP["bank-app<br/>(Svelte)"]
-    API["bank-api<br/>(Reitit + Malli)"]
-    SIM["bank-clearbank-simulator<br/>(ClearBank FPS mock)"]
-    ADAPTER["bank-clearbank-adapter<br/>(webhooks + FPS client)"]
-    APP -->|HTTP API| API
+graph TB
+    APP["bank-app<br/>(Svelte UI)"]
 
-    subgraph sync ["Direct (create/update/query)"]
-        SYNC_CU["api-key<br/>cash-account-product<br/>organization<br/>policy"]
-        SYNC_Q["query: *"]
+    subgraph http ["HTTP services"]
+        direction LR
+        API[bank-api-service]
+        CBA[bank-clearbank-<br/>adapter-service]
+        CBS[bank-clearbank-<br/>simulator-service]
+        OFA[bank-onfido-<br/>adapter-service]
+        OFS[bank-onfido-<br/>simulator-service]
     end
 
-    subgraph async ["Commands (create/update/simulate)"]
-        CP["command-processor<br/>(Avro)"]
-        CP --> PARTY[party]
-        CP --> CASH[cash-account]
-        CP --> PAY[payment]
-        CP --> INT[interest]
-        CP --> TXN[transaction]
+    PULSAR[("Apache Pulsar<br/>command + event topics")]
+
+    subgraph processors ["Processor services (Pulsar consumers)"]
+        direction LR
+        PCA[cash-account-<br/>processor]
+        PPT[party-<br/>processor]
+        PPY[payment-<br/>processor]
+        PIN[interest-<br/>processor]
+        PTX[transaction-<br/>processor]
+        PID[idv-<br/>processor]
     end
 
-    subgraph events ["Async Message-Bus (events)"]
-        EP["event-processor<br/>(Avro)"]
-        EP -->|transaction-settled<br/>credit| PAY_IN["payment<br/>(settle inbound)"]
-        EP -->|transaction-settled<br/>debit| PAY_OUT["payment<br/>(settle outbound)"]
+    FDB[("FoundationDB<br/>Record Layer + changelog")]
+
+    subgraph oneshots ["Cold-start (one-shot k8s Jobs)"]
+        direction LR
+        MIG[migrator-service]
+        BS[bootstrap-service]
     end
 
-    API --> sync
-    API --> async
-
-    PAY -->|submit-payment| ADAPTER
-    ADAPTER -->|POST /v3/payments/fps| SIM
-    SIM -->|TransactionSettled<br/>webhook| ADAPTER
-    ADAPTER -->|publish event| events
-
-    subgraph watchers ["Watchers (FDB changelog)"]
-        W1["idv: → accepted"]
-        W2["party: → active"]
-        W3["cash-account: → opened / closed"]
+    subgraph external ["External (production targets)"]
+        direction LR
+        CB[ClearBank FPS]
+        OF[Onfido]
     end
 
-    PARTY --> W1
-    PARTY --> W2
-    CASH --> W3
+    APP -->|HTTP| API
+    API -->|commands| PULSAR
+    API -->|direct CRUD<br/>org, api-key, product, policy| FDB
 
-    subgraph fdb ["FoundationDB (Record Layer)"]
-        STORES["api-keys<br/>balances<br/>cash-account-products<br/>cash-accounts<br/>idvs<br/>inbound-payments<br/>internal-payments<br/>organizations<br/>outbound-payments<br/>parties<br/>policies<br/>transactions"]
-    end
+    PULSAR -->|consume commands| processors
+    processors -->|read + write| FDB
+    FDB -->|changelog| processors
 
-    sync --> fdb
-    watchers --> fdb
-    PARTY --> fdb
-    CASH --> fdb
-    PAY --> fdb
-    PAY_IN --> fdb
-    PAY_OUT --> fdb
-    INT --> fdb
-    TXN --> fdb
+    PPY -->|submit-payment| PULSAR
+    PULSAR -->|consume| CBA
+    CBA <-->|HTTP + webhook| CBS
+    CBA <-.->|HTTP + webhook| CB
+    CBA -->|transaction-settled| PULSAR
+
+    PID -->|submit-idv-check| PULSAR
+    PULSAR -->|consume| OFA
+    OFA <-->|HTTP + webhook| OFS
+    OFA <-.->|HTTP + webhook| OF
+    OFA -->|idv-completed| PULSAR
+
+    MIG -->|FDB metadata| FDB
+    MIG -->|topics + schemas| PULSAR
+    MIG --> BS
+    BS -->|internal org,<br/>platform policies| FDB
 ```
 
-**Direct path** — low-volume activity (organisations, products,
-policies, API keys) is created and updated directly by the API
-handlers; all records are queried on-demand using FDB record
-primary key ordering.
+**HTTP services** — `bank-api-service` is the public banking
+surface (Reitit + Malli + Sieppari + Muuntaja). The
+adapter/simulator pairs serve their own HTTP surfaces:
+adapters host webhook receivers and call out to providers;
+simulators stand in for the providers in development and
+tests.
 
-**Commands path** — high-volume activity (parties, cash accounts,
-payments, interest, transactions) flows as Avro-serialised
-commands through the message bus to processors. Processors write
-to FDB and reply via the same bus. Envelope statuses: `ACCEPTED`
-(2xx), `REJECTED` (4xx), `FAILED` (5xx).
-See [transaction-processing](docs/tdd/transaction-processing.md).
+**Direct path** — low-volume, idempotent records
+(organisations, products, policies, API keys) are created
+and updated directly by `bank-api-service` against FDB. All
+records query on-demand using FDB record primary key
+ordering.
 
-**Events path** — outbound payments publish a `submit-payment`
-command to a pluggable scheme adapter, which POSTs to the FPS
-API. Settlement webhooks become `transaction-settled` events;
-the event processor routes credits to inbound creation and
-debits to outbound completion. The simulator base
-(`bank-clearbank-simulator`) is the live integration today; a
-ClearBank-specific adapter (`bank-clearbank-adapter`) is wired
-as the production target. See [payments](docs/tdd/payments.md).
+**Commands path** — high-volume activity (parties, cash
+accounts, payments, interest, transactions) flows as
+Avro-serialised commands from `bank-api-service` through
+Pulsar to a domain processor. Each processor writes to FDB
+and replies via the same bus. Envelope statuses: `ACCEPTED`
+(2xx), `REJECTED` (4xx), `FAILED` (5xx). See
+[transaction-processing](docs/tdd/transaction-processing.md).
 
-**Watchers** — FDB changelog triggers drive reactive state
-transitions: IDV acceptance activates the party; account
-opening/closing auto-transitions.
-See [ADR-0008](docs/adr/0008-changelog-watchers.md).
+**Scheme + IDV paths** — outbound payments publish a
+`submit-payment` command on a scheme channel;
+`bank-clearbank-adapter-service` consumes, calls FPS, and
+republishes settlement webhooks as `transaction-settled`
+events. The IDV path mirrors this:
+`bank-idv-processor-service` publishes `submit-idv-check`,
+`bank-onfido-adapter-service` calls Onfido, the
+`check.completed` webhook becomes an `idv-completed` event.
+The simulator services stand in for ClearBank FPS and
+Onfido respectively; the dotted edges to ClearBank and
+Onfido mark the production targets.
+
+**Watchers** — FDB changelog triggers drive reactive
+state transitions inside the processor services: cash
+account `opening` → `opened` and `closing` → `closed`;
+the party–IDV–party activation chain (party-processor
+writes a pending party, idv-processor reacts to the
+party changelog and initiates IDV, the `idv-completed`
+event flips the IDV record, party-processor reacts to
+the IDV changelog and activates the party). See
+[ADR-0008](docs/adr/0008-changelog-watchers.md) and
+[parties](docs/tdd/parties.md).
+
+**Cold-start** — `bank-migrator-service` applies FDB
+record metadata and Pulsar topics/schemas;
+`bank-bootstrap-service` seeds the singleton internal
+organisation and the platform/micro policies. Both run as
+one-shot k8s Jobs; services wait on the bootstrap Job
+before starting. See
+[deployment](docs/recipes/deployment.md).
 
 ## Documentation
 
 The bank is documented:
 
-- **[docs/prd/](docs/prd/)** — eight product requirements
-  documents: a platform-wide umbrella plus one per capability
-  (onboarding, parties, cash-account-products, cash-accounts,
-  payments, interest, policies). The *what and why* — intended
-  scope, users, and domain rules — companion to the TDDs' *how*.
-- **[docs/tdd/](docs/tdd/)** — fourteen technical design
-  documents covering the substrate (transaction processing,
-  transactions and balances, traceability, scenario testing,
-  idempotency proposal), the API surface and auth (service-apis,
-  api-keys), the policy engine, and every domain (organisations,
-  parties, products, accounts, payments, interest).
-- **[docs/adr/](docs/adr/)** — fourteen architecture decision
-  records (mono fork, FoundationDB, message-bus abstraction,
-  Avro, anomalies, kebab-case keys, system-as-data, changelog
-  watchers, model-equality testing, code generation via
-  prep-lib, one-component-per-library, pre-commit hooks, single
-  unified API, OpenAPI 3.x compliance).
+- **[docs/prd/](docs/prd/)** — product requirements documents:
+  a platform-wide umbrella plus one per capability (onboarding,
+  parties, cash-account-products, cash-accounts, payments,
+  interest, policies). The *what and why* — intended scope,
+  users, and domain rules — companion to the TDDs' *how*.
+- **[docs/tdd/](docs/tdd/)** — technical design documents
+  covering the substrate (transaction processing, transactions
+  and balances, traceability, scenario testing, idempotency
+  proposal), the API surface and auth (service-apis, api-keys),
+  the policy engine, and every domain (organisations, parties,
+  products, accounts, payments, interest).
+- **[docs/adr/](docs/adr/)** — architecture decision records
+  (mono fork, FoundationDB, message-bus abstraction, Avro,
+  anomalies, kebab-case keys, system-as-data, changelog watchers,
+  model-equality testing, code generation via prep-lib,
+  one-component-per-library, pre-commit hooks, single unified
+  API, OpenAPI 3.x compliance, comments and docstrings).
 - **[docs/slides/](docs/slides/)** — a slidev walk-through of how
   systems-as-data assembles a running system.
-- **[docs/recipes/](docs/recipes/)** — twelve task-oriented
-  recipes (Problem / Solution / Rules / Discussion / References)
-  for components, bases, projects, system-components,
+- **[docs/recipes/](docs/recipes/)** — task-oriented recipes
+  (Problem / Solution / Rules / Discussion / References) for
+  components, bases, projects, system-components,
   system-configurations, testcontainers, error-handling, testing,
-  code-style, code-generation, common-helpers, git-workflow.
+  code-style, code-generation, common-helpers, deployment,
+  git-workflow, writing-docs.
 
 ## Running
 
@@ -196,7 +234,7 @@ This boots the full system — FDB, Pulsar, HTTP server — inside
 Testcontainers. Then start the Svelte front-end:
 
 ```bash
-just start-bank-app
+just bank-app-start
 ```
 
 ## Built on mono

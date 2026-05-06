@@ -20,9 +20,9 @@ In scope: the `bank-policy` brick, capability evaluation,
 limit evaluation, the matching engine, bindings, the anomaly
 contract.
 
-Out of scope: HTTP authentication (see
-[service-apis.md](service-apis.md)); idempotency (see
-[idempotency.md](idempotency.md)); how individual domains
+Out of scope: HTTP authentication, see
+[service-apis.md](service-apis.md); idempotency, see
+[idempotency.md](idempotency.md); how individual domains
 structure their per-leg evaluation calls (covered in their
 respective TDDs).
 

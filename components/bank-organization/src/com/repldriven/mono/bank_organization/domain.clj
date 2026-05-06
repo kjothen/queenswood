@@ -7,9 +7,6 @@
 (def allowed-payment-address-schemes [:payment-address-scheme-scan])
 
 (defn new-organization
-  "Creates a new Organization record map. Returns the
-  organization map or an unauthorized anomaly when `policies`
-  deny creation or report a violated limit."
   [org-name org-type org-status aggregates policies]
   (let-nom>
     [_ (policy/check-capability policies

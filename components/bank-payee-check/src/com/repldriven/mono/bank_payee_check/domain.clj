@@ -17,8 +17,6 @@
    :reason (or (:reason result) "")})
 
 (defn new-check
-  "Builds a PayeeCheck map from an organization-id, request
-  map, and result map. Generates check-id and timestamps."
   [organization-id request result]
   (let [created (utility/now-rfc3339)]
     {:check-id (utility/generate-id "chk")

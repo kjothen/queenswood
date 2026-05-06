@@ -3,7 +3,7 @@
   The settlement-event handlers and happy-path command paths are
   covered by the scenario suite (payment-event-idempotency.edn,
   outbound-payment.edn, intra-org-internal-transfer.edn) and the
-  500-trial property test in bank-scenario-runner — no system boot
+  500-trial property test in bank-test-scenarios — no system boot
   is needed at the brick layer."
   (:require
     [com.repldriven.mono.bank-payment.commands :as commands]

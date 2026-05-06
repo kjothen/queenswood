@@ -11,7 +11,6 @@
 (def transact fdb/transact)
 
 (defn save-balance
-  "Persists a balance. Returns nil or anomaly."
   [txn balance]
   (fdb/transact
    txn
@@ -22,9 +21,6 @@
    "Failed to save balance"))
 
 (defn find-balance
-  "Loads a balance by its composite primary key if it
-  exists. Returns the balance map, nil (if none), or
-  anomaly on I/O failure. For existence probes."
   [txn account-id balance-type currency balance-status]
   (let-nom>
     [result (fdb/transact
@@ -41,8 +37,6 @@
     (when result (schema/pb->Balance result))))
 
 (defn get-balance
-  "Loads a balance by its composite primary key. Returns
-  the balance map or a rejection anomaly if not found."
   [txn account-id balance-type currency balance-status]
   (let-nom>
     [balance (find-balance txn
@@ -59,8 +53,6 @@
                        :balance-status balance-status}))))
 
 (defn get-balances
-  "Lists balances for an account. Returns a sequence of
-  balances or anomaly."
   [txn account-id]
   (fdb/transact txn
                 (fn [txn]

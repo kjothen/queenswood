@@ -1,9 +1,9 @@
 (ns ^:eftest/synchronized
-    com.repldriven.mono.bank-scenario-runner.interface-test
+    com.repldriven.mono.bank-test-scenarios.interface-test
   (:require
-    com.repldriven.mono.bank-scenario-runner.system
+    com.repldriven.mono.bank-test-scenarios.system
 
-    [com.repldriven.mono.bank-scenario-runner.interface :as SUT]
+    [com.repldriven.mono.bank-test-scenarios.interface :as SUT]
 
     [com.repldriven.mono.bank-onfido-adapter.api :as onfido-adapter]
     [com.repldriven.mono.bank-onfido-simulator.api :as onfido-simulator]
@@ -40,7 +40,7 @@
 
 (defn- scenario-files
   []
-  (->> (io/file (.getFile (io/resource "bank-scenario-runner/scenarios")))
+  (->> (io/file (.getFile (io/resource "bank-test-scenarios/scenarios")))
        (.listFiles)
        (filter (fn [f] (.endsWith (.getName f) ".edn")))
        (sort-by (fn [f] (.getName f)))))
@@ -151,9 +151,9 @@
     (log/info "scenarios starting" {:count (count files)})
     (with-test-system
      [sys
-      ["classpath:bank-scenario-runner/application-test.yml" patch-handlers]]
+      ["classpath:bank-test-scenarios/application-test.yml" patch-handlers]]
      (doseq [f files]
-       (let [resource-path (str "bank-scenario-runner/scenarios/" (.getName f))]
+       (let [resource-path (str "bank-test-scenarios/scenarios/" (.getName f))]
          (nom-test> [loaded (SUT/from-resource resource-path)
                      steps (SUT/steps loaded)
                      _ (log/info "scenario running"

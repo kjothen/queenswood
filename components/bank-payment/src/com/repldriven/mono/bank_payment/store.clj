@@ -11,7 +11,6 @@
 (def transact fdb/transact)
 
 (defn save-internal-payment
-  "Saves an internal payment. Returns nil or anomaly."
   [txn payment]
   (fdb/transact
    txn
@@ -23,7 +22,6 @@
    "Failed to save internal payment"))
 
 (defn save-outbound-payment
-  "Saves an outbound payment. Returns nil or anomaly."
   [txn payment]
   (fdb/transact
    txn
@@ -35,7 +33,6 @@
    "Failed to save outbound payment"))
 
 (defn save-inbound-payment
-  "Saves an inbound payment. Returns nil or anomaly."
   [txn payment]
   (fdb/transact
    txn
@@ -47,8 +44,6 @@
    "Failed to save inbound payment"))
 
 (defn get-internal-payment
-  "Loads an internal payment by payment-id. Returns the
-  payment map or nil."
   [txn payment-id]
   (fdb/transact
    txn
@@ -60,8 +55,6 @@
    "Failed to get internal payment"))
 
 (defn get-outbound-payment
-  "Loads an outbound payment by payment-id. Returns the
-  payment map or nil."
   [txn payment-id]
   (fdb/transact
    txn
@@ -73,8 +66,6 @@
    "Failed to get outbound payment"))
 
 (defn get-inbound-payment
-  "Returns the inbound payment matching the given
-  scheme-transaction-id, or nil."
   [txn scheme-transaction-id]
   (fdb/transact
    txn
@@ -88,4 +79,3 @@
              schema/pb->InboundPayment))
    :payment/get-inbound-payment
    "Failed to get inbound payment"))
-

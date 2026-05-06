@@ -115,6 +115,7 @@
             pkgs.just
             pkgs.k6
             pkgs.kind
+            pkgs.kubeconform
             pkgs.kubernetes-helm
             pkgs.openssl
             protocBinary

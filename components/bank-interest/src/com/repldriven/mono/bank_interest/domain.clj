@@ -3,15 +3,10 @@
 (def ^:private micro-scale 1000000)
 
 (defn- net-balance
-  "Returns credit minus debit for a balance."
   [balance]
   (- (:credit balance 0) (:debit balance 0)))
 
 (defn daily-interest
-  "Calculates daily interest using integer micro-unit
-  arithmetic. Returns {:whole-units n :carry c} where
-  carry is in micro-minor-units (1 minor unit = 1e6
-  micro)."
   [balance interest-rate-bps]
   (let [{:keys [credit-carry]} balance]
     (when-not (zero? interest-rate-bps)
@@ -34,8 +29,6 @@
   (str "capitalize-" account-id "-" as-of-date))
 
 (defn accrual-transaction
-  "Builds the transaction data for a daily interest
-  accrual. Returns nil when whole-units is zero."
   [settlement-id account-id currency whole-units
    as-of-date]
   (when-not (zero? whole-units)
@@ -45,9 +38,7 @@
      :transaction-type :transaction-type-interest-accrual
      :currency currency
      :reference (str "Daily interest accrual " as-of-date)
-     :legs [;; debit  → org settlement interest-payable/posted
-            ;; credit → customer interest-accrued/posted
-            {:account-id settlement-id
+     :legs [{:account-id settlement-id
              :balance-type :balance-type-interest-payable
              :balance-status :balance-status-posted
              :side :leg-side-debit
@@ -59,8 +50,6 @@
              :amount whole-units}]}))
 
 (defn capitalization-transaction
-  "Builds the transaction data for monthly interest
-  capitalization. Returns nil when accrued is zero."
   [settlement-id account-id currency balance as-of-date]
   (let [accrued (net-balance balance)]
     (when-not (zero? accrued)
@@ -72,9 +61,7 @@
        :currency currency
        :reference (str "Monthly interest capitalization "
                        as-of-date)
-       :legs [;; debit  → org settlement default/posted
-              ;; credit → customer interest-paid/posted
-              {:account-id settlement-id
+       :legs [{:account-id settlement-id
                :balance-type :balance-type-default
                :balance-status :balance-status-posted
                :side :leg-side-debit
@@ -84,8 +71,6 @@
                :balance-status :balance-status-posted
                :side :leg-side-credit
                :amount accrued}
-              ;; debit  → customer interest-accrued/posted credit → org
-              ;; credit → settlement interest-payable/posted
               {:account-id account-id
                :balance-type
                :balance-type-interest-accrued
@@ -98,8 +83,6 @@
                :balance-status :balance-status-posted
                :side :leg-side-credit
                :amount accrued}
-              ;; debit  → customer interest-paid/posted
-              ;; credit → customer default/posted
               {:account-id account-id
                :balance-type
                :balance-type-interest-paid
@@ -112,8 +95,3 @@
                :balance-status :balance-status-posted
                :side :leg-side-credit
                :amount accrued}]})))
-
-
-
-
-

@@ -64,10 +64,13 @@ system:
       service-name: !env SERVICE_NAME
       endpoint: !env OTEL_ENDPOINT
   clearbank-adapter:
+    readiness: !system/component
+      system/component-kind: clearbank-adapter/readiness
     registrar: !system/component
       system/component-kind: clearbank-adapter/registrar
       simulator-url: !env CLEARBANK_SIMULATOR_URL
       webhook-url: !env CLEARBANK_ADAPTER_PUBLIC_URL
+      readiness: !system/ref clearbank-adapter.readiness
       webhooks:
         - type: TransactionSettled
           path: /webhooks/transaction-settled
@@ -99,7 +102,7 @@ system:
       system/component-kind: server/jetty-adapter
       handler: !system/ref clearbank-adapter-server.handler
       interceptors: !system/ref clearbank-adapter-server.interceptors
-      ready-fn: !system/ref clearbank-adapter.registrar
+      ready-fn: !system/ref clearbank-adapter.readiness
       options:
         port: 8082
     http-url: !system/component

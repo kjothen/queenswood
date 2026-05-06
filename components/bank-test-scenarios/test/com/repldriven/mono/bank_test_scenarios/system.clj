@@ -1,4 +1,4 @@
-(ns com.repldriven.mono.bank-scenario-runner.system
+(ns com.repldriven.mono.bank-test-scenarios.system
   "Bare-require bundle for scenario-runner tests. Each `defcomponents`
   registration only fires when its namespace loads, so the system
   config in `application-test.yml` references brick component-kinds

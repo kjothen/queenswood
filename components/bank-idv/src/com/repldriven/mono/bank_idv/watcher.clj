@@ -1,18 +1,4 @@
 (ns com.repldriven.mono.bank-idv.watcher
-  "One changelog handler that initiates IDV when a person party
-  enters `:party-status-pending`.
-
-  The handler is idempotent: it consults the unique
-  `Idv_by_party` index before writing, so changelog replay or a
-  duplicate event won't create a second IDV. If no IDV exists
-  for the party, it delegates to `core/initiate` which writes
-  the IDV record and publishes a `submit-idv-check` command on
-  the IDV-provider channel — the same code path the
-  `initiate-idv` command takes.
-
-  Names ride into the IDV envelope from `PersonIdentification`
-  (loaded directly from FDB inside the same transaction), since
-  the `Party` proto only carries `display_name`."
   (:require
     [com.repldriven.mono.bank-idv.core :as core]
     [com.repldriven.mono.bank-idv.store :as store]
@@ -25,12 +11,10 @@
 
 (def ^:private person-identifications-store-name "person-identifications")
 
+;; Reads the PersonIdentification record direct from FDB rather than
+;; through bank-party, which already depends on bank-idv; routing via
+;; bank-schema is the cycle-free path.
 (defn- load-person-identification
-  "Reads the PersonIdentification record for a party direct from
-  FDB. Returns the map, nil if no record, or anomaly. Bypasses
-  bank-party because bank-party already depends on bank-idv;
-  the seam through `bank-schema/pb->PersonIdentification` is
-  the cycle-free path."
   [config party-id]
   (fdb/transact
    config
@@ -43,10 +27,6 @@
    "Failed to load person-identification for IDV initiation"))
 
 (defn party-changelog-handler
-  "Returns a watcher handler that idempotently initiates IDV
-  when a person party enters pending state. Only person parties
-  reach `:party-status-pending` (internal/organization parties
-  start active), so no explicit type check is needed."
   [config]
   (fn [_ctx changelog-bytes]
     (let [{:keys [organization-id party-id]

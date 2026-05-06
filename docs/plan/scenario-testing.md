@@ -8,7 +8,7 @@ The discipline of this plan is to keep failure radius small. Do not skip ahead. 
 
 Goal: a pure-functional model that can be exercised in isolation, with no fugato dependency yet.
 
-- [x] **1.1** Create `bank-test-model` component skeleton with empty `interface.clj`. Add to root `deps.edn` (`:dev` and `:+bank` aliases) so existing `project:dev` test runs pick it up. No new project — there's nothing here we'd build into a deployable artifact, so the `bank-tests` plumbing lives in the existing test pipeline (the `external-test-runner` base + each brick's `test/`). When the scenario runner needs an entrypoint in Phase 3, it'll be a `bases/bank-scenario-runner` base, not a project. Confirm `clojure -M:poly check` is clean.
+- [x] **1.1** Create `bank-test-model` component skeleton with empty `interface.clj`. Add to root `deps.edn` (`:dev` and `:+bank` aliases) so existing `project:dev` test runs pick it up. No new project — there's nothing here we'd build into a deployable artifact, so the `bank-tests` plumbing lives in the existing test pipeline (the `external-test-runner` base + each brick's `test/`). When the scenario runner needs an entrypoint in Phase 3, it'll be a `bases/bank-test-scenarios` base, not a project. Confirm `clojure -M:poly check` is clean.
 - [x] **1.2** Define `init-state` and helpers in `state.clj`: `known-accounts`, `balance`, `next-id`. Pure functions, no commands yet. The `:policies` field carries one entry — the available-balance rule — in model-shape (e.g. `{:available {:min 0 :improving? true}}`).
 - [x] **1.3** Implement `:open-account` spec in `balances.clj`. Just `:args` (returns empty tuple) and `:next-state` (creates account at zero balance with synthetic ID). No `:run?` needed (always available); no `:valid?` needed for stand-alone.
 - [x] **1.4** Implement `:inbound-transfer` spec in `transfers.clj`. Re-implement the relevant policy rule (`available >= 0`, with the lenient `improving` allowance) as a pure helper in `policy.clj`; the model never imports `bank-policy`. State stays unchanged when the helper returns `:denied`.
@@ -34,7 +34,7 @@ Goal: read real-system state and produce model-comparable shapes.
 
 Goal: drive the real system from a command sequence, with no fugato yet.
 
-- [x] **3.1** Create `bank-scenario-runner` component skeleton. Depend on `bank-test-model/interface`, `bank-test-projections/interface`, and the production command-submission interface.
+- [x] **3.1** Create `bank-test-scenarios` component skeleton. Depend on `bank-test-model/interface`, `bank-test-projections/interface`, and the production command-submission interface.
 - [x] **3.2** Implement the ID side-table in `id_mapping.clj`. Two views: `model->real`, `real->model`. Functions to add a mapping and resolve in either direction.
 - [x] **3.3** Implement command dispatch in `verbs.clj`. One multimethod (or case) keyed on `:command`. Each verb translates a model command to a real command and submits it. For `:open-account`, capture the returned real ID and store the mapping.
 - [x] **3.4** Implement `quiescence.clj`. After submitting commands, wait for the read-side cursor to catch up to the last command's outbox versionstamp. Timeout is a runner error (not a domain divergence). Phase 3 verbs are synchronous (record-transaction + apply-legs in one fdb/transact, no Pulsar), so this is a no-op stub — to be replaced with the changelog-cursor poll once any verb starts submitting via the command pipeline.
@@ -51,7 +51,7 @@ Goal: hand-authored scenarios as the simpler complement to fugato.
 - [x] **4.2** Write the scenario loader: read EDN file, validate, return a normalised internal representation.
 - [x] **4.3** Extend the runner to accept EDN scenarios. `:given`, `:when`, `:then` are all sequences of the same step type; the split is for readers, not the runner.
 - [x] **4.4** Add assertion verbs: `:assert-balance`, `:assert-outcome`, `:assert-no-anomaly`. Each is a step that compares a projection to an expected value.
-- [x] **4.5** Author three scenarios in `components/bank-scenario-runner/test-resources/bank-scenario-runner/scenarios/`:
+- [x] **4.5** Author three scenarios in `components/bank-test-scenarios/test-resources/bank-test-scenarios/scenarios/`:
   - `simple-inbound.edn` — basic credit, balance moves up.
   - `simple-outbound.edn` — basic debit, balance moves down.
   - `curative-inbound-when-in-breach.edn` — fee drives account negative; improving inbound permitted (lenient `:limit-allow-improving`). The original wording also asserted "outbound denied" here, but exercising that uncovered a real model/reality divergence: an outbound that worsens an existing breach is denied by the model but currently permitted by the real bank. Left out of Phase 4's hand-authored scope on purpose — Phase 5 fugato is the right tool to surface and shrink that case.
@@ -63,7 +63,7 @@ Goal: hand-authored scenarios as the simpler complement to fugato.
 
 Goal: model-equality property test running over generated command sequences.
 
-- [x] **5.1** Add `org.clojure/test.check` and `io.vouch/fugato` to `bank-scenario-runner` test deps. Fugato is unreleased on Clojars; pulled as a git dep pinned to `vouch-opensource/fugato` SHA `4c1f687b`.
+- [x] **5.1** Add `org.clojure/test.check` and `io.vouch/fugato` to `bank-test-scenarios` test deps. Fugato is unreleased on Clojars; pulled as a git dep pinned to `vouch-opensource/fugato` SHA `4c1f687b`.
 - [x] **5.2** Confirm the model map from Phase 1 works with `fugato/commands`. Sanity `deftest` generates 5 sequences of ≥3 steps and asserts each step has a known `:command` and a vector `:args`.
 - [x] **5.3** Write the first `defspec`: `model-eq-reality`, using `project-balances` only. Started at 10 trials × max-size 10. Each trial spins up its own FDB testcontainer.
 - [x] **5.4** Skipped — the headline divergence (worsening outbound permitted because the platform `BalanceLimit` was silently dead through proto-record/plain-map equality) was already root-caused and fixed before Phase 5 started. No new divergences appeared.

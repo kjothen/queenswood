@@ -82,7 +82,7 @@ test runner; *not* part of any deployable project):
 - `bank-test-model` — the pure model.
 - `bank-test-projections` — projection fns built on production
   component *interfaces only*.
-- `bank-scenario-runner` — command dispatch, ID side-table,
+- `bank-test-scenarios` — command dispatch, ID side-table,
   quiescence wait, divergence debugging.
 
 The dependency arrow points test → production, never the reverse.

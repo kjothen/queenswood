@@ -211,6 +211,29 @@ codebase. For RFC 3339 strings, use `util/now-rfc3339`.
 (java.time.Instant/now)
 ```
 
+### Interceptor short-circuit
+
+When a Reitit / Sieppari interceptor needs to short-circuit
+the chain (auth 401/403, idempotency replay, etc.), use
+`sieppari.context/terminate` — never set `:response` or
+`:error` on the context directly:
+
+```clojure
+(:require [sieppari.context :as sc])
+
+(fn [ctx]
+  (sc/terminate ctx {:status 401
+                     :headers {...}
+                     :body {...}}))
+```
+
+Sieppari does not short-circuit on a `:response` value; the
+handler interceptor still runs and reitit's handler step
+overwrites whatever you set. `:error` works but the chain
+behaviour is confusing — `terminate` is the documented
+escape hatch and the only reliable one. `:leave` interceptors
+still run normally after termination.
+
 ### Linting
 
 clj-kondo is configured in `.clj-kondo/config.edn`. The
@@ -244,6 +267,8 @@ lints as `clojure.core/->`, and so on.
 - Use `!` suffix on side-effecting function names.
 - Use the `#(...)` reader macro for anonymous functions.
 - Nest destructuring in function arguments.
+- Set `:response` or `:error` on a Sieppari context to
+  short-circuit — use `sieppari.context/terminate`.
 - Use `random-uuid` for new IDs.
 - Use `(System/currentTimeMillis)`, `(Instant/now)`, or other
   platform clock APIs directly. Go through `util/now`.

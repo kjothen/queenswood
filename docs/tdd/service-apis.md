@@ -3,10 +3,10 @@
 ## Objective
 
 Queenswood serves more than one HTTP API. The headline is
-`bank-api` — one unified API for the whole bank
-([ADR-0013](../adr/0013-single-unified-api.md)) with full
-OpenAPI 3.x compliance as the contract
-([ADR-0014](../adr/0014-openapi-3x-compliance.md)). The
+`bank-api` — one unified API for the whole bank, see
+[ADR-0013](../adr/0013-single-unified-api.md), with full
+OpenAPI 3.x compliance as the contract per
+[ADR-0014](../adr/0014-openapi-3x-compliance.md). The
 ClearBank simulator and ClearBank adapter also serve HTTP
 surfaces, with their own contracts shaped by external
 specifications.
@@ -24,10 +24,10 @@ auth and error-mapping patterns, OpenAPI assembly, the
 domain-folder layout for routing, with `bank-api` as the
 worked example.
 
-Out of scope: domain-specific request/response shapes (those
-live in per-domain components and the OpenAPI document); the
-command pipeline behind handlers
-([transaction-processing.md](transaction-processing.md));
+Out of scope: domain-specific request/response shapes —
+those live in per-domain components and the OpenAPI
+document; the command pipeline behind handlers, see
+[transaction-processing.md](transaction-processing.md);
 idempotency (planned recipe).
 
 ## Background
@@ -45,13 +45,13 @@ bricks per
 base depends on `server` interfaces plus its own routes and
 interceptors.
 
-The wire and storage formats are settled elsewhere: Avro on the
-message bus
-([ADR-0004](../adr/0004-avro-for-message-payloads.md)),
-kebab-case keyword keys throughout
-([ADR-0006](../adr/0006-kebab-case-keyword-keys.md)), anomalies
-at component boundaries
-([ADR-0005](../adr/0005-error-handling-with-anomalies.md)).
+The wire and storage formats are settled elsewhere: Avro on
+the message bus, see
+[ADR-0004](../adr/0004-avro-for-message-payloads.md);
+kebab-case keyword keys throughout, see
+[ADR-0006](../adr/0006-kebab-case-keyword-keys.md);
+anomalies at component boundaries, see
+[ADR-0005](../adr/0005-error-handling-with-anomalies.md).
 This TDD is about how those decisions land at any HTTP
 boundary.
 
@@ -127,6 +127,15 @@ The top-level `api.clj` requires every domain's `routes`,
 router data, and wires the OpenAPI document.
 
 ### Resource and verb conventions
+
+The API style is **resource-based**, not CRUD-shaped. Resources
+(cash accounts, parties, products, payments) are first-class
+and have their own lifecycle states; some operations on a
+resource fit a verb model (close, suspend, activate, reopen)
+that doesn't translate cleanly to Create/Read/Update/Delete.
+"CRUD" mixes the verb model with the resource model and ages
+poorly when state transitions multiply. The docs and the API
+should describe operations as resource-based throughout.
 
 Endpoints follow standard HTTP resource conventions where they
 map cleanly:

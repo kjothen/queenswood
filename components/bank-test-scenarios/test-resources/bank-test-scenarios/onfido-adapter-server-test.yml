@@ -10,6 +10,7 @@ jetty-adapter: !system/component
   system/component-kind: server/jetty-adapter
   handler: !system/ref onfido-adapter-server.handler
   interceptors: !system/ref onfido-adapter-server.interceptors
+  ready-fn: !system/ref onfido-adapter.readiness
   options:
     port: 0
 

@@ -31,8 +31,9 @@
   `ready-fn` comes from the API ctx — the jetty-adapter system
   component threads it through, defaulting to `(constantly true)`
   for services without a startup dependency. Adapter services
-  pass their registrar's atom-closure so readiness stays DOWN
-  until webhook registration succeeds."
+  pass an atom-backed readiness component (jetty-adapter coerces
+  any IDeref to a thunk) so readiness stays DOWN until webhook
+  registration succeeds."
   [ctx]
   (let [ready-fn (or (:ready-fn ctx) (constantly true))
         json {"content-type" "application/json"}
