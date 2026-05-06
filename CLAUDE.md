@@ -115,8 +115,8 @@ rationale live in the docs.
 
 ## Critical guardrails
 
-These four are the rules most load-bearing across the codebase.
-Detail and rationale live in the referenced docs.
+The rules most load-bearing across the codebase. Detail and
+rationale live in the referenced docs.
 
 - **No throwing from `interface.clj`.** Component interfaces
   return a value or an anomaly; they never raise. Use
