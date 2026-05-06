@@ -62,7 +62,7 @@ the doc that goes deep on it:
 
 ## Architecture
 
-Thirteen deployable services on two substrates — Apache Pulsar
+Per-domain deployable services on two substrates — Apache Pulsar
 for command and event flow, FoundationDB Record Layer for
 storage and changelog. Adapter/simulator pairs front the two
 external integrations (UK Faster Payments via ClearBank, IDV
@@ -190,30 +190,31 @@ before starting. See
 
 The bank is documented:
 
-- **[docs/prd/](docs/prd/)** — eight product requirements
-  documents: a platform-wide umbrella plus one per capability
-  (onboarding, parties, cash-account-products, cash-accounts,
-  payments, interest, policies). The *what and why* — intended
-  scope, users, and domain rules — companion to the TDDs' *how*.
-- **[docs/tdd/](docs/tdd/)** — fourteen technical design
-  documents covering the substrate (transaction processing,
-  transactions and balances, traceability, scenario testing,
-  idempotency proposal), the API surface and auth (service-apis,
-  api-keys), the policy engine, and every domain (organisations,
-  parties, products, accounts, payments, interest).
-- **[docs/adr/](docs/adr/)** — fourteen architecture decision
-  records (mono fork, FoundationDB, message-bus abstraction,
-  Avro, anomalies, kebab-case keys, system-as-data, changelog
-  watchers, model-equality testing, code generation via
-  prep-lib, one-component-per-library, pre-commit hooks, single
-  unified API, OpenAPI 3.x compliance).
+- **[docs/prd/](docs/prd/)** — product requirements documents:
+  a platform-wide umbrella plus one per capability (onboarding,
+  parties, cash-account-products, cash-accounts, payments,
+  interest, policies). The *what and why* — intended scope,
+  users, and domain rules — companion to the TDDs' *how*.
+- **[docs/tdd/](docs/tdd/)** — technical design documents
+  covering the substrate (transaction processing, transactions
+  and balances, traceability, scenario testing, idempotency
+  proposal), the API surface and auth (service-apis, api-keys),
+  the policy engine, and every domain (organisations, parties,
+  products, accounts, payments, interest).
+- **[docs/adr/](docs/adr/)** — architecture decision records
+  (mono fork, FoundationDB, message-bus abstraction, Avro,
+  anomalies, kebab-case keys, system-as-data, changelog watchers,
+  model-equality testing, code generation via prep-lib,
+  one-component-per-library, pre-commit hooks, single unified
+  API, OpenAPI 3.x compliance, comments and docstrings).
 - **[docs/slides/](docs/slides/)** — a slidev walk-through of how
   systems-as-data assembles a running system.
-- **[docs/recipes/](docs/recipes/)** — twelve task-oriented
-  recipes (Problem / Solution / Rules / Discussion / References)
-  for components, bases, projects, system-components,
+- **[docs/recipes/](docs/recipes/)** — task-oriented recipes
+  (Problem / Solution / Rules / Discussion / References) for
+  components, bases, projects, system-components,
   system-configurations, testcontainers, error-handling, testing,
-  code-style, code-generation, common-helpers, git-workflow.
+  code-style, code-generation, common-helpers, deployment,
+  git-workflow, writing-docs.
 
 ## Running
 
@@ -233,7 +234,7 @@ This boots the full system — FDB, Pulsar, HTTP server — inside
 Testcontainers. Then start the Svelte front-end:
 
 ```bash
-just start-bank-app
+just bank-app-start
 ```
 
 ## Built on mono
