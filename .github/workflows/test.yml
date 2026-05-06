@@ -131,8 +131,16 @@ jobs:
           path: target/test-results/**/*.xml
           retention-days: 7
 
+      # Coverage runs only for the per-service matrix entries. The
+      # `dev` entry tests dev-only bricks (bank-test-scenarios,
+      # bank-monolith, bank-test-model, bank-test-projections) which
+      # are test fixtures — production bricks already get coverage
+      # via the per-service runs. Polylith also writes coverage to
+      # `target/coverage/development/` (project NAME) rather than
+      # `target/coverage/dev/` (alias), so the path here wouldn't
+      # match anyway.
       - name: Report coverage
-        if: always()
+        if: always() && matrix.project != 'dev'
         uses: zgosalvez/github-actions-report-lcov@v7.0.8
         with:
           coverage-files: target/coverage/${{ matrix.project }}/lcov.info
@@ -142,7 +150,7 @@ jobs:
           title-prefix: "[${{ matrix.project }}]"
 
       - name: Upload coverage report
-        if: always()
+        if: always() && matrix.project != 'dev'
         uses: actions/upload-artifact@v7
         with:
           name: coverage-report-${{ matrix.project }}
