@@ -1,6 +1,7 @@
 (ns com.repldriven.mono.bank-api.payment.commands
   (:require
-    [com.repldriven.mono.bank-api.commands :as commands]))
+    [com.repldriven.mono.bank-api.commands :as commands]
+    [com.repldriven.mono.bank-api.payment.coercion :as coercion]))
 
 (defn- dispatcher
   [request]
@@ -22,6 +23,7 @@
                  request
                  "submit-outbound-payment"
                  "outbound-payment"
-                 (assoc (get-in request [:parameters :body])
-                        :organization-id
-                        (get-in request [:auth :organization-id]))))
+                 (-> (get-in request [:parameters :body])
+                     (update :scheme coercion/encode-payment-scheme)
+                     (assoc :organization-id
+                            (get-in request [:auth :organization-id])))))

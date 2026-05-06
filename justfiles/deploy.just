@@ -1,0 +1,102 @@
+# Render the Helm chart locally (does not install)
+helm-template tag="dev":
+    helm dependency update infra/helm/queenswood
+    helm template queenswood infra/helm/queenswood \
+      --set image.tag={{ tag }} \
+      --set secrets.adminApiKey=template-render
+
+# Lint and schema-validate the Helm chart without a cluster
+helm-validate tag="dev":
+    # CRDs (FoundationDBCluster etc.) are skipped via -ignore-missing-schemas.
+    helm dependency update infra/helm/queenswood
+    helm lint infra/helm/queenswood --set secrets.adminApiKey=lint
+    helm template queenswood infra/helm/queenswood \
+      --set image.tag={{ tag }} \
+      --set secrets.adminApiKey=template-render \
+      | kubeconform -strict -ignore-missing-schemas -summary
+
+# Install or upgrade the chart; rotates the admin API key only on first install
+helm-install tag="dev" admin_key="" registry="ghcr.io/kjothen":
+    #!/usr/bin/env zsh
+    # Reuses the existing Secret value on subsequent installs so the admin API key is stable
+    # across deploys; pass `admin_key=...` to rotate. `registry` lets `kind-up` point at
+    # the local registry so containerd pulls from there.
+    set -e
+    key={{ admin_key }}
+    if [[ -z "$key" ]]; then
+      key=$(kubectl get secret queenswood-admin-api-key \
+        -o jsonpath='{.data.MONO_ADMIN_API_KEY}' 2>/dev/null \
+        | base64 -d || true)
+      [[ -z "$key" ]] && key=$(openssl rand -hex 16)
+    fi
+    helm dependency update infra/helm/queenswood
+    helm upgrade --install queenswood infra/helm/queenswood \
+      --set image.tag={{ tag }} \
+      --set image.registry={{ registry }} \
+      --set secrets.adminApiKey=$key \
+      --wait --timeout 10m
+
+# Create kind cluster, push images to local registry, and install the chart
+kind-up tag="dev":
+    #!/usr/bin/env zsh
+    # Uses a host-side registry to deduplicate layers across rebuilds — dramatically
+    # faster than `kind load docker-image` for iterative rebuilds.
+    set -e
+    bash {{ justfile_directory() }}/infra/kind/with-registry.sh queenswood
+    just docker-build-all {{ tag }}
+    for project in projects/*-service/; do
+      svc=${project:t}
+      docker tag {{ DOCKER_REGISTRY }}/$svc:{{ tag }} localhost:5001/$svc:{{ tag }}
+      docker push localhost:5001/$svc:{{ tag }}
+    done
+    just helm-install {{ tag }} "" localhost:5001
+
+# Tear down the kind cluster
+kind-down:
+    kind delete cluster --name queenswood
+
+# Start Tilt dev loop (creates kind cluster if missing)
+tilt-up:
+    #!/usr/bin/env zsh
+    # Refreshes subchart deps once before handing off so Tilt's helm() watcher
+    # doesn't see Chart.lock / charts/*.tgz appear mid-session and loop.
+    set -e
+    kind get clusters | grep -q queenswood || kind create cluster --name queenswood
+    helm dependency update infra/helm/queenswood
+    tilt up
+
+# Tear down Tilt-managed resources (leaves kind cluster intact)
+tilt-down:
+    tilt down
+
+# Prune orphaned Tilt images from Docker daemon and kind node containerd
+tilt-prune:
+    #!/usr/bin/env zsh
+    # Tilt rewrites every rebuild's manifest to a fresh `:tilt-<hex>` tag; per-edit
+    # rebuilds accumulate orphan images on the host and inside kind. Safe vs `:dev`
+    # and version tags — the glob only matches `*:tilt-*`.
+    set -e
+    images=$(docker images --filter 'reference=ghcr.io/kjothen/*:tilt-*' -q | sort -u)
+    if [[ -n "$images" ]]; then
+      echo "$images" | xargs docker rmi -f
+    else
+      echo "No host-side Tilt images to prune."
+    fi
+    if docker ps --format '{{ "{{" }}.Names{{ "}}" }}' | grep -q '^queenswood-control-plane$'; then
+      docker exec queenswood-control-plane crictl rmi --prune || true
+    else
+      echo "kind node 'queenswood-control-plane' not running — skipping containerd prune."
+    fi
+
+# Print the cluster admin API key from the queenswood Secret
+kube-admin-key:
+    #!/usr/bin/env zsh
+    # Designed for command substitution: VITE_MONO_ADMIN_API_KEY=$(just kube-admin-key) just bank-app-start
+    set -euo pipefail
+    key=$(kubectl get secret queenswood-admin-api-key \
+      -o jsonpath='{.data.MONO_ADMIN_API_KEY}' | base64 -d)
+    if [[ -z "$key" ]]; then
+      echo "queenswood-admin-api-key Secret missing or empty — is the cluster up and the chart installed?" >&2
+      exit 1
+    fi
+    printf '%s' "$key"

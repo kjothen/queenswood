@@ -29,7 +29,7 @@
 (def DuplicateItems
   {:value {:title "REJECTED"
            :type ":cash-account-product/duplicate-items"
-           :status 409
+           :status 422
            :detail "Duplicate items in: balance-products"}})
 
 (def registry

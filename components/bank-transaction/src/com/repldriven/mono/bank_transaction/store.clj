@@ -9,6 +9,7 @@
 (def ^:private legs-store-name "transaction-legs")
 
 (def transact fdb/transact)
+(def uniqueness-violation? fdb/uniqueness-violation?)
 
 (defn save-transaction
   [txn transaction]

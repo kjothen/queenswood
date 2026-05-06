@@ -23,6 +23,15 @@
 
 (def
   ^{:doc
+    "Like assoc, but silently drops any kv pair whose value is nil.
+  Args:
+  - m: the map to update.
+  - kvs: alternating key/value pairs; pairs with nil values are skipped."}
+  assoc-some
+  util.collections/assoc-some)
+
+(def
+  ^{:doc
     "First-match search through a nested structure.
   Returns [path value] of the first element matching pred,
   descending into maps/sequentials/sets without recursing into

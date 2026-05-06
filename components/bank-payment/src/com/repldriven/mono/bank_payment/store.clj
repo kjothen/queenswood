@@ -9,6 +9,7 @@
 (def ^:private inbound-payments-store-name "inbound-payments")
 
 (def transact fdb/transact)
+(def uniqueness-violation? fdb/uniqueness-violation?)
 
 (defn save-internal-payment
   [txn payment]

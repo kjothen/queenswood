@@ -11,3 +11,15 @@
 
 (def outbound-payment-status-enum-schema
   (:enum-schema outbound-payment-status-enum))
+
+(def ^:private payment-scheme-enum
+  (coercion/enum-coercion {"fps" :payment-scheme-fps} :payment-scheme-unknown))
+
+(def payment-scheme-enum-schema (:enum-schema payment-scheme-enum))
+
+(defn encode-payment-scheme
+  "Convert a decoded payment scheme keyword back to its wire string,
+  e.g. :payment-scheme-fps -> \"fps\". Required before Avro serialization."
+  [scheme]
+  (some-> ((:encode payment-scheme-enum) scheme)
+          name))

@@ -5,7 +5,7 @@
 
     [com.repldriven.mono.bank-balance.interface :as balances]
 
-    [com.repldriven.mono.error.interface :refer [let-nom>]]))
+    [com.repldriven.mono.error.interface :as error :refer [let-nom>]]))
 
 (defn record
   [txn data]
@@ -19,18 +19,24 @@
                          (domain/new-leg leg transaction-id currency))
                        legs)]
        (let-nom>
-         [_ (store/save-transaction txn transaction)
+         [_ (domain/validate-legs legs)
+          _ (store/save-transaction txn transaction)
           _ (store/save-legs txn legs')]
          (assoc transaction :legs legs'))))))
 
 (defn record-transaction
   [txn data]
-  (store/transact
-   txn
-   (fn [txn]
-     (let-nom>
-       [result (record txn data)
-        _ (balances/apply-legs txn
-                               (:legs result)
-                               (:transaction-type result))]
-       result))))
+  (let [result (store/transact
+                txn
+                (fn [txn]
+                  (let-nom>
+                    [result (record txn data)
+                     _ (balances/apply-legs txn
+                                            (:legs result)
+                                            (:transaction-type result))]
+                    result)))
+        result (if (store/uniqueness-violation? result)
+                 (error/reject :transaction/already-recorded
+                               "Transaction already recorded")
+                 result)]
+    result))

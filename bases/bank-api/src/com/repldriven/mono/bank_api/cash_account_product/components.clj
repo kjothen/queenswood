@@ -53,7 +53,7 @@
    [:valid-from {:optional true} [:maybe [:ref "Date"]]]
    [:created-at [:ref "Timestamp"]]
    [:updated-at [:ref "Timestamp"]]
-   [:discarded-at {:optional true} [:ref "Timestamp"]]])
+   [:discarded-at {:optional true} [:maybe [:ref "Timestamp"]]]])
 
 (def CashAccountProduct
   [:map {:json-schema/example examples/CashAccountProduct}

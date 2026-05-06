@@ -5,6 +5,7 @@
     [com.repldriven.mono.bank-api.party.examples :refer
      [DuplicateNationalIdentifier PartyNotFound]]
     [com.repldriven.mono.bank-api.schema :refer [ErrorResponse]]
+    [com.repldriven.mono.bank-api.party.links :as links]
     [com.repldriven.mono.bank-api.shared.parameters :as shared.parameters]
     [com.repldriven.mono.telemetry.interface :as telemetry]))
 
@@ -16,17 +17,19 @@
     [""
      {:get {:summary "Retrieve parties"
             :openapi {:operationId "RetrieveParties"
-                      :parameters shared.parameters/ref-page}
+                      :parameters ^:replace [shared.parameters/ref-page]}
             :parameters {:query list-parties-query-schema}
             :responses {200 {:body [:ref "PartyList"]}}
             :handler queries/list-parties}
       :post {:summary "Create a new party"
              :openapi {:operationId "CreateParty"
                        :requestBody {:required true}
-                       :parameters shared.parameters/ref-idempotency-key}
+                       :parameters ^:replace
+                                   [shared.parameters/ref-idempotency-key]}
              :interceptors [telemetry/require-idempotency-key]
              :parameters {:body [:ref "CreatePartyRequest"]}
-             :responses {200 {:body [:ref "CreatePartyResponse"]}
+             :responses {200 {:body [:ref "CreatePartyResponse"]
+                              :openapi {:links links/from-party}}
                          409 (ErrorResponse [#'DuplicateNationalIdentifier])}
              :handler commands/create-party}}]
     ["/{party-id}" {:parameters {:path {:party-id [:ref "PartyId"]}}}

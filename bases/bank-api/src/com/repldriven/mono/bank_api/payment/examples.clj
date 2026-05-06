@@ -14,7 +14,21 @@
            :status 404
            :detail "Balance not found"}})
 
-(def registry (examples-registry [#'PaymentNotFound #'BalanceNotFound]))
+(def AlreadySubmitted
+  {:value {:title "REJECTED"
+           :type ":payment/already-submitted"
+           :status 409
+           :detail "Payment already submitted"}})
+
+(def InvalidAmount
+  {:value {:title "REJECTED"
+           :type ":transaction/invalid-amount"
+           :status 422
+           :detail "Transaction amount must be positive"}})
+
+(def registry
+  (examples-registry [#'PaymentNotFound #'BalanceNotFound #'AlreadySubmitted
+                      #'InvalidAmount]))
 
 (def PaymentId "pmt.01kprbmgcj35ptc8npmybhh4s5")
 
@@ -42,12 +56,12 @@
    :creditor-name "Arthur Dent"
    :currency "GBP"
    :amount 500
-   :scheme "FPS"
+   :scheme "fps"
    :reference "Invoice 123"})
 
 (def OutboundPayment
   {:payment-id "pmt.01kprbmgcj35ptc8npmybhh4s6"
-   :scheme "FPS"
+   :scheme "fps"
    :debtor-account-id "acc.01kprbmgcj35ptc8npmybhh4s8"
    :creditor-bban "04000412345678"
    :creditor-name "Arthur Dent"

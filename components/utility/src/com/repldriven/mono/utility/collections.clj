@@ -33,6 +33,13 @@
   [form]
   (postwalk #(if (record? %) (into {} %) %) form))
 
+(defn assoc-some
+  "Like assoc, but silently drops any kv pair whose value is nil."
+  [m & kvs]
+  (reduce (fn [acc [k v]] (if (some? v) (assoc acc k v) acc))
+          m
+          (partition 2 kvs)))
+
 (defn deep-some
   [pred coll]
   (cond (pred coll)

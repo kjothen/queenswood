@@ -6,6 +6,7 @@
      [BalanceAlreadyExists BalanceNotFound]]
     [com.repldriven.mono.bank-api.cash-account.examples :refer
      [CashAccountNotFound]]
+    [com.repldriven.mono.bank-api.balance.links :as links]
     [com.repldriven.mono.bank-api.schema :refer [ErrorResponse]]))
 
 (def routes
@@ -22,7 +23,8 @@
              :openapi {:operationId "CreateBalance"
                        :requestBody {:required true}}
              :parameters {:body [:ref "CreateBalanceRequest"]}
-             :responses {201 {:body [:ref "CreateBalanceResponse"]}
+             :responses {201 {:body [:ref "CreateBalanceResponse"]
+                              :openapi {:links links/from-balance}}
                          404 (ErrorResponse [#'CashAccountNotFound])
                          409 (ErrorResponse [#'BalanceAlreadyExists])}
              :handler handlers/create-balance}}]
