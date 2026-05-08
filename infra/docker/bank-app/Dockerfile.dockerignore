@@ -1,0 +1,20 @@
+# Per-Dockerfile override for the bank-app build. The repo-root
+# `.dockerignore` is tuned for the JVM service images (which only
+# need a pre-built uberjar) and explicitly excludes `bases/bank-app`
+# and `infra/docker` — both of which the SPA build needs. Buildx
+# picks up `<dockerfile>.dockerignore` ahead of the root one when
+# present, so this file is consulted only for the bank-app target.
+
+# Start by excluding everything, then whitelist the minimum the
+# multi-stage build actually copies.
+*
+
+!bases/bank-app
+!infra/docker/bank-app
+
+# Re-exclude artefacts inside the whitelisted dirs. (Re-exclusion
+# only works when the parent dir was re-included above.)
+bases/bank-app/node_modules
+bases/bank-app/dist
+bases/bank-app/.svelte-kit
+bases/bank-app/**/*.log
