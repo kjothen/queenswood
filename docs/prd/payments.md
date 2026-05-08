@@ -401,4 +401,4 @@ result; no duplicate payment is created.
   for the double-entry posting model that sits under
   every payment;
   [tdd/idempotency](../tdd/idempotency.md) for the
-  proposed unified idempotency model.
+  idempotency design.

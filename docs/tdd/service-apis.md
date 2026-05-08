@@ -28,7 +28,7 @@ Out of scope: domain-specific request/response shapes —
 those live in per-domain components and the OpenAPI
 document; the command pipeline behind handlers, see
 [transaction-processing.md](transaction-processing.md);
-idempotency (planned recipe).
+idempotency — see [idempotency.md](idempotency.md).
 
 ## Background
 
@@ -437,10 +437,11 @@ Read operations skip the pipeline and query FDB directly.
   extra fields are rejected with 400. Deliberate, but means
   client teams need to be careful with optional-field
   conventions.
-- **Idempotency is a per-route opt-in interceptor**
-  (`telemetry/require-idempotency-key`). Forgetting to add it
+- **Idempotency is a per-route opt-in interceptor pair**
+  (`server/require-idempotency-key` then
+  `bank-idempotency/cache-response`). Forgetting to add both
   to a write endpoint means the endpoint accepts retries
-  blindly. Worth a dedicated recipe to capture the discipline.
+  blindly. See [idempotency.md](idempotency.md).
 
 ## References
 

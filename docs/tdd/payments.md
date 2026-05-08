@@ -294,18 +294,18 @@ sequencing for FPS settlements. Within Queenswood, the event
 processor handles events serially (one consumer; per-account
 ordering follows).
 
-**Idempotency.** Today's mix:
+**Idempotency.**
 
-- **Internal payments** dedup at submission via the envelope
-  `:id` (idempotency-key). Today's storage is per-domain and
-  not yet universal — see
-  [idempotency.md](idempotency.md) for the proposed unified
-  design.
+- **Internal and outbound payments** at submission are covered
+  by the API-layer FDB-backed idempotency cache
+  (`bank-idempotency/cache-response`), scoped by
+  `[principal_id, operation, idempotency_key]`. Duplicate
+  requests within the 24 h window receive the original
+  response. See [idempotency.md](idempotency.md).
 - **Inbound payments** dedup via `scheme-transaction-id` (the
   ClearBank identifier). The check is FDB-indexed and atomic
   with the settlement transaction.
-- **Outbound payments** at submission dedup via envelope
-  `:id`; settlement (the event-driven side) dedups by the
+- **Outbound settlement** (event-driven side) dedups by the
   outbound payment's known status.
 
 ### Three roles for Pulsar in this flow
@@ -404,10 +404,8 @@ channel separation is configuration, not infrastructure.
   owning it works but creates a small layering question
   if CoP-result handling ever needs to live alongside
   payment domain logic.
-- **Idempotency on internal payments is per-domain.** As
-  with all writes, internal payment idempotency is whatever
-  `bank-payment` implements today, with the universal
-  design proposed in
+- **Idempotency on write submissions is handled by the
+  API-layer cache** (`bank-idempotency`). See
   [idempotency.md](idempotency.md).
 
 ## References
