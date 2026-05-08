@@ -14,7 +14,33 @@ ARG PROJECT_NAME
 
 FROM clojure:temurin-21-tools-deps-bookworm AS build
 ARG PROJECT_NAME
+ARG TARGETARCH
 WORKDIR /workspace
+
+# Code-gen tooling for the prep step. Both versions match the local
+# nix flake so generated output is identical to dev:
+#  - protoc 25.8 — arch-aware Linux build from the upstream release
+#  - protoc-gen-clojure 2.1.2 — protojure's plugin, distributed as a
+#    `:;exec java -jar ...` self-executing jar, so it runs on any
+#    arch via the temurin JDK already in this image
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends curl unzip ca-certificates \
+ && rm -rf /var/lib/apt/lists/* \
+ && PROTOC_ARCH="$(case ${TARGETARCH:-amd64} in \
+                     amd64|x86_64)  echo x86_64 ;; \
+                     arm64|aarch64) echo aarch_64 ;; \
+                     *) echo "unknown arch: ${TARGETARCH}" >&2; exit 1 ;; \
+                   esac)" \
+ && curl -fsSL \
+      "https://github.com/protocolbuffers/protobuf/releases/download/v25.8/protoc-25.8-linux-${PROTOC_ARCH}.zip" \
+      -o /tmp/protoc.zip \
+ && unzip -q /tmp/protoc.zip -d /usr/local \
+ && rm /tmp/protoc.zip \
+ && curl -fsSL \
+      "https://github.com/protojure/protoc-plugin/releases/download/v2.1.2/protoc-gen-clojure" \
+      -o /usr/local/bin/protoc-gen-clojure \
+ && chmod +x /usr/local/bin/protoc-gen-clojure
+
 COPY . .
 # Code-gen step (Lancaster Avro schemas, protobuf classes) must run
 # from the workspace root — the `:+bank` alias is defined in the
