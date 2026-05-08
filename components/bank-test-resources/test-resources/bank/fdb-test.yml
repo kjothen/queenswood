@@ -32,6 +32,10 @@ _record-types: !strs &record-types
         type: count
       - name: CashAccount_by_bban
         field: bban
+  idempotency:
+    record-type: Idempotency
+    primary-key: [principal_id, operation, idempotency_key]
+    indexes: []
   idvs:
     record-type: Idv
     primary-key: [organization_id, verification_id]
@@ -99,7 +103,7 @@ _record-types: !strs &record-types
     record-type: Transaction
     indexes:
       - name: Transaction_by_idempotency_key
-        field: idempotency_key
+        fields: [transaction_type, idempotency_key]
         unique: true
 
 container: !system/component

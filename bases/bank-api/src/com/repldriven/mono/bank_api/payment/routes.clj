@@ -9,7 +9,9 @@
     [com.repldriven.mono.bank-api.schema :refer [ErrorResponse]]
     [com.repldriven.mono.bank-api.payment.links :as links]
     [com.repldriven.mono.bank-api.shared.parameters :as shared.parameters]
-    [com.repldriven.mono.telemetry.interface :as telemetry]))
+
+    [com.repldriven.mono.bank-idempotency.interface :as bank-idempotency]
+    [com.repldriven.mono.server.interface :as server]))
 
 (def routes
   [["/payments"
@@ -20,7 +22,8 @@
                        :requestBody {:required true}
                        :parameters ^:replace
                                    [shared.parameters/ref-idempotency-key]}
-             :interceptors [telemetry/require-idempotency-key]
+             :interceptors [server/require-idempotency-key
+                            bank-idempotency/cache-response]
              :parameters {:body [:ref "SubmitInternalPaymentRequest"]}
              :responses {200 {:body [:ref "InternalPayment"]
                               :openapi {:links links/from-internal-payment}}
@@ -43,7 +46,8 @@
                        :requestBody {:required true}
                        :parameters ^:replace
                                    [shared.parameters/ref-idempotency-key]}
-             :interceptors [telemetry/require-idempotency-key]
+             :interceptors [server/require-idempotency-key
+                            bank-idempotency/cache-response]
              :parameters {:body [:ref "SubmitOutboundPaymentRequest"]}
              :responses {200 {:body [:ref "OutboundPayment"]
                               :openapi {:links links/from-outbound-payment}}

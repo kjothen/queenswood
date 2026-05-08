@@ -240,6 +240,16 @@
     :description
     "Monetary quantity in the smallest denomination of the associated currency."}])
 
+(def PaymentMinorUnits
+  [:int
+   {:min 1
+    :max 10000000000000
+    :json-schema/format "int64"
+    :description
+    "Positive monetary quantity in the smallest denomination of the
+    associated currency. Used for payment submission requests to
+    reject zero amounts at the API boundary."}])
+
 (def PageQuery
   "Nested `page` deepObject query parameter. Wire form is
   `page[after]=…&page[size]=20`, nested into
@@ -328,5 +338,5 @@
   (components-registry
    [#'AccountNumber #'Amount #'Bban #'CountryCode #'Currency #'CurrencyCode
     #'Date #'DateOfBirth #'EmbedQuery #'IdempotencyKey #'MinorUnits #'Name
-    #'NationalIdentifierValue #'PageQuery #'SignedAmount #'SignedBasisPoints
-    #'SignedMinorUnits #'SortCode #'Timestamp]))
+    #'PaymentMinorUnits #'NationalIdentifierValue #'PageQuery #'SignedAmount
+    #'SignedBasisPoints #'SignedMinorUnits #'SortCode #'Timestamp]))

@@ -1,7 +1,13 @@
 (ns com.repldriven.mono.server.interface
   (:require
     com.repldriven.mono.server.system
-    [com.repldriven.mono.server.core :as core]))
+    [com.repldriven.mono.server.core :as core]
+    [com.repldriven.mono.server.interceptors :as interceptors]))
+
+(def require-idempotency-key
+  "Interceptor that validates the `Idempotency-Key` header is present
+  and syntactically well-formed (16-255 URL-safe ASCII chars)."
+  interceptors/require-idempotency-key)
 
 (def standard-router-data core/standard-router-data)
 (def standard-executor core/standard-executor)

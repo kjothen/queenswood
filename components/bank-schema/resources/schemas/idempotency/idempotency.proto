@@ -1,0 +1,39 @@
+syntax = "proto2";
+
+package com.repldriven.mono.schemas.idempotency;
+
+import "record_metadata_options.proto";
+
+option java_outer_classname = "IdempotencyProto";
+
+// Cached response for an Idempotency-Key, scoped by the
+// authenticated principal (the API key id for org-scoped
+// callers, the literal "admin" for admin-key callers) and the
+// operation (HTTP method + path template).
+//
+// Two-state machine to handle concurrent duplicate requests:
+//
+//   `pending`   — a handler is currently processing this key.
+//                 Subsequent requests with the same key get 409
+//                 until the handler completes (or the entry
+//                 ages out via the stale-pending timeout).
+//   `completed` — handler done; `status` and `body` hold the
+//                 response to replay. Cached for `expires_at`
+//                 (24h after creation by default).
+//
+// `body` is the response body serialised as EDN — preserves
+// keyword values (e.g. `:cash-account-status-closed`) that would
+// otherwise be flattened to plain strings by JSON round-trip and
+// fail downstream malli response coercion on replay.
+message Idempotency {
+  option (com.apple.foundationdb.record.record).usage = RECORD;
+
+  required string principal_id    = 1;
+  required string operation       = 2;
+  required string idempotency_key = 3;
+  required string state           = 4;  // "pending" or "completed"
+  optional int32  status          = 5;
+  optional string body            = 6;
+  required int64  created_at      = 7;
+  required int64  expires_at      = 8;
+}

@@ -8,7 +8,9 @@
     [com.repldriven.mono.bank-api.schema :refer [ErrorResponse]]
     [com.repldriven.mono.bank-api.cash-account.links :as links]
     [com.repldriven.mono.bank-api.shared.parameters :as shared.parameters]
-    [com.repldriven.mono.telemetry.interface :as telemetry]))
+
+    [com.repldriven.mono.bank-idempotency.interface :as bank-idempotency]
+    [com.repldriven.mono.server.interface :as server]))
 
 (def ^:private list-cash-accounts-query-schema
   [:map {:closed true}
@@ -36,7 +38,8 @@
                        :requestBody {:required true}
                        :parameters ^:replace
                                    [shared.parameters/ref-idempotency-key]}
-             :interceptors [telemetry/require-idempotency-key]
+             :interceptors [server/require-idempotency-key
+                            bank-idempotency/cache-response]
              :parameters {:body [:ref "CreateCashAccountRequest"]}
              :responses {200 {:body [:ref "CreateCashAccountResponse"]
                               :openapi {:links links/from-account}}
@@ -69,7 +72,8 @@
                         :parameters ^:replace
                                     [shared.parameters/ref-account-id
                                      shared.parameters/ref-idempotency-key]}
-              :interceptors [telemetry/require-idempotency-key]
+              :interceptors [server/require-idempotency-key
+                             bank-idempotency/cache-response]
               :responses {200 {:body [:ref "CloseCashAccountResponse"]
                                :openapi {:links links/from-account}}
                           404 (ErrorResponse [#'CashAccountNotFound])}

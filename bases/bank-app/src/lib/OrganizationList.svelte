@@ -34,11 +34,6 @@
     return new Date().toISOString().slice(0, 10);
   }
 
-  function dateToInt(isoDate) {
-    const [y, m, d] = isoDate.split("-").map(Number);
-    return y * 10000 + m * 100 + d;
-  }
-
   function openDatePicker(orgId, action) {
     datePickerOrgId = orgId;
     datePickerAction = action;
@@ -123,7 +118,7 @@
 
   async function submitDatePicker() {
     const orgId = datePickerOrgId;
-    const asOfDate = dateToInt(datePickerDate);
+    const asOfDate = datePickerDate;
     const action = datePickerAction;
     showDatePicker = false;
 

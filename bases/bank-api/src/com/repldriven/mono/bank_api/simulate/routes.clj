@@ -3,11 +3,14 @@
     [com.repldriven.mono.bank-api.organization.examples :refer
      [OrganizationNotFound]]
     [com.repldriven.mono.bank-api.simulate.examples :refer
-     [BalanceNotFound SettlementAccountNotFound]]
+     [BalanceNotFound InvalidAmount SettlementAccountNotFound
+      TransactionAlreadyRecorded]]
     [com.repldriven.mono.bank-api.simulate.handlers :as handlers]
     [com.repldriven.mono.bank-api.schema :refer [ErrorResponse]]
     [com.repldriven.mono.bank-api.shared.parameters :as shared.parameters]
-    [com.repldriven.mono.telemetry.interface :as telemetry]))
+
+    [com.repldriven.mono.bank-idempotency.interface :as bank-idempotency]
+    [com.repldriven.mono.server.interface :as server]))
 
 (def routes
   [["/simulate"
@@ -22,11 +25,14 @@
                                     [shared.parameters/ref-org-id
                                      shared.parameters/ref-idempotency-key]}
               :parameters {:body [:ref "SimulateInboundTransferRequest"]}
-              :interceptors [telemetry/require-idempotency-key]
+              :interceptors [server/require-idempotency-key
+                             bank-idempotency/cache-response]
               :responses {200 {:body [:ref
                                       "SimulateInboundTransferResponse"]}
                           404 (ErrorResponse [#'OrganizationNotFound
-                                              #'BalanceNotFound])}
+                                              #'BalanceNotFound])
+                          422 (ErrorResponse [#'TransactionAlreadyRecorded
+                                              #'InvalidAmount])}
               :handler handlers/inbound-transfer}}]
      ["/accrue"
       {:post {:summary "Accrue interest"
@@ -36,11 +42,13 @@
                                     [shared.parameters/ref-org-id
                                      shared.parameters/ref-idempotency-key]}
               :parameters {:body [:ref "SimulateInterestRequest"]}
-              :interceptors [telemetry/require-idempotency-key]
+              :interceptors [server/require-idempotency-key
+                             bank-idempotency/cache-response]
               :responses {200 {:body [:ref
                                       "SimulateInterestResponse"]}
                           404 (ErrorResponse [#'OrganizationNotFound
-                                              #'SettlementAccountNotFound])}
+                                              #'SettlementAccountNotFound])
+                          422 (ErrorResponse [#'TransactionAlreadyRecorded])}
               :handler handlers/accrue}}]
      ["/capitalize"
       {:post {:summary "Capitalize interest"
@@ -50,9 +58,11 @@
                                     [shared.parameters/ref-org-id
                                      shared.parameters/ref-idempotency-key]}
               :parameters {:body [:ref "SimulateInterestRequest"]}
-              :interceptors [telemetry/require-idempotency-key]
+              :interceptors [server/require-idempotency-key
+                             bank-idempotency/cache-response]
               :responses {200 {:body [:ref
                                       "SimulateInterestResponse"]}
                           404 (ErrorResponse [#'OrganizationNotFound
-                                              #'SettlementAccountNotFound])}
+                                              #'SettlementAccountNotFound])
+                          422 (ErrorResponse [#'TransactionAlreadyRecorded])}
               :handler handlers/capitalize}}]]]])

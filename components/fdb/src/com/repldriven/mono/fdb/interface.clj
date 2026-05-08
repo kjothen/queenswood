@@ -25,6 +25,12 @@
 
 (defn save-record [store record] (record/save store record))
 
+(defn delete-record
+  "Deletes a record by primary key from an open FDBRecordStore.
+  Returns true if deleted, false if not found."
+  [store & primary-key-parts]
+  (apply record/delete store primary-key-parts))
+
 (defn query-records
   "Queries an open FDBRecordStore where field equals value.
   Returns a vector of serialized byte arrays. opts supports

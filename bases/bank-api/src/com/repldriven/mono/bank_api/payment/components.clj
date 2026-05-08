@@ -16,7 +16,7 @@
    [:debtor-account-id [:ref "CashAccountId"]]
    [:creditor-account-id [:ref "CashAccountId"]]
    [:currency [:ref "Currency"]]
-   [:amount [:ref "MinorUnits"]]
+   [:amount [:ref "PaymentMinorUnits"]]
    [:reference {:optional true} [:maybe string?]]])
 
 (def InternalPayment
@@ -42,7 +42,7 @@
    [:creditor-bban [:ref "Bban"]]
    [:creditor-name [:ref "Name"]]
    [:currency [:ref "Currency"]]
-   [:amount [:ref "MinorUnits"]]
+   [:amount [:ref "PaymentMinorUnits"]]
    [:scheme [:ref "PaymentScheme"]]
    [:reference {:optional true} [:maybe string?]]])
 

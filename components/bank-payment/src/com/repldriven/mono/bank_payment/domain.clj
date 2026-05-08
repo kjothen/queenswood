@@ -52,7 +52,7 @@
   (let [{:keys [scheme-transaction-id end-to-end-id scheme
                 currency amount debtor-name reference]}
         data
-        now (System/currentTimeMillis)]
+        now (utility/now)]
     (utility/assoc-some
      {:payment-id (utility/generate-id "pmt")
       :scheme-transaction-id scheme-transaction-id
@@ -96,7 +96,7 @@
                 creditor-bban creditor-name scheme
                 currency amount reference]}
         data
-        now (System/currentTimeMillis)]
+        now (utility/now)]
     (utility/assoc-some
      {:payment-id (utility/generate-id "pmt")
       :idempotency-key idempotency-key
@@ -117,7 +117,7 @@
   [payment]
   (assoc payment
          :payment-status :outbound-payment-status-completed
-         :updated-at (System/currentTimeMillis)))
+         :updated-at (utility/now)))
 
 (defn new-internal-payment
   [data transaction-id]
@@ -125,7 +125,7 @@
                 creditor-account-id currency amount
                 reference]}
         data
-        now (System/currentTimeMillis)]
+        now (utility/now)]
     (utility/assoc-some
      {:payment-id (utility/generate-id "pmt")
       :idempotency-key idempotency-key

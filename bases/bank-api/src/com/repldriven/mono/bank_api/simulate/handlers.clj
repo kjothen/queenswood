@@ -36,7 +36,7 @@
          request
          "record-transaction"
          "transaction"
-         {:transaction-type :transaction-type-internal-transfer
+         {:transaction-type :transaction-type-inbound-transfer
           :currency currency
           :reference "Simulated inbound transfer"
           :legs [{:account-id internal-account-id

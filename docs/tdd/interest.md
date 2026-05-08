@@ -290,9 +290,8 @@ The `as-of-date` is part of the per-account idempotency key:
 
 Re-running a date is safe — the second pass finds the
 existing accrual transactions via the idempotency key and
-either skips (today's per-domain pattern) or returns the
-prior outcome under the proposed universal idempotency
-design; see [idempotency.md](idempotency.md).
+skips or returns the prior outcome via the API-layer
+idempotency cache; see [idempotency.md](idempotency.md).
 
 ### Per-account atomicity, cross-account resumability
 
