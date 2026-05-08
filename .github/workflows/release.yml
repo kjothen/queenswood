@@ -38,6 +38,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
+      # QEMU is needed to build linux/arm64 layers on the amd64 runner.
+      # The cross-arch JVM compile is the slow part; GHA layer cache
+      # (configured below) makes unchanged layers instant on re-runs.
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -53,14 +59,26 @@ jobs:
       # docker-build-all`). Override to push directly to the
       # registry from the buildx builder — no intermediate
       # `docker push` step, no local daemon required.
+      #
+      # Caching strategy:
+      # - `MULTI_ARCH=1` flips bake.hcl to publish linux/amd64 +
+      #   linux/arm64. Local builds stay single-arch by default.
+      # - `cache-from`/`cache-to=type=gha` persists BuildKit layer
+      #   cache across workflow runs via the GitHub Actions cache.
+      # - The Dockerfile's `--mount=type=cache` for /root/.m2 shares
+      #   the Maven cache across the 13 service builds in a single
+      #   bake invocation (deps downloaded once, not 13×).
       - name: Build and push all service images
         env:
           REGISTRY: ghcr.io/${{ github.repository_owner }}
           TAG: latest
+          MULTI_ARCH: "1"
         run: |
           docker buildx bake \
             -f infra/docker/bake.hcl \
-            --set "*.output=type=registry,push=true"
+            --set "*.output=type=registry,push=true" \
+            --set "*.cache-from=type=gha,scope=release" \
+            --set "*.cache-to=type=gha,scope=release,mode=max"
 
       - name: Install Helm
         uses: azure/setup-helm@v4

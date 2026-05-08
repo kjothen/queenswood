@@ -27,6 +27,16 @@ group "default" {
   targets = concat(services, ["bank-app"])
 }
 
+// Multi-platform builds are gated on the `MULTI_ARCH` variable so
+// local `docker buildx bake` (the just docker-build-* recipes) stays
+// fast and single-arch, while CI publishes both linux/amd64 and
+// linux/arm64. Single-arch is selected by leaving the variable empty
+// (the default) — `platforms = []` lets BuildKit fall back to the
+// host platform.
+variable "MULTI_ARCH" { default = "" }
+
+platforms_default = MULTI_ARCH == "1" ? ["linux/amd64", "linux/arm64"] : []
+
 target "service" {
   name       = svc
   matrix     = { svc = services }
@@ -34,6 +44,7 @@ target "service" {
   dockerfile = "infra/docker/service/Dockerfile"
   args       = { PROJECT_NAME = svc }
   tags       = ["${REGISTRY}/${svc}:${TAG}"]
+  platforms  = platforms_default
   output     = ["type=docker"]
 }
 
@@ -44,5 +55,6 @@ target "bank-app" {
   context    = "."
   dockerfile = "infra/docker/bank-app/Dockerfile"
   tags       = ["${REGISTRY}/bank-app:${TAG}"]
+  platforms  = platforms_default
   output     = ["type=docker"]
 }
