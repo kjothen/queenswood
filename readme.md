@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/assets/logo-240.png" alt="Queenswood Bank" width="240" />
+</p>
+
 # Queenswood
 
 A multi-tenant banking platform: core banking with double-entry

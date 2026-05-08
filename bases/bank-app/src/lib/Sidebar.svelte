@@ -35,7 +35,9 @@
 </script>
 
 <nav>
-  <div class="brand">Queenswood</div>
+  <div class="brand">
+    <img src="/logo.png" alt="Queenswood Bank" />
+  </div>
   {#each navItems as item}
     <button
       class="nav-item"
@@ -68,11 +70,15 @@
   }
 
   .brand {
-    color: white;
-    font-size: 1.2rem;
-    font-weight: 700;
-    padding: 0.75rem 1.25rem 1.5rem;
-    letter-spacing: 0.02em;
+    display: flex;
+    justify-content: center;
+    padding: 1rem 1.25rem 1.5rem;
+  }
+
+  .brand img {
+    width: 100%;
+    max-width: 150px;
+    height: auto;
   }
 
   .nav-item {
