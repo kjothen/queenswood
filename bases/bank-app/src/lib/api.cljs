@@ -2,8 +2,28 @@
 
 (def ^:private api-key (atom nil))
 (def ^:private api-keys-store "mono-api-keys")
+(def ^:private admin-key-store "mono-admin-api-key")
 
-(defn- admin-token [] (.-VITE_MONO_ADMIN_API_KEY (.-env js/import.meta)))
+(defn admin-token
+  "Browser-side admin API key. Read from localStorage first; fall
+  back to the Vite-injected build-time env var as a dev convenience
+  so a developer who set VITE_MONO_ADMIN_API_KEY on the host doesn't
+  also have to paste it into the login screen."
+  []
+  (or (.getItem js/localStorage admin-key-store)
+      (.-VITE_MONO_ADMIN_API_KEY (.-env js/import.meta))))
+
+(defn save-admin-token
+  "Persist the admin API key to localStorage. Called by the login
+  screen on submit."
+  [token]
+  (.setItem js/localStorage admin-key-store token))
+
+(defn clear-admin-token
+  "Wipe the stored admin API key — caller's choice whether to also
+  clear org keys."
+  []
+  (.removeItem js/localStorage admin-key-store))
 
 (defn- parse-response
   [res]
