@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "mermaid-preview",
+      "runtimeExecutable": "/usr/bin/ruby",
+      "runtimeArgs": ["-run", "-e", "httpd", ".claude/preview", "-p", "9876"],
+      "port": 9876
+    }
+  ]
+}

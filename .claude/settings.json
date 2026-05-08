@@ -1,0 +1,31 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(clj:*)",
+      "Bash(clj-kondo:*)",
+      "Bash(clojure:*)",
+      "Bash(docker buildx:*)",
+      "Bash(docker info:*)",
+      "Bash(helm:*)",
+      "Bash(just:*)",
+      "Bash(kind:*)",
+      "Bash(kubeconform:*)",
+      "Bash(kubectl:*)",
+      "Bash(tilt:*)",
+      "WebFetch(domain:clearbank.github.io)"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/post-edit-check-docs.sh"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -27,7 +27,7 @@ interceptor. The header value is 16–255 URL-safe ASCII chars
 
 The `Idempotency-Key` is also carried in the command
 envelope's `:id` field so processors can deduplicate at the
-domain layer if needed (see [ADR-0008](../adr/0008-changelog-watchers.md)).
+domain layer if needed — see [ADR-0008](../adr/0008-changelog-watchers.md).
 Envelope hygiene stays clean: the key is never folded into the
 message payload.
 
