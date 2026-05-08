@@ -8,9 +8,12 @@ name: Release
 # First-run setup: GHCR packages are private by default. After the
 # first successful run, visit
 #   https://github.com/users/<owner>/packages/container/<service>/settings
-# for each service and flip the visibility to "public", OR document
-# image-pull secrets in the quickstart. The current quickstart
-# assumes public images.
+# for each service AND for the `queenswood` chart artifact, and
+# flip the visibility to "public". The quickstart's OCI one-liner
+# (`helm install ... oci://ghcr.io/<owner>/queenswood`) and image
+# pulls into the kind cluster both rely on public access — the
+# alternative would be `helm registry login` plus a per-namespace
+# imagePullSecret.
 
 on:
   push:
@@ -80,14 +83,38 @@ jobs:
           mkdir -p release
           helm package infra/helm/queenswood -d release
 
+      # Publish the chart to GHCR as an OCI artifact so consumers
+      # can run `helm install queenswood oci://ghcr.io/<owner>/queenswood
+      # --version <ver>` directly. Helm 3.8+ does share ~/.docker/config.json
+      # with the docker/login-action above, but be explicit — it's
+      # one line and removes a debug-time gotcha if the auth path
+      # ever drifts.
+      - name: Helm registry login (GHCR)
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | \
+            helm registry login ghcr.io \
+              --username ${{ github.actor }} \
+              --password-stdin
+
+      - name: Push Helm chart to GHCR (OCI)
+        run: |
+          helm push release/queenswood-*.tgz oci://ghcr.io/${{ github.repository_owner }}
+
       - name: Write quickstart README
         run: |
+          # Single-quoted heredoc keeps shell metacharacters
+          # (`$ADMIN_KEY`, backticks, `$(...)`) literal. The two
+          # build-time values — chart version and owner — are
+          # left as `__VERSION__` / `__OWNER__` placeholders and
+          # replaced with sed afterwards.
           cat > release/README.md <<'EOF'
           # Queenswood — local Kubernetes quickstart
 
-          This release ships a Helm chart that deploys the entire
-          Queenswood platform (API, processors, adapters/simulators,
-          Pulsar, FoundationDB) into a local Kubernetes cluster.
+          This release publishes the Helm chart at
+          `oci://ghcr.io/__OWNER__/queenswood:__VERSION__`. The chart
+          deploys the entire Queenswood platform (API, processors,
+          adapters/simulators, the Svelte front-end, Pulsar,
+          FoundationDB) into a local Kubernetes cluster.
 
           ## Prerequisites
 
@@ -103,29 +130,37 @@ jobs:
              kind create cluster --name queenswood
              ```
 
-          2. **Install the chart** (generates a one-off admin API
-             key — save it; it's how you authenticate against the
-             admin endpoints):
+          2. **Install the chart** straight from the OCI registry —
+             generates a one-off admin API key (save it; it's how you
+             authenticate against the admin endpoints):
              ```bash
              ADMIN_KEY=$(openssl rand -hex 16)
-             helm install queenswood queenswood-*.tgz \
+             helm install queenswood \
+               oci://ghcr.io/__OWNER__/queenswood --version __VERSION__ \
                --set secrets.adminApiKey=$ADMIN_KEY \
                --wait --timeout 10m
              echo "Admin API key: $ADMIN_KEY"
              ```
 
-          3. **Port-forward the API:**
+          3. **Port-forward** the API and the front-end
+             (separate terminals):
              ```bash
-             kubectl port-forward svc/bank-api 8080:8080
+             kubectl port-forward svc/queenswood-bank-api-service 8080:8080
+             kubectl port-forward svc/queenswood-bank-app          8081:8080
              ```
 
-          4. **Smoke-test:**
+          4. **Smoke-test the API:**
              ```bash
              curl -H "Authorization: Bearer $ADMIN_KEY" \
                http://localhost:8080/v1/tiers
              ```
 
              OpenAPI docs at <http://localhost:8080/scalar>.
+
+          5. **Open the bank-app:** <http://localhost:8081>. The
+             nginx in front of the SPA proxies `/v1/*` to the
+             in-cluster bank-api service, so the UI works with no
+             extra configuration.
 
           ## Recover the admin API key
 
@@ -143,6 +178,11 @@ jobs:
           kind delete cluster --name queenswood
           ```
           EOF
+          CHART_VERSION=$(awk '/^version:/ {print $2}' \
+            infra/helm/queenswood/Chart.yaml)
+          OWNER="${{ github.repository_owner }}"
+          sed -i "s/__VERSION__/$CHART_VERSION/g; s/__OWNER__/$OWNER/g" \
+            release/README.md
 
       # `gh release create` fails if the release already exists, so
       # delete the previous `latest` release (and its tag) first.

@@ -1,0 +1,82 @@
+{{- if .Values.bankApp.enabled }}
+---
+# Frontend SPA. Standalone template — distinct from the Clojure
+# `services:` matrix because the bank-app has no FDB volumes, no
+# bootstrap-Job dependency, no admin-key secret, and uses simple
+# TCP probes instead of Spring-Boot-Actuator endpoints.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-bank-app
+  labels:
+    {{- include "queenswood.labels" . | nindent 4 }}
+    app.kubernetes.io/component: bank-app
+spec:
+  replicas: {{ default 1 .Values.bankApp.replicas }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: bank-app
+  template:
+    metadata:
+      labels:
+        {{- include "queenswood.labels" . | nindent 8 }}
+        app.kubernetes.io/component: bank-app
+    spec:
+      {{- with .Values.image.pullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: bank-app
+          image: "{{ .Values.image.registry }}/bank-app:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.bankApp.port }}
+              protocol: TCP
+          env:
+            # nginx upstream for `/v1/*` proxying. `tpl` so the
+            # value can reference {{ .Release.Name }}.
+            - name: API_UPSTREAM
+              value: {{ tpl .Values.bankApp.apiUpstream . | quote }}
+          # Static-asset server: a TCP probe is sufficient — nginx
+          # accepts connections as soon as it's bound to :8080.
+          startupProbe:
+            tcpSocket:
+              port: http
+            periodSeconds: 5
+            failureThreshold: 12
+          livenessProbe:
+            tcpSocket:
+              port: http
+            periodSeconds: 30
+            failureThreshold: 3
+          readinessProbe:
+            tcpSocket:
+              port: http
+            periodSeconds: 10
+            failureThreshold: 3
+          {{- with .Values.bankApp.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-bank-app
+  labels:
+    {{- include "queenswood.labels" . | nindent 4 }}
+    app.kubernetes.io/component: bank-app
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: bank-app
+  ports:
+    - name: http
+      port: {{ .Values.bankApp.port }}
+      targetPort: http
+      protocol: TCP
+{{- end }}

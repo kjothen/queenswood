@@ -24,7 +24,7 @@ services = [
 ]
 
 group "default" {
-  targets = services
+  targets = concat(services, ["bank-app"])
 }
 
 target "service" {
@@ -34,5 +34,15 @@ target "service" {
   dockerfile = "infra/docker/service/Dockerfile"
   args       = { PROJECT_NAME = svc }
   tags       = ["${REGISTRY}/${svc}:${TAG}"]
+  output     = ["type=docker"]
+}
+
+// Frontend SPA — Node build → nginx serve. Separate target because
+// the Dockerfile and base images are unrelated to the JVM services
+// above; the Clojure base layer wouldn't share.
+target "bank-app" {
+  context    = "."
+  dockerfile = "infra/docker/bank-app/Dockerfile"
+  tags       = ["${REGISTRY}/bank-app:${TAG}"]
   output     = ["type=docker"]
 }

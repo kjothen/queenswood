@@ -46,6 +46,19 @@ ingress:
   annotations: {}
   tls: []
 
+# -- Frontend SPA (Svelte/Vite served by nginx). Image name is `bank-app`
+# under {{ image.registry }}. The container's nginx proxies `/v1/*` to
+# `apiUpstream`; the value supports `{{ .Release.Name }}` interpolation
+# so the default points at the in-cluster bank-api service.
+bankApp:
+  enabled: true
+  port: 8080
+  replicas: 1
+  apiUpstream: "http://{{ .Release.Name }}-bank-api-service:8080"
+  resources:
+    limits: { cpu: "200m", memory: "128Mi" }
+    requests: { cpu: "50m", memory: "64Mi" }
+
 # ---------------------------------------------------------------------
 # Per-service settings. Each key maps to one Deployment + (if http=true)
 # one Service. Set enabled: false to skip a service.
