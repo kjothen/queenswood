@@ -12,7 +12,7 @@
   (let [{:keys [idempotency-key transaction-type currency
                 reference]}
         data
-        now (System/currentTimeMillis)
+        now (utility/now)
         status (get type->status
                     transaction-type
                     :transaction-status-pending)]
@@ -46,4 +46,4 @@
      :side side
      :amount amount
      :currency currency
-     :created-at (System/currentTimeMillis)}))
+     :created-at (utility/now)}))

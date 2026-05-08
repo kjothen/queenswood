@@ -52,6 +52,11 @@
   - 5xx                        → drop the `pending` marker so the
                                   request can be retried immediately
 
+  `:error` releases the claim if the handler threw — Sieppari skips
+  `:leave` on the throwing path. Without this, a transient handler
+  exception would leave the claim sitting in FDB until the 60s
+  stale-pending TTL expires, spuriously 409-ing legitimate retries.
+
   Place at the route level AFTER `server/require-idempotency-key`
   so the header is known valid; auth has already run by the time
   any route-level interceptor fires."
@@ -86,4 +91,14 @@
                 (if (core/cacheable-status? (:status response))
                   (core/complete config principal-id operation key response)
                   (core/release config principal-id operation key)))
+              ctx))
+   :error (fn [ctx]
+            (let [{:keys [record-db record-store]
+                   :idempotency/keys [principal-id operation key]}
+                  (:request ctx)]
+              (when (and principal-id operation key)
+                (core/release {:record-db record-db :record-store record-store}
+                              principal-id
+                              operation
+                              key))
               ctx))})
