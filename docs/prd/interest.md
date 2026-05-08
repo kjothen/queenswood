@@ -203,13 +203,13 @@ every other day.
 Across millions of accounts and many years, the
 arithmetic conserves every micro-fraction of a penny.
 
-### Idempotent re-runs
+### Safe to re-run
 
-Accrual and capitalisation runs are idempotent on the
-date. If a daily run is interrupted or has to be re-fired
-for the same date, the platform recognises the work
-already done on each account and skips it. The tenant
-and the operator can re-run safely.
+Accrual and capitalisation runs are safe to repeat for
+the same date. If a daily run is interrupted or has to
+be re-fired, the platform recognises the work already
+done on each account and skips it. The tenant and the
+operator can re-run safely.
 
 ### Per-account independence
 

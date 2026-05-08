@@ -380,9 +380,9 @@ result; no duplicate payment is created.
 ## References
 
 - **Engineering view**: [tdd/payments](../tdd/payments.md)
-  for the data model, the choreography between the
-  payment processor, the scheme adapter, and the event
-  processor, and the simulator's coverage.
+  for the data model, the flow between the payment
+  processor, the scheme adapter, and the event processor,
+  and the simulator's coverage.
 - **Platform context**: [platform](platform.md);
   [cash-accounts](cash-accounts.md) — payments move
   money between accounts;

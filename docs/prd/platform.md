@@ -129,8 +129,9 @@ covered by its own PRD.
 - **Payments** — internal transfers (instant), inbound UK
   Faster Payments (settlement notification from the scheme),
   outbound UK Faster Payments (submission via scheme
-  adapter). All idempotent on re-submission. Forthcoming
-  PRD: [payments](payments.md).
+  adapter). All safe to re-submit — duplicates are
+  recognised and skipped. Forthcoming PRD:
+  [payments](payments.md).
 - **Interest** — daily accrual with fractional carry;
   capitalisation at the operator's chosen cadence.
   Forthcoming PRD: [interest](interest.md).
@@ -216,7 +217,7 @@ sequenceDiagram
 
     P->>S: FPS payment to account's SCAN
     S->>Q: settlement notification (amount, BBAN)
-    Q->>Q: idempotent lookup,<br/>record transaction
+    Q->>Q: recognise duplicates,<br/>record incoming payment
     Q->>Q: credit posted balance,<br/>save inbound payment
     Q-->>S: acknowledge
 ```

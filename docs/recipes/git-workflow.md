@@ -10,8 +10,8 @@ Two project-specific rules sit on top of standard git practice:
 
 1. **Merge from `main` before committing.** Renovate
    auto-merges dependency updates to `main` on a weekly
-   schedule, so a feature branch that hasn't pulled recently
-   is likely behind.
+   schedule, so a feature branch that hasn't pulled is
+   likely already behind.
 2. **Don't manually bump dependency versions Renovate
    manages.** Renovate (configured in `renovate.json`) handles
    all Clojure `deps.edn` and GitHub Actions version bumps.

@@ -252,7 +252,7 @@ name comparison belongs here.
   none of which are deployed today. Until that's in place,
   the platform isn't enforcing real KYC, even though the
   shape of the integration is real.
-- **Simulator outcomes are deterministic, not realistic.**
+- **Simulator outcomes are scripted, not realistic.**
   The IDV simulator routes outcomes off the applicant's
   first name (`Reject` rejects, anything else accepts).
   It doesn't model partial outcomes, manual-review queues,
@@ -303,8 +303,8 @@ name comparison belongs here.
 ## References
 
 - **Engineering view**: [tdd/parties](../tdd/parties.md)
-  for the full data model, the verification flow, and the
-  brick split.
+  for the full data model, the verification flow, and how
+  the code is organised.
 - **Platform context**: [platform](platform.md);
   [onboarding](onboarding.md) — the tenant's own party is
   seeded here.
