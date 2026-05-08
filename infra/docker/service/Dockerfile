@@ -16,9 +16,11 @@ FROM clojure:temurin-21-tools-deps-bookworm AS build
 ARG PROJECT_NAME
 WORKDIR /workspace
 COPY . .
-RUN cd "projects/${PROJECT_NAME}" \
- && clojure -X:deps prep :aliases '[:+bank :dev]' :force true \
- || true
+# Code-gen step (Lancaster Avro schemas, protobuf classes) must run
+# from the workspace root — the `:+bank` alias is defined in the
+# top-level deps.edn, not in any project deps.edn. Mirrors the
+# local `just force-prep` recipe.
+RUN clojure -X:deps prep :aliases '[:+bank :dev]' :force true
 RUN cd "projects/${PROJECT_NAME}" \
  && clojure -X:build uber :snapshot true \
  && mv target/*.jar target/app.jar
