@@ -42,12 +42,20 @@ RUN apt-get update \
  && chmod +x /usr/local/bin/protoc-gen-clojure
 
 COPY . .
+# Cache mounts for the Maven local repo and tools.deps git-libs cache.
+# All 13 service builds in a single bake invocation share these mounts,
+# so dependencies are downloaded once instead of 13×. Cache contents are
+# *not* baked into the image layer, which keeps the runtime stage clean.
 # Code-gen step (Lancaster Avro schemas, protobuf classes) must run
 # from the workspace root — the `:+bank` alias is defined in the
 # top-level deps.edn, not in any project deps.edn. Mirrors the
 # local `just force-prep` recipe.
-RUN clojure -X:deps prep :aliases '[:+bank :dev]' :force true
-RUN cd "projects/${PROJECT_NAME}" \
+RUN --mount=type=cache,target=/root/.m2,sharing=shared \
+    --mount=type=cache,target=/root/.gitlibs,sharing=shared \
+    clojure -X:deps prep :aliases '[:+bank :dev]' :force true
+RUN --mount=type=cache,target=/root/.m2,sharing=shared \
+    --mount=type=cache,target=/root/.gitlibs,sharing=shared \
+    cd "projects/${PROJECT_NAME}" \
  && clojure -X:build uber :snapshot true \
  && mv target/*.jar target/app.jar
 
