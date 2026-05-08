@@ -24,8 +24,12 @@
 .idea/replstate.xml
 *.iml
 
-# Claude Code
-.claude
+# Claude Code — only the per-machine and runtime artefacts.
+# Everything else under .claude/ is committed: settings.json,
+# launch.json, skills/, hooks/.
+.claude/settings.local.json
+.claude/preview/
+.claude/worktrees/
 
 # Clojure tools
 .calva
