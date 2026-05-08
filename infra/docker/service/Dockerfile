@@ -12,9 +12,15 @@
 
 ARG PROJECT_NAME
 
-FROM clojure:temurin-21-tools-deps-bookworm AS build
+# `--platform=$BUILDPLATFORM` pins the JVM build to the host arch.
+# Java bytecode is platform-independent, so the resulting uberjar runs
+# on either linux/amd64 or linux/arm64 runtime images without
+# rebuilding. Avoids ~3× QEMU-emulation slowdown for the cross-arch
+# build under multi-platform bake. The runtime stage stays on
+# `$TARGETPLATFORM` because the JRE and libfdb_c.so are arch-specific.
+FROM --platform=$BUILDPLATFORM clojure:temurin-21-tools-deps-bookworm AS build
 ARG PROJECT_NAME
-ARG TARGETARCH
+ARG BUILDARCH
 WORKDIR /workspace
 
 # Code-gen tooling for the prep step. Both versions match the local
@@ -23,13 +29,16 @@ WORKDIR /workspace
 #  - protoc-gen-clojure 2.1.2 — protojure's plugin, distributed as a
 #    `:;exec java -jar ...` self-executing jar, so it runs on any
 #    arch via the temurin JDK already in this image
+# `BUILDARCH` (not TARGETARCH) because this stage runs on the build
+# host; protoc's binary needs to match the host, not the eventual
+# image's target arch.
 RUN apt-get update \
  && apt-get install -y --no-install-recommends curl unzip ca-certificates \
  && rm -rf /var/lib/apt/lists/* \
- && PROTOC_ARCH="$(case ${TARGETARCH:-amd64} in \
+ && PROTOC_ARCH="$(case ${BUILDARCH:-amd64} in \
                      amd64|x86_64)  echo x86_64 ;; \
                      arm64|aarch64) echo aarch_64 ;; \
-                     *) echo "unknown arch: ${TARGETARCH}" >&2; exit 1 ;; \
+                     *) echo "unknown arch: ${BUILDARCH}" >&2; exit 1 ;; \
                    esac)" \
  && curl -fsSL \
       "https://github.com/protocolbuffers/protobuf/releases/download/v25.8/protoc-25.8-linux-${PROTOC_ARCH}.zip" \

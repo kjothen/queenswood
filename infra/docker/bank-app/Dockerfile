@@ -11,13 +11,22 @@
 #  (host.docker.internal), in kind (Kubernetes service DNS), and in
 #  any other deployment.
 
-FROM node:22-alpine AS build
+# `--platform=$BUILDPLATFORM` pins the Node build to the host arch
+# regardless of the requested target. The output (`dist/`) is static
+# HTML/CSS/JS — arch-independent — so we can copy it into either
+# linux/amd64 or linux/arm64 runtime images. Without this, multi-arch
+# bake would run `npm ci` under QEMU for the non-native arch, where
+# node's network stack is slow enough to hit ETIMEDOUT on registry
+# fetches.
+FROM --platform=$BUILDPLATFORM node:22-alpine AS build
 WORKDIR /app
 COPY bases/bank-app/package.json bases/bank-app/package-lock.json ./
 RUN npm ci
 COPY bases/bank-app/ ./
 RUN npm run build
 
+# Runtime stage uses the requested target arch — nginx is multi-arch
+# on Docker Hub, so this just works.
 FROM nginxinc/nginx-unprivileged:1.27-alpine AS runtime
 COPY infra/docker/bank-app/nginx.conf.template /etc/nginx/templates/default.conf.template
 COPY --from=build /app/dist/ /usr/share/nginx/html/
