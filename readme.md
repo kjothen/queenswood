@@ -222,6 +222,12 @@ The bank is documented:
 
 ## Running
 
+Two options: a REPL-driven dev loop with everything inside
+Testcontainers, or a one-liner Helm install onto a local
+Kubernetes cluster.
+
+### REPL (Testcontainers)
+
 Start a REPL with `just repl` and connect your editor. The
 development entry point follows the standard Polylith pattern —
 a namespace under `development/src/dev/` that requires the base
@@ -240,6 +246,49 @@ Testcontainers. Then start the Svelte front-end:
 ```bash
 just bank-app-start
 ```
+
+### Kubernetes
+
+The released Helm chart deploys the entire platform (API,
+processors, adapters/simulators, the Svelte front-end, Pulsar,
+FoundationDB) onto any Kubernetes cluster.
+
+**Get a local Kubernetes runtime on macOS** — pick one:
+
+- **OrbStack** — single-app, fastest setup:
+  ```bash
+  brew install orbstack
+  # Open OrbStack, enable Kubernetes in Settings → Kubernetes
+  ```
+- **kind on Colima** — closer to upstream, more configurable:
+  ```bash
+  brew install colima kind kubectl helm
+  colima start --vm-type vz --vz-rosetta --cpu 6 --memory 24
+  kind create cluster --name queenswood
+  ```
+
+**Install:**
+
+```bash
+ADMIN_KEY=$(openssl rand -hex 16)
+helm install queenswood \
+  oci://ghcr.io/kjothen/queenswood --version 0.1.0 \
+  --set secrets.adminApiKey=$ADMIN_KEY \
+  --wait --timeout 10m
+echo "Admin API key: $ADMIN_KEY"
+```
+
+**Reach the API and the front-end** (separate terminals):
+
+```bash
+kubectl port-forward svc/queenswood-bank-api-service 8080:8080
+kubectl port-forward svc/queenswood-bank-app          8081:8080
+```
+
+Then open <http://localhost:8081> for the SPA, or hit
+<http://localhost:8080/scalar> for OpenAPI docs. The full
+quickstart — including key recovery and tear-down — ships with
+each [release](https://github.com/kjothen/queenswood/releases/latest).
 
 ## Built on mono
 
