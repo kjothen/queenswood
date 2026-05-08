@@ -1,0 +1,161 @@
+name: Release
+
+# Builds every Queenswood service image, pushes to ghcr.io with the
+# `:latest` tag, packages the Helm chart, and updates a single
+# GitHub release tagged `latest` with the chart `.tgz` + a local-k8s
+# quickstart README. Runs only from `main` (push) or manual trigger.
+#
+# First-run setup: GHCR packages are private by default. After the
+# first successful run, visit
+#   https://github.com/users/<owner>/packages/container/<service>/settings
+# for each service and flip the visibility to "public", OR document
+# image-pull secrets in the quickstart. The current quickstart
+# assumes public images.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# `latest` is a single moving tag — serialise concurrent runs to
+# avoid two pushes racing to update the same release.
+concurrency:
+  group: release-latest
+  cancel-in-progress: false
+
+permissions:
+  contents: write       # create/move tags + manage releases
+  packages: write       # push images to ghcr.io
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # The bake file's default `output = ["type=docker"]` loads
+      # images into the local daemon (right for `just
+      # docker-build-all`). Override to push directly to the
+      # registry from the buildx builder — no intermediate
+      # `docker push` step, no local daemon required.
+      - name: Build and push all service images
+        env:
+          REGISTRY: ghcr.io/${{ github.repository_owner }}
+          TAG: latest
+        run: |
+          docker buildx bake \
+            -f infra/docker/bake.hcl \
+            --set "*.output=type=registry,push=true"
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: latest
+
+      # Pin the chart's default image.tag to `latest` for the
+      # packaged release so `helm install <tgz>` works out of the
+      # box without `--set image.tag=...`. The dev chart in the
+      # repo keeps `0.0.0` so local builds aren't pinned to the
+      # CI tag.
+      - name: Pin packaged chart to image.tag=latest
+        run: |
+          sed -i 's/^  tag: .*/  tag: "latest"/' \
+            infra/helm/queenswood/values.yaml
+
+      - name: Resolve subchart deps and package
+        run: |
+          helm dependency update infra/helm/queenswood
+          mkdir -p release
+          helm package infra/helm/queenswood -d release
+
+      - name: Write quickstart README
+        run: |
+          cat > release/README.md <<'EOF'
+          # Queenswood — local Kubernetes quickstart
+
+          This release ships a Helm chart that deploys the entire
+          Queenswood platform (API, processors, adapters/simulators,
+          Pulsar, FoundationDB) into a local Kubernetes cluster.
+
+          ## Prerequisites
+
+          - Docker
+          - [kind](https://kind.sigs.k8s.io/)
+          - [Helm](https://helm.sh/) (>= 3.14)
+          - kubectl
+
+          ## Deploy
+
+          1. **Create a local cluster:**
+             ```bash
+             kind create cluster --name queenswood
+             ```
+
+          2. **Install the chart** (generates a one-off admin API
+             key — save it; it's how you authenticate against the
+             admin endpoints):
+             ```bash
+             ADMIN_KEY=$(openssl rand -hex 16)
+             helm install queenswood queenswood-*.tgz \
+               --set secrets.adminApiKey=$ADMIN_KEY \
+               --wait --timeout 10m
+             echo "Admin API key: $ADMIN_KEY"
+             ```
+
+          3. **Port-forward the API:**
+             ```bash
+             kubectl port-forward svc/bank-api 8080:8080
+             ```
+
+          4. **Smoke-test:**
+             ```bash
+             curl -H "Authorization: Bearer $ADMIN_KEY" \
+               http://localhost:8080/v1/tiers
+             ```
+
+             OpenAPI docs at <http://localhost:8080/scalar>.
+
+          ## Recover the admin API key
+
+          The chart stores the key in a Secret named
+          `queenswood-admin-api-key`:
+          ```bash
+          kubectl get secret queenswood-admin-api-key \
+            -o jsonpath='{.data.MONO_ADMIN_API_KEY}' | base64 -d
+          ```
+
+          ## Tear down
+
+          ```bash
+          helm uninstall queenswood
+          kind delete cluster --name queenswood
+          ```
+          EOF
+
+      # `gh release create` fails if the release already exists, so
+      # delete the previous `latest` release (and its tag) first.
+      # `--cleanup-tag` removes the tag too. `|| true` because the
+      # very first run has no prior release to delete.
+      - name: Replace `latest` release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release delete latest --yes --cleanup-tag || true
+          gh release create latest \
+            --title "Latest" \
+            --notes-file release/README.md \
+            --target ${{ github.sha }} \
+            release/*.tgz \
+            release/README.md
