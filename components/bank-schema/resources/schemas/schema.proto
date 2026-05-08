@@ -5,6 +5,7 @@ package com.repldriven.mono.schemas.schemas;
 import "schemas/balances/balance.proto";
 import "schemas/cash-account-products/account-product.proto";
 import "schemas/cash-accounts/account.proto";
+import "schemas/idempotency/idempotency.proto";
 import "schemas/idv/idv.proto";
 import "schemas/keys/api_key.proto";
 import "schemas/organizations/organization.proto";
@@ -44,4 +45,5 @@ message RecordTypeUnion {
   optional com.repldriven.mono.schemas.payee_check.PayeeCheck _PayeeCheck = 18;
   optional com.repldriven.mono.schemas.policies.Policy _Policy = 19;
   optional com.repldriven.mono.schemas.policies.PolicyBinding _PolicyBinding = 20;
+  optional com.repldriven.mono.schemas.idempotency.Idempotency _Idempotency = 21;
 }

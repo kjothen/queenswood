@@ -4,7 +4,8 @@
     [com.repldriven.mono.utility.interface :as utility]))
 
 (def ^:private type->status
-  {:transaction-type-internal-transfer :transaction-status-posted})
+  {:transaction-type-internal-transfer :transaction-status-posted
+   :transaction-type-inbound-transfer :transaction-status-posted})
 
 (defn new-transaction
   [data]

@@ -29,6 +29,7 @@
   component/bank-payment {:local/root "../../components/bank-payment"}
   component/bank-policy {:local/root "../../components/bank-policy"}
   component/bank-transaction {:local/root "../../components/bank-transaction"}
+  component/bank-idempotency {:local/root "../../components/bank-idempotency"}
   component/bank-idv {:local/root "../../components/bank-idv"}
   component/bank-schema {:local/root "../../components/bank-schema"}
   component/avro {:local/root "../../components/avro"}

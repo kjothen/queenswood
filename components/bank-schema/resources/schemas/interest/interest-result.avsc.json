@@ -4,7 +4,7 @@
   "namespace": "com.repldriven.mono.interest",
   "fields": [
     {"name": "organization_id",   "type": "string"},
-    {"name": "as_of_date",        "type": "int"},
+    {"name": "as_of_date",        "type": "string"},
     {"name": "accounts_processed","type": "int"}
   ]
 }

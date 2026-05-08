@@ -2,6 +2,54 @@
 test: docker-start
     clojure -M:poly test :all
 
+# Parse schemathesis JUnit report; optionally filter by status class: 2xx, 4xx, 5xx (or just 2, 4, 5)
+schemathesis-check filter="":
+    #!/usr/bin/env python3
+    import re
+    import sys
+    import xml.etree.ElementTree as ET
+    from pathlib import Path
+
+    reports = sorted(Path("schemathesis-report").glob("junit-*.xml"))
+    if not reports:
+        print("No report found — run 'just schemathesis' first.")
+        sys.exit(1)
+    report = reports[-1]
+
+    raw    = "{{ filter }}"
+    prefix = raw[0] if raw else None   # "5xx" -> "5", "4" -> "4", "" -> all
+    label  = f" ({raw})" if raw else ""
+    print(f"Report: {report.name}  filter: {raw or 'all'}\n")
+
+    failures = []
+    for tc in ET.parse(report).getroot().iter("testcase"):
+        for child in tc:
+            if child.tag not in ("failure", "error"):
+                continue
+            msg  = (child.get("message") or "") + (child.text or "")
+            m    = re.search(r"\[(\d{3})\]", msg)
+            code = m.group(1) if m else None
+            if prefix is None or (code and code.startswith(prefix)):
+                failures.append({
+                    "op":   tc.get("name", "?"),
+                    "code": f"[{code}]" if code else "[???]",
+                    "msg":  msg.strip(),
+                })
+
+    if not failures:
+        print(f"✅ No failures{label}.")
+        sys.exit(0)
+
+    print(f"{'='*60}")
+    print(f"  Schemathesis failures{label}: {len(failures)}")
+    print(f"{'='*60}\n")
+    for f in failures:
+        print(f"{f['code']}  {f['op']}")
+        detail = next((l.strip() for l in f['msg'].splitlines() if l.strip()), "")
+        if detail:
+            print(f"       {detail[:120]}")
+        print()
+
 # Check test failures from last test run
 poly-test-check:
     #!/usr/bin/env python3
@@ -63,7 +111,7 @@ schemathesis base_url="http://127.0.0.1:8080":
     _post() { curl -s -X POST "$1" -H "Content-Type: application/json" "${@:2}"; }
     _get()  { curl -s "$1" "${@:2}"; }
     _bail() { echo "$1: $2"; exit 1; }
-    _id()   { jq -r --arg k "$1" '.[$k]' <<< "$2"; }
+    _id()   { jq -r --arg k "$1" '.[$k] // empty' <<< "$2"; }
 
     # --- Organisation ---
     echo "Creating organisation..."
@@ -182,4 +230,5 @@ schemathesis base_url="http://127.0.0.1:8080":
         --output-sanitize false \
         --max-examples 500 \
         --phases=examples,coverage,fuzzing \
+        --report junit \
         --continue-on-failure

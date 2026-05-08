@@ -28,7 +28,9 @@
                                                           record-store}
                                                          key-hash))]
     (when (and (map? api-key) (zero? (:revoked-at api-key 0)))
-      {:role :org :organization-id (:organization-id api-key)})))
+      {:role :org
+       :organization-id (:organization-id api-key)
+       :api-key-id (:api-key-id api-key)})))
 
 (def authenticate
   {:name ::authenticate

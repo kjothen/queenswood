@@ -6,7 +6,6 @@ docker-start:
     # and surface as "too many open files" in init containers.
     colima ssh -- sudo sysctl -w fs.inotify.max_user_instances=8192 fs.inotify.max_user_watches=524288
     docker context use colima
-    docker system prune -af --volumes
 
 # Stop Docker via Colima
 docker-stop:

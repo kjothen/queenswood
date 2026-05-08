@@ -7,7 +7,9 @@
     [com.repldriven.mono.bank-api.schema :refer [ErrorResponse]]
     [com.repldriven.mono.bank-api.party.links :as links]
     [com.repldriven.mono.bank-api.shared.parameters :as shared.parameters]
-    [com.repldriven.mono.telemetry.interface :as telemetry]))
+
+    [com.repldriven.mono.bank-idempotency.interface :as bank-idempotency]
+    [com.repldriven.mono.server.interface :as server]))
 
 (def ^:private list-parties-query-schema
   [:map {:closed true} [:page {:optional true} [:ref "PageQuery"]]])
@@ -26,7 +28,8 @@
                        :requestBody {:required true}
                        :parameters ^:replace
                                    [shared.parameters/ref-idempotency-key]}
-             :interceptors [telemetry/require-idempotency-key]
+             :interceptors [server/require-idempotency-key
+                            bank-idempotency/cache-response]
              :parameters {:body [:ref "CreatePartyRequest"]}
              :responses {200 {:body [:ref "CreatePartyResponse"]
                               :openapi {:links links/from-party}}

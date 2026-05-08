@@ -7,7 +7,7 @@
   [:map
    {:closed true :json-schema/example examples/SimulateInboundTransferRequest}
    [:account-id [:ref "CashAccountId"]]
-   [:amount [:ref "MinorUnits"]]
+   [:amount [:ref "PaymentMinorUnits"]]
    [:currency [:ref "Currency"]]])
 
 (def TransactionLeg
@@ -35,12 +35,12 @@
 
 (def SimulateInterestRequest
   [:map {:closed true :json-schema/example examples/SimulateInterestRequest}
-   [:as-of-date int?]])
+   [:as-of-date [:ref "Date"]]])
 
 (def SimulateInterestResponse
   [:map {:json-schema/example examples/SimulateInterestResponse}
    [:organization-id [:ref "OrganizationId"]]
-   [:as-of-date int?]
+   [:as-of-date [:ref "Date"]]
    [:accounts-processed int?]])
 
 (def registry

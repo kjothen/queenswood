@@ -48,6 +48,13 @@
   (.saveRecord store record)
   nil)
 
+(defn delete
+  "Deletes a record by primary key from an open FDBRecordStore.
+  Returns true if deleted, false if not found. For use inside
+  transact. Accepts one or more primary key parts for composite keys."
+  [store & primary-key-parts]
+  (.deleteRecord store (Tuple/from (into-array Object primary-key-parts))))
+
 (defn- field-filter
   [[field value]]
   (-> (Query/field field)
