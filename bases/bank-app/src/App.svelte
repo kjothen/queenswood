@@ -1,5 +1,6 @@
 <script>
-  import { set_org } from "./lib/api.mjs";
+  import { admin_token, save_admin_token, set_org } from "./lib/api.mjs";
+  import Login from "./lib/Login.svelte";
   import Sidebar from "./lib/Sidebar.svelte";
   import OrgSelector from "./lib/OrgSelector.svelte";
   import OrganizationList from "./lib/OrganizationList.svelte";
@@ -22,8 +23,14 @@
   let apiKeyListRef = $state();
   let copListRef = $state();
   let toastRef = $state();
+  let adminTokenSet = $state(!!admin_token());
 
   let hasApiKey = $derived(selectedOrgId != null);
+
+  function handleLogin(token) {
+    save_admin_token(token);
+    adminTokenSet = true;
+  }
 
   function showToast(opts) {
     toastRef?.show(opts);
@@ -62,6 +69,9 @@
 
 <Toast bind:this={toastRef} />
 
+{#if !adminTokenSet}
+  <Login onSubmit={handleLogin} />
+{:else}
 <div class="layout">
   <Sidebar {currentPage} onNavigate={(page) => currentPage = page} />
   <main>
@@ -128,6 +138,7 @@
     {/if}
   </main>
 </div>
+{/if}
 
 <style>
   :global(:root) {

@@ -176,9 +176,10 @@ jobs:
              OpenAPI docs at <http://localhost:8080/scalar>.
 
           5. **Open the bank-app:** <http://localhost:8081>. The
-             nginx in front of the SPA proxies `/v1/*` to the
-             in-cluster bank-api service, so the UI works with no
-             extra configuration.
+             SPA prompts for the admin API key on first load — paste
+             the key from step 2. It's stored in localStorage so you
+             only paste it once per browser. nginx in front of the
+             SPA proxies `/v1/*` to the in-cluster bank-api service.
 
           ## Recover the admin API key
 
