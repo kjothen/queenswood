@@ -1,5 +1,4 @@
 (ns com.repldriven.mono.pulsar.system.components
-  (:refer-clojure :exclude [name namespace type])
   (:require
     [com.repldriven.mono.pulsar.message-bus :as message-bus]
     [com.repldriven.mono.pulsar.pulsar.admin :as admin]
