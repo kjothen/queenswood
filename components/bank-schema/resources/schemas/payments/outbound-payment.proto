@@ -31,4 +31,6 @@ message OutboundPayment {
   optional string cancellation_reason = 13;
   required int64 created_at = 14;
   optional int64 updated_at = 15;
+  required string organization_id = 16;
+  required int64 business_day = 17;
 }

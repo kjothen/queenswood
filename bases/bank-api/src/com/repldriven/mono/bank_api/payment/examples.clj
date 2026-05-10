@@ -41,12 +41,14 @@
 
 (def InternalPayment
   {:payment-id PaymentId
+   :organization-id "org.01kprbmgcj35ptc8npmybhh4s7"
    :debtor-account-id "acc.01kprbmgcj35ptc8npmybhh4s8"
    :creditor-account-id "acc.01kprbmgcj35ptc8npmybhh4s9"
    :currency "GBP"
    :amount 1000
    :transaction-id "txn.01kprbmgcj35ptc8npmybhh4sb"
    :reference "Internal transfer"
+   :business-day "2025-01-01"
    :created-at "2025-01-01T00:00:00Z"
    :updated-at "2025-01-01T00:00:00Z"})
 
@@ -61,6 +63,7 @@
 
 (def OutboundPayment
   {:payment-id "pmt.01kprbmgcj35ptc8npmybhh4s6"
+   :organization-id "org.01kprbmgcj35ptc8npmybhh4s7"
    :scheme "fps"
    :debtor-account-id "acc.01kprbmgcj35ptc8npmybhh4s8"
    :creditor-bban "04000412345678"
@@ -70,5 +73,6 @@
    :payment-status :outbound-payment-status-pending
    :transaction-id "txn.01kprbmgcj35ptc8npmybhh4sb"
    :reference "Invoice 123"
+   :business-day "2025-01-01"
    :created-at "2025-01-01T00:00:00Z"
    :updated-at "2025-01-01T00:00:00Z"})

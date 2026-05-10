@@ -4,6 +4,8 @@
 
     [com.repldriven.mono.system.interface :as system]))
 
+(def ^:private default-cutoff {:zone "UTC" :hour-of-day 0})
+
 (def ^:private processor
   {:system/start (fn [{:system/keys [config instance]}]
                    (or instance (commands/->PaymentProcessor config)))
@@ -12,7 +14,8 @@
                    :schemas system/required-component
                    :internal-account-id nil
                    :bus nil
-                   :scheme-payment-command-channel nil}
+                   :scheme-payment-command-channel nil
+                   :business-day-cutoff default-cutoff}
    :system/instance-schema some?})
 
 (def ^:private event-processor
@@ -21,7 +24,8 @@
    :system/config {:record-db system/required-component
                    :record-store system/required-component
                    :schemas system/required-component
-                   :internal-account-id system/required-component}
+                   :internal-account-id system/required-component
+                   :business-day-cutoff default-cutoff}
    :system/instance-schema some?})
 
 (system/defcomponents :payment

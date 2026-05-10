@@ -80,3 +80,42 @@
              schema/pb->InboundPayment))
    :payment/get-inbound-payment
    "Failed to get inbound payment"))
+
+(defn count-internal-by-org-business-day
+  [txn org-id business-day]
+  (fdb/transact
+   txn
+   (fn [txn]
+     (fdb/count-records (fdb/open txn internal-payments-store-name)
+                        "InternalPayment_count_by_org_business_day"
+                        [org-id business-day]))
+   :payment/count-internal-by-org-business-day
+   {:message "Failed to count internal payments by org/day"
+    :organization-id org-id
+    :business-day business-day}))
+
+(defn count-outbound-by-org-business-day
+  [txn org-id business-day]
+  (fdb/transact
+   txn
+   (fn [txn]
+     (fdb/count-records (fdb/open txn outbound-payments-store-name)
+                        "OutboundPayment_count_by_org_business_day"
+                        [org-id business-day]))
+   :payment/count-outbound-by-org-business-day
+   {:message "Failed to count outbound payments by org/day"
+    :organization-id org-id
+    :business-day business-day}))
+
+(defn count-inbound-by-org-business-day
+  [txn org-id business-day]
+  (fdb/transact
+   txn
+   (fn [txn]
+     (fdb/count-records (fdb/open txn inbound-payments-store-name)
+                        "InboundPayment_count_by_org_business_day"
+                        [org-id business-day]))
+   :payment/count-inbound-by-org-business-day
+   {:message "Failed to count inbound payments by org/day"
+    :organization-id org-id
+    :business-day business-day}))

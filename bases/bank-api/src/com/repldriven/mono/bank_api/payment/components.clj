@@ -22,12 +22,14 @@
 (def InternalPayment
   [:map {:json-schema/example examples/InternalPayment}
    [:payment-id [:ref "PaymentId"]]
+   [:organization-id [:ref "OrganizationId"]]
    [:debtor-account-id [:ref "CashAccountId"]]
    [:creditor-account-id [:ref "CashAccountId"]]
    [:currency [:ref "Currency"]]
    [:amount [:ref "MinorUnits"]]
    [:transaction-id [:ref "TransactionId"]]
    [:reference {:optional true} [:maybe string?]]
+   [:business-day [:ref "BusinessDay"]]
    [:created-at [:ref "Timestamp"]]
    [:updated-at {:optional true} [:maybe [:ref "Timestamp"]]]])
 
@@ -49,6 +51,7 @@
 (def OutboundPayment
   [:map {:json-schema/example examples/OutboundPayment}
    [:payment-id [:ref "PaymentId"]]
+   [:organization-id [:ref "OrganizationId"]]
    [:scheme [:ref "PaymentScheme"]]
    [:debtor-account-id [:ref "CashAccountId"]]
    [:creditor-bban [:ref "Bban"]]
@@ -60,6 +63,7 @@
    [:reference {:optional true} [:maybe string?]]
    [:cancellation-code {:optional true} [:maybe string?]]
    [:cancellation-reason {:optional true} [:maybe string?]]
+   [:business-day [:ref "BusinessDay"]]
    [:created-at {:optional true} [:maybe [:ref "Timestamp"]]]
    [:updated-at {:optional true} [:maybe [:ref "Timestamp"]]]])
 

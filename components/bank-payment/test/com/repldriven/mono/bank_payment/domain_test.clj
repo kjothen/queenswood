@@ -12,13 +12,53 @@
   [tx leg-side]
   (some (fn [leg] (when (= leg-side (:side leg)) leg)) (:legs tx)))
 
+(defn- allow-all
+  "Minimal policy fixture that allow-lists every payment action and
+  permits a high daily count, so the leg-shape assertions don't get
+  short-circuited by a capability denial or a limit breach."
+  []
+  [{:enabled true
+    :capabilities
+    [{:effect :effect-allow
+      :kind {:internal-payment
+             {:action :internal-payment-action-submit}}}
+     {:effect :effect-allow
+      :kind {:inbound-payment
+             {:action :inbound-payment-action-receive}}}
+     {:effect :effect-allow
+      :kind {:outbound-payment
+             {:action :outbound-payment-action-send}}}]
+    :limits
+    [{:kind {:internal-payment {}}
+      :bound {:kind {:max {:aggregate {:kind {:count {:value 1000000
+                                                      :window
+                                                      :time-window-daily}}}}}}}
+     {:kind {:inbound-payment {}}
+      :bound {:kind {:max {:aggregate {:kind {:count {:value 1000000
+                                                      :window
+                                                      :time-window-daily}}}}}}}
+     {:kind {:outbound-payment {}}
+      :bound {:kind {:max {:aggregate
+                           {:kind {:count {:value 1000000
+                                           :window :time-window-daily}}}}}}}]}])
+
+(defn- empty-aggregates
+  "Aggregates fixture where today's count is zero for the given
+  payment kind. Combined with `allow-all`, leg-shape tests stay clear
+  of any limit boundary."
+  [kind]
+  {kind {#{:organization-id :business-day} 0}})
+
 (deftest internal-payment->transaction-test
   (let [tx (SUT/internal-payment->transaction {:idempotency-key "idem-1"
                                                :debtor-account-id "debtor"
                                                :creditor-account-id "creditor"
                                                :currency "GBP"
                                                :amount 500
-                                               :reference "Test"})]
+                                               :reference "Test"}
+                                              (allow-all)
+                                              (empty-aggregates
+                                               :internal-payment))]
     (testing "envelope carries idempotency-key, type, currency, reference"
       (is (= "idem-1" (:idempotency-key tx)))
       (is (= :transaction-type-internal-transfer (:transaction-type tx)))
@@ -42,7 +82,10 @@
                                               :amount 1000
                                               :reference "Invoice"}
                                              "creditor"
-                                             "internal")]
+                                             "internal"
+                                             (allow-all)
+                                             (empty-aggregates
+                                              :inbound-payment))]
     (testing "scheme-transaction-id becomes the idempotency-key"
       (is (= "stx-1" (:idempotency-key tx)))
       (is (= :transaction-type-inbound-transfer (:transaction-type tx))))
@@ -64,7 +107,10 @@
                                                :currency "GBP"
                                                :amount 250
                                                :reference "Outbound"}
-                                              "internal")]
+                                              "internal"
+                                              (allow-all)
+                                              (empty-aggregates
+                                               :outbound-payment))]
     (testing "envelope shape"
       (is (= "ob-1" (:idempotency-key tx)))
       (is (= :transaction-type-outbound-transfer (:transaction-type tx))))
@@ -92,3 +138,35 @@
         (is (= 250 (:amount completed))))
       (testing "bumps :updated-at past the original"
         (is (>= (:updated-at completed) (:updated-at pending)))))))
+
+(defn- ts
+  "Epoch-millis from an ISO-8601 instant string."
+  ^long [s]
+  (.toEpochMilli (java.time.Instant/parse s)))
+
+(defn- day
+  "Epoch-day from an ISO-8601 local-date string."
+  ^long [s]
+  (.toEpochDay (java.time.LocalDate/parse s)))
+
+(deftest current-business-day-test
+  (testing "UTC midnight cutoff = calendar epoch-day"
+    (is (= (day "2026-01-15")
+           (SUT/current-business-day (ts "2026-01-15T12:00:00Z")
+                                     {:zone "UTC" :hour-of-day 0}))))
+  (testing "Europe/London 17:00 cutoff: 16:00 GMT rolls to previous day"
+    ;; 2026-01-15 is winter — Europe/London = GMT, so 16:00 UTC =
+    ;; 16:00 London, before the cutoff.
+    (is (= (day "2026-01-14")
+           (SUT/current-business-day (ts "2026-01-15T16:00:00Z")
+                                     {:zone "Europe/London" :hour-of-day 17}))))
+  (testing "Europe/London 17:00 cutoff: 17:00 GMT counts as current day"
+    (is (= (day "2026-01-15")
+           (SUT/current-business-day (ts "2026-01-15T17:00:00Z")
+                                     {:zone "Europe/London" :hour-of-day 17}))))
+  (testing "zone shifts the date boundary"
+    ;; 2026-01-15 23:30 UTC. In Asia/Tokyo (UTC+9) that's 2026-01-16 08:30.
+    ;; With cutoff 0, business-day = 2026-01-16.
+    (is (= (day "2026-01-16")
+           (SUT/current-business-day (ts "2026-01-15T23:30:00Z")
+                                     {:zone "Asia/Tokyo" :hour-of-day 0})))))

@@ -115,6 +115,8 @@
             pkgs.just
             pkgs.k6
             pkgs.kind
+            pkgs.krew
+            pkgs.kubeaudit
             pkgs.kubeconform
             pkgs.kubernetes-helm
             pkgs.openssl
@@ -122,6 +124,7 @@
             protocGenClojure
             pkgs.semgrep
             pkgs.tilt
+            pkgs.trivy
             pkgs.uv
             pkgs.zprint
           ];

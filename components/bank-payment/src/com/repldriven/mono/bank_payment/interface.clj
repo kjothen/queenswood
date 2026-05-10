@@ -44,6 +44,22 @@
   [txn scheme-transaction-id]
   (store/get-inbound-payment txn scheme-transaction-id))
 
+(defn submit-internal
+  "Submit an internal (same-org) payment between two cash accounts.
+  Verifies both accounts under the request's `:organization-id`,
+  records the transaction, posts the debit/credit legs, and
+  persists an InternalPayment.
+
+  Args:
+  - config: FDB handle plus :business-day-cutoff (optional).
+  - data: submission map (organization-id, debtor-account-id,
+    creditor-account-id, currency, amount, reference, ...).
+
+  Returns the payment map or an anomaly. A creditor account that
+  isn't in the same org returns `:cash-account/not-found`."
+  [config data]
+  (core/submit-internal config data))
+
 (defn submit-outbound
   "Submit an outbound payment: verify the debtor, debit the customer
   account, credit the settlement-suspense leg, persist the

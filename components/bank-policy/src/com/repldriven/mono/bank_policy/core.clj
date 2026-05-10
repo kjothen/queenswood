@@ -37,9 +37,25 @@
   ([txn opts]
    (store/get-bindings txn opts)))
 
+(defn- bound-policies
+  "Returns the policies bound (via PolicyBinding records) to the
+  organization in `selectors`, or `[]` when the selector carries no
+  organization."
+  [txn selectors]
+  (if-let [org-id (:organization-id selectors)]
+    (let-nom> [bindings (store/get-bindings-for-organization txn org-id)]
+      (reduce (fn [acc b]
+                (let [p (store/get-policy txn (:policy-id b))]
+                  (if (map? p) (conj acc p) (reduced p))))
+              []
+              bindings))
+    []))
+
 (defn get-effective-policies
-  [txn _selectors]
-  (store/get-policies-by-label txn "tier" "platform"))
+  [txn selectors]
+  (let-nom> [platform (store/get-policies-by-label txn "tier" "platform")
+             bound (bound-policies txn selectors)]
+    (vec (concat platform bound))))
 
 (defn get-policies-by-tier
   [txn tier]

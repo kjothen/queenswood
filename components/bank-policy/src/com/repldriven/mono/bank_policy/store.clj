@@ -130,3 +130,26 @@
          :after (:after result)}))
     :policy-binding/list
     "Failed to list policy bindings")))
+
+(defn get-bindings-for-organization
+  "Returns all `PolicyBinding` records whose target is the given
+  organization. Does a full scan and filters in memory — fine while
+  binding cardinality is low; an `OrganizationTarget` index is the
+  natural follow-up once bindings grow."
+  [txn organization-id]
+  (fdb/transact
+   txn
+   (fn [txn]
+     (let [result (fdb/scan-records
+                   (fdb/open txn bindings-store-name)
+                   {:limit 10000 :order :asc})]
+       (->> (:records result)
+            (mapv pb->PolicyBinding)
+            (filterv (fn [b]
+                       (= organization-id
+                          (get-in b
+                                  [:target :kind :organization
+                                   :organization-id])))))))
+   :policy-binding/list-by-organization
+   {:message "Failed to list bindings for organization"
+    :organization-id organization-id}))

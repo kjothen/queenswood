@@ -122,9 +122,12 @@
         (is (= 120 (SUT/balance s' :acct-0)))))))
 
 (deftest internal-transfer-test
+  ;; The same-org-only paths use a single org with two accounts.
+  ;; `:open-account` isn't in the model registry, so we add the
+  ;; second account directly to the model state.
   (let [s (-> SUT/init-state
               (step :create-org [])
-              (step :create-org []))]
+              (assoc-in [:accounts :acct-1] {:org :org-0 :status :open}))]
     (testing "two-leg transfer between funded and zero account"
       (let [funded (assoc-in s [:accounts :acct-0 :available] 1000)
             s' (step funded :internal-transfer [:acct-0 :acct-1 400])]
@@ -141,7 +144,15 @@
                          (assoc-in [:accounts :acct-1 :available] 200))
             s' (step breached :internal-transfer [:acct-1 :acct-0 50])]
         (is (= -50 (SUT/balance s' :acct-0)) "improving — permitted")
-        (is (= 150 (SUT/balance s' :acct-1)))))))
+        (is (= 150 (SUT/balance s' :acct-1))))))
+  (testing "cross-org transfer is a no-op (model mirrors API rejection)"
+    (let [s (-> SUT/init-state
+                (step :create-org [])
+                (step :create-org [])
+                (assoc-in [:accounts :acct-0 :available] 1000))
+          s' (step s :internal-transfer [:acct-0 :acct-1 400])]
+      (is (= 1000 (SUT/balance s' :acct-0)) "debtor balance unchanged")
+      (is (= 0 (SUT/balance s' :acct-1)) "creditor balance unchanged"))))
 
 (deftest create-person-party-test
   (let [s0 (step SUT/init-state :create-org [])]

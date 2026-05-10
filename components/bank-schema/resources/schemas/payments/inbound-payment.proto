@@ -20,4 +20,6 @@ message InboundPayment {
   optional string reference = 10;
   required int64 created_at = 11;
   required int64 updated_at = 12;
+  required string organization_id = 13;
+  required int64 business_day = 14;
 }

@@ -68,6 +68,18 @@
   [_ schema children _]
   (-unique-vector-apidocs schema children))
 
+(defn- iso-date->epoch-day
+  "Parses a strict ISO-8601 calendar date into an `int64` epoch-day.
+  Returns nil when `s` isn't a real calendar date."
+  [s]
+  (when (string? s)
+    (try (.toEpochDay (LocalDate/parse ^String s))
+         (catch DateTimeParseException _ nil))))
+
+(defn- epoch-day->iso-date
+  [n]
+  (when (int? n) (str (LocalDate/ofEpochDay (long n)))))
+
 (defn- iso-date->yyyymmdd
   "Packs a strict ISO-8601 calendar date (validated by
   `java.time.LocalDate/parse`) into a YYYYMMDD int. Returns nil when
@@ -187,6 +199,26 @@
     {:title "Date" :json-schema/format "date" :json-schema/example "2025-01-01"}
     #"^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$"]
    [:fn {:error/message "must be a valid calendar date"} valid-iso-date?]])
+
+(def BusinessDay
+  "ISO 8601 calendar date at the API boundary, stored as an `int64`
+  epoch-day internally (matches the `business_day` field on the
+  payment protos and Avro schemas). Decoded/encoded via `:api` so
+  the storage format never leaks to clients."
+  [:and
+   {:json-schema {:type "string"
+                  :format "date"
+                  :pattern "^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$"
+                  :example "2025-01-01"}}
+   [:int
+    {:decode/api (fn [v]
+                   (cond (int? v)
+                         v
+                         (string? v)
+                         (or (iso-date->epoch-day v) v)
+                         :else
+                         v))
+     :encode/api epoch-day->iso-date}]])
 
 (def DateOfBirth
   "ISO 8601 calendar date at the API boundary, stored as a packed
@@ -335,8 +367,9 @@
     :json-schema {:type "string" :format "date-time"}}])
 
 (def registry
-  (components-registry
-   [#'AccountNumber #'Amount #'Bban #'CountryCode #'Currency #'CurrencyCode
-    #'Date #'DateOfBirth #'EmbedQuery #'IdempotencyKey #'MinorUnits #'Name
-    #'PaymentMinorUnits #'NationalIdentifierValue #'PageQuery #'SignedAmount
-    #'SignedBasisPoints #'SignedMinorUnits #'SortCode #'Timestamp]))
+  (components-registry [#'AccountNumber #'Amount #'Bban #'BusinessDay
+                        #'CountryCode #'Currency #'CurrencyCode #'Date
+                        #'DateOfBirth #'EmbedQuery #'IdempotencyKey #'MinorUnits
+                        #'Name #'PaymentMinorUnits #'NationalIdentifierValue
+                        #'PageQuery #'SignedAmount #'SignedBasisPoints
+                        #'SignedMinorUnits #'SortCode #'Timestamp]))
