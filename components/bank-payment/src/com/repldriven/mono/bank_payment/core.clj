@@ -6,6 +6,7 @@
     [com.repldriven.mono.bank-balance.interface :as balances]
     [com.repldriven.mono.bank-cash-account.interface :as
      cash-accounts]
+    [com.repldriven.mono.bank-policy.interface :as policy]
     [com.repldriven.mono.bank-transaction.interface :as
      transactions]
 
@@ -24,7 +25,13 @@
          (fn [txn]
            (let [{:keys [organization-id debtor-account-id
                          creditor-account-id]}
-                 data]
+                 data
+                 business-day (domain/current-business-day
+                               (utility/now)
+                               (:business-day-cutoff config))
+                 policies (policy/get-effective-policies
+                           txn
+                           {:organization-id organization-id})]
              (let-nom>
                [_ (cash-accounts/get-account txn
                                              organization-id
@@ -32,13 +39,24 @@
                 _ (cash-accounts/get-account txn
                                              organization-id
                                              creditor-account-id)
-                payment-transaction (domain/internal-payment->transaction data)
+                today-count (store/count-internal-by-org-business-day
+                             txn
+                             organization-id
+                             business-day)
+                aggregates {:internal-payment
+                            {#{:organization-id :business-day} today-count}}
+                payment-transaction (domain/internal-payment->transaction
+                                     data
+                                     policies
+                                     aggregates)
                 transaction (transactions/record-transaction
                              txn
                              payment-transaction)
                 {:keys [transaction-id transaction-type legs]} transaction
                 _ (balances/apply-legs txn legs transaction-type)
-                payment (domain/new-internal-payment data transaction-id)
+                payment (domain/new-internal-payment data
+                                                     business-day
+                                                     transaction-id)
                 _ (store/save-internal-payment txn payment)]
                payment))))
         result (if (store/uniqueness-violation? result)
@@ -91,22 +109,39 @@
         result (store/transact
                 config
                 (fn [txn]
-                  (let-nom>
-                    [_ (cash-accounts/get-account txn
-                                                  organization-id
-                                                  debtor-account-id)
-                     transaction (domain/outbound-payment->transaction
-                                  data
-                                  internal-account-id)
-                     transaction+legs (transactions/record-transaction
-                                       txn
-                                       transaction)
-                     {:keys [transaction-id transaction-type legs]}
-                     transaction+legs
-                     _ (balances/apply-legs txn legs transaction-type)
-                     payment (domain/new-outbound-payment data transaction-id)
-                     _ (store/save-outbound-payment txn payment)]
-                    payment)))
+                  (let [business-day (domain/current-business-day
+                                      (utility/now)
+                                      (:business-day-cutoff config))
+                        policies (policy/get-effective-policies
+                                  txn
+                                  {:organization-id organization-id})]
+                    (let-nom>
+                      [_ (cash-accounts/get-account txn
+                                                    organization-id
+                                                    debtor-account-id)
+                       today-count (store/count-outbound-by-org-business-day
+                                    txn
+                                    organization-id
+                                    business-day)
+                       aggregates {:outbound-payment
+                                   {#{:organization-id :business-day}
+                                    today-count}}
+                       transaction (domain/outbound-payment->transaction
+                                    data
+                                    internal-account-id
+                                    policies
+                                    aggregates)
+                       transaction+legs (transactions/record-transaction
+                                         txn
+                                         transaction)
+                       {:keys [transaction-id transaction-type legs]}
+                       transaction+legs
+                       _ (balances/apply-legs txn legs transaction-type)
+                       payment (domain/new-outbound-payment data
+                                                            business-day
+                                                            transaction-id)
+                       _ (store/save-outbound-payment txn payment)]
+                      payment))))
         result (if (store/uniqueness-violation? result)
                  (error/reject :payment/already-submitted
                                "Payment already submitted")

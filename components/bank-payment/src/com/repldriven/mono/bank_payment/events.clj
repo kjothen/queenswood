@@ -5,53 +5,75 @@
 
     [com.repldriven.mono.bank-balance.interface :as balances]
     [com.repldriven.mono.bank-cash-account.interface :as cash-accounts]
+    [com.repldriven.mono.bank-policy.interface :as policy]
     [com.repldriven.mono.bank-transaction.interface :as transactions]
 
     [com.repldriven.mono.error.interface :as error :refer [let-nom>]]
-    [com.repldriven.mono.log.interface :as log]))
+    [com.repldriven.mono.log.interface :as log]
+    [com.repldriven.mono.utility.interface :as utility]))
+
+(defn- check-debit-credit-code
+  [debit-credit-code]
+  (when (not= :debit-credit-code-credit debit-credit-code)
+    (error/fail
+     :payment/settle-inbound
+     {:message "Inbound payment settlement for non-credit is not permissible"
+      :debit-credit-code debit-credit-code})))
+
+(defn- record-inbound-settlement
+  [config data account]
+  (let [{:keys [account-id organization-id]} account
+        {:keys [internal-account-id]} config
+        business-day (domain/current-business-day
+                      (utility/now)
+                      (:business-day-cutoff config))]
+    (store/transact
+     config
+     (fn [txn]
+       (let-nom>
+         [policies (policy/get-effective-policies
+                    txn
+                    {:organization-id organization-id})
+          today-count (store/count-inbound-by-org-business-day
+                       txn
+                       organization-id
+                       business-day)
+          aggregates {:inbound-payment
+                      {#{:organization-id :business-day} today-count}}
+          transaction (domain/inbound-payment->transaction
+                       data
+                       account-id
+                       internal-account-id
+                       policies
+                       aggregates)
+          transaction+legs (transactions/record-transaction txn transaction)
+          {:keys [transaction-id transaction-type legs]} transaction+legs
+          _ (balances/apply-legs txn legs transaction-type)
+          payment (domain/new-inbound-payment data
+                                              account-id
+                                              organization-id
+                                              business-day
+                                              transaction-id)
+          _ (store/save-inbound-payment txn payment)]
+         payment)))))
 
 (defn settle-inbound
   [config data]
-  (let [{:keys [debit-credit-code creditor-bban scheme-transaction-id]} data
-        {:keys [internal-account-id]} config]
-    (if (not= :debit-credit-code-credit debit-credit-code)
-      (error/fail
-       :payment/settle-inbound
-       {:message "Inbound payment settlement for non-credit is not permissible"
-        :debit-credit-code debit-credit-code})
-      (let-nom>
-        [account (cash-accounts/get-account-by-bban config creditor-bban)
-         _ (when-not account
-             (error/fail :payment/settle-inbound
-                         {:message "No account found for creditor BBAN"
-                          :bban creditor-bban}))
-         settled (store/get-inbound-payment config scheme-transaction-id)]
-        (if settled
-          (do (log/infof
-               "Inbound payment settlement already processed: %s"
-               scheme-transaction-id)
-              settled)
-          (let [{:keys [account-id]} account]
-            (store/transact
-             config
-             (fn [txn]
-               (let-nom>
-                 [transaction (domain/inbound-payment->transaction
-                               data
-                               account-id
-                               internal-account-id)
-                  transaction+legs (transactions/record-transaction
-                                    txn
-                                    transaction)
-                  {:keys [transaction-id transaction-type legs]}
-                  transaction+legs
-                  _ (balances/apply-legs txn legs transaction-type)
-                  payment (domain/new-inbound-payment
-                           data
-                           account-id
-                           transaction-id)
-                  _ (store/save-inbound-payment txn payment)]
-                 payment)))))))))
+  (let [{:keys [debit-credit-code creditor-bban scheme-transaction-id]} data]
+    (let-nom>
+      [_ (check-debit-credit-code debit-credit-code)
+       account (cash-accounts/get-account-by-bban config creditor-bban)
+       _ (when-not account
+           (error/fail :payment/settle-inbound
+                       {:message "No account found for creditor BBAN"
+                        :bban creditor-bban}))
+       settled (store/get-inbound-payment config scheme-transaction-id)]
+      (if settled
+        (do (log/infof
+             "Inbound payment settlement already processed: %s"
+             scheme-transaction-id)
+            settled)
+        (record-inbound-settlement config data account)))))
 
 (defn settle-outbound
   [config data]

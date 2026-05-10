@@ -6,6 +6,9 @@ processor: !system/component
   internal-account-id: !system/ref organizations.internal-account-id
   bus: !system/ref message-bus.bus
   scheme-payment-command-channel: !keyword schemes-payment-command
+  business-day-cutoff:
+    zone: Europe/London
+    hour-of-day: 17
 
 command-processor: !system/component
   system/component-kind: command-processor/command-processor
@@ -20,6 +23,9 @@ event-processor-impl: !system/component
   record-store: !system/ref fdb.meta-store
   schemas: !system/ref avro.serde
   internal-account-id: !system/ref organizations.internal-account-id
+  business-day-cutoff:
+    zone: Europe/London
+    hour-of-day: 17
 
 event-processor: !system/component
   system/component-kind: event-processor/event-processor

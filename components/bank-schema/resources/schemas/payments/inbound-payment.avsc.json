@@ -14,6 +14,8 @@
     {"name": "debtor_name",          "type": ["null", "string"], "default": null},
     {"name": "reference",            "type": ["null", "string"], "default": null},
     {"name": "created_at", "type": {"type": "long", "logicalType": "timestamp-millis"}},
-    {"name": "updated_at", "type": {"type": "long", "logicalType": "timestamp-millis"}}
+    {"name": "updated_at", "type": {"type": "long", "logicalType": "timestamp-millis"}},
+    {"name": "organization_id",     "type": "string"},
+    {"name": "business_day",        "type": "long"}
   ]
 }

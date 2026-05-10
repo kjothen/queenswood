@@ -67,8 +67,7 @@
   [next-payment-id]
   (keyword (str "pmt-" next-payment-id)))
 
-(defmulti dispatch
-  (fn [_ctx command] (:command command)))
+(defmulti dispatch (fn [_ctx command] (:command command)))
 
 (defmethod dispatch :create-org
   [{:keys [bank counter next-model-id next-org-id next-product-id next-party-id
@@ -396,27 +395,36 @@
         (update :counter inc)
         (track result))))
 
+(defmethod dispatch :bind-policy
+  [{:keys [bank orgs] :as ctx} {[model-org policy-data] :args}]
+  (let [org-real-id (get-in orgs [model-org :real-id])
+        result (let [created (policy/new-policy bank policy-data)]
+                 (if (error/anomaly? created)
+                   created
+                   (policy/new-binding
+                    bank
+                    {:policy-id (:policy-id created)
+                     :target {:kind {:organization {:organization-id
+                                                    org-real-id}}}
+                     :reason "scenario-bound test policy"})))]
+    (track ctx result)))
+
 (defmethod dispatch :internal-transfer
-  [{:keys [bank counter id-mapping run-id] :as ctx}
+  [{:keys [bank counter id-mapping run-id orgs accounts] :as ctx}
    {[from-model to-model amount] :args}]
   (let [from-real (id-mapping/real id-mapping from-model)
         to-real (id-mapping/real id-mapping to-model)
-        result (record-and-apply
+        model-org (get-in accounts [from-model :org])
+        org-real-id (get-in orgs [model-org :real-id])
+        result (payment/submit-internal
                 bank
                 {:idempotency-key (str "scen-int-" run-id "-" counter)
-                 :transaction-type :transaction-type-internal-transfer
+                 :organization-id org-real-id
+                 :debtor-account-id from-real
+                 :creditor-account-id to-real
                  :currency "GBP"
-                 :reference (str "scenario internal " counter)
-                 :legs [{:account-id from-real
-                         :balance-type :balance-type-default
-                         :balance-status :balance-status-posted
-                         :side :leg-side-debit
-                         :amount amount}
-                        {:account-id to-real
-                         :balance-type :balance-type-default
-                         :balance-status :balance-status-posted
-                         :side :leg-side-credit
-                         :amount amount}]})]
+                 :amount amount
+                 :reference (str "scenario internal " counter)})]
     (-> ctx
         (update :counter inc)
         (track result))))

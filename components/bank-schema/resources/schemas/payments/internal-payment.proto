@@ -19,4 +19,6 @@ message InternalPayment {
   optional string reference           = 8;
   required int64  created_at          = 9;
   required int64  updated_at          = 10;
+  required string organization_id     = 11;
+  required int64  business_day        = 12;
 }

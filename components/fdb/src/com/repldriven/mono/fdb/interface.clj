@@ -5,7 +5,8 @@
     [com.repldriven.mono.fdb.check :as check]
     [com.repldriven.mono.fdb.counter :as counter]
     [com.repldriven.mono.fdb.kv :as kv]
-    [com.repldriven.mono.fdb.record :as record]))
+    [com.repldriven.mono.fdb.record :as record]
+    [com.repldriven.mono.fdb.scan :as scan]))
 
 ;; KV layer
 
@@ -87,7 +88,7 @@
   (record/count-groups store index-name prefix))
 
 
-(defn scan-records [store opts] (record/scan store opts))
+(defn scan-records [store opts] (scan/scan store opts))
 
 (defn write-changelog
   [store store-name record-id changelog-bytes]

@@ -107,8 +107,9 @@
 
 (defn get-effective-policies
   "Return the policies effective for the given binding-target
-  selectors. Today always loads policies labelled `tier=platform`;
-  selectors are reserved for binding resolution in a later round.
+  selectors: the always-on `tier=platform` policies plus any
+  policies bound to the selector's target via `PolicyBinding`
+  records. Returns a vector of policy maps or an anomaly.
 
   Args:
   - txn: FDB config or open transaction.

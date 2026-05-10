@@ -75,15 +75,24 @@ inbound-payments:
     - name: InboundPayment_by_scheme_transaction_id
       field: scheme_transaction_id
       unique: true
+    - name: InboundPayment_count_by_org_business_day
+      fields: [organization_id, business_day]
+      type: count
 outbound-payments:
   record-type: OutboundPayment
-  indexes: []
+  indexes:
+    - name: OutboundPayment_count_by_org_business_day
+      fields: [organization_id, business_day]
+      type: count
 internal-payments:
   record-type: InternalPayment
   indexes:
     - name: InternalPayment_by_idempotency_key
       field: idempotency_key
       unique: true
+    - name: InternalPayment_count_by_org_business_day
+      fields: [organization_id, business_day]
+      type: count
 policies:
   record-type: Policy
   indexes:

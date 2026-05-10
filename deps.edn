@@ -88,19 +88,22 @@
   {:extra-deps
    {components/bank-api-key {:local/root "components/bank-api-key"}
     components/bank-balance {:local/root "components/bank-balance"}
-    components/bank-cash-account-product {:local/root "components/bank-cash-account-product"}
+    components/bank-cash-account-product
+    {:local/root "components/bank-cash-account-product"}
     components/bank-cash-account {:local/root "components/bank-cash-account"}
-    components/bank-clearbank-webhook {:local/root "components/bank-clearbank-webhook"}
+    components/bank-clearbank-webhook {:local/root
+                                       "components/bank-clearbank-webhook"}
     components/bank-idempotency {:local/root "components/bank-idempotency"}
     components/bank-idv {:local/root "components/bank-idv"}
-    components/bank-onfido-webhook {:local/root "components/bank-onfido-webhook"}
+    components/bank-onfido-webhook {:local/root
+                                    "components/bank-onfido-webhook"}
     components/bank-interest {:local/root "components/bank-interest"}
     components/bank-organization {:local/root "components/bank-organization"}
     components/bank-party {:local/root "components/bank-party"}
     components/bank-policy {:local/root "components/bank-policy"}
     components/bank-schema {:local/root "components/bank-schema"}
     components/bank-test-scenarios {:local/root
-                                     "components/bank-test-scenarios"}
+                                    "components/bank-test-scenarios"}
     components/bank-test-model {:local/root "components/bank-test-model"}
     components/bank-test-projections {:local/root
                                       "components/bank-test-projections"}
@@ -108,54 +111,59 @@
     components/bank-payment {:local/root "components/bank-payment"}
     components/bank-transaction {:local/root "components/bank-transaction"}
     bases/bank-api {:local/root "bases/bank-api"}
-    bases/bank-clearbank-simulator {:local/root "bases/bank-clearbank-simulator"}
+    bases/bank-clearbank-simulator {:local/root
+                                    "bases/bank-clearbank-simulator"}
     bases/bank-clearbank-adapter {:local/root "bases/bank-clearbank-adapter"}
     bases/bank-onfido-simulator {:local/root "bases/bank-onfido-simulator"}
     bases/bank-onfido-adapter {:local/root "bases/bank-onfido-adapter"}
     bases/bank-monolith {:local/root "bases/bank-monolith"}}
    :extra-paths ["components/bank-api-key/test"
-                  "components/bank-api-key/test-resources"
-                  "components/bank-balance/test"
-                  "components/bank-balance/test-resources"
-                  "components/bank-cash-account-product/test"
-                  "components/bank-cash-account-product/test-resources"
-                  "components/bank-cash-account/test"
-                  "components/bank-cash-account/test-resources"
-                  "components/bank-clearbank-webhook/test"
-                  "components/bank-idv/test"
-                  "components/bank-idv/test-resources"
-                  "components/bank-onfido-webhook/test"
-                  "components/bank-interest/test"
-                  "components/bank-interest/test-resources"
-                  "components/bank-party/test"
-                  "components/bank-party/test-resources"
-                  "components/bank-policy/test"
-                  "components/bank-policy/test-resources"
-                  "components/bank-test-scenarios/test"
-                  "components/bank-test-scenarios/test-resources"
-                  "components/bank-test-model/test"
-                  "components/bank-test-projections/test"
-                  "components/bank-test-resources/test-resources"
-                  "components/bank-payment/test"
-                  "components/bank-payment/test-resources"
-                  "components/bank-transaction/test"
-                  "components/bank-transaction/test-resources"
-                  "bases/bank-api/test"
-                  "bases/bank-api/test-resources"
-                  "bases/bank-clearbank-simulator/test"
-                  "bases/bank-clearbank-simulator/test-resources"
-                  "bases/bank-clearbank-adapter/test"
-                  "bases/bank-clearbank-adapter/test-resources"
-                  "bases/bank-onfido-simulator/test"
-                  "bases/bank-onfido-simulator/test-resources"
-                  "bases/bank-onfido-adapter/test"
-                  "bases/bank-onfido-adapter/test-resources"
-                  "bases/bank-monolith/test"
-                  "bases/bank-monolith/test-resources"]}
+                 "components/bank-api-key/test-resources"
+                 "components/bank-balance/test"
+                 "components/bank-balance/test-resources"
+                 "components/bank-cash-account-product/test"
+                 "components/bank-cash-account-product/test-resources"
+                 "components/bank-cash-account/test"
+                 "components/bank-cash-account/test-resources"
+                 "components/bank-clearbank-webhook/test"
+                 "components/bank-idv/test"
+                 "components/bank-idv/test-resources"
+                 "components/bank-onfido-webhook/test"
+                 "components/bank-interest/test"
+                 "components/bank-interest/test-resources"
+                 "components/bank-party/test"
+                 "components/bank-party/test-resources"
+                 "components/bank-policy/test"
+                 "components/bank-policy/test-resources"
+                 "components/bank-test-scenarios/test"
+                 "components/bank-test-scenarios/test-resources"
+                 "components/bank-test-model/test"
+                 "components/bank-test-projections/test"
+                 "components/bank-test-resources/test-resources"
+                 "components/bank-payment/test"
+                 "components/bank-payment/test-resources"
+                 "components/bank-transaction/test"
+                 "components/bank-transaction/test-resources"
+                 "bases/bank-api/test"
+                 "bases/bank-api/test-resources"
+                 "bases/bank-clearbank-simulator/test"
+                 "bases/bank-clearbank-simulator/test-resources"
+                 "bases/bank-clearbank-adapter/test"
+                 "bases/bank-clearbank-adapter/test-resources"
+                 "bases/bank-onfido-simulator/test"
+                 "bases/bank-onfido-simulator/test-resources"
+                 "bases/bank-onfido-adapter/test"
+                 "bases/bank-onfido-adapter/test-resources"
+                 "bases/bank-monolith/test"
+                 "bases/bank-monolith/test-resources"]}
   :format/zprint {:extra-deps {zprint/zprint {:mvn/version "1.3.0"}}
                   :main-opts ["-m" "zprint.main"]}
   :lint/clj-kondo {:extra-deps {clj-kondo/clj-kondo {:mvn/version "2026.01.19"}}
                    :main-opts ["-m" "clj-kondo.main"]}
+  :metrics {:extra-deps {io.github.kjothen/clojure-metrics
+                         {:git/url "https://github.com/kjothen/clojure-metrics"
+                          :git/sha "7f88f92695f055e3afd93ecb28ded8a1f4902e8d"}}
+            :main-opts ["-m" "clojure-metrics.core"]}
   :nvd {:extra-deps {nvd-clojure/nvd-clojure {:mvn/version "5.3.0"}}
         :main-opts ["-m" "nvd.task.check"]}
   :nrepl {:extra-deps {nrepl/nrepl {:mvn/version "1.6.0"}
