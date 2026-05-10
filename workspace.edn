@@ -8,60 +8,60 @@
             ;; only, so :necessary suppresses false-positive warnings.
             "bank-cash-account-processor-service"
               {:alias "acc",
-               :necessary ["bank-fdb-resources" "bank-pulsar-resources"
+               :necessary ["bank-resources"
                            "bank-schema" "bank-test-resources" "test-schema"
                            "command-schema" "event-schema"
                            "test-resources"]},
             "bank-party-processor-service"
               {:alias "pty",
-               :necessary ["bank-fdb-resources" "bank-pulsar-resources"
+               :necessary ["bank-resources"
                            "bank-schema" "bank-test-resources" "test-schema"
                            "command-schema" "event-schema"
                            "test-resources"]},
             "bank-payment-processor-service"
               {:alias "pay",
-               :necessary ["bank-fdb-resources" "bank-pulsar-resources"
+               :necessary ["bank-resources"
                            "bank-schema" "bank-test-resources" "test-schema"
                            "command-schema" "event-schema"
                            "test-resources"]},
             "bank-interest-processor-service"
               {:alias "int",
-               :necessary ["bank-fdb-resources" "bank-pulsar-resources"
+               :necessary ["bank-resources"
                            "bank-schema" "bank-test-resources" "test-schema"
                            "command-schema" "event-schema"
                            "test-resources"]},
             "bank-transaction-processor-service"
               {:alias "txn",
-               :necessary ["bank-fdb-resources" "bank-pulsar-resources"
+               :necessary ["bank-resources"
                            "bank-schema" "bank-test-resources" "test-schema"
                            "command-schema" "event-schema"
                            "test-resources"]},
             "bank-idv-processor-service"
               {:alias "idv",
-               :necessary ["bank-fdb-resources" "bank-pulsar-resources"
+               :necessary ["bank-resources"
                            "bank-schema" "bank-test-resources" "test-schema"
                            "command-schema" "event-schema"
                            "test-resources"]},
             "bank-api-service"
               {:alias "api",
-               :necessary ["bank-fdb-resources" "bank-pulsar-resources"
+               :necessary ["bank-resources"
                            "bank-schema" "bank-test-resources" "test-schema"
                            "command-schema" "event-schema"
                            "test-resources"]},
             "bank-bootstrap-service"
               {:alias "bbs",
-               :necessary ["bank-fdb-resources" "bank-schema"
+               :necessary ["bank-resources" "bank-schema"
                            "bank-test-resources" "test-schema"
                            "test-resources"]},
             "bank-migrator-service"
               {:alias "mig",
-               :necessary ["bank-fdb-resources" "bank-pulsar-resources"
+               :necessary ["bank-resources"
                            "bank-schema" "test-schema"
                            "command-schema" "event-schema"
                            "test-resources"]},
             "bank-clearbank-adapter-service"
               {:alias "cba",
-               :necessary ["bank-fdb-resources" "bank-pulsar-resources"
+               :necessary ["bank-resources"
                            "bank-schema" "bank-test-resources"
                            "command-schema" "event-schema"
                            "test-resources" "test-schema" "testcontainers"]},
@@ -70,7 +70,7 @@
                :necessary ["test-resources"]},
             "bank-onfido-adapter-service"
               {:alias "ioa",
-               :necessary ["bank-fdb-resources" "bank-pulsar-resources"
+               :necessary ["bank-resources"
                            "bank-schema" "bank-test-resources"
                            "command-schema" "event-schema"
                            "test-resources"]},

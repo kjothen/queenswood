@@ -411,7 +411,7 @@
 
 (defmethod dispatch :internal-transfer
   [{:keys [bank counter id-mapping run-id orgs accounts] :as ctx}
-   {[from-model to-model amount] :args}]
+   {[from-model to-model amount currency] :args}]
   (let [from-real (id-mapping/real id-mapping from-model)
         to-real (id-mapping/real id-mapping to-model)
         model-org (get-in accounts [from-model :org])
@@ -422,7 +422,7 @@
                  :organization-id org-real-id
                  :debtor-account-id from-real
                  :creditor-account-id to-real
-                 :currency "GBP"
+                 :currency (or currency "GBP")
                  :amount amount
                  :reference (str "scenario internal " counter)})]
     (-> ctx

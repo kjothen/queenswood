@@ -150,10 +150,8 @@ Don't bake an environment name (`prod`, `dev`, `staging`,
 `demo`) into a shared resource component or its config. Name
 the component by the concern it represents:
 
-- OK: `bank-fdb-resources`, `bank-pulsar-resources`,
-  `bank-infra-resources`.
-- Not OK: `bank-fdb-prod-resources`,
-  `bank-pulsar-staging-resources`.
+- OK: `bank-resources`, `bank-infra-resources`.
+- Not OK: `bank-prod-resources`, `bank-staging-resources`.
 
 The same artefact gets deployed to multiple environments. An
 env-in-the-name component reads as "this is only valid in
@@ -235,7 +233,7 @@ functions on it.
 - Use the unbracketed bare-require form (deprecated convention).
 - Bake an environment name (`prod`, `dev`, `staging`) into a
   shared resource component or config. Name by concern
-  (`bank-fdb-resources`, `bank-pulsar-resources`).
+  (e.g. `bank-resources`).
 
 **SHOULD:**
 

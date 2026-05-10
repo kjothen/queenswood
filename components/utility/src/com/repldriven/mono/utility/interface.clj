@@ -32,6 +32,18 @@
 
 (def
   ^{:doc
+    "Like assoc, but silently drops any kv pair whose value is nil
+  or an empty collection. Mirrors `(when (seq v) ...)` semantics —
+  use when the value must be both present *and* non-empty.
+  Args:
+  - m: the map to update.
+  - kvs: alternating key/value pairs; pairs with empty/nil values
+    are skipped."}
+  assoc-seq
+  util.collections/assoc-seq)
+
+(def
+  ^{:doc
     "First-match search through a nested structure.
   Returns [path value] of the first element matching pred,
   descending into maps/sequentials/sets without recursing into

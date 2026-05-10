@@ -49,9 +49,9 @@ helm install bank infra/helm/queenswood \
 
 `bank-bootstrap-service` runs as a one-shot Job (named
 `<release>-bank-bootstrap-<image.tag>`) before any service starts.
-It opens FDB (which applies record metadata via `bank-fdb-resources`),
-declares the Pulsar tenant/namespace/topics/schemas via
-`bank-pulsar-resources`, and idempotently seeds the internal
+It opens FDB (applying record metadata declared in `bank-resources`),
+declares the Pulsar tenant/namespace/topics/schemas from the same
+component, and idempotently seeds the internal
 Organization. Service Deployments block on its completion via a
 `kubectl wait --for=condition=complete` initContainer; services
 discover the seeded organization by querying FDB on startup.

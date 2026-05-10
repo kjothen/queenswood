@@ -14,7 +14,7 @@
          :or {capabilities [] limits [] enabled true labels {}}}
         data
         now (utility/now)]
-    (cond->
+    (utility/assoc-some
      {:policy-id (utility/generate-id "pol")
       :name name
       :category category
@@ -24,19 +24,17 @@
       :enabled enabled
       :created-at now
       :updated-at now}
-
-     description
-     (assoc :description description))))
+     :description
+     description)))
 
 (defn new-binding
   [data]
   (let [{:keys [policy-id target reason]} data
         now (utility/now)]
-    (cond->
+    (utility/assoc-some
      {:binding-id (utility/generate-id "bnd")
       :policy-id policy-id
       :target target
       :created-at now}
-
-     reason
-     (assoc :reason reason))))
+     :reason
+     reason)))

@@ -5,6 +5,8 @@
   (:require
     [com.repldriven.mono.bank-payment.domain :as SUT]
 
+    [com.repldriven.mono.error.interface :as error]
+
     [clojure.test :refer [deftest is testing]]))
 
 (defn- side
@@ -49,6 +51,12 @@
   [kind]
   {kind {#{:organization-id :business-day} 0}})
 
+(defn- account
+  "Minimal cash-account fixture — just the fields the domain guards
+  read."
+  [account-id currency]
+  {:account-id account-id :currency currency})
+
 (deftest internal-payment->transaction-test
   (let [tx (SUT/internal-payment->transaction {:idempotency-key "idem-1"
                                                :debtor-account-id "debtor"
@@ -56,6 +64,8 @@
                                                :currency "GBP"
                                                :amount 500
                                                :reference "Test"}
+                                              (account "debtor" "GBP")
+                                              (account "creditor" "GBP")
                                               (allow-all)
                                               (empty-aggregates
                                                :internal-payment))]
@@ -81,7 +91,7 @@
                                               :currency "GBP"
                                               :amount 1000
                                               :reference "Invoice"}
-                                             "creditor"
+                                             (account "creditor" "GBP")
                                              "internal"
                                              (allow-all)
                                              (empty-aggregates
@@ -107,6 +117,7 @@
                                                :currency "GBP"
                                                :amount 250
                                                :reference "Outbound"}
+                                              (account "debtor" "GBP")
                                               "internal"
                                               (allow-all)
                                               (empty-aggregates
@@ -123,6 +134,55 @@
         (is (= "internal" (:account-id credit)))
         (is (= :balance-type-suspense (:balance-type credit)))
         (is (= 250 (:amount credit)))))))
+
+(deftest currency-mismatch-test
+  (testing "internal-payment: debtor currency must match payment currency"
+    (let [result (SUT/internal-payment->transaction
+                  {:idempotency-key "idem-2"
+                   :debtor-account-id "debtor"
+                   :creditor-account-id "creditor"
+                   :currency "EUR"
+                   :amount 100}
+                  (account "debtor" "GBP")
+                  (account "creditor" "EUR")
+                  (allow-all)
+                  (empty-aggregates :internal-payment))]
+      (is (error/anomaly? result))
+      (is (= :payment/currency-mismatch (error/kind result)))))
+  (testing "internal-payment: creditor currency must match payment currency"
+    (let [result (SUT/internal-payment->transaction
+                  {:idempotency-key "idem-3"
+                   :debtor-account-id "debtor"
+                   :creditor-account-id "creditor"
+                   :currency "GBP"
+                   :amount 100}
+                  (account "debtor" "GBP")
+                  (account "creditor" "EUR")
+                  (allow-all)
+                  (empty-aggregates :internal-payment))]
+      (is (error/anomaly? result))
+      (is (= :payment/currency-mismatch (error/kind result)))))
+  (testing "inbound-payment: creditor currency must match payment currency"
+    (let [result (SUT/inbound-payment->transaction
+                  {:scheme-transaction-id "stx-2" :currency "USD" :amount 100}
+                  (account "creditor" "GBP")
+                  "internal"
+                  (allow-all)
+                  (empty-aggregates :inbound-payment))]
+      (is (error/anomaly? result))
+      (is (= :payment/currency-mismatch (error/kind result)))))
+  (testing "outbound-payment: debtor currency must match payment currency"
+    (let [result (SUT/outbound-payment->transaction {:idempotency-key "ob-2"
+                                                     :debtor-account-id "debtor"
+                                                     :currency "USD"
+                                                     :amount 100}
+                                                    (account "debtor" "GBP")
+                                                    "internal"
+                                                    (allow-all)
+                                                    (empty-aggregates
+                                                     :outbound-payment))]
+      (is (error/anomaly? result))
+      (is (= :payment/currency-mismatch (error/kind result))))))
 
 (deftest completed-outbound-payment-test
   (testing "flips :payment-status to completed"

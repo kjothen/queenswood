@@ -34,27 +34,37 @@
   (postwalk #(if (record? %) (into {} %) %) form))
 
 (defn assoc-some
-  "Like assoc, but silently drops any kv pair whose value is nil."
   [m & kvs]
   (reduce (fn [acc [k v]] (if (some? v) (assoc acc k v) acc))
           m
           (partition 2 kvs)))
 
+(defn assoc-seq
+  [m & kvs]
+  (reduce (fn [acc [k v]] (if (not-empty v) (assoc acc k v) acc))
+          m
+          (partition 2 kvs)))
+
 (defn deep-some
   [pred coll]
-  (cond (pred coll)
-        [[] coll]
-        (map? coll)
-        (some (fn [[k v]]
-                (when-let [[p m] (deep-some pred v)]
-                  [(into [k] p) m]))
-              coll)
-        (sequential? coll)
-        (some (fn [[i v]]
-                (when-let [[p m] (deep-some pred v)]
-                  [(into [i] p) m]))
-              (map-indexed vector coll))
-        (set? coll)
-        (some #(deep-some pred %) coll)
-        :else
-        nil))
+  (cond
+   (pred coll)
+   [[] coll]
+
+   (map? coll)
+   (some (fn [[k v]]
+           (when-let [[p m] (deep-some pred v)]
+             [(into [k] p) m]))
+         coll)
+
+   (sequential? coll)
+   (some (fn [[i v]]
+           (when-let [[p m] (deep-some pred v)]
+             [(into [i] p) m]))
+         (map-indexed vector coll))
+
+   (set? coll)
+   (some #(deep-some pred %) coll)
+
+   :else
+   nil))

@@ -71,12 +71,12 @@
                 date-of-birth nationality]}
         data
         now (System/currentTimeMillis)]
-    (cond-> {:party-id party-id
-             :given-name given-name
-             :family-name family-name
-             :date-of-birth date-of-birth
-             :nationality nationality
-             :created-at now
-             :updated-at now}
-            middle-names
-            (assoc :middle-names middle-names))))
+    (utility/assoc-some {:party-id party-id
+                         :given-name given-name
+                         :family-name family-name
+                         :date-of-birth date-of-birth
+                         :nationality nationality
+                         :created-at now
+                         :updated-at now}
+                        :middle-names
+                        middle-names)))

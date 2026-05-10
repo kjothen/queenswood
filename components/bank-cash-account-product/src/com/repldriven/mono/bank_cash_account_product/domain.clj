@@ -56,28 +56,22 @@
                           :organization-id organization-id
                           :product-id product-id}))]
 
-      (cond-> {:organization-id organization-id
-               :product-id product-id
-               :version-id (utility/generate-id "prv")
-               :version-number (inc (count versions))
-               :status :cash-account-product-status-draft
-               :name name
-               :product-type product-type
-               :balance-sheet-side balance-sheet-side
-               :balance-products balance-products
-               :interest-rate-bps (or interest-rate-bps 0)
-               :created-at now
-               :updated-at now}
-
-              (seq allowed-currencies)
-              (assoc :allowed-currencies allowed-currencies)
-
-              valid-from
-              (assoc :valid-from valid-from)
-
-              (seq allowed-payment-address-schemes)
-              (assoc :allowed-payment-address-schemes
-                     allowed-payment-address-schemes)))))
+      (-> {:organization-id organization-id
+           :product-id product-id
+           :version-id (utility/generate-id "prv")
+           :version-number (inc (count versions))
+           :status :cash-account-product-status-draft
+           :name name
+           :product-type product-type
+           :balance-sheet-side balance-sheet-side
+           :balance-products balance-products
+           :interest-rate-bps (or interest-rate-bps 0)
+           :created-at now
+           :updated-at now}
+          (utility/assoc-seq
+           :allowed-currencies allowed-currencies
+           :allowed-payment-address-schemes allowed-payment-address-schemes)
+          (utility/assoc-some :valid-from valid-from)))))
 
 (defn new-product
   [organization-id data aggregates policies]
@@ -105,28 +99,22 @@
        _ (check-capability :cash-account-product-action-draft
                            product-type
                            policies)]
-      (cond-> {:organization-id organization-id
-               :product-id product-id
-               :version-id version-id
-               :version-number version-number
-               :status status
-               :name name
-               :product-type product-type
-               :balance-sheet-side balance-sheet-side
-               :balance-products balance-products
-               :interest-rate-bps (or interest-rate-bps 0)
-               :created-at created-at
-               :updated-at (utility/now)}
-
-              (seq allowed-currencies)
-              (assoc :allowed-currencies allowed-currencies)
-
-              valid-from
-              (assoc :valid-from valid-from)
-
-              (seq allowed-payment-address-schemes)
-              (assoc :allowed-payment-address-schemes
-                     allowed-payment-address-schemes)))))
+      (-> {:organization-id organization-id
+           :product-id product-id
+           :version-id version-id
+           :version-number version-number
+           :status status
+           :name name
+           :product-type product-type
+           :balance-sheet-side balance-sheet-side
+           :balance-products balance-products
+           :interest-rate-bps (or interest-rate-bps 0)
+           :created-at created-at
+           :updated-at (utility/now)}
+          (utility/assoc-seq
+           :allowed-currencies allowed-currencies
+           :allowed-payment-address-schemes allowed-payment-address-schemes)
+          (utility/assoc-some :valid-from valid-from)))))
 
 (defn publish
   [existing policies]

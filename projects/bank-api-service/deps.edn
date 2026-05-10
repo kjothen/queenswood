@@ -14,10 +14,8 @@
     component/test-system {:local/root "../../components/test-system"}
     component/testcontainers {:local/root "../../components/testcontainers"}}}}
  :deps
- {component/bank-fdb-resources {:local/root
-                                "../../components/bank-fdb-resources"}
-  component/bank-pulsar-resources {:local/root
-                                   "../../components/bank-pulsar-resources"}
+ {component/bank-resources {:local/root
+                            "../../components/bank-resources"}
   component/bank-api-key {:local/root "../../components/bank-api-key"}
   component/bank-balance {:local/root "../../components/bank-balance"}
   component/bank-cash-account {:local/root "../../components/bank-cash-account"}
