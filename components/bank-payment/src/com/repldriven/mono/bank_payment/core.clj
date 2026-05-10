@@ -33,12 +33,14 @@
                            txn
                            {:organization-id organization-id})]
              (let-nom>
-               [_ (cash-accounts/get-account txn
-                                             organization-id
-                                             debtor-account-id)
-                _ (cash-accounts/get-account txn
-                                             organization-id
-                                             creditor-account-id)
+               [debtor-account (cash-accounts/get-account
+                                txn
+                                organization-id
+                                debtor-account-id)
+                creditor-account (cash-accounts/get-account
+                                  txn
+                                  organization-id
+                                  creditor-account-id)
                 today-count (store/count-internal-by-org-business-day
                              txn
                              organization-id
@@ -47,6 +49,8 @@
                             {#{:organization-id :business-day} today-count}}
                 payment-transaction (domain/internal-payment->transaction
                                      data
+                                     debtor-account
+                                     creditor-account
                                      policies
                                      aggregates)
                 transaction (transactions/record-transaction
@@ -116,9 +120,10 @@
                                   txn
                                   {:organization-id organization-id})]
                     (let-nom>
-                      [_ (cash-accounts/get-account txn
-                                                    organization-id
-                                                    debtor-account-id)
+                      [debtor-account (cash-accounts/get-account
+                                       txn
+                                       organization-id
+                                       debtor-account-id)
                        today-count (store/count-outbound-by-org-business-day
                                     txn
                                     organization-id
@@ -128,6 +133,7 @@
                                     today-count}}
                        transaction (domain/outbound-payment->transaction
                                     data
+                                    debtor-account
                                     internal-account-id
                                     policies
                                     aggregates)

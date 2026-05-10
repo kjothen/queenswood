@@ -12,7 +12,7 @@
   zone-local time-of-day before `:hour-of-day` counts as the
   *previous* day's bucket. A missing `cutoff` (nil or empty map)
   defaults to UTC midnight — i.e. plain calendar day in UTC."
-  ^long [^long now-ms cutoff]
+  [^long now-ms cutoff]
   (let [{:keys [zone hour-of-day]
          :or {zone "UTC" hour-of-day 0}}
         cutoff]
@@ -22,12 +22,22 @@
         .toLocalDate
         .toEpochDay)))
 
-(defn- check-distinct-accounts
+(defn- ensure-distinct-accounts
   [debtor-account-id creditor-account-id]
   (when (= debtor-account-id creditor-account-id)
     (error/reject :payment/self-transfer-not-permitted
                   {:message "Debtor and creditor accounts must differ"
                    :account-id debtor-account-id})))
+
+(defn- ensure-currency-matches
+  [payment-currency account]
+  (when (not= payment-currency (:currency account))
+    (error/reject :payment/currency-mismatch
+                  {:message
+                   "Payment currency must match account currency"
+                   :payment-currency payment-currency
+                   :account-id (:account-id account)
+                   :account-currency (:currency account)})))
 
 (defn- check-capability
   [policies kind action]
@@ -44,18 +54,19 @@
                         [kind #{:organization-id :business-day}]))}))
 
 (defn internal-payment->transaction
-  [data policies aggregates]
-  (let-nom>
-    [_ (check-distinct-accounts (:debtor-account-id data)
-                                (:creditor-account-id data))
-     _ (check-capability policies
-                         :internal-payment
-                         :internal-payment-action-submit)
-     _ (check-daily-count policies :internal-payment aggregates)]
-    (let [{:keys [idempotency-key debtor-account-id
-                  creditor-account-id currency amount
-                  reference]}
-          data]
+  [data debtor-account creditor-account policies aggregates]
+  (let [{:keys [idempotency-key debtor-account-id
+                creditor-account-id currency amount
+                reference]}
+        data]
+    (let-nom>
+      [_ (ensure-distinct-accounts debtor-account-id creditor-account-id)
+       _ (ensure-currency-matches currency debtor-account)
+       _ (ensure-currency-matches currency creditor-account)
+       _ (check-capability policies
+                           :internal-payment
+                           :internal-payment-action-submit)
+       _ (check-daily-count policies :internal-payment aggregates)]
       (utility/assoc-some
        {:idempotency-key idempotency-key
         :transaction-type :transaction-type-internal-transfer
@@ -74,15 +85,15 @@
        reference))))
 
 (defn inbound-payment->transaction
-  [data creditor-account-id internal-account-id policies aggregates]
-  (let-nom>
-    [_ (check-capability policies
-                         :inbound-payment
-                         :inbound-payment-action-receive)
-     _ (check-daily-count policies :inbound-payment aggregates)]
-    (let [{:keys [scheme-transaction-id currency amount
-                  reference]}
-          data]
+  [data creditor-account internal-account-id policies aggregates]
+  (let [{:keys [scheme-transaction-id currency amount reference]} data
+        {creditor-account-id :account-id} creditor-account]
+    (let-nom>
+      [_ (ensure-currency-matches currency creditor-account)
+       _ (check-capability policies
+                           :inbound-payment
+                           :inbound-payment-action-receive)
+       _ (check-daily-count policies :inbound-payment aggregates)]
       (utility/assoc-some
        {:idempotency-key scheme-transaction-id
         :transaction-type :transaction-type-inbound-transfer
@@ -124,15 +135,16 @@
      reference)))
 
 (defn outbound-payment->transaction
-  [data internal-account-id policies aggregates]
-  (let-nom>
-    [_ (check-capability policies
-                         :outbound-payment
-                         :outbound-payment-action-send)
-     _ (check-daily-count policies :outbound-payment aggregates)]
-    (let [{:keys [idempotency-key debtor-account-id
-                  currency amount reference]}
-          data]
+  [data debtor-account internal-account-id policies aggregates]
+  (let [{:keys [idempotency-key debtor-account-id
+                currency amount reference]}
+        data]
+    (let-nom>
+      [_ (ensure-currency-matches currency debtor-account)
+       _ (check-capability policies
+                           :outbound-payment
+                           :outbound-payment-action-send)
+       _ (check-daily-count policies :outbound-payment aggregates)]
       (utility/assoc-some
        {:idempotency-key idempotency-key
         :transaction-type :transaction-type-outbound-transfer

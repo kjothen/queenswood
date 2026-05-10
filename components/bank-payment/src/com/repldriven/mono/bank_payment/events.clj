@@ -42,7 +42,7 @@
                       {#{:organization-id :business-day} today-count}}
           transaction (domain/inbound-payment->transaction
                        data
-                       account-id
+                       account
                        internal-account-id
                        policies
                        aggregates)

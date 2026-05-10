@@ -108,17 +108,21 @@
                                          (gen/elements accts))
                        amount (gen/choose 1 10000)]
                [from to amount])))
-   :next-state (fn [state {[from to amount] :args}]
+   :next-state (fn [state {[from to amount currency] :args}]
                  ;; Generator is constrained to positive amounts,
                  ;; same-org pairs, and distinct accounts. Explicit
                  ;; scenarios may still pass cross-org / self / zero
-                 ;; / negative cases that reality rejects (see the
-                 ;; *-rejected.edn fixtures). The model predicts a
-                 ;; no-op for any rejection-bound input.
+                 ;; / negative / currency-mismatch cases that reality
+                 ;; rejects (see the *-rejected.edn fixtures). The
+                 ;; model predicts a no-op for any rejection-bound
+                 ;; input. Scenario accounts are implicitly GBP
+                 ;; (the only currency the verbs allocate), so a
+                 ;; non-GBP explicit currency is a mismatch.
                  (if (and (pos? amount)
                           (not= from to)
                           (= (get-in state [:accounts from :org])
-                             (get-in state [:accounts to :org])))
+                             (get-in state [:accounts to :org]))
+                          (or (nil? currency) (= "GBP" currency)))
                    (transfer-between state from to amount)
                    state))
    :valid? (fn [state {[from to] :args}]

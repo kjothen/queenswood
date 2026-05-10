@@ -80,9 +80,10 @@ These two Jobs split the cold-start work along two axes —
 metadata vs data, and platform-wide vs tenant-specific:
 
 - **`bank-migrator-service`** — opens FDB and applies
-  record metadata via `bank-fdb-resources`; declares the
-  Pulsar tenant, namespace, topics, and schemas via
-  `bank-pulsar-resources`. Idempotent: skips
+  record metadata via the FDB YAML in `bank-resources`;
+  declares the Pulsar tenant, namespace, topics, and
+  schemas via the Pulsar YAML in the same component.
+  Idempotent: skips
   already-created Pulsar topology, treats FDB
   "meta-data version must increase" as a no-op. Exits
   non-zero with `:pulsar/topics-audit` if any declared
