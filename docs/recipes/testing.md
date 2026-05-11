@@ -14,7 +14,11 @@ We use two test forms, chosen by what's being tested:
 - **The scenario runner** for system-level behaviour — anything
   that touches the command pipeline, persisted state, or
   multi-component interaction. Fugato property tests and
-  hand-authored EDN scenarios share the same runner.
+  hand-authored EDN scenarios share the same runner. Two
+  sibling bricks split the layer: `bank-test-scenarios` drives
+  the domain via component interfaces (and owns the
+  model-equality property test); `bank-test-api-scenarios`
+  drives the HTTP surface via real `bank-api` requests.
 
 System tests manage lifecycle explicitly with `with-test-system`
 — not `use-fixtures` — and assert anomaly-freeness with
@@ -43,7 +47,10 @@ clojure -M:poly test brick:bank-balance:bank-cash-account project:dev
 - **Cross-component behaviour** → scenario runner.
 - **Specific case to lock down explicitly** → EDN scenario.
 - **Exploring command sequences for bugs** → fugato property
-  test.
+  test in `bank-test-scenarios`.
+- **HTTP contract — status codes, error bodies, hypermedia
+  links, auth boundaries on the public API** → EDN scenario in
+  `bank-test-api-scenarios`, not a brick `interface_test.clj`.
 
 Don't write `deftest`-style integration tests against the
 command pipeline. The scenario runner is the only sanctioned

@@ -1,6 +1,8 @@
 (ns com.repldriven.mono.bank-test-scenarios.quiescence
   (:require
+    [com.repldriven.mono.bank-balance.interface :as balance]
     [com.repldriven.mono.bank-party.interface :as party]
+    [com.repldriven.mono.bank-payment.interface :as payment]
 
     [com.repldriven.mono.error.interface :as error]))
 
@@ -25,6 +27,72 @@
                        :organization-id organization-id
                        :party-id party-id
                        :status status})
+
+          :else
+          (do (Thread/sleep poll-interval-ms) (recur))))))))
+
+(defn wait-for-outbound-completed
+  "Poll the OutboundPayment record until its `:payment-status` is
+  `:outbound-payment-status-completed`. submit-outbound returns
+  immediately after debiting the debtor and publishing the scheme
+  command; ClearBank settles asynchronously and the bank-payment
+  event-processor flips the status (Debit event → settle-outbound).
+  The verb that just submitted needs to block until that hop lands
+  so the surrounding model-eq check sees a consistent state."
+  ([bank payment-id]
+   (wait-for-outbound-completed bank payment-id default-deadline-ms))
+  ([bank payment-id deadline-ms]
+   (let [deadline (+ (System/currentTimeMillis) deadline-ms)]
+     (loop []
+       (let [pmt (payment/get-outbound-payment bank payment-id)
+             status (when-not (error/anomaly? pmt) (:payment-status pmt))]
+         (cond
+          (= :outbound-payment-status-completed status)
+          :quiescent
+
+          (>= (System/currentTimeMillis) deadline)
+          (error/fail :scenario/quiescence-timeout
+                      {:message "Outbound payment did not complete"
+                       :payment-id payment-id
+                       :status status})
+
+          :else
+          (do (Thread/sleep poll-interval-ms) (recur))))))))
+
+(defn- net-balance
+  [bank account-id currency]
+  (let [b (balance/get-balance bank
+                               account-id
+                               :balance-type-default
+                               currency
+                               :balance-status-posted)]
+    (when-not (error/anomaly? b)
+      (- (:credit b 0) (:debit b 0)))))
+
+(defn wait-for-credit
+  "Poll the default-posted balance of `account-id` until its net
+  (credit − debit) is at least `target`. Use after an outbound
+  payment with an internal creditor — ClearBank fires the Debit
+  (settle-outbound, marks the OutboundPayment :completed) and
+  Credit (settle-inbound, credits the creditor) events as two
+  separate transaction-settled webhooks, so
+  `wait-for-outbound-completed` only catches the first hop."
+  ([bank account-id currency target]
+   (wait-for-credit bank account-id currency target default-deadline-ms))
+  ([bank account-id currency target deadline-ms]
+   (let [deadline (+ (System/currentTimeMillis) deadline-ms)]
+     (loop []
+       (let [net (net-balance bank account-id currency)]
+         (cond
+          (and net (>= net target))
+          :quiescent
+
+          (>= (System/currentTimeMillis) deadline)
+          (error/fail :scenario/quiescence-timeout
+                      {:message "Creditor balance did not reach target"
+                       :account-id account-id
+                       :target target
+                       :actual net})
 
           :else
           (do (Thread/sleep poll-interval-ms) (recur))))))))

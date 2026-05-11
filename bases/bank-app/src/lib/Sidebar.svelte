@@ -1,7 +1,7 @@
 <script>
   import { onMount } from "svelte";
 
-  let { currentPage, onNavigate } = $props();
+  let { currentPage, onNavigate, onLogout } = $props();
 
   const navItems = [
     { id: "organizations", label: "Organizations", icon: `<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M3 1a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H3zm1 2h2v2H4V3zm0 4h2v2H4V7zm0 4h2v2H4v-2zm4-8h2v2H8V3zm0 4h2v2H8V7zm0 4h2v2H8v-2z"/></svg>` },
@@ -49,6 +49,10 @@
     </button>
   {/each}
   <div class="spacer"></div>
+  <button class="nav-item logout" onclick={onLogout} title="Clear the admin key and return to the login screen">
+    <span class="nav-icon"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M6 2a1 1 0 0 0-1 1v2h2V4h6v8H7v-1H5v2a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V3a1 1 0 0 0-1-1H6zm-.7 4.3L1.6 10l3.7 3.7 1.4-1.4L4.4 10l2.3-2.3-1.4-1.4z"/></svg></span>
+    Logout
+  </button>
   <button class="theme-toggle" onclick={toggleTheme} title={dark ? "Switch to light mode" : "Switch to dark mode"}>
     <span class="toggle-track" class:dark>
       <span class="toggle-icon sun">&#9788;</span>

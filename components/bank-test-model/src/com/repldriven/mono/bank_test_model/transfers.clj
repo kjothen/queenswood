@@ -58,33 +58,65 @@
    :valid? (fn [state {[acct] :args}] (contains? (:accounts state) acct))})
 
 (def outbound-payment
+  "Two-arg `[debtor amount]` pays an external creditor — debits the
+  debtor and records the payment. Three-arg
+  `[debtor creditor amount]` pays a known model account; the
+  bank-payment event-processor recognises the creditor BBAN as
+  internal on the schemes-payments-event settled callback and
+  credits it. The verb publishes the schemes-payment-command on
+  the bus; ClearBank settles it asynchronously and the
+  event-processor flips the OutboundPayment to `:completed`. The
+  model mirrors that auto-settle here by marking `:status
+  :completed` straight away (so by the time the next model-eq
+  check fires — possibly after an explicit `:wait` — the model
+  matches reality without depending on a hand-driven
+  `:settle-outbound-payment`)."
   {:run? (fn [state] (seq (state/known-accounts state)))
    :args (fn [state]
            (gen/tuple (gen/elements (state/known-accounts state))
                       (gen/choose 1 10000)))
-   :next-state (fn [state {[acct amount] :args}]
-                 ;; Reality rejects non-positive amounts via
-                 ;; `:transaction/invalid-amount` — predict no-op.
-                 (if-not (pos? amount)
-                   state
-                   (let [advanced (apply-delta state acct (- amount))]
-                     (if (= advanced state)
-                       state
-                       (let [pmt-id (state/next-payment-id advanced)]
-                         (-> advanced
-                             (assoc-in
-                              [:payments pmt-id]
-                              {:debtor acct :amount amount :status :pending})
-                             (update :next-payment-id inc)))))))
-   :valid? (fn [state {[acct] :args}] (contains? (:accounts state) acct))})
+   :next-state
+   (fn [state {args :args}]
+     (let [[debtor creditor amount] (case (count args)
+                                      2 [(first args) nil (second args)]
+                                      3 args)]
+       ;; Reality rejects non-positive amounts via
+       ;; `:transaction/invalid-amount` — predict no-op.
+       (if-not (pos? amount)
+         state
+         (let [advanced (if creditor
+                          (transfer-between state debtor creditor amount)
+                          (apply-delta state debtor (- amount)))]
+           (if (= advanced state)
+             state
+             (let [pmt-id (state/next-payment-id advanced)]
+               (-> advanced
+                   (assoc-in [:payments pmt-id]
+                             (cond-> {:debtor debtor
+                                      :amount amount
+                                      :status :completed}
+                                     creditor
+                                     (assoc :creditor creditor)))
+                   (update :next-payment-id inc))))))))
+   :valid? (fn [state {args :args}]
+             (let [[debtor maybe-creditor] args]
+               (and (contains? (:accounts state) debtor)
+                    (if (= 3 (count args))
+                      (contains? (:accounts state) maybe-creditor)
+                      true))))})
 
 (def settle-outbound-payment
-  {:run? (fn [state] (seq (state/pending-payments state)))
-   :args (fn [state] (gen/tuple (gen/elements (state/pending-payments state))))
+  "Idempotent on the model side: `:outbound-payment` already marked
+  the payment `:completed`, so re-marking it here is a no-op.
+  Reality's settle-outbound is similarly idempotent
+  (`Outbound payment settlement already completed`), so
+  hand-authored scenarios that drive a redelivery to exercise the
+  idempotency contract still match between model and reality."
+  {:run? (fn [state] (seq (:payments state)))
+   :args (fn [state] (gen/tuple (gen/elements (keys (:payments state)))))
    :next-state (fn [state {[pmt-id] :args}]
                  (assoc-in state [:payments pmt-id :status] :completed))
-   :valid? (fn [state {[pmt-id] :args}]
-             (= :pending (get-in state [:payments pmt-id :status])))})
+   :valid? (fn [state {[pmt-id] :args}] (contains? (:payments state) pmt-id))})
 
 (defn- accounts-by-org
   "Returns a map of org-id → vector of account-ids for known

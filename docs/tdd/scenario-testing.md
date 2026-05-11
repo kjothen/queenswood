@@ -20,6 +20,40 @@ for cases we want locked down explicitly. Fugato finds bugs in
 sequences nobody thought to write; EDN scenarios document specific
 cases that must keep working.
 
+## Two sibling bricks: domain layer and HTTP layer
+
+Scenario testing lives in two bricks that share shape but target
+different layers.
+
+- **`bank-test-scenarios`** is the **domain-layer** brick. Verbs
+  call component interfaces directly (`payment/submit-outbound`,
+  `balance/get-balance`, …). It owns the model-equality property
+  test described in the rest of this document — fugato generates
+  command sequences, the model and projections live in
+  `bank-test-model` and `bank-test-projections`, and equality
+  after each sequence is the property.
+- **`bank-test-api-scenarios`** is the **HTTP-surface** brick.
+  Verbs are HTTP requests against a live `bank-api` (booted in
+  the test system). Scenarios use EDN with the same `:given` /
+  `:when` / `:then` shape, refs (`[:ref alias k1 …]`) for
+  capturing values across steps, and
+  `nubank/matcher-combinators` markers (`[:m/regex …]`,
+  `[:m/embeds …]`, …) for assertion shapes. This brick replaced
+  the scattered per-base / per-component `*_test.clj` API tests
+  that used to live in `bases/bank-api/test/`,
+  `components/bank-api-key/test/`, and similar paths.
+
+The two bricks coexist deliberately. The domain-layer brick
+finds bugs in rules and choreography; the HTTP-layer brick locks
+down request/response contracts, status codes, error bodies, and
+hypermedia links. They share neither code nor configuration
+beyond pattern — each has its own runner, its own
+`application-test.yml`, and its own scenario fixtures.
+
+The rest of this TDD is about the domain-layer brick. The
+HTTP-layer brick follows the same EDN + runner pattern with verb
+semantics swapped for HTTP requests.
+
 ## Why this approach
 
 We are deliberately writing the rules twice. The model is a

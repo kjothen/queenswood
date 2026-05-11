@@ -371,6 +371,31 @@ For write operations, the handler calls `command/send`
 
 Read operations skip the pipeline and query FDB directly.
 
+### Testing
+
+HTTP-surface tests live in **`bank-test-api-scenarios`**, the
+sibling of `bank-test-scenarios` covered in
+[scenario-testing.md](scenario-testing.md). It boots the full
+test system (FDB, Pulsar, ClearBank simulator, Onfido simulator)
+plus a live `bank-api` and drives real HTTP requests via
+data-driven EDN scenarios.
+
+Each scenario is a map with `:given` / `:when` / `:then` step
+sequences. An `:api/request` verb makes an HTTP call; refs
+(`[:ref alias k1 k2 …]`) capture values from earlier responses,
+including following `:links :next` across pages.
+`nubank/matcher-combinators` markers (`[:m/regex …]`,
+`[:m/embeds …]`, `[:m/seq-of …]`) shape body assertions without
+hand-rolled sub-match logic. Scenarios are grouped by domain
+under
+`test-resources/bank-test-api-scenarios/scenarios/<domain>/`.
+
+This brick replaced the per-base and per-component
+`*_test.clj` API tests under `bases/bank-api/test/`,
+`components/bank-api-key/test/`, and similar paths. New API
+contract tests — status codes, error bodies, hypermedia links,
+auth boundaries — go here, not into a brick's `interface_test.clj`.
+
 ## Alternatives Considered
 
 - **Compojure or hand-rolled routing.** Simpler but no built-in

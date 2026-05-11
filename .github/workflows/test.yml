@@ -68,7 +68,7 @@ jobs:
       - name: Setup Protoc
         uses: arduino/setup-protoc@v3
         with:
-          version: '25.8'
+          version: "25.8"
           repo-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Install protoc-gen-clojure
@@ -103,12 +103,12 @@ jobs:
           MONO_ADMIN_API_KEY: ${{ secrets.MONO_ADMIN_API_KEY }}
           TESTCONTAINERS_REUSE_ENABLE: "true"
           COVERAGE: "true"
-          COVERAGE_THRESHOLD: "50"
+          COVERAGE_THRESHOLD: ${{ matrix.project == 'dev' && '90' || '50' }}
         run: |
           clojure -X:deps prep :aliases '[:dev :+bank]'
           if [[ "${{ matrix.project }}" == "dev" ]]; then
             clojure -M:poly test project:dev \
-              brick:bank-test-scenarios:bank-monolith:bank-test-model:bank-test-projections \
+              brick:bank-test-scenarios:bank-test-model:bank-test-projections:bank-test-api-scenarios \
               :all
           else
             clojure -M:poly test project:${{ matrix.project }} :all
@@ -141,7 +141,7 @@ jobs:
         uses: zgosalvez/github-actions-report-lcov@v7.0.8
         with:
           coverage-files: target/coverage/${{ matrix.project == 'dev' && 'development' || matrix.project }}/lcov.info
-          minimum-coverage: 50
+          minimum-coverage: ${{ matrix.project == 'dev' && 90 || 50 }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           update-comment: true
           title-prefix: "[${{ matrix.project }}]"

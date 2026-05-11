@@ -152,7 +152,6 @@
                  "bases/bank-onfido-simulator/test-resources"
                  "bases/bank-onfido-adapter/test"
                  "bases/bank-onfido-adapter/test-resources"
-                 "bases/bank-monolith/test"
                  "bases/bank-monolith/test-resources"]}
   :format/zprint {:extra-deps {zprint/zprint {:mvn/version "1.3.0"}}
                   :main-opts ["-m" "zprint.main"]}
