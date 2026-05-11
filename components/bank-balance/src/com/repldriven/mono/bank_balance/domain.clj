@@ -116,7 +116,7 @@
                         {:kind {:computed {:name "available"}}
                          :transaction-type transaction-type
                          :aggregate :amount
-                         :window :instant
+                         :window :time-window-instant
                          :pre-value {:value (:value pre-amount)
                                      :currency currency}
                          :value {:value (:value post-amount)

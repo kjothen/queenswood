@@ -39,7 +39,8 @@
    :cash-account-product/draft-already-exists 409
    :cash-account-product/duplicate-items 422
    :cash-account-product/version-immutable 409
-   :interest/no-settlement 404})
+   :interest/no-settlement 404
+   :policy/limit-exceeded 429})
 
 (defn rejection-kind->status
   "Pick an HTTP status code for a rejection kind keyword.
@@ -65,11 +66,13 @@
 
 (defn anomaly->status
   "Pick an HTTP status code for an anomaly. Rejection anomalies
-  flow through `rejection-kind->status`. Unauthorized -> 401.
-  Error anomalies -> 500."
+  flow through `rejection-kind->status`. Unauthorized -> 403 (the
+  caller is authenticated by the time bricks see the request;
+  401 is reserved for auth.clj's missing/invalid-credential
+  shortfalls). Error anomalies -> 500."
   [anomaly]
   (cond (error/unauthorized? anomaly)
-        401
+        403
         (not (error/rejection? anomaly))
         500
         :else

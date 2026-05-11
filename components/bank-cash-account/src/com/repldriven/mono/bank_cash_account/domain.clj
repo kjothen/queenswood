@@ -65,14 +65,14 @@
           policies
           :cash-account
           {:aggregate :count
-           :window :instant
+           :window :time-window-instant
            :value (inc (get-in aggregates
                                [:cash-account #{:organization-id}]))})
        _ (policy/check-limit
           policies
           :cash-account
           {:aggregate :count
-           :window :instant
+           :window :time-window-instant
            :product-type product-type
            :account-type account-type
            :currency currency

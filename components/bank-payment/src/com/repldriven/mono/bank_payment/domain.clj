@@ -49,7 +49,7 @@
    policies
    kind
    {:aggregate :count
-    :window :daily
+    :window :time-window-daily
     :value (inc (get-in aggregates
                         [kind #{:organization-id :business-day}]))}))
 

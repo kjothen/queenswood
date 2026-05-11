@@ -17,7 +17,7 @@
      _ (policy/check-limit policies
                            :organization
                            {:aggregate :count
-                            :window :instant
+                            :window :time-window-instant
                             :type org-type
                             :status org-status
                             :value (inc (get-in aggregates

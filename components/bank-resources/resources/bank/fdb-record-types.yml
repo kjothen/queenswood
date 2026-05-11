@@ -81,6 +81,9 @@ inbound-payments:
 outbound-payments:
   record-type: OutboundPayment
   indexes:
+    - name: OutboundPayment_by_idempotency_key
+      field: idempotency_key
+      unique: true
     - name: OutboundPayment_count_by_org_business_day
       fields: [organization_id, business_day]
       type: count
