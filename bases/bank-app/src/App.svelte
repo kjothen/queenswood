@@ -1,5 +1,5 @@
 <script>
-  import { admin_token, save_admin_token, set_org } from "./lib/api.mjs";
+  import { admin_token, save_admin_token, clear_admin_token, set_org } from "./lib/api.mjs";
   import Login from "./lib/Login.svelte";
   import Sidebar from "./lib/Sidebar.svelte";
   import OrgSelector from "./lib/OrgSelector.svelte";
@@ -30,6 +30,13 @@
   function handleLogin(token) {
     save_admin_token(token);
     adminTokenSet = true;
+  }
+
+  function handleLogout() {
+    clear_admin_token();
+    selectedOrgId = null;
+    organizations = [];
+    adminTokenSet = false;
   }
 
   function showToast(opts) {
@@ -73,7 +80,7 @@
   <Login onSubmit={handleLogin} />
 {:else}
 <div class="layout">
-  <Sidebar {currentPage} onNavigate={(page) => currentPage = page} />
+  <Sidebar {currentPage} onNavigate={(page) => currentPage = page} onLogout={handleLogout} />
   <main>
     {#if currentPage === "organizations"}
       <OrganizationList
