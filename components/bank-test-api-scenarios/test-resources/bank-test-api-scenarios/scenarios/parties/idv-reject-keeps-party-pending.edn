@@ -1,0 +1,50 @@
+{:name "IDV reject outcome leaves the party in :status \"pending\""
+ :tags #{:parties :idv :api :unhappy}
+ :given
+ [{:command :api/request
+   :request {:method :post
+             :path "/v1/organizations"
+             :auth :admin
+             :body {:name "IDV Reject Test Org"
+                    :status "live"
+                    :tier "micro"
+                    :currencies ["GBP"]}}
+   :as :org-0
+   :assert {:status 201}}]
+
+ :when
+ ;; The Onfido simulator routes by first-name: `Reject*` → "consider"
+ ;; outcome → IDV "rejected". The bank-party watcher only activates
+ ;; on accepted IDVs, so the party stays in :status "pending".
+ [{:command :api/request
+   :request {:method :post
+             :path "/v1/parties"
+             :auth [:ref :org-0 :api-key-secret]
+             :headers {:idempotency-key "ik-idv-reject-keeps-pending-001"}
+             :body {:type "person"
+                    :display-name "Reject Smith"
+                    :given-name "Reject"
+                    :family-name "Smith"
+                    :date-of-birth "1950-07-27"
+                    :nationality "GB"
+                    :national-identifier {:type "national-insurance"
+                                          :value "TN000050R"
+                                          :issuing-country "GB"}}}
+   :as :party-0
+   :assert {:status 200 :body {:status "pending"}}}
+
+  ;; Wait long enough for the IDV chain to settle. The Onfido
+  ;; simulator's webhook-delay-ms is 10, so the full chain is fast,
+  ;; but we leave headroom for the event-processor + watcher hops.
+  {:command :wait :duration-ms 2000}
+
+  ;; Party is still pending — no activation happened because the
+  ;; IDV outcome was "rejected".
+  {:command :api/request
+   :request {:method :get
+             :path "/v1/parties/{party-id}"
+             :path-params {:party-id [:ref :party-0 :party-id]}
+             :auth [:ref :org-0 :api-key-secret]}
+   :assert {:status 200
+            :body {:party-id [:ref :party-0 :party-id]
+                   :status "pending"}}}]}

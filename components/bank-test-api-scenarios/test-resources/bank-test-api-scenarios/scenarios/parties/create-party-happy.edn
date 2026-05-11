@@ -1,0 +1,41 @@
+{:name "Tenant creates a person party"
+ :tags #{:parties :api :happy}
+ :given
+ [{:command :api/request
+   :request {:method :post
+             :path "/v1/organizations"
+             :auth :admin
+             :body {:name "Parties Test Org"
+                    :status "live"
+                    :tier "micro"
+                    :currencies ["GBP"]}}
+   :as :org-0
+   :assert {:status 201}}]
+ :when
+ [{:command :api/request
+   :request {:method :post
+             :path "/v1/parties"
+             :auth [:ref :org-0 :api-key-secret]
+             :headers {:idempotency-key "ik-create-party-happy-001"}
+             :body {:type "person"
+                    :display-name "Arthur Phillip Dent"
+                    :given-name "Arthur"
+                    :family-name "Dent"
+                    :date-of-birth "1950-07-27"
+                    :nationality "GB"
+                    :national-identifier {:type "national-insurance"
+                                          :value "TN000001A"
+                                          :issuing-country "GB"}}}
+   :as :party-0
+   :assert {:status 200
+            :body {:party-id [:m/regex "^pty\\."]
+                   :type "person"
+                   :display-name "Arthur Phillip Dent"
+                   :status "pending"}}}
+  {:command :api/poll
+   :request {:method :get
+             :path "/v1/parties/{party-id}"
+             :path-params {:party-id [:ref :party-0 :party-id]}
+             :auth [:ref :org-0 :api-key-secret]}
+   :until {:status 200
+           :body {:status "active"}}}]}

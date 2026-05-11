@@ -1,0 +1,20 @@
+{:name "Unknown party id returns 404"
+ :tags #{:parties :api :unhappy}
+ :given
+ [{:command :api/request
+   :request {:method :post
+             :path "/v1/organizations"
+             :auth :admin
+             :body {:name "404 Party Test Org"
+                    :status "live"
+                    :tier "micro"
+                    :currencies ["GBP"]}}
+   :as :org-0
+   :assert {:status 201}}]
+ :when
+ [{:command :api/request
+   :request {:method :get
+             :path "/v1/parties/{party-id}"
+             :path-params {:party-id "pty.00000000000000000000000000"}
+             :auth [:ref :org-0 :api-key-secret]}
+   :assert {:status 404}}]}

@@ -1,0 +1,11 @@
+{:name "Unauthenticated request rejected"
+ :tags #{:organizations :api :unhappy :auth}
+ :when
+ [{:command :api/request
+   :request {:method :post
+             :path "/v1/organizations"
+             :body {:name "No Auth Org"
+                    :status "live"
+                    :tier "micro"
+                    :currencies ["GBP"]}}
+   :assert {:status 401}}]}

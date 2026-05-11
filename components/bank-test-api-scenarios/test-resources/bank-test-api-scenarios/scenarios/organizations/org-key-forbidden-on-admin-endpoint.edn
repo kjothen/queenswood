@@ -1,0 +1,23 @@
+{:name "Org-tier key is rejected by the admin-only org creation endpoint"
+ :tags #{:organizations :api :auth :unhappy}
+ :given
+ [{:command :api/request
+   :request {:method :post
+             :path "/v1/organizations"
+             :auth :admin
+             :body {:name "First Org"
+                    :status "live"
+                    :tier "micro"
+                    :currencies ["GBP"]}}
+   :as :org-0
+   :assert {:status 201}}]
+ :when
+ [{:command :api/request
+   :request {:method :post
+             :path "/v1/organizations"
+             :auth [:ref :org-0 :api-key-secret]
+             :body {:name "Second Org"
+                    :status "live"
+                    :tier "micro"
+                    :currencies ["GBP"]}}
+   :assert {:status 403}}]}

@@ -11,18 +11,20 @@
 (def ^:private default-page-size 20)
 
 (defn- build-links
-  [base before-id after-id]
+  [base size before-id after-id]
   (cond-> {}
           after-id
           (assoc :next
                  (str base
                       "?page[after]="
-                      (cursor/encode after-id)))
+                      (cursor/encode after-id)
+                      "&page[size]=" size))
           before-id
           (assoc :prev
                  (str base
                       "?page[before]="
-                      (cursor/encode before-id)))))
+                      (cursor/encode before-id)
+                      "&page[size]=" size))))
 
 (defn list-cash-accounts
   [request]
@@ -60,6 +62,7 @@
       (let [{:keys [accounts before after]} result
             links (when (seq accounts)
                     (build-links "/v1/cash-accounts"
+                                 size
                                  (when after-id before)
                                  after))]
         {:status 200

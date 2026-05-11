@@ -1,0 +1,91 @@
+{:name "Tenant opens a cash account against an active party and published product"
+ :tags #{:cash-accounts :api :happy}
+ :given
+ [{:command :api/request
+   :request {:method :post
+             :path "/v1/organizations"
+             :auth :admin
+             :body {:name "Cash Accounts Test Org"
+                    :status "live"
+                    :tier "micro"
+                    :currencies ["GBP"]}}
+   :as :org-0
+   :assert {:status 201}}
+
+  ;; Create a person party — initially :status "pending"
+  {:command :api/request
+   :request {:method :post
+             :path "/v1/parties"
+             :auth [:ref :org-0 :api-key-secret]
+             :headers {:idempotency-key "ik-cash-account-party"}
+             :body {:type "person"
+                    :display-name "Arthur Phillip Dent"
+                    :given-name "Arthur"
+                    :family-name "Dent"
+                    :date-of-birth "1950-07-27"
+                    :nationality "GB"
+                    :national-identifier {:type "national-insurance"
+                                          :value "TN000010A"
+                                          :issuing-country "GB"}}}
+   :as :party-0
+   :assert {:status 200
+            :body {:status "pending"}}}
+
+  ;; Wait for the IDV → activation cascade
+  {:command :api/poll
+   :request {:method :get
+             :path "/v1/parties/{party-id}"
+             :path-params {:party-id [:ref :party-0 :party-id]}
+             :auth [:ref :org-0 :api-key-secret]}
+   :until {:status 200 :body {:status "active"}}}
+
+  ;; Publishable product: create draft, then publish
+  {:command :api/request
+   :request {:method :post
+             :path "/v1/cash-account-products"
+             :auth [:ref :org-0 :api-key-secret]
+             :body {:name "Current Account"
+                    :product-type "current"
+                    :balance-sheet-side "liability"
+                    :allowed-currencies ["GBP"]
+                    :balance-products [{:balance-type "default"
+                                        :balance-status "posted"}]
+                    :allowed-payment-address-schemes ["scan"]
+                    :interest-rate-bps 0
+                    :valid-from "2026-01-01"}}
+   :as :draft
+   :assert {:status 201 :body {:status "draft"}}}
+  {:command :api/request
+   :request {:method :post
+             :path "/v1/cash-account-products/{product-id}/versions/{version-id}/publish"
+             :path-params {:product-id [:ref :draft :product-id]
+                           :version-id [:ref :draft :version-id]}
+             :auth [:ref :org-0 :api-key-secret]}
+   :as :published
+   :assert {:status 200 :body {:status "published"}}}]
+
+ :when
+ [{:command :api/request
+   :request {:method :post
+             :path "/v1/cash-accounts"
+             :auth [:ref :org-0 :api-key-secret]
+             :headers {:idempotency-key "ik-cash-account-open"}
+             :body {:party-id [:ref :party-0 :party-id]
+                    :name "Current GBP"
+                    :currency "GBP"
+                    :product-id [:ref :draft :product-id]}}
+   :as :account-0
+   :assert {:status 200
+            :body {:account-id [:m/regex "^acc\\."]
+                   :party-id [:ref :party-0 :party-id]
+                   :name "Current GBP"
+                   :currency "GBP"
+                   :account-status "opening"}}}
+
+  ;; Watcher transitions opening -> opened on the changelog
+  {:command :api/poll
+   :request {:method :get
+             :path "/v1/cash-accounts/{account-id}"
+             :path-params {:account-id [:ref :account-0 :account-id]}
+             :auth [:ref :org-0 :api-key-secret]}
+   :until {:status 200 :body {:account-status "opened"}}}]}

@@ -1,0 +1,21 @@
+{:name "Unknown product id returns 404"
+ :tags #{:cash-account-products :api :unhappy}
+ :given
+ [{:command :api/request
+   :request {:method :post
+             :path "/v1/organizations"
+             :auth :admin
+             :body {:name "404 Product Test Org"
+                    :status "live"
+                    :tier "micro"
+                    :currencies ["GBP"]}}
+   :as :org-0
+   :assert {:status 201}}]
+ :when
+ [{:command :api/request
+   :request {:method :get
+             :path "/v1/cash-account-products/{product-id}"
+             :path-params {:product-id "prd.00000000000000000000000000"}
+             :auth [:ref :org-0 :api-key-secret]}
+   :assert {:status 404
+            :problem {:type ":cash-account-product/product-not-found"}}}]}

@@ -8,16 +8,18 @@
 (def ^:private default-page-size 20)
 
 (defn- build-links
-  [before-cursor after-cursor]
+  [size before-cursor after-cursor]
   (cond-> {}
           after-cursor
           (assoc :next
                  (str "/v1/payee-checks?page[after]="
-                      (cursor/encode after-cursor)))
+                      (cursor/encode after-cursor)
+                      "&page[size]=" size))
           before-cursor
           (assoc :prev
                  (str "/v1/payee-checks?page[before]="
-                      (cursor/encode before-cursor)))))
+                      (cursor/encode before-cursor)
+                      "&page[size]=" size))))
 
 (defn get-check
   [request]
@@ -53,7 +55,8 @@
       (errors/anomaly->response result)
       (let [{:keys [items before after]} result
             links (when (seq items)
-                    (build-links (when after-id before)
+                    (build-links size
+                                 (when after-id before)
                                  after))]
         {:status 200
          :body (cond-> {:items items}

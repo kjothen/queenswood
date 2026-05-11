@@ -8,18 +8,20 @@
 (def ^:private default-page-size 20)
 
 (defn- build-links
-  [base before-cursor after-cursor]
+  [base size before-cursor after-cursor]
   (cond-> {}
           after-cursor
           (assoc :next
                  (str base
                       "?page[after]="
-                      (cursor/encode after-cursor)))
+                      (cursor/encode after-cursor)
+                      "&page[size]=" size))
           before-cursor
           (assoc :prev
                  (str base
                       "?page[before]="
-                      (cursor/encode before-cursor)))))
+                      (cursor/encode before-cursor)
+                      "&page[size]=" size))))
 
 (defn list-parties
   [request]
@@ -39,6 +41,7 @@
       (let [{:keys [parties before after]} result
             links (when (seq parties)
                     (build-links "/v1/parties"
+                                 size
                                  (when after-id before)
                                  after))]
         {:status 200

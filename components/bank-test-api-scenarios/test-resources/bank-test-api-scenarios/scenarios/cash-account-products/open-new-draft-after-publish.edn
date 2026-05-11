@@ -1,0 +1,58 @@
+{:name "Tenant opens a new draft after publishing the previous version"
+ :tags #{:cash-account-products :api :happy :lifecycle}
+ :given
+ [{:command :api/request
+   :request {:method :post
+             :path "/v1/organizations"
+             :auth :admin
+             :body {:name "Open New Draft Test Org"
+                    :status "live"
+                    :tier "micro"
+                    :currencies ["GBP"]}}
+   :as :org-0
+   :assert {:status 201}}
+  {:command :api/request
+   :request {:method :post
+             :path "/v1/cash-account-products"
+             :auth [:ref :org-0 :api-key-secret]
+             :body {:name "v1"
+                    :product-type "current"
+                    :balance-sheet-side "liability"
+                    :allowed-currencies ["GBP"]
+                    :balance-products [{:balance-type "default"
+                                        :balance-status "posted"}]
+                    :allowed-payment-address-schemes ["scan"]
+                    :interest-rate-bps 0
+                    :valid-from "2026-01-01"}}
+   :as :v1
+   :assert {:status 201 :body {:status "draft" :version-number 1}}}
+  {:command :api/request
+   :request {:method :post
+             :path "/v1/cash-account-products/{product-id}/versions/{version-id}/publish"
+             :path-params {:product-id [:ref :v1 :product-id]
+                           :version-id [:ref :v1 :version-id]}
+             :auth [:ref :org-0 :api-key-secret]}
+   :assert {:status 200 :body {:status "published"}}}]
+ :when
+ [{:command :api/request
+   :request {:method :post
+             :path "/v1/cash-account-products/{product-id}/versions"
+             :path-params {:product-id [:ref :v1 :product-id]}
+             :auth [:ref :org-0 :api-key-secret]
+             :body {:name "v2"
+                    :product-type "current"
+                    :balance-sheet-side "liability"
+                    :allowed-currencies ["GBP" "EUR"]
+                    :balance-products [{:balance-type "default"
+                                        :balance-status "posted"}]
+                    :allowed-payment-address-schemes ["scan"]
+                    :interest-rate-bps 100
+                    :valid-from "2026-06-01"}}
+   :as :v2
+   :assert {:status 201
+            :body {:product-id [:ref :v1 :product-id]
+                   :version-id [:m/mismatch
+                                [:m/equals [:ref :v1 :version-id]]]
+                   :version-number 2
+                   :status "draft"
+                   :name "v2"}}}]}

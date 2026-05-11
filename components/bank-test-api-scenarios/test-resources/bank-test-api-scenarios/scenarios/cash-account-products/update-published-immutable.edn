@@ -1,0 +1,53 @@
+{:name "Updating a published version is rejected as immutable"
+ :tags #{:cash-account-products :api :unhappy :lifecycle}
+ :given
+ [{:command :api/request
+   :request {:method :post
+             :path "/v1/organizations"
+             :auth :admin
+             :body {:name "Immutable Update Test Org"
+                    :status "live"
+                    :tier "micro"
+                    :currencies ["GBP"]}}
+   :as :org-0
+   :assert {:status 201}}
+  {:command :api/request
+   :request {:method :post
+             :path "/v1/cash-account-products"
+             :auth [:ref :org-0 :api-key-secret]
+             :body {:name "v1"
+                    :product-type "current"
+                    :balance-sheet-side "liability"
+                    :allowed-currencies ["GBP"]
+                    :balance-products [{:balance-type "default"
+                                        :balance-status "posted"}]
+                    :allowed-payment-address-schemes ["scan"]
+                    :interest-rate-bps 0
+                    :valid-from "2026-01-01"}}
+   :as :v1
+   :assert {:status 201 :body {:status "draft"}}}
+  {:command :api/request
+   :request {:method :post
+             :path "/v1/cash-account-products/{product-id}/versions/{version-id}/publish"
+             :path-params {:product-id [:ref :v1 :product-id]
+                           :version-id [:ref :v1 :version-id]}
+             :auth [:ref :org-0 :api-key-secret]}
+   :assert {:status 200 :body {:status "published"}}}]
+ :when
+ [{:command :api/request
+   :request {:method :put
+             :path "/v1/cash-account-products/{product-id}/versions/{version-id}"
+             :path-params {:product-id [:ref :v1 :product-id]
+                           :version-id [:ref :v1 :version-id]}
+             :auth [:ref :org-0 :api-key-secret]
+             :body {:name "Attempted Rename"
+                    :product-type "current"
+                    :balance-sheet-side "liability"
+                    :allowed-currencies ["GBP"]
+                    :balance-products [{:balance-type "default"
+                                        :balance-status "posted"}]
+                    :allowed-payment-address-schemes ["scan"]
+                    :interest-rate-bps 0
+                    :valid-from "2026-01-01"}}
+   :assert {:status 409
+            :problem {:type ":cash-account-product/version-immutable"}}}]}

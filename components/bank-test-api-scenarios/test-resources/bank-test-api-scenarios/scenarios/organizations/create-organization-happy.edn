@@ -1,0 +1,28 @@
+{:name "Admin creates an organization"
+ :tags #{:organizations :api :happy}
+ :when
+ [{:command :api/request
+   :request {:method :post
+             :path "/v1/organizations"
+             :auth :admin
+             :body {:name "Galactic Bank"
+                    :status "live"
+                    :tier "micro"
+                    :currencies ["GBP"]}}
+   :as :org-0
+   :assert {:status 201
+            :body {:name "Galactic Bank"
+                   :status "live"
+                   :type "customer"
+                   :organization-id [:m/regex "^org\\."]
+                   :api-key-secret [:m/regex "^sk_live\\."]
+                   :api-key {:key-prefix [:m/regex ".+"]}
+                   :party {:party-id [:m/regex "^pty\\."]}
+                   :accounts [{:account-id [:m/regex "^acc\\."]
+                               :balances [:m/non-empty]}]}}}]
+ :then
+ [{:command :api/request
+   :request {:method :get
+             :path "/v1/organizations"
+             :auth :admin}
+   :assert {:status 200}}]}

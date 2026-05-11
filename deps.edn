@@ -102,6 +102,8 @@
     components/bank-party {:local/root "components/bank-party"}
     components/bank-policy {:local/root "components/bank-policy"}
     components/bank-schema {:local/root "components/bank-schema"}
+    components/bank-test-api-scenarios {:local/root
+                                        "components/bank-test-api-scenarios"}
     components/bank-test-scenarios {:local/root
                                     "components/bank-test-scenarios"}
     components/bank-test-model {:local/root "components/bank-test-model"}
@@ -117,14 +119,11 @@
     bases/bank-onfido-simulator {:local/root "bases/bank-onfido-simulator"}
     bases/bank-onfido-adapter {:local/root "bases/bank-onfido-adapter"}
     bases/bank-monolith {:local/root "bases/bank-monolith"}}
-   :extra-paths ["components/bank-api-key/test"
-                 "components/bank-api-key/test-resources"
-                 "components/bank-balance/test"
+   :extra-paths ["components/bank-balance/test"
                  "components/bank-balance/test-resources"
                  "components/bank-cash-account-product/test"
                  "components/bank-cash-account-product/test-resources"
                  "components/bank-cash-account/test"
-                 "components/bank-cash-account/test-resources"
                  "components/bank-clearbank-webhook/test"
                  "components/bank-idv/test"
                  "components/bank-idv/test-resources"
@@ -132,9 +131,10 @@
                  "components/bank-interest/test"
                  "components/bank-interest/test-resources"
                  "components/bank-party/test"
-                 "components/bank-party/test-resources"
                  "components/bank-policy/test"
                  "components/bank-policy/test-resources"
+                 "components/bank-test-api-scenarios/test"
+                 "components/bank-test-api-scenarios/test-resources"
                  "components/bank-test-scenarios/test"
                  "components/bank-test-scenarios/test-resources"
                  "components/bank-test-model/test"
@@ -144,8 +144,6 @@
                  "components/bank-payment/test-resources"
                  "components/bank-transaction/test"
                  "components/bank-transaction/test-resources"
-                 "bases/bank-api/test"
-                 "bases/bank-api/test-resources"
                  "bases/bank-clearbank-simulator/test"
                  "bases/bank-clearbank-simulator/test-resources"
                  "bases/bank-clearbank-adapter/test"
