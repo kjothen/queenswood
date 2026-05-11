@@ -307,6 +307,17 @@ ordering follows).
   with the settlement transaction.
 - **Outbound settlement** (event-driven side) dedups by the
   outbound payment's known status.
+- **Belt-and-braces at the store layer.** If a duplicate slips
+  past the API cache (different `idempotency-key` header on the
+  retry, internal caller bypassing the cache, etc.), both
+  `InternalPayment_by_idempotency_key` and
+  `OutboundPayment_by_idempotency_key` are unique indexes that
+  reject the second write. In practice the transaction layer's
+  `Transaction_by_idempotency_key` index fires first, so callers
+  parsing rejection kinds will most often see
+  `:transaction/already-recorded` rather than
+  `:payment/already-submitted` — both are correct, neither
+  produces a duplicate balance move.
 
 ### Three roles for Pulsar in this flow
 

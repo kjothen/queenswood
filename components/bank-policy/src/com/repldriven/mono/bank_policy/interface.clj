@@ -90,15 +90,19 @@
 
 (defn check-limit
   "Check whether `policies` impose any violated limit on the
-  request. Returns `true` when no limit is breached, or an
-  `:unauthorized/policy-limit-exceeded` anomaly.
+  request. Returns `true` when no limit is breached, or a
+  `:rejection/policy-limit-exceeded` anomaly (a limit breach is
+  a quota/rate condition, not an authz failure — modelled as a
+  rejection so the API surfaces it as HTTP 429).
 
   Args:
   - policies: collection of policy maps to evaluate.
   - kind: limit kind keyword.
   - request: map of shape
     `{:aggregate :count|:amount
-      :window    :instant|:daily|:weekly|:monthly|:rolling
+      :window    :time-window-instant|:time-window-daily|
+                 :time-window-weekly|:time-window-monthly|
+                 :time-window-rolling
       :value     <number-or-amount>
       :pre-value <number-or-amount>}` — `:pre-value` is optional
     and unlocks `:limit-allow-improving` leniency when present."

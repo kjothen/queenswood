@@ -8,25 +8,32 @@
 (def ^:private store-name "idvs")
 
 (def transact fdb/transact)
+(def uniqueness-violation? fdb/uniqueness-violation?)
 
 (defn save-idv
   [txn idv changelog]
-  (fdb/transact
-   txn
-   (fn [txn]
-     (let [store (fdb/open txn store-name)]
-       (let-nom>
-         [_ (fdb/save-record store (schema/Idv->java idv))
-          _ (fdb/write-changelog store
-                                 store-name
-                                 (:verification-id idv)
-                                 (schema/IdvChangelog->pb
-                                  (assoc changelog
-                                         :organization-id
-                                         (:organization-id idv))))]
-         idv)))
-   :idv/save
-   "Failed to save IDV"))
+  (let [result (fdb/transact
+                txn
+                (fn [txn]
+                  (let [store (fdb/open txn store-name)]
+                    (let-nom>
+                      [_ (fdb/save-record store (schema/Idv->java idv))
+                       _ (fdb/write-changelog
+                          store
+                          store-name
+                          (:verification-id idv)
+                          (schema/IdvChangelog->pb
+                           (assoc changelog
+                                  :organization-id
+                                  (:organization-id idv))))]
+                      idv)))
+                :idv/save
+                "Failed to save IDV")]
+    (if (uniqueness-violation? result)
+      (error/reject :idv/already-verified
+                    {:message "IDV already exists for party"
+                     :party-id (:party-id idv)})
+      result)))
 
 (defn get-idv
   [txn organization-id verification-id]

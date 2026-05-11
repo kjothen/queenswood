@@ -21,7 +21,7 @@
         policies
         :api-key
         {:aggregate :count
-         :window :instant
+         :window :time-window-instant
          :value (inc (get-in aggregates [:api-key #{:organization-id}]))})]
 
     (let [api-key-prefix (get status->api-key-prefix

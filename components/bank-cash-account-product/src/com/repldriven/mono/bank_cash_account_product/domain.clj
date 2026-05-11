@@ -76,7 +76,11 @@
 (defn new-product
   [organization-id data aggregates policies]
   (let-nom>
-    [_ (check-limit :count :instant #{:organization-id} aggregates policies)]
+    [_ (check-limit :count
+                    :time-window-instant
+                    #{:organization-id}
+                    aggregates
+                    policies)]
     (new-version organization-id
                  (utility/generate-id "prd")
                  []

@@ -171,15 +171,16 @@
     (is (true? (SUT/check-limit
                 []
                 :api-key
-                {:aggregate :count :window :instant :value 1}))))
+                {:aggregate :count :window :time-window-instant :value 1}))))
   (testing "no matching limit kind => true"
     (let [policies [(limit-policy
                      [(limit {:cash-account {}}
                              (max-bound :count 1 :time-window-instant))])]]
-      (is (true? (SUT/check-limit
-                  policies
-                  :api-key
-                  {:aggregate :count :window :instant :value 999})))))
+      (is (true? (SUT/check-limit policies
+                                  :api-key
+                                  {:aggregate :count
+                                   :window :time-window-instant
+                                   :value 999})))))
   (testing "max bound at value passes"
     (let [policies [(limit-policy
                      [(limit {:api-key {}}
@@ -187,7 +188,7 @@
       (is (true? (SUT/check-limit
                   policies
                   :api-key
-                  {:aggregate :count :window :instant :value 5})))))
+                  {:aggregate :count :window :time-window-instant :value 5})))))
   (testing "max bound exceeded => unauthorized with reason"
     (let [policies [(limit-policy [(limit
                                     {:api-key {}}
@@ -196,8 +197,8 @@
           result (SUT/check-limit
                   policies
                   :api-key
-                  {:aggregate :count :window :instant :value 6})]
-      (is (error/unauthorized? result))
+                  {:aggregate :count :window :time-window-instant :value 6})]
+      (is (error/rejection? result))
       (is (= :policy/limit-exceeded (error/kind result)))
       (is (= "max 5 keys" (:message (error/payload result))))))
   (testing "min bound violated => unauthorized"
@@ -207,8 +208,8 @@
           result (SUT/check-limit
                   policies
                   :cash-account
-                  {:aggregate :count :window :instant :value 0})]
-      (is (error/unauthorized? result))))
+                  {:aggregate :count :window :time-window-instant :value 0})]
+      (is (error/rejection? result))))
   (testing "range bound max exceeded => unauthorized"
     (let [policies [(limit-policy
                      [(limit {:cash-account {}}
@@ -216,34 +217,37 @@
           result (SUT/check-limit
                   policies
                   :cash-account
-                  {:aggregate :count :window :instant :value 2})]
-      (is (error/unauthorized? result))))
+                  {:aggregate :count :window :time-window-instant :value 2})]
+      (is (error/rejection? result))))
   (testing "aggregate kind mismatch is skipped (count req vs amount limit)"
     (let [policies [(limit-policy
                      [(limit {:api-key {}}
                              (max-bound :amount 5 :time-window-instant))])]]
-      (is (true? (SUT/check-limit
-                  policies
-                  :api-key
-                  {:aggregate :count :window :instant :value 999})))))
+      (is (true? (SUT/check-limit policies
+                                  :api-key
+                                  {:aggregate :count
+                                   :window :time-window-instant
+                                   :value 999})))))
   (testing "window mismatch is skipped"
     (let [policies [(limit-policy [(limit
                                     {:api-key {}}
                                     (max-bound :count 5 :time-window-daily))])]]
-      (is (true? (SUT/check-limit
-                  policies
-                  :api-key
-                  {:aggregate :count :window :instant :value 999})))))
+      (is (true? (SUT/check-limit policies
+                                  :api-key
+                                  {:aggregate :count
+                                   :window :time-window-instant
+                                   :value 999})))))
   (testing "disabled policy is ignored"
     (let [policies [(limit-policy [(limit
                                     {:api-key {}}
                                     (max-bound :count 5 :time-window-instant))]
                                   :enabled
                                   false)]]
-      (is (true? (SUT/check-limit
-                  policies
-                  :api-key
-                  {:aggregate :count :window :instant :value 999})))))
+      (is (true? (SUT/check-limit policies
+                                  :api-key
+                                  {:aggregate :count
+                                   :window :time-window-instant
+                                   :value 999})))))
   (testing "tuple-filter mismatch skips the limit"
     (let [policies [(limit-policy [(limit
                                     {:cash-account {:filters
@@ -254,7 +258,7 @@
       (is (true? (SUT/check-limit policies
                                   :cash-account
                                   {:aggregate :count
-                                   :window :instant
+                                   :window :time-window-instant
                                    :value 1
                                    :account-type :account-type-business})))))
   (testing "tuple-filter match — limit applies and bound is checked"
@@ -268,11 +272,11 @@
           result (SUT/check-limit policies
                                   :cash-account
                                   {:aggregate :count
-                                   :window :instant
+                                   :window :time-window-instant
                                    :value 2
                                    :product-type :product-type-settlement
                                    :account-type :account-type-business})]
-      (is (error/unauthorized? result))))
+      (is (error/rejection? result))))
   (testing "multi-tuple OR — limit applies when any tuple matches"
     (let [policies [(limit-policy
                      [(limit {:organization
@@ -283,10 +287,10 @@
           result (SUT/check-limit policies
                                   :organization
                                   {:aggregate :count
-                                   :window :instant
+                                   :window :time-window-instant
                                    :value 2
                                    :type :organization-type-internal})]
-      (is (error/unauthorized? result))))
+      (is (error/rejection? result))))
   (testing "tuple unset slot does not constrain"
     (let [policies [(limit-policy [(limit
                                     {:organization {:filters [{:type nil}]}}
@@ -295,10 +299,10 @@
           result (SUT/check-limit policies
                                   :organization
                                   {:aggregate :count
-                                   :window :instant
+                                   :window :time-window-instant
                                    :value 1
                                    :type :organization-type-customer})]
-      (is (error/unauthorized? result))))
+      (is (error/rejection? result))))
   (testing "BalanceLimit filter without transaction-type fires for any type"
     (let [policies [(limit-policy [(limit {:balance {:filters
                                                      [{:kind {:computed
@@ -314,9 +318,9 @@
                                    :transaction-type
                                    :transaction-type-interest-accrual
                                    :aggregate :amount
-                                   :window :instant
+                                   :window :time-window-instant
                                    :value {:value -10 :currency "GBP"}})]
-      (is (error/unauthorized? result))))
+      (is (error/rejection? result))))
   (testing "BalanceLimit filter with transaction-type scopes the limit"
     (let [policies [(limit-policy
                      [(limit {:balance
@@ -335,9 +339,9 @@
                                        :transaction-type
                                        :transaction-type-internal-transfer
                                        :aggregate :amount
-                                       :window :instant
+                                       :window :time-window-instant
                                        :value {:value -10 :currency "GBP"}})]
-          (is (error/unauthorized? result))))
+          (is (error/rejection? result))))
       (testing "non-matching transaction-type skips the limit"
         (is (true? (SUT/check-limit policies
                                     :balance
@@ -345,7 +349,7 @@
                                      :transaction-type
                                      :transaction-type-interest-accrual
                                      :aggregate :amount
-                                     :window :instant
+                                     :window :time-window-instant
                                      :value {:value -10 :currency "GBP"}}))))))
   (testing "allow-improving — pre out-of-bound, post no worse, passes"
     (let [policies [(limit-policy [(limit {:balance {:filters
@@ -361,14 +365,14 @@
                                   :balance
                                   {:kind {:computed {:name "available"}}
                                    :aggregate :amount
-                                   :window :instant
+                                   :window :time-window-instant
                                    :pre-value {:value -50 :currency "GBP"}
                                    :value {:value -50 :currency "GBP"}})))
       (is (true? (SUT/check-limit policies
                                   :balance
                                   {:kind {:computed {:name "available"}}
                                    :aggregate :amount
-                                   :window :instant
+                                   :window :time-window-instant
                                    :pre-value {:value -50 :currency "GBP"}
                                    :value {:value -40 :currency "GBP"}})))))
   (testing "allow-improving — pre out-of-bound, post worse, fails"
@@ -385,10 +389,10 @@
                                   :balance
                                   {:kind {:computed {:name "available"}}
                                    :aggregate :amount
-                                   :window :instant
+                                   :window :time-window-instant
                                    :pre-value {:value -50 :currency "GBP"}
                                    :value {:value -60 :currency "GBP"}})]
-      (is (error/unauthorized? result))))
+      (is (error/rejection? result))))
   (testing "allow-improving — pre in-bound, post out-of-bound, fails"
     (let [policies [(limit-policy [(limit {:balance {:filters
                                                      [{:kind {:computed
@@ -403,10 +407,10 @@
                                   :balance
                                   {:kind {:computed {:name "available"}}
                                    :aggregate :amount
-                                   :window :instant
+                                   :window :time-window-instant
                                    :pre-value {:value 10 :currency "GBP"}
                                    :value {:value -1 :currency "GBP"}})]
-      (is (error/unauthorized? result))))
+      (is (error/rejection? result))))
   (testing "allow-improving — post in-bound passes regardless of pre"
     (let [policies [(limit-policy [(limit {:balance {:filters
                                                      [{:kind {:computed
@@ -421,7 +425,7 @@
                                   :balance
                                   {:kind {:computed {:name "available"}}
                                    :aggregate :amount
-                                   :window :instant
+                                   :window :time-window-instant
                                    :pre-value {:value -50 :currency "GBP"}
                                    :value {:value 1 :currency "GBP"}})))))
   (testing "strict default — pre out-of-bound, post no worse, still fails"
@@ -437,10 +441,10 @@
                                   :balance
                                   {:kind {:computed {:name "available"}}
                                    :aggregate :amount
-                                   :window :instant
+                                   :window :time-window-instant
                                    :pre-value {:value -50 :currency "GBP"}
                                    :value {:value -40 :currency "GBP"}})]
-      (is (error/unauthorized? result)))))
+      (is (error/rejection? result)))))
 
 (deftest labels-roundtrip-test
   (with-test-system
