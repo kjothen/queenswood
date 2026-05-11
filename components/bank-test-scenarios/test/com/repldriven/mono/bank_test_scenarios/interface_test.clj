@@ -1,10 +1,11 @@
-(ns ^:eftest/synchronized
-    com.repldriven.mono.bank-test-scenarios.interface-test
+(ns ^:eftest/synchronized com.repldriven.mono.bank-test-scenarios.interface-test
   (:require
     com.repldriven.mono.bank-test-scenarios.system
 
     [com.repldriven.mono.bank-test-scenarios.interface :as SUT]
 
+    [com.repldriven.mono.bank-clearbank-adapter.api :as cb-adapter]
+    [com.repldriven.mono.bank-clearbank-simulator.api :as cb-simulator]
     [com.repldriven.mono.bank-onfido-adapter.api :as onfido-adapter]
     [com.repldriven.mono.bank-onfido-simulator.api :as onfido-simulator]
 
@@ -23,6 +24,10 @@
 (defn- patch-handlers
   [defs]
   (-> defs
+      (assoc-in [:system/defs :clearbank-simulator-server :handler]
+                cb-simulator/app)
+      (assoc-in [:system/defs :clearbank-adapter-server :handler]
+                cb-adapter/app)
       (assoc-in [:system/defs :onfido-simulator-server :handler]
                 onfido-simulator/app)
       (assoc-in [:system/defs :onfido-adapter-server :handler]
@@ -31,7 +36,16 @@
 (defn- fdb-config
   [sys]
   {:record-db (system/instance sys [:fdb :record-db])
-   :record-store (system/instance sys [:fdb :store])})
+   :record-store (system/instance sys [:fdb :store])
+   ;; `payment/submit-outbound` publishes a schemes-payment-command
+   ;; on the bus when the outbound is created — wire the bus,
+   ;; schemas, and channel keyword through so it lands on the right
+   ;; topic. The clearbank-adapter command-processor consumes it,
+   ;; ClearBank settles, and bank-payment's event-processor on
+   ;; schemes-payments-event credits the inbound side.
+   :bus (system/instance sys [:message-bus :bus])
+   :schemas (system/instance sys [:avro :serde])
+   :scheme-payment-command-channel :schemes-payment-command})
 
 (defn- internal-account
   [sys]
@@ -150,8 +164,7 @@
     (is (seq files) "expected scenarios on the classpath")
     (log/info "scenarios starting" {:count (count files)})
     (with-test-system
-     [sys
-      ["classpath:bank-test-scenarios/application-test.yml" patch-handlers]]
+     [sys ["classpath:bank-test-scenarios/application-test.yml" patch-handlers]]
      (doseq [f files]
        (let [resource-path (str "bank-test-scenarios/scenarios/" (.getName f))]
          (nom-test> [loaded (SUT/from-resource resource-path)

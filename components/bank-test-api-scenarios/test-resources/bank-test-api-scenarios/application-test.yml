@@ -9,9 +9,15 @@ system:
   idv: !include bank/idv-test.yml
   parties: !include bank-test-api-scenarios/party-test.yml
   cash-accounts: !include bank/cash-account-test.yml
+  payments: !include bank/payment-test.yml
+  interest: !include bank/interest-test.yml
+  transactions: !include bank/transaction-test.yml
   onfido-simulator-server: !include bank-test-api-scenarios/onfido-simulator-test.yml
   onfido-adapter-server: !include bank-test-api-scenarios/onfido-adapter-server-test.yml
   onfido-adapter: !include bank-test-api-scenarios/onfido-adapter-test.yml
+  clearbank-simulator-server: !include bank-test-api-scenarios/clearbank-simulator-test.yml
+  clearbank-adapter-server: !include bank-test-api-scenarios/clearbank-adapter-server-test.yml
+  clearbank-adapter: !include bank-test-api-scenarios/clearbank-adapter-test.yml
   server:
     handler: !system/required-component
     interceptors: !system/component
@@ -22,9 +28,13 @@ system:
       dispatchers:
         parties: !system/ref parties.dispatcher
         cash-accounts: !system/ref cash-accounts.dispatcher
+        payments: !system/ref payments.dispatcher
+        interest: !system/ref interest.dispatcher
+        transactions: !system/ref transactions.dispatcher
       avro: !system/ref avro.serde
       record-db: !system/ref fdb.record-db
       record-store: !system/ref fdb.meta-store
+      clearbank-adapter-url: !system/ref clearbank-adapter-server.http-url
     jetty-adapter: !system/component
       system/component-kind: server/jetty-adapter
       handler: !system/ref server.handler

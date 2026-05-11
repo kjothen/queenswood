@@ -1,0 +1,26 @@
+{:name "Tenant runs a payee check and the name is a match"
+ :tags #{:payee-checks :api :happy}
+ :given
+ [{:command :api/request
+   :request {:method :post
+             :path "/v1/organizations"
+             :auth :admin
+             :body {:name "Payee Check Match Org"
+                    :status "live"
+                    :tier "micro"
+                    :currencies ["GBP"]}}
+   :as :org-0
+   :assert {:status 201}}]
+
+ :when
+ [{:command :api/request
+   :request {:method :post
+             :path "/v1/payee-checks"
+             :auth [:ref :org-0 :api-key-secret]
+             :body {:creditor-name "Arthur Dent"
+                    :account {:sort-code "040062"
+                              :account-number "12345678"}
+                    :account-type "personal"}}
+   :assert {:status 201
+            :body {:check-id [:m/regex "^chk\\."]
+                   :result {:match-result "match"}}}}]}

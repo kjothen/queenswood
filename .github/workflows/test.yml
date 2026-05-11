@@ -103,7 +103,7 @@ jobs:
           MONO_ADMIN_API_KEY: ${{ secrets.MONO_ADMIN_API_KEY }}
           TESTCONTAINERS_REUSE_ENABLE: "true"
           COVERAGE: "true"
-          COVERAGE_THRESHOLD: "50"
+          COVERAGE_THRESHOLD: ${{ matrix.project == 'dev' && '90' || '50' }}
         run: |
           clojure -X:deps prep :aliases '[:dev :+bank]'
           if [[ "${{ matrix.project }}" == "dev" ]]; then
@@ -141,7 +141,7 @@ jobs:
         uses: zgosalvez/github-actions-report-lcov@v7.0.8
         with:
           coverage-files: target/coverage/${{ matrix.project == 'dev' && 'development' || matrix.project }}/lcov.info
-          minimum-coverage: 50
+          minimum-coverage: ${{ matrix.project == 'dev' && 90 || 50 }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           update-comment: true
           title-prefix: "[${{ matrix.project }}]"

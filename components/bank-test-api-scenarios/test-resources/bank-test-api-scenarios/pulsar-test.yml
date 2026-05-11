@@ -73,16 +73,43 @@ topics: !system/component
   admin: !system/local-ref admin
   schemas: !system/local-ref schemas
   topics:
+    - topic: "persistent://tenant-1/namespace-1/topic-cash-accounts-command"
+      partitions: 1
+      schema: !keyword command
+    - topic: "persistent://tenant-1/namespace-1/topic-cash-accounts-command-response"
+      partitions: 1
+      schema: !keyword command-response
     - topic: "persistent://tenant-1/namespace-1/topic-parties-command"
       partitions: 1
       schema: !keyword command
     - topic: "persistent://tenant-1/namespace-1/topic-parties-command-response"
       partitions: 1
       schema: !keyword command-response
-    - topic: "persistent://tenant-1/namespace-1/topic-cash-accounts-command"
+    - topic: "persistent://tenant-1/namespace-1/topic-transactions-command"
       partitions: 1
       schema: !keyword command
-    - topic: "persistent://tenant-1/namespace-1/topic-cash-accounts-command-response"
+    - topic: "persistent://tenant-1/namespace-1/topic-transactions-command-response"
+      partitions: 1
+      schema: !keyword command-response
+    - topic: "persistent://tenant-1/namespace-1/topic-payments-command"
+      partitions: 1
+      schema: !keyword command
+    - topic: "persistent://tenant-1/namespace-1/topic-payments-command-response"
+      partitions: 1
+      schema: !keyword command-response
+    - topic: "persistent://tenant-1/namespace-1/topic-interest-command"
+      partitions: 1
+      schema: !keyword command
+    - topic: "persistent://tenant-1/namespace-1/topic-interest-command-response"
+      partitions: 1
+      schema: !keyword command-response
+    - topic: "persistent://tenant-1/namespace-1/topic-schemes-payments-event"
+      partitions: 1
+      schema: !keyword event
+    - topic: "persistent://tenant-1/namespace-1/topic-schemes-payment-command"
+      partitions: 1
+      schema: !keyword command
+    - topic: "persistent://tenant-1/namespace-1/topic-schemes-payment-command-response"
       partitions: 1
       schema: !keyword command-response
     - topic: "persistent://tenant-1/namespace-1/topic-idv-command"
@@ -97,6 +124,22 @@ topics: !system/component
 
 producers: !system/component
   system/component-kind: pulsar/producers
+  cash-accounts-command:
+    _: !system/local-ref topics
+    client: !system/local-ref client
+    conf:
+      accessMode: !pulsar/access-mode Shared
+      schema: !keyword command
+      topicName: "persistent://tenant-1/namespace-1/topic-cash-accounts-command"
+    schemas: !system/local-ref schemas
+  cash-accounts-command-response:
+    _: !system/local-ref topics
+    client: !system/local-ref client
+    conf:
+      accessMode: !pulsar/access-mode Shared
+      schema: !keyword command-response
+      topicName: "persistent://tenant-1/namespace-1/topic-cash-accounts-command-response"
+    schemas: !system/local-ref schemas
   parties-command:
     _: !system/local-ref topics
     client: !system/local-ref client
@@ -113,21 +156,77 @@ producers: !system/component
       schema: !keyword command-response
       topicName: "persistent://tenant-1/namespace-1/topic-parties-command-response"
     schemas: !system/local-ref schemas
-  cash-accounts-command:
+  transactions-command:
     _: !system/local-ref topics
     client: !system/local-ref client
     conf:
       accessMode: !pulsar/access-mode Shared
       schema: !keyword command
-      topicName: "persistent://tenant-1/namespace-1/topic-cash-accounts-command"
+      topicName: "persistent://tenant-1/namespace-1/topic-transactions-command"
     schemas: !system/local-ref schemas
-  cash-accounts-command-response:
+  transactions-command-response:
     _: !system/local-ref topics
     client: !system/local-ref client
     conf:
       accessMode: !pulsar/access-mode Shared
       schema: !keyword command-response
-      topicName: "persistent://tenant-1/namespace-1/topic-cash-accounts-command-response"
+      topicName: "persistent://tenant-1/namespace-1/topic-transactions-command-response"
+    schemas: !system/local-ref schemas
+  payments-command:
+    _: !system/local-ref topics
+    client: !system/local-ref client
+    conf:
+      accessMode: !pulsar/access-mode Shared
+      schema: !keyword command
+      topicName: "persistent://tenant-1/namespace-1/topic-payments-command"
+    schemas: !system/local-ref schemas
+  payments-command-response:
+    _: !system/local-ref topics
+    client: !system/local-ref client
+    conf:
+      accessMode: !pulsar/access-mode Shared
+      schema: !keyword command-response
+      topicName: "persistent://tenant-1/namespace-1/topic-payments-command-response"
+    schemas: !system/local-ref schemas
+  interest-command:
+    _: !system/local-ref topics
+    client: !system/local-ref client
+    conf:
+      accessMode: !pulsar/access-mode Shared
+      schema: !keyword command
+      topicName: "persistent://tenant-1/namespace-1/topic-interest-command"
+    schemas: !system/local-ref schemas
+  interest-command-response:
+    _: !system/local-ref topics
+    client: !system/local-ref client
+    conf:
+      accessMode: !pulsar/access-mode Shared
+      schema: !keyword command-response
+      topicName: "persistent://tenant-1/namespace-1/topic-interest-command-response"
+    schemas: !system/local-ref schemas
+  schemes-payments-event:
+    _: !system/local-ref topics
+    client: !system/local-ref client
+    conf:
+      accessMode: !pulsar/access-mode Shared
+      schema: !keyword event
+      topicName: "persistent://tenant-1/namespace-1/topic-schemes-payments-event"
+    schemas: !system/local-ref schemas
+  schemes-payment-command:
+    _: !system/local-ref topics
+    client: !system/local-ref client
+    conf:
+      accessMode: !pulsar/access-mode Shared
+      schema: !keyword command
+      topicName: "persistent://tenant-1/namespace-1/topic-schemes-payment-command"
+    schemas: !system/local-ref schemas
+  schemes-payment-command-response:
+    _: !system/local-ref topics
+    client: !system/local-ref client
+    conf:
+      accessMode: !pulsar/access-mode Shared
+      schema: !keyword command-response
+      topicName: "persistent://tenant-1/namespace-1/topic-schemes-payment-command-response"
     schemas: !system/local-ref schemas
   idv-command:
     _: !system/local-ref topics
@@ -156,6 +255,28 @@ producers: !system/component
 
 consumers: !system/component
   system/component-kind: pulsar/consumers
+  cash-accounts-command:
+    _: !system/local-ref topics
+    client: !system/local-ref client
+    conf:
+      cryptoFailureAction: !pulsar/crypto-failure-action CONSUME
+      schema: !pulsar/schema AUTO_CONSUME
+      subscriptionName: bank-test-api-scenarios-cash-accounts-command
+      subscriptionType: !pulsar/subscription-type Shared
+      topicNames:
+        ["persistent://tenant-1/namespace-1/topic-cash-accounts-command"]
+    schemas: !system/local-ref schemas
+  cash-accounts-command-response:
+    _: !system/local-ref topics
+    client: !system/local-ref client
+    conf:
+      cryptoFailureAction: !pulsar/crypto-failure-action CONSUME
+      schema: !pulsar/schema AUTO_CONSUME
+      subscriptionName: bank-test-api-scenarios-cash-accounts-command-response
+      subscriptionType: !pulsar/subscription-type Shared
+      topicNames:
+        ["persistent://tenant-1/namespace-1/topic-cash-accounts-command-response"]
+    schemas: !system/local-ref schemas
   parties-command:
     _: !system/local-ref topics
     client: !system/local-ref client
@@ -178,27 +299,104 @@ consumers: !system/component
       topicNames:
         ["persistent://tenant-1/namespace-1/topic-parties-command-response"]
     schemas: !system/local-ref schemas
-  cash-accounts-command:
+  transactions-command:
     _: !system/local-ref topics
     client: !system/local-ref client
     conf:
       cryptoFailureAction: !pulsar/crypto-failure-action CONSUME
       schema: !pulsar/schema AUTO_CONSUME
-      subscriptionName: bank-test-api-scenarios-cash-accounts-command
+      subscriptionName: bank-test-api-scenarios-transactions-command
       subscriptionType: !pulsar/subscription-type Shared
       topicNames:
-        ["persistent://tenant-1/namespace-1/topic-cash-accounts-command"]
+        ["persistent://tenant-1/namespace-1/topic-transactions-command"]
     schemas: !system/local-ref schemas
-  cash-accounts-command-response:
+  transactions-command-response:
     _: !system/local-ref topics
     client: !system/local-ref client
     conf:
       cryptoFailureAction: !pulsar/crypto-failure-action CONSUME
       schema: !pulsar/schema AUTO_CONSUME
-      subscriptionName: bank-test-api-scenarios-cash-accounts-command-response
+      subscriptionName: bank-test-api-scenarios-transactions-command-response
       subscriptionType: !pulsar/subscription-type Shared
       topicNames:
-        ["persistent://tenant-1/namespace-1/topic-cash-accounts-command-response"]
+        ["persistent://tenant-1/namespace-1/topic-transactions-command-response"]
+    schemas: !system/local-ref schemas
+  payments-command:
+    _: !system/local-ref topics
+    client: !system/local-ref client
+    conf:
+      cryptoFailureAction: !pulsar/crypto-failure-action CONSUME
+      schema: !pulsar/schema AUTO_CONSUME
+      subscriptionName: bank-test-api-scenarios-payments-command
+      subscriptionType: !pulsar/subscription-type Shared
+      topicNames:
+        ["persistent://tenant-1/namespace-1/topic-payments-command"]
+    schemas: !system/local-ref schemas
+  payments-command-response:
+    _: !system/local-ref topics
+    client: !system/local-ref client
+    conf:
+      cryptoFailureAction: !pulsar/crypto-failure-action CONSUME
+      schema: !pulsar/schema AUTO_CONSUME
+      subscriptionName: bank-test-api-scenarios-payments-command-response
+      subscriptionType: !pulsar/subscription-type Shared
+      topicNames:
+        ["persistent://tenant-1/namespace-1/topic-payments-command-response"]
+    schemas: !system/local-ref schemas
+  interest-command:
+    _: !system/local-ref topics
+    client: !system/local-ref client
+    conf:
+      cryptoFailureAction: !pulsar/crypto-failure-action CONSUME
+      schema: !pulsar/schema AUTO_CONSUME
+      subscriptionName: bank-test-api-scenarios-interest-command
+      subscriptionType: !pulsar/subscription-type Shared
+      topicNames:
+        ["persistent://tenant-1/namespace-1/topic-interest-command"]
+    schemas: !system/local-ref schemas
+  interest-command-response:
+    _: !system/local-ref topics
+    client: !system/local-ref client
+    conf:
+      cryptoFailureAction: !pulsar/crypto-failure-action CONSUME
+      schema: !pulsar/schema AUTO_CONSUME
+      subscriptionName: bank-test-api-scenarios-interest-command-response
+      subscriptionType: !pulsar/subscription-type Shared
+      topicNames:
+        ["persistent://tenant-1/namespace-1/topic-interest-command-response"]
+    schemas: !system/local-ref schemas
+  schemes-payments-event:
+    _: !system/local-ref topics
+    client: !system/local-ref client
+    conf:
+      cryptoFailureAction: !pulsar/crypto-failure-action CONSUME
+      schema: !pulsar/schema AUTO_CONSUME
+      subscriptionName: bank-test-api-scenarios-schemes-payments-event
+      subscriptionType: !pulsar/subscription-type Shared
+      topicNames:
+        ["persistent://tenant-1/namespace-1/topic-schemes-payments-event"]
+    schemas: !system/local-ref schemas
+  schemes-payment-command:
+    _: !system/local-ref topics
+    client: !system/local-ref client
+    conf:
+      cryptoFailureAction: !pulsar/crypto-failure-action CONSUME
+      schema: !pulsar/schema AUTO_CONSUME
+      subscriptionName: bank-test-api-scenarios-schemes-payment-command
+      subscriptionType: !pulsar/subscription-type Shared
+      topicNames:
+        ["persistent://tenant-1/namespace-1/topic-schemes-payment-command"]
+    schemas: !system/local-ref schemas
+  schemes-payment-command-response:
+    _: !system/local-ref topics
+    client: !system/local-ref client
+    conf:
+      cryptoFailureAction: !pulsar/crypto-failure-action CONSUME
+      schema: !pulsar/schema AUTO_CONSUME
+      subscriptionName: bank-test-api-scenarios-schemes-payment-command-response
+      subscriptionType: !pulsar/subscription-type Shared
+      topicNames:
+        ["persistent://tenant-1/namespace-1/topic-schemes-payment-command-response"]
     schemas: !system/local-ref schemas
   idv-command:
     _: !system/local-ref topics
@@ -236,14 +434,32 @@ consumers: !system/component
 
 message-bus-producers: !system/component
   system/component-kind: pulsar/message-bus-producers
-  parties-command:
-    producer: !system/local-ref producers.parties-command
-  parties-command-response:
-    producer: !system/local-ref producers.parties-command-response
   cash-accounts-command:
     producer: !system/local-ref producers.cash-accounts-command
   cash-accounts-command-response:
     producer: !system/local-ref producers.cash-accounts-command-response
+  parties-command:
+    producer: !system/local-ref producers.parties-command
+  parties-command-response:
+    producer: !system/local-ref producers.parties-command-response
+  transactions-command:
+    producer: !system/local-ref producers.transactions-command
+  transactions-command-response:
+    producer: !system/local-ref producers.transactions-command-response
+  payments-command:
+    producer: !system/local-ref producers.payments-command
+  payments-command-response:
+    producer: !system/local-ref producers.payments-command-response
+  interest-command:
+    producer: !system/local-ref producers.interest-command
+  interest-command-response:
+    producer: !system/local-ref producers.interest-command-response
+  schemes-payments-event:
+    producer: !system/local-ref producers.schemes-payments-event
+  schemes-payment-command:
+    producer: !system/local-ref producers.schemes-payment-command
+  schemes-payment-command-response:
+    producer: !system/local-ref producers.schemes-payment-command-response
   idv-command:
     producer: !system/local-ref producers.idv-command
   idv-command-response:
@@ -253,14 +469,32 @@ message-bus-producers: !system/component
 
 message-bus-consumers: !system/component
   system/component-kind: pulsar/message-bus-consumers
-  parties-command:
-    consumer: !system/local-ref consumers.parties-command
-  parties-command-response:
-    consumer: !system/local-ref consumers.parties-command-response
   cash-accounts-command:
     consumer: !system/local-ref consumers.cash-accounts-command
   cash-accounts-command-response:
     consumer: !system/local-ref consumers.cash-accounts-command-response
+  parties-command:
+    consumer: !system/local-ref consumers.parties-command
+  parties-command-response:
+    consumer: !system/local-ref consumers.parties-command-response
+  transactions-command:
+    consumer: !system/local-ref consumers.transactions-command
+  transactions-command-response:
+    consumer: !system/local-ref consumers.transactions-command-response
+  payments-command:
+    consumer: !system/local-ref consumers.payments-command
+  payments-command-response:
+    consumer: !system/local-ref consumers.payments-command-response
+  interest-command:
+    consumer: !system/local-ref consumers.interest-command
+  interest-command-response:
+    consumer: !system/local-ref consumers.interest-command-response
+  schemes-payments-event:
+    consumer: !system/local-ref consumers.schemes-payments-event
+  schemes-payment-command:
+    consumer: !system/local-ref consumers.schemes-payment-command
+  schemes-payment-command-response:
+    consumer: !system/local-ref consumers.schemes-payment-command-response
   idv-command:
     consumer: !system/local-ref consumers.idv-command
   idv-command-response:

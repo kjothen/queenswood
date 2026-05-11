@@ -43,6 +43,7 @@
    [:account-type [:ref "AccountType"]]
    [:account-status [:ref "CashAccountStatus"]]
    [:payment-addresses [:vector [:ref "PaymentAddress"]]]
+   [:bban {:optional true} [:ref "Bban"]]
    [:balances {:optional true} [:vector [:ref "Balance"]]]
    [:posted-balance {:optional true} [:ref "SignedAmount"]]
    [:available-balance {:optional true} [:ref "SignedAmount"]]

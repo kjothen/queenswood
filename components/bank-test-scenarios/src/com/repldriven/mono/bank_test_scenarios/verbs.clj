@@ -432,13 +432,39 @@
 (defmethod dispatch :outbound-payment
   [{:keys [bank counter id-mapping internal-account-id orgs accounts run-id
            next-payment-id]
-    :as ctx} {[model-acct amount] :args}]
-  (let [real-acct-id (id-mapping/real id-mapping model-acct)
+    :as ctx} {args :args}]
+  ;; Two-arg `[debtor amount]` pays an external creditor with a
+  ;; fixed BBAN. Three-arg `[debtor creditor amount]` pays a known
+  ;; model account; we look its BBAN up so the bank-payment
+  ;; event-processor recognises the creditor as internal and
+  ;; credits it on settlement.
+  ;;
+  (let [internal-creditor (when (= 3 (count args)) (second args))
+        [model-acct amount creditor-bban creditor-name]
+        (case (count args)
+          2 (let [[a amt] args]
+              [a amt "040004000000001"
+               (str "Scenario External Creditor " counter)])
+          3 (let [[a c amt] args]
+              [a amt (get-in accounts [c :bban])
+               (str "Scenario Internal Creditor " counter)]))
+        real-acct-id (id-mapping/real id-mapping model-acct)
+        creditor-real-id (when internal-creditor
+                           (id-mapping/real id-mapping internal-creditor))
         model-org (get-in accounts [model-acct :org])
         org-real-id (get-in orgs [model-org :real-id])
         model-pmt (model-id-for-next-payment next-payment-id)
+        bank+internal (assoc bank :internal-account-id internal-account-id)
+        creditor-pre-net
+        (when creditor-real-id
+          (let [b (balances/get-balance bank
+                                        creditor-real-id
+                                        :balance-type-default
+                                        "GBP"
+                                        :balance-status-posted)]
+            (when-not (error/anomaly? b) (- (:credit b 0) (:debit b 0)))))
         result (payment/submit-outbound
-                (assoc bank :internal-account-id internal-account-id)
+                bank+internal
                 {:idempotency-key (str "scen-pay-" run-id "-" counter)
                  :organization-id org-real-id
                  :debtor-account-id real-acct-id
@@ -446,15 +472,38 @@
                  :currency "GBP"
                  :amount amount
                  :reference (str "scenario payment " counter)
-                 :creditor-bban "040004000000001"
-                 :creditor-name (str "Scenario Creditor " counter)})
-        real-pmt-id (:payment-id result)]
+                 :creditor-bban creditor-bban
+                 :creditor-name creditor-name})
+        real-pmt-id (:payment-id result)
+        ;; ClearBank settles asynchronously; the bank-payment
+        ;; event-processor on schemes-payments-event fires both
+        ;; settle-outbound (Debit → flip OutboundPayment to
+        ;; :completed) and settle-inbound (Credit → credit the
+        ;; creditor when its BBAN matches an internal account).
+        ;; The model auto-completes on :outbound-payment, so the
+        ;; subsequent model-eq check needs reality at the same
+        ;; state. Poll the OutboundPayment for :completed (Debit
+        ;; hop) — and for the 3-arg form, also poll the creditor's
+        ;; balance to reach pre + amount (Credit hop, fired as a
+        ;; separate transaction-settled webhook).
+        _ (when real-pmt-id
+            (quiescence/wait-for-outbound-completed bank+internal real-pmt-id))
+        _ (when (and real-pmt-id creditor-real-id creditor-pre-net)
+            (quiescence/wait-for-credit bank
+                                        creditor-real-id
+                                        "GBP"
+                                        (+ creditor-pre-net amount)))]
     (-> ctx
         (cond-> real-pmt-id
                 (assoc-in [:payments model-pmt] {:real-id real-pmt-id}))
         (cond-> real-pmt-id (update :next-payment-id inc))
         (update :counter inc)
         (track result))))
+
+(defmethod dispatch :wait
+  [ctx {[duration-ms] :args}]
+  (Thread/sleep ^long duration-ms)
+  (update ctx :counter inc))
 
 (defmethod dispatch :settle-inbound-event
   [{:keys [bank accounts internal-account-id] :as ctx}

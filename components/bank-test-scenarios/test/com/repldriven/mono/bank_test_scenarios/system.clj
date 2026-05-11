@@ -7,6 +7,9 @@
   namespaces only need a single bare require of this ns."
   (:require
     com.repldriven.mono.bank-cash-account.interface
+    com.repldriven.mono.bank-clearbank-adapter.system
+    com.repldriven.mono.bank-clearbank-simulator.system
+    com.repldriven.mono.bank-clearbank-webhook.interface
     com.repldriven.mono.bank-idv.interface
     com.repldriven.mono.bank-idv.system
     com.repldriven.mono.bank-onfido-adapter.system
@@ -15,6 +18,7 @@
     com.repldriven.mono.bank-organization.interface
     com.repldriven.mono.bank-party.interface
     com.repldriven.mono.bank-party.system
+    com.repldriven.mono.bank-payment.interface
     com.repldriven.mono.bank-policy.interface
     com.repldriven.mono.bank-schema.interface
 

@@ -68,19 +68,31 @@
   {:command :internal-transfer      :args [:acct-1 :acct-2 75000]}
   ;; Ford: £350 current → savings
   {:command :internal-transfer      :args [:acct-3 :acct-4 35000]}
-  ;; Ford: £25 outbound payment ("beer and nuts")
-  {:command :outbound-payment       :args [:acct-3 2500]}]
+  ;; Ford: £25 outbound payment to Arthur — settles the beer and
+  ;; nuts debt before they get on the spaceship. The three-arg
+  ;; form routes via Arthur's BBAN; the bank-payment event-processor
+  ;; recognises the creditor as internal and credits Arthur's
+  ;; current on settlement. The verb itself polls the OutboundPayment
+  ;; until it's `:completed`, so model-eq lines up without an
+  ;; explicit wait step.
+  {:command :outbound-payment       :args [:acct-3 :acct-1 2500]}]
 
  :then
+ ;; ClearBank settles the scheme leg and bank-payment's
+ ;; event-processor on schemes-payments-event recognises the
+ ;; creditor BBAN as internal, posting an inbound credit to
+ ;; Arthur's current. The verb sleeps after submit-outbound long
+ ;; enough for the chain to settle, so the subsequent model-eq
+ ;; check sees the credited state.
  [;; --- Pre-interest balances --------------------------------------
   ;;   settlement   (acct-0): 50,000 - 1,000 - 1,000     = 48,000.00 = 4_800_000
-  ;;   Arthur cur   (acct-1): 1,000 - 750                =    250.00 =    25_000
+  ;;   Arthur cur   (acct-1): 1,000 - 750 + 25           =    275.00 =    27_500
   ;;   Arthur sav   (acct-2):              + 750         =    750.00 =    75_000
   ;;   Ford   cur   (acct-3): 1,000 - 350 - 25           =    625.00 =    62_500
   ;;   Ford   sav   (acct-4):              + 350         =    350.00 =    35_000
   {:command :assert-no-anomaly      :args []}
   {:command :assert-balance         :args [:acct-0 4800000]}
-  {:command :assert-balance         :args [:acct-1 25000]}
+  {:command :assert-balance         :args [:acct-1 27500]}
   {:command :assert-balance         :args [:acct-2 75000]}
   {:command :assert-balance         :args [:acct-3 62500]}
   {:command :assert-balance         :args [:acct-4 35000]}
@@ -107,7 +119,7 @@
   ;; current accounts unchanged.
   {:command :capitalize-interest    :args [:org-0 20260501]}
   {:command :assert-balance         :args [:acct-0 4799890]}
-  {:command :assert-balance         :args [:acct-1 25000]}
+  {:command :assert-balance         :args [:acct-1 27500]}
   {:command :assert-balance         :args [:acct-2 75075]}
   {:command :assert-balance         :args [:acct-3 62500]}
   {:command :assert-balance         :args [:acct-4 35035]}

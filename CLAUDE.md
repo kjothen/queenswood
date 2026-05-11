@@ -69,8 +69,12 @@ rationale live in the docs.
 - **Testcontainers** — FDB and Pulsar containers, reuse, image
   selection. See
   [recipes/testcontainers.md](docs/recipes/testcontainers.md).
-- **Scenario testing** — model-equality scenarios run via
-  `bank-test-scenarios` against the dev project.
+- **Scenario testing** — two sibling scenario bricks, both
+  data-driven EDN + fugato-style runner. `bank-test-scenarios`
+  drives the domain layer for model-equality property tests;
+  `bank-test-api-scenarios` drives the HTTP surface (`bank-api`)
+  via real requests and is the home for what used to be
+  per-base / per-component `*_test.clj` API tests.
   See [tdd/scenario-testing.md](docs/tdd/scenario-testing.md).
 
 ### Writing docs
