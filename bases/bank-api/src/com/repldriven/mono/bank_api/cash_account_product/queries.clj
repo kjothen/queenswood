@@ -21,14 +21,18 @@
         n))
 
 (defn- build-links
-  [base before-id after-id]
+  [base size before-id after-id]
   (cond-> {}
           after-id
           (assoc :next
-                 (str base "?page[after]=" (cursor/encode after-id)))
+                 (str base
+                      "?page[after]=" (cursor/encode after-id)
+                      "&page[size]=" size))
           before-id
           (assoc :prev
-                 (str base "?page[before]=" (cursor/encode before-id)))))
+                 (str base
+                      "?page[before]=" (cursor/encode before-id)
+                      "&page[size]=" size))))
 
 (defn- paginate
   "Windows a seq of product aggregates — assumed to already be in
@@ -94,6 +98,7 @@
             windowed
             links (when (seq windowed-items)
                     (build-links "/v1/cash-account-products"
+                                 (clamp-size size)
                                  (when after prev-cursor)
                                  next-cursor))]
         {:status 200

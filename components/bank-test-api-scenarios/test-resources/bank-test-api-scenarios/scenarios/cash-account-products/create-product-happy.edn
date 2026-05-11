@@ -1,0 +1,40 @@
+{:name "Tenant creates a cash-account product"
+ :tags #{:cash-account-products :api :happy}
+ :given
+ [{:command :api/request
+   :request {:method :post
+             :path "/v1/organizations"
+             :auth :admin
+             :body {:name "Products Test Org"
+                    :status "live"
+                    :tier "micro"
+                    :currencies ["GBP"]}}
+   :as :org-0
+   :assert {:status 201}}]
+ :when
+ [{:command :api/request
+   :request {:method :post
+             :path "/v1/cash-account-products"
+             :auth [:ref :org-0 :api-key-secret]
+             :body {:name "Current Account"
+                    :product-type "current"
+                    :balance-sheet-side "liability"
+                    :allowed-currencies ["GBP" "EUR"]
+                    :balance-products [{:balance-type "default"
+                                        :balance-status "posted"}]
+                    :allowed-payment-address-schemes ["scan"]
+                    :interest-rate-bps 0
+                    :valid-from "2026-01-01"}}
+   :as :product-0
+   :assert {:status 201
+            :body {:product-id [:m/regex "^prd\\."]
+                   :version-id [:m/regex "^prv\\."]
+                   :version-number 1
+                   :status "draft"
+                   :name "Current Account"
+                   :product-type "current"
+                   :balance-sheet-side "liability"
+                   :allowed-currencies ["GBP" "EUR"]
+                   :allowed-payment-address-schemes ["scan"]
+                   :interest-rate-bps 0
+                   :valid-from "2026-01-01"}}}]}

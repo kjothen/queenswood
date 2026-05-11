@@ -1,0 +1,7 @@
+{:name "Listing API keys without a bearer is rejected"
+ :tags #{:api-keys :api :unhappy :auth}
+ :when
+ [{:command :api/request
+   :request {:method :get
+             :path "/v1/api-keys"}
+   :assert {:status 401}}]}

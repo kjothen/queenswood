@@ -1,0 +1,33 @@
+system:
+  pulsar: !include bank-test-api-scenarios/pulsar-test.yml
+  message-bus: !include bank-test-api-scenarios/message-bus-test.yml
+  fdb: !include bank/fdb-test.yml
+  avro: !include avro/avro-test.yml
+  policies: !include bank/policy-test.yml
+  organizations: !include bank/organization-test.yml
+  policy-bindings: !include bank/policy-binding-test.yml
+  idv: !include bank/idv-test.yml
+  parties: !include bank-test-api-scenarios/party-test.yml
+  cash-accounts: !include bank/cash-account-test.yml
+  onfido-simulator-server: !include bank-test-api-scenarios/onfido-simulator-test.yml
+  onfido-adapter-server: !include bank-test-api-scenarios/onfido-adapter-server-test.yml
+  onfido-adapter: !include bank-test-api-scenarios/onfido-adapter-test.yml
+  server:
+    handler: !system/required-component
+    interceptors: !system/component
+      system/component-kind: server/interceptors
+      admin-api-key: !env MONO_ADMIN_API_KEY
+      internal-organization-id: !system/ref organizations.internal.organization.organization-id
+      internal-account-id: !system/ref organizations.internal-account-id
+      dispatchers:
+        parties: !system/ref parties.dispatcher
+        cash-accounts: !system/ref cash-accounts.dispatcher
+      avro: !system/ref avro.serde
+      record-db: !system/ref fdb.record-db
+      record-store: !system/ref fdb.meta-store
+    jetty-adapter: !system/component
+      system/component-kind: server/jetty-adapter
+      handler: !system/ref server.handler
+      interceptors: !system/ref server.interceptors
+      options:
+        port: 0

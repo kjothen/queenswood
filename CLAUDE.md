@@ -134,6 +134,14 @@ rationale live in the referenced docs.
 - **Pull/merge from `main` before committing.** Renovate
   auto-merges dependency updates weekly.
   See [recipes/git-workflow.md](docs/recipes/git-workflow.md).
+- **Cross brick boundaries only via `interface.clj`; wrap
+  every library.** Reach other components through their
+  `interface.clj`, never internal namespaces, and never list
+  components in `deps.edn`. Every third-party library has
+  exactly one wrapping brick; other bricks consume the wrapper,
+  not the library directly.
+  See [recipes/components.md](docs/recipes/components.md) and
+  [ADR-0011](docs/adr/0011-one-component-per-third-party-library.md).
 
 ## Common commands
 

@@ -1,0 +1,45 @@
+{:name "Opening a draft while one already exists is rejected"
+ :tags #{:cash-account-products :api :unhappy :lifecycle}
+ :given
+ [{:command :api/request
+   :request {:method :post
+             :path "/v1/organizations"
+             :auth :admin
+             :body {:name "Draft Already Exists Test Org"
+                    :status "live"
+                    :tier "micro"
+                    :currencies ["GBP"]}}
+   :as :org-0
+   :assert {:status 201}}
+  {:command :api/request
+   :request {:method :post
+             :path "/v1/cash-account-products"
+             :auth [:ref :org-0 :api-key-secret]
+             :body {:name "Initial Draft"
+                    :product-type "current"
+                    :balance-sheet-side "liability"
+                    :allowed-currencies ["GBP"]
+                    :balance-products [{:balance-type "default"
+                                        :balance-status "posted"}]
+                    :allowed-payment-address-schemes ["scan"]
+                    :interest-rate-bps 0
+                    :valid-from "2026-01-01"}}
+   :as :v1
+   :assert {:status 201 :body {:status "draft"}}}]
+ :when
+ [{:command :api/request
+   :request {:method :post
+             :path "/v1/cash-account-products/{product-id}/versions"
+             :path-params {:product-id [:ref :v1 :product-id]}
+             :auth [:ref :org-0 :api-key-secret]
+             :body {:name "Second Draft"
+                    :product-type "current"
+                    :balance-sheet-side "liability"
+                    :allowed-currencies ["GBP"]
+                    :balance-products [{:balance-type "default"
+                                        :balance-status "posted"}]
+                    :allowed-payment-address-schemes ["scan"]
+                    :interest-rate-bps 0
+                    :valid-from "2026-02-01"}}
+   :assert {:status 409
+            :problem {:type ":cash-account-product/draft-already-exists"}}}]}
