@@ -1,84 +1,34 @@
-name: Release
+name: Release Chart
 
-# Builds every Queenswood service image, pushes to ghcr.io with the
-# `:latest` tag, packages the Helm chart, and updates a single
-# GitHub release tagged `latest` with the chart `.tgz` + a local-k8s
-# quickstart README. Runs only from `main` (push) or manual trigger.
+# Packages the Helm chart and publishes:
+#   - the OCI artifact `oci://ghcr.io/<owner>/queenswood:<version>`
+#   - the `latest` GitHub release (chart .tgz + quickstart README)
 #
-# First-run setup: GHCR packages are private by default. After the
-# first successful run, visit
-#   https://github.com/users/<owner>/packages/container/<service>/settings
-# for each service AND for the `queenswood` chart artifact, and
-# flip the visibility to "public". The quickstart's OCI one-liner
-# (`helm install ... oci://ghcr.io/<owner>/queenswood`) and image
-# pulls into the kind cluster both rely on public access — the
-# alternative would be `helm registry login` plus a per-namespace
-# imagePullSecret.
+# Manual-only: chart-template patches don't require an image rebuild,
+# so this is decoupled from `release-images.yml`. Run from the
+# Actions UI after merging a chart change to main. The chart pins
+# `image.tag: latest`, so it picks up whatever images are currently
+# published — no version coupling between this workflow and the
+# image builds.
 
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
-# `latest` is a single moving tag — serialise concurrent runs to
-# avoid two pushes racing to update the same release.
 concurrency:
-  group: release-latest
+  group: release-chart-latest
   cancel-in-progress: false
 
 permissions:
   contents: write       # create/move tags + manage releases
-  packages: write       # push images to ghcr.io
+  packages: write       # push chart to ghcr.io as OCI artifact
 
 jobs:
-  release:
+  chart:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout
         uses: actions/checkout@v6
-
-      # QEMU is needed to build linux/arm64 layers on the amd64 runner.
-      # The cross-arch JVM compile is the slow part; GHA layer cache
-      # (configured below) makes unchanged layers instant on re-runs.
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Login to GHCR
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      # The bake file's default `output = ["type=docker"]` loads
-      # images into the local daemon (right for `just
-      # docker-build-all`). Override to push directly to the
-      # registry from the buildx builder — no intermediate
-      # `docker push` step, no local daemon required.
-      #
-      # Caching strategy:
-      # - `MULTI_ARCH=1` flips bake.hcl to publish linux/amd64 +
-      #   linux/arm64. Local builds stay single-arch by default.
-      # - `cache-from`/`cache-to=type=gha` persists BuildKit layer
-      #   cache across workflow runs via the GitHub Actions cache.
-      # - The Dockerfile's `--mount=type=cache` for /root/.m2 shares
-      #   the Maven cache across the 13 service builds in a single
-      #   bake invocation (deps downloaded once, not 13×).
-      - name: Build and push all service images
-        env:
-          REGISTRY: ghcr.io/${{ github.repository_owner }}
-          TAG: latest
-          MULTI_ARCH: "1"
-        run: |
-          docker buildx bake \
-            -f infra/docker/bake.hcl \
-            --set "*.output=type=registry,push=true" \
-            --set "*.cache-from=type=gha,scope=release" \
-            --set "*.cache-to=type=gha,scope=release,mode=max"
 
       - name: Install Helm
         uses: azure/setup-helm@v4
