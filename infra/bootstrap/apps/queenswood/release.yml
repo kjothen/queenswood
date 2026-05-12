@@ -8,7 +8,7 @@ spec:
   forProvider:
     chart:
       name: queenswood-bank
-      repository: oci://ghcr.io/kjothen/charts
+      repository: oci://ghcr.io/kjothen
       version: 0.1.0
     namespace: queenswood
     values:
