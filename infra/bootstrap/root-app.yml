@@ -5,7 +5,7 @@ metadata:
   namespace: argocd
 spec:
   source:
-    repoURL: https://github.com/kjothen/mono
+    repoURL: https://github.com/kjothen/queenswood
     targetRevision: main
     path: infra/bootstrap # ← path within the repo
     directory:
