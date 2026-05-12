@@ -32,11 +32,12 @@ spec:
     location: europe-west2
     clusterRef:
       name: queenswood-gke
-    nodeCount: 3
+    nodeCount: 1
     nodeConfig:
-      machineType: e2-standard-4
-      diskSizeGb: 100
+      machineType: e2-standard-2
+      diskSizeGb: 50
       diskType: pd-standard
+      preemptible: false
       oauthScopes:
         - https://www.googleapis.com/auth/cloud-platform
       workloadMetadataConfig:
