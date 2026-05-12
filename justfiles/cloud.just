@@ -146,3 +146,53 @@ gcp-health-check:
     curl -sI --max-time 5 https://queenswood.repldriven.com 2>&1 | head -3 | sed 's/^/  /'
     echo "curl -sI http://queenswood.repldriven.com (expect 301):"
     curl -sI --max-time 5 http://queenswood.repldriven.com 2>&1 | head -3 | sed 's/^/  /'
+
+# Inspect the first queenswood pod whose STATUS column matches `state` (default Init:Error)
+gcp-diagnose-pod state="Init:Error":
+    #!/usr/bin/env zsh
+    : "${GOOGLE_CLOUD_PROJECT_ID:?must be set}"
+    KCTX=gke_${GOOGLE_CLOUD_PROJECT_ID}_europe-west2-a_queenswood-gke
+
+    POD=$(kubectl --context $KCTX -n queenswood get pods --no-headers 2>/dev/null \
+      | awk -v state="{{ state }}" '$3 == state {print $1; exit}')
+
+    if [[ -z "$POD" ]]; then
+      echo "No pods in queenswood namespace matched STATUS={{ state }}"
+      echo "Current status counts:"
+      kubectl --context $KCTX -n queenswood get pods --no-headers 2>/dev/null \
+        | awk '{print "  " $3}' | sort | uniq -c
+      echo "Try: just gcp-diagnose-pod 'Init:CrashLoopBackOff'  or  ImagePullBackOff  or  'Init:1/2'"
+      exit 0
+    fi
+
+    echo "=== Pod $POD (STATUS={{ state }}) ==="
+    kubectl --context $KCTX -n queenswood get pod $POD
+
+    echo "\n=== Init container states ==="
+    kubectl --context $KCTX -n queenswood get pod $POD -o json \
+      | jq -r '.status.initContainerStatuses[]? |
+          "  \(.name): " +
+          (if .state.running then "running"
+           elif .state.terminated then "terminated exit=\(.state.terminated.exitCode) reason=\(.state.terminated.reason // "-")"
+           elif .state.waiting then "waiting reason=\(.state.waiting.reason)"
+           else "unknown" end)'
+
+    echo "\n=== Recent events ==="
+    kubectl --context $KCTX -n queenswood describe pod $POD \
+      | sed -n '/^Events:/,$p' | head -20
+
+    echo "\n=== Init container logs (last 30 lines each) ==="
+    for c in $(kubectl --context $KCTX -n queenswood get pod $POD \
+        -o jsonpath='{.spec.initContainers[*].name}' 2>/dev/null); do
+      echo "--- init: $c ---"
+      kubectl --context $KCTX -n queenswood logs $POD -c $c --tail=30 2>&1 \
+        | sed 's/^/  /'
+    done
+
+    echo "\n=== Main container logs (--previous if it crashed) ==="
+    for c in $(kubectl --context $KCTX -n queenswood get pod $POD \
+        -o jsonpath='{.spec.containers[*].name}' 2>/dev/null); do
+      echo "--- container: $c ---"
+      kubectl --context $KCTX -n queenswood logs $POD -c $c --tail=30 --previous 2>&1 \
+        | sed 's/^/  /'
+    done
