@@ -8,7 +8,7 @@ type: application
 version: 0.1.0
 appVersion: "0.0.0"
 icon: https://avatars.githubusercontent.com/kjothen
-kubeVersion: ">=1.27.0"
+kubeVersion: ">=1.27.0-0"
 
 dependencies:
   - name: pulsar
