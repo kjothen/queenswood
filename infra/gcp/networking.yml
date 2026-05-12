@@ -27,5 +27,13 @@ spec:
     name: queenswood.repldriven.com.
     type: A
     ttl: 300
-    rrdatasRefs:
-      - name: queenswood-ingress-ip
+    # IP is hardcoded because the Crossplane DNS provider's RecordSet
+    # has no working cross-resource reference for rrdatas: rrdatasRefs
+    # exists in v1beta1 but is dropped during conversion to v1beta2
+    # (the storage version), and v1beta2 / the .m. variant both expose
+    # the flat schema with rrdatas as a literal string list. The IP is
+    # the address reserved on the queenswood-ingress-ip GlobalAddress
+    # above; Crossplane reconciles drift, so the literal value is
+    # stable for the lifetime of that resource.
+    rrdatas:
+      - "34.36.148.164"
