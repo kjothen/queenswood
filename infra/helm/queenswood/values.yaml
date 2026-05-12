@@ -38,13 +38,22 @@ bootstrap:
     limits: { cpu: "1000m", memory: "1Gi" }
     requests: { cpu: "100m", memory: "512Mi" }
 
-# -- Optional ingress for bank-api-service.
+# -- Optional public ingress for the bank-app SPA (which proxies
+# `/v1/*` to bank-api internally). When `gcp.enabled` is true the
+# templates emit a GKE-flavoured chain (Ingress with ingressClassName
+# gce + global static IP + ManagedCertificate + FrontendConfig
+# redirect, plus a NEG annotation on the bank-app Service); when
+# false the Ingress is plain and `annotations` / `tls` passthroughs
+# apply for non-GKE setups.
 ingress:
   enabled: false
   className: ""
   host: bank-api.local
   annotations: {}
   tls: []
+  gcp:
+    enabled: false
+    globalStaticIpName: queenswood-ingress-ip
 
 # -- Frontend SPA (Svelte/Vite served by nginx). Image name is `bank-app`
 # under {{ image.registry }}. The container's nginx proxies `/v1/*` to

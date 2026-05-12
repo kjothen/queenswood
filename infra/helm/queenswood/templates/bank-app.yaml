@@ -69,6 +69,10 @@ metadata:
   labels:
     {{- include "queenswood.labels" . | nindent 4 }}
     app.kubernetes.io/component: bank-app
+  {{- if and .Values.ingress.enabled .Values.ingress.gcp.enabled }}
+  annotations:
+    cloud.google.com/neg: '{"ingress": true}'
+  {{- end }}
 spec:
   type: ClusterIP
   selector:

@@ -13,8 +13,13 @@ spec:
     namespace: queenswood
     values:
       image:
-        repository: ghcr.io/kjothen/queenswood
+        registry: ghcr.io/kjothen
         tag: 0.1.0
+      ingress:
+        enabled: true
+        host: queenswood.repldriven.com
+        gcp:
+          enabled: true
       # Queenswood-specific config: FDB cluster ref, Pulsar endpoint, etc.
   providerConfigRef:
     name: queenswood-gke
