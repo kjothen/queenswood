@@ -4,10 +4,14 @@ metadata:
   name: queenswood-gke
 spec:
   forProvider:
-    location: europe-west2
+    location: europe-west2-a
     initialNodeCount: 1
     removeDefaultNodePool: true
     deletionProtection: false
+    nodeConfig:
+      machineType: e2-standard-2
+      diskType: pd-standard
+      diskSizeGb: 50
     networkRef:
       name: queenswood-vpc
     subnetworkRef:
@@ -29,7 +33,7 @@ metadata:
   name: queenswood-pool
 spec:
   forProvider:
-    location: europe-west2
+    location: europe-west2-a
     clusterRef:
       name: queenswood-gke
     nodeCount: 1
@@ -37,7 +41,6 @@ spec:
       machineType: e2-standard-2
       diskSizeGb: 50
       diskType: pd-standard
-      preemptible: false
       oauthScopes:
         - https://www.googleapis.com/auth/cloud-platform
       workloadMetadataConfig:
