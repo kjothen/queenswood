@@ -23,6 +23,15 @@ spec:
       workloadPool: project-7da8be71-664d-40bd-b5d.svc.id.goog
     releaseChannel:
       channel: REGULAR
+    # The HTTP Load Balancing addon spawns the master-side `glbc`
+    # controller. Without it, Ingress resources with `ingressClassName:
+    # gce` sit unprocessed -- no forwarding rules, no backend services,
+    # no NEGs, no events. The Upbound provider's default omits this
+    # block (which GKE then treats as disabled), so it has to be
+    # declared explicitly.
+    addonsConfig:
+      httpLoadBalancing:
+        disabled: false
   writeConnectionSecretToRef:
     name: queenswood-gke-kubeconfig
     namespace: crossplane-system
