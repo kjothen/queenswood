@@ -1,16 +1,16 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: crossplane-providers
+  name: crossplane-configs
   namespace: argocd
   annotations:
-    argocd.argoproj.io/sync-wave: "0"
+    argocd.argoproj.io/sync-wave: "1"
 spec:
   project: default
   source:
     repoURL: https://github.com/kjothen/queenswood
     targetRevision: main
-    path: infra/platform/crossplane-providers
+    path: infra/platform/crossplane-configs
   destination:
     server: https://kubernetes.default.svc
   syncPolicy:
