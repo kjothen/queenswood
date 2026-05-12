@@ -14,7 +14,7 @@ spec:
     values:
       image:
         registry: ghcr.io/kjothen
-        tag: 0.1.0
+        tag: latest
       ingress:
         enabled: true
         host: queenswood.repldriven.com
