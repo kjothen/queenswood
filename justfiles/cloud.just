@@ -32,6 +32,7 @@ gcp-bootstrap:
       container.googleapis.com \
       compute.googleapis.com \
       dns.googleapis.com \
+      certificatemanager.googleapis.com \
       iam.googleapis.com \
       iamcredentials.googleapis.com \
       cloudresourcemanager.googleapis.com
@@ -40,11 +41,12 @@ gcp-bootstrap:
     gcloud iam service-accounts create $SA \
       --display-name "Crossplane Provider"
 
-    # Grant the SA the roles it needs to manage GKE + networking + DNS
+    # Grant the SA the roles it needs to manage GKE + networking + DNS + cert manager
     for role in \
       roles/container.admin \
       roles/compute.networkAdmin \
       roles/dns.admin \
+      roles/certificatemanager.editor \
       roles/iam.serviceAccountUser \
       roles/resourcemanager.projectIamAdmin ; do
       gcloud projects add-iam-policy-binding $PROJECT_ID \
