@@ -98,6 +98,9 @@
           exec ${pkgs.clojure}/bin/clj "$@"
         '';
 
+        gcloud = pkgs.google-cloud-sdk.withExtraComponents (
+          with pkgs.google-cloud-sdk.components; [ gke-gcloud-auth-plugin ]
+        );
       in
       {
         devShells.default = pkgs.mkShell {
@@ -113,7 +116,7 @@
             pkgs.docker
             pkgs.docker-credential-helpers
             fdbBinary
-            pkgs.google-cloud-sdk
+            gcloud
             pkgs.jdk21
             pkgs.just
             pkgs.k6
