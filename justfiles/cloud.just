@@ -153,13 +153,26 @@ gcp-diagnose-pod state="Init:Error":
     : "${GOOGLE_CLOUD_PROJECT_ID:?must be set}"
     KCTX=gke_${GOOGLE_CLOUD_PROJECT_ID}_europe-west2-a_queenswood-gke
 
-    POD=$(kubectl --context $KCTX -n queenswood get pods --no-headers 2>/dev/null \
+    # Fail loudly upfront if kubectl can't reach GKE -- the most common cause
+    # is gke-gcloud-auth-plugin not on PATH in this non-interactive shell.
+    if ! kubectl --context $KCTX cluster-info >/dev/null 2>&1; then
+      echo "ERROR: kubectl can't reach $KCTX. Likely causes:" >&2
+      echo "  - gke-gcloud-auth-plugin missing from PATH in this shell" >&2
+      echo "  - gcloud creds expired (try: gcloud container clusters \\" >&2
+      echo "      get-credentials queenswood-gke --zone=europe-west2-a \\" >&2
+      echo "      --project=\$GOOGLE_CLOUD_PROJECT_ID)" >&2
+      echo "Full error:" >&2
+      kubectl --context $KCTX cluster-info >&2
+      exit 1
+    fi
+
+    POD=$(kubectl --context $KCTX -n queenswood get pods --no-headers \
       | awk -v state="{{ state }}" '$3 == state {print $1; exit}')
 
     if [[ -z "$POD" ]]; then
       echo "No pods in queenswood namespace matched STATUS={{ state }}"
       echo "Current status counts:"
-      kubectl --context $KCTX -n queenswood get pods --no-headers 2>/dev/null \
+      kubectl --context $KCTX -n queenswood get pods --no-headers \
         | awk '{print "  " $3}' | sort | uniq -c
       echo "Try: just gcp-diagnose-pod 'Init:CrashLoopBackOff'  or  ImagePullBackOff  or  'Init:1/2'"
       exit 0
@@ -183,7 +196,7 @@ gcp-diagnose-pod state="Init:Error":
 
     echo "\n=== Init container logs (last 30 lines each) ==="
     for c in $(kubectl --context $KCTX -n queenswood get pod $POD \
-        -o jsonpath='{.spec.initContainers[*].name}' 2>/dev/null); do
+        -o jsonpath='{.spec.initContainers[*].name}'); do
       echo "--- init: $c ---"
       kubectl --context $KCTX -n queenswood logs $POD -c $c --tail=30 2>&1 \
         | sed 's/^/  /'
@@ -191,7 +204,7 @@ gcp-diagnose-pod state="Init:Error":
 
     echo "\n=== Main container logs (--previous if it crashed) ==="
     for c in $(kubectl --context $KCTX -n queenswood get pod $POD \
-        -o jsonpath='{.spec.containers[*].name}' 2>/dev/null); do
+        -o jsonpath='{.spec.containers[*].name}'); do
       echo "--- container: $c ---"
       kubectl --context $KCTX -n queenswood logs $POD -c $c --tail=30 --previous 2>&1 \
         | sed 's/^/  /'
