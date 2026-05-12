@@ -22,6 +22,13 @@ spec:
 apiVersion: pkg.crossplane.io/v1
 kind: Provider
 metadata:
+  name: provider-gcp-dns
+spec:
+  package: xpkg.upbound.io/upbound/provider-gcp-dns:v2.5.1
+---
+apiVersion: pkg.crossplane.io/v1
+kind: Provider
+metadata:
   name: provider-helm
 spec:
   package: xpkg.crossplane.io/crossplane-contrib/provider-helm:v1.2.0

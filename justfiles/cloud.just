@@ -31,6 +31,7 @@ gcp-bootstrap:
     gcloud services enable \
       container.googleapis.com \
       compute.googleapis.com \
+      dns.googleapis.com \
       iam.googleapis.com \
       iamcredentials.googleapis.com \
       cloudresourcemanager.googleapis.com
@@ -39,10 +40,11 @@ gcp-bootstrap:
     gcloud iam service-accounts create $SA \
       --display-name "Crossplane Provider"
 
-    # Grant the SA the roles it needs to manage GKE + networking
+    # Grant the SA the roles it needs to manage GKE + networking + DNS
     for role in \
       roles/container.admin \
       roles/compute.networkAdmin \
+      roles/dns.admin \
       roles/iam.serviceAccountUser \
       roles/resourcemanager.projectIamAdmin ; do
       gcloud projects add-iam-policy-binding $PROJECT_ID \
@@ -55,4 +57,7 @@ gcp-bootstrap:
       --member="user:${ME}" \
       --role="roles/iam.serviceAccountTokenCreator"
 
-
+# Print Cloud DNS nameservers for the queenswood zone (paste into registrar NS records)
+gcp-dns-ns:
+    kubectl --context kind-xp-mp get managedzone.dns.gcp.upbound.io queenswood-zone \
+      -o jsonpath='{.status.atProvider.nameServers}{"\n"}'
