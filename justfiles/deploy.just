@@ -55,6 +55,38 @@ kind-up tag="dev":
 kind-down:
     kind delete cluster --name queenswood
 
+# Create the xp-mp kind cluster and install Crossplane/ArgoCD into crossplane-system
+kind-xp-up:
+    #!/usr/bin/env zsh
+    set -e
+    kind get clusters | grep --q '^{{ XP_CLUSTER }}$' || kind create cluster --name '{{ XP_CLUSTER }}'
+    
+    # crossplane 
+    helm repo add crossplane-stable https://charts.crossplane.io/stable \
+      --kube-context {{ KIND_XP_CLUSTER }}
+    helm repo update \
+      --kube-context {{ KIND_XP_CLUSTER }}
+    helm install crossplane crossplane-stable/crossplane \
+      --kube-context {{ KIND_XP_CLUSTER }} \
+      --namespace crossplane-system --create-namespace
+
+    # argocd
+    kubectl --context {{ KIND_XP_CLUSTER }} create namespace argocd
+    kubectl --context {{ KIND_XP_CLUSTER }} apply --server-side -n argocd \
+      -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+    kubectl --context {{ KIND_XP_CLUSTER }} -n argocd wait \
+      --for=condition=available --timeout=300s deployment/argocd-server
+    kubectl --context {{ KIND_XP_CLUSTER }} -n argocd get secret argocd-initial-admin-secret \
+      -o jsonpath='{.data.password}' | base64 -d
+
+kind-xp-down:
+    kind delete cluster --name {{ XP_CLUSTER }} 
+
+kind-xp-install-gcp-secret:
+    kubectl --context {{ KIND_XP_CLUSTER }} create secret generic gcp-creds \
+      -n crossplane-system \
+      --from-file=creds=$HOME/.config/gcloud/application_default_credentials.json
+
 # Start Tilt dev loop (creates kind cluster if missing)
 tilt-up:
     #!/usr/bin/env zsh

@@ -102,15 +102,18 @@
       {
         devShells.default = pkgs.mkShell {
           buildInputs = [
+            pkgs.argocd
             pkgs.babashka
             cljWithFdb
             clojureWithFdb
             pkgs.clj-kondo
             pkgs.clojure-lsp
             pkgs.colima
+            pkgs.crossplane-cli
             pkgs.docker
             pkgs.docker-credential-helpers
             fdbBinary
+            pkgs.google-cloud-sdk
             pkgs.jdk21
             pkgs.just
             pkgs.k6

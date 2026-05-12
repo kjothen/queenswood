@@ -1,0 +1,25 @@
+apiVersion: compute.gcp.upbound.io/v1beta1
+kind: Network
+metadata:
+  name: queenswood-vpc
+spec:
+  forProvider:
+    autoCreateSubnetworks: false
+    routingMode: REGIONAL
+---
+apiVersion: compute.gcp.upbound.io/v1beta1
+kind: Subnetwork
+metadata:
+  name: queenswood-subnet
+spec:
+  forProvider:
+    region: europe-west2
+    ipCidrRange: 10.10.0.0/16
+    networkRef:
+      name: queenswood-vpc
+    secondaryIpRange:
+      - rangeName: pods
+        ipCidrRange: 10.20.0.0/16
+      - rangeName: services
+        ipCidrRange: 10.30.0.0/20
+    privateIpGoogleAccess: true

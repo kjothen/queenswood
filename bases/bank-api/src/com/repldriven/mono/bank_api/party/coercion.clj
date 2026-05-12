@@ -12,7 +12,8 @@
   (coercion/enum-coercion {"pending" :party-status-pending
                            "active" :party-status-active
                            "suspended" :party-status-suspended
-                           "closed" :party-status-closed}
+                           "closed" :party-status-closed
+                           "rejected" :party-status-rejected}
                           :party-status-unknown))
 
 (def ^:private identifier-type-enum
