@@ -30,6 +30,13 @@ spec:
           # finds an eligible coordinator. RBAC is in
           # rbac-fdb-pod.yaml.
           serviceAccountName: {{ .Release.Name }}-fdb-pod
+          # fdbserver runs as uid/gid 4059. A fresh ext4 PVC is
+          # owned root:root 0755, so without an fsGroup the
+          # process can't write its data dir and crash-loops with
+          # `Fatal Error: File could not be written`. fsGroup
+          # tells kubelet to chgrp the volume to 4059 on mount.
+          securityContext:
+            fsGroup: 4059
           {{- with .Values.fdb.resources }}
           # Per-process resource caps. The FDB operator's default
           # request is ~8Gi per pod which doesn't fit a kind node;
