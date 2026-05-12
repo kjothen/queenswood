@@ -26,6 +26,12 @@
          :status :party-status-active
          :updated-at (System/currentTimeMillis)))
 
+(defn reject-party
+  [party]
+  (assoc party
+         :status :party-status-rejected
+         :updated-at (System/currentTimeMillis)))
+
 (defn new-party-national-identifier
   [national-identifier organization-id party-id]
   (let [{:keys [type value issuing-country]} national-identifier]

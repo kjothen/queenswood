@@ -9,23 +9,28 @@
     [com.repldriven.mono.error.interface :refer [let-nom>]]
     [com.repldriven.mono.fdb.interface :as fdb]))
 
+(def ^:private idv-status->party-transition
+  {:idv-status-accepted domain/activate-party
+   :idv-status-rejected domain/reject-party})
+
 (defn idv-changelog-handler
   [record-store]
   (fn [ctx changelog-bytes]
     (let [changelog (schema/pb->IdvChangelog changelog-bytes)
           {:keys [organization-id verification-id] status :status-after}
-          changelog]
-      (when (= :idv-status-accepted status)
+          changelog
+          transition (idv-status->party-transition status)]
+      (when transition
         (let-nom> [txn (fdb/ctx->txn ctx record-store)
                    idv (idv/get-idv txn organization-id verification-id)
                    {:keys [party-id]} idv
                    party (store/get-party txn organization-id party-id)]
           (when (= :party-status-pending (:status party))
-            (let [activated-party (domain/activate-party party)]
+            (let [updated-party (transition party)]
               (store/save-party txn
-                                activated-party
+                                updated-party
                                 {:organization-id organization-id
                                  :party-id party-id
                                  :status-before (:status party)
                                  :status-after (:status
-                                                activated-party)}))))))))
+                                                updated-party)}))))))))

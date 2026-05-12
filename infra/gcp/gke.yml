@@ -1,0 +1,43 @@
+apiVersion: container.gcp.upbound.io/v1beta2
+kind: Cluster
+metadata:
+  name: queenswood-gke
+spec:
+  forProvider:
+    location: europe-west2
+    initialNodeCount: 1
+    removeDefaultNodePool: true
+    deletionProtection: false
+    networkRef:
+      name: queenswood-vpc
+    subnetworkRef:
+      name: queenswood-subnet
+    ipAllocationPolicy:
+      - clusterSecondaryRangeName: pods
+        servicesSecondaryRangeName: services
+    workloadIdentityConfig:
+      - workloadPool: project-7da8be71-664d-40bd-b5d.svc.id.goog
+    releaseChannel:
+      - channel: REGULAR
+  writeConnectionSecretToRef:
+    name: queenswood-gke-kubeconfig
+    namespace: crossplane-system
+---
+apiVersion: container.gcp.upbound.io/v1beta2
+kind: NodePool
+metadata:
+  name: queenswood-pool
+spec:
+  forProvider:
+    location: europe-west2
+    clusterRef:
+      name: queenswood-gke
+    nodeCount: 3
+    nodeConfig:
+      - machineType: e2-standard-4
+        diskSizeGb: 100
+        diskType: pd-standard
+        oauthScopes:
+          - https://www.googleapis.com/auth/cloud-platform
+        workloadMetadataConfig:
+          - mode: GKE_METADATA

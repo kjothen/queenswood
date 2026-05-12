@@ -1,0 +1,18 @@
+apiVersion: helm.crossplane.io/v1beta1
+kind: Release
+metadata:
+  name: queenswood-bank
+spec:
+  forProvider:
+    chart:
+      name: queenswood-bank
+      repository: oci://ghcr.io/kjothen/charts
+      version: 0.1.0
+    namespace: queenswood
+    values:
+      image:
+        repository: ghcr.io/kjothen/queenswood
+        tag: 0.1.0
+      # Queenswood-specific config: FDB cluster ref, Pulsar endpoint, etc.
+  providerConfigRef:
+    name: queenswood-gke
