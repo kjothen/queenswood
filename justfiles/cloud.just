@@ -84,15 +84,15 @@ gcp-health-check:
       queenswood-ingress-ip -o jsonpath='{.status.atProvider.address}{"\n"}' \
       2>/dev/null || echo "(not found)"
     echo -n "ManagedZone queenswood-zone Ready: "
-    kubectl --context $MGT get managedzone queenswood-zone \
+    kubectl --context $MGT get managedzones.dns.gcp.upbound.io queenswood-zone \
       -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}{"\n"}' \
       2>/dev/null || echo "(not found)"
     echo -n "RecordSet queenswood-apex rrdatas: "
-    kubectl --context $MGT get recordset queenswood-apex \
+    kubectl --context $MGT get recordsets.dns.gcp.upbound.io queenswood-apex \
       -o jsonpath='{.spec.forProvider.rrdatas}{"  Synced="}{.status.conditions[?(@.type=="Synced")].status}{"\n"}' \
       2>/dev/null || echo "(not found)"
     echo -n "NodePool queenswood-pool: nodeCount="
-    kubectl --context $MGT get nodepool queenswood-pool \
+    kubectl --context $MGT get nodepools.container.gcp.upbound.io queenswood-pool \
       -o jsonpath='{.status.atProvider.nodeCount}{"  Ready="}{.status.conditions[?(@.type=="Ready")].status}{"\n"}' \
       2>/dev/null || echo "(not found)"
 
@@ -127,8 +127,9 @@ gcp-health-check:
 
     echo "\n=== 6. Public-traffic chain on GKE ==="
     echo "Ingresses:"
-    kubectl --context $KCTX -n queenswood get ingress --no-headers 2>/dev/null \
-      | awk '{printf "  %-30s class=%-6s address=%s\n", $1, $2, $4}'
+    kubectl --context $KCTX -n queenswood get ingress -o json 2>/dev/null \
+      | jq -r '.items[] | "  \(.metadata.name)  class=\(.spec.ingressClassName // "-")  address=\((.status.loadBalancer.ingress[0].ip // "-"))"' \
+      || echo "  (none)"
     echo -n "ManagedCertificate: "
     kubectl --context $KCTX -n queenswood get managedcertificate \
       -o jsonpath='{.items[0].metadata.name}={.items[0].status.certificateStatus}{"\n"}' \
