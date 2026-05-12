@@ -72,7 +72,7 @@ spec:
             - -c
             - |
               kubectl wait --for=condition=complete --timeout=10m \
-                job/{{ $.Release.Name }}-bank-bootstrap-{{ $.Values.image.tag }}
+                job/{{ $.Release.Name }}-bank-bootstrap-{{ $.Values.image.tag }}-{{ $.Chart.Version }}
         {{- end }}
         {{- range $dep := $svc.waitFor }}
         # Cross-pod startup dependency. Polls the target service's

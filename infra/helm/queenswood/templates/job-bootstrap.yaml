@@ -7,13 +7,15 @@
 # has applied FDB record metadata + Pulsar topology; reads the
 # persisted FDB schema (no Pulsar interaction).
 #
-# Job name embeds .Values.image.tag so each helm upgrade with a new
-# tag creates a fresh Job rather than failing on the immutable spec;
-# old Jobs age out via ttlSecondsAfterFinished.
+# Job name embeds both .Values.image.tag and .Chart.Version so every
+# helm upgrade -- whether the bump is the image (new app code) or the
+# chart (new template content like added labels) -- creates a fresh
+# Job rather than failing on Job.spec.template immutability; old Jobs
+# age out via ttlSecondsAfterFinished.
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: {{ .Release.Name }}-bank-bootstrap-{{ .Values.image.tag }}
+  name: {{ .Release.Name }}-bank-bootstrap-{{ .Values.image.tag }}-{{ .Chart.Version }}
   labels:
     {{- include "queenswood.labels" . | nindent 4 }}
     app.kubernetes.io/component: bank-bootstrap
@@ -70,7 +72,7 @@ spec:
             - -c
             - |
               kubectl wait --for=condition=complete --timeout=10m \
-                job/{{ .Release.Name }}-bank-migrator-{{ .Values.image.tag }}
+                job/{{ .Release.Name }}-bank-migrator-{{ .Values.image.tag }}-{{ .Chart.Version }}
         {{- end }}
       containers:
         - name: bank-bootstrap

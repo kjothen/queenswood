@@ -36,7 +36,7 @@ spec:
     location: europe-west2-a
     clusterRef:
       name: queenswood-gke
-    nodeCount: 1
+    nodeCount: 3
     nodeConfig:
       machineType: e2-standard-2
       diskSizeGb: 50
