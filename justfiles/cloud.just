@@ -298,6 +298,12 @@ down-to-zero:
     just kind-xp-down || true
     echo ">>> deleting GCP project $GOOGLE_CLOUD_PROJECT_ID"
     gcloud projects delete "$GOOGLE_CLOUD_PROJECT_ID" --quiet
+    # Prune the local kubeconfig entry so `kubectl config get-contexts`
+    # doesn't accumulate stale gke_* entries across teardowns.
+    CTX="gke_${GOOGLE_CLOUD_PROJECT_ID}_europe-west2-a_queenswood-gke"
+    kubectl config delete-context "$CTX" 2>/dev/null || true
+    kubectl config delete-cluster "$CTX" 2>/dev/null || true
+    kubectl config delete-user    "$CTX" 2>/dev/null || true
     echo ">>> recover within 30 days: gcloud projects undelete $GOOGLE_CLOUD_PROJECT_ID"
 
 # Block until each Argo Application reaches Healthy
