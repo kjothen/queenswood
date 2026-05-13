@@ -63,7 +63,7 @@ spec:
       containers:
         - name: bank-migrator
           image: "{{ .Values.image.registry }}/bank-migrator-service:{{ .Values.image.tag }}"
-          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          imagePullPolicy: {{ include "queenswood.imagePullPolicy" $ }}
           env:
             - name: SERVICE_NAME
               value: "bank-migrator-service"

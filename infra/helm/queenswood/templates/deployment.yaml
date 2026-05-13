@@ -102,7 +102,7 @@ spec:
       containers:
         - name: {{ $svcName }}
           image: "{{ $.Values.image.registry }}/{{ $svcName }}:{{ $.Values.image.tag }}"
-          imagePullPolicy: {{ $.Values.image.pullPolicy }}
+          imagePullPolicy: {{ include "queenswood.imagePullPolicy" $ }}
           {{- if and $svc.http $svc.port }}
           ports:
             - name: http
