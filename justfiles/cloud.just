@@ -333,16 +333,25 @@ kind-xp-wait-ready timeout="2700":
       until kubectl --context {{ KIND_XP_CLUSTER }} -n argocd \
             get application/$app >/dev/null 2>&1; do sleep 5; done
       # ManagedZone creation requires Google to have verified domain
-      # ownership for this account (per-account, one-time). First-time
-      # cold-start under a fresh Google account / domain pair blocks
-      # silently here until the user adds the TXT record Google asks for.
+      # ownership for this account (per-account, one-time). If the
+      # parent isn't already verified, launch the Search Console flow
+      # via gcloud; the kubectl wait below then blocks until the user
+      # completes it out-of-band and the MR reconciles.
       if [[ "$app" == "gcp-dns" ]]; then
-        echo
-        echo "NOTE: if this hangs, the ManagedZone is waiting on domain"
-        echo "ownership. Verify the parent domain at"
-        echo "https://search.google.com/search-console (DNS TXT method)."
-        echo "One-time per Google account."
-        echo
+        until kubectl --context {{ KIND_XP_CLUSTER }} -n crossplane-system \
+              get managedzone.dns.gcp.m.upbound.io queenswood-zone \
+              >/dev/null 2>&1; do sleep 5; done
+        DOMAIN=$(kubectl --context {{ KIND_XP_CLUSTER }} -n crossplane-system \
+          get managedzone.dns.gcp.m.upbound.io queenswood-zone \
+          -o jsonpath='{.spec.forProvider.dnsName}' | sed 's/\.$//')
+        PARENT=${DOMAIN#*.}
+        if gcloud domains list-user-verified --format='value(id)' 2>/dev/null \
+             | grep -qx "$PARENT"; then
+          echo ">>> $PARENT already verified for active Google account"
+        else
+          echo "ACTION: opening Search Console to verify $PARENT"
+          gcloud domains verify "$PARENT"
+        fi
       fi
       kubectl --context {{ KIND_XP_CLUSTER }} -n argocd wait \
         --for=jsonpath='{.status.health.status}'=Healthy \
