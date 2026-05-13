@@ -13,6 +13,14 @@ spec:
     path: infra/platform/crossplane-configs
   destination:
     server: https://kubernetes.default.svc
+  # projectID is set per-cluster by `just kind-xp-install-gcp-provider-config`
+  # (called from `up-from-zero`). Keeping it out of git so cold starts
+  # against fresh GCP projects don't need a commit.
+  ignoreDifferences:
+    - group: gcp.upbound.io
+      kind: ProviderConfig
+      jsonPointers:
+        - /spec/projectID
   syncPolicy:
     automated:
       prune: true

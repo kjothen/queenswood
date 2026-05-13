@@ -3,7 +3,10 @@ kind: ProviderConfig
 metadata:
   name: default
 spec:
-  projectID: project-7da8be71-664d-40bd-b5d
+  # Overridden per-cluster by `just kind-xp-install-gcp-provider-config`;
+  # Argo's ignoreDifferences in apps/crossplane-configs.yml keeps this
+  # placeholder from clobbering the live value on selfHeal.
+  projectID: PLACEHOLDER
   credentials:
     source: Secret
     secretRef:

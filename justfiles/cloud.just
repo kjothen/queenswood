@@ -270,6 +270,7 @@ up-from-zero:
     just gcp-sa-login
     just kind-xp-install-gcp-secret
     kubectl --context {{ KIND_XP_CLUSTER }} apply -f infra/bootstrap/root-app.yml
+    just kind-xp-install-gcp-provider-config
     just kind-xp-wait-ready
     just gcp-health-check
 
