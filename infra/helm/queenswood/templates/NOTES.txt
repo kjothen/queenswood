@@ -1,19 +1,19 @@
 Queenswood {{ .Chart.Version }} installed as {{ .Release.Name }} in {{ .Release.Namespace }}.
 
-{{- if and .Values.ingress.enabled .Values.ingress.gcp.enabled }}
+{{- if and .Values.gateway.enabled .Values.gateway.gcp.enabled }}
 
 Public URL (once the LB + cert provision):
-  https://{{ .Values.ingress.host }}
+  https://{{ .Values.gateway.host }}
 
-The HTTPS Load Balancer takes 5-10 minutes to come up. The Google
-managed certificate then transitions FailedNotVisible -> Provisioning
--> Active over 15-60 minutes for the first issuance. FailedNotVisible
-for the first ~30 min is expected while DNS propagation completes.
+The regional external Application Load Balancer takes 5-10 minutes
+to come up. The Certificate Manager certificate transitions
+PROVISIONING -> ACTIVE over 15-60 minutes for the first issuance,
+once the DNSAuthorization CNAME has propagated.
 
 Check progress:
-  kubectl -n {{ .Release.Namespace }} get ingress {{ .Release.Name }}-bank-app
-  kubectl -n {{ .Release.Namespace }} get managedcertificate {{ .Release.Name }}-cert \
-    -o jsonpath='{.status.certificateStatus}{"\n"}'
+  kubectl -n {{ .Release.Namespace }} get gateway {{ .Release.Name }}-gateway
+  kubectl --context kind-xp-mp get certificate.certificatemanager.gcp.upbound.io \
+    queenswood-cert -o jsonpath='{.status.atProvider.managed.state}{"\n"}'
 
 Registrar delegation (once-only):
 The Cloud DNS managed zone is provisioned by Crossplane on the xp-mp
@@ -22,18 +22,19 @@ records for the `queenswood` subdomain at your registrar:
 
   just gcp-dns-ns
 
-If the cert sticks on FailedNotVisible beyond ~30 min, the NS
-delegation at the registrar is the most likely culprit -- re-check
-that all four ns-cloud-cN.googledomains.com. values are set
-correctly.
-{{- else if .Values.ingress.enabled }}
+If the cert sticks on PROVISIONING beyond ~30 min, check the
+DNSAuthorization CNAME in Cloud DNS matches the value in
+DNSAuthorization.status.atProvider.dnsResourceRecord, and confirm the
+NS delegation at the registrar is correct -- all four
+ns-cloud-cN.googledomains.com. values must be set.
+{{- else if .Values.gateway.enabled }}
 
-Ingress: enabled with host {{ .Values.ingress.host }} (non-GCP path).
-For GKE deployments with managed certificates + HTTP->HTTPS redirect,
-also set --set ingress.gcp.enabled=true.
+Gateway: enabled with host {{ .Values.gateway.host }} (non-GCP path).
+For GKE deployments with Certificate Manager + HTTP->HTTPS redirect,
+also set --set gateway.gcp.enabled=true.
 {{- else }}
 
-Ingress: disabled. The bank-app Service is ClusterIP-only. To expose
-publicly on GKE, set --set ingress.enabled=true --set ingress.gcp.enabled=true
---set ingress.host=<your-host>.
+Gateway: disabled. The bank-app Service is ClusterIP-only. To expose
+publicly on GKE, set --set gateway.enabled=true --set gateway.gcp.enabled=true
+--set gateway.host=<your-host>.
 {{- end }}

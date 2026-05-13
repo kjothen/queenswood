@@ -1,0 +1,46 @@
+{{- if .Values.gateway.enabled }}
+# Production traffic on :443 → bank-app SPA. nginx in the bank-app
+# pod proxies /v1/* to the in-cluster bank-api service.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: {{ .Release.Name }}-bank-app
+  labels:
+    {{- include "queenswood.labels" . | nindent 4 }}
+spec:
+  parentRefs:
+    - name: {{ .Release.Name }}-gateway
+      sectionName: https
+  hostnames:
+    - {{ .Values.gateway.host | quote }}
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: {{ .Release.Name }}-bank-app
+          port: {{ .Values.bankApp.port }}
+---
+# HTTP→HTTPS redirect on :80. Replaces the legacy FrontendConfig's
+# redirectToHttps; Gateway API expresses it as an HTTPRoute filter
+# on the :80 listener instead of a controller-specific CRD.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: {{ .Release.Name }}-redirect
+  labels:
+    {{- include "queenswood.labels" . | nindent 4 }}
+spec:
+  parentRefs:
+    - name: {{ .Release.Name }}-gateway
+      sectionName: http
+  hostnames:
+    - {{ .Values.gateway.host | quote }}
+  rules:
+    - filters:
+        - type: RequestRedirect
+          requestRedirect:
+            scheme: https
+            statusCode: 301
+{{- end }}
