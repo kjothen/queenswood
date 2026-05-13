@@ -93,22 +93,23 @@ kind-xp-install-gcp-secret:
 kind-xp-install-gcp-config:
     #!/usr/bin/env zsh
     set -e
-    : "${GOOGLE_CLOUD_PROJECT_ID:?must be set}"
+    PROJECT_ID=$(gcloud config get project 2>/dev/null)
+    [[ -n "$PROJECT_ID" ]] || { echo "no active gcloud project; run 'just gcp-project-create'" >&2; exit 1; }
     until kubectl --context {{ KIND_XP_CLUSTER }} get \
       providerconfig.gcp.upbound.io default >/dev/null 2>&1; do sleep 5; done
     kubectl --context {{ KIND_XP_CLUSTER }} patch providerconfig.gcp.upbound.io \
       default --type=merge \
-      -p "{\"spec\":{\"projectID\":\"$GOOGLE_CLOUD_PROJECT_ID\"}}"
+      -p "{\"spec\":{\"projectID\":\"$PROJECT_ID\"}}"
     until kubectl --context {{ KIND_XP_CLUSTER }} get \
       clusterproviderconfig.gcp.m.upbound.io default >/dev/null 2>&1; do sleep 5; done
     kubectl --context {{ KIND_XP_CLUSTER }} patch clusterproviderconfig.gcp.m.upbound.io \
       default --type=merge \
-      -p "{\"spec\":{\"projectID\":\"$GOOGLE_CLOUD_PROJECT_ID\"}}"
+      -p "{\"spec\":{\"projectID\":\"$PROJECT_ID\"}}"
     until kubectl --context {{ KIND_XP_CLUSTER }} get \
       cluster.container.gcp.upbound.io queenswood-gke >/dev/null 2>&1; do sleep 5; done
     kubectl --context {{ KIND_XP_CLUSTER }} patch cluster.container.gcp.upbound.io \
       queenswood-gke --type=merge \
-      -p "{\"spec\":{\"forProvider\":{\"workloadIdentityConfig\":{\"workloadPool\":\"$GOOGLE_CLOUD_PROJECT_ID.svc.id.goog\"}}}}"
+      -p "{\"spec\":{\"forProvider\":{\"workloadIdentityConfig\":{\"workloadPool\":\"$PROJECT_ID.svc.id.goog\"}}}}"
 
 # Start Tilt dev loop (creates kind cluster if missing)
 tilt-up:
