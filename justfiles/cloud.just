@@ -287,13 +287,14 @@ down-to-zero:
 kind-xp-wait-ready timeout="2700":
     #!/usr/bin/env zsh
     set -e
-    K="kubectl --context {{ KIND_XP_CLUSTER }} -n argocd"
     for app in crossplane-providers crossplane-configs crossplane-xrds \
-               gcp-network gcp-cluster gcp-dns gcp-cert gcp-records; do
+               gcp-network gcp-cluster gcp-dns gcp-cert gcp-records \
+               queenswood; do
       echo ">>> $app"
-      $K wait --for=jsonpath='{.status.health.status}'=Healthy \
+      # Wait for Argo to discover the Application before waiting on its health
+      until kubectl --context {{ KIND_XP_CLUSTER }} -n argocd \
+            get application/$app >/dev/null 2>&1; do sleep 5; done
+      kubectl --context {{ KIND_XP_CLUSTER }} -n argocd wait \
+        --for=jsonpath='{.status.health.status}'=Healthy \
         application/$app --timeout={{ timeout }}s
     done
-    echo ">>> queenswood (cert provisioning gates this)"
-    $K wait --for=jsonpath='{.status.health.status}'=Healthy \
-      application/queenswood --timeout=3600s
