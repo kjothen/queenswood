@@ -283,6 +283,11 @@ up-from-zero:
     kubectl --context {{ KIND_XP_CLUSTER }} apply -f infra/bootstrap/root-app.yml
     just kind-xp-install-gcp-config
     just kind-xp-wait-ready
+    # Fetch GKE creds so local kubectl/k9s/gcp-* recipes can target the
+    # cluster. Crossplane has its own kubeconfig for the Helm Release;
+    # this is purely for the operator's terminal.
+    gcloud container clusters get-credentials queenswood-gke \
+      --zone=europe-west2-a --project="$GOOGLE_CLOUD_PROJECT_ID"
     just gcp-health-check
 
 # Nuke the kind cluster + the GCP project (recoverable for 30 days)
@@ -293,6 +298,12 @@ down-to-zero:
     just kind-xp-down || true
     echo ">>> deleting GCP project $GOOGLE_CLOUD_PROJECT_ID"
     gcloud projects delete "$GOOGLE_CLOUD_PROJECT_ID" --quiet
+    # Prune the local kubeconfig entry so `kubectl config get-contexts`
+    # doesn't accumulate stale gke_* entries across teardowns.
+    CTX="gke_${GOOGLE_CLOUD_PROJECT_ID}_europe-west2-a_queenswood-gke"
+    kubectl config delete-context "$CTX" 2>/dev/null || true
+    kubectl config delete-cluster "$CTX" 2>/dev/null || true
+    kubectl config delete-user    "$CTX" 2>/dev/null || true
     echo ">>> recover within 30 days: gcloud projects undelete $GOOGLE_CLOUD_PROJECT_ID"
 
 # Block until each Argo Application reaches Healthy
@@ -309,4 +320,22 @@ kind-xp-wait-ready timeout="2700":
       kubectl --context {{ KIND_XP_CLUSTER }} -n argocd wait \
         --for=jsonpath='{.status.health.status}'=Healthy \
         application/$app --timeout={{ timeout }}s
+      # After the ManagedZone is up, surface its NS values: the user
+      # must paste them into the registrar (Squarespace) before
+      # gcp-cert's DNSAuthorization CNAME can resolve and Google CA
+      # validates. Without this prompt the loop sits silently on
+      # gcp-cert until the user figures it out.
+      if [[ "$app" == "gcp-dns" ]]; then
+        echo
+        echo "------------------------------------------------------"
+        echo "ACTION: paste these 4 nameservers into your registrar's"
+        echo "NS records for queenswood.repldriven.com (trailing dots"
+        echo "optional). cert validation gates on this propagating."
+        kubectl --context {{ KIND_XP_CLUSTER }} -n crossplane-system \
+          get managedzone.dns.gcp.m.upbound.io queenswood-zone \
+          -o jsonpath='{.status.atProvider.nameServers}' \
+          | tr ',' '\n' | tr -d '[]"' | sed 's/^ */  /'
+        echo "------------------------------------------------------"
+        echo
+      fi
     done
