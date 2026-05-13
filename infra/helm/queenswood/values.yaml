@@ -38,22 +38,24 @@ bootstrap:
     limits: { cpu: "1000m", memory: "1Gi" }
     requests: { cpu: "100m", memory: "512Mi" }
 
-# -- Optional public ingress for the bank-app SPA (which proxies
-# `/v1/*` to bank-api internally). When `gcp.enabled` is true the
-# templates emit a GKE-flavoured chain (Ingress with ingressClassName
-# gce + global static IP + ManagedCertificate + FrontendConfig
-# redirect, plus a NEG annotation on the bank-app Service); when
-# false the Ingress is plain and `annotations` / `tls` passthroughs
-# apply for non-GKE setups.
-ingress:
+# -- Public Gateway for the bank-app SPA (which proxies `/v1/*` to
+# bank-api internally). When `gcp.enabled` is true the templates
+# emit a Gateway with gatewayClassName gke-l7-regional-external-managed,
+# a NamedAddress reference to a regional Address, an annotation
+# binding it to a Certificate Manager CertificateMap, plus two
+# HTTPRoutes (production traffic + an HTTP->HTTPS redirect). When
+# false the Gateway uses `className` and serves plain HTTP for
+# non-GKE setups.
+gateway:
   enabled: false
   className: ""
   host: bank-api.local
-  annotations: {}
-  tls: []
   gcp:
     enabled: false
-    globalStaticIpName: queenswood-ingress-ip
+    # Regional Address provisioned in infra/gcp/networking.yml.
+    staticIpName: queenswood-ingress-ip
+    # CertificateMap provisioned in infra/gcp/certificates.yml.
+    certMap: queenswood-cert-map
 
 # -- Frontend SPA (Svelte/Vite served by nginx). Image name is `bank-app`
 # under {{ image.registry }}. The container's nginx proxies `/v1/*` to
