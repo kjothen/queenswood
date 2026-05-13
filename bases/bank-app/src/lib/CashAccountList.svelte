@@ -323,7 +323,7 @@
         payOutCreditorName.trim(),
         payOutCurrency,
         inputToMinor(payOutAmount),
-        "FPS",
+        "fps",
         payOutReference.trim() || null
       );
       if (res["http-status"] >= 200 && res["http-status"] < 300) {
