@@ -3,9 +3,6 @@ kind: Composition
 metadata:
   name: xqueenswoodapex.gcp
 spec:
-  # Crossplane v2 defaults to Pipeline mode; opt into legacy Resources
-  # mode since this composition uses direct patches, not Functions.
-  mode: Resources
   compositeTypeRef:
     apiVersion: platform.queenswood.repldriven.com/v1alpha1
     kind: XQueenswoodApex
