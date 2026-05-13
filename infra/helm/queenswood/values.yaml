@@ -54,8 +54,10 @@ gateway:
     enabled: false
     # Regional Address provisioned in infra/gcp/networking.yml.
     staticIpName: queenswood-ingress-ip
-    # CertificateMap provisioned in infra/gcp/certificates.yml.
-    certMap: queenswood-cert-map
+    # Certificate Manager certs to bind to the HTTPS listener.
+    # Comma-separated for multiple. Cert provisioned in
+    # infra/gcp/certificates.yml.
+    certManagerCerts: queenswood-cert
 
 # -- Frontend SPA (Svelte/Vite served by nginx). Image name is `bank-app`
 # under {{ image.registry }}. The container's nginx proxies `/v1/*` to

@@ -9,7 +9,7 @@ spec:
     chart:
       name: queenswood
       repository: oci://ghcr.io/kjothen
-      version: 0.5.1
+      version: 0.5.2
     namespace: queenswood
     values:
       image:
