@@ -100,6 +100,11 @@ kind-xp-install-gcp-config:
       default --type=merge \
       -p "{\"spec\":{\"projectID\":\"$GOOGLE_CLOUD_PROJECT_ID\"}}"
     until kubectl --context {{ KIND_XP_CLUSTER }} get \
+      clusterproviderconfig.gcp.m.upbound.io default >/dev/null 2>&1; do sleep 5; done
+    kubectl --context {{ KIND_XP_CLUSTER }} patch clusterproviderconfig.gcp.m.upbound.io \
+      default --type=merge \
+      -p "{\"spec\":{\"projectID\":\"$GOOGLE_CLOUD_PROJECT_ID\"}}"
+    until kubectl --context {{ KIND_XP_CLUSTER }} get \
       cluster.container.gcp.upbound.io queenswood-gke >/dev/null 2>&1; do sleep 5; done
     kubectl --context {{ KIND_XP_CLUSTER }} patch cluster.container.gcp.upbound.io \
       queenswood-gke --type=merge \
