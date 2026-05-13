@@ -3,11 +3,7 @@
 (defn enum-coercion
   "Builds decoder, encoder, and json-schema from a
   string-to-keyword mapping. When unknown-key is provided,
-  the encoder maps it to :unknown and the decoder maps any
-  unrecognised wire value to unknown-key -- so a stray
-  client value lands at the enum's :*-unknown sentinel
-  (which the schema allows) instead of leaking the raw
-  string past validation."
+  the encoder maps it to :unknown."
   ([m] (enum-coercion m nil))
   ([m unknown-key]
    (let [decode-m (merge m (update-keys m keyword))
@@ -17,7 +13,7 @@
                           (assoc unknown-key :unknown))
          json-schema {:type "string"
                       :enum (vec (keys m))}
-         decode-fn (fn [v] (get decode-m v (or unknown-key v)))
+         decode-fn (fn [v] (get decode-m v v))
          encode-fn (fn [v] (get encode-m v v))
          enum-props {:json-schema json-schema
                      :decode/api decode-fn
