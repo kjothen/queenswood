@@ -17,7 +17,7 @@
     <details>
       <summary>How to find your key</summary>
       <p>The helm install command printed it. To recover it from the cluster:</p>
-      <pre><code>kubectl get secret queenswood-admin-api-key \
+      <pre><code>kubectl -n queenswood get secret queenswood-admin-api-key \
   -o jsonpath='&lbrace;.data.MONO_ADMIN_API_KEY&rbrace;' | base64 -d</code></pre>
     </details>
   </div>

@@ -273,6 +273,7 @@ FoundationDB) onto any Kubernetes cluster.
 ADMIN_KEY=$(openssl rand -hex 16)
 helm install queenswood \
   oci://ghcr.io/kjothen/queenswood --version 0.1.0 \
+  -n queenswood --create-namespace \
   --set secrets.adminApiKey=$ADMIN_KEY \
   --wait --timeout 10m
 echo "Admin API key: $ADMIN_KEY"
@@ -281,8 +282,8 @@ echo "Admin API key: $ADMIN_KEY"
 **Reach the API and the front-end** (separate terminals):
 
 ```bash
-kubectl port-forward svc/queenswood-bank-api-service 8080:8080
-kubectl port-forward svc/queenswood-bank-app          8081:8080
+kubectl -n queenswood port-forward svc/queenswood-bank-api-service 8080:8080
+kubectl -n queenswood port-forward svc/queenswood-bank-app          8081:8080
 ```
 
 Then open <http://localhost:8081> for the SPA, or hit

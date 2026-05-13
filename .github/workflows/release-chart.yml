@@ -105,6 +105,7 @@ jobs:
              ADMIN_KEY=$(openssl rand -hex 16)
              helm install queenswood \
                oci://ghcr.io/__OWNER__/queenswood --version __VERSION__ \
+               -n queenswood --create-namespace \
                --set secrets.adminApiKey=$ADMIN_KEY \
                --wait --timeout 10m
              echo "Admin API key: $ADMIN_KEY"
@@ -113,8 +114,8 @@ jobs:
           3. **Port-forward** the API and the front-end
              (separate terminals):
              ```bash
-             kubectl port-forward svc/queenswood-bank-api-service 8080:8080
-             kubectl port-forward svc/queenswood-bank-app          8081:8080
+             kubectl -n queenswood port-forward svc/queenswood-bank-api-service 8080:8080
+             kubectl -n queenswood port-forward svc/queenswood-bank-app          8081:8080
              ```
 
           4. **Smoke-test the API:**
@@ -136,14 +137,14 @@ jobs:
           The chart stores the key in a Secret named
           `queenswood-admin-api-key`:
           ```bash
-          kubectl get secret queenswood-admin-api-key \
+          kubectl -n queenswood get secret queenswood-admin-api-key \
             -o jsonpath='{.data.MONO_ADMIN_API_KEY}' | base64 -d
           ```
 
           ## Tear down
 
           ```bash
-          helm uninstall queenswood
+          helm uninstall queenswood -n queenswood
           kind delete cluster --name queenswood
           ```
           EOF

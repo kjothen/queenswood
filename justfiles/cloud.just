@@ -116,12 +116,12 @@ gcp-health-check:
       --field-selector=status.phase=Pending --no-headers 2>/dev/null | wc -l | tr -d ' '
 
     echo "\n=== 4. Helm release ==="
-    helm --kube-context $KCTX -n queenswood history queenswood-bank 2>/dev/null \
+    helm --kube-context $KCTX -n queenswood history queenswood 2>/dev/null \
       | tail -2 || echo "  (release not found)"
     echo "Rendered kinds:"
-    helm --kube-context $KCTX -n queenswood get manifest queenswood-bank 2>/dev/null \
+    helm --kube-context $KCTX -n queenswood get manifest queenswood 2>/dev/null \
       | grep -E "^kind:" | sort | uniq -c \
-      | grep -E "Ingress|ManagedCertificate|FrontendConfig|Deployment|Job" \
+      | grep -E "Gateway|HTTPRoute|Deployment|Job" \
       || echo "  (no manifest)"
 
     echo "\n=== 5. Workloads ==="
@@ -137,18 +137,18 @@ gcp-health-check:
       || echo "(no FDB cluster)"
 
     echo "\n=== 6. Public-traffic chain on GKE ==="
-    echo "Ingresses:"
-    kubectl --context $KCTX -n queenswood get ingress -o json 2>/dev/null \
-      | jq -r '.items[] | "  \(.metadata.name)  class=\(.spec.ingressClassName // "-")  address=\((.status.loadBalancer.ingress[0].ip // "-"))"' \
+    echo "Gateways:"
+    kubectl --context $KCTX -n queenswood get gateway -o json 2>/dev/null \
+      | jq -r '.items[] | "  \(.metadata.name)  class=\(.spec.gatewayClassName)  address=\((.status.addresses[0].value // "-"))  programmed=\((.status.conditions[]? | select(.type=="Programmed") | .status))"' \
       || echo "  (none)"
-    echo -n "ManagedCertificate: "
-    kubectl --context $KCTX -n queenswood get managedcertificate \
-      -o jsonpath='{.items[0].metadata.name}={.items[0].status.certificateStatus}{"\n"}' \
-      2>/dev/null || echo "(none)"
-    echo -n "bank-app Service NEG annotation: "
-    kubectl --context $KCTX -n queenswood get svc queenswood-bank-bank-app \
-      -o jsonpath='{.metadata.annotations.cloud\.google\.com/neg}{"\n"}' \
-      2>/dev/null || echo "(no bank-app service)"
+    echo "HTTPRoutes:"
+    kubectl --context $KCTX -n queenswood get httproute --no-headers 2>/dev/null \
+      | awk '{printf "  %-40s %s\n", $1, $2}' \
+      || echo "  (none)"
+    echo -n "Certificate Manager cert: "
+    kubectl --context kind-xp-mp get certificate.certificatemanager.gcp.upbound.io \
+      queenswood-cert -o jsonpath='{.status.atProvider.managed.state}{"\n"}' \
+      2>/dev/null || echo "(not provisioned)"
 
     echo "\n=== 7. Public DNS + HTTPS ==="
     echo -n "dig A queenswood.repldriven.com @8.8.8.8: "
