@@ -1,4 +1,22 @@
-# Create a new GCP project, link billing, return the ID on stdout
+# One-time org setup: grant the operator orgpolicy.policyAdmin and pin
+# compute.skipDefaultNetworkCreation at the org level so every child
+# project inherits it. roles/owner does NOT include orgpolicy perms.
+gcp-org-bootstrap:
+    #!/usr/bin/env zsh
+    set -e
+    : "${GCLOUD_ORGANIZATION_ID:?must be set}"
+    ME=$(gcloud config get-value account)
+    echo ">>> granting orgpolicy.policyAdmin to $ME on org $GCLOUD_ORGANIZATION_ID"
+    gcloud organizations add-iam-policy-binding "$GCLOUD_ORGANIZATION_ID" \
+      --member="user:${ME}" --role="roles/orgpolicy.policyAdmin" --condition=None
+    echo ">>> setting compute.skipDefaultNetworkCreation on org"
+    printf 'name: organizations/%s/policies/compute.skipDefaultNetworkCreation\nspec:\n  rules:\n    - enforce: true\n' "$GCLOUD_ORGANIZATION_ID" \
+      | gcloud org-policies set-policy /dev/stdin
+
+# Create a new GCP project, link billing, return the ID on stdout.
+# Assumes the org has compute.skipDefaultNetworkCreation enforced
+# (see gcp-org-bootstrap); the policy is inherited by every child
+# project so no per-project policy work is needed here.
 gcp-project-create suffix=`openssl rand -hex 3`:
     #!/usr/bin/env zsh
     set -e
@@ -11,12 +29,6 @@ gcp-project-create suffix=`openssl rand -hex 3`:
       echo ">>> creating project $PROJECT_ID (no org)" >&2
     fi
     gcloud projects create "$PROJECT_ID" --name=queenswood $org_flag >&2
-    # Block default-network creation BEFORE Compute API is enabled in
-    # gcp-bootstrap; otherwise GCP auto-creates a `default` VPC with
-    # open firewall rules and auto-subnets in every region.
-    echo ">>> setting compute.skipDefaultNetworkCreation policy" >&2
-    printf 'name: projects/%s/policies/compute.skipDefaultNetworkCreation\nspec:\n  rules:\n    - enforce: true\n' "$PROJECT_ID" \
-      | gcloud org-policies set-policy /dev/stdin >&2
     : "${GCP_BILLING_ACCOUNT_ID:=$(gcloud beta billing accounts list \
         --filter='OPEN=True' --format='value(name)' | head -1)}"
     if [[ -z "$GCP_BILLING_ACCOUNT_ID" ]]; then
