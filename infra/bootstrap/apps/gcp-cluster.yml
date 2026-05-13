@@ -13,6 +13,12 @@ spec:
     path: infra/gcp/cluster
   destination:
     server: https://kubernetes.default.svc
+  # workloadPool is set per-cluster by `just kind-xp-install-gcp-config`.
+  ignoreDifferences:
+    - group: container.gcp.upbound.io
+      kind: Cluster
+      jsonPointers:
+        - /spec/forProvider/workloadIdentityConfig/workloadPool
   syncPolicy:
     automated:
       prune: true
