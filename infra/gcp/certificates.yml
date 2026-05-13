@@ -25,17 +25,16 @@ spec:
     domain: queenswood.repldriven.com
 ---
 # CNAME record Cloud DNS needs to serve for DNSAuthorization to
-# validate. The target value comes from the DNSAuthorization's
-# status.atProvider.dnsResourceRecord -- but Crossplane's DNS
-# RecordSet doesn't accept cross-resource refs (same limitation
-# noted in networking.yml). Once the DNSAuthorization is created
-# read the target with:
+# validate. The name carries a per-authorization unique suffix
+# (`_acme-challenge_<token>`) that Certificate Manager generates --
+# you can't pick it, you have to read it back after the
+# DNSAuthorization reconciles. Crossplane's DNS RecordSet doesn't
+# accept cross-resource refs (same limitation noted in
+# networking.yml), so both the name and the target are hardcoded
+# here. To refresh after a DNSAuthorization recreate:
 #   kubectl --context kind-xp-mp get dnsauthorization \
-#     queenswood-dns-auth -o jsonpath= \
-#     '{.status.atProvider.dnsResourceRecord}'
-# and replace the placeholder rrdatas value below in a follow-up
-# commit. The record name follows the DNSAuthorization convention
-# (_acme-challenge prefix).
+#     queenswood-dns-auth -o json | \
+#     jq '.status.atProvider.dnsResourceRecord'
 apiVersion: dns.gcp.upbound.io/v1beta1
 kind: RecordSet
 metadata:
@@ -44,11 +43,11 @@ spec:
   forProvider:
     managedZoneRef:
       name: queenswood-zone
-    name: _acme-challenge.queenswood.repldriven.com.
+    name: _acme-challenge_6d62fz6lwhq33oim.queenswood.repldriven.com.
     type: CNAME
     ttl: 300
     rrdatas:
-      - "placeholder.invalid."  # replace after DNSAuthorization reconciles
+      - "29bd48fb-9b7e-418e-8c22-5121d33e5f00.0.europe-west2.authorize.certificatemanager.goog."
 ---
 apiVersion: certificatemanager.gcp.upbound.io/v1beta1
 kind: Certificate

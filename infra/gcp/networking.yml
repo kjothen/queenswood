@@ -45,4 +45,4 @@ spec:
     # and push a follow-up commit. Crossplane reconciles drift, so the
     # literal value is stable for the lifetime of the Address.
     rrdatas:
-      - "0.0.0.0"  # placeholder; replace after Address is reserved
+      - "34.147.173.241"
