@@ -132,8 +132,11 @@ gcp-rollout +components:
 
 # Print Cloud DNS nameservers for the queenswood zone (paste into registrar NS records)
 gcp-dns-ns:
-    kubectl --context kind-xp-mp get managedzone.dns.gcp.upbound.io queenswood-zone \
-      -o jsonpath='{.status.atProvider.nameServers}{"\n"}'
+    kubectl --context {{ KIND_XP_CLUSTER }} -n crossplane-system \
+      get managedzone.dns.gcp.m.upbound.io queenswood-zone \
+      -o jsonpath='{.status.atProvider.nameServers}' \
+      | tr ',' '\n' | tr -d '[]"' | sed 's/^ */  /'
+    @echo
 
 # Walk the queenswood public-traffic chain top-to-bottom; first failure points to where to look
 gcp-health-check:
