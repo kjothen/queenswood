@@ -4,7 +4,8 @@
 
 (defn new-policy
   [data]
-  (let [{:keys [name
+  (let [{:keys [policy-id
+                name
                 category
                 capabilities
                 limits
@@ -14,8 +15,14 @@
          :or {capabilities [] limits [] enabled true labels {}}}
         data
         now (utility/now)]
+    ;; A supplied :policy-id makes the resulting save idempotent --
+    ;; seed data (e.g. the bootstrap-service's platform / micro
+    ;; restricted policies loaded from YAML) carries a stable id so
+    ;; subsequent bootstrap runs upsert the same row instead of
+    ;; piling up duplicates. Runtime-created policies pass no id and
+    ;; get a freshly generated one.
     (utility/assoc-some
-     {:policy-id (utility/generate-id "pol")
+     {:policy-id (or policy-id (utility/generate-id "pol"))
       :name name
       :category category
       :capabilities capabilities

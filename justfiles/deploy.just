@@ -24,13 +24,14 @@ helm-install tag="dev" admin_key="" registry="ghcr.io/kjothen":
     set -e
     key={{ admin_key }}
     if [[ -z "$key" ]]; then
-      key=$(kubectl get secret queenswood-admin-api-key \
+      key=$(kubectl -n queenswood get secret queenswood-admin-api-key \
         -o jsonpath='{.data.MONO_ADMIN_API_KEY}' 2>/dev/null \
         | base64 -d || true)
       [[ -z "$key" ]] && key=$(openssl rand -hex 16)
     fi
     helm dependency update infra/helm/queenswood
     helm upgrade --install queenswood infra/helm/queenswood \
+      -n queenswood --create-namespace \
       --set image.tag={{ tag }} \
       --set image.registry={{ registry }} \
       --set secrets.adminApiKey=$key \
@@ -125,10 +126,10 @@ kube-admin-key:
     #!/usr/bin/env zsh
     # Designed for command substitution: VITE_MONO_ADMIN_API_KEY=$(just kube-admin-key) just bank-app-start
     set -euo pipefail
-    key=$(kubectl get secret queenswood-admin-api-key \
+    key=$(kubectl -n queenswood get secret queenswood-admin-api-key \
       -o jsonpath='{.data.MONO_ADMIN_API_KEY}' | base64 -d)
     if [[ -z "$key" ]]; then
-      echo "queenswood-admin-api-key Secret missing or empty — is the cluster up and the chart installed?" >&2
+      echo "queenswood-admin-api-key Secret missing or empty in namespace queenswood — is the cluster up and the chart installed?" >&2
       exit 1
     fi
     printf '%s' "$key"

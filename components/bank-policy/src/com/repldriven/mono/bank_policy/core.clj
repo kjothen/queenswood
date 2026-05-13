@@ -3,11 +3,22 @@
     [com.repldriven.mono.bank-policy.domain :as domain]
     [com.repldriven.mono.bank-policy.store :as store]
 
-    [com.repldriven.mono.error.interface :refer [let-nom>]]))
+    [com.repldriven.mono.error.interface :as error :refer [let-nom>]]))
 
 (defn new-policy
   [config data]
-  (let [policy (domain/new-policy data)]
+  (let [policy (domain/new-policy data)
+        ;; When the caller supplied a stable :policy-id (seed data),
+        ;; check whether the policy already exists and preserve the
+        ;; original :created-at so it doesn't shift on every bootstrap
+        ;; run. A not-found anomaly means first install; we ignore it
+        ;; and let the new :created-at stand.
+        existing (when (:policy-id data)
+                   (store/get-policy config (:policy-id policy)))
+        policy (cond-> policy
+                       (and (not (error/anomaly? existing))
+                            (:created-at existing))
+                       (assoc :created-at (:created-at existing)))]
     (let-nom> [_ (store/save-policy config policy)]
       policy)))
 
