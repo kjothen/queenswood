@@ -41,29 +41,29 @@ gcp-project-create suffix=`openssl rand -hex 3`:
     gcloud config set project "$PROJECT_ID" >&2
     printf '%s\n' "$PROJECT_ID"
 
-# Authenticate gcloud and pin the active project to $GOOGLE_CLOUD_PROJECT_ID
+# Authenticate gcloud. `gcp-project-create` sets the active project,
+# so this recipe doesn't touch project config.
 gcp-login:
     gcloud auth login
-    gcloud config set project $GOOGLE_CLOUD_PROJECT_ID
 
 # Login to GCP impersonating the crossplane SA
 gcp-sa-login:
     #!/usr/bin/env zsh
-    set -e    
-    PROJECT_ID=$GOOGLE_CLOUD_PROJECT_ID
+    set -e
+    PROJECT_ID=$(gcloud config get project 2>/dev/null)
+    [[ -n "$PROJECT_ID" ]] || { echo "no active gcloud project; run 'just gcp-project-create'" >&2; exit 1; }
     SA=crossplane-provider
     SA_EMAIL=${SA}@${PROJECT_ID}.iam.gserviceaccount.com
-    
     gcloud auth application-default login \
       --impersonate-service-account=$SA_EMAIL
-    gcloud config set project $GOOGLE_CLOUD_PROJECT_ID
 
 # Provision the crossplane-provider service account, IAM bindings, key, and APIs
 gcp-bootstrap:
     #!/usr/bin/env zsh
     set -e
 
-    PROJECT_ID=$GOOGLE_CLOUD_PROJECT_ID
+    PROJECT_ID=$(gcloud config get project 2>/dev/null)
+    [[ -n "$PROJECT_ID" ]] || { echo "no active gcloud project; run 'just gcp-project-create'" >&2; exit 1; }
     SA=crossplane-provider
     SA_EMAIL=${SA}@${PROJECT_ID}.iam.gserviceaccount.com
     ME=$(gcloud config get-value account)
@@ -121,9 +121,10 @@ gcp-bootstrap:
 # prefix: `just gcp-rollout bank-app bank-api-service`.
 gcp-rollout +components:
     #!/usr/bin/env zsh
-    : "${GOOGLE_CLOUD_PROJECT_ID:?must be set}"
     set -e
-    KCTX=gke_${GOOGLE_CLOUD_PROJECT_ID}_europe-west2-a_queenswood-gke
+    PROJECT_ID=$(gcloud config get project 2>/dev/null)
+    [[ -n "$PROJECT_ID" ]] || { echo "no active gcloud project; run 'just gcp-project-create'" >&2; exit 1; }
+    KCTX=gke_${PROJECT_ID}_europe-west2-a_queenswood-gke
     for c in {{ components }}; do
       echo "→ deploy/queenswood-$c"
       kubectl --context $KCTX -n queenswood rollout restart deploy/queenswood-$c
@@ -141,9 +142,10 @@ gcp-dns-ns:
 # Walk the queenswood public-traffic chain top-to-bottom; first failure points to where to look
 gcp-health-check:
     #!/usr/bin/env zsh
-    : "${GOOGLE_CLOUD_PROJECT_ID:?must be set}"
+    PROJECT_ID=$(gcloud config get project 2>/dev/null)
+    [[ -n "$PROJECT_ID" ]] || { echo "no active gcloud project; run 'just gcp-project-create'" >&2; exit 1; }
     MGT=kind-xp-mp
-    KCTX=gke_${GOOGLE_CLOUD_PROJECT_ID}_europe-west2-a_queenswood-gke
+    KCTX=gke_${PROJECT_ID}_europe-west2-a_queenswood-gke
 
     echo "=== 1. Crossplane providers ($MGT) ==="
     kubectl --context $MGT get providers.pkg.crossplane.io \
@@ -224,8 +226,9 @@ gcp-health-check:
 # Inspect the first queenswood pod whose STATUS column matches `state` (default Init:Error)
 gcp-diagnose-pod state="Init:Error":
     #!/usr/bin/env zsh
-    : "${GOOGLE_CLOUD_PROJECT_ID:?must be set}"
-    KCTX=gke_${GOOGLE_CLOUD_PROJECT_ID}_europe-west2-a_queenswood-gke
+    PROJECT_ID=$(gcloud config get project 2>/dev/null)
+    [[ -n "$PROJECT_ID" ]] || { echo "no active gcloud project; run 'just gcp-project-create'" >&2; exit 1; }
+    KCTX=gke_${PROJECT_ID}_europe-west2-a_queenswood-gke
 
     # Fail loudly upfront if kubectl can't reach GKE -- the most common cause
     # is gke-gcloud-auth-plugin not on PATH in this non-interactive shell.
@@ -234,7 +237,7 @@ gcp-diagnose-pod state="Init:Error":
       echo "  - gke-gcloud-auth-plugin missing from PATH in this shell" >&2
       echo "  - gcloud creds expired (try: gcloud container clusters \\" >&2
       echo "      get-credentials queenswood-gke --zone=europe-west2-a \\" >&2
-      echo "      --project=\$GOOGLE_CLOUD_PROJECT_ID)" >&2
+      echo "      --project=$PROJECT_ID)" >&2
       echo "Full error:" >&2
       kubectl --context $KCTX cluster-info >&2
       exit 1
@@ -295,18 +298,19 @@ gcp-diagnose-pod state="Init:Error":
 # `gcloud domains verify` and rerun.
 gcp-precreate-zone:
     #!/usr/bin/env zsh
-    : "${GOOGLE_CLOUD_PROJECT_ID:?must be set}"
     set -e
+    PROJECT_ID=$(gcloud config get project 2>/dev/null)
+    [[ -n "$PROJECT_ID" ]] || { echo "no active gcloud project; run 'just gcp-project-create'" >&2; exit 1; }
     DNS=queenswood.repldriven.com.
     NAME=queenswood-zone
     if gcloud dns managed-zones describe "$NAME" \
-         --project="$GOOGLE_CLOUD_PROJECT_ID" >/dev/null 2>&1; then
+         --project="$PROJECT_ID" >/dev/null 2>&1; then
       echo ">>> $NAME already exists; skipping create"
       exit 0
     fi
     if ! gcloud dns managed-zones create "$NAME" \
            --dns-name="$DNS" --description="Public DNS for queenswood" \
-           --visibility=public --project="$GOOGLE_CLOUD_PROJECT_ID" 2>/tmp/dns-err; then
+           --visibility=public --project="$PROJECT_ID" 2>/tmp/dns-err; then
       if grep -q verifyManagedZoneDnsNameOwnership /tmp/dns-err; then
         PARENT="${DNS%.}"; PARENT="${PARENT#*.}"
         echo ">>> $PARENT not verified for $(gcloud config get-value account); opening Search Console"
@@ -321,7 +325,8 @@ gcp-precreate-zone:
 up-from-zero:
     #!/usr/bin/env zsh
     set -e
-    : "${GOOGLE_CLOUD_PROJECT_ID:?must be set (see: just gcp-project-create)}"
+    PROJECT_ID=$(gcloud config get project 2>/dev/null)
+    [[ -n "$PROJECT_ID" ]] || { echo "no active gcloud project; run 'just gcp-project-create' first" >&2; exit 1; }
     just gcp-login
     just gcp-bootstrap
     just gcp-precreate-zone
@@ -331,33 +336,34 @@ up-from-zero:
     kubectl --context {{ KIND_XP_CLUSTER }} apply -f infra/bootstrap/root-app.yml
     just kind-xp-install-gcp-config
     just kind-xp-wait-ready
-    # Fetch GKE creds so local kubectl/k9s/gcp-* recipes can target the
-    # cluster. Crossplane has its own kubeconfig for the Helm Release;
-    # this is purely for the operator's terminal.
-    gcloud container clusters get-credentials queenswood-gke \
-      --zone=europe-west2-a --project="$GOOGLE_CLOUD_PROJECT_ID"
     just gcp-health-check
 
 # Nuke the kind cluster + the GCP project (recoverable for 30 days)
 down-to-zero:
     #!/usr/bin/env zsh
     set -e
-    : "${GOOGLE_CLOUD_PROJECT_ID:?must be set}"
+    PROJECT_ID=$(gcloud config get project 2>/dev/null)
+    [[ -n "$PROJECT_ID" ]] || { echo "no active gcloud project; nothing to tear down" >&2; exit 1; }
     just kind-xp-down || true
-    echo ">>> deleting GCP project $GOOGLE_CLOUD_PROJECT_ID"
-    gcloud projects delete "$GOOGLE_CLOUD_PROJECT_ID" --quiet
+    echo ">>> deleting GCP project $PROJECT_ID"
+    gcloud projects delete "$PROJECT_ID" --quiet
     # Prune the local kubeconfig entry so `kubectl config get-contexts`
     # doesn't accumulate stale gke_* entries across teardowns.
-    CTX="gke_${GOOGLE_CLOUD_PROJECT_ID}_europe-west2-a_queenswood-gke"
+    CTX="gke_${PROJECT_ID}_europe-west2-a_queenswood-gke"
     kubectl config delete-context "$CTX" 2>/dev/null || true
     kubectl config delete-cluster "$CTX" 2>/dev/null || true
     kubectl config delete-user    "$CTX" 2>/dev/null || true
-    echo ">>> recover within 30 days: gcloud projects undelete $GOOGLE_CLOUD_PROJECT_ID"
+    # Unset gcloud's project pointer so the next cold-start can't reuse a
+    # now-deleted project ID by accident.
+    gcloud config unset project >/dev/null 2>&1 || true
+    echo ">>> recover within 30 days: gcloud projects undelete $PROJECT_ID"
 
 # Block until each Argo Application reaches Healthy
 kind-xp-wait-ready timeout="2700":
     #!/usr/bin/env zsh
     set -e
+    PROJECT_ID=$(gcloud config get project 2>/dev/null)
+    [[ -n "$PROJECT_ID" ]] || { echo "no active gcloud project; run 'just gcp-project-create'" >&2; exit 1; }
     for app in crossplane-providers crossplane-configs crossplane-xrds \
                gcp-network gcp-cluster gcp-dns gcp-cert gcp-records \
                queenswood; do
@@ -368,11 +374,20 @@ kind-xp-wait-ready timeout="2700":
       kubectl --context {{ KIND_XP_CLUSTER }} -n argocd wait \
         --for=jsonpath='{.status.health.status}'=Healthy \
         application/$app --timeout={{ timeout }}s
+      # As soon as GKE is up, write its kubeconfig context locally so
+      # k9s/kubectl/gcp-* recipes can target the cluster during the rest
+      # of the cold-start (cert provisioning, queenswood Release, etc.).
+      # Crossplane has its own kubeconfig for the Helm Release; this is
+      # purely for the operator's terminal.
+      if [[ "$app" == "gcp-cluster" ]]; then
+        gcloud container clusters get-credentials queenswood-gke \
+          --zone=europe-west2-a --project="$PROJECT_ID"
+      fi
       # After the ManagedZone is up, surface its NS values: the user
-      # must paste them into the registrar (Squarespace) before
-      # gcp-cert's DNSAuthorization CNAME can resolve and Google CA
-      # validates. Without this prompt the loop sits silently on
-      # gcp-cert until the user figures it out.
+      # must paste them into the registrar before gcp-cert's
+      # DNSAuthorization CNAME can resolve and Google CA validates.
+      # Without this prompt the loop sits silently on gcp-cert until
+      # the user figures it out.
       if [[ "$app" == "gcp-dns" ]]; then
         echo
         echo "------------------------------------------------------"
