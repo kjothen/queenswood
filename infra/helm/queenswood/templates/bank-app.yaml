@@ -30,7 +30,7 @@ spec:
       containers:
         - name: bank-app
           image: "{{ .Values.image.registry }}/bank-app:{{ .Values.image.tag }}"
-          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          imagePullPolicy: {{ include "queenswood.imagePullPolicy" $ }}
           ports:
             - name: http
               containerPort: {{ .Values.bankApp.port }}

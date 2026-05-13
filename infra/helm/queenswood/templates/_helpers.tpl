@@ -13,6 +13,11 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 helm.sh/chart: {{ printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" }}
 {{- end -}}
 
+{{/* Force Always when tag is `:latest` so re-pulls actually happen */}}
+{{- define "queenswood.imagePullPolicy" -}}
+{{- if eq .Values.image.tag "latest" -}}Always{{- else -}}{{ .Values.image.pullPolicy }}{{- end -}}
+{{- end -}}
+
 {{- define "queenswood.serviceFullname" -}}
 {{- $svc := .svc -}}
 {{- $root := .root -}}
