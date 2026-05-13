@@ -23,3 +23,8 @@ spec:
     automated:
       prune: true
       selfHeal: true
+    syncOptions:
+      # Without this, Argo only ignores the field for drift detection
+      # but still pushes git's value during sync, clobbering the
+      # workloadPool patch on every reconcile.
+      - RespectIgnoreDifferences=true

@@ -21,7 +21,13 @@ spec:
       kind: ProviderConfig
       jsonPointers:
         - /spec/projectID
+    - group: gcp.m.upbound.io
+      kind: ClusterProviderConfig
+      jsonPointers:
+        - /spec/projectID
   syncPolicy:
     automated:
       prune: true
       selfHeal: true
+    syncOptions:
+      - RespectIgnoreDifferences=true

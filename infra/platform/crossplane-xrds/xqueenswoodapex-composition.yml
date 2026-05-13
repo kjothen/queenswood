@@ -9,45 +9,53 @@ spec:
   compositeTypeRef:
     apiVersion: platform.queenswood.repldriven.com/v1alpha1
     kind: XQueenswoodApex
-  resources:
-    - name: address
-      base:
-        apiVersion: compute.gcp.upbound.io/v1beta1
-        kind: Address
-        metadata:
-          name: queenswood-ingress-ip
-        spec:
-          forProvider: {}
-      patches:
-        - fromFieldPath: spec.region
-          toFieldPath: spec.forProvider.region
-        - fromFieldPath: spec.addressType
-          toFieldPath: spec.forProvider.addressType
-        # Pivot Address.status.atProvider.address up into XR.status.ip
-        # so the apex RecordSet (below) can pick it up declaratively.
-        - type: ToCompositeFieldPath
-          fromFieldPath: status.atProvider.address
-          toFieldPath: status.ip
-    - name: apex
-      base:
-        apiVersion: dns.gcp.upbound.io/v1beta1
-        kind: RecordSet
-        metadata:
-          name: queenswood-apex
-        spec:
-          forProvider:
-            type: A
-            ttl: 300
-            rrdatas: [""]
-      patches:
-        - fromFieldPath: spec.managedZoneRef.name
-          toFieldPath: spec.forProvider.managedZoneRef.name
-        - fromFieldPath: spec.domain
-          toFieldPath: spec.forProvider.name
-          transforms:
-            - type: string
-              string:
-                type: Format
-                fmt: "%s."
-        - fromFieldPath: status.ip
-          toFieldPath: spec.forProvider.rrdatas[0]
+  mode: Pipeline
+  pipeline:
+    - step: patch-and-transform
+      functionRef:
+        name: function-patch-and-transform
+      input:
+        apiVersion: pt.fn.crossplane.io/v1beta1
+        kind: Resources
+        resources:
+          - name: address
+            base:
+              apiVersion: compute.gcp.m.upbound.io/v1beta1
+              kind: Address
+              metadata:
+                name: queenswood-ingress-ip
+              spec:
+                forProvider: {}
+            patches:
+              - fromFieldPath: spec.region
+                toFieldPath: spec.forProvider.region
+              - fromFieldPath: spec.addressType
+                toFieldPath: spec.forProvider.addressType
+              # Pivot Address.status.atProvider.address up into XR.status.ip
+              # so the apex RecordSet (below) can pick it up declaratively.
+              - type: ToCompositeFieldPath
+                fromFieldPath: status.atProvider.address
+                toFieldPath: status.ip
+          - name: apex
+            base:
+              apiVersion: dns.gcp.m.upbound.io/v1beta1
+              kind: RecordSet
+              metadata:
+                name: queenswood-apex
+              spec:
+                forProvider:
+                  type: A
+                  ttl: 300
+                  rrdatas: [""]
+            patches:
+              - fromFieldPath: spec.managedZoneRef.name
+                toFieldPath: spec.forProvider.managedZoneRef.name
+              - fromFieldPath: spec.domain
+                toFieldPath: spec.forProvider.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "%s."
+              - fromFieldPath: status.ip
+                toFieldPath: spec.forProvider.rrdatas[0]
