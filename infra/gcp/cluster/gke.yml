@@ -32,14 +32,12 @@ spec:
       # Without it, neither path produces a load balancer.
       httpLoadBalancing:
         disabled: false
-    # Gateway API is the GA path for HTTP(S) load balancing on GKE;
-    # legacy Ingress (ingressClassName: gce) is in maintenance mode.
-    # Enabling this registers the gke-l7-* GatewayClasses and the
-    # `networking.gke.io/gateway` controller. CHANNEL_STANDARD pins
-    # to the standard channel of the Gateway API CRDs.
-    networkConfig:
-      gatewayApiConfig:
-        channel: CHANNEL_STANDARD
+    # Gateway API is the GA path for HTTP(S) load balancing on GKE.
+    # Upbound's CRD follows the Terraform schema where `gateway_api_config`
+    # is a top-level argument, not nested under network_config -- putting
+    # it under networkConfig: silently strips at apiserver validation.
+    gatewayApiConfig:
+      channel: CHANNEL_STANDARD
   writeConnectionSecretToRef:
     name: queenswood-gke-kubeconfig
     namespace: crossplane-system
