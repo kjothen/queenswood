@@ -320,4 +320,22 @@ kind-xp-wait-ready timeout="2700":
       kubectl --context {{ KIND_XP_CLUSTER }} -n argocd wait \
         --for=jsonpath='{.status.health.status}'=Healthy \
         application/$app --timeout={{ timeout }}s
+      # After the ManagedZone is up, surface its NS values: the user
+      # must paste them into the registrar (Squarespace) before
+      # gcp-cert's DNSAuthorization CNAME can resolve and Google CA
+      # validates. Without this prompt the loop sits silently on
+      # gcp-cert until the user figures it out.
+      if [[ "$app" == "gcp-dns" ]]; then
+        echo
+        echo "------------------------------------------------------"
+        echo "ACTION: paste these 4 nameservers into your registrar's"
+        echo "NS records for queenswood.repldriven.com (trailing dots"
+        echo "optional). cert validation gates on this propagating."
+        kubectl --context {{ KIND_XP_CLUSTER }} -n crossplane-system \
+          get managedzone.dns.gcp.m.upbound.io queenswood-zone \
+          -o jsonpath='{.status.atProvider.nameServers}' \
+          | tr ',' '\n' | tr -d '[]"' | sed 's/^ */  /'
+        echo "------------------------------------------------------"
+        echo
+      fi
     done
