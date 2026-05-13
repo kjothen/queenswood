@@ -1,0 +1,9 @@
+apiVersion: dns.gcp.upbound.io/v1beta1
+kind: ManagedZone
+metadata:
+  name: queenswood-zone
+spec:
+  forProvider:
+    dnsName: queenswood.repldriven.com.
+    description: Queenswood public DNS
+    visibility: public
