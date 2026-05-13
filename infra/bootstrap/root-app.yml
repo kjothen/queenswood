@@ -22,3 +22,9 @@ spec:
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
+      # provider-helm registers helm.crossplane.io/Release; until that
+      # provider installs, queenswood/release.yml fails validation and
+      # aborts the whole sync (incl. the providers app that would fix
+      # it). Skipping dry-run for unknown kinds lets Argo apply what it
+      # can and retry the rest as CRDs come online.
+      - SkipDryRunOnMissingResource=true
