@@ -1,0 +1,11 @@
+apiVersion: platform.queenswood.repldriven.com/v1alpha1
+kind: XQueenswoodApex
+metadata:
+  name: queenswood-apex
+  namespace: crossplane-system
+spec:
+  region: europe-west2
+  addressType: EXTERNAL
+  domain: queenswood.repldriven.com
+  managedZoneRef:
+    name: queenswood-zone

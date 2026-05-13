@@ -1,0 +1,36 @@
+apiVersion: apiextensions.crossplane.io/v1
+kind: CompositeResourceDefinition
+metadata:
+  name: xqueenswoodapexes.platform.queenswood.repldriven.com
+spec:
+  scope: Namespaced
+  group: platform.queenswood.repldriven.com
+  names:
+    kind: XQueenswoodApex
+    plural: xqueenswoodapexes
+  defaultCompositionRef:
+    name: xqueenswoodapex.gcp
+  versions:
+    - name: v1alpha1
+      served: true
+      referenceable: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              required: [region, domain, managedZoneRef]
+              properties:
+                region: { type: string }
+                addressType: { type: string, default: EXTERNAL }
+                domain: { type: string }
+                managedZoneRef:
+                  type: object
+                  required: [name]
+                  properties:
+                    name: { type: string }
+            status:
+              type: object
+              properties:
+                ip: { type: string }

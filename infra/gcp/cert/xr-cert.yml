@@ -1,0 +1,10 @@
+apiVersion: platform.queenswood.repldriven.com/v1alpha1
+kind: XQueenswoodCertificate
+metadata:
+  name: queenswood-cert
+  namespace: crossplane-system
+spec:
+  domain: queenswood.repldriven.com
+  location: europe-west2
+  managedZoneRef:
+    name: queenswood-zone

@@ -60,33 +60,32 @@ kind-down:
 kind-xp-up:
     #!/usr/bin/env zsh
     set -e
-    kind get clusters | grep --q '^{{ XP_CLUSTER }}$' || kind create cluster --name '{{ XP_CLUSTER }}'
-    
-    # crossplane 
+    kind get clusters | grep -q '^{{ XP_CLUSTER }}$' || kind create cluster --name '{{ XP_CLUSTER }}'
+
     helm repo add crossplane-stable https://charts.crossplane.io/stable \
       --kube-context {{ KIND_XP_CLUSTER }}
-    helm repo update \
-      --kube-context {{ KIND_XP_CLUSTER }}
-    helm install crossplane crossplane-stable/crossplane \
+    helm repo update --kube-context {{ KIND_XP_CLUSTER }}
+    helm upgrade --install crossplane crossplane-stable/crossplane \
       --kube-context {{ KIND_XP_CLUSTER }} \
       --namespace crossplane-system --create-namespace
 
-    # argocd
-    kubectl --context {{ KIND_XP_CLUSTER }} create namespace argocd
+    kubectl --context {{ KIND_XP_CLUSTER }} create namespace argocd \
+      --dry-run=client -o yaml | kubectl --context {{ KIND_XP_CLUSTER }} apply -f -
     kubectl --context {{ KIND_XP_CLUSTER }} apply --server-side -n argocd \
       -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
     kubectl --context {{ KIND_XP_CLUSTER }} -n argocd wait \
       --for=condition=available --timeout=300s deployment/argocd-server
     kubectl --context {{ KIND_XP_CLUSTER }} -n argocd get secret argocd-initial-admin-secret \
-      -o jsonpath='{.data.password}' | base64 -d
+      -o jsonpath='{.data.password}' 2>/dev/null | base64 -d || true
 
 kind-xp-down:
-    kind delete cluster --name {{ XP_CLUSTER }} 
+    kind delete cluster --name {{ XP_CLUSTER }}
 
 kind-xp-install-gcp-secret:
     kubectl --context {{ KIND_XP_CLUSTER }} create secret generic gcp-creds \
       -n crossplane-system \
-      --from-file=creds=$HOME/.config/gcloud/application_default_credentials.json
+      --from-file=creds=$HOME/.config/gcloud/application_default_credentials.json \
+      --dry-run=client -o yaml | kubectl --context {{ KIND_XP_CLUSTER }} apply -f -
 
 # Start Tilt dev loop (creates kind cluster if missing)
 tilt-up:

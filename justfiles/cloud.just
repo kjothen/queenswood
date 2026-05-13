@@ -1,3 +1,23 @@
+# Create a new GCP project, link billing, return the ID on stdout
+gcp-project-create suffix=`openssl rand -hex 3`:
+    #!/usr/bin/env zsh
+    set -e
+    # Logs to stderr so `$(just gcp-project-create)` captures only the ID
+    PROJECT_ID="queenswood-{{ suffix }}"
+    echo ">>> creating project $PROJECT_ID" >&2
+    gcloud projects create "$PROJECT_ID" --name=queenswood >&2
+    : "${GCP_BILLING_ACCOUNT_ID:=$(gcloud beta billing accounts list \
+        --filter='OPEN=True' --format='value(name)' | head -1)}"
+    if [[ -z "$GCP_BILLING_ACCOUNT_ID" ]]; then
+      echo "no open billing account; set GCP_BILLING_ACCOUNT_ID" >&2
+      exit 1
+    fi
+    echo ">>> linking billing $GCP_BILLING_ACCOUNT_ID" >&2
+    gcloud beta billing projects link "$PROJECT_ID" \
+      --billing-account="$GCP_BILLING_ACCOUNT_ID" >&2
+    gcloud config set project "$PROJECT_ID" >&2
+    printf '%s\n' "$PROJECT_ID"
+
 # Authenticate gcloud and pin the active project to $GOOGLE_CLOUD_PROJECT_ID
 gcp-login:
     gcloud auth login
@@ -106,9 +126,9 @@ gcp-health-check:
     HEALTHY:'.status.conditions[?(@.type=="Healthy")].status' \
       2>/dev/null || echo "  (failed to list providers)"
 
-    echo "\n=== 2. GCP infra (GlobalAddress / Cloud DNS / GKE) ==="
-    echo -n "GlobalAddress queenswood-ingress-ip: "
-    kubectl --context $MGT get globaladdresses.compute.gcp.upbound.io \
+    echo "\n=== 2. GCP infra (Address / Cloud DNS / GKE) ==="
+    echo -n "Address queenswood-ingress-ip: "
+    kubectl --context $MGT get addresses.compute.gcp.upbound.io \
       queenswood-ingress-ip -o jsonpath='{.status.atProvider.address}{"\n"}' \
       2>/dev/null || echo "(not found)"
     echo -n "ManagedZone queenswood-zone Ready: "
@@ -237,3 +257,43 @@ gcp-diagnose-pod state="Init:Error":
       kubectl --context $KCTX -n queenswood logs $POD -c $c --tail=30 --previous 2>&1 \
         | sed 's/^/  /'
     done
+
+
+# Cold start: existing GCP project + no kind cluster -> green stack
+up-from-zero:
+    #!/usr/bin/env zsh
+    set -e
+    : "${GOOGLE_CLOUD_PROJECT_ID:?must be set (see: just gcp-project-create)}"
+    just gcp-login
+    just gcp-bootstrap
+    just kind-xp-up
+    just gcp-sa-login
+    just kind-xp-install-gcp-secret
+    kubectl --context {{ KIND_XP_CLUSTER }} apply -f infra/bootstrap/root-app.yml
+    just kind-xp-wait-ready
+    just gcp-health-check
+
+# Nuke the kind cluster + the GCP project (recoverable for 30 days)
+down-to-zero:
+    #!/usr/bin/env zsh
+    set -e
+    : "${GOOGLE_CLOUD_PROJECT_ID:?must be set}"
+    just kind-xp-down || true
+    echo ">>> deleting GCP project $GOOGLE_CLOUD_PROJECT_ID"
+    gcloud projects delete "$GOOGLE_CLOUD_PROJECT_ID" --quiet
+    echo ">>> recover within 30 days: gcloud projects undelete $GOOGLE_CLOUD_PROJECT_ID"
+
+# Block until each Argo Application reaches Healthy
+kind-xp-wait-ready timeout="2700":
+    #!/usr/bin/env zsh
+    set -e
+    K="kubectl --context {{ KIND_XP_CLUSTER }} -n argocd"
+    for app in crossplane-providers crossplane-configs crossplane-xrds \
+               gcp-network gcp-cluster gcp-dns gcp-cert gcp-records; do
+      echo ">>> $app"
+      $K wait --for=jsonpath='{.status.health.status}'=Healthy \
+        application/$app --timeout={{ timeout }}s
+    done
+    echo ">>> queenswood (cert provisioning gates this)"
+    $K wait --for=jsonpath='{.status.health.status}'=Healthy \
+      application/queenswood --timeout=3600s

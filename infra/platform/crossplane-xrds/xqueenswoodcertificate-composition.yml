@@ -1,0 +1,66 @@
+apiVersion: apiextensions.crossplane.io/v1
+kind: Composition
+metadata:
+  name: xqueenswoodcertificate.gcp
+spec:
+  compositeTypeRef:
+    apiVersion: platform.queenswood.repldriven.com/v1alpha1
+    kind: XQueenswoodCertificate
+  resources:
+    - name: dnsauth
+      base:
+        apiVersion: certificatemanager.gcp.upbound.io/v1beta1
+        kind: DNSAuthorization
+        metadata:
+          name: queenswood-dns-auth
+        spec:
+          forProvider: {}
+      patches:
+        - fromFieldPath: spec.domain
+          toFieldPath: spec.forProvider.domain
+        - fromFieldPath: spec.location
+          toFieldPath: spec.forProvider.location
+        # Pivot DNSAuthorization.status.atProvider.dnsResourceRecord[0]
+        # into XR.status.dnsRecord so the CNAME RecordSet (below) can
+        # consume it without a hardcoded literal in git.
+        - type: ToCompositeFieldPath
+          fromFieldPath: status.atProvider.dnsResourceRecord[0].name
+          toFieldPath: status.dnsRecord.name
+        - type: ToCompositeFieldPath
+          fromFieldPath: status.atProvider.dnsResourceRecord[0].data
+          toFieldPath: status.dnsRecord.data
+    - name: cname
+      base:
+        apiVersion: dns.gcp.upbound.io/v1beta1
+        kind: RecordSet
+        metadata:
+          name: queenswood-dns-auth-cname
+        spec:
+          forProvider:
+            type: CNAME
+            ttl: 300
+            rrdatas: [""]
+      patches:
+        - fromFieldPath: spec.managedZoneRef.name
+          toFieldPath: spec.forProvider.managedZoneRef.name
+        - fromFieldPath: status.dnsRecord.name
+          toFieldPath: spec.forProvider.name
+        - fromFieldPath: status.dnsRecord.data
+          toFieldPath: spec.forProvider.rrdatas[0]
+    - name: cert
+      base:
+        apiVersion: certificatemanager.gcp.upbound.io/v1beta1
+        kind: Certificate
+        metadata:
+          name: queenswood-cert
+        spec:
+          forProvider:
+            managed:
+              - dnsAuthorizationsRefs:
+                  - name: queenswood-dns-auth
+                domains: [""]
+      patches:
+        - fromFieldPath: spec.location
+          toFieldPath: spec.forProvider.location
+        - fromFieldPath: spec.domain
+          toFieldPath: spec.forProvider.managed[0].domains[0]
