@@ -283,6 +283,11 @@ up-from-zero:
     kubectl --context {{ KIND_XP_CLUSTER }} apply -f infra/bootstrap/root-app.yml
     just kind-xp-install-gcp-config
     just kind-xp-wait-ready
+    # Fetch GKE creds so local kubectl/k9s/gcp-* recipes can target the
+    # cluster. Crossplane has its own kubeconfig for the Helm Release;
+    # this is purely for the operator's terminal.
+    gcloud container clusters get-credentials queenswood-gke \
+      --zone=europe-west2-a --project="$GOOGLE_CLOUD_PROJECT_ID"
     just gcp-health-check
 
 # Nuke the kind cluster + the GCP project (recoverable for 30 days)
