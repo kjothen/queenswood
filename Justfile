@@ -10,7 +10,7 @@ KIND_XP_CLUSTER := "kind-xp-mp"
 list:
     just --list
 
-import 'justfiles/git.just'
+import 'justfiles/github.just'
 import 'justfiles/build.just'
 import 'justfiles/cloud.just'
 import 'justfiles/docker.just'
