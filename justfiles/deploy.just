@@ -87,20 +87,23 @@ kind-xp-install-gcp-secret:
       --from-file=creds=$HOME/.config/gcloud/application_default_credentials.json \
       --dry-run=client -o yaml | kubectl --context {{ KIND_XP_CLUSTER }} apply -f -
 
-# Set ProviderConfig.spec.projectID to $GOOGLE_CLOUD_PROJECT_ID
-kind-xp-install-gcp-provider-config:
+# Set per-cluster project-scoped fields that Argo manages with PLACEHOLDER
+# in git: ProviderConfig.spec.projectID and Cluster.workloadPool. Both have
+# `ignoreDifferences` rules so selfHeal won't revert these patches.
+kind-xp-install-gcp-config:
     #!/usr/bin/env zsh
     set -e
     : "${GOOGLE_CLOUD_PROJECT_ID:?must be set}"
-    # The ProviderConfig CR is applied by Argo with a PLACEHOLDER
-    # projectID; this patch sets the per-cluster value, and Argo's
-    # ignoreDifferences on /spec/projectID keeps selfHeal from
-    # reverting it.
     until kubectl --context {{ KIND_XP_CLUSTER }} get \
       providerconfig.gcp.upbound.io default >/dev/null 2>&1; do sleep 5; done
     kubectl --context {{ KIND_XP_CLUSTER }} patch providerconfig.gcp.upbound.io \
       default --type=merge \
       -p "{\"spec\":{\"projectID\":\"$GOOGLE_CLOUD_PROJECT_ID\"}}"
+    until kubectl --context {{ KIND_XP_CLUSTER }} get \
+      cluster.container.gcp.upbound.io queenswood-gke >/dev/null 2>&1; do sleep 5; done
+    kubectl --context {{ KIND_XP_CLUSTER }} patch cluster.container.gcp.upbound.io \
+      queenswood-gke --type=merge \
+      -p "{\"spec\":{\"forProvider\":{\"workloadIdentityConfig\":{\"workloadPool\":\"$GOOGLE_CLOUD_PROJECT_ID.svc.id.goog\"}}}}"
 
 # Start Tilt dev loop (creates kind cluster if missing)
 tilt-up:

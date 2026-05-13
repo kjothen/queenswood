@@ -20,7 +20,10 @@ spec:
       clusterSecondaryRangeName: pods
       servicesSecondaryRangeName: services
     workloadIdentityConfig:
-      workloadPool: project-7da8be71-664d-40bd-b5d.svc.id.goog
+      # Overridden per-cluster by `just kind-xp-install-gcp-config`;
+      # gcp-cluster Argo app ignoreDifferences keeps Argo from
+      # clobbering the live value on selfHeal.
+      workloadPool: PLACEHOLDER.svc.id.goog
     releaseChannel:
       channel: REGULAR
     addonsConfig:
