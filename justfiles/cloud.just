@@ -132,8 +132,11 @@ gcp-rollout +components:
 
 # Print Cloud DNS nameservers for the queenswood zone (paste into registrar NS records)
 gcp-dns-ns:
-    kubectl --context kind-xp-mp get managedzone.dns.gcp.upbound.io queenswood-zone \
-      -o jsonpath='{.status.atProvider.nameServers}{"\n"}'
+    kubectl --context {{ KIND_XP_CLUSTER }} -n crossplane-system \
+      get managedzone.dns.gcp.m.upbound.io queenswood-zone \
+      -o jsonpath='{.status.atProvider.nameServers}' \
+      | tr ',' '\n' | tr -d '[]"' | sed 's/^ */  /'
+    @echo
 
 # Walk the queenswood public-traffic chain top-to-bottom; first failure points to where to look
 gcp-health-check:
@@ -282,6 +285,38 @@ gcp-diagnose-pod state="Init:Error":
     done
 
 
+# Pre-create the queenswood-zone ManagedZone as the user (who's a
+# verified domain owner) so Crossplane (calling as the impersonated
+# SA via ADC) can Observe it instead of Create. Cloud DNS's
+# domain-ownership check rejects SA-initiated zone creates: the SA
+# isn't a verified owner, and per-cold-start re-verification per SA
+# email is impractical. If the user isn't yet verified for the parent
+# domain, the create surfaces an "ownership" error -- launch
+# `gcloud domains verify` and rerun.
+gcp-precreate-zone:
+    #!/usr/bin/env zsh
+    : "${GOOGLE_CLOUD_PROJECT_ID:?must be set}"
+    set -e
+    DNS=queenswood.repldriven.com.
+    NAME=queenswood-zone
+    if gcloud dns managed-zones describe "$NAME" \
+         --project="$GOOGLE_CLOUD_PROJECT_ID" >/dev/null 2>&1; then
+      echo ">>> $NAME already exists; skipping create"
+      exit 0
+    fi
+    if ! gcloud dns managed-zones create "$NAME" \
+           --dns-name="$DNS" --description="Public DNS for queenswood" \
+           --visibility=public --project="$GOOGLE_CLOUD_PROJECT_ID" 2>/tmp/dns-err; then
+      if grep -q verifyManagedZoneDnsNameOwnership /tmp/dns-err; then
+        PARENT="${DNS%.}"; PARENT="${PARENT#*.}"
+        echo ">>> $PARENT not verified for $(gcloud config get-value account); opening Search Console"
+        gcloud domains verify "$PARENT"
+        echo ">>> after verifying, rerun: just gcp-precreate-zone"
+        exit 1
+      fi
+      cat /tmp/dns-err; exit 1
+    fi
+
 # Cold start: existing GCP project + no kind cluster -> green stack
 up-from-zero:
     #!/usr/bin/env zsh
@@ -289,6 +324,7 @@ up-from-zero:
     : "${GOOGLE_CLOUD_PROJECT_ID:?must be set (see: just gcp-project-create)}"
     just gcp-login
     just gcp-bootstrap
+    just gcp-precreate-zone
     just kind-xp-up
     just gcp-sa-login
     just kind-xp-install-gcp-secret
