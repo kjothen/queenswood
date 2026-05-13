@@ -2,10 +2,22 @@
 gcp-project-create suffix=`openssl rand -hex 3`:
     #!/usr/bin/env zsh
     set -e
-    # Logs to stderr so `$(just gcp-project-create)` captures only the ID
     PROJECT_ID="queenswood-{{ suffix }}"
-    echo ">>> creating project $PROJECT_ID" >&2
-    gcloud projects create "$PROJECT_ID" --name=queenswood >&2
+    org_flag=""
+    if [[ -n "${GCLOUD_ORGANIZATION_ID:-}" ]]; then
+      org_flag="--organization=${GCLOUD_ORGANIZATION_ID}"
+      echo ">>> creating project $PROJECT_ID under org $GCLOUD_ORGANIZATION_ID" >&2
+    else
+      echo ">>> creating project $PROJECT_ID (no org)" >&2
+    fi
+    gcloud projects create "$PROJECT_ID" --name=queenswood $org_flag >&2
+    # Block default-network creation BEFORE Compute API is enabled in
+    # gcp-bootstrap; otherwise GCP auto-creates a `default` VPC with
+    # open firewall rules and auto-subnets in every region.
+    echo ">>> setting compute.skipDefaultNetworkCreation policy" >&2
+    gcloud org-policies enable-enforce \
+      compute.skipDefaultNetworkCreation \
+      --project="$PROJECT_ID" >&2
     : "${GCP_BILLING_ACCOUNT_ID:=$(gcloud beta billing accounts list \
         --filter='OPEN=True' --format='value(name)' | head -1)}"
     if [[ -z "$GCP_BILLING_ACCOUNT_ID" ]]; then
