@@ -37,11 +37,22 @@ gcp-bootstrap:
       iamcredentials.googleapis.com \
       cloudresourcemanager.googleapis.com
 
-    # Create the service account Crossplane will act as
-    gcloud iam service-accounts create $SA \
-      --display-name "Crossplane Provider"
+    # Create the service account Crossplane will act as. Wrapped in
+    # an existence check so re-running the recipe is idempotent --
+    # `gcloud iam service-accounts create` exits non-zero when the SA
+    # already exists, which `set -e` then turns into a script failure.
+    # Re-running matters because the role list below evolves over time
+    # (e.g. roles/certificatemanager.editor was added retroactively);
+    # an existing SA needs to be brought up to the current role set.
+    if ! gcloud iam service-accounts describe $SA_EMAIL >/dev/null 2>&1; then
+      gcloud iam service-accounts create $SA \
+        --display-name "Crossplane Provider"
+    fi
 
-    # Grant the SA the roles it needs to manage GKE + networking + DNS + cert manager
+    # Grant the SA the roles it needs to manage GKE + networking + DNS
+    # + cert manager. `add-iam-policy-binding` is idempotent on its own,
+    # so re-running just no-ops on already-granted roles and adds any
+    # newly listed ones.
     for role in \
       roles/container.admin \
       roles/compute.networkAdmin \
