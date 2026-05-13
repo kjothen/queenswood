@@ -1,19 +1,23 @@
 # Certificate Manager resources for the Gateway API migration.
 # Replaces the legacy ManagedCertificate (which only worked with
 # the deprecated GCE Ingress controller). All resources live in
-# the europe-west2 region to match the regional Gateway LB; the
-# CertificateMap is bound to the Gateway via the
-# `networking.gke.io/certmap: queenswood-cert-map` annotation in
-# the chart's gateway.yaml template.
+# europe-west2 to match the regional Gateway LB.
 #
 # Flow:
-#   1. DNSAuthorization issues a CNAME record that must exist
-#      in Cloud DNS before Certificate Manager will provision.
+#   1. DNSAuthorization issues a CNAME record that must exist in
+#      Cloud DNS before Certificate Manager will provision.
 #   2. Certificate references the DNSAuthorization and obtains a
 #      Google-managed cert for queenswood.repldriven.com.
-#   3. CertificateMap groups certs; CertificateMapEntry binds the
-#      cert to the hostname.
-#   4. Gateway consumes the map via annotation.
+#   3. Gateway listener references the cert by name via
+#      `tls.options.networking.gke.io/cert-manager-certs` in the
+#      chart's gateway.yaml template.
+#
+# Note: regional Gateways (gke-l7-regional-external-managed)
+# reference Certificate Manager certs directly via tls.options,
+# unlike global Gateways which use a CertificateMap +
+# CertificateMapEntry bound by the `networking.gke.io/certmap`
+# annotation. Don't add a CertificateMap here -- the regional LB
+# controller doesn't read it.
 ---
 apiVersion: certificatemanager.gcp.upbound.io/v1beta1
 kind: DNSAuthorization
@@ -61,24 +65,3 @@ spec:
           - queenswood.repldriven.com
         dnsAuthorizationsRefs:
           - name: queenswood-dns-auth
----
-apiVersion: certificatemanager.gcp.upbound.io/v1beta1
-kind: CertificateMap
-metadata:
-  name: queenswood-cert-map
-spec:
-  forProvider:
-    location: europe-west2
----
-apiVersion: certificatemanager.gcp.upbound.io/v1beta1
-kind: CertificateMapEntry
-metadata:
-  name: queenswood-cert-map-entry
-spec:
-  forProvider:
-    location: europe-west2
-    mapRef:
-      name: queenswood-cert-map
-    certificatesRefs:
-      - name: queenswood-cert
-    hostname: queenswood.repldriven.com
