@@ -15,9 +15,8 @@ gcp-project-create suffix=`openssl rand -hex 3`:
     # gcp-bootstrap; otherwise GCP auto-creates a `default` VPC with
     # open firewall rules and auto-subnets in every region.
     echo ">>> setting compute.skipDefaultNetworkCreation policy" >&2
-    gcloud org-policies enable-enforce \
-      compute.skipDefaultNetworkCreation \
-      --project="$PROJECT_ID" >&2
+    printf 'name: projects/%s/policies/compute.skipDefaultNetworkCreation\nspec:\n  rules:\n    - enforce: true\n' "$PROJECT_ID" \
+      | gcloud org-policies set-policy /dev/stdin >&2
     : "${GCP_BILLING_ACCOUNT_ID:=$(gcloud beta billing accounts list \
         --filter='OPEN=True' --format='value(name)' | head -1)}"
     if [[ -z "$GCP_BILLING_ACCOUNT_ID" ]]; then
