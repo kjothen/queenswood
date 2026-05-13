@@ -57,7 +57,7 @@ gcp-bootstrap:
       roles/container.admin \
       roles/compute.networkAdmin \
       roles/dns.admin \
-      roles/certificatemanager.editor \
+      roles/certificatemanager.owner \
       roles/iam.serviceAccountUser \
       roles/resourcemanager.projectIamAdmin ; do
       gcloud projects add-iam-policy-binding $PROJECT_ID \
