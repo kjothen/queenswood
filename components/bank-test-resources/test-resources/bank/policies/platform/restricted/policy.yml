@@ -1,3 +1,9 @@
+# Stable ID -- bootstrap-service seeds this policy on every install
+# and re-bootstrap. Without a fixed id the domain layer generates a
+# fresh ULID per run, which piles up duplicate rows in FDB. The
+# format conforms to the PolicyId regex enforced by the API
+# (`pol\.[0-9a-hjkmnp-tv-z]{26}`).
+policy-id: pol.00000000000000000000000001
 name: Platform policy
 description: Platform policy - all capabilities and safety limits
 enabled: true

@@ -1,3 +1,5 @@
+# Stable ID -- see platform/restricted/policy.yml for rationale.
+policy-id: pol.00000000000000000000000002
 name: Micro tier policy
 description: Micro tier policy - capabilities and limits
 enabled: true
