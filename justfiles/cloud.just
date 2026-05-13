@@ -70,6 +70,23 @@ gcp-bootstrap:
       --member="user:${ME}" \
       --role="roles/iam.serviceAccountTokenCreator"
 
+# Roll one or more queenswood Deployments to pick up a fresh :latest image.
+# Use after `release-images.yml` republishes :latest without a chart version
+# bump -- since the Crossplane Helm Release sees no spec diff, nothing
+# naturally recreates pods, and `imagePullPolicy: Always` only re-pulls on
+# pod create. Components are brick names without the `queenswood-` release
+# prefix: `just gcp-rollout bank-app bank-api-service`.
+gcp-rollout +components:
+    #!/usr/bin/env zsh
+    : "${GOOGLE_CLOUD_PROJECT_ID:?must be set}"
+    set -e
+    KCTX=gke_${GOOGLE_CLOUD_PROJECT_ID}_europe-west2-a_queenswood-gke
+    for c in {{ components }}; do
+      echo "→ deploy/queenswood-$c"
+      kubectl --context $KCTX -n queenswood rollout restart deploy/queenswood-$c
+      kubectl --context $KCTX -n queenswood rollout status  deploy/queenswood-$c
+    done
+
 # Print Cloud DNS nameservers for the queenswood zone (paste into registrar NS records)
 gcp-dns-ns:
     kubectl --context kind-xp-mp get managedzone.dns.gcp.upbound.io queenswood-zone \
