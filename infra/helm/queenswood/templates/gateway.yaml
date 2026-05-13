@@ -34,12 +34,15 @@ spec:
     - name: https
       protocol: HTTPS
       port: 443
-      # TLS is supplied by the certmap annotation above. The listener
-      # still needs protocol: HTTPS so the LB serves on 443; the
-      # actual cert material is fetched from Certificate Manager by
-      # the gke-l7 controller using the map.
+      # TLS is supplied by the certmap annotation above. `options: {}`
+      # is present-but-empty to satisfy the Gateway API CRD's CEL
+      # validation rule, which requires either `certificateRefs` or
+      # `options` when mode is Terminate. The GKE controller ignores
+      # both fields when the certmap annotation is set and pulls the
+      # cert material from Certificate Manager instead.
       tls:
         mode: Terminate
+        options: {}
     - name: http
       protocol: HTTP
       port: 80
