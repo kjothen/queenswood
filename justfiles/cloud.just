@@ -338,23 +338,100 @@ up-from-zero:
     just kind-xp-wait-ready
     just gcp-health-check
 
-# Nuke the kind cluster + the GCP project (recoverable for 30 days)
+# Tear down kind + the expensive GCP resources (GKE cluster, ingress IP,
+# cert, dns-authorization, VPC) and the records they manage in the DNS
+# zone. KEEPS: the GCP project, the crossplane-provider SA + IAM, the
+# DNS ManagedZone (queenswood-zone) and its NS records at the registrar.
+# Rationale: GKE is the only line item costing real money at rest;
+# everything kept is free, holds the dnsName claim against Cloud DNS's
+# NS-pool exhaustion, and avoids re-verifying domain ownership each cycle.
+# Use `just down-and-delete-project` to fully retire the project + zone.
 down-to-zero:
     #!/usr/bin/env zsh
     set -e
     PROJECT_ID=$(gcloud config get project 2>/dev/null)
     [[ -n "$PROJECT_ID" ]] || { echo "no active gcloud project; nothing to tear down" >&2; exit 1; }
+    REGION=europe-west2
+    ZONE_NAME=queenswood-zone
+    DOMAIN=queenswood.repldriven.com.
+
+    # 1. Kill kind first so Crossplane stops reconciling -- otherwise the
+    # gcloud deletes below race against selfHeal trying to recreate them.
     just kind-xp-down || true
-    echo ">>> deleting GCP project $PROJECT_ID"
-    gcloud projects delete "$PROJECT_ID" --quiet
-    # Prune the local kubeconfig entry so `kubectl config get-contexts`
-    # doesn't accumulate stale gke_* entries across teardowns.
-    CTX="gke_${PROJECT_ID}_europe-west2-a_queenswood-gke"
+
+    # 2. Delete in dependency order. --quiet + || true so a missing
+    # resource (idempotent re-run) doesn't abort the rest.
+    echo ">>> deleting GKE cluster (most of the bill)"
+    gcloud container clusters delete queenswood-gke \
+      --zone="${REGION}-a" --project="$PROJECT_ID" --quiet 2>/dev/null || true
+
+    echo ">>> deleting ingress IP"
+    gcloud compute addresses delete queenswood-ingress-ip \
+      --region="$REGION" --project="$PROJECT_ID" --quiet 2>/dev/null || true
+
+    echo ">>> deleting Certificate + DNSAuthorization"
+    gcloud certificate-manager certificates delete queenswood-cert \
+      --location="$REGION" --project="$PROJECT_ID" --quiet 2>/dev/null || true
+    gcloud certificate-manager dns-authorizations delete queenswood-dns-auth \
+      --location="$REGION" --project="$PROJECT_ID" --quiet 2>/dev/null || true
+
+    echo ">>> deleting subnets + VPC"
+    gcloud compute networks subnets delete queenswood-subnet \
+      --region="$REGION" --project="$PROJECT_ID" --quiet 2>/dev/null || true
+    gcloud compute networks subnets delete queenswood-proxy-only \
+      --region="$REGION" --project="$PROJECT_ID" --quiet 2>/dev/null || true
+    gcloud compute networks delete queenswood-vpc \
+      --project="$PROJECT_ID" --quiet 2>/dev/null || true
+
+    # 3. Drop the apex A and the cert-validation CNAME from the zone;
+    # keep the zone itself (and its NS records) so the registrar
+    # configuration stays valid across cycles.
+    echo ">>> deleting apex A + cert CNAME (keeping zone)"
+    gcloud dns record-sets delete "$DOMAIN" --type=A --zone="$ZONE_NAME" \
+      --project="$PROJECT_ID" --quiet 2>/dev/null || true
+    gcloud dns record-sets list --zone="$ZONE_NAME" --project="$PROJECT_ID" \
+        --filter="type=CNAME" --format='value(name)' 2>/dev/null \
+      | while read n; do
+          gcloud dns record-sets delete "$n" --type=CNAME --zone="$ZONE_NAME" \
+            --project="$PROJECT_ID" --quiet 2>/dev/null || true
+        done
+
+    # 4. Prune local kubeconfig entry so contexts don't accumulate.
+    CTX="gke_${PROJECT_ID}_${REGION}-a_queenswood-gke"
     kubectl config delete-context "$CTX" 2>/dev/null || true
     kubectl config delete-cluster "$CTX" 2>/dev/null || true
     kubectl config delete-user    "$CTX" 2>/dev/null || true
-    # Unset gcloud's project pointer so the next cold-start can't reuse a
-    # now-deleted project ID by accident.
+
+    echo ">>> kept: project, SA, IAM, DNS zone, registrar NS. Run 'just up-from-zero' to come back."
+
+# Full retirement: down-to-zero + delete the DNS zone (releasing the
+# dnsName claim immediately rather than waiting on the project's 30-day
+# soft-delete window) + delete the project. Rarely needed -- this burns
+# NS pool allocations and forces domain re-verification next time. Use
+# only when retiring the deployment entirely.
+down-and-delete-project:
+    #!/usr/bin/env zsh
+    set -e
+    PROJECT_ID=$(gcloud config get project 2>/dev/null)
+    [[ -n "$PROJECT_ID" ]] || { echo "no active gcloud project; nothing to delete" >&2; exit 1; }
+    just down-to-zero
+
+    # Empty the zone (zone delete refuses if non-SOA/NS records remain),
+    # then delete the zone itself. Doing this BEFORE project delete is
+    # what releases the dnsName claim immediately.
+    echo ">>> emptying + deleting queenswood-zone"
+    gcloud dns record-sets list --zone=queenswood-zone --project="$PROJECT_ID" \
+        --format='value(name,type)' 2>/dev/null \
+      | while read name type; do
+          [[ "$type" == "SOA" || "$type" == "NS" ]] && continue
+          gcloud dns record-sets delete "$name" --type="$type" \
+            --zone=queenswood-zone --project="$PROJECT_ID" --quiet 2>/dev/null || true
+        done
+    gcloud dns managed-zones delete queenswood-zone \
+      --project="$PROJECT_ID" --quiet 2>/dev/null || true
+
+    echo ">>> deleting GCP project $PROJECT_ID"
+    gcloud projects delete "$PROJECT_ID" --quiet
     gcloud config unset project >/dev/null 2>&1 || true
     echo ">>> recover within 30 days: gcloud projects undelete $PROJECT_ID"
 
