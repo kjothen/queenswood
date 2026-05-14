@@ -157,8 +157,8 @@
                   :main-opts ["-m" "zprint.main"]}
   :lint/clj-kondo {:extra-deps {clj-kondo/clj-kondo {:mvn/version "2026.01.19"}}
                    :main-opts ["-m" "clj-kondo.main"]}
-  :metrics {:extra-deps {io.github.kjothen/clojure-metrics
-                         {:git/url "https://github.com/kjothen/clojure-metrics"
+  :metrics {:extra-deps {io.github.repldriven/clojure-metrics
+                         {:git/url "https://github.com/repldriven/clojure-metrics"
                           :git/sha "7f88f92695f055e3afd93ecb28ded8a1f4902e8d"}}
             :main-opts ["-m" "clojure-metrics.core"]}
   :nvd {:extra-deps {nvd-clojure/nvd-clojure {:mvn/version "5.3.0"}}

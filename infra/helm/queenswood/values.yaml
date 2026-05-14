@@ -2,7 +2,7 @@
 # The image NAME is taken from the service entry's key in `services` below
 # (e.g. {{ image.registry }}/bank-api-service:{{ image.tag }}).
 image:
-  registry: ghcr.io/kjothen
+  registry: ghcr.io/repldriven
   tag: "0.0.0"
   pullPolicy: IfNotPresent
   pullSecrets: []

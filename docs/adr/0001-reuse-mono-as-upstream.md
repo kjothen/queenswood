@@ -13,7 +13,7 @@ testcontainers, system lifecycle, code generation, JSON, encryption,
 vault integration. None of it is bank-specific.
 
 That infrastructure already exists as a separate, domain-independent
-Polylith workspace with tests: [`mono`](https://github.com/kjothen/mono).
+Polylith workspace with tests: [`mono`](https://github.com/repldriven/mono).
 Mono is new — it does not have years of production behind it — but it is
 the only place this code lives, and the bricks were built from the start
 to be reusable substrate rather than carved out of an existing

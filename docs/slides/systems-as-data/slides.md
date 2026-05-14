@@ -733,7 +733,7 @@ layout: center
 
 # Thanks
 
-`github.com/kjothen/mono`
+`github.com/repldriven/mono`
 
 <div class="mt-8 opacity-60 text-sm">
   donut.system &middot; aero &middot; clj-yaml &middot; Polylith

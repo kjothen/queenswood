@@ -4,7 +4,7 @@
 //
 //   TAG=dev docker buildx bake -f infra/docker/bake.hcl
 
-variable "REGISTRY" { default = "ghcr.io/kjothen" }
+variable "REGISTRY" { default = "ghcr.io/repldriven" }
 variable "TAG"      { default = "dev" }
 
 services = [
