@@ -16,7 +16,7 @@ helm-validate tag="dev":
       | kubeconform -strict -ignore-missing-schemas -summary
 
 # Install or upgrade the chart; rotates the admin API key only on first install
-helm-install tag="dev" admin_key="" registry="ghcr.io/kjothen":
+helm-install tag="dev" admin_key="" registry="ghcr.io/repldriven":
     #!/usr/bin/env zsh
     # Reuses the existing Secret value on subsequent installs so the admin API key is stable
     # across deploys; pass `admin_key=...` to rotate. `registry` lets `kind-up` point at
@@ -132,7 +132,7 @@ tilt-prune:
     # rebuilds accumulate orphan images on the host and inside kind. Safe vs `:dev`
     # and version tags — the glob only matches `*:tilt-*`.
     set -e
-    images=$(docker images --filter 'reference=ghcr.io/kjothen/*:tilt-*' -q | sort -u)
+    images=$(docker images --filter 'reference=ghcr.io/repldriven/*:tilt-*' -q | sort -u)
     if [[ -n "$images" ]]; then
       echo "$images" | xargs docker rmi -f
     else

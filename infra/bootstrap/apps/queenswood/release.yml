@@ -15,12 +15,12 @@ spec:
   forProvider:
     chart:
       name: queenswood
-      repository: oci://ghcr.io/kjothen
+      repository: oci://ghcr.io/repldriven
       version: 0.5.3
     namespace: queenswood
     values:
       image:
-        registry: ghcr.io/kjothen
+        registry: ghcr.io/repldriven
         tag: latest
       gateway:
         enabled: true

@@ -2,7 +2,7 @@
 
 Queenswood is a Clojure core-banking system, organised as a Polylith
 workspace and built as a domain fork of
-[`mono`](https://github.com/kjothen/mono). Bricks prefixed `bank-*`
+[`mono`](https://github.com/repldriven/mono). Bricks prefixed `bank-*`
 are Queenswood-specific; everything else is shared infrastructure
 inherited from upstream.
 

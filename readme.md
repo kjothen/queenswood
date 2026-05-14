@@ -22,7 +22,7 @@ onboarding with IDV.
 | **Organisations & API Keys** | Multi-tenant onboarding — create a tenant, issue API keys (returned once, stored hashed)                                                                          |
 
 API documentation:
-[kjothen.github.io/queenswood](https://kjothen.github.io/queenswood/)
+[repldriven.github.io/queenswood](https://repldriven.github.io/queenswood/)
 | OpenAPI at [localhost:8080](http://localhost:8080) when running.
 
 ## What's interesting
@@ -272,7 +272,7 @@ FoundationDB) onto any Kubernetes cluster.
 ```bash
 ADMIN_KEY=$(openssl rand -hex 16)
 helm install queenswood \
-  oci://ghcr.io/kjothen/queenswood --version 0.1.0 \
+  oci://ghcr.io/repldriven/queenswood --version 0.1.0 \
   -n queenswood --create-namespace \
   --set secrets.adminApiKey=$ADMIN_KEY \
   --wait --timeout 10m
@@ -289,12 +289,12 @@ kubectl -n queenswood port-forward svc/queenswood-bank-app          8081:8080
 Then open <http://localhost:8081> for the SPA, or hit
 <http://localhost:8080/scalar> for OpenAPI docs. The full
 quickstart — including key recovery and tear-down — ships with
-each [release](https://github.com/kjothen/queenswood/releases/latest).
+each [release](https://github.com/repldriven/queenswood/releases/latest).
 
 ## Built on mono
 
 Queenswood is a **domain fork** of
-[mono](https://github.com/kjothen/mono), a Clojure component
+[mono](https://github.com/repldriven/mono), a Clojure component
 library for production-ready distributed systems built on
 [Polylith](https://polylith.gitbook.io/polylith). Bricks prefixed
 `bank-*` are Queenswood-specific; everything else is shared
@@ -303,7 +303,7 @@ infrastructure inherited from upstream and pulled down via
 See [ADR-0001](docs/adr/0001-reuse-mono-as-upstream.md) for the
 reasoning. The shared component library (lifecycle,
 persistence, messaging, security, etc.) is documented in the
-[mono README](https://github.com/kjothen/mono#mono-components).
+[mono README](https://github.com/repldriven/mono#mono-components).
 
 For the workspace layout, see `components/`, `bases/`, and
 `projects/`. Brick conventions are documented in

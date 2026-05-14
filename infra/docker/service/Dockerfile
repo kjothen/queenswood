@@ -5,7 +5,7 @@
 # at build time:
 #   docker buildx build \
 #     --build-arg PROJECT_NAME=bank-api-service \
-#     -t ghcr.io/kjothen/bank-api-service:0.0.0 \
+#     -t ghcr.io/repldriven/bank-api-service:0.0.0 \
 #     -f infra/docker/service/Dockerfile \
 #     --platform linux/amd64,linux/arm64 \
 #     .

@@ -36,9 +36,9 @@ for svc in bank-bootstrap-service bank-api-service \
            bank-onfido-adapter-service \
            bank-onfido-simulator-service; do
   docker buildx build --build-arg PROJECT_NAME=$svc \
-    -t ghcr.io/kjothen/$svc:dev \
+    -t ghcr.io/repldriven/$svc:dev \
     -f infra/docker/service/Dockerfile .
-  kind load docker-image ghcr.io/kjothen/$svc:dev
+  kind load docker-image ghcr.io/repldriven/$svc:dev
 done
 helm install bank infra/helm/queenswood \
   --set image.tag=dev \

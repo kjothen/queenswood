@@ -64,7 +64,7 @@ SERVICES = [
 # Tilt actually built — no `image_keys` / `--set` plumbing needed.
 for svc in SERVICES:
     docker_build(
-        'ghcr.io/kjothen/' + svc,
+        'ghcr.io/repldriven/' + svc,
         '.',
         dockerfile='infra/docker/service/Dockerfile',
         build_args={'PROJECT_NAME': svc},
