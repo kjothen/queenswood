@@ -1,0 +1,36 @@
+# Crossplane subchart values. The defaults from charts.crossplane.io
+# are fine for a kind-local management plane; production overrides
+# (replicas, resources, registry mirroring) go here.
+crossplane:
+  enabled: true
+
+# ArgoCD subchart values. The previous Justfile path installed Argo via
+# raw `kubectl apply -f .../install.yaml`; the chart equivalent is
+# argo-helm 9.x (Argo CD 3.4). Tune as needed — keep the `default`
+# AppProject usable so the existing infra/bootstrap/root-app.yml works.
+argo-cd:
+  enabled: true
+
+# Crossplane Provider and Function packages. These are re-exported here
+# (as opposed to in infra/platform/crossplane-providers/providers.yml)
+# so a single `helm template infra/helm/xp-mp` render exposes the
+# package images to the audit pipeline.
+#
+# Argo still owns reconciliation in-cluster: the Application at
+# infra/bootstrap/apps/crossplane-providers.yml manages the on-disk
+# YAML, not these chart templates. Keep the two version-pin sets in
+# sync; the audit treats this chart as the source of truth.
+providers:
+  enabled: true
+  # Upbound's GCP provider family — keep versions identical across the
+  # set; Upbound publishes them in lockstep.
+  gcp:
+    version: v2.5.1
+  # crossplane-contrib provider-helm — installs Helm releases as
+  # Crossplane managed resources (queenswood release.yml depends on it).
+  helm:
+    version: v1.2.0
+  # crossplane-contrib function-patch-and-transform — required by
+  # Crossplane v2 Compositions in Pipeline mode.
+  functionPatchAndTransform:
+    version: v0.8.2

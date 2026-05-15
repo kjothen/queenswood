@@ -1,0 +1,56 @@
+{{- if .Values.providers.enabled }}
+# Crossplane Provider + Function packages. Re-exported from
+# infra/platform/crossplane-providers/providers.yml so the audit
+# sees the package images in a single render.
+---
+apiVersion: pkg.crossplane.io/v1
+kind: Provider
+metadata:
+  name: provider-gcp-container
+spec:
+  package: xpkg.upbound.io/upbound/provider-gcp-container:{{ .Values.providers.gcp.version }}
+---
+apiVersion: pkg.crossplane.io/v1
+kind: Provider
+metadata:
+  name: provider-gcp-compute
+spec:
+  package: xpkg.upbound.io/upbound/provider-gcp-compute:{{ .Values.providers.gcp.version }}
+---
+apiVersion: pkg.crossplane.io/v1
+kind: Provider
+metadata:
+  name: provider-gcp-cloudplatform
+spec:
+  package: xpkg.upbound.io/upbound/provider-gcp-cloudplatform:{{ .Values.providers.gcp.version }}
+---
+apiVersion: pkg.crossplane.io/v1
+kind: Provider
+metadata:
+  name: provider-gcp-dns
+spec:
+  package: xpkg.upbound.io/upbound/provider-gcp-dns:{{ .Values.providers.gcp.version }}
+---
+apiVersion: pkg.crossplane.io/v1
+kind: Provider
+metadata:
+  name: provider-gcp-certificatemanager
+spec:
+  package: xpkg.upbound.io/upbound/provider-gcp-certificatemanager:{{ .Values.providers.gcp.version }}
+---
+apiVersion: pkg.crossplane.io/v1
+kind: Provider
+metadata:
+  name: provider-helm
+spec:
+  package: xpkg.crossplane.io/crossplane-contrib/provider-helm:{{ .Values.providers.helm.version }}
+---
+# Crossplane v2 removed Composition.spec.resources; direct patches now
+# go through this function in Pipeline mode.
+apiVersion: pkg.crossplane.io/v1
+kind: Function
+metadata:
+  name: function-patch-and-transform
+spec:
+  package: xpkg.crossplane.io/crossplane-contrib/function-patch-and-transform:{{ .Values.providers.functionPatchAndTransform.version }}
+{{- end }}

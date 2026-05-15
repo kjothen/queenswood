@@ -32,10 +32,11 @@ WORKDIR /workspace
 # `BUILDARCH` (not TARGETARCH) because this stage runs on the build
 # host; protoc's binary needs to match the host, not the eventual
 # image's target arch.
+# hadolint ignore=DL3008
 RUN apt-get update \
  && apt-get install -y --no-install-recommends curl unzip ca-certificates \
  && rm -rf /var/lib/apt/lists/* \
- && PROTOC_ARCH="$(case ${BUILDARCH:-amd64} in \
+ && PROTOC_ARCH="$(case "${BUILDARCH:-amd64}" in \
                      amd64|x86_64)  echo x86_64 ;; \
                      arm64|aarch64) echo aarch_64 ;; \
                      *) echo "unknown arch: ${BUILDARCH}" >&2; exit 1 ;; \
@@ -66,10 +67,10 @@ COPY . .
 RUN --mount=type=cache,target=/root/.m2,sharing=locked \
     --mount=type=cache,target=/root/.gitlibs,sharing=locked \
     clojure -X:deps prep :aliases '[:+bank :dev]' :force true
+WORKDIR /workspace/projects/${PROJECT_NAME}
 RUN --mount=type=cache,target=/root/.m2,sharing=locked \
     --mount=type=cache,target=/root/.gitlibs,sharing=locked \
-    cd "projects/${PROJECT_NAME}" \
- && clojure -X:build uber :snapshot true \
+    clojure -X:build uber :snapshot true \
  && mv target/*.jar target/app.jar
 
 FROM eclipse-temurin:21-jre-noble AS runtime
@@ -77,13 +78,14 @@ ARG PROJECT_NAME
 ARG TARGETARCH
 ARG FDB_VERSION=7.3.75
 
+# hadolint ignore=DL3008
 RUN apt-get update \
  && apt-get install -y --no-install-recommends curl ca-certificates dnsutils \
  && rm -rf /var/lib/apt/lists/*
 
 # libfdb_c is required by the FDB Java client at runtime; arch-aware
 # download from the upstream release.
-RUN ARCH="$(case ${TARGETARCH:-amd64} in \
+RUN ARCH="$(case "${TARGETARCH:-amd64}" in \
               amd64|x86_64) echo x86_64 ;; \
               arm64|aarch64) echo aarch64 ;; \
               *) echo "unknown arch: ${TARGETARCH}" >&2; exit 1 ;; \
@@ -91,7 +93,7 @@ RUN ARCH="$(case ${TARGETARCH:-amd64} in \
  && curl -fsSL \
       "https://github.com/apple/foundationdb/releases/download/${FDB_VERSION}/libfdb_c.${ARCH}.so" \
       -o /usr/lib/libfdb_c.so \
- && ln -sf /usr/lib/libfdb_c.so /usr/lib/libfdb_c_${FDB_VERSION}.so
+ && ln -sf /usr/lib/libfdb_c.so "/usr/lib/libfdb_c_${FDB_VERSION}.so"
 
 ENV FDB_CLUSTER_FILE=/etc/fdb/fdb.cluster
 ENV JAVA_TOOL_OPTIONS="-XX:+ExitOnOutOfMemoryError"
