@@ -71,13 +71,18 @@
   `org-id` via /oauth/token. Returns a Promise that resolves once the
   token is in place; callers that immediately fetch org-scoped data
   must await it. Falls back to the admin bearer if no credentials are
-  stored for the org (e.g. it was created in a different session)."
+  stored for the org (e.g. it was created in a different session).
+
+  Hyphenated property names need bracket access — cherry compiles
+  `(.-client-id obj)` to `obj.client_id`, which doesn't match the
+  `client-id` JSON key the credentials map is keyed on."
   [org-id]
-  (let [creds (aget (load-org-credentials) org-id)]
-    (if (and creds (.-client-id creds))
-      (-> (exchange-token (.-client-id creds)
-                          (.-client-secret creds)
-                          (.-status creds))
+  (let [creds (aget (load-org-credentials) org-id)
+        client-id (when creds (aget creds "client-id"))
+        client-secret (when creds (aget creds "client-secret"))
+        status (when creds (aget creds "status"))]
+    (if client-id
+      (-> (exchange-token client-id client-secret status)
           (.then (fn [token]
                    (reset! api-key (or token (admin-token)))
                    token)))
