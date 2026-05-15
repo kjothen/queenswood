@@ -8,6 +8,7 @@
     [com.repldriven.mono.bank-identity-provider.interface
      :as identity-provider]
     [com.repldriven.mono.encryption.interface :as encryption]
+    [com.repldriven.mono.log.interface :as log]
     [com.repldriven.mono.utility.interface :as util]
 
     [sieppari.context :as sc]
@@ -69,6 +70,16 @@
                              identity-provider
                              token
                              {:expected-audiences (set expected-audiences)})]
+                 (log/info "auth claims"
+                           {:claim-keys (when (map? claims) (keys claims))
+                            :azp (when (map? claims) (:azp claims))
+                            :sub (when (map? claims) (:sub claims))
+                            :aud (when (map? claims) (:aud claims))
+                            :realm_access (when (map? claims)
+                                            (:realm_access claims))
+                            :map? (map? claims)
+                            :record? (record? claims)
+                            :anomaly? (vector? claims)})
                  (if (map? claims)
                    (assoc-in ctx [:request :auth] (service-auth claims))
                    ctx)))))})
