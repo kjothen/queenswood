@@ -10,6 +10,7 @@
     [matcher-combinators.standalone :as standalone]
 
     [clojure.data.json :as json]
+    [clojure.string :as str]
     [clojure.test :refer [is]]
     [clojure.walk :as walk]))
 
@@ -101,13 +102,25 @@
    :else
    (str base-url (substitute-path path path-params))))
 
+(defn- form-urlencode
+  [params]
+  (->> params
+       (map (fn [[k v]]
+              (str (java.net.URLEncoder/encode (name k) "UTF-8")
+                   "="
+                   (java.net.URLEncoder/encode (str v) "UTF-8"))))
+       (str/join "&")))
+
 (defn- build-request
   [{:keys [base-url] :as ctx}
-   {:keys [method url path path-params query-params body auth headers]}]
+   {:keys [method url path path-params query-params body form auth headers]}]
   (let [token (resolve-auth ctx auth)
         base-headers (cond-> {}
                              body
                              (assoc "Content-Type" "application/json")
+                             form
+                             (assoc "Content-Type"
+                                    "application/x-www-form-urlencoded")
                              token
                              (assoc "Authorization" (str "Bearer " token)))]
     (cond-> {:method method
@@ -116,7 +129,9 @@
             query-params
             (assoc :query-params query-params)
             body
-            (assoc :body (json/write-str body)))))
+            (assoc :body (json/write-str body))
+            form
+            (assoc :body (form-urlencode form)))))
 
 (defn- assert-match
   [expected actual label]

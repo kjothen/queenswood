@@ -38,17 +38,33 @@
   [{:keys [base-url realm]} & path-parts]
   (apply str base-url "/admin/realms/" realm path-parts))
 
+(defn exchange-client-credentials
+  "POST `client_credentials` to the realm token endpoint. Returns the
+  raw Keycloak response body (keys keyword-ified from the JSON, so
+  `:access_token`, `:expires_in`, `:token_type`, `:scope`) or an
+  anomaly. The caller is responsible for normalisation."
+  [client {:keys [client-id client-secret scope]}]
+  (let [config (-config client)]
+    (let-nom>
+      [res (http/request
+            {:method :post
+             :url (realm-url config "/protocol/openid-connect/token")
+             :headers {"content-type" "application/x-www-form-urlencoded"}
+             :body (cond-> (str "grant_type=client_credentials"
+                                "&client_id=" client-id
+                                "&client_secret=" client-secret)
+                           scope
+                           (str "&scope=" scope))})
+       body (http/res->edn res)]
+      body)))
+
 (defn- fetch-admin-token
   [config]
   (let-nom>
-    [res (http/request
-          {:method :post
-           :url (realm-url config "/protocol/openid-connect/token")
-           :headers {"content-type" "application/x-www-form-urlencoded"}
-           :body (str "grant_type=client_credentials"
-                      "&client_id=" (:admin-client-id config)
-                      "&client_secret=" (:admin-client-secret config))})
-     body (http/res->edn res)]
+    [body (exchange-client-credentials
+           (->IdentityProviderClient config nil nil)
+           {:client-id (:admin-client-id config)
+            :client-secret (:admin-client-secret config)})]
     (or (some-> (domain/parse-token-response body)
                 (assoc :fetched-at (util/now)))
         (error/fail :identity-provider/admin-token-malformed

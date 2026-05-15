@@ -18,6 +18,9 @@
     [com.repldriven.mono.bank-api.cash-account.examples :as
      cash-account.examples]
     [com.repldriven.mono.bank-api.cash-account.routes :as cash-account]
+    [com.repldriven.mono.bank-api.oauth.components :as oauth.components]
+    [com.repldriven.mono.bank-api.oauth.examples :as oauth.examples]
+    [com.repldriven.mono.bank-api.oauth.routes :as oauth]
     [com.repldriven.mono.bank-api.organization.components :as
      organization.components]
     [com.repldriven.mono.bank-api.organization.examples :as
@@ -98,6 +101,7 @@
                                balance.components/registry
                                cash-account-product.components/registry
                                cash-account.components/registry
+                               oauth.components/registry
                                organization.components/registry
                                party.components/registry
                                payee-check.components/registry
@@ -133,6 +137,7 @@
                     balance.examples/registry
                     cash-account-product.examples/registry
                     cash-account.examples/registry
+                    oauth.examples/registry
                     organization.examples/registry
                     party.examples/registry
                     payee-check.examples/registry
@@ -141,6 +146,10 @@
                     simulate.examples/registry
                     tier.examples/registry)}}
        :handler (server/standard-openapi-handler)}}]
+    (into [""
+           {:interceptors (concat telemetry/trace-span
+                                  (:interceptors ctx))}]
+          oauth/routes)
     (into ["/v1"
            {:interceptors (concat telemetry/trace-span
                                   (:interceptors ctx)

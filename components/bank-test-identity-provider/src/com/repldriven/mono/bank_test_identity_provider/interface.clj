@@ -25,6 +25,8 @@
      (store/delete-client client organization-id))
    (-rotate-secret [client organization-id]
      (store/regenerate-secret client organization-id))
+   (-exchange-client-credentials [client creds]
+     (store/exchange-client-credentials client creds))
    (-verify-token [client jwt-string opts]
      (store/verify-token client jwt-string opts))
    (-get-jwks [client] (store/jwks client))

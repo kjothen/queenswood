@@ -25,6 +25,14 @@
      result (store/client-secret client organization-id)]
     result))
 
+(defn exchange-client-credentials
+  "Exchange a client_id + client_secret pair at the realm's token
+  endpoint. Returns the raw OAuth2 token response (snake-case keys
+  from Keycloak: `:access_token`, `:expires_in`, `:token_type`,
+  `:scope`) or an anomaly."
+  [client creds]
+  (store/exchange-client-credentials client creds))
+
 (defn revoke-service-account
   "Delete the Keycloak client for `organization-id`. Idempotent."
   [client organization-id]

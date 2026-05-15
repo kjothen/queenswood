@@ -102,6 +102,36 @@
               {:alg :rs256
                :header {:kid (-kid client) :alg "RS256" :typ "JWT"}})))
 
+(defn- scope->audience
+  "Map an OAuth2 `scope` value back to the audience claim it grants.
+  Mirrors the production realm import, which provisions one client
+  scope per env. Unknown scopes get the test audience."
+  [scope]
+  (case scope
+    "queenswood-api-live" "queenswood-api-live"
+    "queenswood-api-test"))
+
+(defn exchange-client-credentials
+  "Validate a `client_credentials` request against the in-memory
+  client registry and mint a fresh JWT. Returns the OAuth2 token
+  response with snake-case keys mirroring Keycloak's contract, or
+  an `:auth/invalid-client` rejection."
+  [client {:keys [client-id client-secret scope]}]
+  (let [registered (get-in @(-state client) [:clients client-id])
+        aud (scope->audience scope)]
+    (if (or (nil? registered) (not= client-secret (:client-secret registered)))
+      (error/reject :auth/invalid-client
+                    {:message "Unknown client_id or client_secret mismatch"})
+      (let [token (mint-token client
+                              {:azp client-id
+                               :sub client-id
+                               :aud [aud]
+                               :realm_access {:roles ["org"]}})]
+        {:access_token token
+         :expires_in 3600
+         :token_type "Bearer"
+         :scope (or scope aud)}))))
+
 (defn verify-token
   "Verify a JWT minted by `mint-token`. Returns claims or an
   `:auth/unauthenticated` rejection."

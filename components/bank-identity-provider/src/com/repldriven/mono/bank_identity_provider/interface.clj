@@ -26,6 +26,7 @@
   (-create-service-account [this data])
   (-revoke-service-account [this organization-id])
   (-rotate-secret [this organization-id])
+  (-exchange-client-credentials [this creds])
   (-verify-token [this jwt-string opts])
   (-get-jwks [this])
   (-get-issuer [this]))
@@ -38,6 +39,8 @@
      (core/revoke-service-account client organization-id))
    (-rotate-secret [client organization-id]
      (core/rotate-secret client organization-id))
+   (-exchange-client-credentials [client creds]
+     (core/exchange-client-credentials client creds))
    (-verify-token [client jwt-string opts]
      (core/verify-token client jwt-string opts))
    (-get-jwks [client] (core/get-jwks client))
@@ -76,6 +79,20 @@
   - organization-id: owning organization id."
   [client organization-id]
   (-rotate-secret client organization-id))
+
+(defn exchange-client-credentials
+  "Run the OAuth2 `client_credentials` flow against the realm.
+  Returns the raw token response with snake-case keys
+  (`:access_token`, `:expires_in`, `:token_type`, `:scope`) so the
+  caller can pass it through to an OAuth2 client without rekeying,
+  or an anomaly.
+
+  Args:
+  - client: identity-provider client component.
+  - creds: map with `:client-id`, `:client-secret`, and optional
+    `:scope`."
+  [client creds]
+  (-exchange-client-credentials client creds))
 
 (defn verify-token
   "Validate a JWT against the realm's JWKS. Returns the claims map
