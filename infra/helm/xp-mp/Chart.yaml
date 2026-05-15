@@ -1,0 +1,23 @@
+apiVersion: v2
+name: xp-mp
+description: |
+  Crossplane management-plane umbrella: bundles Crossplane core, ArgoCD,
+  and the GCP/helm Crossplane provider+function packages currently
+  installed individually by `just kind-xp-up` and the Argo bootstrap.
+  Renders as a single chart so the helm-docker-base-audit skill can walk
+  every image the management plane pulls.
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+icon: https://avatars.githubusercontent.com/kjothen
+kubeVersion: ">=1.27.0-0"
+
+dependencies:
+  - name: crossplane
+    version: "2.2.1"
+    repository: "https://charts.crossplane.io/stable"
+    condition: crossplane.enabled
+  - name: argo-cd
+    version: "9.5.14"
+    repository: "https://argoproj.github.io/argo-helm"
+    condition: argo-cd.enabled

@@ -72,15 +72,12 @@
                                          organization-id
                                          product-id)
            product-version (products/published-version product)
-           _ (when (nil? product-version)
-               (error/reject :cash-account/open
-                             {:message "Product is not published"
-                              :product-id product-id}))
-           aggregates (counts txn
-                              organization-id
-                              (:product-type product-version)
-                              (party->account-type party)
-                              currency)
+           aggregates (when product-version
+                        (counts txn
+                                organization-id
+                                (:product-type product-version)
+                                (party->account-type party)
+                                currency))
            account (domain/open-account
                     data
                     product-version
@@ -106,7 +103,12 @@
     txn
     (fn [txn]
       (let-nom>
-        [account (store/get-account txn org-id account-id)]
+        [account (store/find-account txn org-id account-id)
+         account (or account
+                     (error/reject :cash-account/not-found
+                                   {:message "Account not found"
+                                    :organization-id org-id
+                                    :account-id account-id}))]
         (enrich-account txn opts account))))))
 
 (defn get-accounts

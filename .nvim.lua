@@ -76,3 +76,10 @@ vim.api.nvim_create_autocmd({ "BufRead", "BufNewFile" }, {
 	end,
 	desc = "Set slidev filetype for slides.md",
 })
+
+vim.api.nvim_create_autocmd({ "BufRead", "BufNewFile" }, {
+	pattern = "*.dockerignore",
+	callback = function()
+		vim.bo.filetype = "gitignore"
+	end,
+})

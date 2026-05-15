@@ -3,7 +3,7 @@
     [com.repldriven.mono.bank-api.party.commands :as commands]
     [com.repldriven.mono.bank-api.party.queries :as queries]
     [com.repldriven.mono.bank-api.party.examples :refer
-     [DuplicateNationalIdentifier PartyNotFound]]
+     [IdentificationRejected PartyNotFound]]
     [com.repldriven.mono.bank-api.schema :refer [ErrorResponse]]
     [com.repldriven.mono.bank-api.party.links :as links]
     [com.repldriven.mono.bank-api.shared.parameters :as shared.parameters]
@@ -33,7 +33,7 @@
              :parameters {:body [:ref "CreatePartyRequest"]}
              :responses {200 {:body [:ref "CreatePartyResponse"]
                               :openapi {:links links/from-party}}
-                         409 (ErrorResponse [#'DuplicateNationalIdentifier])}
+                         422 (ErrorResponse [#'IdentificationRejected])}
              :handler commands/create-party}}]
     ["/{party-id}" {:parameters {:path {:party-id [:ref "PartyId"]}}}
      [""

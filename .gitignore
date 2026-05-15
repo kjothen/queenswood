@@ -73,3 +73,5 @@ gcp-creds.json
 # IS source-of-truth and stays committed.
 infra/helm/queenswood/Chart.lock
 infra/helm/queenswood/charts/*.tgz
+infra/helm/xp-mp/Chart.lock
+infra/helm/xp-mp/charts/*.tgz

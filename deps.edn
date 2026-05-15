@@ -100,6 +100,8 @@
     components/bank-interest {:local/root "components/bank-interest"}
     components/bank-organization {:local/root "components/bank-organization"}
     components/bank-party {:local/root "components/bank-party"}
+    components/bank-person-identification {:local/root
+                                           "components/bank-person-identification"}
     components/bank-policy {:local/root "components/bank-policy"}
     components/bank-schema {:local/root "components/bank-schema"}
     components/bank-test-api-scenarios {:local/root

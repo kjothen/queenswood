@@ -2,7 +2,7 @@
   (:require
     [com.repldriven.mono.bank-schema.interface :as schema]
 
-    [com.repldriven.mono.error.interface :as error :refer [let-nom>]]
+    [com.repldriven.mono.error.interface :refer [let-nom>]]
     [com.repldriven.mono.fdb.interface :as fdb]))
 
 (def ^:private store-name "cash-accounts")
@@ -20,15 +20,6 @@
              schema/pb->CashAccount))
    :cash-account/find
    "Failed to load account"))
-
-(defn get-account
-  [txn org-id account-id]
-  (let-nom> [account (find-account txn org-id account-id)]
-    (or account
-        (error/reject :cash-account/not-found
-                      {:message "Account not found"
-                       :organization-id org-id
-                       :account-id account-id}))))
 
 (defn save-account
   [txn account changelog]

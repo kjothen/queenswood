@@ -43,7 +43,7 @@
 
   Returns the party map or a `:party/not-found` anomaly."
   [txn org-id party-id]
-  (store/get-party txn org-id party-id))
+  (core/get-party txn org-id party-id))
 
 (defn get-parties
   "List parties for an organisation in a paged result.
@@ -86,7 +86,7 @@
   Returns the active party (pb record) or an anomaly."
   [txn organization-id party-id]
   (let-nom>
-    [party (store/get-party txn organization-id party-id)
+    [party (core/get-party txn organization-id party-id)
      activated (domain/activate-party party)
      saved (store/save-party txn
                              activated

@@ -3,6 +3,7 @@
     [com.repldriven.mono.bank-party.domain :as domain]
     [com.repldriven.mono.bank-party.store :as store]
 
+    [com.repldriven.mono.bank-person-identification.interface :as person-id]
     [com.repldriven.mono.bank-policy.interface :as policy]
     [com.repldriven.mono.error.interface :as error :refer [let-nom>]]))
 
@@ -14,9 +15,9 @@
      (let [party (domain/new-party data)
            {:keys [national-identifier]} data
            {:keys [organization-id party-id status]} party
-           person-id (domain/new-person-identification data party-id)]
+           pi (person-id/new-person-identification data party-id)]
        (let-nom>
-         [_ (store/save-person-identification txn person-id)
+         [_ (person-id/save-person-identification txn pi)
           _ (when national-identifier
               (store/save-party-national-identifier
                txn
@@ -46,6 +47,15 @@
          :party-id party-id
          :status-after status})))))
 
+(defn get-party
+  [txn org-id party-id]
+  (let-nom> [party (store/get-party txn org-id party-id)]
+    (or party
+        (error/reject :party/not-found
+                      {:message "Party not found"
+                       :organization-id org-id
+                       :party-id party-id}))))
+
 (defn new-party
   ([txn data]
    (new-party txn data {}))
@@ -63,6 +73,6 @@
                     (create-person txn data)
                     (create-internal txn data))]
        (if (store/uniqueness-violation? result)
-         (error/reject :party/duplicate-national-identifier
-                       "National identifier already exists")
+         (error/reject :party/identification-rejected
+                       "Identification rejected for this party")
          result)))))

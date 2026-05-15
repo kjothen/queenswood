@@ -17,13 +17,14 @@
  {component/bank-resources {:local/root
                             "../../components/bank-resources"}
   component/bank-interest {:local/root "../../components/bank-interest"}
-  component/bank-idv {:local/root "../../components/bank-idv"}
   component/bank-balance {:local/root "../../components/bank-balance"}
   component/cache {:local/root "../../components/cache"}
   component/bank-cash-account {:local/root "../../components/bank-cash-account"}
   component/bank-cash-account-product
   {:local/root "../../components/bank-cash-account-product"}
   component/bank-party {:local/root "../../components/bank-party"}
+  component/bank-person-identification
+  {:local/root "../../components/bank-person-identification"}
   component/bank-policy {:local/root "../../components/bank-policy"}
   component/bank-transaction {:local/root "../../components/bank-transaction"}
   component/avro {:local/root "../../components/avro"}
