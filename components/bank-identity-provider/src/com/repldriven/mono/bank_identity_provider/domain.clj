@@ -12,25 +12,26 @@
 
 (defn new-client-representation
   "Build the Keycloak ClientRepresentation JSON body for a per-org
-  service-account client. Returns plain Clojure data ready for JSON
-  encoding."
+  service-account client. The realm import provides one client scope
+  per environment audience (`queenswood-api-test`, `queenswood-api-
+  live`); we attach the one matching this org's status so every JWT
+  the client mints carries the right `aud` claim. Returns plain
+  Clojure data ready for JSON encoding."
   [{:keys [organization-id name status]}]
-  {:clientId organization-id
-   :name (or name organization-id)
-   :enabled true
-   :protocol "openid-connect"
-   :publicClient false
-   :serviceAccountsEnabled true
-   :standardFlowEnabled false
-   :directAccessGrantsEnabled false
-   :implicitFlowEnabled false
-   :attributes {"access.token.lifespan" "3600"}
-   :defaultClientScopes ["service-accounts"]
-   :optionalClientScopes []
-   ;; Audience hard-coded into the token via a protocol mapper that
-   ;; the realm import provisions; we tag the client itself with the
-   ;; per-env audience as a non-functional label too.
-   :description (audience-for-status status)})
+  (let [audience (audience-for-status status)]
+    {:clientId organization-id
+     :name (or name organization-id)
+     :enabled true
+     :protocol "openid-connect"
+     :publicClient false
+     :serviceAccountsEnabled true
+     :standardFlowEnabled false
+     :directAccessGrantsEnabled false
+     :implicitFlowEnabled false
+     :attributes {"access.token.lifespan" "3600"}
+     :defaultClientScopes ["service-accounts" audience]
+     :optionalClientScopes []
+     :description audience}))
 
 (defn parse-token-response
   "Pull `{:access-token :expires-in}` out of a Keycloak token

@@ -3,9 +3,7 @@ system:
   message-bus: !include bank-monolith/message-bus-test.yml
   fdb: !include bank/fdb-test.yml
   avro: !include avro/avro-test.yml
-  identity-provider:
-    client: !system/component
-      system/component-kind: test-identity-provider/client
+  identity-provider: !include bank/keycloak-test.yml
   cash-accounts: !include bank/cash-account-test.yml
   parties: !include bank/party-test.yml
   payments: !include bank/payment-test.yml

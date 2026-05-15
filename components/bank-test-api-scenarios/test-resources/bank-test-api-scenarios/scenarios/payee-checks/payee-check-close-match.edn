@@ -17,6 +17,7 @@
    :assert {:status 201}}
   {:command :auth/mint-token
    :for {:client-id [:ref :org-0 :client-id]
+         :client-secret [:ref :org-0 :client-secret]
          :status :live}
    :as :org-0-token}]
 
