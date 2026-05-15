@@ -134,7 +134,7 @@ gcp-rollout +components:
 # Print Cloud DNS nameservers for the queenswood zone (paste into registrar NS records)
 gcp-dns-ns:
     kubectl --context {{ KIND_XP_CLUSTER }} -n crossplane-system \
-      get managedzone.dns.gcp.m.upbound.io queenswood-zone \
+      get managedzone.dns.gcp.m.upbound.io {{ ENV_ZONE }} \
       -o jsonpath='{.status.atProvider.nameServers}' \
       | tr ',' '\n' | tr -d '[]"' | sed 's/^ */  /'
     @echo
@@ -159,8 +159,8 @@ gcp-health-check:
     kubectl --context $MGT get addresses.compute.gcp.upbound.io \
       queenswood-ingress-ip -o jsonpath='{.status.atProvider.address}{"\n"}' \
       2>/dev/null || echo "(not found)"
-    echo -n "ManagedZone queenswood-zone Ready: "
-    kubectl --context $MGT get managedzones.dns.gcp.upbound.io queenswood-zone \
+    echo -n "ManagedZone {{ ENV_ZONE }} Ready: "
+    kubectl --context $MGT get managedzones.dns.gcp.upbound.io {{ ENV_ZONE }} \
       -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}{"\n"}' \
       2>/dev/null || echo "(not found)"
     echo -n "RecordSet queenswood-apex rrdatas: "
@@ -216,12 +216,12 @@ gcp-health-check:
       2>/dev/null || echo "(not provisioned)"
 
     echo "\n=== 7. Public DNS + HTTPS ==="
-    echo -n "dig A queenswood.repldriven.com @8.8.8.8: "
-    dig +short A queenswood.repldriven.com @8.8.8.8 | tr '\n' ' '; echo
-    echo "curl -sI https://queenswood.repldriven.com:"
-    curl -sI --max-time 5 https://queenswood.repldriven.com 2>&1 | head -3 | sed 's/^/  /'
-    echo "curl -sI http://queenswood.repldriven.com (expect 301):"
-    curl -sI --max-time 5 http://queenswood.repldriven.com 2>&1 | head -3 | sed 's/^/  /'
+    echo -n "dig A {{ ENV_DOMAIN }} @8.8.8.8: "
+    dig +short A {{ ENV_DOMAIN }} @8.8.8.8 | tr '\n' ' '; echo
+    echo "curl -sI https://{{ ENV_DOMAIN }}:"
+    curl -sI --max-time 5 https://{{ ENV_DOMAIN }} 2>&1 | head -3 | sed 's/^/  /'
+    echo "curl -sI http://{{ ENV_DOMAIN }} (expect 301):"
+    curl -sI --max-time 5 http://{{ ENV_DOMAIN }} 2>&1 | head -3 | sed 's/^/  /'
 
 # Inspect the first queenswood pod whose STATUS column matches `state` (default Init:Error)
 gcp-diagnose-pod state="Init:Error":
@@ -288,7 +288,7 @@ gcp-diagnose-pod state="Init:Error":
     done
 
 
-# Pre-create the queenswood-zone ManagedZone as the user (who's a
+# Pre-create the {{ ENV_ZONE }} ManagedZone as the user (who's a
 # verified domain owner) so Crossplane (calling as the impersonated
 # SA via ADC) can Observe it instead of Create. Cloud DNS's
 # domain-ownership check rejects SA-initiated zone creates: the SA
@@ -301,8 +301,8 @@ gcp-precreate-zone:
     set -e
     PROJECT_ID=$(gcloud config get project 2>/dev/null)
     [[ -n "$PROJECT_ID" ]] || { echo "no active gcloud project; run 'just gcp-project-create'" >&2; exit 1; }
-    DNS=queenswood.repldriven.com.
-    NAME=queenswood-zone
+    DNS={{ ENV_DOMAIN }}.
+    NAME={{ ENV_ZONE }}
     if gcloud dns managed-zones describe "$NAME" \
          --project="$PROJECT_ID" >/dev/null 2>&1; then
       echo ">>> $NAME already exists; skipping create"
@@ -341,7 +341,7 @@ up-from-zero:
 # Tear down kind + the expensive GCP resources (GKE cluster, ingress IP,
 # cert, dns-authorization, VPC) and the records they manage in the DNS
 # zone. KEEPS: the GCP project, the crossplane-provider SA + IAM, the
-# DNS ManagedZone (queenswood-zone) and its NS records at the registrar.
+# DNS ManagedZone ({{ ENV_ZONE }}) and its NS records at the registrar.
 # Rationale: GKE is the only line item costing real money at rest;
 # everything kept is free, holds the dnsName claim against Cloud DNS's
 # NS-pool exhaustion, and avoids re-verifying domain ownership each cycle.
@@ -352,8 +352,8 @@ down-to-zero:
     PROJECT_ID=$(gcloud config get project 2>/dev/null)
     [[ -n "$PROJECT_ID" ]] || { echo "no active gcloud project; nothing to tear down" >&2; exit 1; }
     REGION=europe-west2
-    ZONE_NAME=queenswood-zone
-    DOMAIN=queenswood.repldriven.com.
+    ZONE_NAME={{ ENV_ZONE }}
+    DOMAIN={{ ENV_DOMAIN }}.
 
     # 1. Kill kind first so Crossplane stops reconciling -- otherwise the
     # gcloud deletes below race against selfHeal trying to recreate them.
@@ -419,15 +419,15 @@ down-and-delete-project:
     # Empty the zone (zone delete refuses if non-SOA/NS records remain),
     # then delete the zone itself. Doing this BEFORE project delete is
     # what releases the dnsName claim immediately.
-    echo ">>> emptying + deleting queenswood-zone"
-    gcloud dns record-sets list --zone=queenswood-zone --project="$PROJECT_ID" \
+    echo ">>> emptying + deleting {{ ENV_ZONE }}"
+    gcloud dns record-sets list --zone={{ ENV_ZONE }} --project="$PROJECT_ID" \
         --format='value(name,type)' 2>/dev/null \
       | while read name type; do
           [[ "$type" == "SOA" || "$type" == "NS" ]] && continue
           gcloud dns record-sets delete "$name" --type="$type" \
-            --zone=queenswood-zone --project="$PROJECT_ID" --quiet 2>/dev/null || true
+            --zone={{ ENV_ZONE }} --project="$PROJECT_ID" --quiet 2>/dev/null || true
         done
-    gcloud dns managed-zones delete queenswood-zone \
+    gcloud dns managed-zones delete {{ ENV_ZONE }} \
       --project="$PROJECT_ID" --quiet 2>/dev/null || true
 
     echo ">>> deleting GCP project $PROJECT_ID"
@@ -469,10 +469,10 @@ kind-xp-wait-ready timeout="2700":
         echo
         echo "------------------------------------------------------"
         echo "ACTION: paste these 4 nameservers into your registrar's"
-        echo "NS records for queenswood.repldriven.com (trailing dots"
+        echo "NS records for {{ ENV_DOMAIN }} (trailing dots"
         echo "optional). cert validation gates on this propagating."
         kubectl --context {{ KIND_XP_CLUSTER }} -n crossplane-system \
-          get managedzone.dns.gcp.m.upbound.io queenswood-zone \
+          get managedzone.dns.gcp.m.upbound.io {{ ENV_ZONE }} \
           -o jsonpath='{.status.atProvider.nameServers}' \
           | tr ',' '\n' | tr -d '[]"' | sed 's/^ */  /'
         echo "------------------------------------------------------"

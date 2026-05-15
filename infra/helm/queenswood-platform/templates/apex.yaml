@@ -1,0 +1,13 @@
+apiVersion: platform.queenswood.repldriven.com/v1alpha1
+kind: XQueenswoodApex
+metadata:
+  name: {{ .Values.env.name }}-apex
+  namespace: {{ .Values.env.name }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "6"
+spec:
+  region: {{ .Values.apex.region }}
+  addressType: EXTERNAL
+  domain: {{ .Values.env.domain }}
+  managedZoneRef:
+    name: {{ .Values.env.name }}-zone

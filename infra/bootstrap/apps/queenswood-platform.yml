@@ -1,0 +1,32 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: queenswood-platform
+  namespace: argocd
+  annotations:
+    # Lands after gcp-network (2) and gcp-cluster (3); the chart's own
+    # per-resource sync-waves (4..7) order zone → cert → apex → release
+    # internally.
+    argocd.argoproj.io/sync-wave: "4"
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/repldriven/queenswood
+    targetRevision: main
+    path: infra/helm/queenswood-platform
+    helm:
+      # To flip back to the default queenswood env once the DNSSEC
+      # cooldown clears, change this to `values.yaml`.
+      valueFiles:
+        - values-test.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    # The chart's templates set explicit namespaces; this is the
+    # fallback used by the Application's Namespace resource itself.
+    namespace: queenswood-test
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

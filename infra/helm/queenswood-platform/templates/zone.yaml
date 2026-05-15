@@ -1,0 +1,12 @@
+apiVersion: dns.gcp.m.upbound.io/v1beta1
+kind: ManagedZone
+metadata:
+  name: {{ .Values.env.name }}-zone
+  namespace: {{ .Values.env.name }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "4"
+spec:
+  forProvider:
+    dnsName: {{ .Values.env.domain }}.
+    description: {{ .Values.env.name }} public DNS
+    visibility: public

@@ -1,0 +1,22 @@
+# The two knobs that change per environment. Everything else
+# (resource names, app namespace) derives from `env.name`.
+env:
+  name: queenswood
+  domain: queenswood.repldriven.com
+
+apex:
+  region: europe-west2
+
+cert:
+  location: europe-west2
+
+release:
+  chart:
+    name: queenswood
+    repository: oci://ghcr.io/repldriven
+    version: 0.5.3
+  # The Crossplane provider-config that owns GKE-bound Helm releases.
+  providerConfigRef: queenswood-gke
+  image:
+    registry: ghcr.io/repldriven
+    tag: latest

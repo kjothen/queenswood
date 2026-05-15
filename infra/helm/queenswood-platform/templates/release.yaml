@@ -1,0 +1,30 @@
+apiVersion: helm.crossplane.io/v1beta1
+kind: Release
+metadata:
+  # Helm release name (and therefore every templated resource name)
+  # inherits from metadata.name. Keeping it plain (e.g. `queenswood`)
+  # matches the release name used by `just helm-install` locally and
+  # by the quickstart README, so the same kubectl recipes work
+  # everywhere.
+  name: {{ .Values.env.name }}
+  namespace: {{ .Values.env.name }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "7"
+spec:
+  forProvider:
+    chart:
+      name: {{ .Values.release.chart.name }}
+      repository: {{ .Values.release.chart.repository }}
+      version: {{ .Values.release.chart.version }}
+    namespace: {{ .Values.env.name }}
+    values:
+      image:
+        registry: {{ .Values.release.image.registry }}
+        tag: {{ .Values.release.image.tag }}
+      gateway:
+        enabled: true
+        host: {{ .Values.env.domain }}
+        gcp:
+          enabled: true
+  providerConfigRef:
+    name: {{ .Values.release.providerConfigRef }}
