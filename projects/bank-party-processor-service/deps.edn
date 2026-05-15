@@ -17,8 +17,9 @@
  {component/bank-resources {:local/root
                             "../../components/bank-resources"}
   component/bank-party {:local/root "../../components/bank-party"}
+  component/bank-person-identification
+  {:local/root "../../components/bank-person-identification"}
   component/bank-policy {:local/root "../../components/bank-policy"}
-  component/bank-idv {:local/root "../../components/bank-idv"}
   component/avro {:local/root "../../components/avro"}
   component/cli {:local/root "../../components/cli"}
   component/command {:local/root "../../components/command"}

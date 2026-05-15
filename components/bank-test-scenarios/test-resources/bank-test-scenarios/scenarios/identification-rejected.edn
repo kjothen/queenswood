@@ -4,8 +4,9 @@
  ;; Pins the rejection kind that the property test only sees as a
  ;; generic `:denied` outcome. Two creates with the same NI marker
  ;; in the same org — the second must reject with
- ;; `:party/duplicate-national-identifier` (the contractual kind
- ;; that API responses surface). Cross-org reuse is allowed and is
+ ;; `:party/identification-rejected` (the opaque contractual kind
+ ;; that API responses surface; the underlying cause is not
+ ;; revealed to callers). Cross-org reuse is allowed and is
  ;; covered by the property test, so it isn't repeated here.
 
  :given
@@ -19,4 +20,4 @@
  :then
  [{:command :assert-outcome :args [:denied]}
   {:command :assert-rejection-kind
-   :args [:party/duplicate-national-identifier]}]}
+   :args [:party/identification-rejected]}]}

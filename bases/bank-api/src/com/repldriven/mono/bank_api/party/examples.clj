@@ -8,14 +8,13 @@
            :status 404
            :detail "Party not found"}})
 
-(def DuplicateNationalIdentifier
+(def IdentificationRejected
   {:value {:title "REJECTED"
-           :type ":party/duplicate-national-identifier"
-           :status 409
-           :detail "National identifier already exists"}})
+           :type ":party/identification-rejected"
+           :status 422
+           :detail "Identification rejected for this party"}})
 
-(def registry
-  (examples-registry [#'PartyNotFound #'DuplicateNationalIdentifier]))
+(def registry (examples-registry [#'PartyNotFound #'IdentificationRejected]))
 
 (def Party
   {:organization-id "org.01kprbmgcj35ptc8npmybhh4s7"

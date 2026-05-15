@@ -9,7 +9,7 @@
   (:require
     com.repldriven.mono.bank-idv.system
 
-    [com.repldriven.mono.bank-idv.store :as store]))
+    [com.repldriven.mono.bank-idv.core :as core]))
 
 (defn get-idv
   "Load an IDV by composite primary key. Returns the IDV map or
@@ -20,4 +20,4 @@
   - organization-id: organization owning the IDV.
   - verification-id: IDV identifier (`idv.<ulid>`)."
   [txn organization-id verification-id]
-  (store/get-idv txn organization-id verification-id))
+  (core/get-idv txn organization-id verification-id))

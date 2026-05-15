@@ -21,8 +21,9 @@
   component/bank-cash-account {:local/root "../../components/bank-cash-account"}
   component/bank-cash-account-product
   {:local/root "../../components/bank-cash-account-product"}
-  component/bank-idv {:local/root "../../components/bank-idv"}
   component/bank-party {:local/root "../../components/bank-party"}
+  component/bank-person-identification
+  {:local/root "../../components/bank-person-identification"}
   component/avro {:local/root "../../components/avro"}
   component/cli {:local/root "../../components/cli"}
   component/command {:local/root "../../components/command"}

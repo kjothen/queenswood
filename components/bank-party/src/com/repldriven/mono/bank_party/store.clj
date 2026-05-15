@@ -2,11 +2,10 @@
   (:require
     [com.repldriven.mono.bank-schema.interface :as schema]
 
-    [com.repldriven.mono.error.interface :as error :refer [let-nom>]]
+    [com.repldriven.mono.error.interface :refer [let-nom>]]
     [com.repldriven.mono.fdb.interface :as fdb]))
 
 (def ^:private store-name "parties")
-(def ^:private person-identifications-store-name "person-identifications")
 (def ^:private party-national-identifiers-store-name
   "party-national-identifiers")
 
@@ -29,17 +28,6 @@
    :party/save
    "Failed to save party"))
 
-(defn save-person-identification
-  [txn person-identification]
-  (fdb/transact
-   txn
-   (fn [txn]
-     (fdb/save-record
-      (fdb/open txn person-identifications-store-name)
-      (schema/PersonIdentification->java person-identification)))
-   :party/save-person-identification
-   "Failed to save person identification"))
-
 (defn save-party-national-identifier
   [txn party-national-identifier]
   (fdb/transact
@@ -56,14 +44,8 @@
   (fdb/transact
    txn
    (fn [txn]
-     (if-let [record (fdb/load-record (fdb/open txn store-name)
-                                      org-id
-                                      party-id)]
-       (schema/pb->Party record)
-       (error/reject :party/not-found
-                     {:message "Party not found"
-                      :organization-id org-id
-                      :party-id party-id})))
+     (some-> (fdb/load-record (fdb/open txn store-name) org-id party-id)
+             schema/pb->Party))
    :party/get
    "Failed to load party"))
 

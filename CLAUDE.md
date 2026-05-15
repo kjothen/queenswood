@@ -47,6 +47,12 @@ rationale live in the docs.
   ignorant of cross-brick effects.
   See [ADR-0008](docs/adr/0008-changelog-watchers.md) and
   [recipes/components.md](docs/recipes/components.md).
+- **Processor bricks** — paired `bank-X-processor` base and
+  `bank-X` component (commands / core / domain / store /
+  watcher), the `txn-or-config` threading convention, FDB
+  confined to `store.clj`, rejections originating in
+  `domain.clj`.
+  See [tdd/processor-bricks.md](docs/tdd/processor-bricks.md).
 - **Bases and projects** — entry points, per-service projects,
   the development project that includes everything.
   See [recipes/bases.md](docs/recipes/bases.md) and
@@ -146,6 +152,12 @@ rationale live in the referenced docs.
   not the library directly.
   See [recipes/components.md](docs/recipes/components.md) and
   [ADR-0011](docs/adr/0011-one-component-per-third-party-library.md).
+- **Minimal commentary on code.** Docstrings on `interface.clj`
+  are the documentation surface; impl files stay bare. Inline
+  `;;` comments are exceptional — only the load-bearing *why*
+  (invariant, workaround, upstream constraint), never the *what*
+  that the code already says.
+  See [ADR-0015](docs/adr/0015-comments-and-docstrings.md).
 
 ## Common commands
 

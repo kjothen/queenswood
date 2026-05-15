@@ -107,7 +107,7 @@
   - account-id: account id."
   [txn organization-id account-id]
   (let-nom>
-    [account (store/get-account txn organization-id account-id)
+    [account (core/get-account txn organization-id account-id)
      opened (domain/opened-account account)
      saved (store/save-account txn
                                opened
@@ -128,7 +128,7 @@
   - account-id: account id."
   [txn organization-id account-id]
   (let-nom>
-    [account (store/get-account txn organization-id account-id)
+    [account (core/get-account txn organization-id account-id)
      closed (domain/closed-account account)
      saved (store/save-account txn
                                closed

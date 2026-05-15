@@ -35,18 +35,39 @@
                           :payload payload}]
             (message-bus/send bus idv-command-channel envelope)))))))
 
+(defn save-idv
+  "Save an IDV, converting a uniqueness-violation result into an
+  `:idv/already-exists` rejection."
+  [txn idv changelog]
+  (let [result (store/save-idv txn idv changelog)]
+    (if (store/uniqueness-violation? result)
+      (error/reject :idv/already-exists
+                    {:message "IDV already exists for party"
+                     :party-id (:party-id idv)})
+      result)))
+
+(defn get-idv
+  "Load an IDV by composite primary key, rejecting with
+  `:idv/not-found` if the record is missing."
+  [txn organization-id verification-id]
+  (let-nom> [idv (store/get-idv txn organization-id verification-id)]
+    (or idv
+        (error/reject :idv/not-found
+                      {:message "IDV not found"
+                       :organization-id organization-id
+                       :verification-id verification-id}))))
+
 (defn initiate
   [config data]
   (let-nom>
     [idv (domain/new-idv data)
-     saved (store/save-idv config
-                           idv
-                           {:verification-id (:verification-id idv)
-                            :status-after (:status idv)})]
+     saved (save-idv config
+                     idv
+                     {:verification-id (:verification-id idv)
+                      :status-after (:status idv)})]
     (publish-submit-idv-check config saved data)
     saved))
 
 (defn get
   [txn data]
-  (let [{:keys [organization-id verification-id]} data]
-    (store/get-idv txn organization-id verification-id)))
+  (get-idv txn (:organization-id data) (:verification-id data)))

@@ -55,7 +55,11 @@
         {:keys [version-id product-type]} product
         account-type (party->account-type party)]
     (let-nom>
-      [_ (validation/valid-product? product)
+      [_ (when (nil? product)
+           (error/reject :cash-account/open
+                         {:message "Product is not published"
+                          :product-id product-id}))
+       _ (validation/valid-product? product)
        _ (validation/valid-currency? currency product)
        _ (validation/valid-party? party)
        _ (check-capability :cash-account-action-open

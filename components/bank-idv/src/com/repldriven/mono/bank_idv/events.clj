@@ -1,7 +1,7 @@
 (ns com.repldriven.mono.bank-idv.events
   (:require
+    [com.repldriven.mono.bank-idv.core :as core]
     [com.repldriven.mono.bank-idv.domain :as domain]
-    [com.repldriven.mono.bank-idv.store :as store]
 
     [com.repldriven.mono.avro.interface :as avro]
     [com.repldriven.mono.error.interface :as error :refer [let-nom>]]
@@ -20,7 +20,7 @@
   (let [{:keys [record-db record-store]} config
         bank {:record-db record-db :record-store record-store}
         {:keys [organization-id verification-id status]} data
-        idv (store/get-idv bank organization-id verification-id)]
+        idv (core/get-idv bank organization-id verification-id)]
     (cond
      (error/anomaly? idv)
      (do (log/error "Failed to load IDV for idv-completed event"
@@ -33,12 +33,12 @@
          (do (log/warnf "Unknown idv-completed status: %s" status)
              nil)
          (let-nom>
-           [_ (store/save-idv bank
-                              updated
-                              {:organization-id organization-id
-                               :verification-id verification-id
-                               :status-before (:status idv)
-                               :status-after (:status updated)})]
+           [_ (core/save-idv bank
+                             updated
+                             {:organization-id organization-id
+                              :verification-id verification-id
+                              :status-before (:status idv)
+                              :status-after (:status updated)})]
            updated))))))
 
 (defn- dispatch
