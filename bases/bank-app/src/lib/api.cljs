@@ -2,6 +2,7 @@
 
 (def ^:private api-key (atom nil))
 (def ^:private admin-key-store "mono-admin-api-key")
+(def ^:private orgs-store "queenswood-org-credentials")
 
 (defn admin-token
   "Browser-side admin API key. Read from localStorage first; fall
@@ -19,22 +20,69 @@
   (.setItem js/localStorage admin-key-store token))
 
 (defn clear-admin-token
-  "Wipe the stored admin API key — caller's choice whether to also
-  clear org keys."
+  "Wipe the admin bearer and any per-org credentials captured during
+  the session so a new admin login starts from scratch."
   []
-  (.removeItem js/localStorage admin-key-store))
+  (.removeItem js/localStorage admin-key-store)
+  (.removeItem js/localStorage orgs-store)
+  (reset! api-key nil))
 
 (defn- parse-response
   [res]
   (-> (.json res)
       (.then (fn [body] #js {:http-status (.-status res) :body body}))))
 
+(defn- load-org-credentials
+  []
+  (let [raw (.getItem js/localStorage orgs-store)]
+    (if raw (js/JSON.parse raw) #js {})))
+
+(defn- save-org-credentials
+  "Stash an org's Keycloak client_id + client_secret + status so
+  set-org can mint JWTs for it later."
+  [org-id client-id client-secret status]
+  (let [store (load-org-credentials)]
+    (aset store
+          org-id
+          #js {:client-id client-id
+               :client-secret client-secret
+               :status status})
+    (.setItem js/localStorage orgs-store (js/JSON.stringify store))))
+
+(defn- exchange-token
+  "POST to /oauth/token with client_credentials. Resolves with the
+  access_token string."
+  [client-id client-secret status]
+  (let [scope (if (= status "live") "queenswood-api-live" "queenswood-api-test")
+        params (str "grant_type=client_credentials"
+                    "&client_id=" (js/encodeURIComponent client-id)
+                    "&client_secret=" (js/encodeURIComponent client-secret)
+                    "&scope=" scope)]
+    (-> (js/fetch "/oauth/token"
+                  #js {:method "POST"
+                       :headers
+                       #js {"Content-Type" "application/x-www-form-urlencoded"}
+                       :body params})
+        (.then (fn [res] (.json res)))
+        (.then (fn [body] (.-access_token body))))))
+
 (defn set-org
-  "Records which organisation the UI is operating on. Org-scoped
-  requests reuse the admin bearer until the frontend learns to mint
-  service-account JWTs from Keycloak."
-  [_org-id]
-  (reset! api-key (admin-token)))
+  "Switch the bearer used by org-scoped requests to a JWT minted for
+  `org-id` via /oauth/token. Returns a Promise that resolves once the
+  token is in place; callers that immediately fetch org-scoped data
+  must await it. Falls back to the admin bearer if no credentials are
+  stored for the org (e.g. it was created in a different session)."
+  [org-id]
+  (let [creds (aget (load-org-credentials) org-id)]
+    (if (and creds (.-client-id creds))
+      (-> (exchange-token (.-client-id creds)
+                          (.-client-secret creds)
+                          (.-status creds))
+          (.then (fn [token]
+                   (reset! api-key (or token (admin-token)))
+                   token)))
+      (do (reset! api-key (admin-token))
+          (js/Promise.resolve nil)))))
 
 (defn create-organization
   [org-name org-status tier currencies]
@@ -48,7 +96,20 @@
                                       "status" org-status
                                       "tier" tier
                                       "currencies" currencies}))})
-      (.then parse-response)))
+      (.then parse-response)
+      (.then (fn [res]
+               (let [status (aget res "http-status")]
+                 (when (and (>= status 200) (< status 300))
+                   (let [body (.-body res)
+                         org-id (aget body "organization-id")
+                         client-id (aget body "client-id")
+                         client-secret (aget body "client-secret")]
+                     (when (and client-id client-secret)
+                       (save-org-credentials org-id
+                                             client-id
+                                             client-secret
+                                             org-status))))
+                 res)))))
 
 (defn list-organizations
   []

@@ -41,9 +41,13 @@
     toastRef?.show(opts);
   }
 
-  function selectOrg(orgId) {
+  async function selectOrg(orgId) {
     selectedOrgId = orgId;
-    set_org(orgId);
+    // set_org mints a JWT against /oauth/token using the org's stored
+    // client_credentials; the list-views below all attach the bearer
+    // from the same atom, so wait for it to settle before kicking
+    // them off.
+    await set_org(orgId);
     partyListRef?.load();
     accountListRef?.load();
     productListRef?.load();
