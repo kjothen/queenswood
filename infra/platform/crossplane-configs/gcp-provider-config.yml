@@ -1,22 +1,12 @@
-apiVersion: gcp.upbound.io/v1beta1
-kind: ProviderConfig
-metadata:
-  name: default
-spec:
-  # Overridden per-cluster by `just kind-xp-install-gcp-config`;
-  # Argo's ignoreDifferences in apps/crossplane-configs.yml keeps this
-  # placeholder from clobbering the live value on selfHeal.
-  projectID: PLACEHOLDER
-  credentials:
-    source: Secret
-    secretRef:
-      namespace: crossplane-system
-      name: gcp-creds
-      key: creds
----
+# The v1 gcp.upbound.io ProviderConfig is NOT defined here; Argo's
+# RespectIgnoreDifferences was observed reverting its spec.projectID
+# back to a placeholder, breaking every fresh `up-from-zero`. That
+# resource is now owned by `just kind-xp-install-gcp-config`, which
+# envsubst-applies infra/local/gcp-provider-config.yml.tmpl directly.
+#
 # Namespace-scoped MRs (the `.m.` variants used by Compositions for
 # Crossplane v2 namespace-scoped XRs) resolve provider auth through
-# ClusterProviderConfig, not the regular ProviderConfig.
+# ClusterProviderConfig, which Argo manages just fine.
 apiVersion: gcp.m.upbound.io/v1beta1
 kind: ClusterProviderConfig
 metadata:

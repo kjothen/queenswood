@@ -13,14 +13,12 @@ spec:
     path: infra/platform/crossplane-configs
   destination:
     server: https://kubernetes.default.svc
-  # projectID is set per-cluster by `just kind-xp-install-gcp-provider-config`
-  # (called from `up-from-zero`). Keeping it out of git so cold starts
-  # against fresh GCP projects don't need a commit.
+  # projectID on the v2 ClusterProviderConfig is set per-cluster by
+  # `just kind-xp-install-gcp-config` (called from `up-from-zero`).
+  # Keeping it out of git so cold starts against fresh GCP projects
+  # don't need a commit. The v1 ProviderConfig is owned outside Argo
+  # entirely; see infra/local/gcp-provider-config.yml.tmpl.
   ignoreDifferences:
-    - group: gcp.upbound.io
-      kind: ProviderConfig
-      jsonPointers:
-        - /spec/projectID
     - group: gcp.m.upbound.io
       kind: ClusterProviderConfig
       jsonPointers:
