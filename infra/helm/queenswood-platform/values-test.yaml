@@ -1,0 +1,5 @@
+# Overrides for the queenswood-test environment. Used to sidestep the
+# Cloud DNS DNSSEC zone-name cooldown after rapid cycling.
+env:
+  name: queenswood-test
+  domain: queenswood-test.repldriven.com

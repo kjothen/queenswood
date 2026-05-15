@@ -1,0 +1,12 @@
+apiVersion: platform.queenswood.repldriven.com/v1alpha1
+kind: XQueenswoodCertificate
+metadata:
+  name: {{ .Values.env.name }}-cert
+  namespace: {{ .Values.env.name }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "5"
+spec:
+  domain: {{ .Values.env.domain }}
+  location: {{ .Values.cert.location }}
+  managedZoneRef:
+    name: {{ .Values.env.name }}-zone
