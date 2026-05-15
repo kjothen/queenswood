@@ -1,15 +1,19 @@
 (ns com.repldriven.mono.bank-api.auth
+  "Two-path authentication: a stop-gap env-var admin bearer (kept
+  until human-auth lands) and a Keycloak-issued JWT for tenant
+  service accounts. JWT validation delegates to
+  `bank-identity-provider` so JWKS caching, kid rotation and audience
+  enforcement live in one place."
   (:require
-    [com.repldriven.mono.cache.interface :as cache]
+    [com.repldriven.mono.bank-identity-provider.interface
+     :as identity-provider]
     [com.repldriven.mono.encryption.interface :as encryption]
-    [com.repldriven.mono.bank-api-key.interface :as bank-api-key]
     [com.repldriven.mono.utility.interface :as util]
 
     [sieppari.context :as sc]
 
+    [clojure.set :as set]
     [clojure.string :as str]))
-
-(def ^:private api-key-cache (cache/create 60000))
 
 (defn- extract-bearer
   [request]
@@ -17,79 +21,104 @@
           (str/split #" " 2)
           (as-> parts (when (= "Bearer" (first parts)) (second parts)))))
 
-(defn- verify-org-key
-  [request key-secret]
-  (let [key-hash (encryption/hash-token key-secret)
-        {:keys [record-db record-store]} request
-        api-key (cache/lookup api-key-cache
-                              key-hash
-                              #(bank-api-key/get-api-key {:record-db record-db
-                                                          :record-store
-                                                          record-store}
-                                                         key-hash))]
-    (when (and (map? api-key) (zero? (:revoked-at api-key 0)))
-      {:role :org
-       :organization-id (:organization-id api-key)
-       :api-key-id (:api-key-id api-key)})))
+(defn- admin?
+  [token admin-api-key]
+  (and admin-api-key
+       (encryption/bytes-equals? (util/str->bytes token)
+                                 (util/str->bytes admin-api-key))))
+
+(defn- admin-auth
+  [request]
+  ;; TODO(human-auth-PR): replace the env-var admin key with a
+  ;; Keycloak admin realm-role. The role is encoded as :admin in
+  ;; the JWT's `realm_access.roles` claim once that PR lands.
+  {:principal-type :admin
+   :principal-id "admin"
+   :organization-id (:internal-organization-id request)
+   :roles #{:admin :org}})
+
+(defn- service-auth
+  "Map a verified JWT claims map to the request auth context. The
+  client_id (== organization-id by convention) appears as `:azp`."
+  [claims]
+  {:principal-type :service
+   :principal-id (:azp claims)
+   :organization-id (:azp claims)
+   :roles (-> claims
+              (get-in [:realm_access :roles])
+              (->> (map keyword))
+              (->> (into #{:org})))
+   :token-jti (:jti claims)})
 
 (def authenticate
   {:name ::authenticate
    :enter (fn [ctx]
             (let [request (:request ctx)
-                  key-secret (extract-bearer request)
-                  admin-api-key (:admin-api-key request)]
+                  token (extract-bearer request)
+                  {:keys [admin-api-key identity-provider expected-audiences]}
+                  request]
               (cond
-               (nil? key-secret)
+               (nil? token)
                ctx
 
-               (encryption/bytes-equals? (util/str->bytes key-secret)
-                                         (util/str->bytes admin-api-key))
-               (assoc-in ctx
-                [:request :auth]
-                {:role :admin
-                 :organization-id
-                 (:internal-organization-id
-                  request)})
+               (admin? token admin-api-key)
+               (assoc-in ctx [:request :auth] (admin-auth request))
 
                :else
-               (if-let [auth (verify-org-key request key-secret)]
-                 (assoc-in ctx [:request :auth] auth)
-                 ctx))))})
+               (let [claims (identity-provider/verify-token
+                             identity-provider
+                             token
+                             {:expected-audiences (set expected-audiences)})]
+                 (if (map? claims)
+                   (assoc-in ctx [:request :auth] (service-auth claims))
+                   ctx)))))})
 
-(def ^:private scheme->roles {"adminAuth" #{:admin} "orgAuth" #{:org :admin}})
+(defn- required-roles
+  "Derive the role set a route requires from its OpenAPI metadata.
+  `bearerAuth` alone permits any authenticated principal; an
+  `x-required-roles` extension narrows it (e.g. `[admin]`)."
+  [security]
+  (let [schemes (into #{} (mapcat keys) security)
+        explicit (->> security
+                      (mapcat vals)
+                      (mapcat identity)
+                      (into #{}))]
+    (cond
+     (empty? schemes)
+     nil
+     (seq explicit)
+     (into #{} (map keyword) explicit)
+     :else
+     #{:org})))
 
 (def authorize
   {:name ::authorize
    :enter (fn [ctx]
             (let [request (:request ctx)
-                  security (get-in request
-                                   [:reitit.core/match :data
-                                    :openapi :security])
-                  schemes (into #{} (mapcat keys) security)]
-              (if (empty? schemes)
+                  security
+                  (get-in request [:reitit.core/match :data :openapi :security])
+                  required (required-roles security)]
+              (if (nil? required)
                 ctx
-                (let [role (get-in request [:auth :role])
-                      allowed (into #{} (mapcat scheme->roles) schemes)]
+                (let [roles (get-in request [:auth :roles] #{})]
                   (cond
-                   (nil? role)
+                   (empty? roles)
                    (sc/terminate ctx
                                  {:status 401
-                                  :headers
-                                  {"content-type" "application/json"}
+                                  :headers {"content-type" "application/json"}
                                   :body {:title "UNAUTHORIZED"
                                          :type "auth/unauthenticated"
                                          :status 401
-                                         :detail
-                                         "Missing or invalid API key"}})
-                   (not (allowed role))
+                                         :detail "Missing or invalid token"}})
+
+                   (empty? (set/intersection roles required))
                    (sc/terminate ctx
                                  {:status 403
-                                  :headers
-                                  {"content-type" "application/json"}
+                                  :headers {"content-type" "application/json"}
                                   :body {:title "FORBIDDEN"
                                          :type "auth/forbidden"
                                          :status 403
-                                         :detail
-                                         "Insufficient privileges"}})
+                                         :detail "Insufficient privileges"}})
+
                    :else
                    ctx)))))})

@@ -1,10 +1,10 @@
 (ns com.repldriven.mono.bank-api.main
   (:require
     com.repldriven.mono.avro.interface
-    com.repldriven.mono.bank-api-key.interface
     com.repldriven.mono.bank-balance.interface
     com.repldriven.mono.bank-cash-account.interface
     com.repldriven.mono.bank-cash-account-product.interface
+    com.repldriven.mono.bank-identity-provider.interface
     com.repldriven.mono.bank-idv.interface
     com.repldriven.mono.bank-organization.interface
     com.repldriven.mono.bank-party.interface

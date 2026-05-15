@@ -2,12 +2,15 @@
   (:require
     [com.repldriven.mono.bank-test-api-scenarios.refs :as refs]
 
+    [com.repldriven.mono.bank-test-identity-provider.interface
+     :as test-idp]
     [com.repldriven.mono.http-client.interface :as http]
 
     [matcher-combinators.matchers :as m]
     [matcher-combinators.standalone :as standalone]
 
     [clojure.data.json :as json]
+    [clojure.string :as str]
     [clojure.test :refer [is]]
     [clojure.walk :as walk]))
 
@@ -56,11 +59,18 @@
    form))
 
 (defn- resolve-auth
-  [{:keys [admin-api-key]} auth]
-  (case auth
-    nil nil
-    :admin admin-api-key
-    auth))
+  [{:keys [admin-api-key captures]} auth]
+  (cond
+   (nil? auth)
+   nil
+   (= :admin auth)
+   admin-api-key
+   ;; A keyword references a previously-captured token (minted by
+   ;; `:auth/mint-token` and stored via `:as`).
+   (keyword? auth)
+   (get captures auth)
+   :else
+   auth))
 
 (defn- substitute-path
   [path path-params]
@@ -92,13 +102,25 @@
    :else
    (str base-url (substitute-path path path-params))))
 
+(defn- form-urlencode
+  [params]
+  (->> params
+       (map (fn [[k v]]
+              (str (java.net.URLEncoder/encode (name k) "UTF-8")
+                   "="
+                   (java.net.URLEncoder/encode (str v) "UTF-8"))))
+       (str/join "&")))
+
 (defn- build-request
   [{:keys [base-url] :as ctx}
-   {:keys [method url path path-params query-params body auth headers]}]
+   {:keys [method url path path-params query-params body form auth headers]}]
   (let [token (resolve-auth ctx auth)
         base-headers (cond-> {}
                              body
                              (assoc "Content-Type" "application/json")
+                             form
+                             (assoc "Content-Type"
+                                    "application/x-www-form-urlencoded")
                              token
                              (assoc "Authorization" (str "Bearer " token)))]
     (cond-> {:method method
@@ -107,7 +129,9 @@
             query-params
             (assoc :query-params query-params)
             body
-            (assoc :body (json/write-str body)))))
+            (assoc :body (json/write-str body))
+            form
+            (assoc :body (form-urlencode form)))))
 
 (defn- assert-match
   [expected actual label]
@@ -199,3 +223,19 @@
                     actual-body
                     "problem-details")))
   ctx)
+
+(defmethod dispatch :auth/mint-token
+  [{:keys [identity-provider captures] :as ctx} {:keys [for as]}]
+  (let [{:keys [client-id status roles audience] :or {roles [:org]}}
+        (refs/resolve-all captures for)
+        aud (or
+             audience
+             (if (= :live status) "queenswood-api-live" "queenswood-api-test"))
+        token (test-idp/mint-token identity-provider
+                                   {:azp client-id
+                                    :sub client-id
+                                    :aud [aud]
+                                    :realm_access {:roles (mapv name roles)}})]
+    (cond-> ctx
+            as
+            (assoc-in [:captures as] token))))

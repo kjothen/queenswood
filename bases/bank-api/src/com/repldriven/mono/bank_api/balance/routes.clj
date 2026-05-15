@@ -11,7 +11,7 @@
 
 (def routes
   [["/cash-accounts/{account-id}/balances"
-    {:openapi {:tags ["Balances"] :security [{"orgAuth" []}]}
+    {:openapi {:tags ["Balances"] :security [{"bearerAuth" ["org"]}]}
      :parameters {:path {:account-id [:ref "CashAccountId"]}}}
     [""
      {:get {:summary "Retrieve account balances"

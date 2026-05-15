@@ -8,7 +8,7 @@
 
 (defn create-organization
   [request]
-  (let [{:keys [record-db record-store parameters]} request
+  (let [{:keys [record-db record-store identity-provider parameters]} request
         {:keys [body]} parameters
         {:keys [name status tier currencies]} body
         config {:record-db record-db :record-store record-store}
@@ -18,10 +18,11 @@
                 :organization-type-customer
                 status
                 tier
-                currencies)]
+                currencies
+                {:identity-provider identity-provider})]
     (if (error/anomaly? result)
       (errors/anomaly->response result)
       {:status 201
        :body (assoc (:organization result)
-                    :api-key-secret
-                    (:key-secret result))})))
+                    :client-secret
+                    (:client-secret result))})))

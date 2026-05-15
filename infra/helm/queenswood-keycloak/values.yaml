@@ -1,0 +1,74 @@
+# The two knobs that change per environment. Everything else
+# (resource names, app namespace) derives from `env.name`.
+env:
+  name: queenswood
+  domain: queenswood.repldriven.com
+
+# Subdomain on which Keycloak is exposed. Combined with env.domain
+# (e.g. `keycloak.queenswood.repldriven.com`).
+host:
+  subdomain: keycloak
+
+# Gateway that fronts the realm endpoint. Created by the queenswood
+# application chart; we attach an HTTPRoute to its `https` section.
+gateway:
+  name: queenswood-gateway
+  sectionName: https
+
+# CoreDNS rewrite: in-cluster pods need the public `keycloak.<domain>`
+# to resolve to the internal Service so the JWT `iss` claim matches
+# inside and outside the cluster.
+coredns:
+  rewrite:
+    enabled: true
+    namespace: kube-system
+    configMapName: coredns-custom
+
+# ArgoCD Application metadata. The Application resource itself lives
+# in infra/bootstrap/apps/; these values are surfaced so the chart can
+# render related labels/annotations.
+argocd:
+  syncWave: "8"
+
+# Inputs to the bundled bitnami/keycloak subchart. Only the knobs we
+# need to override are listed; the rest pick up Bitnami defaults.
+keycloak:
+  # Bitnami's chart sets the Pod fullname to {release}-keycloak. We
+  # use that everywhere we have to refer to the Service / StatefulSet.
+  fullnameOverride: queenswood-keycloak
+
+  auth:
+    # Admin user / password materialise from a Kubernetes Secret named
+    # `queenswood-keycloak` (chart wiring below). Created out-of-band
+    # by the bootstrap (Sealed Secret or manual `kubectl create secret`).
+    existingSecret: queenswood-keycloak
+    passwordSecretKey: admin-password
+    adminUser: admin
+
+  production: true
+  proxy: edge
+  tls:
+    enabled: false
+
+  # The HTTPRoute (templates/httproute.yaml) terminates TLS at the
+  # gateway; the Bitnami chart's own ingress is therefore disabled.
+  ingress:
+    enabled: false
+
+  # External Keycloak hostname so the realm issuer matches what the
+  # bank-api expects to see in token `iss` claims.
+  externalDatabase: {}
+  postgresql:
+    enabled: true
+    auth:
+      existingSecret: queenswood-keycloak-postgresql
+      secretKeys:
+        adminPasswordKey: postgres-password
+        userPasswordKey: password
+        replicationPasswordKey: replication-password
+
+  # Realm import via keycloak-config-cli sidecar. The ConfigMap is
+  # rendered by templates/realm-import-configmap.yaml.
+  keycloakConfigCli:
+    enabled: true
+    existingConfigmap: queenswood-keycloak-realm

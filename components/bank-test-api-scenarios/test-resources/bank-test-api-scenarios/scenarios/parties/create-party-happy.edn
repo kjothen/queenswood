@@ -10,12 +10,16 @@
                     :tier "micro"
                     :currencies ["GBP"]}}
    :as :org-0
-   :assert {:status 201}}]
+   :assert {:status 201}}
+  {:command :auth/mint-token
+   :for {:client-id [:ref :org-0 :client-id]
+         :status :live}
+   :as :org-0-token}]
  :when
  [{:command :api/request
    :request {:method :post
              :path "/v1/parties"
-             :auth [:ref :org-0 :api-key-secret]
+             :auth :org-0-token
              :headers {:idempotency-key "ik-create-party-happy-001"}
              :body {:type "person"
                     :display-name "Arthur Phillip Dent"
@@ -36,6 +40,6 @@
    :request {:method :get
              :path "/v1/parties/{party-id}"
              :path-params {:party-id [:ref :party-0 :party-id]}
-             :auth [:ref :org-0 :api-key-secret]}
+             :auth :org-0-token}
    :until {:status 200
            :body {:status "active"}}}]}

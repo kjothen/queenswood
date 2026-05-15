@@ -3,7 +3,8 @@
     [com.repldriven.mono.bank-idv.core :as core]
     [com.repldriven.mono.bank-idv.store :as store]
 
-    [com.repldriven.mono.bank-person-identification.interface :as person-id]
+    [com.repldriven.mono.bank-person-identification.interface :as
+     person-identification]
     [com.repldriven.mono.bank-schema.interface :as schema]
 
     [com.repldriven.mono.error.interface :refer [let-nom>]]
@@ -24,7 +25,7 @@
                        :verification-id (:verification-id existing)
                        :status (:status existing)})
             (let-nom>
-              [identification (person-id/get-person-identification
+              [identification (person-identification/get-person-identification
                                config
                                party-id)
                result (core/initiate

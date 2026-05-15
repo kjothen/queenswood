@@ -4,9 +4,6 @@
     [com.repldriven.mono.bank-api.examples :as examples]
     [com.repldriven.mono.bank-api.schema :as schema]
 
-    [com.repldriven.mono.bank-api.api-key.components :as api-key.components]
-    [com.repldriven.mono.bank-api.api-key.examples :as api-key.examples]
-    [com.repldriven.mono.bank-api.api-key.routes :as api-key]
     [com.repldriven.mono.bank-api.balance.components :as balance.components]
     [com.repldriven.mono.bank-api.balance.examples :as balance.examples]
     [com.repldriven.mono.bank-api.balance.routes :as balance]
@@ -21,6 +18,9 @@
     [com.repldriven.mono.bank-api.cash-account.examples :as
      cash-account.examples]
     [com.repldriven.mono.bank-api.cash-account.routes :as cash-account]
+    [com.repldriven.mono.bank-api.oauth.components :as oauth.components]
+    [com.repldriven.mono.bank-api.oauth.examples :as oauth.examples]
+    [com.repldriven.mono.bank-api.oauth.routes :as oauth]
     [com.repldriven.mono.bank-api.organization.components :as
      organization.components]
     [com.repldriven.mono.bank-api.organization.examples :as
@@ -98,10 +98,10 @@
                                 :unique-vector-lax
                                 shared.components/unique-vector-lax-schema
                                 "ErrorResponse" schema/ErrorResponseSchema}
-                               api-key.components/registry
                                balance.components/registry
                                cash-account-product.components/registry
                                cash-account.components/registry
+                               oauth.components/registry
                                organization.components/registry
                                party.components/registry
                                payee-check.components/registry
@@ -117,33 +117,39 @@
   (into
    (server/health-routes ctx)
    [["/openapi.json"
-     {:get {:no-doc true
-            :openapi {:info {:title "Queenswood"
-                             :description "Queenswood Banking API"
-                             :version "1.0.0"}
-                      :components
-                      {:securitySchemes
-                       {"adminAuth" {:type :http
-                                     :scheme :bearer
-                                     :description "Admin API key"}
-                        "orgAuth" {:type :http
-                                   :scheme :bearer
-                                   :description "Organization API key"}}
-                       :parameters shared.parameters/registry
-                       :examples (merge
-                                  examples/registry
-                                  balance.examples/registry
-                                  cash-account-product.examples/registry
-                                  cash-account.examples/registry
-                                  api-key.examples/registry
-                                  organization.examples/registry
-                                  party.examples/registry
-                                  payee-check.examples/registry
-                                  payment.examples/registry
-                                  policy.examples/registry
-                                  simulate.examples/registry
-                                  tier.examples/registry)}}
-            :handler (server/standard-openapi-handler)}}]
+     {:get
+      {:no-doc true
+       :openapi
+       {:info {:title "Queenswood"
+               :description "Queenswood Banking API"
+               :version "1.0.0"}
+        :components
+        {:securitySchemes
+         {"bearerAuth"
+          {:type :http
+           :scheme :bearer
+           :bearerFormat "JWT"
+           :description
+           "JWT issued by the Queenswood Keycloak realm. The token's `azp` claim is the calling org's identifier; admin-only routes require an `admin` role in `realm_access.roles`."}}
+         :parameters shared.parameters/registry
+         :examples (merge
+                    examples/registry
+                    balance.examples/registry
+                    cash-account-product.examples/registry
+                    cash-account.examples/registry
+                    oauth.examples/registry
+                    organization.examples/registry
+                    party.examples/registry
+                    payee-check.examples/registry
+                    payment.examples/registry
+                    policy.examples/registry
+                    simulate.examples/registry
+                    tier.examples/registry)}}
+       :handler (server/standard-openapi-handler)}}]
+    (into [""
+           {:interceptors (concat telemetry/trace-span
+                                  (:interceptors ctx))}]
+          oauth/routes)
     (into ["/v1"
            {:interceptors (concat telemetry/trace-span
                                   (:interceptors ctx)
@@ -158,7 +164,6 @@
           (concat balance/routes
                   cash-account-product/routes
                   cash-account/routes
-                  api-key/routes
                   organization/routes
                   party/routes
                   payee-check/routes

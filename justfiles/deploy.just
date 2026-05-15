@@ -158,3 +158,20 @@ kube-admin-key:
       exit 1
     fi
     printf '%s' "$key"
+
+# Print Keycloak admin credentials + console URL for the active env
+keycloak-admin-login:
+    #!/usr/bin/env zsh
+    set -euo pipefail
+    KCTX=gke_$(gcloud config get project 2>/dev/null)_europe-west2-a_queenswood-gke
+    user=$(kubectl --context $KCTX -n {{ ENV }} get secret queenswood-keycloak \
+      -o jsonpath='{.data.admin-user}' 2>/dev/null | base64 -d)
+    pass=$(kubectl --context $KCTX -n {{ ENV }} get secret queenswood-keycloak \
+      -o jsonpath='{.data.admin-password}' 2>/dev/null | base64 -d)
+    if [[ -z "$user" || -z "$pass" ]]; then
+      echo "queenswood-keycloak Secret missing or empty in namespace {{ ENV }} — is the Keycloak chart installed?" >&2
+      exit 1
+    fi
+    echo "Admin console: https://keycloak.{{ ENV_DOMAIN }}/admin/"
+    echo "User:          $user"
+    echo "Password:      $pass"

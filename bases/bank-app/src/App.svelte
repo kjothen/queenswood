@@ -8,7 +8,6 @@
   import PartyList from "./lib/PartyList.svelte";
   import CashAccountList from "./lib/CashAccountList.svelte";
   import CashAccountProductList from "./lib/CashAccountProductList.svelte";
-  import ApiKeyList from "./lib/ApiKeyList.svelte";
   import TierList from "./lib/TierList.svelte";
   import PolicyList from "./lib/PolicyList.svelte";
   import PayeeCheckList from "./lib/PayeeCheckList.svelte";
@@ -20,7 +19,6 @@
   let partyListRef = $state();
   let accountListRef = $state();
   let productListRef = $state();
-  let apiKeyListRef = $state();
   let copListRef = $state();
   let toastRef = $state();
   let adminTokenSet = $state(!!admin_token());
@@ -43,13 +41,16 @@
     toastRef?.show(opts);
   }
 
-  function selectOrg(orgId) {
+  async function selectOrg(orgId) {
     selectedOrgId = orgId;
-    set_org(orgId);
+    // set_org mints a JWT against /oauth/token using the org's stored
+    // client_credentials; the list-views below all attach the bearer
+    // from the same atom, so wait for it to settle before kicking
+    // them off.
+    await set_org(orgId);
     partyListRef?.load();
     accountListRef?.load();
     productListRef?.load();
-    apiKeyListRef?.load();
     copListRef?.load();
   }
 
@@ -135,13 +136,6 @@
         onSelect={(id) => selectOrg(id)}
       />
       <PayeeCheckList bind:this={copListRef} />
-    {:else if currentPage === "api-keys"}
-      <OrgSelector
-        {organizations}
-        {selectedOrgId}
-        onSelect={(id) => selectOrg(id)}
-      />
-      <ApiKeyList bind:this={apiKeyListRef} />
     {/if}
   </main>
 </div>

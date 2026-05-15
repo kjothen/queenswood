@@ -3,7 +3,6 @@
     [com.repldriven.mono.bank-test-scenarios.id-mapping :as id-mapping]
     [com.repldriven.mono.bank-test-scenarios.quiescence :as quiescence]
 
-    [com.repldriven.mono.bank-api-key.interface :as api-key]
     [com.repldriven.mono.bank-balance.interface :as balances]
     [com.repldriven.mono.bank-cash-account-product.interface :as products]
     [com.repldriven.mono.bank-cash-account.interface :as cash-accounts]
@@ -663,13 +662,6 @@
 (defmethod dispatch :get-policy-binding
   [{:keys [bank] :as ctx} {[binding-id] :args}]
   (let [result (policy/get-binding bank binding-id)]
-    (-> ctx
-        (update :counter inc)
-        (track result))))
-
-(defmethod dispatch :get-api-key
-  [{:keys [bank] :as ctx} {[key-hash] :args}]
-  (let [result (api-key/get-api-key bank key-hash)]
     (-> ctx
         (update :counter inc)
         (track result))))

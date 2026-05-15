@@ -3,6 +3,9 @@ system:
   message-bus: !include bank-test-api-scenarios/message-bus-test.yml
   fdb: !include bank/fdb-test.yml
   avro: !include avro/avro-test.yml
+  identity-provider:
+    client: !system/component
+      system/component-kind: test-identity-provider/client
   policies: !include bank/policy-test.yml
   organizations: !include bank/organization-test.yml
   policy-bindings: !include bank/policy-binding-test.yml
@@ -23,6 +26,10 @@ system:
     interceptors: !system/component
       system/component-kind: server/interceptors
       admin-api-key: !env MONO_ADMIN_API_KEY
+      identity-provider: !system/ref identity-provider.client
+      expected-audiences:
+        - queenswood-api-test
+        - queenswood-api-live
       internal-organization-id: !system/ref organizations.internal.organization.organization-id
       internal-account-id: !system/ref organizations.internal-account-id
       dispatchers:

@@ -1,0 +1,85 @@
+# Realm import consumed by Bitnami's keycloak-config-cli sidecar. The
+# `queenswood` realm exposes the realm-level roles the bank-api maps
+# back to principals (`admin`, `org`) and two protocol mappers that
+# inject the per-env audience claims into every service-account token.
+#
+# Per-tenant clients are created dynamically by `bank-identity-provider`
+# at runtime, so we deliberately ship zero clients in the import.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: queenswood-keycloak-realm
+  labels:
+    {{- include "queenswood-keycloak.labels" . | nindent 4 }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "{{ .Values.argocd.syncWave }}"
+data:
+  queenswood-realm.json: |
+    {
+      "realm": "queenswood",
+      "enabled": true,
+      "sslRequired": "external",
+      "registrationAllowed": false,
+      "loginWithEmailAllowed": false,
+      "duplicateEmailsAllowed": false,
+      "resetPasswordAllowed": false,
+      "editUsernameAllowed": false,
+      "bruteForceProtected": true,
+      "accessTokenLifespan": 3600,
+      "roles": {
+        "realm": [
+          {
+            "name": "admin",
+            "description": "Queenswood platform admin role"
+          },
+          {
+            "name": "org",
+            "description": "Queenswood tenant service-account role"
+          }
+        ]
+      },
+      "clientScopes": [
+        {
+          "name": "queenswood-api-test",
+          "description": "Audience scope for the test API listener",
+          "protocol": "openid-connect",
+          "attributes": {
+            "include.in.token.scope": "true",
+            "display.on.consent.screen": "false"
+          },
+          "protocolMappers": [
+            {
+              "name": "audience-test",
+              "protocol": "openid-connect",
+              "protocolMapper": "oidc-audience-mapper",
+              "config": {
+                "included.custom.audience": "queenswood-api-test",
+                "id.token.claim": "false",
+                "access.token.claim": "true"
+              }
+            }
+          ]
+        },
+        {
+          "name": "queenswood-api-live",
+          "description": "Audience scope for the live API listener",
+          "protocol": "openid-connect",
+          "attributes": {
+            "include.in.token.scope": "true",
+            "display.on.consent.screen": "false"
+          },
+          "protocolMappers": [
+            {
+              "name": "audience-live",
+              "protocol": "openid-connect",
+              "protocolMapper": "oidc-audience-mapper",
+              "config": {
+                "included.custom.audience": "queenswood-api-live",
+                "id.token.claim": "false",
+                "access.token.claim": "true"
+              }
+            }
+          ]
+        }
+      ]
+    }

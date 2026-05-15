@@ -4,7 +4,7 @@
 
 (def routes
   [["/tiers"
-    {:openapi {:tags ["Tiers"] :security [{"adminAuth" []}]}}
+    {:openapi {:tags ["Tiers"] :security [{"bearerAuth" ["admin"]}]}}
     [""
      {:get {:summary "List all tiers"
             :openapi {:operationId "ListTiers"}

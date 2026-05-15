@@ -86,8 +86,8 @@
                        "bases/external-test-runner/test"]}
   :+bank
   {:extra-deps
-   {components/bank-api-key {:local/root "components/bank-api-key"}
-    components/bank-balance {:local/root "components/bank-balance"}
+   {components/bank-balance {:local/root "components/bank-balance"}
+    components/bank-identity-provider {:local/root "components/bank-identity-provider"}
     components/bank-cash-account-product
     {:local/root "components/bank-cash-account-product"}
     components/bank-cash-account {:local/root "components/bank-cash-account"}
@@ -108,6 +108,8 @@
                                         "components/bank-test-api-scenarios"}
     components/bank-test-scenarios {:local/root
                                     "components/bank-test-scenarios"}
+    components/bank-test-identity-provider
+    {:local/root "components/bank-test-identity-provider"}
     components/bank-test-model {:local/root "components/bank-test-model"}
     components/bank-test-projections {:local/root
                                       "components/bank-test-projections"}

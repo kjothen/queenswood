@@ -11,12 +11,16 @@
                     :currencies ["GBP"]}}
    :as :org-0
    :assert {:status 201}}
+  {:command :auth/mint-token
+   :for {:client-id [:ref :org-0 :client-id]
+         :status :live}
+   :as :org-0-token}
 
   ;; Active party (the holder of both accounts)
   {:command :api/request
    :request {:method :post
              :path "/v1/parties"
-             :auth [:ref :org-0 :api-key-secret]
+             :auth :org-0-token
              :headers {:idempotency-key "ik-list-accounts-party"}
              :body {:type "person"
                     :display-name "Account Holder"
@@ -33,14 +37,14 @@
    :request {:method :get
              :path "/v1/parties/{party-id}"
              :path-params {:party-id [:ref :party-0 :party-id]}
-             :auth [:ref :org-0 :api-key-secret]}
+             :auth :org-0-token}
    :until {:status 200 :body {:status "active"}}}
 
   ;; Product 1: Current — create + publish
   {:command :api/request
    :request {:method :post
              :path "/v1/cash-account-products"
-             :auth [:ref :org-0 :api-key-secret]
+             :auth :org-0-token
              :body {:name "Current"
                     :product-type "current"
                     :balance-sheet-side "liability"
@@ -57,14 +61,14 @@
              :path "/v1/cash-account-products/{product-id}/versions/{version-id}/publish"
              :path-params {:product-id [:ref :current-draft :product-id]
                            :version-id [:ref :current-draft :version-id]}
-             :auth [:ref :org-0 :api-key-secret]}
+             :auth :org-0-token}
    :assert {:status 200 :body {:status "published"}}}
 
   ;; Product 2: Savings — create + publish
   {:command :api/request
    :request {:method :post
              :path "/v1/cash-account-products"
-             :auth [:ref :org-0 :api-key-secret]
+             :auth :org-0-token
              :body {:name "Savings"
                     :product-type "savings"
                     :balance-sheet-side "liability"
@@ -81,14 +85,14 @@
              :path "/v1/cash-account-products/{product-id}/versions/{version-id}/publish"
              :path-params {:product-id [:ref :savings-draft :product-id]
                            :version-id [:ref :savings-draft :version-id]}
-             :auth [:ref :org-0 :api-key-secret]}
+             :auth :org-0-token}
    :assert {:status 200 :body {:status "published"}}}
 
   ;; Open current-account, wait for opened
   {:command :api/request
    :request {:method :post
              :path "/v1/cash-accounts"
-             :auth [:ref :org-0 :api-key-secret]
+             :auth :org-0-token
              :headers {:idempotency-key "ik-list-accounts-current"}
              :body {:party-id [:ref :party-0 :party-id]
                     :name "Current GBP"
@@ -100,14 +104,14 @@
    :request {:method :get
              :path "/v1/cash-accounts/{account-id}"
              :path-params {:account-id [:ref :account-1 :account-id]}
-             :auth [:ref :org-0 :api-key-secret]}
+             :auth :org-0-token}
    :until {:status 200 :body {:account-status "opened"}}}
 
   ;; Open savings-account, wait for opened
   {:command :api/request
    :request {:method :post
              :path "/v1/cash-accounts"
-             :auth [:ref :org-0 :api-key-secret]
+             :auth :org-0-token
              :headers {:idempotency-key "ik-list-accounts-savings"}
              :body {:party-id [:ref :party-0 :party-id]
                     :name "Savings GBP"
@@ -119,7 +123,7 @@
    :request {:method :get
              :path "/v1/cash-accounts/{account-id}"
              :path-params {:account-id [:ref :account-2 :account-id]}
-             :auth [:ref :org-0 :api-key-secret]}
+             :auth :org-0-token}
    :until {:status 200 :body {:account-status "opened"}}}]
 
  :when
@@ -128,7 +132,7 @@
  [{:command :api/request
    :request {:method :get
              :path "/v1/cash-accounts"
-             :auth [:ref :org-0 :api-key-secret]
+             :auth :org-0-token
              :query-params {"page[size]" 1}}
    :as :page-1
    :assert {:status 200
@@ -143,7 +147,7 @@
   {:command :api/request
    :request {:method :get
              :url [:ref :page-1 :links :next]
-             :auth [:ref :org-0 :api-key-secret]}
+             :auth :org-0-token}
    :as :page-2
    :assert {:status 200
             :body {:cash-accounts
@@ -157,7 +161,7 @@
   {:command :api/request
    :request {:method :get
              :url [:ref :page-2 :links :next]
-             :auth [:ref :org-0 :api-key-secret]}
+             :auth :org-0-token}
    :assert {:status 200
             :body {:cash-accounts
                    [{:account-id

@@ -11,10 +11,14 @@
                     :currencies ["GBP"]}}
    :as :org-0
    :assert {:status 201}}
+  {:command :auth/mint-token
+   :for {:client-id [:ref :org-0 :client-id]
+         :status :live}
+   :as :org-0-token}
   {:command :api/request
    :request {:method :post
              :path "/v1/cash-account-products"
-             :auth [:ref :org-0 :api-key-secret]
+             :auth :org-0-token
              :body {:name "Initial Name"
                     :product-type "current"
                     :balance-sheet-side "liability"
@@ -33,7 +37,7 @@
              :path "/v1/cash-account-products/{product-id}/versions/{version-id}"
              :path-params {:product-id [:ref :draft :product-id]
                            :version-id [:ref :draft :version-id]}
-             :auth [:ref :org-0 :api-key-secret]
+             :auth :org-0-token
              :body {:name "Renamed"
                     :product-type "current"
                     :balance-sheet-side "liability"

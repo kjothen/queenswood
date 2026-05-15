@@ -13,13 +13,17 @@
                     :tier "micro"
                     :currencies ["GBP"]}}
    :as :org-0
-   :assert {:status 201}}]
+   :assert {:status 201}}
+  {:command :auth/mint-token
+   :for {:client-id [:ref :org-0 :client-id]
+         :status :live}
+   :as :org-0-token}]
 
  :when
  [{:command :api/request
    :request {:method :post
              :path "/v1/payee-checks"
-             :auth [:ref :org-0 :api-key-secret]
+             :auth :org-0-token
              :body {:creditor-name "COP_NOMATCH"
                     :account {:sort-code "040062"
                               :account-number "12345678"}

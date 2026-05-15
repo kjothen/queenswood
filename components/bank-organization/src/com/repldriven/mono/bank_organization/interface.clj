@@ -57,9 +57,9 @@
   (store/get-organization txn org-id))
 
 (defn get-organizations
-  "List organizations enriched with party, accounts (with
-  balances), and api-key. Returns a vector of rich organization
-  maps or an anomaly.
+  "List organizations enriched with party and accounts (with
+  balances). Returns a vector of rich organization maps or an
+  anomaly.
 
   Args:
   - txn: FDB transaction or db handle.

@@ -18,7 +18,8 @@
 
 (def routes
   [["/cash-account-products"
-    {:openapi {:tags ["Cash Account Products"] :security [{"orgAuth" []}]}}
+    {:openapi {:tags ["Cash Account Products"]
+               :security [{"bearerAuth" ["org"]}]}}
     [""
      {:get {:summary "List products with their version histories inline"
             :openapi {:operationId "ListCashAccountProducts"

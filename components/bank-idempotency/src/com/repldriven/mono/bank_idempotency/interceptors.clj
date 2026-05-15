@@ -6,14 +6,12 @@
     [sieppari.context :as sc]))
 
 (defn- principal-id
-  "Compose a principal id from the auth context. Org-scoped requests
-  use the api-key-id; admin-scoped requests share the literal `admin`
-  (single shared scope, since admin keys aren't tracked individually)."
+  "Compose a principal id from the auth context. Service-account
+  requests scope by their `:principal-id` (the organization-id);
+  admin-scoped requests share the literal `\"admin\"` (single shared
+  scope, since admin sessions aren't tracked individually)."
   [auth]
-  (case (:role auth)
-    :org (:api-key-id auth)
-    :admin "admin"
-    nil))
+  (:principal-id auth))
 
 (defn- operation
   "Stable identifier for the route — METHOD + path-template, e.g.

@@ -6,7 +6,7 @@
 
 (def routes
   [["/policies"
-    {:openapi {:tags ["Policies"] :security [{"adminAuth" []}]}}
+    {:openapi {:tags ["Policies"] :security [{"bearerAuth" ["admin"]}]}}
     [""
      {:get {:summary "List all policies"
             :openapi {:operationId "ListPolicies"}

@@ -15,7 +15,7 @@
   [:map {:closed true} [:page {:optional true} [:ref "PageQuery"]]])
 
 (def routes
-  [["/parties" {:openapi {:tags ["Parties"] :security [{"orgAuth" []}]}}
+  [["/parties" {:openapi {:tags ["Parties"] :security [{"bearerAuth" ["org"]}]}}
     [""
      {:get {:summary "Retrieve parties"
             :openapi {:operationId "RetrieveParties"

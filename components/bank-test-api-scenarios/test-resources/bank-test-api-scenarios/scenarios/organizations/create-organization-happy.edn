@@ -15,8 +15,8 @@
                    :status "live"
                    :type "customer"
                    :organization-id [:m/regex "^org\\."]
-                   :api-key-secret [:m/regex "^sk_live\\."]
-                   :api-key {:key-prefix [:m/regex ".+"]}
+                   :client-id [:m/regex "^org\\."]
+                   :client-secret [:m/regex ".+"]
                    :party {:party-id [:m/regex "^pty\\."]}
                    :accounts [{:account-id [:m/regex "^acc\\."]
                                :balances [:m/non-empty]}]}}}]

@@ -1,4 +1,4 @@
-{:name "Org-tier key is rejected by the admin-only org creation endpoint"
+{:name "Service-account JWT is rejected by the admin-only org creation endpoint"
  :tags #{:organizations :api :auth :unhappy}
  :given
  [{:command :api/request
@@ -10,12 +10,16 @@
                     :tier "micro"
                     :currencies ["GBP"]}}
    :as :org-0
-   :assert {:status 201}}]
+   :assert {:status 201}}
+  {:command :auth/mint-token
+   :for {:client-id [:ref :org-0 :client-id]
+         :status :live}
+   :as :org-0-token}]
  :when
  [{:command :api/request
    :request {:method :post
              :path "/v1/organizations"
-             :auth [:ref :org-0 :api-key-secret]
+             :auth :org-0-token
              :body {:name "Second Org"
                     :status "live"
                     :tier "micro"

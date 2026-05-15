@@ -12,7 +12,6 @@
     [com.repldriven.mono.schemas.cash_accounts :as cash-accounts]
     [com.repldriven.mono.schemas.idempotency :as idempotency]
     [com.repldriven.mono.schemas.idv :as idv]
-    [com.repldriven.mono.schemas.keys :as keys]
     [com.repldriven.mono.schemas.organizations :as organizations]
     [com.repldriven.mono.schemas.party :as party]
     [com.repldriven.mono.schemas.payments :as payments]
@@ -34,7 +33,6 @@
     (com.repldriven.mono.schemas.idempotency IdempotencyProto$Idempotency)
     (com.repldriven.mono.schemas.idv IdvProto$Idv
                                      IdvChangelogProto$IdvChangelog)
-    (com.repldriven.mono.schemas.keys ApiKeyProto$ApiKey)
     (com.repldriven.mono.schemas.organizations
      OrganizationProto$Organization
      OrganizationProto$OrganizationType
@@ -165,25 +163,6 @@
   "Parse an Idempotency map into the generated Java protobuf class."
   [m]
   (IdempotencyProto$Idempotency/parseFrom (Idempotency->pb m)))
-
-(def ^{:doc "Parse ApiKey protobuf bytes into a Clojure map."} pb->ApiKey
-  keys/pb->ApiKey)
-
-(defn ApiKey->pb
-  "Serialise an ApiKey map to protobuf bytes.
-
-  Args:
-  - m: ApiKey map matching the generated schema."
-  [m]
-  (proto/->pb (keys/new-ApiKey m)))
-
-(defn ApiKey->java
-  "Parse an ApiKey map into the generated Java protobuf class.
-
-  Args:
-  - m: ApiKey map matching the generated schema."
-  [m]
-  (ApiKeyProto$ApiKey/parseFrom (ApiKey->pb m)))
 
 (def ^{:doc "Parse Organization protobuf bytes into a Clojure map."}
      pb->Organization

@@ -13,7 +13,7 @@
 
 (def routes
   [["/payee-checks"
-    {:openapi {:tags ["CoP"] :security [{"orgAuth" []}]}}
+    {:openapi {:tags ["CoP"] :security [{"bearerAuth" ["org"]}]}}
     [""
      {:get {:summary "List payee checks"
             :openapi {:operationId "ListPayeeChecks"
