@@ -1,7 +1,10 @@
 (ns com.repldriven.mono.bank-identity-provider.core
-  "Orchestration: create a service account (Keycloak client + secret
-  fetch), revoke, rotate, and verify JWTs minted by the realm."
+  "The production identity-provider client: a `defrecord` that holds
+  the Keycloak admin token + JWKS atoms and implements
+  `IdentityProvider` inline by orchestrating calls into `store` (the
+  low-level Keycloak REST layer)."
   (:require
+    [com.repldriven.mono.bank-identity-provider.protocol :as protocol]
     [com.repldriven.mono.bank-identity-provider.store :as store]
 
     [com.repldriven.mono.error.interface :as error :refer [let-nom>]]
@@ -10,52 +13,11 @@
     [buddy.sign.jws :as jws]
     [buddy.sign.jwt :as jwt]))
 
-(defn create-service-account
-  "Create a Keycloak client for `organization-id` and return
-  `{:client-id … :client-secret …}`. The client_id is set to the
-  organization-id; secret is fetched after creation. Idempotent: a
-  pre-existing client with the same id surfaces as
-  `:identity-provider/client-already-exists`."
-  [client {:keys [organization-id name status]}]
-  (let-nom>
-    [_ (store/create-client client
-                            {:organization-id organization-id
-                             :name name
-                             :status status})
-     result (store/client-secret client organization-id)]
-    result))
-
-(defn exchange-client-credentials
-  "Exchange a client_id + client_secret pair at the realm's token
-  endpoint. Returns the raw OAuth2 token response (snake-case keys
-  from Keycloak: `:access_token`, `:expires_in`, `:token_type`,
-  `:scope`) or an anomaly."
-  [client creds]
-  (store/exchange-client-credentials client creds))
-
-(defn revoke-service-account
-  "Delete the Keycloak client for `organization-id`. Idempotent."
-  [client organization-id]
-  (store/delete-client client organization-id))
-
-(defn rotate-secret
-  "Issue a fresh `client_secret` for `organization-id`. Returns
-  `{:client-id … :client-secret …}`."
-  [client organization-id]
-  (store/regenerate-secret client organization-id))
-
 (defn- find-jwk
   [jwks kid]
   (some #(when (= kid (:kid %)) %) (:keys jwks)))
 
-(defn verify-token
-  "Validate a JWT minted by the realm and return its claims map, or
-  an `:auth/unauthenticated` rejection.
-
-  Checks: signature against the JWKS, `iss` matches the configured
-  realm issuer, `aud` is in `expected-audiences`, `exp` not past.
-  On an unknown `kid` the JWKS is force-refreshed once (Keycloak
-  rotation case)."
+(defn- verify-token-impl
   [client jwt-string {:keys [expected-audiences]}]
   (try
     (let [header (jws/decode-header jwt-string)
@@ -65,7 +27,8 @@
       (if (error/anomaly? jwks)
         jwks
         (let [jwk (or (find-jwk jwks kid)
-                      ;; kid not in cache — try a forced refresh once
+                      ;; kid not in cache — force-refresh once in case
+                      ;; Keycloak rotated.
                       (find-jwk (store/jwks! client true) kid))]
           (if-not jwk
             (error/reject :auth/unauthenticated
@@ -90,12 +53,32 @@
                     {:message (str "Token verification failed: "
                                    (.getMessage e))}))))
 
-(defn get-jwks
-  "Return the realm's JWKS (refreshing if stale)."
-  [client]
-  (store/jwks! client))
+(defrecord IdentityProviderClient [config admin-token jwks]
+  store/Client
+    (-config [_] config)
+    (-admin-token-atom [_] admin-token)
+    (-jwks-atom [_] jwks)
+  protocol/IdentityProvider
+    (-create-service-account [this {:keys [organization-id name status]}]
+      (let-nom> [_ (store/create-client this
+                                        {:organization-id organization-id
+                                         :name name
+                                         :status status})
+                 result (store/client-secret this organization-id)]
+        result))
+    (-revoke-service-account [this organization-id]
+      (store/delete-client this organization-id))
+    (-rotate-secret [this organization-id]
+      (store/regenerate-secret this organization-id))
+    (-exchange-client-credentials [this creds]
+      (store/exchange-client-credentials this creds))
+    (-verify-token [this jwt-string opts]
+      (verify-token-impl this jwt-string opts))
+    (-get-jwks [this] (store/jwks! this))
+    (-get-issuer [this] (store/issuer this)))
 
-(defn get-issuer
-  "Return the configured realm issuer URL."
-  [client]
-  (store/issuer client))
+(defn ->client
+  "Build an IdentityProviderClient. `config` carries
+  `:base-url`, `:realm`, `:admin-client-id`, `:admin-client-secret`."
+  [config]
+  (->IdentityProviderClient config (atom nil) (atom nil)))

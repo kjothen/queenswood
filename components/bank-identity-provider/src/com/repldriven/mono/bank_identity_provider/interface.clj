@@ -7,44 +7,20 @@
   Issued tokens carry an `aud` claim of `queenswood-api-test` or
   `queenswood-api-live` depending on org status.
 
-  Public surface is dispatched through the `IdentityProvider` protocol
-  so `bank-test-identity-provider` can plug in an in-memory stand-in
-  without code outside this brick caring which one is wired."
+  Both the production `IdentityProviderClient` (in this brick) and
+  the test `TestIdentityProviderClient` (in `bank-test-identity-
+  provider`) implement the `IdentityProvider` protocol re-exported
+  here, so callers depend on the protocol — not on either store —
+  and the system YAML picks which one is wired."
   (:require
     com.repldriven.mono.bank-identity-provider.system
 
-    [com.repldriven.mono.bank-identity-provider.core :as core])
-  (:import
-    (com.repldriven.mono.bank_identity_provider.store
-     IdentityProviderClient)))
+    [com.repldriven.mono.bank-identity-provider.protocol :as protocol]))
 
-(defprotocol IdentityProvider
-  "Dispatch surface for identity-provider clients. The production
-  `IdentityProviderClient` and the test `TestIdentityProviderClient`
-  both extend this so production code can call into either without
-  knowing the difference."
-  (-create-service-account [this data])
-  (-revoke-service-account [this organization-id])
-  (-rotate-secret [this organization-id])
-  (-exchange-client-credentials [this creds])
-  (-verify-token [this jwt-string opts])
-  (-get-jwks [this])
-  (-get-issuer [this]))
-
-(extend-protocol IdentityProvider
- IdentityProviderClient
-   (-create-service-account [client data]
-     (core/create-service-account client data))
-   (-revoke-service-account [client organization-id]
-     (core/revoke-service-account client organization-id))
-   (-rotate-secret [client organization-id]
-     (core/rotate-secret client organization-id))
-   (-exchange-client-credentials [client creds]
-     (core/exchange-client-credentials client creds))
-   (-verify-token [client jwt-string opts]
-     (core/verify-token client jwt-string opts))
-   (-get-jwks [client] (core/get-jwks client))
-   (-get-issuer [client] (core/get-issuer client)))
+;; Re-export so external implementers can pull the protocol off the
+;; interface namespace without dipping into internals — same pattern
+;; as `message-bus.interface` does for Producer/Consumer.
+(def IdentityProvider protocol/IdentityProvider)
 
 (defn create-service-account
   "Create a Keycloak service-account client for an organization.
@@ -58,7 +34,7 @@
     `:organization-status-live`); status selects the per-env
     audience claim."
   [client data]
-  (-create-service-account client data))
+  (protocol/-create-service-account client data))
 
 (defn revoke-service-account
   "Delete the Keycloak service-account client for `organization-id`.
@@ -68,7 +44,7 @@
   - client: identity-provider client component.
   - organization-id: owning organization id."
   [client organization-id]
-  (-revoke-service-account client organization-id))
+  (protocol/-revoke-service-account client organization-id))
 
 (defn rotate-secret
   "Rotate the `client_secret` for `organization-id`. Returns
@@ -78,7 +54,7 @@
   - client: identity-provider client component.
   - organization-id: owning organization id."
   [client organization-id]
-  (-rotate-secret client organization-id))
+  (protocol/-rotate-secret client organization-id))
 
 (defn exchange-client-credentials
   "Run the OAuth2 `client_credentials` flow against the realm.
@@ -92,7 +68,7 @@
   - creds: map with `:client-id`, `:client-secret`, and optional
     `:scope`."
   [client creds]
-  (-exchange-client-credentials client creds))
+  (protocol/-exchange-client-credentials client creds))
 
 (defn verify-token
   "Validate a JWT against the realm's JWKS. Returns the claims map
@@ -104,7 +80,7 @@
   - opts: map with `:expected-audiences` (set of strings; token's
     `aud` must intersect)."
   [client jwt-string opts]
-  (-verify-token client jwt-string opts))
+  (protocol/-verify-token client jwt-string opts))
 
 (defn get-jwks
   "Return the realm's JWKS (refreshing if stale).
@@ -112,7 +88,7 @@
   Args:
   - client: identity-provider client component."
   [client]
-  (-get-jwks client))
+  (protocol/-get-jwks client))
 
 (defn get-issuer
   "Return the realm's issuer URL (`iss` claim value).
@@ -120,4 +96,4 @@
   Args:
   - client: identity-provider client component."
   [client]
-  (-get-issuer client))
+  (protocol/-get-issuer client))

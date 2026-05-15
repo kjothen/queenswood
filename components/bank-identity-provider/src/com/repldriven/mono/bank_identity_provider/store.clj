@@ -13,22 +13,13 @@
 
 (def ^:private jwks-ttl-ms (* 10 60 1000))
 
+;; Internal accessors on the production client. `core/IdentityProviderClient`
+;; implements this protocol so store helpers can pull config + atoms off
+;; the record without store knowing about the defrecord directly.
 (defprotocol Client
   (-config [_])
   (-admin-token-atom [_])
   (-jwks-atom [_]))
-
-(defrecord IdentityProviderClient [config admin-token jwks]
-  Client
-    (-config [_] config)
-    (-admin-token-atom [_] admin-token)
-    (-jwks-atom [_] jwks))
-
-(defn ->client
-  "Build an IdentityProviderClient. `config` carries
-  `:base-url`, `:realm`, `:admin-client-id`, `:admin-client-secret`."
-  [config]
-  (->IdentityProviderClient config (atom nil) (atom nil)))
 
 (defn- realm-url
   [{:keys [base-url realm]} & path-parts]
@@ -38,31 +29,37 @@
   [{:keys [base-url realm]} & path-parts]
   (apply str base-url "/admin/realms/" realm path-parts))
 
+(defn- exchange-client-credentials*
+  "Config-only variant: hit the token endpoint without needing a built
+  client. Used both by `exchange-client-credentials` (for the public
+  flow) and by the admin-token refresh path."
+  [config {:keys [client-id client-secret scope]}]
+  (let-nom>
+    [res (http/request
+          {:method :post
+           :url (realm-url config "/protocol/openid-connect/token")
+           :headers {"content-type" "application/x-www-form-urlencoded"}
+           :body (cond-> (str "grant_type=client_credentials"
+                              "&client_id=" client-id
+                              "&client_secret=" client-secret)
+                         scope
+                         (str "&scope=" scope))})
+     body (http/res->edn res)]
+    body))
+
 (defn exchange-client-credentials
   "POST `client_credentials` to the realm token endpoint. Returns the
   raw Keycloak response body (keys keyword-ified from the JSON, so
   `:access_token`, `:expires_in`, `:token_type`, `:scope`) or an
   anomaly. The caller is responsible for normalisation."
-  [client {:keys [client-id client-secret scope]}]
-  (let [config (-config client)]
-    (let-nom>
-      [res (http/request
-            {:method :post
-             :url (realm-url config "/protocol/openid-connect/token")
-             :headers {"content-type" "application/x-www-form-urlencoded"}
-             :body (cond-> (str "grant_type=client_credentials"
-                                "&client_id=" client-id
-                                "&client_secret=" client-secret)
-                           scope
-                           (str "&scope=" scope))})
-       body (http/res->edn res)]
-      body)))
+  [client creds]
+  (exchange-client-credentials* (-config client) creds))
 
 (defn- fetch-admin-token
   [config]
   (let-nom>
-    [body (exchange-client-credentials
-           (->IdentityProviderClient config nil nil)
+    [body (exchange-client-credentials*
+           config
            {:client-id (:admin-client-id config)
             :client-secret (:admin-client-secret config)})]
     (or (some-> (domain/parse-token-response body)
