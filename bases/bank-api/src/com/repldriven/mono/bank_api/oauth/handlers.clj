@@ -6,8 +6,7 @@
   in-memory test stub."
   (:require
     [com.repldriven.mono.bank-identity-provider.interface :as identity-provider]
-    [com.repldriven.mono.error.interface :as error]
-    [com.repldriven.mono.log.interface :as log]))
+    [com.repldriven.mono.error.interface :as error]))
 
 (defn- external-base-url
   "Derive the public URL the caller used to reach the API. Honours
@@ -39,15 +38,6 @@
         params (or (get-in request [:parameters :form])
                    (:form-params request))
         {:keys [grant_type client_id client_secret scope]} params]
-    (log/info "oauth token"
-              {:has-idp (some? identity-provider)
-               :param-keys (keys params)
-               :grant_type grant_type
-               :client_id-prefix
-               (when client_id
-                 (subs (str client_id) 0 (min 12 (count client_id))))
-               :has-client_secret (not (empty? client_secret))
-               :scope scope})
     (cond
      (not= "client_credentials" grant_type)
      (oauth-error 400
@@ -65,11 +55,6 @@
                    {:client-id client_id
                     :client-secret client_secret
                     :scope scope})]
-       (log/info "oauth token result"
-                 {:anomaly? (error/anomaly? result)
-                  :has-access_token (and (map? result)
-                                         (some? (:access_token result)))
-                  :keys (when (map? result) (keys result))})
        (if (error/anomaly? result)
          (oauth-error 401
                       "invalid_client"
