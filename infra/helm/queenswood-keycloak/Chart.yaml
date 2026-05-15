@@ -1,0 +1,16 @@
+apiVersion: v2
+name: queenswood-keycloak
+description: |
+  Wrapper chart around bitnami/keycloak that provisions the queenswood
+  realm and exposes Keycloak on `keycloak.<env-domain>`. Adds a CoreDNS
+  rewrite so in-cluster pods resolve the public hostname to the internal
+  Service (issuer URL matches inside and outside the cluster), and an
+  HTTPRoute on the queenswood Gateway. Parameterised on env.name and
+  env.domain so the same chart drives queenswood, queenswood-test, etc.
+type: application
+version: 0.1.0
+appVersion: "26.0"
+dependencies:
+  - name: keycloak
+    version: "24.x.x"
+    repository: oci://registry-1.docker.io/bitnamicharts

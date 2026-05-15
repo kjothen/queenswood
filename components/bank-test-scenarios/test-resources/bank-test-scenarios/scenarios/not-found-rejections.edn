@@ -75,11 +75,6 @@
   {:command :assert-rejection-kind
    :args [:policy-binding/not-found]}
 
-  {:command :get-api-key
-   :args ["unknown-hash"]}
-  {:command :assert-rejection-kind
-   :args [:api-key/not-found]}
-
   {:command :get-balance
    :args ["acc.unknown" :balance-type-default "GBP" :balance-status-posted]}
   {:command :assert-rejection-kind

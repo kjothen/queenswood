@@ -30,15 +30,6 @@ enum PolicyCategory {
 // Capabilities
 // ==========================================================================
 
-enum ApiKeyAction {
-  API_KEY_ACTION_UNKNOWN = 0;
-  API_KEY_ACTION_ISSUE = 1;
-}
-
-message ApiKeyCapability {
-  required ApiKeyAction action = 1;
-}
-
 enum BalanceAction {
   BALANCE_ACTION_UNKNOWN = 0;
   BALANCE_ACTION_CREATE = 1;
@@ -214,8 +205,9 @@ message Capability {
   required Effect effect = 1;
   optional string reason = 2;
 
+  reserved 101;
+
   oneof kind {
-    ApiKeyCapability api_key = 101;
     BalanceCapability balance = 102;
     CashAccountCapability cash_account = 103;
     CashAccountProductCapability cash_account_product = 104;
@@ -289,8 +281,6 @@ enum LimitAllow {
 }
 
 // --- Limit kinds (one per Capability variant) ---
-
-message ApiKeyLimit {}
 
 message ActualBalance {
   required com.repldriven.mono.schemas.balances.BalanceType type = 1;
@@ -384,8 +374,9 @@ message PolicyLimit {
 message TransactionLimit {}
 
 message Limit {
+  reserved 1;
+
   oneof kind {
-    ApiKeyLimit api_key = 1;
     BalanceLimit balance = 2;
     CashAccountLimit cash_account = 3;
     CashAccountProductLimit cash_account_product = 4;

@@ -200,6 +200,14 @@ gcp-health-check:
     kubectl --context $KCTX -n {{ ENV }} get foundationdbcluster \
       -o jsonpath='{.items[0].status.health.available}{"\n"}' 2>/dev/null \
       || echo "(no FDB cluster)"
+    echo -n "Keycloak StatefulSet ready: "
+    kubectl --context $KCTX -n {{ ENV }} get statefulset queenswood-keycloak \
+      -o jsonpath='{.status.readyReplicas}/{.status.replicas}{"\n"}' 2>/dev/null \
+      || echo "(not installed)"
+    echo -n "Keycloak realm endpoint: "
+    curl -sIo /dev/null -w '%{http_code}\n' --max-time 5 \
+      https://keycloak.{{ ENV_DOMAIN }}/realms/queenswood/.well-known/openid-configuration \
+      2>/dev/null || echo "(unreachable)"
 
     echo "\n=== 6. Public-traffic chain on GKE ==="
     echo "Gateways:"

@@ -1,0 +1,31 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: queenswood-keycloak
+  namespace: argocd
+  annotations:
+    # Lands after queenswood-platform (4); the chart's own per-resource
+    # sync-waves (8) keep Keycloak ordered after the application chart's
+    # gateway is up.
+    argocd.argoproj.io/sync-wave: "5"
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/repldriven/queenswood
+    targetRevision: main
+    path: infra/helm/queenswood-keycloak
+    helm:
+      # Mirrors queenswood-platform: flip to `values.yaml` once the
+      # production env is the default again.
+      valueFiles:
+        - values-test.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: queenswood-test
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

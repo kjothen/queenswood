@@ -1,7 +1,6 @@
 (ns lib.api)
 
 (def ^:private api-key (atom nil))
-(def ^:private api-keys-store "mono-api-keys")
 (def ^:private admin-key-store "mono-admin-api-key")
 
 (defn admin-token
@@ -30,26 +29,12 @@
   (-> (.json res)
       (.then (fn [body] #js {:http-status (.-status res) :body body}))))
 
-(defn- load-keys
-  "Loads the org-id->api-key map from localStorage."
-  []
-  (let [raw (.getItem js/localStorage api-keys-store)]
-    (if raw (js->clj (js/JSON.parse raw)) {})))
-
-(defn- save-key
-  "Persists a single org-id->api-key entry to localStorage."
-  [org-id raw-key]
-  (let [keys-map (assoc (load-keys) org-id raw-key)]
-    (.setItem js/localStorage
-              api-keys-store
-              (js/JSON.stringify (clj->js keys-map)))))
-
 (defn set-org
-  "Switches the active API key to the one stored for
-  org-id, falling back to the admin token."
-  [org-id]
-  (reset! api-key (or (get (load-keys) org-id)
-                      (admin-token))))
+  "Records which organisation the UI is operating on. Org-scoped
+  requests reuse the admin bearer until the frontend learns to mint
+  service-account JWTs from Keycloak."
+  [_org-id]
+  (reset! api-key (admin-token)))
 
 (defn create-organization
   [org-name org-status tier currencies]
@@ -63,15 +48,7 @@
                                       "status" org-status
                                       "tier" tier
                                       "currencies" currencies}))})
-      (.then parse-response)
-      (.then (fn [res]
-               (let [status (aget res "http-status")]
-                 (when (and (>= status 200) (< status 300))
-                   (let [body (.-body res)
-                         org-id (aget body "organization-id")
-                         raw-key (aget body "api-key-secret")]
-                     (save-key org-id raw-key))))
-               res))))
+      (.then parse-response)))
 
 (defn list-organizations
   []
@@ -348,12 +325,6 @@
                                       "scheme" scheme}
                                      reference
                                      (assoc "reference" reference))))})
-      (.then parse-response)))
-
-(defn list-api-keys
-  []
-  (-> (js/fetch "/v1/api-keys"
-                #js {:headers #js {"Authorization" (str "Bearer " @api-key)}})
       (.then parse-response)))
 
 (defn list-tiers

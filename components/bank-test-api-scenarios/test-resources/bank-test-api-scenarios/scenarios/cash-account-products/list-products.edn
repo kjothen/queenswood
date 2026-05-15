@@ -11,10 +11,14 @@
                     :currencies ["GBP" "EUR"]}}
    :as :org-0
    :assert {:status 201}}
+  {:command :auth/mint-token
+   :for {:client-id [:ref :org-0 :client-id]
+         :status :live}
+   :as :org-0-token}
   {:command :api/request
    :request {:method :post
              :path "/v1/cash-account-products"
-             :auth [:ref :org-0 :api-key-secret]
+             :auth :org-0-token
              :body {:name "Current Account"
                     :product-type "current"
                     :balance-sheet-side "liability"
@@ -29,7 +33,7 @@
   {:command :api/request
    :request {:method :post
              :path "/v1/cash-account-products"
-             :auth [:ref :org-0 :api-key-secret]
+             :auth :org-0-token
              :body {:name "Savings Account"
                     :product-type "savings"
                     :balance-sheet-side "liability"
@@ -45,7 +49,7 @@
  [{:command :api/request
    :request {:method :get
              :path "/v1/cash-account-products"
-             :auth [:ref :org-0 :api-key-secret]}
+             :auth :org-0-token}
    :assert {:status 200
             :body {:items [:m/embeds
                            [{:product-id [:ref :product-1 :product-id]}

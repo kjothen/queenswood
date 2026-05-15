@@ -170,37 +170,37 @@
   (testing "empty policies => true"
     (is (true? (SUT/check-limit
                 []
-                :api-key
+                :internal-payment
                 {:aggregate :count :window :time-window-instant :value 1}))))
   (testing "no matching limit kind => true"
     (let [policies [(limit-policy
                      [(limit {:cash-account {}}
                              (max-bound :count 1 :time-window-instant))])]]
       (is (true? (SUT/check-limit policies
-                                  :api-key
+                                  :internal-payment
                                   {:aggregate :count
                                    :window :time-window-instant
                                    :value 999})))))
   (testing "max bound at value passes"
     (let [policies [(limit-policy
-                     [(limit {:api-key {}}
+                     [(limit {:internal-payment {}}
                              (max-bound :count 5 :time-window-instant))])]]
       (is (true? (SUT/check-limit
                   policies
-                  :api-key
+                  :internal-payment
                   {:aggregate :count :window :time-window-instant :value 5})))))
   (testing "max bound exceeded => unauthorized with reason"
     (let [policies [(limit-policy [(limit
-                                    {:api-key {}}
+                                    {:internal-payment {}}
                                     (max-bound :count 5 :time-window-instant)
-                                    "max 5 keys")])]
+                                    "max 5 payments")])]
           result (SUT/check-limit
                   policies
-                  :api-key
+                  :internal-payment
                   {:aggregate :count :window :time-window-instant :value 6})]
       (is (error/rejection? result))
       (is (= :policy/limit-exceeded (error/kind result)))
-      (is (= "max 5 keys" (:message (error/payload result))))))
+      (is (= "max 5 payments" (:message (error/payload result))))))
   (testing "min bound violated => unauthorized"
     (let [policies [(limit-policy
                      [(limit {:cash-account {}}
@@ -221,30 +221,30 @@
       (is (error/rejection? result))))
   (testing "aggregate kind mismatch is skipped (count req vs amount limit)"
     (let [policies [(limit-policy
-                     [(limit {:api-key {}}
+                     [(limit {:internal-payment {}}
                              (max-bound :amount 5 :time-window-instant))])]]
       (is (true? (SUT/check-limit policies
-                                  :api-key
+                                  :internal-payment
                                   {:aggregate :count
                                    :window :time-window-instant
                                    :value 999})))))
   (testing "window mismatch is skipped"
     (let [policies [(limit-policy [(limit
-                                    {:api-key {}}
+                                    {:internal-payment {}}
                                     (max-bound :count 5 :time-window-daily))])]]
       (is (true? (SUT/check-limit policies
-                                  :api-key
+                                  :internal-payment
                                   {:aggregate :count
                                    :window :time-window-instant
                                    :value 999})))))
   (testing "disabled policy is ignored"
     (let [policies [(limit-policy [(limit
-                                    {:api-key {}}
+                                    {:internal-payment {}}
                                     (max-bound :count 5 :time-window-instant))]
                                   :enabled
                                   false)]]
       (is (true? (SUT/check-limit policies
-                                  :api-key
+                                  :internal-payment
                                   {:aggregate :count
                                    :window :time-window-instant
                                    :value 999})))))

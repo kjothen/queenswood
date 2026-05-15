@@ -133,6 +133,13 @@ system:
   message-bus: !include bank/message-bus.yml
   fdb: !include bank/fdb.yml
   avro: !include bank/avro.yml
+  identity-provider:
+    client: !system/component
+      system/component-kind: identity-provider/client
+      base-url: !env KEYCLOAK_BASE_URL
+      realm: !env KEYCLOAK_REALM
+      admin-client-id: !env KEYCLOAK_ADMIN_CLIENT_ID
+      admin-client-secret: !env KEYCLOAK_ADMIN_CLIENT_SECRET
   organizations:
     internal: !system/component
       system/component-kind: organizations/organization-from-fdb
@@ -182,6 +189,10 @@ system:
     interceptors: !system/component
       system/component-kind: server/interceptors
       admin-api-key: !env MONO_ADMIN_API_KEY
+      identity-provider: !system/ref identity-provider.client
+      expected-audiences:
+        - queenswood-api-test
+        - queenswood-api-live
       internal-organization-id: !system/ref organizations.internal.organization.organization-id
       internal-account-id: !system/ref organizations.internal-account-id
       dispatchers:

@@ -11,10 +11,14 @@
                     :currencies ["GBP"]}}
    :as :org-0
    :assert {:status 201}}
+  {:command :auth/mint-token
+   :for {:client-id [:ref :org-0 :client-id]
+         :status :live}
+   :as :org-0-token}
   {:command :api/request
    :request {:method :post
              :path "/v1/payee-checks"
-             :auth [:ref :org-0 :api-key-secret]
+             :auth :org-0-token
              :body {:creditor-name "Arthur Dent"
                     :account {:sort-code "040062"
                               :account-number "12345678"}
@@ -26,7 +30,7 @@
  [{:command :api/request
    :request {:method :get
              :path "/v1/payee-checks"
-             :auth [:ref :org-0 :api-key-secret]}
+             :auth :org-0-token}
    :assert {:status 200
             :body {:items [{:check-id [:ref :check-0 :check-id]
                             :result {:match-result "match"}}]}}}]}

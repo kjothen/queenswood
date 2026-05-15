@@ -8,7 +8,6 @@
   import PartyList from "./lib/PartyList.svelte";
   import CashAccountList from "./lib/CashAccountList.svelte";
   import CashAccountProductList from "./lib/CashAccountProductList.svelte";
-  import ApiKeyList from "./lib/ApiKeyList.svelte";
   import TierList from "./lib/TierList.svelte";
   import PolicyList from "./lib/PolicyList.svelte";
   import PayeeCheckList from "./lib/PayeeCheckList.svelte";
@@ -20,7 +19,6 @@
   let partyListRef = $state();
   let accountListRef = $state();
   let productListRef = $state();
-  let apiKeyListRef = $state();
   let copListRef = $state();
   let toastRef = $state();
   let adminTokenSet = $state(!!admin_token());
@@ -49,7 +47,6 @@
     partyListRef?.load();
     accountListRef?.load();
     productListRef?.load();
-    apiKeyListRef?.load();
     copListRef?.load();
   }
 
@@ -135,13 +132,6 @@
         onSelect={(id) => selectOrg(id)}
       />
       <PayeeCheckList bind:this={copListRef} />
-    {:else if currentPage === "api-keys"}
-      <OrgSelector
-        {organizations}
-        {selectedOrgId}
-        onSelect={(id) => selectOrg(id)}
-      />
-      <ApiKeyList bind:this={apiKeyListRef} />
     {/if}
   </main>
 </div>

@@ -11,12 +11,16 @@
                     :currencies ["GBP"]}}
    :as :org-0
    :assert {:status 201}}
+  {:command :auth/mint-token
+   :for {:client-id [:ref :org-0 :client-id]
+         :status :live}
+   :as :org-0-token}
 
   ;; Create a person party — initially :status "pending"
   {:command :api/request
    :request {:method :post
              :path "/v1/parties"
-             :auth [:ref :org-0 :api-key-secret]
+             :auth :org-0-token
              :headers {:idempotency-key "ik-cash-account-party"}
              :body {:type "person"
                     :display-name "Arthur Phillip Dent"
@@ -36,14 +40,14 @@
    :request {:method :get
              :path "/v1/parties/{party-id}"
              :path-params {:party-id [:ref :party-0 :party-id]}
-             :auth [:ref :org-0 :api-key-secret]}
+             :auth :org-0-token}
    :until {:status 200 :body {:status "active"}}}
 
   ;; Publishable product: create draft, then publish
   {:command :api/request
    :request {:method :post
              :path "/v1/cash-account-products"
-             :auth [:ref :org-0 :api-key-secret]
+             :auth :org-0-token
              :body {:name "Current Account"
                     :product-type "current"
                     :balance-sheet-side "liability"
@@ -60,7 +64,7 @@
              :path "/v1/cash-account-products/{product-id}/versions/{version-id}/publish"
              :path-params {:product-id [:ref :draft :product-id]
                            :version-id [:ref :draft :version-id]}
-             :auth [:ref :org-0 :api-key-secret]}
+             :auth :org-0-token}
    :as :published
    :assert {:status 200 :body {:status "published"}}}]
 
@@ -68,7 +72,7 @@
  [{:command :api/request
    :request {:method :post
              :path "/v1/cash-accounts"
-             :auth [:ref :org-0 :api-key-secret]
+             :auth :org-0-token
              :headers {:idempotency-key "ik-cash-account-open"}
              :body {:party-id [:ref :party-0 :party-id]
                     :name "Current GBP"
@@ -87,5 +91,5 @@
    :request {:method :get
              :path "/v1/cash-accounts/{account-id}"
              :path-params {:account-id [:ref :account-0 :account-id]}
-             :auth [:ref :org-0 :api-key-secret]}
+             :auth :org-0-token}
    :until {:status 200 :body {:account-status "opened"}}}]}
