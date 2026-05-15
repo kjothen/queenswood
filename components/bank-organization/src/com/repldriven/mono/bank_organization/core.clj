@@ -150,12 +150,17 @@
 
          ;; Issue the Keycloak service-account client BEFORE the FDB
          ;; write so a Keycloak failure aborts the transaction cleanly.
-         ;; Client-id == organization-id (deterministic mapping).
-         {:keys [client-secret]} (identity-provider/create-service-account
-                                  (:identity-provider opts)
-                                  {:organization-id org-id
-                                   :name org-name
-                                   :status org-status})
+         ;; Client-id == organization-id (deterministic mapping). The
+         ;; internal-org bootstrap path provisions no IDP because the
+         ;; queenswood org itself authenticates as admin; only callers
+         ;; that pass `:identity-provider` get a client.
+         {:keys [client-secret]} (if-let [idp (:identity-provider opts)]
+                                   (identity-provider/create-service-account
+                                    idp
+                                    {:organization-id org-id
+                                     :name org-name
+                                     :status org-status})
+                                   {})
 
          _ (store/create txn org)
 
