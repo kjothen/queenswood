@@ -126,14 +126,14 @@ gcp-rollout +components:
     [[ -n "$PROJECT_ID" ]] || { echo "no active gcloud project; run 'just gcp-project-create'" >&2; exit 1; }
     KCTX=gke_${PROJECT_ID}_europe-west2-a_queenswood-gke
     for c in {{ components }}; do
-      echo "→ deploy/queenswood-$c"
-      kubectl --context $KCTX -n queenswood rollout restart deploy/queenswood-$c
-      kubectl --context $KCTX -n queenswood rollout status  deploy/queenswood-$c
+      echo "→ deploy/{{ ENV }}-$c"
+      kubectl --context $KCTX -n {{ ENV }}rollout restart deploy/{{ ENV }}-$c
+      kubectl --context $KCTX -n {{ ENV }}rollout status  deploy/{{ ENV }}-$c
     done
 
 # Print Cloud DNS nameservers for the queenswood zone (paste into registrar NS records)
 gcp-dns-ns:
-    kubectl --context {{ KIND_XP_CLUSTER }} -n crossplane-system \
+    kubectl --context {{ KIND_XP_CLUSTER }} -n {{ ENV }} \
       get managedzone.dns.gcp.m.upbound.io {{ ENV_ZONE }} \
       -o jsonpath='{.status.atProvider.nameServers}' \
       | tr ',' '\n' | tr -d '[]"' | sed 's/^ */  /'
@@ -156,15 +156,15 @@ gcp-health-check:
 
     echo "\n=== 2. GCP infra (Address / Cloud DNS / GKE) ==="
     echo -n "Address queenswood-ingress-ip: "
-    kubectl --context $MGT get addresses.compute.gcp.upbound.io \
+    kubectl --context $MGT -n {{ ENV }} get addresses.compute.gcp.m.upbound.io \
       queenswood-ingress-ip -o jsonpath='{.status.atProvider.address}{"\n"}' \
       2>/dev/null || echo "(not found)"
     echo -n "ManagedZone {{ ENV_ZONE }} Ready: "
-    kubectl --context $MGT get managedzones.dns.gcp.upbound.io {{ ENV_ZONE }} \
+    kubectl --context $MGT -n {{ ENV }} get managedzones.dns.gcp.m.upbound.io {{ ENV_ZONE }} \
       -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}{"\n"}' \
       2>/dev/null || echo "(not found)"
     echo -n "RecordSet queenswood-apex rrdatas: "
-    kubectl --context $MGT get recordsets.dns.gcp.upbound.io queenswood-apex \
+    kubectl --context $MGT -n {{ ENV }} get recordsets.dns.gcp.m.upbound.io queenswood-apex \
       -o jsonpath='{.spec.forProvider.rrdatas}{"  Synced="}{.status.conditions[?(@.type=="Synced")].status}{"\n"}' \
       2>/dev/null || echo "(not found)"
     echo -n "NodePool queenswood-pool: nodeCount="
@@ -176,42 +176,43 @@ gcp-health-check:
     kubectl --context $KCTX get nodes \
       -o custom-columns=NAME:.metadata.name,STATUS:'.status.conditions[?(@.type=="Ready")].status',\
     AGE:.metadata.creationTimestamp 2>/dev/null || echo "  (failed to reach GKE)"
-    echo -n "Pods Pending in queenswood namespace: "
-    kubectl --context $KCTX -n queenswood get pods \
+    echo -n "Pods Pending in {{ ENV }} namespace: "
+    kubectl --context $KCTX -n {{ ENV }} get pods \
       --field-selector=status.phase=Pending --no-headers 2>/dev/null | wc -l | tr -d ' '
 
     echo "\n=== 4. Helm release ==="
-    helm --kube-context $KCTX -n queenswood history queenswood 2>/dev/null \
+    helm --kube-context $KCTX -n {{ ENV }} history {{ ENV }} 2>/dev/null \
       | tail -2 || echo "  (release not found)"
     echo "Rendered kinds:"
-    helm --kube-context $KCTX -n queenswood get manifest queenswood 2>/dev/null \
+    helm --kube-context $KCTX -n {{ ENV }} get manifest {{ ENV }} 2>/dev/null \
       | grep -E "^kind:" | sort | uniq -c \
       | grep -E "Gateway|HTTPRoute|Deployment|Job" \
       || echo "  (no manifest)"
 
     echo "\n=== 5. Workloads ==="
     echo "Pod phases:"
-    kubectl --context $KCTX -n queenswood get pods --no-headers 2>/dev/null \
+    kubectl --context $KCTX -n {{ ENV }} get pods --no-headers 2>/dev/null \
       | awk '{print $3}' | sort | uniq -c | sed 's/^/  /'
     echo "One-shot Jobs:"
-    kubectl --context $KCTX -n queenswood get jobs --no-headers 2>/dev/null \
+    kubectl --context $KCTX -n {{ ENV }} get jobs --no-headers 2>/dev/null \
       | awk '{printf "  %-50s %s\n", $1, $2}'
     echo -n "FDB cluster available: "
-    kubectl --context $KCTX -n queenswood get foundationdbcluster \
+    kubectl --context $KCTX -n {{ ENV }} get foundationdbcluster \
       -o jsonpath='{.items[0].status.health.available}{"\n"}' 2>/dev/null \
       || echo "(no FDB cluster)"
 
     echo "\n=== 6. Public-traffic chain on GKE ==="
     echo "Gateways:"
-    kubectl --context $KCTX -n queenswood get gateway -o json 2>/dev/null \
+    kubectl --context $KCTX -n {{ ENV }} get gateway -o json 2>/dev/null \
       | jq -r '.items[] | "  \(.metadata.name)  class=\(.spec.gatewayClassName)  address=\((.status.addresses[0].value // "-"))  programmed=\((.status.conditions[]? | select(.type=="Programmed") | .status))"' \
       || echo "  (none)"
     echo "HTTPRoutes:"
-    kubectl --context $KCTX -n queenswood get httproute --no-headers 2>/dev/null \
+    kubectl --context $KCTX -n {{ ENV }} get httproute --no-headers 2>/dev/null \
       | awk '{printf "  %-40s %s\n", $1, $2}' \
       || echo "  (none)"
     echo -n "Certificate Manager cert: "
-    kubectl --context kind-xp-mp get certificate.certificatemanager.gcp.upbound.io \
+    kubectl --context kind-xp-mp -n {{ ENV }} \
+      get certificate.certificatemanager.gcp.m.upbound.io \
       queenswood-cert -o jsonpath='{.status.atProvider.managed.state}{"\n"}' \
       2>/dev/null || echo "(not provisioned)"
 
@@ -243,23 +244,23 @@ gcp-diagnose-pod state="Init:Error":
       exit 1
     fi
 
-    POD=$(kubectl --context $KCTX -n queenswood get pods --no-headers \
+    POD=$(kubectl --context $KCTX -n {{ ENV }}get pods --no-headers \
       | awk -v state="{{ state }}" '$3 == state {print $1; exit}')
 
     if [[ -z "$POD" ]]; then
       echo "No pods in queenswood namespace matched STATUS={{ state }}"
       echo "Current status counts:"
-      kubectl --context $KCTX -n queenswood get pods --no-headers \
+      kubectl --context $KCTX -n {{ ENV }}get pods --no-headers \
         | awk '{print "  " $3}' | sort | uniq -c
       echo "Try: just gcp-diagnose-pod 'Init:CrashLoopBackOff'  or  ImagePullBackOff  or  'Init:1/2'"
       exit 0
     fi
 
     echo "=== Pod $POD (STATUS={{ state }}) ==="
-    kubectl --context $KCTX -n queenswood get pod $POD
+    kubectl --context $KCTX -n {{ ENV }}get pod $POD
 
     echo "\n=== Init container states ==="
-    kubectl --context $KCTX -n queenswood get pod $POD -o json \
+    kubectl --context $KCTX -n {{ ENV }}get pod $POD -o json \
       | jq -r '.status.initContainerStatuses[]? |
           "  \(.name): " +
           (if .state.running then "running"
@@ -268,22 +269,22 @@ gcp-diagnose-pod state="Init:Error":
            else "unknown" end)'
 
     echo "\n=== Recent events ==="
-    kubectl --context $KCTX -n queenswood describe pod $POD \
+    kubectl --context $KCTX -n {{ ENV }}describe pod $POD \
       | sed -n '/^Events:/,$p' | head -20
 
     echo "\n=== Init container logs (last 30 lines each) ==="
-    for c in $(kubectl --context $KCTX -n queenswood get pod $POD \
+    for c in $(kubectl --context $KCTX -n {{ ENV }}get pod $POD \
         -o jsonpath='{.spec.initContainers[*].name}'); do
       echo "--- init: $c ---"
-      kubectl --context $KCTX -n queenswood logs $POD -c $c --tail=30 2>&1 \
+      kubectl --context $KCTX -n {{ ENV }}logs $POD -c $c --tail=30 2>&1 \
         | sed 's/^/  /'
     done
 
     echo "\n=== Main container logs (--previous if it crashed) ==="
-    for c in $(kubectl --context $KCTX -n queenswood get pod $POD \
+    for c in $(kubectl --context $KCTX -n {{ ENV }}get pod $POD \
         -o jsonpath='{.spec.containers[*].name}'); do
       echo "--- container: $c ---"
-      kubectl --context $KCTX -n queenswood logs $POD -c $c --tail=30 --previous 2>&1 \
+      kubectl --context $KCTX -n {{ ENV }}logs $POD -c $c --tail=30 --previous 2>&1 \
         | sed 's/^/  /'
     done
 
@@ -442,12 +443,39 @@ kind-xp-wait-ready timeout="2700":
     PROJECT_ID=$(gcloud config get project 2>/dev/null)
     [[ -n "$PROJECT_ID" ]] || { echo "no active gcloud project; run 'just gcp-project-create'" >&2; exit 1; }
     for app in crossplane-providers crossplane-configs crossplane-xrds \
-               gcp-network gcp-cluster gcp-dns gcp-cert gcp-records \
-               queenswood; do
+               gcp-network gcp-cluster queenswood-platform; do
       echo ">>> $app"
       # Wait for Argo to discover the Application before waiting on its health
       until kubectl --context {{ KIND_XP_CLUSTER }} -n argocd \
             get application/$app >/dev/null 2>&1; do sleep 5; done
+      # queenswood-platform's Healthy gate depends on the GCP cert
+      # validating, which depends on NS propagation from the registrar.
+      # So we surface NS records as soon as the ManagedZone is queryable
+      # (sync-wave 4 inside the chart), BEFORE waiting for the App to be
+      # Healthy — otherwise the wait deadlocks until the user manually
+      # discovers they need to paste NS records.
+      if [[ "$app" == "queenswood-platform" ]]; then
+        until kubectl --context {{ KIND_XP_CLUSTER }} -n {{ ENV }} get \
+              managedzone.dns.gcp.m.upbound.io {{ ENV_ZONE }} >/dev/null 2>&1; do
+          sleep 5
+        done
+        until [[ -n "$(kubectl --context {{ KIND_XP_CLUSTER }} -n {{ ENV }} get \
+              managedzone.dns.gcp.m.upbound.io {{ ENV_ZONE }} \
+              -o jsonpath='{.status.atProvider.nameServers}' 2>/dev/null)" ]]; do
+          sleep 5
+        done
+        echo
+        echo "------------------------------------------------------"
+        echo "ACTION: paste these 4 nameservers into your registrar's"
+        echo "NS records for {{ ENV_DOMAIN }} (trailing dots"
+        echo "optional). cert validation gates on this propagating."
+        kubectl --context {{ KIND_XP_CLUSTER }} -n {{ ENV }} \
+          get managedzone.dns.gcp.m.upbound.io {{ ENV_ZONE }} \
+          -o jsonpath='{.status.atProvider.nameServers}' \
+          | tr ',' '\n' | tr -d '[]"' | sed 's/^ */  /'
+        echo "------------------------------------------------------"
+        echo
+      fi
       kubectl --context {{ KIND_XP_CLUSTER }} -n argocd wait \
         --for=jsonpath='{.status.health.status}'=Healthy \
         application/$app --timeout={{ timeout }}s
@@ -459,23 +487,5 @@ kind-xp-wait-ready timeout="2700":
       if [[ "$app" == "gcp-cluster" ]]; then
         gcloud container clusters get-credentials queenswood-gke \
           --zone=europe-west2-a --project="$PROJECT_ID"
-      fi
-      # After the ManagedZone is up, surface its NS values: the user
-      # must paste them into the registrar before gcp-cert's
-      # DNSAuthorization CNAME can resolve and Google CA validates.
-      # Without this prompt the loop sits silently on gcp-cert until
-      # the user figures it out.
-      if [[ "$app" == "gcp-dns" ]]; then
-        echo
-        echo "------------------------------------------------------"
-        echo "ACTION: paste these 4 nameservers into your registrar's"
-        echo "NS records for {{ ENV_DOMAIN }} (trailing dots"
-        echo "optional). cert validation gates on this propagating."
-        kubectl --context {{ KIND_XP_CLUSTER }} -n crossplane-system \
-          get managedzone.dns.gcp.m.upbound.io {{ ENV_ZONE }} \
-          -o jsonpath='{.status.atProvider.nameServers}' \
-          | tr ',' '\n' | tr -d '[]"' | sed 's/^ */  /'
-        echo "------------------------------------------------------"
-        echo
       fi
     done
