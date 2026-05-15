@@ -88,18 +88,20 @@ kind-xp-install-gcp-secret:
       --dry-run=client -o yaml | kubectl --context {{ KIND_XP_CLUSTER }} apply -f -
 
 # Set per-cluster project-scoped fields that Argo manages with PLACEHOLDER
-# in git: ProviderConfig.spec.projectID and Cluster.workloadPool. Both have
-# `ignoreDifferences` rules so selfHeal won't revert these patches.
+# in git: ClusterProviderConfig.spec.projectID and Cluster.workloadPool.
+# Both have `ignoreDifferences` rules so selfHeal won't revert these
+# patches. The v1 ProviderConfig is owned outside Argo (the v1
+# RespectIgnoreDifferences path was unreliable) — applied directly from
+# infra/local/gcp-provider-config.yml.tmpl via envsubst.
 kind-xp-install-gcp-config:
     #!/usr/bin/env zsh
     set -e
-    PROJECT_ID=$(gcloud config get project 2>/dev/null)
+    export PROJECT_ID=$(gcloud config get project 2>/dev/null)
     [[ -n "$PROJECT_ID" ]] || { echo "no active gcloud project; run 'just gcp-project-create'" >&2; exit 1; }
-    until kubectl --context {{ KIND_XP_CLUSTER }} get \
-      providerconfig.gcp.upbound.io default >/dev/null 2>&1; do sleep 5; done
-    kubectl --context {{ KIND_XP_CLUSTER }} patch providerconfig.gcp.upbound.io \
-      default --type=merge \
-      -p "{\"spec\":{\"projectID\":\"$PROJECT_ID\"}}"
+    until kubectl --context {{ KIND_XP_CLUSTER }} get crd \
+      providerconfigs.gcp.upbound.io >/dev/null 2>&1; do sleep 5; done
+    envsubst < infra/local/gcp-provider-config.yml.tmpl \
+      | kubectl --context {{ KIND_XP_CLUSTER }} apply -f -
     until kubectl --context {{ KIND_XP_CLUSTER }} get \
       clusterproviderconfig.gcp.m.upbound.io default >/dev/null 2>&1; do sleep 5; done
     kubectl --context {{ KIND_XP_CLUSTER }} patch clusterproviderconfig.gcp.m.upbound.io \

@@ -115,6 +115,7 @@
             pkgs.crossplane-cli
             pkgs.docker
             pkgs.docker-credential-helpers
+            pkgs.envsubst
             fdbBinary
             gcloud
             pkgs.jdk21
