@@ -11,7 +11,6 @@ labels: !strs
   tier: platform
 category: !keyword policy-category-restricted
 capabilities: !concat
-  - !include bank/policies/platform/restricted/capabilities/api-keys.yml
   - !include bank/policies/platform/restricted/capabilities/balances.yml
   - !include bank/policies/platform/restricted/capabilities/cash-account-products.yml
   - !include bank/policies/platform/restricted/capabilities/cash-accounts.yml
@@ -24,7 +23,6 @@ capabilities: !concat
   - !include bank/policies/platform/restricted/capabilities/policies.yml
   - !include bank/policies/platform/restricted/capabilities/transactions.yml
 limits: !concat
-  - !include bank/policies/platform/restricted/limits/api-keys.yml
   - !include bank/policies/platform/restricted/limits/balances.yml
   - !include bank/policies/platform/restricted/limits/cash-account-products.yml
   - !include bank/policies/platform/restricted/limits/cash-accounts.yml

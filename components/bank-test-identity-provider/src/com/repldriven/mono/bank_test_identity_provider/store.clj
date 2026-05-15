@@ -1,0 +1,126 @@
+(ns com.repldriven.mono.bank-test-identity-provider.store
+  "In-memory stand-in for `bank-identity-provider/store`. Generates
+  an RSA keypair on construction so the stub can both mint and
+  verify JWTs without talking to a real Keycloak."
+  (:require
+    [com.repldriven.mono.error.interface :as error]
+    [com.repldriven.mono.utility.interface :as util]
+
+    [buddy.sign.jwt :as jwt])
+  (:import
+    (java.security KeyPair KeyPairGenerator)
+    (java.util Base64)))
+
+(defn- generate-rsa-keypair
+  []
+  (let [gen (KeyPairGenerator/getInstance "RSA")]
+    (.initialize gen 2048)
+    (.generateKeyPair gen)))
+
+(defn- b64url
+  ^String [^bytes bs]
+  (.encodeToString (Base64/getUrlEncoder) bs))
+
+(defn- public-jwk
+  [^KeyPair kp kid]
+  (let [pub (.getPublic kp)
+        modulus (.getModulus pub)
+        exponent (.getPublicExponent pub)]
+    {:kty "RSA"
+     :kid kid
+     :alg "RS256"
+     :use "sig"
+     :n (b64url (.toByteArray modulus))
+     :e (b64url (.toByteArray exponent))}))
+
+(defprotocol Client
+  (-keypair [_])
+  (-kid [_])
+  (-issuer [_])
+  (-state [_]))
+
+(defrecord TestIdentityProviderClient [keypair kid issuer state]
+  Client
+    (-keypair [_] keypair)
+    (-kid [_] kid)
+    (-issuer [_] issuer)
+    (-state [_] state))
+
+(defn ->client
+  "Build a stub IDP client. `config` may carry `:issuer`; defaults
+  to `https://test.invalid/realms/queenswood`."
+  [{:keys [issuer] :or {issuer "https://test.invalid/realms/queenswood"}}]
+  (->TestIdentityProviderClient
+   (generate-rsa-keypair)
+   (str "test-key-" (util/uuidv7))
+   issuer
+   (atom {:clients {}})))
+
+(defn create-client
+  "Register a stub client. Returns `{:client-id … :client-secret …}`."
+  [client {:keys [organization-id]}]
+  (let [secret (str "test-secret-" (util/uuidv7))]
+    (swap! (-state client) assoc-in
+      [:clients organization-id]
+      {:client-id organization-id
+       :client-secret secret})
+    {:client-id organization-id :client-secret secret}))
+
+(defn delete-client
+  [client client-id]
+  (swap! (-state client) update :clients dissoc client-id)
+  {:client-id client-id})
+
+(defn regenerate-secret
+  [client client-id]
+  (let [secret (str "test-secret-" (util/uuidv7))]
+    (swap! (-state client) assoc-in [:clients client-id :client-secret] secret)
+    {:client-id client-id :client-secret secret}))
+
+(defn jwks
+  [client]
+  {:keys [(public-jwk (-keypair client) (-kid client))]
+   :fetched-at (util/now)})
+
+(defn issuer
+  [client]
+  (-issuer client))
+
+(defn mint-token
+  "Sign a JWT for tests. `claims` should include `:azp` (the
+  client-id), and may include `:aud`, `:realm_access`, and a
+  custom `:exp` override."
+  [client claims]
+  (let [now-s (long (/ (util/now) 1000))
+        full-claims (merge {:iss (-issuer client)
+                            :iat now-s
+                            :exp (+ now-s 3600)
+                            :jti (str "test-jti-" (util/uuidv7))}
+                           claims)]
+    (jwt/sign full-claims
+              (.getPrivate ^KeyPair (-keypair client))
+              {:alg :rs256
+               :header {:kid (-kid client) :alg "RS256" :typ "JWT"}})))
+
+(defn verify-token
+  "Verify a JWT minted by `mint-token`. Returns claims or an
+  `:auth/unauthenticated` rejection."
+  [client jwt-string {:keys [expected-audiences]}]
+  (try
+    (let [public-key (.getPublic ^KeyPair (-keypair client))
+          claims (jwt/unsign jwt-string
+                             public-key
+                             {:alg :rs256 :iss (-issuer client)})]
+      (if (and (seq expected-audiences)
+               (not (some expected-audiences
+                          (cond-> (:aud claims)
+                                  (string? (:aud claims))
+                                  vector))))
+        (error/reject :auth/unauthenticated
+                      {:message "Token audience not accepted"
+                       :aud (:aud claims)})
+        claims))
+    (catch Exception e
+      (error/reject :auth/unauthenticated
+                    {:message (str "Token verification failed: "
+                                   (.getMessage e))}))))

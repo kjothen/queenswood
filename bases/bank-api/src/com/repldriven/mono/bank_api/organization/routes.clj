@@ -10,7 +10,7 @@
 
 (def routes
   [["/organizations"
-    {:openapi {:tags ["Organizations"] :security [{"adminAuth" []}]}}
+    {:openapi {:tags ["Organizations"] :security [{"bearerAuth" ["admin"]}]}}
     [""
      {:get {:summary "Retrieve organizations"
             :openapi {:operationId "RetrieveOrganizations"}

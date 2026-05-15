@@ -9,6 +9,8 @@
    {bases/external-test-runner {:local/root "../../bases/external-test-runner"}
     component/bank-test-resources {:local/root
                                    "../../components/bank-test-resources"}
+    component/bank-test-identity-provider
+    {:local/root "../../components/bank-test-identity-provider"}
     component/test-resources {:local/root "../../components/test-resources"}
     component/test-schema {:local/root "../../components/test-schema"}
     component/test-system {:local/root "../../components/test-system"}
@@ -16,7 +18,7 @@
  :deps
  {component/bank-resources {:local/root
                             "../../components/bank-resources"}
-  component/bank-api-key {:local/root "../../components/bank-api-key"}
+  component/bank-identity-provider {:local/root "../../components/bank-identity-provider"}
   component/bank-balance {:local/root "../../components/bank-balance"}
   component/bank-cash-account {:local/root "../../components/bank-cash-account"}
   component/bank-cash-account-product

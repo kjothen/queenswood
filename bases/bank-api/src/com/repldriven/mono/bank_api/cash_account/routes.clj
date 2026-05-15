@@ -23,7 +23,7 @@
 
 (def routes
   [["/cash-accounts"
-    {:openapi {:tags ["Cash Accounts"] :security [{"orgAuth" []}]}}
+    {:openapi {:tags ["Cash Accounts"] :security [{"bearerAuth" ["org"]}]}}
     [""
      {:get {:summary "Retrieve cash accounts"
             :openapi {:operationId "RetrieveCashAccounts"

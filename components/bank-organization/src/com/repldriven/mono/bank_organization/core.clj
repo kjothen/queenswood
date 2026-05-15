@@ -3,19 +3,17 @@
     [com.repldriven.mono.bank-organization.domain :as domain]
     [com.repldriven.mono.bank-organization.store :as store]
 
-    [com.repldriven.mono.bank-api-key.interface :as bank-api-key]
     [com.repldriven.mono.bank-balance.interface :as balances]
     [com.repldriven.mono.bank-cash-account.interface
      :as cash-accounts]
     [com.repldriven.mono.bank-cash-account-product.interface
      :as products]
+    [com.repldriven.mono.bank-identity-provider.interface
+     :as identity-provider]
     [com.repldriven.mono.bank-party.interface :as party]
     [com.repldriven.mono.bank-policy.interface :as policy]
 
     [com.repldriven.mono.error.interface :as error :refer [let-nom>]]))
-
-(def ^:private api-key-response-keys
-  [:api-key-id :key-prefix :name :created-at])
 
 (def ^:private org-type->party-type
   {:organization-type-internal :party-type-internal
@@ -79,28 +77,27 @@
           accounts))
 
 (defn- enrich
-  [txn org key-secret]
+  [txn org client-secret]
   (let [org-id (:organization-id org)]
     (let-nom>
       [{:keys [parties]} (party/get-parties txn org-id)
        accounts (cash-accounts/get-accounts txn org-id)
-       enriched (enrich-accounts txn (:accounts accounts))
-       api-keys (bank-api-key/get-api-keys txn org-id)]
+       enriched (enrich-accounts txn (:accounts accounts))]
       (cond->
        {:organization
         (assoc org
                :party (first parties)
                :accounts enriched
-               :api-key (select-keys (first api-keys) api-key-response-keys))}
+               :client-id org-id)}
 
-       key-secret
-       (assoc :key-secret key-secret)))))
+       client-secret
+       (assoc :client-secret client-secret)))))
 
 (defn get-organization
   ([txn org]
    (get-organization txn org nil))
-  ([txn org key-secret]
-   (store/transact txn (fn [txn] (enrich txn org key-secret)))))
+  ([txn org client-secret]
+   (store/transact txn (fn [txn] (enrich txn org client-secret)))))
 
 (defn get-organizations
   ([txn] (get-organizations txn nil))
@@ -151,14 +148,16 @@
                                       policies)
          org-id (:organization-id org)
 
-         {:keys [api-key key-secret]} (bank-api-key/new-api-key
-                                       txn
-                                       org-id
-                                       org-status
-                                       "default"
-                                       {:policies policies})
+         ;; Issue the Keycloak service-account client BEFORE the FDB
+         ;; write so a Keycloak failure aborts the transaction cleanly.
+         ;; Client-id == organization-id (deterministic mapping).
+         {:keys [client-secret]} (identity-provider/create-service-account
+                                  (:identity-provider opts)
+                                  {:organization-id org-id
+                                   :name org-name
+                                   :status org-status})
 
-         _ (store/create txn org api-key)
+         _ (store/create txn org)
 
          {:keys [party-id]} (party/new-party
                              txn
@@ -195,7 +194,7 @@
 
          _ (bind-policies txn org-id tier-policies)
 
-         result (get-organization txn org key-secret)]
+         result (get-organization txn org client-secret)]
         result))
     :organization/create
     "Failed to create organization")))

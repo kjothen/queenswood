@@ -6,18 +6,15 @@
     [com.repldriven.mono.fdb.interface :as fdb]))
 
 (def ^:private store-name "organizations")
-(def ^:private api-keys-store-name "api-keys")
 
 (def transact fdb/transact)
 
 (defn create
-  [txn org api-key]
+  [txn org]
   (fdb/transact txn
                 (fn [txn]
                   (fdb/save-record (fdb/open txn store-name)
-                                   (schema/Organization->java org))
-                  (fdb/save-record (fdb/open txn api-keys-store-name)
-                                   (schema/ApiKey->java api-key)))
+                                   (schema/Organization->java org)))
                 :organization/create
                 "Failed to create organization"))
 

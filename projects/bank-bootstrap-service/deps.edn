@@ -18,7 +18,7 @@
                             "../../components/bank-resources"}
   component/bank-test-resources {:local/root
                                  "../../components/bank-test-resources"}
-  component/bank-api-key {:local/root "../../components/bank-api-key"}
+  component/bank-identity-provider {:local/root "../../components/bank-identity-provider"}
   component/bank-balance {:local/root "../../components/bank-balance"}
   component/bank-cash-account {:local/root "../../components/bank-cash-account"}
   component/bank-cash-account-product

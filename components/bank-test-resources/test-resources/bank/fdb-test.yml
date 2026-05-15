@@ -1,12 +1,4 @@
 _record-types: !strs &record-types
-  api-keys:
-    record-type: ApiKey
-    indexes:
-      - name: ApiKey_by_org
-        field: organization_id
-      - name: ApiKey_count_by_org
-        field: organization_id
-        type: count
   balances:
     record-type: Balance
     primary-key: [account_id, balance_type, currency, balance_status]

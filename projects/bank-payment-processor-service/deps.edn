@@ -26,7 +26,7 @@
   component/bank-person-identification
   {:local/root "../../components/bank-person-identification"}
   component/bank-policy {:local/root "../../components/bank-policy"}
-  component/bank-api-key {:local/root "../../components/bank-api-key"}
+  component/bank-identity-provider {:local/root "../../components/bank-identity-provider"}
   component/bank-transaction {:local/root "../../components/bank-transaction"}
   component/avro {:local/root "../../components/avro"}
   component/cli {:local/root "../../components/cli"}

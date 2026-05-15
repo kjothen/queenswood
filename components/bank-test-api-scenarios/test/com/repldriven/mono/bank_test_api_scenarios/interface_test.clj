@@ -72,6 +72,7 @@
       ["classpath:bank-test-api-scenarios/application-test.yml"
        patch-handlers]]
      (let [jetty (system/instance sys [:server :jetty-adapter])
+           idp (system/instance sys [:identity-provider :client])
            base-url (server/http-local-url jetty)]
        (doseq [{:keys [relative]} files]
          (let [resource-path (str "bank-test-api-scenarios/scenarios/"
@@ -85,6 +86,7 @@
                          _ (SUT/run-scenario (SUT/fresh-context
                                               {:base-url base-url
                                                :admin-api-key admin-api-key
+                                               :identity-provider idp
                                                :run-id (str (util/uuidv7))})
                                              resource-path)
                          _ (log/info "api scenario complete" {:file relative})]))))))))

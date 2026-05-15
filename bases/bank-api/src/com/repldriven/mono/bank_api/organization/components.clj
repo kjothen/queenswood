@@ -29,7 +29,7 @@
    [:status [:ref "OrganizationStatus"]]
    [:party [:ref "Party"]]
    [:accounts [:vector [:ref "CashAccount"]]]
-   [:api-key [:ref "ApiKey"]]
+   [:client-id [:ref "OrganizationId"]]
    [:created-at [:ref "Timestamp"]]
    [:updated-at [:ref "Timestamp"]]])
 
@@ -45,8 +45,8 @@
    [:status [:ref "OrganizationStatus"]]
    [:party [:ref "Party"]]
    [:accounts [:vector [:ref "CashAccount"]]]
-   [:api-key [:ref "ApiKey"]]
-   [:api-key-secret string?]
+   [:client-id [:ref "OrganizationId"]]
+   [:client-secret string?]
    [:created-at [:ref "Timestamp"]]
    [:updated-at [:ref "Timestamp"]]])
 

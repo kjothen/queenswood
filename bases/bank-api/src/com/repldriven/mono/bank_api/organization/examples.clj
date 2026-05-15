@@ -1,7 +1,5 @@
 (ns com.repldriven.mono.bank-api.organization.examples
   (:require
-    [com.repldriven.mono.bank-api.api-key.examples :as
-     api-key-examples]
     [com.repldriven.mono.bank-api.balance.examples :as
      balance-examples]
     [com.repldriven.mono.bank-api.cash-account.examples :as
@@ -27,6 +25,8 @@
 
 (def OrganizationId "org.01kprbmgcj35ptc8npmybhh4s7")
 
+(def ClientSecret "k7DqGZ-Wt0aIqcPyQs8FdVx3y9rNJ4hLp1m6BvE-AtQ")
+
 (def Organization
   {:organization-id OrganizationId
    :name "Galactic Bank"
@@ -38,7 +38,7 @@
    :accounts [(assoc cash-account-examples/CashAccount
                      :balances
                      [balance-examples/Balance])]
-   :api-key api-key-examples/ApiKey})
+   :client-id OrganizationId})
 
 (def OrganizationList {:organizations [Organization]})
 
@@ -46,5 +46,5 @@
   {:name "Galactic Bank" :status :test :tier "micro" :currencies ["GBP"]})
 
 (def CreateOrganizationResponse
-  (assoc Organization :api-key-secret api-key-examples/ApiKeySecret))
+  (assoc Organization :client-secret ClientSecret))
 

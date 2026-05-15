@@ -14,7 +14,7 @@
 
 (def routes
   [["/simulate"
-    {:openapi {:tags ["Simulate"] :security [{"adminAuth" []}]}}
+    {:openapi {:tags ["Simulate"] :security [{"bearerAuth" ["admin"]}]}}
     ["/organizations/{org-id}"
      {:parameters {:path {:org-id [:ref "OrganizationId"]}}}
      ["/inbound-transfer"

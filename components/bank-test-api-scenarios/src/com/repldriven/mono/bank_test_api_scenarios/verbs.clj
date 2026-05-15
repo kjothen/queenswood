@@ -2,6 +2,8 @@
   (:require
     [com.repldriven.mono.bank-test-api-scenarios.refs :as refs]
 
+    [com.repldriven.mono.bank-test-identity-provider.interface
+     :as test-idp]
     [com.repldriven.mono.http-client.interface :as http]
 
     [matcher-combinators.matchers :as m]
@@ -56,11 +58,18 @@
    form))
 
 (defn- resolve-auth
-  [{:keys [admin-api-key]} auth]
-  (case auth
-    nil nil
-    :admin admin-api-key
-    auth))
+  [{:keys [admin-api-key captures]} auth]
+  (cond
+   (nil? auth)
+   nil
+   (= :admin auth)
+   admin-api-key
+   ;; A keyword references a previously-captured token (minted by
+   ;; `:auth/mint-token` and stored via `:as`).
+   (keyword? auth)
+   (get captures auth)
+   :else
+   auth))
 
 (defn- substitute-path
   [path path-params]
@@ -199,3 +208,19 @@
                     actual-body
                     "problem-details")))
   ctx)
+
+(defmethod dispatch :auth/mint-token
+  [{:keys [identity-provider captures] :as ctx} {:keys [for as]}]
+  (let [{:keys [client-id status roles audience] :or {roles [:org]}}
+        (refs/resolve-all captures for)
+        aud (or
+             audience
+             (if (= :live status) "queenswood-api-live" "queenswood-api-test"))
+        token (test-idp/mint-token identity-provider
+                                   {:azp client-id
+                                    :sub client-id
+                                    :aud [aud]
+                                    :realm_access {:roles (mapv name roles)}})]
+    (cond-> ctx
+            as
+            (assoc-in [:captures as] token))))

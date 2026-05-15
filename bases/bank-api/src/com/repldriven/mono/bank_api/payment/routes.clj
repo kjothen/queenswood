@@ -15,7 +15,7 @@
 
 (def routes
   [["/payments"
-    {:openapi {:tags ["Payments"] :security [{"orgAuth" []}]}}
+    {:openapi {:tags ["Payments"] :security [{"bearerAuth" ["org"]}]}}
     ["/internal"
      {:post {:summary "Submit an internal payment"
              :openapi {:operationId "SubmitInternalPayment"
