@@ -78,7 +78,8 @@ gcp-bootstrap:
       certificatemanager.googleapis.com \
       iam.googleapis.com \
       iamcredentials.googleapis.com \
-      cloudresourcemanager.googleapis.com
+      cloudresourcemanager.googleapis.com \
+      sqladmin.googleapis.com
 
     # Create the service account Crossplane will act as. Wrapped in
     # an existence check so re-running the recipe is idempotent --
@@ -93,14 +94,15 @@ gcp-bootstrap:
     fi
 
     # Grant the SA the roles it needs to manage GKE + networking + DNS
-    # + cert manager. `add-iam-policy-binding` is idempotent on its own,
-    # so re-running just no-ops on already-granted roles and adds any
-    # newly listed ones.
+    # + cert manager + CloudSQL. `add-iam-policy-binding` is idempotent
+    # on its own, so re-running just no-ops on already-granted roles
+    # and adds any newly listed ones.
     for role in \
       roles/container.admin \
       roles/compute.networkAdmin \
       roles/dns.admin \
       roles/certificatemanager.owner \
+      roles/cloudsql.admin \
       roles/iam.serviceAccountUser \
       roles/resourcemanager.projectIamAdmin ; do
       gcloud projects add-iam-policy-binding $PROJECT_ID \
@@ -200,6 +202,15 @@ gcp-health-check:
     kubectl --context $KCTX -n {{ ENV }} get foundationdbcluster \
       -o jsonpath='{.items[0].status.health.available}{"\n"}' 2>/dev/null \
       || echo "(no FDB cluster)"
+    echo -n "Keycloak CloudSQL XR Ready: "
+    kubectl --context $MGT -n {{ ENV }} \
+      get xkeycloakdatabase.platform.queenswood.repldriven.com queenswood-keycloak \
+      -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}{"\n"}' \
+      2>/dev/null || echo "(not found)"
+    echo -n "Keycloak cloud-sql-proxy ready: "
+    kubectl --context $KCTX -n {{ ENV }} get deploy queenswood-keycloak-cloudsql-proxy \
+      -o jsonpath='{.status.readyReplicas}/{.status.replicas}{"\n"}' 2>/dev/null \
+      || echo "(not installed)"
     echo -n "Keycloak StatefulSet ready: "
     kubectl --context $KCTX -n {{ ENV }} get statefulset queenswood-keycloak \
       -o jsonpath='{.status.readyReplicas}/{.status.replicas}{"\n"}' 2>/dev/null \
@@ -497,3 +508,67 @@ kind-xp-wait-ready timeout="2700":
           --zone=europe-west2-a --project="$PROJECT_ID"
       fi
     done
+
+
+# Provision the GCP service account the cloud-sql-proxy pod authenticates
+# as, bound to the K8s ServiceAccount via Workload Identity. Idempotent
+# -- re-run after `up-from-zero` so the SA + IAM bindings exist before
+# the queenswood-keycloak chart's proxy Deployment starts asking GCP for
+# tokens. Prints the SA email at the end; paste into the
+# `postgresql.external.proxy.gcpServiceAccount` value (or values-gcp.yaml).
+gcp-keycloak-cloudsql-identity:
+    #!/usr/bin/env zsh
+    set -e
+    PROJECT_ID=$(gcloud config get project 2>/dev/null)
+    [[ -n "$PROJECT_ID" ]] || { echo "no active gcloud project; run 'just gcp-project-create'" >&2; exit 1; }
+    SA=queenswood-keycloak-cloudsql-proxy
+    SA_EMAIL=${SA}@${PROJECT_ID}.iam.gserviceaccount.com
+    K8S_SA=queenswood-keycloak-cloudsql-proxy
+    NS={{ ENV }}
+
+    if ! gcloud iam service-accounts describe $SA_EMAIL >/dev/null 2>&1; then
+      gcloud iam service-accounts create $SA \
+        --display-name "Keycloak Cloud SQL Proxy"
+    fi
+
+    gcloud projects add-iam-policy-binding $PROJECT_ID \
+      --member="serviceAccount:${SA_EMAIL}" \
+      --role="roles/cloudsql.client"
+
+    # Workload Identity: the K8s ServiceAccount the proxy pod runs as
+    # impersonates the GCP SA. Format below is the canonical
+    # `<project>.svc.id.goog[<namespace>/<k8s-sa>]` member.
+    gcloud iam service-accounts add-iam-policy-binding $SA_EMAIL \
+      --role="roles/iam.workloadIdentityUser" \
+      --member="serviceAccount:${PROJECT_ID}.svc.id.goog[${NS}/${K8S_SA}]"
+
+    echo
+    echo "Paste into infra/helm/queenswood-keycloak/values-gcp.yaml under"
+    echo "postgresql.external.proxy.gcpServiceAccount:"
+    echo "  $SA_EMAIL"
+
+# Print the `<project>:<region>:<instance>` connection string the
+# cloud-sql-proxy needs. Reads it off the XKeycloakDatabase composite's
+# status field once Crossplane has provisioned the CloudSQL instance
+# (5+ min from XR create). Paste the output into the
+# `postgresql.external.proxy.connectionName` value.
+gcp-keycloak-cloudsql-connection:
+    #!/usr/bin/env zsh
+    set -e
+    PROJECT_ID=$(gcloud config get project 2>/dev/null)
+    [[ -n "$PROJECT_ID" ]] || { echo "no active gcloud project; run 'just gcp-project-create'" >&2; exit 1; }
+    XR_NAME=queenswood-keycloak
+
+    CONN=$(kubectl --context {{ KIND_XP_CLUSTER }} -n {{ ENV }} \
+             get xkeycloakdatabase.platform.queenswood.repldriven.com $XR_NAME \
+             -o jsonpath='{.status.connectionName}' 2>/dev/null)
+    if [[ -z "$CONN" ]]; then
+      echo "XKeycloakDatabase/$XR_NAME has no status.connectionName yet — CloudSQL is still provisioning?" >&2
+      echo "Check: kubectl --context {{ KIND_XP_CLUSTER }} -n {{ ENV }} get xkeycloakdatabase $XR_NAME -o yaml" >&2
+      exit 1
+    fi
+
+    echo
+    echo "Paste into infra/helm/queenswood-keycloak/values-gcp.yaml under"
+    echo "postgresql.external.proxy.connectionName:"
+    echo "  $CONN"
