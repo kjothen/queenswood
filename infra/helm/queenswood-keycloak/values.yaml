@@ -38,10 +38,14 @@ keycloak:
   # symlink to `components/bank-resources/resources/bank/keycloak-
   # realm.json`, the canonical realm for the queenswood platform.
 
-# Postgres backing — `local` spins up an in-chart Postgres
-# StatefulSet (suitable for kind / dev); `external` expects a
-# pre-provisioned database referenced by host + Secret. Override via
-# `values-gcp.yaml` (or similar) for managed-DB deployments.
+# Postgres backing.
+#
+# - `local` spins up an in-chart Postgres StatefulSet (kind / dev).
+# - `external` skips the Postgres render and stands up a
+#   cloud-sql-proxy Deployment + Service pointed at a CloudSQL
+#   instance provisioned by `queenswood-platform`'s
+#   XKeycloakDatabase composite. The proxy speaks Postgres on the
+#   in-cluster Service; the Keycloak CR connects to that Service.
 postgresql:
   mode: local
   local:
@@ -51,9 +55,25 @@ postgresql:
     # external` and reference a real Secret.
     password: keycloak-dev-password
   external:
-    host: ""
+    # Service name + port the Keycloak CR connects to. The chart
+    # renders this Service in front of the cloud-sql-proxy pods.
+    serviceName: queenswood-keycloak-cloudsql
     port: 5432
     database: keycloak
-    # Name of an existing Secret carrying `username` and `password`
-    # keys. Caller is responsible for creating / rotating it.
-    secretName: ""
+    # Name of the Secret (`username`/`password` keys) the
+    # XKeycloakDatabase composite publishes into this namespace.
+    # Used both by the Keycloak CR and by the proxy pod.
+    secretName: queenswood-keycloak-conn
+    # Cloud SQL Auth Proxy config — needed for `mode: external`.
+    proxy:
+      image: gcr.io/cloud-sql-connectors/cloud-sql-proxy:2.14.3
+      # `<project>:<region>:<instance>` — surfaced on the
+      # XKeycloakDatabase composite's `status.connectionName`. Set
+      # via `values-gcp.yaml` (or a wrapper) once Crossplane has
+      # provisioned the CloudSQL instance.
+      connectionName: ""
+      # GCP service account email bound to the K8s SA via Workload
+      # Identity. The GCP SA needs `roles/cloudsql.client`; the
+      # `iam.workloadIdentityUser` binding from the K8s SA to the
+      # GCP SA is one-time setup outside the chart.
+      gcpServiceAccount: ""

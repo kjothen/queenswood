@@ -1,12 +1,18 @@
 # Overlay for GKE / GCP deployments: skip the in-chart Postgres and
-# point the Keycloak CR at a CloudSQL instance provisioned by
-# `queenswood-platform` via Crossplane. The Secret referenced here
-# must be created out-of-band (Crossplane `XKeycloakDatabase` writes
-# it, or the operator team rotates it manually).
+# stand up a cloud-sql-proxy that fronts the CloudSQL instance
+# provisioned by `queenswood-platform`'s `XKeycloakDatabase` composite.
+# The Keycloak CR talks to the proxy Service; the proxy authenticates
+# to CloudSQL via Workload Identity.
 postgresql:
   mode: external
   external:
-    host: queenswood-keycloak-cloudsql.queenswood.svc.cluster.local
-    port: 5432
-    database: keycloak
-    secretName: queenswood-keycloak-db
+    proxy:
+      # `<project>:<region>:queenswood-keycloak` — fill in the GCP
+      # project id after `gcloud config get-value project` (or read
+      # it from the XKeycloakDatabase CR's `status.connectionName`).
+      connectionName: ""
+      # GCP service account email bound to `roles/cloudsql.client`
+      # and granted `iam.workloadIdentityUser` from the
+      # `queenswood-keycloak-cloudsql-proxy` K8s SA in the
+      # `queenswood` namespace.
+      gcpServiceAccount: ""

@@ -17,14 +17,14 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 
 {{- /*
 Hostname the Keycloak CR talks to for its database. Local mode
-points at the in-chart Postgres Service; external mode passes the
-operator-provided host straight through.
+points at the in-chart Postgres Service; external mode points at
+the in-chart cloud-sql-proxy Service that fronts CloudSQL.
 */ -}}
 {{- define "queenswood-keycloak.dbHost" -}}
 {{- if eq .Values.postgresql.mode "local" -}}
 {{ .Release.Name }}-postgres
 {{- else -}}
-{{ .Values.postgresql.external.host }}
+{{ .Values.postgresql.external.serviceName }}
 {{- end -}}
 {{- end -}}
 

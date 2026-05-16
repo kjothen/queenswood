@@ -10,6 +10,20 @@ apex:
 cert:
   location: europe-west2
 
+# Keycloak's Postgres backing — `enabled: true` on GCP spins up a
+# CloudSQL Postgres instance via Crossplane (XKeycloakDatabase) so
+# the queenswood-keycloak chart can run in `postgresql.mode:
+# external` mode. The chart writes connection details into a Secret
+# the cloud-sql-proxy in the queenswood-keycloak chart consumes.
+keycloakDatabase:
+  enabled: true
+  region: europe-west2
+  instanceName: queenswood-keycloak
+  databaseName: keycloak
+  username: keycloak
+  tier: db-f1-micro
+  postgresVersion: POSTGRES_16
+
 release:
   chart:
     name: queenswood
