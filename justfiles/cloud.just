@@ -349,6 +349,12 @@ up-from-zero:
     [[ -n "$PROJECT_ID" ]] || { echo "no active gcloud project; run 'just gcp-project-create' first" >&2; exit 1; }
     just gcp-login
     just gcp-bootstrap
+    # cloud-sql-proxy's Workload Identity binding. The K8s SA the
+    # binding references doesn't have to exist yet (GCP's IAM API
+    # doesn't validate the cluster side), so getting it in here means
+    # by the time the queenswood-keycloak chart's proxy Deployment
+    # comes up its impersonation is already approved.
+    just gcp-keycloak-cloudsql-identity
     just gcp-precreate-zone
     just kind-xp-up
     just gcp-sa-login
