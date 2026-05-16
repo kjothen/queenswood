@@ -1,12 +1,16 @@
-(ns com.repldriven.mono.bank-test-identity-provider.store
-  "In-memory stand-in for `bank-identity-provider`. Generates an RSA
+(ns com.repldriven.mono.identity-provider.local
+  "In-memory implementation of `IdentityProvider`. Generates an RSA
   keypair on construction so the stub can both mint and verify JWTs
-  without talking to a real Keycloak. The `TestIdentityProviderClient`
-  defrecord implements `bank-identity-provider.interface/IdentityProvider`
-  inline, so any code that calls the production interface dispatches
-  here transparently when a test client is wired."
+  without talking to any external service. Suitable for fast brick
+  tests; high-fidelity tests should use the `keycloak` adapter
+  pointed at a real Keycloak (testcontainer or otherwise).
+
+  Audience handling is domain-agnostic: callers pass a `:status`
+  keyword on `create-service-account`, the record looks up the
+  matching audience string in its configured `audiences-by-status`
+  map, and stamps it on subsequently-issued tokens for that client."
   (:require
-    [com.repldriven.mono.bank-identity-provider.interface :as idp]
+    [com.repldriven.mono.identity-provider.protocol :as protocol]
 
     [com.repldriven.mono.error.interface :as error]
     [com.repldriven.mono.utility.interface :as util]
@@ -40,12 +44,12 @@
 
 (defprotocol Stub
   "Internal accessors so the implementation fns below can pull the
-  keypair / state off the defrecord without leaking the record's
-  field shape."
+  keypair / state off the defrecord without leaking field shape."
   (-keypair [_])
   (-kid [_])
   (-issuer [_])
-  (-state [_]))
+  (-state [_])
+  (-audiences-by-status [_]))
 
 (defn- mint-token*
   [client claims]
@@ -53,29 +57,22 @@
         full-claims (merge {:iss (-issuer client)
                             :iat now-s
                             :exp (+ now-s 3600)
-                            :jti (str "test-jti-" (util/uuidv7))}
+                            :jti (str "local-jti-" (util/uuidv7))}
                            claims)]
     (jwt/sign full-claims
               (.getPrivate ^KeyPair (-keypair client))
               {:alg :rs256
                :header {:kid (-kid client) :alg "RS256" :typ "JWT"}})))
 
-(defn- scope->audience
-  "Map an OAuth2 `scope` value back to the audience claim it grants.
-  Mirrors the production realm import, which provisions one client
-  scope per env. Unknown scopes get the test audience."
-  [scope]
-  (case scope
-    "queenswood-api-live" "queenswood-api-live"
-    "queenswood-api-test"))
-
 (defn- create-client-impl
-  [client {:keys [organization-id]}]
-  (let [secret (str "test-secret-" (util/uuidv7))]
+  [client {:keys [organization-id status]}]
+  (let [secret (str "local-secret-" (util/uuidv7))
+        audience (get (-audiences-by-status client) status)]
     (swap! (-state client) assoc-in
       [:clients organization-id]
       {:client-id organization-id
-       :client-secret secret})
+       :client-secret secret
+       :audience audience})
     {:client-id organization-id :client-secret secret}))
 
 (defn- delete-client-impl
@@ -85,18 +82,18 @@
 
 (defn- regenerate-secret-impl
   [client client-id]
-  (let [secret (str "test-secret-" (util/uuidv7))]
+  (let [secret (str "local-secret-" (util/uuidv7))]
     (swap! (-state client) assoc-in [:clients client-id :client-secret] secret)
     {:client-id client-id :client-secret secret}))
 
 (defn- exchange-client-credentials-impl
-  [client {:keys [client-id client-secret scope]}]
-  (let [registered (get-in @(-state client) [:clients client-id])
-        aud (scope->audience scope)]
+  [client {:keys [client-id client-secret]}]
+  (let [registered (get-in @(-state client) [:clients client-id])]
     (if (or (nil? registered) (not= client-secret (:client-secret registered)))
       (error/reject :auth/invalid-client
                     {:message "Unknown client_id or client_secret mismatch"})
-      (let [token (mint-token* client
+      (let [aud (:audience registered)
+            token (mint-token* client
                                {:azp client-id
                                 :sub client-id
                                 :aud [aud]
@@ -104,7 +101,7 @@
         {:access_token token
          :expires_in 3600
          :token_type "Bearer"
-         :scope (or scope aud)}))))
+         :scope aud}))))
 
 (defn- verify-token-impl
   [client jwt-string {:keys [expected-audiences]}]
@@ -132,13 +129,14 @@
   {:keys [(public-jwk (-keypair client) (-kid client))]
    :fetched-at (util/now)})
 
-(defrecord TestIdentityProviderClient [keypair kid issuer state]
+(defrecord LocalIdentityProvider [keypair kid issuer state audiences-by-status]
   Stub
     (-keypair [_] keypair)
     (-kid [_] kid)
     (-issuer [_] issuer)
     (-state [_] state)
-  idp/IdentityProvider
+    (-audiences-by-status [_] audiences-by-status)
+  protocol/IdentityProvider
     (-create-service-account [this data] (create-client-impl this data))
     (-revoke-service-account [this organization-id]
       (delete-client-impl this organization-id))
@@ -152,19 +150,15 @@
     (-get-issuer [_] issuer))
 
 (defn ->client
-  "Build a stub IDP client. `config` may carry `:issuer`; defaults
-  to `https://test.invalid/realms/queenswood`."
-  [{:keys [issuer] :or {issuer "https://test.invalid/realms/queenswood"}}]
-  (->TestIdentityProviderClient
+  "Build a `LocalIdentityProvider`. `config` may carry `:issuer`
+  (default `https://local.invalid/`) and must carry
+  `:audiences-by-status` — a map from organization-status keyword to
+  audience string."
+  [{:keys [issuer audiences-by-status]
+    :or {issuer "https://local.invalid/"}}]
+  (->LocalIdentityProvider
    (generate-rsa-keypair)
-   (str "test-key-" (util/uuidv7))
+   (str "local-key-" (util/uuidv7))
    issuer
-   (atom {:clients {}})))
-
-(defn mint-token
-  "Sign a JWT for tests. `claims` should include `:azp` (the
-  client-id), and may include `:aud`, `:realm_access`, and a
-  custom `:exp` override. Test-only entry point — production code
-  goes through the realm's token endpoint."
-  [client claims]
-  (mint-token* client claims))
+   (atom {:clients {}})
+   (or audiences-by-status {})))

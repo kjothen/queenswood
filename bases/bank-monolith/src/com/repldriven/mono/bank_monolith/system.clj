@@ -4,9 +4,9 @@
     com.repldriven.mono.bank-clearbank-adapter.system
     com.repldriven.mono.bank-clearbank-simulator.system
     com.repldriven.mono.bank-clearbank-webhook.interface
-    com.repldriven.mono.bank-identity-provider.interface
-    com.repldriven.mono.bank-test-identity-provider.interface
     com.repldriven.mono.bank-idv.interface
+    com.repldriven.mono.identity-provider.interface
+    com.repldriven.mono.keycloak.interface
     com.repldriven.mono.bank-onfido-adapter.system
     com.repldriven.mono.bank-onfido-simulator.system
     com.repldriven.mono.bank-onfido-webhook.interface

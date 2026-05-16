@@ -3,16 +3,22 @@ container: !system/component
   # Imported at container boot. The realm carries the audience scopes
   # the bank-api expects and a `queenswood-admin` service-account
   # client (id/secret below) with realm-management roles for the
-  # bank-identity-provider admin path.
+  # keycloak adapter's admin path.
   realm-import-file: bank/queenswood-realm.json
 
 auth-server-url: !system/component
   system/component-kind: keycloak/auth-server-url
   container: !system/local-ref container
 
-client: !system/component
-  system/component-kind: identity-provider/client
+identity-provider: !system/component
+  system/component-kind: keycloak/identity-provider
   base-url: !system/local-ref auth-server-url
   realm: queenswood
   admin-client-id: queenswood-admin
   admin-client-secret: queenswood-admin-test-secret
+  # Banking-specific status → audience mapping lives here, not in
+  # the substrate. Both values are queenswood-realm scope names that
+  # the realm import provisions with `oidc-audience-mapper`.
+  audiences-by-status:
+    organization-status-test: queenswood-api-test
+    organization-status-live: queenswood-api-live

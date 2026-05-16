@@ -1,21 +1,20 @@
-(ns com.repldriven.mono.bank-identity-provider.store
-  "Keycloak Admin REST + token endpoint client. Holds the cached
-  admin access token and JWKS in atoms on the client record. All
-  HTTP goes through `http-client` so failures surface as
-  `:http-client/request` or `:identity-provider/*` anomalies."
+(ns com.repldriven.mono.keycloak.core
+  "Keycloak Admin REST + token endpoint glue. The `KeycloakIdentity
+  Provider` defrecord (in `identity_provider`) wraps these helpers
+  and implements the `identity-provider` brick's protocol — the
+  same way `pulsar/message-bus.clj` wraps the raw Pulsar SDK to
+  satisfy `message-bus`'s Producer/Consumer protocols."
   (:require
-    [com.repldriven.mono.bank-identity-provider.domain :as domain]
-
     [com.repldriven.mono.error.interface :as error :refer [let-nom>]]
     [com.repldriven.mono.http-client.interface :as http]
     [com.repldriven.mono.json.interface :as json]
     [com.repldriven.mono.utility.interface :as util]))
 
-(def ^:private jwks-ttl-ms (* 10 60 1000))
+(def jwks-ttl-ms (* 10 60 1000))
 
-;; Internal accessors on the production client. `core/IdentityProviderClient`
-;; implements this protocol so store helpers can pull config + atoms off
-;; the record without store knowing about the defrecord directly.
+;; Internal accessor protocol — `KeycloakIdentityProvider` extends it
+;; so these helpers can pull config / cached-token atoms off the
+;; record without depending on its field shape.
 (defprotocol Client
   (-config [_])
   (-admin-token-atom [_])
@@ -29,10 +28,61 @@
   [{:keys [base-url realm]} & path-parts]
   (apply str base-url "/admin/realms/" realm path-parts))
 
+(defn parse-token-response
+  "Pull `{:access-token :expires-in}` out of a Keycloak token
+  response. Returns nil on malformed input."
+  [body]
+  (when (and (map? body) (:access_token body))
+    {:access-token (:access_token body)
+     :expires-in (or (:expires_in body) 60)}))
+
+(defn parse-jwks
+  "Pass-through that exists so callers can route through one place
+  if Keycloak's JWKS response shape ever needs translation."
+  [body]
+  (when (and (map? body) (sequential? (:keys body)))
+    body))
+
+(defn admin-token-expired?
+  "Return true if `cached` is nil or older than 80 % of its lifetime."
+  [cached now-ms]
+  (or (nil? cached)
+      (let [{:keys [expires-in fetched-at]} cached
+            age-ms (- now-ms fetched-at)
+            threshold-ms (* 0.8 1000 (or expires-in 60))]
+        (>= age-ms threshold-ms))))
+
+(defn jwks-stale?
+  "Return true if cached JWKS is older than the configured TTL."
+  [cached now-ms ttl-ms]
+  (or (nil? cached)
+      (>= (- now-ms (:fetched-at cached)) ttl-ms)))
+
+(defn new-client-representation
+  "Build the Keycloak ClientRepresentation JSON body for a per-tenant
+  service-account client. `audience` is the realm-level client-scope
+  name to attach, so every JWT this client mints carries the right
+  `aud` claim. Returns plain Clojure data ready for JSON encoding."
+  [{:keys [organization-id name audience]}]
+  {:clientId organization-id
+   :name (or name organization-id)
+   :enabled true
+   :protocol "openid-connect"
+   :publicClient false
+   :serviceAccountsEnabled true
+   :standardFlowEnabled false
+   :directAccessGrantsEnabled false
+   :implicitFlowEnabled false
+   :attributes {"access.token.lifespan" "3600"}
+   :defaultClientScopes (cond-> ["service-accounts"]
+                                audience (conj audience))
+   :optionalClientScopes []
+   :description audience})
+
 (defn- exchange-client-credentials*
   "Config-only variant: hit the token endpoint without needing a built
-  client. Used both by `exchange-client-credentials` (for the public
-  flow) and by the admin-token refresh path."
+  client. Used both by the public exchange flow and by the admin-token
+  refresh path."
   [config {:keys [client-id client-secret scope]}]
   (let-nom>
     [res (http/request
@@ -49,9 +99,8 @@
 
 (defn exchange-client-credentials
   "POST `client_credentials` to the realm token endpoint. Returns the
-  raw Keycloak response body (keys keyword-ified from the JSON, so
-  `:access_token`, `:expires_in`, `:token_type`, `:scope`) or an
-  anomaly. The caller is responsible for normalisation."
+  raw Keycloak response body (snake-case keys preserved) or an
+  anomaly."
   [client creds]
   (exchange-client-credentials* (-config client) creds))
 
@@ -62,11 +111,10 @@
            config
            {:client-id (:admin-client-id config)
             :client-secret (:admin-client-secret config)})]
-    (or (some-> (domain/parse-token-response body)
+    (or (some-> (parse-token-response body)
                 (assoc :fetched-at (util/now)))
-        (error/fail :identity-provider/admin-token-malformed
-                    {:message
-                     "Keycloak admin token response missing access_token"}))))
+        (error/fail :keycloak/admin-token-malformed
+                    {:message "Keycloak admin token response missing access_token"}))))
 
 (defn- admin-token!
   "Return a valid admin access token, refreshing if expired."
@@ -74,7 +122,7 @@
   (let [config (-config client)
         a (-admin-token-atom client)
         cached @a]
-    (if-not (domain/admin-token-expired? cached (util/now))
+    (if-not (admin-token-expired? cached (util/now))
       (:access-token cached)
       (let [fresh (fetch-admin-token config)]
         (if (error/anomaly? fresh)
@@ -87,12 +135,10 @@
    "content-type" "application/json"})
 
 (defn create-client
-  "Create a Keycloak client (per-org service account). Returns the
-  created client representation or an anomaly. The Keycloak Create
-  Client endpoint returns 201 with the new client's URL in the
-  `Location` header — we then fetch the client to get its UUID and
-  pair it with a secret."
-  [client {:keys [organization-id name status]}]
+  "Create a Keycloak client for `organization-id`. Returns
+  `{:client-id …}` (the secret is fetched separately via
+  `client-secret`) or an anomaly."
+  [client {:keys [organization-id name audience]}]
   (let [config (-config client)]
     (let-nom>
       [token (admin-token! client)
@@ -101,10 +147,10 @@
            :url (admin-url config "/clients")
            :headers (admin-headers token)
            :body (json/write-str
-                  (domain/new-client-representation
+                  (new-client-representation
                    {:organization-id organization-id
                     :name name
-                    :status status}))})]
+                    :audience audience}))})]
       {:client-id organization-id})))
 
 (defn client-secret
@@ -120,11 +166,9 @@
                   :url (admin-url config "/clients?clientId=" client-id)
                   :headers (admin-headers token)})
        clients (http/res->edn list-res)
-       uuid (some-> clients
-                    first
-                    :id)
+       uuid (some-> clients first :id)
        _ (when-not uuid
-           (error/reject :identity-provider/client-not-found
+           (error/reject :keycloak/client-not-found
                          {:message "No Keycloak client matches client-id"
                           :client-id client-id}))
        sec-res (http/request
@@ -146,9 +190,7 @@
                   :url (admin-url config "/clients?clientId=" client-id)
                   :headers (admin-headers token)})
        clients (http/res->edn list-res)
-       uuid (some-> clients
-                    first
-                    :id)]
+       uuid (some-> clients first :id)]
       (if uuid
         (let-nom>
           [_ (http/request
@@ -169,11 +211,9 @@
                   :url (admin-url config "/clients?clientId=" client-id)
                   :headers (admin-headers token)})
        clients (http/res->edn list-res)
-       uuid (some-> clients
-                    first
-                    :id)
+       uuid (some-> clients first :id)
        _ (when-not uuid
-           (error/reject :identity-provider/client-not-found
+           (error/reject :keycloak/client-not-found
                          {:message "No Keycloak client matches client-id"
                           :client-id client-id}))
        res (http/request
@@ -190,9 +230,9 @@
                         :url (realm-url config
                                         "/protocol/openid-connect/certs")})
      body (http/res->edn res)]
-    (or (some-> (domain/parse-jwks body)
+    (or (some-> (parse-jwks body)
                 (assoc :fetched-at (util/now)))
-        (error/fail :identity-provider/jwks-malformed
+        (error/fail :keycloak/jwks-malformed
                     {:message "Keycloak JWKS response missing :keys"}))))
 
 (defn jwks!
@@ -204,7 +244,7 @@
          a (-jwks-atom client)
          cached @a]
      (if (and (not force-refresh?)
-              (not (domain/jwks-stale? cached (util/now) jwks-ttl-ms)))
+              (not (jwks-stale? cached (util/now) jwks-ttl-ms)))
        cached
        (let [fresh (fetch-jwks config)]
          (if (error/anomaly? fresh)

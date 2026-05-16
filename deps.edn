@@ -12,7 +12,9 @@
     components/event {:local/root "components/event"}
     components/fdb {:local/root "components/fdb"}
     components/http-client {:local/root "components/http-client"}
+    components/identity-provider {:local/root "components/identity-provider"}
     components/json {:local/root "components/json"}
+    components/keycloak {:local/root "components/keycloak"}
     components/log {:local/root "components/log"}
     components/migrator {:local/root "components/migrator"}
     components/message-bus {:local/root "components/message-bus"}
@@ -87,7 +89,6 @@
   :+bank
   {:extra-deps
    {components/bank-balance {:local/root "components/bank-balance"}
-    components/bank-identity-provider {:local/root "components/bank-identity-provider"}
     components/bank-cash-account-product
     {:local/root "components/bank-cash-account-product"}
     components/bank-cash-account {:local/root "components/bank-cash-account"}
@@ -108,8 +109,6 @@
                                         "components/bank-test-api-scenarios"}
     components/bank-test-scenarios {:local/root
                                     "components/bank-test-scenarios"}
-    components/bank-test-identity-provider
-    {:local/root "components/bank-test-identity-provider"}
     components/bank-test-model {:local/root "components/bank-test-model"}
     components/bank-test-projections {:local/root
                                       "components/bank-test-projections"}

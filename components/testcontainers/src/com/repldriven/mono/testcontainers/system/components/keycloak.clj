@@ -4,8 +4,8 @@
   keycloak — the lib handles startup probing and the
   `withRealmImportFile` import hook. The container exposes its
   randomly-mapped HTTP port; the `auth-server-url` component
-  surfaces the full base URL the bank-identity-provider can be
-  pointed at."
+  surfaces the full base URL the `keycloak/identity-provider`
+  component can be pointed at."
   (:require
     [com.repldriven.mono.log.interface :as log]
     [com.repldriven.mono.system.interface :as system])
@@ -35,7 +35,7 @@
 
 (def auth-server-url
   "Resolves to the container's `<scheme>://<host>:<port>` base URL.
-  Pair with `identity-provider/client`'s `:base-url` config."
+  Pair with `keycloak/identity-provider`'s `:base-url` config."
   {:system/start (fn [{:system/keys [config instance]}]
                    (or instance
                        (let [^KeycloakContainer c (:container (:container

@@ -1,11 +1,11 @@
 (ns com.repldriven.mono.bank-api.oauth.handlers
   "RFC 6749 token endpoint + RFC 7517 JWKS endpoint + RFC 8414
-  discovery, layered on top of `bank-identity-provider`. The handlers
-  speak snake_case at the wire boundary (OAuth2 spec) and let the IDP
-  brick decide whether the request hits a real Keycloak realm or the
-  in-memory test stub."
+  discovery, layered on top of the `identity-provider` substrate.
+  The handlers speak snake_case at the wire boundary (OAuth2 spec)
+  and let the substrate decide whether the request hits a real
+  Keycloak realm or the in-memory local impl."
   (:require
-    [com.repldriven.mono.bank-identity-provider.interface :as identity-provider]
+    [com.repldriven.mono.identity-provider.interface :as identity-provider]
     [com.repldriven.mono.error.interface :as error]))
 
 (defn- external-base-url
@@ -32,7 +32,7 @@
 
 (defn token
   "RFC 6749 §4.4 — client_credentials grant. Proxies the request to
-  the realm's token endpoint via `bank-identity-provider`."
+  the realm's token endpoint via the configured identity-provider."
   [request]
   (let [{:keys [identity-provider]} request
         params (or (get-in request [:parameters :form])

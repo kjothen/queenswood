@@ -8,7 +8,7 @@
      :as cash-accounts]
     [com.repldriven.mono.bank-cash-account-product.interface
      :as products]
-    [com.repldriven.mono.bank-identity-provider.interface
+    [com.repldriven.mono.identity-provider.interface
      :as identity-provider]
     [com.repldriven.mono.bank-party.interface :as party]
     [com.repldriven.mono.bank-policy.interface :as policy]
