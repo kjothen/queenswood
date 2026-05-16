@@ -1,5 +1,5 @@
-# Overrides for the queenswood-test environment. Mirrors the convention
-# used by queenswood-platform/values-test.yaml.
+# Overrides for the queenswood-test environment. Mirrors the
+# convention used by queenswood-platform/values-test.yaml.
 env:
   name: queenswood-test
   domain: queenswood-test.repldriven.com

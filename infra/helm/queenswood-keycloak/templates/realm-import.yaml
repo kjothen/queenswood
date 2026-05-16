@@ -1,0 +1,22 @@
+# `KeycloakRealmImport` CR — the operator picks this up, runs a Job
+# that imports the realm against the Keycloak instance, and marks
+# the CR as Done. Re-imports happen if the realm spec changes.
+#
+# The realm payload comes from `files/queenswood-realm.json`, which
+# is a symlink to the canonical
+# `components/bank-resources/resources/bank/keycloak-realm.json`
+# kept in the polylith workspace. Both the helm-deployed realm and
+# the testcontainer-fixture realm (in `bank-test-resources/`) trace
+# back to the same source.
+apiVersion: k8s.keycloak.org/v2alpha1
+kind: KeycloakRealmImport
+metadata:
+  name: {{ .Release.Name }}-realm
+  labels:
+    {{- include "queenswood-keycloak.labels" . | nindent 4 }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "{{ .Values.argocd.syncWave }}"
+spec:
+  keycloakCRName: {{ .Release.Name }}-keycloak
+  realm:
+    {{- .Files.Get "files/queenswood-realm.json" | fromJson | toYaml | nindent 4 }}

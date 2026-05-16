@@ -1,0 +1,12 @@
+# Overlay for GKE / GCP deployments: skip the in-chart Postgres and
+# point the Keycloak CR at a CloudSQL instance provisioned by
+# `queenswood-platform` via Crossplane. The Secret referenced here
+# must be created out-of-band (Crossplane `XKeycloakDatabase` writes
+# it, or the operator team rotates it manually).
+postgresql:
+  mode: external
+  external:
+    host: queenswood-keycloak-cloudsql.queenswood.svc.cluster.local
+    port: 5432
+    database: keycloak
+    secretName: queenswood-keycloak-db

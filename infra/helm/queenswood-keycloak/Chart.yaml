@@ -1,16 +1,20 @@
 apiVersion: v2
 name: queenswood-keycloak
 description: |
-  Wrapper chart around bitnami/keycloak that provisions the queenswood
-  realm and exposes Keycloak on `keycloak.<env-domain>`. Adds a CoreDNS
-  rewrite so in-cluster pods resolve the public hostname to the internal
-  Service (issuer URL matches inside and outside the cluster), and an
-  HTTPRoute on the queenswood Gateway. Parameterised on env.name and
-  env.domain so the same chart drives queenswood, queenswood-test, etc.
+  Per-environment Keycloak instance for queenswood, deployed via the
+  official Keycloak Operator. Emits a `Keycloak` CR + a
+  `KeycloakRealmImport` CR plus the supporting plumbing (HTTPRoute on
+  the queenswood gateway, DNS record for `keycloak.<env-domain>`,
+  CoreDNS rewrite so in-cluster pods resolve the public hostname to
+  the in-cluster Service, and — in local mode — an in-chart Postgres
+  StatefulSet). Operator + CRDs are cluster-scoped and installed
+  separately by `infra/bootstrap/apps/keycloak-operator.yml`.
+
+  Parameterised on `env.name` and `env.domain` so the same chart
+  drives queenswood, queenswood-test, etc. The `postgresql.mode`
+  switch flips between a local Postgres pod (for kind clusters) and
+  an externally-provisioned database (CloudSQL via Crossplane in
+  GCP).
 type: application
-version: 0.1.0
-appVersion: "26.0"
-dependencies:
-  - name: keycloak
-    version: "24.x.x"
-    repository: oci://registry-1.docker.io/bitnamicharts
+version: 0.2.0
+appVersion: "26.6.1"
