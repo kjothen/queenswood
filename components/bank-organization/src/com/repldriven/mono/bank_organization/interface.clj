@@ -1,9 +1,9 @@
 (ns com.repldriven.mono.bank-organization.interface
-  "Organization tenant lifecycle: provisions an organization with an
-  API key, default party, product, and one cash account per
-  currency, and binds tier-specific policies to the new org. Read
-  paths return the organization enriched with its party, accounts
-  (including balances), and minted API key."
+  "Organization tenant lifecycle: provisions an organization with a
+  service-account client, default party, product, and one cash
+  account per currency, and binds tier-specific policies to the new
+  org. Read paths return the organization enriched with its party
+  and accounts (with balances)."
   (:require
     com.repldriven.mono.bank-organization.system
 
@@ -11,13 +11,11 @@
     [com.repldriven.mono.bank-organization.store :as store]))
 
 (defn new-organization
-  "Provision a new organization with an API key, party, product,
-  and one cash account per currency, and bind the tier policies
-  to it. Returns
-  `{:organization {...} :key-secret <one-time-string>}` or an
-  anomaly. The minted API key's prefix (`sk_live.` / `sk_test.`)
-  tracks `org-status`; the key-secret is only returned at
-  creation time.
+  "Provision a new organization with a service-account client, party,
+  product, and one cash account per currency, and bind the tier
+  policies to it. Returns
+  `{:organization {... :client-id …} :client-secret <one-time-string>}`
+  or an anomaly. The client_secret is only returned at creation time.
 
   Args:
   - txn: FDB transaction or db handle.
@@ -29,7 +27,12 @@
     policies to bind to the new organization, or nil for none.
   - currencies: collection of ISO 4217 currency strings.
   - opts (optional): map; `:policies` overrides the platform
-    policies used for the capability check."
+    policies used for the capability check;
+    `:identity-provider` enables service-account-client creation
+    (omit for internal-org bootstrap);
+    `:audience` (string) is the `aud` claim stamped on tokens minted
+    for the new client — required when `:identity-provider` is
+    present."
   ([txn org-name org-type org-status tier currencies]
    (core/new-organization txn
                           org-name

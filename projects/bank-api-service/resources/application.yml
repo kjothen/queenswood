@@ -140,11 +140,6 @@ system:
       realm: !env KEYCLOAK_REALM
       admin-client-id: !env KEYCLOAK_ADMIN_CLIENT_ID
       admin-client-secret: !env KEYCLOAK_ADMIN_CLIENT_SECRET
-      # Banking-specific status → audience mapping. Both values are
-      # realm-import scope names that carry an `oidc-audience-mapper`.
-      audiences-by-status:
-        organization-status-test: queenswood-api-test
-        organization-status-live: queenswood-api-live
   organizations:
     internal: !system/component
       system/component-kind: organizations/organization-from-fdb
@@ -198,6 +193,11 @@ system:
       expected-audiences:
         - queenswood-api-test
         - queenswood-api-live
+      # Banking-specific status → audience mapping. Both values are
+      # realm-import scope names that carry an `oidc-audience-mapper`.
+      audiences-by-status:
+        organization-status-test: queenswood-api-test
+        organization-status-live: queenswood-api-live
       internal-organization-id: !system/ref organizations.internal.organization.organization-id
       internal-account-id: !system/ref organizations.internal-account-id
       dispatchers:

@@ -148,18 +148,21 @@
                                       policies)
          org-id (:organization-id org)
 
-         ;; Issue the Keycloak service-account client BEFORE the FDB
-         ;; write so a Keycloak failure aborts the transaction cleanly.
+         ;; Issue the service-account client BEFORE the FDB write so an
+         ;; identity-provider failure aborts the transaction cleanly.
          ;; Client-id == organization-id (deterministic mapping). The
-         ;; internal-org bootstrap path provisions no IDP because the
+         ;; internal-org bootstrap provisions no IDP because the
          ;; queenswood org itself authenticates as admin; only callers
-         ;; that pass `:identity-provider` get a client.
+         ;; that pass `:identity-provider` get a client. `:audience`
+         ;; is the JWT `aud` claim the IDP will stamp on tokens for
+         ;; this client — the bank-api handler picks it from its own
+         ;; status→audience config and forwards it here.
          {:keys [client-secret]} (if-let [idp (:identity-provider opts)]
                                    (identity-provider/create-service-account
                                     idp
                                     {:organization-id org-id
                                      :name org-name
-                                     :status org-status})
+                                     :audience (:audience opts)})
                                    {})
 
          _ (store/create txn org)

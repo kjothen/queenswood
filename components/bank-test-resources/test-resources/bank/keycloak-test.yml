@@ -16,9 +16,3 @@ identity-provider: !system/component
   realm: queenswood
   admin-client-id: queenswood-admin
   admin-client-secret: queenswood-admin-test-secret
-  # Banking-specific status → audience mapping lives here, not in
-  # the substrate. Both values are queenswood-realm scope names that
-  # the realm import provisions with `oidc-audience-mapper`.
-  audiences-by-status:
-    organization-status-test: queenswood-api-test
-    organization-status-live: queenswood-api-live

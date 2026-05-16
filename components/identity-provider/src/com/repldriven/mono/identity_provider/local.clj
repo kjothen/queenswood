@@ -5,10 +5,11 @@
   tests; high-fidelity tests should use the `keycloak` adapter
   pointed at a real Keycloak (testcontainer or otherwise).
 
-  Audience handling is domain-agnostic: callers pass a `:status`
-  keyword on `create-service-account`, the record looks up the
-  matching audience string in its configured `audiences-by-status`
-  map, and stamps it on subsequently-issued tokens for that client."
+  Audience handling is domain-agnostic: callers pass an `:audience`
+  string on `create-service-account`, the record stores it with the
+  client, and tokens minted via `exchange-client-credentials` for
+  that client carry it as the `aud` claim. How the caller picks the
+  audience is none of the substrate's business."
   (:require
     [com.repldriven.mono.identity-provider.protocol :as protocol]
 
@@ -48,8 +49,7 @@
   (-keypair [_])
   (-kid [_])
   (-issuer [_])
-  (-state [_])
-  (-audiences-by-status [_]))
+  (-state [_]))
 
 (defn- mint-token*
   [client claims]
@@ -65,9 +65,8 @@
                :header {:kid (-kid client) :alg "RS256" :typ "JWT"}})))
 
 (defn- create-client-impl
-  [client {:keys [organization-id status]}]
-  (let [secret (str "local-secret-" (util/uuidv7))
-        audience (get (-audiences-by-status client) status)]
+  [client {:keys [organization-id audience]}]
+  (let [secret (str "local-secret-" (util/uuidv7))]
     (swap! (-state client) assoc-in
       [:clients organization-id]
       {:client-id organization-id
@@ -129,13 +128,12 @@
   {:keys [(public-jwk (-keypair client) (-kid client))]
    :fetched-at (util/now)})
 
-(defrecord LocalIdentityProvider [keypair kid issuer state audiences-by-status]
+(defrecord LocalIdentityProvider [keypair kid issuer state]
   Stub
     (-keypair [_] keypair)
     (-kid [_] kid)
     (-issuer [_] issuer)
     (-state [_] state)
-    (-audiences-by-status [_] audiences-by-status)
   protocol/IdentityProvider
     (-create-service-account [this data] (create-client-impl this data))
     (-revoke-service-account [this organization-id]
@@ -151,14 +149,10 @@
 
 (defn ->client
   "Build a `LocalIdentityProvider`. `config` may carry `:issuer`
-  (default `https://local.invalid/`) and must carry
-  `:audiences-by-status` — a map from organization-status keyword to
-  audience string."
-  [{:keys [issuer audiences-by-status]
-    :or {issuer "https://local.invalid/"}}]
+  (default `https://local.invalid/`)."
+  [{:keys [issuer] :or {issuer "https://local.invalid/"}}]
   (->LocalIdentityProvider
    (generate-rsa-keypair)
    (str "local-key-" (util/uuidv7))
    issuer
-   (atom {:clients {}})
-   (or audiences-by-status {})))
+   (atom {:clients {}})))

@@ -28,6 +28,9 @@ system:
       expected-audiences:
         - queenswood-api-test
         - queenswood-api-live
+      audiences-by-status:
+        organization-status-test: queenswood-api-test
+        organization-status-live: queenswood-api-live
       internal-organization-id: !system/ref organizations.internal.organization.organization-id
       internal-account-id: !system/ref organizations.internal-account-id
       dispatchers:
