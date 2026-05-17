@@ -1,17 +1,6 @@
-# Overlay for GKE / GCP deployments: skip the in-chart Postgres and
-# stand up a cloud-sql-proxy that fronts the CloudSQL instance
-# provisioned by `queenswood-platform`'s `XKeycloakDatabase` composite.
-# The Keycloak CR talks to the proxy Service; the proxy authenticates
-# to CloudSQL via Workload Identity.
-#
-# `connectionName` and `gcpServiceAccount` are pinned automatically by
-# `just gcp-keycloak-cloudsql-pin-values` once Crossplane has finished
-# provisioning CloudSQL (also invoked from `up-from-zero`). The empty
-# defaults here are filled in on the operator's first cold-start
-# commit; subsequent reconciles read the committed values.
 postgresql:
   mode: external
   external:
     proxy:
-      connectionName: ""
-      gcpServiceAccount: ""
+      connectionName: queenswood-820d84:europe-west2:queenswood-keycloak
+      gcpServiceAccount: keycloak-sql-proxy@queenswood-820d84.iam.gserviceaccount.com
