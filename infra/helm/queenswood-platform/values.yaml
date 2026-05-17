@@ -21,6 +21,10 @@ keycloakDatabase:
   instanceName: queenswood-keycloak
   databaseName: keycloak
   username: keycloak
+  # Initial password the composite's `User` resource picks up via
+  # `passwordSecretRef`. Dev-only placeholder; rotate post-deploy
+  # (or pre-create the Secret out-of-band before first sync).
+  password: change-me-keycloak-db-password
   # `db-custom-<vCPUs>-<memMB>` — smallest legal Postgres shape;
   # shared-core (`db-f1-micro`) is MySQL-only.
   tier: db-custom-1-3840
