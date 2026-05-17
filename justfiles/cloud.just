@@ -589,8 +589,27 @@ gcp-keycloak-cloudsql-pin-values:
       [[ -z "$CONN" ]] && sleep 10
     done
     if [[ -z "$CONN" ]]; then
-      echo "Timed out waiting for status.connectionName on XKeycloakDatabase/$XR_NAME" >&2
-      echo "Check: kubectl --context {{ KIND_XP_CLUSTER }} -n {{ ENV }} get xkeycloakdatabase $XR_NAME -o yaml" >&2
+      echo "" >&2
+      echo "Timed out waiting for status.connectionName on XKeycloakDatabase/$XR_NAME." >&2
+      echo "Dumping diagnostic state:" >&2
+      echo "" >&2
+      echo "--- XR conditions ---" >&2
+      kubectl --context {{ KIND_XP_CLUSTER }} -n {{ ENV }} \
+        get xkeycloakdatabase.platform.queenswood.repldriven.com $XR_NAME \
+        -o jsonpath='{range .status.conditions[*]}{.type}={.status}  reason={.reason}  message={.message}{"\n"}{end}' >&2 || true
+      echo "" >&2
+      echo "--- Composed resources ---" >&2
+      kubectl --context {{ KIND_XP_CLUSTER }} -n {{ ENV }} \
+        get xkeycloakdatabase.platform.queenswood.repldriven.com $XR_NAME \
+        -o jsonpath='{range .spec.resourceRefs[*]}{.kind}/{.name}{"\n"}{end}' >&2 || true
+      echo "" >&2
+      echo "--- DatabaseInstance state ---" >&2
+      kubectl --context {{ KIND_XP_CLUSTER }} get databaseinstance.sql.gcp.m.upbound.io \
+        -l crossplane.io/composite=$XR_NAME \
+        -o jsonpath='{range .items[*]}{.metadata.name}: synced={.status.conditions[?(@.type=="Synced")].status} ready={.status.conditions[?(@.type=="Ready")].status} message={.status.conditions[?(@.type=="Synced")].message}{"\n"}{end}' >&2 || true
+      echo "" >&2
+      echo "Full XR yaml:" >&2
+      echo "  kubectl --context {{ KIND_XP_CLUSTER }} -n {{ ENV }} get xkeycloakdatabase $XR_NAME -o yaml" >&2
       exit 1
     fi
     echo "Resolved connectionName: $CONN"

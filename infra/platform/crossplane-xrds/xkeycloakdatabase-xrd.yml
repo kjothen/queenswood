@@ -34,7 +34,11 @@ spec:
                 instanceName: { type: string }
                 databaseName: { type: string }
                 username: { type: string }
-                tier: { type: string, default: db-f1-micro }
+                # Smallest valid Postgres tier — shared-core
+                # (`db-f1-micro`, `db-g1-small`) is MySQL-only, so
+                # custom shape `db-custom-<vCPUs>-<memMB>` is the
+                # floor. 1 vCPU / 3840 MB is the minimum legal combo.
+                tier: { type: string, default: db-custom-1-3840 }
                 postgresVersion: { type: string, default: POSTGRES_16 }
             status:
               type: object

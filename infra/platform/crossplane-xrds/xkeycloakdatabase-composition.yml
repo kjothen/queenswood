@@ -30,7 +30,12 @@ spec:
                   databaseVersion: POSTGRES_16
                   deletionProtection: false
                   settings:
-                    - tier: db-f1-micro
+                    # `db-custom-1-3840` (1 vCPU / 3840 MB) is the
+                    # smallest legal shape for CloudSQL Postgres;
+                    # shared-core (`db-f1-micro` / `db-g1-small`)
+                    # is MySQL-only. Override per env via the XR's
+                    # `spec.tier`.
+                    - tier: db-custom-1-3840
                       diskSize: 10
                       diskType: PD_SSD
                       backupConfiguration:

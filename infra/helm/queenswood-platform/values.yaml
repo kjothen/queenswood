@@ -21,7 +21,9 @@ keycloakDatabase:
   instanceName: queenswood-keycloak
   databaseName: keycloak
   username: keycloak
-  tier: db-f1-micro
+  # `db-custom-<vCPUs>-<memMB>` — smallest legal Postgres shape;
+  # shared-core (`db-f1-micro`) is MySQL-only.
+  tier: db-custom-1-3840
   postgresVersion: POSTGRES_16
 
 release:
