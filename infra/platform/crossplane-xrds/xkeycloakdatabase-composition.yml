@@ -25,26 +25,30 @@ spec:
                 forProvider:
                   databaseVersion: POSTGRES_16
                   deletionProtection: false
+                  # `settings`, `backupConfiguration`, and
+                  # `ipConfiguration` are all map-typed on this CRD
+                  # (provider-upjet-gcp collapses Terraform's
+                  # MaxItems-1 TypeList blocks into single objects).
                   settings:
                     # `db-custom-1-3840` (1 vCPU / 3840 MB) is the
                     # smallest legal shape for CloudSQL Postgres;
                     # shared-core (`db-f1-micro` / `db-g1-small`)
                     # is MySQL-only. Override per env via the XR's
                     # `spec.tier`.
-                    - tier: db-custom-1-3840
-                      diskSize: 10
-                      diskType: PD_SSD
-                      backupConfiguration:
-                        - enabled: true
-                          pointInTimeRecoveryEnabled: false
-                      ipConfiguration:
-                        # Public IP with cloud-sql-proxy. The cluster's
-                        # NAT egress reaches CloudSQL over public
-                        # internet; auth is via IAM (Workload Identity
-                        # on the proxy pod) — `authorizedNetworks`
-                        # stays empty so password-less direct access
-                        # is impossible.
-                        - ipv4Enabled: true
+                    tier: db-custom-1-3840
+                    diskSize: 10
+                    diskType: PD_SSD
+                    backupConfiguration:
+                      enabled: true
+                      pointInTimeRecoveryEnabled: false
+                    ipConfiguration:
+                      # Public IP with cloud-sql-proxy. The cluster's
+                      # NAT egress reaches CloudSQL over public
+                      # internet; auth is via IAM (Workload Identity
+                      # on the proxy pod) — `authorizedNetworks`
+                      # stays empty so password-less direct access
+                      # is impossible.
+                      ipv4Enabled: true
             patches:
               - fromFieldPath: spec.instanceName
                 toFieldPath: metadata.name
@@ -53,7 +57,7 @@ spec:
               - fromFieldPath: spec.postgresVersion
                 toFieldPath: spec.forProvider.databaseVersion
               - fromFieldPath: spec.tier
-                toFieldPath: spec.forProvider.settings[0].tier
+                toFieldPath: spec.forProvider.settings.tier
               # Surface `<project>:<region>:<instance>` so consumers
               # don't have to assemble it themselves. Crossplane's
               # provider-gcp-sql writes it onto
