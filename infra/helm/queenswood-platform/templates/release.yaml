@@ -34,7 +34,7 @@ spec:
       # whatever's set on subsequent upgrades, so rotating in-place
       # is a `helm upgrade --set` away).
       keycloak:
-        baseUrl: {{ .Values.queenswoodKeycloak.serverSide.baseUrl | quote }}
+        baseUrl: {{ printf "https://keycloak.%s" .Values.env.domain | quote }}
         realm: {{ .Values.queenswoodKeycloak.serverSide.realm | quote }}
         adminClientId: {{ .Values.queenswoodKeycloak.serverSide.adminClientId | quote }}
       secrets:
