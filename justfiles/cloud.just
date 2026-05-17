@@ -615,15 +615,19 @@ gcp-keycloak-cloudsql-pin-values:
     echo "Resolved connectionName: $CONN"
     echo "Pinning gcpServiceAccount:  $SA_EMAIL"
 
-    cur_conn=$(yq '.postgresql.external.proxy.connectionName' $VALUES)
-    cur_sa=$(yq '.postgresql.external.proxy.gcpServiceAccount' $VALUES)
+    cur_conn=$(yq -r '.postgresql.external.proxy.connectionName' $VALUES)
+    cur_sa=$(yq -r '.postgresql.external.proxy.gcpServiceAccount' $VALUES)
     if [[ "$cur_conn" == "$CONN" && "$cur_sa" == "$SA_EMAIL" ]]; then
       echo "$VALUES already pinned; skipping commit."
       exit 0
     fi
 
-    yq -i ".postgresql.external.proxy.connectionName = \"$CONN\"" $VALUES
-    yq -i ".postgresql.external.proxy.gcpServiceAccount = \"$SA_EMAIL\"" $VALUES
+    # Use sed not `yq -y -i` — kislyuk/yq round-trips through JSON
+    # and strips YAML comments. The two keys live at fixed paths
+    # and are unique in this file, so anchored sed is safe.
+    sed -i.bak -E "s|^([[:space:]]*connectionName:).*|\1 $CONN|" $VALUES
+    sed -i.bak -E "s|^([[:space:]]*gcpServiceAccount:).*|\1 $SA_EMAIL|" $VALUES
+    rm -f "${VALUES}.bak"
 
     git add $VALUES
     git commit -m "values-gcp: pin queenswood-keycloak CloudSQL connection + WI SA"
