@@ -4,7 +4,7 @@
 # reconciles this into a StatefulSet + Service + everything else a
 # running Keycloak needs. Database is parameterised through the
 # `postgresql.mode` switch in values.yaml — see _helpers.tpl.
-apiVersion: k8s.keycloak.org/v2alpha1
+apiVersion: k8s.keycloak.org/v2beta1
 kind: Keycloak
 metadata:
   name: {{ .Release.Name }}-keycloak

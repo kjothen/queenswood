@@ -50,7 +50,7 @@ keycloakOperator:
   chart:
     name: keycloak-operator
     repository: oci://ghcr.io/repldriven
-    version: 0.1.1
+    version: 0.1.2
 
 # Per-env Keycloak instance + cloud-sql-proxy. The two `proxy.*`
 # fields are pinned by `just gcp-keycloak-cloudsql-pin-values` once
@@ -62,7 +62,7 @@ queenswoodKeycloak:
   chart:
     name: queenswood-keycloak
     repository: oci://ghcr.io/repldriven
-    version: 0.2.2
+    version: 0.2.3
   proxy:
     connectionName: ""
     gcpServiceAccount: ""

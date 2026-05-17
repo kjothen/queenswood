@@ -6,7 +6,10 @@
 #      ClusterRoleBinding so the operator can manage Keycloak instances
 #      anywhere on the cluster.
 #   2. Switches both controller `JOSDK_WATCH_CURRENT` env vars to
-#      `JOSDK_WATCH_ALL_NAMESPACES`.
+#      `JOSDK_ALL_NAMESPACES` (the Quarkus operator-sdk sentinel for
+#      cluster-wide watch). The upstream `JOSDK_WATCH_ALL_NAMESPACES`
+#      mentioned in some docs is NOT recognised by 26.6.x and ends up
+#      treated as a literal namespace name — silently nothing watched.
 # The upstream `Namespace: keycloak-operator` resource was dropped --
 # `spec.forProvider.namespace` on the Crossplane Release that installs
 # this chart creates it via Helm's `--create-namespace`, with the
@@ -409,9 +412,9 @@ spec:
             - name: RELATED_IMAGE_KEYCLOAK
               value: quay.io/keycloak/keycloak:26.6.1
             - name: QUARKUS_OPERATOR_SDK_CONTROLLERS_KEYCLOAKREALMIMPORTCONTROLLER_NAMESPACES
-              value: JOSDK_WATCH_ALL_NAMESPACES
+              value: JOSDK_ALL_NAMESPACES
             - name: QUARKUS_OPERATOR_SDK_CONTROLLERS_KEYCLOAKCONTROLLER_NAMESPACES
-              value: JOSDK_WATCH_ALL_NAMESPACES
+              value: JOSDK_ALL_NAMESPACES
           image: quay.io/keycloak/keycloak-operator:26.6.1
           imagePullPolicy: Always
           livenessProbe:
