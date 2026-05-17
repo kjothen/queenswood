@@ -1,16 +1,21 @@
 # Keycloak Operator (vendored)
 
-Cluster-wide install of the official Keycloak Operator. Synced into
-the cluster by `infra/bootstrap/apps/keycloak-operator.yml` (Argo
-Application, sync-wave `2` so the CRDs land before any chart that
-emits Keycloak / KeycloakRealmImport CRs).
+Cluster-wide install of the official Keycloak Operator, wrapped as a
+thin Helm chart. Installed onto GKE by a Crossplane provider-helm
+`Release` resource templated from `queenswood-platform`
+(`templates/keycloak-operator-release.yaml`, sync-wave `3`) so its
+CRDs are present before the queenswood-keycloak chart (sync-wave `6`)
+emits a `Keycloak` CR.
 
 ## Files
 
-- `crd-keycloaks.yml` — `Keycloak` CRD (cluster scope).
-- `crd-realmimports.yml` — `KeycloakRealmImport` CRD (cluster scope).
-- `operator.yml` — the operator itself: Namespace, ServiceAccount,
-  ClusterRoles, ClusterRoleBindings, Service, Deployment.
+- `crds/crd-keycloaks.yaml` — `Keycloak` CRD (cluster scope).
+- `crds/crd-realmimports.yaml` — `KeycloakRealmImport` CRD (cluster
+  scope). Both live under `crds/` so Helm installs them once,
+  ahead of templates, and skips template rendering on them.
+- `templates/operator.yaml` — the operator itself: Namespace,
+  ServiceAccount, ClusterRoles, ClusterRoleBindings, Service,
+  Deployment.
 
 ## Sourced from
 
