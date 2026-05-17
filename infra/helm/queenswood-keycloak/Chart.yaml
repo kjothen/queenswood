@@ -16,5 +16,5 @@ description: |
   an externally-provisioned database (CloudSQL via Crossplane in
   GCP).
 type: application
-version: 0.2.0
+version: 0.2.1
 appVersion: "26.6.1"
