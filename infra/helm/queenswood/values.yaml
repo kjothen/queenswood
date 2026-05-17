@@ -29,6 +29,13 @@ keycloak:
   baseUrl: "http://queenswood-keycloak-keycloak-service:8080"
   realm: queenswood
   adminClientId: queenswood-admin
+  # Override the iss the verifier expects on incoming JWTs. Leave
+  # empty to default to `<baseUrl>/realms/<realm>`. Set when
+  # Keycloak's public `hostname.hostname` differs from base-url --
+  # the typical deployed shape where base-url is the in-cluster
+  # Service URL for fast admin REST calls but tokens carry the
+  # public issuer URL.
+  expectedIssuer: ""
 
 # -- OpenTelemetry collector endpoint (gets passed as OTEL_ENDPOINT env
 # to every service). Leave empty to disable.

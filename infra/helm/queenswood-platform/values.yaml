@@ -67,13 +67,17 @@ queenswoodKeycloak:
     connectionName: queenswood-820d84:europe-west2:queenswood-keycloak
     gcpServiceAccount: keycloak-sql-proxy@queenswood-820d84.iam.gserviceaccount.com
   # Server-side Keycloak config consumed by the queenswood chart's
-  # bank-api + bootstrap. `baseUrl` uses the in-cluster Service so
-  # admin REST calls don't round-trip out via the gateway LB; relies
-  # on `hostname.strict: false` on the Keycloak CR for the issuer
-  # mismatch between internal and external. `adminClientSecret` must
-  # match the realm-import JSON.
+  # bank-api + bootstrap. baseUrl is derived from env.domain in the
+  # Release template (https://keycloak.<env-domain>) -- the EXTERNAL
+  # hostname, with one LB round-trip per call. The alternative
+  # in-cluster Service URL mints tokens whose `iss` claim embeds
+  # the configured `hostname.hostname` (external), which doesn't
+  # match what bank-api derives from base-url (internal). Aligning
+  # at external keeps the iss match without code changes; a future
+  # Envoy egress would let us go internal again while preserving
+  # the external iss. `adminClientSecret` must match the realm-
+  # import JSON.
   serverSide:
-    baseUrl: "http://queenswood-keycloak-keycloak-service:8080"
     realm: queenswood
     adminClientId: queenswood-admin
     adminClientSecret: queenswood-admin-secret-change-me

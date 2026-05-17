@@ -160,6 +160,10 @@ spec:
                 secretKeyRef:
                   name: {{ $.Release.Name }}-keycloak-admin
                   key: KEYCLOAK_ADMIN_CLIENT_SECRET
+            {{- with $.Values.keycloak.expectedIssuer }}
+            - name: KEYCLOAK_EXPECTED_ISSUER
+              value: {{ . | quote }}
+            {{- end }}
             {{- range $k, $v := $svc.extraEnv }}
             - name: {{ $k }}
               value: {{ tpl $v $ | quote }}
