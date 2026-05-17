@@ -106,6 +106,11 @@ rationale live in the docs.
 - **Deployment** — Helm chart, Tilt + kind dev loop, per-service
   Docker images. See
   [recipes/deployment.md](docs/recipes/deployment.md).
+- **Infrastructure** — GCP via Crossplane on a kind management
+  plane; Argo CD wires the bootstrap chain; queenswood-platform
+  Composites + Releases drive everything else. See
+  [tdd/infrastructure.md](docs/tdd/infrastructure.md) and
+  [ADR-0016](docs/adr/0016-crossplane-over-terraform.md).
 - **Pre-commit hooks** — zprint, clj-kondo, before-commit
   formatting. See
   [ADR-0012](docs/adr/0012-pre-commit-hooks.md).
@@ -114,9 +119,10 @@ rationale live in the docs.
 
 - **Per-capability designs** — `docs/tdd/` has one TDD per
   capability or subsystem (api-keys, cash-account-products,
-  cash-accounts, idempotency, interest, organizations, parties,
-  payments, policy-evaluation, scenario-testing, service-apis,
-  traceability, transaction-processing, transactions-and-balances).
+  cash-accounts, idempotency, infrastructure, interest,
+  organizations, parties, payments, policy-evaluation,
+  scenario-testing, service-apis, traceability,
+  transaction-processing, transactions-and-balances).
 - **Per-capability requirements** — `docs/prd/` has the
   product-shaped requirements (cash-account-products,
   cash-accounts, interest, onboarding, parties, payments,
