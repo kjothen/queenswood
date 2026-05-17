@@ -30,11 +30,14 @@ spec:
                   # (provider-upjet-gcp collapses Terraform's
                   # MaxItems-1 TypeList blocks into single objects).
                   settings:
-                    # `db-custom-1-3840` (1 vCPU / 3840 MB) is the
-                    # smallest legal shape for CloudSQL Postgres;
-                    # shared-core (`db-f1-micro` / `db-g1-small`)
-                    # is MySQL-only. Override per env via the XR's
-                    # `spec.tier`.
+                    # ENTERPRISE edition accepts custom shapes;
+                    # ENTERPRISE_PLUS (the default for newly-created
+                    # instances) only takes the predefined
+                    # `db-perf-optimized-N-*` family which is
+                    # several times the cost. ENTERPRISE +
+                    # `db-custom-1-3840` is the cheapest legal combo
+                    # for Postgres.
+                    edition: ENTERPRISE
                     tier: db-custom-1-3840
                     diskSize: 10
                     diskType: PD_SSD
