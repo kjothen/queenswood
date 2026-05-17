@@ -25,16 +25,13 @@
     `http://localhost:NNNN`).
   - `:admin-api-key` — bearer token used when `:auth :admin`
     appears in a step.
-  - `:identity-provider` — test IDP client component, used by
-    the `:auth/mint-token` verb to synthesise per-org JWTs.
   - `:run-id` (optional) — caller-supplied tag for log lines.
 
   The fresh `:captures` map isolates scenarios from each other so
   one boot can serve many."
-  [{:keys [base-url admin-api-key identity-provider run-id]}]
+  [{:keys [base-url admin-api-key run-id]}]
   {:base-url base-url
    :admin-api-key admin-api-key
-   :identity-provider identity-provider
    :run-id run-id
    :captures {}
    :last-response nil

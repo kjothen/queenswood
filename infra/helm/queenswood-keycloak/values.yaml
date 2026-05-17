@@ -24,51 +24,56 @@ coredns:
     namespace: kube-system
     configMapName: coredns-custom
 
-# ArgoCD Application metadata. The Application resource itself lives
-# in infra/bootstrap/apps/; these values are surfaced so the chart can
-# render related labels/annotations.
+# ArgoCD Application sync-wave annotation rendered onto chart
+# resources. The Application resource itself lives in
+# `infra/bootstrap/apps/queenswood-keycloak.yml`.
 argocd:
   syncWave: "8"
 
-# Inputs to the bundled bitnami/keycloak subchart. Only the knobs we
-# need to override are listed; the rest pick up Bitnami defaults.
+# Keycloak instance config consumed by the operator's `Keycloak` CR.
 keycloak:
-  # Bitnami's chart sets the Pod fullname to {release}-keycloak. We
-  # use that everywhere we have to refer to the Service / StatefulSet.
-  fullnameOverride: queenswood-keycloak
+  image: quay.io/keycloak/keycloak:26.6.1
+  instances: 1
+  # The realm import lives in `files/queenswood-realm.json` — a
+  # symlink to `components/bank-resources/resources/bank/keycloak-
+  # realm.json`, the canonical realm for the queenswood platform.
 
-  auth:
-    # Admin user / password materialise from a Kubernetes Secret named
-    # `queenswood-keycloak` (chart wiring below). Created out-of-band
-    # by the bootstrap (Sealed Secret or manual `kubectl create secret`).
-    existingSecret: queenswood-keycloak
-    passwordSecretKey: admin-password
-    adminUser: admin
-
-  production: true
-  proxy: edge
-  tls:
-    enabled: false
-
-  # The HTTPRoute (templates/httproute.yaml) terminates TLS at the
-  # gateway; the Bitnami chart's own ingress is therefore disabled.
-  ingress:
-    enabled: false
-
-  # External Keycloak hostname so the realm issuer matches what the
-  # bank-api expects to see in token `iss` claims.
-  externalDatabase: {}
-  postgresql:
-    enabled: true
-    auth:
-      existingSecret: queenswood-keycloak-postgresql
-      secretKeys:
-        adminPasswordKey: postgres-password
-        userPasswordKey: password
-        replicationPasswordKey: replication-password
-
-  # Realm import via keycloak-config-cli sidecar. The ConfigMap is
-  # rendered by templates/realm-import-configmap.yaml.
-  keycloakConfigCli:
-    enabled: true
-    existingConfigmap: queenswood-keycloak-realm
+# Postgres backing.
+#
+# - `local` spins up an in-chart Postgres StatefulSet (kind / dev).
+# - `external` skips the Postgres render and stands up a
+#   cloud-sql-proxy Deployment + Service pointed at a CloudSQL
+#   instance provisioned by `queenswood-platform`'s
+#   XKeycloakDatabase composite. The proxy speaks Postgres on the
+#   in-cluster Service; the Keycloak CR connects to that Service.
+postgresql:
+  mode: local
+  local:
+    image: postgres:16
+    storage: 1Gi
+    # Dev-only default. Production deployments must use `mode:
+    # external` and reference a real Secret.
+    password: keycloak-dev-password
+  external:
+    # Service name + port the Keycloak CR connects to. The chart
+    # renders this Service in front of the cloud-sql-proxy pods.
+    serviceName: queenswood-keycloak-cloudsql
+    port: 5432
+    database: keycloak
+    # Name of the Secret (`username`/`password` keys) the
+    # XKeycloakDatabase composite publishes into this namespace.
+    # Used both by the Keycloak CR and by the proxy pod.
+    secretName: queenswood-keycloak-conn
+    # Cloud SQL Auth Proxy config — needed for `mode: external`.
+    proxy:
+      image: gcr.io/cloud-sql-connectors/cloud-sql-proxy:2.14.3
+      # `<project>:<region>:<instance>` — surfaced on the
+      # XKeycloakDatabase composite's `status.connectionName`. Set
+      # via `values-gcp.yaml` (or a wrapper) once Crossplane has
+      # provisioned the CloudSQL instance.
+      connectionName: ""
+      # GCP service account email bound to the K8s SA via Workload
+      # Identity. The GCP SA needs `roles/cloudsql.client`; the
+      # `iam.workloadIdentityUser` binding from the K8s SA to the
+      # GCP SA is one-time setup outside the chart.
+      gcpServiceAccount: ""

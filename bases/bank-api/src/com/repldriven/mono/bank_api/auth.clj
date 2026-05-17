@@ -2,10 +2,10 @@
   "Two-path authentication: a stop-gap env-var admin bearer (kept
   until human-auth lands) and a Keycloak-issued JWT for tenant
   service accounts. JWT validation delegates to
-  `bank-identity-provider` so JWKS caching, kid rotation and audience
-  enforcement live in one place."
+  the `identity-provider` substrate so JWKS caching, kid rotation
+  and audience enforcement live in one place."
   (:require
-    [com.repldriven.mono.bank-identity-provider.interface
+    [com.repldriven.mono.identity-provider.interface
      :as identity-provider]
     [com.repldriven.mono.encryption.interface :as encryption]
     [com.repldriven.mono.utility.interface :as util]

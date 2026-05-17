@@ -1,0 +1,48 @@
+apiVersion: apiextensions.crossplane.io/v1
+kind: CompositeResourceDefinition
+metadata:
+  name: xkeycloakdatabases.platform.queenswood.repldriven.com
+spec:
+  scope: Namespaced
+  group: platform.queenswood.repldriven.com
+  names:
+    kind: XKeycloakDatabase
+    plural: xkeycloakdatabases
+  defaultCompositionRef:
+    name: xkeycloakdatabase.gcp
+  # The composition writes the per-instance credentials into a Secret
+  # the keycloak chart's cloud-sql-proxy consumes. Connection name +
+  # username + password come from there; the host (proxy hostname)
+  # is wired by the chart.
+  connectionSecretKeys:
+    - connectionName
+    - username
+    - password
+  versions:
+    - name: v1alpha1
+      served: true
+      referenceable: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              required: [region, instanceName, databaseName, username]
+              properties:
+                region: { type: string }
+                instanceName: { type: string }
+                databaseName: { type: string }
+                username: { type: string }
+                # Smallest valid Postgres tier — shared-core
+                # (`db-f1-micro`, `db-g1-small`) is MySQL-only, so
+                # custom shape `db-custom-<vCPUs>-<memMB>` is the
+                # floor. 1 vCPU / 3840 MB is the minimum legal combo.
+                tier: { type: string, default: db-custom-1-3840 }
+                postgresVersion: { type: string, default: POSTGRES_16 }
+            status:
+              type: object
+              properties:
+                # `<project>:<region>:<instance>` — the format
+                # cloud-sql-proxy expects on its CLI.
+                connectionName: { type: string }

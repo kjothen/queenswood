@@ -1,0 +1,36 @@
+# `Keycloak` CR consumed by the operator (installed cluster-wide by
+# `infra/bootstrap/apps/keycloak-operator.yml`). The operator
+# reconciles this into a StatefulSet + Service + everything else a
+# running Keycloak needs. Database is parameterised through the
+# `postgresql.mode` switch in values.yaml — see _helpers.tpl.
+apiVersion: k8s.keycloak.org/v2alpha1
+kind: Keycloak
+metadata:
+  name: {{ .Release.Name }}-keycloak
+  labels:
+    {{- include "queenswood-keycloak.labels" . | nindent 4 }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "{{ .Values.argocd.syncWave }}"
+spec:
+  instances: {{ .Values.keycloak.instances }}
+  image: {{ .Values.keycloak.image | quote }}
+  db:
+    vendor: postgres
+    host: {{ include "queenswood-keycloak.dbHost" . | quote }}
+    port: {{ include "queenswood-keycloak.dbPort" . }}
+    database: {{ include "queenswood-keycloak.dbName" . | quote }}
+    usernameSecret:
+      name: {{ include "queenswood-keycloak.dbSecret" . | quote }}
+      key: username
+    passwordSecret:
+      name: {{ include "queenswood-keycloak.dbSecret" . | quote }}
+      key: password
+  hostname:
+    hostname: {{ include "queenswood-keycloak.host" . | quote }}
+    strict: false
+  http:
+    # The gateway terminates TLS; the Keycloak pod itself serves
+    # plain HTTP and trusts `X-Forwarded-*` headers.
+    httpEnabled: true
+  proxy:
+    headers: xforwarded

@@ -29,6 +29,13 @@ spec:
 apiVersion: pkg.crossplane.io/v1
 kind: Provider
 metadata:
+  name: provider-gcp-sql
+spec:
+  package: xpkg.upbound.io/upbound/provider-gcp-sql:v2.5.1
+---
+apiVersion: pkg.crossplane.io/v1
+kind: Provider
+metadata:
   name: provider-gcp-certificatemanager
 spec:
   package: xpkg.upbound.io/upbound/provider-gcp-certificatemanager:v2.5.1

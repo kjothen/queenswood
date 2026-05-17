@@ -1,0 +1,18 @@
+container: !system/component
+  system/component-kind: keycloak/container
+  # Imported at container boot. The realm carries the audience scopes
+  # the bank-api expects and a `queenswood-admin` service-account
+  # client (id/secret below) with realm-management roles for the
+  # keycloak adapter's admin path.
+  realm-import-file: bank/queenswood-realm.json
+
+auth-server-url: !system/component
+  system/component-kind: keycloak/auth-server-url
+  container: !system/local-ref container
+
+identity-provider: !system/component
+  system/component-kind: keycloak/identity-provider
+  base-url: !system/local-ref auth-server-url
+  realm: queenswood
+  admin-client-id: queenswood-admin
+  admin-client-secret: queenswood-admin-test-secret

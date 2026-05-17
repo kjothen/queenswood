@@ -2,8 +2,6 @@
   (:require
     [com.repldriven.mono.bank-test-api-scenarios.refs :as refs]
 
-    [com.repldriven.mono.bank-test-identity-provider.interface
-     :as test-idp]
     [com.repldriven.mono.http-client.interface :as http]
 
     [matcher-combinators.matchers :as m]
@@ -225,17 +223,27 @@
   ctx)
 
 (defmethod dispatch :auth/mint-token
-  [{:keys [identity-provider captures] :as ctx} {:keys [for as]}]
-  (let [{:keys [client-id status roles audience] :or {roles [:org]}}
+  [{:keys [base-url captures] :as ctx} {:keys [for as]}]
+  (let [{:keys [client-id client-secret status scope]}
         (refs/resolve-all captures for)
-        aud (or
-             audience
-             (if (= :live status) "queenswood-api-live" "queenswood-api-test"))
-        token (test-idp/mint-token identity-provider
-                                   {:azp client-id
-                                    :sub client-id
-                                    :aud [aud]
-                                    :realm_access {:roles (mapv name roles)}})]
+        scope-value
+        (or scope
+            (if (= :live status) "queenswood-api-live" "queenswood-api-test"))
+        res (http/request {:method :post
+                           :url (str base-url "/oauth/token")
+                           :headers {"content-type"
+                                     "application/x-www-form-urlencoded"}
+                           :body (str "grant_type=client_credentials"
+                                      "&client_id=" client-id
+                                      "&client_secret=" client-secret
+                                      "&scope=" scope-value)})
+        body (http/res->edn res)
+        token (:access_token body)]
+    (when-not token
+      (is false
+          (str ":auth/mint-token failed to exchange credentials at /oauth/token"
+               " — status: " (:status res)
+               " body: " (pr-str body))))
     (cond-> ctx
             as
             (assoc-in [:captures as] token))))
