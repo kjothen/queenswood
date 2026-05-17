@@ -1,5 +1,6 @@
 # `Keycloak` CR consumed by the operator (installed cluster-wide by
-# `infra/bootstrap/apps/keycloak-operator.yml`). The operator
+# the keycloak-operator chart — see queenswood-platform's
+# `templates/keycloak-operator-release.yaml`). The operator
 # reconciles this into a StatefulSet + Service + everything else a
 # running Keycloak needs. Database is parameterised through the
 # `postgresql.mode` switch in values.yaml — see _helpers.tpl.

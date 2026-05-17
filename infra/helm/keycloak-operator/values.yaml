@@ -1,0 +1,4 @@
+# Intentionally empty. The chart wraps vendored upstream YAML
+# verbatim; there are no parameters worth surfacing today. Future
+# overrides (image tag pin, replica count, watch-namespace list)
+# would land here.

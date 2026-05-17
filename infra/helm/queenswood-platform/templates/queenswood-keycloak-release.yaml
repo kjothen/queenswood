@@ -1,0 +1,40 @@
+{{- if .Values.queenswoodKeycloak.enabled }}
+# Per-environment Keycloak instance, installed onto GKE via
+# Crossplane provider-helm. The chart emits a `Keycloak` CR (consumed
+# by the operator from sync-wave 3), a `KeycloakRealmImport`, the
+# HTTPRoute on the gateway, the keycloak DNS record, and — in
+# `postgresql.mode: external` — a `cloud-sql-proxy` Deployment that
+# fronts the CloudSQL instance the XKeycloakDatabase composite
+# (sync-wave 5) provisions.
+#
+# `proxy.connectionName` + `proxy.gcpServiceAccount` are pinned by
+# `just gcp-keycloak-cloudsql-pin-values` once the composite has
+# published `status.connectionName` and the Workload Identity
+# binding has been minted.
+apiVersion: helm.crossplane.io/v1beta1
+kind: Release
+metadata:
+  name: queenswood-keycloak
+  namespace: {{ .Values.env.name }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "6"
+spec:
+  forProvider:
+    chart:
+      name: {{ .Values.queenswoodKeycloak.chart.name }}
+      repository: {{ .Values.queenswoodKeycloak.chart.repository }}
+      version: {{ .Values.queenswoodKeycloak.chart.version }}
+    namespace: {{ .Values.env.name }}
+    values:
+      env:
+        name: {{ .Values.env.name }}
+        domain: {{ .Values.env.domain }}
+      postgresql:
+        mode: external
+        external:
+          proxy:
+            connectionName: {{ .Values.queenswoodKeycloak.proxy.connectionName | quote }}
+            gcpServiceAccount: {{ .Values.queenswoodKeycloak.proxy.gcpServiceAccount | quote }}
+  providerConfigRef:
+    name: {{ .Values.release.providerConfigRef }}
+{{- end }}

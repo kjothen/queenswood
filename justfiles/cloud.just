@@ -364,9 +364,10 @@ up-from-zero:
     just kind-xp-wait-ready
     # Block on Crossplane finishing the CloudSQL provision (so the
     # XR's `status.connectionName` is populated), then pin both
-    # connectionName and the WI SA email into values-gcp.yaml and
-    # commit + push so Argo reconciles queenswood-keycloak with the
-    # real values.
+    # connectionName and the WI SA email into queenswood-platform's
+    # values.yaml and commit + push so Argo reconciles
+    # queenswood-platform and Crossplane reinstalls
+    # queenswood-keycloak with the real values.
     just gcp-keycloak-cloudsql-pin-values
     just gcp-health-check
 
@@ -541,8 +542,9 @@ kind-xp-wait-ready timeout="2700":
 # Provision the GCP service account the cloud-sql-proxy pod authenticates
 # as, bound to the K8s ServiceAccount via Workload Identity. Idempotent
 # -- safe to re-run on `up-from-zero`. The SA email itself is pinned
-# into values-gcp.yaml by `gcp-keycloak-cloudsql-pin-values` once
-# CloudSQL has finished provisioning.
+# into queenswood-platform/values.yaml by
+# `gcp-keycloak-cloudsql-pin-values` once CloudSQL has finished
+# provisioning.
 gcp-keycloak-cloudsql-identity:
     #!/usr/bin/env zsh
     set -e
@@ -590,7 +592,11 @@ gcp-keycloak-cloudsql-pin-values:
     PROJECT_ID=$(gcloud config get project 2>/dev/null)
     [[ -n "$PROJECT_ID" ]] || { echo "no active gcloud project" >&2; exit 1; }
     XR_NAME=queenswood-keycloak
-    VALUES=infra/helm/queenswood-keycloak/values-gcp.yaml
+    # queenswood-platform is the source of truth for the Crossplane
+    # Release that installs queenswood-keycloak on GKE. The chart's
+    # own values-gcp.yaml is no longer consumed by Argo and stays in
+    # the repo as a local-helm reference only.
+    VALUES=infra/helm/queenswood-platform/values.yaml
     # Matches the SA name set in `gcp-keycloak-cloudsql-identity`
     # (kept short to fit GCP's 30-char IAM account-id cap).
     SA_EMAIL=keycloak-sql-proxy@${PROJECT_ID}.iam.gserviceaccount.com
@@ -631,8 +637,8 @@ gcp-keycloak-cloudsql-pin-values:
     echo "Resolved connectionName: $CONN"
     echo "Pinning gcpServiceAccount:  $SA_EMAIL"
 
-    cur_conn=$(yq -r '.postgresql.external.proxy.connectionName' $VALUES)
-    cur_sa=$(yq -r '.postgresql.external.proxy.gcpServiceAccount' $VALUES)
+    cur_conn=$(yq -r '.queenswoodKeycloak.proxy.connectionName' $VALUES)
+    cur_sa=$(yq -r '.queenswoodKeycloak.proxy.gcpServiceAccount' $VALUES)
     if [[ "$cur_conn" == "$CONN" && "$cur_sa" == "$SA_EMAIL" ]]; then
       echo "$VALUES already pinned; skipping commit."
       exit 0
@@ -640,12 +646,13 @@ gcp-keycloak-cloudsql-pin-values:
 
     # Use sed not `yq -y -i` — kislyuk/yq round-trips through JSON
     # and strips YAML comments. The two keys live at fixed paths
-    # and are unique in this file, so anchored sed is safe.
+    # under `queenswoodKeycloak.proxy.*` and are unique in this
+    # file, so anchored sed is safe.
     sed -i.bak -E "s|^([[:space:]]*connectionName:).*|\1 $CONN|" $VALUES
     sed -i.bak -E "s|^([[:space:]]*gcpServiceAccount:).*|\1 $SA_EMAIL|" $VALUES
     rm -f "${VALUES}.bak"
 
     git add $VALUES
-    git commit -m "values-gcp: pin queenswood-keycloak CloudSQL connection + WI SA"
+    git commit -m "queenswood-platform: pin queenswood-keycloak CloudSQL connection + WI SA"
     git push
-    echo "Pushed. Argo will reconcile queenswood-keycloak shortly."
+    echo "Pushed. Argo will reconcile queenswood-platform; Crossplane will reinstall queenswood-keycloak with the new values."

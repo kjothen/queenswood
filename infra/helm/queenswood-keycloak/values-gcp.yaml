@@ -1,15 +1,21 @@
-# Overlay for GKE / GCP deployments: skip the in-chart Postgres and
-# stand up a cloud-sql-proxy that fronts the CloudSQL instance
-# provisioned by `queenswood-platform`'s `XKeycloakDatabase` composite.
-# The Keycloak CR talks to the proxy Service; the proxy authenticates
-# to CloudSQL via Workload Identity.
+# Local-helm reference for the GCP overlay — no longer consumed by
+# Argo or Crossplane in production. The production path is
+# `infra/helm/queenswood-platform/templates/queenswood-keycloak-
+# release.yaml`, which inlines these same fields under
+# `spec.forProvider.values` of a Crossplane provider-helm `Release`.
+# `just gcp-keycloak-cloudsql-pin-values` pins
+# `connectionName` + `gcpServiceAccount` in queenswood-platform's
+# `values.yaml`, not here.
 #
-# `connectionName` and `gcpServiceAccount` are pinned automatically by
-# `just gcp-keycloak-cloudsql-pin-values` once Crossplane has finished
-# provisioning CloudSQL (also invoked from `up-from-zero`).
+# Use this file only when testing the chart standalone, e.g.:
+#   helm install qk infra/helm/queenswood-keycloak \
+#     -f infra/helm/queenswood-keycloak/values-test.yaml \
+#     -f infra/helm/queenswood-keycloak/values-gcp.yaml \
+#     --set postgresql.external.proxy.connectionName=<conn> \
+#     --set postgresql.external.proxy.gcpServiceAccount=<sa>
 postgresql:
   mode: external
   external:
     proxy:
-      connectionName: queenswood-820d84:europe-west2:queenswood-keycloak
-      gcpServiceAccount: keycloak-sql-proxy@queenswood-820d84.iam.gserviceaccount.com
+      connectionName: ""
+      gcpServiceAccount: ""

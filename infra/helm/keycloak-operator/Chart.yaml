@@ -1,0 +1,21 @@
+apiVersion: v2
+name: keycloak-operator
+description: |
+  Thin Helm-chart wrapper around the official Keycloak Operator's
+  vendored YAML (release tag 26.6.1) — the operator and its
+  ClusterRole/ClusterRoleBinding live under `templates/`, and the
+  two upstream CRDs (`Keycloak`, `KeycloakRealmImport`) live under
+  `crds/` so Helm installs them ahead of the rest. There are no
+  values; the chart exists so the operator install can be
+  driven through Crossplane provider-helm `Release` resources
+  exactly like the queenswood and queenswood-keycloak charts.
+
+  Deviations from upstream `kubernetes/kubernetes.yml`:
+    1. Adds a `keycloak-operator` Namespace at the top.
+    2. The namespace-scoped role becomes a ClusterRole so the
+       operator can manage Keycloak instances cluster-wide.
+    3. Both controller `JOSDK_WATCH_CURRENT` env vars are set to
+       `JOSDK_WATCH_ALL_NAMESPACES`.
+type: application
+version: 0.1.0
+appVersion: "26.6.1"
