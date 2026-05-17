@@ -133,6 +133,7 @@
             pkgs.tilt
             pkgs.trivy
             pkgs.uv
+            pkgs.yq
             pkgs.zprint
           ];
 
