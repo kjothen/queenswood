@@ -73,8 +73,13 @@ kind-xp-up:
       --dry-run=client -o yaml | kubectl --context {{ KIND_XP_CLUSTER }} apply -f -
     kubectl --context {{ KIND_XP_CLUSTER }} apply --server-side -n argocd \
       -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+    # 600s (not 300s): on a cold kind cluster the argo install pulls
+    # ~5 images sequentially (argocd-server, repo-server, application-
+    # controller, applicationset-controller, notifications-controller,
+    # redis, dex), and even a fast laptop can blow past 5 min on the
+    # first up-from-zero of the day.
     kubectl --context {{ KIND_XP_CLUSTER }} -n argocd wait \
-      --for=condition=available --timeout=300s deployment/argocd-server
+      --for=condition=available --timeout=600s deployment/argocd-server
     kubectl --context {{ KIND_XP_CLUSTER }} -n argocd get secret argocd-initial-admin-secret \
       -o jsonpath='{.data.password}' 2>/dev/null | base64 -d || true
 
