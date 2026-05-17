@@ -36,7 +36,11 @@ spec:
       name: {{ include "queenswood-keycloak.dbSecret" . | quote }}
       key: password
   hostname:
-    hostname: {{ include "queenswood-keycloak.host" . | quote }}
+    # Full URL so Keycloak embeds the same iss in every token
+    # regardless of how it was reached -- see _helpers.tpl. strict:
+    # false keeps the operator from rejecting in-cluster Host
+    # headers that don't match.
+    hostname: {{ include "queenswood-keycloak.hostUrl" . | quote }}
     strict: false
   http:
     # The gateway terminates TLS; the Keycloak pod itself serves

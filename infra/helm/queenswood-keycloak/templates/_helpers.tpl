@@ -1,9 +1,23 @@
 {{- /*
 Hostname for the realm endpoint, combining the per-env subdomain
-with env.domain (e.g. `keycloak.queenswood.repldriven.com`).
+with env.domain (e.g. `keycloak.queenswood.repldriven.com`). Used
+for HTTPRoute hostnames + the CoreDNS rewrite source.
 */ -}}
 {{- define "queenswood-keycloak.host" -}}
 {{ .Values.host.subdomain }}.{{ .Values.env.domain }}
+{{- end -}}
+
+{{- /*
+Full HTTPS URL for the Keycloak CR's `hostname.hostname`.
+Keycloak embeds this in every JWT's `iss` claim regardless of how
+the request reached it -- so setting it to the public URL keeps
+iss stable across in-cluster admin REST calls (bank-api ->
+in-cluster Service) and external user-facing access (Gateway).
+Override via `keycloak.hostUrlOverride` for local-kind setups
+where TLS hasn't been provisioned.
+*/ -}}
+{{- define "queenswood-keycloak.hostUrl" -}}
+{{- default (printf "https://%s" (include "queenswood-keycloak.host" .)) .Values.keycloak.hostUrlOverride -}}
 {{- end -}}
 
 {{- /*
