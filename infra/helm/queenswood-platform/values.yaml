@@ -34,7 +34,7 @@ release:
   chart:
     name: queenswood
     repository: oci://ghcr.io/repldriven
-    version: 0.5.4
+    version: 0.5.5
   # The Crossplane provider-config that owns GKE-bound Helm releases.
   # Shared by the queenswood, queenswood-keycloak, and
   # keycloak-operator Release resources below.
