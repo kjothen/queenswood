@@ -62,7 +62,7 @@ queenswoodKeycloak:
   chart:
     name: queenswood-keycloak
     repository: oci://ghcr.io/repldriven
-    version: 0.2.3
+    version: 0.2.4
   proxy:
     connectionName: queenswood-820d84:europe-west2:queenswood-keycloak
     gcpServiceAccount: keycloak-sql-proxy@queenswood-820d84.iam.gserviceaccount.com
