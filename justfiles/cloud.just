@@ -532,7 +532,11 @@ gcp-keycloak-cloudsql-identity:
     set -e
     PROJECT_ID=$(gcloud config get project 2>/dev/null)
     [[ -n "$PROJECT_ID" ]] || { echo "no active gcloud project; run 'just gcp-project-create'" >&2; exit 1; }
-    SA=queenswood-keycloak-cloudsql-proxy
+    # GCP IAM caps account IDs at 30 chars, so the cloud-side SA is
+    # shorter than the K8s-side one. The Workload Identity binding ties
+    # them together by full email + namespace/SA tuple — they don't
+    # have to share a name.
+    SA=keycloak-sql-proxy
     SA_EMAIL=${SA}@${PROJECT_ID}.iam.gserviceaccount.com
     K8S_SA=queenswood-keycloak-cloudsql-proxy
     NS={{ ENV }}
@@ -571,7 +575,9 @@ gcp-keycloak-cloudsql-pin-values:
     [[ -n "$PROJECT_ID" ]] || { echo "no active gcloud project" >&2; exit 1; }
     XR_NAME=queenswood-keycloak
     VALUES=infra/helm/queenswood-keycloak/values-gcp.yaml
-    SA_EMAIL=queenswood-keycloak-cloudsql-proxy@${PROJECT_ID}.iam.gserviceaccount.com
+    # Matches the SA name set in `gcp-keycloak-cloudsql-identity`
+    # (kept short to fit GCP's 30-char IAM account-id cap).
+    SA_EMAIL=keycloak-sql-proxy@${PROJECT_ID}.iam.gserviceaccount.com
 
     echo "Waiting for XKeycloakDatabase/$XR_NAME status.connectionName (up to 15m)..."
     CONN=""
