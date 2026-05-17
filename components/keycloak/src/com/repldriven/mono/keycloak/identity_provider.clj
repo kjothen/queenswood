@@ -42,10 +42,20 @@
                           {:message "Token signing key not recognised"
                            :kid kid})
             (let [public-key (buddy-keys/jwk->public-key jwk)
+                  ;; Tokens minted by Keycloak embed iss = frontchannel
+                  ;; `hostname.hostname/realms/<realm>`, which can differ
+                  ;; from the realm URL bank-api derives from base-url
+                  ;; (e.g. base-url = in-cluster Service for fast
+                  ;; admin REST calls, but the deployment's public
+                  ;; hostname is what ends up in tokens). An explicit
+                  ;; `:expected-issuer` on the client config overrides
+                  ;; the base-url-derived default for this check.
+                  expected-iss (or (:expected-issuer (core/-config client))
+                                   (core/issuer client))
                   claims (jwt/unsign jwt-string
                                      public-key
                                      {:alg :rs256
-                                      :iss (core/issuer client)})]
+                                      :iss expected-iss})]
               (if (and (seq expected-audiences)
                        (not (some expected-audiences
                                   (cond-> (:aud claims)
@@ -86,12 +96,17 @@
 
 (defn ->client
   "Build a `KeycloakIdentityProvider`. `config` carries `:base-url`,
-  `:realm`, `:admin-client-id`, `:admin-client-secret`."
-  [{:keys [base-url realm admin-client-id admin-client-secret]}]
+  `:realm`, `:admin-client-id`, `:admin-client-secret`, and an
+  optional `:expected-issuer` for token validation when the
+  base-url and the token's `iss` claim disagree (e.g. internal
+  Service URL for backchannel admin REST + public Keycloak
+  hostname embedded as iss)."
+  [{:keys [base-url realm admin-client-id admin-client-secret expected-issuer]}]
   (->KeycloakIdentityProvider
    {:base-url base-url
     :realm realm
     :admin-client-id admin-client-id
-    :admin-client-secret admin-client-secret}
+    :admin-client-secret admin-client-secret
+    :expected-issuer expected-issuer}
    (atom nil)
    (atom nil)))

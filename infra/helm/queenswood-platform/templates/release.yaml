@@ -34,7 +34,13 @@ spec:
       # whatever's set on subsequent upgrades, so rotating in-place
       # is a `helm upgrade --set` away).
       keycloak:
-        baseUrl: {{ printf "https://keycloak.%s" .Values.env.domain | quote }}
+        # base-url is the in-cluster Service so admin REST + token
+        # exchange don't round-trip out via the LB. Tokens still
+        # embed the public hostname as iss (Keycloak frontchannel),
+        # so expectedIssuer is set to that public hostname so the
+        # verifier accepts them.
+        baseUrl: "http://queenswood-keycloak-keycloak-service:8080"
+        expectedIssuer: {{ printf "https://keycloak.%s/realms/%s" .Values.env.domain .Values.queenswoodKeycloak.serverSide.realm | quote }}
         realm: {{ .Values.queenswoodKeycloak.serverSide.realm | quote }}
         adminClientId: {{ .Values.queenswoodKeycloak.serverSide.adminClientId | quote }}
       secrets:

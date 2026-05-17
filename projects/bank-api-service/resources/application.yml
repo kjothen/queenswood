@@ -140,6 +140,10 @@ system:
       realm: !env KEYCLOAK_REALM
       admin-client-id: !env KEYCLOAK_ADMIN_CLIENT_ID
       admin-client-secret: !env KEYCLOAK_ADMIN_CLIENT_SECRET
+      # Override the iss claim the verifier expects when base-url is
+      # an in-cluster Service URL but Keycloak embeds its public
+      # hostname in tokens (the deployed shape -- see ADR-TBD).
+      expected-issuer: !env KEYCLOAK_EXPECTED_ISSUER
   organizations:
     internal: !system/component
       system/component-kind: organizations/organization-from-fdb
