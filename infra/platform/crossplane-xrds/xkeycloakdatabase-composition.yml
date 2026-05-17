@@ -94,10 +94,11 @@ spec:
                     matchControllerRef: true
                   passwordSecretRef:
                     key: password
-                # The User publishes `username` + `password` into this
-                # Secret. The keycloak chart's Keycloak CR + cloud-sql-
-                # proxy mount it. The namespace is the XR's own (set
-                # by the queenswood-platform chart per env).
+                # Under Crossplane v2 namespaced composites, both
+                # `passwordSecretRef` and `writeConnectionSecretToRef`
+                # resolve to the User resource's own namespace (which
+                # is the XR's namespace). The composed Secret lands
+                # alongside the keycloak chart that mounts it.
                 writeConnectionSecretToRef: {}
             patches:
               # Same external-name story as `Database` — username
@@ -116,8 +117,6 @@ spec:
                     string:
                       type: Format
                       fmt: "%s-password"
-              - fromFieldPath: metadata.namespace
-                toFieldPath: spec.forProvider.passwordSecretRef.namespace
               - fromFieldPath: spec.instanceName
                 toFieldPath: spec.writeConnectionSecretToRef.name
                 transforms:
@@ -125,5 +124,3 @@ spec:
                     string:
                       type: Format
                       fmt: "%s-conn"
-              - fromFieldPath: metadata.namespace
-                toFieldPath: spec.writeConnectionSecretToRef.namespace
