@@ -362,6 +362,12 @@ up-from-zero:
     kubectl --context {{ KIND_XP_CLUSTER }} apply -f infra/bootstrap/root-app.yml
     just kind-xp-install-gcp-config
     just kind-xp-wait-ready
+    # Block on Crossplane finishing the CloudSQL provision (so the
+    # XR's `status.connectionName` is populated), then pin both
+    # connectionName and the WI SA email into values-gcp.yaml and
+    # commit + push so Argo reconciles queenswood-keycloak with the
+    # real values.
+    just gcp-keycloak-cloudsql-pin-values
     just gcp-health-check
 
 # Tear down kind + the expensive GCP resources (GKE cluster, ingress IP,
@@ -518,10 +524,9 @@ kind-xp-wait-ready timeout="2700":
 
 # Provision the GCP service account the cloud-sql-proxy pod authenticates
 # as, bound to the K8s ServiceAccount via Workload Identity. Idempotent
-# -- re-run after `up-from-zero` so the SA + IAM bindings exist before
-# the queenswood-keycloak chart's proxy Deployment starts asking GCP for
-# tokens. Prints the SA email at the end; paste into the
-# `postgresql.external.proxy.gcpServiceAccount` value (or values-gcp.yaml).
+# -- safe to re-run on `up-from-zero`. The SA email itself is pinned
+# into values-gcp.yaml by `gcp-keycloak-cloudsql-pin-values` once
+# CloudSQL has finished provisioning.
 gcp-keycloak-cloudsql-identity:
     #!/usr/bin/env zsh
     set -e
@@ -548,33 +553,54 @@ gcp-keycloak-cloudsql-identity:
       --role="roles/iam.workloadIdentityUser" \
       --member="serviceAccount:${PROJECT_ID}.svc.id.goog[${NS}/${K8S_SA}]"
 
-    echo
-    echo "Paste into infra/helm/queenswood-keycloak/values-gcp.yaml under"
-    echo "postgresql.external.proxy.gcpServiceAccount:"
-    echo "  $SA_EMAIL"
+    echo "GCP SA + WI binding ready: $SA_EMAIL"
 
-# Print the `<project>:<region>:<instance>` connection string the
-# cloud-sql-proxy needs. Reads it off the XKeycloakDatabase composite's
-# status field once Crossplane has provisioned the CloudSQL instance
-# (5+ min from XR create). Paste the output into the
-# `postgresql.external.proxy.connectionName` value.
-gcp-keycloak-cloudsql-connection:
+# Wait for Crossplane to finish provisioning the CloudSQL instance,
+# then pin both `postgresql.external.proxy.gcpServiceAccount` and
+# `.connectionName` into values-gcp.yaml and commit + push so Argo
+# picks them up on its next reconcile. Idempotent: if the file
+# already holds the right values, the recipe no-ops (no empty
+# commits).
+#
+# CloudSQL provisioning routinely takes 5-10 minutes from the XR
+# being created, so the wait timeout is 15m.
+gcp-keycloak-cloudsql-pin-values:
     #!/usr/bin/env zsh
     set -e
     PROJECT_ID=$(gcloud config get project 2>/dev/null)
-    [[ -n "$PROJECT_ID" ]] || { echo "no active gcloud project; run 'just gcp-project-create'" >&2; exit 1; }
+    [[ -n "$PROJECT_ID" ]] || { echo "no active gcloud project" >&2; exit 1; }
     XR_NAME=queenswood-keycloak
+    VALUES=infra/helm/queenswood-keycloak/values-gcp.yaml
+    SA_EMAIL=queenswood-keycloak-cloudsql-proxy@${PROJECT_ID}.iam.gserviceaccount.com
 
-    CONN=$(kubectl --context {{ KIND_XP_CLUSTER }} -n {{ ENV }} \
-             get xkeycloakdatabase.platform.queenswood.repldriven.com $XR_NAME \
-             -o jsonpath='{.status.connectionName}' 2>/dev/null)
+    echo "Waiting for XKeycloakDatabase/$XR_NAME status.connectionName (up to 15m)..."
+    CONN=""
+    deadline=$(( $(date +%s) + 900 ))
+    while [[ -z "$CONN" && $(date +%s) -lt $deadline ]]; do
+      CONN=$(kubectl --context {{ KIND_XP_CLUSTER }} -n {{ ENV }} \
+               get xkeycloakdatabase.platform.queenswood.repldriven.com $XR_NAME \
+               -o jsonpath='{.status.connectionName}' 2>/dev/null || true)
+      [[ -z "$CONN" ]] && sleep 10
+    done
     if [[ -z "$CONN" ]]; then
-      echo "XKeycloakDatabase/$XR_NAME has no status.connectionName yet — CloudSQL is still provisioning?" >&2
+      echo "Timed out waiting for status.connectionName on XKeycloakDatabase/$XR_NAME" >&2
       echo "Check: kubectl --context {{ KIND_XP_CLUSTER }} -n {{ ENV }} get xkeycloakdatabase $XR_NAME -o yaml" >&2
       exit 1
     fi
+    echo "Resolved connectionName: $CONN"
+    echo "Pinning gcpServiceAccount:  $SA_EMAIL"
 
-    echo
-    echo "Paste into infra/helm/queenswood-keycloak/values-gcp.yaml under"
-    echo "postgresql.external.proxy.connectionName:"
-    echo "  $CONN"
+    cur_conn=$(yq '.postgresql.external.proxy.connectionName' $VALUES)
+    cur_sa=$(yq '.postgresql.external.proxy.gcpServiceAccount' $VALUES)
+    if [[ "$cur_conn" == "$CONN" && "$cur_sa" == "$SA_EMAIL" ]]; then
+      echo "$VALUES already pinned; skipping commit."
+      exit 0
+    fi
+
+    yq -i ".postgresql.external.proxy.connectionName = \"$CONN\"" $VALUES
+    yq -i ".postgresql.external.proxy.gcpServiceAccount = \"$SA_EMAIL\"" $VALUES
+
+    git add $VALUES
+    git commit -m "values-gcp: pin queenswood-keycloak CloudSQL connection + WI SA"
+    git push
+    echo "Pushed. Argo will reconcile queenswood-keycloak shortly."
