@@ -32,6 +32,15 @@ spec:
       postgresql:
         mode: external
         external:
+          # Username + password match the CloudSQL user the
+          # XKeycloakDatabase composite (sync-wave 5) provisions.
+          # The chart renders these into a Secret on GKE that the
+          # Keycloak CR's usernameSecret/passwordSecret refs point
+          # at -- sidesteps the cross-cluster sync we'd otherwise
+          # need to pull the Crossplane-composed conn Secret from
+          # kind to GKE.
+          username: {{ .Values.keycloakDatabase.username | quote }}
+          password: {{ .Values.keycloakDatabase.password | quote }}
           proxy:
             connectionName: {{ .Values.queenswoodKeycloak.proxy.connectionName | quote }}
             gcpServiceAccount: {{ .Values.queenswoodKeycloak.proxy.gcpServiceAccount | quote }}

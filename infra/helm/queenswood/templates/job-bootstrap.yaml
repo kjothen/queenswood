@@ -90,6 +90,17 @@ spec:
                 secretKeyRef:
                   name: {{ .Release.Name }}-admin-api-key
                   key: MONO_ADMIN_API_KEY
+            - name: KEYCLOAK_BASE_URL
+              value: {{ .Values.keycloak.baseUrl | quote }}
+            - name: KEYCLOAK_REALM
+              value: {{ .Values.keycloak.realm | quote }}
+            - name: KEYCLOAK_ADMIN_CLIENT_ID
+              value: {{ .Values.keycloak.adminClientId | quote }}
+            - name: KEYCLOAK_ADMIN_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-keycloak-admin
+                  key: KEYCLOAK_ADMIN_CLIENT_SECRET
           volumeMounts:
             - name: fdb-cluster-file
               mountPath: /etc/fdb

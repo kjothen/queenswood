@@ -4,7 +4,7 @@
 # reconciles this into a StatefulSet + Service + everything else a
 # running Keycloak needs. Database is parameterised through the
 # `postgresql.mode` switch in values.yaml — see _helpers.tpl.
-apiVersion: k8s.keycloak.org/v2alpha1
+apiVersion: k8s.keycloak.org/v2beta1
 kind: Keycloak
 metadata:
   name: {{ .Release.Name }}-keycloak
@@ -15,6 +15,15 @@ metadata:
 spec:
   instances: {{ .Values.keycloak.instances }}
   image: {{ .Values.keycloak.image | quote }}
+  # The upstream `quay.io/keycloak/keycloak:26.6.1` image ships
+  # *unbuilt* -- production images are expected to bake the
+  # `kc.sh build` step into their Dockerfile. The operator
+  # defaults to `start --optimized`, which crashes on first run
+  # against the upstream image with "The '--optimized' flag was
+  # used for first ever server start". Setting this to false
+  # makes the operator run the build step inside the pod before
+  # starting.
+  startOptimized: false
   db:
     vendor: postgres
     host: {{ include "queenswood-keycloak.dbHost" . | quote }}
@@ -35,3 +44,13 @@ spec:
     httpEnabled: true
   proxy:
     headers: xforwarded
+  additionalOptions:
+    {{- if eq .Values.postgresql.mode "external" }}
+    # cloud-sql-proxy fronts CloudSQL with a plain-TCP listener on
+    # localhost; auth/encryption terminates at the proxy via
+    # Workload Identity. The Postgres JDBC driver defaults to
+    # sslmode=prefer and crashes on the proxy's SSL handshake
+    # close, so force-disable client-side SSL.
+    - name: db-url-properties
+      value: "?sslmode=disable"
+    {{- end }}

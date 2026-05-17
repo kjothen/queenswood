@@ -11,11 +11,13 @@ description: |
   exactly like the queenswood and queenswood-keycloak charts.
 
   Deviations from upstream `kubernetes/kubernetes.yml`:
-    1. Adds a `keycloak-operator` Namespace at the top.
-    2. The namespace-scoped role becomes a ClusterRole so the
+    1. The namespace-scoped role becomes a ClusterRole so the
        operator can manage Keycloak instances cluster-wide.
-    3. Both controller `JOSDK_WATCH_CURRENT` env vars are set to
-       `JOSDK_WATCH_ALL_NAMESPACES`.
+    2. Both controller `JOSDK_WATCH_CURRENT` env vars are set to
+       `JOSDK_ALL_NAMESPACES` — the Quarkus operator-sdk sentinel
+       for cluster-wide watch. (`JOSDK_WATCH_ALL_NAMESPACES`, which
+       some upstream docs mention, is silently treated as a literal
+       namespace name and the operator watches nothing.)
 type: application
-version: 0.1.1
+version: 0.1.2
 appVersion: "26.6.1"

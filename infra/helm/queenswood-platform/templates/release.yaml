@@ -26,5 +26,18 @@ spec:
         host: {{ .Values.env.domain }}
         gcp:
           enabled: true
+      # Server-side Keycloak config: bank-api + bootstrap call the
+      # Admin REST API to register per-org service accounts, and
+      # bank-api validates JWTs via the realm JWKS. The admin client
+      # secret must match the realm-import JSON (currently
+      # `queenswood-admin-secret-change-me` -- the chart preserves
+      # whatever's set on subsequent upgrades, so rotating in-place
+      # is a `helm upgrade --set` away).
+      keycloak:
+        baseUrl: {{ .Values.queenswoodKeycloak.serverSide.baseUrl | quote }}
+        realm: {{ .Values.queenswoodKeycloak.serverSide.realm | quote }}
+        adminClientId: {{ .Values.queenswoodKeycloak.serverSide.adminClientId | quote }}
+      secrets:
+        keycloakAdminClientSecret: {{ .Values.queenswoodKeycloak.serverSide.adminClientSecret | quote }}
   providerConfigRef:
     name: {{ .Values.release.providerConfigRef }}
