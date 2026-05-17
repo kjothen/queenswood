@@ -76,10 +76,12 @@ spec:
                   instanceSelector:
                     matchControllerRef: true
             patches:
+              # provider-upjet-gcp derives the CloudSQL database name
+              # from `metadata.name` (via the `crossplane.io/
+              # external-name` annotation it sets automatically).
+              # There's no `spec.forProvider.name` field.
               - fromFieldPath: spec.databaseName
                 toFieldPath: metadata.name
-              - fromFieldPath: spec.databaseName
-                toFieldPath: spec.forProvider.name
           - name: user
             base:
               apiVersion: sql.gcp.m.upbound.io/v1beta1
@@ -98,10 +100,11 @@ spec:
                 # by the queenswood-platform chart per env).
                 writeConnectionSecretToRef: {}
             patches:
+              # Same external-name story as `Database` — username
+              # flows through `metadata.name`, not `spec.forProvider.
+              # name`.
               - fromFieldPath: spec.username
                 toFieldPath: metadata.name
-              - fromFieldPath: spec.username
-                toFieldPath: spec.forProvider.name
               # passwordSecretRef points at a chart-rendered Secret
               # in the XR's namespace carrying the operator-supplied
               # password (see queenswood-platform/templates/
