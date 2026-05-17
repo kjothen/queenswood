@@ -56,3 +56,31 @@ spec:
                       fmt: "%s."
               - fromFieldPath: status.ip
                 toFieldPath: spec.forProvider.rrdatas[0]
+          # Keycloak's `keycloak.<env-domain>` subdomain shares the
+          # same managed IP. Lives in the apex composite (not the
+          # queenswood-keycloak chart) because `RecordSet` is a
+          # Crossplane managed resource: its CRD only exists on the
+          # kind management plane, while the chart installs onto GKE.
+          - name: keycloak
+            base:
+              apiVersion: dns.gcp.m.upbound.io/v1beta1
+              kind: RecordSet
+              metadata:
+                name: queenswood-keycloak
+              spec:
+                forProvider:
+                  type: A
+                  ttl: 300
+                  rrdatas: [""]
+            patches:
+              - fromFieldPath: spec.managedZoneRef.name
+                toFieldPath: spec.forProvider.managedZoneRef.name
+              - fromFieldPath: spec.domain
+                toFieldPath: spec.forProvider.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "keycloak.%s."
+              - fromFieldPath: status.ip
+                toFieldPath: spec.forProvider.rrdatas[0]

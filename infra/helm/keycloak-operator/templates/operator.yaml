@@ -1,22 +1,18 @@
 # Cluster-wide install of the official Keycloak Operator (Quarkus-based,
-# 26.x). Vendored from the upstream release tag, with three deviations
+# 26.x). Vendored from the upstream release tag, with two deviations
 # from `kubernetes/kubernetes.yml`:
-#   1. Adds a `keycloak-operator` Namespace at the top.
-#   2. Converts the namespace-scoped `keycloak-operator-role` (and all
+#   1. Converts the namespace-scoped `keycloak-operator-role` (and all
 #      RoleBindings referencing cluster-scoped roles) into ClusterRole /
 #      ClusterRoleBinding so the operator can manage Keycloak instances
 #      anywhere on the cluster.
-#   3. Switches both controller `JOSDK_WATCH_CURRENT` env vars to
+#   2. Switches both controller `JOSDK_WATCH_CURRENT` env vars to
 #      `JOSDK_WATCH_ALL_NAMESPACES`.
-# CRDs live alongside in `crd-keycloaks.yml` and `crd-realmimports.yml`
-# and install via the same Argo Application.
----
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: keycloak-operator
-  labels:
-    app.kubernetes.io/name: keycloak-operator
+# The upstream `Namespace: keycloak-operator` resource was dropped --
+# `spec.forProvider.namespace` on the Crossplane Release that installs
+# this chart creates it via Helm's `--create-namespace`, with the
+# right ownership annotations. Including it again here would race that
+# logic and Helm would refuse to import the unowned namespace.
+# CRDs live under `crds/` so Helm installs them ahead of templates.
 ---
 apiVersion: v1
 kind: ServiceAccount
