@@ -386,12 +386,29 @@ down-to-zero:
     REGION=europe-west2
     ZONE_NAME={{ ENV_ZONE }}
     DOMAIN={{ ENV_DOMAIN }}.
+    GKE_CTX="gke_${PROJECT_ID}_${REGION}-a_queenswood-gke"
 
-    # 1. Kill kind first so Crossplane stops reconciling -- otherwise the
+    # 1. Drain workload namespaces on GKE BEFORE anything else. The
+    # GKE CSI driver (pd.csi.storage.gke.io) only DeleteDisk's a PV
+    # while the cluster is alive; if the cluster is destroyed with
+    # PVCs still around, the underlying PDs leak as orphans and
+    # chew through regional SSD_TOTAL_GB on the next up-from-zero
+    # (~180 GiB per cycle from pulsar zk + bookie + fdb). Drain
+    # must happen while Crossplane (in kind) is still up so that
+    # any namespaced Crossplane managed resources can have their
+    # finalizers cleared.
+    if kubectl --context "$GKE_CTX" get ns queenswood-test >/dev/null 2>&1; then
+      echo ">>> draining queenswood-test (lets CSI free PVs cleanly)"
+      kubectl --context "$GKE_CTX" delete ns queenswood-test \
+        --wait=true --timeout=5m \
+        || echo "  (drain timed out -- some PDs may leak)" >&2
+    fi
+
+    # 2. Kill kind so Crossplane stops reconciling -- otherwise the
     # gcloud deletes below race against selfHeal trying to recreate them.
     just kind-xp-down || true
 
-    # 2. Delete in dependency order. --quiet + || true so a missing
+    # 3. Delete in dependency order. --quiet + || true so a missing
     # resource (idempotent re-run) doesn't abort the rest.
     echo ">>> deleting GKE cluster (most of the bill)"
     gcloud container clusters delete queenswood-gke \
@@ -415,7 +432,7 @@ down-to-zero:
     gcloud compute networks delete queenswood-vpc \
       --project="$PROJECT_ID" --quiet 2>/dev/null || true
 
-    # 3. Drop the apex A and the cert-validation CNAME from the zone;
+    # 4. Drop the apex A and the cert-validation CNAME from the zone;
     # keep the zone itself (and its NS records) so the registrar
     # configuration stays valid across cycles.
     echo ">>> deleting apex A + cert CNAME (keeping zone)"
@@ -428,11 +445,10 @@ down-to-zero:
             --project="$PROJECT_ID" --quiet 2>/dev/null || true
         done
 
-    # 4. Prune local kubeconfig entry so contexts don't accumulate.
-    CTX="gke_${PROJECT_ID}_${REGION}-a_queenswood-gke"
-    kubectl config delete-context "$CTX" 2>/dev/null || true
-    kubectl config delete-cluster "$CTX" 2>/dev/null || true
-    kubectl config delete-user    "$CTX" 2>/dev/null || true
+    # 5. Prune local kubeconfig entry so contexts don't accumulate.
+    kubectl config delete-context "$GKE_CTX" 2>/dev/null || true
+    kubectl config delete-cluster "$GKE_CTX" 2>/dev/null || true
+    kubectl config delete-user    "$GKE_CTX" 2>/dev/null || true
 
     echo ">>> kept: project, SA, IAM, DNS zone, registrar NS. Run 'just up-from-zero' to come back."
 
