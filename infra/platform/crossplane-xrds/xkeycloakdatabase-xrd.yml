@@ -10,14 +10,11 @@ spec:
     plural: xkeycloakdatabases
   defaultCompositionRef:
     name: xkeycloakdatabase.gcp
-  # The composition writes the per-instance credentials into a Secret
-  # the keycloak chart's cloud-sql-proxy consumes. Connection name +
-  # username + password come from there; the host (proxy hostname)
-  # is wired by the chart.
-  connectionSecretKeys:
-    - connectionName
-    - username
-    - password
+  # Credentials surface via the composed `User` resource's own
+  # `writeConnectionSecretToRef` (patched to the XR's namespace).
+  # We do not declare `connectionSecretKeys` here: Crossplane v2 only
+  # permits that on cluster-scope XRDs, and we want per-env namespaced
+  # XRs. `status.connectionName` carries the proxy connection string.
   versions:
     - name: v1alpha1
       served: true

@@ -7,10 +7,6 @@ spec:
     apiVersion: platform.queenswood.repldriven.com/v1alpha1
     kind: XKeycloakDatabase
   mode: Pipeline
-  # The User resource writes the generated password into this Secret;
-  # downstream consumers (the keycloak chart's cloud-sql-proxy and the
-  # Keycloak CR's passwordSecret reference) pull from it.
-  writeConnectionSecretsToNamespace: ""
   pipeline:
     - step: patch-and-transform
       functionRef:
@@ -91,15 +87,21 @@ spec:
                   instanceSelector:
                     matchControllerRef: true
                   passwordSecretRef:
-                    namespace: crossplane-system
                     key: password
-                writeConnectionSecretToRef:
-                  namespace: crossplane-system
+                # The User publishes `username` + `password` into this
+                # Secret. The keycloak chart's Keycloak CR + cloud-sql-
+                # proxy mount it. The namespace is the XR's own (set
+                # by the queenswood-platform chart per env).
+                writeConnectionSecretToRef: {}
             patches:
               - fromFieldPath: spec.username
                 toFieldPath: metadata.name
               - fromFieldPath: spec.username
                 toFieldPath: spec.forProvider.name
+              # passwordSecretRef points at a chart-rendered Secret
+              # in the XR's namespace carrying the operator-supplied
+              # password (see queenswood-platform/templates/
+              # keycloak-database-password.yaml).
               - fromFieldPath: spec.instanceName
                 toFieldPath: spec.forProvider.passwordSecretRef.name
                 transforms:
@@ -107,6 +109,8 @@ spec:
                     string:
                       type: Format
                       fmt: "%s-password"
+              - fromFieldPath: metadata.namespace
+                toFieldPath: spec.forProvider.passwordSecretRef.namespace
               - fromFieldPath: spec.instanceName
                 toFieldPath: spec.writeConnectionSecretToRef.name
                 transforms:
@@ -114,3 +118,5 @@ spec:
                     string:
                       type: Format
                       fmt: "%s-conn"
+              - fromFieldPath: metadata.namespace
+                toFieldPath: spec.writeConnectionSecretToRef.namespace
