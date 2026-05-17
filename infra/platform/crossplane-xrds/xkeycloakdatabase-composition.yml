@@ -40,7 +40,11 @@ spec:
                     edition: ENTERPRISE
                     tier: db-custom-1-3840
                     diskSize: 10
-                    diskType: PD_SSD
+                    # PD_HDD is fine for a dev Keycloak DB (low QPS,
+                    # mostly admin-token reads) and a third the cost
+                    # per GB-month of PD_SSD. ENTERPRISE_PLUS would
+                    # force SSD; ENTERPRISE accepts either.
+                    diskType: PD_HDD
                     backupConfiguration:
                       enabled: true
                       pointInTimeRecoveryEnabled: false
