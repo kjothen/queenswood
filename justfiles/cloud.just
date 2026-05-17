@@ -415,6 +415,17 @@ down-to-zero:
     gcloud container clusters delete queenswood-gke \
       --zone="${REGION}-a" --project="$PROJECT_ID" --quiet 2>/dev/null || true
 
+    echo ">>> deleting CloudSQL databases (instance + database + user)"
+    # The XKeycloakDatabase XR lives in the kind cluster's queenswood-test
+    # namespace and would normally cascade-delete these via Crossplane, but
+    # `kind-xp-down` above destroys the XR before Crossplane gets to
+    # reconcile its deletion. Deleting the SQL instance also drops the
+    # `keycloak` Database and `keycloak` User that live inside it (the SQL
+    # admin API treats them as sub-resources). CloudSQL Postgres is ~$25/mo
+    # idle on the cheapest tier, so leaving it behind is not free.
+    gcloud sql instances delete queenswood-keycloak \
+      --project="$PROJECT_ID" --quiet 2>/dev/null || true
+
     echo ">>> deleting ingress IP"
     gcloud compute addresses delete queenswood-ingress-ip \
       --region="$REGION" --project="$PROJECT_ID" --quiet 2>/dev/null || true
