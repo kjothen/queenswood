@@ -24,9 +24,10 @@ coredns:
     namespace: kube-system
     configMapName: coredns-custom
 
-# ArgoCD Application sync-wave annotation rendered onto chart
-# resources. The Application resource itself lives in
-# `infra/bootstrap/apps/queenswood-keycloak.yml`.
+# ArgoCD sync-wave annotation rendered onto chart resources. The
+# chart is installed onto GKE by a Crossplane provider-helm Release
+# templated from queenswood-platform; the outer Release sync-wave is
+# set there.
 argocd:
   syncWave: "8"
 

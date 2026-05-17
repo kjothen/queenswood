@@ -1,15 +1,22 @@
 name: Release Chart
 
-# Packages the Helm chart and publishes:
-#   - the OCI artifact `oci://ghcr.io/<owner>/queenswood:<version>`
-#   - the `latest` GitHub release (chart .tgz + quickstart README)
+# Packages all three deployable Helm charts and publishes them:
+#   - `queenswood`         (app: bank-* services + frontend)
+#   - `queenswood-keycloak` (per-env Keycloak CR + plumbing)
+#   - `keycloak-operator`  (vendored upstream operator + CRDs)
+#
+# Each pushes as an OCI artifact `oci://ghcr.io/<owner>/<name>:<version>`.
+# Only `queenswood` also lands on the `latest` GitHub release page (with
+# the quickstart README) — the other two are infra-side and consumed by
+# Crossplane provider-helm `Release` resources templated from
+# queenswood-platform.
 #
 # Manual-only: chart-template patches don't require an image rebuild,
 # so this is decoupled from `release-images.yml`. Run from the
-# Actions UI after merging a chart change to main. The chart pins
-# `image.tag: latest`, so it picks up whatever images are currently
-# published — no version coupling between this workflow and the
-# image builds.
+# Actions UI after merging a chart change to main. The queenswood
+# chart pins `image.tag: latest`, so it picks up whatever images are
+# currently published — no version coupling between this workflow
+# and the image builds.
 
 on:
   workflow_dispatch:
@@ -45,18 +52,26 @@ jobs:
           sed -i 's/^  tag: .*/  tag: "latest"/' \
             infra/helm/queenswood/values.yaml
 
-      - name: Resolve subchart deps and package
+      - name: Resolve subchart deps and package all three charts
         run: |
-          helm dependency update infra/helm/queenswood
           mkdir -p release
-          helm package infra/helm/queenswood -d release
+          for chart in queenswood queenswood-keycloak keycloak-operator; do
+            if [ -f "infra/helm/$chart/Chart.yaml" ]; then
+              # Only `queenswood` has subchart deps today, but
+              # `helm dependency update` is a no-op when there are
+              # none — safe to call unconditionally.
+              helm dependency update "infra/helm/$chart"
+              helm package "infra/helm/$chart" -d release
+            fi
+          done
 
-      # Publish the chart to GHCR as an OCI artifact so consumers
-      # can run `helm install queenswood oci://ghcr.io/<owner>/queenswood
-      # --version <ver>` directly. Helm 3.8+ does share ~/.docker/config.json
-      # with the docker/login-action above, but be explicit — it's
-      # one line and removes a debug-time gotcha if the auth path
-      # ever drifts.
+      # Publish each chart to GHCR as an OCI artifact so consumers can
+      # `helm install <name> oci://ghcr.io/<owner>/<name> --version <ver>`
+      # directly. Crossplane provider-helm pulls the two infra charts
+      # via the same OCI URL — see queenswood-platform/templates/
+      # *-release.yaml. Helm 3.8+ shares ~/.docker/config.json with
+      # docker/login-action, but logging in explicitly removes a
+      # debug-time gotcha if that auth path ever drifts.
       - name: Helm registry login (GHCR)
         run: |
           echo "${{ secrets.GITHUB_TOKEN }}" | \
@@ -64,9 +79,11 @@ jobs:
               --username ${{ github.actor }} \
               --password-stdin
 
-      - name: Push Helm chart to GHCR (OCI)
+      - name: Push all chart tarballs to GHCR (OCI)
         run: |
-          helm push release/queenswood-*.tgz oci://ghcr.io/${{ github.repository_owner }}
+          for tgz in release/*.tgz; do
+            helm push "$tgz" oci://ghcr.io/${{ github.repository_owner }}
+          done
 
       - name: Write quickstart README
         run: |
@@ -163,9 +180,13 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release delete latest --yes --cleanup-tag || true
+          # `queenswood-[0-9]*.tgz` matches `queenswood-0.5.3.tgz`
+          # but NOT `queenswood-keycloak-0.2.0.tgz` — the GH release
+          # is the user-facing quickstart, which only ships the app
+          # chart.
           gh release create latest \
             --title "Latest" \
             --notes-file release/README.md \
             --target ${{ github.sha }} \
-            release/*.tgz \
+            release/queenswood-[0-9]*.tgz \
             release/README.md

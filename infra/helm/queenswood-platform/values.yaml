@@ -36,7 +36,33 @@ release:
     repository: oci://ghcr.io/repldriven
     version: 0.5.3
   # The Crossplane provider-config that owns GKE-bound Helm releases.
+  # Shared by the queenswood, queenswood-keycloak, and
+  # keycloak-operator Release resources below.
   providerConfigRef: queenswood-gke
   image:
     registry: ghcr.io/repldriven
     tag: latest
+
+# Cluster-scoped Keycloak Operator (CRDs + controller). Pulled onto
+# GKE via the same Crossplane provider-helm path as the app chart.
+keycloakOperator:
+  enabled: true
+  chart:
+    name: keycloak-operator
+    repository: oci://ghcr.io/repldriven
+    version: 0.1.0
+
+# Per-env Keycloak instance + cloud-sql-proxy. The two `proxy.*`
+# fields are pinned by `just gcp-keycloak-cloudsql-pin-values` once
+# the XKeycloakDatabase composite has published its
+# `status.connectionName`. Empty defaults are the cold-start state;
+# the recipe rewrites them in place.
+queenswoodKeycloak:
+  enabled: true
+  chart:
+    name: queenswood-keycloak
+    repository: oci://ghcr.io/repldriven
+    version: 0.2.0
+  proxy:
+    connectionName: ""
+    gcpServiceAccount: ""

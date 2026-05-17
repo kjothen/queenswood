@@ -8,7 +8,7 @@ description: |
   CoreDNS rewrite so in-cluster pods resolve the public hostname to
   the in-cluster Service, and — in local mode — an in-chart Postgres
   StatefulSet). Operator + CRDs are cluster-scoped and installed
-  separately by `infra/bootstrap/apps/keycloak-operator.yml`.
+  separately by the `keycloak-operator` chart (sibling of this one).
 
   Parameterised on `env.name` and `env.domain` so the same chart
   drives queenswood, queenswood-test, etc. The `postgresql.mode`
