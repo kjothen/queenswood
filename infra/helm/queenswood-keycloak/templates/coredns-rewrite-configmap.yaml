@@ -14,5 +14,5 @@ metadata:
     argocd.argoproj.io/sync-wave: "{{ .Values.argocd.syncWave }}"
 data:
   queenswood-keycloak.override: |
-    rewrite name exact {{ include "queenswood-keycloak.host" . }} {{ .Values.keycloak.fullnameOverride }}.{{ .Values.env.name }}.svc.cluster.local
+    rewrite name exact {{ include "queenswood-keycloak.host" . }} {{ .Release.Name }}-keycloak-service.{{ .Values.env.name }}.svc.cluster.local
 {{- end }}
