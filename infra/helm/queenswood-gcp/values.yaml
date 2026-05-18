@@ -1,0 +1,26 @@
+# gcpProjectId is mandatory. Renders into Cluster.workloadIdentityConfig.workloadPool,
+# every ProjectIAMMember.member, the cloud-sql-proxy workload-identity binding,
+# and the v1 + v2 (Cluster)ProviderConfig spec.projectID. The dynamic
+# `gcloud projects create` suffix means this value is per-deploy.
+gcpProjectId: ""
+
+# The K8s namespace where queenswood-keycloak runs; used in the
+# workload-identity member string. Keep in sync with the
+# queenswood-platform Application values.
+envNamespace: queenswood-test
+
+region: europe-west2
+zone: europe-west2-a
+
+# Bootstrap GCP service account name (created by `just gcp-iam-bootstrap`).
+crossplaneSaName: crossplane-provider
+
+# K8s SA name the queenswood-keycloak chart renders for the
+# cloud-sql-proxy sidecar.
+sqlProxyK8sSa: queenswood-keycloak-cloudsql-proxy
+
+# GCP SA name for the cloud-sql-proxy pod (must be <30 chars).
+sqlProxyGcpSa: keycloak-sql-proxy
+
+# Postgres password used by the Cloud SQL User MR. Dev-only.
+keycloakDbPassword: change-me-keycloak-db-password

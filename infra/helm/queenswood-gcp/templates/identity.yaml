@@ -1,0 +1,41 @@
+{{- $projectId := include "queenswood-gcp.projectId" . -}}
+{{- $member := include "queenswood-gcp.sqlProxyGcpSaMember" . -}}
+{{- $wiMember := include "queenswood-gcp.sqlProxyWorkloadIdentityMember" . -}}
+# GCP SA for the cloud-sql-proxy pod + the Workload Identity binding
+# to the K8s SA the queenswood-keycloak chart renders. accountId
+# must be under 30 chars (GCP IAM cap).
+apiVersion: cloudplatform.gcp.upbound.io/v1beta1
+kind: ServiceAccount
+metadata:
+  name: {{ .Values.sqlProxyGcpSa }}
+  annotations:
+    description: Cloud SQL Proxy GCP SA
+spec:
+  forProvider:
+    accountId: {{ .Values.sqlProxyGcpSa }}
+    displayName: "Keycloak Cloud SQL Proxy"
+---
+apiVersion: cloudplatform.gcp.upbound.io/v1beta1
+kind: ProjectIAMMember
+metadata:
+  name: {{ printf "%s-cloudsql-client" .Values.sqlProxyGcpSa }}
+  annotations:
+    description: Cloud SQL Proxy SA — cloudsql.client
+spec:
+  forProvider:
+    project: {{ $projectId | quote }}
+    role: roles/cloudsql.client
+    member: {{ $member | quote }}
+---
+apiVersion: cloudplatform.gcp.upbound.io/v1beta1
+kind: ServiceAccountIAMMember
+metadata:
+  name: {{ printf "%s-workload-identity" .Values.sqlProxyGcpSa }}
+  annotations:
+    description: Workload Identity binding for the Cloud SQL Proxy
+spec:
+  forProvider:
+    serviceAccountIdRef:
+      name: {{ .Values.sqlProxyGcpSa }}
+    role: roles/iam.workloadIdentityUser
+    member: {{ $wiMember | quote }}

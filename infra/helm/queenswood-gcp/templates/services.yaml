@@ -1,0 +1,23 @@
+# GCP APIs the crossplane-provider SA needs. Bootstrap APIs
+# (cloudresourcemanager, iam, iamcredentials, serviceusage) are
+# enabled by `just gcp-iam-bootstrap` before this chart installs.
+{{- $services := list
+  (dict "name" "container.googleapis.com" "description" "Kubernetes Engine API")
+  (dict "name" "compute.googleapis.com" "description" "Compute Engine API")
+  (dict "name" "dns.googleapis.com" "description" "Cloud DNS API")
+  (dict "name" "certificatemanager.googleapis.com" "description" "Certificate Manager API")
+  (dict "name" "sqladmin.googleapis.com" "description" "Cloud SQL Admin API")
+}}
+{{- range $services }}
+---
+apiVersion: cloudplatform.gcp.upbound.io/v1beta1
+kind: ProjectService
+metadata:
+  name: {{ .name }}
+  annotations:
+    description: {{ .description }}
+spec:
+  forProvider:
+    service: {{ .name }}
+    disableOnDestroy: false
+{{- end }}

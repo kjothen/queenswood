@@ -1,0 +1,34 @@
+{{- $projectId := include "queenswood-gcp.projectId" . -}}
+# v1 ProviderConfig used by cluster-scoped v1 MRs (Network, Cluster, NodePool,
+# DatabaseInstance, etc.) and by IAM members. Was applied imperatively via
+# envsubst+kubectl before queenswood-gcp owned project-ID propagation.
+apiVersion: gcp.upbound.io/v1beta1
+kind: ProviderConfig
+metadata:
+  name: default
+  annotations:
+    description: GCP credentials (v1)
+spec:
+  projectID: {{ $projectId | quote }}
+  credentials:
+    source: Secret
+    secretRef:
+      namespace: crossplane-system
+      name: gcp-creds
+      key: creds
+---
+# v2 ClusterProviderConfig used by namespaced v2 (.m.) MRs.
+apiVersion: gcp.m.upbound.io/v1beta1
+kind: ClusterProviderConfig
+metadata:
+  name: default
+  annotations:
+    description: GCP credentials (v2 cluster-scoped)
+spec:
+  projectID: {{ $projectId | quote }}
+  credentials:
+    source: Secret
+    secretRef:
+      namespace: crossplane-system
+      name: gcp-creds
+      key: creds

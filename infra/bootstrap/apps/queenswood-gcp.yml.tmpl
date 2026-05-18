@@ -1,0 +1,32 @@
+# Applied locally by `kind-xp-install-gcp-config` via envsubst with
+# the live PROJECT_ID. The Helm parameter on this Application's spec
+# is the ONE place the per-deploy project ID enters the system;
+# everything else flows from Argo rendering the queenswood-gcp chart
+# with this value.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: queenswood-gcp
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+    description: All project-scoped GCP infra (Crossplane MRs)
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/repldriven/queenswood
+    targetRevision: main
+    path: infra/helm/queenswood-gcp
+    helm:
+      parameters:
+        - name: gcpProjectId
+          value: "${PROJECT_ID}"
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: crossplane-system
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
