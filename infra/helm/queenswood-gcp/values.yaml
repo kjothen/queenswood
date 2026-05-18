@@ -22,5 +22,11 @@ sqlProxyK8sSa: queenswood-keycloak-cloudsql-proxy
 # GCP SA name for the cloud-sql-proxy pod (must be <30 chars).
 sqlProxyGcpSa: keycloak-sql-proxy
 
+# Dedicated GCP SA for GKE node pools (must be <30 chars). Granted
+# only roles/container.defaultNodeServiceAccount -- the GKE-blessed
+# narrow bundle replacing the broad roles/editor on the Compute
+# Engine default SA.
+gkeNodeSa: queenswood-gke-nodes
+
 # Postgres password used by the Cloud SQL User MR. Dev-only.
 keycloakDbPassword: change-me-keycloak-db-password
