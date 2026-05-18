@@ -1,0 +1,52 @@
+server {
+    listen 8080;
+    server_name _;
+
+    root /usr/share/nginx/html;
+    index index.html;
+
+    # Runtime config injection. The SPA loads /env.js BEFORE its
+    # main module so window.__env is populated by the time
+    # keycloak-js initialises. Values come from container env vars,
+    # which Helm wires from chart values so the same image works in
+    # kind and on GKE without a rebuild.
+    location = /env.js {
+        default_type application/javascript;
+        add_header Cache-Control "no-store" always;
+        return 200 'window.__env={"keycloakUrl":"${KEYCLOAK_URL}","keycloakRealm":"${KEYCLOAK_REALM}","keycloakClientId":"${KEYCLOAK_CLIENT_ID}","keycloakIdpHint":"${KEYCLOAK_IDP_HINT}"};';
+    }
+
+    # bank-api proxy. proxy_pass without trailing slash forwards the
+    # full URI so /v1/me reaches bank-api at /v1/me unchanged. Same
+    # pattern as bank-app — the SPA stays same-origin and bypasses
+    # CORS entirely.
+    location /v1/ {
+        proxy_pass ${API_UPSTREAM};
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location /oauth/ {
+        proxy_pass ${API_UPSTREAM};
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location /.well-known/ {
+        proxy_pass ${API_UPSTREAM};
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # SPA fallback — client-side routing means deep links aren't
+    # real files; nginx returns index.html and Svelte handles it.
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}

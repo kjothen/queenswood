@@ -18,9 +18,17 @@
     [com.repldriven.mono.bank-api.cash-account.examples :as
      cash-account.examples]
     [com.repldriven.mono.bank-api.cash-account.routes :as cash-account]
+    [com.repldriven.mono.bank-api.me.components :as me.components]
+    [com.repldriven.mono.bank-api.me.examples :as me.examples]
+    [com.repldriven.mono.bank-api.me.routes :as me]
     [com.repldriven.mono.bank-api.oauth.components :as oauth.components]
     [com.repldriven.mono.bank-api.oauth.examples :as oauth.examples]
     [com.repldriven.mono.bank-api.oauth.routes :as oauth]
+    [com.repldriven.mono.bank-api.onboarding.components :as
+     onboarding.components]
+    [com.repldriven.mono.bank-api.onboarding.examples :as
+     onboarding.examples]
+    [com.repldriven.mono.bank-api.onboarding.routes :as onboarding]
     [com.repldriven.mono.bank-api.organization.components :as
      organization.components]
     [com.repldriven.mono.bank-api.organization.examples :as
@@ -101,7 +109,9 @@
                                balance.components/registry
                                cash-account-product.components/registry
                                cash-account.components/registry
+                               me.components/registry
                                oauth.components/registry
+                               onboarding.components/registry
                                organization.components/registry
                                party.components/registry
                                payee-check.components/registry
@@ -130,14 +140,16 @@
            :scheme :bearer
            :bearerFormat "JWT"
            :description
-           "JWT issued by the Queenswood Keycloak realm. The token's `azp` claim is the calling org's identifier; admin-only routes require an `admin` role in `realm_access.roles`."}}
+           "JWT issued by the Queenswood Keycloak realm. Two shapes are accepted: a service JWT minted by an organization's service-account client (`azp` is the org id, default role `org`) and a user JWT minted by the `queenswood-console` SPA via Authorization Code + PKCE (`azp` is `queenswood-console`, role `user`; once the human has completed `/v1/onboarding/me` they also carry `org`). Admin-only routes require an `admin` realm role."}}
          :parameters shared.parameters/registry
          :examples (merge
                     examples/registry
                     balance.examples/registry
                     cash-account-product.examples/registry
                     cash-account.examples/registry
+                    me.examples/registry
                     oauth.examples/registry
+                    onboarding.examples/registry
                     organization.examples/registry
                     party.examples/registry
                     payee-check.examples/registry
@@ -164,6 +176,8 @@
           (concat balance/routes
                   cash-account-product/routes
                   cash-account/routes
+                  me/routes
+                  onboarding/routes
                   organization/routes
                   party/routes
                   payee-check/routes

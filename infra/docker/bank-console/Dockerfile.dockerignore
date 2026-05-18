@@ -1,0 +1,13 @@
+# Same logic as bank-app's per-Dockerfile ignore. The repo-root
+# .dockerignore is tuned for JVM service images and excludes
+# bases/bank-console + infra/docker by default; this file
+# whitelists the bits this Dockerfile actually copies.
+*
+
+!bases/bank-console
+!infra/docker/bank-console
+
+bases/bank-console/node_modules
+bases/bank-console/dist
+bases/bank-console/.svelte-kit
+bases/bank-console/**/*.log

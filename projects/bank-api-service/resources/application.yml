@@ -197,6 +197,15 @@ system:
       expected-audiences:
         - queenswood-api-test
         - queenswood-api-live
+        # User JWTs minted by the SPA carry the public client's id
+        # as their aud claim (no audience mapper on the console
+        # client). Accept it alongside the per-status banking
+        # audiences so onboarding + /v1/me verify cleanly.
+        - queenswood-console
+      # The Keycloak public client SPAs use to mint user JWTs. Used
+      # by the auth interceptor to distinguish user JWTs (azp ==
+      # this) from service JWTs (azp == org-id).
+      console-client-id: queenswood-console
       # Banking-specific status → audience mapping. Both values are
       # realm-import scope names that carry an `oidc-audience-mapper`.
       audiences-by-status:

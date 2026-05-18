@@ -28,6 +28,13 @@ system:
       expected-audiences:
         - queenswood-api-test
         - queenswood-api-live
+        # User JWTs minted for the bank-console SPA carry the public
+        # client's id as aud (no custom audience mapper on that client).
+        - queenswood-console
+      # The Keycloak public client SPAs use to mint user JWTs. The
+      # auth interceptor uses this to discriminate user JWTs (azp ==
+      # this) from service JWTs (azp == org-id).
+      console-client-id: queenswood-console
       audiences-by-status:
         organization-status-test: queenswood-api-test
         organization-status-live: queenswood-api-live

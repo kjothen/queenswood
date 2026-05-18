@@ -5,6 +5,13 @@ container: !system/component
   # client (id/secret below) with realm-management roles for the
   # keycloak adapter's admin path.
   realm-import-file: bank/queenswood-realm.json
+  # Pin to a stable host port under `dev` so the bank-console SPA
+  # (running outside the JVM) can reach the testcontainer Keycloak
+  # at `http://localhost:8090`. Random port for tests so parallel
+  # runs don't fight over a single binding.
+  host-port: !profile
+    dev: 8090
+    default: 0
 
 auth-server-url: !system/component
   system/component-kind: keycloak/auth-server-url

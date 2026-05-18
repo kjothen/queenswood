@@ -1,0 +1,89 @@
+{{- if .Values.bankConsole.enabled }}
+---
+# Human-identity SPA. Mirrors bank-app's standalone template (TCP
+# probes, no FDB volumes, no bootstrap dependency) — the SPA only
+# proxies to bank-api at runtime, so a TCP-only probe is sufficient.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-bank-console
+  labels:
+    {{- include "queenswood.labels" . | nindent 4 }}
+    app.kubernetes.io/component: bank-console
+spec:
+  replicas: {{ default 1 .Values.bankConsole.replicas }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: bank-console
+  template:
+    metadata:
+      labels:
+        {{- include "queenswood.labels" . | nindent 8 }}
+        app.kubernetes.io/component: bank-console
+    spec:
+      {{- with .Values.image.pullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: bank-console
+          image: "{{ .Values.image.registry }}/bank-console:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ include "queenswood.imagePullPolicy" $ }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.bankConsole.port }}
+              protocol: TCP
+          env:
+            # bank-api upstream nginx proxies /v1/* to.
+            - name: API_UPSTREAM
+              value: {{ tpl .Values.bankConsole.apiUpstream . | quote }}
+            # Runtime config the SPA reads via /env.js. Set
+            # bankConsole.keycloakPublicUrl on GKE; on kind leave
+            # empty and rely on a port-forwarded dev fallback.
+            - name: KEYCLOAK_URL
+              value: {{ .Values.bankConsole.keycloakPublicUrl | quote }}
+            - name: KEYCLOAK_REALM
+              value: {{ .Values.keycloak.realm | quote }}
+            - name: KEYCLOAK_CLIENT_ID
+              value: {{ .Values.keycloak.consoleClientId | quote }}
+            - name: KEYCLOAK_IDP_HINT
+              value: {{ .Values.bankConsole.keycloakIdpHint | quote }}
+          startupProbe:
+            tcpSocket:
+              port: http
+            periodSeconds: 5
+            failureThreshold: 12
+          livenessProbe:
+            tcpSocket:
+              port: http
+            periodSeconds: 30
+            failureThreshold: 3
+          readinessProbe:
+            tcpSocket:
+              port: http
+            periodSeconds: 10
+            failureThreshold: 3
+          {{- with .Values.bankConsole.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-bank-console
+  labels:
+    {{- include "queenswood.labels" . | nindent 4 }}
+    app.kubernetes.io/component: bank-console
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: bank-console
+  ports:
+    - name: http
+      port: {{ .Values.bankConsole.port }}
+      targetPort: http
+      protocol: TCP
+{{- end }}

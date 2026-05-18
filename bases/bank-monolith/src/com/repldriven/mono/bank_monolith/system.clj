@@ -7,6 +7,7 @@
     com.repldriven.mono.bank-idv.interface
     com.repldriven.mono.identity-provider.interface
     com.repldriven.mono.keycloak.interface
+    com.repldriven.mono.bank-membership.interface
     com.repldriven.mono.bank-onfido-adapter.system
     com.repldriven.mono.bank-onfido-simulator.system
     com.repldriven.mono.bank-onfido-webhook.interface
@@ -15,6 +16,7 @@
     com.repldriven.mono.bank-payment.interface
     com.repldriven.mono.bank-schema.interface
     com.repldriven.mono.bank-transaction.interface
+    com.repldriven.mono.bank-user.interface
 
     com.repldriven.mono.command.interface
     com.repldriven.mono.command-processor.interface
