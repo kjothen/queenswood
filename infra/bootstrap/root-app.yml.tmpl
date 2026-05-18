@@ -1,0 +1,37 @@
+# Applied locally by `kind-xp-install-root` via envsubst with
+# the live PROJECT_ID. ${PROJECT_ID} is the ONE place the per-deploy
+# project ID enters the bootstrap chain: it flows from here into the
+# bootstrap chart's helm.parameters, then into queenswood-gcp's
+# helm.parameters, and from there into every Crossplane MR.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: root
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/repldriven/queenswood
+    targetRevision: main
+    path: infra/helm/bootstrap
+    helm:
+      parameters:
+        - name: gcpProjectId
+          value: "${PROJECT_ID}"
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      # provider-helm registers helm.crossplane.io/Release; until that
+      # provider installs (wave 0), Release MRs in the queenswood-gcp
+      # chart fail validation and abort the whole sync. Skipping
+      # dry-run for unknown kinds lets Argo apply what it can and
+      # retry the rest as CRDs come online.
+      - SkipDryRunOnMissingResource=true

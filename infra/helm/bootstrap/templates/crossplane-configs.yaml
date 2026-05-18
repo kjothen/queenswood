@@ -9,8 +9,8 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/repldriven/queenswood
-    targetRevision: main
+    repoURL: {{ .Values.repoURL | quote }}
+    targetRevision: {{ .Values.targetRevision | quote }}
     path: infra/platform/crossplane-configs
   destination:
     server: https://kubernetes.default.svc

@@ -1,0 +1,35 @@
+# Project-scoped GCP infrastructure. Wave 1 alongside crossplane-configs
+# + crossplane-xrds; queenswood-platform (wave 4) is gated on this
+# reaching Healthy, which only happens when every MR in the
+# queenswood-gcp chart is Ready -- including the GKE Cluster MR, which
+# is the moment the GKE kubeconfig connection Secret is written and
+# the helm provider can talk to the cluster.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: queenswood-gcp
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+    description: All project-scoped GCP infra (Crossplane MRs)
+spec:
+  project: default
+  source:
+    repoURL: {{ .Values.repoURL | quote }}
+    targetRevision: {{ .Values.targetRevision | quote }}
+    path: infra/helm/queenswood-gcp
+    helm:
+      parameters:
+        - name: gcpProjectId
+          value: {{ include "bootstrap.projectId" . | quote }}
+        - name: envNamespace
+          value: {{ .Values.envNamespace | quote }}
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: crossplane-system
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

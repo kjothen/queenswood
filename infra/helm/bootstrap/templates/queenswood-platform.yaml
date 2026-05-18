@@ -1,30 +1,31 @@
+# Wave 4 (was 4 historically; one wave gap above queenswood-gcp at 1
+# leaves room for sync-wave 2/3 work-in-progress without renumbering).
+# The chart's own per-resource sync-waves (4..7) order zone -> cert ->
+# apex -> release internally.
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   name: queenswood-platform
   namespace: argocd
   annotations:
-    # Lands after gcp-network (2) and gcp-cluster (3); the chart's own
-    # per-resource sync-waves (4..7) order zone → cert → apex → release
-    # internally.
     argocd.argoproj.io/sync-wave: "4"
     description: Queenswood platform Helm chart
 spec:
   project: default
   source:
-    repoURL: https://github.com/repldriven/queenswood
-    targetRevision: main
+    repoURL: {{ .Values.repoURL | quote }}
+    targetRevision: {{ .Values.targetRevision | quote }}
     path: infra/helm/queenswood-platform
     helm:
-      # To flip back to the default queenswood env once the DNSSEC
-      # cooldown clears, change this to `values.yaml`.
       valueFiles:
-        - values-test.yaml
+{{- range .Values.queenswoodPlatform.valueFiles }}
+        - {{ . | quote }}
+{{- end }}
   destination:
     server: https://kubernetes.default.svc
     # The chart's templates set explicit namespaces; this is the
     # fallback used by the Application's Namespace resource itself.
-    namespace: queenswood-test
+    namespace: {{ .Values.envNamespace | quote }}
   syncPolicy:
     automated:
       prune: true
