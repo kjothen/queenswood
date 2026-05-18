@@ -2,8 +2,8 @@
 # Bootstrap APIs (cloudresourcemanager, iam, iamcredentials,
 # serviceusage) are enabled by `just gcp-iam-bootstrap`.
 ---
-apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
-kind: Service
+apiVersion: cloudplatform.gcp.upbound.io/v1beta1
+kind: ProjectService
 metadata:
   name: container.googleapis.com
   annotations:
@@ -13,8 +13,8 @@ spec:
     service: container.googleapis.com
     disableOnDestroy: false
 ---
-apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
-kind: Service
+apiVersion: cloudplatform.gcp.upbound.io/v1beta1
+kind: ProjectService
 metadata:
   name: compute.googleapis.com
   annotations:
@@ -24,8 +24,8 @@ spec:
     service: compute.googleapis.com
     disableOnDestroy: false
 ---
-apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
-kind: Service
+apiVersion: cloudplatform.gcp.upbound.io/v1beta1
+kind: ProjectService
 metadata:
   name: dns.googleapis.com
   annotations:
@@ -35,8 +35,8 @@ spec:
     service: dns.googleapis.com
     disableOnDestroy: false
 ---
-apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
-kind: Service
+apiVersion: cloudplatform.gcp.upbound.io/v1beta1
+kind: ProjectService
 metadata:
   name: certificatemanager.googleapis.com
   annotations:
@@ -46,8 +46,8 @@ spec:
     service: certificatemanager.googleapis.com
     disableOnDestroy: false
 ---
-apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
-kind: Service
+apiVersion: cloudplatform.gcp.upbound.io/v1beta1
+kind: ProjectService
 metadata:
   name: sqladmin.googleapis.com
   annotations:

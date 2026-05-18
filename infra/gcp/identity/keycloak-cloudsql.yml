@@ -2,7 +2,7 @@
 # binding to the K8s SA the queenswood-keycloak chart renders.
 # Account ID kept under 30 chars (GCP IAM cap).
 ---
-apiVersion: iam.gcp.upbound.io/v1beta1
+apiVersion: cloudplatform.gcp.upbound.io/v1beta1
 kind: ServiceAccount
 metadata:
   name: keycloak-sql-proxy
@@ -25,7 +25,7 @@ spec:
     memberRef:
       name: keycloak-sql-proxy
 ---
-apiVersion: iam.gcp.upbound.io/v1beta1
+apiVersion: cloudplatform.gcp.upbound.io/v1beta1
 kind: ServiceAccountIAMMember
 metadata:
   name: keycloak-sql-proxy-workload-identity
