@@ -45,8 +45,11 @@ kind-up tag="dev":
     set -e
     bash {{ justfile_directory() }}/infra/kind/with-registry.sh queenswood
     just docker-build-all {{ tag }}
-    for project in projects/*-service/; do
-      svc=${project:t}
+    # bank-app lives at bases/bank-app/ (Svelte/CLJS, not a Polylith
+    # service project), so the projects/*-service/ glob misses it.
+    # docker-build-all's `default` group in infra/docker/bake.hcl
+    # already builds it -- we just need to push it alongside.
+    for svc in projects/*-service/(:t) bank-app; do
       docker tag {{ DOCKER_REGISTRY }}/$svc:{{ tag }} localhost:5001/$svc:{{ tag }}
       docker push localhost:5001/$svc:{{ tag }}
     done
