@@ -110,3 +110,9 @@ data:
   resource.customizations.health.certificatemanager.gcp.m.upbound.io: *upbound_health
   resource.customizations.health.gcp.upbound.io: *upbound_health
   resource.customizations.health.gcp.m.upbound.io: *upbound_health
+  # XR group. Composite Resources follow the same Crossplane
+  # convention (Synced + Ready conditions); the upbound Lua works
+  # for them too, so kubectl wait --for=health.status=Healthy
+  # on the queenswood-gcp Argo App correctly blocks until the XR
+  # (and via Ready aggregation, every composed MR) is actually up.
+  resource.customizations.health.platform.queenswood.repldriven.com: *upbound_health
