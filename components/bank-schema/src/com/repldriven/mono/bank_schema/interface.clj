@@ -12,6 +12,7 @@
     [com.repldriven.mono.schemas.cash_accounts :as cash-accounts]
     [com.repldriven.mono.schemas.idempotency :as idempotency]
     [com.repldriven.mono.schemas.idv :as idv]
+    [com.repldriven.mono.schemas.memberships :as memberships]
     [com.repldriven.mono.schemas.organizations :as organizations]
     [com.repldriven.mono.schemas.party :as party]
     [com.repldriven.mono.schemas.payments :as payments]
@@ -21,6 +22,7 @@
     [com.repldriven.mono.schemas.policies :as policies]
     [com.repldriven.mono.schemas.transactions :as transactions]
     [com.repldriven.mono.schemas.types :as types]
+    [com.repldriven.mono.schemas.users :as users]
     [protojure.protobuf :as proto])
   (:import
     (com.repldriven.mono.schemas.balances BalanceProto$Balance)
@@ -54,7 +56,14 @@
      PolicyProto$PolicyBinding)
     (com.repldriven.mono.schemas.transactions
      TransactionProto$Transaction
-     TransactionProto$TransactionLeg)))
+     TransactionProto$TransactionLeg)
+    (com.repldriven.mono.schemas.users
+     UserProto$User
+     UserProto$IdentityProvider
+     UserProto$UserStatus)
+    (com.repldriven.mono.schemas.memberships
+     MembershipProto$Membership
+     MembershipProto$Role)))
 
 (def ^{:doc "Parse Balance protobuf bytes into a Clojure map."} pb->Balance
   balances/pb->Balance)
@@ -548,3 +557,81 @@
   - m: PolicyBinding map matching the generated schema."
   [m]
   (PolicyProto$PolicyBinding/parseFrom (PolicyBinding->pb m)))
+
+(def ^{:doc "Parse User protobuf bytes into a Clojure map."} pb->User
+  users/pb->User)
+
+(defn User->pb
+  "Serialise a User map to protobuf bytes.
+
+  Args:
+  - m: User map matching the generated schema."
+  [m]
+  (proto/->pb (users/new-User m)))
+
+(defn User->java
+  "Parse a User map into the generated Java protobuf class.
+
+  Args:
+  - m: User map matching the generated schema."
+  [m]
+  (UserProto$User/parseFrom (User->pb m)))
+
+(def ^{:doc "Map of IdentityProvider label to protobuf int value."}
+     identity-provider->int
+  users/IdentityProvider-label2val)
+
+(defn identity-provider->pb-enum
+  "Convert an identity-provider keyword to the protobuf enum value,
+  for use in FDB index queries.
+
+  Args:
+  - identity-provider: `:identity-provider-*` keyword."
+  [identity-provider]
+  (UserProto$IdentityProvider/forNumber
+   (identity-provider->int identity-provider)))
+
+(def ^{:doc "Map of UserStatus label to protobuf int value."} user-status->int
+  users/UserStatus-label2val)
+
+(defn user-status->pb-enum
+  "Convert a user-status keyword to the protobuf enum value, for
+  use in FDB index queries.
+
+  Args:
+  - user-status: `:user-status-*` keyword."
+  [user-status]
+  (UserProto$UserStatus/forNumber
+   (user-status->int user-status)))
+
+(def ^{:doc "Parse Membership protobuf bytes into a Clojure map."}
+     pb->Membership
+  memberships/pb->Membership)
+
+(defn Membership->pb
+  "Serialise a Membership map to protobuf bytes.
+
+  Args:
+  - m: Membership map matching the generated schema."
+  [m]
+  (proto/->pb (memberships/new-Membership m)))
+
+(defn Membership->java
+  "Parse a Membership map into the generated Java protobuf class.
+
+  Args:
+  - m: Membership map matching the generated schema."
+  [m]
+  (MembershipProto$Membership/parseFrom (Membership->pb m)))
+
+(def ^{:doc "Map of Membership Role label to protobuf int value."} role->int
+  memberships/Role-label2val)
+
+(defn role->pb-enum
+  "Convert a membership role keyword to the protobuf enum value,
+  for use in FDB index queries.
+
+  Args:
+  - role: `:role-*` keyword."
+  [role]
+  (MembershipProto$Role/forNumber (role->int role)))

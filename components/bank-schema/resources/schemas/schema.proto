@@ -7,6 +7,7 @@ import "schemas/cash-account-products/account-product.proto";
 import "schemas/cash-accounts/account.proto";
 import "schemas/idempotency/idempotency.proto";
 import "schemas/idv/idv.proto";
+import "schemas/memberships/membership.proto";
 import "schemas/organizations/organization.proto";
 import "schemas/party/party-national-identifier.proto";
 import "schemas/party/party.proto";
@@ -17,6 +18,7 @@ import "schemas/payments/outbound-payment.proto";
 import "schemas/person-identification/person-identification.proto";
 import "schemas/policies/policy.proto";
 import "schemas/transactions/transaction.proto";
+import "schemas/users/user.proto";
 
 option java_outer_classname = "SchemaProto";
 
@@ -45,4 +47,6 @@ message RecordTypeUnion {
   optional com.repldriven.mono.schemas.policies.Policy _Policy = 19;
   optional com.repldriven.mono.schemas.policies.PolicyBinding _PolicyBinding = 20;
   optional com.repldriven.mono.schemas.idempotency.Idempotency _Idempotency = 21;
+  optional com.repldriven.mono.schemas.users.User _User = 22;
+  optional com.repldriven.mono.schemas.memberships.Membership _Membership = 23;
 }
