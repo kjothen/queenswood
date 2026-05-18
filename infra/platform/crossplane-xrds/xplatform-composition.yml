@@ -255,6 +255,10 @@ spec:
           # renders on GKE. accountId in initProvider because the provider
           # strips it from forProvider after create.
           # ===================================================================
+          # accountId in v2 ServiceAccount is derived from metadata.name
+          # (or crossplane.io/external-name); not a spec field. The
+          # composed MR's metadata.name (`keycloak-sql-proxy`) is the
+          # accountId.
           - name: sql-proxy-sa
             base:
               apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
@@ -268,10 +272,6 @@ spec:
                   name: default
                 forProvider:
                   displayName: "Keycloak Cloud SQL Proxy"
-                initProvider: {}
-            patches:
-              - fromFieldPath: spec.sqlProxyGcpSa
-                toFieldPath: spec.initProvider.accountId
           - name: sql-proxy-cloudsql-client
             base:
               apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
@@ -339,10 +339,6 @@ spec:
                   name: default
                 forProvider:
                   displayName: "Queenswood GKE Nodes"
-                initProvider: {}
-            patches:
-              - fromFieldPath: spec.gkeNodeSa
-                toFieldPath: spec.initProvider.accountId
           - name: gke-nodes-default-node-sa
             base:
               apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
