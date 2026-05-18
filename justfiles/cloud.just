@@ -381,15 +381,15 @@ gcp-cloudsql-wire:
     PROJECT_ID=$(just _gcp-project-id)
     INSTANCE=queenswood-keycloak
     VALUES=infra/helm/queenswood-platform/values.yaml
-    # Matches the SA from infra/gcp/identity/keycloak-cloudsql.yml.
+    # Matches the SA from queenswood-gcp templates/identity.yaml.
     SA_EMAIL=$(just _gcp-sa-email keycloak-sql-proxy)
 
     echo "Waiting for DatabaseInstance/$INSTANCE status.atProvider.connectionName (up to 15m)..."
     CONN=""
     deadline=$(( $(date +%s) + 900 ))
     while [[ -z "$CONN" && $(date +%s) -lt $deadline ]]; do
-      CONN=$(kubectl --context {{ KIND_XP_CLUSTER }} \
-               get databaseinstance.sql.gcp.upbound.io $INSTANCE \
+      CONN=$(kubectl --context {{ KIND_XP_CLUSTER }} -n crossplane-system \
+               get databaseinstance.sql.gcp.m.upbound.io $INSTANCE \
                -o jsonpath='{.status.atProvider.connectionName}' 2>/dev/null || true)
       [[ -z "$CONN" ]] && sleep 10
     done
@@ -397,8 +397,8 @@ gcp-cloudsql-wire:
       echo "" >&2
       echo "Timed out waiting for status.atProvider.connectionName on DatabaseInstance/$INSTANCE." >&2
       echo "--- DatabaseInstance conditions ---" >&2
-      kubectl --context {{ KIND_XP_CLUSTER }} \
-        get databaseinstance.sql.gcp.upbound.io $INSTANCE \
+      kubectl --context {{ KIND_XP_CLUSTER }} -n crossplane-system \
+        get databaseinstance.sql.gcp.m.upbound.io $INSTANCE \
         -o jsonpath='{range .status.conditions[*]}{.type}={.status}  reason={.reason}  message={.message}{"\n"}{end}' >&2 || true
       exit 1
     fi
@@ -502,9 +502,9 @@ gcp-health-check:
     eq "RecordSet queenswood-apex Synced" \
       "$(kubectl --context $MGT -n {{ QUEENSWOOD_ENV }} get recordsets.dns.gcp.m.upbound.io queenswood-apex -o jsonpath='{.status.conditions[?(@.type=="Synced")].status}' 2>/dev/null)" True
     eq "NodePool queenswood-pool Ready" \
-      "$(kubectl --context $MGT get nodepools.container.gcp.upbound.io queenswood-pool -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}' 2>/dev/null)" True
+      "$(kubectl --context $MGT -n crossplane-system get nodepools.container.gcp.m.upbound.io queenswood-pool -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}' 2>/dev/null)" True
     eq "CloudSQL DatabaseInstance Ready" \
-      "$(kubectl --context $MGT get databaseinstance.sql.gcp.upbound.io queenswood-keycloak -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}' 2>/dev/null)" True
+      "$(kubectl --context $MGT -n crossplane-system get databaseinstance.sql.gcp.m.upbound.io queenswood-keycloak -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}' 2>/dev/null)" True
     eq "Certificate queenswood-cert ACTIVE" \
       "$(kubectl --context $MGT -n {{ QUEENSWOOD_ENV }} get certificate.certificatemanager.gcp.m.upbound.io queenswood-cert -o jsonpath='{.status.atProvider.managed.state}' 2>/dev/null)" ACTIVE
 

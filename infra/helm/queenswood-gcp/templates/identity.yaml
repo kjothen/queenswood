@@ -6,37 +6,49 @@
 # must be under 30 chars (GCP IAM cap) and goes under `initProvider`
 # because the upbound provider strips it from `spec.forProvider`
 # after create -- leaving Argo permanently OutOfSync otherwise.
-apiVersion: cloudplatform.gcp.upbound.io/v1beta1
+apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
 kind: ServiceAccount
 metadata:
   name: {{ .Values.sqlProxyGcpSa }}
+  namespace: crossplane-system
   annotations:
     description: Cloud SQL Proxy GCP SA
 spec:
+  providerConfigRef:
+    kind: ClusterProviderConfig
+    name: default
   forProvider:
     displayName: "Keycloak Cloud SQL Proxy"
   initProvider:
     accountId: {{ .Values.sqlProxyGcpSa }}
 ---
-apiVersion: cloudplatform.gcp.upbound.io/v1beta1
+apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
 kind: ProjectIAMMember
 metadata:
   name: {{ printf "%s-cloudsql-client" .Values.sqlProxyGcpSa }}
+  namespace: crossplane-system
   annotations:
     description: Cloud SQL Proxy SA — cloudsql.client
 spec:
+  providerConfigRef:
+    kind: ClusterProviderConfig
+    name: default
   forProvider:
     project: {{ $projectId | quote }}
     role: roles/cloudsql.client
     member: {{ $member | quote }}
 ---
-apiVersion: cloudplatform.gcp.upbound.io/v1beta1
+apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
 kind: ServiceAccountIAMMember
 metadata:
   name: {{ printf "%s-workload-identity" .Values.sqlProxyGcpSa }}
+  namespace: crossplane-system
   annotations:
     description: Workload Identity binding for the Cloud SQL Proxy
 spec:
+  providerConfigRef:
+    kind: ClusterProviderConfig
+    name: default
   forProvider:
     serviceAccountIdRef:
       name: {{ .Values.sqlProxyGcpSa }}
