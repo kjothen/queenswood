@@ -35,6 +35,16 @@ idvs:
     - name: Idv_by_party
       field: party_id
       unique: true
+memberships:
+  record-type: Membership
+  indexes:
+    - name: Membership_by_user
+      field: user_id
+    - name: Membership_by_organization
+      field: organization_id
+    - name: Membership_by_user_and_org
+      fields: [user_id, organization_id]
+      unique: true
 organizations:
   record-type: Organization
   indexes:
@@ -109,3 +119,11 @@ transactions:
     - name: Transaction_by_idempotency_key
       fields: [transaction_type, idempotency_key]
       unique: true
+users:
+  record-type: User
+  indexes:
+    - name: User_by_keycloak_sub
+      field: keycloak_sub
+      unique: true
+    - name: User_by_email
+      field: email
