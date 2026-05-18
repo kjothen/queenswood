@@ -1,0 +1,39 @@
+# GCP SA for the cloud-sql-proxy pod + the Workload Identity
+# binding to the K8s SA the queenswood-keycloak chart renders.
+# Account ID kept under 30 chars (GCP IAM cap).
+---
+apiVersion: iam.gcp.upbound.io/v1beta1
+kind: ServiceAccount
+metadata:
+  name: keycloak-sql-proxy
+  annotations:
+    description: Cloud SQL Proxy GCP SA
+spec:
+  forProvider:
+    accountId: keycloak-sql-proxy
+    displayName: "Keycloak Cloud SQL Proxy"
+---
+apiVersion: cloudplatform.gcp.upbound.io/v1beta1
+kind: ProjectIAMMember
+metadata:
+  name: keycloak-sql-proxy-cloudsql-client
+  annotations:
+    description: Cloud SQL Proxy SA — cloudsql.client
+spec:
+  forProvider:
+    role: roles/cloudsql.client
+    memberRef:
+      name: keycloak-sql-proxy
+---
+apiVersion: iam.gcp.upbound.io/v1beta1
+kind: ServiceAccountIAMMember
+metadata:
+  name: keycloak-sql-proxy-workload-identity
+  annotations:
+    description: Workload Identity binding for the Cloud SQL Proxy
+spec:
+  forProvider:
+    serviceAccountIdRef:
+      name: keycloak-sql-proxy
+    role: roles/iam.workloadIdentityUser
+    member: serviceAccount:queenswood-820d84.svc.id.goog[queenswood-test/queenswood-keycloak-cloudsql-proxy]

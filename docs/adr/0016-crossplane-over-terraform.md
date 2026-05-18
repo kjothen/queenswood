@@ -63,5 +63,5 @@ What we lose:
 
 The infrastructure TDD ([infrastructure.md](../tdd/infrastructure.md))
 describes how the pieces fit together — which Composites we own,
-how the management plane bootstraps GKE, the down-to-zero
+how the management plane bootstraps GKE, the gcp-down
 teardown, the patterns we keep coming back to.

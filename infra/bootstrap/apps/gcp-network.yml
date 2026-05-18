@@ -5,6 +5,7 @@ metadata:
   namespace: argocd
   annotations:
     argocd.argoproj.io/sync-wave: "2"
+    description: Queenswood VPC + subnets
 spec:
   project: default
   source:

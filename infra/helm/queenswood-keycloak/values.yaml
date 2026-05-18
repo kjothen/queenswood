@@ -44,9 +44,9 @@ keycloak:
 # - `local` spins up an in-chart Postgres StatefulSet (kind / dev).
 # - `external` skips the Postgres render and stands up a
 #   cloud-sql-proxy Deployment + Service pointed at a CloudSQL
-#   instance provisioned by `queenswood-platform`'s
-#   XKeycloakDatabase composite. The proxy speaks Postgres on the
-#   in-cluster Service; the Keycloak CR connects to that Service.
+#   instance provisioned by the flat MRs in `infra/gcp/database/`.
+#   The proxy speaks Postgres on the in-cluster Service; the
+#   Keycloak CR connects to that Service.
 postgresql:
   mode: local
   local:
@@ -61,17 +61,19 @@ postgresql:
     serviceName: queenswood-keycloak-cloudsql
     port: 5432
     database: keycloak
-    # Name of the Secret (`username`/`password` keys) the
-    # XKeycloakDatabase composite publishes into this namespace.
-    # Used both by the Keycloak CR and by the proxy pod.
+    # Name of the Secret (`username`/`password` keys) the chart
+    # renders on GKE via `external-db-secret.yaml`. The Keycloak CR
+    # mounts it for its usernameSecret/passwordSecret refs.
     secretName: queenswood-keycloak-conn
     # Cloud SQL Auth Proxy config — needed for `mode: external`.
     proxy:
       image: gcr.io/cloud-sql-connectors/cloud-sql-proxy:2.14.3
       # `<project>:<region>:<instance>` — surfaced on the
-      # XKeycloakDatabase composite's `status.connectionName`. Set
-      # via `values-gcp.yaml` (or a wrapper) once Crossplane has
-      # provisioned the CloudSQL instance.
+      # CloudSQL DatabaseInstance MR's
+      # `status.atProvider.connectionName`. Pinned into
+      # queenswood-platform's values.yaml by
+      # `just gcp-cloudsql-wire` once Crossplane has
+      # provisioned the instance.
       connectionName: ""
       # GCP service account email bound to the K8s SA via Workload
       # Identity. The GCP SA needs `roles/cloudsql.client`; the

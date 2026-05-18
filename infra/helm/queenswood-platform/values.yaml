@@ -10,26 +10,6 @@ apex:
 cert:
   location: europe-west2
 
-# Keycloak's Postgres backing — `enabled: true` on GCP spins up a
-# CloudSQL Postgres instance via Crossplane (XKeycloakDatabase) so
-# the queenswood-keycloak chart can run in `postgresql.mode:
-# external` mode. The chart writes connection details into a Secret
-# the cloud-sql-proxy in the queenswood-keycloak chart consumes.
-keycloakDatabase:
-  enabled: true
-  region: europe-west2
-  instanceName: queenswood-keycloak
-  databaseName: keycloak
-  username: keycloak
-  # Initial password the composite's `User` resource picks up via
-  # `passwordSecretRef`. Dev-only placeholder; rotate post-deploy
-  # (or pre-create the Secret out-of-band before first sync).
-  password: change-me-keycloak-db-password
-  # `db-custom-<vCPUs>-<memMB>` — smallest legal Postgres shape;
-  # shared-core (`db-f1-micro`) is MySQL-only.
-  tier: db-custom-1-3840
-  postgresVersion: POSTGRES_16
-
 release:
   chart:
     name: queenswood
@@ -53,10 +33,10 @@ keycloakOperator:
     version: 0.1.2
 
 # Per-env Keycloak instance + cloud-sql-proxy. The two `proxy.*`
-# fields are pinned by `just gcp-keycloak-cloudsql-pin-values` once
-# the XKeycloakDatabase composite has published its
-# `status.connectionName`. Empty defaults are the cold-start state;
-# the recipe rewrites them in place.
+# fields are pinned by `just gcp-cloudsql-wire` once
+# the CloudSQL DatabaseInstance MR (in `infra/gcp/database/`) has
+# published its `status.atProvider.connectionName`. Empty defaults
+# are the cold-start state; the recipe rewrites them in place.
 queenswoodKeycloak:
   enabled: true
   chart:

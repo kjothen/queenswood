@@ -8,6 +8,7 @@ metadata:
     # per-resource sync-waves (4..7) order zone → cert → apex → release
     # internally.
     argocd.argoproj.io/sync-wave: "4"
+    description: Queenswood platform Helm chart
 spec:
   project: default
   source:

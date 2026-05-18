@@ -3,7 +3,7 @@
 # `infra/helm/queenswood-platform/templates/queenswood-keycloak-
 # release.yaml`, which inlines these same fields under
 # `spec.forProvider.values` of a Crossplane provider-helm `Release`.
-# `just gcp-keycloak-cloudsql-pin-values` pins
+# `just gcp-cloudsql-wire` pins
 # `connectionName` + `gcpServiceAccount` in queenswood-platform's
 # `values.yaml`, not here.
 #

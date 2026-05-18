@@ -3,7 +3,7 @@ name: xp-mp
 description: |
   Crossplane management-plane umbrella: bundles Crossplane core, ArgoCD,
   and the GCP/helm Crossplane provider+function packages currently
-  installed individually by `just kind-xp-up` and the Argo bootstrap.
+  installed individually by `just kind-xp-bootstrap` and the Argo bootstrap.
   Renders as a single chart so the helm-docker-base-audit skill can walk
   every image the management plane pulls.
 type: application

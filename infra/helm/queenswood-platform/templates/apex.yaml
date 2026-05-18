@@ -5,6 +5,7 @@ metadata:
   namespace: {{ .Values.env.name }}
   annotations:
     argocd.argoproj.io/sync-wave: "6"
+    description: Queenswood static IP + apex DNS records
 spec:
   region: {{ .Values.apex.region }}
   addressType: EXTERNAL

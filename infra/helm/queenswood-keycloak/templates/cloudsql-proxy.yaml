@@ -1,10 +1,10 @@
 {{- if eq .Values.postgresql.mode "external" }}
-# Cloud SQL Auth Proxy fronting the CloudSQL instance provisioned by
-# `queenswood-platform`'s `XKeycloakDatabase` composite. The proxy
-# authenticates to CloudSQL via Workload Identity (the K8s
-# ServiceAccount below is annotated with a GCP SA the operator has
-# pre-bound to `roles/cloudsql.client`). Keycloak talks plain Postgres
-# to the Service; the proxy handles GCP-side IAM.
+# Cloud SQL Auth Proxy fronting the CloudSQL instance provisioned
+# by the flat MRs in `infra/gcp/database/`. The proxy authenticates
+# to CloudSQL via Workload Identity (the K8s ServiceAccount below is
+# annotated with a GCP SA the operator has pre-bound to
+# `roles/cloudsql.client`). Keycloak talks plain Postgres to the
+# Service; the proxy handles GCP-side IAM.
 apiVersion: v1
 kind: ServiceAccount
 metadata:

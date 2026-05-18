@@ -2,6 +2,8 @@ apiVersion: compute.gcp.upbound.io/v1beta1
 kind: Network
 metadata:
   name: queenswood-vpc
+  annotations:
+    description: Queenswood VPC
 spec:
   forProvider:
     autoCreateSubnetworks: false
@@ -11,6 +13,8 @@ apiVersion: compute.gcp.upbound.io/v1beta1
 kind: Subnetwork
 metadata:
   name: queenswood-subnet
+  annotations:
+    description: Queenswood primary subnet (pods + services)
 spec:
   forProvider:
     region: europe-west2
@@ -39,6 +43,8 @@ apiVersion: compute.gcp.upbound.io/v1beta1
 kind: Subnetwork
 metadata:
   name: queenswood-proxy-only
+  annotations:
+    description: Regional proxy-only subnet for the Gateway
 spec:
   forProvider:
     region: europe-west2

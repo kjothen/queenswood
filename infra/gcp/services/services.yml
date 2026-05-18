@@ -1,0 +1,58 @@
+# GCP APIs the crossplane-provider SA needs to act through.
+# Bootstrap APIs (cloudresourcemanager, iam, iamcredentials,
+# serviceusage) are enabled by `just gcp-iam-bootstrap`.
+---
+apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+kind: Service
+metadata:
+  name: container.googleapis.com
+  annotations:
+    description: Kubernetes Engine API
+spec:
+  forProvider:
+    service: container.googleapis.com
+    disableOnDestroy: false
+---
+apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+kind: Service
+metadata:
+  name: compute.googleapis.com
+  annotations:
+    description: Compute Engine API
+spec:
+  forProvider:
+    service: compute.googleapis.com
+    disableOnDestroy: false
+---
+apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+kind: Service
+metadata:
+  name: dns.googleapis.com
+  annotations:
+    description: Cloud DNS API
+spec:
+  forProvider:
+    service: dns.googleapis.com
+    disableOnDestroy: false
+---
+apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+kind: Service
+metadata:
+  name: certificatemanager.googleapis.com
+  annotations:
+    description: Certificate Manager API
+spec:
+  forProvider:
+    service: certificatemanager.googleapis.com
+    disableOnDestroy: false
+---
+apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+kind: Service
+metadata:
+  name: sqladmin.googleapis.com
+  annotations:
+    description: Cloud SQL Admin API
+spec:
+  forProvider:
+    service: sqladmin.googleapis.com
+    disableOnDestroy: false
