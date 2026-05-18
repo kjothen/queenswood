@@ -81,11 +81,11 @@ and after auth.
 **`:enter`** — runs a single FDB transaction
 (`claim-or-replay`):
 
-| State of existing entry | Action |
-|--------------------------|--------|
-| `completed`, not expired | `sc/terminate` with cached `{:status :body}` — replay |
-| `pending`, not stale     | `sc/terminate` with 409 — duplicate in flight |
-| `pending`, stale / absent | write `pending` marker, let handler run |
+| Entry state              | Action                                       |
+| ------------------------ | -------------------------------------------- |
+| `completed`, not expired | `sc/terminate` with cached body              |
+| `pending`, not stale     | `sc/terminate` with 409 — duplicate          |
+| `pending`, stale/absent  | write `pending` marker, run handler          |
 
 FDB's optimistic concurrency serialises concurrent arrivals:
 if two threads both pass the lookup and attempt to write
@@ -94,10 +94,10 @@ the now-`pending` entry and returns 409.
 
 **`:leave`** — finalises the claim:
 
-| Response status | Action |
-|-----------------|--------|
-| 2xx or 4xx      | overwrite with `completed` entry (EDN body, 24 h TTL) |
-| 5xx             | delete `pending` marker — request can be retried immediately |
+| Response status | Action                                       |
+| --------------- | -------------------------------------------- |
+| 2xx or 4xx      | overwrite with `completed` (EDN, 24 h TTL)   |
+| 5xx             | delete `pending` marker — retryable          |
 
 There is no `:error` stage. If the handler throws an exception
 through Sieppari's error path, the `pending` claim stays live

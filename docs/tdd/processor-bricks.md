@@ -44,8 +44,8 @@ shape its internals:
   faults.** A "policy denies this transfer" rejection has to be
   separated from a "FDB transaction aborted" infrastructure
   failure, because they map to different envelope statuses and
-  HTTP families (see
-  [tdd/transaction-processing.md](transaction-processing.md)).
+  HTTP families — see
+  [tdd/transaction-processing.md](transaction-processing.md).
 
 The conventions below are how every `bank-X` component answers
 those three forces.
