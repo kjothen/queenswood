@@ -46,9 +46,9 @@ What we gain over Terraform:
 
 What we lose:
 
-- **Provider maturity.** Terraform's GCP provider is more
-  battle-tested than provider-upjet-gcp. We've hit several
-  edge cases this year — v1 vs v2 ProviderConfig semantics,
+- **Provider maturity.** Terraform's GCP provider is older and
+  has more in-tree coverage than provider-upjet-gcp. We've hit
+  edge cases — v1 vs v2 ProviderConfig semantics,
   `LegacyCluster`-only connection secrets, schema differences
   between v1beta1 and the upjet v2 `*.gcp.m.upbound.io` API
   group. Mitigation: pin providers and Compositions in the
@@ -61,7 +61,7 @@ What we lose:
   diff before it applies. Mitigation: Argo's diff view + the
   composite's `status.conditions` give acceptable visibility.
 
-The infrastructure TDD ([infrastructure.md](../tdd/infrastructure.md))
-describes how the pieces fit together — which Composites we own,
-how the management plane bootstraps GKE, the gcp-down
-teardown, the patterns we keep coming back to.
+The [infrastructure TDD](../tdd/infrastructure.md) describes how
+the pieces fit together — which Composites we own, how the
+management plane bootstraps GKE, the gcp-down teardown, the
+patterns we keep coming back to.
