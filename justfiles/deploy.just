@@ -98,23 +98,21 @@ kind-xp-up:
     set -e
     just kind-xp-bootstrap
     just kind-xp-install-gcp-secret
-    kubectl --context {{ KIND_XP_CLUSTER }} apply -f infra/bootstrap/root-app.yml
-    just kind-xp-install-gcp-config
+    just kind-xp-install-root
     just kind-xp-wait-ready
 
-# Render the queenswood-gcp Argo Application with the live PROJECT_ID
-# baked into its `helm.parameters.gcpProjectId`. Argo then renders the
-# queenswood-gcp chart with that value and applies every Crossplane MR
-# directly -- no PLACEHOLDER in git, no kubectl patches afterwards.
-kind-xp-install-gcp-config:
+# Render the root Argo Application with the live PROJECT_ID baked
+# into its `helm.parameters.gcpProjectId`. From there the bootstrap
+# chart fans out into the wave-ordered child Applications --
+# crossplane-providers (0), crossplane-configs + crossplane-xrds +
+# queenswood-gcp (1), queenswood-platform (4) -- so queenswood-platform
+# isn't created until queenswood-gcp is Healthy (GKE cluster Ready,
+# kubeconfig secret written).
+kind-xp-install-root:
     #!/usr/bin/env zsh
     set -e
     export PROJECT_ID=$(just _gcp-project-id)
-    # Provider CRDs must be registered before queenswood-gcp's MRs try
-    # to apply -- otherwise Argo errors on unknown kinds.
-    until kubectl --context {{ KIND_XP_CLUSTER }} get crd \
-      providerconfigs.gcp.upbound.io >/dev/null 2>&1; do sleep 5; done
-    envsubst < infra/bootstrap/apps/queenswood-gcp.yml.tmpl \
+    envsubst < infra/bootstrap/root-app.yml.tmpl \
       | kubectl --context {{ KIND_XP_CLUSTER }} apply -f -
 
 # Start Tilt dev loop (creates kind cluster if missing)
