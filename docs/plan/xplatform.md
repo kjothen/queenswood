@@ -7,6 +7,32 @@ Composition that owns every project-scoped MR. Argo manages
 **one** resource per environment (the `XPlatform` XR); Crossplane
 owns the reconcile loop for everything underneath.
 
+## What this does NOT affect
+
+Three local-dev workflows that the v2 → XPlatform migration
+**must keep working unchanged**:
+
+- **REPL via Testcontainers** — `just repl`, drives the full
+  system inside FDB + Pulsar testcontainers. No kind, no
+  Crossplane.
+- **`just kind-up`** — local kind cluster with
+  `infra/helm/queenswood` (the application chart: Polylith
+  services + FDB + Pulsar via operators). No Crossplane.
+- **`helm install queenswood` against any cluster** — the
+  released OCI chart at `ghcr.io/repldriven/queenswood`. Same
+  chart as kind-up; deployable anywhere.
+
+Only `infra/helm/queenswood-gcp/` is in scope. The application
+chart (`infra/helm/queenswood/`) doesn't currently use Crossplane
+MRs and won't gain a dependency on them through this plan —
+queenswood is already split on Pattern B (separate app and
+platform charts), so the local story stays clean.
+
+If a future need arises for a label-selected
+`xplatform-gcp` + `xplatform-local` pair (Pattern A — one XRD
+used in both environments), it's an additive change to this
+shape, not a precondition.
+
 This is the "Compose any Kubernetes resource" payoff from
 Crossplane v2 — Argo never touches the underlying MRs, which
 removes a whole class of cross-cluster drift questions and gives
