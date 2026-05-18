@@ -1,0 +1,70 @@
+apiVersion: apiextensions.crossplane.io/v1
+kind: CompositeResourceDefinition
+metadata:
+  name: xplatforms.platform.queenswood.repldriven.com
+spec:
+  group: platform.queenswood.repldriven.com
+  names:
+    kind: XPlatform
+    plural: xplatforms
+  # Crossplane v2 namespaced XR. Keeps the XR adjacent to its
+  # composed MRs in crossplane-system; avoids any dependency on
+  # the env namespace existing first.
+  scope: Namespaced
+  versions:
+    - name: v1alpha1
+      served: true
+      referenceable: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              required:
+                - projectId
+              properties:
+                projectId:
+                  type: string
+                  description: |
+                    GCP project ID. Flows into every composed MR
+                    that embeds it: ProjectIAMMember.project +
+                    member, Cluster.workloadPool, etc.
+                envNamespace:
+                  type: string
+                  default: queenswood-test
+                  description: |
+                    K8s namespace on GKE where the queenswood
+                    workloads run. Used in the cloud-sql-proxy
+                    Workload-Identity binding's member string.
+                region:
+                  type: string
+                  default: europe-west2
+                zone:
+                  type: string
+                  default: europe-west2-a
+                crossplaneSaName:
+                  type: string
+                  default: crossplane-provider
+                sqlProxyGcpSa:
+                  type: string
+                  default: keycloak-sql-proxy
+                sqlProxyK8sSa:
+                  type: string
+                  default: queenswood-keycloak-cloudsql-proxy
+                gkeNodeSa:
+                  type: string
+                  default: queenswood-gke-nodes
+            status:
+              type: object
+              properties:
+                connectionName:
+                  type: string
+                  description: |
+                    CloudSQL DatabaseInstance.status.atProvider.
+                    connectionName, pivoted up so `gcp-cloudsql-wire`
+                    can read it from the XR.
+                clusterEndpoint:
+                  type: string
+                  description: |
+                    GKE Cluster.status.atProvider.endpoint.

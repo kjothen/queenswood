@@ -1,0 +1,37 @@
+# Crossplane v2 ships a default ManagedResourceActivationPolicy that
+# activates every MRD ("*") on every installed provider. provider-
+# family-gcp registers hundreds of MRDs; activating all of them
+# means the application-controller runs reconcile loops + holds
+# CRD memory for resources we don't use.
+#
+# This MRAP pins activation to exactly the kinds queenswood
+# composes (XPlatform + XQueenswoodApex + XQueenswoodCertificate)
+# plus the env-level ManagedZone. When a new MR kind is composed,
+# add it here.
+apiVersion: apiextensions.crossplane.io/v1alpha1
+kind: ManagedResourceActivationPolicy
+metadata:
+  name: queenswood
+spec:
+  activate:
+    # XPlatform (project-scoped GCP infra)
+    - projectservices.cloudplatform.gcp.m.upbound.io
+    - projectiammembers.cloudplatform.gcp.m.upbound.io
+    - serviceaccounts.cloudplatform.gcp.m.upbound.io
+    - serviceaccountiammembers.cloudplatform.gcp.m.upbound.io
+    - networks.compute.gcp.m.upbound.io
+    - subnetworks.compute.gcp.m.upbound.io
+    - clusters.container.gcp.m.upbound.io
+    - nodepools.container.gcp.m.upbound.io
+    - databaseinstances.sql.gcp.m.upbound.io
+    - databases.sql.gcp.m.upbound.io
+    - users.sql.gcp.m.upbound.io
+    # XQueenswoodApex (static IP + apex/keycloak DNS records)
+    - addresses.compute.gcp.m.upbound.io
+    - recordsets.dns.gcp.m.upbound.io
+    # XQueenswoodCertificate (DNS-01 validated managed cert)
+    - dnsauthorizations.certificatemanager.gcp.m.upbound.io
+    - certificates.certificatemanager.gcp.m.upbound.io
+    # Env-level DNS zone (observe-only, owned outside the
+    # Composition)
+    - managedzones.dns.gcp.m.upbound.io

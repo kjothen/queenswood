@@ -31,7 +31,7 @@ flowchart LR
     xp[Crossplane]
     providers["provider-gcp-*<br/>provider-helm"]
     xrds["XRDs + Compositions<br/>(XQueenswoodApex,<br/>XQueenswoodCertificate)"]
-    qwgcp["queenswood-gcp chart<br/>(every project-scoped MR)"]
+    qwgcp["XPlatform XR<br/>(every project-scoped MR composed)"]
   end
   subgraph gke["queenswood-gke (GKE)"]
     qw[queenswood chart<br/>bank-api, processors,<br/>frontend, Pulsar, FDB]
@@ -143,60 +143,75 @@ The waves let Crossplane start expensive long-running work
 minutes) as early as possible, in parallel with everything else
 spinning up.
 
-## queenswood-gcp chart
+## queenswood-gcp chart + XPlatform Composition
 
-`infra/helm/queenswood-gcp/` is the one chart that owns every
-project-scoped GCP resource. The chart has one mandatory value
-(`gcpProjectId`) plus env-shaped defaults (envNamespace,
-region, zone, SA names). Templates render:
+`infra/helm/queenswood-gcp/` renders three resources per install:
 
-- **`provider-configs.yaml`** — v1 `ProviderConfig` and v2
-  `ClusterProviderConfig`, both referencing the `gcp-creds`
-  Secret, both with `projectID` set to `gcpProjectId`.
-- **`services.yaml`** — `ProjectService` MRs enabling the five
-  GCP APIs Crossplane needs to drive everything else
-  (container, compute, dns, certificatemanager, sqladmin).
-- **`roles.yaml`** — `ProjectIAMMember` MRs binding the
-  workload roles (`container.admin`, `compute.networkAdmin`,
-  `dns.admin`, `certificatemanager.owner`, `cloudsql.admin`,
-  `iam.serviceAccountAdmin`) to the crossplane-provider SA.
-  Bootstrap roles (`projectIamAdmin`, `serviceUsageAdmin`)
-  are still bound by `just gcp-iam-bootstrap` because Crossplane
-  itself needs them to manage everything that follows.
-- **`network.yaml`** — VPC, primary subnet (with pods + services
-  secondary ranges), and a regional proxy-only subnet for the
-  Gateway-API LB.
-- **`cluster.yaml`** — GKE Cluster (with
-  `workloadIdentityConfig.workloadPool` templated from
-  `gcpProjectId`) and NodePool. The NodePool runs under a
-  dedicated `queenswood-gke-nodes` SA, *not* the Compute Engine
-  default — see [Operational notes](#operational-notes).
-- **`nodes.yaml`** — the `queenswood-gke-nodes` ServiceAccount
-  and the ProjectIAMMember binding it to
-  `roles/container.defaultNodeServiceAccount`.
-- **`identity.yaml`** — the `keycloak-sql-proxy` ServiceAccount,
-  its `roles/cloudsql.client` ProjectIAMMember, and the
-  Workload-Identity ServiceAccountIAMMember bridging it to the
-  K8s SA the keycloak chart renders on GKE.
-- **`database.yaml`** — CloudSQL `DatabaseInstance` + `Database`
-  + `User` + the input password `Secret` for the User MR's
-  `passwordSecretRef`. ENTERPRISE edition + PD_HDD +
-  `db-custom-1-3840` is the cheapest legal Postgres combo;
-  ENTERPRISE_PLUS rejects custom shapes, PD_SSD is overkill for
-  the Keycloak workload.
+- `xplatform.yaml` — one `XPlatform` Composite Resource carrying
+  `spec.projectId` + env-shaped defaults
+  (`envNamespace`, `region`, `zone`, SA names).
+- `cluster-provider-config.yaml` — the v2
+  `ClusterProviderConfig.default` referencing the `gcp-creds`
+  Secret; every composed MR uses it via `providerConfigRef`.
+- `database-password.yaml` — the static `Secret` the composed
+  CloudSQL `User` MR's `passwordSecretRef` consumes
+  (Secrets aren't MRs so they can't be composed).
 
-The chart uses the v2 (`*.gcp.m.upbound.io`) namespace-scoped API
-group throughout, with every MR landing in `crossplane-system` and
-referencing a `ClusterProviderConfig` named `default` (also v2).
-Project IDs are templated explicitly from `gcpProjectId`; cross-
-resource refs use the `name`-only shape (refs are same-namespace).
+The XR itself does no work; the lifting happens in the
+`XPlatform` Composition at
+`infra/platform/crossplane-xrds/xplatform-composition.yml`,
+which composes every project-scoped MR via the
+`function-patch-and-transform` pipeline:
 
-`status.atProvider.connectionName` on the `DatabaseInstance` is
-what the `gcp-cloudsql-wire` recipe waits on; once set, the
-recipe pins the connection name and the Workload-Identity-bound
-GCP SA email into `queenswood-platform/values.yaml`, then
-commits + pushes so the next Argo reconcile of
-`queenswood-platform` picks them up.
+| Composed MRs                       | Purpose                                |
+| ---------------------------------- | -------------------------------------- |
+| 5× `ProjectService`                | Enable GCP APIs Crossplane drives      |
+| 6× `ProjectIAMMember`              | crossplane SA workload roles           |
+| `ServiceAccount` + 2 IAM bindings  | cloud-sql-proxy SA + cloudsql + WI     |
+| `ServiceAccount` + 1 IAM binding   | gke-nodes SA + defaultNode role        |
+| `Network` + 2× `Subnetwork`        | VPC + primary + proxy-only subnet      |
+| `Cluster` + `NodePool`             | GKE cluster + node pool                |
+| `DatabaseInstance`/`Database`/`User` | CloudSQL Postgres for Keycloak       |
+
+Patches drive everything from the XR's spec:
+`spec.projectId` flows into every `forProvider.project`, into
+each IAM member string (via the function's string-format
+transform), into `Cluster.workloadIdentityConfig.workloadPool`
+(suffixed with `.svc.id.goog`), into the GKE-nodes SA email
+`NodePool.nodeConfig.serviceAccount` takes. The Workload-Identity
+binding's member string uses a `CombineFromComposite` patch over
+three fields (`projectId`, `envNamespace`, `sqlProxyK8sSa`) for
+the `serviceAccount:<proj>.svc.id.goog[<ns>/<sa>]` shape.
+
+Two status fields pivot up from composed MRs to the XR via
+`ToCompositeFieldPath`:
+
+- `DatabaseInstance.status.atProvider.connectionName` →
+  `XR.status.connectionName` — what `gcp-cloudsql-wire` reads to
+  pin the CloudSQL Auth Proxy's `connectionName` +
+  Workload-Identity-bound GCP SA email into
+  `queenswood-platform/values.yaml` and commit + push so the
+  next Argo reconcile picks up the values.
+- `Cluster.status.atProvider.endpoint` →
+  `XR.status.clusterEndpoint`.
+
+The composed MRs use the v2 (`*.gcp.m.upbound.io`)
+namespace-scoped API group, all in `crossplane-system`, all
+referencing the chart-rendered `ClusterProviderConfig`. v2
+Cluster + NodePool + DatabaseInstance ship `v1beta1` only (the
+v1 group's `v1beta2` doesn't exist in v2 yet); other v2 kinds
+are `v1beta1`.
+
+### Activation policy
+
+`infra/platform/crossplane-providers/mrap.yml` is a
+`ManagedResourceActivationPolicy` listing only the ~16 MR kinds
+the Composition + the `XQueenswoodApex` / `XQueenswoodCertificate`
+compositions actually compose. provider-family-gcp ships
+hundreds of MRDs by default; pinning activation here means the
+application-controller only runs reconcile loops + holds CRD
+memory for kinds we use. When a new MR kind gets composed, add
+it to the activate list.
 
 ## Composites
 
@@ -286,8 +301,9 @@ We don't sync the Secret across clusters. Instead, the
 `queenswood-keycloak` chart renders its own
 `queenswood-keycloak-conn` Secret on GKE, populated from literal
 values in the `queenswood-platform` Release template. The same
-literal lives in the queenswood-gcp chart's `database.yaml`
-input Secret, which the User MR's `passwordSecretRef` consumes.
+literal lives in the queenswood-gcp chart's
+`database-password.yaml` Secret, which the composed CloudSQL
+`User` MR's `passwordSecretRef` consumes.
 Both sides share a single source-of-truth at deploy time; live
 rotations need both files updated. Cross-cluster Secret sync
 would require installing `provider-kubernetes` pointed at GKE
@@ -344,18 +360,18 @@ discoverable from the topic router rather than scattered across
 commit messages.
 
 - **`gcpProjectId` is the one parameter that bridges the
-  per-deploy world to GitOps.** Project IDs have a random
-  suffix per `gcloud projects create`, so they can't live in
-  git. The single envsubst at `kind-xp-install-root` substitutes
+  per-deploy world to GitOps.** Project IDs have a random suffix
+  per `gcloud projects create`, so they can't live in git. The
+  single envsubst at `kind-xp-install-root` substitutes
   `${PROJECT_ID}` into `root-app.yml.tmpl`'s
-  `helm.parameters.gcpProjectId`, and that value flows through
-  the bootstrap chart's values, the queenswood-gcp child
+  `helm.parameters.gcpProjectId`. That value flows through the
+  bootstrap chart's values, the queenswood-gcp child
   Application's helm parameters, the queenswood-gcp chart's
-  values, and finally into every MR field that embeds the
-  project ID (ProviderConfig.projectID, Cluster.workloadPool,
-  ProjectIAMMember.{project,member}, ServiceAccountIAMMember.member).
-  Adding a new MR that needs the project ID means templating
-  from `.Values.gcpProjectId` — nothing else.
+  values, into `XPlatform.spec.projectId`, and from there the
+  Composition's patches drive it into every composed MR field
+  that embeds the project ID. Adding a new MR field that needs
+  the project ID means adding a patch in
+  `xplatform-composition.yml` — nothing in the chart.
 - **argocd-cm fixes the upstream upbound health-check.**
   `infra/argocd/health-customizations.yaml` overrides Argo CD's
   built-in `_.upbound.io/_/health.lua` because that script's
@@ -383,15 +399,14 @@ commit messages.
   `forProvider` shows as permanent drift. `initProvider` is the
   upstream pattern for "set at create, ignore on update".
 - **v2 (`*.gcp.m.upbound.io`) is the default for new MRs.** The
-  queenswood-gcp chart is fully on v2, namespace-scoped to
+  XPlatform Composition is fully on v2, namespace-scoped to
   `crossplane-system`, referencing the v2
-  `ClusterProviderConfig.default`. Two gotchas the migration
-  surfaced and the chart already handles: `ServiceAccount` and
-  `ServiceAccountIAMMember` live under `cloudplatform.gcp` in
-  both v1 and v2 (not `iam.gcp.upbound.io`); v2
+  `ClusterProviderConfig.default`. Two gotchas: `ServiceAccount`
+  and `ServiceAccountIAMMember` live under `cloudplatform.gcp`
+  in both v1 and v2 (not `iam.gcp.upbound.io`); v2
   `ProjectIAMMember` has the same project-late-init behaviour
-  as v1, so `forProvider.project` is templated explicitly from
-  `gcpProjectId` rather than relying on `ClusterProviderConfig`
+  as v1, so the Composition patches `forProvider.project`
+  explicitly rather than relying on `ClusterProviderConfig`
   propagation.
 - **Squash-merges + a long-running feature branch don't mix
   cleanly.** When PRs from the branch are squashed onto main,

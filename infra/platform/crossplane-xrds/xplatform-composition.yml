@@ -1,0 +1,598 @@
+apiVersion: apiextensions.crossplane.io/v1
+kind: Composition
+metadata:
+  name: xplatform.gcp
+spec:
+  compositeTypeRef:
+    apiVersion: platform.queenswood.repldriven.com/v1alpha1
+    kind: XPlatform
+  mode: Pipeline
+  pipeline:
+    - step: patch-and-transform
+      functionRef:
+        name: function-patch-and-transform
+      input:
+        apiVersion: pt.fn.crossplane.io/v1beta1
+        kind: Resources
+        resources:
+          # ===================================================================
+          # ProjectServices: enable the GCP APIs Crossplane needs to act on
+          # this project. Bootstrap APIs (cloudresourcemanager, iam,
+          # iamcredentials, serviceusage) are enabled by gcp-iam-bootstrap.
+          # ===================================================================
+          - name: service-container
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: ProjectService
+              metadata:
+                name: container-googleapis-com
+                namespace: crossplane-system
+              spec:
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  service: container.googleapis.com
+                  disableOnDestroy: false
+            patches:
+              - fromFieldPath: spec.projectId
+                toFieldPath: spec.forProvider.project
+          - name: service-compute
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: ProjectService
+              metadata:
+                name: compute-googleapis-com
+                namespace: crossplane-system
+              spec:
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  service: compute.googleapis.com
+                  disableOnDestroy: false
+            patches:
+              - fromFieldPath: spec.projectId
+                toFieldPath: spec.forProvider.project
+          - name: service-dns
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: ProjectService
+              metadata:
+                name: dns-googleapis-com
+                namespace: crossplane-system
+              spec:
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  service: dns.googleapis.com
+                  disableOnDestroy: false
+            patches:
+              - fromFieldPath: spec.projectId
+                toFieldPath: spec.forProvider.project
+          - name: service-certificatemanager
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: ProjectService
+              metadata:
+                name: certificatemanager-googleapis-com
+                namespace: crossplane-system
+              spec:
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  service: certificatemanager.googleapis.com
+                  disableOnDestroy: false
+            patches:
+              - fromFieldPath: spec.projectId
+                toFieldPath: spec.forProvider.project
+          - name: service-sqladmin
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: ProjectService
+              metadata:
+                name: sqladmin-googleapis-com
+                namespace: crossplane-system
+              spec:
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  service: sqladmin.googleapis.com
+                  disableOnDestroy: false
+            patches:
+              - fromFieldPath: spec.projectId
+                toFieldPath: spec.forProvider.project
+          # ===================================================================
+          # ProjectIAMMembers for the crossplane-provider SA. Bootstrap roles
+          # (projectIamAdmin, serviceUsageAdmin) are bound by
+          # gcp-iam-bootstrap. serviceAccountAdmin is required so the SA can
+          # manage IAM policies on workload-identity SAs it creates.
+          # ===================================================================
+          - name: role-container-admin
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: ProjectIAMMember
+              metadata:
+                name: crossplane-provider-container-admin
+                namespace: crossplane-system
+              spec:
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  role: roles/container.admin
+            patches:
+              - fromFieldPath: spec.projectId
+                toFieldPath: spec.forProvider.project
+              - fromFieldPath: spec.projectId
+                toFieldPath: spec.forProvider.member
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "serviceAccount:crossplane-provider@%s.iam.gserviceaccount.com"
+          - name: role-compute-network-admin
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: ProjectIAMMember
+              metadata:
+                name: crossplane-provider-compute-network-admin
+                namespace: crossplane-system
+              spec:
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  role: roles/compute.networkAdmin
+            patches:
+              - fromFieldPath: spec.projectId
+                toFieldPath: spec.forProvider.project
+              - fromFieldPath: spec.projectId
+                toFieldPath: spec.forProvider.member
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "serviceAccount:crossplane-provider@%s.iam.gserviceaccount.com"
+          - name: role-dns-admin
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: ProjectIAMMember
+              metadata:
+                name: crossplane-provider-dns-admin
+                namespace: crossplane-system
+              spec:
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  role: roles/dns.admin
+            patches:
+              - fromFieldPath: spec.projectId
+                toFieldPath: spec.forProvider.project
+              - fromFieldPath: spec.projectId
+                toFieldPath: spec.forProvider.member
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "serviceAccount:crossplane-provider@%s.iam.gserviceaccount.com"
+          - name: role-certificatemanager-owner
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: ProjectIAMMember
+              metadata:
+                name: crossplane-provider-certificatemanager-owner
+                namespace: crossplane-system
+              spec:
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  role: roles/certificatemanager.owner
+            patches:
+              - fromFieldPath: spec.projectId
+                toFieldPath: spec.forProvider.project
+              - fromFieldPath: spec.projectId
+                toFieldPath: spec.forProvider.member
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "serviceAccount:crossplane-provider@%s.iam.gserviceaccount.com"
+          - name: role-cloudsql-admin
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: ProjectIAMMember
+              metadata:
+                name: crossplane-provider-cloudsql-admin
+                namespace: crossplane-system
+              spec:
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  role: roles/cloudsql.admin
+            patches:
+              - fromFieldPath: spec.projectId
+                toFieldPath: spec.forProvider.project
+              - fromFieldPath: spec.projectId
+                toFieldPath: spec.forProvider.member
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "serviceAccount:crossplane-provider@%s.iam.gserviceaccount.com"
+          - name: role-iam-service-account-admin
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: ProjectIAMMember
+              metadata:
+                name: crossplane-provider-iam-service-account-admin
+                namespace: crossplane-system
+              spec:
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  role: roles/iam.serviceAccountAdmin
+            patches:
+              - fromFieldPath: spec.projectId
+                toFieldPath: spec.forProvider.project
+              - fromFieldPath: spec.projectId
+                toFieldPath: spec.forProvider.member
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "serviceAccount:crossplane-provider@%s.iam.gserviceaccount.com"
+          # ===================================================================
+          # cloud-sql-proxy GCP SA + cloudsql.client binding + Workload
+          # Identity binding to the K8s SA the queenswood-keycloak chart
+          # renders on GKE. accountId in initProvider because the provider
+          # strips it from forProvider after create.
+          # ===================================================================
+          - name: sql-proxy-sa
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: ServiceAccount
+              metadata:
+                name: keycloak-sql-proxy
+                namespace: crossplane-system
+              spec:
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  displayName: "Keycloak Cloud SQL Proxy"
+                initProvider: {}
+            patches:
+              - fromFieldPath: spec.sqlProxyGcpSa
+                toFieldPath: spec.initProvider.accountId
+          - name: sql-proxy-cloudsql-client
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: ProjectIAMMember
+              metadata:
+                name: keycloak-sql-proxy-cloudsql-client
+                namespace: crossplane-system
+              spec:
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  role: roles/cloudsql.client
+            patches:
+              - fromFieldPath: spec.projectId
+                toFieldPath: spec.forProvider.project
+              - fromFieldPath: spec.projectId
+                toFieldPath: spec.forProvider.member
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "serviceAccount:keycloak-sql-proxy@%s.iam.gserviceaccount.com"
+          - name: sql-proxy-workload-identity
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: ServiceAccountIAMMember
+              metadata:
+                name: keycloak-sql-proxy-workload-identity
+                namespace: crossplane-system
+              spec:
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  serviceAccountIdRef:
+                    name: keycloak-sql-proxy
+                  role: roles/iam.workloadIdentityUser
+            patches:
+              - type: CombineFromComposite
+                combine:
+                  variables:
+                    - fromFieldPath: spec.projectId
+                    - fromFieldPath: spec.envNamespace
+                    - fromFieldPath: spec.sqlProxyK8sSa
+                  strategy: string
+                  string:
+                    fmt: "serviceAccount:%s.svc.id.goog[%s/%s]"
+                toFieldPath: spec.forProvider.member
+          # ===================================================================
+          # GKE node-pool GCP SA + roles/container.defaultNodeServiceAccount
+          # binding. Replaces the broad-roles/editor Compute Engine default
+          # SA that GKE's health-check flags.
+          # ===================================================================
+          - name: gke-nodes-sa
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: ServiceAccount
+              metadata:
+                name: queenswood-gke-nodes
+                namespace: crossplane-system
+              spec:
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  displayName: "Queenswood GKE Nodes"
+                initProvider: {}
+            patches:
+              - fromFieldPath: spec.gkeNodeSa
+                toFieldPath: spec.initProvider.accountId
+          - name: gke-nodes-default-node-sa
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: ProjectIAMMember
+              metadata:
+                name: queenswood-gke-nodes-default-node-sa
+                namespace: crossplane-system
+              spec:
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  role: roles/container.defaultNodeServiceAccount
+            patches:
+              - fromFieldPath: spec.projectId
+                toFieldPath: spec.forProvider.project
+              - fromFieldPath: spec.projectId
+                toFieldPath: spec.forProvider.member
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "serviceAccount:queenswood-gke-nodes@%s.iam.gserviceaccount.com"
+          # ===================================================================
+          # VPC + primary subnet (pods + services secondary ranges) + a
+          # regional proxy-only subnet for the gke-l7-regional-external-
+          # managed Gateway.
+          # ===================================================================
+          - name: vpc
+            base:
+              apiVersion: compute.gcp.m.upbound.io/v1beta1
+              kind: Network
+              metadata:
+                name: queenswood-vpc
+                namespace: crossplane-system
+              spec:
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  autoCreateSubnetworks: false
+                  routingMode: REGIONAL
+          - name: subnet-primary
+            base:
+              apiVersion: compute.gcp.m.upbound.io/v1beta1
+              kind: Subnetwork
+              metadata:
+                name: queenswood-subnet
+                namespace: crossplane-system
+              spec:
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  ipCidrRange: 10.10.0.0/16
+                  networkRef:
+                    name: queenswood-vpc
+                  secondaryIpRange:
+                    - rangeName: pods
+                      ipCidrRange: 10.20.0.0/16
+                    - rangeName: services
+                      ipCidrRange: 10.30.0.0/20
+                  privateIpGoogleAccess: true
+            patches:
+              - fromFieldPath: spec.region
+                toFieldPath: spec.forProvider.region
+          - name: subnet-proxy-only
+            base:
+              apiVersion: compute.gcp.m.upbound.io/v1beta1
+              kind: Subnetwork
+              metadata:
+                name: queenswood-proxy-only
+                namespace: crossplane-system
+              spec:
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  ipCidrRange: 10.40.0.0/24
+                  networkRef:
+                    name: queenswood-vpc
+                  purpose: REGIONAL_MANAGED_PROXY
+                  role: ACTIVE
+            patches:
+              - fromFieldPath: spec.region
+                toFieldPath: spec.forProvider.region
+          # ===================================================================
+          # GKE Cluster + NodePool. workloadPool patched from projectId;
+          # nodepool SA email derived likewise. Cluster endpoint pivoted up
+          # to XR status. v2 .m. group ships v1beta1 only for these kinds.
+          # ===================================================================
+          - name: gke-cluster
+            base:
+              apiVersion: container.gcp.m.upbound.io/v1beta1
+              kind: Cluster
+              metadata:
+                name: queenswood-gke
+                namespace: crossplane-system
+              spec:
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  initialNodeCount: 1
+                  removeDefaultNodePool: true
+                  deletionProtection: false
+                  nodeConfig:
+                    machineType: e2-standard-2
+                    diskType: pd-standard
+                    diskSizeGb: 50
+                  networkRef:
+                    name: queenswood-vpc
+                  subnetworkRef:
+                    name: queenswood-subnet
+                  ipAllocationPolicy:
+                    clusterSecondaryRangeName: pods
+                    servicesSecondaryRangeName: services
+                  releaseChannel:
+                    channel: REGULAR
+                  addonsConfig:
+                    httpLoadBalancing:
+                      disabled: false
+                  # Upbound's CRD nests gateway_api_config at the top level
+                  # (not under networkConfig); placing it elsewhere is
+                  # silently dropped.
+                  gatewayApiConfig:
+                    channel: CHANNEL_STANDARD
+                # v2 namespaced MR writes the connection Secret in its own
+                # namespace (crossplane-system); the helm provider's
+                # ProviderConfig already reads it from there.
+                writeConnectionSecretToRef:
+                  name: queenswood-gke-kubeconfig
+            patches:
+              - fromFieldPath: spec.zone
+                toFieldPath: spec.forProvider.location
+              - fromFieldPath: spec.projectId
+                toFieldPath: spec.forProvider.workloadIdentityConfig.workloadPool
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "%s.svc.id.goog"
+              - type: ToCompositeFieldPath
+                fromFieldPath: status.atProvider.endpoint
+                toFieldPath: status.clusterEndpoint
+          - name: gke-nodepool
+            base:
+              apiVersion: container.gcp.m.upbound.io/v1beta1
+              kind: NodePool
+              metadata:
+                name: queenswood-pool
+                namespace: crossplane-system
+              spec:
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  clusterRef:
+                    name: queenswood-gke
+                  autoscaling:
+                    minNodeCount: 3
+                    maxNodeCount: 6
+                  nodeConfig:
+                    machineType: e2-standard-2
+                    diskSizeGb: 50
+                    diskType: pd-standard
+                    oauthScopes:
+                      - https://www.googleapis.com/auth/cloud-platform
+                    workloadMetadataConfig:
+                      mode: GKE_METADATA
+            patches:
+              - fromFieldPath: spec.zone
+                toFieldPath: spec.forProvider.location
+              - fromFieldPath: spec.projectId
+                toFieldPath: spec.forProvider.nodeConfig.serviceAccount
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "queenswood-gke-nodes@%s.iam.gserviceaccount.com"
+          # ===================================================================
+          # CloudSQL Postgres for queenswood-keycloak. ENTERPRISE +
+          # db-custom-1-3840 + PD_HDD is the cheapest legal combo;
+          # ENTERPRISE_PLUS rejects custom shapes and PD_SSD is overkill.
+          # connectionName pivoted up to XR status for gcp-cloudsql-wire.
+          # passwordSecretRef target is rendered by the chart, not
+          # composed (Secret isn't an MR).
+          # ===================================================================
+          - name: cloudsql-instance
+            base:
+              apiVersion: sql.gcp.m.upbound.io/v1beta1
+              kind: DatabaseInstance
+              metadata:
+                name: queenswood-keycloak
+                namespace: crossplane-system
+              spec:
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  databaseVersion: POSTGRES_16
+                  deletionProtection: false
+                  settings:
+                    edition: ENTERPRISE
+                    tier: db-custom-1-3840
+                    diskSize: 10
+                    diskType: PD_HDD
+                    backupConfiguration:
+                      enabled: true
+                      pointInTimeRecoveryEnabled: false
+                    ipConfiguration:
+                      ipv4Enabled: true
+            patches:
+              - fromFieldPath: spec.region
+                toFieldPath: spec.forProvider.region
+              - type: ToCompositeFieldPath
+                fromFieldPath: status.atProvider.connectionName
+                toFieldPath: status.connectionName
+          - name: cloudsql-database
+            base:
+              apiVersion: sql.gcp.m.upbound.io/v1beta1
+              kind: Database
+              metadata:
+                name: keycloak
+                namespace: crossplane-system
+              spec:
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  instanceRef:
+                    name: queenswood-keycloak
+          - name: cloudsql-user
+            base:
+              apiVersion: sql.gcp.m.upbound.io/v1beta1
+              kind: User
+              metadata:
+                name: keycloak
+                namespace: crossplane-system
+              spec:
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  instanceRef:
+                    name: queenswood-keycloak
+                  passwordSecretRef:
+                    namespace: crossplane-system
+                    name: queenswood-keycloak-password
+                    key: password
+                writeConnectionSecretToRef:
+                  namespace: crossplane-system
+                  name: queenswood-keycloak-conn
