@@ -1,0 +1,113 @@
+{{- if .Values.keycloak.dev.enabled }}
+{{- /*
+  Dev-only Keycloak. Single replica, `start-dev` (embedded H2 DB),
+  with the realm JSON from files/keycloak-realm.json imported at
+  startup. The Service name matches the default
+  `keycloak.baseUrl` so bank-api's existing config resolves
+  without override. Production uses the queenswood-keycloak chart
+  (Crossplane-Released) instead -- guarded by `keycloak.dev.enabled`.
+*/ -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-keycloak-dev-realm
+  labels:
+    {{- include "queenswood.labels" . | nindent 4 }}
+data:
+  realm.json: |-
+{{ .Files.Get "files/keycloak-realm.json" | indent 4 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  # Matches `keycloak.baseUrl` default so bank-api's KEYCLOAK_BASE_URL
+  # resolves without override. On GKE the queenswood-keycloak chart's
+  # operator publishes a Service with this same name.
+  name: queenswood-keycloak-keycloak-service
+  labels:
+    {{- include "queenswood.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: {{ .Chart.Name }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: keycloak-dev
+  ports:
+    - port: 8080
+      targetPort: 8080
+      protocol: TCP
+      name: http
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-keycloak-dev
+  labels:
+    {{- include "queenswood.labels" . | nindent 4 }}
+    app.kubernetes.io/component: keycloak-dev
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ .Chart.Name }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: keycloak-dev
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ .Chart.Name }}
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/component: keycloak-dev
+    spec:
+      containers:
+        - name: keycloak
+          image: {{ .Values.keycloak.dev.image | quote }}
+          imagePullPolicy: IfNotPresent
+          args: ["start-dev", "--import-realm"]
+          env:
+            # Bootstrap master-realm admin (Keycloak's own admin
+            # console). Dev-only credentials; do not use in any
+            # non-local environment.
+            - name: KEYCLOAK_ADMIN
+              value: {{ .Values.keycloak.dev.adminUser | quote }}
+            - name: KEYCLOAK_ADMIN_PASSWORD
+              value: {{ .Values.keycloak.dev.adminPassword | quote }}
+            - name: KC_HEALTH_ENABLED
+              value: "true"
+            - name: KC_HTTP_ENABLED
+              value: "true"
+          ports:
+            - containerPort: 8080
+              name: http
+            - containerPort: 9000
+              name: management
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: 9000
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 60
+          livenessProbe:
+            httpGet:
+              path: /health/live
+              port: 9000
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 6
+          volumeMounts:
+            - name: realm-import
+              mountPath: /opt/keycloak/data/import
+              readOnly: true
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "512Mi"
+            limits:
+              cpu: "1000m"
+              memory: "1Gi"
+      volumes:
+        - name: realm-import
+          configMap:
+            name: {{ .Release.Name }}-keycloak-dev-realm
+{{- end }}

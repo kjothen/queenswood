@@ -1,0 +1,91 @@
+{
+  "realm": "queenswood",
+  "enabled": true,
+  "sslRequired": "external",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": false,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": false,
+  "editUsernameAllowed": false,
+  "bruteForceProtected": true,
+  "accessTokenLifespan": 3600,
+  "roles": {
+    "realm": [
+      {"name": "admin", "description": "Queenswood platform admin role"},
+      {"name": "org", "description": "Queenswood tenant service-account role"}
+    ]
+  },
+  "clientScopes": [
+    {
+      "name": "queenswood-api-test",
+      "description": "Audience scope for the test API listener",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "true",
+        "display.on.consent.screen": "false"
+      },
+      "protocolMappers": [
+        {
+          "name": "audience-test",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": {
+            "included.custom.audience": "queenswood-api-test",
+            "id.token.claim": "false",
+            "access.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
+      "name": "queenswood-api-live",
+      "description": "Audience scope for the live API listener",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "true",
+        "display.on.consent.screen": "false"
+      },
+      "protocolMappers": [
+        {
+          "name": "audience-live",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": {
+            "included.custom.audience": "queenswood-api-live",
+            "id.token.claim": "false",
+            "access.token.claim": "true"
+          }
+        }
+      ]
+    }
+  ],
+  "clients": [
+    {
+      "clientId": "queenswood-admin",
+      "secret": "queenswood-admin-secret-change-me",
+      "enabled": true,
+      "publicClient": false,
+      "serviceAccountsEnabled": true,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "implicitFlowEnabled": false,
+      "protocol": "openid-connect"
+    }
+  ],
+  "users": [
+    {
+      "username": "service-account-queenswood-admin",
+      "enabled": true,
+      "serviceAccountClientId": "queenswood-admin",
+      "clientRoles": {
+        "realm-management": [
+          "manage-clients",
+          "view-clients",
+          "manage-realm",
+          "view-realm",
+          "manage-users"
+        ]
+      }
+    }
+  ]
+}

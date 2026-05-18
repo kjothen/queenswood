@@ -16,11 +16,13 @@ helm-validate tag="dev":
       | kubeconform -strict -ignore-missing-schemas -summary
 
 # Install or upgrade the chart; rotates the admin API key only on first install
-helm-install tag="dev" admin_key="" registry="ghcr.io/repldriven":
+helm-install tag="dev" admin_key="" registry="ghcr.io/repldriven" values_file="":
     #!/usr/bin/env zsh
     # Reuses the existing Secret value on subsequent installs so the admin API key is stable
     # across deploys; pass `admin_key=...` to rotate. `registry` lets `kind-up` point at
-    # the local registry so containerd pulls from there.
+    # the local registry so containerd pulls from there. `values_file` layers an extra
+    # values file on top of values.yaml -- kind-up passes values-dev.yaml to enable the
+    # bundled dev Keycloak.
     set -e
     key={{ admin_key }}
     if [[ -z "$key" ]]; then
@@ -29,9 +31,14 @@ helm-install tag="dev" admin_key="" registry="ghcr.io/repldriven":
         | base64 -d || true)
       [[ -z "$key" ]] && key=$(openssl rand -hex 16)
     fi
+    extra_values=()
+    if [[ -n "{{ values_file }}" ]]; then
+      extra_values=(-f infra/helm/queenswood/{{ values_file }})
+    fi
     helm dependency update infra/helm/queenswood
     helm upgrade --install queenswood infra/helm/queenswood \
       -n queenswood --create-namespace \
+      "${extra_values[@]}" \
       --set image.tag={{ tag }} \
       --set image.registry={{ registry }} \
       --set secrets.adminApiKey=$key \
@@ -53,7 +60,7 @@ kind-up tag="dev":
       docker tag {{ DOCKER_REGISTRY }}/$svc:{{ tag }} localhost:5001/$svc:{{ tag }}
       docker push localhost:5001/$svc:{{ tag }}
     done
-    just helm-install {{ tag }} "" localhost:5001
+    just helm-install {{ tag }} "" localhost:5001 values-dev.yaml
 
 # Create kind cluster and install the chart from ghcr.io/repldriven (no local build).
 kind-up-remote tag="latest":

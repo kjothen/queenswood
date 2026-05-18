@@ -36,6 +36,25 @@ keycloak:
   # Service URL for fast admin REST calls but tokens carry the
   # public issuer URL.
   expectedIssuer: ""
+  # -- Bundled dev Keycloak for local kind/k3s. On GKE Keycloak is
+  # deployed separately via the queenswood-keycloak chart (Crossplane
+  # Helm Release), and the operator-published Service `queenswood-
+  # keycloak-keycloak-service` matches `keycloak.baseUrl` above. For a
+  # local cluster there's no operator -- enable this to render a
+  # single-replica Deployment + matching Service + ConfigMap-mounted
+  # realm import. Off by default; `just kind-up` flips it on.
+  dev:
+    enabled: false
+    image: quay.io/keycloak/keycloak:26.0
+    # Keycloak's master-realm bootstrap admin. Dev-only credentials.
+    adminUser: admin
+    adminPassword: admin
+    # When .Values.secrets.keycloakAdminClientSecret is empty AND
+    # dev.enabled is true, the secret-keycloak template falls back to
+    # this value so it matches the dev realm's queenswood-admin client
+    # secret. The realm JSON committed under files/ hardcodes the same
+    # literal -- keep them in sync.
+    realmAdminClientSecret: "queenswood-admin-secret-change-me"
 
 # -- OpenTelemetry collector endpoint (gets passed as OTEL_ENDPOINT env
 # to every service). Leave empty to disable.
