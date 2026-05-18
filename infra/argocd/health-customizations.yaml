@@ -1,0 +1,108 @@
+# Workaround for an upstream precedence bug in Argo CD's built-in
+# `_.upbound.io/_/health.lua` wildcard (argoproj/argo-cd, current
+# master and v3.4.x):
+#
+#   if obj.status == nil or next(obj.status) == nil and contains(has_no_status, obj.kind) then
+#
+# Lua's `and` binds tighter than `or`, so this parses as:
+#
+#   (obj.status == nil) OR ((next(obj.status) == nil) AND contains(...))
+#
+# The intent was clearly "empty status AND kind is one we treat as
+# always-healthy", but the actual reading short-circuits on the first
+# branch the moment .status is nil -- and any freshly-applied
+# Crossplane MR has nil status until the controller's first
+# reconcile, so during that window EVERY upbound MR (Cluster, Network,
+# IAMMember, ...) reports Healthy. That window is enough for
+# `kubectl wait --for=health.status=Healthy application/queenswood-gcp`
+# to catch it and proceed before GKE has even started provisioning.
+#
+# Fix: regroup so empty-status only short-circuits to Healthy for
+# kinds that legitimately have no status (ProviderConfig*,
+# ProviderConfigUsage).
+#
+# We override per-group in argocd-cm because the `_.upbound.io`
+# directory wildcard is only honored from Argo CD's compiled-in
+# resource_customizations tree, not via argocd-cm keys. Remove this
+# entire ConfigMap once an upstream fix lands.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-cm
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: argocd-cm
+    app.kubernetes.io/part-of: argocd
+data:
+  resource.customizations.health.cloudplatform.gcp.upbound.io: &upbound_health |
+    -- Health check copied from upstream Argo CD with the OR/AND
+    -- precedence bug fixed (parentheses around the second branch).
+    -- Source: argoproj/argo-cd resource_customizations/_.upbound.io/_/health.lua
+    health_status = {
+      status = "Progressing",
+      message = "Provisioning ..."
+    }
+
+    local function contains (table, val)
+      for i, v in ipairs(table) do
+        if v == val then
+          return true
+        end
+      end
+      return false
+    end
+
+    local has_no_status = {
+      "ClusterProviderConfig",
+      "ProviderConfig",
+      "ProviderConfigUsage"
+    }
+
+    if (obj.status == nil or next(obj.status) == nil) and contains(has_no_status, obj.kind) then
+      health_status.status = "Healthy"
+      health_status.message = "Resource is up-to-date."
+      return health_status
+    end
+
+    if obj.status == nil or next(obj.status) == nil or obj.status.conditions == nil then
+      if (obj.kind == "ProviderConfig" or obj.kind == "ClusterProviderConfig") and obj.status.users ~= nil then
+        health_status.status = "Healthy"
+        health_status.message = "Resource is in use."
+        return health_status
+      end
+      return health_status
+    end
+
+    for i, condition in ipairs(obj.status.conditions) do
+      if condition.type == "LastAsyncOperation" then
+        if condition.status == "False" then
+          health_status.status = "Degraded"
+          health_status.message = condition.message
+          return health_status
+        end
+      end
+
+      if condition.type == "Synced" then
+        if condition.status == "False" then
+          health_status.status = "Degraded"
+          health_status.message = condition.message
+          return health_status
+        end
+      end
+
+      if condition.type == "Ready" then
+        if condition.status == "True" then
+          health_status.status = "Healthy"
+          health_status.message = "Resource is up-to-date."
+        end
+      end
+    end
+
+    return health_status
+  resource.customizations.health.cloudplatform.gcp.m.upbound.io: *upbound_health
+  resource.customizations.health.compute.gcp.upbound.io: *upbound_health
+  resource.customizations.health.container.gcp.upbound.io: *upbound_health
+  resource.customizations.health.sql.gcp.upbound.io: *upbound_health
+  resource.customizations.health.dns.gcp.m.upbound.io: *upbound_health
+  resource.customizations.health.gcp.upbound.io: *upbound_health
+  resource.customizations.health.gcp.m.upbound.io: *upbound_health
