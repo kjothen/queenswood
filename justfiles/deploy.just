@@ -52,11 +52,12 @@ kind-up tag="dev":
     set -e
     bash {{ justfile_directory() }}/infra/kind/with-registry.sh queenswood
     just docker-build-all {{ tag }}
-    # bank-app lives at bases/bank-app/ (Svelte/CLJS, not a Polylith
-    # service project), so the projects/*-service/ glob misses it.
-    # docker-build-all's `default` group in infra/docker/bake.hcl
-    # already builds it -- we just need to push it alongside.
-    for svc in projects/*-service/(:t) bank-app; do
+    # bank-app + bank-console live at bases/* (Svelte SPAs, not
+    # Polylith service projects), so the projects/*-service/ glob
+    # misses them. docker-build-all's `default` group in
+    # infra/docker/bake.hcl already builds both -- we just need to
+    # push them alongside the services.
+    for svc in projects/*-service/(:t) bank-app bank-console; do
       docker tag {{ DOCKER_REGISTRY }}/$svc:{{ tag }} localhost:5001/$svc:{{ tag }}
       docker push localhost:5001/$svc:{{ tag }}
     done
@@ -75,6 +76,29 @@ kind-up-remote tag="latest":
 # Tear down the kind cluster
 kind-down:
     kind delete cluster --name queenswood
+
+# Run a local dev Keycloak in Docker (foreground; Ctrl+C tears it down)
+keycloak-up:
+    # Listens on host :8090 to match VITE_KEYCLOAK_URL in
+    # bases/bank-console/.env.example. 8090 (not 8081) keeps the
+    # port out of the way of bank-monolith, which binds 8081 for
+    # the bank-clearbank-simulator dev component. Admin console
+    # at http://localhost:8090/admin (admin / admin). Realm JSON
+    # imports the queenswood-admin + queenswood-console clients
+    # plus the Google IdP (placeholder creds — sign-in via Google
+    # only works once you wire real credentials in).
+    docker run --rm \
+      --name queenswood-keycloak-dev \
+      -p 8090:8080 \
+      -e KEYCLOAK_ADMIN=admin \
+      -e KEYCLOAK_ADMIN_PASSWORD=admin \
+      -v "$PWD/infra/helm/queenswood/files/keycloak-realm.json:/opt/keycloak/data/import/realm.json:ro" \
+      quay.io/keycloak/keycloak:26.0 \
+      start-dev --import-realm
+
+# Force-stop a stray dev Keycloak container (Ctrl+C is normally enough)
+keycloak-down:
+    docker rm -f queenswood-keycloak-dev 2>/dev/null || true
 
 # Create the xp-mp kind cluster and install Crossplane/ArgoCD into crossplane-system
 kind-xp-bootstrap:

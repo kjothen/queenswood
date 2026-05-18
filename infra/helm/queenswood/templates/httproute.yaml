@@ -21,6 +21,33 @@ spec:
       backendRefs:
         - name: {{ .Release.Name }}-bank-app
           port: {{ .Values.bankApp.port }}
+{{- if .Values.bankConsole.enabled }}
+---
+# Production traffic on :443 → bank-console SPA. Distinct hostname
+# from bank-app so the console SPA's redirectUris + webOrigins stay
+# clean (Keycloak's Authorization Code flow validates these
+# strictly per-client).
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: {{ .Release.Name }}-bank-console
+  labels:
+    {{- include "queenswood.labels" . | nindent 4 }}
+spec:
+  parentRefs:
+    - name: {{ .Release.Name }}-gateway
+      sectionName: https
+  hostnames:
+    - {{ .Values.gateway.consoleHost | quote }}
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: {{ .Release.Name }}-bank-console
+          port: {{ .Values.bankConsole.port }}
+{{- end }}
 ---
 # HTTP→HTTPS redirect on :80. Replaces the legacy FrontendConfig's
 # redirectToHttps; Gateway API expresses it as an HTTPRoute filter
@@ -37,6 +64,9 @@ spec:
       sectionName: http
   hostnames:
     - {{ .Values.gateway.host | quote }}
+{{- if .Values.bankConsole.enabled }}
+    - {{ .Values.gateway.consoleHost | quote }}
+{{- end }}
   rules:
     - filters:
         - type: RequestRedirect

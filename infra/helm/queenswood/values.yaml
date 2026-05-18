@@ -29,6 +29,10 @@ keycloak:
   baseUrl: "http://queenswood-keycloak-keycloak-service:8080"
   realm: queenswood
   adminClientId: queenswood-admin
+  # Public client id the bank-console SPA uses for Authorization
+  # Code + PKCE. Must match the `clientId` of the corresponding
+  # `clients[]` entry in `files/keycloak-realm.json`.
+  consoleClientId: queenswood-console
   # Override the iss the verifier expects on incoming JWTs. Leave
   # empty to default to `<baseUrl>/realms/<realm>`. Set when
   # Keycloak's public `hostname.hostname` differs from base-url --
@@ -94,6 +98,10 @@ gateway:
   enabled: false
   className: ""
   host: bank-api.local
+  # Second hostname the public Gateway terminates on, routed to the
+  # bank-console SPA. Kept distinct from `host` so the SPA can keep
+  # its keycloak-js redirectUris + post-logout origins clean.
+  consoleHost: console.bank-api.local
   gcp:
     enabled: false
     # Regional Address provisioned in infra/gcp/networking.yml.
@@ -112,6 +120,29 @@ bankApp:
   port: 8080
   replicas: 1
   apiUpstream: "http://{{ .Release.Name }}-bank-api-service:8080"
+  resources:
+    limits: { cpu: "200m", memory: "128Mi" }
+    requests: { cpu: "50m", memory: "64Mi" }
+
+# -- Human-identity SPA. nginx in the pod proxies `/v1/*` to bank-api
+# (same pattern as bank-app) and serves a synthesised /env.js so the
+# SPA picks up its Keycloak URL at runtime. Image name is `bank-console`.
+bankConsole:
+  enabled: true
+  port: 8080
+  replicas: 1
+  apiUpstream: "http://{{ .Release.Name }}-bank-api-service:8080"
+  # Public URL of the realm endpoint the browser calls. Empty means
+  # the SPA falls back to its build-time default — leave empty for
+  # Vite dev (which uses VITE_KEYCLOAK_URL) and set to e.g.
+  # `https://keycloak.<env>.repldriven.com` on GKE.
+  keycloakPublicUrl: ""
+  # Optional federated IdP alias. When set (e.g. "google"), the SPA
+  # skips Keycloak's own login form and redirects straight to that
+  # provider. Empty by default so the realm's login screen renders;
+  # set to "google" in production values for a one-click Sign-In-
+  # with-Google flow.
+  keycloakIdpHint: ""
   resources:
     limits: { cpu: "200m", memory: "128Mi" }
     requests: { cpu: "50m", memory: "64Mi" }

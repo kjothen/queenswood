@@ -120,13 +120,14 @@ rationale live in the docs.
 - **Per-capability designs** — `docs/tdd/` has one TDD per
   capability or subsystem (api-keys, cash-account-products,
   cash-accounts, idempotency, infrastructure, interest,
-  organizations, parties, payments, policy-evaluation,
-  scenario-testing, service-apis, traceability,
-  transaction-processing, transactions-and-balances).
+  onboarding, organizations, parties, payments,
+  policy-evaluation, scenario-testing, service-apis,
+  traceability, transaction-processing,
+  transactions-and-balances).
 - **Per-capability requirements** — `docs/prd/` has the
   product-shaped requirements (cash-account-products,
-  cash-accounts, interest, onboarding, parties, payments,
-  platform, policies).
+  cash-accounts, interest, memberships, onboarding, parties,
+  payments, platform, policies, users).
 - **In-flight implementation plans** — `docs/plan/`.
 
 ## Critical guardrails

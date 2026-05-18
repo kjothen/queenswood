@@ -1,13 +1,22 @@
 (ns com.repldriven.mono.bank-api.auth
-  "Two-path authentication: a stop-gap env-var admin bearer (kept
-  until human-auth lands) and a Keycloak-issued JWT for tenant
-  service accounts. JWT validation delegates to
-  the `identity-provider` substrate so JWKS caching, kid rotation
-  and audience enforcement live in one place."
+  "Three-path authentication: a stop-gap env-var admin bearer (kept
+  until human-auth fully replaces it), a Keycloak-issued JWT minted
+  by a tenant service account (existing `client_credentials` flow),
+  and a Keycloak-issued JWT minted by the `queenswood-console` SPA
+  on behalf of a human User (Authorization Code + PKCE flow). The
+  three paths share JWT verification via the `identity-provider`
+  substrate and diverge on principal shape: admin → fixed admin
+  context, service → `{:principal-type :service ...}`, user →
+  `{:principal-type :user :user :memberships ...}` resolved against
+  the `bank-user` + `bank-membership` bricks."
   (:require
+    [com.repldriven.mono.bank-membership.interface :as memberships]
+    [com.repldriven.mono.bank-user.interface :as users]
+    [com.repldriven.mono.encryption.interface :as encryption]
+    [com.repldriven.mono.error.interface :as error]
     [com.repldriven.mono.identity-provider.interface
      :as identity-provider]
-    [com.repldriven.mono.encryption.interface :as encryption]
+    [com.repldriven.mono.log.interface :as log]
     [com.repldriven.mono.utility.interface :as util]
 
     [sieppari.context :as sc]
@@ -38,8 +47,8 @@
    :roles #{:admin :org}})
 
 (defn- service-auth
-  "Map a verified JWT claims map to the request auth context. The
-  client_id (== organization-id by convention) appears as `:azp`."
+  "Map a verified service-JWT claims map to the request auth context.
+  The client_id (== organization-id by convention) appears as `:azp`."
   [claims]
   {:principal-type :service
    :principal-id (:azp claims)
@@ -50,12 +59,50 @@
               (->> (into #{:org})))
    :token-jti (:jti claims)})
 
+(defn- nilable-result
+  "Treat a `nil` or anomaly result as absence; pass other values
+  through. The bank-user/bank-membership reads we depend on return
+  nil for missing records and an anomaly only on FDB failure; both
+  surfaces collapse to \"no domain identity\" for the auth context."
+  [v]
+  (when-not (or (nil? v) (error/anomaly? v)) v))
+
+(defn- user-auth
+  "Resolve a verified user-JWT into the principal sum-type. The user
+  record may be absent (first sign-in before onboarding) — in that
+  case `:user-id`/`:user` are nil and only the `:user` role is
+  granted, gating non-onboarding routes off until /v1/onboarding/me
+  runs. With at least one membership the principal also carries
+  `:org`, the default role existing tenant-scoped routes require."
+  [request claims]
+  (let [{:keys [record-db record-store]} request
+        txn {:record-db record-db :record-store record-store}
+        sub (:sub claims)
+        user (nilable-result (users/find-by-keycloak-sub txn sub))
+        memberships (or (when user
+                          (nilable-result
+                           (memberships/list-by-user txn (:user-id user))))
+                        [])
+        primary (first memberships)]
+    {:principal-type :user
+     :principal-id (:user-id user)
+     :keycloak-sub sub
+     :user user
+     :claims claims
+     :memberships memberships
+     :organization-id (:organization-id primary)
+     :roles (cond-> #{:user}
+                    (seq memberships)
+                    (conj :org))
+     :token-jti (:jti claims)}))
+
 (def authenticate
   {:name ::authenticate
    :enter (fn [ctx]
             (let [request (:request ctx)
                   token (extract-bearer request)
-                  {:keys [admin-api-key identity-provider expected-audiences]}
+                  {:keys [admin-api-key console-client-id identity-provider
+                          expected-audiences]}
                   request]
               (cond
                (nil? token)
@@ -69,14 +116,30 @@
                              identity-provider
                              token
                              {:expected-audiences (set expected-audiences)})]
-                 (if (map? claims)
-                   (assoc-in ctx [:request :auth] (service-auth claims))
-                   ctx)))))})
+                 (cond
+                  (not (map? claims))
+                  (do (log/warn "JWT verification rejected:"
+                                (:message (error/payload claims))
+                                "expected-audiences:" expected-audiences
+                                "console-client-id:" console-client-id)
+                      ctx)
+
+                  (and console-client-id
+                       (= console-client-id (:azp claims)))
+                  (assoc-in ctx
+                   [:request :auth]
+                   (user-auth request claims))
+
+                  :else
+                  (assoc-in ctx
+                   [:request :auth]
+                   (service-auth claims)))))))})
 
 (defn- required-roles
   "Derive the role set a route requires from its OpenAPI metadata.
   `bearerAuth` alone permits any authenticated principal; an
-  `x-required-roles` extension narrows it (e.g. `[admin]`)."
+  `x-required-roles`-style extension narrows it (e.g. `[admin]` or
+  `[user]`)."
   [security]
   (let [schemes (into #{} (mapcat keys) security)
         explicit (->> security
