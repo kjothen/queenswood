@@ -571,6 +571,8 @@ spec:
                 forProvider:
                   instanceRef:
                     name: queenswood-keycloak
+          # v2 namespaced MR -- passwordSecretRef + writeConnectionSecretToRef
+          # only take `name` (Secret is implicitly same-namespace as the MR).
           - name: cloudsql-user
             base:
               apiVersion: sql.gcp.m.upbound.io/v1beta1
@@ -586,9 +588,7 @@ spec:
                   instanceRef:
                     name: queenswood-keycloak
                   passwordSecretRef:
-                    namespace: crossplane-system
                     name: queenswood-keycloak-password
                     key: password
                 writeConnectionSecretToRef:
-                  namespace: crossplane-system
                   name: queenswood-keycloak-conn
