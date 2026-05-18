@@ -1,5 +1,5 @@
 {{- $projectId := include "queenswood-gcp.projectId" . -}}
-apiVersion: container.gcp.m.upbound.io/v1beta2
+apiVersion: container.gcp.m.upbound.io/v1beta1
 kind: Cluster
 metadata:
   name: queenswood-gke
@@ -43,7 +43,7 @@ spec:
   writeConnectionSecretToRef:
     name: queenswood-gke-kubeconfig
 ---
-apiVersion: container.gcp.m.upbound.io/v1beta2
+apiVersion: container.gcp.m.upbound.io/v1beta1
 kind: NodePool
 metadata:
   name: queenswood-pool
