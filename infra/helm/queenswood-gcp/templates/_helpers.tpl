@@ -18,3 +18,11 @@ serviceAccount:{{ .Values.sqlProxyGcpSa }}@{{ include "queenswood-gcp.projectId"
 {{- define "queenswood-gcp.sqlProxyWorkloadIdentityMember" -}}
 serviceAccount:{{ include "queenswood-gcp.projectId" . }}.svc.id.goog[{{ .Values.envNamespace }}/{{ .Values.sqlProxyK8sSa }}]
 {{- end -}}
+
+{{- define "queenswood-gcp.gkeNodeSaEmail" -}}
+{{ .Values.gkeNodeSa }}@{{ include "queenswood-gcp.projectId" . }}.iam.gserviceaccount.com
+{{- end -}}
+
+{{- define "queenswood-gcp.gkeNodeSaMember" -}}
+serviceAccount:{{ include "queenswood-gcp.gkeNodeSaEmail" . }}
+{{- end -}}

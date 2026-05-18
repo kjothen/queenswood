@@ -3,7 +3,9 @@
 {{- $wiMember := include "queenswood-gcp.sqlProxyWorkloadIdentityMember" . -}}
 # GCP SA for the cloud-sql-proxy pod + the Workload Identity binding
 # to the K8s SA the queenswood-keycloak chart renders. accountId
-# must be under 30 chars (GCP IAM cap).
+# must be under 30 chars (GCP IAM cap) and goes under `initProvider`
+# because the upbound provider strips it from `spec.forProvider`
+# after create -- leaving Argo permanently OutOfSync otherwise.
 apiVersion: cloudplatform.gcp.upbound.io/v1beta1
 kind: ServiceAccount
 metadata:
@@ -12,8 +14,9 @@ metadata:
     description: Cloud SQL Proxy GCP SA
 spec:
   forProvider:
-    accountId: {{ .Values.sqlProxyGcpSa }}
     displayName: "Keycloak Cloud SQL Proxy"
+  initProvider:
+    accountId: {{ .Values.sqlProxyGcpSa }}
 ---
 apiVersion: cloudplatform.gcp.upbound.io/v1beta1
 kind: ProjectIAMMember

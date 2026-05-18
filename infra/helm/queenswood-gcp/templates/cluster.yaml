@@ -52,6 +52,7 @@ spec:
       minNodeCount: 3
       maxNodeCount: 6
     nodeConfig:
+      serviceAccount: {{ include "queenswood-gcp.gkeNodeSaEmail" . | quote }}
       machineType: e2-standard-2
       diskSizeGb: 50
       diskType: pd-standard
