@@ -80,6 +80,13 @@ kind-xp-bootstrap:
     # first gcp-up of the day.
     kubectl --context {{ KIND_XP_CLUSTER }} -n argocd wait \
       --for=condition=available --timeout=600s deployment/argocd-server
+
+    # Teach Argo CD to grade upbound Crossplane MRs by walking their
+    # Ready condition (otherwise Argo defaults the kinds to Healthy
+    # before Crossplane's controller has even observed them).
+    kubectl --context {{ KIND_XP_CLUSTER }} apply --server-side --force-conflicts \
+      -f infra/argocd/health-customizations.yaml
+
     kubectl --context {{ KIND_XP_CLUSTER }} -n argocd get secret argocd-initial-admin-secret \
       -o jsonpath='{.data.password}' 2>/dev/null | base64 -d || true
 
