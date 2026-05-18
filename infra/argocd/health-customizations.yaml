@@ -101,8 +101,12 @@ data:
     return health_status
   resource.customizations.health.cloudplatform.gcp.m.upbound.io: *upbound_health
   resource.customizations.health.compute.gcp.upbound.io: *upbound_health
+  resource.customizations.health.compute.gcp.m.upbound.io: *upbound_health
   resource.customizations.health.container.gcp.upbound.io: *upbound_health
+  resource.customizations.health.container.gcp.m.upbound.io: *upbound_health
   resource.customizations.health.sql.gcp.upbound.io: *upbound_health
+  resource.customizations.health.sql.gcp.m.upbound.io: *upbound_health
   resource.customizations.health.dns.gcp.m.upbound.io: *upbound_health
+  resource.customizations.health.certificatemanager.gcp.m.upbound.io: *upbound_health
   resource.customizations.health.gcp.upbound.io: *upbound_health
   resource.customizations.health.gcp.m.upbound.io: *upbound_health

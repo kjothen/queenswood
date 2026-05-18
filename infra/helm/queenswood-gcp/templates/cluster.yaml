@@ -1,11 +1,15 @@
 {{- $projectId := include "queenswood-gcp.projectId" . -}}
-apiVersion: container.gcp.upbound.io/v1beta2
+apiVersion: container.gcp.m.upbound.io/v1beta2
 kind: Cluster
 metadata:
   name: queenswood-gke
+  namespace: crossplane-system
   annotations:
     description: Queenswood GKE Cluster
 spec:
+  providerConfigRef:
+    kind: ClusterProviderConfig
+    name: default
   forProvider:
     location: {{ .Values.zone | quote }}
     initialNodeCount: 1
@@ -33,17 +37,23 @@ spec:
     # networkConfig); placing it elsewhere is silently dropped.
     gatewayApiConfig:
       channel: CHANNEL_STANDARD
+  # v2 namespaced MR writes the connection Secret in its own namespace
+  # (crossplane-system); the helm provider's ProviderConfig already
+  # reads it from there.
   writeConnectionSecretToRef:
     name: queenswood-gke-kubeconfig
-    namespace: crossplane-system
 ---
-apiVersion: container.gcp.upbound.io/v1beta2
+apiVersion: container.gcp.m.upbound.io/v1beta2
 kind: NodePool
 metadata:
   name: queenswood-pool
+  namespace: crossplane-system
   annotations:
     description: Queenswood GKE node pool
 spec:
+  providerConfigRef:
+    kind: ClusterProviderConfig
+    name: default
   forProvider:
     location: {{ .Values.zone | quote }}
     clusterRef:

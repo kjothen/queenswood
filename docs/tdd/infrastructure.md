@@ -185,15 +185,11 @@ region, zone, SA names). Templates render:
   ENTERPRISE_PLUS rejects custom shapes, PD_SSD is overkill for
   the Keycloak workload.
 
-The chart currently uses the v1 (cluster-scoped)
-`*.gcp.upbound.io` API group throughout, with the v2
-(`*.gcp.m.upbound.io`) `ClusterProviderConfig` already in place
-ready for a v2 migration. v2 is the preferred direction for new MRs — see
-[Operational notes](#operational-notes). The chart is on v1 as
-an artefact of the build path: one early v2 attempt hit
-cross-resource ref + IAM project-late-init friction, and
-shipping the project-ID propagation work was the priority.
-Migration is tracked as a follow-up.
+The chart uses the v2 (`*.gcp.m.upbound.io`) namespace-scoped API
+group throughout, with every MR landing in `crossplane-system` and
+referencing a `ClusterProviderConfig` named `default` (also v2).
+Project IDs are templated explicitly from `gcpProjectId`; cross-
+resource refs use the `name`-only shape (refs are same-namespace).
 
 `status.atProvider.connectionName` on the `DatabaseInstance` is
 what the `gcp-cloudsql-wire` recipe waits on; once set, the
@@ -386,16 +382,17 @@ commit messages.
   from `spec.forProvider` after create, so any value in
   `forProvider` shows as permanent drift. `initProvider` is the
   upstream pattern for "set at create, ignore on update".
-- **Prefer v2 (`*.gcp.m.upbound.io`) over v1 for new MRs.** The
-  v2 API group is namespace-scoped, references the patched
-  `ClusterProviderConfig.projectID`, and is the direction we're
-  migrating toward. The queenswood-gcp chart is still on v1
-  throughout — an artefact of the build path, not a target.
-  Two known gotchas for the migration: `ServiceAccount` and
+- **v2 (`*.gcp.m.upbound.io`) is the default for new MRs.** The
+  queenswood-gcp chart is fully on v2, namespace-scoped to
+  `crossplane-system`, referencing the v2
+  `ClusterProviderConfig.default`. Two gotchas the migration
+  surfaced and the chart already handles: `ServiceAccount` and
   `ServiceAccountIAMMember` live under `cloudplatform.gcp` in
   both v1 and v2 (not `iam.gcp.upbound.io`); v2
-  `ProjectIAMMember` has the same project-late-init issue as
-  v1, so `project` still has to be templated explicitly.
+  `ProjectIAMMember` has the same project-late-init behaviour
+  as v1, so `forProvider.project` is templated explicitly from
+  `gcpProjectId` rather than relying on `ClusterProviderConfig`
+  propagation.
 - **Squash-merges + a long-running feature branch don't mix
   cleanly.** When PRs from the branch are squashed onto main,
   the original commits on the branch retain their old SHAs and

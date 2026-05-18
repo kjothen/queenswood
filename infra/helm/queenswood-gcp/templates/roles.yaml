@@ -15,13 +15,17 @@
 }}
 {{- range $roles }}
 ---
-apiVersion: cloudplatform.gcp.upbound.io/v1beta1
+apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
 kind: ProjectIAMMember
 metadata:
   name: {{ printf "%s-%s" $.Values.crossplaneSaName .slug }}
+  namespace: crossplane-system
   annotations:
     description: Crossplane SA — {{ .desc }}
 spec:
+  providerConfigRef:
+    kind: ClusterProviderConfig
+    name: default
   forProvider:
     project: {{ $projectId | quote }}
     role: {{ .role | quote }}
