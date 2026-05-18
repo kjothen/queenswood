@@ -334,7 +334,7 @@ kind-xp-wait-ready timeout="2700":
     # queryable so the operator can paste them into the registrar --
     # cert validation gates on NS propagation.
     for app in crossplane-providers crossplane-configs crossplane-xrds \
-               gcp-network gcp-cluster queenswood-platform; do
+               queenswood-gcp queenswood-platform; do
       echo ">>> $app"
       until kubectl --context {{ KIND_XP_CLUSTER }} -n argocd \
             get application/$app >/dev/null 2>&1; do sleep 5; done
@@ -363,7 +363,7 @@ kind-xp-wait-ready timeout="2700":
       kubectl --context {{ KIND_XP_CLUSTER }} -n argocd wait \
         --for=jsonpath='{.status.health.status}'=Healthy \
         application/$app --timeout={{ timeout }}s
-      if [[ "$app" == "gcp-cluster" ]]; then
+      if [[ "$app" == "queenswood-gcp" ]]; then
         gcloud container clusters get-credentials queenswood-gke \
           --zone={{ ZONE }} --project="$PROJECT_ID"
       fi
