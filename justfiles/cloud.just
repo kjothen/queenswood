@@ -379,26 +379,25 @@ gcp-cloudsql-wire:
     set -e
     # CloudSQL provisioning takes 5-10 minutes; wait timeout is 15m.
     PROJECT_ID=$(just _gcp-project-id)
-    INSTANCE=queenswood-keycloak
     VALUES=infra/helm/queenswood-platform/values.yaml
-    # Matches the SA from queenswood-gcp templates/identity.yaml.
+    # Matches the cloud-sql-proxy GCP SA composed by the XPlatform XR.
     SA_EMAIL=$(just _gcp-sa-email keycloak-sql-proxy)
 
-    echo "Waiting for DatabaseInstance/$INSTANCE status.atProvider.connectionName (up to 15m)..."
+    echo "Waiting for XPlatform/queenswood status.connectionName (up to 15m)..."
     CONN=""
     deadline=$(( $(date +%s) + 900 ))
     while [[ -z "$CONN" && $(date +%s) -lt $deadline ]]; do
       CONN=$(kubectl --context {{ KIND_XP_CLUSTER }} -n crossplane-system \
-               get databaseinstance.sql.gcp.m.upbound.io $INSTANCE \
-               -o jsonpath='{.status.atProvider.connectionName}' 2>/dev/null || true)
+               get xplatform.platform.queenswood.repldriven.com queenswood \
+               -o jsonpath='{.status.connectionName}' 2>/dev/null || true)
       [[ -z "$CONN" ]] && sleep 10
     done
     if [[ -z "$CONN" ]]; then
       echo "" >&2
-      echo "Timed out waiting for status.atProvider.connectionName on DatabaseInstance/$INSTANCE." >&2
-      echo "--- DatabaseInstance conditions ---" >&2
+      echo "Timed out waiting for status.connectionName on XPlatform/queenswood." >&2
+      echo "--- XPlatform conditions ---" >&2
       kubectl --context {{ KIND_XP_CLUSTER }} -n crossplane-system \
-        get databaseinstance.sql.gcp.m.upbound.io $INSTANCE \
+        get xplatform.platform.queenswood.repldriven.com queenswood \
         -o jsonpath='{range .status.conditions[*]}{.type}={.status}  reason={.reason}  message={.message}{"\n"}{end}' >&2 || true
       exit 1
     fi
@@ -501,10 +500,10 @@ gcp-health-check:
       "$(kubectl --context $MGT -n {{ QUEENSWOOD_ENV }} get managedzones.dns.gcp.m.upbound.io {{ QUEENSWOOD_DNS_ZONE }} -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}' 2>/dev/null)" True
     eq "RecordSet queenswood-apex Synced" \
       "$(kubectl --context $MGT -n {{ QUEENSWOOD_ENV }} get recordsets.dns.gcp.m.upbound.io queenswood-apex -o jsonpath='{.status.conditions[?(@.type=="Synced")].status}' 2>/dev/null)" True
-    eq "NodePool queenswood-pool Ready" \
-      "$(kubectl --context $MGT -n crossplane-system get nodepools.container.gcp.m.upbound.io queenswood-pool -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}' 2>/dev/null)" True
-    eq "CloudSQL DatabaseInstance Ready" \
-      "$(kubectl --context $MGT -n crossplane-system get databaseinstance.sql.gcp.m.upbound.io queenswood-keycloak -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}' 2>/dev/null)" True
+    eq "XPlatform queenswood Ready" \
+      "$(kubectl --context $MGT -n crossplane-system get xplatform.platform.queenswood.repldriven.com queenswood -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}' 2>/dev/null)" True
+    present "XPlatform.status.connectionName populated" \
+      "$(kubectl --context $MGT -n crossplane-system get xplatform.platform.queenswood.repldriven.com queenswood -o jsonpath='{.status.connectionName}' 2>/dev/null)"
     eq "Certificate queenswood-cert ACTIVE" \
       "$(kubectl --context $MGT -n {{ QUEENSWOOD_ENV }} get certificate.certificatemanager.gcp.m.upbound.io queenswood-cert -o jsonpath='{.status.atProvider.managed.state}' 2>/dev/null)" ACTIVE
 

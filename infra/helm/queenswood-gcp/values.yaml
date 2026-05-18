@@ -1,31 +1,29 @@
-# gcpProjectId is mandatory. Renders into Cluster.workloadIdentityConfig.workloadPool,
-# every ProjectIAMMember.member, the cloud-sql-proxy workload-identity binding,
-# and the v1 + v2 (Cluster)ProviderConfig spec.projectID. The dynamic
-# `gcloud projects create` suffix means this value is per-deploy.
+# gcpProjectId is mandatory. Flows from the chart's XPlatform XR into
+# the Composition, which patches it into every composed MR field that
+# embeds the project ID. The dynamic `gcloud projects create` suffix
+# means this value is per-deploy.
 gcpProjectId: ""
 
-# The K8s namespace where queenswood-keycloak runs; used in the
-# workload-identity member string. Keep in sync with the
-# queenswood-platform Application values.
+# K8s namespace on GKE where the queenswood workloads run. Used by
+# the Composition's cloud-sql-proxy Workload-Identity binding's
+# `serviceAccount:<proj>.svc.id.goog[<ns>/<k8s-sa>]` member string.
+# Keep in sync with the queenswood-platform Application values.
 envNamespace: queenswood-test
 
 region: europe-west2
 zone: europe-west2-a
 
-# Bootstrap GCP service account name (created by `just gcp-iam-bootstrap`).
-crossplaneSaName: crossplane-provider
+# GCP SA name for the cloud-sql-proxy pod (<30 chars to fit GCP IAM cap).
+sqlProxyGcpSa: keycloak-sql-proxy
 
 # K8s SA name the queenswood-keycloak chart renders for the
 # cloud-sql-proxy sidecar.
 sqlProxyK8sSa: queenswood-keycloak-cloudsql-proxy
 
-# GCP SA name for the cloud-sql-proxy pod (must be <30 chars).
-sqlProxyGcpSa: keycloak-sql-proxy
-
-# Dedicated GCP SA for GKE node pools (must be <30 chars). Granted
-# only roles/container.defaultNodeServiceAccount -- the GKE-blessed
-# narrow bundle replacing the broad roles/editor on the Compute
-# Engine default SA.
+# Dedicated GCP SA for GKE node pools (<30 chars). Granted only
+# roles/container.defaultNodeServiceAccount -- the GKE-blessed narrow
+# bundle replacing the broad roles/editor on the Compute Engine
+# default SA.
 gkeNodeSa: queenswood-gke-nodes
 
 # Postgres password used by the Cloud SQL User MR. Dev-only.
