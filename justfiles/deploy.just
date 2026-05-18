@@ -52,6 +52,16 @@ kind-up tag="dev":
     done
     just helm-install {{ tag }} "" localhost:5001
 
+# Create kind cluster and install the chart from ghcr.io/repldriven (no local build).
+kind-up-remote tag="latest":
+    #!/usr/bin/env zsh
+    # For the iterative build-test loop, use `kind-up` instead. This
+    # path skips the host-side registry + docker buildx; containerd
+    # pulls images directly from ghcr on first pod schedule.
+    set -e
+    kind get clusters | grep -q '^queenswood$' || kind create cluster --name queenswood
+    just helm-install {{ tag }} "" ghcr.io/repldriven
+
 # Tear down the kind cluster
 kind-down:
     kind delete cluster --name queenswood
