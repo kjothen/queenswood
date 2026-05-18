@@ -1,17 +1,17 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: crossplane-providers
+  name: gcp-identity
   namespace: argocd
   annotations:
-    argocd.argoproj.io/sync-wave: "0"
-    description: Crossplane GCP + Helm provider Packages
+    argocd.argoproj.io/sync-wave: "1"
+    description: Cloud SQL Proxy SA + Workload Identity
 spec:
   project: default
   source:
     repoURL: https://github.com/repldriven/queenswood
     targetRevision: main
-    path: infra/platform/crossplane-providers
+    path: infra/gcp/identity
   destination:
     server: https://kubernetes.default.svc
   syncPolicy:

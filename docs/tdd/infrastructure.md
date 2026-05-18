@@ -3,8 +3,8 @@
 ## Objective
 
 Spin Queenswood up from a fresh GCP project to a fully working
-GKE deployment with one command (`just up-from-zero`), and tear
-it back down with another (`just down-to-zero`). Drive every
+GKE deployment with one command (`just gcp-up`), and tear
+it back down with another (`just gcp-down`). Drive every
 cloud resource through Crossplane on a small management-plane
 cluster, with Argo CD as the GitOps front-end — see
 [ADR-0016](../adr/0016-crossplane-over-terraform.md) for the
@@ -30,7 +30,8 @@ flowchart LR
     argo[Argo CD]
     xp[Crossplane]
     providers["provider-gcp-*<br/>provider-helm"]
-    xrds["XRDs + Compositions<br/>(XQueenswoodApex,<br/>XQueenswoodCertificate,<br/>XKeycloakDatabase)"]
+    xrds["XRDs + Compositions<br/>(XQueenswoodApex,<br/>XQueenswoodCertificate)"]
+    db["CloudSQL MRs<br/>(infra/gcp/database/)"]
   end
   subgraph gke["queenswood-gke (GKE)"]
     qw[queenswood chart<br/>bank-api, processors,<br/>frontend, Pulsar, FDB]
@@ -76,7 +77,7 @@ the orchestrator that knows how to rebuild it.
 
 ## Bootstrap chain
 
-`just up-from-zero` does the cold-start sequence. Once kind is up
+`just gcp-up` does the cold-start sequence. Once kind is up
 and Argo's `root-app` is applied, the apps in
 `infra/bootstrap/apps/` reconcile in this order:
 
@@ -85,8 +86,12 @@ and Argo's `root-app` is applied, the apps in
 |         0 | crossplane-providers | The provider Packages (gcp-* + helm)                     |
 |         1 | crossplane-configs   | ProviderConfigs binding providers to GCP SA / kubeconfig |
 |         1 | crossplane-xrds      | XRDs + Compositions (see [Composites](#composites))      |
-|         2 | gcp-network          | VPC, subnets (XR/managed resources)                      |
+|         1 | gcp-services         | `Service` MRs enabling project-scoped GCP APIs           |
+|         1 | gcp-roles            | `ProjectIAMMember` MRs binding workload roles to the SA  |
+|         1 | gcp-identity         | `ServiceAccount` + WI binding for the keycloak SQL proxy |
+|         2 | gcp-network          | VPC, subnets (managed resources)                         |
 |         3 | gcp-cluster          | GKE cluster + node pool                                  |
+|         3 | gcp-database         | CloudSQL Postgres (DatabaseInstance + Database + User)   |
 |         4 | queenswood-platform  | The platform Helm chart — everything else                |
 
 Within `queenswood-platform` itself, per-resource sync-waves take
@@ -95,8 +100,8 @@ over:
 | Wave | Resource (in `queenswood-platform`)                        |
 | ---: | ---------------------------------------------------------- |
 |    3 | Namespace + `keycloak-operator` Release                    |
-|    4 | DNS zone, Keycloak admin password Secret                   |
-|    5 | Cert (XQueenswoodCertificate), XKeycloakDatabase composite |
+|    4 | DNS zone                                                   |
+|    5 | Cert (XQueenswoodCertificate)                              |
 |    6 | Apex DNS records (XQueenswoodApex), `queenswood-keycloak` Release |
 |    7 | `queenswood` Release (bank-api, processors, etc.)          |
 
@@ -131,18 +136,33 @@ Crossplane Managed Resource — its CRD only exists on the
 management plane, not on the GKE target. Keeping all DNS in the
 apex composite avoids the cross-cluster-CRD trap.
 
-### `XKeycloakDatabase`
+## CloudSQL Postgres (flat MRs)
 
-CloudSQL Postgres instance + Database + User, with the
-connection string surfaced on `XR.status.connectionName` for the
-chart-side proxy. ENTERPRISE edition + PD_HDD + `db-custom-1-3840`
-— the cheapest legal Postgres combo on CloudSQL (ENTERPRISE_PLUS
-rejects custom shapes; PD_SSD is overkill for a Keycloak DB).
+`infra/gcp/database/database.yml` provisions the Keycloak database
+as three flat Managed Resources — same shape as `infra/gcp/network/`
+and `infra/gcp/cluster/`:
 
-Crossplane provider-upjet-gcp v2 uses the
-`*.gcp.m.upbound.io/v1beta1` API group for these resources; the
-older `*.gcp.upbound.io/v1beta1` group is v1 and incompatible
-(different connection-secret semantics among other things).
+- `DatabaseInstance` (`sql.gcp.upbound.io/v1beta2`) — the
+  instance itself. ENTERPRISE edition + PD_HDD + `db-custom-1-3840`,
+  the cheapest legal Postgres combo (ENTERPRISE_PLUS rejects
+  custom shapes; PD_SSD is overkill for the Keycloak workload).
+- `Database` (`sql.gcp.upbound.io/v1beta1`) — the `keycloak`
+  database inside the instance.
+- `User` (`sql.gcp.upbound.io/v1beta1`) — the `keycloak` user,
+  with `passwordSecretRef` pointing at the static Secret in
+  `infra/gcp/database/password-secret.yaml`.
+
+We use the v1 (cluster-scoped) `sql.gcp.upbound.io` API group
+here rather than the v2 (namespaced) `sql.gcp.m.upbound.io` —
+keeps the layout symmetric with VPC + cluster, and we lost
+nothing by dropping the per-env composite (only one instance per
+project anyway).
+
+`status.atProvider.connectionName` on the DatabaseInstance is what
+the `gcp-cloudsql-wire` recipe waits on; once set,
+it pins the connection name + Workload-Identity-bound GCP SA email
+into `queenswood-platform/values.yaml` for the workload-side
+cloud-sql-proxy.
 
 ## Workload deployment via Crossplane Releases
 
@@ -199,20 +219,19 @@ open without forcing it.
 ### DB credentials
 
 The CloudSQL instance has a single `keycloak` user. The
-credentials need to land on GKE (where Keycloak runs), but
-Crossplane composes them on the management plane (where the
-XKeycloakDatabase XR lives).
+credentials need to land on GKE (where Keycloak runs), but the
+User MR lives on the management plane.
 
 We don't sync the Secret across clusters. Instead, the
 `queenswood-keycloak` chart renders its own
-`queenswood-keycloak-conn` Secret on GKE, populated from values
-the `queenswood-platform` Release passes through
-(`keycloakDatabase.username` / `keycloakDatabase.password`).
-The same password is what the composite passes to the User
-resource's `passwordSecretRef`. Cross-cluster Secret sync would
-require installing `provider-kubernetes` pointed at GKE for one
-data point — not worth the complexity for a static-at-deploy-time
-credential.
+`queenswood-keycloak-conn` Secret on GKE, populated from literal
+values in the `queenswood-platform` Release template. The same
+literal lives in `infra/gcp/database/password-secret.yaml`, which
+the User MR's `passwordSecretRef` consumes. Both sides share a
+single source-of-truth at deploy time; live rotations need both
+files updated. Cross-cluster Secret sync would require installing
+`provider-kubernetes` pointed at GKE just for this credential —
+not worth the complexity.
 
 ### Cloud SQL Auth Proxy
 
@@ -229,14 +248,14 @@ SA-create time.
 
 The proxy's `connectionName` and the GCP SA email get pinned
 into `queenswood-platform/values.yaml` by
-`just gcp-keycloak-cloudsql-pin-values` once Crossplane has
+`just gcp-cloudsql-wire` once Crossplane has
 published `XR.status.connectionName`. The pin is committed +
 pushed so the next reconcile of `queenswood-platform` picks up
 the values.
 
 ## Down-to-zero
 
-`just down-to-zero` is the reverse path. The non-obvious step is
+`just gcp-down` is the reverse path. The non-obvious step is
 the first one:
 
 1. **Drain workload namespaces on GKE.** `kubectl delete ns
@@ -245,7 +264,7 @@ the first one:
    cluster (and Crossplane managing it from kind) is alive; if
    we destroy GKE with PVCs still bound, the underlying PDs
    leak as orphan disks in `europe-west2`. Two
-   `up-from-zero/down-to-zero` cycles of the FDB + Pulsar
+   `gcp-up/gcp-down` cycles of the FDB + Pulsar
    StatefulSets is enough to exhaust the default 250 GiB
    regional SSD_TOTAL_GB quota and block the next cold start
    on a pending PVC.
@@ -255,7 +274,7 @@ the first one:
 5. Prune the local kubeconfig context.
 
 The DNS zone itself is kept (the `dnsName` claim is sticky for
-30 days after a delete); `just down-and-delete-project` is the
+30 days after a delete); `just gcp-project-delete` is the
 nuclear option that also drops the zone and the project.
 
 ## Operational notes

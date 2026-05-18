@@ -10,6 +10,7 @@ metadata:
   namespace: {{ .Values.env.name }}
   annotations:
     argocd.argoproj.io/sync-wave: "7"
+    description: Queenswood platform on GKE
 spec:
   forProvider:
     chart:

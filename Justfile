@@ -6,13 +6,19 @@ DOCKER_REGISTRY := "ghcr.io/repldriven"
 XP_CLUSTER := "xp-mp"
 KIND_XP_CLUSTER := "kind-xp-mp"
 
-# Active environment for cloud.just recipes. Override per invocation
-# with `ENV=queenswood just <recipe>`. Must match the valueFiles entry
-# in `infra/bootstrap/apps/queenswood-platform.yml`; both flip together
-# when changing envs.
-ENV := env_var_or_default("ENV", "queenswood-test")
-ENV_DOMAIN := ENV + ".repldriven.com"
-ENV_ZONE := ENV + "-zone"
+# GCP region + compute zone. Single-zone footprint -- cluster and
+# regional/zonal resources all live in europe-west2-a.
+REGION := "europe-west2"
+ZONE := REGION + "-a"
+
+# Active queenswood environment for cloud.just recipes. Override per
+# invocation with `QUEENSWOOD_ENV=queenswood just <recipe>`. Must match
+# the valueFiles entry in `infra/bootstrap/apps/queenswood-platform.yml`;
+# both flip together when changing envs.
+QUEENSWOOD_ENV := env_var_or_default("QUEENSWOOD_ENV", "queenswood-test")
+QUEENSWOOD_DOMAIN := QUEENSWOOD_ENV + ".repldriven.com"
+# Cloud DNS ManagedZone resource name (not a compute zone).
+QUEENSWOOD_DNS_ZONE := QUEENSWOOD_ENV + "-zone"
 
 # List all available recipes
 list:

@@ -4,3 +4,4 @@ metadata:
   name: {{ .Values.env.name }}
   annotations:
     argocd.argoproj.io/sync-wave: "3"
+    description: Queenswood workload namespace

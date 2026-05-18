@@ -1,3 +1,5 @@
+# Observe-only: created once by `just gcp-dns-zone-create` as the
+# domain-verified user; Crossplane never modifies or deletes.
 apiVersion: dns.gcp.m.upbound.io/v1beta1
 kind: ManagedZone
 metadata:
@@ -5,7 +7,10 @@ metadata:
   namespace: {{ .Values.env.name }}
   annotations:
     argocd.argoproj.io/sync-wave: "4"
+    description: Queenswood Cloud DNS managed zone
 spec:
+  managementPolicies:
+    - Observe
   forProvider:
     dnsName: {{ .Values.env.domain }}.
     description: {{ .Values.env.name }} public DNS

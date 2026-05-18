@@ -4,13 +4,13 @@
 # by the operator from sync-wave 3), a `KeycloakRealmImport`, the
 # HTTPRoute on the gateway, the keycloak DNS record, and — in
 # `postgresql.mode: external` — a `cloud-sql-proxy` Deployment that
-# fronts the CloudSQL instance the XKeycloakDatabase composite
-# (sync-wave 5) provisions.
+# fronts the CloudSQL instance provisioned by the flat MRs in
+# `infra/gcp/database/` (sync-wave 3).
 #
 # `proxy.connectionName` + `proxy.gcpServiceAccount` are pinned by
-# `just gcp-keycloak-cloudsql-pin-values` once the composite has
-# published `status.connectionName` and the Workload Identity
-# binding has been minted.
+# `just gcp-cloudsql-wire` once the DatabaseInstance
+# MR has published `status.atProvider.connectionName` and the
+# Workload Identity binding has been minted.
 apiVersion: helm.crossplane.io/v1beta1
 kind: Release
 metadata:
@@ -18,6 +18,7 @@ metadata:
   namespace: {{ .Values.env.name }}
   annotations:
     argocd.argoproj.io/sync-wave: "6"
+    description: Keycloak instance on GKE
 spec:
   forProvider:
     chart:
@@ -32,15 +33,19 @@ spec:
       postgresql:
         mode: external
         external:
-          # Username + password match the CloudSQL user the
-          # XKeycloakDatabase composite (sync-wave 5) provisions.
-          # The chart renders these into a Secret on GKE that the
-          # Keycloak CR's usernameSecret/passwordSecret refs point
-          # at -- sidesteps the cross-cluster sync we'd otherwise
-          # need to pull the Crossplane-composed conn Secret from
+          # Username + password match the CloudSQL User MR + Secret
+          # in `infra/gcp/database/`. The chart renders these into
+          # a Secret on GKE that the Keycloak CR's usernameSecret /
+          # passwordSecret refs point at -- sidesteps the cross-
+          # cluster sync we'd otherwise need to pull the Crossplane-
+          # composed conn Secret from
           # kind to GKE.
-          username: {{ .Values.keycloakDatabase.username | quote }}
-          password: {{ .Values.keycloakDatabase.password | quote }}
+          # Must match the CloudSQL User MR + Secret defined in
+          # `infra/gcp/database/`. Hardcoded here so both sides
+          # share the same source-of-truth in the repo; rotating
+          # means changing both files.
+          username: "keycloak"
+          password: "change-me-keycloak-db-password"
           proxy:
             connectionName: {{ .Values.queenswoodKeycloak.proxy.connectionName | quote }}
             gcpServiceAccount: {{ .Values.queenswoodKeycloak.proxy.gcpServiceAccount | quote }}

@@ -2,6 +2,8 @@ apiVersion: container.gcp.upbound.io/v1beta2
 kind: Cluster
 metadata:
   name: queenswood-gke
+  annotations:
+    description: Queenswood GKE Cluster
 spec:
   forProvider:
     location: europe-west2-a
@@ -46,6 +48,8 @@ apiVersion: container.gcp.upbound.io/v1beta2
 kind: NodePool
 metadata:
   name: queenswood-pool
+  annotations:
+    description: Queenswood GKE node pool
 spec:
   forProvider:
     location: europe-west2-a

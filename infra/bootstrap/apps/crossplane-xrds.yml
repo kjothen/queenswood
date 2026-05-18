@@ -5,6 +5,7 @@ metadata:
   namespace: argocd
   annotations:
     argocd.argoproj.io/sync-wave: "1"
+    description: Crossplane XRDs + Compositions
 spec:
   project: default
   source:

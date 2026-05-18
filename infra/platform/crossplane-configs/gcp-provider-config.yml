@@ -1,6 +1,6 @@
 # The v1 gcp.upbound.io ProviderConfig is NOT defined here; Argo's
 # RespectIgnoreDifferences was observed reverting its spec.projectID
-# back to a placeholder, breaking every fresh `up-from-zero`. That
+# back to a placeholder, breaking every fresh `gcp-up`. That
 # resource is now owned by `just kind-xp-install-gcp-config`, which
 # envsubst-applies infra/local/gcp-provider-config.yml.tmpl directly.
 #

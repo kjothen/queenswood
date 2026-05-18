@@ -44,7 +44,7 @@ not this chart.
 ## Install usage (optional)
 
 The chart will also install end-to-end as a replacement for the
-hand-rolled steps in `just kind-xp-up`:
+hand-rolled steps in `just kind-xp-bootstrap`:
 
 ```bash
 helm dependency update infra/helm/xp-mp

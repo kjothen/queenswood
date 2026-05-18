@@ -57,7 +57,7 @@ kind-down:
     kind delete cluster --name queenswood
 
 # Create the xp-mp kind cluster and install Crossplane/ArgoCD into crossplane-system
-kind-xp-up:
+kind-xp-bootstrap:
     #!/usr/bin/env zsh
     set -e
     kind get clusters | grep -q '^{{ XP_CLUSTER }}$' || kind create cluster --name '{{ XP_CLUSTER }}'
@@ -77,7 +77,7 @@ kind-xp-up:
     # ~5 images sequentially (argocd-server, repo-server, application-
     # controller, applicationset-controller, notifications-controller,
     # redis, dex), and even a fast laptop can blow past 5 min on the
-    # first up-from-zero of the day.
+    # first gcp-up of the day.
     kubectl --context {{ KIND_XP_CLUSTER }} -n argocd wait \
       --for=condition=available --timeout=600s deployment/argocd-server
     kubectl --context {{ KIND_XP_CLUSTER }} -n argocd get secret argocd-initial-admin-secret \
@@ -92,17 +92,22 @@ kind-xp-install-gcp-secret:
       --from-file=creds=$HOME/.config/gcloud/application_default_credentials.json \
       --dry-run=client -o yaml | kubectl --context {{ KIND_XP_CLUSTER }} apply -f -
 
-# Set per-cluster project-scoped fields that Argo manages with PLACEHOLDER
-# in git: ClusterProviderConfig.spec.projectID and Cluster.workloadPool.
-# Both have `ignoreDifferences` rules so selfHeal won't revert these
-# patches. The v1 ProviderConfig is owned outside Argo (the v1
-# RespectIgnoreDifferences path was unreliable) — applied directly from
-# infra/local/gcp-provider-config.yml.tmpl via envsubst.
+# Stand up the kind management plane end-to-end (cluster, GCP creds, root app, wait healthy).
+kind-xp-up:
+    #!/usr/bin/env zsh
+    set -e
+    just kind-xp-bootstrap
+    just kind-xp-install-gcp-secret
+    kubectl --context {{ KIND_XP_CLUSTER }} apply -f infra/bootstrap/root-app.yml
+    just kind-xp-install-gcp-config
+    just kind-xp-wait-ready
+
+# Patch the PLACEHOLDER fields Argo can't own (ClusterProviderConfig.projectID
+# and Cluster.workloadPool, both with ignoreDifferences for selfHeal).
 kind-xp-install-gcp-config:
     #!/usr/bin/env zsh
     set -e
-    export PROJECT_ID=$(gcloud config get project 2>/dev/null)
-    [[ -n "$PROJECT_ID" ]] || { echo "no active gcloud project; run 'just gcp-project-create'" >&2; exit 1; }
+    export PROJECT_ID=$(just _gcp-project-id)
     until kubectl --context {{ KIND_XP_CLUSTER }} get crd \
       providerconfigs.gcp.upbound.io >/dev/null 2>&1; do sleep 5; done
     envsubst < infra/local/gcp-provider-config.yml.tmpl \
@@ -114,6 +119,10 @@ kind-xp-install-gcp-config:
       -p "{\"spec\":{\"projectID\":\"$PROJECT_ID\"}}"
     until kubectl --context {{ KIND_XP_CLUSTER }} get \
       cluster.container.gcp.upbound.io queenswood-gke >/dev/null 2>&1; do sleep 5; done
+    # `kubectl patch --type=merge` registers as field manager
+    # `kubectl-patch`. The gcp-cluster Argo app's `managedFieldsManagers:
+    # [kubectl-patch]` + `ServerSideApply=true` means selfHeal defers to
+    # this owner instead of clobbering it back to PLACEHOLDER.
     kubectl --context {{ KIND_XP_CLUSTER }} patch cluster.container.gcp.upbound.io \
       queenswood-gke --type=merge \
       -p "{\"spec\":{\"forProvider\":{\"workloadIdentityConfig\":{\"workloadPool\":\"$PROJECT_ID.svc.id.goog\"}}}}"
@@ -168,15 +177,15 @@ kube-admin-key:
 keycloak-admin-login:
     #!/usr/bin/env zsh
     set -euo pipefail
-    KCTX=gke_$(gcloud config get project 2>/dev/null)_europe-west2-a_queenswood-gke
-    user=$(kubectl --context $KCTX -n {{ ENV }} get secret queenswood-keycloak \
+    KCTX=$(just _gke-ctx)
+    user=$(kubectl --context $KCTX -n {{ QUEENSWOOD_ENV }} get secret queenswood-keycloak \
       -o jsonpath='{.data.admin-user}' 2>/dev/null | base64 -d)
-    pass=$(kubectl --context $KCTX -n {{ ENV }} get secret queenswood-keycloak \
+    pass=$(kubectl --context $KCTX -n {{ QUEENSWOOD_ENV }} get secret queenswood-keycloak \
       -o jsonpath='{.data.admin-password}' 2>/dev/null | base64 -d)
     if [[ -z "$user" || -z "$pass" ]]; then
-      echo "queenswood-keycloak Secret missing or empty in namespace {{ ENV }} — is the Keycloak chart installed?" >&2
+      echo "queenswood-keycloak Secret missing or empty in namespace {{ QUEENSWOOD_ENV }} — is the Keycloak chart installed?" >&2
       exit 1
     fi
-    echo "Admin console: https://keycloak.{{ ENV_DOMAIN }}/admin/"
+    echo "Admin console: https://keycloak.{{ QUEENSWOOD_DOMAIN }}/admin/"
     echo "User:          $user"
     echo "Password:      $pass"
