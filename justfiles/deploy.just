@@ -102,30 +102,20 @@ kind-xp-up:
     just kind-xp-install-gcp-config
     just kind-xp-wait-ready
 
-# Patch the PLACEHOLDER fields Argo can't own (ClusterProviderConfig.projectID
-# and Cluster.workloadPool, both with ignoreDifferences for selfHeal).
+# Render the queenswood-gcp Argo Application with the live PROJECT_ID
+# baked into its `helm.parameters.gcpProjectId`. Argo then renders the
+# queenswood-gcp chart with that value and applies every Crossplane MR
+# directly -- no PLACEHOLDER in git, no kubectl patches afterwards.
 kind-xp-install-gcp-config:
     #!/usr/bin/env zsh
     set -e
     export PROJECT_ID=$(just _gcp-project-id)
+    # Provider CRDs must be registered before queenswood-gcp's MRs try
+    # to apply -- otherwise Argo errors on unknown kinds.
     until kubectl --context {{ KIND_XP_CLUSTER }} get crd \
       providerconfigs.gcp.upbound.io >/dev/null 2>&1; do sleep 5; done
-    envsubst < infra/local/gcp-provider-config.yml.tmpl \
+    envsubst < infra/bootstrap/apps/queenswood-gcp.yml.tmpl \
       | kubectl --context {{ KIND_XP_CLUSTER }} apply -f -
-    until kubectl --context {{ KIND_XP_CLUSTER }} get \
-      clusterproviderconfig.gcp.m.upbound.io default >/dev/null 2>&1; do sleep 5; done
-    kubectl --context {{ KIND_XP_CLUSTER }} patch clusterproviderconfig.gcp.m.upbound.io \
-      default --type=merge \
-      -p "{\"spec\":{\"projectID\":\"$PROJECT_ID\"}}"
-    until kubectl --context {{ KIND_XP_CLUSTER }} get \
-      cluster.container.gcp.upbound.io queenswood-gke >/dev/null 2>&1; do sleep 5; done
-    # `kubectl patch --type=merge` registers as field manager
-    # `kubectl-patch`. The gcp-cluster Argo app's `managedFieldsManagers:
-    # [kubectl-patch]` + `ServerSideApply=true` means selfHeal defers to
-    # this owner instead of clobbering it back to PLACEHOLDER.
-    kubectl --context {{ KIND_XP_CLUSTER }} patch cluster.container.gcp.upbound.io \
-      queenswood-gke --type=merge \
-      -p "{\"spec\":{\"forProvider\":{\"workloadIdentityConfig\":{\"workloadPool\":\"$PROJECT_ID.svc.id.goog\"}}}}"
 
 # Start Tilt dev loop (creates kind cluster if missing)
 tilt-up:

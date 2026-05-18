@@ -17,7 +17,7 @@ metadata:
     description: Queenswood primary subnet (pods + services)
 spec:
   forProvider:
-    region: europe-west2
+    region: {{ .Values.region | quote }}
     ipCidrRange: 10.10.0.0/16
     networkRef:
       name: queenswood-vpc
@@ -28,17 +28,9 @@ spec:
         ipCidrRange: 10.30.0.0/20
     privateIpGoogleAccess: true
 ---
-# Proxy-only subnet required by regional external Application LBs
-# on GCP. The Envoy-based proxies that terminate TLS for our
-# gke-l7-regional-external-managed Gateway live here, not on our
-# nodes. One per region per VPC; not used for any other purpose.
-# Without this subnet, the GKE Gateway controller fails to create
-# the regional forwarding rule with:
-#   "An active proxy-only subnetwork is required in the same region
-#    and VPC as the forwarding rule"
-# Global LBs don't need this (they terminate at Google's edge), so
-# if we ever switch the Gateway to gke-l7-global-external-managed
-# this subnet becomes unused (safe to keep or remove).
+# Proxy-only subnet for the regional external Application LB used by
+# the gke-l7-regional-external-managed Gateway. Without it the GKE
+# Gateway controller fails to create the forwarding rule.
 apiVersion: compute.gcp.upbound.io/v1beta1
 kind: Subnetwork
 metadata:
@@ -47,7 +39,7 @@ metadata:
     description: Regional proxy-only subnet for the Gateway
 spec:
   forProvider:
-    region: europe-west2
+    region: {{ .Values.region | quote }}
     ipCidrRange: 10.40.0.0/24
     networkRef:
       name: queenswood-vpc

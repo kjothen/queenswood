@@ -5,7 +5,7 @@ metadata:
   namespace: argocd
   annotations:
     argocd.argoproj.io/sync-wave: "1"
-    description: Crossplane ProviderConfigs
+    description: Crossplane ProviderConfigs (non-GCP)
 spec:
   project: default
   source:
@@ -14,19 +14,7 @@ spec:
     path: infra/platform/crossplane-configs
   destination:
     server: https://kubernetes.default.svc
-  # projectID on the v2 ClusterProviderConfig is set per-cluster by
-  # `just kind-xp-install-gcp-config` (called from `gcp-up`).
-  # Keeping it out of git so cold starts against fresh GCP projects
-  # don't need a commit. The v1 ProviderConfig is owned outside Argo
-  # entirely; see infra/local/gcp-provider-config.yml.tmpl.
-  ignoreDifferences:
-    - group: gcp.m.upbound.io
-      kind: ClusterProviderConfig
-      jsonPointers:
-        - /spec/projectID
   syncPolicy:
     automated:
       prune: true
       selfHeal: true
-    syncOptions:
-      - RespectIgnoreDifferences=true

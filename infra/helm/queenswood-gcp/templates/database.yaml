@@ -1,6 +1,5 @@
 # CloudSQL Postgres for queenswood-keycloak. ENTERPRISE +
 # db-custom-1-3840 + PD_HDD is the cheapest legal Postgres combo.
----
 apiVersion: sql.gcp.upbound.io/v1beta2
 kind: DatabaseInstance
 metadata:
@@ -10,7 +9,7 @@ metadata:
 spec:
   forProvider:
     databaseVersion: POSTGRES_16
-    region: europe-west2
+    region: {{ .Values.region | quote }}
     deletionProtection: false
     settings:
       edition: ENTERPRISE
@@ -51,3 +50,14 @@ spec:
   writeConnectionSecretToRef:
     namespace: crossplane-system
     name: queenswood-keycloak-conn
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: queenswood-keycloak-password
+  namespace: crossplane-system
+  annotations:
+    description: Keycloak DB password
+type: Opaque
+stringData:
+  password: {{ .Values.keycloakDbPassword | quote }}
