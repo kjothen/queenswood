@@ -161,6 +161,7 @@
       "username": "service-account-queenswood-admin",
       "enabled": true,
       "serviceAccountClientId": "queenswood-admin",
+      "realmRoles": ["admin"],
       "clientRoles": {
         "realm-management": [
           "manage-clients",

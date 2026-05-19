@@ -1,13 +1,16 @@
-# `KeycloakRealmImport` CR — the operator picks this up, runs a Job
-# that imports the realm against the Keycloak instance, and marks
+# `KeycloakRealmImport` CRs — the operator picks each one up, runs a
+# Job that imports the realm against the Keycloak instance, and marks
 # the CR as Done. Re-imports happen if the realm spec changes.
 #
-# The realm payload comes from `files/queenswood-realm.json`, which
-# is a symlink to the canonical
-# `components/bank-resources/resources/bank/keycloak-realm.json`
-# kept in the polylith workspace. Both the helm-deployed realm and
-# the testcontainer-fixture realm (in `bank-test-resources/`) trace
-# back to the same source.
+# Both payloads come from `files/*.json` symlinks pointing at the
+# canonical realm definitions in `components/bank-resources/resources/
+# bank/`. The same files back the testcontainer-fixture realm (in
+# `bank-test-resources/`), so the helm-deployed realm, the operator-
+# managed realm, and the testcontainer realm all trace to one source.
+#
+# Two realms live on this Keycloak: `queenswood` is the
+# organisation-user realm (bank-console SPA + per-org service
+# accounts); `queenswood-ops` is the operator realm (bank-app SPA).
 apiVersion: k8s.keycloak.org/v2beta1
 kind: KeycloakRealmImport
 metadata:
@@ -20,3 +23,16 @@ spec:
   keycloakCRName: {{ .Release.Name }}-keycloak
   realm:
     {{- .Files.Get "files/queenswood-realm.json" | fromJson | toYaml | nindent 4 }}
+---
+apiVersion: k8s.keycloak.org/v2beta1
+kind: KeycloakRealmImport
+metadata:
+  name: {{ .Release.Name }}-realm-ops
+  labels:
+    {{- include "queenswood-keycloak.labels" . | nindent 4 }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "{{ .Values.argocd.syncWave }}"
+spec:
+  keycloakCRName: {{ .Release.Name }}-keycloak
+  realm:
+    {{- .Files.Get "files/queenswood-ops-realm.json" | fromJson | toYaml | nindent 4 }}

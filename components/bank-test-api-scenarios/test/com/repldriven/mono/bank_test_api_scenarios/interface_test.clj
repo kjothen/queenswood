@@ -18,6 +18,7 @@
     [com.repldriven.mono.bank-onfido-adapter.api :as onfido-adapter]
     [com.repldriven.mono.bank-onfido-simulator.api :as onfido-simulator]
 
+    [com.repldriven.mono.http-client.interface :as http]
     [com.repldriven.mono.log.interface :as log]
     [com.repldriven.mono.server.interface :as server]
     [com.repldriven.mono.system.interface :as system]
@@ -28,7 +29,29 @@
     [clojure.java.io :as io]
     [clojure.test :refer [deftest is testing]]))
 
-(def ^:private admin-api-key (System/getenv "MONO_ADMIN_API_KEY"))
+(defn- mint-admin-token
+  "Exchange the seeded queenswood-admin client_credentials for an
+  admin-roled service JWT against the queenswood realm. The
+  service-account-queenswood-admin user has the `admin` realm role
+  assigned in the test realm JSON, and the queenswood-admin client
+  carries a realm-roles protocol mapper, so the minted token's
+  `realm_access.roles` includes `admin` — bank-api's service-auth
+  picks that up and flips `:organization-id` to the internal-org-id,
+  giving the same principal shape as the legacy env-var admin
+  bearer."
+  [base-url]
+  (let [res (http/request
+             {:method :post
+              :url (str base-url "/oauth/token")
+              :headers {"content-type" "application/x-www-form-urlencoded"}
+              :body (str "grant_type=client_credentials"
+                         "&client_id=queenswood-admin"
+                         "&client_secret=queenswood-admin-test-secret"
+                         "&scope=queenswood-api-test+realm-roles")})
+        body (http/res->edn res)]
+    (or (:access_token body)
+        (throw (ex-info "Failed to mint scenario admin token"
+                        {:status (:status res) :body body})))))
 
 (defn- patch-handlers
   [defs]
@@ -72,7 +95,8 @@
       ["classpath:bank-test-api-scenarios/application-test.yml"
        patch-handlers]]
      (let [jetty (system/instance sys [:server :jetty-adapter])
-           base-url (server/http-local-url jetty)]
+           base-url (server/http-local-url jetty)
+           admin-token (mint-admin-token base-url)]
        (doseq [{:keys [relative]} files]
          (let [resource-path (str "bank-test-api-scenarios/scenarios/"
                                   relative)]
@@ -84,7 +108,7 @@
                                       :steps (count (SUT/steps loaded))})
                          _ (SUT/run-scenario (SUT/fresh-context
                                               {:base-url base-url
-                                               :admin-api-key admin-api-key
+                                               :admin-api-key admin-token
                                                :run-id (str (util/uuidv7))})
                                              resource-path)
                          _ (log/info "api scenario complete" {:file relative})]))))))))
