@@ -3,8 +3,9 @@
 Auth hook
 ---------
 Selects the correct Bearer token per operation based on its OpenAPI
-security scheme: `adminAuth` uses the admin API key, `orgAuth` uses an
-organization API key.  Both are passed via environment variables.
+security scheme: `adminAuth` uses a Keycloak-issued admin JWT
+(`$ADMIN_TOKEN`); `orgAuth` uses an organization API key
+(`$ORG_TOKEN`).  Both are passed via environment variables.
 
 Using the `@schemathesis.auth()` API (rather than a blind
 `before_call` override) lets schemathesis's `ignored_auth` check

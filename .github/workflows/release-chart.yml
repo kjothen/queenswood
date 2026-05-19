@@ -115,48 +115,30 @@ jobs:
              kind create cluster --name queenswood
              ```
 
-          2. **Install the chart** straight from the OCI registry —
-             generates a one-off admin API key (save it; it's how you
-             authenticate against the admin endpoints):
+          2. **Install the chart** straight from the OCI registry:
              ```bash
-             ADMIN_KEY=$(openssl rand -hex 16)
              helm install queenswood \
                oci://ghcr.io/__OWNER__/queenswood --version __VERSION__ \
                -n queenswood --create-namespace \
-               --set secrets.adminApiKey=$ADMIN_KEY \
                --wait --timeout 10m
-             echo "Admin API key: $ADMIN_KEY"
              ```
 
-          3. **Port-forward** the API and the front-end
+          3. **Port-forward** the API and the SPAs
              (separate terminals):
              ```bash
              kubectl -n queenswood port-forward svc/queenswood-bank-api-service 8080:8080
              kubectl -n queenswood port-forward svc/queenswood-bank-app          8081:8080
+             kubectl -n queenswood port-forward svc/queenswood-bank-console      8082:8080
              ```
 
-          4. **Smoke-test the API:**
-             ```bash
-             curl -H "Authorization: Bearer $ADMIN_KEY" \
-               http://localhost:8080/v1/tiers
-             ```
-
-             OpenAPI docs at <http://localhost:8080/scalar>.
-
-          5. **Open the bank-app:** <http://localhost:8081>. The
-             SPA prompts for the admin API key on first load — paste
-             the key from step 2. It's stored in localStorage so you
-             only paste it once per browser. nginx in front of the
-             SPA proxies `/v1/*` to the in-cluster bank-api service.
-
-          ## Recover the admin API key
-
-          The chart stores the key in a Secret named
-          `queenswood-admin-api-key`:
-          ```bash
-          kubectl -n queenswood get secret queenswood-admin-api-key \
-            -o jsonpath='{.data.MONO_ADMIN_API_KEY}' | base64 -d
-          ```
+          4. **Sign in via Keycloak.** Open
+             <http://localhost:8081> for the operator console
+             (`bank-app`) or <http://localhost:8082> for the
+             organisation console (`bank-console`). Both redirect to
+             the bundled Keycloak; tokens flow back to the SPA, and
+             nginx proxies `/v1/*` to the in-cluster bank-api
+             service. OpenAPI docs at
+             <http://localhost:8080/scalar>.
 
           ## Tear down
 

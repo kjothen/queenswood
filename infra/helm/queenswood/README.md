@@ -19,8 +19,7 @@ Deploys the Queenswood core-banking platform on Kubernetes:
 helm dependency update infra/helm/queenswood
 
 helm install bank infra/helm/queenswood \
-  --set image.tag=$(git rev-list --count HEAD) \
-  --set secrets.adminApiKey=$(openssl rand -hex 16)
+  --set image.tag=$(git rev-list --count HEAD)
 ```
 
 For dev/CI, point at a `kind` cluster:
@@ -41,8 +40,7 @@ for svc in bank-bootstrap-service bank-api-service \
   kind load docker-image ghcr.io/repldriven/$svc:dev
 done
 helm install bank infra/helm/queenswood \
-  --set image.tag=dev \
-  --set secrets.adminApiKey=test
+  --set image.tag=dev
 ```
 
 ## Bootstrap

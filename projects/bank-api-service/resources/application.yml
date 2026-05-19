@@ -202,7 +202,6 @@ system:
     handler: !system/required-component
     interceptors: !system/component
       system/component-kind: server/interceptors
-      admin-api-key: !env MONO_ADMIN_API_KEY
       identity-provider: !system/ref keycloak.identity-provider
       # All identity-provider instances the auth interceptor may use
       # to verify an incoming JWT. The interceptor extracts the

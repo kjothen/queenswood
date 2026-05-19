@@ -100,7 +100,6 @@ jobs:
 
       - name: Run tests
         env:
-          MONO_ADMIN_API_KEY: ${{ secrets.MONO_ADMIN_API_KEY }}
           TESTCONTAINERS_REUSE_ENABLE: "true"
           COVERAGE: "true"
           COVERAGE_THRESHOLD: ${{ matrix.project == 'dev' && '90' || '50' }}
@@ -183,10 +182,9 @@ jobs:
           # vendored FDB operator subchart bypass kubeconform via
           # -ignore-missing-schemas.
           helm dependency update infra/helm/queenswood
-          helm lint infra/helm/queenswood --set secrets.adminApiKey=lint
+          helm lint infra/helm/queenswood
           helm template queenswood infra/helm/queenswood \
             --set image.tag=ci \
-            --set secrets.adminApiKey=template-render \
             | kubeconform -strict -ignore-missing-schemas -summary
 
   # Gate job for branch protection — produces a single required check

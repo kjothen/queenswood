@@ -7,10 +7,8 @@ image:
   pullPolicy: IfNotPresent
   pullSecrets: []
 
-# -- Required secrets. adminApiKey is REQUIRED to be set at install time:
-#   helm install ... --set secrets.adminApiKey=$(openssl rand -hex 16)
+# -- Required secrets.
 secrets:
-  adminApiKey: ""
   # The Keycloak admin client secret matches the realm-import JSON's
   # `queenswood-admin` client. Used by bank-api / bootstrap to mint
   # admin tokens against the Keycloak Admin REST API (creating per-

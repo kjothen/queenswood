@@ -23,7 +23,6 @@ system:
     handler: !system/required-component
     interceptors: !system/component
       system/component-kind: server/interceptors
-      admin-api-key: !env MONO_ADMIN_API_KEY
       identity-provider: !system/ref keycloak.identity-provider
       # API-scenario tests only ever mint service JWTs from the orgs
       # realm; the ops identity-provider is wired alongside so the

@@ -46,7 +46,6 @@ system:
     handler: !system/required-component
     interceptors: !system/component
       system/component-kind: server/interceptors
-      admin-api-key: !env MONO_ADMIN_API_KEY
       record-db: !system/ref fdb.record-db
     jetty-adapter: !system/component
       system/component-kind: server/jetty-adapter

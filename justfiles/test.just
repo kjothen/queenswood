@@ -106,6 +106,13 @@ nvd project="":
 # Run schemathesis API fuzzer against the running bank-api
 schemathesis base_url="http://127.0.0.1:8080":
     #!/usr/bin/env zsh
+    # Requires $ADMIN_TOKEN — a Keycloak-issued service JWT carrying the
+    # `admin` realm role. Mint via:
+    #   curl -s -d 'grant_type=client_credentials&client_id=queenswood-admin' \
+    #     -d "client_secret=$CLIENT_SECRET" \
+    #     -d 'scope=queenswood-api-live realm-roles' \
+    #     <keycloak-url>/realms/queenswood/protocol/openid-connect/token \
+    #     | jq -r .access_token
     set -e
 
     _post() { curl -s -X POST "$1" -H "Content-Type: application/json" "${@:2}"; }
@@ -116,7 +123,7 @@ schemathesis base_url="http://127.0.0.1:8080":
     # --- Organisation ---
     echo "Creating organisation..."
     r=$(_post "{{ base_url }}/v1/organizations" \
-          -H "Authorization: Bearer $MONO_ADMIN_API_KEY" \
+          -H "Authorization: Bearer $ADMIN_TOKEN" \
           -d '{"name":"Schemathesis Org","status":"test","tier":"micro","currencies":["GBP"]}')
     org_id=$(_id "organization-id" "$r")
     org_token=$(_id "api-key-secret" "$r")
@@ -178,7 +185,7 @@ schemathesis base_url="http://127.0.0.1:8080":
     # --- Fund account via simulate ---
     echo "Funding account..."
     _post "{{ base_url }}/v1/simulate/organizations/$org_id/inbound-transfer" \
-      -H "Authorization: Bearer $MONO_ADMIN_API_KEY" \
+      -H "Authorization: Bearer $ADMIN_TOKEN" \
       -H "Idempotency-Key: $(openssl rand -hex 8)" \
       -d "{\"account-id\":\"$account_id\",\"amount\":1000000,\"currency\":\"GBP\"}" > /dev/null
 
@@ -209,7 +216,7 @@ schemathesis base_url="http://127.0.0.1:8080":
     policy_id=$(jq -r '.policies[0]."policy-id" // empty' <<< "$r")
 
     echo "Running schemathesis..."
-    ADMIN_TOKEN="$MONO_ADMIN_API_KEY" \
+    ADMIN_TOKEN="$ADMIN_TOKEN" \
     ORG_TOKEN="$org_token" \
     ORG_ID="$org_id" \
     PARTY_ID="$party_id" \

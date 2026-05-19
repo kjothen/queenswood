@@ -1,10 +1,12 @@
 (ns com.repldriven.mono.bank-api.auth
-  "Three-path authentication. (1) A stop-gap env-var admin bearer
-  retained for `bank-test-api-scenarios` fixtures and operator escape
-  hatches. (2) A Keycloak-issued service JWT minted by a tenant's
-  service-account client (`client_credentials` flow); principal type
-  `:service`. (3) A Keycloak-issued user JWT minted by either the
-  `queenswood-console` SPA against the `queenswood` realm (org
+  "Two-path JWT authentication. (1) A Keycloak-issued service JWT
+  minted by a tenant's service-account client (`client_credentials`
+  flow); principal type `:service`. The `queenswood-admin` service
+  account carries the `admin` realm role, which flips the principal's
+  `:organization-id` to the internal-org-id and grants `:admin` —
+  giving operators a Keycloak-minted admin bearer in place of a
+  static env-var key. (2) A Keycloak-issued user JWT minted by either
+  the `queenswood-console` SPA against the `queenswood` realm (org
   admins/members) or the `queenswood-app` SPA against the
   `queenswood-ops` realm (Queenswood operators); principal type
   `:user`. JWT verification dispatches across multiple
@@ -16,7 +18,6 @@
     [com.repldriven.mono.bank-api.shared.claims :as claims]
     [com.repldriven.mono.bank-membership.interface :as memberships]
     [com.repldriven.mono.bank-user.interface :as users]
-    [com.repldriven.mono.encryption.interface :as encryption]
     [com.repldriven.mono.error.interface :as error]
     [com.repldriven.mono.identity-provider.interface
      :as identity-provider]
@@ -37,31 +38,13 @@
           (str/split #" " 2)
           (as-> parts (when (= "Bearer" (first parts)) (second parts)))))
 
-(defn- admin?
-  [token admin-api-key]
-  (and admin-api-key
-       (encryption/bytes-equals? (util/str->bytes token)
-                                 (util/str->bytes admin-api-key))))
-
-(defn- admin-auth
-  [request]
-  ;; The env-var admin bearer stays alongside the queenswood-ops
-  ;; realm + ops user JWT path. Tests and the bootstrap deploy chain
-  ;; still depend on it.
-  {:principal-type :admin
-   :principal-id "admin"
-   :organization-id (:internal-organization-id request)
-   :roles #{:admin :org}})
-
 (defn- service-auth
   "Map a verified service-JWT claims map to the request auth context.
   The client_id (== organization-id by convention) appears as `:azp`.
   When the realm's role mapper has flagged the service account with
-  `admin`, the principal flips its `:organization-id` to the
-  internal-org-id and picks up `:admin` alongside `:org` — same
-  shape as the env-var admin-auth principal, so admin scenario
-  tokens minted via `client_credentials` against the
-  `queenswood-admin` client can stand in for the env-var bearer."
+  `admin` (the `queenswood-admin` operator client), the principal
+  flips its `:organization-id` to the internal-org-id and picks up
+  `:admin` alongside `:org`."
   [request claims]
   (let [realm-roles (->> (get-in claims [:realm_access :roles])
                          (map keyword)
@@ -163,48 +146,42 @@
 
 (def authenticate
   {:name ::authenticate
-   :enter (fn [ctx]
-            (let [request (:request ctx)
-                  token (extract-bearer request)
-                  {:keys [admin-api-key user-client-ids identity-providers
-                          expected-audiences]}
-                  request]
-              (cond
-               (nil? token)
-               ctx
+   :enter
+   (fn [ctx]
+     (let [request (:request ctx)
+           token (extract-bearer request)
+           {:keys [user-client-ids identity-providers expected-audiences]}
+           request]
+       (if (nil? token)
+         ctx
+         (let [iss (unverified-issuer token)
+               provider (pick-provider identity-providers iss)
+               claims (when provider
+                        (identity-provider/verify-token
+                         provider
+                         token
+                         {:expected-audiences (set expected-audiences)}))]
+           (cond
+            (nil? provider)
+            (do (log/warn "JWT verification rejected: unknown issuer"
+                          (pr-str iss))
+                ctx)
 
-               (admin? token admin-api-key)
-               (assoc-in ctx [:request :auth] (admin-auth request))
+            (not (map? claims))
+            (do (log/warn "JWT verification rejected:"
+                          (:message (error/payload claims))
+                          "iss:" (pr-str iss))
+                ctx)
 
-               :else
-               (let [iss (unverified-issuer token)
-                     provider (pick-provider identity-providers iss)
-                     claims (when provider
-                              (identity-provider/verify-token
-                               provider
-                               token
-                               {:expected-audiences (set expected-audiences)}))]
-                 (cond
-                  (nil? provider)
-                  (do (log/warn "JWT verification rejected: unknown issuer"
-                                (pr-str iss))
-                      ctx)
+            (contains? (set user-client-ids) (:azp claims))
+            (assoc-in ctx
+             [:request :auth]
+             (user-auth request claims))
 
-                  (not (map? claims))
-                  (do (log/warn "JWT verification rejected:"
-                                (:message (error/payload claims))
-                                "iss:" (pr-str iss))
-                      ctx)
-
-                  (contains? (set user-client-ids) (:azp claims))
-                  (assoc-in ctx
-                   [:request :auth]
-                   (user-auth request claims))
-
-                  :else
-                  (assoc-in ctx
-                   [:request :auth]
-                   (service-auth request claims)))))))})
+            :else
+            (assoc-in ctx
+             [:request :auth]
+             (service-auth request claims)))))))})
 
 (defn- required-roles
   "Derive the role set a route requires from its OpenAPI metadata.

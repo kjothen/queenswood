@@ -199,25 +199,22 @@ The hashed-lookup-with-cache shape is intentional: every
 authenticated request hits this path, so the FDB read is
 amortised over many requests within the cache window.
 
-### Admin key vs org keys
+### Admin access vs org keys
 
-Two tiers of bearer credential coexist:
+Operator-grade `admin` access does not flow through this
+brick. It is a Keycloak-issued JWT carrying the `admin` realm
+role — either a user JWT minted by the `bank-app` SPA against
+the `queenswood-ops` realm, or a service JWT minted via
+`client_credentials` against the `queenswood-admin` client.
+The `bank-api` auth interceptor maps either to
+`{:roles #{:admin :org} :organization-id <internal-org-id>}`;
+see [service-apis.md](service-apis.md).
 
-- **Admin key** — a single shared secret configured at boot
-  via `!env MONO_ADMIN_API_KEY`; see
-  [system-configurations.md](system-configurations.md).
-  Compared at auth time using `encryption/bytes-equals?`
-  (constant-time). Resolves to
-  `{:role :admin :organization-id <internal-org-id>}`.
-- **Org keys** — per-organisation, generated through this
-  brick, stored hashed. Resolves to
-  `{:role :org :organization-id <their-org-id>}`.
-
-The two tiers serve different needs: the admin key is for
-operator and platform-management calls (creating
-organisations, system maintenance); org keys are for
-tenant-scope API traffic. Routes opt into the right scheme
-via OpenAPI `:security` (see service-apis TDD).
+The keys this brick issues are **org keys**: per-organisation,
+generated and stored hashed, resolving to
+`{:role :org :organization-id <their-org-id>}`. They authorise
+tenant-scope API traffic. Routes opt into the right scheme via
+OpenAPI `:security` (see service-apis TDD).
 
 ### Policy integration
 
@@ -436,7 +433,7 @@ it stands.
   auth interceptor that consumes `get-api-key` and the
   cache layer)
 - [system-configurations.md](../recipes/system-configurations.md)
-  — System configurations (`!env MONO_ADMIN_API_KEY`)
+  — System configurations
 - `bank-api-key` brick interface
 - `encryption` brick interface (`generate-token`,
   `hash-token`, `bytes-equals?`)

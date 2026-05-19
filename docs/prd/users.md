@@ -91,9 +91,13 @@ escape hatch; users are how non-operator humans get in.
   as **parties** — see [parties](parties.md). Users sit one
   layer up: the people who operate a fintech that holds
   parties.
-- **Replacing the admin API key.** The operator-grade admin
-  bearer is unchanged by this work and stays the escape hatch
-  for platform-wide operations.
+- **Static admin bearer.** There is no env-var admin API key.
+  Operator-grade access flows through Keycloak: an operator
+  signs in to the `bank-app` SPA against the `queenswood-ops`
+  realm, or a back-office service mints a service JWT via the
+  `queenswood-admin` `client_credentials` client. Either path
+  carries the `admin` realm role, which the API maps to the
+  internal-organisation principal.
 
 ## Functional scope
 
