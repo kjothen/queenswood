@@ -88,10 +88,10 @@ jobs:
       - name: Write quickstart README
         run: |
           # Single-quoted heredoc keeps shell metacharacters
-          # (`$ADMIN_KEY`, backticks, `$(...)`) literal. The two
-          # build-time values — chart version and owner — are
-          # left as `__VERSION__` / `__OWNER__` placeholders and
-          # replaced with sed afterwards.
+          # (backticks, `$(...)`) literal. The two build-time
+          # values — chart version and owner — are left as
+          # `__VERSION__` / `__OWNER__` placeholders and replaced
+          # with sed afterwards.
           cat > release/README.md <<'EOF'
           # Queenswood — local Kubernetes quickstart
 

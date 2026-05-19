@@ -265,11 +265,11 @@ adding a policy + binding (see policy-evaluation TDD).
   because the operator needs *some* way to identify a key in
   a list. Twelve characters of high-entropy prefix isn't
   enough to reverse the secret in any practical attack.
-- **Admin key in FDB instead of env.** Would let admin keys
-  be rotated via the same flow as org keys. Rejected for
-  bootstrap chicken-and-egg: the admin key is what
-  authorises the calls that would create org keys. Keeping
-  it in the system configuration (env) avoids the cycle.
+- **Admin keys in FDB alongside org keys.** Would let admin
+  bearers be rotated via the same flow as org keys. Moot
+  now that admin access is a Keycloak-issued JWT minted via
+  `client_credentials` against the `queenswood-admin` client
+  — rotation lives in Keycloak, not in this brick.
 
 ## Known Limitations
 
@@ -289,12 +289,14 @@ adding a policy + binding (see policy-evaluation TDD).
   most cases; not acceptable for emergency revocation.
   Mitigation would be cache invalidation on revoke (across
   instances, which needs the message-bus) or a shorter TTL.
-- **The admin key is a single shared secret.** No
-  per-operator credentials at the platform-admin tier;
-  audit attribution is "someone with the admin key did
-  this." For low-volume admin operations, acceptable;
-  for any scale of platform team, would want a richer
-  identity model.
+- **The `queenswood-admin` service account is shared.** The
+  `client_credentials` admin path issues tokens that all
+  identify as the same service principal; audit attribution
+  for back-office automation is "the queenswood-admin client
+  did this." Per-operator humans sign in through the
+  `bank-app` SPA, which does carry per-user identity; the
+  shared-credential gap is only the machine-to-machine
+  path.
 - **Per-organisation count limits are the only quantitative
   policy today.** The capability/limit machinery could
   express more (rate limits per key, time-bound keys, scoped

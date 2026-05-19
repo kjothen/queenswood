@@ -2,9 +2,8 @@
 
 # bank-app: Svelte/Vite operator console.
 #  Stage 1 — build the static bundle with Node (`npm run build` →
-#  `vite build`). Pure ESM/Svelte now — the cherry-cljs compile step
-#  the old admin-key version had is gone; auth lives in `auth.mjs`
-#  and talks to Keycloak via keycloak-js.
+#  `vite build`). Auth lives in `auth.mjs` and talks to Keycloak
+#  via keycloak-js.
 #  Stage 2 — serve `dist/` via nginx, proxying /v1, /oauth, and
 #  /.well-known to bank-api so the SPA stays same-origin (no CORS).
 #  nginx also synthesises `/env.js` from container env at startup

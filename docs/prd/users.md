@@ -33,8 +33,9 @@ lives inside.
 
 **Platform admin / Queenswood operator.** Sees users as the
 human counterpart of the existing service-account credentials.
-The operator-driven admin-key path stays available as an
-escape hatch; users are how non-operator humans get in.
+Operators sign in to the `bank-app` SPA against the
+`queenswood-ops` realm; users are how non-operator humans get
+in to the org-facing `bank-console`.
 
 ## Goals
 

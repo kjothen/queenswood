@@ -315,8 +315,8 @@ attribute system fees against).
   data are all manual today.
 - **No org-level audit trail.** Created-at is the only
   history. Who created the organisation (which platform
-  admin operator) isn't recorded — only that the admin key
-  was used.
+  admin operator) isn't recorded — only that an admin
+  principal made the call.
 - **Single default product.** The create flow gives the
   organisation one settlement (or internal) product.
   Customers wanting additional products of different
