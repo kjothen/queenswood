@@ -90,6 +90,11 @@
                     :family-name "Dent"
                     :date-of-birth "1950-07-27"
                     :nationality "GB"
+                    :address {:building-number "155"
+                              :street "Country Lane"
+                              :town "Cottington"
+                              :postcode "CT12 4XY"
+                              :country "GBR"}
                     :national-identifier {:type "national-insurance"
                                           :value "TN555001A"
                                           :issuing-country "GB"}}}
@@ -114,6 +119,11 @@
                     :family-name "Prefect"
                     :date-of-birth "1948-04-01"
                     :nationality "GB"
+                    :address {:building-number "155"
+                              :street "Country Lane"
+                              :town "Cottington"
+                              :postcode "CT12 4XY"
+                              :country "GBR"}
                     :national-identifier {:type "national-insurance"
                                           :value "TN555002B"
                                           :issuing-country "GB"}}}

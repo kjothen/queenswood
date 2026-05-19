@@ -11,7 +11,7 @@
           {:keys [body]} parameters
           id (str (uuidv7))
           applicant (-> body
-                        (select-keys [:first_name :last_name :dob])
+                        (select-keys [:first_name :last_name :dob :address])
                         (assoc :id id :created_at (now-iso8601)))]
       (swap! state assoc-in [:applicants id] applicant)
       {:status 201 :body applicant})))

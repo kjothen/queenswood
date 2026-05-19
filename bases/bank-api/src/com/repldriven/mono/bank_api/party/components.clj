@@ -32,6 +32,24 @@
    [:value [:ref "NationalIdentifierValue"]]
    [:issuing-country [:ref "CountryCode"]]])
 
+(def Address
+  "Address shape mirrors the Entrust/Onfido applicant address
+  object. `country` is ISO 3166-1 alpha-3 to match what the
+  applicants API expects; this differs from `nationality` (alpha-2)
+  on PersonIdentification — kept separate so the adapter doesn't
+  need a code-table conversion at the edge."
+  [:map {:closed true :json-schema/example examples/Address}
+   [:flat-number {:optional true} [:ref "Name"]]
+   [:building-number {:optional true} [:ref "Name"]]
+   [:building-name {:optional true} [:ref "Name"]]
+   [:street [:ref "Name"]]
+   [:sub-street {:optional true} [:ref "Name"]]
+   [:town [:ref "Name"]]
+   [:state {:optional true} [:ref "Name"]]
+   [:postcode [:ref "Name"]]
+   [:country [:ref "Country3Code"]]
+   [:start-date {:optional true} [:ref "Date"]]])
+
 (def CreatePartyRequest
   [:map {:json-schema/example examples/CreatePartyRequest}
    [:type
@@ -45,6 +63,7 @@
    [:family-name [:ref "Name"]]
    [:date-of-birth [:ref "DateOfBirth"]]
    [:nationality [:ref "CountryCode"]]
+   [:address [:ref "Address"]]
    [:national-identifier [:ref "NationalIdentifier"]]])
 
 (def CreatePartyResponse [:ref "Party"])
@@ -59,5 +78,6 @@
 
 (def registry
   (components-registry [#'PartyId #'PartyType #'PartyStatus #'IdentifierType
-                        #'Party #'NationalIdentifier #'CreatePartyRequest
-                        #'CreatePartyResponse #'PartyList]))
+                        #'Party #'NationalIdentifier #'Address
+                        #'CreatePartyRequest #'CreatePartyResponse
+                        #'PartyList]))

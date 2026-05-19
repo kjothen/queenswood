@@ -11,7 +11,9 @@
     [com.repldriven.mono.error.interface :as error]
     [com.repldriven.mono.http-client.interface :as http]
     [com.repldriven.mono.json.interface :as json]
-    [com.repldriven.mono.log.interface :as log]))
+    [com.repldriven.mono.log.interface :as log]
+
+    [clojure.string :as str]))
 
 (defn- post
   [url body]
@@ -30,9 +32,44 @@
                     :body (:body res)})
        res))))
 
+(defn- full-first-name
+  "Onfido applicants have no middle_name field — the standard pattern
+  is to concatenate given + middle into `first_name` (space-joined)."
+  [first-name middle-names]
+  (if (str/blank? middle-names)
+    first-name
+    (str/trim (str first-name " " middle-names))))
+
+(defn- address->onfido
+  "Translate our kebab-case address map into Onfido's snake_case
+  applicant address shape. Drops nil entries so the request stays
+  tight; the Entrust applicant schema only requires postcode +
+  country at this layer (our request schema already enforces the
+  stricter set: street, town, postcode, country)."
+  [{:keys [flat-number building-number building-name street sub-street
+           town state postcode country start-date]}]
+  (cond-> {:street street
+           :town town
+           :postcode postcode
+           :country country}
+          flat-number
+          (assoc :flat_number flat-number)
+          building-number
+          (assoc :building_number building-number)
+          building-name
+          (assoc :building_name building-name)
+          sub-street
+          (assoc :sub_street sub-street)
+          state
+          (assoc :state state)
+          start-date
+          (assoc :start_date start-date)))
+
 (defn- create-applicant
-  [onfido-url {:keys [first-name last-name date-of-birth]}]
-  (let [body (cond-> {:first_name first-name :last_name last-name}
+  [onfido-url {:keys [first-name middle-names last-name date-of-birth address]}]
+  (let [body (cond-> {:first_name (full-first-name first-name middle-names)
+                      :last_name last-name
+                      :address (address->onfido address)}
                      date-of-birth
                      (assoc :dob date-of-birth))]
     (post (str onfido-url "/v3.6/applicants") body)))
@@ -71,15 +108,17 @@
   [config data]
   (let [{:keys [onfido-url]} config
         {:keys [organization-id verification-id
-                first-name last-name date-of-birth]}
+                first-name middle-names last-name date-of-birth address]}
         data]
     (log/info "Submitting Onfido check"
               {:verification-id verification-id
                :first-name first-name})
     (let [applicant (create-applicant onfido-url
                                       {:first-name first-name
+                                       :middle-names middle-names
                                        :last-name last-name
-                                       :date-of-birth date-of-birth})]
+                                       :date-of-birth date-of-birth
+                                       :address address})]
       (if (error/anomaly? applicant)
         applicant
         (let [applicant-id (:id (http/res->edn applicant))]

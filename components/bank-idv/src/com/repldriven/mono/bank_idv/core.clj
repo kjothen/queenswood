@@ -14,7 +14,7 @@
   [config idv data]
   (let [{:keys [bus schemas idv-command-channel]} config
         {:keys [organization-id verification-id party-id]} idv
-        {:keys [given-name family-name date-of-birth]} data
+        {:keys [given-name middle-names family-name date-of-birth address]} data
         schema (clojure.core/get schemas "submit-idv-check")]
     (when (and bus schema idv-command-channel)
       (let [payload (avro/serialize
@@ -23,9 +23,11 @@
                       :verification-id verification-id
                       :party-id party-id
                       :first-name (or given-name "")
+                      :middle-names middle-names
                       :last-name (or family-name "")
                       :date-of-birth (when date-of-birth
-                                       (str date-of-birth))})]
+                                       (str date-of-birth))
+                      :address address})]
         (if (error/anomaly? payload)
           (log/error "Failed to serialize submit-idv-check" payload)
           (let [envelope {:command "submit-idv-check"

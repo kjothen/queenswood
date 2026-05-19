@@ -4,12 +4,27 @@
      :as examples]
     [com.repldriven.mono.bank-onfido-simulator.schema :as schema]))
 
+(def Address
+  [:map
+   {:json-schema/example examples/Address}
+   [:flat_number {:optional true} string?]
+   [:building_number {:optional true} string?]
+   [:building_name {:optional true} string?]
+   [:street string?]
+   [:sub_street {:optional true} string?]
+   [:town string?]
+   [:state {:optional true} string?]
+   [:postcode string?]
+   [:country string?]
+   [:start_date {:optional true} string?]])
+
 (def CreateApplicantRequest
   [:map
    {:json-schema/example examples/CreateApplicantRequest}
    [:first_name string?]
    [:last_name string?]
-   [:dob {:optional true} [:maybe string?]]])
+   [:dob {:optional true} [:maybe string?]]
+   [:address [:ref "Address"]]])
 
 (def Applicant
   [:map
@@ -18,7 +33,8 @@
    [:created_at string?]
    [:first_name string?]
    [:last_name string?]
-   [:dob {:optional true} [:maybe string?]]])
+   [:dob {:optional true} [:maybe string?]]
+   [:address [:ref "Address"]]])
 
 (def registry
-  (schema/components-registry [#'CreateApplicantRequest #'Applicant]))
+  (schema/components-registry [#'Address #'CreateApplicantRequest #'Applicant]))

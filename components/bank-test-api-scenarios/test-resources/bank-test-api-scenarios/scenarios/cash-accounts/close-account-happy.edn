@@ -29,6 +29,11 @@
                     :family-name "Customer"
                     :date-of-birth "1970-01-01"
                     :nationality "GB"
+                    :address {:building-number "155"
+                              :street "Country Lane"
+                              :town "Cottington"
+                              :postcode "CT12 4XY"
+                              :country "GBR"}
                     :national-identifier {:type "national-insurance"
                                           :value "TN888001A"
                                           :issuing-country "GB"}}}

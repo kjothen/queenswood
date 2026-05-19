@@ -169,6 +169,15 @@
    {:title "CountryCode" :json-schema/example "GB"}
    #"^[A-Z]{2}$"])
 
+(def Country3Code
+  "ISO 3166-1 alpha-3 country code: three uppercase ASCII letters.
+  Used by address fields — the Entrust/Onfido applicant accepts
+  alpha-3 in `address.country`, separate from our alpha-2
+  `nationality`."
+  [:re
+   {:title "Country3Code" :json-schema/example "GBR"}
+   #"^[A-Z]{3}$"])
+
 (def Currency
   "Closed enum of currencies the system natively supports. Stricter
   than `CurrencyCode` — request bodies use this to reject unsupported
@@ -367,9 +376,9 @@
     :json-schema {:type "string" :format "date-time"}}])
 
 (def registry
-  (components-registry [#'AccountNumber #'Amount #'Bban #'BusinessDay
-                        #'CountryCode #'Currency #'CurrencyCode #'Date
-                        #'DateOfBirth #'EmbedQuery #'IdempotencyKey #'MinorUnits
-                        #'Name #'PaymentMinorUnits #'NationalIdentifierValue
-                        #'PageQuery #'SignedAmount #'SignedBasisPoints
-                        #'SignedMinorUnits #'SortCode #'Timestamp]))
+  (components-registry
+   [#'AccountNumber #'Amount #'Bban #'BusinessDay #'CountryCode #'Country3Code
+    #'Currency #'CurrencyCode #'Date #'DateOfBirth #'EmbedQuery #'IdempotencyKey
+    #'MinorUnits #'Name #'PaymentMinorUnits #'NationalIdentifierValue
+    #'PageQuery #'SignedAmount #'SignedBasisPoints #'SignedMinorUnits #'SortCode
+    #'Timestamp]))

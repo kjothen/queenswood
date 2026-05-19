@@ -240,7 +240,12 @@
                          :given-name "Scenario"
                          :family-name (str "Person" counter)
                          :date-of-birth 19700101
-                         :nationality "GB"}
+                         :nationality "GB"
+                         :address {:building-number "155"
+                                   :street "Country Lane"
+                                   :town "Cottington"
+                                   :postcode "CT12 4XY"
+                                   :country "GBR"}}
 
                         ni
                         (assoc :national-identifier ni))
