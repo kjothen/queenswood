@@ -8,10 +8,12 @@ option java_outer_classname = "UserProto";
 
 // User -- a human operator of the Queenswood platform. Kept strictly
 // separate from Party (a customer/identity in the banking domain).
-// A User is 1:1 with a Keycloak `sub`; Memberships join Users to
-// Organizations. user_id is the storage primary key; keycloak_sub is
-// the natural lookup (stable, never changes); email is a secondary
-// index used by future Invitation flows.
+// A User is 1:1 with an OIDC (issuer, sub) pair from whichever IdP
+// is federated -- `sub` is only unique within an `issuer`, so both
+// are required for lookups. user_id is the storage primary key;
+// (issuer, sub) is the natural composite lookup (stable across
+// re-signins); email is a secondary index used by future Invitation
+// flows.
 enum IdentityProvider {
   IDENTITY_PROVIDER_UNKNOWN = 0;
   IDENTITY_PROVIDER_GOOGLE = 1;
@@ -29,12 +31,13 @@ message User {
   option (com.apple.foundationdb.record.record).usage = RECORD;
 
   required string user_id = 1 [(com.apple.foundationdb.record.field).primary_key = true];
-  required string keycloak_sub = 2;
-  required string email = 3;
-  required string name = 4;
-  optional string avatar_url = 5;
-  required IdentityProvider identity_provider = 6;
-  required UserStatus status = 7;
-  required int64 created_at = 8;
-  required int64 updated_at = 9;
+  required string issuer = 2;
+  required string sub = 3;
+  required string email = 4;
+  required string name = 5;
+  optional string avatar_url = 6;
+  required IdentityProvider identity_provider = 7;
+  required UserStatus status = 8;
+  required int64 created_at = 9;
+  required int64 updated_at = 10;
 }

@@ -20,7 +20,8 @@
 (def User
   [:map {:json-schema/example examples/User}
    [:user-id [:ref "UserId"]]
-   [:keycloak-sub string?]
+   [:issuer string?]
+   [:sub string?]
    [:email string?]
    [:name [:ref "Name"]]
    [:avatar-url {:optional true} string?]

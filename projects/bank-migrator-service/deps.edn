@@ -12,9 +12,9 @@
     component/test-system {:local/root "../../components/test-system"}
     component/testcontainers {:local/root "../../components/testcontainers"}}}}
  :deps
- {component/bank-resources {:local/root
-                            "../../components/bank-resources"}
+ {component/bank-resources {:local/root "../../components/bank-resources"}
   component/bank-schema {:local/root "../../components/bank-schema"}
+
   component/avro {:local/root "../../components/avro"}
   component/cli {:local/root "../../components/cli"}
   component/command-schema {:local/root "../../components/command-schema"}
@@ -30,6 +30,7 @@
   component/system {:local/root "../../components/system"}
   component/telemetry {:local/root "../../components/telemetry"}
   component/utility {:local/root "../../components/utility"}
+
   base/bank-migrator {:local/root "../../bases/bank-migrator"}
   ;; protojure brings protobuf-java 4.x which breaks FDB Record Layer
   ;; at runtime — pin to 3.x for binary compatibility

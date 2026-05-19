@@ -5,7 +5,7 @@
 
     [com.repldriven.mono.error.interface :refer [let-nom>]]))
 
-(defn create-membership
+(defn new-membership
   [txn {:keys [user-id organization-id role]}]
   (store/transact
    txn
@@ -16,7 +16,7 @@
                         :role role})]
        (let-nom> [_ (store/create txn membership)]
          membership)))
-   :membership/create
+   :membership/new
    "Failed to create membership"))
 
 (defn list-by-user

@@ -25,9 +25,21 @@ system:
       system/component-kind: server/interceptors
       admin-api-key: !env MONO_ADMIN_API_KEY
       identity-provider: !system/ref keycloak.identity-provider
+      # API-scenario tests only ever mint service JWTs from the orgs
+      # realm; the ops identity-provider is wired alongside so the
+      # auth dispatch logic stays uniform with bank-api-service and
+      # bank-monolith.
+      identity-providers:
+        - !system/ref keycloak.identity-provider
+        - !system/ref keycloak.identity-provider-ops
       expected-audiences:
         - queenswood-api-test
         - queenswood-api-live
+        - queenswood-console
+        - queenswood-app
+      user-client-ids:
+        - queenswood-console
+        - queenswood-app
       audiences-by-status:
         organization-status-test: queenswood-api-test
         organization-status-live: queenswood-api-live

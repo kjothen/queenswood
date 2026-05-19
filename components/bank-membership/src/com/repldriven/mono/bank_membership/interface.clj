@@ -6,7 +6,7 @@
   (:require
     [com.repldriven.mono.bank-membership.core :as core]))
 
-(defn create-membership
+(defn new-membership
   "Create a membership linking a User to an Organization with a Role.
 
   Args:
@@ -16,7 +16,7 @@
 
   Returns the Membership map or an anomaly."
   [txn input]
-  (core/create-membership txn input))
+  (core/new-membership txn input))
 
 (defn list-by-user
   "List memberships for a given user. Returns a vector (possibly

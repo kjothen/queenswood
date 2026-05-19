@@ -3,14 +3,15 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "cljs:compile": "npx cherry compile src/lib/api.cljs src/lib/time.cljs --output-dir src --extension mjs",
-    "dev": "npm run cljs:compile && vite",
-    "build": "npm run cljs:compile && vite build",
-    "preview": "vite preview"
+    "dev": "NODE_OPTIONS='--max-http-header-size=32768' vite",
+    "build": "vite build",
+    "preview": "NODE_OPTIONS='--max-http-header-size=32768' vite preview"
+  },
+  "dependencies": {
+    "keycloak-js": "^26.0.7"
   },
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "^5.0.3",
-    "cherry-cljs": "^0.5.34",
     "svelte": "^5.25.3",
     "vite": "^6.2.2"
   }

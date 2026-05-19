@@ -1,28 +1,35 @@
 (ns com.repldriven.mono.bank-api.auth
-  "Three-path authentication: a stop-gap env-var admin bearer (kept
-  until human-auth fully replaces it), a Keycloak-issued JWT minted
-  by a tenant service account (existing `client_credentials` flow),
-  and a Keycloak-issued JWT minted by the `queenswood-console` SPA
-  on behalf of a human User (Authorization Code + PKCE flow). The
-  three paths share JWT verification via the `identity-provider`
-  substrate and diverge on principal shape: admin → fixed admin
-  context, service → `{:principal-type :service ...}`, user →
-  `{:principal-type :user :user :memberships ...}` resolved against
-  the `bank-user` + `bank-membership` bricks."
+  "Three-path authentication. (1) A stop-gap env-var admin bearer
+  retained for `bank-test-api-scenarios` fixtures and operator escape
+  hatches. (2) A Keycloak-issued service JWT minted by a tenant's
+  service-account client (`client_credentials` flow); principal type
+  `:service`. (3) A Keycloak-issued user JWT minted by either the
+  `queenswood-console` SPA against the `queenswood` realm (org
+  admins/members) or the `queenswood-app` SPA against the
+  `queenswood-ops` realm (Queenswood operators); principal type
+  `:user`. JWT verification dispatches across multiple
+  `identity-provider` instances keyed by the unverified `iss` claim,
+  then the verified `azp` claim discriminates user vs service. The
+  user path always upserts a `bank-user` row on first sign-in so
+  every authenticated human has a stable platform-identity record."
   (:require
+    [com.repldriven.mono.bank-api.shared.claims :as claims]
     [com.repldriven.mono.bank-membership.interface :as memberships]
     [com.repldriven.mono.bank-user.interface :as users]
     [com.repldriven.mono.encryption.interface :as encryption]
     [com.repldriven.mono.error.interface :as error]
     [com.repldriven.mono.identity-provider.interface
      :as identity-provider]
+    [com.repldriven.mono.json.interface :as json]
     [com.repldriven.mono.log.interface :as log]
     [com.repldriven.mono.utility.interface :as util]
 
     [sieppari.context :as sc]
 
     [clojure.set :as set]
-    [clojure.string :as str]))
+    [clojure.string :as str])
+  (:import
+    (java.util Base64)))
 
 (defn- extract-bearer
   [request]
@@ -38,9 +45,9 @@
 
 (defn- admin-auth
   [request]
-  ;; TODO(human-auth-PR): replace the env-var admin key with a
-  ;; Keycloak admin realm-role. The role is encoded as :admin in
-  ;; the JWT's `realm_access.roles` claim once that PR lands.
+  ;; The env-var admin bearer stays alongside the queenswood-ops
+  ;; realm + ops user JWT path. Tests and the bootstrap deploy chain
+  ;; still depend on it.
   {:principal-type :admin
    :principal-id "admin"
    :organization-id (:internal-organization-id request)
@@ -61,47 +68,96 @@
 
 (defn- nilable-result
   "Treat a `nil` or anomaly result as absence; pass other values
-  through. The bank-user/bank-membership reads we depend on return
-  nil for missing records and an anomaly only on FDB failure; both
-  surfaces collapse to \"no domain identity\" for the auth context."
+  through."
   [v]
   (when-not (or (nil? v) (error/anomaly? v)) v))
 
+(defn- realm-access-roles
+  "Project the JWT's `realm_access.roles` claim into a set of role
+  keywords. Empty when the claim is absent (the SPA realm may not
+  include a realm-roles mapper)."
+  [claims]
+  (into #{} (map keyword) (get-in claims [:realm_access :roles])))
+
 (defn- user-auth
-  "Resolve a verified user-JWT into the principal sum-type. The user
-  record may be absent (first sign-in before onboarding) — in that
-  case `:user-id`/`:user` are nil and only the `:user` role is
-  granted, gating non-onboarding routes off until /v1/onboarding/me
-  runs. With at least one membership the principal also carries
-  `:org`, the default role existing tenant-scoped routes require."
+  "Resolve a verified user-JWT into the principal sum-type. Upserts
+  the User on every authenticated request — idempotent on the (iss,
+  sub) pair, so first sign-in creates the row and subsequent sign-ins
+  refresh mutable claims (email / name / avatar) only when they've
+  changed. Roles always include `:user`; `:admin` is added when the
+  realm carries it via `realm_access.roles`; `:org` is added when the
+  user has at least one membership OR is admin (so existing org-
+  scoped routes accept ops JWTs). The principal's `:organization-id`
+  defaults to the internal-org-id for admins, the first membership's
+  org for normal users, nil otherwise."
   [request claims]
-  (let [{:keys [record-db record-store]} request
+  (let [{:keys [record-db record-store internal-organization-id]} request
         txn {:record-db record-db :record-store record-store}
-        sub (:sub claims)
-        user (nilable-result (users/find-by-keycloak-sub txn sub))
+        user (nilable-result
+              (users/upsert-by-sub txn (claims/claims->user-claims claims)))
         memberships (or (when user
                           (nilable-result
                            (memberships/list-by-user txn (:user-id user))))
                         [])
+        realm-roles (realm-access-roles claims)
+        is-admin? (contains? realm-roles :admin)
         primary (first memberships)]
-    {:principal-type :user
-     :principal-id (:user-id user)
-     :keycloak-sub sub
-     :user user
-     :claims claims
-     :memberships memberships
-     :organization-id (:organization-id primary)
-     :roles (cond-> #{:user}
-                    (seq memberships)
-                    (conj :org))
-     :token-jti (:jti claims)}))
+    (util/assoc-some
+     {:principal-type :user
+      :principal-id (:user-id user)
+      :issuer (:iss claims)
+      :sub (:sub claims)
+      :user user
+      :claims claims
+      :memberships memberships
+      :roles (cond-> #{:user}
+                     is-admin?
+                     (conj :admin :org)
+                     (seq memberships)
+                     (conj :org))
+      :token-jti (:jti claims)}
+     :organization-id
+     (cond is-admin?
+           internal-organization-id
+           primary
+           (:organization-id primary)))))
+
+(defn- decode-unverified-payload
+  "Best-effort base64url-decode of a JWT's middle segment into the
+  payload claims map. Returns nil on any failure — callers should
+  treat that the same as an unverifiable token."
+  [^String jwt-string]
+  (try
+    (let [parts (str/split jwt-string #"\." 3)
+          payload-bytes (.decode (Base64/getUrlDecoder)
+                                 ^String (second parts))
+          payload-str (String. payload-bytes "UTF-8")
+          parsed (json/read-str payload-str :key-fn keyword)]
+      (when (map? parsed) parsed))
+    (catch Exception _ nil)))
+
+(defn- unverified-issuer
+  "Pull the `iss` claim out of the JWT payload WITHOUT signature
+  verification — used only to pick which identity-provider should be
+  asked to verify. The verifier still rejects the token if iss
+  doesn't match its expected issuer, so a forged iss can't gain
+  access to a realm whose JWKS it can't satisfy."
+  [jwt-string]
+  (:iss (decode-unverified-payload jwt-string)))
+
+(defn- pick-provider
+  "Find the identity-provider instance whose configured issuer matches
+  the JWT's (unverified) iss claim. Returns nil when none match."
+  [providers iss]
+  (some (fn [p] (when (= iss (identity-provider/get-issuer p)) p))
+        providers))
 
 (def authenticate
   {:name ::authenticate
    :enter (fn [ctx]
             (let [request (:request ctx)
                   token (extract-bearer request)
-                  {:keys [admin-api-key console-client-id identity-provider
+                  {:keys [admin-api-key user-client-ids identity-providers
                           expected-audiences]}
                   request]
               (cond
@@ -112,20 +168,26 @@
                (assoc-in ctx [:request :auth] (admin-auth request))
 
                :else
-               (let [claims (identity-provider/verify-token
-                             identity-provider
-                             token
-                             {:expected-audiences (set expected-audiences)})]
+               (let [iss (unverified-issuer token)
+                     provider (pick-provider identity-providers iss)
+                     claims (when provider
+                              (identity-provider/verify-token
+                               provider
+                               token
+                               {:expected-audiences (set expected-audiences)}))]
                  (cond
+                  (nil? provider)
+                  (do (log/warn "JWT verification rejected: unknown issuer"
+                                (pr-str iss))
+                      ctx)
+
                   (not (map? claims))
                   (do (log/warn "JWT verification rejected:"
                                 (:message (error/payload claims))
-                                "expected-audiences:" expected-audiences
-                                "console-client-id:" console-client-id)
+                                "iss:" (pr-str iss))
                       ctx)
 
-                  (and console-client-id
-                       (= console-client-id (:azp claims)))
+                  (contains? (set user-client-ids) (:azp claims))
                   (assoc-in ctx
                    [:request :auth]
                    (user-auth request claims))

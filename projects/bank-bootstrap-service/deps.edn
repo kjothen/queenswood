@@ -14,12 +14,7 @@
     component/test-system {:local/root "../../components/test-system"}
     component/testcontainers {:local/root "../../components/testcontainers"}}}}
  :deps
- {component/bank-resources {:local/root "../../components/bank-resources"}
-  component/bank-test-resources {:local/root
-                                 "../../components/bank-test-resources"}
-  component/identity-provider {:local/root "../../components/identity-provider"}
-  component/keycloak {:local/root "../../components/keycloak"}
-  component/bank-balance {:local/root "../../components/bank-balance"}
+ {component/bank-balance {:local/root "../../components/bank-balance"}
   component/bank-cash-account {:local/root "../../components/bank-cash-account"}
   component/bank-cash-account-product
   {:local/root "../../components/bank-cash-account-product"}
@@ -28,22 +23,24 @@
   component/bank-person-identification
   {:local/root "../../components/bank-person-identification"}
   component/bank-policy {:local/root "../../components/bank-policy"}
+  component/bank-resources {:local/root "../../components/bank-resources"}
   component/bank-schema {:local/root "../../components/bank-schema"}
+  component/bank-test-resources {:local/root
+                                 "../../components/bank-test-resources"}
   component/bank-transaction {:local/root "../../components/bank-transaction"}
+
   component/avro {:local/root "../../components/avro"}
   component/cli {:local/root "../../components/cli"}
-  component/encryption {:local/root "../../components/encryption"}
   component/env {:local/root "../../components/env"}
   component/error {:local/root "../../components/error"}
   component/fdb {:local/root "../../components/fdb"}
-  component/http-client {:local/root "../../components/http-client"}
-  component/json {:local/root "../../components/json"}
+  component/identity-provider {:local/root "../../components/identity-provider"}
   component/log {:local/root "../../components/log"}
-  component/message-bus {:local/root "../../components/message-bus"}
   component/processor {:local/root "../../components/processor"}
   component/system {:local/root "../../components/system"}
   component/telemetry {:local/root "../../components/telemetry"}
   component/utility {:local/root "../../components/utility"}
+
   base/bank-bootstrap {:local/root "../../bases/bank-bootstrap"}
   ;; protojure brings protobuf-java 4.x which breaks FDB Record Layer
   ;; at runtime — pin to 3.x for binary compatibility

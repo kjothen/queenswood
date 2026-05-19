@@ -5,27 +5,38 @@
 
     [com.repldriven.mono.error.interface :refer [let-nom>]]))
 
-(defn upsert-by-keycloak-sub
-  "Idempotent upsert keyed by Keycloak sub. On first call (sub is
-  new) creates a User; on subsequent calls applies the fresh OIDC
-  claims to the existing record. Returns the User map."
-  [txn {:keys [keycloak-sub] :as claims}]
+(defn upsert-by-sub
+  "Idempotent upsert keyed by the OIDC (issuer, sub) pair. On first
+  call (unknown pair) creates a User. On subsequent calls, only
+  writes when the mutable claim fields (email/name/avatar/identity-
+  provider) actually differ from the stored record — keeps re-sign-in
+  on every request cheap. Returns the resulting User map."
+  [txn {:keys [issuer sub] :as claims}]
   (store/transact
    txn
    (fn [txn]
-     (let-nom> [existing (store/find-by-keycloak-sub txn keycloak-sub)]
-       (let [user (if existing
-                    (domain/apply-claims existing claims)
-                    (domain/new-user claims))]
-         (let-nom> [_ (store/save txn user)]
-           user))))
+     (let-nom> [existing (store/find-by-sub txn issuer sub)]
+       (cond
+        (nil? existing)
+        (let [user (domain/new-user claims)]
+          (let-nom> [_ (store/save txn user)]
+            user))
+
+        (domain/claims-changed? existing claims)
+        (let [user (domain/update-user existing claims)]
+          (let-nom> [_ (store/save txn user)]
+            user))
+
+        :else
+        existing)))
    :user/upsert
    "Failed to upsert user"))
 
-(defn find-by-keycloak-sub
-  "Returns the User with the given Keycloak sub or nil if absent."
-  [txn sub]
-  (store/find-by-keycloak-sub txn sub))
+(defn find-by-sub
+  "Returns the User with the given (issuer, sub) pair or nil if
+  absent."
+  [txn issuer sub]
+  (store/find-by-sub txn issuer sub))
 
 (defn find-by-id
   [txn user-id]

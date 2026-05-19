@@ -12,6 +12,7 @@
  :deps
  {component/bank-clearbank-webhook
   {:local/root "../../components/bank-clearbank-webhook"}
+
   component/cli {:local/root "../../components/cli"}
   component/env {:local/root "../../components/env"}
   component/error {:local/root "../../components/error"}
@@ -22,6 +23,7 @@
   component/system {:local/root "../../components/system"}
   component/telemetry {:local/root "../../components/telemetry"}
   component/utility {:local/root "../../components/utility"}
+
   base/bank-clearbank-simulator
   {:local/root "../../bases/bank-clearbank-simulator"}
   com.google.protobuf/protobuf-java {:mvn/version "3.25.8"}
