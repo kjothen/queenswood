@@ -1,10 +1,10 @@
 (ns com.repldriven.mono.identity-provider.interface
-  "Per-org service-account provisioning and JWT verification.
-  Substrate brick — does not know about Keycloak, queenswood, or any
-  banking concept. The bundled `LocalIdentityProvider` (in `local`)
-  is suitable for fast brick tests; external SDK adapters (e.g.,
-  the `keycloak` brick's `KeycloakIdentityProvider`) plug into the
-  same `IdentityProvider` protocol.
+  "Per-tenant service-account provisioning and JWT verification.
+  Substrate brick — adapter-agnostic and domain-agnostic. The
+  bundled `LocalIdentityProvider` (in `local`) is suitable for fast
+  brick tests; external SDK adapters (e.g., the `keycloak` brick's
+  `KeycloakIdentityProvider`) plug into the same `IdentityProvider`
+  protocol.
 
   Callers depend on this interface — never on a specific adapter —
   and the system YAML wires whichever implementation matches the

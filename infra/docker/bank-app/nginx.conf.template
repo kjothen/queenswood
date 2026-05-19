@@ -5,6 +5,17 @@ server {
     root /usr/share/nginx/html;
     index index.html;
 
+    # Runtime config injection. The SPA loads /env.js BEFORE its
+    # main module so window.__env is populated by the time
+    # keycloak-js initialises. Values come from container env vars
+    # which Helm wires from chart values, so the same image works
+    # in kind and on GKE without a rebuild.
+    location = /env.js {
+        default_type application/javascript;
+        add_header Cache-Control "no-store" always;
+        return 200 'window.__env={"keycloakUrl":"${KEYCLOAK_URL}","keycloakRealm":"${KEYCLOAK_REALM}","keycloakClientId":"${KEYCLOAK_CLIENT_ID}","keycloakIdpHint":"${KEYCLOAK_IDP_HINT}"};';
+    }
+
     # API proxy. `proxy_pass` without a trailing slash preserves the
     # full URI, so `/v1/cash-accounts` is forwarded as
     # `/v1/cash-accounts` to ${API_UPSTREAM} — matching the dev-mode

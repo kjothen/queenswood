@@ -144,6 +144,16 @@ system:
       # an in-cluster Service URL but Keycloak embeds its public
       # hostname in tokens (the deployed shape -- see ADR-TBD).
       expected-issuer: !env KEYCLOAK_EXPECTED_ISSUER
+    # Operator realm — hosts the queenswood-app SPA users
+    # (bank-app). Same Keycloak instance, different realm; only used
+    # for JWT verification.
+    identity-provider-ops: !system/component
+      system/component-kind: keycloak/identity-provider
+      base-url: !env KEYCLOAK_BASE_URL
+      realm: !env KEYCLOAK_OPS_REALM
+      admin-client-id: !env KEYCLOAK_ADMIN_CLIENT_ID
+      admin-client-secret: !env KEYCLOAK_ADMIN_CLIENT_SECRET
+      expected-issuer: !env KEYCLOAK_OPS_EXPECTED_ISSUER
   organizations:
     internal: !system/component
       system/component-kind: organizations/organization-from-fdb
@@ -194,18 +204,25 @@ system:
       system/component-kind: server/interceptors
       admin-api-key: !env MONO_ADMIN_API_KEY
       identity-provider: !system/ref keycloak.identity-provider
+      # All identity-provider instances the auth interceptor may use
+      # to verify an incoming JWT. The interceptor extracts the
+      # unverified `iss`, picks the matching provider, then verifies.
+      identity-providers:
+        - !system/ref keycloak.identity-provider
+        - !system/ref keycloak.identity-provider-ops
       expected-audiences:
         - queenswood-api-test
         - queenswood-api-live
-        # User JWTs minted by the SPA carry the public client's id
-        # as their aud claim (no audience mapper on the console
-        # client). Accept it alongside the per-status banking
-        # audiences so onboarding + /v1/me verify cleanly.
+        # SPA user JWTs carry the public client id as aud (the audience
+        # mapper points the client at itself).
         - queenswood-console
-      # The Keycloak public client SPAs use to mint user JWTs. Used
-      # by the auth interceptor to distinguish user JWTs (azp ==
-      # this) from service JWTs (azp == org-id).
-      console-client-id: queenswood-console
+        - queenswood-app
+      # Public client ids whose JWTs the auth interceptor treats as
+      # user JWTs (azp == one of these). Anything else is a service
+      # JWT keyed by azp == org-id.
+      user-client-ids:
+        - queenswood-console
+        - queenswood-app
       # Banking-specific status → audience mapping. Both values are
       # realm-import scope names that carry an `oidc-audience-mapper`.
       audiences-by-status:

@@ -18,17 +18,21 @@
   {:system/start
    (fn [{:system/keys [config instance]}]
      (or instance
-         (let [{:keys [docker-image-name realm-import-file host-port]} config]
+         (let [{:keys [docker-image-name realm-import-file realm-import-files
+                       host-port]}
+               config
+               ;; Singular `:realm-import-file` stays supported for
+               ;; back-compat; `:realm-import-files` (vector) wins when
+               ;; both are set, so a system YAML can mount multiple
+               ;; realms into the same container.
+               files (or (seq realm-import-files)
+                         (when realm-import-file [realm-import-file]))]
            (log/info "Starting keycloak container" docker-image-name)
-           (let [c (cond-> (KeycloakContainer. docker-image-name)
-                           realm-import-file
-                           (.withRealmImportFile realm-import-file))]
-             ;; A fixed `host-port` pins the testcontainer to a known
-             ;; localhost port so an in-browser SPA can talk to it
-             ;; without having to discover the random port testcontainers
-             ;; would otherwise allocate. Only one container can hold
-             ;; the binding at a time — leave nil/0 for parallel test
-             ;; runs to get a random port.
+           (let [c (KeycloakContainer. docker-image-name)]
+             (doseq [f files] (.withRealmImportFile c f))
+             ;; Fixed `host-port` pins :8080 to a known host port so a
+             ;; host-running SPA can reach it; nil/0 keeps the random
+             ;; mapping parallel test runs need.
              (when (and host-port (pos? host-port))
                (.setPortBindings c [(str host-port ":8080")]))
              (.start c)
@@ -39,6 +43,7 @@
                     (.stop c)))
    :system/config {:docker-image-name default-docker-image-name
                    :realm-import-file nil
+                   :realm-import-files nil
                    :host-port nil}
    :system/instance-schema map?})
 

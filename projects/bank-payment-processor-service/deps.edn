@@ -14,42 +14,42 @@
     component/test-system {:local/root "../../components/test-system"}
     component/testcontainers {:local/root "../../components/testcontainers"}}}}
  :deps
- {component/bank-resources {:local/root "../../components/bank-resources"}
-  component/bank-payment {:local/root "../../components/bank-payment"}
-  component/bank-balance {:local/root "../../components/bank-balance"}
+ {component/bank-balance {:local/root "../../components/bank-balance"}
   component/bank-cash-account {:local/root "../../components/bank-cash-account"}
   component/bank-cash-account-product
   {:local/root "../../components/bank-cash-account-product"}
   component/bank-organization {:local/root "../../components/bank-organization"}
   component/bank-party {:local/root "../../components/bank-party"}
+  component/bank-payment {:local/root "../../components/bank-payment"}
   component/bank-person-identification
   {:local/root "../../components/bank-person-identification"}
   component/bank-policy {:local/root "../../components/bank-policy"}
-  component/identity-provider {:local/root "../../components/identity-provider"}
-  component/keycloak {:local/root "../../components/keycloak"}
+  component/bank-resources {:local/root "../../components/bank-resources"}
+  component/bank-schema {:local/root "../../components/bank-schema"}
   component/bank-transaction {:local/root "../../components/bank-transaction"}
+
   component/avro {:local/root "../../components/avro"}
   component/cli {:local/root "../../components/cli"}
   component/command {:local/root "../../components/command"}
   component/command-processor {:local/root "../../components/command-processor"}
   component/command-schema {:local/root "../../components/command-schema"}
+  component/encryption {:local/root "../../components/encryption"}
+  component/env {:local/root "../../components/env"}
+  component/error {:local/root "../../components/error"}
   component/event {:local/root "../../components/event"}
   component/event-processor {:local/root "../../components/event-processor"}
   component/event-schema {:local/root "../../components/event-schema"}
   component/fdb {:local/root "../../components/fdb"}
+  component/http-client {:local/root "../../components/http-client"}
+  component/identity-provider {:local/root "../../components/identity-provider"}
+  component/log {:local/root "../../components/log"}
   component/message-bus {:local/root "../../components/message-bus"}
   component/processor {:local/root "../../components/processor"}
-  component/encryption {:local/root "../../components/encryption"}
-  component/env {:local/root "../../components/env"}
-  component/error {:local/root "../../components/error"}
-  component/http-client {:local/root "../../components/http-client"}
-  component/json {:local/root "../../components/json"}
-  component/log {:local/root "../../components/log"}
   component/pulsar {:local/root "../../components/pulsar"}
-  component/bank-schema {:local/root "../../components/bank-schema"}
   component/system {:local/root "../../components/system"}
   component/telemetry {:local/root "../../components/telemetry"}
   component/utility {:local/root "../../components/utility"}
+
   base/bank-payment-processor {:local/root "../../bases/bank-payment-processor"}
   com.google.protobuf/protobuf-java {:mvn/version "3.25.8"}
   org.clojure/clojure {:mvn/version "1.12.4"}

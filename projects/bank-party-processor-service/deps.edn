@@ -14,31 +14,32 @@
     component/test-system {:local/root "../../components/test-system"}
     component/testcontainers {:local/root "../../components/testcontainers"}}}}
  :deps
- {component/bank-resources {:local/root
-                            "../../components/bank-resources"}
-  component/bank-party {:local/root "../../components/bank-party"}
+ {component/bank-party {:local/root "../../components/bank-party"}
   component/bank-person-identification
   {:local/root "../../components/bank-person-identification"}
   component/bank-policy {:local/root "../../components/bank-policy"}
+  component/bank-resources {:local/root "../../components/bank-resources"}
+  component/bank-schema {:local/root "../../components/bank-schema"}
+
   component/avro {:local/root "../../components/avro"}
   component/cli {:local/root "../../components/cli"}
   component/command {:local/root "../../components/command"}
   component/command-processor {:local/root "../../components/command-processor"}
   component/command-schema {:local/root "../../components/command-schema"}
-  component/event-schema {:local/root "../../components/event-schema"}
-  component/fdb {:local/root "../../components/fdb"}
-  component/message-bus {:local/root "../../components/message-bus"}
-  component/processor {:local/root "../../components/processor"}
   component/encryption {:local/root "../../components/encryption"}
   component/env {:local/root "../../components/env"}
   component/error {:local/root "../../components/error"}
+  component/event-schema {:local/root "../../components/event-schema"}
+  component/fdb {:local/root "../../components/fdb"}
   component/http-client {:local/root "../../components/http-client"}
   component/log {:local/root "../../components/log"}
+  component/message-bus {:local/root "../../components/message-bus"}
+  component/processor {:local/root "../../components/processor"}
   component/pulsar {:local/root "../../components/pulsar"}
-  component/bank-schema {:local/root "../../components/bank-schema"}
   component/system {:local/root "../../components/system"}
   component/telemetry {:local/root "../../components/telemetry"}
   component/utility {:local/root "../../components/utility"}
+
   base/bank-party-processor {:local/root "../../bases/bank-party-processor"}
   com.google.protobuf/protobuf-java {:mvn/version "3.25.8"}
   org.clojure/clojure {:mvn/version "1.12.4"}

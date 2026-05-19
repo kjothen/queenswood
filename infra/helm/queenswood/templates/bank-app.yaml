@@ -40,6 +40,17 @@ spec:
             # value can reference {{ .Release.Name }}.
             - name: API_UPSTREAM
               value: {{ tpl .Values.bankApp.apiUpstream . | quote }}
+            # Runtime config the SPA reads via /env.js. Set
+            # bankApp.keycloakPublicUrl on GKE; on kind leave empty
+            # and rely on a port-forwarded dev fallback.
+            - name: KEYCLOAK_URL
+              value: {{ .Values.bankApp.keycloakPublicUrl | quote }}
+            - name: KEYCLOAK_REALM
+              value: {{ .Values.keycloak.opsRealm | quote }}
+            - name: KEYCLOAK_CLIENT_ID
+              value: {{ .Values.keycloak.opsClientId | quote }}
+            - name: KEYCLOAK_IDP_HINT
+              value: {{ .Values.bankApp.keycloakIdpHint | quote }}
           # Static-asset server: a TCP probe is sufficient — nginx
           # accepts connections as soon as it's bound to :8080.
           startupProbe:

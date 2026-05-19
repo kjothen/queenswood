@@ -10,7 +10,8 @@
 
 (def User
   {:user-id UserId
-   :keycloak-sub "f3c0a18c-2cf7-4d5a-a3b0-c4e9d0b5a124"
+   :issuer "https://keycloak.queenswood.example/realms/queenswood"
+   :sub "f3c0a18c-2cf7-4d5a-a3b0-c4e9d0b5a124"
    :email "ada@example.com"
    :name "Ada Lovelace"
    :avatar-url "https://lh3.googleusercontent.com/a/AOh14Gh7fA"
@@ -29,12 +30,4 @@
 
 (def Me {:user User :memberships [Membership]})
 
-(def MeNotOnboarded
-  {:value
-   {:title "REJECTED"
-    :type ":user/not-found"
-    :status 404
-    :detail
-    "User signed in but has no Queenswood account yet — POST /v1/onboarding/me first"}})
-
-(def registry (examples-registry [#'User #'Membership #'Me #'MeNotOnboarded]))
+(def registry (examples-registry [#'User #'Membership #'Me]))

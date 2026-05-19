@@ -1,6 +1,7 @@
 <script>
-  import { admin_token, save_admin_token, clear_admin_token, set_org } from "./lib/api.mjs";
-  import Login from "./lib/Login.svelte";
+  import { ensure_session, sign_in, sign_out } from "./lib/auth.mjs";
+  import { set_org, clear_org_credentials } from "./lib/api.mjs";
+  import SignIn from "./lib/SignIn.svelte";
   import Sidebar from "./lib/Sidebar.svelte";
   import OrgSelector from "./lib/OrgSelector.svelte";
   import OrganizationList from "./lib/OrganizationList.svelte";
@@ -13,6 +14,12 @@
   import PayeeCheckList from "./lib/PayeeCheckList.svelte";
   import Toast from "./lib/Toast.svelte";
 
+  // Two transient states (loading / signin) and one steady state
+  // (dashboard) — bank-app doesn't have an onboarding screen because
+  // ops users come pre-provisioned (the auth interceptor upserts
+  // their User row on first sign-in, no org-creation step).
+  let stage = $state("loading");
+
   let currentPage = $state("organizations");
   let organizations = $state([]);
   let selectedOrgId = $state(null);
@@ -21,20 +28,24 @@
   let productListRef = $state();
   let copListRef = $state();
   let toastRef = $state();
-  let adminTokenSet = $state(!!admin_token());
 
   let hasApiKey = $derived(selectedOrgId != null);
 
-  function handleLogin(token) {
-    save_admin_token(token);
-    adminTokenSet = true;
+  $effect(() => {
+    bootstrap();
+  });
+
+  async function bootstrap() {
+    const session = await ensure_session();
+    stage = session.authenticated ? "dashboard" : "signin";
   }
 
   function handleLogout() {
-    clear_admin_token();
+    clear_org_credentials();
     selectedOrgId = null;
     organizations = [];
-    adminTokenSet = false;
+    stage = "signin";
+    sign_out();
   }
 
   function showToast(opts) {
@@ -43,10 +54,10 @@
 
   async function selectOrg(orgId) {
     selectedOrgId = orgId;
-    // set_org mints a JWT against /oauth/token using the org's stored
-    // client_credentials; the list-views below all attach the bearer
-    // from the same atom, so wait for it to settle before kicking
-    // them off.
+    // set_org mints a per-org JWT via /oauth/token when the org's
+    // client_credentials are stored locally (orgs created in this
+    // session). For orgs we don't have credentials for, set_org
+    // falls back to the ops user JWT (admin role).
     await set_org(orgId);
     partyListRef?.load();
     accountListRef?.load();
@@ -77,8 +88,10 @@
 
 <Toast bind:this={toastRef} />
 
-{#if !adminTokenSet}
-  <Login onSubmit={handleLogin} />
+{#if stage === "loading"}
+  <div class="splash">Loading…</div>
+{:else if stage === "signin"}
+  <SignIn onSignIn={sign_in} />
 {:else}
 <div class="layout">
   <Sidebar {currentPage} onNavigate={(page) => currentPage = page} onLogout={handleLogout} />
@@ -214,5 +227,14 @@
     border: none;
     border-radius: 4px;
     cursor: pointer;
+  }
+
+  .splash {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    color: var(--text-muted, #6b7280);
+    font-family: system-ui, -apple-system, sans-serif;
   }
 </style>

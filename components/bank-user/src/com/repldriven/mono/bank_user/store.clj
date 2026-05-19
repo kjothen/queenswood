@@ -32,22 +32,22 @@
                 :user/get
                 "Failed to load user"))
 
-(defn find-by-keycloak-sub
-  "Returns the User with the given Keycloak sub, or nil if absent.
-  Uses the unique User_by_keycloak_sub index."
-  [txn sub]
+(defn find-by-sub
+  "Returns the User with the given (issuer, sub) pair, or nil if
+  absent. Uses the unique User_by_issuer_and_sub index. The OIDC
+  spec only guarantees `sub` uniqueness within an `issuer`, so both
+  values are required for a safe lookup."
+  [txn issuer sub]
   (fdb/transact txn
                 (fn [txn]
-                  (first
-                   (mapv schema/pb->User
-                         (fdb/query-records
-                          (fdb/open txn store-name)
-                          "User"
-                          "keycloak_sub"
-                          sub
-                          {:index "User_by_keycloak_sub"}))))
-                :user/find-by-keycloak-sub
-                "Failed to look up user by keycloak sub"))
+                  (some-> (fdb/query-record-compound
+                           (fdb/open txn store-name)
+                           "User"
+                           [["issuer" issuer] ["sub" sub]]
+                           {:index "User_by_issuer_and_sub"})
+                          schema/pb->User))
+                :user/find-by-sub
+                "Failed to look up user by issuer + sub"))
 
 (defn find-by-email
   "Returns Users with the given email (non-unique index)."

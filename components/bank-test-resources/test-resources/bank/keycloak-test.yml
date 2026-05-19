@@ -1,12 +1,15 @@
 container: !system/component
   system/component-kind: keycloak/container
-  # Imported at container boot. The realm carries the audience scopes
-  # the bank-api expects and a `queenswood-admin` service-account
-  # client (id/secret below) with realm-management roles for the
-  # keycloak adapter's admin path.
-  realm-import-file: bank/queenswood-realm.json
-  # Pin to a stable host port under `dev` so the bank-console SPA
-  # (running outside the JVM) can reach the testcontainer Keycloak
+  # Imported at container boot. Each realm carries audience scopes
+  # + a `queenswood-admin` service-account client for the keycloak
+  # adapter's admin path. queenswood is the organization-user realm
+  # (bank-console SPA); queenswood-ops is the operator realm
+  # (bank-app SPA).
+  realm-import-files:
+    - bank/queenswood-realm.json
+    - bank/queenswood-ops-realm.json
+  # Pin to a stable host port under `dev` so the host-side SPAs
+  # (bank-console, bank-app) can reach the testcontainer Keycloak
   # at `http://localhost:8090`. Random port for tests so parallel
   # runs don't fight over a single binding.
   host-port: !profile
@@ -21,5 +24,16 @@ identity-provider: !system/component
   system/component-kind: keycloak/identity-provider
   base-url: !system/local-ref auth-server-url
   realm: queenswood
+  admin-client-id: queenswood-admin
+  admin-client-secret: queenswood-admin-test-secret
+
+# Second realm `queenswood-ops` hosts the Queenswood operator users
+# (bank-app SPA). Only used for JWT verification by the bank-api auth
+# interceptor; we don't issue admin REST calls against this realm so
+# the admin-client-* values are unused but kept symmetric.
+identity-provider-ops: !system/component
+  system/component-kind: keycloak/identity-provider
+  base-url: !system/local-ref auth-server-url
+  realm: queenswood-ops
   admin-client-id: queenswood-admin
   admin-client-secret: queenswood-admin-test-secret

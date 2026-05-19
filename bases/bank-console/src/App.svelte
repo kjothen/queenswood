@@ -13,8 +13,10 @@
   let memberships = $state([]);
 
   // On every page-load: hand off to Keycloak to figure out whether
-  // there's an existing session. If yes, GET /v1/me; the response
-  // distinguishes "needs onboarding" (404) from "ready" (200).
+  // there's an existing session. If yes, GET /v1/me. bank-api's auth
+  // interceptor upserts the User row on every authenticated request,
+  // so /v1/me always returns 200 — we route by whether the response
+  // carries any memberships (none means: needs onboarding).
   $effect(() => {
     bootstrap();
   });
@@ -30,17 +32,15 @@
 
   async function refresh_me() {
     const { status, body } = await get_me();
-    if (status === 200) {
-      user = body.user;
-      memberships = body.memberships ?? [];
-      stage = "dashboard";
-    } else if (status === 404) {
-      stage = "onboarding";
-    } else {
-      // Surface unexpected statuses (5xx, 401 after refresh) as a
-      // sign-out — safer than a confusing dashboard with stale state.
+    if (status !== 200) {
+      // Unexpected status (5xx, 401 after refresh) — safer to send
+      // the user back to sign-in than to render stale state.
       stage = "signin";
+      return;
     }
+    user = body.user;
+    memberships = body.memberships ?? [];
+    stage = memberships.length === 0 ? "onboarding" : "dashboard";
   }
 
   function handleOnboardComplete(payload) {

@@ -25,16 +25,26 @@ system:
       system/component-kind: server/interceptors
       admin-api-key: !env MONO_ADMIN_API_KEY
       identity-provider: !system/ref keycloak.identity-provider
+      # All identity-provider instances the auth interceptor may use
+      # to verify an incoming JWT. The interceptor extracts the
+      # unverified `iss` claim, picks the matching provider, then
+      # verifies. queenswood = bank-console; queenswood-ops = bank-app.
+      identity-providers:
+        - !system/ref keycloak.identity-provider
+        - !system/ref keycloak.identity-provider-ops
       expected-audiences:
         - queenswood-api-test
         - queenswood-api-live
-        # User JWTs minted for the bank-console SPA carry the public
-        # client's id as aud (no custom audience mapper on that client).
+        # SPA user JWTs carry the public client id as aud (audience
+        # mapper points the client at itself).
         - queenswood-console
-      # The Keycloak public client SPAs use to mint user JWTs. The
-      # auth interceptor uses this to discriminate user JWTs (azp ==
-      # this) from service JWTs (azp == org-id).
-      console-client-id: queenswood-console
+        - queenswood-app
+      # The Keycloak public client ids whose JWTs the auth interceptor
+      # treats as user JWTs (azp == one of these); anything else is
+      # treated as a service JWT.
+      user-client-ids:
+        - queenswood-console
+        - queenswood-app
       audiences-by-status:
         organization-status-test: queenswood-api-test
         organization-status-live: queenswood-api-live

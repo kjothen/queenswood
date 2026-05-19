@@ -33,6 +33,17 @@ keycloak:
   # Code + PKCE. Must match the `clientId` of the corresponding
   # `clients[]` entry in `files/keycloak-realm.json`.
   consoleClientId: queenswood-console
+  # Second realm hosting Queenswood operator users (bank-app SPA).
+  # Same Keycloak instance, separate realm. bank-api wires a second
+  # identity-provider pointed at this realm.
+  opsRealm: queenswood-ops
+  # Override the iss claim the verifier expects on the ops realm
+  # when base-url is an in-cluster Service URL but Keycloak embeds
+  # its public hostname in tokens. Leave empty to default to
+  # `<baseUrl>/realms/<opsRealm>`.
+  opsExpectedIssuer: ""
+  # Public client id the bank-app SPA uses against the ops realm.
+  opsClientId: queenswood-app
   # Override the iss the verifier expects on incoming JWTs. Leave
   # empty to default to `<baseUrl>/realms/<realm>`. Set when
   # Keycloak's public `hostname.hostname` differs from base-url --
@@ -120,6 +131,16 @@ bankApp:
   port: 8080
   replicas: 1
   apiUpstream: "http://{{ .Release.Name }}-bank-api-service:8080"
+  # Public URL of the realm the bank-app SPA authenticates against.
+  # Empty falls back to the build-time default (useful for Vite dev
+  # against the chart's bundled dev Keycloak via port-forward); set
+  # to `https://keycloak.<env>.repldriven.com` on GKE.
+  keycloakPublicUrl: ""
+  # Optional federated IdP alias for skip-straight-to-Google flows.
+  # Empty in dev so the Keycloak login form renders for the seeded
+  # `ops` / `ops` user; set to `google` once real Google OAuth
+  # credentials are wired into the ops realm.
+  keycloakIdpHint: ""
   resources:
     limits: { cpu: "200m", memory: "128Mi" }
     requests: { cpu: "50m", memory: "64Mi" }

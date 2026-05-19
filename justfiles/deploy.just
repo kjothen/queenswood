@@ -93,6 +93,7 @@ keycloak-up:
       -e KEYCLOAK_ADMIN=admin \
       -e KEYCLOAK_ADMIN_PASSWORD=admin \
       -v "$PWD/infra/helm/queenswood/files/keycloak-realm.json:/opt/keycloak/data/import/realm.json:ro" \
+      -v "$PWD/infra/helm/queenswood/files/keycloak-realm-ops.json:/opt/keycloak/data/import/realm-ops.json:ro" \
       quay.io/keycloak/keycloak:26.0 \
       start-dev --import-realm
 

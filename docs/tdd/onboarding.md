@@ -100,22 +100,24 @@ project's processor / store conventions.
 #### `User`
 
 Lives in `components/bank-schema/resources/schemas/users/`.
-Keyed by `user-id` (ULID, prefix `usr`). The federated subject
-`keycloak-sub` is a non-mutable unique secondary index, the
-lookup key for sign-in. Email is a non-unique secondary index
-for the future invitation flow.
+Keyed by `user-id` (ULID, prefix `usr`). The federated
+subject is the OIDC `(issuer, sub)` pair — `sub` is only
+unique within an `issuer`, so both are required for a safe
+lookup, and the FDB index is composite over both. Email is a
+non-unique secondary index for the future invitation flow.
 
 ```protobuf
 message User {
   string user_id = 1;
-  string keycloak_sub = 2;
-  string email = 3;
-  string name = 4;
-  string avatar_url = 5;
-  IdentityProvider identity_provider = 6;
-  UserStatus status = 7;
-  int64 created_at = 8;
-  int64 updated_at = 9;
+  string issuer = 2;
+  string sub = 3;
+  string email = 4;
+  string name = 5;
+  string avatar_url = 6;
+  IdentityProvider identity_provider = 7;
+  UserStatus status = 8;
+  int64 created_at = 9;
+  int64 updated_at = 10;
 }
 ```
 
@@ -126,7 +128,7 @@ reserved `SUSPENDED` slot.
 
 FDB record-type registrations:
 
-- `User_by_keycloak_sub` — unique. Sign-in lookup.
+- `User_by_issuer_and_sub` — unique. Sign-in lookup.
 - `User_by_email` — non-unique. Future invitation matching.
 
 #### `Membership`
@@ -163,17 +165,18 @@ FDB record-type registrations:
 
 Polylith component at `components/bank-user/` with the
 canonical `interface / core / domain / store` split.
-`upsert-by-keycloak-sub` is idempotent: first call creates a
-new record, subsequent calls apply fresh OIDC claims
-(email, name, avatar may have rotated) without disturbing
-`user-id`, `status`, or `created-at`. `find-by-keycloak-sub`
-returns the record or `nil` (not an anomaly) so callers can
-drive first-sign-in onboarding off the nil.
+`upsert-by-sub` is idempotent: first call creates a new
+record, subsequent calls apply fresh OIDC claims (email,
+name, avatar may have rotated) without disturbing `user-id`,
+`issuer`, `sub`, `status`, or `created-at`. `find-by-sub`
+takes both issuer and sub explicitly and returns the record
+or `nil` (not an anomaly) so callers can drive first-sign-in
+onboarding off the nil.
 
 #### `bank-membership`
 
 Polylith component at `components/bank-membership/` with the
-same shape. `create-membership` defaults the role to
+same shape. `new-membership` defaults the role to
 `role-owner`. The two list operations
 (`list-by-user` / `list-by-organization`) traverse the FDB
 secondary indexes.
@@ -212,15 +215,16 @@ Discrimination is on the verified JWT's `azp` claim:
   user-JWT path.
 - anything else → existing service-JWT path.
 
-The user-JWT path looks up `bank-user/find-by-keycloak-sub`
-and `bank-membership/list-by-user` against the FDB
-record-store the same way handlers do. The resolved principal
-carries:
+The user-JWT path looks up `bank-user/find-by-sub` (passing
+both `iss` and `sub`) and `bank-membership/list-by-user`
+against the FDB record-store the same way handlers do. The
+resolved principal carries:
 
 ```clojure
 {:principal-type :user
  :principal-id user-id
- :keycloak-sub sub
+ :issuer      iss
+ :sub         sub
  :user        user-record-or-nil
  :memberships memberships-or-empty-vector
  :organization-id org-id-or-nil
@@ -265,7 +269,7 @@ Handler:
    `organization-status-test`. This is the same call the
    operator-driven onboarding makes, with the user-facing
    defaults filled in.
-4. Calls `bank-membership/create-membership` with role
+4. Calls `bank-membership/new-membership` with role
    `role-owner`.
 5. Returns 201 with the user, the rich organisation (party,
    accounts, client-id, one-time client-secret), and the

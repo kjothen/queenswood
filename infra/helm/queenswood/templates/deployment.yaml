@@ -164,6 +164,16 @@ spec:
             - name: KEYCLOAK_EXPECTED_ISSUER
               value: {{ . | quote }}
             {{- end }}
+            # Second realm for the queenswood-app SPA (Queenswood
+            # operators). bank-api wires a second identity-provider
+            # instance pointed at this realm so it accepts JWTs from
+            # both the org-user realm and the ops realm.
+            - name: KEYCLOAK_OPS_REALM
+              value: {{ $.Values.keycloak.opsRealm | quote }}
+            {{- with $.Values.keycloak.opsExpectedIssuer }}
+            - name: KEYCLOAK_OPS_EXPECTED_ISSUER
+              value: {{ . | quote }}
+            {{- end }}
             {{- range $k, $v := $svc.extraEnv }}
             - name: {{ $k }}
               value: {{ tpl $v $ | quote }}

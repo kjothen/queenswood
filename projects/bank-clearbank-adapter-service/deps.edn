@@ -14,33 +14,30 @@
     component/test-system {:local/root "../../components/test-system"}
     component/testcontainers {:local/root "../../components/testcontainers"}}}}
  :deps
- {component/bank-resources {:local/root
-                            "../../components/bank-resources"}
-  component/bank-clearbank-webhook
-  {:local/root "../../components/bank-clearbank-webhook"}
+ {component/bank-balance {:local/root "../../components/bank-balance"}
   component/bank-cash-account {:local/root "../../components/bank-cash-account"}
   component/bank-cash-account-product
   {:local/root "../../components/bank-cash-account-product"}
+  component/bank-clearbank-webhook
+  {:local/root "../../components/bank-clearbank-webhook"}
   component/bank-party {:local/root "../../components/bank-party"}
   component/bank-person-identification
   {:local/root "../../components/bank-person-identification"}
-  component/bank-balance {:local/root "../../components/bank-balance"}
   component/bank-policy {:local/root "../../components/bank-policy"}
-  component/bank-transaction {:local/root "../../components/bank-transaction"}
-  component/bank-organization {:local/root "../../components/bank-organization"}
-  component/identity-provider {:local/root "../../components/identity-provider"}
-  component/keycloak {:local/root "../../components/keycloak"}
+  component/bank-resources {:local/root "../../components/bank-resources"}
   component/bank-schema {:local/root "../../components/bank-schema"}
+  component/bank-transaction {:local/root "../../components/bank-transaction"}
+
   component/avro {:local/root "../../components/avro"}
   component/cli {:local/root "../../components/cli"}
   component/command {:local/root "../../components/command"}
   component/command-processor {:local/root "../../components/command-processor"}
   component/command-schema {:local/root "../../components/command-schema"}
-  component/event {:local/root "../../components/event"}
-  component/event-schema {:local/root "../../components/event-schema"}
   component/encryption {:local/root "../../components/encryption"}
   component/env {:local/root "../../components/env"}
   component/error {:local/root "../../components/error"}
+  component/event {:local/root "../../components/event"}
+  component/event-schema {:local/root "../../components/event-schema"}
   component/fdb {:local/root "../../components/fdb"}
   component/http-client {:local/root "../../components/http-client"}
   component/json {:local/root "../../components/json"}
@@ -52,6 +49,7 @@
   component/system {:local/root "../../components/system"}
   component/telemetry {:local/root "../../components/telemetry"}
   component/utility {:local/root "../../components/utility"}
+
   base/bank-clearbank-adapter {:local/root "../../bases/bank-clearbank-adapter"}
   com.google.protobuf/protobuf-java {:mvn/version "3.25.8"}
   org.clojure/clojure {:mvn/version "1.12.4"}
