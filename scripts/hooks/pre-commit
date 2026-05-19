@@ -24,9 +24,8 @@ if [ -n "$helm_files" ]; then
   # "missing in charts/ directory" message and they can run
   # `just helm-validate` once to sync.
   echo "Validating Helm chart..."
-  helm lint infra/helm/queenswood --set secrets.adminApiKey=lint >/dev/null
+  helm lint infra/helm/queenswood >/dev/null
   helm template queenswood infra/helm/queenswood \
     --set image.tag=dev \
-    --set secrets.adminApiKey=template-render \
     | kubeconform -strict -ignore-missing-schemas -summary
 fi

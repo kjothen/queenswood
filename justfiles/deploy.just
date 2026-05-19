@@ -2,35 +2,25 @@
 helm-template tag="dev":
     helm dependency update infra/helm/queenswood
     helm template queenswood infra/helm/queenswood \
-      --set image.tag={{ tag }} \
-      --set secrets.adminApiKey=template-render
+      --set image.tag={{ tag }}
 
 # Lint and schema-validate the Helm chart without a cluster
 helm-validate tag="dev":
     # CRDs (FoundationDBCluster etc.) are skipped via -ignore-missing-schemas.
     helm dependency update infra/helm/queenswood
-    helm lint infra/helm/queenswood --set secrets.adminApiKey=lint
+    helm lint infra/helm/queenswood
     helm template queenswood infra/helm/queenswood \
       --set image.tag={{ tag }} \
-      --set secrets.adminApiKey=template-render \
       | kubeconform -strict -ignore-missing-schemas -summary
 
-# Install or upgrade the chart; rotates the admin API key only on first install
-helm-install tag="dev" admin_key="" registry="ghcr.io/repldriven" values_file="":
+# Install or upgrade the chart
+helm-install tag="dev" registry="ghcr.io/repldriven" values_file="":
     #!/usr/bin/env zsh
-    # Reuses the existing Secret value on subsequent installs so the admin API key is stable
-    # across deploys; pass `admin_key=...` to rotate. `registry` lets `kind-up` point at
-    # the local registry so containerd pulls from there. `values_file` layers an extra
-    # values file on top of values.yaml -- kind-up passes values-dev.yaml to enable the
+    # `registry` lets `kind-up` point at the local registry so containerd
+    # pulls from there. `values_file` layers an extra values file on top
+    # of values.yaml -- kind-up passes values-dev.yaml to enable the
     # bundled dev Keycloak.
     set -e
-    key={{ admin_key }}
-    if [[ -z "$key" ]]; then
-      key=$(kubectl -n queenswood get secret queenswood-admin-api-key \
-        -o jsonpath='{.data.MONO_ADMIN_API_KEY}' 2>/dev/null \
-        | base64 -d || true)
-      [[ -z "$key" ]] && key=$(openssl rand -hex 16)
-    fi
     extra_values=()
     if [[ -n "{{ values_file }}" ]]; then
       extra_values=(-f infra/helm/queenswood/{{ values_file }})
@@ -41,7 +31,6 @@ helm-install tag="dev" admin_key="" registry="ghcr.io/repldriven" values_file=""
       "${extra_values[@]}" \
       --set image.tag={{ tag }} \
       --set image.registry={{ registry }} \
-      --set secrets.adminApiKey=$key \
       --wait --timeout 10m
 
 # Create kind cluster, push images to local registry, and install the chart
@@ -61,7 +50,7 @@ kind-up tag="dev":
       docker tag {{ DOCKER_REGISTRY }}/$svc:{{ tag }} localhost:5001/$svc:{{ tag }}
       docker push localhost:5001/$svc:{{ tag }}
     done
-    just helm-install {{ tag }} "" localhost:5001 values-dev.yaml
+    just helm-install {{ tag }} localhost:5001 values-dev.yaml
 
 # Create kind cluster and install the chart from ghcr.io/repldriven (no local build).
 kind-up-remote tag="latest":
@@ -71,7 +60,7 @@ kind-up-remote tag="latest":
     # pulls images directly from ghcr on first pod schedule.
     set -e
     kind get clusters | grep -q '^queenswood$' || kind create cluster --name queenswood
-    just helm-install {{ tag }} "" ghcr.io/repldriven
+    just helm-install {{ tag }} ghcr.io/repldriven
 
 # Tear down the kind cluster
 kind-down:
@@ -199,19 +188,6 @@ tilt-prune:
     else
       echo "kind node 'queenswood-control-plane' not running — skipping containerd prune."
     fi
-
-# Print the cluster admin API key from the queenswood Secret
-kube-admin-key:
-    #!/usr/bin/env zsh
-    # Designed for command substitution: VITE_MONO_ADMIN_API_KEY=$(just kube-admin-key) just bank-app-start
-    set -euo pipefail
-    key=$(kubectl -n queenswood get secret queenswood-admin-api-key \
-      -o jsonpath='{.data.MONO_ADMIN_API_KEY}' | base64 -d)
-    if [[ -z "$key" ]]; then
-      echo "queenswood-admin-api-key Secret missing or empty in namespace queenswood — is the cluster up and the chart installed?" >&2
-      exit 1
-    fi
-    printf '%s' "$key"
 
 # Print Keycloak admin credentials + console URL for the active env
 keycloak-admin-login:

@@ -410,7 +410,8 @@ The end-to-end flow:
   in the data model. Adding invitations means relaxing the
   409 check and adding the invitation record + acceptance
   flow.
-- **bank-app continues to work.** The legacy admin-key SPA
-  is untouched. The two consoles live side-by-side; once
-  the human-driven UI is preferred we can deprecate
-  bank-app.
+- **bank-app continues to work.** The operator SPA signs in
+  via Keycloak against the `queenswood-ops` realm and
+  remains in place for platform-admin workflows. The two
+  consoles live side-by-side — `bank-app` for operators,
+  `bank-console` for org users.

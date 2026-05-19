@@ -247,23 +247,28 @@ maps before Malli sees them.
 ### Auth
 
 Bearer-token authentication. The `Authorization: Bearer <token>`
-header is checked against:
+header carries one of:
 
-- The configured admin API key (constant-time byte compare via
-  `encryption/bytes-equals?`).
-- The per-organisation API keys (cached lookup of the
-  hashed token, with a 60-second TTL cache layered over an FDB
-  read).
+- A Keycloak-issued service JWT minted by an organisation's
+  `client_credentials` client. The `queenswood-admin` operator
+  client carries the `admin` realm role; the auth interceptor
+  flips its `:organization-id` to the internal-org-id and
+  grants `:admin`.
+- A Keycloak-issued user JWT minted by the `bank-console` SPA
+  (`queenswood` realm) or the `bank-app` SPA (`queenswood-ops`
+  realm).
+- A per-organisation API key (cached lookup of the hashed
+  token, with a 60-second TTL cache layered over an FDB read).
 
 A successful identification attaches `:auth` to the request:
 
 ```clojure
-{:role :admin :organization-id "..."}
-;; or
-{:role :org   :organization-id "..."}
+{:principal-type :service :roles #{:admin :org} :organization-id "..."}
+{:principal-type :user    :roles #{:user :org}  :organization-id "..."}
+{:principal-type :service :roles #{:org}        :organization-id "..."}
 ```
 
-`authenticate` only attaches `:auth` if a key is valid; it
+`authenticate` only attaches `:auth` if a token verifies; it
 never short-circuits. Routes without `:openapi :security` are
 genuinely public.
 

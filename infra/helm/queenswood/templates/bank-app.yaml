@@ -2,8 +2,8 @@
 ---
 # Frontend SPA. Standalone template — distinct from the Clojure
 # `services:` matrix because the bank-app has no FDB volumes, no
-# bootstrap-Job dependency, no admin-key secret, and uses simple
-# TCP probes instead of Spring-Boot-Actuator endpoints.
+# bootstrap-Job dependency, and uses simple TCP probes instead of
+# Spring-Boot-Actuator endpoints.
 apiVersion: apps/v1
 kind: Deployment
 metadata:

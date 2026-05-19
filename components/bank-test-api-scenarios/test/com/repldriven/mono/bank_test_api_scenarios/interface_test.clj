@@ -108,7 +108,7 @@
                                       :steps (count (SUT/steps loaded))})
                          _ (SUT/run-scenario (SUT/fresh-context
                                               {:base-url base-url
-                                               :admin-api-key admin-token
+                                               :admin-token admin-token
                                                :run-id (str (util/uuidv7))})
                                              resource-path)
                          _ (log/info "api scenario complete" {:file relative})]))))))))

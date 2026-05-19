@@ -8,8 +8,8 @@ option java_outer_classname = "IdempotencyProto";
 
 // Cached response for an Idempotency-Key, scoped by the
 // authenticated principal (the API key id for org-scoped
-// callers, the literal "admin" for admin-key callers) and the
-// operation (HTTP method + path template).
+// API-key callers, or the JWT's `azp` for Keycloak-authenticated
+// callers) and the operation (HTTP method + path template).
 //
 // Two-state machine to handle concurrent duplicate requests:
 //

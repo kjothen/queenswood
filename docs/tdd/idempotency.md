@@ -50,7 +50,8 @@ Each entry is keyed by `[principal_id, operation,
 idempotency_key]`:
 
 - **principal_id** — `api-key-id` for org-scoped requests;
-  `"admin"` for admin-key requests.
+  the JWT's `azp` (== `queenswood-admin` for service-account
+  admin tokens) for Keycloak-authenticated requests.
 - **operation** — `METHOD + path-template`, e.g.
   `POST /v1/cash-accounts`. Scopes the key independently per
   endpoint, so the same key can be used across different
@@ -239,12 +240,14 @@ lookup runs.
   interceptors accepts retries without deduplication. Worth a
   lint check or a default-on policy at the router level.
 
-- **Admin scope is shared.** Admin-key requests share the
-  `"admin"` principal scope. Two different admin keys using
-  the same `Idempotency-Key` on the same operation will
-  collide. Acceptable given admin usage patterns; if admin
-  keys are ever individually tracked, this scope should be
-  tightened.
+- **Admin service-account scope is shared.** Service tokens
+  minted via `client_credentials` against `queenswood-admin`
+  all share the same `azp` principal scope, so two callers
+  using that client with the same `Idempotency-Key` on the
+  same operation will collide. Acceptable given the
+  back-office usage pattern; per-operator humans use the
+  user-JWT path with a distinct `:user-id` principal and
+  don't share scope.
 
 ## References
 

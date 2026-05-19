@@ -10,10 +10,6 @@ image:
   tag: "dev"
   pullPolicy: Never
 
-# Required by the chart's secret template; not a real credential.
-secrets:
-  adminApiKey: "dev"
-
 # Dev runs only FDB 7.3.x — drop the 7.1 / 7.4 init-container
 # entries the operator chart ships by default. Saves two image
 # pulls and the containerd snapshot space for them in kind.

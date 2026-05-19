@@ -48,7 +48,7 @@
     </button>
   {/each}
   <div class="spacer"></div>
-  <button class="nav-item logout" onclick={onLogout} title="Clear the admin key and return to the login screen">
+  <button class="nav-item logout" onclick={onLogout} title="Sign out and return to the login screen">
     <span class="nav-icon"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M6 2a1 1 0 0 0-1 1v2h2V4h6v8H7v-1H5v2a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V3a1 1 0 0 0-1-1H6zm-.7 4.3L1.6 10l3.7 3.7 1.4-1.4L4.4 10l2.3-2.3-1.4-1.4z"/></svg></span>
     Logout
   </button>

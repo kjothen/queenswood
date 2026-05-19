@@ -121,10 +121,6 @@ just docker-build-all dev
 just helm-install dev
 ```
 
-The recipe reuses the existing admin-key Secret on
-upgrades, generating a fresh key only if no Secret exists.
-Pass `admin_key=...` to rotate.
-
 ### kind end-to-end
 
 ```bash

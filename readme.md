@@ -270,26 +270,26 @@ FoundationDB) onto any Kubernetes cluster.
 **Install:**
 
 ```bash
-ADMIN_KEY=$(openssl rand -hex 16)
 helm install queenswood \
   oci://ghcr.io/repldriven/queenswood --version 0.1.0 \
   -n queenswood --create-namespace \
-  --set secrets.adminApiKey=$ADMIN_KEY \
   --wait --timeout 10m
-echo "Admin API key: $ADMIN_KEY"
 ```
 
-**Reach the API and the front-end** (separate terminals):
+**Reach the API and the SPAs** (separate terminals):
 
 ```bash
 kubectl -n queenswood port-forward svc/queenswood-bank-api-service 8080:8080
 kubectl -n queenswood port-forward svc/queenswood-bank-app          8081:8080
+kubectl -n queenswood port-forward svc/queenswood-bank-console      8082:8080
 ```
 
-Then open <http://localhost:8081> for the SPA, or hit
-<http://localhost:8080/scalar> for OpenAPI docs. The full
-quickstart — including key recovery and tear-down — ships with
-each [release](https://github.com/repldriven/queenswood/releases/latest).
+Then open <http://localhost:8081> for the operator console
+(`bank-app`) or <http://localhost:8082> for the organisation
+console (`bank-console`); both sign in via the bundled
+Keycloak. OpenAPI docs at <http://localhost:8080/scalar>. The
+full quickstart — including tear-down — ships with each
+[release](https://github.com/repldriven/queenswood/releases/latest).
 
 ## Built on mono
 

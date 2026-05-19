@@ -3,9 +3,10 @@
 
   A scenario is a map with `:given` / `:when` / `:then` step lists;
   each step is dispatched through `verbs/dispatch`. The runner
-  context carries a base URL, an admin API key, and a `:captures`
-  map populated by steps that capture their response body via
-  `:as <alias>`. Later steps refer back to captures with
+  context carries a base URL, an admin bearer token (a Keycloak-
+  minted service JWT carrying the `admin` realm role), and a
+  `:captures` map populated by steps that capture their response
+  body via `:as <alias>`. Later steps refer back to captures with
   `[:ref :alias :k1 :k2 ...]` markers.
 
   Scenarios call the API over HTTP. One booted system serves every
@@ -23,15 +24,15 @@
   Args (map):
   - `:base-url` — root URL of the booted bank API (e.g.
     `http://localhost:NNNN`).
-  - `:admin-api-key` — bearer token used when `:auth :admin`
-    appears in a step.
+  - `:admin-token` — Keycloak-minted service JWT used when
+    `:auth :admin` appears in a step.
   - `:run-id` (optional) — caller-supplied tag for log lines.
 
   The fresh `:captures` map isolates scenarios from each other so
   one boot can serve many."
-  [{:keys [base-url admin-api-key run-id]}]
+  [{:keys [base-url admin-token run-id]}]
   {:base-url base-url
-   :admin-api-key admin-api-key
+   :admin-token admin-token
    :run-id run-id
    :captures {}
    :last-response nil

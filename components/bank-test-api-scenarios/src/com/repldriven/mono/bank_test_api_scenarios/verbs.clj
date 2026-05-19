@@ -57,12 +57,12 @@
    form))
 
 (defn- resolve-auth
-  [{:keys [admin-api-key captures]} auth]
+  [{:keys [admin-token captures]} auth]
   (cond
    (nil? auth)
    nil
    (= :admin auth)
-   admin-api-key
+   admin-token
    ;; A keyword references a previously-captured token (minted by
    ;; `:auth/mint-token` and stored via `:as`).
    (keyword? auth)

@@ -199,25 +199,22 @@ The hashed-lookup-with-cache shape is intentional: every
 authenticated request hits this path, so the FDB read is
 amortised over many requests within the cache window.
 
-### Admin key vs org keys
+### Admin access vs org keys
 
-Two tiers of bearer credential coexist:
+Operator-grade `admin` access does not flow through this
+brick. It is a Keycloak-issued JWT carrying the `admin` realm
+role — either a user JWT minted by the `bank-app` SPA against
+the `queenswood-ops` realm, or a service JWT minted via
+`client_credentials` against the `queenswood-admin` client.
+The `bank-api` auth interceptor maps either to
+`{:roles #{:admin :org} :organization-id <internal-org-id>}`;
+see [service-apis.md](service-apis.md).
 
-- **Admin key** — a single shared secret configured at boot
-  via `!env MONO_ADMIN_API_KEY`; see
-  [system-configurations.md](system-configurations.md).
-  Compared at auth time using `encryption/bytes-equals?`
-  (constant-time). Resolves to
-  `{:role :admin :organization-id <internal-org-id>}`.
-- **Org keys** — per-organisation, generated through this
-  brick, stored hashed. Resolves to
-  `{:role :org :organization-id <their-org-id>}`.
-
-The two tiers serve different needs: the admin key is for
-operator and platform-management calls (creating
-organisations, system maintenance); org keys are for
-tenant-scope API traffic. Routes opt into the right scheme
-via OpenAPI `:security` (see service-apis TDD).
+The keys this brick issues are **org keys**: per-organisation,
+generated and stored hashed, resolving to
+`{:role :org :organization-id <their-org-id>}`. They authorise
+tenant-scope API traffic. Routes opt into the right scheme via
+OpenAPI `:security` (see service-apis TDD).
 
 ### Policy integration
 
@@ -268,11 +265,11 @@ adding a policy + binding (see policy-evaluation TDD).
   because the operator needs *some* way to identify a key in
   a list. Twelve characters of high-entropy prefix isn't
   enough to reverse the secret in any practical attack.
-- **Admin key in FDB instead of env.** Would let admin keys
-  be rotated via the same flow as org keys. Rejected for
-  bootstrap chicken-and-egg: the admin key is what
-  authorises the calls that would create org keys. Keeping
-  it in the system configuration (env) avoids the cycle.
+- **Admin keys in FDB alongside org keys.** Would let admin
+  bearers be rotated via the same flow as org keys. Moot
+  now that admin access is a Keycloak-issued JWT minted via
+  `client_credentials` against the `queenswood-admin` client
+  — rotation lives in Keycloak, not in this brick.
 
 ## Known Limitations
 
@@ -292,12 +289,14 @@ adding a policy + binding (see policy-evaluation TDD).
   most cases; not acceptable for emergency revocation.
   Mitigation would be cache invalidation on revoke (across
   instances, which needs the message-bus) or a shorter TTL.
-- **The admin key is a single shared secret.** No
-  per-operator credentials at the platform-admin tier;
-  audit attribution is "someone with the admin key did
-  this." For low-volume admin operations, acceptable;
-  for any scale of platform team, would want a richer
-  identity model.
+- **The `queenswood-admin` service account is shared.** The
+  `client_credentials` admin path issues tokens that all
+  identify as the same service principal; audit attribution
+  for back-office automation is "the queenswood-admin client
+  did this." Per-operator humans sign in through the
+  `bank-app` SPA, which does carry per-user identity; the
+  shared-credential gap is only the machine-to-machine
+  path.
 - **Per-organisation count limits are the only quantitative
   policy today.** The capability/limit machinery could
   express more (rate limits per key, time-bound keys, scoped
@@ -436,7 +435,7 @@ it stands.
   auth interceptor that consumes `get-api-key` and the
   cache layer)
 - [system-configurations.md](../recipes/system-configurations.md)
-  — System configurations (`!env MONO_ADMIN_API_KEY`)
+  — System configurations
 - `bank-api-key` brick interface
 - `encryption` brick interface (`generate-token`,
   `hash-token`, `bytes-equals?`)

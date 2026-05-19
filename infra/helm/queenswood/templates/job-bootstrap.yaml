@@ -85,11 +85,6 @@ spec:
               value: "/etc/fdb/fdb.cluster"
             - name: OTEL_ENDPOINT
               value: {{ default "" .Values.otel.endpoint | quote }}
-            - name: MONO_ADMIN_API_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .Release.Name }}-admin-api-key
-                  key: MONO_ADMIN_API_KEY
             - name: KEYCLOAK_BASE_URL
               value: {{ .Values.keycloak.baseUrl | quote }}
             - name: KEYCLOAK_REALM
