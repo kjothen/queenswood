@@ -50,13 +50,7 @@
          :status :cash-account-product-status-draft))
 
 (def ^:private good-data
-  {:name "v2"
-   :product-type :product-type-current
-   :balance-sheet-side :balance-sheet-side-liability
-   :balance-products [{:balance-type :balance-type-default
-                       :balance-status :balance-status-posted}]
-   :allowed-currencies ["GBP"]
-   :allowed-payment-address-schemes [:payment-address-scheme-scan]})
+  {:name "v2" :product-type :product-type-current :currency "GBP"})
 
 (deftest update-version-test
   (testing "rejects with :version-immutable when existing is published"
@@ -127,4 +121,24 @@
   (testing "succeeds with no prior versions — fresh product flow"
     (let [v (SUT/new-version "org.1" "prd.1" [] good-data permissive-policies)]
       (is (= 1 (:version-number v)))
-      (is (= :cash-account-product-status-draft (:status v))))))
+      (is (= :cash-account-product-status-draft (:status v)))))
+  (testing "fills derived fields from the per-product-type template"
+    (let [v (SUT/new-version "org.1" "prd.1" [] good-data permissive-policies)]
+      (is (= :balance-sheet-side-liability (:balance-sheet-side v)))
+      (is (= ["GBP"] (:allowed-currencies v)))
+      (is (= [:payment-address-scheme-scan]
+             (:allowed-payment-address-schemes v)))
+      (is (some #(= %
+                    {:balance-type :balance-type-default
+                     :balance-status :balance-status-posted})
+                (:balance-products v))
+          "template provides at least the default-posted balance bucket")))
+  (testing
+    "rejects with :currency-not-allowed when currency is outside the menu"
+    (let [r (SUT/new-version "org.1"
+                             "prd.1"
+                             []
+                             (assoc good-data :currency "USD")
+                             permissive-policies)]
+      (is (error/rejection? r))
+      (is (= :cash-account-product/currency-not-allowed (error/kind r))))))

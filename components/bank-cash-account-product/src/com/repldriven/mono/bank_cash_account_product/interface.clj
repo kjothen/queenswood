@@ -5,7 +5,8 @@
   versioned through draft, published, and discarded states; only
   published versions can back live accounts."
   (:require
-    [com.repldriven.mono.bank-cash-account-product.core :as core]))
+    [com.repldriven.mono.bank-cash-account-product.core :as core]
+    [com.repldriven.mono.bank-cash-account-product.resources :as resources]))
 
 (defn new-product
   "Create a new product as an initial draft v1. Returns the
@@ -122,6 +123,18 @@
   - opts (optional): map; `:limit`, `:order`."
   ([txn org-id] (core/get-products txn org-id))
   ([txn org-id opts] (core/get-products txn org-id opts)))
+
+(defn list-templates
+  "Return all per-product-type templates as a vector of maps with a
+  `:product-type` key plus the derived fields applied at product
+  creation. Static today, loaded from classpath at brick init;
+  intended to move to per-organization FDB records later so an
+  operator can author their own product templates."
+  []
+  (->> resources/product-defaults
+       (map (fn [[t fields]] (assoc fields :product-type t)))
+       (sort-by :product-type)
+       vec))
 
 (defn published-version
   "Return the highest-version-number `:published` version in a

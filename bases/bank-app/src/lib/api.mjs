@@ -287,18 +287,15 @@ function product_request_body(data) {
   const body = {
     name: data.name,
     "product-type": data["product-type"],
-    "balance-sheet-side": data["balance-sheet-side"],
+    currency: data.currency,
   };
-  if (data["allowed-currencies"]?.length)
-    body["allowed-currencies"] = data["allowed-currencies"];
-  if (data["balance-products"]?.length)
-    body["balance-products"] = data["balance-products"];
-  if (data["allowed-payment-address-schemes"]?.length)
-    body["allowed-payment-address-schemes"] =
-      data["allowed-payment-address-schemes"];
   if (data["interest-rate-bps"])
     body["interest-rate-bps"] = data["interest-rate-bps"];
   return body;
+}
+
+export function list_cash_account_product_templates() {
+  return org_request("/v1/cash-account-product-templates");
 }
 
 export function create_cash_account_product(data) {

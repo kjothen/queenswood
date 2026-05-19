@@ -22,11 +22,7 @@
              :auth :org-0-token
              :body {:name "v1"
                     :product-type "current"
-                    :balance-sheet-side "liability"
-                    :allowed-currencies ["GBP"]
-                    :balance-products [{:balance-type "default"
-                                        :balance-status "posted"}]
-                    :allowed-payment-address-schemes ["scan"]
+                    :currency "GBP"
                     :interest-rate-bps 0
                     :valid-from "2026-01-01"}}
    :as :v1
@@ -47,11 +43,7 @@
              :auth :org-0-token
              :body {:name "Attempted Rename"
                     :product-type "current"
-                    :balance-sheet-side "liability"
-                    :allowed-currencies ["GBP"]
-                    :balance-products [{:balance-type "default"
-                                        :balance-status "posted"}]
-                    :allowed-payment-address-schemes ["scan"]
+                    :currency "GBP"
                     :interest-rate-bps 0
                     :valid-from "2026-01-01"}}
    :assert {:status 409

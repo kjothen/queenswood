@@ -109,25 +109,11 @@
         (update :counter inc)
         (track result))))
 
-(def ^:private default-balance-products
-  [{:balance-type :balance-type-default :balance-status :balance-status-posted}
-   {:balance-type :balance-type-default
-    :balance-status :balance-status-pending-incoming}
-   {:balance-type :balance-type-default
-    :balance-status :balance-status-pending-outgoing}
-   {:balance-type :balance-type-interest-accrued
-    :balance-status :balance-status-posted}
-   {:balance-type :balance-type-interest-paid
-    :balance-status :balance-status-posted}])
-
 (defn- product-payload
   [product-name product-type & [extras]]
   (merge {:name product-name
           :product-type product-type
-          :balance-sheet-side :balance-sheet-side-liability
-          :allowed-currencies ["GBP"]
-          :allowed-payment-address-schemes [:payment-address-scheme-scan]
-          :balance-products default-balance-products}
+          :currency "GBP"}
          extras))
 
 (defn- record-fresh-product

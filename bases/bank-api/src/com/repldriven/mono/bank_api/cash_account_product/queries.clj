@@ -132,3 +132,8 @@
     (if (error/anomaly? result)
       (errors/anomaly->response result)
       {:status 200 :body result})))
+
+(defn list-templates
+  [_request]
+  {:status 200
+   :body {:items (cash-account-products/list-templates)}})
