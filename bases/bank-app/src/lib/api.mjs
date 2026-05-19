@@ -190,6 +190,22 @@ export function simulate_capitalize(org_id, as_of_date) {
 
 // ─── Parties (org-scoped) ───
 
+function address_body(addr) {
+  const out = {
+    street: addr.street,
+    town: addr.town,
+    postcode: addr.postcode,
+    country: addr.country,
+  };
+  if (addr["flat-number"])     out["flat-number"]     = addr["flat-number"];
+  if (addr["building-number"]) out["building-number"] = addr["building-number"];
+  if (addr["building-name"])   out["building-name"]   = addr["building-name"];
+  if (addr["sub-street"])      out["sub-street"]      = addr["sub-street"];
+  if (addr.state)              out.state              = addr.state;
+  if (addr["start-date"])      out["start-date"]      = addr["start-date"];
+  return out;
+}
+
 export function create_party(data) {
   const body = {
     type: "person",
@@ -198,6 +214,7 @@ export function create_party(data) {
     "family-name": data["family-name"],
     "date-of-birth": data["date-of-birth"],
     nationality: data.nationality,
+    address: address_body(data.address),
   };
   if (data["middle-names"]) body["middle-names"] = data["middle-names"];
   if (data["national-identifier"])

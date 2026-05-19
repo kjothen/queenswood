@@ -52,25 +52,34 @@
      #(assoc-in % [:system/defs :server :handler] api/app)]]
    (let [jetty (system/instance sys [:server :jetty-adapter])]
      (binding [*base-url* (server/http-local-url jetty)]
-       (testing "POST /v3.6/applicants creates an applicant"
-         (nom-test> [res (post "/v3.6/applicants"
-                               {:first_name "Arthur" :last_name "Dent"})
-                     _ (is (= 201 (:status res)))
-                     body (http/res->edn res)
-                     _ (is (string? (:id body)))
-                     _ (is (= "Arthur" (:first_name body)))]))
-       (testing "POST /v3.6/checks rejects with 422 when applicant unknown"
-         (nom-test> [res (post "/v3.6/checks" {:applicant_id "missing"})
-                     _ (is (= 422 (:status res)))]))
-       (testing "POST /v3.6/checks succeeds for a known applicant"
-         (nom-test> [a (post "/v3.6/applicants"
-                             {:first_name "Ford" :last_name "Prefect"})
-                     applicant-id (:id (http/res->edn a))
-                     res (post "/v3.6/checks" {:applicant_id applicant-id})
-                     _ (is (= 201 (:status res)))
-                     body (http/res->edn res)
-                     _ (is (= applicant-id (:applicant_id body)))
-                     _ (is (= "in_progress" (:status body)))]))))))
+       (let [sample-address {:building_number "100"
+                             :street "Main Street"
+                             :town "London"
+                             :postcode "SW1A 1AA"
+                             :country "GBR"}]
+         (testing "POST /v3.6/applicants creates an applicant"
+           (nom-test> [res (post "/v3.6/applicants"
+                                 {:first_name "Arthur"
+                                  :last_name "Dent"
+                                  :address sample-address})
+                       _ (is (= 201 (:status res)))
+                       body (http/res->edn res)
+                       _ (is (string? (:id body)))
+                       _ (is (= "Arthur" (:first_name body)))]))
+         (testing "POST /v3.6/checks rejects with 422 when applicant unknown"
+           (nom-test> [res (post "/v3.6/checks" {:applicant_id "missing"})
+                       _ (is (= 422 (:status res)))]))
+         (testing "POST /v3.6/checks succeeds for a known applicant"
+           (nom-test> [a (post "/v3.6/applicants"
+                               {:first_name "Ford"
+                                :last_name "Prefect"
+                                :address sample-address})
+                       applicant-id (:id (http/res->edn a))
+                       res (post "/v3.6/checks" {:applicant_id applicant-id})
+                       _ (is (= 201 (:status res)))
+                       body (http/res->edn res)
+                       _ (is (= applicant-id (:applicant_id body)))
+                       _ (is (= "in_progress" (:status body)))])))))))
 
 (deftest webhook-crud-test
   (with-test-system

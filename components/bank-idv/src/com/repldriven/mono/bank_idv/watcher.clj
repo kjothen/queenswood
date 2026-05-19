@@ -33,6 +33,8 @@
                        {:organization-id organization-id
                         :party-id party-id
                         :given-name (:given-name identification)
+                        :middle-names (:middle-names identification)
                         :family-name (:family-name identification)
-                        :date-of-birth (:date-of-birth identification)})]
+                        :date-of-birth (:date-of-birth identification)
+                        :address (:address identification)})]
               result)))))))

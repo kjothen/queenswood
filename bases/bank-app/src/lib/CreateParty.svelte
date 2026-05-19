@@ -11,6 +11,11 @@
   let familyName = $state("Dent");
   let dateOfBirth = $state("1950-07-27");
   let nationality = $state("GB");
+  let buildingNumber = $state("155");
+  let street = $state("Country Lane");
+  let town = $state("Cottington");
+  let postcode = $state("CT12 4XY");
+  let country = $state("GBR");
   let niType = $state("national-insurance");
   let niValue = $state("TN000001A");
   let niCountry = $state("GB");
@@ -37,6 +42,13 @@
         "family-name": familyName,
         "date-of-birth": dobToInt(dateOfBirth),
         nationality: nationality,
+        address: {
+          "building-number": buildingNumber || undefined,
+          street: street,
+          town: town,
+          postcode: postcode,
+          country: country,
+        },
         "national-identifier": {
           type: niType,
           value: niValue,
@@ -71,6 +83,14 @@
     <label>Family Name <input type="text" bind:value={familyName} required /></label>
     <label>Date of Birth <input type="date" bind:value={dateOfBirth} required /></label>
     <label>Nationality <input type="text" bind:value={nationality} required maxlength="2" placeholder="e.g. GB" /></label>
+    <fieldset>
+      <legend>Address</legend>
+      <label>Building Number <input type="text" bind:value={buildingNumber} placeholder="e.g. 155" /></label>
+      <label>Street <input type="text" bind:value={street} required placeholder="e.g. Country Lane" /></label>
+      <label>Town <input type="text" bind:value={town} required placeholder="e.g. Cottington" /></label>
+      <label>Postcode <input type="text" bind:value={postcode} required placeholder="e.g. CT12 4XY" /></label>
+      <label>Country <input type="text" bind:value={country} required maxlength="3" placeholder="ISO 3166-1 alpha-3, e.g. GBR" /></label>
+    </fieldset>
     <fieldset>
       <legend>National Identifier</legend>
       <label>Type <select bind:value={niType} required><option value="national-insurance">National Insurance</option></select></label>

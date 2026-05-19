@@ -29,13 +29,22 @@
 
 (def PartyList {:parties [Party]})
 
+(def Address
+  {:building-number "155"
+   :street "Country Lane"
+   :town "Cottington"
+   :postcode "CT12 4XY"
+   :country "GBR"})
+
 (def CreatePartyRequest
   {:type :person
    :display-name "Arthur Phillip Dent"
    :given-name "Arthur"
+   :middle-names "Phillip"
    :family-name "Dent"
    :date-of-birth "1950-07-27"
    :nationality "GB"
+   :address Address
    :national-identifier
    {:type :national-insurance :value "TN000001A" :issuing-country "GB"}})
 

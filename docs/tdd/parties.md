@@ -167,17 +167,49 @@ party:
  :created-at}
 ```
 
-**PersonIdentification** — names and demographics for person
-parties:
+**PersonIdentification** — names, demographics, and residence
+for person parties:
 
 ```clojure
 {:party-id
  :given-name
- :middle-names
+ :middle-names                    ;; optional
  :family-name
- ;; ... (date of birth, etc., per implementation)
+ :date-of-birth                   ;; YYYYMMDD int
+ :nationality                     ;; ISO 3166-1 alpha-2
+ :address
+ {:flat-number                    ;; optional
+  :building-number                ;; optional
+  :building-name                  ;; optional
+  :street                         ;; required
+  :sub-street                     ;; optional
+  :town                           ;; required
+  :state                          ;; optional (US: USPS abbrev)
+  :postcode                       ;; required
+  :country                        ;; required, ISO 3166-1 alpha-3
+  :start-date}                    ;; optional, YYYY-MM-DD
  :created-at}
 ```
+
+The address shape mirrors the Entrust/Onfido applicant address
+object so the adapter can forward it without a code-table
+translation. Two deliberate asymmetries:
+
+- **Nationality stays alpha-2 (`GB`); address country goes
+  alpha-3 (`GBR`).** Onfido's applicant accepts alpha-3 in
+  `address.country`; we mirror that exactly. Nationality is a
+  separate concept and the proto's `nationality` predates the
+  Onfido alignment.
+- **Middle names live as a separate field but are concatenated
+  into `first_name` at the adapter edge.** Onfido has no
+  `middle_name` field; the standard pattern is
+  `first_name = "Arthur Phillip"`. Storing them separately keeps
+  the data legible internally.
+
+Single current address only — previous-N-years lookback (Onfido
+supports it via `POST /applicants/:id/addresses`) is not modelled
+today and is a future follow-up if a customer relationship
+requires it.
 
 **IDV** — the verification record itself:
 
