@@ -55,16 +55,25 @@
 
 (defn- service-auth
   "Map a verified service-JWT claims map to the request auth context.
-  The client_id (== organization-id by convention) appears as `:azp`."
-  [claims]
-  {:principal-type :service
-   :principal-id (:azp claims)
-   :organization-id (:azp claims)
-   :roles (-> claims
-              (get-in [:realm_access :roles])
-              (->> (map keyword))
-              (->> (into #{:org})))
-   :token-jti (:jti claims)})
+  The client_id (== organization-id by convention) appears as `:azp`.
+  When the realm's role mapper has flagged the service account with
+  `admin`, the principal flips its `:organization-id` to the
+  internal-org-id and picks up `:admin` alongside `:org` — same
+  shape as the env-var admin-auth principal, so admin scenario
+  tokens minted via `client_credentials` against the
+  `queenswood-admin` client can stand in for the env-var bearer."
+  [request claims]
+  (let [realm-roles (->> (get-in claims [:realm_access :roles])
+                         (map keyword)
+                         (into #{}))
+        is-admin? (contains? realm-roles :admin)]
+    {:principal-type :service
+     :principal-id (:azp claims)
+     :organization-id (if is-admin?
+                        (:internal-organization-id request)
+                        (:azp claims))
+     :roles (into #{:org} realm-roles)
+     :token-jti (:jti claims)}))
 
 (defn- nilable-result
   "Treat a `nil` or anomaly result as absence; pass other values
@@ -195,7 +204,7 @@
                   :else
                   (assoc-in ctx
                    [:request :auth]
-                   (service-auth claims)))))))})
+                   (service-auth request claims)))))))})
 
 (defn- required-roles
   "Derive the role set a route requires from its OpenAPI metadata.

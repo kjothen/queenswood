@@ -57,6 +57,29 @@
           }
         }
       ]
+    },
+    {
+      "name": "realm-roles",
+      "description": "Adds the caller's realm roles to realm_access.roles",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "true",
+        "display.on.consent.screen": "false"
+      },
+      "protocolMappers": [
+        {
+          "name": "realm-roles-mapper",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "config": {
+            "claim.name": "realm_access.roles",
+            "jsonType.label": "String",
+            "multivalued": "true",
+            "access.token.claim": "true",
+            "id.token.claim": "false"
+          }
+        }
+      ]
     }
   ],
   "identityProviders": [
@@ -86,7 +109,8 @@
       "standardFlowEnabled": false,
       "directAccessGrantsEnabled": false,
       "implicitFlowEnabled": false,
-      "protocol": "openid-connect"
+      "protocol": "openid-connect",
+      "optionalClientScopes": ["queenswood-api-test", "realm-roles"]
     },
     {
       "clientId": "queenswood-console",
@@ -193,6 +217,7 @@
       "username": "service-account-queenswood-admin",
       "enabled": true,
       "serviceAccountClientId": "queenswood-admin",
+      "realmRoles": ["admin"],
       "clientRoles": {
         "realm-management": [
           "manage-clients",
