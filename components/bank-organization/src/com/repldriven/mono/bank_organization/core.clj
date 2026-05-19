@@ -27,16 +27,6 @@
   {:organization-type-internal "Internal Account"
    :organization-type-customer "Settlement Account"})
 
-(def ^:private org-type->balance-products
-  {:organization-type-internal [{:balance-type :balance-type-default
-                                 :balance-status :balance-status-posted}
-                                {:balance-type :balance-type-suspense
-                                 :balance-status :balance-status-posted}]
-   :organization-type-customer [{:balance-type :balance-type-default
-                                 :balance-status :balance-status-posted}
-                                {:balance-type :balance-type-interest-payable
-                                 :balance-status :balance-status-posted}]})
-
 (defn- open-accounts
   [txn org-id party-id product-id product-name currencies policies]
   (reduce (fn [acc currency]
@@ -179,11 +169,7 @@
                   org-id
                   {:name (org-type->product-name org-type)
                    :product-type (org-type->product-type org-type)
-                   :balance-sheet-side :balance-sheet-side-liability
-                   :allowed-currencies currencies
-                   :allowed-payment-address-schemes
-                   domain/allowed-payment-address-schemes
-                   :balance-products (org-type->balance-products org-type)}
+                   :currency (first currencies)}
                   {:policies policies})
          product-id (:product-id version)
          _ (products/publish txn

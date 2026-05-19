@@ -4,8 +4,6 @@
     [com.repldriven.mono.error.interface :refer [let-nom>]]
     [com.repldriven.mono.utility.interface :as utility]))
 
-(def allowed-payment-address-schemes [:payment-address-scheme-scan])
-
 (defn new-organization
   [org-name org-type org-status aggregates policies]
   (let-nom>

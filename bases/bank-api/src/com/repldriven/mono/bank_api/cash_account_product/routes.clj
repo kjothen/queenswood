@@ -5,7 +5,7 @@
     [com.repldriven.mono.bank-api.cash-account-product.queries :as queries]
     [com.repldriven.mono.bank-api.cash-account-product.examples :refer
      [ProductNotFound VersionNotFound DraftAlreadyExists VersionImmutable
-      DuplicateItems]]
+      CurrencyNotAllowed]]
     [com.repldriven.mono.bank-api.schema :refer [ErrorResponse]]
     [com.repldriven.mono.bank-api.shared.parameters :as shared.parameters]))
 
@@ -17,7 +17,19 @@
    :description "URI of the newly-created draft version"})
 
 (def routes
-  [["/cash-account-products"
+  [["/cash-account-product-templates"
+    {:openapi {:tags ["Cash Account Products"]
+               :security [{"bearerAuth" ["org"]}]}}
+    [""
+     {:get {:summary (str "List per-product-type templates (the menu of "
+                          "balance-sheet-side, balance-products, "
+                          "allowed-currencies, and "
+                          "allowed-payment-address-schemes that the API "
+                          "applies on cash-account-product creation)")
+            :openapi {:operationId "ListCashAccountProductTemplates"}
+            :responses {200 {:body [:ref "CashAccountProductTemplateList"]}}
+            :handler queries/list-templates}}]]
+   ["/cash-account-products"
     {:openapi {:tags ["Cash Account Products"]
                :security [{"bearerAuth" ["org"]}]}}
     [""
@@ -34,7 +46,7 @@
              :responses {201 {:body [:ref "CashAccountProductVersion"]
                               :openapi {:headers {"Location" location-header}
                                         :links links/from-draft}}
-                         422 (ErrorResponse [#'DuplicateItems])}
+                         422 (ErrorResponse [#'CurrencyNotAllowed])}
              :handler handlers/create-product}}]
     ["/{product-id}" {:parameters {:path {:product-id [:ref "ProductId"]}}}
      [""
@@ -54,7 +66,7 @@
                                          :links links/from-draft}}
                           404 (ErrorResponse [#'ProductNotFound])
                           409 (ErrorResponse [#'DraftAlreadyExists])
-                          422 (ErrorResponse [#'DuplicateItems])}
+                          422 (ErrorResponse [#'CurrencyNotAllowed])}
               :handler handlers/open-draft}}]
      ["/versions/{version-id}"
       {:parameters {:path {:version-id [:ref "VersionId"]}}}
@@ -74,7 +86,7 @@
                                :openapi {:links links/from-draft}}
                           404 (ErrorResponse [#'VersionNotFound])
                           409 (ErrorResponse [#'VersionImmutable])
-                          422 (ErrorResponse [#'DuplicateItems])}
+                          422 (ErrorResponse [#'CurrencyNotAllowed])}
               :handler handlers/update-draft}
         :delete {:summary "Discard the draft version (draft state only)"
                  :openapi {:operationId "DiscardCashAccountProductDraft"}

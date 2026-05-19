@@ -1,6 +1,6 @@
 (ns com.repldriven.mono.bank-cash-account-product.domain
   (:require
-    [com.repldriven.mono.bank-cash-account-product.validation :as validation]
+    [com.repldriven.mono.bank-cash-account-product.resources :as resources]
 
     [com.repldriven.mono.bank-policy.interface :as policy]
     [com.repldriven.mono.error.interface :as error :refer [let-nom>]]
@@ -37,16 +37,28 @@
                          :window window
                          :value value})))
 
+(defn- resolve-template
+  [product-type]
+  (or (get resources/product-defaults product-type)
+      (error/reject :cash-account-product/unknown-product-type
+                    {:message "No template defined for product-type"
+                     :product-type product-type})))
+
+(defn- ensure-currency-allowed
+  [template currency]
+  (when-not (contains? (set (:allowed-currencies template)) currency)
+    (error/reject :cash-account-product/currency-not-allowed
+                  {:message "Currency not allowed for this product-type"
+                   :currency currency
+                   :allowed-currencies (:allowed-currencies template)})))
+
 (defn new-version
   [organization-id product-id versions data policies]
-  (let [{:keys [name product-type balance-sheet-side
-                allowed-currencies balance-products
-                allowed-payment-address-schemes
-                interest-rate-bps valid-from]}
-        data
-        now (System/currentTimeMillis)]
+  (let [{:keys [name product-type currency interest-rate-bps valid-from]} data
+        now (utility/now)]
     (let-nom>
-      [_ (validation/unique-fields? data)
+      [template (resolve-template product-type)
+       _ (ensure-currency-allowed template currency)
        _ (check-capability :cash-account-product-action-draft
                            product-type
                            policies)
@@ -63,14 +75,14 @@
            :status :cash-account-product-status-draft
            :name name
            :product-type product-type
-           :balance-sheet-side balance-sheet-side
-           :balance-products balance-products
+           :balance-sheet-side (:balance-sheet-side template)
+           :balance-products (:balance-products template)
+           :allowed-currencies [currency]
+           :allowed-payment-address-schemes
+           (:allowed-payment-address-schemes template)
            :interest-rate-bps (or interest-rate-bps 0)
            :created-at now
            :updated-at now}
-          (utility/assoc-seq
-           :allowed-currencies allowed-currencies
-           :allowed-payment-address-schemes allowed-payment-address-schemes)
           (utility/assoc-some :valid-from valid-from)))))
 
 (defn new-product
@@ -90,18 +102,16 @@
 (defn update-version
   [existing data policies]
   (let [{:keys [organization-id product-id version-id
-                version-number status created-at]}
+                version-number status created-at]
+         existing-product-type :product-type}
         existing
-        {:keys [name product-type balance-sheet-side
-                allowed-currencies balance-products
-                allowed-payment-address-schemes
-                interest-rate-bps valid-from]}
-        data]
+        {:keys [name currency interest-rate-bps valid-from]} data]
     (let-nom>
-      [_ (validation/unique-fields? data)
-       _ (ensure-draft existing)
+      [_ (ensure-draft existing)
+       template (resolve-template existing-product-type)
+       _ (ensure-currency-allowed template currency)
        _ (check-capability :cash-account-product-action-draft
-                           product-type
+                           existing-product-type
                            policies)]
       (-> {:organization-id organization-id
            :product-id product-id
@@ -109,15 +119,15 @@
            :version-number version-number
            :status status
            :name name
-           :product-type product-type
-           :balance-sheet-side balance-sheet-side
-           :balance-products balance-products
+           :product-type existing-product-type
+           :balance-sheet-side (:balance-sheet-side template)
+           :balance-products (:balance-products template)
+           :allowed-currencies [currency]
+           :allowed-payment-address-schemes
+           (:allowed-payment-address-schemes template)
            :interest-rate-bps (or interest-rate-bps 0)
            :created-at created-at
            :updated-at (utility/now)}
-          (utility/assoc-seq
-           :allowed-currencies allowed-currencies
-           :allowed-payment-address-schemes allowed-payment-address-schemes)
           (utility/assoc-some :valid-from valid-from)))))
 
 (defn publish

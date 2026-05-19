@@ -1,7 +1,5 @@
 (ns com.repldriven.mono.bank-api.organization.routes
   (:require
-    [com.repldriven.mono.bank-api.cash-account-product.examples :refer
-     [DuplicateItems]]
     [com.repldriven.mono.bank-api.organization.examples :refer
      [OrganizationLimitExceeded]]
     [com.repldriven.mono.bank-api.organization.handlers :as handlers]
@@ -21,6 +19,5 @@
                        :requestBody {:required true}}
              :parameters {:body [:ref "CreateOrganizationRequest"]}
              :responses {201 {:body [:ref "CreateOrganizationResponse"]}
-                         409 (ErrorResponse [#'DuplicateItems])
                          422 (ErrorResponse [#'OrganizationLimitExceeded])}
              :handler handlers/create-organization}}]]])

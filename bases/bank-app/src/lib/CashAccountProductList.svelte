@@ -1,6 +1,7 @@
 <script>
   import {
     list_cash_account_products,
+    list_cash_account_product_templates,
     create_cash_account_product,
     open_cash_account_product_draft,
     update_cash_account_product_draft,
@@ -14,6 +15,7 @@
   let { showToast } = $props();
 
   let versions = $state([]);
+  let templates = $state([]);
   let loading = $state(false);
   let error = $state(null);
 
@@ -26,9 +28,17 @@
   let modalOpen = $state(false);
   let accountType = $state("current");
   let name = $state("Current Account");
-  let balanceSheetSide = $state("liability");
-  let allowedCurrencies = $state("GBP");
+  let currency = $state("GBP");
   let interestRateBps = $state(265);
+  let creating = $state(false);
+
+  function templateFor(t) {
+    return templates.find(x => x["product-type"] === t);
+  }
+
+  function currenciesFor(t) {
+    return templateFor(t)?.["allowed-currencies"] ?? ["GBP"];
+  }
 
   function onProductTypeChange(e) {
     accountType = e.target.value;
@@ -37,40 +47,9 @@
       name = defaults.name;
       interestRateBps = defaults.bps;
     }
+    const allowed = currenciesFor(accountType);
+    if (!allowed.includes(currency)) currency = allowed[0];
   }
-  let creating = $state(false);
-
-  const defaultBalanceProducts = [
-    { type: "default",          status: "posted",           label: "Default / Posted" },
-    { type: "default",          status: "pending-incoming",  label: "Default / Pending Incoming" },
-    { type: "default",          status: "pending-outgoing",  label: "Default / Pending Outgoing" },
-    { type: "interest-accrued", status: "posted",           label: "Interest Accrued / Posted" },
-    { type: "interest-paid",    status: "posted",           label: "Interest Paid / Posted" },
-  ];
-
-  const balanceGroups = [
-    { type: "default",          typeLabel: "Default",          statuses: ["posted", "pending-incoming", "pending-outgoing"] },
-    { type: "interest-accrued", typeLabel: "Interest Accrued", statuses: ["posted"] },
-    { type: "interest-paid",    typeLabel: "Interest Paid",    statuses: ["posted"] },
-  ];
-
-  const statusLabels = {
-    "posted": "Posted",
-    "pending-incoming": "Pending Incoming",
-    "pending-outgoing": "Pending Outgoing",
-  };
-
-  function bpIndex(type, status) {
-    return defaultBalanceProducts.findIndex(bp => bp.type === type && bp.status === status);
-  }
-
-  let selectedBalanceProducts = $state(defaultBalanceProducts.map(() => true));
-
-  const paymentAddressSchemes = [
-    { scheme: "scan", label: "SCAN (UK Sort Code & Account Number)" },
-  ];
-
-  let selectedSchemes = $state(paymentAddressSchemes.map(() => true));
 
   let publishing = $state({});
 
@@ -78,27 +57,15 @@
   let reviseVersion = $state(null);
   let reviseName = $state("");
   let reviseProductType = $state("current");
-  let reviseBalanceSheetSide = $state("liability");
-  let reviseAllowedCurrencies = $state("");
-  let reviseSelectedBalanceProducts = $state(defaultBalanceProducts.map(() => true));
-  let reviseSelectedSchemes = $state(paymentAddressSchemes.map(() => true));
+  let reviseCurrency = $state("GBP");
   let reviseInterestRateBps = $state(0);
   let revising = $state(false);
 
   function openReviseModal(v) {
     reviseVersion = v;
     reviseName = v.name;
-    reviseProductType = v["product-type"] ?? "";
-    reviseBalanceSheetSide = v["balance-sheet-side"] ?? "";
-    reviseAllowedCurrencies = (v["allowed-currencies"] ?? []).join(", ");
-    const existing = v["balance-products"] ?? [];
-    reviseSelectedBalanceProducts = defaultBalanceProducts.map(bp =>
-      existing.some(e =>
-        e["balance-type"] === bp.type &&
-        e["balance-status"] === bp.status));
-    const existingSchemes = v["allowed-payment-address-schemes"] ?? [];
-    reviseSelectedSchemes = paymentAddressSchemes.map(s =>
-      existingSchemes.includes(s.scheme));
+    reviseProductType = v["product-type"] ?? "current";
+    reviseCurrency = (v["allowed-currencies"] ?? ["GBP"])[0];
     reviseInterestRateBps = v["interest-rate-bps"] ?? 0;
     reviseModalOpen = true;
   }
@@ -107,20 +74,10 @@
     e.preventDefault();
     revising = true;
     try {
-      const currencies = reviseAllowedCurrencies.split(",").map(s => s.trim()).filter(Boolean);
-      const bps = defaultBalanceProducts
-        .filter((_, i) => reviseSelectedBalanceProducts[i])
-        .map(bp => ({ "balance-type": bp.type, "balance-status": bp.status }));
-      const schemes = paymentAddressSchemes
-        .filter((_, i) => reviseSelectedSchemes[i])
-        .map(s => s.scheme);
       const body = {
         "name": reviseName,
         "product-type": reviseProductType,
-        "balance-sheet-side": reviseBalanceSheetSide,
-        "allowed-currencies": currencies.length > 0 ? currencies : undefined,
-        "balance-products": bps.length > 0 ? bps : undefined,
-        "allowed-payment-address-schemes": schemes.length > 0 ? schemes : undefined,
+        "currency": reviseCurrency,
         "interest-rate-bps": reviseInterestRateBps,
       };
       // On a published version the "revise" action opens a fresh draft;
@@ -148,6 +105,17 @@
     if (!body) return null;
     return body.message ?? body.error ?? body.detail
            ?? (typeof body === "string" ? body : JSON.stringify(body));
+  }
+
+  async function loadTemplates() {
+    try {
+      const res = await list_cash_account_product_templates();
+      if (res["http-status"] >= 200 && res["http-status"] < 300) {
+        templates = res.body?.items ?? [];
+      }
+    } catch (_err) {
+      // Non-fatal: the create form falls back to GBP-only.
+    }
   }
 
   export async function load() {
@@ -189,20 +157,10 @@
     e.preventDefault();
     creating = true;
     try {
-      const currencies = allowedCurrencies.split(",").map(s => s.trim()).filter(Boolean);
-      const bps = defaultBalanceProducts
-        .filter((_, i) => selectedBalanceProducts[i])
-        .map(bp => ({ "balance-type": bp.type, "balance-status": bp.status }));
-      const schemes = paymentAddressSchemes
-        .filter((_, i) => selectedSchemes[i])
-        .map(s => s.scheme);
       const res = await create_cash_account_product({
         "name": name,
         "product-type": accountType,
-        "balance-sheet-side": balanceSheetSide,
-        "allowed-currencies": currencies.length > 0 ? currencies : undefined,
-        "balance-products": bps.length > 0 ? bps : undefined,
-        "allowed-payment-address-schemes": schemes.length > 0 ? schemes : undefined,
+        "currency": currency,
         "interest-rate-bps": interestRateBps,
       });
       if (res["http-status"] >= 200 && res["http-status"] < 300) {
@@ -260,7 +218,10 @@
     }
   }
 
-  onMount(() => load());
+  onMount(() => {
+    loadTemplates();
+    load();
+  });
 </script>
 
 <section>
@@ -292,44 +253,16 @@
         <input type="text" bind:value={name} placeholder="Product name" required disabled={creating} />
       </label>
       <label>
-        Balance Sheet Side
-        <select bind:value={balanceSheetSide} disabled={creating}>
-          <option value="liability">Liability</option>
-          <option value="asset">Asset</option>
+        Currency
+        <select bind:value={currency} disabled={creating}>
+          {#each currenciesFor(accountType) as c}
+            <option value={c}>{c}</option>
+          {/each}
         </select>
       </label>
-      <fieldset class="checkbox-group" disabled={creating}>
-        <legend>Balances</legend>
-        {#each balanceGroups as group}
-          <div class="balance-group">
-            <span class="balance-type-label">{group.typeLabel}</span>
-            <div class="balance-statuses">
-              {#each group.statuses as status}
-                <label class="checkbox-label">
-                  <input type="checkbox" bind:checked={selectedBalanceProducts[bpIndex(group.type, status)]} />
-                  {statusLabels[status]}
-                </label>
-              {/each}
-            </div>
-          </div>
-        {/each}
-      </fieldset>
-      <fieldset class="checkbox-group" disabled={creating}>
-        <legend>Payment Addresses</legend>
-        {#each paymentAddressSchemes as s, i}
-          <label class="checkbox-label">
-            <input type="checkbox" bind:checked={selectedSchemes[i]} />
-            {s.label}
-          </label>
-        {/each}
-      </fieldset>
       <label>
         Interest Rate (Basis Points)
         <input type="number" bind:value={interestRateBps} min="0" disabled={creating} />
-      </label>
-      <label>
-        Allowed Currencies
-        <input type="text" bind:value={allowedCurrencies} placeholder="e.g. GBP,EUR" disabled={creating} />
       </label>
       <button type="submit" disabled={creating}>
         {creating ? "Creating..." : "Create Product"}
@@ -345,51 +278,23 @@
       </label>
       <label>
         Account Type
-        <select bind:value={reviseProductType} disabled={revising}>
+        <select bind:value={reviseProductType} disabled>
           <option value="current">Current</option>
           <option value="savings">Savings</option>
           <option value="term-deposit">Term Deposit</option>
         </select>
       </label>
       <label>
-        Balance Sheet Side
-        <select bind:value={reviseBalanceSheetSide} disabled={revising}>
-          <option value="liability">Liability</option>
-          <option value="asset">Asset</option>
+        Currency
+        <select bind:value={reviseCurrency} disabled={revising}>
+          {#each currenciesFor(reviseProductType) as c}
+            <option value={c}>{c}</option>
+          {/each}
         </select>
       </label>
-      <fieldset class="checkbox-group" disabled={revising}>
-        <legend>Balances</legend>
-        {#each balanceGroups as group}
-          <div class="balance-group">
-            <span class="balance-type-label">{group.typeLabel}</span>
-            <div class="balance-statuses">
-              {#each group.statuses as status}
-                <label class="checkbox-label">
-                  <input type="checkbox" bind:checked={reviseSelectedBalanceProducts[bpIndex(group.type, status)]} />
-                  {statusLabels[status]}
-                </label>
-              {/each}
-            </div>
-          </div>
-        {/each}
-      </fieldset>
-      <fieldset class="checkbox-group" disabled={revising}>
-        <legend>Payment Addresses</legend>
-        {#each paymentAddressSchemes as s, i}
-          <label class="checkbox-label">
-            <input type="checkbox" bind:checked={reviseSelectedSchemes[i]} />
-            {s.label}
-          </label>
-        {/each}
-      </fieldset>
       <label>
         Interest Rate (Basis Points)
         <input type="number" bind:value={reviseInterestRateBps} min="0" disabled={revising} />
-      </label>
-      <label>
-        Allowed Currencies
-        <input type="text" bind:value={reviseAllowedCurrencies} placeholder="e.g. GBP,EUR" disabled={revising} />
       </label>
       <button type="submit" disabled={revising}>
         {revising ? "Creating..." : "Create Version"}
@@ -547,65 +452,6 @@
     font-size: 0.9rem;
     background: var(--bg-input);
     color: var(--text);
-  }
-
-  .checkbox-group {
-    border: 1px solid var(--border-input);
-    border-radius: 4px;
-    padding: 0.75rem;
-    margin: 0;
-  }
-
-  .checkbox-group legend {
-    font-weight: 500;
-    font-size: 0.9rem;
-    padding: 0 0.25rem;
-  }
-
-  .checkbox-group:disabled {
-    opacity: 0.6;
-  }
-
-  .balance-group {
-    padding: 0.35rem 0;
-  }
-
-  .balance-group + .balance-group {
-    border-top: 1px solid var(--border);
-    margin-top: 0.35rem;
-    padding-top: 0.5rem;
-  }
-
-  .balance-type-label {
-    display: block;
-    font-weight: 600;
-    font-size: 0.8rem;
-    color: var(--text-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
-    margin-bottom: 0.3rem;
-  }
-
-  .balance-statuses {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.25rem 1rem;
-  }
-
-  .checkbox-label {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    gap: 0.5rem;
-    font-weight: 400;
-    font-size: 0.85rem;
-    padding: 0.2rem 0;
-    cursor: pointer;
-  }
-
-  .checkbox-label input[type="checkbox"] {
-    width: auto;
-    margin: 0;
   }
 
   form button {

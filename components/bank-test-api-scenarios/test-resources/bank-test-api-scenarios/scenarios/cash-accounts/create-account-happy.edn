@@ -51,11 +51,7 @@
              :auth :org-0-token
              :body {:name "Current Account"
                     :product-type "current"
-                    :balance-sheet-side "liability"
-                    :allowed-currencies ["GBP"]
-                    :balance-products [{:balance-type "default"
-                                        :balance-status "posted"}]
-                    :allowed-payment-address-schemes ["scan"]
+                    :currency "GBP"
                     :interest-rate-bps 0
                     :valid-from "2026-01-01"}}
    :as :draft

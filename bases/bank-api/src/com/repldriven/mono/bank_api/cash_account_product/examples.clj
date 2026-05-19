@@ -26,15 +26,15 @@
            :status 409
            :detail "Version is not a draft and cannot be modified"}})
 
-(def DuplicateItems
+(def CurrencyNotAllowed
   {:value {:title "REJECTED"
-           :type ":cash-account-product/duplicate-items"
+           :type "cash-account-products/currency-not-allowed"
            :status 422
-           :detail "Duplicate items in: balance-products"}})
+           :detail "Currency not allowed for this product-type"}})
 
 (def registry
   (examples-registry [#'ProductNotFound #'VersionNotFound #'DraftAlreadyExists
-                      #'VersionImmutable #'DuplicateItems]))
+                      #'VersionImmutable #'CurrencyNotAllowed]))
 
 (def ProductId "prd.01kprbmgcj35ptc8npmybhh4se")
 (def VersionId "prv.01kprbmgcj35ptc8npmybhh4sf")
@@ -48,7 +48,7 @@
    :name "Current Account"
    :product-type :current
    :balance-sheet-side :liability
-   :allowed-currencies ["GBP" "EUR"]
+   :allowed-currencies ["GBP"]
    :balance-products [{:balance-type :default :balance-status :posted}]
    :allowed-payment-address-schemes [:scan]
    :interest-rate-bps 0
@@ -64,9 +64,26 @@
 (def CashAccountProductRequest
   {:name "Current Account"
    :product-type :current
-   :balance-sheet-side :liability
-   :allowed-currencies ["GBP" "EUR"]
-   :balance-products [{:balance-type :default :balance-status :posted}]
-   :allowed-payment-address-schemes [:scan]
+   :currency "GBP"
    :interest-rate-bps 0
    :valid-from "2025-01-01"})
+
+(def CashAccountProductTemplate
+  {:product-type :current
+   :balance-sheet-side :liability
+   :allowed-currencies ["GBP"]
+   :balance-products [{:balance-type :default :balance-status :posted}]
+   :allowed-payment-address-schemes [:scan]})
+
+(def CashAccountProductTemplateList
+  {:items [CashAccountProductTemplate
+           (assoc CashAccountProductTemplate :product-type :savings)
+           (assoc CashAccountProductTemplate
+                  :product-type :term-deposit
+                  :allowed-payment-address-schemes [])
+           (assoc CashAccountProductTemplate
+                  :product-type :settlement
+                  :balance-sheet-side :asset)
+           (assoc CashAccountProductTemplate
+                  :product-type :internal
+                  :allowed-payment-address-schemes [])]})

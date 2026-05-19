@@ -105,6 +105,7 @@
     components/bank-person-identification {:local/root
                                            "components/bank-person-identification"}
     components/bank-policy {:local/root "components/bank-policy"}
+    components/bank-resources {:local/root "components/bank-resources"}
     components/bank-schema {:local/root "components/bank-schema"}
     components/bank-test-api-scenarios {:local/root
                                         "components/bank-test-api-scenarios"}
