@@ -288,11 +288,20 @@ kubectl -n queenswood port-forward svc/queenswood-bank-console              8082
 kubectl -n queenswood port-forward svc/queenswood-keycloak-keycloak-service 8090:8080
 ```
 
-Then open <http://localhost:8081> for the operator console
-(`bank-app`) or <http://localhost:8082> for the organisation
-console (`bank-console`); both sign in via the bundled
-Keycloak on <http://localhost:8090> (admin / admin for the
-Keycloak admin console). OpenAPI docs at
+Then open:
+
+- <http://localhost:8081> — operator console
+  (`bank-app`). Sign in with `ops` / `ops` against the
+  `queenswood-ops` realm.
+- <http://localhost:8082> — organisation console
+  (`bank-console`). Sign in with `dev` / `dev` against the
+  `queenswood` realm.
+
+Both SPAs redirect to the bundled Keycloak at
+<http://localhost:8090> to authenticate. The Keycloak admin
+console itself (<http://localhost:8090/admin>, separate from
+the realms above) accepts `admin` / `admin` if you need to
+inspect or edit the realms directly. OpenAPI docs at
 <http://localhost:8080/scalar>. The full quickstart —
 including tear-down — ships with each
 [release](https://github.com/repldriven/queenswood/releases/latest).
