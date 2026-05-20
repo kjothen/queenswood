@@ -36,13 +36,20 @@ spec:
               containerPort: {{ .Values.bankApp.port }}
               protocol: TCP
           env:
-            # nginx upstream for `/v1/*` proxying. `tpl` so the
-            # value can reference {{ .Release.Name }}.
+            # nginx upstreams. `tpl` so the values can reference
+            # `{{ .Release.Name }}`. KEYCLOAK_UPSTREAM is what the
+            # `/keycloak/*` location reverse-proxies to; defaults to
+            # the bundled dev Keycloak's Service in-cluster, and
+            # GKE overrides via queenswood-platform.
             - name: API_UPSTREAM
               value: {{ tpl .Values.bankApp.apiUpstream . | quote }}
-            # Runtime config the SPA reads via /env.js. Set
-            # bankApp.keycloakPublicUrl on GKE; on kind leave empty
-            # and rely on a port-forwarded dev fallback.
+            - name: KEYCLOAK_UPSTREAM
+              value: {{ tpl .Values.bankApp.keycloakUpstream . | quote }}
+            # Runtime config the SPA reads via /env.js. The default
+            # `keycloakPublicUrl` points at the SPA's own same-origin
+            # `/keycloak` path so a bare `helm install` works after
+            # one port-forward to the SPA; GKE overrides to the
+            # public Keycloak hostname.
             - name: KEYCLOAK_URL
               value: {{ .Values.bankApp.keycloakPublicUrl | quote }}
             - name: KEYCLOAK_REALM

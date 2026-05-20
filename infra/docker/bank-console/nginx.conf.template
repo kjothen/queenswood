@@ -44,6 +44,26 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
     }
 
+    # Same-origin Keycloak proxy. Browser hits
+    # `${current-origin}/keycloak/...`; nginx forwards the path
+    # unchanged to upstream, where Keycloak runs natively under
+    # `/keycloak/` (`KC_HTTP_RELATIVE_PATH=/keycloak`) and so already
+    # builds URLs with that prefix. `$http_host` (not `$host`)
+    # preserves the request's port in X-Forwarded-Host -- `$host`
+    # drops it. Keycloak (`KC_PROXY_HEADERS=xforwarded`,
+    # `KC_HOSTNAME_STRICT=false`) uses that forwarded host as the
+    # authority in its generated discovery URLs, redirect URLs, and
+    # JWT `iss` claim, so sign-in round-trips through the SPA origin
+    # and the token's `iss` matches the verifier's `expectedIssuer`.
+    location /keycloak/ {
+        proxy_pass ${KEYCLOAK_UPSTREAM};
+        proxy_set_header Host $http_host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Host $http_host;
+    }
+
     # SPA fallback — client-side routing means deep links aren't
     # real files; nginx returns index.html and Svelte handles it.
     location / {

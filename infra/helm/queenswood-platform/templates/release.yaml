@@ -49,12 +49,15 @@ spec:
         # verifier accepts them.
         baseUrl: "http://queenswood-keycloak-keycloak-service:8080"
         expectedIssuer: {{ printf "https://keycloak.%s/realms/%s" .Values.env.domain .Values.queenswoodKeycloak.serverSide.realm | quote }}
+        opsExpectedIssuer: {{ printf "https://keycloak.%s/realms/queenswood-ops" .Values.env.domain | quote }}
         realm: {{ .Values.queenswoodKeycloak.serverSide.realm | quote }}
         adminClientId: {{ .Values.queenswoodKeycloak.serverSide.adminClientId | quote }}
       # Both SPAs read Keycloak URL from /env.js at runtime. The
-      # chart defaults point at the local port-forward
-      # (http://localhost:8090); on GKE we need the public hostname
-      # the browser actually hits.
+      # chart defaults route the browser through each SPA's own
+      # nginx (`http://localhost:808{1,2}/keycloak`) for the
+      # single-port-forward local install. On GKE Keycloak has its
+      # own DNS + cert, so we point the browser directly at the
+      # public hostname and skip the SPA-side reverse proxy.
       bankApp:
         keycloakPublicUrl: {{ printf "https://keycloak.%s" .Values.env.domain | quote }}
       bankConsole:
