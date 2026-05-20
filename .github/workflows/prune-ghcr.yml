@@ -1,0 +1,70 @@
+name: Prune GHCR Untagged
+
+# Deletes untagged container manifests from GHCR for each Queenswood
+# image. Every `release-images.yml` run pushes new content to the
+# moving `:latest-<arch>` tags and rebuilds the `:latest` manifest
+# list; the digests behind the *previous* tags become untagged but
+# still occupy storage. Without periodic pruning they accumulate
+# indefinitely.
+#
+# Cleanup-only: this workflow never touches tagged versions, so a
+# botched run can't lose a release. Worst case it leaves untagged
+# residue for another week.
+
+on:
+  # Sunday 03:30 UTC. Off-peak for GHCR + no overlap with
+  # release-images.yml which fires on every push to main.
+  schedule:
+    - cron: '30 3 * * 0'
+  workflow_dispatch:
+
+# Manual + scheduled runs queue rather than overlap.
+concurrency:
+  group: prune-ghcr
+  cancel-in-progress: false
+
+permissions:
+  packages: write       # delete untagged versions on GHCR
+
+jobs:
+  prune:
+    runs-on: ubuntu-latest
+    strategy:
+      # Don't let a single package's failure (e.g. transient API
+      # error, or a package that doesn't exist yet on a fresh
+      # registry) cancel the rest.
+      fail-fast: false
+      matrix:
+        package:
+          - bank-migrator-service
+          - bank-bootstrap-service
+          - bank-api-service
+          - bank-cash-account-processor-service
+          - bank-party-processor-service
+          - bank-payment-processor-service
+          - bank-interest-processor-service
+          - bank-transaction-processor-service
+          - bank-idv-processor-service
+          - bank-clearbank-adapter-service
+          - bank-clearbank-simulator-service
+          - bank-onfido-adapter-service
+          - bank-onfido-simulator-service
+          - bank-app
+          - bank-console
+    steps:
+      - name: Delete untagged versions of ${{ matrix.package }}
+        uses: actions/delete-package-versions@v5
+        with:
+          package-name: ${{ matrix.package }}
+          package-type: container
+          # `true` restricts the delete to manifests with no tags --
+          # the orphaned digests left behind by prior `:latest`,
+          # `:latest-amd64`, `:latest-arm64` pushes. Tagged versions
+          # (including `:latest` and the per-arch refs from the most
+          # recent run) are untouched.
+          delete-only-untagged-versions: 'true'
+          # Keep the most recent few untagged digests as a rollback
+          # safety net -- if a release-images.yml run pushes a bad
+          # image, those untagged digests are the only way to
+          # `imagetools create` a previous `:latest`.
+          min-versions-to-keep: 5

@@ -197,8 +197,8 @@ The bank is documented:
 - **[docs/prd/](docs/prd/)** — product requirements documents:
   a platform-wide umbrella plus one per capability (onboarding,
   parties, cash-account-products, cash-accounts, payments,
-  interest, policies). The *what and why* — intended scope,
-  users, and domain rules — companion to the TDDs' *how*.
+  interest, policies). The _what and why_ — intended scope,
+  users, and domain rules — companion to the TDDs' _how_.
 - **[docs/tdd/](docs/tdd/)** — technical design documents
   covering the substrate (transaction processing, transactions
   and balances, traceability, scenario testing, idempotency
@@ -256,11 +256,14 @@ FoundationDB) onto any Kubernetes cluster.
 **Get a local Kubernetes runtime on macOS** — pick one:
 
 - **OrbStack** — single-app, fastest setup:
+
   ```bash
   brew install orbstack
   # Open OrbStack, enable Kubernetes in Settings → Kubernetes
   ```
+
 - **kind on Colima** — closer to upstream, more configurable:
+
   ```bash
   brew install colima kind kubectl helm
   colima start --vm-type vz --vz-rosetta --cpu 6 --memory 24
@@ -271,7 +274,7 @@ FoundationDB) onto any Kubernetes cluster.
 
 ```bash
 helm install queenswood \
-  oci://ghcr.io/repldriven/queenswood --version 0.1.0 \
+  oci://ghcr.io/repldriven/queenswood \
   -n queenswood --create-namespace \
   --wait --timeout 10m
 ```
@@ -285,11 +288,20 @@ kubectl -n queenswood port-forward svc/queenswood-bank-console              8082
 kubectl -n queenswood port-forward svc/queenswood-keycloak-keycloak-service 8090:8080
 ```
 
-Then open <http://localhost:8081> for the operator console
-(`bank-app`) or <http://localhost:8082> for the organisation
-console (`bank-console`); both sign in via the bundled
-Keycloak on <http://localhost:8090> (admin / admin for the
-Keycloak admin console). OpenAPI docs at
+Then open:
+
+- <http://localhost:8081> — operator console
+  (`bank-app`). Sign in with `ops` / `ops` against the
+  `queenswood-ops` realm.
+- <http://localhost:8082> — organisation console
+  (`bank-console`). Sign in with `dev` / `dev` against the
+  `queenswood` realm.
+
+Both SPAs redirect to the bundled Keycloak at
+<http://localhost:8090> to authenticate. The Keycloak admin
+console itself (<http://localhost:8090/admin>, separate from
+the realms above) accepts `admin` / `admin` if you need to
+inspect or edit the realms directly. OpenAPI docs at
 <http://localhost:8080/scalar>. The full quickstart —
 including tear-down — ships with each
 [release](https://github.com/repldriven/queenswood/releases/latest).
