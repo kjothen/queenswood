@@ -1,0 +1,22 @@
+# kind cluster config for the `helm install oci://...` quickstart
+# in readme.md. The only deviation from the upstream default is
+# bumping containerd's `max_concurrent_downloads` from 3 to 6 so
+# the ~20 first-install image pulls (Pulsar, Keycloak, FDB
+# binaries, 15 service images) don't serialise behind the biggest
+# layer. Halves first-run wall clock on a cold kind node without
+# changing any pod's behaviour after the cache is warm.
+#
+# Usage:
+#   kind create cluster --name queenswood --config infra/kind/queenswood-config.yaml
+#
+# Unrelated to `infra/kind/with-registry.sh`, which sets up a
+# host-side registry mirror for the Tilt / local-image-build dev
+# loop. Pick one based on what you're doing:
+#   - `helm install oci://...`  -> this file
+#   - `just tilt-up` / pushing locally-built images -> with-registry.sh
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+containerdConfigPatches:
+  - |-
+    [plugins."io.containerd.grpc.v1.cri"]
+      max_concurrent_downloads = 6

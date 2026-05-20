@@ -9,16 +9,3 @@
 image:
   tag: "dev"
   pullPolicy: Never
-
-# Dev runs only FDB 7.3.x — drop the 7.1 / 7.4 init-container
-# entries the operator chart ships by default. Saves two image
-# pulls and the containerd snapshot space for them in kind.
-# Alias is `fdbOperator` (camelCase) per the parent Chart.yaml
-# `dependencies` declaration; subchart-internal name is fdb-operator.
-fdbOperator:
-  initContainers:
-    7.3:
-      image:
-        repository: foundationdb/fdb-kubernetes-monitor
-        tag: 7.3.63
-        pullPolicy: IfNotPresent
