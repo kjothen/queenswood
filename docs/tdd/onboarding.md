@@ -197,8 +197,8 @@ chart-resources sibling):
   via the `pkce.code.challenge.method` attribute.
   `redirectUris` cover the Vite dev origin
   (`http://localhost:5173/*`), the in-cluster port-forward
-  origin (`http://localhost:8080/*`), and the public
-  GKE-hosted console host
+  origin for bank-console (`http://localhost:8082/*`), and
+  the public GKE-hosted console host
   (`https://console.*.repldriven.com/*`).
 
 ### bank-api auth

@@ -34,7 +34,32 @@ For GKE deployments with Certificate Manager + HTTP->HTTPS redirect,
 also set --set gateway.gcp.enabled=true.
 {{- else }}
 
-Gateway: disabled. The bank-app Service is ClusterIP-only. To expose
-publicly on GKE, set --set gateway.enabled=true --set gateway.gcp.enabled=true
---set gateway.host=<your-host>.
+Gateway: disabled. Port-forward each Service in a separate terminal
+to reach the platform from your host:
+
+  kubectl -n {{ .Release.Namespace }} port-forward svc/{{ .Release.Name }}-bank-api-service 8080:8080
+{{- if .Values.bankApp.enabled }}
+  kubectl -n {{ .Release.Namespace }} port-forward svc/{{ .Release.Name }}-bank-app 8081:{{ .Values.bankApp.port }}
+{{- end }}
+{{- if .Values.bankConsole.enabled }}
+  kubectl -n {{ .Release.Namespace }} port-forward svc/{{ .Release.Name }}-bank-console 8082:{{ .Values.bankConsole.port }}
+{{- end }}
+{{- if .Values.keycloak.dev.enabled }}
+  kubectl -n {{ .Release.Namespace }} port-forward svc/queenswood-keycloak-keycloak-service 8090:8080
+{{- end }}
+
+Then open:
+  http://localhost:8080/scalar       (bank-api OpenAPI)
+{{- if .Values.bankApp.enabled }}
+  http://localhost:8081              (bank-app -- operator console)
+{{- end }}
+{{- if .Values.bankConsole.enabled }}
+  http://localhost:8082              (bank-console -- organisation sign-in)
+{{- end }}
+{{- if .Values.keycloak.dev.enabled }}
+  http://localhost:8090              (Keycloak admin console -- admin / admin)
+{{- end }}
+
+To expose publicly on GKE, set --set gateway.enabled=true
+--set gateway.gcp.enabled=true --set gateway.host=<your-host>.
 {{- end }}

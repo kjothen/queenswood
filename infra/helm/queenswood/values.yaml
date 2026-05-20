@@ -131,10 +131,11 @@ bankApp:
   replicas: 1
   apiUpstream: "http://{{ .Release.Name }}-bank-api-service:8080"
   # Public URL of the realm the bank-app SPA authenticates against.
-  # Empty falls back to the build-time default (useful for Vite dev
-  # against the chart's bundled dev Keycloak via port-forward); set
-  # to `https://keycloak.<env>.repldriven.com` on GKE.
-  keycloakPublicUrl: ""
+  # The browser reads this from /env.js at runtime; empty makes the
+  # sign-in button inert. Default matches the Keycloak port-forward
+  # printed in NOTES.txt for a bare `helm install` (port 8090);
+  # queenswood-platform overrides to the public hostname on GKE.
+  keycloakPublicUrl: "http://localhost:8090"
   # Optional federated IdP alias for skip-straight-to-Google flows.
   # Empty in dev so the Keycloak login form renders for the seeded
   # `ops` / `ops` user; set to `google` once real Google OAuth
@@ -152,11 +153,11 @@ bankConsole:
   port: 8080
   replicas: 1
   apiUpstream: "http://{{ .Release.Name }}-bank-api-service:8080"
-  # Public URL of the realm endpoint the browser calls. Empty means
-  # the SPA falls back to its build-time default — leave empty for
-  # Vite dev (which uses VITE_KEYCLOAK_URL) and set to e.g.
-  # `https://keycloak.<env>.repldriven.com` on GKE.
-  keycloakPublicUrl: ""
+  # Public URL of the realm endpoint the browser calls. Same shape
+  # as bankApp.keycloakPublicUrl above: default points at the local
+  # port-forward suggested in NOTES.txt (8090), GKE overrides via
+  # queenswood-platform.
+  keycloakPublicUrl: "http://localhost:8090"
   # Optional federated IdP alias. When set (e.g. "google"), the SPA
   # skips Keycloak's own login form and redirects straight to that
   # provider. Empty by default so the realm's login screen renders;

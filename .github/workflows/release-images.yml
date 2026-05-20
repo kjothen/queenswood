@@ -3,10 +3,19 @@ name: Release Images
 # Builds every Queenswood service image and pushes to ghcr.io with
 # the `:latest` tag. Runs from `main` (push) or manual trigger.
 #
-# Intentionally does NOT package or publish the Helm chart — that's
-# `release-chart.yml`, which is manual-only. Splitting saves ~20
-# minutes on chart-only edits (the multi-arch JVM compile is the
-# slow part).
+# Strategy: fan out by architecture, not by service. Each matrix arm
+# runs natively on a GitHub-hosted runner of the right arch (no QEMU,
+# which is the wall-clock dominator), uses `docker buildx bake` to
+# build every service in parallel on that one runner, and pushes
+# `:latest-<arch>` tags. A final `manifest` job stitches the two
+# per-arch tags into a single multi-arch `:latest` manifest with
+# `docker buildx imagetools create`.
+#
+# Why not matrix-per-service: bake's intra-runner parallelism shares
+# the Clojure base layer and the Maven `--mount=type=cache` across
+# all 13 JVM services in one invocation. Splitting per service loses
+# that cache entirely and burns ~13x the runner minutes for a slower
+# wall clock.
 #
 # First-run setup: GHCR packages are private by default. After the
 # first successful run, visit
@@ -19,7 +28,7 @@ on:
   push:
     branches: [main]
     # Skip when only chart/infra/docs changed — the chart workflow
-    # handles those and there's no reason to burn 20 minutes
+    # handles those and there's no reason to burn runner minutes
     # rebuilding identical images.
     paths-ignore:
       - 'infra/helm/**'
@@ -40,18 +49,25 @@ permissions:
   packages: write       # push images to ghcr.io
 
 jobs:
-  images:
-    runs-on: ubuntu-latest
+  build:
+    strategy:
+      # An amd64 failure shouldn't kill the arm64 run (or vice versa);
+      # better to push one arch's `:latest-<arch>` and skip the
+      # manifest step than to lose both.
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runs-on: ubuntu-latest
+            platform: linux/amd64
+          - arch: arm64
+            runs-on: ubuntu-24.04-arm
+            platform: linux/arm64
+    runs-on: ${{ matrix.runs-on }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v6
-
-      # QEMU is needed to build linux/arm64 layers on the amd64 runner.
-      # The cross-arch JVM compile is the slow part; GHA layer cache
-      # (configured below) makes unchanged layers instant on re-runs.
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -63,28 +79,73 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # The bake file's default `output = ["type=docker"]` loads
-      # images into the local daemon (right for `just
-      # docker-build-all`). Override to push directly to the
-      # registry from the buildx builder — no intermediate
-      # `docker push` step, no local daemon required.
+      # Native arch per runner means MULTI_ARCH stays unset (bake's
+      # `platforms_default = []` lets BuildKit fall back to the host
+      # platform) — no QEMU emulation, no cross-arch JVM compile
+      # penalty.
       #
-      # Caching strategy:
-      # - `MULTI_ARCH=1` flips bake.hcl to publish linux/amd64 +
-      #   linux/arm64. Local builds stay single-arch by default.
-      # - `cache-from`/`cache-to=type=gha` persists BuildKit layer
-      #   cache across workflow runs via the GitHub Actions cache.
-      # - The Dockerfile's `--mount=type=cache` for /root/.m2 shares
-      #   the Maven cache across the 13 service builds in a single
-      #   bake invocation (deps downloaded once, not 13×).
-      - name: Build and push all service images
+      # Tag with the arch suffix so the two arms don't clobber each
+      # other. The `manifest` job below stitches `:latest-amd64` +
+      # `:latest-arm64` into the canonical `:latest`.
+      #
+      # `cache-from`/`cache-to=type=gha` scoped per arch so each
+      # runner has its own layer cache.
+      - name: Build and push all service images (${{ matrix.arch }})
         env:
           REGISTRY: ghcr.io/${{ github.repository_owner }}
-          TAG: latest
-          MULTI_ARCH: "1"
+          TAG: latest-${{ matrix.arch }}
         run: |
           docker buildx bake \
             -f infra/docker/bake.hcl \
+            --set "*.platform=${{ matrix.platform }}" \
             --set "*.output=type=registry,push=true" \
-            --set "*.cache-from=type=gha,scope=release" \
-            --set "*.cache-to=type=gha,scope=release,mode=max"
+            --set "*.cache-from=type=gha,scope=release-${{ matrix.arch }}" \
+            --set "*.cache-to=type=gha,scope=release-${{ matrix.arch }},mode=max"
+
+  manifest:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # `imagetools create -t :latest :latest-amd64 :latest-arm64`
+      # produces a manifest list for each image whose two referenced
+      # manifests are the per-arch images pushed above. No image data
+      # is re-uploaded — only the manifest list is created.
+      #
+      # The service list is the same one bake.hcl defines; kept in
+      # sync by hand. (Bake can emit it, but the extra dependency to
+      # parse JSON output from `docker buildx bake --print` isn't
+      # worth saving 15 lines here.)
+      - name: Stitch multi-arch manifests
+        env:
+          REGISTRY: ghcr.io/${{ github.repository_owner }}
+        run: |
+          images=(
+            bank-migrator-service
+            bank-bootstrap-service
+            bank-api-service
+            bank-cash-account-processor-service
+            bank-party-processor-service
+            bank-payment-processor-service
+            bank-interest-processor-service
+            bank-transaction-processor-service
+            bank-idv-processor-service
+            bank-clearbank-adapter-service
+            bank-clearbank-simulator-service
+            bank-onfido-adapter-service
+            bank-onfido-simulator-service
+            bank-app
+            bank-console
+          )
+          for img in "${images[@]}"; do
+            docker buildx imagetools create \
+              -t "$REGISTRY/$img:latest" \
+              "$REGISTRY/$img:latest-amd64" \
+              "$REGISTRY/$img:latest-arm64"
+          done

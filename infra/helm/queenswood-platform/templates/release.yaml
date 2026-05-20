@@ -51,6 +51,14 @@ spec:
         expectedIssuer: {{ printf "https://keycloak.%s/realms/%s" .Values.env.domain .Values.queenswoodKeycloak.serverSide.realm | quote }}
         realm: {{ .Values.queenswoodKeycloak.serverSide.realm | quote }}
         adminClientId: {{ .Values.queenswoodKeycloak.serverSide.adminClientId | quote }}
+      # Both SPAs read Keycloak URL from /env.js at runtime. The
+      # chart defaults point at the local port-forward
+      # (http://localhost:8090); on GKE we need the public hostname
+      # the browser actually hits.
+      bankApp:
+        keycloakPublicUrl: {{ printf "https://keycloak.%s" .Values.env.domain | quote }}
+      bankConsole:
+        keycloakPublicUrl: {{ printf "https://keycloak.%s" .Values.env.domain | quote }}
       secrets:
         keycloakAdminClientSecret: {{ .Values.queenswoodKeycloak.serverSide.adminClientSecret | quote }}
   providerConfigRef:

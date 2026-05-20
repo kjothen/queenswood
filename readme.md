@@ -279,16 +279,19 @@ helm install queenswood \
 **Reach the API and the SPAs** (separate terminals):
 
 ```bash
-kubectl -n queenswood port-forward svc/queenswood-bank-api-service 8080:8080
-kubectl -n queenswood port-forward svc/queenswood-bank-app          8081:8080
-kubectl -n queenswood port-forward svc/queenswood-bank-console      8082:8080
+kubectl -n queenswood port-forward svc/queenswood-bank-api-service          8080:8080
+kubectl -n queenswood port-forward svc/queenswood-bank-app                  8081:8080
+kubectl -n queenswood port-forward svc/queenswood-bank-console              8082:8080
+kubectl -n queenswood port-forward svc/queenswood-keycloak-keycloak-service 8090:8080
 ```
 
 Then open <http://localhost:8081> for the operator console
 (`bank-app`) or <http://localhost:8082> for the organisation
 console (`bank-console`); both sign in via the bundled
-Keycloak. OpenAPI docs at <http://localhost:8080/scalar>. The
-full quickstart — including tear-down — ships with each
+Keycloak on <http://localhost:8090> (admin / admin for the
+Keycloak admin console). OpenAPI docs at
+<http://localhost:8080/scalar>. The full quickstart —
+including tear-down — ships with each
 [release](https://github.com/repldriven/queenswood/releases/latest).
 
 ## Built on mono

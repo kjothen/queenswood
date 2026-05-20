@@ -7,6 +7,14 @@
 !bases/bank-console
 !infra/docker/bank-console
 
+# SignIn.svelte ?raw-imports a handful of ADRs, TDDs, and recipes
+# via `../../../../docs/…`. Whitelist just those three subtrees so
+# the build context stays small (docs/slides is ~500MB locally with
+# its node_modules cache, and docs/prd / docs/plan aren't referenced).
+!docs/adr
+!docs/tdd
+!docs/recipes
+
 bases/bank-console/node_modules
 bases/bank-console/dist
 bases/bank-console/.svelte-kit
