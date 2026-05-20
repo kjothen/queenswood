@@ -8,7 +8,8 @@
     "preview": "NODE_OPTIONS='--max-http-header-size=32768' vite preview"
   },
   "dependencies": {
-    "keycloak-js": "^26.0.7"
+    "keycloak-js": "^26.0.7",
+    "marked": "^18.0.4"
   },
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "^5.0.3",
