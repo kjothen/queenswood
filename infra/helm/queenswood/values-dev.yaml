@@ -22,10 +22,3 @@ fdbOperator:
         repository: foundationdb/fdb-kubernetes-monitor
         tag: 7.3.63
         pullPolicy: IfNotPresent
-
-# Bundle a dev Keycloak in the chart so org-create works locally
-# without depending on the queenswood-keycloak Crossplane chart that
-# only runs on GKE. See templates/keycloak-dev.yaml.
-keycloak:
-  dev:
-    enabled: true

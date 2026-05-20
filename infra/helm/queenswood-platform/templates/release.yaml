@@ -35,6 +35,13 @@ spec:
       # whatever's set on subsequent upgrades, so rotating in-place
       # is a `helm upgrade --set` away).
       keycloak:
+        # On GKE, the operator-driven queenswood-keycloak chart
+        # (sync-wave 6) provides Keycloak -- keep the bundled dev
+        # Keycloak off so we don't run two side by side. (The
+        # queenswood chart defaults `dev.enabled: true` for
+        # standalone installs.)
+        dev:
+          enabled: false
         # base-url is the in-cluster Service so admin REST + token
         # exchange don't round-trip out via the LB. Tokens still
         # embed the public hostname as iss (Keycloak frontchannel),
