@@ -28,10 +28,9 @@
                 tier
                 currencies
                 {:identity-provider identity-provider
-                 :audience audience})]
+                 :audience audience})
+        {:keys [organization client-secret]} result]
     (if (error/anomaly? result)
       (errors/anomaly->response result)
       {:status 201
-       :body (assoc (:organization result)
-                    :client-secret
-                    (:client-secret result))})))
+       :body (assoc organization :client-secret client-secret)})))

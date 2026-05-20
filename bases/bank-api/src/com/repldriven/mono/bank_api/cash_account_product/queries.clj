@@ -4,35 +4,8 @@
     [com.repldriven.mono.bank-api.errors :as errors]
     [com.repldriven.mono.bank-cash-account-product.interface :as
      cash-account-products]
-    [com.repldriven.mono.error.interface :as error]))
-
-(def ^:private default-page-size 20)
-(def ^:private max-page-size 100)
-
-(defn- clamp-size
-  [n]
-  (cond (nil? n)
-        default-page-size
-        (< n 1)
-        1
-        (> n max-page-size)
-        max-page-size
-        :else
-        n))
-
-(defn- build-links
-  [base size before-id after-id]
-  (cond-> {}
-          after-id
-          (assoc :next
-                 (str base
-                      "?page[after]=" (cursor/encode after-id)
-                      "&page[size]=" size))
-          before-id
-          (assoc :prev
-                 (str base
-                      "?page[before]=" (cursor/encode before-id)
-                      "&page[size]=" size))))
+    [com.repldriven.mono.error.interface :as error]
+    [com.repldriven.mono.utility.interface :as utility]))
 
 (defn- paginate
   "Windows a seq of product aggregates — assumed to already be in
@@ -44,7 +17,7 @@
   into smaller product-ids; `:before cursor` retreats toward larger
   ones. `size` caps the page length."
   [items {:keys [after before size]}]
-  (let [limit (clamp-size size)]
+  (let [limit (cursor/clamp-size size)]
     (cond
      after
      (let [after-items (drop-while
@@ -77,43 +50,42 @@
 
 (defn list-products
   [request]
-  (let [{:keys [record-db record-store]} request
-        org-id (get-in request [:auth :organization-id])
-        query (get-in request [:parameters :query])
+  (let [{:keys [record-db record-store auth parameters]} request
+        {:keys [organization-id]} auth
+        {:keys [query]} parameters
         {:keys [page]} query
-        after (cursor/decode (:after page))
-        before (cursor/decode (:before page))
-        size (:size page)
+        {:keys [after before size]} page
+        after-id (cursor/decode after)
+        before-id (cursor/decode before)
         result (cash-account-products/get-products
                 {:record-db record-db :record-store record-store}
-                org-id)]
+                organization-id)]
     (if (error/anomaly? result)
       (errors/anomaly->response result)
       (let [{:keys [items]} result
             windowed (paginate (or items [])
-                               {:after after :before before :size size})
+                               {:after after-id :before before-id :size size})
             {windowed-items :page
              next-cursor :after
              prev-cursor :before}
             windowed
             links (when (seq windowed-items)
-                    (build-links "/v1/cash-account-products"
-                                 (clamp-size size)
-                                 (when after prev-cursor)
-                                 next-cursor))]
+                    (cursor/build-links "/v1/cash-account-products"
+                                        (cursor/clamp-size size)
+                                        (when after-id prev-cursor)
+                                        next-cursor))]
         {:status 200
-         :body (cond-> {:items windowed-items}
-                       (seq links)
-                       (assoc :links links))}))))
+         :body (utility/assoc-seq {:items windowed-items} :links links)}))))
 
 (defn get-product
   [request]
-  (let [{:keys [record-db record-store]} request
-        org-id (get-in request [:auth :organization-id])
-        {:keys [product-id]} (get-in request [:parameters :path])
+  (let [{:keys [record-db record-store auth parameters]} request
+        {:keys [organization-id]} auth
+        {:keys [path]} parameters
+        {:keys [product-id]} path
         result (cash-account-products/get-product
                 {:record-db record-db :record-store record-store}
-                org-id
+                organization-id
                 product-id)]
     (if (error/anomaly? result)
       (errors/anomaly->response result)
@@ -121,12 +93,13 @@
 
 (defn get-version
   [request]
-  (let [{:keys [record-db record-store]} request
-        org-id (get-in request [:auth :organization-id])
-        {:keys [product-id version-id]} (get-in request [:parameters :path])
+  (let [{:keys [record-db record-store auth parameters]} request
+        {:keys [organization-id]} auth
+        {:keys [path]} parameters
+        {:keys [product-id version-id]} path
         result (cash-account-products/get-version
                 {:record-db record-db :record-store record-store}
-                org-id
+                organization-id
                 product-id
                 version-id)]
     (if (error/anomaly? result)

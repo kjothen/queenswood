@@ -7,10 +7,10 @@
 
 (defn create-balance
   [request]
-  (let [{:keys [record-db record-store auth]} request
+  (let [{:keys [record-db record-store auth parameters]} request
         {:keys [organization-id]} auth
-        account-id (get-in request [:parameters :path :account-id])
-        body (get-in request [:parameters :body])
+        {:keys [path body]} parameters
+        {:keys [account-id]} path
         config {:record-db record-db :record-store record-store}
         result (let-nom>
                  [account (cash-accounts/get-account config

@@ -5,25 +5,30 @@
 
 (defn- dispatcher
   [request]
-  (get-in request [:dispatchers :payments]))
+  (let [{:keys [dispatchers]} request
+        {:keys [payments]} dispatchers]
+    payments))
 
 (defn submit-internal-payment
   [request]
-  (commands/send (dispatcher request)
-                 request
-                 "submit-internal-payment"
-                 "internal-payment"
-                 (assoc (get-in request [:parameters :body])
-                        :organization-id
-                        (get-in request [:auth :organization-id]))))
+  (let [{:keys [auth parameters]} request
+        {:keys [organization-id]} auth
+        {:keys [body]} parameters]
+    (commands/send (dispatcher request)
+                   request
+                   "submit-internal-payment"
+                   "internal-payment"
+                   (assoc body :organization-id organization-id))))
 
 (defn submit-outbound-payment
   [request]
-  (commands/send (dispatcher request)
-                 request
-                 "submit-outbound-payment"
-                 "outbound-payment"
-                 (-> (get-in request [:parameters :body])
-                     (update :scheme coercion/encode-payment-scheme)
-                     (assoc :organization-id
-                            (get-in request [:auth :organization-id])))))
+  (let [{:keys [auth parameters]} request
+        {:keys [organization-id]} auth
+        {:keys [body]} parameters]
+    (commands/send (dispatcher request)
+                   request
+                   "submit-outbound-payment"
+                   "outbound-payment"
+                   (-> body
+                       (update :scheme coercion/encode-payment-scheme)
+                       (assoc :organization-id organization-id)))))

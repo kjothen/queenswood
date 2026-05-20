@@ -6,8 +6,8 @@
 
 (defn list-organizations
   [request]
-  (let [config {:record-db (:record-db request)
-                :record-store (:record-store request)}
+  (let [{:keys [record-db record-store]} request
+        config {:record-db record-db :record-store record-store}
         result (organizations/get-organizations config)]
     (if (error/anomaly? result)
       (errors/anomaly->response result)

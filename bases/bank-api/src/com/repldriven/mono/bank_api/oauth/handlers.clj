@@ -34,9 +34,9 @@
   "RFC 6749 §4.4 — client_credentials grant. Proxies the request to
   the realm's token endpoint via the configured identity-provider."
   [request]
-  (let [{:keys [identity-provider]} request
-        params (or (get-in request [:parameters :form])
-                   (:form-params request))
+  (let [{:keys [identity-provider parameters form-params]} request
+        {:keys [form]} parameters
+        params (or form form-params)
         {:keys [grant_type client_id client_secret scope]} params]
     (cond
      (not= "client_credentials" grant_type)

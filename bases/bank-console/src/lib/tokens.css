@@ -1,0 +1,37 @@
+/* Queenswood brand tokens — copied verbatim from the design handoff
+   (Queenswood Home.html). The forest greens share chroma ~0.045-0.06
+   around hue 145; the crown golds are warm at hue 58-92. */
+
+:root {
+  /* Surfaces */
+  --bone:   #f4f1ea;
+  --bone-2: #ebe6dc;
+  --paper:  #fbf9f4;
+  --ink:    #161310;
+  --ink-2:  #2a2622;
+  --muted:  #6b645b;
+  --rule:   rgba(20, 15, 10, 0.10);
+  --rule-2: rgba(20, 15, 10, 0.06);
+
+  /* Conifer greens */
+  --pine-1: oklch(0.28 0.045 150);
+  --pine-2: oklch(0.36 0.055 148);
+  --pine-3: oklch(0.44 0.060 145);
+  --pine-4: oklch(0.52 0.060 142);
+  --pine-5: oklch(0.60 0.055 140);
+
+  /* Crown golds */
+  --gold:        oklch(0.66 0.135 72);
+  --gold-bright: oklch(0.78 0.140 80);
+  --gold-deep:   oklch(0.52 0.120 68);
+  --gold-1: oklch(0.88 0.155 92);
+  --gold-2: oklch(0.80 0.175 86);
+  --gold-3: oklch(0.70 0.180 78);
+  --gold-4: oklch(0.56 0.160 68);
+  --gold-5: oklch(0.42 0.125 58);
+
+  /* Type */
+  --grotesk: 'Geist', ui-sans-serif, system-ui, sans-serif;
+  --serif:   'Cormorant Garamond', ui-serif, Georgia, serif;
+  --mono:    'Geist Mono', ui-monospace, monospace;
+}

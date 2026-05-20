@@ -2,14 +2,19 @@
   (:require
     [com.repldriven.mono.bank-api.commands :as commands]))
 
-(defn- dispatcher [request] (get-in request [:dispatchers :parties]))
+(defn- dispatcher
+  [request]
+  (let [{:keys [dispatchers]} request
+        {:keys [parties]} dispatchers]
+    parties))
 
 (defn create-party
   [request]
-  (commands/send (dispatcher request)
-                 request
-                 "create-party"
-                 "party"
-                 (assoc (get-in request [:parameters :body])
-                        :organization-id
-                        (get-in request [:auth :organization-id]))))
+  (let [{:keys [auth parameters]} request
+        {:keys [organization-id]} auth
+        {:keys [body]} parameters]
+    (commands/send (dispatcher request)
+                   request
+                   "create-party"
+                   "party"
+                   (assoc body :organization-id organization-id))))

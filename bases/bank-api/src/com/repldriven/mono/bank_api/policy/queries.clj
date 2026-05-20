@@ -6,8 +6,8 @@
 
 (defn list-policies
   [request]
-  (let [config {:record-db (:record-db request)
-                :record-store (:record-store request)}
+  (let [{:keys [record-db record-store]} request
+        config {:record-db record-db :record-store record-store}
         result (policies/get-policies config)]
     (if (error/anomaly? result)
       (errors/anomaly->response result)
@@ -15,9 +15,10 @@
 
 (defn get-policy
   [request]
-  (let [config {:record-db (:record-db request)
-                :record-store (:record-store request)}
-        {:keys [policy-id]} (get-in request [:parameters :path])
+  (let [{:keys [record-db record-store parameters]} request
+        {:keys [path]} parameters
+        {:keys [policy-id]} path
+        config {:record-db record-db :record-store record-store}
         result (policies/get-policy config policy-id)]
     (if (error/anomaly? result)
       (errors/anomaly->response result)

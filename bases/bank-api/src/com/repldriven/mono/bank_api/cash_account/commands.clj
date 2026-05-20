@@ -2,25 +2,32 @@
   (:require
     [com.repldriven.mono.bank-api.commands :as commands]))
 
-(defn- dispatcher [request] (get-in request [:dispatchers :cash-accounts]))
+(defn- dispatcher
+  [request]
+  (let [{:keys [dispatchers]} request
+        {:keys [cash-accounts]} dispatchers]
+    cash-accounts))
 
 (defn open-cash-account
   [request]
-  (commands/send (dispatcher request)
-                 request
-                 "open-cash-account"
-                 "cash-account"
-                 (assoc (get-in request [:parameters :body])
-                        :organization-id
-                        (get-in request [:auth :organization-id]))))
+  (let [{:keys [auth parameters]} request
+        {:keys [organization-id]} auth
+        {:keys [body]} parameters]
+    (commands/send (dispatcher request)
+                   request
+                   "open-cash-account"
+                   "cash-account"
+                   (assoc body :organization-id organization-id))))
 
 (defn close-cash-account
   [request]
-  (let [{:keys [account-id]} (get-in request [:parameters :path])
-        org-id (get-in request [:auth :organization-id])]
+  (let [{:keys [auth parameters]} request
+        {:keys [organization-id]} auth
+        {:keys [path]} parameters
+        {:keys [account-id]} path]
     (commands/send (dispatcher request)
                    request
                    "close-cash-account"
                    "cash-account"
-                   {:organization-id org-id
+                   {:organization-id organization-id
                     :account-id account-id})))
