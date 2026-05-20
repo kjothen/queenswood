@@ -2,109 +2,80 @@
   (:require
     [com.repldriven.mono.bank-api.cursor :as cursor]
     [com.repldriven.mono.bank-api.errors :as errors]
-    [com.repldriven.mono.bank-cash-account.interface :as
-     cash-accounts]
-    [com.repldriven.mono.bank-transaction.interface :as
-     transactions]
-    [com.repldriven.mono.error.interface :as error]))
 
-(def ^:private default-page-size 20)
+    [com.repldriven.mono.bank-cash-account.interface :as cash-accounts]
+    [com.repldriven.mono.bank-transaction.interface :as transactions]
 
-(defn- build-links
-  [base size before-id after-id]
-  (cond-> {}
-          after-id
-          (assoc :next
-                 (str base
-                      "?page[after]="
-                      (cursor/encode after-id)
-                      "&page[size]=" size))
-          before-id
-          (assoc :prev
-                 (str base
-                      "?page[before]="
-                      (cursor/encode before-id)
-                      "&page[size]=" size))))
+    [com.repldriven.mono.error.interface :as error]
+    [com.repldriven.mono.utility.interface :as utility]))
 
 (defn list-cash-accounts
   [request]
-  (let [{:keys [record-db record-store]} request
-        org-id (get-in request [:auth :organization-id])
-        query (get-in request [:parameters :query])
+  (let [{:keys [record-db record-store auth parameters]} request
+        {:keys [organization-id]} auth
+        {:keys [query]} parameters
         {:keys [page embed]} query
-        after-id (cursor/decode (:after page))
-        before-id (cursor/decode (:before page))
-        size (or (:size page) default-page-size)
-        embed-balances (:balances embed)
-        embed-transactions (:transactions embed)
-        opts (cond->
-              {:limit size}
-
-              after-id
-              (assoc :after after-id)
-
-              before-id
-              (assoc :before before-id)
-
-              (some? embed-balances)
-              (assoc :embed-balances embed-balances)
-
-              (some? embed-transactions)
-              (assoc :embed-transactions embed-transactions))
+        {:keys [after before size]} page
+        {embed-balances :balances embed-transactions :transactions} embed
+        after-id (cursor/decode after)
+        before-id (cursor/decode before)
+        size (cursor/clamp-size size)
+        opts (utility/assoc-some {:limit size}
+                                 :after after-id
+                                 :before before-id
+                                 :embed-balances embed-balances
+                                 :embed-transactions embed-transactions)
         result (cash-accounts/get-accounts
                 {:record-db record-db
                  :record-store record-store}
-                org-id
+                organization-id
                 opts)]
 
     (if (error/anomaly? result)
       (errors/anomaly->response result)
       (let [{:keys [accounts before after]} result
             links (when (seq accounts)
-                    (build-links "/v1/cash-accounts"
-                                 size
-                                 (when after-id before)
-                                 after))]
+                    (cursor/build-links "/v1/cash-accounts"
+                                        size
+                                        (when after-id before)
+                                        after))]
         {:status 200
-         :body (cond->
-                {:cash-accounts accounts}
-
-                (seq links)
-                (assoc :links links))}))))
+         :body (utility/assoc-seq {:cash-accounts accounts} :links links)}))))
 
 (defn get-cash-account
   [request]
-  (let [{:keys [record-db record-store]} request
-        org-id (get-in request [:auth :organization-id])
-        {:keys [account-id]} (get-in request [:parameters :path])
-        query (get-in request [:parameters :query])
+  (let [{:keys [record-db record-store auth parameters]} request
+        {:keys [organization-id]} auth
+        {:keys [path query]} parameters
+        {:keys [account-id]} path
         {:keys [embed]} query
-        embed-balances (:balances embed)
-        embed-transactions (:transactions embed)
+        {embed-balances :balances embed-transactions :transactions} embed
         result (cash-accounts/get-account
                 {:record-db record-db :record-store record-store}
-                org-id
+                organization-id
                 account-id
-                (cond-> {}
-                        (some? embed-balances)
-                        (assoc :embed-balances embed-balances)
-                        (some? embed-transactions)
-                        (assoc :embed-transactions embed-transactions)))]
-    (cond (error/anomaly? result)
-          (errors/anomaly->response result)
-          (nil? result)
-          {:status 404
-           :body (errors/error-response 404 "REJECTED"
-                                        "cash-accounts/not-found"
-                                        "Cash account not found")}
-          :else
-          {:status 200 :body result})))
+                (utility/assoc-some {}
+                                    :embed-balances embed-balances
+                                    :embed-transactions embed-transactions))]
+    (cond
+     (error/anomaly? result)
+     (errors/anomaly->response result)
+
+     (nil? result)
+     {:status 404
+      :body (errors/error-response 404 "REJECTED"
+                                   "cash-accounts/not-found"
+                                   "Cash account not found")}
+
+     :else
+     {:status 200 :body result})))
 
 (defn list-transactions
   [request]
   (let [{:keys [record-db record-store auth parameters]} request
         {:keys [organization-id]} auth
-        {:keys [account-id]} (:path parameters)
+        {:keys [path]} parameters
+        {:keys [account-id]} path
         config {:record-db record-db :record-store record-store}
         result (error/let-nom>
                  [_ (cash-accounts/get-account config

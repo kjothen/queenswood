@@ -30,17 +30,15 @@
                              default-currencies
                              {:identity-provider identity-provider
                               :audience audience})
+                 {:keys [organization client-secret]} org-result
+                 {:keys [organization-id]} organization
                  membership (memberships/new-membership
                              txn
                              {:user-id (:user-id user)
-                              :organization-id (get-in org-result
-                                                       [:organization
-                                                        :organization-id])
+                              :organization-id organization-id
                               :role :role-owner})]
         {:user user
-         :organization (assoc (:organization org-result)
-                              :client-secret
-                              (:client-secret org-result))
+         :organization (assoc organization :client-secret client-secret)
          :membership membership}))))
 
 (defn onboard

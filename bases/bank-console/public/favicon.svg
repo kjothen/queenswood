@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" aria-label="Queenswood">
+  <defs>
+    <linearGradient id="t0" x1="0" y1="0" x2="0" y2="1" gradientUnits="objectBoundingBox">
+      <stop offset="0%" stop-color="oklch(0.660 0.045 138)" />
+      <stop offset="100%" stop-color="oklch(0.200 0.055 138)" />
+    </linearGradient>
+    <linearGradient id="t1" x1="0" y1="0" x2="0" y2="1" gradientUnits="objectBoundingBox">
+      <stop offset="0%" stop-color="oklch(0.710 0.045 145)" />
+      <stop offset="100%" stop-color="oklch(0.230 0.055 145)" />
+    </linearGradient>
+    <linearGradient id="t2" x1="0" y1="0" x2="0" y2="1" gradientUnits="objectBoundingBox">
+      <stop offset="0%" stop-color="oklch(0.660 0.045 152)" />
+      <stop offset="100%" stop-color="oklch(0.260 0.055 152)" />
+    </linearGradient>
+    <linearGradient id="t3" x1="0" y1="0" x2="0" y2="1" gradientUnits="objectBoundingBox">
+      <stop offset="0%" stop-color="oklch(0.750 0.045 138)" />
+      <stop offset="100%" stop-color="oklch(0.220 0.055 138)" />
+    </linearGradient>
+  </defs>
+  <!-- Forest set C, shortest first (i=3, i=0, i=2, i=1) -->
+  <polygon points="180,60 159,120 201,120" fill="url(#t3)" />
+  <polygon points="44,68 22,120 66,120" fill="url(#t0)" />
+  <polygon points="134,84 110,120 158,120" fill="url(#t2)" />
+  <polygon points="86,104 59,120 113,120" fill="url(#t1)" />
+  <!-- Crown — 5 teeth, x1=48, x2=192, bandH=18, toothH=42 -->
+  <polygon points="48,120 192,120 192,138 163.2,180 134.4,138 105.6,180 76.8,138 48,138" fill="oklch(0.66 0.135 72)" />
+  <line x1="52" y1="136.8" x2="188" y2="136.8" stroke="oklch(0.52 0.12 68)" stroke-opacity="0.6" stroke-width="0.8" />
+  <!-- Baubles at apexes 76.8, 105.6, 134.4, 163.2; y = 138+42+3.6+0.6 = 184.2 -->
+  <g>
+    <circle cx="76.8" cy="184.2" r="3.6" fill="oklch(0.66 0.135 72)" />
+    <circle cx="75.54" cy="182.94" r="1.008" fill="oklch(0.82 0.13 82)" opacity="0.85" />
+  </g>
+  <g>
+    <circle cx="105.6" cy="184.2" r="3.6" fill="oklch(0.66 0.135 72)" />
+    <circle cx="104.34" cy="182.94" r="1.008" fill="oklch(0.82 0.13 82)" opacity="0.85" />
+  </g>
+  <g>
+    <circle cx="134.4" cy="184.2" r="3.6" fill="oklch(0.66 0.135 72)" />
+    <circle cx="133.14" cy="182.94" r="1.008" fill="oklch(0.82 0.13 82)" opacity="0.85" />
+  </g>
+  <g>
+    <circle cx="163.2" cy="184.2" r="3.6" fill="oklch(0.66 0.135 72)" />
+    <circle cx="161.94" cy="182.94" r="1.008" fill="oklch(0.82 0.13 82)" opacity="0.85" />
+  </g>
+</svg>

@@ -42,21 +42,24 @@
 
 (defn send
   [dispatcher request command-name response-schema data]
-  (let [schemas (:avro request)
+  (let [{:keys [avro]} request
         envelope (command/req->command-request request command-name)
         result (let-nom>
-                 [schema (get-schema schemas command-name)
-                  payload
-                  (avro/serialize schema data)]
+                 [schema (get-schema avro command-name)
+                  payload (avro/serialize schema data)]
                  (command/send dispatcher (assoc envelope :payload payload)))]
-    (cond (error/anomaly? result)
-          (errors/anomaly->response result)
-          (= "REJECTED" (:status result))
-          (rejected-response result)
-          (= "FAILED" (:status result))
-          {:status 500 :body (errors/error-response 500 "FAILED" result)}
-          :else
-          (let [body (decode-payload schemas response-schema result)]
-            (if (error/anomaly? body)
-              (errors/anomaly->response body)
-              {:status 200 :body body})))))
+    (cond
+     (error/anomaly? result)
+     (errors/anomaly->response result)
+
+     (= "REJECTED" (:status result))
+     (rejected-response result)
+
+     (= "FAILED" (:status result))
+     {:status 500 :body (errors/error-response 500 "FAILED" result)}
+
+     :else
+     (let [body (decode-payload avro response-schema result)]
+       (if (error/anomaly? body)
+         (errors/anomaly->response body)
+         {:status 200 :body body})))))

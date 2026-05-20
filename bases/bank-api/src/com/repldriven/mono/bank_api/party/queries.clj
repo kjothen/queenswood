@@ -2,37 +2,24 @@
   (:require
     [com.repldriven.mono.bank-api.cursor :as cursor]
     [com.repldriven.mono.bank-api.errors :as errors]
+
     [com.repldriven.mono.bank-party.interface :as parties]
-    [com.repldriven.mono.error.interface :as error]))
 
-(def ^:private default-page-size 20)
-
-(defn- build-links
-  [base size before-cursor after-cursor]
-  (cond-> {}
-          after-cursor
-          (assoc :next
-                 (str base
-                      "?page[after]="
-                      (cursor/encode after-cursor)
-                      "&page[size]=" size))
-          before-cursor
-          (assoc :prev
-                 (str base
-                      "?page[before]="
-                      (cursor/encode before-cursor)
-                      "&page[size]=" size))))
+    [com.repldriven.mono.error.interface :as error]
+    [com.repldriven.mono.utility.interface :as utility]))
 
 (defn list-parties
   [request]
-  (let [org-id (get-in request [:auth :organization-id])
-        query (get-in request [:parameters :query])
+  (let [{:keys [auth parameters]} request
+        {:keys [organization-id]} auth
+        {:keys [query]} parameters
         {:keys [page]} query
-        after-id (cursor/decode (:after page))
-        before-id (cursor/decode (:before page))
-        size (or (:size page) default-page-size)
+        {:keys [after before size]} page
+        after-id (cursor/decode after)
+        before-id (cursor/decode before)
+        size (cursor/clamp-size size)
         result (parties/get-parties request
-                                    org-id
+                                    organization-id
                                     {:after after-id
                                      :before before-id
                                      :limit size})]
@@ -40,21 +27,20 @@
       (errors/anomaly->response result)
       (let [{:keys [parties before after]} result
             links (when (seq parties)
-                    (build-links "/v1/parties"
-                                 size
-                                 (when after-id before)
-                                 after))]
+                    (cursor/build-links "/v1/parties"
+                                        size
+                                        (when after-id before)
+                                        after))]
         {:status 200
-         :body (cond-> {:parties parties}
-                       (seq links)
-                       (assoc :links links))}))))
+         :body (utility/assoc-seq {:parties parties} :links links)}))))
 
 (defn get-party
   [request]
-  (let [org-id (get-in request [:auth :organization-id])
-        {:keys [party-id]} (get-in request [:parameters :path])
-        result (parties/get-party request org-id party-id)]
-    (cond (error/anomaly? result)
-          (errors/anomaly->response result)
-          :else
-          {:status 200 :body result})))
+  (let [{:keys [auth parameters]} request
+        {:keys [organization-id]} auth
+        {:keys [path]} parameters
+        {:keys [party-id]} path
+        result (parties/get-party request organization-id party-id)]
+    (if (error/anomaly? result)
+      (errors/anomaly->response result)
+      {:status 200 :body result})))

@@ -7,18 +7,23 @@
 
 (defn- dispatcher
   [request]
-  (get-in request [:dispatchers :transactions]))
+  (let [{:keys [dispatchers]} request
+        {:keys [transactions]} dispatchers]
+    transactions))
 
 (defn- interest-dispatcher
   [request]
-  (get-in request [:dispatchers :interest]))
+  (let [{:keys [dispatchers]} request
+        {:keys [interest]} dispatchers]
+    interest))
 
 (defn- check-org
   "Confirms the path's `{org-id}` resolves to a real organization.
   Returns nil when found, or the anomaly-response for `:organization/not-found`."
   [request]
   (let [{:keys [record-db record-store parameters]} request
-        {:keys [org-id]} (:path parameters)
+        {:keys [path]} parameters
+        {:keys [org-id]} path
         result (organizations/get-organization
                 {:record-db record-db :record-store record-store}
                 org-id)]
