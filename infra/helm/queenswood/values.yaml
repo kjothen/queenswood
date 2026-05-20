@@ -49,15 +49,16 @@ keycloak:
   # Service URL for fast admin REST calls but tokens carry the
   # public issuer URL.
   expectedIssuer: ""
-  # -- Bundled dev Keycloak for local kind/k3s. On GKE Keycloak is
-  # deployed separately via the queenswood-keycloak chart (Crossplane
-  # Helm Release), and the operator-published Service `queenswood-
-  # keycloak-keycloak-service` matches `keycloak.baseUrl` above. For a
-  # local cluster there's no operator -- enable this to render a
-  # single-replica Deployment + matching Service + ConfigMap-mounted
-  # realm import. Off by default; `just kind-up` flips it on.
+  # -- Bundled dev Keycloak for any standalone install of this chart
+  # (local kind/k3s, the published OCI artifact). Renders a single-
+  # replica Deployment + matching Service + ConfigMap-mounted realm
+  # import. On GKE this is explicitly disabled by queenswood-platform's
+  # Release, because Keycloak is provided there by the operator-driven
+  # queenswood-keycloak chart (its operator-published Service shares
+  # the same `queenswood-keycloak-keycloak-service` name so
+  # `keycloak.baseUrl` resolves either way).
   dev:
-    enabled: false
+    enabled: true
     image: quay.io/keycloak/keycloak:26.0
     # Keycloak's master-realm bootstrap admin. Dev-only credentials.
     adminUser: admin
