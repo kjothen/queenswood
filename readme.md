@@ -282,13 +282,14 @@ helm install queenswood \
 **Reach the API and the SPAs** (separate terminals):
 
 ```bash
-kubectl -n queenswood port-forward svc/queenswood-bank-api-service          8080:8080
-kubectl -n queenswood port-forward svc/queenswood-bank-app                  8081:8080
-kubectl -n queenswood port-forward svc/queenswood-bank-console              8082:8080
-kubectl -n queenswood port-forward svc/queenswood-keycloak-keycloak-service 8090:8080
+kubectl -n queenswood port-forward svc/queenswood-bank-api-service 8080:8080
+kubectl -n queenswood port-forward svc/queenswood-bank-app         8081:8080
+kubectl -n queenswood port-forward svc/queenswood-bank-console     8082:8080
 ```
 
-Then open:
+Each SPA's nginx reverse-proxies its realm's Keycloak at
+`/keycloak/*`, so no separate Keycloak port-forward is
+needed for sign-in. Then open:
 
 - <http://localhost:8081> — operator console
   (`bank-app`). Sign in with `ops` / `ops` against the
@@ -297,13 +298,12 @@ Then open:
   (`bank-console`). Sign in with `dev` / `dev` against the
   `queenswood` realm.
 
-Both SPAs redirect to the bundled Keycloak at
-<http://localhost:8090> to authenticate. The Keycloak admin
-console itself (<http://localhost:8090/admin>, separate from
-the realms above) accepts `admin` / `admin` if you need to
-inspect or edit the realms directly. OpenAPI docs at
-<http://localhost:8080/scalar>. The full quickstart —
-including tear-down — ships with each
+If you need the Keycloak admin UI (to inspect or edit the
+realms directly), it rides the same proxy:
+<http://localhost:8081/keycloak/admin> with `admin` /
+`admin`. OpenAPI docs at <http://localhost:8080/scalar>.
+The full quickstart — including tear-down — ships with
+each
 [release](https://github.com/repldriven/queenswood/releases/latest).
 
 ## Built on mono

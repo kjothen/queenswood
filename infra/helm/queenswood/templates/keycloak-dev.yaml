@@ -82,21 +82,47 @@ spec:
               value: "true"
             - name: KC_HTTP_ENABLED
               value: "true"
+            # Trust X-Forwarded-Proto + X-Forwarded-Host from the SPA
+            # nginx so Keycloak generates discovery URLs, redirect
+            # URLs, and the JWT `iss` claim based on the SPA's
+            # public origin (http://localhost:8081 / 8082) rather
+            # than its own in-cluster Service name. HOSTNAME_STRICT
+            # =false relaxes Keycloak's default requirement that
+            # requests match a configured hostname -- safe for the
+            # dev bundle, off in production (queenswood-keycloak
+            # sets a fixed hostname there).
+            - name: KC_PROXY_HEADERS
+              value: "xforwarded"
+            - name: KC_HOSTNAME_STRICT
+              value: "false"
+            # Run Keycloak under the `/keycloak/` path so the same-
+            # origin SPA proxy works without rewriting URLs in the
+            # discovery doc. Keycloak doesn't honour X-Forwarded-
+            # Prefix; the only supported way to carry a path prefix
+            # into generated URLs is `--http-relative-path`. nginx
+            # forwards `/keycloak/realms/...` unchanged to upstream;
+            # Keycloak knows it's at /keycloak/ and builds URLs to
+            # match.
+            - name: KC_HTTP_RELATIVE_PATH
+              value: "/keycloak"
           ports:
             - containerPort: 8080
               name: http
             - containerPort: 9000
               name: management
           readinessProbe:
+            # KC_HTTP_RELATIVE_PATH=/keycloak applies to the
+            # management port too, so the health endpoints move
+            # from /health/* to /keycloak/health/*.
             httpGet:
-              path: /health/ready
+              path: /keycloak/health/ready
               port: 9000
             periodSeconds: 5
             timeoutSeconds: 3
             failureThreshold: 60
           livenessProbe:
             httpGet:
-              path: /health/live
+              path: /keycloak/health/live
               port: 9000
             periodSeconds: 10
             timeoutSeconds: 3

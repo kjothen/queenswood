@@ -24,7 +24,13 @@ secrets:
 # service` -- override to an external URL (or an Envoy egress
 # entry) if Keycloak lives elsewhere.
 keycloak:
-  baseUrl: "http://queenswood-keycloak-keycloak-service:8080"
+  # The bundled dev Keycloak runs under the `/keycloak/` path
+  # (KC_HTTP_RELATIVE_PATH) so the SPA's same-origin proxy carries a
+  # consistent prefix and Keycloak's own generated URLs include it.
+  # bank-api's admin REST calls land at this baseUrl too. On GKE the
+  # operator-driven Keycloak runs at the root of its dedicated
+  # hostname, so queenswood-platform overrides this back to "...:8080".
+  baseUrl: "http://queenswood-keycloak-keycloak-service:8080/keycloak"
   realm: queenswood
   adminClientId: queenswood-admin
   # Public client id the bank-console SPA uses for Authorization
@@ -37,18 +43,18 @@ keycloak:
   opsRealm: queenswood-ops
   # Override the iss claim the verifier expects on the ops realm
   # when base-url is an in-cluster Service URL but Keycloak embeds
-  # its public hostname in tokens. Leave empty to default to
-  # `<baseUrl>/realms/<opsRealm>`.
-  opsExpectedIssuer: ""
+  # its public hostname in tokens. Default matches the bank-app
+  # SPA's same-origin Keycloak proxy at `localhost:8081/keycloak`
+  # (the URL the dev Keycloak builds into JWTs via the SPA nginx's
+  # X-Forwarded-* headers); GKE overrides to the public hostname.
+  opsExpectedIssuer: "http://localhost:8081/keycloak/realms/queenswood-ops"
   # Public client id the bank-app SPA uses against the ops realm.
   opsClientId: queenswood-app
-  # Override the iss the verifier expects on incoming JWTs. Leave
-  # empty to default to `<baseUrl>/realms/<realm>`. Set when
-  # Keycloak's public `hostname.hostname` differs from base-url --
-  # the typical deployed shape where base-url is the in-cluster
-  # Service URL for fast admin REST calls but tokens carry the
-  # public issuer URL.
-  expectedIssuer: ""
+  # Override the iss the verifier expects on incoming JWTs. Same
+  # shape as opsExpectedIssuer above: default matches the bank-console
+  # SPA's same-origin Keycloak proxy at `localhost:8082/keycloak`;
+  # GKE overrides to the public hostname.
+  expectedIssuer: "http://localhost:8082/keycloak/realms/queenswood"
   # -- Bundled dev Keycloak for any standalone install of this chart
   # (local kind/k3s, the published OCI artifact). Renders a single-
   # replica Deployment + matching Service + ConfigMap-mounted realm
@@ -130,12 +136,20 @@ bankApp:
   port: 8080
   replicas: 1
   apiUpstream: "http://{{ .Release.Name }}-bank-api-service:8080"
-  # Public URL of the realm the bank-app SPA authenticates against.
-  # The browser reads this from /env.js at runtime; empty makes the
-  # sign-in button inert. Default matches the Keycloak port-forward
-  # printed in NOTES.txt for a bare `helm install` (port 8090);
-  # queenswood-platform overrides to the public hostname on GKE.
-  keycloakPublicUrl: "http://localhost:8090"
+  # In-cluster Service the nginx `/keycloak/*` reverse-proxies to so
+  # the SPA stays same-origin and the user only needs a single
+  # port-forward to bank-app. Defaults to the bundled dev Keycloak
+  # Service; GKE overrides to the operator-published Service URL
+  # (functionally the same name in either mode, but kept overridable
+  # so a sidecar Keycloak or external instance can be wired in).
+  keycloakUpstream: "http://queenswood-keycloak-keycloak-service:8080"
+  # Public URL of the realm the bank-app SPA authenticates against
+  # (the browser reads this from /env.js at runtime). The default is
+  # the SPA's own same-origin `/keycloak` path so a bare `helm install`
+  # works after one `kubectl port-forward svc/<release>-bank-app
+  # 8081:8080`; queenswood-platform overrides to the public hostname
+  # on GKE.
+  keycloakPublicUrl: "http://localhost:8081/keycloak"
   # Optional federated IdP alias for skip-straight-to-Google flows.
   # Empty in dev so the Keycloak login form renders for the seeded
   # `ops` / `ops` user; set to `google` once real Google OAuth
@@ -153,11 +167,14 @@ bankConsole:
   port: 8080
   replicas: 1
   apiUpstream: "http://{{ .Release.Name }}-bank-api-service:8080"
-  # Public URL of the realm endpoint the browser calls. Same shape
-  # as bankApp.keycloakPublicUrl above: default points at the local
-  # port-forward suggested in NOTES.txt (8090), GKE overrides via
-  # queenswood-platform.
-  keycloakPublicUrl: "http://localhost:8090"
+  # In-cluster Service the nginx `/keycloak/*` reverse-proxies to.
+  # Same shape as bankApp.keycloakUpstream above.
+  keycloakUpstream: "http://queenswood-keycloak-keycloak-service:8080"
+  # Public URL of the realm endpoint the browser calls. Default is
+  # the SPA's own same-origin `/keycloak` path so a bare `helm install`
+  # works after one `kubectl port-forward svc/<release>-bank-console
+  # 8082:8080`; GKE overrides via queenswood-platform.
+  keycloakPublicUrl: "http://localhost:8082/keycloak"
   # Optional federated IdP alias. When set (e.g. "google"), the SPA
   # skips Keycloak's own login form and redirects straight to that
   # provider. Empty by default so the realm's login screen renders;
