@@ -14,15 +14,20 @@
 # static output is arch-independent, and we avoid running npm under
 # QEMU for non-native arches.
 FROM --platform=$BUILDPLATFORM node:22-alpine AS build
-WORKDIR /app
+# Mirror the repo layout so source-relative imports resolve the same
+# way as at the repo root. SignIn.svelte ?raw-imports markdown via
+# `../../../../docs/...`, which only works if both bases/bank-console
+# and docs/ exist as siblings here exactly as they do in the repo.
+WORKDIR /repo/bases/bank-console
 COPY bases/bank-console/package.json bases/bank-console/package-lock.json* ./
 RUN npm install
 COPY bases/bank-console/ ./
+COPY docs/ /repo/docs/
 RUN npm run build
 
 FROM nginxinc/nginx-unprivileged:1.27-alpine AS runtime
 COPY infra/docker/bank-console/nginx.conf.template /etc/nginx/templates/default.conf.template
-COPY --from=build /app/dist/ /usr/share/nginx/html/
+COPY --from=build /repo/bases/bank-console/dist/ /usr/share/nginx/html/
 
 # nginx-unprivileged runs envsubst on /etc/nginx/templates/*.template
 # at startup. We need API_UPSTREAM (bank-api proxy target) and the
