@@ -1,10 +1,16 @@
 <script>
-  /* Sticky top bar for authenticated screens (Dashboard, Onboarding).
-     Mirrors the brand chrome of Landing.svelte's marketing nav so the
-     post-signin surfaces share visual language with the landing page. */
+  /* Sticky top bar for authenticated screens. Mirrors the brand chrome
+     of Landing.svelte's marketing nav so post-signin surfaces share
+     visual language with the landing page.
+
+     v2 — Surfaces / type colors migrated from raw palette tokens
+     (--ink, --paper) to semantic tokens (--fg, --surface-translucent,
+     etc.) so the bar adapts to light / dark via tokens.css. ThemeToggle
+     dropped in beside Sign out. */
 
   import Logo from "./Logo.svelte";
   import Wordmark from "./Wordmark.svelte";
+  import ThemeToggle from "./ThemeToggle.svelte";
 
   let { user, onSignOut } = $props();
 </script>
@@ -23,6 +29,7 @@
       {#if user?.name}
         <span class="name">{user.name}</span>
       {/if}
+      <ThemeToggle />
       <button type="button" class="btn line" onclick={onSignOut}>Sign out</button>
     </div>
   </div>
@@ -33,7 +40,7 @@
     position: sticky;
     top: 0;
     z-index: 30;
-    background: rgba(251, 249, 244, 0.86);
+    background: var(--surface-translucent);
     backdrop-filter: saturate(140%) blur(10px);
     border-bottom: 1px solid var(--rule-2);
   }
@@ -72,7 +79,7 @@
   }
   .name {
     font-size: 14px;
-    color: var(--ink-2);
+    color: var(--fg-2);
   }
 
   .btn {
@@ -87,6 +94,7 @@
     border: 1px solid transparent;
     cursor: pointer;
     font-family: var(--grotesk);
+    white-space: nowrap;
     transition:
       background 0.12s,
       border-color 0.12s,
@@ -98,10 +106,10 @@
   }
   .btn.line {
     border-color: var(--rule);
-    color: var(--ink);
+    color: var(--fg);
     background: transparent;
   }
   .btn.line:hover {
-    background: rgba(20, 15, 10, 0.05);
+    background: var(--hover-overlay);
   }
 </style>

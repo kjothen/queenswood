@@ -71,13 +71,13 @@
     display: grid;
     grid-template-columns: 1.05fr 1fr;
     min-height: 100vh;
-    background: var(--paper);
-    color: var(--ink);
+    background: var(--surface-raised);
+    color: var(--fg);
     font-family: var(--grotesk);
   }
 
   .brand {
-    background: var(--paper);
+    background: var(--surface-raised);
     border-right: 1px solid var(--rule);
     padding: 64px;
     display: flex;
@@ -118,11 +118,11 @@
     font-size: 11px;
     letter-spacing: 0.16em;
     text-transform: uppercase;
-    color: var(--muted);
+    color: var(--fg-muted);
   }
 
   .card {
-    background: var(--paper);
+    background: var(--surface-raised);
     display: flex;
     align-items: center;
     padding: 64px;
@@ -136,7 +136,7 @@
     font-size: 11px;
     letter-spacing: 0.2em;
     text-transform: uppercase;
-    color: var(--muted);
+    color: var(--fg-muted);
     display: inline-flex;
     align-items: center;
     gap: 8px;
@@ -158,7 +158,7 @@
   .lede {
     font-size: 15px;
     line-height: 1.55;
-    color: var(--ink-2);
+    color: var(--fg-2);
     margin: 0 0 28px;
     max-width: 38ch;
   }
@@ -177,7 +177,7 @@
     border-radius: 8px;
     border: 1px solid var(--rule);
     background: transparent;
-    color: var(--ink);
+    color: var(--fg);
     font-family: var(--grotesk);
     font-size: 15px;
     font-weight: 500;
@@ -189,8 +189,8 @@
       transform 0.08s;
   }
   .opt:hover {
-    background: rgba(20, 15, 10, 0.04);
-    border-color: rgba(20, 15, 10, 0.18);
+    background: var(--hover-overlay);
+    border-color: var(--rule);
   }
   .opt:active {
     transform: translateY(0.5px);
@@ -204,7 +204,7 @@
     align-items: center;
     gap: 12px;
     margin: 8px 0;
-    color: var(--muted);
+    color: var(--fg-muted);
     font-family: var(--mono);
     font-size: 11px;
     letter-spacing: 0.18em;
@@ -221,7 +221,7 @@
   .foot {
     margin: 28px 0 0;
     font-size: 12px;
-    color: var(--muted);
+    color: var(--fg-muted);
     line-height: 1.55;
   }
 

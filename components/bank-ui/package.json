@@ -9,7 +9,15 @@
     "./tokens.css": "./src/tokens.css",
     "./*.svelte": "./src/*.svelte"
   },
+  "scripts": {
+    "showcase": "vite --config showcase/vite.config.js"
+  },
   "peerDependencies": {
     "svelte": "^5.25.3"
+  },
+  "devDependencies": {
+    "@sveltejs/vite-plugin-svelte": "^5.0.3",
+    "svelte": "^5.25.3",
+    "vite": "^6.2.2"
   }
 }

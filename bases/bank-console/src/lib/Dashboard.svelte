@@ -27,8 +27,8 @@
 <style>
   .page {
     min-height: 100vh;
-    background: var(--paper);
-    color: var(--ink);
+    background: var(--surface-raised);
+    color: var(--fg);
     font-family: var(--grotesk);
   }
 
@@ -43,7 +43,7 @@
     font-size: 11px;
     letter-spacing: 0.2em;
     text-transform: uppercase;
-    color: var(--muted);
+    color: var(--fg-muted);
     display: inline-flex;
     align-items: center;
     gap: 8px;
@@ -73,7 +73,7 @@
 
   .card {
     padding: 26px;
-    background: var(--paper);
+    background: var(--surface-raised);
     border: 1px solid var(--rule);
     border-radius: 12px;
     max-width: 640px;
@@ -94,12 +94,12 @@
     margin: 0;
     font-family: var(--mono);
     font-size: 14px;
-    color: var(--ink);
+    color: var(--fg);
   }
 
   .muted {
     margin: 0;
-    color: var(--muted);
+    color: var(--fg-muted);
     font-size: 14px;
   }
 </style>

@@ -828,8 +828,8 @@
   :global(html),
   :global(body),
   :global(#app) {
-    background: var(--paper);
-    color: var(--ink);
+    background: var(--surface-raised);
+    color: var(--fg);
     font-family: var(--grotesk);
     -webkit-font-smoothing: antialiased;
   }
@@ -843,6 +843,9 @@
     box-sizing: border-box;
   }
 
+  /* Always-dark punctuation bar at the very top: ink in both light
+     and dark, with bone text. Doesn't theme — it's a constant accent
+     element by design. */
   .announce {
     background: var(--ink);
     color: var(--bone);
@@ -888,7 +891,7 @@
     position: sticky;
     top: 0;
     z-index: 30;
-    background: rgba(251, 249, 244, 0.86);
+    background: var(--surface-translucent);
     backdrop-filter: saturate(140%) blur(10px);
     border-bottom: 1px solid var(--rule-2);
   }
@@ -916,14 +919,14 @@
     align-items: center;
     gap: 22px;
     font-size: 14px;
-    color: var(--ink-2);
+    color: var(--fg-2);
   }
   .nav ul li a {
     padding: 6px 2px;
     transition: color 0.15s;
   }
   .nav ul li a:hover {
-    color: var(--ink);
+    color: var(--fg);
   }
   .nav .spacer {
     flex: 1;
@@ -957,29 +960,33 @@
     transform: translateY(0.5px);
   }
   .btn.ghost {
-    color: var(--ink);
+    color: var(--fg);
     background: transparent;
   }
   .btn.ghost:hover {
-    background: rgba(20, 15, 10, 0.05);
+    background: var(--hover-overlay);
   }
   .btn.line {
     border-color: var(--rule);
-    color: var(--ink);
+    color: var(--fg);
     background: transparent;
   }
   .btn.line:hover {
-    background: rgba(20, 15, 10, 0.05);
+    background: var(--hover-overlay);
   }
   .btn.solid {
-    background: var(--ink);
-    color: var(--bone);
+    background: var(--fg);
+    color: var(--surface);
   }
   .btn.solid:hover {
-    background: #2a2622;
+    /* Slightly-different shade of fg; inverts cleanly in dark mode
+       where the button background is bone and this becomes bone-2. */
+    background: var(--fg-2);
   }
   .btn.gold {
     background: var(--gold);
+    /* Gold is constant across themes, so the text on it must be
+       constant too — raw ink for high contrast in both modes. */
     color: var(--ink);
   }
   .btn.gold:hover {
@@ -1008,7 +1015,7 @@
     font-size: 11px;
     letter-spacing: 0.2em;
     text-transform: uppercase;
-    color: var(--muted);
+    color: var(--fg-muted);
     display: inline-flex;
     align-items: center;
     gap: 8px;
@@ -1040,7 +1047,7 @@
   .lede {
     font-size: 19px;
     line-height: 1.55;
-    color: var(--ink-2);
+    color: var(--fg-2);
     max-width: 50ch;
     text-wrap: pretty;
   }
@@ -1059,7 +1066,7 @@
     font-size: 11px;
     letter-spacing: 0.16em;
     text-transform: uppercase;
-    color: var(--muted);
+    color: var(--fg-muted);
   }
   .hero .meta .dot {
     width: 5px;
@@ -1068,6 +1075,9 @@
     background: var(--pine-3);
   }
 
+  /* Terminal/shell panels stay dark in both modes — code-on-dark is
+     the conventional reading experience. Uses raw --ink so the panel
+     punctuates the page the same way regardless of theme. */
   .code {
     background: var(--ink);
     color: #e9e3d3;
@@ -1140,7 +1150,7 @@
     bottom: -120px;
     width: 520px;
     height: 520px;
-    color: var(--bone);
+    color: var(--surface);
   }
 
   .capabilities {
@@ -1178,7 +1188,7 @@
     margin: 0;
     font-size: 14px;
     line-height: 1.5;
-    color: var(--ink-2);
+    color: var(--fg-2);
     text-wrap: pretty;
   }
   @media (max-width: 1024px) {
@@ -1247,7 +1257,7 @@
   .feat p {
     font-size: 17px;
     line-height: 1.6;
-    color: var(--ink-2);
+    color: var(--fg-2);
     max-width: 50ch;
     margin: 0;
   }
@@ -1264,7 +1274,7 @@
     gap: 12px;
     align-items: baseline;
     font-size: 15px;
-    color: var(--ink-2);
+    color: var(--fg-2);
   }
   .feat ul li::before {
     content: "";
@@ -1281,7 +1291,7 @@
   }
 
   .visual {
-    background: var(--paper);
+    background: var(--surface-raised);
     border-radius: 12px;
     border: 1px solid var(--rule);
     box-shadow:
@@ -1302,7 +1312,7 @@
     font-size: 11px;
     letter-spacing: 0.16em;
     text-transform: uppercase;
-    color: var(--muted);
+    color: var(--fg-muted);
   }
   .visual .topbar .dots {
     display: flex;
@@ -1335,11 +1345,11 @@
     text-align: left;
     padding: 10px 12px;
     border-bottom: 1px solid var(--rule-2);
-    color: var(--ink-2);
+    color: var(--fg-2);
     letter-spacing: 0.01em;
   }
   .org-table th {
-    color: var(--muted);
+    color: var(--fg-muted);
     font-weight: 500;
     text-transform: uppercase;
     letter-spacing: 0.16em;
@@ -1384,14 +1394,14 @@
     border-bottom: 0;
   }
   .trail .step .t {
-    color: var(--muted);
+    color: var(--fg-muted);
     font-size: 11px;
   }
   .trail .step .pin {
     width: 10px;
     height: 10px;
     border-radius: 50%;
-    background: var(--paper);
+    background: var(--surface-raised);
     border: 2px solid var(--pine-3);
   }
   .trail .step.done .pin {
@@ -1404,15 +1414,15 @@
     box-shadow: 0 0 0 4px rgba(170, 120, 30, 0.12);
   }
   .trail .step .desc {
-    color: var(--ink);
+    color: var(--fg);
   }
   .trail .step .kind {
-    color: var(--muted);
+    color: var(--fg-muted);
     font-size: 11px;
     text-align: right;
   }
   .trail .step .desc .ref {
-    color: var(--muted);
+    color: var(--fg-muted);
     font-size: 11px;
     margin-left: 6px;
   }
@@ -1439,13 +1449,13 @@
     padding: 10px;
   }
   .accrual .day .lab {
-    color: var(--muted);
+    color: var(--fg-muted);
     font-size: 10px;
     letter-spacing: 0.16em;
     text-transform: uppercase;
   }
   .accrual .day .micro {
-    color: var(--ink);
+    color: var(--fg);
   }
   .accrual .day .cap-day {
     color: var(--gold-deep);
@@ -1480,7 +1490,7 @@
   }
   .principles .lead {
     font-size: 17px;
-    color: var(--ink-2);
+    color: var(--fg-2);
     max-width: 56ch;
     margin: 0 0 48px;
     line-height: 1.55;
@@ -1494,7 +1504,7 @@
     padding: 26px;
     border: 1px solid var(--rule);
     border-radius: 12px;
-    background: var(--paper);
+    background: var(--surface-raised);
     display: flex;
     flex-direction: column;
     gap: 10px;
@@ -1537,12 +1547,14 @@
     margin: 0;
     font-size: 14px;
     line-height: 1.55;
-    color: var(--ink-2);
+    color: var(--fg-2);
   }
   .pri code {
     font-family: var(--mono);
     font-size: 12.5px;
   }
+  /* The one always-dark recipe card among the light grid. Raw ink
+     across themes so the "this is the dark one" intent survives. */
   .pri.dark {
     background: var(--ink);
     color: var(--bone);
@@ -1558,6 +1570,8 @@
     color: rgba(244, 241, 234, 0.7);
   }
 
+  /* Always-dark "Run it locally" CTA section. Constant ink across
+     themes — its job is to be a strong visual finish to the page. */
   .final {
     background: var(--ink);
     color: var(--bone);
@@ -1612,8 +1626,8 @@
 
   footer {
     padding: 64px 0 40px;
-    color: var(--ink-2);
-    background: var(--paper);
+    color: var(--fg-2);
+    background: var(--surface-raised);
   }
   footer .row {
     display: grid;
@@ -1627,7 +1641,7 @@
     font-size: 11px;
     letter-spacing: 0.2em;
     text-transform: uppercase;
-    color: var(--muted);
+    color: var(--fg-muted);
     font-weight: 500;
     margin: 0 0 16px;
   }
@@ -1641,11 +1655,11 @@
     font-size: 14px;
   }
   footer ul a:hover {
-    color: var(--ink);
+    color: var(--fg);
   }
   footer .brand-block .desc {
     margin-top: 14px;
-    color: var(--muted);
+    color: var(--fg-muted);
     font-size: 13px;
     line-height: 1.55;
     max-width: 32ch;
@@ -1659,6 +1673,6 @@
     font-size: 11px;
     letter-spacing: 0.14em;
     text-transform: uppercase;
-    color: var(--muted);
+    color: var(--fg-muted);
   }
 </style>
