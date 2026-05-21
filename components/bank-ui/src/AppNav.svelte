@@ -45,12 +45,14 @@
     border-bottom: 1px solid var(--rule-2);
   }
   .nav-inner {
-    max-width: 1280px;
-    margin: 0 auto;
-    padding: 14px 32px;
+    /* Full-width: brand pinned to the left edge, who-cluster pinned
+       to the right. The earlier max-width capped the bar at 1280px
+       which centered both ends inward on wide displays; the .app-shell
+       grid below is full-width anyway, so the chrome should match. */
+    padding: 14px 28px;
     display: flex;
     align-items: center;
-    gap: 28px;
+    gap: 24px;
   }
   .brand {
     display: flex;

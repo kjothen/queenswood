@@ -6,9 +6,11 @@
       Stable across themes. Reach for these when you want a *specific*
       color regardless of light/dark — the gold of the crown, a pine.
 
-   2. Semantic tokens (--surface, --fg, --rule, --hover-overlay, ...).
+   2. Semantic tokens (--surface, --fg, --rule, --hover-overlay, ...
+      plus the new --primary, --danger, --brand-action triplets).
       Adapt to theme. Reach for these for everything that should feel
-      "right" in both modes — backgrounds, text, hairlines, hover states.
+      "right" in both modes — backgrounds, text, hairlines, hover states,
+      button intents.
 
    Theme switching:
 
@@ -52,36 +54,43 @@
   --serif:   'Cormorant Garamond', ui-serif, Georgia, serif;
   --mono:    'Geist Mono', ui-monospace, monospace;
 
-  /* ===== Semantic tokens — flip with theme via light-dark() ===== */
+  /* ===== Semantic surface + fg tokens — flip with theme ===== */
 
   color-scheme: light dark;
 
-  /* Surface elevation. Light: bone family. Dark: ink family.
-     `raised` is brighter than `surface` in both modes (cards, the
-     translucent nav bar). `sunk` is recessed. */
   --surface:        light-dark(#f4f1ea, #2a2622);
   --surface-sunk:   light-dark(#ebe6dc, #161310);
   --surface-raised: light-dark(#fbf9f4, #38322c);
-
-  /* Translucent surface — same hue as --surface but at high alpha so
-     whatever sits behind bleeds through. Used by the AppNav's backdrop
-     blur backing. */
   --surface-translucent: light-dark(
     rgba(251, 249, 244, 0.86),
     rgba(42, 38, 34, 0.82)
   );
 
-  /* Foreground */
   --fg:       light-dark(#161310, #f4f1ea);
   --fg-2:     light-dark(#2a2622, #ebe6dc);
   --fg-muted: light-dark(#6b645b, #8a8377);
 
-  /* Hairlines — alpha-on-fg so they pick up whichever surface they sit on. */
   --rule:   light-dark(rgba(20, 15, 10, 0.10), rgba(244, 241, 234, 0.12));
   --rule-2: light-dark(rgba(20, 15, 10, 0.06), rgba(244, 241, 234, 0.06));
-
-  /* Hover overlay — alpha-on-fg, same trick. Lay it on any surface. */
   --hover-overlay: light-dark(rgba(20, 15, 10, 0.05), rgba(244, 241, 234, 0.06));
+
+  /* ===== Semantic action tokens — for Button and friends =====
+     Buttons ask for "primary" or "danger" by intent, not pine-3 by
+     hex. That way the design system can retune the fills without
+     consumers changing their markup. Brand-action is gold because
+     gold is the brand. */
+
+  --primary:        light-dark(oklch(0.42 0.065 145), oklch(0.55 0.075 145));
+  --primary-hover:  light-dark(oklch(0.37 0.065 145), oklch(0.60 0.075 145));
+  --primary-fg:     #fbf9f4;
+
+  --danger:         light-dark(oklch(0.52 0.135 30), oklch(0.60 0.135 30));
+  --danger-hover:   light-dark(oklch(0.47 0.135 30), oklch(0.65 0.135 30));
+  --danger-fg:      #fbf9f4;
+
+  --brand-action:        var(--gold);
+  --brand-action-hover:  var(--gold-deep);
+  --brand-action-fg:     #161310;
 }
 
 /* Explicit user choice — overrides the system preference. */

@@ -5,7 +5,7 @@
      an identity provider. Keycloak handoff happens from SignInPage. */
 
   import { push } from "svelte-spa-router";
-  import { Logo, Wordmark } from "@queenswood/bank-ui";
+  import { Logo, Wordmark, ThemeToggle } from "@queenswood/bank-ui";
   import DocViewer from "./DocViewer.svelte";
 
   // Markdown docs imported as raw strings at build time. Each card
@@ -122,6 +122,7 @@
     </ul>
     <div class="spacer"></div>
     <div class="cta-row">
+      <ThemeToggle />
       <button class="btn solid" onclick={goSignIn}>Sign in</button>
     </div>
   </div>
@@ -1077,10 +1078,15 @@
 
   /* Terminal/shell panels stay dark in both modes — code-on-dark is
      the conventional reading experience. Uses raw --ink so the panel
-     punctuates the page the same way regardless of theme. */
+     punctuates the page the same way regardless of theme. The
+     hairline border is bone-on-ink in dark mode (10% via --rule) so
+     the panel doesn't blend into the surrounding surface-raised
+     when both are dark; in light mode the strong ink/paper contrast
+     carries the separation on its own. */
   .code {
     background: var(--ink);
     color: #e9e3d3;
+    border: 1px solid var(--rule);
     border-radius: 12px;
     box-shadow:
       0 28px 60px -28px rgba(20, 15, 10, 0.45),
