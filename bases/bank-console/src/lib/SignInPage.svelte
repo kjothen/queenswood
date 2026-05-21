@@ -5,8 +5,7 @@
      kc.login({idpHint}) call — or, for null, Keycloak's own username/
      password form (used in dev with seeded `dev` / `dev`). */
 
-  import Logo from "./Logo.svelte";
-  import Wordmark from "./Wordmark.svelte";
+  import { Logo, Wordmark } from "@queenswood/bank-ui";
 
   let { onSignIn } = $props();
 </script>
@@ -120,12 +119,6 @@
     letter-spacing: 0.16em;
     text-transform: uppercase;
     color: var(--muted);
-  }
-  .brand .meta .dot {
-    width: 5px;
-    height: 5px;
-    border-radius: 50%;
-    background: var(--pine-3);
   }
 
   .card {

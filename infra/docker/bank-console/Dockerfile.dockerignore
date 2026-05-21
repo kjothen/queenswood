@@ -4,18 +4,33 @@
 # whitelists the bits this Dockerfile actually copies.
 *
 
+# Yarn workspace root manifests. Yarn validates the whole workspace
+# graph at install time, so every workspace member's package.json
+# must be present even though only bank-console + bank-ui source
+# gets COPY-ed below.
+!package.json
+!yarn.lock
+!.yarnrc.yml
+!bases/bank-app/package.json
 !bases/bank-console
+!components/bank-ui
 !infra/docker/bank-console
 
-# SignIn.svelte ?raw-imports a handful of ADRs, TDDs, and recipes
-# via `../../../../docs/…`. Whitelist just those three subtrees so
+# Landing.svelte ?raw-imports a handful of ADRs, TDDs, and recipes
+# via `../../../../docs/...`. Whitelist just those three subtrees so
 # the build context stays small (docs/slides is ~500MB locally with
 # its node_modules cache, and docs/prd / docs/plan aren't referenced).
 !docs/adr
 !docs/tdd
 !docs/recipes
 
-bases/bank-console/node_modules
-bases/bank-console/dist
-bases/bank-console/.svelte-kit
-bases/bank-console/**/*.log
+# Re-exclude per-brick build artefacts inside the whitelisted dirs.
+# Yarn 4 hoists node_modules to the workspace root, but stray
+# per-brick caches from a host `yarn dev` session can still appear.
+**/node_modules
+**/dist
+**/.svelte-kit
+**/.vite
+**/*.log
+.yarn/cache
+.yarn/install-state.gz

@@ -7,6 +7,25 @@
 **/generated
 **/src/gen
 
+# Yarn 4 / npm workspace artefacts. The workspace root and every
+# JS-bearing brick (bases/bank-console, bases/bank-app,
+# components/bank-ui) shares the same set of throwaways.
+**/node_modules/
+**/dist/
+**/.vite/
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions
+**/.pnp.*
+
+# Vite env files. `.env` and `.env.example` are committed; `.env.local`
+# and `.env.*.local` carry developer-specific values and stay local.
+**/.env.local
+**/.env.*.local
+
 # User-specific stuff
 .idea/**/workspace.xml
 .idea/**/tasks.xml

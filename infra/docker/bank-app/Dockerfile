@@ -1,9 +1,11 @@
 # syntax=docker/dockerfile:1.7
 
 # bank-app: Svelte/Vite operator console.
-#  Stage 1 — build the static bundle with Node (`npm run build` →
-#  `vite build`). Auth lives in `auth.mjs` and talks to Keycloak
-#  via keycloak-js.
+#  Stage 1 — build the static bundle with Node from the yarn 4
+#  workspace at the repo root. bank-app is one workspace member;
+#  the shared design system (`@queenswood/bank-ui`) is another,
+#  hoisted by yarn so its tokens.css and components are reachable
+#  via `@queenswood/bank-ui`.
 #  Stage 2 — serve `dist/` via nginx, proxying /v1, /oauth, and
 #  /.well-known to bank-api so the SPA stays same-origin (no CORS).
 #  nginx also synthesises `/env.js` from container env at startup
@@ -13,15 +15,25 @@
 # `--platform=$BUILDPLATFORM` pins the Node build to the host arch
 # regardless of the requested target. Same rationale as bank-console.
 FROM --platform=$BUILDPLATFORM node:22-alpine AS build
-WORKDIR /app
-COPY bases/bank-app/package.json bases/bank-app/package-lock.json* ./
-RUN npm install
-COPY bases/bank-app/ ./
-RUN npm run build
+WORKDIR /repo
+
+# Workspace manifests first for Docker layer caching. All three
+# workspaces must be present even if this image only builds bank-app
+# — yarn validates the whole graph at install time.
+COPY package.json yarn.lock .yarnrc.yml ./
+COPY bases/bank-console/package.json bases/bank-console/
+COPY bases/bank-app/package.json bases/bank-app/
+COPY components/bank-ui/package.json components/bank-ui/
+RUN corepack enable && corepack yarn install --immutable
+
+# Brick source.
+COPY bases/bank-app/ bases/bank-app/
+COPY components/bank-ui/ components/bank-ui/
+RUN corepack yarn workspace bank-app build
 
 FROM nginxinc/nginx-unprivileged:1.27-alpine AS runtime
 COPY infra/docker/bank-app/nginx.conf.template /etc/nginx/templates/default.conf.template
-COPY --from=build /app/dist/ /usr/share/nginx/html/
+COPY --from=build /repo/bases/bank-app/dist/ /usr/share/nginx/html/
 
 # nginx-unprivileged runs envsubst on /etc/nginx/templates/*.template
 # at startup. API_UPSTREAM is the bank-api proxy target,

@@ -9,12 +9,25 @@
 # multi-stage build actually copies.
 *
 
+# Yarn workspace root manifests. Yarn validates the whole workspace
+# graph at install time, so every workspace member's package.json
+# must be present even though only bank-app + bank-ui source gets
+# COPY-ed below.
+!package.json
+!yarn.lock
+!.yarnrc.yml
+!bases/bank-console/package.json
 !bases/bank-app
+!components/bank-ui
 !infra/docker/bank-app
 
-# Re-exclude artefacts inside the whitelisted dirs. (Re-exclusion
-# only works when the parent dir was re-included above.)
-bases/bank-app/node_modules
-bases/bank-app/dist
-bases/bank-app/.svelte-kit
-bases/bank-app/**/*.log
+# Re-exclude per-brick build artefacts inside the whitelisted dirs.
+# Yarn 4 hoists node_modules to the workspace root, but stray
+# per-brick caches from a host `yarn dev` session can still appear.
+**/node_modules
+**/dist
+**/.svelte-kit
+**/.vite
+**/*.log
+.yarn/cache
+.yarn/install-state.gz

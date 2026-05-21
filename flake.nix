@@ -134,6 +134,7 @@
             pkgs.trivy
             pkgs.uv
             pkgs.watch
+            pkgs.yarn
             pkgs.yq
             pkgs.zprint
           ];

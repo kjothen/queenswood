@@ -1,5 +1,5 @@
 <script>
-  import AppNav from "./AppNav.svelte";
+  import { AppNav } from "@queenswood/bank-ui";
 
   let { user, memberships, onSignOut } = $props();
   const organization = $derived(memberships?.[0]);

@@ -5,8 +5,7 @@
      an identity provider. Keycloak handoff happens from SignInPage. */
 
   import { push } from "svelte-spa-router";
-  import Logo from "./Logo.svelte";
-  import Wordmark from "./Wordmark.svelte";
+  import { Logo, Wordmark } from "@queenswood/bank-ui";
   import DocViewer from "./DocViewer.svelte";
 
   // Markdown docs imported as raw strings at build time. Each card
