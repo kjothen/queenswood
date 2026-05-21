@@ -5,12 +5,16 @@
      kc.login({idpHint}) call — or, for null, Keycloak's own username/
      password form (used in dev with seeded `dev` / `dev`). */
 
-  import { Logo, Wordmark } from "@queenswood/bank-ui";
+  import { Logo, Wordmark, ThemeToggle } from "@queenswood/bank-ui";
 
   let { onSignIn } = $props();
 </script>
 
 <div class="page">
+  <div class="theme-toggle-slot">
+    <ThemeToggle />
+  </div>
+
   <section class="brand">
     <div class="brand-inner">
       <div class="mark">
@@ -74,6 +78,17 @@
     background: var(--surface-raised);
     color: var(--fg);
     font-family: var(--grotesk);
+    position: relative;
+  }
+
+  /* Top-right floating slot for the ThemeToggle. Avoids cluttering
+     either the brand panel or the sign-in card — sign-in is the one
+     page where a manual theme choice often happens first. */
+  .theme-toggle-slot {
+    position: absolute;
+    top: 20px;
+    right: 24px;
+    z-index: 1;
   }
 
   .brand {

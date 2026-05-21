@@ -1,35 +1,66 @@
 <script>
-  import Router from "svelte-spa-router";
+  import Router, { push } from "svelte-spa-router";
   import { wrap } from "svelte-spa-router/wrap";
   import { ensure_session, sign_in, sign_out, token_claims } from "./lib/auth.mjs";
   import { get_me } from "./lib/api.mjs";
   import Landing from "./lib/Landing.svelte";
   import SignInPage from "./lib/SignInPage.svelte";
   import Onboarding from "./lib/Onboarding.svelte";
-  import Dashboard from "./lib/Dashboard.svelte";
+  import AppShell from "./lib/AppShell.svelte";
+  import Products from "./lib/Products.svelte";
+  import ComingSoon from "./lib/ComingSoon.svelte";
 
   // Unauthenticated surfaces are URL-routed so /#/sign-in is shareable
-  // and the marketing landing has a stable home. Authenticated screens
-  // (onboarding / dashboard) stay state-driven — they have no need for
-  // URLs of their own and that keeps the post-login redirect trivial.
+  // and the marketing landing has a stable home.
   const unauthRoutes = {
     "/": Landing,
     "/sign-in": wrap({ component: SignInPage, props: { onSignIn: sign_in } }),
     "*": Landing,
   };
 
-  // Three end states (sign-in / onboarding / dashboard) plus a
-  // "loading" transient while Keycloak runs its silent SSO check
-  // and we hit /v1/me. The state name drives which screen renders.
+  // Authenticated routes live inside the AppShell. Products is the
+  // default landing; the other Sidenav targets render a ComingSoon
+  // stub until they get wired up.
+  let authRoutes = $state({});
+
+  function buildAuthRoutes() {
+    // Kicker is the org name when /v1/me has surfaced it. If absent
+    // (older bank-api that hasn't been restarted yet), pass undefined
+    // — PageHeader hides empty kickers cleanly.
+    const kicker = memberships?.[0]?.["organization-name"];
+    authRoutes = {
+      "/products": wrap({
+        component: Products,
+        props: { user, memberships },
+      }),
+      "/parties": wrap({
+        component: ComingSoon,
+        props: { name: "Parties", kicker },
+      }),
+      "/accounts": wrap({
+        component: ComingSoon,
+        props: { name: "Accounts", kicker },
+      }),
+      "/policies": wrap({
+        component: ComingSoon,
+        props: { name: "Policies", kicker },
+      }),
+      // Catch-all: render Products. Anyone landing on /#/ or a bad
+      // path sees the default surface, matching what onboarding push.
+      "*": wrap({
+        component: Products,
+        props: { user, memberships },
+      }),
+    };
+  }
+
+  // Three end states (sign-in / onboarding / app) plus a "loading"
+  // transient while Keycloak runs its silent SSO check and we hit
+  // /v1/me. The state name drives which surface renders.
   let stage = $state("loading");
   let user = $state(null);
   let memberships = $state([]);
 
-  // On every page-load: hand off to Keycloak to figure out whether
-  // there's an existing session. If yes, GET /v1/me. bank-api's auth
-  // interceptor upserts the User row on every authenticated request,
-  // so /v1/me always returns 200 — we route by whether the response
-  // carries any memberships (none means: needs onboarding).
   $effect(() => {
     bootstrap();
   });
@@ -53,13 +84,25 @@
     }
     user = body.user;
     memberships = body.memberships ?? [];
-    stage = memberships.length === 0 ? "onboarding" : "dashboard";
+    if (memberships.length === 0) {
+      stage = "onboarding";
+    } else {
+      buildAuthRoutes();
+      stage = "app";
+      // Default to /products if the user arrived on the bare app or
+      // an unauth path. Push only when nothing meaningful is set.
+      if (!location.hash || location.hash === "#" || location.hash === "#/") {
+        push("/products");
+      }
+    }
   }
 
   function handleOnboardComplete(payload) {
     user = payload.user;
     memberships = [payload.membership];
-    stage = "dashboard";
+    buildAuthRoutes();
+    stage = "app";
+    push("/products");
   }
 
   function defaultOrgName() {
@@ -78,8 +121,10 @@
     onComplete={handleOnboardComplete}
     onSignOut={sign_out}
   />
-{:else if stage === "dashboard"}
-  <Dashboard {user} {memberships} onSignOut={sign_out} />
+{:else if stage === "app"}
+  <AppShell {user} onSignOut={sign_out}>
+    <Router routes={authRoutes} />
+  </AppShell>
 {/if}
 
 <style>
@@ -88,7 +133,8 @@
     align-items: center;
     justify-content: center;
     height: 100vh;
-    color: #6b7280;
-    font-family: system-ui, -apple-system, sans-serif;
+    color: var(--fg-muted);
+    font-family: var(--grotesk);
+    background: var(--surface);
   }
 </style>

@@ -24,6 +24,7 @@
   {:membership-id MembershipId
    :user-id UserId
    :organization-id OrganizationId
+   :organization-name "Ada's Organization"
    :role :owner
    :created-at "2026-05-18T09:15:00Z"
    :updated-at "2026-05-18T09:15:00Z"})

@@ -6,19 +6,35 @@
     refresh this page and the truth updates with it. No HTML mockups,
     no porting step.
 
-    Sections: Marks, Wordmark, Chrome, Surfaces, Pines, Golds, Type.
+    Sections: Marks, Wordmark, Chrome, Surfaces, Pines, Golds, Type,
+              Buttons, Badges, Fields, Tables, PageHeader, Sidenav, Drawer.
   */
 
-  import { Logo, Wordmark, AppNav, ThemeToggle, themeState, resolvedTheme } from "../src/index.js";
+  import {
+    Logo, Wordmark, AppNav, ThemeToggle,
+    Button, Badge,
+    Sidenav, SidenavGroup, SidenavItem,
+    PageHeader, Drawer,
+    Table, Thead, Tbody, Tr, Th, Td,
+    Field, Input, Select,
+    themeState, resolvedTheme,
+  } from "../src/index.js";
 
   const SECTIONS = [
-    { id: "marks",    label: "Marks" },
-    { id: "wordmark", label: "Wordmark" },
-    { id: "chrome",   label: "Chrome" },
-    { id: "surfaces", label: "Surfaces" },
-    { id: "pines",    label: "Forest greens" },
-    { id: "golds",    label: "Crown golds" },
-    { id: "type",     label: "Type" },
+    { id: "marks",      label: "Marks" },
+    { id: "wordmark",   label: "Wordmark" },
+    { id: "chrome",     label: "Chrome" },
+    { id: "surfaces",   label: "Surfaces" },
+    { id: "pines",      label: "Forest greens" },
+    { id: "golds",      label: "Crown golds" },
+    { id: "type",       label: "Type" },
+    { id: "buttons",    label: "Buttons" },
+    { id: "badges",     label: "Badges" },
+    { id: "fields",     label: "Fields" },
+    { id: "tables",     label: "Tables" },
+    { id: "pageheader", label: "PageHeader" },
+    { id: "sidenav",    label: "Sidenav" },
+    { id: "drawer",     label: "Drawer" },
   ];
 
   const VARIANTS = [
@@ -33,10 +49,6 @@
   const WM_GROTESK_SIZES = [48, 32, 24, 18, 14, 12];
   const WM_SERIF_SIZES   = [72, 48, 32, 24, 18];
 
-  // Surfaces and tokens — kept here so the showcase can display the
-  // CSS expression alongside each swatch. Values mirror tokens.css;
-  // if tokens.css changes the var() ref still renders correctly, but
-  // the label string here is documentation and should be updated too.
   const SURFACES = [
     { name: "bone",   value: "#f4f1ea",                 onDark: false },
     { name: "bone-2", value: "#ebe6dc",                 onDark: false },
@@ -79,6 +91,15 @@
   };
 
   function noop() {}
+
+  // Demo state for Fields + Drawer sections. Fields and Drawer share
+  // bindings so editing in one section updates the other — useful to
+  // see the binding semantics live.
+  let demoName = $state("GBP Current Account");
+  let demoType = $state("Current Account");
+  let demoCcy  = $state("GBP");
+  let demoRate = $state(265);
+  let drawerDemoOpen = $state(false);
 </script>
 
 <AppNav user={DEMO_USER} onSignOut={noop} />
@@ -115,7 +136,7 @@
       </p>
     </header>
 
-    <!-- =================== Marks =================== -->
+    <!-- =================== 01 Marks =================== -->
     <section id="marks" class="section">
       <div class="section-head">
         <span class="kicker">01 — Marks</span>
@@ -153,7 +174,7 @@
       </div>
     </section>
 
-    <!-- =================== Wordmark =================== -->
+    <!-- =================== 02 Wordmark =================== -->
     <section id="wordmark" class="section">
       <div class="section-head">
         <span class="kicker">02 — Wordmark</span>
@@ -190,7 +211,7 @@
       </div>
     </section>
 
-    <!-- =================== Chrome =================== -->
+    <!-- =================== 03 Chrome =================== -->
     <section id="chrome" class="section">
       <div class="section-head">
         <span class="kicker">03 — Chrome</span>
@@ -238,7 +259,7 @@
       </div>
     </section>
 
-    <!-- =================== Surfaces =================== -->
+    <!-- =================== 04 Surfaces =================== -->
     <section id="surfaces" class="section">
       <div class="section-head">
         <span class="kicker">04 — Surfaces</span>
@@ -266,7 +287,7 @@
       </div>
     </section>
 
-    <!-- =================== Pines =================== -->
+    <!-- =================== 05 Pines =================== -->
     <section id="pines" class="section">
       <div class="section-head">
         <span class="kicker">05 — Forest greens</span>
@@ -284,7 +305,7 @@
       </div>
     </section>
 
-    <!-- =================== Golds =================== -->
+    <!-- =================== 06 Golds =================== -->
     <section id="golds" class="section">
       <div class="section-head">
         <span class="kicker">06 — Crown golds</span>
@@ -307,7 +328,7 @@
       </div>
     </section>
 
-    <!-- =================== Type =================== -->
+    <!-- =================== 07 Type =================== -->
     <section id="type" class="section">
       <div class="section-head">
         <span class="kicker">07 — Type</span>
@@ -375,6 +396,268 @@
       </article>
     </section>
 
+    <!-- =================== 08 Buttons =================== -->
+    <section id="buttons" class="section">
+      <div class="section-head">
+        <span class="kicker">08 — Buttons</span>
+        <h2>Five intents, three sizes.</h2>
+        <p class="lead">Variants encode intent, not color — components ask for "primary" or "danger" and <code>tokens.css</code> decides the actual fill. Pair with sizes (<code>sm</code>, <code>md</code>, <code>lg</code>) and modifiers (<code>block</code>, <code>solid</code> on danger).</p>
+      </div>
+
+      <div class="btn-matrix">
+        <div class="btn-row">
+          <span class="btn-label">primary</span>
+          <Button variant="primary" size="sm">Save</Button>
+          <Button variant="primary">Save</Button>
+          <Button variant="primary" size="lg">Save</Button>
+        </div>
+        <div class="btn-row">
+          <span class="btn-label">brand</span>
+          <Button variant="brand" size="sm">Publish</Button>
+          <Button variant="brand">Publish</Button>
+          <Button variant="brand" size="lg">Publish</Button>
+        </div>
+        <div class="btn-row">
+          <span class="btn-label">line</span>
+          <Button variant="line" size="sm">Refresh</Button>
+          <Button variant="line">Refresh</Button>
+          <Button variant="line" size="lg">Refresh</Button>
+        </div>
+        <div class="btn-row">
+          <span class="btn-label">ghost</span>
+          <Button variant="ghost" size="sm">Edit</Button>
+          <Button variant="ghost">Edit</Button>
+          <Button variant="ghost" size="lg">Edit</Button>
+        </div>
+        <div class="btn-row">
+          <span class="btn-label">danger</span>
+          <Button variant="danger" size="sm">Discard</Button>
+          <Button variant="danger">Discard</Button>
+          <Button variant="danger" solid size="lg">Delete forever</Button>
+        </div>
+      </div>
+
+      <div class="subhead">
+        <h3>Block (full width)</h3>
+        <p>Use inside a Drawer footer, or anywhere the action owns the row.</p>
+      </div>
+      <div class="btn-block-frame">
+        <Button variant="primary" size="lg" block>Create product</Button>
+      </div>
+
+      <div class="subhead">
+        <h3>Disabled</h3>
+        <p>Opacity drops, pointer becomes "not-allowed", click animation is suppressed.</p>
+      </div>
+      <div class="btn-row">
+        <Button variant="primary" disabled>Save</Button>
+        <Button variant="brand" disabled>Publish</Button>
+        <Button variant="line" disabled>Refresh</Button>
+        <Button variant="ghost" disabled>Edit</Button>
+        <Button variant="danger" disabled>Discard</Button>
+      </div>
+    </section>
+
+    <!-- =================== 09 Badges =================== -->
+    <section id="badges" class="section">
+      <div class="section-head">
+        <span class="kicker">09 — Badges</span>
+        <h2>Status pills.</h2>
+        <p class="lead">Leading dot, lowercased label. Five tones cover the common lifecycle states; <code>neutral</code> is the fallback when nothing specific fits.</p>
+      </div>
+
+      <div class="badge-row">
+        <Badge tone="draft">draft</Badge>
+        <Badge tone="published">published</Badge>
+        <Badge tone="archived">archived</Badge>
+        <Badge tone="pending">pending</Badge>
+        <Badge tone="neutral">neutral</Badge>
+      </div>
+    </section>
+
+    <!-- =================== 10 Fields =================== -->
+    <section id="fields" class="section">
+      <div class="section-head">
+        <span class="kicker">10 — Fields</span>
+        <h2>Form controls.</h2>
+        <p class="lead">Label / control / hint stacked, 40px controls, gold focus ring. Three controls so far: text Input, number Input with affix, and native-styled Select. Bindings work two-way — edit any field here and the same values appear in the Drawer demo below.</p>
+      </div>
+
+      <form class="field-demo" onsubmit={(e) => e.preventDefault()}>
+        <Field label="Account type" htmlFor="sc-type">
+          <Select id="sc-type" bind:value={demoType}>
+            <option>Current Account</option>
+            <option>Settlement Account</option>
+            <option>Savings</option>
+            <option>Loan</option>
+            <option>Deposit</option>
+          </Select>
+        </Field>
+        <Field label="Currency" htmlFor="sc-ccy">
+          <Select id="sc-ccy" bind:value={demoCcy}>
+            <option>GBP</option>
+            <option>EUR</option>
+            <option>USD</option>
+          </Select>
+        </Field>
+        <Field label="Product name" htmlFor="sc-name">
+          <Input id="sc-name" bind:value={demoName} />
+          {#snippet hint()}
+            Defaults to <code>&#123;currency&#125; &#123;type&#125;</code>. Override if needed.
+          {/snippet}
+        </Field>
+        <Field label="Interest rate" htmlFor="sc-rate" hint="Basis points. 100 bps = 1.00%.">
+          <Input id="sc-rate" type="number" affix="bps" bind:value={demoRate} />
+        </Field>
+      </form>
+    </section>
+
+    <!-- =================== 11 Tables =================== -->
+    <section id="tables" class="section">
+      <div class="section-head">
+        <span class="kicker">11 — Tables</span>
+        <h2>Data rows.</h2>
+        <p class="lead">Hairlined surface, mono ids, tabular rates, hover row. <code>Td</code> takes <code>mono</code>, <code>muted</code>, <code>emphasized</code>, <code>tabular</code>, and <code>align</code> as visual modifiers. Cells can hold any primitive — the Status column drops a Badge.</p>
+      </div>
+
+      <Table>
+        <Thead>
+          <Tr>
+            <Th>ID</Th>
+            <Th>Name</Th>
+            <Th>Status</Th>
+            <Th align="right">Rate</Th>
+            <Th>Currency</Th>
+          </Tr>
+        </Thead>
+        <Tbody>
+          <Tr>
+            <Td mono muted>prd.01ks5kya</Td>
+            <Td emphasized>GBP Current Account</Td>
+            <Td><Badge tone="draft">draft</Badge></Td>
+            <Td align="right" mono tabular>265</Td>
+            <Td mono>GBP</Td>
+          </Tr>
+          <Tr>
+            <Td mono muted>prd.01ks5kxd</Td>
+            <Td emphasized>GBP Settlement</Td>
+            <Td><Badge tone="published">published</Badge></Td>
+            <Td align="right" mono tabular>0</Td>
+            <Td mono>GBP</Td>
+          </Tr>
+          <Tr>
+            <Td mono muted>prd.01ks3rwb</Td>
+            <Td emphasized>GBP Deposit</Td>
+            <Td><Badge tone="archived">archived</Badge></Td>
+            <Td align="right" mono tabular>510</Td>
+            <Td mono>GBP</Td>
+          </Tr>
+        </Tbody>
+      </Table>
+    </section>
+
+    <!-- =================== 12 PageHeader =================== -->
+    <section id="pageheader" class="section">
+      <div class="section-head">
+        <span class="kicker">12 — PageHeader</span>
+        <h2>Top of every page.</h2>
+        <p class="lead">Three-part stack — kicker / title / sub — on the left, action cluster on the right via the <code>actions</code> snippet.</p>
+      </div>
+
+      <div class="ph-frame">
+        <PageHeader
+          kicker="Galactic Bank"
+          title="Products"
+          sub="Drafts are iterable; publishing commits a version and auto-archives the one it supersedes."
+        >
+          {#snippet actions()}
+            <Button variant="ghost">Refresh</Button>
+            <Button variant="primary">New product</Button>
+          {/snippet}
+        </PageHeader>
+      </div>
+    </section>
+
+    <!-- =================== 13 Sidenav =================== -->
+    <section id="sidenav" class="section">
+      <div class="section-head">
+        <span class="kicker">13 — Sidenav</span>
+        <h2>Section navigation.</h2>
+        <p class="lead">Left rail with grouped items. Drag the right edge (or double-click it) to snap between expanded (220px) and icon-only (60px) — width persists in <code>localStorage</code>. The component writes its width to <code>--sidenav-w</code>; consumers use <code>grid-template-columns: var(--sidenav-w, 220px) 1fr</code> on their shell.</p>
+      </div>
+
+      <div class="sidenav-demo">
+        <Sidenav top={0}>
+          <SidenavGroup title="Manage">
+            <SidenavItem href="#sidenav" title="Organizations">
+              {#snippet icon()}
+                <svg viewBox="0 0 16 16" aria-hidden="true">
+                  <rect x="2" y="2" width="5" height="5" rx="0.8" />
+                  <rect x="9" y="2" width="5" height="5" rx="0.8" />
+                  <rect x="2" y="9" width="5" height="5" rx="0.8" />
+                  <rect x="9" y="9" width="5" height="5" rx="0.8" />
+                </svg>
+              {/snippet}
+              Organizations
+            </SidenavItem>
+            <SidenavItem href="#sidenav" current title="Products">
+              {#snippet icon()}
+                <svg viewBox="0 0 16 16" aria-hidden="true">
+                  <path d="M2 4 L14 4" />
+                  <path d="M2 8 L14 8" />
+                  <path d="M2 12 L14 12" />
+                </svg>
+              {/snippet}
+              Products
+            </SidenavItem>
+            <SidenavItem href="#sidenav" title="Parties">
+              {#snippet icon()}
+                <svg viewBox="0 0 16 16" aria-hidden="true">
+                  <circle cx="8" cy="6" r="2.6" />
+                  <path d="M3 14c0.8-3 2.6-4.6 5-4.6s4.2 1.6 5 4.6" />
+                </svg>
+              {/snippet}
+              Parties
+            </SidenavItem>
+            <SidenavItem href="#sidenav" title="Accounts">
+              {#snippet icon()}
+                <svg viewBox="0 0 16 16" aria-hidden="true">
+                  <rect x="2.5" y="3.5" width="11" height="9" rx="1" />
+                  <path d="M2.5 7.5 L13.5 7.5" />
+                  <circle cx="11" cy="10" r="0.8" />
+                </svg>
+              {/snippet}
+              Accounts
+            </SidenavItem>
+          </SidenavGroup>
+          <SidenavGroup title="Compliance">
+            <SidenavItem href="#sidenav" title="Policies">
+              {#snippet icon()}
+                <svg viewBox="0 0 16 16" aria-hidden="true">
+                  <path d="M8 2 L13 4 V8 C13 11 10.5 13 8 14 C5.5 13 3 11 3 8 V4 Z" />
+                  <path d="M5.8 8 L7.4 9.6 L10.4 6.6" />
+                </svg>
+              {/snippet}
+              Policies
+            </SidenavItem>
+          </SidenavGroup>
+        </Sidenav>
+      </div>
+    </section>
+
+    <!-- =================== 14 Drawer =================== -->
+    <section id="drawer" class="section">
+      <div class="section-head">
+        <span class="kicker">14 — Drawer</span>
+        <h2>Right-side panel.</h2>
+        <p class="lead">For create/edit forms, detail panes, secondary content that doesn't deserve a route. The body uses the Fields above — edit and the values stay in sync. Esc, the scrim, or the X close.</p>
+      </div>
+
+      <div class="drawer-demo-trigger">
+        <Button variant="primary" onclick={() => drawerDemoOpen = true}>Open drawer</Button>
+      </div>
+    </section>
+
     <footer class="foot">
       <span class="foot-mark"><Logo variant="C" size={36} idPrefix="sc-foot" /></span>
       <span class="foot-text">
@@ -383,6 +666,47 @@
     </footer>
   </main>
 </div>
+
+<!-- Drawer lives outside the page grid because it's fixed-position. -->
+<Drawer
+  open={drawerDemoOpen}
+  onClose={() => drawerDemoOpen = false}
+  kicker="Define"
+  title="New product"
+  sub="Drafts are iterable—save, come back, edit again. Publishing commits a version and releases it to onboarding flows."
+>
+  <Field label="Account type" htmlFor="dd-type">
+    <Select id="dd-type" bind:value={demoType}>
+      <option>Current Account</option>
+      <option>Settlement Account</option>
+      <option>Savings</option>
+      <option>Loan</option>
+      <option>Deposit</option>
+    </Select>
+  </Field>
+  <Field label="Currency" htmlFor="dd-ccy">
+    <Select id="dd-ccy" bind:value={demoCcy}>
+      <option>GBP</option>
+      <option>EUR</option>
+      <option>USD</option>
+    </Select>
+  </Field>
+  <Field label="Product name" htmlFor="dd-name">
+    <Input id="dd-name" bind:value={demoName} />
+    {#snippet hint()}
+      Defaults to <code>&#123;currency&#125; &#123;type&#125;</code>. Override if needed.
+    {/snippet}
+  </Field>
+  <Field label="Interest rate" htmlFor="dd-rate" hint="Basis points. 100 bps = 1.00%.">
+    <Input id="dd-rate" type="number" affix="bps" bind:value={demoRate} />
+  </Field>
+
+  {#snippet footer()}
+    <Button variant="primary" size="lg" block onclick={() => drawerDemoOpen = false}>
+      Create product
+    </Button>
+  {/snippet}
+</Drawer>
 
 <style>
   :global(body) {
@@ -414,12 +738,9 @@
     gap: 28px;
     padding: 56px 24px 24px 0;
     border-right: 1px solid var(--rule-2);
+    overflow-y: auto;
   }
-  .rail-head {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-  }
+  .rail-head { display: flex; flex-direction: column; gap: 4px; }
   .rail-eyebrow {
     font-family: var(--mono);
     font-size: 11px;
@@ -435,15 +756,8 @@
     color: var(--fg);
     line-height: 1;
   }
-  .rail-sub {
-    font-size: 13px;
-    color: var(--fg-muted);
-  }
-  .rail-nav {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-  }
+  .rail-sub { font-size: 13px; color: var(--fg-muted); }
+  .rail-nav { display: flex; flex-direction: column; gap: 2px; }
   .rail-nav a {
     display: block;
     padding: 8px 0;
@@ -453,16 +767,8 @@
     border-bottom: 1px solid var(--rule-2);
     transition: color 0.12s, padding-left 0.16s;
   }
-  .rail-nav a:hover {
-    color: var(--pine-4);
-    padding-left: 6px;
-  }
-  .rail-foot {
-    margin-top: auto;
-    font-size: 12px;
-    line-height: 1.55;
-    color: var(--fg-muted);
-  }
+  .rail-nav a:hover { color: var(--pine-4); padding-left: 6px; }
+  .rail-foot { margin-top: auto; font-size: 12px; line-height: 1.55; color: var(--fg-muted); }
   .rail-foot code {
     font-family: var(--mono);
     font-size: 11px;
@@ -472,13 +778,8 @@
   }
 
   /* ===== Main ===== */
-  .main {
-    padding: 56px 0 96px 48px;
-    min-width: 0;
-  }
-  .lede {
-    margin-bottom: 96px;
-  }
+  .main { padding: 56px 0 96px 48px; min-width: 0; }
+  .lede { margin-bottom: 96px; }
   .eyebrow {
     font-family: var(--mono);
     font-size: 11px;
@@ -510,13 +811,8 @@
   }
 
   /* ===== Section scaffolding ===== */
-  .section {
-    padding: 64px 0;
-    border-top: 1px solid var(--rule);
-  }
-  .section-head {
-    margin-bottom: 48px;
-  }
+  .section { padding: 64px 0; border-top: 1px solid var(--rule); }
+  .section-head { margin-bottom: 48px; }
   .kicker {
     font-family: var(--mono);
     font-size: 12px;
@@ -541,9 +837,7 @@
     color: var(--fg-2);
     margin: 0;
   }
-  .subhead {
-    margin: 48px 0 24px 0;
-  }
+  .subhead { margin: 48px 0 24px 0; }
   .subhead h3 {
     font-family: var(--grotesk);
     font-weight: 500;
@@ -553,12 +847,7 @@
     margin: 0 0 8px 0;
     color: var(--fg);
   }
-  .subhead p {
-    font-size: 14px;
-    color: var(--fg-muted);
-    margin: 0;
-    max-width: 60ch;
-  }
+  .subhead p { font-size: 14px; color: var(--fg-muted); margin: 0; max-width: 60ch; }
 
   /* ===== Marks ===== */
   .marks-row {
@@ -578,20 +867,8 @@
     border-right: 1px solid var(--rule-2);
   }
   .mark-card:last-child { border-right: none; }
-  .mark-frame {
-    width: 132px;
-    height: 132px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  .mark-card figcaption {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    align-items: center;
-    text-align: center;
-  }
+  .mark-frame { width: 132px; height: 132px; display: flex; align-items: center; justify-content: center; }
+  .mark-card figcaption { display: flex; flex-direction: column; gap: 6px; align-items: center; text-align: center; }
   .mark-tag {
     font-family: var(--mono);
     font-size: 11px;
@@ -599,12 +876,7 @@
     text-transform: uppercase;
     color: var(--gold-deep);
   }
-  .mark-note {
-    font-size: 12px;
-    line-height: 1.45;
-    color: var(--fg-muted);
-    max-width: 22ch;
-  }
+  .mark-note { font-size: 12px; line-height: 1.45; color: var(--fg-muted); max-width: 22ch; }
 
   .size-row {
     display: flex;
@@ -615,24 +887,9 @@
     border: 1px solid var(--rule-2);
     overflow-x: auto;
   }
-  .size-cell {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 12px;
-    flex: 0 0 auto;
-  }
-  .size-frame {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  .size-label {
-    font-family: var(--mono);
-    font-size: 11px;
-    color: var(--fg-muted);
-    letter-spacing: 0.04em;
-  }
+  .size-cell { display: flex; flex-direction: column; align-items: center; gap: 12px; flex: 0 0 auto; }
+  .size-frame { display: flex; align-items: center; justify-content: center; }
+  .size-label { font-family: var(--mono); font-size: 11px; color: var(--fg-muted); letter-spacing: 0.04em; }
 
   /* ===== Wordmark ===== */
   .wm-grid {
@@ -663,10 +920,7 @@
     letter-spacing: 0.08em;
     color: var(--gold-deep);
   }
-  .wm-meta {
-    font-size: 13px;
-    color: var(--fg-muted);
-  }
+  .wm-meta { font-size: 13px; color: var(--fg-muted); }
   .wm-row {
     display: flex;
     align-items: baseline;
@@ -674,18 +928,10 @@
     gap: 16px;
     padding: 8px 0;
   }
-  .wm-size {
-    font-family: var(--mono);
-    font-size: 11px;
-    color: var(--fg-muted);
-  }
+  .wm-size { font-family: var(--mono); font-size: 11px; color: var(--fg-muted); }
 
   /* ===== Chrome (AppNav demos) ===== */
-  .nav-demo-stack {
-    display: flex;
-    flex-direction: column;
-    gap: 24px;
-  }
+  .nav-demo-stack { display: flex; flex-direction: column; gap: 24px; }
   .nav-demo-tag {
     font-family: var(--mono);
     font-size: 11px;
@@ -711,11 +957,7 @@
         var(--rule-2) 13px
       );
   }
-  /* AppNav inside a frame: cancel the sticky so all three sit in-flow. */
-  .nav-demo-frame :global(.nav) {
-    position: relative;
-    top: auto;
-  }
+  .nav-demo-frame :global(.nav) { position: relative; top: auto; }
 
   /* ===== ThemeToggle demo ===== */
   .toggle-demo {
@@ -728,12 +970,7 @@
     border-radius: 4px;
     margin-top: 8px;
   }
-  .toggle-state {
-    margin: 0;
-    display: grid;
-    grid-template-columns: repeat(3, auto);
-    gap: 4px 28px;
-  }
+  .toggle-state { margin: 0; display: grid; grid-template-columns: repeat(3, auto); gap: 4px 28px; }
   .toggle-state > div { display: flex; flex-direction: column; gap: 2px; }
   .toggle-state dt {
     font-family: var(--mono);
@@ -743,12 +980,7 @@
     color: var(--fg-muted);
     margin: 0;
   }
-  .toggle-state dd {
-    margin: 0;
-    font-family: var(--mono);
-    font-size: 13px;
-    color: var(--fg);
-  }
+  .toggle-state dd { margin: 0; font-family: var(--mono); font-size: 13px; color: var(--fg); }
   .toggle-state code { font-family: var(--mono); }
 
   .lede-meta {
@@ -772,11 +1004,7 @@
     grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
     gap: 16px;
   }
-  .swatch {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-  }
+  .swatch { display: flex; flex-direction: column; gap: 12px; }
   .swatch-block {
     height: 140px;
     border-radius: 4px;
@@ -792,27 +1020,18 @@
   }
   .swatch-block.overlay {
     background-color: var(--surface) !important;
-    background-image:
-      linear-gradient(var(--rule), var(--rule));
+    background-image: linear-gradient(var(--rule), var(--rule));
   }
   .swatch-block.overlay > .swatch-aa { color: var(--fg); }
   .swatch-aa { display: inline-block; }
-  .swatch-meta {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-  }
+  .swatch-meta { display: flex; flex-direction: column; gap: 2px; }
   .swatch-name {
     font-family: var(--mono);
     font-size: 12px;
     color: var(--fg);
     letter-spacing: 0.02em;
   }
-  .swatch-value {
-    font-family: var(--mono);
-    font-size: 11px;
-    color: var(--fg-muted);
-  }
+  .swatch-value { font-family: var(--mono); font-size: 11px; color: var(--fg-muted); }
 
   /* ===== Ramps ===== */
   .ramp {
@@ -832,16 +1051,8 @@
     gap: 4px;
     color: var(--paper);
   }
-  .ramp-name {
-    font-family: var(--mono);
-    font-size: 12px;
-    letter-spacing: 0.02em;
-  }
-  .ramp-value {
-    font-family: var(--mono);
-    font-size: 10px;
-    opacity: 0.75;
-  }
+  .ramp-name { font-family: var(--mono); font-size: 12px; letter-spacing: 0.02em; }
+  .ramp-value { font-family: var(--mono); font-size: 10px; opacity: 0.75; }
 
   /* ===== Type specimens ===== */
   .spec {
@@ -852,12 +1063,7 @@
     gap: 20px;
   }
   .spec:first-of-type { border-top: none; padding-top: 0; }
-  .spec-head {
-    display: flex;
-    align-items: baseline;
-    gap: 16px;
-    flex-wrap: wrap;
-  }
+  .spec-head { display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; }
   .spec-name {
     font-family: var(--mono);
     font-size: 11px;
@@ -865,39 +1071,113 @@
     letter-spacing: 0.08em;
     color: var(--gold-deep);
   }
-  .spec-stack {
-    font-family: var(--mono);
-    font-size: 11px;
-    color: var(--fg-muted);
-  }
-  .spec-display {
-    font-size: clamp(40px, 5vw, 72px);
-    line-height: 1;
-    letter-spacing: -0.005em;
-    color: var(--fg);
-  }
+  .spec-stack { font-family: var(--mono); font-size: 11px; color: var(--fg-muted); }
+  .spec-display { font-size: clamp(40px, 5vw, 72px); line-height: 1; letter-spacing: -0.005em; color: var(--fg); }
   .spec-display.grotesk { font-family: var(--grotesk); font-weight: 500; }
   .spec-display.serif   { font-family: var(--serif);   font-weight: 500; letter-spacing: 0.01em; }
   .spec-display.mono    { font-family: var(--mono);    font-weight: 400; font-size: clamp(28px, 3.4vw, 44px); letter-spacing: 0; }
-  .spec-body {
-    max-width: 60ch;
-    line-height: 1.55;
-    color: var(--fg-2);
-    margin: 0;
-  }
+  .spec-body { max-width: 60ch; line-height: 1.55; color: var(--fg-2); margin: 0; }
   .spec-body.grotesk { font-family: var(--grotesk); font-size: 16px; }
   .spec-body.serif   { font-family: var(--serif);   font-size: 22px; line-height: 1.45; }
   .spec-body.mono    { font-family: var(--mono);    font-size: 13px; }
-  .spec-scale {
-    display: flex;
-    align-items: baseline;
-    gap: 24px;
-    padding: 8px 0;
-    color: var(--fg);
-  }
+  .spec-scale { display: flex; align-items: baseline; gap: 24px; padding: 8px 0; color: var(--fg); }
   .spec-scale.grotesk { font-family: var(--grotesk); }
   .spec-scale.serif   { font-family: var(--serif); }
   .spec-scale.mono    { font-family: var(--mono); }
+
+  /* ===== Buttons demo ===== */
+  .btn-matrix {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 24px;
+    background: var(--surface-raised);
+    border: 1px solid var(--rule-2);
+    border-radius: 6px;
+  }
+  .btn-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .btn-label {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--fg-muted);
+    width: 80px;
+    flex: 0 0 80px;
+  }
+  .btn-block-frame {
+    padding: 24px;
+    background: var(--surface-raised);
+    border: 1px solid var(--rule-2);
+    border-radius: 6px;
+    max-width: 420px;
+  }
+
+  /* ===== Badges demo ===== */
+  .badge-row {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+    padding: 28px 24px;
+    background: var(--surface-raised);
+    border: 1px solid var(--rule-2);
+    border-radius: 6px;
+  }
+
+  /* ===== Fields demo ===== */
+  .field-demo {
+    padding: 28px;
+    background: var(--surface-raised);
+    border: 1px solid var(--rule-2);
+    border-radius: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    max-width: 480px;
+  }
+
+  /* ===== PageHeader demo ===== */
+  .ph-frame {
+    padding: 28px 32px;
+    background: var(--surface-raised);
+    border: 1px solid var(--rule-2);
+    border-radius: 6px;
+  }
+
+  /* ===== Sidenav demo ===== */
+  .sidenav-demo {
+    position: relative;
+    height: 380px;
+    width: 320px;
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    overflow: hidden;
+    background: var(--surface);
+  }
+  /* Strip the sticky positioning so the Sidenav sits inside the frame
+     rather than escaping it. Real consumers leave the sticky intact. */
+  .sidenav-demo :global(.sidenav) {
+    position: relative !important;
+    top: auto !important;
+    height: 100% !important;
+    border-right: none !important;
+  }
+
+  /* ===== Drawer demo ===== */
+  .drawer-demo-trigger {
+    padding: 28px;
+    background: var(--surface-raised);
+    border: 1px solid var(--rule-2);
+    border-radius: 6px;
+    display: flex;
+    justify-content: flex-start;
+  }
 
   /* ===== Foot ===== */
   .foot {
@@ -908,9 +1188,5 @@
     align-items: center;
     gap: 20px;
   }
-  .foot-text {
-    font-size: 13px;
-    color: var(--fg-muted);
-    max-width: 60ch;
-  }
+  .foot-text { font-size: 13px; color: var(--fg-muted); max-width: 60ch; }
 </style>
