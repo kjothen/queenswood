@@ -1,9 +1,22 @@
 <script>
+  import Router from "svelte-spa-router";
+  import { wrap } from "svelte-spa-router/wrap";
   import { ensure_session, sign_in, sign_out, token_claims } from "./lib/auth.mjs";
   import { get_me } from "./lib/api.mjs";
-  import SignIn from "./lib/SignIn.svelte";
+  import Landing from "./lib/Landing.svelte";
+  import SignInPage from "./lib/SignInPage.svelte";
   import Onboarding from "./lib/Onboarding.svelte";
   import Dashboard from "./lib/Dashboard.svelte";
+
+  // Unauthenticated surfaces are URL-routed so /#/sign-in is shareable
+  // and the marketing landing has a stable home. Authenticated screens
+  // (onboarding / dashboard) stay state-driven — they have no need for
+  // URLs of their own and that keeps the post-login redirect trivial.
+  const unauthRoutes = {
+    "/": Landing,
+    "/sign-in": wrap({ component: SignInPage, props: { onSignIn: sign_in } }),
+    "*": Landing,
+  };
 
   // Three end states (sign-in / onboarding / dashboard) plus a
   // "loading" transient while Keycloak runs its silent SSO check
@@ -58,7 +71,7 @@
 {#if stage === "loading"}
   <div class="splash">Loading…</div>
 {:else if stage === "signin"}
-  <SignIn onSignIn={sign_in} />
+  <Router routes={unauthRoutes} />
 {:else if stage === "onboarding"}
   <Onboarding
     defaultName={defaultOrgName()}

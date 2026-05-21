@@ -1,9 +1,10 @@
 <script>
   /* Marketing-style landing for the unauthenticated bank-console.
      Structure ported from design_handoff_queenswood_logo/Queenswood Home.html.
-     The two "Sign in with Google" CTAs (nav + final) call the existing
-     `onSignIn` prop, which hands off to Keycloak via `auth.mjs/sign_in`. */
+     The three "Sign in" CTAs route to /#/sign-in, where the user picks
+     an identity provider. Keycloak handoff happens from SignInPage. */
 
+  import { push } from "svelte-spa-router";
   import Logo from "./Logo.svelte";
   import Wordmark from "./Wordmark.svelte";
   import DocViewer from "./DocViewer.svelte";
@@ -83,7 +84,9 @@
     };
   }
 
-  let { onSignIn } = $props();
+  function goSignIn() {
+    push("/sign-in");
+  }
 </script>
 
 <DocViewer
@@ -120,8 +123,7 @@
     </ul>
     <div class="spacer"></div>
     <div class="cta-row">
-      <button class="btn solid" onclick={onSignIn}>Sign in with Google →</button
-      >
+      <button class="btn solid" onclick={goSignIn}>Sign in</button>
     </div>
   </div>
 </nav>
@@ -143,9 +145,7 @@
           Use the hosted edition, or self-host the open core. MIT-licensed.
         </p>
         <div class="ctas">
-          <button class="btn solid" onclick={onSignIn}
-            >Sign in with Google →</button
-          >
+          <button class="btn solid" onclick={goSignIn}>Sign in</button>
           <a target="_blank" rel="noreferrer"
             class="btn line"
             href="https://github.com/repldriven/queenswood#readme"
@@ -685,9 +685,7 @@
           posting balanced transfers in minutes.
         </p>
         <div class="ctas">
-          <button class="btn gold" onclick={onSignIn}
-            >Sign in with Google →</button
-          >
+          <button class="btn gold" onclick={goSignIn}>Sign in</button>
           <a target="_blank" rel="noreferrer"
             class="btn line"
             href="https://github.com/repldriven/queenswood#readme"

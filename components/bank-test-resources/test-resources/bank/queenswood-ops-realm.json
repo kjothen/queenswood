@@ -1,6 +1,7 @@
 {
   "realm": "queenswood-ops",
   "enabled": true,
+  "loginTheme": "queenswood",
   "sslRequired": "none",
   "registrationAllowed": false,
   "loginWithEmailAllowed": false,
