@@ -1,94 +1,105 @@
 <script>
+  import AppNav from "./AppNav.svelte";
+
   let { user, memberships, onSignOut } = $props();
   const organization = $derived(memberships?.[0]);
 </script>
 
-<div class="dashboard">
-  <header>
-    <h1>Queenswood</h1>
-    <div class="who">
-      {#if user?.["avatar-url"]}
-        <img src={user["avatar-url"]} alt="" class="avatar" />
-      {/if}
-      <span class="name">{user?.name}</span>
-      <button onclick={onSignOut}>Sign out</button>
-    </div>
-  </header>
-  <main>
-    <section class="welcome">
-      <h2>Welcome, {user?.name ?? "friend"}.</h2>
+<div class="page">
+  <AppNav {user} {onSignOut} />
+
+  <main class="wrap">
+    <span class="eyebrow">Console · home</span>
+    <h2>Welcome, <em>{user?.name ?? "friend"}.</em></h2>
+
+    <div class="card">
       {#if organization}
-        <p>Organization: <strong>{organization["organization-id"]}</strong></p>
+        <span class="cap-label">Organization</span>
+        <p class="org-id">{organization["organization-id"]}</p>
       {:else}
-        <p>No organization yet.</p>
+        <span class="cap-label">Organization</span>
+        <p class="muted">No organization yet.</p>
       {/if}
-    </section>
+    </div>
   </main>
 </div>
 
 <style>
-  .dashboard {
+  .page {
     min-height: 100vh;
-    background: #f9fafb;
-    color: #111827;
-    font-family: system-ui, -apple-system, sans-serif;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--grotesk);
   }
 
-  header {
-    display: flex;
+  .wrap {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 64px 32px;
+  }
+
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--muted);
+    display: inline-flex;
     align-items: center;
-    justify-content: space-between;
-    padding: 1rem 2rem;
-    background: #ffffff;
-    border-bottom: 1px solid #e5e7eb;
+    gap: 8px;
   }
-
-  h1 {
-    margin: 0;
-    font-size: 1.25rem;
-  }
-
-  .who {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-  }
-
-  .avatar {
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-  }
-
-  .name {
-    color: #374151;
-    font-size: 0.95rem;
-  }
-
-  header button {
-    padding: 0.4rem 0.8rem;
-    background: #ffffff;
-    color: #111827;
-    border: 1px solid #d1d5db;
-    border-radius: 4px;
-    cursor: pointer;
-    font: inherit;
-  }
-
-  main {
-    padding: 2rem;
-  }
-
-  .welcome {
-    max-width: 640px;
-    padding: 2rem;
-    background: #ffffff;
-    border: 1px solid #e5e7eb;
-    border-radius: 8px;
+  .eyebrow::before {
+    content: "";
+    width: 18px;
+    height: 1px;
+    background: var(--gold-deep);
   }
 
   h2 {
-    margin: 0 0 0.5rem;
-    font-size: 1.5rem;
+    font-family: var(--serif);
+    font-weight: 500;
+    font-size: 48px;
+    line-height: 1.05;
+    letter-spacing: -0.008em;
+    margin: 14px 0 36px;
+    max-width: 18ch;
+    text-wrap: pretty;
+  }
+  h2 em {
+    font-style: italic;
+    color: var(--gold-deep);
+    font-weight: 500;
+  }
+
+  .card {
+    padding: 26px;
+    background: var(--paper);
+    border: 1px solid var(--rule);
+    border-radius: 12px;
+    max-width: 640px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .cap-label {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--gold-deep);
+  }
+
+  .org-id {
+    margin: 0;
+    font-family: var(--mono);
+    font-size: 14px;
+    color: var(--ink);
+  }
+
+  .muted {
+    margin: 0;
+    color: var(--muted);
+    font-size: 14px;
   }
 </style>

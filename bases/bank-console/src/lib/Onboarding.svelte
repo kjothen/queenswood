@@ -1,6 +1,7 @@
 <script>
   import { onMount } from "svelte";
   import { onboard } from "./api.mjs";
+  import AppNav from "./AppNav.svelte";
 
   let { onComplete, onSignOut, defaultName = "" } = $props();
   // Read `defaultName` inside onMount, not at module scope: Svelte 5
@@ -28,11 +29,15 @@
   }
 </script>
 
-<div class="onboarding">
-  <div class="card">
-    <h1>Welcome to Queenswood</h1>
-    <p>Name your organization to finish setting up your account.</p>
-    <form onsubmit={(e) => { e.preventDefault(); submit(); }}>
+<div class="page">
+  <AppNav {onSignOut} />
+
+  <main class="wrap">
+    <span class="eyebrow">Console · onboarding</span>
+    <h2>Welcome to <em>Queenswood.</em></h2>
+    <p class="lede">Name your organization to finish setting up your account.</p>
+
+    <form class="card" onsubmit={(e) => { e.preventDefault(); submit(); }}>
       <label for="org">Organization name</label>
       <input
         id="org"
@@ -45,91 +50,146 @@
       {#if error_message}
         <p class="error">{error_message}</p>
       {/if}
-      <button type="submit" disabled={!organization_name.trim() || submitting}>
+      <button
+        type="submit"
+        class="btn solid"
+        disabled={!organization_name.trim() || submitting}
+      >
         {submitting ? "Creating…" : "Continue"}
       </button>
     </form>
-    <button type="button" class="link" onclick={onSignOut}>Sign out</button>
-  </div>
+  </main>
 </div>
 
 <style>
-  .onboarding {
-    display: flex;
+  .page {
+    min-height: 100vh;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--grotesk);
+  }
+
+  .wrap {
+    max-width: 520px;
+    margin: 0 auto;
+    padding: 64px 32px;
+  }
+
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--muted);
+    display: inline-flex;
     align-items: center;
-    justify-content: center;
-    height: 100vh;
-    background: #f9fafb;
-    color: #111827;
-    font-family: system-ui, -apple-system, sans-serif;
+    gap: 8px;
+  }
+  .eyebrow::before {
+    content: "";
+    width: 18px;
+    height: 1px;
+    background: var(--gold-deep);
+  }
+
+  h2 {
+    font-family: var(--serif);
+    font-weight: 500;
+    font-size: 44px;
+    line-height: 1.05;
+    letter-spacing: -0.008em;
+    margin: 14px 0 14px;
+    text-wrap: pretty;
+  }
+  h2 em {
+    font-style: italic;
+    color: var(--gold-deep);
+    font-weight: 500;
+  }
+
+  .lede {
+    font-size: 16px;
+    line-height: 1.55;
+    color: var(--ink-2);
+    margin: 0 0 28px;
   }
 
   .card {
-    width: min(420px, 90vw);
-    padding: 2rem;
-    background: #ffffff;
-    border: 1px solid #e5e7eb;
-    border-radius: 8px;
-  }
-
-  h1 {
-    margin: 0 0 0.5rem;
-    font-size: 1.5rem;
-  }
-
-  p {
-    margin: 0 0 1.5rem;
-    color: #6b7280;
+    padding: 26px;
+    background: var(--paper);
+    border: 1px solid var(--rule);
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
   }
 
   label {
-    display: block;
-    font-size: 0.85rem;
-    color: #374151;
-    margin-bottom: 0.4rem;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--gold-deep);
   }
 
   input {
-    width: 100%;
-    padding: 0.6rem 0.75rem;
-    margin-bottom: 1rem;
-    border: 1px solid #d1d5db;
-    border-radius: 4px;
+    padding: 12px 14px;
+    margin-bottom: 8px;
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    background: var(--bone);
+    color: var(--ink);
     font: inherit;
+    font-family: var(--grotesk);
+    font-size: 15px;
     box-sizing: border-box;
+    transition: border-color 0.12s;
+  }
+  input:focus {
+    outline: none;
+    border-color: var(--gold-deep);
   }
 
-  button[type="submit"] {
-    width: 100%;
-    padding: 0.7rem;
-    background: #2563eb;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    font: inherit;
+  .btn {
+    height: 44px;
+    padding: 0 18px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border-radius: 6px;
+    font-size: 14px;
     font-weight: 500;
+    letter-spacing: 0.005em;
+    border: 1px solid transparent;
     cursor: pointer;
+    font-family: var(--grotesk);
+    transition:
+      background 0.12s,
+      border-color 0.12s,
+      color 0.12s,
+      transform 0.08s;
   }
-
-  button[type="submit"]:disabled {
-    background: #93c5fd;
+  .btn:active {
+    transform: translateY(0.5px);
+  }
+  .btn.solid {
+    background: var(--ink);
+    color: var(--bone);
+  }
+  .btn.solid:hover {
+    background: #2a2622;
+  }
+  .btn:disabled {
+    background: var(--muted);
+    color: var(--bone);
     cursor: not-allowed;
-  }
-
-  .link {
-    display: block;
-    margin: 1rem auto 0;
-    background: none;
-    border: none;
-    color: #6b7280;
-    font-size: 0.85rem;
-    cursor: pointer;
-    text-decoration: underline;
+    opacity: 0.6;
   }
 
   .error {
-    margin: 0 0 0.75rem;
-    color: #b91c1c;
-    font-size: 0.9rem;
+    margin: 0;
+    color: oklch(0.55 0.18 28);
+    font-size: 13px;
   }
 </style>

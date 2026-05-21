@@ -1,6 +1,7 @@
 {
   "realm": "queenswood",
   "enabled": true,
+  "loginTheme": "queenswood",
   "sslRequired": "external",
   "registrationAllowed": false,
   "loginWithEmailAllowed": false,
@@ -94,6 +95,21 @@
       "config": {
         "clientId": "REPLACE-ME-GOOGLE-CLIENT-ID",
         "clientSecret": "REPLACE-ME-GOOGLE-CLIENT-SECRET",
+        "syncMode": "IMPORT",
+        "useJwksUrl": "true"
+      }
+    },
+    {
+      "alias": "github",
+      "providerId": "github",
+      "enabled": true,
+      "trustEmail": true,
+      "storeToken": false,
+      "addReadTokenRoleOnCreate": false,
+      "firstBrokerLoginFlowAlias": "first broker login",
+      "config": {
+        "clientId": "REPLACE-ME-GITHUB-CLIENT-ID",
+        "clientSecret": "REPLACE-ME-GITHUB-CLIENT-SECRET",
         "syncMode": "IMPORT",
         "useJwksUrl": "true"
       }

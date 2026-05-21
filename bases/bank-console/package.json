@@ -9,7 +9,8 @@
   },
   "dependencies": {
     "keycloak-js": "^26.0.7",
-    "marked": "^18.0.4"
+    "marked": "^18.0.4",
+    "svelte-spa-router": "^5.1.0"
   },
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "^5.0.3",

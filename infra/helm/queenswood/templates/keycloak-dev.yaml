@@ -24,6 +24,21 @@ data:
 {{ .Files.Get "files/keycloak-realm-ops.json" | indent 4 }}
 ---
 apiVersion: v1
+kind: ConfigMap
+metadata:
+  # Brand theme for the Keycloak login page. CSS-only override of
+  # the keycloak.v2 base theme; layout stays Keycloak's default.
+  # Mounted via subPath into /opt/keycloak/themes/queenswood/login.
+  name: {{ .Release.Name }}-keycloak-dev-theme
+  labels:
+    {{- include "queenswood.labels" . | nindent 4 }}
+data:
+  theme.properties: |-
+{{ .Files.Get "files/keycloak-theme/login/theme.properties" | indent 4 }}
+  styles.css: |-
+{{ .Files.Get "files/keycloak-theme/login/resources/css/styles.css" | indent 4 }}
+---
+apiVersion: v1
 kind: Service
 metadata:
   # Matches `keycloak.baseUrl` default so bank-api's KEYCLOAK_BASE_URL
@@ -131,6 +146,18 @@ spec:
             - name: realm-import
               mountPath: /opt/keycloak/data/import
               readOnly: true
+            # The queenswood login theme. Two subPath mounts so the
+            # theme tree gets the directory shape Keycloak's loader
+            # expects (theme.properties at the login/ root,
+            # resources/css/styles.css for the CSS override).
+            - name: kc-theme
+              mountPath: /opt/keycloak/themes/queenswood/login/theme.properties
+              subPath: theme.properties
+              readOnly: true
+            - name: kc-theme
+              mountPath: /opt/keycloak/themes/queenswood/login/resources/css/styles.css
+              subPath: styles.css
+              readOnly: true
           resources:
             requests:
               cpu: "100m"
@@ -142,4 +169,7 @@ spec:
         - name: realm-import
           configMap:
             name: {{ .Release.Name }}-keycloak-dev-realm
+        - name: kc-theme
+          configMap:
+            name: {{ .Release.Name }}-keycloak-dev-theme
 {{- end }}

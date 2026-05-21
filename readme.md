@@ -267,8 +267,15 @@ FoundationDB) onto any Kubernetes cluster.
   ```bash
   brew install colima kind kubectl helm
   colima start --vm-type vz --vz-rosetta --cpu 6 --memory 24
-  kind create cluster --name queenswood
+  kind create cluster --name queenswood \
+    --config <(curl -fsSL https://raw.githubusercontent.com/repldriven/queenswood/main/infra/kind/queenswood-config.yaml)
   ```
+
+  The kind config bumps containerd's `max_concurrent_downloads`
+  from 3 to 6 so the ~20 first-install image pulls don't queue
+  behind the biggest layer. From a checkout, the equivalent is
+  `kind create cluster --name queenswood --config
+  infra/kind/queenswood-config.yaml`.
 
 **Install:**
 

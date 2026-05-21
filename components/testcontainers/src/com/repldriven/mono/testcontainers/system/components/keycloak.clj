@@ -10,16 +10,34 @@
     [com.repldriven.mono.log.interface :as log]
     [com.repldriven.mono.system.interface :as system])
   (:import
-    (dasniko.testcontainers.keycloak KeycloakContainer)))
+    (dasniko.testcontainers.keycloak KeycloakContainer)
+    (org.testcontainers.utility MountableFile)))
 
 (def default-docker-image-name "quay.io/keycloak/keycloak:26.0")
+
+;; Files Keycloak expects to find under <theme>/login/. Copied
+;; individually as classpath resources because Testcontainers'
+;; MountableFile doesn't recursively materialise a classpath
+;; directory tree.
+(def ^:private theme-files
+  ["login/theme.properties"
+   "login/resources/css/styles.css"])
+
+(defn- mount-theme!
+  [^KeycloakContainer c theme-resource theme-name]
+  (doseq [rel theme-files]
+    (let [src (str theme-resource "/" rel)
+          dst (str "/opt/keycloak/themes/" theme-name "/" rel)]
+      (.withCopyFileToContainer c
+                                (MountableFile/forClasspathResource src)
+                                dst))))
 
 (def container
   {:system/start
    (fn [{:system/keys [config instance]}]
      (or instance
          (let [{:keys [docker-image-name realm-import-file realm-import-files
-                       host-port]}
+                       host-port theme-resource theme-name]}
                config
                ;; Singular `:realm-import-file` stays supported for
                ;; back-compat; `:realm-import-files` (vector) wins when
@@ -30,6 +48,12 @@
            (log/info "Starting keycloak container" docker-image-name)
            (let [c (KeycloakContainer. docker-image-name)]
              (doseq [f files] (.withRealmImportFile c f))
+             ;; Optional custom login theme. `theme-resource` is a
+             ;; classpath prefix containing `login/theme.properties`
+             ;; and `login/resources/css/styles.css`; they get copied
+             ;; into the container at `/opt/keycloak/themes/<theme-
+             ;; name>/login/...` where Keycloak picks them up.
+             (when theme-resource (mount-theme! c theme-resource theme-name))
              ;; Fixed `host-port` pins :8080 to a known host port so a
              ;; host-running SPA can reach it; nil/0 keeps the random
              ;; mapping parallel test runs need.
@@ -44,7 +68,9 @@
    :system/config {:docker-image-name default-docker-image-name
                    :realm-import-file nil
                    :realm-import-files nil
-                   :host-port nil}
+                   :host-port nil
+                   :theme-resource nil
+                   :theme-name "queenswood"}
    :system/instance-schema map?})
 
 (def auth-server-url

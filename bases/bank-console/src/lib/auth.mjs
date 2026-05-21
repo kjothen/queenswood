@@ -6,9 +6,11 @@
 // We expose three thunks the rest of the SPA depends on:
 //   ensure_session()   – idempotent init; resolves once on every page
 //                        load with the current auth state attached.
-//   sign_in()          – kc.login({idpHint: 'google'}); the browser
+//   sign_in(provider)  – kc.login({idpHint: provider}); the browser
 //                        navigates to Keycloak and never returns from
-//                        this call.
+//                        this call. Pass 'google' / 'github' to skip
+//                        the Keycloak chooser; pass null to land on
+//                        Keycloak's own username/password form.
 //   sign_out()         – kc.logout(); same browser-navigation contract.
 //   fresh_token()      – returns a current access token, refreshing
 //                        if it's within 30s of expiry. Used by api.mjs
@@ -82,14 +84,18 @@ export function ensure_session() {
   return init_promise;
 }
 
-export function sign_in() {
+export function sign_in(provider) {
   if (!kc) {
     console.error(
       "bank-console: cannot sign in — Keycloak URL not configured.",
     );
     return;
   }
-  return kc.login(idp_hint ? { idpHint: idp_hint } : {});
+  // Explicit provider from the UI wins; fall back to the env hint
+  // (still useful for prod where you might force everyone via Google).
+  // null/undefined → no idpHint → Keycloak shows its own login form.
+  const hint = provider ?? idp_hint;
+  return kc.login(hint ? { idpHint: hint } : {});
 }
 
 export function sign_out() {

@@ -1,0 +1,399 @@
+/* Queenswood Keycloak login theme.
+   CSS-only override of the keycloak.v2 base theme (PatternFly v5).
+   Aligns the Keycloak login page with the bank-console SPA's brand
+   tokens — paper surfaces, Geist body + Cormorant headings, ink
+   primary buttons, gold-deep field labels.
+
+   keycloak.v2 follows the user's OS color-scheme preference via a
+   tiny script that toggles `pf-v5-theme-dark` on <html>. We force
+   the light palette here regardless — the SPA itself doesn't have
+   a dark mode, and the brand tokens are paper-based. */
+
+@import url("https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;1,500&family=Geist+Mono&family=Geist:wght@300;400;500;600&display=swap");
+
+:root {
+  --bone:   #f4f1ea;
+  --bone-2: #ebe6dc;
+  --paper:  #fbf9f4;
+  --ink:    #161310;
+  --ink-2:  #2a2622;
+  --muted:  #6b645b;
+  --rule:   rgba(20, 15, 10, 0.10);
+  --rule-2: rgba(20, 15, 10, 0.06);
+
+  --gold:        oklch(0.66 0.135 72);
+  --gold-bright: oklch(0.78 0.140 80);
+  --gold-deep:   oklch(0.52 0.120 68);
+
+  --grotesk: 'Geist', ui-sans-serif, system-ui, sans-serif;
+  --serif:   'Cormorant Garamond', ui-serif, Georgia, serif;
+  --mono:    'Geist Mono', ui-monospace, monospace;
+}
+
+/* Force the PatternFly v5 light palette even under OS dark mode.
+   keycloak.v2 toggles .pf-v5-theme-dark on <html>; we override the
+   key globals so the dark variants resolve to our paper palette. */
+html,
+html.pf-v5-theme-dark,
+.pf-v5-theme-dark {
+  --pf-v5-global--BackgroundColor--100: var(--paper);
+  --pf-v5-global--BackgroundColor--150: var(--paper);
+  --pf-v5-global--BackgroundColor--200: var(--bone);
+  --pf-v5-global--BackgroundColor--300: var(--paper);
+  --pf-v5-global--BackgroundColor--light-100: var(--paper);
+  --pf-v5-global--BackgroundColor--light-200: var(--bone);
+  --pf-v5-global--BackgroundColor--light-300: var(--bone-2);
+  --pf-v5-global--Color--100: var(--ink);
+  --pf-v5-global--Color--200: var(--ink-2);
+  --pf-v5-global--Color--light-100: var(--ink);
+  --pf-v5-global--Color--light-200: var(--ink-2);
+  --pf-v5-global--BorderColor--100: var(--rule);
+  --pf-v5-global--BorderColor--light-100: var(--rule);
+  --pf-v5-global--link--Color: var(--gold-deep);
+  --pf-v5-global--link--Color--light: var(--gold-deep);
+  color-scheme: light;
+}
+
+html,
+body,
+body#keycloak-bg {
+  background: var(--paper) !important;
+  color: var(--ink) !important;
+  font-family: var(--grotesk) !important;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Outer login container. */
+.pf-v5-c-login,
+.login-pf,
+.login-pf body,
+.login-pf-page {
+  background: var(--paper) !important;
+}
+
+/* PF v5 defaults to a two-column grid at XL viewports, dropping the
+   realm-name header into a sibling column beside the card. PF
+   declares `grid-template-areas: "main header" "main footer" "main ."`
+   which pins the placements regardless of column count, so we
+   override both the areas and the columns to stack header above the
+   card in a single centered column. */
+.pf-v5-c-login {
+  display: flex !important;
+  justify-content: center !important;
+}
+.pf-v5-c-login__container {
+  --pf-v5-c-login__container--MaxWidth: 31.25rem !important;
+  --pf-v5-c-login__container--xl--MaxWidth: 31.25rem !important;
+  --pf-v5-c-login__container--xl--GridTemplateColumns: 1fr !important;
+  --pf-v5-c-login__container--PaddingLeft: 0 !important;
+  --pf-v5-c-login__container--PaddingRight: 0 !important;
+  grid-template-columns: 1fr !important;
+  grid-template-areas: "header" "main" "footer" !important;
+  max-width: 31.25rem !important;
+  width: 100% !important;
+  margin: 0 auto !important;
+}
+
+/* Header (the realm-name brand row above the card).
+
+   Keycloak's template prints the raw realm name (`queenswood`) here
+   as a text node. We hide that text (font-size: 0 on the parent) and
+   render a small forest mark + the QUEENSWOOD wordmark via pseudo-
+   elements, matching the SPA's Logo + Wordmark pairing. The two
+   wordmark halves get different weights — QUEENS in 300, WOOD in
+   500 — mirroring Wordmark.svelte's grotesk variant. */
+.pf-v5-c-login__header,
+#kc-header {
+  background: transparent !important;
+  padding-block: 0 24px !important;
+}
+#kc-header-wrapper,
+.pf-v5-c-brand {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  font-size: 0 !important;
+  line-height: 1 !important;
+  color: var(--ink) !important;
+  text-shadow: none !important;
+  text-transform: none !important;
+  background: transparent !important;
+}
+#kc-header-wrapper::before {
+  content: "";
+  flex: 0 0 36px;
+  width: 36px;
+  height: 36px;
+  /* Mark C (monoline) from the design handoff: outline conifer
+     forest above the horizon, outline crown with bauble finials
+     below. Pine-2/pine-3/gold-deep stroke colours, bone bauble
+     fills — same palette as the SPA Logo component, just the
+     wireframe register. */
+  background: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNDAgMjQwIj48ZyBmaWxsPSJub25lIiBzdHJva2U9IiMzZjU2NDQiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+PHBvbHlnb24gcG9pbnRzPSIyMiw3MiAyLDEyMCA0MiwxMjAiLz48cG9seWdvbiBwb2ludHM9IjUwLDQyIDI3LDEyMCA3MywxMjAiLz48cG9seWdvbiBwb2ludHM9Ijc4LDU2IDU4LDEyMCA5OCwxMjAiLz48cG9seWdvbiBwb2ludHM9IjEwNiwxNiA4MSwxMjAgMTMxLDEyMCIvPjxwb2x5Z29uIHBvaW50cz0iMTM0LDM2IDExMiwxMjAgMTU2LDEyMCIvPjxwb2x5Z29uIHBvaW50cz0iMTYyLDQgMTM2LDEyMCAxODgsMTIwIi8+PHBvbHlnb24gcG9pbnRzPSIxOTAsNDQgMTY4LDEyMCAyMTIsMTIwIi8+PHBvbHlnb24gcG9pbnRzPSIyMTYsNjQgMTk3LDEyMCAyMzUsMTIwIi8+PC9nPjxsaW5lIHgxPSIxNCIgeTE9IjEyMCIgeDI9IjIyNiIgeTI9IjEyMCIgc3Ryb2tlPSIjNTA2YjU0IiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPjxwb2x5Z29uIHBvaW50cz0iMzYsMTIwIDIwNCwxMjAgMjA0LDEzNiAxOTIsMTgyIDE4MCwxMzYgMTY4LDE4MiAxNTYsMTM2IDE0NCwxODIgMTMyLDEzNiAxMjAsMTgyIDEwOCwxMzYgOTYsMTgyIDg0LDEzNiA3MiwxODIgNjAsMTM2IDQ4LDE4MiAzNiwxMzYiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2EwN2EyMyIgc3Ryb2tlLXdpZHRoPSIyLjUiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz48ZyBmaWxsPSIjZjRmMWVhIiBzdHJva2U9IiNhMDdhMjMiIHN0cm9rZS13aWR0aD0iMi41Ij48Y2lyY2xlIGN4PSI0OCIgY3k9IjE4Ni4yIiByPSIzLjYiLz48Y2lyY2xlIGN4PSI3MiIgY3k9IjE4Ni4yIiByPSIzLjYiLz48Y2lyY2xlIGN4PSI5NiIgY3k9IjE4Ni4yIiByPSIzLjYiLz48Y2lyY2xlIGN4PSIxMjAiIGN5PSIxODYuMiIgcj0iMy42Ii8+PGNpcmNsZSBjeD0iMTQ0IiBjeT0iMTg2LjIiIHI9IjMuNiIvPjxjaXJjbGUgY3g9IjE2OCIgY3k9IjE4Ni4yIiByPSIzLjYiLz48Y2lyY2xlIGN4PSIxOTIiIGN5PSIxODYuMiIgcj0iMy42Ii8+PC9nPjwvc3ZnPg==") center/contain no-repeat;
+}
+#kc-header-wrapper::after {
+  content: "QUEENSWOOD";
+  font-family: var(--grotesk);
+  font-weight: 500;
+  font-size: 16px;
+  letter-spacing: 0.18em;
+  color: var(--ink);
+}
+
+/* The card. */
+.pf-v5-c-login__main,
+.pf-v5-c-login__main-header,
+.pf-v5-c-login__main-body,
+.pf-v5-c-login__main-footer {
+  background: var(--paper) !important;
+  background-color: var(--paper) !important;
+  color: var(--ink) !important;
+}
+.pf-v5-c-login__main {
+  border: 1px solid var(--rule) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 24px 60px -32px rgba(20, 15, 10, 0.18) !important;
+}
+
+/* Page title — "Sign in to your account". */
+.pf-v5-c-title.pf-m-3xl,
+#kc-page-title,
+h1#kc-page-title {
+  font-family: var(--serif) !important;
+  font-weight: 500 !important;
+  font-size: 36px !important;
+  line-height: 1.05 !important;
+  letter-spacing: -0.008em !important;
+  color: var(--ink) !important;
+  margin: 0 0 24px !important;
+  text-transform: none !important;
+}
+
+/* Field labels — mono caps with gold-deep accent. */
+.pf-v5-c-form__label,
+.pf-v5-c-form__label-text,
+label {
+  font-family: var(--mono) !important;
+  font-size: 11px !important;
+  letter-spacing: 0.18em !important;
+  text-transform: uppercase !important;
+  color: var(--gold-deep) !important;
+  font-weight: 500 !important;
+}
+
+/* Inputs. */
+.pf-v5-c-form-control,
+.pf-v5-c-form-control input,
+input[type="text"],
+input[type="password"],
+input[type="email"] {
+  background: var(--bone) !important;
+  background-color: var(--bone) !important;
+  border: 1px solid var(--rule) !important;
+  border-radius: 6px !important;
+  color: var(--ink) !important;
+  font-family: var(--grotesk) !important;
+  font-size: 15px !important;
+  padding: 12px 14px !important;
+  height: auto !important;
+  box-shadow: none !important;
+  transition: border-color 0.12s !important;
+}
+.pf-v5-c-form-control:focus,
+.pf-v5-c-form-control input:focus,
+input[type="text"]:focus,
+input[type="password"]:focus {
+  outline: none !important;
+  border-color: var(--gold-deep) !important;
+  box-shadow: none !important;
+}
+.pf-v5-c-form-control::before,
+.pf-v5-c-form-control::after {
+  display: none !important;
+}
+
+/* Password reveal button (eye toggle) inside .pf-v5-c-input-group. */
+.pf-v5-c-input-group {
+  background: transparent !important;
+  border-radius: 6px !important;
+  overflow: hidden !important;
+  border: 1px solid var(--rule) !important;
+}
+.pf-v5-c-input-group .pf-v5-c-form-control {
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: var(--bone) !important;
+}
+.pf-v5-c-button.pf-m-control {
+  background: var(--bone) !important;
+  background-color: var(--bone) !important;
+  color: var(--ink-2) !important;
+  border: 0 !important;
+  border-left: 1px solid var(--rule) !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+.pf-v5-c-button.pf-m-control:hover {
+  background: var(--bone-2) !important;
+  color: var(--ink) !important;
+}
+
+/* Primary submit button — solid ink, mirrors .btn.solid in the SPA. */
+.pf-v5-c-button.pf-m-primary,
+input[type="submit"],
+#kc-login,
+button[type="submit"] {
+  background: var(--ink) !important;
+  background-color: var(--ink) !important;
+  background-image: none !important;
+  color: var(--bone) !important;
+  border: 1px solid var(--ink) !important;
+  border-radius: 6px !important;
+  font-family: var(--grotesk) !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  letter-spacing: 0.005em !important;
+  height: 44px !important;
+  padding: 0 18px !important;
+  text-shadow: none !important;
+  text-transform: none !important;
+  cursor: pointer !important;
+  transition: background 0.12s !important;
+}
+.pf-v5-c-button.pf-m-primary:hover,
+input[type="submit"]:hover,
+#kc-login:hover,
+button[type="submit"]:hover {
+  background: #2a2622 !important;
+  border-color: #2a2622 !important;
+}
+
+/* Social provider section. Keycloak ships icon-only links with the
+   provider name only in aria-label; reveal it via a generated text
+   node so users see "Continue with Google" / GitHub. */
+#kc-social-providers,
+.kc-social-section,
+.kc-social-gray,
+.pf-v5-c-login__main-footer {
+  background: var(--paper) !important;
+  color: var(--ink) !important;
+}
+#kc-social-providers h2,
+#kc-social-providers h4,
+.pf-v5-c-login__main-footer > h2,
+.pf-v5-c-login__main-footer > h4 {
+  font-family: var(--mono) !important;
+  font-size: 11px !important;
+  letter-spacing: 0.18em !important;
+  text-transform: uppercase !important;
+  color: var(--muted) !important;
+  font-weight: 400 !important;
+  text-align: center !important;
+  margin: 12px 0 16px !important;
+}
+.pf-v5-c-login__main-footer-links {
+  list-style: none !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 10px !important;
+  margin: 8px 0 0 !important;
+  padding: 0 !important;
+}
+.pf-v5-c-login__main-footer-links-item {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+.pf-v5-c-login__main-footer-links-item-link {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 12px !important;
+  height: 48px !important;
+  padding: 0 16px !important;
+  border-radius: 8px !important;
+  border: 1px solid var(--rule) !important;
+  background: var(--paper) !important;
+  color: var(--ink) !important;
+  font-family: var(--grotesk) !important;
+  font-size: 15px !important;
+  font-weight: 500 !important;
+  text-decoration: none !important;
+  transition: background 0.12s, border-color 0.12s !important;
+}
+.pf-v5-c-login__main-footer-links-item-link::after {
+  content: "Continue with " attr(aria-label);
+  font-family: var(--grotesk);
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--ink);
+}
+.pf-v5-c-login__main-footer-links-item-link:hover {
+  background: rgba(20, 15, 10, 0.04) !important;
+  border-color: rgba(20, 15, 10, 0.18) !important;
+}
+.pf-v5-c-login__main-footer-links-item-link svg {
+  width: 20px !important;
+  height: 20px !important;
+  flex: 0 0 20px !important;
+  fill: var(--ink) !important;
+}
+
+/* Google: replace Keycloak's monochrome Font Awesome G with the
+   brand colour mark used in the SPA. We hide the original SVG and
+   render the brand glyph as a sibling pseudo-element so order is
+   preserved (icon, then label). */
+a[aria-label="Google"] svg {
+  display: none !important;
+}
+a[aria-label="Google"]::before {
+  content: "";
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  flex: 0 0 20px;
+  background: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0OCA0OCI+PHBhdGggZmlsbD0iI0VBNDMzNSIgZD0iTTI0IDkuNWMzLjU0IDAgNi43MSAxLjIyIDkuMjEgMy42bDYuODUtNi44NUMzNS45IDIuMzggMzAuNDcgMCAyNCAwIDE0LjYyIDAgNi41MSA1LjM4IDIuNTYgMTMuMjJsNy45OCA2LjE5QzEyLjQzIDEzLjcyIDE3Ljc0IDkuNSAyNCA5LjV6Ii8+PHBhdGggZmlsbD0iIzQyODVGNCIgZD0iTTQ2Ljk4IDI0LjU1YzAtMS41Ny0uMTUtMy4wOS0uMzgtNC41NUgyNHY5LjAyaDEyLjk0Yy0uNTggMi45Ni0yLjI2IDUuNDgtNC43OCA3LjE4bDcuNzMgNmM0LjUxLTQuMTggNy4wOS0xMC4zNiA3LjA5LTE3LjY1eiIvPjxwYXRoIGZpbGw9IiNGQkJDMDUiIGQ9Ik0xMC41MyAyOC41OWMtLjQ4LTEuNDUtLjc2LTIuOTktLjc2LTQuNTlzLjI3LTMuMTQuNzYtNC41OWwtNy45OC02LjE5Qy45MiAxNi40NiAwIDIwLjEyIDAgMjRjMCAzLjg4LjkyIDcuNTQgMi41NiAxMC43OGw3Ljk3LTYuMTl6Ii8+PHBhdGggZmlsbD0iIzM0QTg1MyIgZD0iTTI0IDQ4YzYuNDggMCAxMS45My0yLjEzIDE1Ljg5LTUuODFsLTcuNzMtNmMtMi4xNSAxLjQ1LTQuOTIgMi4zLTguMTYgMi4zLTYuMjYgMC0xMS41Ny00LjIyLTEzLjQ3LTkuOTFsLTcuOTggNi4xOUM2LjUxIDQyLjYyIDE0LjYyIDQ4IDI0IDQ4eiIvPjwvc3ZnPg==") center/contain no-repeat;
+}
+
+/* Links (forgot password, register, locale switcher). */
+a,
+a:link,
+a:visited {
+  color: var(--gold-deep) !important;
+}
+a:hover {
+  color: var(--ink) !important;
+}
+
+/* Feedback banners — alerts, errors. */
+.pf-v5-c-alert {
+  border-radius: 6px !important;
+  font-family: var(--grotesk) !important;
+}
+
+/* Footer / locale switcher. */
+#kc-locale,
+#kc-info {
+  font-family: var(--grotesk) !important;
+  color: var(--muted) !important;
+  background: var(--paper) !important;
+}
+
+/* "Or sign in with" divider band above social providers. */
+.pf-v5-c-login__main-footer-band {
+  border-top: 1px solid var(--rule) !important;
+  margin-top: 8px !important;
+  padding-block: 16px 4px !important;
+  background: var(--paper) !important;
+  text-align: center !important;
+}
+.pf-v5-c-login__main-footer-band-item {
+  font-family: var(--mono) !important;
+  font-size: 11px !important;
+  letter-spacing: 0.18em !important;
+  text-transform: uppercase !important;
+  color: var(--muted) !important;
+  font-weight: 400 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  background: transparent !important;
+}

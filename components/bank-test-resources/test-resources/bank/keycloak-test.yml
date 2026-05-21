@@ -8,6 +8,11 @@ container: !system/component
   realm-import-files:
     - bank/queenswood-realm.json
     - bank/queenswood-ops-realm.json
+  # Brand login theme — keycloak.v2 extended with the SPA's paper /
+  # Geist / gold-deep palette. Both realms reference loginTheme=
+  # queenswood; the component copies the files into the container at
+  # /opt/keycloak/themes/queenswood/login/.
+  theme-resource: bank/keycloak-theme
   # Pin to a stable host port under `dev` so the host-side SPAs
   # (bank-console, bank-app) can reach the testcontainer Keycloak
   # at `http://localhost:8090`. Random port for tests so parallel
