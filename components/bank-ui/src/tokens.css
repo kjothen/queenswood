@@ -1,8 +1,27 @@
-/* Queenswood brand tokens — copied verbatim from the design handoff
-   (Queenswood Home.html). The forest greens share chroma ~0.045-0.06
-   around hue 145; the crown golds are warm at hue 58-92. */
+/* Queenswood design tokens.
+
+   Two layers:
+
+   1. Raw palette  (--bone, --ink, --pine-N, --gold, --gold-N, ...).
+      Stable across themes. Reach for these when you want a *specific*
+      color regardless of light/dark — the gold of the crown, a pine.
+
+   2. Semantic tokens (--surface, --fg, --rule, --hover-overlay, ...).
+      Adapt to theme. Reach for these for everything that should feel
+      "right" in both modes — backgrounds, text, hairlines, hover states.
+
+   Theme switching:
+
+     - Default: browser picks via `color-scheme: light dark` + the user's
+       OS preference. No JS needed.
+     - `[data-theme="light"]` / `[data-theme="dark"]` on <html>: explicit
+       override. Set by theme.svelte.js when the user picks a mode.
+     - The `light-dark()` CSS function reads the active scheme and picks
+       the appropriate side. No media queries, no duplicate :root blocks. */
 
 :root {
+  /* ===== Raw palette — constant across themes ===== */
+
   /* Surfaces */
   --bone:   #f4f1ea;
   --bone-2: #ebe6dc;
@@ -10,8 +29,6 @@
   --ink:    #161310;
   --ink-2:  #2a2622;
   --muted:  #6b645b;
-  --rule:   rgba(20, 15, 10, 0.10);
-  --rule-2: rgba(20, 15, 10, 0.06);
 
   /* Conifer greens */
   --pine-1: oklch(0.28 0.045 150);
@@ -30,8 +47,43 @@
   --gold-4: oklch(0.56 0.160 68);
   --gold-5: oklch(0.42 0.125 58);
 
-  /* Type */
+  /* Type stacks */
   --grotesk: 'Geist', ui-sans-serif, system-ui, sans-serif;
   --serif:   'Cormorant Garamond', ui-serif, Georgia, serif;
   --mono:    'Geist Mono', ui-monospace, monospace;
+
+  /* ===== Semantic tokens — flip with theme via light-dark() ===== */
+
+  color-scheme: light dark;
+
+  /* Surface elevation. Light: bone family. Dark: ink family.
+     `raised` is brighter than `surface` in both modes (cards, the
+     translucent nav bar). `sunk` is recessed. */
+  --surface:        light-dark(#f4f1ea, #2a2622);
+  --surface-sunk:   light-dark(#ebe6dc, #161310);
+  --surface-raised: light-dark(#fbf9f4, #38322c);
+
+  /* Translucent surface — same hue as --surface but at high alpha so
+     whatever sits behind bleeds through. Used by the AppNav's backdrop
+     blur backing. */
+  --surface-translucent: light-dark(
+    rgba(251, 249, 244, 0.86),
+    rgba(42, 38, 34, 0.82)
+  );
+
+  /* Foreground */
+  --fg:       light-dark(#161310, #f4f1ea);
+  --fg-2:     light-dark(#2a2622, #ebe6dc);
+  --fg-muted: light-dark(#6b645b, #8a8377);
+
+  /* Hairlines — alpha-on-fg so they pick up whichever surface they sit on. */
+  --rule:   light-dark(rgba(20, 15, 10, 0.10), rgba(244, 241, 234, 0.12));
+  --rule-2: light-dark(rgba(20, 15, 10, 0.06), rgba(244, 241, 234, 0.06));
+
+  /* Hover overlay — alpha-on-fg, same trick. Lay it on any surface. */
+  --hover-overlay: light-dark(rgba(20, 15, 10, 0.05), rgba(244, 241, 234, 0.06));
 }
+
+/* Explicit user choice — overrides the system preference. */
+[data-theme="light"] { color-scheme: light; }
+[data-theme="dark"]  { color-scheme: dark; }

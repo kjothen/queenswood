@@ -2,7 +2,15 @@
   /* Queenswood logo marks — ported verbatim from
      design_handoff_queenswood_logo/logo-marks.jsx.
      The numeric SVG geometry IS the source of truth; do not
-     eyeball changes — adjust the source then port. */
+     eyeball changes — adjust the source then port.
+
+     v2 — Dark mode support. Gradient stops and monoline strokes
+     wrap their colors in `light-dark()` so the forest stays
+     readable on an ink-2 surface. Brand golds are intentionally
+     left as raw oklch values (per design call). The sealed-bauble
+     fill, which used to be `var(--bone)` to "knock out" against
+     the page, now references `var(--surface)` so it matches
+     whichever theme is active. */
 
   let { variant = "A", size = 120, idPrefix = "qw" } = $props();
 
@@ -54,15 +62,21 @@
   const baseY = 120;
   const baubleR = 3.6;
 
-  // Per-tree gradient — hue 138-156, lightness varies so the forest has
-  // depth instead of looking like one flat shape.
+  // Per-tree gradient. The bottom stop is the one that disappears against
+  // a dark surface — 0.20 lightness vanishes on ink-2 — so the dark side
+  // of light-dark() raises it dramatically. The top stop is also lifted
+  // a touch so the gradient stays a gradient rather than collapsing into
+  // a flat midtone.
   function gradientFor(i) {
     const hue  = 138 + ((i * 7) % 18);
     const topL = 0.66 + ((i * 5) % 10) / 100;
     const botL = 0.20 + ((i * 3) % 8) / 100;
+    const topLDark = 0.78 + ((i * 5) % 10) / 100;
+    const botLDark = 0.46 + ((i * 3) % 8) / 100;
+    const light = (l, c) => `oklch(${l.toFixed(3)} ${c} ${hue})`;
     return {
-      top: `oklch(${topL.toFixed(3)} 0.045 ${hue})`,
-      bot: `oklch(${botL.toFixed(3)} 0.055 ${hue})`,
+      top: `light-dark(${light(topL, 0.045)}, ${light(topLDark, 0.045)})`,
+      bot: `light-dark(${light(botL, 0.055)}, ${light(botLDark, 0.055)})`,
     };
   }
 
@@ -93,6 +107,7 @@
     return { path: points.join(" "), apexes };
   });
 
+  // Brand golds — raw, constant in both themes.
   const goldFill  = "oklch(0.66 0.135 72)";
   const goldDeep  = "oklch(0.58 0.13 72)";
   const goldDark  = "oklch(0.52 0.12 68)";
@@ -100,8 +115,10 @@
 
   let baubleY = $derived(baseY + opts.bandH + opts.toothH + baubleR + 0.6);
 
-  let pineMid = "oklch(0.44 0.060 145)"; // PINE[2] — monoline forest stroke
-  let pineFour = "oklch(0.52 0.060 142)"; // PINE[3] — monoline horizon line
+  // Monoline strokes lift into a paler register on dark surfaces so
+  // the outlines don't disappear into the background.
+  let pineMid  = "light-dark(oklch(0.44 0.060 145), oklch(0.66 0.060 145))";
+  let pineFour = "light-dark(oklch(0.52 0.060 142), oklch(0.70 0.060 142))";
 </script>
 
 <svg
@@ -119,8 +136,8 @@
         {#each trees as _t, i}
           {@const g = gradientFor(i)}
           <linearGradient id="{idPrefix}-e-tg-{i}" x1="0" y1="0" x2="0" y2="1" gradientUnits="objectBoundingBox">
-            <stop offset="0%" stop-color={g.top} />
-            <stop offset="100%" stop-color={g.bot} />
+            <stop offset="0%"   style="stop-color: {g.top}" />
+            <stop offset="100%" style="stop-color: {g.bot}" />
           </linearGradient>
         {/each}
       </defs>
@@ -142,8 +159,8 @@
       {#each trees as _t, i}
         {@const g = gradientFor(i)}
         <linearGradient id="{idPrefix}-tg-{i}" x1="0" y1="0" x2="0" y2="1" gradientUnits="objectBoundingBox">
-          <stop offset="0%" stop-color={g.top} />
-          <stop offset="100%" stop-color={g.bot} />
+          <stop offset="0%"   style="stop-color: {g.top}" />
+          <stop offset="100%" style="stop-color: {g.bot}" />
         </linearGradient>
       {/each}
     </defs>
@@ -171,7 +188,7 @@
 
     {#each crown.apexes as ax, i (i)}
       {#if opts.monolineCrown}
-        <circle cx={ax} cy={baubleY} r={baubleR} fill="var(--bone)" stroke={goldDeep} stroke-width="2.5" />
+        <circle cx={ax} cy={baubleY} r={baubleR} fill="var(--surface)" stroke={goldDeep} stroke-width="2.5" />
       {:else}
         <g>
           <circle cx={ax} cy={baubleY} r={baubleR} fill={goldFill} />

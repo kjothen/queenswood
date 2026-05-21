@@ -92,8 +92,8 @@
     padding: 32px;
   }
   .modal {
-    background: var(--paper);
-    color: var(--ink);
+    background: var(--surface-raised);
+    color: var(--fg);
     border-radius: 12px;
     box-shadow: 0 32px 80px -16px rgba(20, 15, 10, 0.5);
     width: min(880px, 100%);
@@ -121,15 +121,15 @@
     border: none;
     font-size: 24px;
     line-height: 1;
-    color: var(--muted);
+    color: var(--fg-muted);
     cursor: pointer;
     padding: 4px 8px;
     border-radius: 4px;
     transition: background 0.12s, color 0.12s;
   }
   .modal-close:hover {
-    background: rgba(20, 15, 10, 0.05);
-    color: var(--ink);
+    background: var(--hover-overlay);
+    color: var(--fg);
   }
   .modal-body {
     overflow-y: auto;
@@ -143,15 +143,15 @@
     font-size: 11px;
     letter-spacing: 0.16em;
     text-transform: uppercase;
-    color: var(--muted);
+    color: var(--fg-muted);
   }
   .modal-footer a {
-    color: var(--ink);
+    color: var(--fg);
     border-bottom: 1px solid var(--rule);
     padding-bottom: 1px;
   }
   .modal-footer a:hover {
-    border-color: var(--ink);
+    border-color: var(--fg);
   }
 
   /* Rendered markdown styles — scoped to the modal body */
@@ -187,14 +187,14 @@
   .doc-content :global(p) {
     margin: 0 0 14px;
     font-size: 15px;
-    color: var(--ink-2);
+    color: var(--fg-2);
   }
   .doc-content :global(ul),
   .doc-content :global(ol) {
     margin: 0 0 14px;
     padding-left: 22px;
     font-size: 15px;
-    color: var(--ink-2);
+    color: var(--fg-2);
   }
   .doc-content :global(li) {
     margin: 4px 0;
@@ -204,30 +204,30 @@
   }
   .doc-content :global(strong) {
     font-weight: 600;
-    color: var(--ink);
+    color: var(--fg);
   }
   .doc-content :global(em) {
     font-style: italic;
   }
   .doc-content :global(a) {
-    color: var(--ink);
+    color: var(--fg);
     border-bottom: 1px solid var(--gold-deep);
     padding-bottom: 1px;
   }
   .doc-content :global(a:hover) {
-    border-bottom-color: var(--ink);
+    border-bottom-color: var(--fg);
   }
   .doc-content :global(code) {
     font-family: var(--mono);
     font-size: 13px;
-    background: rgba(20, 15, 10, 0.05);
+    background: var(--hover-overlay);
     padding: 1px 6px;
     border-radius: 3px;
   }
   .doc-content :global(pre) {
     margin: 0 0 14px;
     padding: 16px 18px;
-    background: var(--ink);
+    background: var(--fg);
     color: #e9e3d3;
     border-radius: 8px;
     overflow-x: auto;
@@ -245,7 +245,7 @@
     margin: 0 0 14px;
     padding: 4px 14px;
     border-left: 3px solid var(--gold-deep);
-    color: var(--muted);
+    color: var(--fg-muted);
     font-style: italic;
   }
   .doc-content :global(hr) {
@@ -270,7 +270,7 @@
     font-size: 11px;
     letter-spacing: 0.14em;
     text-transform: uppercase;
-    color: var(--muted);
+    color: var(--fg-muted);
     font-weight: 500;
   }
 

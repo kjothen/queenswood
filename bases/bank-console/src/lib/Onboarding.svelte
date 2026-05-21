@@ -64,8 +64,8 @@
 <style>
   .page {
     min-height: 100vh;
-    background: var(--paper);
-    color: var(--ink);
+    background: var(--surface-raised);
+    color: var(--fg);
     font-family: var(--grotesk);
   }
 
@@ -80,7 +80,7 @@
     font-size: 11px;
     letter-spacing: 0.2em;
     text-transform: uppercase;
-    color: var(--muted);
+    color: var(--fg-muted);
     display: inline-flex;
     align-items: center;
     gap: 8px;
@@ -110,13 +110,13 @@
   .lede {
     font-size: 16px;
     line-height: 1.55;
-    color: var(--ink-2);
+    color: var(--fg-2);
     margin: 0 0 28px;
   }
 
   .card {
     padding: 26px;
-    background: var(--paper);
+    background: var(--surface-raised);
     border: 1px solid var(--rule);
     border-radius: 12px;
     display: flex;
@@ -137,8 +137,8 @@
     margin-bottom: 8px;
     border: 1px solid var(--rule);
     border-radius: 6px;
-    background: var(--bone);
-    color: var(--ink);
+    background: var(--surface);
+    color: var(--fg);
     font: inherit;
     font-family: var(--grotesk);
     font-size: 15px;
@@ -174,15 +174,15 @@
     transform: translateY(0.5px);
   }
   .btn.solid {
-    background: var(--ink);
-    color: var(--bone);
+    background: var(--fg);
+    color: var(--surface);
   }
   .btn.solid:hover {
     background: #2a2622;
   }
   .btn:disabled {
-    background: var(--muted);
-    color: var(--bone);
+    background: var(--fg-muted);
+    color: var(--surface);
     cursor: not-allowed;
     opacity: 0.6;
   }
