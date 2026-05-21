@@ -8,6 +8,7 @@
     "preview": "NODE_OPTIONS='--max-http-header-size=32768' vite preview"
   },
   "dependencies": {
+    "@queenswood/bank-ui": "workspace:*",
     "keycloak-js": "^26.0.7",
     "marked": "^18.0.4",
     "svelte-spa-router": "^5.1.0"

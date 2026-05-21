@@ -1,0 +1,15 @@
+{
+  "name": "@queenswood/bank-ui",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Queenswood design system: brand tokens, logo, wordmark, shared chrome. Consumed by bank-console and bank-app via yarn workspaces.",
+  "exports": {
+    ".": "./src/index.js",
+    "./tokens.css": "./src/tokens.css",
+    "./*.svelte": "./src/*.svelte"
+  },
+  "peerDependencies": {
+    "svelte": "^5.25.3"
+  }
+}

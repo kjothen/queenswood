@@ -6,11 +6,15 @@ bank-app-start:
     # so the SPA can reach Keycloak on localhost:8090 and bank-api
     # on localhost:8080.
     set -e
-    cd {{ justfile_directory() }}/bases/bank-app
-    [[ -f .env.local ]] || cp .env.example .env.local
+    cd {{ justfile_directory() }}
+    [[ -f bases/bank-app/.env.local ]] || cp bases/bank-app/.env.example bases/bank-app/.env.local
     echo "bank-app: sign in as 'ops' / 'ops' once Keycloak is reachable."
-    npm install
-    npm run dev
+    # Yarn 4 workspace: a single install at the repo root hoists deps
+    # for bank-app + bank-console + the shared @queenswood/bank-ui
+    # design brick. Corepack resolves yarn 4 from the `packageManager`
+    # field in root package.json, so no global yarn install is needed.
+    corepack yarn install
+    corepack yarn workspace bank-app dev
 
 # Start the Vite dev server for the bank-console org-user SPA (port 5173)
 bank-console-start:
@@ -20,11 +24,11 @@ bank-console-start:
     # so the SPA can reach Keycloak on localhost:8090 and bank-api
     # on localhost:8080.
     set -e
-    cd {{ justfile_directory() }}/bases/bank-console
-    [[ -f .env.local ]] || cp .env.example .env.local
+    cd {{ justfile_directory() }}
+    [[ -f bases/bank-console/.env.local ]] || cp bases/bank-console/.env.example bases/bank-console/.env.local
     echo "bank-console: sign in as 'dev' / 'dev' once Keycloak is reachable."
-    npm install
-    npm run dev
+    corepack yarn install
+    corepack yarn workspace bank-console dev
 
 # Run the bank-monolith against its test application.yml, teeing stdout/stderr to server.log
 bank-monolith-start:

@@ -1,5 +1,5 @@
 import { mount } from "svelte";
-import "./lib/tokens.css";
+import "@queenswood/bank-ui/tokens.css";
 import App from "./App.svelte";
 
 const app = mount(App, { target: document.getElementById("app") });

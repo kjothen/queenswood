@@ -1,7 +1,7 @@
 <script>
   import { onMount } from "svelte";
   import { onboard } from "./api.mjs";
-  import AppNav from "./AppNav.svelte";
+  import { AppNav } from "@queenswood/bank-ui";
 
   let { onComplete, onSignOut, defaultName = "" } = $props();
   // Read `defaultName` inside onMount, not at module scope: Svelte 5
