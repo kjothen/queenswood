@@ -8,6 +8,7 @@
   import Onboarding from "./lib/Onboarding.svelte";
   import AppShell from "./lib/AppShell.svelte";
   import Products from "./lib/Products.svelte";
+  import LegalPersons from "./lib/LegalPersons.svelte";
   import ComingSoon from "./lib/ComingSoon.svelte";
 
   // Unauthenticated surfaces are URL-routed so /#/sign-in is shareable
@@ -34,8 +35,8 @@
         props: { user, memberships },
       }),
       "/parties": wrap({
-        component: ComingSoon,
-        props: { name: "Parties", kicker },
+        component: LegalPersons,
+        props: { user, memberships },
       }),
       "/accounts": wrap({
         component: ComingSoon,

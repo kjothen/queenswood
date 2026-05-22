@@ -64,7 +64,7 @@
 <style>
   .page {
     min-height: 100vh;
-    background: var(--surface-raised);
+    background: var(--surface);
     color: var(--fg);
     font-family: var(--grotesk);
   }

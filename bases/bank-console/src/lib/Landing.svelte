@@ -5,8 +5,69 @@
      an identity provider. Keycloak handoff happens from SignInPage. */
 
   import { push } from "svelte-spa-router";
-  import { Logo, Wordmark, ThemeToggle } from "@queenswood/bank-ui";
+  import {
+    Logo,
+    Wordmark,
+    ThemeToggle,
+    Card,
+    CardHeader,
+    CardBody,
+    CardFooter,
+    CodeCard,
+  } from "@queenswood/bank-ui";
   import DocViewer from "./DocViewer.svelte";
+
+  // Slug helper for the CardFooter ref link: trims the GitHub URL down
+  // to the doc's human-readable slug (strips path, leading numbers,
+  // and the .md extension). "0013-single-unified-api.md" → "single-
+  // unified-api"; "policy-evaluation.md" → "policy-evaluation".
+  function slugFromHref(href) {
+    const file = href.split("/").pop() ?? "";
+    return file.replace(/\.md$/i, "").replace(/^\d+-/, "");
+  }
+
+  // The Engineering Choices grid. Last card has variant="feature" so
+  // it stands out as the section's one inverted accent. Body uses
+  // {@html} because one entry contains inline <code>.
+  const PRINCIPLES = [
+    { key: "adr-0013", kicker: "ADR · 0013 · 0014",
+      title: "One unified API. OpenAPI is the contract.",
+      href: "https://github.com/repldriven/queenswood/blob/main/docs/adr/0013-single-unified-api.md",
+      body: "Bank-shaped, not implementation-shaped. The spec drives client generation, validation, and documentation — there is no second source of truth." },
+    { key: "tdd-policy", kicker: "TDD · policy-evaluation",
+      title: "Policies as data, not hard-coded rules.",
+      href: "https://github.com/repldriven/queenswood/blob/main/docs/tdd/policy-evaluation.md",
+      body: "Capabilities and limits are records. A curative-permit pattern lets your customers self-correct balances out of breach without a manual override." },
+    { key: "tdd-interest", kicker: "TDD · interest",
+      title: "Pennies are conserved by construction.",
+      href: "https://github.com/repldriven/queenswood/blob/main/docs/tdd/interest.md",
+      body: "Integer micro-unit arithmetic with sub-minor-unit carry. Daily accrual, monthly capitalisation, six-leg postings — ties out exactly." },
+    { key: "tdd-scenario", kicker: "TDD · scenario-testing",
+      title: "A pure model runs beside the real system.",
+      href: "https://github.com/repldriven/queenswood/blob/main/docs/tdd/scenario-testing.md",
+      body: "Tests pass only when the two agree. Property-based testing via fugato plus hand-authored EDN scenarios, sharing one runner." },
+    { key: "adr-0005", kicker: "ADR · 0005",
+      title: "Anomalies, not exceptions.",
+      href: "https://github.com/repldriven/queenswood/blob/main/docs/adr/0005-error-handling-with-anomalies.md",
+      body: "Three semantic kinds — error, rejection, unauthorized — mapping directly to HTTP status families at every component interface." },
+    { key: "adr-0007", kicker: "ADR · 0007",
+      title: "System-as-data.",
+      href: "https://github.com/repldriven/queenswood/blob/main/docs/adr/0007-system-as-data.md",
+      body: "donut.system + YAML. Components are records, profiles are values, testcontainers and production share one bootstrap path." },
+    { key: "adr-0002", kicker: "ADR · 0002",
+      title: "The changelog is the outbox.",
+      href: "https://github.com/repldriven/queenswood/blob/main/docs/adr/0002-foundationdb-record-layer.md",
+      body: "FoundationDB Record Layer gives multi-record ACID by default; the transactional outbox pattern falls out of the storage engine — no separate table." },
+    { key: "adr-0001", kicker: "ADR · 0001",
+      title: "A domain fork of mono.",
+      href: "https://github.com/repldriven/queenswood/blob/main/docs/adr/0001-reuse-mono-as-upstream.md",
+      body: "Infrastructure bricks live in the workspace, not as a library. Pulled upstream via <code>git merge upstream/main</code>; bank-specific code stays close." },
+    { key: "recipe-tc", kicker: "Recipe · testcontainers",
+      title: "REPL on the inside.",
+      href: "https://github.com/repldriven/queenswood/blob/main/docs/recipes/testcontainers.md",
+      body: "Start a REPL, evaluate a comment block, and the whole system — FDB, Pulsar, HTTP, Keycloak — boots inside Testcontainers. The dev loop is the system.",
+      variant: "feature" },
+  ];
 
   // Markdown docs imported as raw strings at build time. Each card
   // in the Engineering Choices section opens its doc in a modal via
@@ -167,31 +228,17 @@
         </div>
       </div>
       <div>
-        <div class="code" aria-label="API example">
-          <div class="bar">
-            <div class="dots">
-              <span class="dot"></span><span class="dot"></span><span
-                class="dot"
-              ></span>
-            </div>
-            <span>~/queenswood · zsh</span>
-          </div>
-          <pre class="body"><span class="c"
-              ># Authed via OAuth (Keycloak). Issue an API key for machine-to-machine.</span
-            >
-<span class="k">curl</span
-            > -X POST https://api.queenswood.local/v1/organisations \
-  -H <span class="s">"Authorization: Bearer $QW_OAUTH_TOKEN"</span> \
-  -H <span class="s">"Content-Type: application/json"</span> \
-  -d <span class="s"
-              >{`'{ "name": "northwind-fs",
-       "jurisdiction": "GB" }'`}</span
-            >
+        <CodeCard filename="~/queenswood · zsh">
+          <pre><span class="syn-comment"># Authed via OAuth (Keycloak). Issue an API key for machine-to-machine.</span>
+<span class="syn-keyword">curl</span> -X POST https://api.queenswood.local/v1/organisations \
+  -H <span class="syn-string">"Authorization: Bearer $QW_OAUTH_TOKEN"</span> \
+  -H <span class="syn-string">"Content-Type: application/json"</span> \
+  -d <span class="syn-string">{`'{ "name": "northwind-fs",
+       "jurisdiction": "GB" }'`}</span>
 
-<span class="c">#</span> <span class="g">{`{ "id": "org.01HW7…",`}</span>
-<span class="c">#  </span>  <span class="g">{`"status": "active" }`}</span
-            ></pre>
-        </div>
+<span class="syn-comment">#</span> <span class="syn-emphasis">{`{ "id": "org.01HW7…",`}</span>
+<span class="syn-comment">#  </span>  <span class="syn-emphasis">{`"status": "active" }`}</span></pre>
+        </CodeCard>
       </div>
     </div>
   </div>
@@ -552,119 +599,21 @@
       codebase, each documented, so you can read on a coffee break.
     </p>
     <div class="grid">
-      <a target="_blank" rel="noreferrer"
-        class="pri"
-        href="https://github.com/repldriven/queenswood/blob/main/docs/adr/0013-single-unified-api.md"
-        onclick={openDoc("adr-0013")}
-      >
-        <span class="num">ADR · 0013 · 0014</span>
-        <h4>One unified API. OpenAPI is the contract.</h4>
-        <p>
-          Bank-shaped, not implementation-shaped. The spec drives client
-          generation, validation, and documentation — there is no second source
-          of truth.
-        </p>
-      </a>
-      <a target="_blank" rel="noreferrer"
-        class="pri"
-        href="https://github.com/repldriven/queenswood/blob/main/docs/tdd/policy-evaluation.md"
-        onclick={openDoc("tdd-policy")}
-      >
-        <span class="num">TDD · policy-evaluation</span>
-        <h4>Policies as data, not hard-coded rules.</h4>
-        <p>
-          Capabilities and limits are records. A curative-permit pattern lets
-          your customers self-correct balances out of breach without a manual
-          override.
-        </p>
-      </a>
-      <a target="_blank" rel="noreferrer"
-        class="pri"
-        href="https://github.com/repldriven/queenswood/blob/main/docs/tdd/interest.md"
-        onclick={openDoc("tdd-interest")}
-      >
-        <span class="num">TDD · interest</span>
-        <h4>Pennies are conserved by construction.</h4>
-        <p>
-          Integer micro-unit arithmetic with sub-minor-unit carry. Daily
-          accrual, monthly capitalisation, six-leg postings — ties out exactly.
-        </p>
-      </a>
-      <a target="_blank" rel="noreferrer"
-        class="pri"
-        href="https://github.com/repldriven/queenswood/blob/main/docs/tdd/scenario-testing.md"
-        onclick={openDoc("tdd-scenario")}
-      >
-        <span class="num">TDD · scenario-testing</span>
-        <h4>A pure model runs beside the real system.</h4>
-        <p>
-          Tests pass only when the two agree. Property-based testing via fugato
-          plus hand-authored EDN scenarios, sharing one runner.
-        </p>
-      </a>
-      <a target="_blank" rel="noreferrer"
-        class="pri"
-        href="https://github.com/repldriven/queenswood/blob/main/docs/adr/0005-error-handling-with-anomalies.md"
-        onclick={openDoc("adr-0005")}
-      >
-        <span class="num">ADR · 0005</span>
-        <h4>Anomalies, not exceptions.</h4>
-        <p>
-          Three semantic kinds — error, rejection, unauthorized — mapping
-          directly to HTTP status families at every component interface.
-        </p>
-      </a>
-      <a target="_blank" rel="noreferrer"
-        class="pri"
-        href="https://github.com/repldriven/queenswood/blob/main/docs/adr/0007-system-as-data.md"
-        onclick={openDoc("adr-0007")}
-      >
-        <span class="num">ADR · 0007</span>
-        <h4>System-as-data.</h4>
-        <p>
-          donut.system + YAML. Components are records, profiles are values,
-          testcontainers and production share one bootstrap path.
-        </p>
-      </a>
-      <a target="_blank" rel="noreferrer"
-        class="pri"
-        href="https://github.com/repldriven/queenswood/blob/main/docs/adr/0002-foundationdb-record-layer.md"
-        onclick={openDoc("adr-0002")}
-      >
-        <span class="num">ADR · 0002</span>
-        <h4>The changelog <em>is</em> the outbox.</h4>
-        <p>
-          FoundationDB Record Layer gives multi-record ACID by default; the
-          transactional outbox pattern falls out of the storage engine — no
-          separate table.
-        </p>
-      </a>
-      <a target="_blank" rel="noreferrer"
-        class="pri"
-        href="https://github.com/repldriven/queenswood/blob/main/docs/adr/0001-reuse-mono-as-upstream.md"
-        onclick={openDoc("adr-0001")}
-      >
-        <span class="num">ADR · 0001</span>
-        <h4>A domain fork of mono.</h4>
-        <p>
-          Infrastructure bricks live in the workspace, not as a library. Pulled
-          upstream via <code>git merge upstream/main</code>; bank-specific code
-          stays close.
-        </p>
-      </a>
-      <a target="_blank" rel="noreferrer"
-        class="pri dark"
-        href="https://github.com/repldriven/queenswood/blob/main/docs/recipes/testcontainers.md"
-        onclick={openDoc("recipe-tc")}
-      >
-        <span class="num">Recipe · testcontainers</span>
-        <h4>REPL on the inside.</h4>
-        <p>
-          Start a REPL, evaluate a comment block, and the whole system — FDB,
-          Pulsar, HTTP, Keycloak — boots inside Testcontainers. The dev loop is
-          the system.
-        </p>
-      </a>
+      {#each PRINCIPLES as p (p.key)}
+        <Card
+          variant={p.variant}
+          href={p.href}
+          onclick={openDoc(p.key)}
+          target="_blank"
+          rel="noreferrer"
+        >
+          <CardHeader kicker={p.kicker} title={p.title} />
+          <CardBody>
+            {@html p.body}
+          </CardBody>
+          <CardFooter><a href={p.href}>{slugFromHref(p.href)} →</a></CardFooter>
+        </Card>
+      {/each}
     </div>
   </div>
 </section>
@@ -694,31 +643,17 @@
         </div>
       </div>
       <div>
-        <div class="code">
-          <div class="bar">
-            <div class="dots">
-              <span class="dot"></span><span class="dot"></span><span
-                class="dot"
-              ></span>
-            </div>
-            <span>install · Kubernetes</span>
-          </div>
-          <pre class="body"><span class="c"
-              ># Install the chart (Keycloak, both consoles, all services included)</span
-            >
-<span class="k">helm</span> install queenswood \
+        <CodeCard filename="install · Kubernetes">
+          <pre><span class="syn-comment"># Install the chart (Keycloak, both consoles, all services included)</span>
+<span class="syn-keyword">helm</span> install queenswood \
   oci://ghcr.io/repldriven/queenswood \
   -n queenswood --create-namespace \
   --wait --timeout 10m
 
-<span class="c"># Sign in via Keycloak at:</span>
-<span class="c">#</span>   <span class="g">localhost:8081</span>  <span
-              class="c">for Queenswood operators</span
-            >
-<span class="c">#</span>   <span class="g">localhost:8082</span>  <span
-              class="c">for bank teams</span
-            ></pre>
-        </div>
+<span class="syn-comment"># Sign in via Keycloak at:</span>
+<span class="syn-comment">#</span>   <span class="syn-emphasis">localhost:8081</span>  <span class="syn-comment">for Queenswood operators</span>
+<span class="syn-comment">#</span>   <span class="syn-emphasis">localhost:8082</span>  <span class="syn-comment">for bank teams</span></pre>
+        </CodeCard>
       </div>
     </div>
   </div>
@@ -829,7 +764,13 @@
   :global(html),
   :global(body),
   :global(#app) {
-    background: var(--surface-raised);
+    /* Landing sits on --surface (the base tier), matching the
+       showcase. Cards and code panels live *above* this baseline
+       on --surface-raised / --ink, so they read as elevated /
+       depressed in both themes. Originally migrated to
+       --surface-raised here too, which squashed CodeCard against
+       the page in dark mode. */
+    background: var(--surface);
     color: var(--fg);
     font-family: var(--grotesk);
     -webkit-font-smoothing: antialiased;
@@ -1076,68 +1017,8 @@
     background: var(--pine-3);
   }
 
-  /* Terminal/shell panels stay dark in both modes — code-on-dark is
-     the conventional reading experience. Uses raw --ink so the panel
-     punctuates the page the same way regardless of theme. The
-     hairline border is bone-on-ink in dark mode (10% via --rule) so
-     the panel doesn't blend into the surrounding surface-raised
-     when both are dark; in light mode the strong ink/paper contrast
-     carries the separation on its own. */
-  .code {
-    background: var(--ink);
-    color: #e9e3d3;
-    border: 1px solid var(--rule);
-    border-radius: 12px;
-    box-shadow:
-      0 28px 60px -28px rgba(20, 15, 10, 0.45),
-      0 2px 6px rgba(20, 15, 10, 0.08);
-    overflow: hidden;
-    font-family: var(--mono);
-    font-size: 13.5px;
-    line-height: 1.6;
-  }
-  .code .bar {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 12px 16px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.07);
-    font-family: var(--grotesk);
-    font-size: 11px;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: rgba(244, 241, 234, 0.6);
-  }
-  .code .bar .dots {
-    display: flex;
-    gap: 6px;
-  }
-  .code .bar .dot {
-    width: 9px;
-    height: 9px;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, 0.12);
-  }
-  .code .body {
-    margin: 0;
-    padding: 18px 22px;
-    white-space: pre;
-    overflow-x: auto;
-    font-family: var(--mono);
-    color: #e9e3d3;
-  }
-  .code .body .c {
-    color: rgba(244, 241, 234, 0.42);
-  }
-  .code .body .k {
-    color: oklch(0.86 0.08 90);
-  }
-  .code .body .s {
-    color: oklch(0.82 0.1 145);
-  }
-  .code .body .g {
-    color: var(--gold-bright);
-  }
+  /* Terminal/code panels and ADR cards are now CodeCard + Card from
+     bank-ui; the chrome/typography lives in the design system. */
 
   .hero .ornament,
   .final .ornament {
@@ -1501,79 +1382,16 @@
     margin: 0 0 48px;
     line-height: 1.55;
   }
+  /* Cards in the principles grid are bank-ui Card primitives now;
+     this rule just owns the layout. Equal-height min-height matches
+     the bank-ui showcase's card-grid-3 convention. */
   .principles .grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 28px;
   }
-  .pri {
-    padding: 26px;
-    border: 1px solid var(--rule);
-    border-radius: 12px;
-    background: var(--surface-raised);
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
+  .principles .grid > * {
     min-height: 200px;
-    position: relative;
-    transition:
-      border-color 0.12s,
-      transform 0.12s,
-      box-shadow 0.12s;
-  }
-  .pri:hover {
-    border-color: var(--gold-deep);
-    transform: translateY(-1px);
-    box-shadow: 0 8px 24px -16px rgba(20, 15, 10, 0.2);
-  }
-  .pri.dark:hover {
-    border-color: var(--gold);
-  }
-  .pri .num {
-    font-family: var(--mono);
-    font-size: 11px;
-    letter-spacing: 0.2em;
-    color: var(--gold-deep);
-    text-transform: uppercase;
-  }
-  .pri h4 {
-    font-family: var(--serif);
-    font-size: 24px;
-    font-weight: 500;
-    margin: 0;
-    line-height: 1.15;
-    letter-spacing: -0.005em;
-    text-wrap: pretty;
-  }
-  .pri h4 em {
-    font-style: italic;
-    color: var(--gold-deep);
-  }
-  .pri p {
-    margin: 0;
-    font-size: 14px;
-    line-height: 1.55;
-    color: var(--fg-2);
-  }
-  .pri code {
-    font-family: var(--mono);
-    font-size: 12.5px;
-  }
-  /* The one always-dark recipe card among the light grid. Raw ink
-     across themes so the "this is the dark one" intent survives. */
-  .pri.dark {
-    background: var(--ink);
-    color: var(--bone);
-    border-color: var(--ink);
-  }
-  .pri.dark .num {
-    color: var(--gold);
-  }
-  .pri.dark h4 {
-    color: var(--bone);
-  }
-  .pri.dark p {
-    color: rgba(244, 241, 234, 0.7);
   }
 
   /* Always-dark "Run it locally" CTA section. Constant ink across

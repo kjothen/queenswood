@@ -75,7 +75,7 @@
     display: grid;
     grid-template-columns: 1.05fr 1fr;
     min-height: 100vh;
-    background: var(--surface-raised);
+    background: var(--surface);
     color: var(--fg);
     font-family: var(--grotesk);
     position: relative;
@@ -92,7 +92,7 @@
   }
 
   .brand {
-    background: var(--surface-raised);
+    background: var(--surface);
     border-right: 1px solid var(--rule);
     padding: 64px;
     display: flex;
@@ -137,7 +137,7 @@
   }
 
   .card {
-    background: var(--surface-raised);
+    background: var(--surface);
     display: flex;
     align-items: center;
     padding: 64px;

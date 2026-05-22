@@ -6,6 +6,7 @@
        published  muted pine   — live
        archived   muted gray   — historical / inactive
        pending    muted violet — awaiting an external step
+       rejected   muted rust   — declined by an approver
        neutral   surface-sunk  — fallback / no-state
 
      Text is lowercased visually so callers can pass "Published" or
@@ -55,6 +56,10 @@
   .badge.pending {
     background: light-dark(oklch(0.92 0.04 270),  oklch(0.27 0.05 270));
     color:      light-dark(oklch(0.40 0.08 270),  oklch(0.80 0.07 270));
+  }
+  .badge.rejected {
+    background: light-dark(oklch(0.92 0.04 30),   oklch(0.27 0.055 30));
+    color:      light-dark(oklch(0.42 0.115 30),  oklch(0.82 0.105 30));
   }
   .badge.neutral {
     background: var(--surface-sunk);

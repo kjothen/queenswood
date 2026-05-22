@@ -111,3 +111,27 @@ export function publish_cash_account_product(product_id, version_id) {
     { method: "POST" },
   );
 }
+
+// ─── Parties (org-scoped) ───
+//
+// bank-api `Party` shape carries summary fields only (party-id, type,
+// display-name, status, created-at, updated-at). The richer record
+// the Legal Persons drawer wants — given/family names, dob, address,
+// national identifier — is what `create_party` accepts but not what
+// `list_parties` returns. The drawer falls back to "—" for the
+// per-field detail until the read endpoint surfaces it.
+
+export function list_parties() {
+  return request("/v1/parties");
+}
+
+export function get_party(party_id) {
+  return request(`/v1/parties/${party_id}`);
+}
+
+export function create_party(data) {
+  return mutate("/v1/parties", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}

@@ -17,6 +17,7 @@
     PageHeader, Drawer,
     Table, Thead, Tbody, Tr, Th, Td,
     Field, Input, Select,
+    Card, CardHeader, CardBody, CardFooter, CodeCard,
     themeState, resolvedTheme,
   } from "../src/index.js";
 
@@ -35,6 +36,7 @@
     { id: "pageheader", label: "PageHeader" },
     { id: "sidenav",    label: "Sidenav" },
     { id: "drawer",     label: "Drawer" },
+    { id: "cards",      label: "Cards" },
   ];
 
   const VARIANTS = [
@@ -658,6 +660,84 @@
       </div>
     </section>
 
+    <!-- =================== 15 Cards =================== -->
+    <section id="cards" class="section">
+      <div class="section-head">
+        <span class="kicker">15 — Cards</span>
+        <h2>Containers for content.</h2>
+        <p class="lead">Composable: <code>Card</code> wraps <code>CardHeader</code> / <code>CardBody</code> / <code>CardFooter</code>. Variants: <code>default</code>, <code>feature</code>, <code>sunk</code>, <code>outline</code>. Pair with <code>href</code> for clickable cards.</p>
+      </div>
+
+      <div class="subhead">
+        <h3>Design-decision cards</h3>
+        <p>The pattern from the home page: kicker + serif title + body + ref link. Three to a row, equal height. One <code>feature</code> card per grid is plenty.</p>
+      </div>
+      <div class="card-grid-3">
+        <Card href="#cards">
+          <CardHeader kicker="ADR-0013" title="One unified API. OpenAPI is the contract." />
+          <CardBody>
+            <p>Bank-shaped, not implementation-shaped. The spec drives client generation, validation, and documentation — there is no second source of truth.</p>
+          </CardBody>
+          <CardFooter><a href="#cards">single-unified-api →</a></CardFooter>
+        </Card>
+
+        <Card href="#cards">
+          <CardHeader kicker="policy-evaluation" title="Policies as data, not hard-coded rules." />
+          <CardBody>
+            <p>Capabilities and limits are records. A curative-permit pattern lets a tenant self-correct out of breach without a manual override.</p>
+          </CardBody>
+          <CardFooter><a href="#cards">policy-evaluation →</a></CardFooter>
+        </Card>
+
+        <Card variant="feature" href="#cards">
+          <CardHeader kicker="REPL · TESTCONTAINERS" title="REPL on the inside." />
+          <CardBody>
+            <p>Start a REPL, evaluate a comment block, and the whole system — FDB, Pulsar, HTTP — boots inside Testcontainers. The dev loop is the system.</p>
+          </CardBody>
+          <CardFooter><a href="#cards">just repl →</a></CardFooter>
+        </Card>
+      </div>
+
+      <div class="subhead">
+        <h3>Variants</h3>
+        <p><code>default</code> (surface-raised), <code>feature</code> (inverted), <code>sunk</code> (recessed), <code>outline</code> (hairline only).</p>
+      </div>
+      <div class="card-grid-4">
+        <Card>
+          <CardHeader kicker="DEFAULT" title="A standard surface." />
+          <CardBody><p>Surface-raised background with a hairline border.</p></CardBody>
+        </Card>
+        <Card variant="feature">
+          <CardHeader kicker="FEATURE" title="An inverted accent." />
+          <CardBody><p>Inverts surface tone in both themes for emphasis.</p></CardBody>
+        </Card>
+        <Card variant="sunk">
+          <CardHeader kicker="SUNK" title="A recessed area." />
+          <CardBody><p>Surface-sunk background. For inset content.</p></CardBody>
+        </Card>
+        <Card variant="outline">
+          <CardHeader kicker="OUTLINE" title="A hairline frame." />
+          <CardBody><p>Transparent fill, just the rule.</p></CardBody>
+        </Card>
+      </div>
+
+      <div class="subhead">
+        <h3>CodeCard</h3>
+        <p>Dark fill regardless of theme — terminal aesthetic. Title bar with traffic-light dots + filename. Syntax token classes (<code>.syn-comment</code>, <code>.syn-keyword</code>, <code>.syn-string</code>, <code>.syn-fn</code>, <code>.syn-emphasis</code>, …) for hand-classed snippets or build-time highlighters.</p>
+      </div>
+      <CodeCard filename="~/queenswood · zsh">
+<pre><span class="syn-comment"># Authed via OAuth (Keycloak). Issue an API key for machine-to-machine.</span>
+<span class="syn-keyword">curl</span> -X POST https://api.queenswood.local/v1/organisations \
+  -H <span class="syn-string">"Authorization: Bearer $QW_OAUTH_TOKEN"</span> \
+  -H <span class="syn-string">"Content-Type: application/json"</span> \
+  -d <span class="syn-string">'&#123; "name": "northwind-fs",
+       "jurisdiction": "GB" &#125;'</span>
+
+<span class="syn-comment">#</span> <span class="syn-emphasis">&#123; "id": "org_01HW7…",</span>
+<span class="syn-comment">#  </span>  <span class="syn-emphasis">"status": "active" &#125;</span></pre>
+      </CodeCard>
+    </section>
+
     <footer class="foot">
       <span class="foot-mark"><Logo variant="C" size={36} idPrefix="sc-foot" /></span>
       <span class="foot-text">
@@ -1177,6 +1257,22 @@
     border-radius: 6px;
     display: flex;
     justify-content: flex-start;
+  }
+
+  /* ===== Cards demo ===== */
+  .card-grid-3 {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 24px;
+  }
+  .card-grid-3 > * { min-height: 200px; }
+  .card-grid-4 {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 20px;
+  }
+  @media (min-width: 1200px) {
+    .card-grid-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   }
 
   /* ===== Foot ===== */
