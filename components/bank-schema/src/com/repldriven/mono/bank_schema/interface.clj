@@ -10,6 +10,7 @@
     [com.repldriven.mono.schemas.cash_account_products :as
      cash-account-products]
     [com.repldriven.mono.schemas.cash_accounts :as cash-accounts]
+    [com.repldriven.mono.schemas.company :as company]
     [com.repldriven.mono.schemas.idempotency :as idempotency]
     [com.repldriven.mono.schemas.idv :as idv]
     [com.repldriven.mono.schemas.memberships :as memberships]
@@ -32,6 +33,7 @@
     (com.repldriven.mono.schemas.cash_accounts
      CashAccountProto$CashAccount
      CashAccountChangelogProto$CashAccountChangelog)
+    (com.repldriven.mono.schemas.company CompanyProto$Company)
     (com.repldriven.mono.schemas.idempotency IdempotencyProto$Idempotency)
     (com.repldriven.mono.schemas.idv IdvProto$Idv
                                      IdvChangelogProto$IdvChangelog)
@@ -158,6 +160,25 @@
   [m]
   (CashAccountProductProto$CashAccountProduct/parseFrom
    (CashAccountProduct->pb m)))
+
+(def ^{:doc "Parse Company protobuf bytes into a Clojure map."} pb->Company
+  company/pb->Company)
+
+(defn Company->pb
+  "Serialise a Company map to protobuf bytes.
+
+  Args:
+  - m: Company map matching the generated schema."
+  [m]
+  (proto/->pb (company/new-Company m)))
+
+(defn Company->java
+  "Parse a Company map into the generated Java protobuf class.
+
+  Args:
+  - m: Company map matching the generated schema."
+  [m]
+  (CompanyProto$Company/parseFrom (Company->pb m)))
 
 (def ^{:doc "Parse Idempotency protobuf bytes into a Clojure map."}
      pb->Idempotency

@@ -76,6 +76,9 @@
                            "test-resources"]},
             "bank-onfido-simulator-service"
               {:alias "ios",
+               :necessary ["test-resources"]},
+            "bank-uk-companies-house-simulator-service"
+              {:alias "ucs",
                :necessary ["test-resources"]}},
  :tag-patterns {:release "v[0-9]*", :stable "stable-*"},
  :test {:create-test-runner
