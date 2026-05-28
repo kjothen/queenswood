@@ -10,13 +10,13 @@
 (defn list-balances
   [request]
   (let [{:keys [record-db record-store auth parameters]} request
-        {:keys [organization-id]} auth
+        {:keys [bank-id]} auth
         {:keys [path]} parameters
         {:keys [account-id]} path
         config {:record-db record-db :record-store record-store}
         result (let-nom>
                  [_ (cash-accounts/get-account config
-                                               organization-id
+                                               bank-id
                                                account-id)
                   balances (balances/get-balances config account-id)]
                  balances)]
@@ -27,13 +27,13 @@
 (defn get-balance
   [request]
   (let [{:keys [record-db record-store auth parameters]} request
-        {:keys [organization-id]} auth
+        {:keys [bank-id]} auth
         {:keys [path]} parameters
         {:keys [account-id balance-type currency balance-status]} path
         config {:record-db record-db :record-store record-store}
         result (let-nom>
                  [_ (cash-accounts/get-account config
-                                               organization-id
+                                               bank-id
                                                account-id)
                   balance (balances/get-balance config
                                                 account-id

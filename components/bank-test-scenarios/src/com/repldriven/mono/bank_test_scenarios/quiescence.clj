@@ -10,12 +10,12 @@
 (def ^:private poll-interval-ms 25)
 
 (defn wait-for-party-active
-  ([bank organization-id party-id]
-   (wait-for-party-active bank organization-id party-id default-deadline-ms))
-  ([bank organization-id party-id deadline-ms]
+  ([bank bank-id party-id]
+   (wait-for-party-active bank bank-id party-id default-deadline-ms))
+  ([bank bank-id party-id deadline-ms]
    (let [deadline (+ (System/currentTimeMillis) deadline-ms)]
      (loop []
-       (let [party (party/get-party bank organization-id party-id)
+       (let [party (party/get-party bank bank-id party-id)
              status (when-not (error/anomaly? party) (:status party))]
          (cond
           (= :party-status-active status)
@@ -24,7 +24,7 @@
           (>= (System/currentTimeMillis) deadline)
           (error/fail :scenario/quiescence-timeout
                       {:message "Party did not become active"
-                       :organization-id organization-id
+                       :bank-id bank-id
                        :party-id party-id
                        :status status})
 

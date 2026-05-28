@@ -76,17 +76,14 @@
     (-admin-token-atom [_] admin-token)
     (-jwks-atom [_] jwks)
   identity-provider/IdentityProvider
-    (-create-service-account [this {:keys [organization-id name audience]}]
-      (let-nom> [_ (core/create-client this
-                                       {:organization-id organization-id
-                                        :name name
-                                        :audience audience})
-                 result (core/client-secret this organization-id)]
+    (-create-service-account [this {:keys [bank-id name audience]}]
+      (let-nom> [_ (core/create-client
+                    this
+                    {:bank-id bank-id :name name :audience audience})
+                 result (core/client-secret this bank-id)]
         result))
-    (-revoke-service-account [this organization-id]
-      (core/delete-client this organization-id))
-    (-rotate-secret [this organization-id]
-      (core/regenerate-secret this organization-id))
+    (-revoke-service-account [this bank-id] (core/delete-client this bank-id))
+    (-rotate-secret [this bank-id] (core/regenerate-secret this bank-id))
     (-exchange-client-credentials [this creds]
       (core/exchange-client-credentials this creds))
     (-verify-token [this jwt-string opts]

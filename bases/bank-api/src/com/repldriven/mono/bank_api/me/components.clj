@@ -34,11 +34,11 @@
   [:map {:json-schema/example examples/Membership}
    [:membership-id [:ref "MembershipId"]]
    [:user-id [:ref "UserId"]]
-   [:organization-id [:ref "OrganizationId"]]
+   [:bank-id [:ref "BankId"]]
    ;; Optional because the field is enriched by the handler from a
    ;; sibling brick — a stripped-down read path (or a future caller)
    ;; could legitimately omit it.
-   [:organization-name {:optional true} [:ref "Name"]]
+   [:bank-name {:optional true} [:ref "Name"]]
    [:role [:ref "Role"]]
    [:created-at [:ref "Timestamp"]]
    [:updated-at [:ref "Timestamp"]]])

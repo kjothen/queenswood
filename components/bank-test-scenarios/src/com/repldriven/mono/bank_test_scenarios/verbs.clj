@@ -8,7 +8,7 @@
     [com.repldriven.mono.bank-cash-account.interface :as cash-accounts]
     [com.repldriven.mono.bank-idv.interface :as idv]
     [com.repldriven.mono.bank-interest.interface :as interest]
-    [com.repldriven.mono.bank-organization.interface :as organizations]
+    [com.repldriven.mono.bank-bank.interface :as banks]
     [com.repldriven.mono.bank-party.interface :as party]
     [com.repldriven.mono.bank-payee-check.interface :as payee-check]
     [com.repldriven.mono.bank-payment.interface :as payment]
@@ -77,13 +77,12 @@
         model-prod (model-id-for-next-product next-product-id)
         model-party (model-id-for-next-party next-party-id)
         org-name (str "Scenario Customer " counter)
-        result (organizations/new-organization bank
-                                               org-name
-                                               :organization-type-customer
-                                               :organization-status-test
-                                               "micro" ["GBP"])
-        org (:organization result)
-        real-org-id (:organization-id org)
+        result (banks/new-bank bank
+                               org-name
+                               :bank-type-customer :bank-status-test
+                               "micro" ["GBP"])
+        org (:bank result)
+        real-org-id (:bank-id org)
         real-acct-id (get-in org [:accounts 0 :account-id])
         _ (when real-acct-id (seed-opened bank real-org-id real-acct-id))]
     (-> ctx
@@ -234,7 +233,7 @@
              {:type :identifier-type-national-insurance
               :value (name ni-marker)
               :issuing-country "GB"})
-        payload (cond-> {:organization-id org-real-id
+        payload (cond-> {:bank-id org-real-id
                          :type :party-type-person
                          :display-name (str "Scenario Person " counter)
                          :given-name "Scenario"
@@ -293,7 +292,7 @@
         {prod-real-id :real-id} (get products model-prod)
         {party-real-id :real-id} (get parties model-party)
         result (cash-accounts/new-account bank
-                                          {:organization-id org-real-id
+                                          {:bank-id org-real-id
                                            :party-id party-real-id
                                            :product-id prod-real-id
                                            :currency currency
@@ -316,7 +315,7 @@
         org-real-id (get-in orgs [model-org :real-id])
         real-acct-id (get-in id-mapping [:model->real model-acct])
         result (cash-accounts/close-account bank
-                                            {:organization-id org-real-id
+                                            {:bank-id org-real-id
                                              :account-id real-acct-id})
         _ (when-not (error/anomaly? result)
             (seed-closed bank org-real-id real-acct-id))]
@@ -394,8 +393,7 @@
                    (policy/new-binding
                     bank
                     {:policy-id (:policy-id created)
-                     :target {:kind {:organization {:organization-id
-                                                    org-real-id}}}
+                     :target {:kind {:bank {:bank-id org-real-id}}}
                      :reason "scenario-bound test policy"})))]
     (track ctx result)))
 
@@ -409,7 +407,7 @@
         result (payment/submit-internal
                 bank
                 {:idempotency-key (str "scen-int-" run-id "-" counter)
-                 :organization-id org-real-id
+                 :bank-id org-real-id
                  :debtor-account-id from-real
                  :creditor-account-id to-real
                  :currency (or currency "GBP")
@@ -456,7 +454,7 @@
         result (payment/submit-outbound
                 bank+internal
                 {:idempotency-key (str "scen-pay-" run-id "-" counter)
-                 :organization-id org-real-id
+                 :bank-id org-real-id
                  :debtor-account-id real-acct-id
                  :scheme "FPS"
                  :currency "GBP"
@@ -558,7 +556,7 @@
   [{:keys [bank orgs] :as ctx} {[model-org as-of-date] :args}]
   (let [{org-real-id :real-id} (get orgs model-org)
         result (interest/accrue-daily bank
-                                      {:organization-id org-real-id
+                                      {:bank-id org-real-id
                                        :as-of-date as-of-date})]
     (-> ctx
         (update :counter inc)
@@ -568,7 +566,7 @@
   [{:keys [bank orgs] :as ctx} {[model-org as-of-date] :args}]
   (let [{org-real-id :real-id} (get orgs model-org)
         result (interest/capitalize-monthly bank
-                                            {:organization-id org-real-id
+                                            {:bank-id org-real-id
                                              :as-of-date as-of-date})]
     (-> ctx
         (update :counter inc)
@@ -619,10 +617,10 @@
         (update :counter inc)
         (track result))))
 
-(defmethod dispatch :get-organization
+(defmethod dispatch :get-bank
   [{:keys [bank orgs] :as ctx} {[org-ref] :args}]
-  (let [org-id (resolve-real-id orgs org-ref)
-        result (organizations/get-organization bank org-id)]
+  (let [bank-id (resolve-real-id orgs org-ref)
+        result (banks/get-bank bank bank-id)]
     (-> ctx
         (update :counter inc)
         (track result))))

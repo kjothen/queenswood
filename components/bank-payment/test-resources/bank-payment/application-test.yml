@@ -2,17 +2,17 @@ system:
   fdb: !include bank/fdb-test.yml
   avro: !include avro/avro-test.yml
   policies: !include bank/policy-test.yml
-  organizations: !include bank/organization-test.yml
+  banks: !include bank/bank-test.yml
   payment:
     processor: !system/component
       system/component-kind: payment/processor
       record-db: !system/ref fdb.record-db
       record-store: !system/ref fdb.meta-store
       schemas: !system/ref avro.serde
-      internal-account-id: !system/ref organizations.internal-account-id
+      internal-account-id: !system/ref banks.internal-account-id
     event-processor: !system/component
       system/component-kind: payment/event-processor
       record-db: !system/ref fdb.record-db
       record-store: !system/ref fdb.meta-store
       schemas: !system/ref avro.serde
-      internal-account-id: !system/ref organizations.internal-account-id
+      internal-account-id: !system/ref banks.internal-account-id

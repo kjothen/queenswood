@@ -45,11 +45,11 @@
                 auth parameters]}
         request
         {:keys [body]} parameters
-        {:keys [organization-id]} auth
+        {:keys [bank-id]} auth
         config {:record-db record-db :record-store record-store}
         cop-result (perform-cop-check clearbank-adapter-url body)
         result (payee-checks/check-payee config
-                                         organization-id
+                                         bank-id
                                          body
                                          cop-result)]
     (if (error/anomaly? result)

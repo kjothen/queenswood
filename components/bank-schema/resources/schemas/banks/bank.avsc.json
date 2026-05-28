@@ -1,0 +1,16 @@
+{
+  "type": "record",
+  "name": "Bank",
+  "namespace": "com.repldriven.mono.banks",
+  "fields": [
+    {"name": "bank_id",  "type": "string"},
+    {"name": "name",     "type": "string"},
+    {"name": "status",   "type": {"type": "enum",
+                                  "name": "BankStatus",
+                                  "symbols": ["BANK_STATUS_UNKNOWN",
+                                              "BANK_STATUS_TEST",
+                                              "BANK_STATUS_LIVE"]}},
+    {"name": "created_at", "type": {"type": "long", "logicalType": "timestamp-millis"}},
+    {"name": "updated_at", "type": {"type": "long", "logicalType": "timestamp-millis"}}
+  ]
+}

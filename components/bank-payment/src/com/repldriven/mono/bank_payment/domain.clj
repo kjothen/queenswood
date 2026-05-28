@@ -51,7 +51,7 @@
    {:aggregate :count
     :window :time-window-daily
     :value (inc (get-in aggregates
-                        [kind #{:organization-id :business-day}]))}))
+                        [kind #{:bank-id :business-day}]))}))
 
 (defn internal-payment->transaction
   [data debtor-account creditor-account policies aggregates]
@@ -112,7 +112,7 @@
        reference))))
 
 (defn new-inbound-payment
-  [data creditor-account-id organization-id business-day transaction-id]
+  [data creditor-account-id bank-id business-day transaction-id]
   (let [{:keys [scheme-transaction-id end-to-end-id scheme
                 currency amount debtor-name reference]}
         data
@@ -123,7 +123,7 @@
       :end-to-end-id end-to-end-id
       :scheme scheme
       :creditor-account-id creditor-account-id
-      :organization-id organization-id
+      :bank-id bank-id
       :business-day business-day
       :currency currency
       :amount amount
@@ -164,7 +164,7 @@
 
 (defn new-outbound-payment
   [data business-day transaction-id]
-  (let [{:keys [idempotency-key organization-id debtor-account-id
+  (let [{:keys [idempotency-key bank-id debtor-account-id
                 creditor-bban creditor-name scheme
                 currency amount reference]}
         data
@@ -173,7 +173,7 @@
      {:payment-id (utility/generate-id "pmt")
       :idempotency-key idempotency-key
       :scheme scheme
-      :organization-id organization-id
+      :bank-id bank-id
       :business-day business-day
       :debtor-account-id debtor-account-id
       :creditor-bban creditor-bban
@@ -195,7 +195,7 @@
 
 (defn new-internal-payment
   [data business-day transaction-id]
-  (let [{:keys [idempotency-key organization-id debtor-account-id
+  (let [{:keys [idempotency-key bank-id debtor-account-id
                 creditor-account-id currency amount
                 reference]}
         data
@@ -203,7 +203,7 @@
     (utility/assoc-some
      {:payment-id (utility/generate-id "pmt")
       :idempotency-key idempotency-key
-      :organization-id organization-id
+      :bank-id bank-id
       :business-day business-day
       :debtor-account-id debtor-account-id
       :creditor-account-id creditor-account-id

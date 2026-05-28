@@ -3,7 +3,7 @@
   "name": "CapitalizeMonthlyInterest",
   "namespace": "com.repldriven.mono.interest",
   "fields": [
-    {"name": "organization_id",   "type": "string"},
+    {"name": "bank_id",   "type": "string"},
     {"name": "as_of_date",        "type": "string"}
   ]
 }

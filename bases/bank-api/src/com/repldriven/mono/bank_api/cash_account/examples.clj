@@ -44,7 +44,7 @@
                       #'ProductNotFound]))
 
 (def CashAccount
-  {:organization-id "org.01kprbmgcj35ptc8npmybhh4s7"
+  {:bank-id "bnk.01kprbmgcj35ptc8npmybhh4s7"
    :account-id "acc.01kprbmgcj35ptc8npmybhh4s8"
    :party-id "pty.01kprbmgcj35ptc8npmybhh4s9"
    :name "Arthur Phillip Dent - Current Account"

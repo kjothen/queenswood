@@ -16,7 +16,7 @@ capabilities: !concat
   - !include bank/policies/platform/restricted/capabilities/cash-accounts.yml
   - !include bank/policies/platform/restricted/capabilities/idvs.yml
   - !include bank/policies/platform/restricted/capabilities/interest.yml
-  - !include bank/policies/platform/restricted/capabilities/organizations.yml
+  - !include bank/policies/platform/restricted/capabilities/banks.yml
   - !include bank/policies/platform/restricted/capabilities/parties.yml
   - !include bank/policies/platform/restricted/capabilities/payee-checks.yml
   - !include bank/policies/platform/restricted/capabilities/payments.yml
@@ -28,7 +28,7 @@ limits: !concat
   - !include bank/policies/platform/restricted/limits/cash-accounts.yml
   - !include bank/policies/platform/restricted/limits/idvs.yml
   - !include bank/policies/platform/restricted/limits/interest.yml
-  - !include bank/policies/platform/restricted/limits/organizations.yml
+  - !include bank/policies/platform/restricted/limits/banks.yml
   - !include bank/policies/platform/restricted/limits/parties.yml
   - !include bank/policies/platform/restricted/limits/payee-checks.yml
   - !include bank/policies/platform/restricted/limits/payments.yml

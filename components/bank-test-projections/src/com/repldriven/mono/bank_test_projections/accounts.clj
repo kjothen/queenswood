@@ -28,7 +28,7 @@
                                                          org-real-id
                                                          real-acct-id)]
                   [model-acct-id
-                   {:org (org-real->model (:organization-id account))
+                   {:org (org-real->model (:bank-id account))
                     :product (prod-real->model (:product-id account))
                     :party (party-real->model (:party-id account))
                     :status (normalise-status (:account-status account))}])))

@@ -1,0 +1,30 @@
+syntax = "proto2";
+
+package com.repldriven.mono.schemas.banks;
+
+import "record_metadata_options.proto";
+
+option java_outer_classname = "BankProto";
+
+enum BankType {
+  BANK_TYPE_UNKNOWN = 0;
+  BANK_TYPE_INTERNAL = 1;
+  BANK_TYPE_CUSTOMER = 2;
+}
+
+enum BankStatus {
+  BANK_STATUS_UNKNOWN = 0;
+  BANK_STATUS_TEST = 1;
+  BANK_STATUS_LIVE = 2;
+}
+
+message Bank {
+  option (com.apple.foundationdb.record.record).usage = RECORD;
+
+  required string bank_id = 1 [(com.apple.foundationdb.record.field).primary_key = true];
+  required BankType type = 2;
+  required BankStatus status = 3;
+  required string name = 5;
+  required int64 created_at = 6;
+  required int64 updated_at = 7;
+}

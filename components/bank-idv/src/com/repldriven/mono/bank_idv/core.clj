@@ -13,13 +13,13 @@
 (defn- publish-submit-idv-check
   [config idv data]
   (let [{:keys [bus schemas idv-command-channel]} config
-        {:keys [organization-id verification-id party-id]} idv
+        {:keys [bank-id verification-id party-id]} idv
         {:keys [given-name middle-names family-name date-of-birth address]} data
         schema (clojure.core/get schemas "submit-idv-check")]
     (when (and bus schema idv-command-channel)
       (let [payload (avro/serialize
                      schema
-                     {:organization-id organization-id
+                     {:bank-id bank-id
                       :verification-id verification-id
                       :party-id party-id
                       :first-name (or given-name "")
@@ -51,12 +51,12 @@
 (defn get-idv
   "Load an IDV by composite primary key, rejecting with
   `:idv/not-found` if the record is missing."
-  [txn organization-id verification-id]
-  (let-nom> [idv (store/get-idv txn organization-id verification-id)]
+  [txn bank-id verification-id]
+  (let-nom> [idv (store/get-idv txn bank-id verification-id)]
     (or idv
         (error/reject :idv/not-found
                       {:message "IDV not found"
-                       :organization-id organization-id
+                       :bank-id bank-id
                        :verification-id verification-id}))))
 
 (defn initiate
@@ -72,4 +72,4 @@
 
 (defn get
   [txn data]
-  (get-idv txn (:organization-id data) (:verification-id data)))
+  (get-idv txn (:bank-id data) (:verification-id data)))

@@ -11,10 +11,10 @@
 (defn create-party
   [request]
   (let [{:keys [auth parameters]} request
-        {:keys [organization-id]} auth
+        {:keys [bank-id]} auth
         {:keys [body]} parameters]
     (commands/send (dispatcher request)
                    request
                    "create-party"
                    "party"
-                   (assoc body :organization-id organization-id))))
+                   (assoc body :bank-id bank-id))))

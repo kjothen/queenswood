@@ -3,7 +3,7 @@ processor: !system/component
   record-db: !system/ref fdb.record-db
   record-store: !system/ref fdb.meta-store
   schemas: !system/ref avro.serde
-  internal-account-id: !system/ref organizations.internal-account-id
+  internal-account-id: !system/ref banks.internal-account-id
   bus: !system/ref message-bus.bus
   scheme-payment-command-channel: !keyword schemes-payment-command
   business-day-cutoff:
@@ -22,7 +22,7 @@ event-processor-impl: !system/component
   record-db: !system/ref fdb.record-db
   record-store: !system/ref fdb.meta-store
   schemas: !system/ref avro.serde
-  internal-account-id: !system/ref organizations.internal-account-id
+  internal-account-id: !system/ref banks.internal-account-id
   business-day-cutoff:
     zone: Europe/London
     hour-of-day: 17

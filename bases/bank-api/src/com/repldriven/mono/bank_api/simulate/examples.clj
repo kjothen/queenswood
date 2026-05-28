@@ -35,7 +35,7 @@
 (def SimulateInterestRequest {:as-of-date "2026-03-26"})
 
 (def SimulateInterestResponse
-  {:organization-id "org.01kprbmgcj35ptc8npmybhh4s7"
+  {:bank-id "bnk.01kprbmgcj35ptc8npmybhh4s7"
    :as-of-date "2026-03-26"
    :accounts-processed 5})
 

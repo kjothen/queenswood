@@ -16,17 +16,17 @@
   [record-store]
   (fn [ctx changelog-bytes]
     (let [changelog (schema/pb->IdvChangelog changelog-bytes)
-          {:keys [organization-id party-id] status :status-after}
+          {:keys [bank-id party-id] status :status-after}
           changelog
           transition (idv-status->party-transition status)]
       (when transition
         (let-nom> [txn (fdb/ctx->txn ctx record-store)
-                   party (store/get-party txn organization-id party-id)]
+                   party (store/get-party txn bank-id party-id)]
           (when (= :party-status-pending (:status party))
             (let [updated-party (transition party)]
               (store/save-party txn
                                 updated-party
-                                {:organization-id organization-id
+                                {:bank-id bank-id
                                  :party-id party-id
                                  :status-before (:status party)
                                  :status-after (:status

@@ -1,12 +1,12 @@
-(ns com.repldriven.mono.bank-api.organization.handlers
+(ns com.repldriven.mono.bank-api.bank.handlers
   (:require
     [com.repldriven.mono.bank-api.errors :as errors]
 
     [com.repldriven.mono.error.interface :as error]
-    [com.repldriven.mono.bank-organization.interface
-     :as organizations]))
+    [com.repldriven.mono.bank-bank.interface
+     :as banks]))
 
-(defn create-organization
+(defn create-bank
   [request]
   (let [{:keys [record-db record-store identity-provider
                 audiences-by-status parameters]}
@@ -20,17 +20,17 @@
         ;; handler resolves the per-status audience here and forwards
         ;; it through.
         audience (get audiences-by-status status)
-        result (organizations/new-organization
+        result (banks/new-bank
                 config
                 name
-                :organization-type-customer
+                :bank-type-customer
                 status
                 tier
                 currencies
                 {:identity-provider identity-provider
                  :audience audience})
-        {:keys [organization client-secret]} result]
+        {:keys [bank client-secret]} result]
     (if (error/anomaly? result)
       (errors/anomaly->response result)
       {:status 201
-       :body (assoc organization :client-secret client-secret)})))
+       :body (assoc bank :client-secret client-secret)})))

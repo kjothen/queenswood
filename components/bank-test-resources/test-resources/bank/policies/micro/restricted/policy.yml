@@ -7,5 +7,5 @@ labels: !strs
   tier: micro
 category: !keyword policy-category-restricted
 capabilities: !concat
-  - !include bank/policies/micro/restricted/capabilities/organizations.yml
+  - !include bank/policies/micro/restricted/capabilities/banks.yml
 limits:

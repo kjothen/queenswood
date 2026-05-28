@@ -13,7 +13,7 @@
 (defn party-changelog-handler
   [config]
   (fn [_ctx changelog-bytes]
-    (let [{:keys [organization-id party-id]
+    (let [{:keys [bank-id party-id]
            status :status-after}
           (schema/pb->PartyChangelog changelog-bytes)]
       (when (= :party-status-pending status)
@@ -30,7 +30,7 @@
                                party-id)
                result (core/initiate
                        config
-                       {:organization-id organization-id
+                       {:bank-id bank-id
                         :party-id party-id
                         :given-name (:given-name identification)
                         :middle-names (:middle-names identification)

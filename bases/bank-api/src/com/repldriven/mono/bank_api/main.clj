@@ -7,7 +7,7 @@
     com.repldriven.mono.bank-idv.interface
     com.repldriven.mono.identity-provider.interface
     com.repldriven.mono.keycloak.interface
-    com.repldriven.mono.bank-organization.interface
+    com.repldriven.mono.bank-bank.interface
     com.repldriven.mono.bank-party.interface
     com.repldriven.mono.bank-payee-check.interface
     com.repldriven.mono.bank-payment.interface

@@ -1,5 +1,5 @@
 (ns com.repldriven.mono.bank-cash-account.interface
-  "Cash account lifecycle (open, close, lookup) for organizations.
+  "Cash account lifecycle (open, close, lookup) for banks.
   Open allocates payment addresses, derives account-type from the
   party, validates the chosen product version, and seeds the
   product's balance buckets. Status transitions are driven via the
@@ -21,7 +21,7 @@
 
   Args:
   - txn: FDB transaction or db handle.
-  - data: map with `:organization-id`, `:party-id`, `:product-id`,
+  - data: map with `:bank-id`, `:party-id`, `:product-id`,
     `:currency`, `:name`.
   - opts (optional): map; `:policies` overrides policy resolution
     for the capability and limit checks."
@@ -36,28 +36,28 @@
 
   Args:
   - txn: FDB transaction or db handle.
-  - org-id: owning organization id.
+  - bank-id: owning bank id.
   - account-id: account id.
   - opts (optional): map; `:embed-balances` and
     `:embed-transactions` enrich the result."
-  ([txn org-id account-id]
-   (core/get-account txn org-id account-id))
-  ([txn org-id account-id opts]
-   (core/get-account txn org-id account-id opts)))
+  ([txn bank-id account-id]
+   (core/get-account txn bank-id account-id))
+  ([txn bank-id account-id opts]
+   (core/get-account txn bank-id account-id opts)))
 
 (defn get-accounts
-  "List cash accounts for an organization. Returns
+  "List cash accounts for a bank. Returns
   `{:accounts [...] :before id|nil :after id|nil}` or an anomaly.
 
   Args:
   - txn: FDB transaction or db handle.
-  - org-id: owning organization id.
+  - bank-id: owning bank id.
   - opts (optional): map; `:after`, `:before`, `:limit`,
     `:embed-balances`, `:embed-transactions`."
-  ([txn org-id]
-   (core/get-accounts txn org-id))
-  ([txn org-id opts]
-   (core/get-accounts txn org-id opts)))
+  ([txn bank-id]
+   (core/get-accounts txn bank-id))
+  ([txn bank-id opts]
+   (core/get-accounts txn bank-id opts)))
 
 (defn get-account-by-type
   "Return the first account matching the given org and product-type,
@@ -65,10 +65,10 @@
 
   Args:
   - txn: FDB transaction or db handle.
-  - org-id: owning organization id.
+  - bank-id: owning bank id.
   - product-type: product-type keyword."
-  [txn org-id product-type]
-  (core/get-account-by-type txn org-id product-type))
+  [txn bank-id product-type]
+  (core/get-account-by-type txn bank-id product-type))
 
 (defn get-account-by-bban
   "Return the account matching the given BBAN, or nil.
@@ -85,7 +85,7 @@
 
   Args:
   - txn: FDB transaction or db handle.
-  - data: map with `:organization-id` and `:account-id`.
+  - data: map with `:bank-id` and `:account-id`.
   - opts (optional): map; `:policies` overrides policy resolution."
   ([txn data]
    (core/close-account txn data))
@@ -103,11 +103,11 @@
 
   Args:
   - txn: FDB transaction or db handle.
-  - organization-id: owning organization id.
+  - bank-id: owning bank id.
   - account-id: account id."
-  [txn organization-id account-id]
+  [txn bank-id account-id]
   (let-nom>
-    [account (core/get-account txn organization-id account-id)
+    [account (core/get-account txn bank-id account-id)
      opened (domain/opened-account account)
      saved (store/save-account txn
                                opened
@@ -124,11 +124,11 @@
 
   Args:
   - txn: FDB transaction or db handle.
-  - organization-id: owning organization id.
+  - bank-id: owning bank id.
   - account-id: account id."
-  [txn organization-id account-id]
+  [txn bank-id account-id]
   (let-nom>
-    [account (core/get-account txn organization-id account-id)
+    [account (core/get-account txn bank-id account-id)
      closed (domain/closed-account account)
      saved (store/save-account txn
                                closed

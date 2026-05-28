@@ -6,12 +6,12 @@
 
 (def OnboardingRequest
   [:map {:closed true :json-schema/example examples/OnboardingRequest}
-   [:organization-name [:ref "Name"]]])
+   [:bank-name [:ref "Name"]]])
 
 (def OnboardingResponse
   [:map {:json-schema/example examples/OnboardingResponse}
    [:user [:ref "User"]]
-   [:organization [:ref "CreateOrganizationResponse"]]
+   [:bank [:ref "CreateBankResponse"]]
    [:membership [:ref "Membership"]]])
 
 (def registry (components-registry [#'OnboardingRequest #'OnboardingResponse]))

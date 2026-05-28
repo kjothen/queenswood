@@ -4,9 +4,9 @@
 
 (defn new-idv
   [data]
-  (let [{:keys [organization-id party-id]} data
+  (let [{:keys [bank-id party-id]} data
         now (System/currentTimeMillis)]
-    {:organization-id organization-id
+    {:bank-id bank-id
      :party-id party-id
      :verification-id (utility/generate-id "idv")
      :status :idv-status-pending

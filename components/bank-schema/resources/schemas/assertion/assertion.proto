@@ -11,7 +11,7 @@ message Assertion {
 
   optional string assertion_id = 1;
   optional string party_id = 2;
-  optional string organization_id = 3;
+  optional string bank_id = 3;
 
   optional Issuer issuer = 4;
   optional AssertionKind kind = 5;

@@ -1,5 +1,5 @@
 (ns com.repldriven.mono.bank-cash-account-product.interface
-  "Cash-account product catalog: per-organization product definitions
+  "Cash-account product catalog: per-bank product definitions
   that drive cash-account opening (allowed currencies, balance bucket
   layout, payment-address schemes, interest rate). Products are
   versioned through draft, published, and discarded states; only
@@ -14,16 +14,16 @@
 
   Args:
   - txn: FDB transaction or db handle.
-  - org-id: owning organization id.
+  - bank-id: owning bank id.
   - data: version fields (`:name`, `:product-type`,
     `:balance-sheet-side`, `:allowed-currencies`,
     `:balance-products`, `:allowed-payment-address-schemes`,
     `:interest-rate-bps`, `:valid-from`).
   - opts (optional): map; `:policies` overrides policy resolution."
-  ([txn org-id data]
-   (core/new-product txn org-id data))
-  ([txn org-id data opts]
-   (core/new-product txn org-id data opts)))
+  ([txn bank-id data]
+   (core/new-product txn bank-id data))
+  ([txn bank-id data opts]
+   (core/new-product txn bank-id data opts)))
 
 (defn open-draft
   "Open a new draft version for an existing product. Returns the
@@ -32,14 +32,14 @@
 
   Args:
   - txn: FDB transaction or db handle.
-  - org-id: owning organization id.
+  - bank-id: owning bank id.
   - product-id: product id.
   - data: version fields (see `new-product`).
   - opts (optional): map; `:policies` overrides policy resolution."
-  ([txn org-id product-id data]
-   (core/open-draft txn org-id product-id data))
-  ([txn org-id product-id data opts]
-   (core/open-draft txn org-id product-id data opts)))
+  ([txn bank-id product-id data]
+   (core/open-draft txn bank-id product-id data))
+  ([txn bank-id product-id data opts]
+   (core/open-draft txn bank-id product-id data opts)))
 
 (defn update-draft
   "Replace a draft version's mutable fields in place. Returns the
@@ -48,15 +48,15 @@
 
   Args:
   - txn: FDB transaction or db handle.
-  - org-id: owning organization id.
+  - bank-id: owning bank id.
   - product-id: product id.
   - version-id: version id.
   - data: version fields (see `new-product`).
   - opts (optional): map; `:policies` overrides policy resolution."
-  ([txn org-id product-id version-id data]
-   (core/update-draft txn org-id product-id version-id data))
-  ([txn org-id product-id version-id data opts]
-   (core/update-draft txn org-id product-id version-id data opts)))
+  ([txn bank-id product-id version-id data]
+   (core/update-draft txn bank-id product-id version-id data))
+  ([txn bank-id product-id version-id data opts]
+   (core/update-draft txn bank-id product-id version-id data opts)))
 
 (defn discard-draft
   "Discard an existing draft version. Returns the discarded
@@ -65,14 +65,14 @@
 
   Args:
   - txn: FDB transaction or db handle.
-  - org-id: owning organization id.
+  - bank-id: owning bank id.
   - product-id: product id.
   - version-id: version id.
   - opts (optional): map; `:policies` overrides policy resolution."
-  ([txn org-id product-id version-id]
-   (core/discard-draft txn org-id product-id version-id))
-  ([txn org-id product-id version-id opts]
-   (core/discard-draft txn org-id product-id version-id opts)))
+  ([txn bank-id product-id version-id]
+   (core/discard-draft txn bank-id product-id version-id))
+  ([txn bank-id product-id version-id opts]
+   (core/discard-draft txn bank-id product-id version-id opts)))
 
 (defn publish
   "Publish an existing draft version. Returns the published
@@ -81,14 +81,14 @@
 
   Args:
   - txn: FDB transaction or db handle.
-  - org-id: owning organization id.
+  - bank-id: owning bank id.
   - product-id: product id.
   - version-id: version id.
   - opts (optional): map; `:policies` overrides policy resolution."
-  ([txn org-id product-id version-id]
-   (core/publish txn org-id product-id version-id))
-  ([txn org-id product-id version-id opts]
-   (core/publish txn org-id product-id version-id opts)))
+  ([txn bank-id product-id version-id]
+   (core/publish txn bank-id product-id version-id))
+  ([txn bank-id product-id version-id opts]
+   (core/publish txn bank-id product-id version-id opts)))
 
 (defn get-version
   "Load a single version. Returns the version map or a rejection
@@ -96,11 +96,11 @@
 
   Args:
   - txn: FDB transaction or db handle.
-  - org-id: owning organization id.
+  - bank-id: owning bank id.
   - product-id: product id.
   - version-id: version id."
-  [txn org-id product-id version-id]
-  (core/get-version txn org-id product-id version-id))
+  [txn bank-id product-id version-id]
+  (core/get-version txn bank-id product-id version-id))
 
 (defn get-product
   "Return `{:product-id <pid> :versions [...]}` for one product,
@@ -108,10 +108,10 @@
 
   Args:
   - txn: FDB transaction or db handle.
-  - org-id: owning organization id.
+  - bank-id: owning bank id.
   - product-id: product id."
-  [txn org-id product-id]
-  (core/get-product txn org-id product-id))
+  [txn bank-id product-id]
+  (core/get-product txn bank-id product-id))
 
 (defn get-products
   "Return `{:items [{:product-id ... :versions [...]} ...]}` for
@@ -119,10 +119,10 @@
 
   Args:
   - txn: FDB transaction or db handle.
-  - org-id: owning organization id.
+  - bank-id: owning bank id.
   - opts (optional): map; `:limit`, `:order`."
-  ([txn org-id] (core/get-products txn org-id))
-  ([txn org-id opts] (core/get-products txn org-id opts)))
+  ([txn bank-id] (core/get-products txn bank-id))
+  ([txn bank-id opts] (core/get-products txn bank-id opts)))
 
 (defn list-templates
   "Return all per-product-type templates as a vector of maps with a

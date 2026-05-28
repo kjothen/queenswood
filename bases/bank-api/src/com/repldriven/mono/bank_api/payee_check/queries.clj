@@ -9,12 +9,12 @@
 (defn get-check
   [request]
   (let [{:keys [record-db record-store auth parameters]} request
-        {:keys [organization-id]} auth
+        {:keys [bank-id]} auth
         {:keys [path]} parameters
         {:keys [check-id]} path
         config {:record-db record-db :record-store record-store}
         result (payee-checks/get-check config
-                                       organization-id
+                                       bank-id
                                        check-id)]
     (if (error/anomaly? result)
       (errors/anomaly->response result)
@@ -23,7 +23,7 @@
 (defn list-checks
   [request]
   (let [{:keys [record-db record-store auth parameters]} request
-        {:keys [organization-id]} auth
+        {:keys [bank-id]} auth
         {:keys [query]} parameters
         {:keys [page]} query
         {:keys [after before size]} page
@@ -32,7 +32,7 @@
         size (cursor/clamp-size size)
         config {:record-db record-db :record-store record-store}
         result (payee-checks/get-checks config
-                                        organization-id
+                                        bank-id
                                         {:after after-id
                                          :before before-id
                                          :limit size})]

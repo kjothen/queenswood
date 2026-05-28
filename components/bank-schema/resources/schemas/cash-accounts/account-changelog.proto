@@ -7,7 +7,7 @@ import "schemas/cash-accounts/account.proto";
 option java_outer_classname = "CashAccountChangelogProto";
 
 message CashAccountChangelog {
-  required string organization_id = 4;
+  required string bank_id = 4;
   required string account_id = 1;
   optional CashAccount.CashAccountStatus status_before = 2;
   required CashAccount.CashAccountStatus status_after = 3;

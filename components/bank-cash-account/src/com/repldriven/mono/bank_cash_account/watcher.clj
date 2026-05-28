@@ -11,11 +11,11 @@
   [record-store]
   (fn [ctx changelog-bytes]
     (let [changelog (schema/pb->CashAccountChangelog changelog-bytes)
-          {:keys [organization-id account-id status-after]} changelog]
+          {:keys [bank-id account-id status-after]} changelog]
       (when (#{:cash-account-status-opening :cash-account-status-closing}
              status-after)
         (let [txn (fdb/ctx->txn ctx record-store)
-              account (store/find-account txn organization-id account-id)]
+              account (store/find-account txn bank-id account-id)]
           (when account
             (let [transitioned
                   (case status-after

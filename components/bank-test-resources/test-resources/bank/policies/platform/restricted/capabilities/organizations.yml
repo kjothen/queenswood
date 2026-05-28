@@ -1,5 +1,0 @@
-- effect: !keyword effect-allow
-  reason: "Allow creating organizations"
-  kind:
-    organization:
-      action: !keyword organization-action-create

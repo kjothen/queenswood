@@ -40,7 +40,7 @@
 (def VersionId "prv.01kprbmgcj35ptc8npmybhh4sf")
 
 (def CashAccountProductVersion
-  {:organization-id "org.01kprbmgcj35ptc8npmybhh4s7"
+  {:bank-id "bnk.01kprbmgcj35ptc8npmybhh4s7"
    :product-id ProductId
    :version-id VersionId
    :version-number 1

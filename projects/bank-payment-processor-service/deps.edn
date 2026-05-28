@@ -18,7 +18,7 @@
   component/bank-cash-account {:local/root "../../components/bank-cash-account"}
   component/bank-cash-account-product
   {:local/root "../../components/bank-cash-account-product"}
-  component/bank-organization {:local/root "../../components/bank-organization"}
+  component/bank-bank {:local/root "../../components/bank-bank"}
   component/bank-party {:local/root "../../components/bank-party"}
   component/bank-payment {:local/root "../../components/bank-payment"}
   component/bank-person-identification

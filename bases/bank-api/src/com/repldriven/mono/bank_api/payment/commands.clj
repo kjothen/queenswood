@@ -12,18 +12,18 @@
 (defn submit-internal-payment
   [request]
   (let [{:keys [auth parameters]} request
-        {:keys [organization-id]} auth
+        {:keys [bank-id]} auth
         {:keys [body]} parameters]
     (commands/send (dispatcher request)
                    request
                    "submit-internal-payment"
                    "internal-payment"
-                   (assoc body :organization-id organization-id))))
+                   (assoc body :bank-id bank-id))))
 
 (defn submit-outbound-payment
   [request]
   (let [{:keys [auth parameters]} request
-        {:keys [organization-id]} auth
+        {:keys [bank-id]} auth
         {:keys [body]} parameters]
     (commands/send (dispatcher request)
                    request
@@ -31,4 +31,4 @@
                    "outbound-payment"
                    (-> body
                        (update :scheme coercion/encode-payment-scheme)
-                       (assoc :organization-id organization-id)))))
+                       (assoc :bank-id bank-id)))))

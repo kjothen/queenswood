@@ -6,7 +6,7 @@
 
 (def MembershipId "mem.01kprbpdwa9q5n2t7vwsx84a3m")
 
-(def OrganizationId "org.01kprbqv3z6e0r9d4f1m8nk2yh")
+(def BankId "bnk.01kprbqv3z6e0r9d4f1m8nk2yh")
 
 (def User
   {:user-id UserId
@@ -23,8 +23,8 @@
 (def Membership
   {:membership-id MembershipId
    :user-id UserId
-   :organization-id OrganizationId
-   :organization-name "Ada's Organization"
+   :bank-id BankId
+   :bank-name "Ada's Bank"
    :role :owner
    :created-at "2026-05-18T09:15:00Z"
    :updated-at "2026-05-18T09:15:00Z"})

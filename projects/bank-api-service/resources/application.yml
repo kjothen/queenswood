@@ -154,15 +154,15 @@ system:
       admin-client-id: !env KEYCLOAK_ADMIN_CLIENT_ID
       admin-client-secret: !env KEYCLOAK_ADMIN_CLIENT_SECRET
       expected-issuer: !env KEYCLOAK_OPS_EXPECTED_ISSUER
-  organizations:
+  banks:
     internal: !system/component
-      system/component-kind: organizations/organization-from-fdb
+      system/component-kind: banks/bank-from-fdb
       record-db: !system/ref fdb.record-db
       record-store: !system/ref fdb.meta-store
-      type: !keyword organization-type-internal
+      type: !keyword bank-type-internal
     internal-account-id: !system/component
-      system/component-kind: organizations/internal-account-id
-      organization: !system/local-ref internal
+      system/component-kind: banks/internal-account-id
+      bank: !system/local-ref internal
   cash-accounts:
     dispatcher: !system/component
       system/component-kind: command/dispatcher
@@ -218,17 +218,17 @@ system:
         - queenswood-app
       # Public client ids whose JWTs the auth interceptor treats as
       # user JWTs (azp == one of these). Anything else is a service
-      # JWT keyed by azp == org-id.
+      # JWT keyed by azp == bank-id.
       user-client-ids:
         - queenswood-console
         - queenswood-app
       # Banking-specific status → audience mapping. Both values are
       # realm-import scope names that carry an `oidc-audience-mapper`.
       audiences-by-status:
-        organization-status-test: queenswood-api-test
-        organization-status-live: queenswood-api-live
-      internal-organization-id: !system/ref organizations.internal.organization.organization-id
-      internal-account-id: !system/ref organizations.internal-account-id
+        bank-status-test: queenswood-api-test
+        bank-status-live: queenswood-api-live
+      internal-bank-id: !system/ref banks.internal.bank.bank-id
+      internal-account-id: !system/ref banks.internal-account-id
       dispatchers:
         cash-accounts: !system/ref cash-accounts.dispatcher
         parties: !system/ref parties.dispatcher

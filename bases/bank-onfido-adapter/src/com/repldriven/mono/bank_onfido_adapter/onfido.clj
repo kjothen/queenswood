@@ -76,38 +76,38 @@
 
 (defn composite-external-id
   "Onfido carries one opaque correlation field per check. The
-  adapter packs both `:organization-id` and `:verification-id`
+  adapter packs both `:bank-id` and `:verification-id`
   into it (separated by `|`) so the webhook receiver can look up
   the right IDV record without needing a separate stateful
   adapter store."
-  [organization-id verification-id]
-  (str organization-id "|" verification-id))
+  [bank-id verification-id]
+  (str bank-id "|" verification-id))
 
 (defn parse-external-id
   "Inverse of `composite-external-id`. Returns
-  `{:organization-id ... :verification-id ...}` or nil if `s`
+  `{:bank-id ... :verification-id ...}` or nil if `s`
   doesn't look like a composite id."
   [s]
   (when (and s (.contains s "|"))
-    (let [[org vid] (.split s "\\|" 2)]
-      {:organization-id org :verification-id vid})))
+    (let [[bnk vid] (.split s "\\|" 2)]
+      {:bank-id bnk :verification-id vid})))
 
 (defn- create-check
-  [onfido-url applicant-id organization-id verification-id]
+  [onfido-url applicant-id bank-id verification-id]
   (post (str onfido-url "/v3.6/checks")
         {:applicant_id applicant-id
          :report_names ["document" "facial_similarity_photo"]
-         :external_id (composite-external-id organization-id verification-id)}))
+         :external_id (composite-external-id bank-id verification-id)}))
 
 (defn submit-idv-check
   "Performs the create-applicant + create-check call pair against
-  Onfido. Returns the check (or anomaly). Both `:organization-id`
+  Onfido. Returns the check (or anomaly). Both `:bank-id`
   and `:verification-id` are smuggled to Onfido as the check's
   `:external_id` so the webhook receiver can correlate the result
   back to the originating IDV record."
   [config data]
   (let [{:keys [onfido-url]} config
-        {:keys [organization-id verification-id
+        {:keys [bank-id verification-id
                 first-name middle-names last-name date-of-birth address]}
         data]
     (log/info "Submitting Onfido check"
@@ -124,5 +124,5 @@
         (let [applicant-id (:id (http/res->edn applicant))]
           (create-check onfido-url
                         applicant-id
-                        organization-id
+                        bank-id
                         verification-id))))))

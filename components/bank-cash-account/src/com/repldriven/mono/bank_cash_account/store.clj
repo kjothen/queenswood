@@ -10,12 +10,12 @@
 (def transact fdb/transact)
 
 (defn find-account
-  [txn org-id account-id]
+  [txn bank-id account-id]
   (fdb/transact
    txn
    (fn [txn]
      (some-> (fdb/load-record (fdb/open txn store-name)
-                              org-id
+                              bank-id
                               account-id)
              schema/pb->CashAccount))
    :cash-account/find
@@ -35,8 +35,8 @@
              (:account-id account)
              (schema/CashAccountChangelog->pb
               (assoc changelog
-                     :organization-id
-                     (:organization-id account))))]
+                     :bank-id
+                     (:bank-id account))))]
          nil)))
    :cash-account/save
    "Failed to save account"))
@@ -54,9 +54,9 @@
                 "Failed to allocate payment address"))
 
 (defn get-accounts
-  ([txn org-id]
-   (get-accounts txn org-id nil))
-  ([txn org-id opts]
+  ([txn bank-id]
+   (get-accounts txn bank-id nil))
+  ([txn bank-id opts]
    (let [{:keys [after before limit order]
           :or {limit 100 order :desc}}
          opts]
@@ -66,7 +66,7 @@
                 (fn [txn]
                   (fdb/scan-records
                    (fdb/open txn store-name)
-                   {:prefix [org-id]
+                   {:prefix [bank-id]
                     :after after
                     :before before
                     :limit limit
@@ -79,47 +79,47 @@
         :after after}))))
 
 (defn count-by-org
-  [txn org-id]
+  [txn bank-id]
   (fdb/transact txn
                 (fn [txn]
                   (fdb/count-records (fdb/open txn store-name)
-                                     "CashAccount_count_by_org"
-                                     org-id))
+                                     "CashAccount_count_by_bank"
+                                     bank-id))
                 :cash-account/count-by-org
                 {:message "Failed to count accounts by org"
-                 :organization-id org-id}))
+                 :bank-id bank-id}))
 
 (defn count-by-org-product-account-type-currency
-  [txn org-id product-type account-type currency]
+  [txn bank-id product-type account-type currency]
   (fdb/transact
    txn
    (fn [txn]
      (fdb/count-records
       (fdb/open txn store-name)
-      "CashAccount_count_by_org_product_account_type_currency"
-      [org-id
+      "CashAccount_count_by_bank_product_account_type_currency"
+      [bank-id
        (schema/product-type->int product-type)
        (schema/account-type->int account-type)
        currency]))
    :cash-account/count-by-org-product-account-type-currency
    {:message
     "Failed to count accounts by org/product/account type/currency"
-    :organization-id org-id
+    :bank-id bank-id
     :product-type product-type
     :account-type account-type
     :currency currency}))
 
 (defn get-account-by-type
-  [txn org-id product-type]
+  [txn bank-id product-type]
   (fdb/transact txn
                 (fn [txn]
                   (some-> (fdb/query-record-compound
                            (fdb/open txn store-name)
                            "CashAccount"
-                           [["organization_id" org-id]
+                           [["bank_id" bank-id]
                             ["product_type"
                              (schema/product-type->pb-enum product-type)]]
-                           {:index "CashAccount_by_org_product_type"})
+                           {:index "CashAccount_by_bank_product_type"})
                           schema/pb->CashAccount))
                 :cash-account/get-by-type
                 "Failed to get account by type"))

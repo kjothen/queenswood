@@ -22,7 +22,7 @@
 
   Args:
   - txn: FDB handle or open transaction.
-  - data: party submission map (organization-id, type,
+  - data: party submission map (bank-id, type,
     display-name, optional person fields).
   - opts: optional map; `:policies` overrides policy resolution.
 
@@ -34,31 +34,31 @@
      (schema/pb->Party pb))))
 
 (defn get-party
-  "Load a party by organisation and id.
+  "Load a party by bank and id.
 
   Args:
   - txn: FDB handle or open transaction.
-  - org-id: organisation id.
+  - bank-id: bank id.
   - party-id: party id.
 
   Returns the party map or a `:party/not-found` anomaly."
-  [txn org-id party-id]
-  (core/get-party txn org-id party-id))
+  [txn bank-id party-id]
+  (core/get-party txn bank-id party-id))
 
 (defn get-parties
-  "List parties for an organisation in a paged result.
+  "List parties for a bank in a paged result.
 
   Args:
   - txn: FDB handle or open transaction.
-  - org-id: organisation id.
+  - bank-id: bank id.
   - opts: optional map with :after, :before, :limit, :order.
 
   Returns `{:parties [...] :before id|nil :after id|nil}` or an
   anomaly."
-  ([txn org-id]
-   (store/get-parties txn org-id))
-  ([txn org-id opts]
-   (store/get-parties txn org-id opts)))
+  ([txn bank-id]
+   (store/get-parties txn bank-id))
+  ([txn bank-id opts]
+   (store/get-parties txn bank-id opts)))
 
 (defn match-name
   "Compare a stored party name against a query name, returning a
@@ -80,17 +80,17 @@
 
   Args:
   - txn: FDB handle or open transaction.
-  - organization-id: organisation id.
+  - bank-id: bank id.
   - party-id: party id to activate.
 
   Returns the active party (pb record) or an anomaly."
-  [txn organization-id party-id]
+  [txn bank-id party-id]
   (let-nom>
-    [party (core/get-party txn organization-id party-id)
+    [party (core/get-party txn bank-id party-id)
      activated (domain/activate-party party)
      saved (store/save-party txn
                              activated
-                             {:organization-id organization-id
+                             {:bank-id bank-id
                               :party-id party-id
                               :status-before (:status party)
                               :status-after (:status activated)})]

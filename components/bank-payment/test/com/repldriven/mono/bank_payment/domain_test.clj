@@ -49,7 +49,7 @@
   payment kind. Combined with `allow-all`, leg-shape tests stay clear
   of any limit boundary."
   [kind]
-  {kind {#{:organization-id :business-day} 0}})
+  {kind {#{:bank-id :business-day} 0}})
 
 (defn- account
   "Minimal cash-account fixture — just the fields the domain guards

@@ -7,7 +7,7 @@ import "record_metadata_options.proto";
 import "schemas/amounts/amount.proto";
 import "schemas/balances/balance.proto";
 import "schemas/cash-accounts/account.proto";
-import "schemas/organizations/organization.proto";
+import "schemas/banks/bank.proto";
 import "schemas/party/party.proto";
 import "schemas/schemes/scheme.proto";
 import "schemas/transactions/transaction.proto";
@@ -118,19 +118,19 @@ message InterestCapability {
   required InterestAction action = 1;
 }
 
-enum OrganizationAction {
-  ORGANIZATION_ACTION_UNKNOWN = 0;
-  ORGANIZATION_ACTION_CREATE = 1;
+enum BankAction {
+  BANK_ACTION_UNKNOWN = 0;
+  BANK_ACTION_CREATE = 1;
 }
 
-message OrganizationCapabilityFilter {
-  optional com.repldriven.mono.schemas.organizations.OrganizationType type = 1;
-  optional com.repldriven.mono.schemas.organizations.OrganizationStatus status = 2;
+message BankCapabilityFilter {
+  optional com.repldriven.mono.schemas.banks.BankType type = 1;
+  optional com.repldriven.mono.schemas.banks.BankStatus status = 2;
 }
 
-message OrganizationCapability {
-  required OrganizationAction action = 1;
-  repeated OrganizationCapabilityFilter filters = 2;
+message BankCapability {
+  required BankAction action = 1;
+  repeated BankCapabilityFilter filters = 2;
 }
 
 enum OutboundPaymentAction {
@@ -215,7 +215,7 @@ message Capability {
     InboundPaymentCapability inbound_payment = 106;
     InternalPaymentCapability internal_payment = 107;
     InterestCapability interest = 108;
-    OrganizationCapability organization = 109;
+    BankCapability bank = 109;
     OutboundPaymentCapability outbound_payment = 110;
     PartyCapability party = 111;
     PayeeCheckCapability payee_check = 112;
@@ -335,13 +335,13 @@ message InternalPaymentLimit {}
 
 message InterestLimit {}
 
-message OrganizationLimitFilter {
-  optional com.repldriven.mono.schemas.organizations.OrganizationType type = 1;
-  optional com.repldriven.mono.schemas.organizations.OrganizationStatus status = 2;
+message BankLimitFilter {
+  optional com.repldriven.mono.schemas.banks.BankType type = 1;
+  optional com.repldriven.mono.schemas.banks.BankStatus status = 2;
 }
 
-message OrganizationLimit {
-  repeated OrganizationLimitFilter filters = 1;
+message BankLimit {
+  repeated BankLimitFilter filters = 1;
 }
 
 message OutboundPaymentLimitFilter {
@@ -384,7 +384,7 @@ message Limit {
     InboundPaymentLimit inbound_payment = 6;
     InternalPaymentLimit internal_payment = 7;
     InterestLimit interest = 8;
-    OrganizationLimit organization = 9;
+    BankLimit bank = 9;
     OutboundPaymentLimit outbound_payment = 10;
     PartyLimit party = 11;
     PayeeCheckLimit payee_check = 12;
@@ -425,8 +425,8 @@ message Policy {
 // ==========================================================================
 message PlatformTarget {}
 
-message OrganizationTarget {
-  required string organization_id = 1;
+message BankTarget {
+  required string bank_id = 1;
 }
 
 message PartyTarget {
@@ -442,13 +442,13 @@ message AccountTarget {
 
 message SchemeTarget {
   required com.repldriven.mono.schemas.schemes.SchemeType scheme = 1;
-  optional string organization_id = 2;
+  optional string bank_id = 2;
 }
 
 message Target {
   oneof kind {
     PlatformTarget platform = 1;
-    OrganizationTarget organization = 2;
+    BankTarget bank = 2;
     PartyTarget party = 3;
     AccountTarget account = 4;
     SchemeTarget scheme = 5;

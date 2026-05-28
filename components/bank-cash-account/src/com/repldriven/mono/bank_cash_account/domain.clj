@@ -51,7 +51,7 @@
 
 (defn open-account
   [data product party address-fountain-fn aggregates policies]
-  (let [{:keys [organization-id party-id product-id currency name]} data
+  (let [{:keys [bank-id party-id product-id currency name]} data
         {:keys [version-id product-type]} product
         account-type (party->account-type party)]
     (let-nom>
@@ -71,7 +71,7 @@
           {:aggregate :count
            :window :time-window-instant
            :value (inc (get-in aggregates
-                               [:cash-account #{:organization-id}]))})
+                               [:cash-account #{:bank-id}]))})
        _ (policy/check-limit
           policies
           :cash-account
@@ -82,13 +82,13 @@
            :currency currency
            :value (inc (get-in aggregates
                                [:cash-account
-                                #{:organization-id :product-type
+                                #{:bank-id :product-type
                                   :account-type :currency}]))})
        payment-addresses (new-addresses product address-fountain-fn)]
       (let [now (utility/now)
             bban (some (fn [{:keys [scan]}] (when scan (scan->bban scan)))
                        payment-addresses)]
-        {:organization-id organization-id
+        {:bank-id bank-id
          :party-id party-id
          :product-id product-id
          :version-id version-id

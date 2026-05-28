@@ -3,7 +3,7 @@
   minted by a tenant's service-account client (`client_credentials`
   flow); principal type `:service`. The `queenswood-admin` service
   account carries the `admin` realm role, which flips the principal's
-  `:organization-id` to the internal-org-id and grants `:admin` —
+  `:bank-id` to the internal-bank-id and grants `:admin` —
   giving operators a Keycloak-minted admin bearer in place of a
   static env-var key. (2) A Keycloak-issued user JWT minted by either
   the `queenswood-console` SPA against the `queenswood` realm (org
@@ -40,10 +40,10 @@
 
 (defn- service-auth
   "Map a verified service-JWT claims map to the request auth context.
-  The client_id (== organization-id by convention) appears as `:azp`.
+  The client_id (== bank-id by convention) appears as `:azp`.
   When the realm's role mapper has flagged the service account with
   `admin` (the `queenswood-admin` operator client), the principal
-  flips its `:organization-id` to the internal-org-id and picks up
+  flips its `:bank-id` to the internal-bank-id and picks up
   `:admin` alongside `:org`."
   [request claims]
   (let [realm-roles (->> (get-in claims [:realm_access :roles])
@@ -52,9 +52,9 @@
         is-admin? (contains? realm-roles :admin)]
     {:principal-type :service
      :principal-id (:azp claims)
-     :organization-id (if is-admin?
-                        (:internal-organization-id request)
-                        (:azp claims))
+     :bank-id (if is-admin?
+                (:internal-bank-id request)
+                (:azp claims))
      :roles (into #{:org} realm-roles)
      :token-jti (:jti claims)}))
 
@@ -79,11 +79,11 @@
   changed. Roles always include `:user`; `:admin` is added when the
   realm carries it via `realm_access.roles`; `:org` is added when the
   user has at least one membership OR is admin (so existing org-
-  scoped routes accept ops JWTs). The principal's `:organization-id`
-  defaults to the internal-org-id for admins, the first membership's
-  org for normal users, nil otherwise."
+  scoped routes accept ops JWTs). The principal's `:bank-id`
+  defaults to the internal-bank-id for admins, the first membership's
+  bank for normal users, nil otherwise."
   [request claims]
-  (let [{:keys [record-db record-store internal-organization-id]} request
+  (let [{:keys [record-db record-store internal-bank-id]} request
         txn {:record-db record-db :record-store record-store}
         user (nilable-result
               (users/upsert-by-sub txn (claims/claims->user-claims claims)))
@@ -108,11 +108,11 @@
                      (seq memberships)
                      (conj :org))
       :token-jti (:jti claims)}
-     :organization-id
+     :bank-id
      (cond is-admin?
-           internal-organization-id
+           internal-bank-id
            primary
-           (:organization-id primary)))))
+           (:bank-id primary)))))
 
 (defn- decode-unverified-payload
   "Best-effort base64url-decode of a JWT's middle segment into the

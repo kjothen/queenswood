@@ -11,23 +11,23 @@
 (defn open-cash-account
   [request]
   (let [{:keys [auth parameters]} request
-        {:keys [organization-id]} auth
+        {:keys [bank-id]} auth
         {:keys [body]} parameters]
     (commands/send (dispatcher request)
                    request
                    "open-cash-account"
                    "cash-account"
-                   (assoc body :organization-id organization-id))))
+                   (assoc body :bank-id bank-id))))
 
 (defn close-cash-account
   [request]
   (let [{:keys [auth parameters]} request
-        {:keys [organization-id]} auth
+        {:keys [bank-id]} auth
         {:keys [path]} parameters
         {:keys [account-id]} path]
     (commands/send (dispatcher request)
                    request
                    "close-cash-account"
                    "cash-account"
-                   {:organization-id organization-id
+                   {:bank-id bank-id
                     :account-id account-id})))

@@ -7,7 +7,7 @@
 
 (defn- principal-id
   "Compose a principal id from the auth context. Service-account
-  requests scope by their `:principal-id` (the organization-id);
+  requests scope by their `:principal-id` (the bank-id);
   admin-scoped requests share the literal `\"admin\"` (single shared
   scope, since admin sessions aren't tracked individually)."
   [auth]

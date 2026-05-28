@@ -39,7 +39,7 @@
 
 (def SimulateInterestResponse
   [:map {:json-schema/example examples/SimulateInterestResponse}
-   [:organization-id [:ref "OrganizationId"]]
+   [:bank-id [:ref "BankId"]]
    [:as-of-date [:ref "Date"]]
    [:accounts-processed int?]])
 

@@ -45,16 +45,16 @@
                 :membership/list-by-user
                 "Failed to list memberships by user"))
 
-(defn list-by-organization
-  [txn organization-id]
+(defn list-by-bank
+  [txn bank-id]
   (fdb/transact txn
                 (fn [txn]
                   (mapv schema/pb->Membership
                         (fdb/query-records
                          (fdb/open txn store-name)
                          "Membership"
-                         "organization_id"
-                         organization-id
-                         {:index "Membership_by_organization"})))
-                :membership/list-by-organization
-                "Failed to list memberships by organization"))
+                         "bank_id"
+                         bank-id
+                         {:index "Membership_by_bank"})))
+                :membership/list-by-bank
+                "Failed to list memberships by bank"))

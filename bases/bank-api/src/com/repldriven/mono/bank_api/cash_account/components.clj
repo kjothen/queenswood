@@ -32,7 +32,7 @@
 
 (def CashAccount
   [:map {:json-schema/example examples/CashAccount}
-   [:organization-id [:ref "OrganizationId"]]
+   [:bank-id [:ref "BankId"]]
    [:account-id [:ref "CashAccountId"]]
    [:party-id [:ref "PartyId"]]
    [:name [:ref "Name"]]

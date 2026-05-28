@@ -6,13 +6,13 @@
     [com.repldriven.mono.error.interface :refer [let-nom>]]))
 
 (defn new-membership
-  [txn {:keys [user-id organization-id role]}]
+  [txn {:keys [user-id bank-id role]}]
   (store/transact
    txn
    (fn [txn]
      (let [membership (domain/new-membership
                        {:user-id user-id
-                        :organization-id organization-id
+                        :bank-id bank-id
                         :role role})]
        (let-nom> [_ (store/create txn membership)]
          membership)))
@@ -23,9 +23,9 @@
   [txn user-id]
   (store/list-by-user txn user-id))
 
-(defn list-by-organization
-  [txn organization-id]
-  (store/list-by-organization txn organization-id))
+(defn list-by-bank
+  [txn bank-id]
+  (store/list-by-bank txn bank-id))
 
 (defn find-by-id
   [txn membership-id]

@@ -14,7 +14,7 @@
     [com.repldriven.mono.schemas.idempotency :as idempotency]
     [com.repldriven.mono.schemas.idv :as idv]
     [com.repldriven.mono.schemas.memberships :as memberships]
-    [com.repldriven.mono.schemas.organizations :as organizations]
+    [com.repldriven.mono.schemas.banks :as banks]
     [com.repldriven.mono.schemas.party :as party]
     [com.repldriven.mono.schemas.payments :as payments]
     [com.repldriven.mono.schemas.person_identification :as
@@ -37,10 +37,10 @@
     (com.repldriven.mono.schemas.idempotency IdempotencyProto$Idempotency)
     (com.repldriven.mono.schemas.idv IdvProto$Idv
                                      IdvChangelogProto$IdvChangelog)
-    (com.repldriven.mono.schemas.organizations
-     OrganizationProto$Organization
-     OrganizationProto$OrganizationType
-     OrganizationChangelogProto$OrganizationChangelog)
+    (com.repldriven.mono.schemas.banks
+     BankProto$Bank
+     BankProto$BankType
+     BankChangelogProto$BankChangelog)
     (com.repldriven.mono.schemas.party
      PartyProto$Party
      PartyChangelogProto$PartyChangelog
@@ -115,19 +115,18 @@
      account-type->int
   cash-accounts/AccountType-label2val)
 
-(def ^{:doc "Map of OrganizationType label to protobuf int value."}
-     organization-type->int
-  organizations/OrganizationType-label2val)
+(def ^{:doc "Map of BankType label to protobuf int value."} bank-type->int
+  banks/BankType-label2val)
 
-(defn organization-type->pb-enum
-  "Convert an organization-type keyword to the protobuf enum value,
+(defn bank-type->pb-enum
+  "Convert a bank-type keyword to the protobuf enum value,
   for use in FDB index queries.
 
   Args:
-  - org-type: `:organization-type-*` keyword."
-  [org-type]
-  (OrganizationProto$OrganizationType/forNumber
-   (organization-type->int org-type)))
+  - bank-type: `:bank-type-*` keyword."
+  [bank-type]
+  (BankProto$BankType/forNumber
+   (bank-type->int bank-type)))
 
 (defn pb->CashAccountProduct
   "Parse CashAccountProduct protobuf bytes into a Clojure map,
@@ -194,25 +193,24 @@
   [m]
   (IdempotencyProto$Idempotency/parseFrom (Idempotency->pb m)))
 
-(def ^{:doc "Parse Organization protobuf bytes into a Clojure map."}
-     pb->Organization
-  organizations/pb->Organization)
+(def ^{:doc "Parse Bank protobuf bytes into a Clojure map."} pb->Bank
+  banks/pb->Bank)
 
-(defn Organization->pb
-  "Serialise an Organization map to protobuf bytes.
-
-  Args:
-  - m: Organization map matching the generated schema."
-  [m]
-  (proto/->pb (organizations/new-Organization m)))
-
-(defn Organization->java
-  "Parse an Organization map into the generated Java protobuf class.
+(defn Bank->pb
+  "Serialise a Bank map to protobuf bytes.
 
   Args:
-  - m: Organization map matching the generated schema."
+  - m: Bank map matching the generated schema."
   [m]
-  (OrganizationProto$Organization/parseFrom (Organization->pb m)))
+  (proto/->pb (banks/new-Bank m)))
+
+(defn Bank->java
+  "Parse a Bank map into the generated Java protobuf class.
+
+  Args:
+  - m: Bank map matching the generated schema."
+  [m]
+  (BankProto$Bank/parseFrom (Bank->pb m)))
 
 (def ^{:doc "Parse Party protobuf bytes into a Clojure map."} pb->Party
   party/pb->Party)
@@ -495,28 +493,26 @@
   [m]
   (TransactionProto$TransactionLeg/parseFrom (TransactionLeg->pb m)))
 
-(def ^{:doc "Parse OrganizationChangelog protobuf bytes into a
-  Clojure map."}
-     pb->OrganizationChangelog
-  organizations/pb->OrganizationChangelog)
+(def ^{:doc "Parse BankChangelog protobuf bytes into a Clojure map."}
+     pb->BankChangelog
+  banks/pb->BankChangelog)
 
-(defn OrganizationChangelog->pb
-  "Serialise an OrganizationChangelog map to protobuf bytes.
-
-  Args:
-  - m: OrganizationChangelog map matching the generated schema."
-  [m]
-  (proto/->pb (organizations/new-OrganizationChangelog m)))
-
-(defn OrganizationChangelog->java
-  "Parse an OrganizationChangelog map into the generated Java
-  protobuf class.
+(defn BankChangelog->pb
+  "Serialise a BankChangelog map to protobuf bytes.
 
   Args:
-  - m: OrganizationChangelog map matching the generated schema."
+  - m: BankChangelog map matching the generated schema."
   [m]
-  (OrganizationChangelogProto$OrganizationChangelog/parseFrom
-   (OrganizationChangelog->pb m)))
+  (proto/->pb (banks/new-BankChangelog m)))
+
+(defn BankChangelog->java
+  "Parse a BankChangelog map into the generated Java protobuf class.
+
+  Args:
+  - m: BankChangelog map matching the generated schema."
+  [m]
+  (BankChangelogProto$BankChangelog/parseFrom
+   (BankChangelog->pb m)))
 
 (def ^{:doc "Parse PayeeCheck protobuf bytes into a Clojure map."}
      pb->PayeeCheck

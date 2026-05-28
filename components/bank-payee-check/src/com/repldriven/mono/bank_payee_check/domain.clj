@@ -17,10 +17,10 @@
    :reason (or (:reason result) "")})
 
 (defn new-check
-  [organization-id request result]
+  [bank-id request result]
   (let [created (utility/now-rfc3339)]
     {:check-id (utility/generate-id "chk")
-     :organization-id organization-id
+     :bank-id bank-id
      :request request
      :result (sanitize-result result)
      :created-at created

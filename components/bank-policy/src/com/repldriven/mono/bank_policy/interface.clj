@@ -118,14 +118,14 @@
   Args:
   - txn: FDB config or open transaction.
   - selectors: map keyed by target id field
-    (e.g. `{:organization-id <id>}`)."
+    (e.g. `{:bank-id <id>}`)."
   [txn selectors]
   (core/get-effective-policies txn selectors))
 
 (defn get-policies-by-tier
   "Return policies whose `tier=<tier>` label matches. Used at
-  organization creation time to bind the selected tier's policies
-  to a new organization.
+  bank creation time to bind the selected tier's policies to a
+  new bank.
 
   Args:
   - txn: FDB config or open transaction.

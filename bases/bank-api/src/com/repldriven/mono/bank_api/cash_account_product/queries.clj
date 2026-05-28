@@ -51,7 +51,7 @@
 (defn list-products
   [request]
   (let [{:keys [record-db record-store auth parameters]} request
-        {:keys [organization-id]} auth
+        {:keys [bank-id]} auth
         {:keys [query]} parameters
         {:keys [page]} query
         {:keys [after before size]} page
@@ -59,7 +59,7 @@
         before-id (cursor/decode before)
         result (cash-account-products/get-products
                 {:record-db record-db :record-store record-store}
-                organization-id)]
+                bank-id)]
     (if (error/anomaly? result)
       (errors/anomaly->response result)
       (let [{:keys [items]} result
@@ -80,12 +80,12 @@
 (defn get-product
   [request]
   (let [{:keys [record-db record-store auth parameters]} request
-        {:keys [organization-id]} auth
+        {:keys [bank-id]} auth
         {:keys [path]} parameters
         {:keys [product-id]} path
         result (cash-account-products/get-product
                 {:record-db record-db :record-store record-store}
-                organization-id
+                bank-id
                 product-id)]
     (if (error/anomaly? result)
       (errors/anomaly->response result)
@@ -94,12 +94,12 @@
 (defn get-version
   [request]
   (let [{:keys [record-db record-store auth parameters]} request
-        {:keys [organization-id]} auth
+        {:keys [bank-id]} auth
         {:keys [path]} parameters
         {:keys [product-id version-id]} path
         result (cash-account-products/get-version
                 {:record-db record-db :record-store record-store}
-                organization-id
+                bank-id
                 product-id
                 version-id)]
     (if (error/anomaly? result)

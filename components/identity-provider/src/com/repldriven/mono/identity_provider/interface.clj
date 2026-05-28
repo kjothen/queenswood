@@ -20,30 +20,27 @@
 (def IdentityProvider protocol/IdentityProvider)
 
 (defn create-service-account
-  "Create a service-account client for an organization. Returns
+  "Create a service-account client for a bank. Returns
   `{:client-id … :client-secret …}` (the secret is only available
   at creation time) or an anomaly.
 
   Args:
   - client: identity-provider component.
-  - data: map with `:organization-id`, optional `:name`, and
-    `:status` keyword. The adapter's configured
-    `:audiences-by-status` map turns `:status` into the audience
-    attached to subsequently-issued tokens."
+  - data: map with `:bank-id`, optional `:name`, and `:audience`
+    (the JWT `aud` claim to stamp on tokens for this client)."
   [client data]
   (protocol/-create-service-account client data))
 
 (defn revoke-service-account
-  "Delete the service-account client for `organization-id`.
-  Idempotent."
-  [client organization-id]
-  (protocol/-revoke-service-account client organization-id))
+  "Delete the service-account client for `bank-id`. Idempotent."
+  [client bank-id]
+  (protocol/-revoke-service-account client bank-id))
 
 (defn rotate-secret
-  "Issue a fresh `client_secret` for `organization-id`. Returns
+  "Issue a fresh `client_secret` for `bank-id`. Returns
   `{:client-id … :client-secret …}` or an anomaly."
-  [client organization-id]
-  (protocol/-rotate-secret client organization-id))
+  [client bank-id]
+  (protocol/-rotate-secret client bank-id))
 
 (defn exchange-client-credentials
   "Run the OAuth2 `client_credentials` flow. Returns the raw token

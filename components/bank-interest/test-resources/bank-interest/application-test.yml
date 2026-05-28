@@ -2,7 +2,7 @@ system:
   fdb: !include bank/fdb-test.yml
   avro: !include avro/avro-test.yml
   policies: !include bank/policy-test.yml
-  organizations: !include bank/organization-test.yml
+  banks: !include bank/bank-test.yml
   cash-account:
     processor: !system/component
       system/component-kind: cash-account/processor

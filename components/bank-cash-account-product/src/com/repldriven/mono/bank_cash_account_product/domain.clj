@@ -13,10 +13,10 @@
 (defn- ensure-draft
   [version]
   (when-not (draft? version)
-    (let [{:keys [organization-id product-id version-id status]} version]
+    (let [{:keys [bank-id product-id version-id status]} version]
       (error/reject :cash-account-product/version-immutable
                     {:message "Version is not a draft and cannot be modified"
-                     :organization-id organization-id
+                     :bank-id bank-id
                      :product-id product-id
                      :version-id version-id
                      :status status}))))
@@ -53,7 +53,7 @@
                    :allowed-currencies (:allowed-currencies template)})))
 
 (defn new-version
-  [organization-id product-id versions data policies]
+  [bank-id product-id versions data policies]
   (let [{:keys [name product-type currency interest-rate-bps valid-from]} data
         now (utility/now)]
     (let-nom>
@@ -65,10 +65,10 @@
        _ (when (some draft? versions)
            (error/reject :cash-account-product/draft-already-exists
                          {:message "A draft already exists"
-                          :organization-id organization-id
+                          :bank-id bank-id
                           :product-id product-id}))]
 
-      (-> {:organization-id organization-id
+      (-> {:bank-id bank-id
            :product-id product-id
            :version-id (utility/generate-id "prv")
            :version-number (inc (count versions))
@@ -86,14 +86,14 @@
           (utility/assoc-some :valid-from valid-from)))))
 
 (defn new-product
-  [organization-id data aggregates policies]
+  [bank-id data aggregates policies]
   (let-nom>
     [_ (check-limit :count
                     :time-window-instant
-                    #{:organization-id}
+                    #{:bank-id}
                     aggregates
                     policies)]
-    (new-version organization-id
+    (new-version bank-id
                  (utility/generate-id "prd")
                  []
                  data
@@ -101,7 +101,7 @@
 
 (defn update-version
   [existing data policies]
-  (let [{:keys [organization-id product-id version-id
+  (let [{:keys [bank-id product-id version-id
                 version-number status created-at]
          existing-product-type :product-type}
         existing
@@ -113,7 +113,7 @@
        _ (check-capability :cash-account-product-action-draft
                            existing-product-type
                            policies)]
-      (-> {:organization-id organization-id
+      (-> {:bank-id bank-id
            :product-id product-id
            :version-id version-id
            :version-number version-number

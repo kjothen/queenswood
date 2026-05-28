@@ -29,11 +29,11 @@
     [com.repldriven.mono.bank-api.onboarding.examples :as
      onboarding.examples]
     [com.repldriven.mono.bank-api.onboarding.routes :as onboarding]
-    [com.repldriven.mono.bank-api.organization.components :as
-     organization.components]
-    [com.repldriven.mono.bank-api.organization.examples :as
-     organization.examples]
-    [com.repldriven.mono.bank-api.organization.routes :as organization]
+    [com.repldriven.mono.bank-api.bank.components :as
+     bank.components]
+    [com.repldriven.mono.bank-api.bank.examples :as
+     bank.examples]
+    [com.repldriven.mono.bank-api.bank.routes :as bank]
     [com.repldriven.mono.bank-api.party.components :as party.components]
     [com.repldriven.mono.bank-api.party.examples :as party.examples]
     [com.repldriven.mono.bank-api.party.routes :as party]
@@ -112,7 +112,7 @@
                                me.components/registry
                                oauth.components/registry
                                onboarding.components/registry
-                               organization.components/registry
+                               bank.components/registry
                                party.components/registry
                                payee-check.components/registry
                                payment.components/registry
@@ -150,7 +150,7 @@
                     me.examples/registry
                     oauth.examples/registry
                     onboarding.examples/registry
-                    organization.examples/registry
+                    bank.examples/registry
                     party.examples/registry
                     payee-check.examples/registry
                     payment.examples/registry
@@ -178,7 +178,7 @@
                   cash-account/routes
                   me/routes
                   onboarding/routes
-                  organization/routes
+                  bank/routes
                   party/routes
                   payee-check/routes
                   payment/routes
