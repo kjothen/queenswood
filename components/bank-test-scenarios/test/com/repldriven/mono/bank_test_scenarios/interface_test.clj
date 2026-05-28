@@ -49,8 +49,8 @@
 
 (defn- internal-account
   [sys]
-  (-> (system/instance sys [:organizations :internal])
-      (get-in [:organization :accounts 0 :account-id])))
+  (-> (system/instance sys [:banks :internal])
+      (get-in [:bank :accounts 0 :account-id])))
 
 (defn- scenario-files
   []

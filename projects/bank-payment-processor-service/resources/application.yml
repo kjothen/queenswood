@@ -70,15 +70,15 @@ system:
   message-bus: !include bank/message-bus.yml
   fdb: !include bank/fdb.yml
   avro: !include bank/avro.yml
-  organizations:
+  banks:
     internal: !system/component
-      system/component-kind: organizations/organization-from-fdb
+      system/component-kind: banks/bank-from-fdb
       record-db: !system/ref fdb.record-db
       record-store: !system/ref fdb.meta-store
-      type: !keyword organization-type-internal
+      type: !keyword bank-type-internal
     internal-account-id: !system/component
-      system/component-kind: organizations/internal-account-id
-      organization: !system/local-ref internal
+      system/component-kind: banks/internal-account-id
+      bank: !system/local-ref internal
   payments: !include bank/payment.yml
   telemetry:
     otel-sdk: !system/component

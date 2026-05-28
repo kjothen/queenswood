@@ -19,8 +19,8 @@
   [config data]
   (let [{:keys [record-db record-store]} config
         bank {:record-db record-db :record-store record-store}
-        {:keys [organization-id verification-id status]} data
-        idv (core/get-idv bank organization-id verification-id)]
+        {:keys [bank-id verification-id status]} data
+        idv (core/get-idv bank bank-id verification-id)]
     (cond
      (error/anomaly? idv)
      (do (log/error "Failed to load IDV for idv-completed event"
@@ -35,7 +35,7 @@
          (let-nom>
            [_ (core/save-idv bank
                              updated
-                             {:organization-id organization-id
+                             {:bank-id bank-id
                               :verification-id verification-id
                               :status-before (:status idv)
                               :status-after (:status updated)})]

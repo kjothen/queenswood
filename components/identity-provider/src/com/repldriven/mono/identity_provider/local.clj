@@ -65,14 +65,14 @@
                :header {:kid (-kid client) :alg "RS256" :typ "JWT"}})))
 
 (defn- create-client-impl
-  [client {:keys [organization-id audience]}]
+  [client {:keys [bank-id audience]}]
   (let [secret (str "local-secret-" (util/uuidv7))]
     (swap! (-state client) assoc-in
-      [:clients organization-id]
-      {:client-id organization-id
+      [:clients bank-id]
+      {:client-id bank-id
        :client-secret secret
        :audience audience})
-    {:client-id organization-id :client-secret secret}))
+    {:client-id bank-id :client-secret secret}))
 
 (defn- delete-client-impl
   [client client-id]
@@ -136,10 +136,8 @@
     (-state [_] state)
   protocol/IdentityProvider
     (-create-service-account [this data] (create-client-impl this data))
-    (-revoke-service-account [this organization-id]
-      (delete-client-impl this organization-id))
-    (-rotate-secret [this organization-id]
-      (regenerate-secret-impl this organization-id))
+    (-revoke-service-account [this bank-id] (delete-client-impl this bank-id))
+    (-rotate-secret [this bank-id] (regenerate-secret-impl this bank-id))
     (-exchange-client-credentials [this creds]
       (exchange-client-credentials-impl this creds))
     (-verify-token [this jwt-string opts]

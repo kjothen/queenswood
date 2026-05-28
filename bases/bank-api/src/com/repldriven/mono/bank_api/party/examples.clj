@@ -17,7 +17,7 @@
 (def registry (examples-registry [#'PartyNotFound #'IdentificationRejected]))
 
 (def Party
-  {:organization-id "org.01kprbmgcj35ptc8npmybhh4s7"
+  {:bank-id "bnk.01kprbmgcj35ptc8npmybhh4s7"
    :party-id "pty.01kprbmgcj35ptc8npmybhh4s9"
    :type :person
    :display-name "Arthur Phillip Dent"

@@ -50,11 +50,10 @@
 
 (defn- bound-policies
   "Returns the policies bound (via PolicyBinding records) to the
-  organization in `selectors`, or `[]` when the selector carries no
-  organization."
+  bank in `selectors`, or `[]` when the selector carries no bank."
   [txn selectors]
-  (if-let [org-id (:organization-id selectors)]
-    (let-nom> [bindings (store/get-bindings-for-organization txn org-id)]
+  (if-let [bank-id (:bank-id selectors)]
+    (let-nom> [bindings (store/get-bindings-for-bank txn bank-id)]
       (reduce (fn [acc b]
                 (let [p (store/get-policy txn (:policy-id b))]
                   (if (map? p) (conj acc p) (reduced p))))

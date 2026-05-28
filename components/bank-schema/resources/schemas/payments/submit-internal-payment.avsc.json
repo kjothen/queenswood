@@ -3,7 +3,7 @@
   "name": "SubmitInternalPayment",
   "namespace": "com.repldriven.mono.payments",
   "fields": [
-    {"name": "organization_id",     "type": "string"},
+    {"name": "bank_id",     "type": "string"},
     {"name": "debtor_account_id",   "type": "string"},
     {"name": "creditor_account_id", "type": "string"},
     {"name": "currency",            "type": "string"},

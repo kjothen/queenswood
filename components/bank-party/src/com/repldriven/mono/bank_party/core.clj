@@ -14,7 +14,7 @@
    (fn [txn]
      (let [party (domain/new-party data)
            {:keys [national-identifier]} data
-           {:keys [organization-id party-id status]} party
+           {:keys [bank-id party-id status]} party
            pi (person-id/new-person-identification data party-id)]
        (let-nom>
          [_ (person-id/save-person-identification txn pi)
@@ -23,12 +23,12 @@
                txn
                (domain/new-party-national-identifier
                 national-identifier
-                organization-id
+                bank-id
                 party-id)))
           result (store/save-party
                   txn
                   party
-                  {:organization-id organization-id
+                  {:bank-id bank-id
                    :party-id party-id
                    :status-after status})]
          result)))))
@@ -39,21 +39,21 @@
    txn
    (fn [txn]
      (let [party (domain/new-party data)
-           {:keys [organization-id party-id status]} party]
+           {:keys [bank-id party-id status]} party]
        (store/save-party
         txn
         party
-        {:organization-id organization-id
+        {:bank-id bank-id
          :party-id party-id
          :status-after status})))))
 
 (defn get-party
-  [txn org-id party-id]
-  (let-nom> [party (store/get-party txn org-id party-id)]
+  [txn bank-id party-id]
+  (let-nom> [party (store/get-party txn bank-id party-id)]
     (or party
         (error/reject :party/not-found
                       {:message "Party not found"
-                       :organization-id org-id
+                       :bank-id bank-id
                        :party-id party-id}))))
 
 (defn new-party
@@ -64,7 +64,7 @@
      [policies (or (:policies opts)
                    (policy/get-effective-policies
                     txn
-                    {:organization-id (:organization-id data)}))
+                    {:bank-id (:bank-id data)}))
       _ (policy/check-capability policies
                                  :party
                                  {:action :party-action-create

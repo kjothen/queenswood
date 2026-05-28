@@ -7,8 +7,8 @@
 ;; for Producer/Consumer with LocalProducer/PulsarProducer.
 (defprotocol IdentityProvider
   (-create-service-account [this data])
-  (-revoke-service-account [this organization-id])
-  (-rotate-secret [this organization-id])
+  (-revoke-service-account [this bank-id])
+  (-rotate-secret [this bank-id])
   (-exchange-client-credentials [this creds])
   (-verify-token [this jwt-string opts])
   (-get-jwks [this])

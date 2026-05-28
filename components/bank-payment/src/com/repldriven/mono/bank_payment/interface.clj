@@ -46,13 +46,13 @@
 
 (defn submit-internal
   "Submit an internal (same-org) payment between two cash accounts.
-  Verifies both accounts under the request's `:organization-id`,
+  Verifies both accounts under the request's `:bank-id`,
   records the transaction, posts the debit/credit legs, and
   persists an InternalPayment.
 
   Args:
   - config: FDB handle plus :business-day-cutoff (optional).
-  - data: submission map (organization-id, debtor-account-id,
+  - data: submission map (bank-id, debtor-account-id,
     creditor-account-id, currency, amount, reference, ...).
 
   Returns the payment map or an anomaly. A creditor account that
@@ -69,7 +69,7 @@
   Args:
   - config: FDB handle plus :internal-account-id, :bus, :schemas,
     :scheme-payment-command-channel.
-  - data: submission map (organization-id, debtor-account-id,
+  - data: submission map (bank-id, debtor-account-id,
     creditor-bban, currency, amount, reference, ...).
 
   Returns the payment map or an anomaly."

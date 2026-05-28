@@ -3,7 +3,7 @@
  :given
  [{:command :api/request
    :request {:method :post
-             :path "/v1/organizations"
+             :path "/v1/banks"
              :auth :admin
              :body {:name "OAuth Token Test Org"
                     :status "live"
@@ -11,7 +11,7 @@
                     :currencies ["GBP"]}}
    :as :org-0
    :assert {:status 201
-            :body {:client-id [:m/regex "^org\\."]
+            :body {:client-id [:m/regex "^bnk\\."]
                    :client-secret [:m/regex ".+"]}}}]
  :when
  [{:command :api/request

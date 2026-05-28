@@ -1,4 +1,4 @@
-(ns com.repldriven.mono.bank-api.organization.examples
+(ns com.repldriven.mono.bank-api.bank.examples
   (:require
     [com.repldriven.mono.bank-api.balance.examples :as
      balance-examples]
@@ -8,27 +8,27 @@
      party-examples]
     [com.repldriven.mono.bank-api.schema :refer [examples-registry]]))
 
-(def OrganizationLimitExceeded
+(def BankLimitExceeded
   {:value {:title "REJECTED"
            :type "cash-account/limit-max-accounts"
            :status 422
-           :detail "Tier limit exceeded for this organization"}})
+           :detail "Tier limit exceeded for this bank"}})
 
-(def OrganizationNotFound
+(def BankNotFound
   {:value {:title "REJECTED"
-           :type ":organization/not-found"
+           :type ":bank/not-found"
            :status 404
-           :detail "Organization not found"}})
+           :detail "Bank not found"}})
 
 (def registry
-  (examples-registry [#'OrganizationLimitExceeded #'OrganizationNotFound]))
+  (examples-registry [#'BankLimitExceeded #'BankNotFound]))
 
-(def OrganizationId "org.01kprbmgcj35ptc8npmybhh4s7")
+(def BankId "bnk.01kprbmgcj35ptc8npmybhh4s7")
 
 (def ClientSecret "k7DqGZ-Wt0aIqcPyQs8FdVx3y9rNJ4hLp1m6BvE-AtQ")
 
-(def Organization
-  {:organization-id OrganizationId
+(def Bank
+  {:bank-id BankId
    :name "Galactic Bank"
    :type :customer
    :status :test
@@ -38,13 +38,12 @@
    :accounts [(assoc cash-account-examples/CashAccount
                      :balances
                      [balance-examples/Balance])]
-   :client-id OrganizationId})
+   :client-id BankId})
 
-(def OrganizationList {:organizations [Organization]})
+(def BankList {:banks [Bank]})
 
-(def CreateOrganizationRequest
+(def CreateBankRequest
   {:name "Galactic Bank" :status :test :tier "micro" :currencies ["GBP"]})
 
-(def CreateOrganizationResponse
-  (assoc Organization :client-secret ClientSecret))
-
+(def CreateBankResponse
+  (assoc Bank :client-secret ClientSecret))

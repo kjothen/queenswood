@@ -2,7 +2,9 @@
   "Transforms an inbound `check.completed` webhook payload from
   Onfido into an internal `idv-completed` event on the message
   bus. The Onfido `result` field (`clear` | `consider`) maps to a
-  bank-idv status string the brick's event-processor reacts on."
+  bank-idv status string the brick's event-processor reacts on.
+  The Onfido `external_id` carries both `:bank-id` and
+  `:verification-id` packed by `onfido/composite-external-id`."
   (:require
     [com.repldriven.mono.bank-onfido-adapter.events :as events]
     [com.repldriven.mono.bank-onfido-adapter.onfido :as onfido]
@@ -22,12 +24,12 @@
 (defn publish-idv-completed
   "Reads the `:check.completed` payload's `:object` and publishes
   an `idv-completed` event keyed by the smuggled `:external_id`
-  (a composite of `:organization-id` and `:verification-id`)."
+  (a composite of `:bank-id` and `:verification-id`)."
   [config payload]
   (let [{:keys [bus avro event-channel]} config
         {:keys [object]} payload
         {:keys [external_id result]} object
-        {:keys [organization-id verification-id]}
+        {:keys [bank-id verification-id]}
         (onfido/parse-external-id external_id)]
     (error/try-nom
      :onfido-adapter/publish-idv-completed
@@ -37,7 +39,7 @@
                      "idv-completed"
                      (str (utility/uuidv7))
                      (str (utility/uuidv7))
-                     {:organization-id organization-id
+                     {:bank-id bank-id
                       :verification-id verification-id
                       :status (result->status result)}
                      {:event-channel event-channel}))))

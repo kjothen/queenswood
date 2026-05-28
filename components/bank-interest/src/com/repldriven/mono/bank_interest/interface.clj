@@ -14,9 +14,9 @@
 
   Args:
   - config: FDB handle plus product/balance/transaction interfaces.
-  - data: map with :organization-id and :as-of-date (YYYYMMDD int).
+  - data: map with :bank-id and :as-of-date (YYYYMMDD int).
 
-  Returns `{:organization-id :as-of-date :accounts-processed}` or
+  Returns `{:bank-id :as-of-date :accounts-processed}` or
   an anomaly."
   [config data]
   (core/accrue-daily config data))
@@ -28,9 +28,9 @@
 
   Args:
   - config: FDB handle plus product/balance/transaction interfaces.
-  - data: map with :organization-id and :as-of-date (YYYYMMDD int).
+  - data: map with :bank-id and :as-of-date (YYYYMMDD int).
 
-  Returns `{:organization-id :as-of-date :accounts-processed}` or
+  Returns `{:bank-id :as-of-date :accounts-processed}` or
   an anomaly."
   [config data]
   (core/capitalize-monthly config data))

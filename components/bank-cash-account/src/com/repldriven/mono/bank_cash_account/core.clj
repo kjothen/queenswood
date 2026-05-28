@@ -12,13 +12,13 @@
     [com.repldriven.mono.error.interface :as error :refer [let-nom>]]))
 
 (defn- get-policies
-  ([txn org-id opts]
+  ([txn bank-id opts]
    (or (:policies opts)
-       (policy/get-effective-policies txn {:organization-id org-id})))
-  ([txn org-id account-id opts]
+       (policy/get-effective-policies txn {:bank-id bank-id})))
+  ([txn bank-id account-id opts]
    (or (:policies opts)
        (policy/get-effective-policies txn
-                                      {:organization-id org-id
+                                      {:bank-id bank-id
                                        :account-id account-id}))))
 
 (defn- enrich-account
@@ -44,18 +44,18 @@
     :account-type-business))
 
 (defn- counts
-  [txn org-id product-type account-type currency]
+  [txn bank-id product-type account-type currency]
   (let-nom>
-    [total (store/count-by-org txn org-id)
+    [total (store/count-by-org txn bank-id)
      subtotal (store/count-by-org-product-account-type-currency
                txn
-               org-id
+               bank-id
                product-type
                account-type
                currency)]
     {:cash-account
-     {#{:organization-id} total
-      #{:organization-id :product-type :account-type :currency} subtotal}}))
+     {#{:bank-id} total
+      #{:bank-id :product-type :account-type :currency} subtotal}}))
 
 (defn open-account
   ([txn data]
@@ -64,17 +64,17 @@
    (store/transact
     txn
     (fn [txn]
-      (let [{:keys [organization-id party-id product-id currency]} data]
+      (let [{:keys [bank-id party-id product-id currency]} data]
         (let-nom>
-          [policies (get-policies txn organization-id opts)
-           party (parties/get-party txn organization-id party-id)
+          [policies (get-policies txn bank-id opts)
+           party (parties/get-party txn bank-id party-id)
            product (products/get-product txn
-                                         organization-id
+                                         bank-id
                                          product-id)
            product-version (products/published-version product)
            aggregates (when product-version
                         (counts txn
-                                organization-id
+                                bank-id
                                 (:product-type product-version)
                                 (party->account-type party)
                                 currency))
@@ -96,30 +96,30 @@
           account))))))
 
 (defn get-account
-  ([txn org-id account-id]
-   (get-account txn org-id account-id nil))
-  ([txn org-id account-id opts]
+  ([txn bank-id account-id]
+   (get-account txn bank-id account-id nil))
+  ([txn bank-id account-id opts]
    (store/transact
     txn
     (fn [txn]
       (let-nom>
-        [account (store/find-account txn org-id account-id)
+        [account (store/find-account txn bank-id account-id)
          account (or account
                      (error/reject :cash-account/not-found
                                    {:message "Account not found"
-                                    :organization-id org-id
+                                    :bank-id bank-id
                                     :account-id account-id}))]
         (enrich-account txn opts account))))))
 
 (defn get-accounts
-  ([txn org-id]
-   (get-accounts txn org-id nil))
-  ([txn org-id opts]
+  ([txn bank-id]
+   (get-accounts txn bank-id nil))
+  ([txn bank-id opts]
    (store/transact
     txn
     (fn [txn]
       (let-nom>
-        [{:keys [accounts before after]} (store/get-accounts txn org-id opts)
+        [{:keys [accounts before after]} (store/get-accounts txn bank-id opts)
          enriched (reduce (fn [acc account]
                             (let [result (enrich-account txn opts account)]
                               (if (error/anomaly? result)
@@ -132,8 +132,8 @@
          :after after})))))
 
 (defn get-account-by-type
-  [txn org-id product-type]
-  (store/get-account-by-type txn org-id product-type))
+  [txn bank-id product-type]
+  (store/get-account-by-type txn bank-id product-type))
 
 (defn get-account-by-bban
   [txn bban]
@@ -146,10 +146,10 @@
    (store/transact
     txn
     (fn [txn]
-      (let [{:keys [organization-id account-id]} data]
+      (let [{:keys [bank-id account-id]} data]
         (let-nom>
-          [policies (get-policies txn organization-id account-id opts)
-           account (get-account txn organization-id account-id)
+          [policies (get-policies txn bank-id account-id opts)
+           account (get-account txn bank-id account-id)
            updated (domain/close-account account policies)
            _ (store/save-account txn
                                  updated

@@ -101,7 +101,7 @@
                                     "components/bank-onfido-webhook"}
     components/bank-interest {:local/root "components/bank-interest"}
     components/bank-membership {:local/root "components/bank-membership"}
-    components/bank-organization {:local/root "components/bank-organization"}
+    components/bank-bank {:local/root "components/bank-bank"}
     components/bank-party {:local/root "components/bank-party"}
     components/bank-person-identification {:local/root
                                            "components/bank-person-identification"}

@@ -12,7 +12,7 @@
 (defn list-cash-accounts
   [request]
   (let [{:keys [record-db record-store auth parameters]} request
-        {:keys [organization-id]} auth
+        {:keys [bank-id]} auth
         {:keys [query]} parameters
         {:keys [page embed]} query
         {:keys [after before size]} page
@@ -28,7 +28,7 @@
         result (cash-accounts/get-accounts
                 {:record-db record-db
                  :record-store record-store}
-                organization-id
+                bank-id
                 opts)]
 
     (if (error/anomaly? result)
@@ -45,14 +45,14 @@
 (defn get-cash-account
   [request]
   (let [{:keys [record-db record-store auth parameters]} request
-        {:keys [organization-id]} auth
+        {:keys [bank-id]} auth
         {:keys [path query]} parameters
         {:keys [account-id]} path
         {:keys [embed]} query
         {embed-balances :balances embed-transactions :transactions} embed
         result (cash-accounts/get-account
                 {:record-db record-db :record-store record-store}
-                organization-id
+                bank-id
                 account-id
                 (utility/assoc-some {}
                                     :embed-balances embed-balances
@@ -73,13 +73,13 @@
 (defn list-transactions
   [request]
   (let [{:keys [record-db record-store auth parameters]} request
-        {:keys [organization-id]} auth
+        {:keys [bank-id]} auth
         {:keys [path]} parameters
         {:keys [account-id]} path
         config {:record-db record-db :record-store record-store}
         result (error/let-nom>
                  [_ (cash-accounts/get-account config
-                                               organization-id
+                                               bank-id
                                                account-id)
                   txns (transactions/get-transactions config account-id)]
                  txns)]

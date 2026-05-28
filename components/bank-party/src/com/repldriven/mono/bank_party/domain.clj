@@ -7,12 +7,12 @@
 
 (defn new-party
   [data]
-  (let [{:keys [organization-id type display-name]} data
+  (let [{:keys [bank-id type display-name]} data
         now (System/currentTimeMillis)
         status (if (= :party-type-person type)
                  :party-status-pending
                  :party-status-active)]
-    {:organization-id organization-id
+    {:bank-id bank-id
      :party-id (utility/generate-id "pty")
      :type type
      :display-name display-name
@@ -33,9 +33,9 @@
          :updated-at (System/currentTimeMillis)))
 
 (defn new-party-national-identifier
-  [national-identifier organization-id party-id]
+  [national-identifier bank-id party-id]
   (let [{:keys [type value issuing-country]} national-identifier]
-    {:organization-id organization-id
+    {:bank-id bank-id
      :party-id party-id
      :type type
      :value value

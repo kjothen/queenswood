@@ -2,7 +2,7 @@
   (:require
     [com.repldriven.mono.bank-api.commands :as commands]
     [com.repldriven.mono.bank-api.errors :as errors]
-    [com.repldriven.mono.bank-organization.interface :as organizations]
+    [com.repldriven.mono.bank-bank.interface :as banks]
     [com.repldriven.mono.error.interface :as error]))
 
 (defn- dispatcher
@@ -17,22 +17,22 @@
         {:keys [interest]} dispatchers]
     interest))
 
-(defn- check-org
-  "Confirms the path's `{org-id}` resolves to a real organization.
-  Returns nil when found, or the anomaly-response for `:organization/not-found`."
+(defn- check-bank
+  "Confirms the path's `{bank-id}` resolves to a real bank.
+  Returns nil when found, or the anomaly-response for `:bank/not-found`."
   [request]
   (let [{:keys [record-db record-store parameters]} request
         {:keys [path]} parameters
-        {:keys [org-id]} path
-        result (organizations/get-organization
+        {:keys [bank-id]} path
+        result (banks/get-bank
                 {:record-db record-db :record-store record-store}
-                org-id)]
+                bank-id)]
     (when (error/anomaly? result)
       (errors/anomaly->response result))))
 
 (defn inbound-transfer
   [request]
-  (or (check-org request)
+  (or (check-bank request)
       (let [{:keys [internal-account-id parameters]} request
             {:keys [body]} parameters
             {:keys [account-id amount currency]} body]
@@ -57,30 +57,30 @@
 
 (defn accrue
   [request]
-  (or (check-org request)
+  (or (check-bank request)
       (let [{:keys [parameters]} request
             {:keys [path body]} parameters
-            {:keys [org-id]} path
+            {:keys [bank-id]} path
             {:keys [as-of-date]} body]
         (commands/send
          (interest-dispatcher request)
          request
          "accrue-daily-interest"
          "interest-result"
-         {:organization-id org-id
+         {:bank-id bank-id
           :as-of-date as-of-date}))))
 
 (defn capitalize
   [request]
-  (or (check-org request)
+  (or (check-bank request)
       (let [{:keys [parameters]} request
             {:keys [path body]} parameters
-            {:keys [org-id]} path
+            {:keys [bank-id]} path
             {:keys [as-of-date]} body]
         (commands/send
          (interest-dispatcher request)
          request
          "capitalize-monthly-interest"
          "interest-result"
-         {:organization-id org-id
+         {:bank-id bank-id
           :as-of-date as-of-date}))))

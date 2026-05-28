@@ -33,7 +33,7 @@
 
 (def CashAccountProductVersion
   [:map {:json-schema/example examples/CashAccountProductVersion}
-   [:organization-id [:ref "OrganizationId"]]
+   [:bank-id [:ref "BankId"]]
    [:product-id [:ref "ProductId"]]
    [:version-id [:ref "VersionId"]]
    [:version-number int?]

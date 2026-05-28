@@ -38,7 +38,7 @@ message PayeeCheck {
   option (com.apple.foundationdb.record.record).usage = RECORD;
 
   required string            check_id        = 1;
-  required string            organization_id = 2;
+  required string            bank_id = 2;
   required PayeeCheckRequest request         = 3;
   required PayeeCheckResult  result          = 4;
   required string            created_at      = 5;

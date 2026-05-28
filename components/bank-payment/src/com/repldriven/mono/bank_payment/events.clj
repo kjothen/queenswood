@@ -22,7 +22,7 @@
 
 (defn- record-inbound-settlement
   [config data account]
-  (let [{:keys [account-id organization-id]} account
+  (let [{:keys [account-id bank-id]} account
         {:keys [internal-account-id]} config
         business-day (domain/current-business-day
                       (utility/now)
@@ -33,13 +33,13 @@
        (let-nom>
          [policies (policy/get-effective-policies
                     txn
-                    {:organization-id organization-id})
+                    {:bank-id bank-id})
           today-count (store/count-inbound-by-org-business-day
                        txn
-                       organization-id
+                       bank-id
                        business-day)
           aggregates {:inbound-payment
-                      {#{:organization-id :business-day} today-count}}
+                      {#{:bank-id :business-day} today-count}}
           transaction (domain/inbound-payment->transaction
                        data
                        account
@@ -51,7 +51,7 @@
           _ (balances/apply-legs txn legs transaction-type)
           payment (domain/new-inbound-payment data
                                               account-id
-                                              organization-id
+                                              bank-id
                                               business-day
                                               transaction-id)
           _ (store/save-inbound-payment txn payment)]

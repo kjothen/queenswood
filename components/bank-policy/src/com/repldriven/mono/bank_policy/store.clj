@@ -131,12 +131,12 @@
     :policy-binding/list
     "Failed to list policy bindings")))
 
-(defn get-bindings-for-organization
-  "Returns all `PolicyBinding` records whose target is the given
-  organization. Does a full scan and filters in memory — fine while
-  binding cardinality is low; an `OrganizationTarget` index is the
-  natural follow-up once bindings grow."
-  [txn organization-id]
+(defn get-bindings-for-bank
+  "Returns all `PolicyBinding` records whose target is the given bank.
+  Does a full scan and filters in memory — fine while binding
+  cardinality is low; a `BankTarget` index is the natural follow-up
+  once bindings grow."
+  [txn bank-id]
   (fdb/transact
    txn
    (fn [txn]
@@ -146,10 +146,10 @@
        (->> (:records result)
             (mapv pb->PolicyBinding)
             (filterv (fn [b]
-                       (= organization-id
+                       (= bank-id
                           (get-in b
-                                  [:target :kind :organization
-                                   :organization-id])))))))
-   :policy-binding/list-by-organization
-   {:message "Failed to list bindings for organization"
-    :organization-id organization-id}))
+                                  [:target :kind :bank
+                                   :bank-id])))))))
+   :policy-binding/list-by-bank
+   {:message "Failed to list bindings for bank"
+    :bank-id bank-id}))

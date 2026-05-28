@@ -1,7 +1,7 @@
 !strs
 assertions:
   record-type: Assertion
-  primary-key: [organization_id, party_id, assertion_id]
+  primary-key: [bank_id, party_id, assertion_id]
   indexes:
     - name: Assertion_by_party_kind
       fields: [party_id, kind]
@@ -11,22 +11,22 @@ balances:
   indexes: []
 cash-account-products:
   record-type: CashAccountProduct
-  primary-key: [organization_id, product_id, version_id]
+  primary-key: [bank_id, product_id, version_id]
   indexes:
-    - name: CashAccountProduct_count_by_org
-      fields: [organization_id, product_id]
+    - name: CashAccountProduct_count_by_bank
+      fields: [bank_id, product_id]
       type: count
 cash-accounts:
   record-type: CashAccount
-  primary-key: [organization_id, account_id]
+  primary-key: [bank_id, account_id]
   indexes:
-    - name: CashAccount_by_org_product_type
-      fields: [organization_id, product_type]
-    - name: CashAccount_count_by_org
-      field: organization_id
+    - name: CashAccount_by_bank_product_type
+      fields: [bank_id, product_type]
+    - name: CashAccount_count_by_bank
+      field: bank_id
       type: count
-    - name: CashAccount_count_by_org_product_account_type_currency
-      fields: [organization_id, product_type, account_type, currency]
+    - name: CashAccount_count_by_bank_product_account_type_currency
+      fields: [bank_id, product_type, account_type, currency]
       type: count
     - name: CashAccount_by_bban
       field: bban
@@ -40,7 +40,7 @@ idempotency:
   indexes: []
 idvs:
   record-type: Idv
-  primary-key: [organization_id, verification_id]
+  primary-key: [bank_id, verification_id]
   indexes:
     - name: Idv_by_party
       field: party_id
@@ -50,33 +50,33 @@ memberships:
   indexes:
     - name: Membership_by_user
       field: user_id
-    - name: Membership_by_organization
-      field: organization_id
-    - name: Membership_by_user_and_org
-      fields: [user_id, organization_id]
+    - name: Membership_by_bank
+      field: bank_id
+    - name: Membership_by_user_and_bank
+      fields: [user_id, bank_id]
       unique: true
-organizations:
-  record-type: Organization
+banks:
+  record-type: Bank
   indexes:
-    - name: Organization_by_type
+    - name: Bank_by_type
       field: type
-    - name: Organization_count_by_type
+    - name: Bank_count_by_type
       field: type
       type: count
 payee-checks:
   record-type: PayeeCheck
-  primary-key: [organization_id, check_id]
+  primary-key: [bank_id, check_id]
   indexes: []
 parties:
   record-type: Party
-  primary-key: [organization_id, party_id]
+  primary-key: [bank_id, party_id]
   indexes: []
 party-national-identifiers:
   record-type: PartyNationalIdentifier
   primary-key: [party_id, type]
   indexes:
-    - name: org_type_value_unique_idx
-      fields: [organization_id, type, value]
+    - name: bank_type_value_unique_idx
+      fields: [bank_id, type, value]
       unique: true
 person-identifications:
   record-type: PersonIdentification
@@ -87,8 +87,8 @@ inbound-payments:
     - name: InboundPayment_by_scheme_transaction_id
       field: scheme_transaction_id
       unique: true
-    - name: InboundPayment_count_by_org_business_day
-      fields: [organization_id, business_day]
+    - name: InboundPayment_count_by_bank_business_day
+      fields: [bank_id, business_day]
       type: count
 outbound-payments:
   record-type: OutboundPayment
@@ -96,8 +96,8 @@ outbound-payments:
     - name: OutboundPayment_by_idempotency_key
       field: idempotency_key
       unique: true
-    - name: OutboundPayment_count_by_org_business_day
-      fields: [organization_id, business_day]
+    - name: OutboundPayment_count_by_bank_business_day
+      fields: [bank_id, business_day]
       type: count
 internal-payments:
   record-type: InternalPayment
@@ -105,8 +105,8 @@ internal-payments:
     - name: InternalPayment_by_idempotency_key
       field: idempotency_key
       unique: true
-    - name: InternalPayment_count_by_org_business_day
-      fields: [organization_id, business_day]
+    - name: InternalPayment_count_by_bank_business_day
+      fields: [bank_id, business_day]
       type: count
 policies:
   record-type: Policy

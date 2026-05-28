@@ -41,7 +41,7 @@
 
 (def InternalPayment
   {:payment-id PaymentId
-   :organization-id "org.01kprbmgcj35ptc8npmybhh4s7"
+   :bank-id "bnk.01kprbmgcj35ptc8npmybhh4s7"
    :debtor-account-id "acc.01kprbmgcj35ptc8npmybhh4s8"
    :creditor-account-id "acc.01kprbmgcj35ptc8npmybhh4s9"
    :currency "GBP"
@@ -63,7 +63,7 @@
 
 (def OutboundPayment
   {:payment-id "pmt.01kprbmgcj35ptc8npmybhh4s6"
-   :organization-id "org.01kprbmgcj35ptc8npmybhh4s7"
+   :bank-id "bnk.01kprbmgcj35ptc8npmybhh4s7"
    :scheme "fps"
    :debtor-account-id "acc.01kprbmgcj35ptc8npmybhh4s8"
    :creditor-bban "04000412345678"

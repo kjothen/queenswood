@@ -6,6 +6,6 @@ internal-platform: !system/component
     policy-id: !system/ref policies.platform.policy-id
     target:
       kind:
-        organization:
-          organization-id: !system/ref organizations.internal.organization.organization-id
-    reason: "Apply platform policy to the internal organization"
+        bank:
+          bank-id: !system/ref banks.internal.bank.bank-id
+    reason: "Apply platform policy to the internal bank"

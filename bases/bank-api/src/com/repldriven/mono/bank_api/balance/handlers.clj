@@ -8,13 +8,13 @@
 (defn create-balance
   [request]
   (let [{:keys [record-db record-store auth parameters]} request
-        {:keys [organization-id]} auth
+        {:keys [bank-id]} auth
         {:keys [path body]} parameters
         {:keys [account-id]} path
         config {:record-db record-db :record-store record-store}
         result (let-nom>
                  [account (cash-accounts/get-account config
-                                                     organization-id
+                                                     bank-id
                                                      account-id)
                   _ (when (nil? account)
                       (error/reject :cash-account/not-found

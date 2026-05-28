@@ -40,19 +40,19 @@
    "Failed to save party national identifier"))
 
 (defn get-party
-  [txn org-id party-id]
+  [txn bank-id party-id]
   (fdb/transact
    txn
    (fn [txn]
-     (some-> (fdb/load-record (fdb/open txn store-name) org-id party-id)
+     (some-> (fdb/load-record (fdb/open txn store-name) bank-id party-id)
              schema/pb->Party))
    :party/get
    "Failed to load party"))
 
 (defn get-parties
-  ([txn org-id]
-   (get-parties txn org-id nil))
-  ([txn org-id opts]
+  ([txn bank-id]
+   (get-parties txn bank-id nil))
+  ([txn bank-id opts]
    (fdb/transact
     txn
     (fn [txn]
@@ -61,7 +61,7 @@
             opts
             result (fdb/scan-records
                     (fdb/open txn store-name)
-                    {:prefix [org-id]
+                    {:prefix [bank-id]
                      :after after
                      :before before
                      :limit limit

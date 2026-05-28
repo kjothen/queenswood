@@ -17,7 +17,7 @@
 
   Args:
   - txn: an open FDB transaction or system bank map.
-  - organization-id: organization owning the IDV.
+  - bank-id: bank owning the IDV.
   - verification-id: IDV identifier (`idv.<ulid>`)."
-  [txn organization-id verification-id]
-  (core/get-idv txn organization-id verification-id))
+  [txn bank-id verification-id]
+  (core/get-idv txn bank-id verification-id))

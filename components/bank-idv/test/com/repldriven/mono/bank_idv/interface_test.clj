@@ -22,7 +22,7 @@
       (is (error/rejection? result))
       (is (= :idv/unknown-command (error/kind result))))))
 
-(def ^:private test-org-id "org_test_idv")
+(def ^:private test-bank-id "bnk_test_idv")
 
 (defn- send-command
   [proc schemas command-name data]
@@ -38,7 +38,7 @@
 (defn- test-initiate-idv
   [proc schemas]
   (testing "initiate creates IDV with pending status"
-    (let [payload {:organization-id test-org-id :party-id "pty.test-party-id"}]
+    (let [payload {:bank-id test-bank-id :party-id "pty.test-party-id"}]
       (nom-test> [result (send-command proc schemas "initiate-idv" payload)
                   _
                   (is (= "ACCEPTED" (:status result)))

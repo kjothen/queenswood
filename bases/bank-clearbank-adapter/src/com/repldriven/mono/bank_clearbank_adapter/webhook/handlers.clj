@@ -119,7 +119,7 @@
                   :reason "Account not found"}}
           (let [{:keys [display-name]}
                 (let [party (parties/get-party config
-                                               (:organization-id account)
+                                               (:bank-id account)
                                                (:party-id account))]
                   (when-not (error/anomaly? party) party))
                 result (if display-name

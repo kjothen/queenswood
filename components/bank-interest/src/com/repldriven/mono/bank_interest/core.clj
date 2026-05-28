@@ -28,25 +28,25 @@
 (def ^:private product-cache (cache/create 60000))
 
 (defn- get-product-version
-  [config org-id account]
+  [config bank-id account]
   (cache/lookup
    product-cache
    [(:product-id account) (:version-id account)]
    #(products/get-version config
-                          org-id
+                          bank-id
                           (:product-id account)
                           (:version-id account))))
 
 (defn- accrue-account
   [config settlement-id account as-of-date]
-  (let [{:keys [organization-id account-id currency]} account]
+  (let [{:keys [bank-id account-id currency]} account]
     (store/transact
      config
      (fn [txn]
        (let-nom>
          [{:keys [interest-rate-bps]} (get-product-version
                                        config
-                                       organization-id
+                                       bank-id
                                        account)
           balance (balances/get-balance txn
                                         account-id
@@ -109,20 +109,20 @@
                                       (:transaction-type transaction+legs))]))])))))
 
 (defn- get-settlement-account
-  [config organization-id]
+  [config bank-id]
   (let [result (cash-accounts/get-account-by-type
                 config
-                organization-id
+                bank-id
                 :product-type-settlement)]
     (when-not (error/anomaly? result) result)))
 
 (defn- process-customer-accounts
-  [config organization-id settlement-id as-of-date f]
+  [config bank-id settlement-id as-of-date f]
   (loop [cursor nil
          n 0]
     (let [page (cash-accounts/get-accounts
                 config
-                organization-id
+                bank-id
                 (when cursor {:after cursor}))]
       (if (error/anomaly? page)
         page
@@ -146,16 +146,16 @@
 
 (defn accrue-daily
   [config data]
-  (let [{:keys [organization-id as-of-date]} data]
-    (if-let [settlement (get-settlement-account config organization-id)]
+  (let [{:keys [bank-id as-of-date]} data]
+    (if-let [settlement (get-settlement-account config bank-id)]
       (let [processed (process-customer-accounts config
-                                                 organization-id
+                                                 bank-id
                                                  (:account-id settlement)
                                                  as-of-date
                                                  accrue-account)]
         (if (error/anomaly? processed)
           processed
-          {:organization-id organization-id
+          {:bank-id bank-id
            :as-of-date as-of-date
            :accounts-processed processed}))
       (error/reject :interest/no-settlement
@@ -163,16 +163,16 @@
 
 (defn capitalize-monthly
   [config data]
-  (let [{:keys [organization-id as-of-date]} data]
-    (if-let [settlement (get-settlement-account config organization-id)]
+  (let [{:keys [bank-id as-of-date]} data]
+    (if-let [settlement (get-settlement-account config bank-id)]
       (let [processed (process-customer-accounts config
-                                                 organization-id
+                                                 bank-id
                                                  (:account-id settlement)
                                                  as-of-date
                                                  capitalize-account)]
         (if (error/anomaly? processed)
           processed
-          {:organization-id organization-id
+          {:bank-id bank-id
            :as-of-date as-of-date
            :accounts-processed processed}))
       (error/reject :interest/no-settlement

@@ -33,7 +33,7 @@
    (store/transact
     config
     (fn [txn]
-      (let [{:keys [organization-id debtor-account-id
+      (let [{:keys [bank-id debtor-account-id
                     creditor-account-id]}
             data
             business-day (domain/current-business-day
@@ -41,22 +41,22 @@
                           (:business-day-cutoff config))
             policies (policy/get-effective-policies
                       txn
-                      {:organization-id organization-id})]
+                      {:bank-id bank-id})]
         (let-nom>
           [debtor-account (cash-accounts/get-account
                            txn
-                           organization-id
+                           bank-id
                            debtor-account-id)
            creditor-account (cash-accounts/get-account
                              txn
-                             organization-id
+                             bank-id
                              creditor-account-id)
            today-count (store/count-internal-by-org-business-day
                         txn
-                        organization-id
+                        bank-id
                         business-day)
            aggregates {:internal-payment
-                       {#{:organization-id :business-day} today-count}}
+                       {#{:bank-id :business-day} today-count}}
            payment-transaction (domain/internal-payment->transaction
                                 data
                                 debtor-account
@@ -78,13 +78,13 @@
   [config payment data]
   (let [{:keys [bus schemas scheme-payment-command-channel]} config
         {:keys [payment-id]} payment
-        {:keys [organization-id debtor-account-id
+        {:keys [bank-id debtor-account-id
                 creditor-bban creditor-name
                 currency amount reference]}
         data
         debtor-account (cash-accounts/get-account
                         config
-                        organization-id
+                        bank-id
                         debtor-account-id)
         bban (when-not (error/anomaly? debtor-account)
                (:bban debtor-account))
@@ -114,7 +114,7 @@
 (defn submit-outbound
   [config data]
   (let [{:keys [internal-account-id]} config
-        {:keys [organization-id debtor-account-id]} data
+        {:keys [bank-id debtor-account-id]} data
         result (or-already-submitted
                 (store/transact
                  config
@@ -124,18 +124,18 @@
                                        (:business-day-cutoff config))
                          policies (policy/get-effective-policies
                                    txn
-                                   {:organization-id organization-id})]
+                                   {:bank-id bank-id})]
                      (let-nom>
                        [debtor-account (cash-accounts/get-account
                                         txn
-                                        organization-id
+                                        bank-id
                                         debtor-account-id)
                         today-count (store/count-outbound-by-org-business-day
                                      txn
-                                     organization-id
+                                     bank-id
                                      business-day)
                         aggregates {:outbound-payment
-                                    {#{:organization-id :business-day}
+                                    {#{:bank-id :business-day}
                                      today-count}}
                         transaction (domain/outbound-payment->transaction
                                      data

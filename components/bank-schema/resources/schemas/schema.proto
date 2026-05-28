@@ -12,7 +12,7 @@ import "schemas/company/company.proto";
 import "schemas/idempotency/idempotency.proto";
 import "schemas/idv/idv.proto";
 import "schemas/memberships/membership.proto";
-import "schemas/organizations/organization.proto";
+import "schemas/banks/bank.proto";
 import "schemas/party/party-national-identifier.proto";
 import "schemas/party/party.proto";
 import "schemas/payee-check/payee_check.proto";
@@ -35,7 +35,7 @@ option (com.apple.foundationdb.record.schema).split_long_records = true;
 message RecordTypeUnion {
   optional com.repldriven.mono.schemas.cash_accounts.CashAccount _CashAccount = 1;
   reserved 2;
-  optional com.repldriven.mono.schemas.organizations.Organization _Organization = 3;
+  optional com.repldriven.mono.schemas.banks.Bank _Bank = 3;
   reserved 4;
   optional com.repldriven.mono.schemas.person_identification.PersonIdentification _PersonIdentification = 5;
   optional com.repldriven.mono.schemas.party.Party _Party = 6;

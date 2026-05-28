@@ -7,7 +7,7 @@
   topology; bootstrap consumes the persisted metadata read-only."
   (:require
     com.repldriven.mono.avro.interface
-    com.repldriven.mono.bank-organization.interface
+    com.repldriven.mono.bank-bank.interface
     com.repldriven.mono.bank-policy.interface
     com.repldriven.mono.bank-schema.interface
     com.repldriven.mono.fdb.interface

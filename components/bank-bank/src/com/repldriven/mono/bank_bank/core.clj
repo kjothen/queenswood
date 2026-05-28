@@ -1,7 +1,7 @@
-(ns com.repldriven.mono.bank-organization.core
+(ns com.repldriven.mono.bank-bank.core
   (:require
-    [com.repldriven.mono.bank-organization.domain :as domain]
-    [com.repldriven.mono.bank-organization.store :as store]
+    [com.repldriven.mono.bank-bank.domain :as domain]
+    [com.repldriven.mono.bank-bank.store :as store]
 
     [com.repldriven.mono.bank-balance.interface :as balances]
     [com.repldriven.mono.bank-cash-account.interface
@@ -15,24 +15,24 @@
 
     [com.repldriven.mono.error.interface :as error :refer [let-nom>]]))
 
-(def ^:private org-type->party-type
-  {:organization-type-internal :party-type-internal
-   :organization-type-customer :party-type-organization})
+(def ^:private bank-type->party-type
+  {:bank-type-internal :party-type-internal
+   :bank-type-customer :party-type-organization})
 
-(def ^:private org-type->product-type
-  {:organization-type-internal :product-type-internal
-   :organization-type-customer :product-type-settlement})
+(def ^:private bank-type->product-type
+  {:bank-type-internal :product-type-internal
+   :bank-type-customer :product-type-settlement})
 
-(def ^:private org-type->product-name
-  {:organization-type-internal "Internal Account"
-   :organization-type-customer "Settlement Account"})
+(def ^:private bank-type->product-name
+  {:bank-type-internal "Internal Account"
+   :bank-type-customer "Settlement Account"})
 
 (defn- open-accounts
-  [txn org-id party-id product-id product-name currencies policies]
+  [txn bank-id party-id product-id product-name currencies policies]
   (reduce (fn [acc currency]
             (let [result (cash-accounts/new-account
                           txn
-                          {:organization-id org-id
+                          {:bank-id bank-id
                            :party-id party-id
                            :product-id product-id
                            :name product-name
@@ -45,13 +45,13 @@
           currencies))
 
 (defn- bind-policies
-  [txn org-id policies]
+  [txn bank-id policies]
   (reduce (fn [_ {:keys [policy-id]}]
             (let [result (policy/new-binding
                           txn
                           {:policy-id policy-id
-                           :target {:kind {:organization
-                                           {:organization-id org-id}}}})]
+                           :target {:kind {:bank
+                                           {:bank-id bank-id}}}})]
               (if (error/anomaly? result) (reduced result) nil)))
           nil
           policies))
@@ -67,60 +67,60 @@
           accounts))
 
 (defn- enrich
-  [txn org client-secret]
-  (let [org-id (:organization-id org)]
+  [txn bank client-secret]
+  (let [bank-id (:bank-id bank)]
     (let-nom>
-      [{:keys [parties]} (party/get-parties txn org-id)
-       accounts (cash-accounts/get-accounts txn org-id)
+      [{:keys [parties]} (party/get-parties txn bank-id)
+       accounts (cash-accounts/get-accounts txn bank-id)
        enriched (enrich-accounts txn (:accounts accounts))]
       (cond->
-       {:organization
-        (assoc org
+       {:bank
+        (assoc bank
                :party (first parties)
                :accounts enriched
-               :client-id org-id)}
+               :client-id bank-id)}
 
        client-secret
        (assoc :client-secret client-secret)))))
 
-(defn get-organization
-  ([txn org]
-   (get-organization txn org nil))
-  ([txn org client-secret]
-   (store/transact txn (fn [txn] (enrich txn org client-secret)))))
+(defn get-bank
+  ([txn bank]
+   (get-bank txn bank nil))
+  ([txn bank client-secret]
+   (store/transact txn (fn [txn] (enrich txn bank client-secret)))))
 
-(defn get-organizations
-  ([txn] (get-organizations txn nil))
+(defn get-banks
+  ([txn] (get-banks txn nil))
   ([txn opts]
-   (let-nom> [orgs (store/get-organizations txn opts)]
-     (reduce (fn [acc org]
-               (let [result (get-organization txn org)]
+   (let-nom> [banks (store/get-banks txn opts)]
+     (reduce (fn [acc bank]
+               (let [result (get-bank txn bank)]
                  (if (error/anomaly? result)
                    (reduced result)
-                   (conj acc (:organization result)))))
+                   (conj acc (:bank result)))))
              []
-             orgs))))
+             banks))))
 
-(defn get-organizations-by-type
-  [txn org-type]
-  (store/get-organizations-by-type txn org-type))
+(defn get-banks-by-type
+  [txn bank-type]
+  (store/get-banks-by-type txn bank-type))
 
 (defn- counts
-  [txn org-type]
+  [txn bank-type]
   (let-nom>
-    [total (store/count-organizations-by-type txn org-type)]
-    {:organization {#{:type} total}}))
+    [total (store/count-banks-by-type txn bank-type)]
+    {:bank {#{:type} total}}))
 
-(defn new-organization
-  ([txn org-name org-type org-status tier currencies]
-   (new-organization txn
-                     org-name
-                     org-type
-                     org-status
-                     tier
-                     currencies
-                     {}))
-  ([txn org-name org-type org-status tier currencies opts]
+(defn new-bank
+  ([txn bank-name bank-type bank-status tier currencies]
+   (new-bank txn
+             bank-name
+             bank-type
+             bank-status
+             tier
+             currencies
+             {}))
+  ([txn bank-name bank-type bank-status tier currencies opts]
    (store/transact
     txn
     (fn [txn]
@@ -130,19 +130,19 @@
          tier-policies (if (some? tier)
                          (policy/get-policies-by-tier txn tier)
                          [])
-         aggregates (counts txn org-type)
-         org (domain/new-organization org-name
-                                      org-type
-                                      org-status
-                                      aggregates
-                                      policies)
-         org-id (:organization-id org)
+         aggregates (counts txn bank-type)
+         bank (domain/new-bank bank-name
+                               bank-type
+                               bank-status
+                               aggregates
+                               policies)
+         bank-id (:bank-id bank)
 
          ;; Issue the service-account client BEFORE the FDB write so an
          ;; identity-provider failure aborts the transaction cleanly.
-         ;; Client-id == organization-id (deterministic mapping). The
-         ;; internal-org bootstrap provisions no IDP because the
-         ;; queenswood org itself authenticates as admin; only callers
+         ;; Client-id == bank-id (deterministic mapping). The
+         ;; internal-bank bootstrap provisions no IDP because the
+         ;; queenswood bank itself authenticates as admin; only callers
          ;; that pass `:identity-provider` get a client. `:audience`
          ;; is the JWT `aud` claim the IDP will stamp on tokens for
          ;; this client — the bank-api handler picks it from its own
@@ -150,45 +150,45 @@
          {:keys [client-secret]} (if-let [idp (:identity-provider opts)]
                                    (identity-provider/create-service-account
                                     idp
-                                    {:organization-id org-id
-                                     :name org-name
+                                    {:bank-id bank-id
+                                     :name bank-name
                                      :audience (:audience opts)})
                                    {})
 
-         _ (store/create txn org)
+         _ (store/create txn bank)
 
          {:keys [party-id]} (party/new-party
                              txn
-                             {:organization-id org-id
-                              :type (org-type->party-type org-type)
-                              :display-name org-name}
+                             {:bank-id bank-id
+                              :type (bank-type->party-type bank-type)
+                              :display-name bank-name}
                              {:policies policies})
 
          version (products/new-product
                   txn
-                  org-id
-                  {:name (org-type->product-name org-type)
-                   :product-type (org-type->product-type org-type)
+                  bank-id
+                  {:name (bank-type->product-name bank-type)
+                   :product-type (bank-type->product-type bank-type)
                    :currency (first currencies)}
                   {:policies policies})
          product-id (:product-id version)
          _ (products/publish txn
-                             org-id
+                             bank-id
                              product-id
                              (:version-id version)
                              {:policies policies})
 
          _ (open-accounts txn
-                          org-id
+                          bank-id
                           party-id
                           product-id
-                          (org-type->product-name org-type)
+                          (bank-type->product-name bank-type)
                           currencies
                           policies)
 
-         _ (bind-policies txn org-id tier-policies)
+         _ (bind-policies txn bank-id tier-policies)
 
-         result (get-organization txn org client-secret)]
+         result (get-bank txn bank client-secret)]
         result))
-    :organization/create
-    "Failed to create organization")))
+    :bank/create
+    "Failed to create bank")))

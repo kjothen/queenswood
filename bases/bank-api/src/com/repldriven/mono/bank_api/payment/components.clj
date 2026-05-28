@@ -22,7 +22,7 @@
 (def InternalPayment
   [:map {:json-schema/example examples/InternalPayment}
    [:payment-id [:ref "PaymentId"]]
-   [:organization-id [:ref "OrganizationId"]]
+   [:bank-id [:ref "BankId"]]
    [:debtor-account-id [:ref "CashAccountId"]]
    [:creditor-account-id [:ref "CashAccountId"]]
    [:currency [:ref "Currency"]]
@@ -51,7 +51,7 @@
 (def OutboundPayment
   [:map {:json-schema/example examples/OutboundPayment}
    [:payment-id [:ref "PaymentId"]]
-   [:organization-id [:ref "OrganizationId"]]
+   [:bank-id [:ref "BankId"]]
    [:scheme [:ref "PaymentScheme"]]
    [:debtor-account-id [:ref "CashAccountId"]]
    [:creditor-bban [:ref "Bban"]]

@@ -1,7 +1,7 @@
 (ns com.repldriven.mono.bank-idempotency.interface
   "FDB-backed idempotency cache for the bank API. Caches the response
   for any POST route that requires `Idempotency-Key`, scoped by the
-  authenticated principal (organization-id for service-account JWTs,
+  authenticated principal (bank-id for service-account JWTs,
   `\"admin\"` for the admin bearer). Replays cached 2xx/4xx for
   matching keys; skips 5xx so transient failures can be retried."
   (:require

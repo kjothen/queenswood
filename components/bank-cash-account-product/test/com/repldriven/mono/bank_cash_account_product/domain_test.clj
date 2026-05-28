@@ -23,7 +23,7 @@
     :capabilities [{:kind {:cash-account-product {}} :effect :effect-allow}]}])
 
 (def ^:private published-version
-  {:organization-id "org.1"
+  {:bank-id "bnk.1"
    :product-id "prd.1"
    :version-id "prv.1"
    :version-number 1
@@ -103,7 +103,7 @@
 
 (deftest new-version-test
   (testing "rejects with :draft-already-exists when versions contains a draft"
-    (let [r (SUT/new-version "org.1"
+    (let [r (SUT/new-version "bnk.1"
                              "prd.1"
                              [draft-version]
                              good-data
@@ -111,7 +111,7 @@
       (is (error/rejection? r))
       (is (= :cash-account-product/draft-already-exists (error/kind r)))))
   (testing "succeeds when prior versions are all published or discarded"
-    (let [v (SUT/new-version "org.1"
+    (let [v (SUT/new-version "bnk.1"
                              "prd.1"
                              [published-version discarded-version]
                              good-data
@@ -119,11 +119,11 @@
       (is (= :cash-account-product-status-draft (:status v)))
       (is (= 3 (:version-number v)) "version-number is 1 + (count versions)")))
   (testing "succeeds with no prior versions — fresh product flow"
-    (let [v (SUT/new-version "org.1" "prd.1" [] good-data permissive-policies)]
+    (let [v (SUT/new-version "bnk.1" "prd.1" [] good-data permissive-policies)]
       (is (= 1 (:version-number v)))
       (is (= :cash-account-product-status-draft (:status v)))))
   (testing "fills derived fields from the per-product-type template"
-    (let [v (SUT/new-version "org.1" "prd.1" [] good-data permissive-policies)]
+    (let [v (SUT/new-version "bnk.1" "prd.1" [] good-data permissive-policies)]
       (is (= :balance-sheet-side-liability (:balance-sheet-side v)))
       (is (= ["GBP"] (:allowed-currencies v)))
       (is (= [:payment-address-scheme-scan]
@@ -135,7 +135,7 @@
           "template provides at least the default-posted balance bucket")))
   (testing
     "rejects with :currency-not-allowed when currency is outside the menu"
-    (let [r (SUT/new-version "org.1"
+    (let [r (SUT/new-version "bnk.1"
                              "prd.1"
                              []
                              (assoc good-data :currency "USD")

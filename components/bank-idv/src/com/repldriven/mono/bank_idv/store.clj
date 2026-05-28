@@ -24,19 +24,19 @@
              (:verification-id idv)
              (schema/IdvChangelog->pb
               (assoc changelog
-                     :organization-id (:organization-id idv)
+                     :bank-id (:bank-id idv)
                      :party-id (:party-id idv))))]
          idv)))
    :idv/save
    "Failed to save IDV"))
 
 (defn get-idv
-  [txn organization-id verification-id]
+  [txn bank-id verification-id]
   (fdb/transact
    txn
    (fn [txn]
      (some-> (fdb/load-record (fdb/open txn store-name)
-                              organization-id
+                              bank-id
                               verification-id)
              schema/pb->Idv))
    :idv/get

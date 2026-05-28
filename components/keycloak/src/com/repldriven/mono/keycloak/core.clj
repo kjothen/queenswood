@@ -63,9 +63,9 @@
   service-account client. `audience` is the realm-level client-scope
   name to attach, so every JWT this client mints carries the right
   `aud` claim. Returns plain Clojure data ready for JSON encoding."
-  [{:keys [organization-id name audience]}]
-  {:clientId organization-id
-   :name (or name organization-id)
+  [{:keys [bank-id name audience]}]
+  {:clientId bank-id
+   :name (or name bank-id)
    :enabled true
    :protocol "openid-connect"
    :publicClient false
@@ -75,7 +75,8 @@
    :implicitFlowEnabled false
    :attributes {"access.token.lifespan" "3600"}
    :defaultClientScopes (cond-> ["service-accounts"]
-                                audience (conj audience))
+                                audience
+                                (conj audience))
    :optionalClientScopes []
    :description audience})
 
@@ -114,7 +115,8 @@
     (or (some-> (parse-token-response body)
                 (assoc :fetched-at (util/now)))
         (error/fail :keycloak/admin-token-malformed
-                    {:message "Keycloak admin token response missing access_token"}))))
+                    {:message
+                     "Keycloak admin token response missing access_token"}))))
 
 (defn- admin-token!
   "Return a valid admin access token, refreshing if expired."
@@ -135,10 +137,10 @@
    "content-type" "application/json"})
 
 (defn create-client
-  "Create a Keycloak client for `organization-id`. Returns
+  "Create a Keycloak client for `bank-id`. Returns
   `{:client-id …}` (the secret is fetched separately via
   `client-secret`) or an anomaly."
-  [client {:keys [organization-id name audience]}]
+  [client {:keys [bank-id name audience]}]
   (let [config (-config client)]
     (let-nom>
       [token (admin-token! client)
@@ -148,10 +150,10 @@
            :headers (admin-headers token)
            :body (json/write-str
                   (new-client-representation
-                   {:organization-id organization-id
+                   {:bank-id bank-id
                     :name name
                     :audience audience}))})]
-      {:client-id organization-id})))
+      {:client-id bank-id})))
 
 (defn client-secret
   "Fetch the current client_secret for a given Keycloak clientId. The
@@ -166,7 +168,9 @@
                   :url (admin-url config "/clients?clientId=" client-id)
                   :headers (admin-headers token)})
        clients (http/res->edn list-res)
-       uuid (some-> clients first :id)
+       uuid (some-> clients
+                    first
+                    :id)
        _ (when-not uuid
            (error/reject :keycloak/client-not-found
                          {:message "No Keycloak client matches client-id"
@@ -190,7 +194,9 @@
                   :url (admin-url config "/clients?clientId=" client-id)
                   :headers (admin-headers token)})
        clients (http/res->edn list-res)
-       uuid (some-> clients first :id)]
+       uuid (some-> clients
+                    first
+                    :id)]
       (if uuid
         (let-nom>
           [_ (http/request
@@ -211,7 +217,9 @@
                   :url (admin-url config "/clients?clientId=" client-id)
                   :headers (admin-headers token)})
        clients (http/res->edn list-res)
-       uuid (some-> clients first :id)
+       uuid (some-> clients
+                    first
+                    :id)
        _ (when-not uuid
            (error/reject :keycloak/client-not-found
                          {:message "No Keycloak client matches client-id"

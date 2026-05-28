@@ -7,7 +7,7 @@
  :given
  [{:command :api/request
    :request {:method :post
-             :path "/v1/organizations"
+             :path "/v1/banks"
              :auth :admin
              :body {:name "Payee Check Close Match Org"
                     :status "live"

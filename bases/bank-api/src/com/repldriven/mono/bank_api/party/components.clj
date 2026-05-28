@@ -18,7 +18,7 @@
 
 (def Party
   [:map {:json-schema/example examples/Party}
-   [:organization-id [:ref "OrganizationId"]]
+   [:bank-id [:ref "BankId"]]
    [:party-id [:ref "PartyId"]]
    [:type [:ref "PartyType"]]
    [:display-name [:ref "Name"]]

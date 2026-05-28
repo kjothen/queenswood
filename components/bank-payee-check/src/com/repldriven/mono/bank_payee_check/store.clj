@@ -20,12 +20,12 @@
    "Failed to save payee check"))
 
 (defn get-check
-  [txn org-id check-id]
+  [txn bank-id check-id]
   (fdb/transact
    txn
    (fn [txn]
      (if-let [record (fdb/load-record (fdb/open txn store-name)
-                                      org-id
+                                      bank-id
                                       check-id)]
        (schema/pb->PayeeCheck record)
        (error/reject :payee-check/not-found
@@ -35,9 +35,9 @@
    "Failed to load payee check"))
 
 (defn get-checks
-  ([txn org-id]
-   (get-checks txn org-id nil))
-  ([txn org-id opts]
+  ([txn bank-id]
+   (get-checks txn bank-id nil))
+  ([txn bank-id opts]
    (fdb/transact
     txn
     (fn [txn]
@@ -46,7 +46,7 @@
             opts
             result (fdb/scan-records
                     (fdb/open txn store-name)
-                    {:prefix [org-id]
+                    {:prefix [bank-id]
                      :after after
                      :before before
                      :limit limit

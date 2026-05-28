@@ -17,7 +17,7 @@
   `:openapi {:parameters ^:replace [...]}`, the replacement wipes any
   path params reitit would have auto-generated from `:parameters :path`.
   Routes that need both a path param and a query/header override must
-  include `ref-account-id` / `ref-org-id` alongside the other refs."
+  include `ref-account-id` / `ref-bank-id` alongside the other refs."
   (:require
     [com.repldriven.mono.bank-api.shared.components :as shared.components]
 
@@ -91,12 +91,12 @@
    :required true
    :schema {:$ref "#/components/schemas/CashAccountId"}})
 
-(def OrgId
-  "`components.parameters` entry for the `org-id` path parameter."
-  {:name "org-id"
+(def BankId
+  "`components.parameters` entry for the `bank-id` path parameter."
+  {:name "bank-id"
    :in "path"
    :required true
-   :schema {:$ref "#/components/schemas/OrganizationId"}})
+   :schema {:$ref "#/components/schemas/BankId"}})
 
 (def PartyId
   {:name "party-id"
@@ -156,7 +156,7 @@
 (def ref-page {:$ref "#/components/parameters/PageQuery"})
 (def ref-embed {:$ref "#/components/parameters/EmbedQuery"})
 (def ref-account-id {:$ref "#/components/parameters/AccountId"})
-(def ref-org-id {:$ref "#/components/parameters/OrgId"})
+(def ref-bank-id {:$ref "#/components/parameters/BankId"})
 (def ref-party-id {:$ref "#/components/parameters/PartyId"})
 (def ref-product-id {:$ref "#/components/parameters/ProductId"})
 (def ref-version-id {:$ref "#/components/parameters/VersionId"})
@@ -174,7 +174,7 @@
    "PageQuery" PageQuery
    "EmbedQuery" EmbedQuery
    "AccountId" AccountId
-   "OrgId" OrgId
+   "BankId" BankId
    "PartyId" PartyId
    "ProductId" ProductId
    "VersionId" VersionId

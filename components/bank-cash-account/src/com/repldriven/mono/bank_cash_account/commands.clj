@@ -22,9 +22,8 @@
                           (->response config (core/close-account config data)))
    "get-cash-account"
    (fn [config data]
-     (let [{:keys [organization-id account-id]} data]
-       (->response config
-                   (core/get-account config organization-id account-id))))})
+     (let [{:keys [bank-id account-id]} data]
+       (->response config (core/get-account config bank-id account-id))))})
 
 (defn- dispatch
   [config message]

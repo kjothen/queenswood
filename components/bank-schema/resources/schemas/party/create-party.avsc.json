@@ -3,7 +3,7 @@
   "name": "CreateParty",
   "namespace": "com.repldriven.mono.party",
   "fields": [
-    {"name": "organization_id", "type": "string"},
+    {"name": "bank_id", "type": "string"},
     {"name": "type", "type": {"type": "enum",
                                        "name": "PartyType",
                                        "symbols": ["PARTY_TYPE_PERSON", "PARTY_TYPE_INTERNAL"]}},

@@ -6,7 +6,7 @@ import "record_metadata_options.proto";
 
 option java_outer_classname = "MembershipProto";
 
-// Membership -- joins a User to an Organization with a role.
+// Membership -- joins a User to a Bank with a role.
 // Designed for N:M (a User can join many Orgs) but the MVP only
 // creates ROLE_OWNER memberships from the onboarding flow.
 // Additional roles (admin/developer/viewer) reserved for future use.
@@ -23,7 +23,7 @@ message Membership {
 
   required string membership_id = 1 [(com.apple.foundationdb.record.field).primary_key = true];
   required string user_id = 2;
-  required string organization_id = 3;
+  required string bank_id = 3;
   required Role role = 4;
   required int64 created_at = 5;
   required int64 updated_at = 6;
