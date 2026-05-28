@@ -1,4 +1,10 @@
 _record-types: !strs &record-types
+  assertions:
+    record-type: Assertion
+    primary-key: [organization_id, party_id, assertion_id]
+    indexes:
+      - name: Assertion_by_party_kind
+        fields: [party_id, kind]
   balances:
     record-type: Balance
     primary-key: [account_id, balance_type, currency, balance_status]
@@ -24,6 +30,10 @@ _record-types: !strs &record-types
         type: count
       - name: CashAccount_by_bban
         field: bban
+  companies:
+    record-type: Company
+    primary-key: [company_number]
+    indexes: []
   idempotency:
     record-type: Idempotency
     primary-key: [principal_id, operation, idempotency_key]
