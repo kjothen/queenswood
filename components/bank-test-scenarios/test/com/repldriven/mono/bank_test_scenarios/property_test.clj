@@ -46,11 +46,6 @@
    :schemas (system/instance sys [:avro :serde])
    :scheme-payment-command-channel :schemes-payment-command})
 
-(defn- internal-account
-  [sys]
-  (-> (system/instance sys [:banks :internal])
-      (get-in [:bank :accounts 0 :account-id])))
-
 (deftest model-generates-plausible-sequences-test
   (testing "fugato produces vectors of {:command :args} maps"
     (let [samples (gen/sample (fugato/commands model/model model/init-state 3)
@@ -114,8 +109,8 @@
   "Drives `cmds` through both reality and the model, then compares
   projected state across balances, products, and parties. Returns
   true on agreement; false (with the diff logged) on divergence."
-  [bank internal-account-id cmds]
-  (let [ctx (SUT/fresh-context bank internal-account-id)
+  [bank cmds]
+  (let [ctx (SUT/fresh-context bank)
         final (SUT/run-commands ctx cmds)
         real (project-real bank final)
         model-end (fugato/execute model/model model/init-state cmds)
@@ -169,7 +164,6 @@
   (with-test-system
    [sys ["classpath:bank-test-scenarios/application-test.yml" patch-handlers]]
    (let [bank (fdb-config sys)
-         internal (internal-account sys)
          stats (atom {:trials 0 :total-commands 0 :by-command {} :lengths []})
          _ (log/info "model-eq-reality starting"
                      {:num-tests num-tests :max-size max-size})
@@ -178,7 +172,7 @@
                  (prop/for-all [cmds
                                 (fugato/commands model/model model/init-state)]
                                (swap! stats record-trial cmds)
-                               (run-and-compare bank internal cmds))
+                               (run-and-compare bank cmds))
                  :max-size
                  max-size)]
      (summarise @stats)

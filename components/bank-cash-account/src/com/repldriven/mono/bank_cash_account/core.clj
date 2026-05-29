@@ -135,6 +135,10 @@
   [txn bank-id product-type]
   (store/get-account-by-type txn bank-id product-type))
 
+(defn get-account-by-gl-code
+  [txn bank-id gl-code]
+  (store/get-account-by-gl-code txn bank-id gl-code))
+
 (defn get-account-by-bban
   [txn bban]
   (store/get-account-by-bban txn bban))

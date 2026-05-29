@@ -9,6 +9,14 @@
 
 (def default-sort-code "040004")
 
+;; Duplicated from bank-chart-of-accounts.domain to avoid a brick
+;; dependency cycle (bank-chart-of-accounts already depends on
+;; bank-cash-account for seeding). Keep these two maps in sync.
+(def ^:private control-code-for-product-type
+  {:product-type-current "2100"
+   :product-type-savings "2200"
+   :product-type-term-deposit "2300"})
+
 (defn- party->account-type
   [party]
   (if (= :party-type-person (:type party))
@@ -51,9 +59,21 @@
 
 (defn open-account
   [data product party address-fountain-fn aggregates policies]
-  (let [{:keys [bank-id party-id product-id currency name]} data
+  (let [{:keys [bank-id party-id product-id currency name
+                gl-code gl-account-type gl-account-class required
+                gl-control-code]}
+        data
         {:keys [version-id product-type]} product
-        account-type (party->account-type party)]
+        account-type (party->account-type party)
+        ;; Customer accounts (current/savings/term) inherit a control
+        ;; code from their product type so payments and interest
+        ;; postings fan out to the matching GL control. Bank-owned
+        ;; CoA accounts get :gl-code set and leave :gl-control-code
+        ;; nil (they are GL themselves, not sub-ledger).
+        resolved-control-code (or gl-control-code
+                                  (when (nil? gl-code)
+                                    (control-code-for-product-type
+                                     product-type)))]
     (let-nom>
       [_ (when (nil? product)
            (error/reject :cash-account/open
@@ -88,20 +108,35 @@
       (let [now (utility/now)
             bban (some (fn [{:keys [scan]}] (when scan (scan->bban scan)))
                        payment-addresses)]
-        {:bank-id bank-id
-         :party-id party-id
-         :product-id product-id
-         :version-id version-id
-         :currency currency
-         :name name
-         :account-id (utility/generate-id "acc")
-         :product-type product-type
-         :account-type account-type
-         :account-status :cash-account-status-opening
-         :payment-addresses payment-addresses
-         :bban bban
-         :created-at now
-         :updated-at now}))))
+        (cond-> {:bank-id bank-id
+                 :party-id party-id
+                 :product-id product-id
+                 :version-id version-id
+                 :currency currency
+                 :name name
+                 :account-id (utility/generate-id "acc")
+                 :product-type product-type
+                 :account-type account-type
+                 :account-status :cash-account-status-opening
+                 :payment-addresses payment-addresses
+                 :bban bban
+                 :created-at now
+                 :updated-at now}
+
+                gl-code
+                (assoc :gl-code gl-code)
+
+                gl-account-type
+                (assoc :gl-account-type gl-account-type)
+
+                gl-account-class
+                (assoc :gl-account-class gl-account-class)
+
+                required
+                (assoc :required required)
+
+                resolved-control-code
+                (assoc :gl-control-code resolved-control-code))))))
 
 (defn opening-balances
   [account currency product]

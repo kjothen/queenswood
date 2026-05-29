@@ -6,6 +6,8 @@
     [com.repldriven.mono.bank-balance.interface :as balances]
     [com.repldriven.mono.bank-cash-account-product.interface :as products]
     [com.repldriven.mono.bank-cash-account.interface :as cash-accounts]
+    [com.repldriven.mono.bank-chart-of-accounts.interface :as
+     chart-of-accounts]
     [com.repldriven.mono.bank-idv.interface :as idv]
     [com.repldriven.mono.bank-interest.interface :as interest]
     [com.repldriven.mono.bank-bank.interface :as banks]
@@ -22,12 +24,20 @@
     [clojure.test :refer [is]]))
 
 (defn- record-and-apply
-  [bank tx-data]
+  "Record a transaction directly (bypassing the payment processor)
+  and apply its legs to balances. Fans out customer sub-ledger legs
+  to the matching control GL accounts in the same FDB transaction."
+  [bank bank-id tx-data]
   (fdb/transact
    bank
    (fn [txn]
-     (let [r (transactions/record-transaction txn tx-data)]
-       (balances/apply-legs txn (:legs r) (:transaction-type r))))))
+     (let [expanded (chart-of-accounts/expand-legs txn bank-id (:legs tx-data))]
+       (if (error/anomaly? expanded)
+         expanded
+         (let [r (transactions/record-transaction
+                  txn
+                  (assoc tx-data :legs expanded))]
+           (balances/apply-legs txn (:legs r) (:transaction-type r))))))))
 
 (defn- seed-opened
   [bank org-real-id real-acct-id]
@@ -324,32 +334,36 @@
         (track result))))
 
 (defn- transfer-tx
-  [{:keys [transaction-type idempotency-key reference
-           customer-id internal-account-id amount
-           customer-side internal-side]}]
+  "Build a balanced 2-leg simulation transaction. `gl-leg` is the
+  bank-side leg; `customer-leg` is the sub-ledger leg. Both already
+  carry their own balance-type/status; the helper just wraps them
+  into the transaction envelope."
+  [{:keys [transaction-type idempotency-key reference currency
+           gl-leg customer-leg]}]
   {:idempotency-key idempotency-key
    :transaction-type transaction-type
-   :currency "GBP"
+   :currency (or currency "GBP")
    :reference reference
-   :legs [{:account-id internal-account-id
-           :balance-type :balance-type-suspense
-           :balance-status :balance-status-posted
-           :side internal-side
-           :amount amount}
-          {:account-id customer-id
-           :balance-type :balance-type-default
-           :balance-status :balance-status-posted
-           :side customer-side
-           :amount amount}]})
+   :legs [gl-leg customer-leg]})
+
+(defn- gl-account-for
+  "Look up the bank's `gl-code` GL account on its own books."
+  [bank bank-id gl-code]
+  (cash-accounts/get-account-by-gl-code bank bank-id gl-code))
+
+(defn- bank-id-for-account
+  "Resolve the bank-id that owns `model-acct`."
+  [orgs accounts model-acct]
+  (get-in orgs [(get-in accounts [model-acct :org]) :real-id]))
 
 (defmethod dispatch :inbound-transfer
-  [{:keys [bank accounts internal-account-id next-inbound-id run-id] :as ctx}
+  [{:keys [bank accounts next-inbound-id run-id] :as ctx}
    {[model-acct amount] :args}]
   (let [bban (get-in accounts [model-acct :bban])
         marker (keyword (str "in-" next-inbound-id))
         stx-id (str "scen-in-" run-id "-" (name marker))
         result (payment/settle-inbound
-                (assoc bank :internal-account-id internal-account-id)
+                bank
                 {:scheme-transaction-id stx-id
                  :end-to-end-id stx-id
                  :scheme "FPS"
@@ -366,20 +380,32 @@
         (track result))))
 
 (defmethod dispatch :outbound-transfer
-  [{:keys [bank counter id-mapping internal-account-id run-id] :as ctx}
+  [{:keys [bank counter id-mapping orgs accounts run-id] :as ctx}
    {[model-id amount] :args}]
   (let [real-id (id-mapping/real id-mapping model-id)
-        result (record-and-apply
-                bank
-                (transfer-tx
-                 {:transaction-type :transaction-type-outbound-transfer
-                  :idempotency-key (str "scen-out-" run-id "-" counter)
-                  :reference (str "scenario outbound " counter)
-                  :customer-id real-id
-                  :internal-account-id internal-account-id
-                  :amount amount
-                  :customer-side :leg-side-debit
-                  :internal-side :leg-side-credit}))]
+        bank-id (bank-id-for-account orgs accounts model-id)
+        pending-outbound (gl-account-for bank bank-id "1200")
+        result
+        (if (or (nil? pending-outbound) (error/anomaly? pending-outbound))
+          (error/reject :scenario/no-pending-outbound-account
+                        {:message "Bank has no 1200 pending-outbound account"
+                         :bank-id bank-id})
+          (record-and-apply
+           bank
+           bank-id
+           (transfer-tx {:transaction-type :transaction-type-outbound-transfer
+                         :idempotency-key (str "scen-out-" run-id "-" counter)
+                         :reference (str "scenario outbound " counter)
+                         :gl-leg {:account-id (:account-id pending-outbound)
+                                  :balance-type :balance-type-default
+                                  :balance-status :balance-status-posted
+                                  :side :leg-side-credit
+                                  :amount amount}
+                         :customer-leg {:account-id real-id
+                                        :balance-type :balance-type-default
+                                        :balance-status :balance-status-posted
+                                        :side :leg-side-debit
+                                        :amount amount}})))]
     (-> ctx
         (update :counter inc)
         (track result))))
@@ -418,8 +444,7 @@
         (track result))))
 
 (defmethod dispatch :outbound-payment
-  [{:keys [bank counter id-mapping internal-account-id orgs accounts run-id
-           next-payment-id]
+  [{:keys [bank counter id-mapping orgs accounts run-id next-payment-id]
     :as ctx} {args :args}]
   ;; Two-arg `[debtor amount]` pays an external creditor with a
   ;; fixed BBAN. Three-arg `[debtor creditor amount]` pays a known
@@ -442,7 +467,6 @@
         model-org (get-in accounts [model-acct :org])
         org-real-id (get-in orgs [model-org :real-id])
         model-pmt (model-id-for-next-payment next-payment-id)
-        bank+internal (assoc bank :internal-account-id internal-account-id)
         creditor-pre-net
         (when creditor-real-id
           (let [b (balances/get-balance bank
@@ -452,7 +476,7 @@
                                         :balance-status-posted)]
             (when-not (error/anomaly? b) (- (:credit b 0) (:debit b 0)))))
         result (payment/submit-outbound
-                bank+internal
+                bank
                 {:idempotency-key (str "scen-pay-" run-id "-" counter)
                  :bank-id org-real-id
                  :debtor-account-id real-acct-id
@@ -475,7 +499,7 @@
         ;; balance to reach pre + amount (Credit hop, fired as a
         ;; separate transaction-settled webhook).
         _ (when real-pmt-id
-            (quiescence/wait-for-outbound-completed bank+internal real-pmt-id))
+            (quiescence/wait-for-outbound-completed bank real-pmt-id))
         _ (when (and real-pmt-id creditor-real-id creditor-pre-net)
             (quiescence/wait-for-credit bank
                                         creditor-real-id
@@ -494,11 +518,10 @@
   (update ctx :counter inc))
 
 (defmethod dispatch :settle-inbound-event
-  [{:keys [bank accounts internal-account-id] :as ctx}
-   {[model-acct amount stx-id] :args}]
+  [{:keys [bank accounts] :as ctx} {[model-acct amount stx-id] :args}]
   (let [bban (get-in accounts [model-acct :bban])
         result (payment/settle-inbound
-                (assoc bank :internal-account-id internal-account-id)
+                bank
                 {:scheme-transaction-id stx-id
                  :end-to-end-id stx-id
                  :scheme "FPS"
@@ -514,11 +537,10 @@
         (track result))))
 
 (defmethod dispatch :settle-outbound-payment
-  [{:keys [bank counter internal-account-id payments run-id] :as ctx}
-   {[model-pmt] :args}]
+  [{:keys [bank counter payments run-id] :as ctx} {[model-pmt] :args}]
   (let [real-pmt-id (get-in payments [model-pmt :real-id])
         result (payment/settle-outbound
-                (assoc bank :internal-account-id internal-account-id)
+                bank
                 {:scheme-transaction-id (str "scen-stl-" run-id "-" counter)
                  :end-to-end-id real-pmt-id
                  :scheme "FPS"
@@ -534,20 +556,34 @@
         (track result))))
 
 (defmethod dispatch :apply-fee
-  [{:keys [bank counter id-mapping internal-account-id run-id] :as ctx}
+  [{:keys [bank counter id-mapping orgs accounts run-id] :as ctx}
    {[model-id amount] :args}]
+  ;; Scenario fee: DEBIT customer.default, CREDIT 1100.default
+  ;; (the bank takes the fee onto its cash position — placeholder
+  ;; until 4100 fee-income lands in a future wave).
   (let [real-id (id-mapping/real id-mapping model-id)
-        result (record-and-apply bank
-                                 (transfer-tx
-                                  {:transaction-type :transaction-type-fee
-                                   :idempotency-key (str "scen-fee-" run-id
-                                                         "-" counter)
-                                   :reference (str "scenario fee " counter)
-                                   :customer-id real-id
-                                   :internal-account-id internal-account-id
-                                   :amount amount
-                                   :customer-side :leg-side-debit
-                                   :internal-side :leg-side-credit}))]
+        bank-id (bank-id-for-account orgs accounts model-id)
+        cash (gl-account-for bank bank-id "1100")
+        result
+        (if (or (nil? cash) (error/anomaly? cash))
+          (error/reject :scenario/no-cash-at-correspondent-account
+                        {:message "Bank has no 1100 account" :bank-id bank-id})
+          (record-and-apply
+           bank
+           bank-id
+           (transfer-tx {:transaction-type :transaction-type-fee
+                         :idempotency-key (str "scen-fee-" run-id "-" counter)
+                         :reference (str "scenario fee " counter)
+                         :gl-leg {:account-id (:account-id cash)
+                                  :balance-type :balance-type-default
+                                  :balance-status :balance-status-posted
+                                  :side :leg-side-credit
+                                  :amount amount}
+                         :customer-leg {:account-id real-id
+                                        :balance-type :balance-type-default
+                                        :balance-status :balance-status-posted
+                                        :side :leg-side-debit
+                                        :amount amount}})))]
     (-> ctx
         (update :counter inc)
         (track result))))

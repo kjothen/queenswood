@@ -30,6 +30,24 @@ enum AccountType {
   ACCOUNT_TYPE_BUSINESS = 2;
 }
 
+enum GlAccountType {
+  GL_ACCOUNT_TYPE_UNKNOWN = 0;
+  GL_ACCOUNT_TYPE_ASSET = 1;
+  GL_ACCOUNT_TYPE_LIABILITY = 2;
+}
+
+enum GlAccountClass {
+  GL_ACCOUNT_CLASS_UNKNOWN = 0;
+  GL_ACCOUNT_CLASS_DETAIL = 1;
+  GL_ACCOUNT_CLASS_CONTROL = 2;
+}
+
+enum Required {
+  REQUIRED_UNKNOWN = 0;
+  REQUIRED_MANDATORY = 1;
+  REQUIRED_OPTIONAL = 2;
+}
+
 message CashAccount {
   option (com.apple.foundationdb.record.record).usage = RECORD;
 
@@ -47,6 +65,15 @@ message CashAccount {
   optional string bban = 12; // denormalised for indexing: sort_code + account_number
   required int64 created_at = 13;
   required int64 updated_at = 14;
+  // GL bookkeeping discriminators. `gl_code` is set on bank-owned
+  // chart-of-accounts rows (e.g. "1100", "2400"); customer cash
+  // accounts leave it nil and carry `gl_control_code` instead, which
+  // names the GL control account their balance rolls up into.
+  optional string gl_code = 15;
+  optional GlAccountType gl_account_type = 16;
+  optional GlAccountClass gl_account_class = 17;
+  optional Required required = 18;
+  optional string gl_control_code = 19;
 
   enum CashAccountStatus {
     CASH_ACCOUNT_STATUS_UNKNOWN = 0;

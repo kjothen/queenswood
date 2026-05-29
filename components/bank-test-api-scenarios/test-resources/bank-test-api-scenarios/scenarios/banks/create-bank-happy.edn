@@ -18,8 +18,9 @@
                    :client-id [:m/regex "^bnk\\."]
                    :client-secret [:m/regex ".+"]
                    :party {:party-id [:m/regex "^pty\\."]}
-                   :accounts [{:account-id [:m/regex "^acc\\."]
-                               :balances [:m/non-empty]}]}}}]
+                   :accounts [:m/embeds
+                              [{:account-id [:m/regex "^acc\\."]
+                                :balances [:m/non-empty]}]]}}}]
  :then
  [{:command :api/request
    :request {:method :get

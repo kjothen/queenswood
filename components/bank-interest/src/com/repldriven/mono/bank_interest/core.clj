@@ -8,12 +8,16 @@
      cash-accounts]
     [com.repldriven.mono.bank-cash-account-product.interface :as
      products]
+    [com.repldriven.mono.bank-chart-of-accounts.interface :as
+     chart-of-accounts]
     [com.repldriven.mono.bank-transaction.interface :as
      transactions]
 
     [com.repldriven.mono.cache.interface :as cache]
     [com.repldriven.mono.error.interface :as error
      :refer [let-nom>]]))
+
+(def ^:private gl-code-interest-payable "2400")
 
 (defn- customer-accounts
   [accounts]
@@ -38,7 +42,7 @@
                           (:version-id account))))
 
 (defn- accrue-account
-  [config settlement-id account as-of-date]
+  [config interest-payable-id account as-of-date]
   (let [{:keys [bank-id account-id currency]} account]
     (store/transact
      config
@@ -61,15 +65,20 @@
           ;; only), and 0 is truthy. accrual-transaction returns nil in
           ;; that case. Mirror in capitalize-account.
           transaction (when whole-units
-                        (domain/accrual-transaction settlement-id
+                        (domain/accrual-transaction interest-payable-id
                                                     account-id
                                                     currency
                                                     whole-units
                                                     as-of-date))
           _ (when transaction
               (let-nom>
-                [transaction+legs (transactions/record-transaction txn
-                                                                   transaction)
+                [expanded-legs (chart-of-accounts/expand-legs
+                                txn
+                                bank-id
+                                (:legs transaction))
+                 transaction+legs (transactions/record-transaction
+                                   txn
+                                   (assoc transaction :legs expanded-legs))
                  _ (balances/apply-legs txn
                                         (:legs transaction+legs)
                                         (:transaction-type transaction+legs))]))
@@ -82,8 +91,8 @@
                                   carry))])))))
 
 (defn- capitalize-account
-  [config settlement-id account as-of-date]
-  (let [{:keys [account-id currency]} account]
+  [config interest-payable-id account as-of-date]
+  (let [{:keys [bank-id account-id currency]} account]
     (store/transact
      config
      (fn [txn]
@@ -94,7 +103,7 @@
                                         currency
                                         :balance-status-posted)
           transaction (domain/capitalization-transaction
-                       settlement-id
+                       interest-payable-id
                        account-id
                        currency
                        balance
@@ -102,22 +111,27 @@
           _
           (when transaction
             (let-nom>
-              [transaction+legs (transactions/record-transaction txn
-                                                                 transaction)
+              [expanded-legs (chart-of-accounts/expand-legs
+                              txn
+                              bank-id
+                              (:legs transaction))
+               transaction+legs (transactions/record-transaction
+                                 txn
+                                 (assoc transaction :legs expanded-legs))
                _ (balances/apply-legs txn
                                       (:legs transaction+legs)
                                       (:transaction-type transaction+legs))]))])))))
 
-(defn- get-settlement-account
+(defn- get-interest-payable-account
   [config bank-id]
-  (let [result (cash-accounts/get-account-by-type
+  (let [result (cash-accounts/get-account-by-gl-code
                 config
                 bank-id
-                :product-type-settlement)]
+                gl-code-interest-payable)]
     (when-not (error/anomaly? result) result)))
 
 (defn- process-customer-accounts
-  [config bank-id settlement-id as-of-date f]
+  [config bank-id interest-payable-id as-of-date f]
   (loop [cursor nil
          n 0]
     (let [page (cash-accounts/get-accounts
@@ -130,7 +144,7 @@
               (reduce
                (fn [n account]
                  (let [result (f config
-                                 settlement-id
+                                 interest-payable-id
                                  account
                                  as-of-date)]
                    (if (error/anomaly? result)
@@ -147,33 +161,41 @@
 (defn accrue-daily
   [config data]
   (let [{:keys [bank-id as-of-date]} data]
-    (if-let [settlement (get-settlement-account config bank-id)]
-      (let [processed (process-customer-accounts config
-                                                 bank-id
-                                                 (:account-id settlement)
-                                                 as-of-date
-                                                 accrue-account)]
+    (if-let [interest-payable (get-interest-payable-account config bank-id)]
+      (let [processed (process-customer-accounts
+                       config
+                       bank-id
+                       (:account-id interest-payable)
+                       as-of-date
+                       accrue-account)]
         (if (error/anomaly? processed)
           processed
           {:bank-id bank-id
            :as-of-date as-of-date
            :accounts-processed processed}))
-      (error/reject :interest/no-settlement
-                    "No settlement account found"))))
+      (error/reject :interest/no-interest-payable-account
+                    {:message
+                     (str "Bank has no 2400 interest-payable account"
+                          " in its chart of accounts")
+                     :bank-id bank-id}))))
 
 (defn capitalize-monthly
   [config data]
   (let [{:keys [bank-id as-of-date]} data]
-    (if-let [settlement (get-settlement-account config bank-id)]
-      (let [processed (process-customer-accounts config
-                                                 bank-id
-                                                 (:account-id settlement)
-                                                 as-of-date
-                                                 capitalize-account)]
+    (if-let [interest-payable (get-interest-payable-account config bank-id)]
+      (let [processed (process-customer-accounts
+                       config
+                       bank-id
+                       (:account-id interest-payable)
+                       as-of-date
+                       capitalize-account)]
         (if (error/anomaly? processed)
           processed
           {:bank-id bank-id
            :as-of-date as-of-date
            :accounts-processed processed}))
-      (error/reject :interest/no-settlement
-                    "No settlement account found"))))
+      (error/reject :interest/no-interest-payable-account
+                    {:message
+                     (str "Bank has no 2400 interest-payable account"
+                          " in its chart of accounts")
+                     :bank-id bank-id}))))

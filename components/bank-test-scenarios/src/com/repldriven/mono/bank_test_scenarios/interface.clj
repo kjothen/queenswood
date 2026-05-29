@@ -17,15 +17,14 @@
   "Build the initial runner context for one command-sequence run.
   The fresh `:run-id` (a uuidv7) prefixes idempotency keys so
   multiple runs against the same bank don't collide on the dedup
-  index.
+  index. Counter-leg GL accounts (1100, 1200, 2400, 2500) are
+  resolved per-bank at verb-dispatch time from the chart of
+  accounts.
 
   Args:
-  - bank: FDB config map (`:record-db` / `:record-store`).
-  - internal-account-id: platform internal/suspense account, used
-    as the counter-leg for transfers and fees."
-  [bank internal-account-id]
+  - bank: FDB config map (`:record-db` / `:record-store`)."
+  [bank]
   {:bank bank
-   :internal-account-id internal-account-id
    :id-mapping id-mapping/init
    :orgs {}
    :products {}
@@ -64,13 +63,12 @@
 
   Args:
   - bank: FDB config map.
-  - internal-account-id: platform internal/suspense account.
   - resource-path: classpath path to the scenario EDN file."
-  [bank internal-account-id resource-path]
+  [bank resource-path]
   (let [loaded (scenario/from-resource resource-path)]
     (if (error/anomaly? loaded)
       loaded
-      (run-commands (fresh-context bank internal-account-id)
+      (run-commands (fresh-context bank)
                     (scenario/steps loaded)))))
 
 (def

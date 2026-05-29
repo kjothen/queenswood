@@ -85,7 +85,7 @@
        reference))))
 
 (defn inbound-payment->transaction
-  [data creditor-account internal-account-id policies aggregates]
+  [data creditor-account suspense-account-id policies aggregates]
   (let [{:keys [scheme-transaction-id currency amount reference]} data
         {creditor-account-id :account-id} creditor-account]
     (let-nom>
@@ -98,8 +98,8 @@
        {:idempotency-key scheme-transaction-id
         :transaction-type :transaction-type-inbound-transfer
         :currency currency
-        :legs [{:account-id internal-account-id
-                :balance-type :balance-type-suspense
+        :legs [{:account-id suspense-account-id
+                :balance-type :balance-type-default
                 :balance-status :balance-status-posted
                 :side :leg-side-debit
                 :amount amount}
@@ -135,7 +135,7 @@
      reference)))
 
 (defn outbound-payment->transaction
-  [data debtor-account internal-account-id policies aggregates]
+  [data debtor-account pending-outbound-account-id policies aggregates]
   (let [{:keys [idempotency-key debtor-account-id
                 currency amount reference]}
         data]
@@ -154,8 +154,8 @@
                 :balance-status :balance-status-posted
                 :side :leg-side-debit
                 :amount amount}
-               {:account-id internal-account-id
-                :balance-type :balance-type-suspense
+               {:account-id pending-outbound-account-id
+                :balance-type :balance-type-default
                 :balance-status :balance-status-posted
                 :side :leg-side-credit
                 :amount amount}]}
