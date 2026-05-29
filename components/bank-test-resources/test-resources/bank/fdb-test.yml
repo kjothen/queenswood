@@ -30,6 +30,8 @@ _record-types: !strs &record-types
         type: count
       - name: CashAccount_by_bban
         field: bban
+      - name: CashAccount_by_bank_gl_code
+        fields: [bank_id, gl_code]
   companies:
     record-type: Company
     primary-key: [company_number]

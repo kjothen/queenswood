@@ -44,14 +44,4 @@
                    :record-store system/required-component}
    :system/instance-schema map?})
 
-(def ^:private internal-account-id
-  {:system/start (fn [{:system/keys [config instance]}]
-                   (or instance
-                       (get-in (:bank config) [:bank :accounts 0 :account-id])))
-   :system/config {:bank system/required-component}
-   :system/instance-schema string?})
-
-(system/defcomponents :banks
-                      {:bank bank
-                       :bank-from-fdb bank-from-fdb
-                       :internal-account-id internal-account-id})
+(system/defcomponents :banks {:bank bank :bank-from-fdb bank-from-fdb})

@@ -32,6 +32,9 @@
     (com.repldriven.mono.schemas.types ProductTypeProto$ProductType)
     (com.repldriven.mono.schemas.cash_accounts
      CashAccountProto$CashAccount
+     CashAccountProto$GlAccountType
+     CashAccountProto$GlAccountClass
+     CashAccountProto$Required
      CashAccountChangelogProto$CashAccountChangelog)
     (com.repldriven.mono.schemas.company CompanyProto$Company)
     (com.repldriven.mono.schemas.idempotency IdempotencyProto$Idempotency)
@@ -114,6 +117,51 @@
   value."}
      account-type->int
   cash-accounts/AccountType-label2val)
+
+(def ^{:doc "Map of CashAccount GlAccountType label to protobuf int
+  value."}
+     gl-account-type->int
+  cash-accounts/GlAccountType-label2val)
+
+(defn gl-account-type->pb-enum
+  "Convert a gl-account-type keyword to the protobuf enum value, for
+  use in FDB index queries.
+
+  Args:
+  - gl-account-type: `:gl-account-type-*` keyword."
+  [gl-account-type]
+  (CashAccountProto$GlAccountType/forNumber
+   (gl-account-type->int gl-account-type)))
+
+(def ^{:doc "Map of CashAccount GlAccountClass label to protobuf int
+  value."}
+     gl-account-class->int
+  cash-accounts/GlAccountClass-label2val)
+
+(defn gl-account-class->pb-enum
+  "Convert a gl-account-class keyword to the protobuf enum value, for
+  use in FDB index queries.
+
+  Args:
+  - gl-account-class: `:gl-account-class-*` keyword."
+  [gl-account-class]
+  (CashAccountProto$GlAccountClass/forNumber
+   (gl-account-class->int gl-account-class)))
+
+(def ^{:doc "Map of CashAccount Required label to protobuf int
+  value."}
+     required->int
+  cash-accounts/Required-label2val)
+
+(defn required->pb-enum
+  "Convert a required keyword to the protobuf enum value, for use in
+  FDB index queries.
+
+  Args:
+  - required: `:required-*` keyword."
+  [required]
+  (CashAccountProto$Required/forNumber
+   (required->int required)))
 
 (def ^{:doc "Map of BankType label to protobuf int value."} bank-type->int
   banks/BankType-label2val)

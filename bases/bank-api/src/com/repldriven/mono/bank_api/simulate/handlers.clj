@@ -3,6 +3,9 @@
     [com.repldriven.mono.bank-api.commands :as commands]
     [com.repldriven.mono.bank-api.errors :as errors]
     [com.repldriven.mono.bank-bank.interface :as banks]
+    [com.repldriven.mono.bank-cash-account.interface :as cash-accounts]
+    [com.repldriven.mono.bank-chart-of-accounts.interface :as
+     chart-of-accounts]
     [com.repldriven.mono.error.interface :as error]))
 
 (defn- dispatcher
@@ -33,27 +36,46 @@
 (defn inbound-transfer
   [request]
   (or (check-bank request)
-      (let [{:keys [internal-account-id parameters]} request
-            {:keys [body]} parameters
-            {:keys [account-id amount currency]} body]
-        (commands/send
-         (dispatcher request)
-         request
-         "record-transaction"
-         "transaction"
-         {:transaction-type :transaction-type-inbound-transfer
-          :currency currency
-          :reference "Simulated inbound transfer"
-          :legs [{:account-id internal-account-id
-                  :balance-type :balance-type-suspense
-                  :balance-status :balance-status-posted
-                  :side :leg-side-debit
-                  :amount amount}
-                 {:account-id account-id
-                  :balance-type :balance-type-default
-                  :balance-status :balance-status-posted
-                  :side :leg-side-credit
-                  :amount amount}]}))))
+      (let [{:keys [record-db record-store parameters]} request
+            {:keys [path body]} parameters
+            {:keys [bank-id]} path
+            {:keys [account-id amount currency]} body
+            suspense (cash-accounts/get-account-by-gl-code
+                      {:record-db record-db :record-store record-store}
+                      bank-id
+                      "2500")]
+        (if (or (nil? suspense) (error/anomaly? suspense))
+          (errors/anomaly->response
+           (error/fail :simulate/no-suspense-account
+                       {:message
+                        "Bank has no 2500 suspense account in its chart"
+                        :bank-id bank-id}))
+          (let [txn {:record-db record-db :record-store record-store}
+                legs [{:account-id (:account-id suspense)
+                       :balance-type :balance-type-default
+                       :balance-status :balance-status-posted
+                       :side :leg-side-debit
+                       :amount amount}
+                      {:account-id account-id
+                       :balance-type :balance-type-default
+                       :balance-status :balance-status-posted
+                       :side :leg-side-credit
+                       :amount amount}]
+                expanded-legs (chart-of-accounts/expand-legs
+                               txn
+                               bank-id
+                               legs)]
+            (if (error/anomaly? expanded-legs)
+              (errors/anomaly->response expanded-legs)
+              (commands/send
+               (dispatcher request)
+               request
+               "record-transaction"
+               "transaction"
+               {:transaction-type :transaction-type-inbound-transfer
+                :currency currency
+                :reference "Simulated inbound transfer"
+                :legs expanded-legs})))))))
 
 (defn accrue
   [request]

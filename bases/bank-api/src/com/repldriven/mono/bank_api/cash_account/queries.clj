@@ -33,14 +33,20 @@
 
     (if (error/anomaly? result)
       (errors/anomaly->response result)
+      ;; Customer-facing cash accounts only — the bank's own chart-of-
+      ;; accounts rows (gl-code set) are listed via
+      ;; `GET /v1/chart-of-accounts` instead.
       (let [{:keys [accounts before after]} result
-            links (when (seq accounts)
+            customer-accounts (filterv (comp nil? :gl-code) accounts)
+            links (when (seq customer-accounts)
                     (cursor/build-links "/v1/cash-accounts"
                                         size
                                         (when after-id before)
                                         after))]
         {:status 200
-         :body (utility/assoc-seq {:cash-accounts accounts} :links links)}))))
+         :body (utility/assoc-seq {:cash-accounts customer-accounts}
+                                  :links
+                                  links)}))))
 
 (defn get-cash-account
   [request]

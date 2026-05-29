@@ -47,10 +47,6 @@
    :schemas (system/instance sys [:avro :serde])
    :scheme-payment-command-channel :schemes-payment-command})
 
-(defn- internal-account
-  [sys]
-  (-> (system/instance sys [:banks :internal])
-      (get-in [:bank :accounts 0 :account-id])))
 
 (defn- scenario-files
   []
@@ -112,8 +108,8 @@
   Returns `{:ctx :model-eq-checks :modelled :asserts :unmodelled
             :tracking-cut-off?}` so the caller can log a per-scenario
   summary."
-  [scenario-name bank internal-account-id steps]
-  (loop [ctx (SUT/fresh-context bank internal-account-id)
+  [scenario-name bank steps]
+  (loop [ctx (SUT/fresh-context bank)
          model-state model/init-state
          remaining steps
          tracking? true
@@ -176,7 +172,6 @@
                      stats (testing (:name loaded)
                              (run-with-model-check (:name loaded)
                                                    (fdb-config sys)
-                                                   (internal-account sys)
                                                    steps))
                      _ (log/info "scenario complete"
                                  {:file (.getName f)

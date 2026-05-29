@@ -8,7 +8,3 @@ internal: !system/component
   type: !keyword bank-type-internal
   status: !keyword bank-status-live
   currencies: [GBP]
-
-internal-account-id: !system/component
-  system/component-kind: banks/internal-account-id
-  bank: !system/local-ref internal

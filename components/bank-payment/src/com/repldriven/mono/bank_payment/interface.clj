@@ -62,12 +62,13 @@
 
 (defn submit-outbound
   "Submit an outbound payment: verify the debtor, debit the customer
-  account, credit the settlement-suspense leg, persist the
-  OutboundPayment as pending, and publish a `submit-payment`
-  command for the scheme adapter.
+  account, credit the bank's 1200 pending-outbound GL account,
+  persist the OutboundPayment as pending, and publish a
+  `submit-payment` command for the scheme adapter. The bank's 1200
+  account is resolved per-bank from the chart of accounts at runtime.
 
   Args:
-  - config: FDB handle plus :internal-account-id, :bus, :schemas,
+  - config: FDB handle plus :bus, :schemas,
     :scheme-payment-command-channel.
   - data: submission map (bank-id, debtor-account-id,
     creditor-bban, currency, amount, reference, ...).
@@ -79,12 +80,13 @@
 (defn settle-inbound
   "Process an inbound `transaction-settled` event. Looks up the
   creditor account by BBAN, dedupes by scheme-transaction-id,
-  records the transaction, posts balance legs, and persists an
-  InboundPayment. Re-delivery of the same scheme-transaction-id
-  returns the existing record and posts no new legs.
+  records the transaction (DEBIT the bank's 2500 suspense GL account
+  / CREDIT the creditor's customer account), posts balance legs, and
+  persists an InboundPayment. The 2500 suspense account is resolved
+  per-bank from the chart of accounts at runtime.
 
   Args:
-  - config: FDB handle plus :internal-account-id.
+  - config: FDB handle.
   - data: settlement event payload.
 
   Returns the payment map or an anomaly."

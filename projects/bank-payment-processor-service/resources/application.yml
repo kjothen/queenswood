@@ -76,9 +76,6 @@ system:
       record-db: !system/ref fdb.record-db
       record-store: !system/ref fdb.meta-store
       type: !keyword bank-type-internal
-    internal-account-id: !system/component
-      system/component-kind: banks/internal-account-id
-      bank: !system/local-ref internal
   payments: !include bank/payment.yml
   telemetry:
     otel-sdk: !system/component

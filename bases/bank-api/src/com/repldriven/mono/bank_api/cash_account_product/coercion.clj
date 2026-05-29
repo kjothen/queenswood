@@ -7,7 +7,8 @@
                            "settlement" :product-type-settlement
                            "current" :product-type-current
                            "savings" :product-type-savings
-                           "term-deposit" :product-type-term-deposit}
+                           "term-deposit" :product-type-term-deposit
+                           "chart-of-accounts" :product-type-chart-of-accounts}
                           :product-type-unknown))
 
 (def ^:private balance-sheet-side-enum

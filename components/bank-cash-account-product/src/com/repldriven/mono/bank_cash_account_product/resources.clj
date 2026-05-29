@@ -15,7 +15,8 @@
    :product-type-savings
    :product-type-term-deposit
    :product-type-settlement
-   :product-type-internal])
+   :product-type-internal
+   :product-type-chart-of-accounts])
 
 (defn- type->resource
   [product-type]

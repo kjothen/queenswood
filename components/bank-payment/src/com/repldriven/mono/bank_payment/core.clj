@@ -6,6 +6,8 @@
     [com.repldriven.mono.bank-balance.interface :as balances]
     [com.repldriven.mono.bank-cash-account.interface :as
      cash-accounts]
+    [com.repldriven.mono.bank-chart-of-accounts.interface :as
+     chart-of-accounts]
     [com.repldriven.mono.bank-policy.interface :as policy]
     [com.repldriven.mono.bank-transaction.interface :as
      transactions]
@@ -16,6 +18,8 @@
     [com.repldriven.mono.log.interface :as log]
     [com.repldriven.mono.message-bus.interface :as message-bus]
     [com.repldriven.mono.utility.interface :as utility]))
+
+(def ^:private gl-code-pending-outbound "1200")
 
 (defn- or-already-submitted
   "Translate the store's low-level uniqueness anomaly into the
@@ -63,9 +67,13 @@
                                 creditor-account
                                 policies
                                 aggregates)
+           expanded-legs (chart-of-accounts/expand-legs
+                          txn
+                          bank-id
+                          (:legs payment-transaction))
            transaction (transactions/record-transaction
                         txn
-                        payment-transaction)
+                        (assoc payment-transaction :legs expanded-legs))
            {:keys [transaction-id transaction-type legs]} transaction
            _ (balances/apply-legs txn legs transaction-type)
            payment (domain/new-internal-payment data
@@ -113,8 +121,7 @@
 
 (defn submit-outbound
   [config data]
-  (let [{:keys [internal-account-id]} config
-        {:keys [bank-id debtor-account-id]} data
+  (let [{:keys [bank-id debtor-account-id]} data
         result (or-already-submitted
                 (store/transact
                  config
@@ -130,6 +137,18 @@
                                         txn
                                         bank-id
                                         debtor-account-id)
+                        pending-outbound
+                        (cash-accounts/get-account-by-gl-code
+                         txn
+                         bank-id
+                         gl-code-pending-outbound)
+                        _ (when (nil? pending-outbound)
+                            (error/reject
+                             :payment/no-pending-outbound-account
+                             {:message
+                              (str "Bank has no 1200 pending-outbound"
+                                   " account in its chart of accounts")
+                              :bank-id bank-id}))
                         today-count (store/count-outbound-by-org-business-day
                                      txn
                                      bank-id
@@ -140,12 +159,18 @@
                         transaction (domain/outbound-payment->transaction
                                      data
                                      debtor-account
-                                     internal-account-id
+                                     (:account-id pending-outbound)
                                      policies
                                      aggregates)
+                        expanded-legs (chart-of-accounts/expand-legs
+                                       txn
+                                       bank-id
+                                       (:legs transaction))
                         transaction+legs (transactions/record-transaction
                                           txn
-                                          transaction)
+                                          (assoc transaction
+                                                 :legs
+                                                 expanded-legs))
                         {:keys [transaction-id transaction-type legs]}
                         transaction+legs
                         _ (balances/apply-legs txn legs transaction-type)

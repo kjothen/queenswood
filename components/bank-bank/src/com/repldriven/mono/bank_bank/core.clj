@@ -6,8 +6,8 @@
     [com.repldriven.mono.bank-balance.interface :as balances]
     [com.repldriven.mono.bank-cash-account.interface
      :as cash-accounts]
-    [com.repldriven.mono.bank-cash-account-product.interface
-     :as products]
+    [com.repldriven.mono.bank-chart-of-accounts.interface
+     :as chart-of-accounts]
     [com.repldriven.mono.identity-provider.interface
      :as identity-provider]
     [com.repldriven.mono.bank-party.interface :as party]
@@ -18,31 +18,6 @@
 (def ^:private bank-type->party-type
   {:bank-type-internal :party-type-internal
    :bank-type-customer :party-type-organization})
-
-(def ^:private bank-type->product-type
-  {:bank-type-internal :product-type-internal
-   :bank-type-customer :product-type-settlement})
-
-(def ^:private bank-type->product-name
-  {:bank-type-internal "Internal Account"
-   :bank-type-customer "Settlement Account"})
-
-(defn- open-accounts
-  [txn bank-id party-id product-id product-name currencies policies]
-  (reduce (fn [acc currency]
-            (let [result (cash-accounts/new-account
-                          txn
-                          {:bank-id bank-id
-                           :party-id party-id
-                           :product-id product-id
-                           :name product-name
-                           :currency currency}
-                          {:policies policies})]
-              (if (error/anomaly? result)
-                (reduced result)
-                (conj acc result))))
-          []
-          currencies))
 
 (defn- bind-policies
   [txn bank-id policies]
@@ -164,27 +139,16 @@
                               :display-name bank-name}
                              {:policies policies})
 
-         version (products/new-product
-                  txn
-                  bank-id
-                  {:name (bank-type->product-name bank-type)
-                   :product-type (bank-type->product-type bank-type)
-                   :currency (first currencies)}
-                  {:policies policies})
-         product-id (:product-id version)
-         _ (products/publish txn
-                             bank-id
-                             product-id
-                             (:version-id version)
-                             {:policies policies})
-
-         _ (open-accounts txn
-                          bank-id
-                          party-id
-                          product-id
-                          (bank-type->product-name bank-type)
-                          currencies
-                          policies)
+         ;; The internal Queenswood bank doesn't transact and has no
+         ;; chart of accounts. Only customer banks seed the canonical
+         ;; CoA (1100/1200/2100/2200/2300/2400/2500) on their own
+         ;; organization-party.
+         _ (when (= :bank-type-customer bank-type)
+             (chart-of-accounts/seed! txn
+                                      bank-id
+                                      party-id
+                                      currencies
+                                      policies))
 
          _ (bind-policies txn bank-id tier-policies)
 

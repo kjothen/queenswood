@@ -12,7 +12,6 @@
    :system/config {:record-db system/required-component
                    :record-store system/required-component
                    :schemas system/required-component
-                   :internal-account-id nil
                    :bus nil
                    :scheme-payment-command-channel nil
                    :business-day-cutoff default-cutoff}
@@ -24,7 +23,6 @@
    :system/config {:record-db system/required-component
                    :record-store system/required-component
                    :schemas system/required-component
-                   :internal-account-id system/required-component
                    :business-day-cutoff default-cutoff}
    :system/instance-schema some?})
 

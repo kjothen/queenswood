@@ -29,7 +29,7 @@
   (str "capitalize-" account-id "-" as-of-date))
 
 (defn accrual-transaction
-  [settlement-id account-id currency whole-units
+  [interest-payable-id account-id currency whole-units
    as-of-date]
   (when-not (zero? whole-units)
     {:idempotency-key (accrual-idempotency-key
@@ -38,8 +38,8 @@
      :transaction-type :transaction-type-interest-accrual
      :currency currency
      :reference (str "Daily interest accrual " as-of-date)
-     :legs [{:account-id settlement-id
-             :balance-type :balance-type-interest-payable
+     :legs [{:account-id interest-payable-id
+             :balance-type :balance-type-default
              :balance-status :balance-status-posted
              :side :leg-side-debit
              :amount whole-units}
@@ -50,7 +50,7 @@
              :amount whole-units}]}))
 
 (defn capitalization-transaction
-  [settlement-id account-id currency balance as-of-date]
+  [interest-payable-id account-id currency balance as-of-date]
   (let [accrued (net-balance balance)]
     (when-not (zero? accrued)
       {:idempotency-key (capitalization-idempotency-key
@@ -61,7 +61,7 @@
        :currency currency
        :reference (str "Monthly interest capitalization "
                        as-of-date)
-       :legs [{:account-id settlement-id
+       :legs [{:account-id interest-payable-id
                :balance-type :balance-type-default
                :balance-status :balance-status-posted
                :side :leg-side-debit
@@ -77,9 +77,8 @@
                :balance-status :balance-status-posted
                :side :leg-side-debit
                :amount accrued}
-              {:account-id settlement-id
-               :balance-type
-               :balance-type-interest-payable
+              {:account-id interest-payable-id
+               :balance-type :balance-type-default
                :balance-status :balance-status-posted
                :side :leg-side-credit
                :amount accrued}
