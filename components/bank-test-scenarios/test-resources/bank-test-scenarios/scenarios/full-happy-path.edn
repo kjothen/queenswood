@@ -101,24 +101,21 @@
   ;; Daily interest on savings at 3650 bps:
   ;;   Arthur sav  75_000 → 75 pence accrued
   ;;   Ford   sav  35_000 → 35 pence accrued
-  ;; Both lands in customer.interest-accrued (not visible in
-  ;; available); settlement.interest-payable goes -110.
+  ;; Both land in customer.interest-accrued. The bank-side leg
+  ;; lands on GL 2400 Interest payable (untracked by the rig);
+  ;; the tracked settlement account (acct-0) stays at 4_800_000.
   {:command :accrue-interest        :args [:org-0 20260501]}
-  ;; Settlement available = default + interest-payable
-  ;;   = 4_800_000 + (-110) = 4_799_890
-  {:command :assert-balance         :args [:acct-0 4799890]}
+  {:command :assert-balance         :args [:acct-0 4800000]}
 
-  ;; Capitalisation has six legs per customer account; the last
-  ;; pair credits the customer's default balance with the accrued
-  ;; amount (the prior pairs unwind the intermediate
-  ;; interest-paid / interest-accrued / interest-payable
-  ;; positions). Net effect:
-  ;;   settlement.default      -= 75 + 35 → 4_799_890
+  ;; Capitalisation: 6 legs per customer (interest-paid debit +
+  ;; credit, interest-accrued debit, default credit) plus 2 GL
+  ;; legs on 2400. The customer's default grows by the accrued
+  ;; amount; settlement (acct-0) stays untouched:
   ;;   Arthur savings.default  += 75      →    75_075
   ;;   Ford   savings.default  += 35      →    35_035
-  ;; current accounts unchanged.
+  ;;   current accounts and acct-0 unchanged.
   {:command :capitalize-interest    :args [:org-0 20260501]}
-  {:command :assert-balance         :args [:acct-0 4799890]}
+  {:command :assert-balance         :args [:acct-0 4800000]}
   {:command :assert-balance         :args [:acct-1 27500]}
   {:command :assert-balance         :args [:acct-2 75075]}
   {:command :assert-balance         :args [:acct-3 62500]}

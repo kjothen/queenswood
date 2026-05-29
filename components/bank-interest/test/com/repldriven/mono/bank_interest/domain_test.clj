@@ -61,17 +61,17 @@
 
 (deftest accrual-transaction-test
   (testing "zero whole-units returns nil — no transaction posted"
-    (is (nil? (SUT/accrual-transaction "settle" "cust" "GBP" 0 20260501))))
+    (is (nil? (SUT/accrual-transaction "iface-2400" "cust" "GBP" 0 20260501))))
   (testing "positive whole-units builds a 2-leg accrual"
-    (let [tx (SUT/accrual-transaction "settle" "cust" "GBP" 75 20260501)]
+    (let [tx (SUT/accrual-transaction "iface-2400" "cust" "GBP" 75 20260501)]
       (is (= "accrue-cust-20260501" (:idempotency-key tx)))
       (is (= :transaction-type-interest-accrual (:transaction-type tx)))
       (is (= "GBP" (:currency tx)))
       (is (= 2 (count (:legs tx))))
-      (testing "settlement debit on interest-payable / posted"
+      (testing "interest-payable (GL 2400) debit on default / posted"
         (let [debit (first (:legs tx))]
-          (is (= "settle" (:account-id debit)))
-          (is (= :balance-type-interest-payable (:balance-type debit)))
+          (is (= "iface-2400" (:account-id debit)))
+          (is (= :balance-type-default (:balance-type debit)))
           (is (= :balance-status-posted (:balance-status debit)))
           (is (= :leg-side-debit (:side debit)))
           (is (= 75 (:amount debit)))))
