@@ -7,7 +7,7 @@
   (:require
     [com.repldriven.mono.bank-test-projections.accounts :as accounts]
     [com.repldriven.mono.bank-test-projections.balances :as balances]
-    [com.repldriven.mono.bank-test-projections.orgs :as orgs]
+    [com.repldriven.mono.bank-test-projections.banks :as banks]
     [com.repldriven.mono.bank-test-projections.parties :as parties]
     [com.repldriven.mono.bank-test-projections.payments :as payments]
     [com.repldriven.mono.bank-test-projections.products :as products]
@@ -40,7 +40,7 @@
   descending by `:number`. Args:
   - bank: FDB config map.
   - model->real: `{model-prod-id {:real-id <id>
-                                  :org-real-id <org>}}`."}
+                                  :bank-real-id <bank>}}`."}
   project-products
   products/project-products)
 
@@ -59,7 +59,7 @@
   `{model-party-id :active|:pending}`. Args:
   - bank: FDB config map.
   - model->real: `{model-party-id {:real-id <id>
-                                    :org-real-id <org>}}`."}
+                                    :bank-real-id <bank>}}`."}
   project-parties
   parties/project-parties)
 
@@ -75,31 +75,31 @@
   ^{:doc
     "Real-side org-membership projection — for each tracked
   org, the set of accounts, products and parties that belong to it.
-  Returns `{model-org-id {:accounts #{...} :products #{...}
+  Returns `{model-bank-id {:accounts #{...} :products #{...}
                           :parties #{...}}}`. Args:
   - bank: FDB config map.
-  - ctx: runner context with `:orgs`, `:id-mapping`, `:products`,
+  - ctx: runner context with `:banks`, `:id-mapping`, `:products`,
     `:parties`."}
-  project-orgs
-  orgs/project-orgs)
+  project-banks
+  banks/project-banks)
 
 (def
   ^{:doc
     "Model-side org-membership projection. Same shape as
-  `project-orgs`, normalised to sets. Args:
+  `project-banks`, normalised to sets. Args:
   - model-state: model state map."}
-  project-model-orgs
-  orgs/project-model-orgs)
+  project-model-banks
+  banks/project-model-banks)
 
 (def
   ^{:doc
-    "Real-side per-account projection: `:org`, `:product`,
+    "Real-side per-account projection: `:bank`, `:product`,
   `:party`, normalised `:status`. Returns
-  `{model-acct-id {:org :model-org :product :model-prod
+  `{model-acct-id {:bank :model-bank :product :model-prod
                    :party :model-party :status :open|:closed}}`.
   Args:
   - bank: FDB config map.
-  - ctx: runner context with `:id-mapping`, `:accounts`, `:orgs`,
+  - ctx: runner context with `:id-mapping`, `:accounts`, `:banks`,
     `:products`, `:parties`."}
   project-accounts
   accounts/project-accounts)

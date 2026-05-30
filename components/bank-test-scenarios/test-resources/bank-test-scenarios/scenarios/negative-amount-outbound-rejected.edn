@@ -6,7 +6,7 @@
  ;; (`:transaction/invalid-amount`) before any balance moves and
  ;; before the scheme adapter command is published.
  :given
- [{:command :create-org      :args []}
+ [{:command :create-bank      :args []}
   {:command :inbound-transfer :args [:acct-0 1000]}]
 
  :when

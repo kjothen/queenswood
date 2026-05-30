@@ -11,36 +11,36 @@
   (let [spec (get SUT/model command)]
     ((:next-state spec) state {:args args})))
 
-(deftest create-org-test
+(deftest create-bank-test
   (testing
-    "create-org allocates an org, settlement product, org-party, and settlement account"
-    (let [s (step SUT/init-state :create-org [])]
+    "create-bank allocates a bank, settlement product, org-party, and settlement account"
+    (let [s (step SUT/init-state :create-bank [])]
       (is (= [:acct-0] (SUT/known-accounts s)))
-      (is (= [:org-0] (keys (:orgs s))))
+      (is (= [:bank-0] (keys (:banks s))))
       (is (= [:prod-0] (keys (:products s))))
       (is (= [:party-0] (keys (:parties s))))
       (is (= 0 (SUT/balance s :acct-0)))
-      (is (= :org-0 (get-in s [:accounts :acct-0 :org])))
+      (is (= :bank-0 (get-in s [:accounts :acct-0 :bank])))
       (is (= :prod-0 (get-in s [:accounts :acct-0 :product])))
       (is (= :party-0 (get-in s [:accounts :acct-0 :party])))
-      (is (= [:acct-0] (get-in s [:orgs :org-0 :accounts])))
-      (is (= [:prod-0] (get-in s [:orgs :org-0 :products])))
-      (is (= [:party-0] (get-in s [:orgs :org-0 :parties])))
+      (is (= [:acct-0] (get-in s [:banks :bank-0 :accounts])))
+      (is (= [:prod-0] (get-in s [:banks :bank-0 :products])))
+      (is (= [:party-0] (get-in s [:banks :bank-0 :parties])))
       (is (= [{:status :published :number 1}]
              (get-in s [:products :prod-0 :versions])))
       (is (= :active (get-in s [:parties :party-0 :status])))
       (is (= :organization (get-in s [:parties :party-0 :type])))
       (is (= 1 (:next-id s)))
-      (is (= 1 (:next-org-id s)))
+      (is (= 1 (:next-bank-id s)))
       (is (= 1 (:next-product-id s)))
       (is (= 1 (:next-party-id s)))))
   (testing
-    "successive create-org calls make distinct orgs, products, and parties"
+    "successive create-bank calls make distinct banks, products, and parties"
     (let [s (-> SUT/init-state
-                (step :create-org [])
-                (step :create-org []))]
+                (step :create-bank [])
+                (step :create-bank []))]
       (is (= #{:acct-0 :acct-1} (set (SUT/known-accounts s))))
-      (is (= #{:org-0 :org-1} (set (keys (:orgs s)))))
+      (is (= #{:bank-0 :bank-1} (set (keys (:banks s)))))
       (is (= #{:prod-0 :prod-1} (set (keys (:products s)))))
       (is (= #{:party-0 :party-1} (set (keys (:parties s)))))
       (is (= :prod-0 (get-in s [:accounts :acct-0 :product])))
@@ -49,42 +49,42 @@
       (is (= :party-1 (get-in s [:accounts :acct-1 :party]))))))
 
 (deftest create-and-publish-product-test
-  (let [s0 (step SUT/init-state :create-org [])]
+  (let [s0 (step SUT/init-state :create-bank [])]
     (testing "create-product opens v1 as draft, attached to an org"
-      (let [s1 (step s0 :create-product [:org-0 :current 0])]
+      (let [s1 (step s0 :create-product [:bank-0 :current 0])]
         (is (= 1 (:next-product-id s0))
             "prod-0 was already taken by the auto settlement product")
         (is (= [{:status :draft :number 1}]
                (get-in s1 [:products :prod-1 :versions])))
-        (is (= :org-0 (get-in s1 [:products :prod-1 :org])))
+        (is (= :bank-0 (get-in s1 [:products :prod-1 :bank])))
         (is (= :current (get-in s1 [:products :prod-1 :product-type])))
-        (is (= [:prod-0 :prod-1] (get-in s1 [:orgs :org-0 :products])))))
+        (is (= [:prod-0 :prod-1] (get-in s1 [:banks :bank-0 :products])))))
     (testing "create-product :savings carries the rate-bps"
-      (let [s1 (step s0 :create-product [:org-0 :savings 250])]
+      (let [s1 (step s0 :create-product [:bank-0 :savings 250])]
         (is (= :savings (get-in s1 [:products :prod-1 :product-type])))
         (is (= 250 (get-in s1 [:products :prod-1 :interest-rate-bps])))))
     (testing "publish-product flips the latest draft to published"
       (let [s2 (-> s0
-                   (step :create-product [:org-0 :current 0])
+                   (step :create-product [:bank-0 :current 0])
                    (step :publish-product [:prod-1]))]
         (is (= [{:status :published :number 1}]
                (get-in s2 [:products :prod-1 :versions])))))
     (testing "open-draft after publish appends v2 in :draft"
       (let [s5 (-> s0
-                   (step :create-product [:org-0 :current 0])
+                   (step :create-product [:bank-0 :current 0])
                    (step :publish-product [:prod-1])
                    (step :open-draft [:prod-1]))]
         (is (= [{:status :published :number 1} {:status :draft :number 2}]
                (get-in s5 [:products :prod-1 :versions])))))
     (testing "discard-draft flips the latest draft to discarded"
       (let [s6 (-> s0
-                   (step :create-product [:org-0 :current 0])
+                   (step :create-product [:bank-0 :current 0])
                    (step :discard-draft [:prod-1]))]
         (is (= [{:status :discarded :number 1}]
                (get-in s6 [:products :prod-1 :versions])))))
     (testing "open-draft after discard appends v2 in :draft"
       (let [s7 (-> s0
-                   (step :create-product [:org-0 :current 0])
+                   (step :create-product [:bank-0 :current 0])
                    (step :discard-draft [:prod-1])
                    (step :open-draft [:prod-1]))]
         (is (= [{:status :discarded :number 1} {:status :draft :number 2}]
@@ -92,7 +92,7 @@
 
 (deftest inbound-transfer-test
   (let [s (-> SUT/init-state
-              (step :create-org []))]
+              (step :create-bank []))]
     (testing "credits a fresh account"
       (let [s' (step s :inbound-transfer [:acct-0 500])]
         (is (= 500 (SUT/balance s' :acct-0)))))
@@ -108,7 +108,7 @@
 
 (deftest outbound-transfer-test
   (let [s (-> SUT/init-state
-              (step :create-org []))]
+              (step :create-bank []))]
     (testing "debit on a zero account is denied (would go negative)"
       (let [s' (step s :outbound-transfer [:acct-0 100])]
         (is (= 0 (SUT/balance s' :acct-0)) "policy denies — state unchanged")))
@@ -126,8 +126,8 @@
   ;; `:open-account` isn't in the model registry, so we add the
   ;; second account directly to the model state.
   (let [s (-> SUT/init-state
-              (step :create-org [])
-              (assoc-in [:accounts :acct-1] {:org :org-0 :status :open}))]
+              (step :create-bank [])
+              (assoc-in [:accounts :acct-1] {:bank :bank-0 :status :open}))]
     (testing "two-leg transfer between funded and zero account"
       (let [funded (assoc-in s [:accounts :acct-0 :available] 1000)
             s' (step funded :internal-transfer [:acct-0 :acct-1 400])]
@@ -147,28 +147,28 @@
         (is (= 150 (SUT/balance s' :acct-1))))))
   (testing "cross-org transfer is a no-op (model mirrors API rejection)"
     (let [s (-> SUT/init-state
-                (step :create-org [])
-                (step :create-org [])
+                (step :create-bank [])
+                (step :create-bank [])
                 (assoc-in [:accounts :acct-0 :available] 1000))
           s' (step s :internal-transfer [:acct-0 :acct-1 400])]
       (is (= 1000 (SUT/balance s' :acct-0)) "debtor balance unchanged")
       (is (= 0 (SUT/balance s' :acct-1)) "creditor balance unchanged"))))
 
 (deftest create-person-party-test
-  (let [s0 (step SUT/init-state :create-org [])]
+  (let [s0 (step SUT/init-state :create-bank [])]
     (testing "create-person-party records a person-party as :active"
       ;; The model treats the IDV chain as deterministic — the
       ;; default `\"Scenario\"` given-name routes to clear, so the
       ;; party is :active by the time the next verb runs.
-      (let [s (step s0 :create-person-party [:org-0])]
+      (let [s (step s0 :create-person-party [:bank-0])]
         (is (= :active (get-in s [:parties :party-1 :status])))
         (is (= :person (get-in s [:parties :party-1 :type])))
-        (is (= :org-0 (get-in s [:parties :party-1 :org])))
-        (is (= [:party-0 :party-1] (get-in s [:orgs :org-0 :parties])))))))
+        (is (= :bank-0 (get-in s [:parties :party-1 :bank])))
+        (is (= [:party-0 :party-1] (get-in s [:banks :bank-0 :parties])))))))
 
 (deftest apply-fee-test
   (let [s (-> SUT/init-state
-              (step :create-org []))]
+              (step :create-bank []))]
     (testing "fee posts on a positive account"
       (let [funded (assoc-in s [:accounts :acct-0 :available] 100)
             s' (step funded :apply-fee [:acct-0 30])]

@@ -5,15 +5,15 @@
 
 (def init-state
   {:accounts {}
-   :orgs {}
+   :banks {}
    :products {}
    :parties {}
    :payments {}
    :inbound-payments #{}
-   :nis-by-org {}
+   :nis-by-bank {}
    :policies {:available {:min 0 :improving? true}}
    :next-id 0
-   :next-org-id 0
+   :next-bank-id 0
    :next-product-id 0
    :next-party-id 0
    :next-payment-id 0
@@ -29,9 +29,9 @@
   [state]
   (keyword (str "acct-" (:next-id state))))
 
-(defn next-org-id
+(defn next-bank-id
   [state]
-  (keyword (str "org-" (:next-org-id state))))
+  (keyword (str "bank-" (:next-bank-id state))))
 
 (defn next-product-id
   [state]
@@ -73,9 +73,9 @@
              :when (= :open (:status a))]
          acct-id)))
 
-(defn known-orgs
+(defn known-banks
   [state]
-  (vec (keys (:orgs state))))
+  (vec (keys (:banks state))))
 
 (defn latest-version
   [state prod-id]

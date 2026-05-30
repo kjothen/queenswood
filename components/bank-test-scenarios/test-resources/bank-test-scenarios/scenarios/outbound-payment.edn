@@ -9,7 +9,7 @@
  ;; the async scheme outcome — the legs are applied synchronously
  ;; inside submit-outbound.
  :given
- [{:command :create-org     :args []}                ; org-0, prod-0, party-0, acct-0
+ [{:command :create-bank     :args []}                ; org-0, prod-0, party-0, acct-0
   {:command :inbound-transfer :args [:acct-0 1000]}]   ; fund customer
 
  :when

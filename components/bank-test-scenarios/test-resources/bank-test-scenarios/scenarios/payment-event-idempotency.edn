@@ -9,7 +9,7 @@
 
  :given
  [;; org-0 with :acct-0 (settlement) and a small inbound balance
-  {:command :create-org :args []}
+  {:command :create-bank :args []}
   {:command :inbound-transfer :args [:acct-0 1000]}
   {:command :assert-no-anomaly :args []}
   {:command :assert-balance :args [:acct-0 1000]}]

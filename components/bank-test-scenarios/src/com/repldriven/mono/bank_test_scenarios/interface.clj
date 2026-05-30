@@ -26,13 +26,13 @@
   [bank]
   {:bank bank
    :id-mapping id-mapping/init
-   :orgs {}
+   :banks {}
    :products {}
    :parties {}
    :accounts {}
    :payments {}
    :next-model-id 0
-   :next-org-id 0
+   :next-bank-id 0
    :next-product-id 0
    :next-party-id 0
    :next-payment-id 0

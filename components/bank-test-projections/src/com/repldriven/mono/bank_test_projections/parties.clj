@@ -10,11 +10,11 @@
 (defn project-parties
   [bank model->real]
   (->> model->real
-       (map (fn [[model-id {:keys [real-id org-real-id]}]]
+       (map (fn [[model-id {:keys [real-id bank-real-id]}]]
               [model-id
                (bare-status (:status (party/get-party
                                       bank
-                                      org-real-id
+                                      bank-real-id
                                       real-id)))]))
        (into {})))
 

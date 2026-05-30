@@ -7,10 +7,10 @@
  ;; `:policy/limit-exceeded`; the debtor balance must reflect only
  ;; the two successful debits.
  :given
- [{:command :create-org      :args []}
+ [{:command :create-bank      :args []}
   {:command :inbound-transfer :args [:acct-0 1000]}
   {:command :bind-policy
-   :args [:org-0
+   :args [:bank-0
           {:name "Test: max 2 outbound payments per day"
            :category :policy-category-restricted
            :limits [{:kind {:outbound-payment {}}

@@ -25,13 +25,13 @@
  [;; --- Org setup --------------------------------------------------
   ;; org-0, prod-0 (settlement, published), party-0 (org-party,
   ;; active), acct-0 (settlement)
-  {:command :create-org           :args []}
+  {:command :create-bank           :args []}
   {:command :assert-no-anomaly      :args []}
 
   ;; --- Products ---------------------------------------------------
   ;; prod-1 = current (rate 0), prod-2 = savings (rate 3650 bps)
-  {:command :create-product         :args [:org-0 :current 0]}
-  {:command :create-product :args [:org-0 :savings 3650]}
+  {:command :create-product         :args [:bank-0 :current 0]}
+  {:command :create-product :args [:bank-0 :savings 3650]}
   {:command :publish-product        :args [:prod-1]}
   {:command :publish-product        :args [:prod-2]}
   {:command :assert-no-anomaly      :args []}
@@ -40,17 +40,17 @@
   ;; Arthur Dent → party-1, Ford Prefect → party-2 (both auto-active
   ;; via the IDV chain — `:create-person-party` waits for the chain
   ;; to settle before the next verb runs).
-  {:command :create-person-party    :args [:org-0]}
-  {:command :create-person-party    :args [:org-0]}
+  {:command :create-person-party    :args [:bank-0]}
+  {:command :create-person-party    :args [:bank-0]}
   {:command :assert-no-anomaly      :args []}
 
   ;; --- Customer accounts ------------------------------------------
   ;; acct-1 = Arthur current  acct-2 = Arthur savings
   ;; acct-3 = Ford   current  acct-4 = Ford   savings
-  {:command :open-account            :args [:org-0 :party-1 :prod-1]}
-  {:command :open-account            :args [:org-0 :party-1 :prod-2]}
-  {:command :open-account            :args [:org-0 :party-2 :prod-1]}
-  {:command :open-account            :args [:org-0 :party-2 :prod-2]}
+  {:command :open-account            :args [:bank-0 :party-1 :prod-1]}
+  {:command :open-account            :args [:bank-0 :party-1 :prod-2]}
+  {:command :open-account            :args [:bank-0 :party-2 :prod-1]}
+  {:command :open-account            :args [:bank-0 :party-2 :prod-2]}
   {:command :assert-no-anomaly      :args []}
 
   ;; --- Money in ---------------------------------------------------
@@ -104,7 +104,7 @@
   ;; Both land in customer.interest-accrued. The bank-side leg
   ;; lands on GL 2400 Interest payable (untracked by the rig);
   ;; the tracked settlement account (acct-0) stays at 4_800_000.
-  {:command :accrue-interest        :args [:org-0 20260501]}
+  {:command :accrue-interest        :args [:bank-0 20260501]}
   {:command :assert-balance         :args [:acct-0 4800000]}
 
   ;; Capitalisation: 6 legs per customer (interest-paid debit +
@@ -114,7 +114,7 @@
   ;;   Arthur savings.default  += 75      →    75_075
   ;;   Ford   savings.default  += 35      →    35_035
   ;;   current accounts and acct-0 unchanged.
-  {:command :capitalize-interest    :args [:org-0 20260501]}
+  {:command :capitalize-interest    :args [:bank-0 20260501]}
   {:command :assert-balance         :args [:acct-0 4800000]}
   {:command :assert-balance         :args [:acct-1 27500]}
   {:command :assert-balance         :args [:acct-2 75075]}

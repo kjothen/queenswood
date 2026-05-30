@@ -7,8 +7,8 @@
  ;; same org — so the cross-org creditor lookup fails, the API
  ;; rejects, and balances stay put.
  :given
- [{:command :create-org     :args []}
-  {:command :create-org     :args []}
+ [{:command :create-bank     :args []}
+  {:command :create-bank     :args []}
   {:command :inbound-transfer :args [:acct-0 1000]}]
 
  :when

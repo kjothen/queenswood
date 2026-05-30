@@ -244,11 +244,9 @@ cannot be deleted (status flip only).
 
 Normal side follows from type per the convention table above
 (A and E are debit-normal; L, Eq, I are credit-normal).
-`1100` represents cash at the correspondent bank for one
-clearing scheme; banks participating in more than one scheme
-add per-scheme children. `5100` is interest expense paid to
-customers; the name is shortened from "Interest expense
-(paid to customers)" in display to fit narrow views.
+`5100` is interest expense paid to customers; the name is
+shortened from "Interest expense (paid to customers)" in
+display to fit narrow views.
 
 The three control accounts (2100 / 2200 / 2300) — one per
 customer-deposit product type — each carry a
@@ -256,11 +254,22 @@ customer-deposit product type — each carry a
 cash-accounts of the corresponding product type roll up to
 their respective control account.
 
-`1100 — Cash at correspondent` is per-scheme in the sense that
-the bank may hold separate cash positions per clearing scheme
-the bank participates in (today FPS only, so one detail
-account suffices; multi-scheme banks would add 1101, 1102, …).
-The seed creates the single 1100 by default.
+`1100 — Cash at correspondent` is the bank's own settlement
+account at its clearing rail — the ISO 20022
+`ExternalCashAccountType1Code` value `SACC` (*"Account used
+to post debit and credit entries, as a result of
+transactions cleared and settled through a specific clearing
+and settlement system"*). For a directly-connected bank, it
+is the bank's account at the central-bank RTGS or scheme
+operator; for an indirect-access bank, it is the bank's view
+of its position with its sponsor — the same position appears
+on the sponsor's books as `CPAC` ("clearing participant
+account").
+
+A bank participating in more than one scheme adds per-scheme
+children — 1101 FPS-SACC, 1102 CHAPS-SACC, and so on — each
+typed as a `default/posted` asset detail. The seed creates a
+single 1100 by default, sufficient for an FPS-only deployment.
 
 The seeded set is small on purpose. A bank that wants finer
 breakdown (per-currency cash-at-correspondent children,
@@ -496,14 +505,17 @@ same call; the pairing combines naturally — the customer
 leg's paired control leg is appended, the GL-only legs join
 it, and the full set is balance-checked.
 
-The amount, currency, balance-type, and balance-status on the
-control leg mirror the customer leg one-for-one. Status
-mirroring means a pending customer credit shows up as a
-pending control-account credit, never a posted one; type
-mirroring means a credit to a customer's `interest-accrued`
-bucket lands on the control's matching `interest-accrued`
-bucket. The per-bucket invariant follows directly (see
-"Balance buckets per account class" below).
+The amount, currency, and balance-status on the control leg
+mirror the customer leg one-for-one — but only when the
+customer leg's `balance-type` is `default`. Status mirroring
+means a pending customer credit shows up as a pending
+control-account credit, never a posted one. Legs against
+`interest-accrued` or `interest-paid` on the customer side do
+*not* auto-pair to a control bucket — interest sits on
+dedicated GL accounts (2400 for payable; accruals expensed
+directly to 5100). See "Balance buckets per account class"
+above for the per-class bucket map and the per-bucket
+invariant that falls out.
 
 ### Reframing today's bricks
 
@@ -527,6 +539,43 @@ entirely: today the platform stands up an internal bank to
 hold cross-cutting books; under the new model each tenant
 bank owns its own CoA and there's no platform-level bank
 inside the tenant API surface.
+
+#### Two settlement-account concepts, only one retires
+
+The word "settlement account" carries two distinct meanings
+that today's Queenswood model conflates. Untangling them is
+the point of the reframe:
+
+- **Concept A — Queenswood's internal
+  `:product-type-settlement` cash-account-product.** A
+  per-tenant cash-account-shaped record used as the bank-side
+  counterparty for interest accrual and capitalisation. This
+  is a Queenswood-specific implementation hack: it dressed
+  up an internal GL position as if it were a customer-facing
+  cash account so the existing transaction substrate could
+  carry both sides. **This concept retires.** Its two roles
+  split across GL 1100 (cash position) and GL 2400 (interest
+  payable).
+- **Concept B — the bank's settlement account at the
+  clearing rail (ISO 20022 `SACC`).** A real banking concept,
+  defined by ISO 20022 as the account used to post debit and
+  credit entries that result from transactions cleared and
+  settled through a specific clearing and settlement system.
+  **This concept stays, and GL 1100 is it.** A bank with
+  multiple scheme memberships gets per-scheme children of
+  1100 — each itself a `SACC` for its respective rail.
+  Indirect-access banks see 1100 as their position with their
+  sponsor; the sponsor sees the same position as `CPAC`
+  ("clearing participant account") on its own books.
+
+The interest brick's settlement-account lookup
+(`get-account-by-type` for `:product-type-settlement`,
+rejecting with `:interest/no-settlement` when missing) goes
+away with Concept A. The replacement is "find GL 2400 by
+code" via `bank-chart-of-accounts`. Because 2400 is part of
+the seeded chart every bank gets at creation, the not-found
+rejection becomes structurally impossible rather than
+runtime-checked.
 
 Existing settlement and internal accounts stay in the data
 store, marked `:cash-account-status-closed` with their
@@ -647,6 +696,57 @@ matching X-denominated control account child. A bank that
 hasn't (yet) added a child for a currency a customer leg
 arrives in rejects with `:gl/missing-currency-account`.
 
+### ISO 20022 cash-account-type classification
+
+ISO 20022 defines `ExternalCashAccountType1Code` — a
+free-list of four-character codes classifying cash accounts
+for inclusion in payment messages (`pacs.008`, `pain.001`,
+`camt.053`, and others). The codes describe *what kind of
+account this is for payment-rail purposes*, not what it is
+on the bank's GL. Customer cash-accounts and the bank's own
+1100 are both addressable by this code set, in different
+roles.
+
+Customer cash-accounts carry an `:iso-cash-account-type`
+field, defaulted from `:product-type` at open time and
+override-able for sub-flavours the product-type doesn't
+distinguish:
+
+| Product type   | Default ISO code |
+|----------------|------------------|
+| `current`      | `CACC`           |
+| `savings`      | `SVGS`           |
+| `term-deposit` | `LLSV`           |
+
+Overrides worth noting: `current` → `TRAN` for a basic
+transacting variant (no overdraft, no chequebook);
+`savings` → `LLSV` for savings with special interest or
+withdrawal terms. The `term-deposit` → `LLSV` default is the
+closest standard code — `LLSV` is "savings with special
+interest and withdrawal terms", which includes term deposits
+but isn't specific to them.
+
+The field is read when emitting outbound ISO 20022 messages
+that reference customer accounts. It's not read by the GL —
+the chart of accounts is the bank's internal books and
+doesn't see ISO codes; the codes are wire-format
+classifiers.
+
+The bank's own GL 1100 *Cash at correspondent* is the
+`SACC` ("settlement account") in this classification, and
+its per-scheme children carry the same `SACC` code (one per
+scheme). 1100 is not stored as a customer cash-account so it
+doesn't carry the `:iso-cash-account-type` field — it's a GL
+account, and its ISO classification follows from its role,
+not from a stored attribute.
+
+Out of scope for v1: lending products (`LOAN`, `MGLD`),
+overdrafts (`ODFT`), physical cash (`CASH`), tax/charge
+sub-accounts (`TAXE`, `CHAR`), virtual accounts (`VACC`).
+Each adds its own product-type when Queenswood grows into
+that capability; the `:iso-cash-account-type` derivation
+table extends naturally.
+
 ### Brick extensions
 
 The TDD is `bank-chart-of-accounts` (new) plus extensions to
@@ -662,7 +762,10 @@ existing bricks:
 - **`bank-cash-account`** (extend). Each cash account now
   carries a `:gl-control-code`, derived at open time from the
   product's `:product-type` via
-  `bank-chart-of-accounts/control-code-for-product-type`.
+  `bank-chart-of-accounts/control-code-for-product-type`, and
+  an `:iso-cash-account-type` field (`CACC` / `SVGS` / `LLSV`
+  / `TRAN`) defaulted from `:product-type` and used when
+  emitting outbound ISO 20022 payment messages.
 - **`bank-transaction-processor`** (extend). Every leg that
   hits a customer cash account also posts to its control
   account (paired-leg construction). Legs can also target GL
@@ -672,7 +775,7 @@ existing bricks:
 - **`bank-schema`** (extend). Protobuf messages for
   `GLAccount`, `GLEntry`, and the control mapping; new
   enums for `:gl-account-type`, `:gl-account-class`,
-  `:sub-ledger-kind`.
+  `:sub-ledger-kind`, `:iso-cash-account-type`.
 - **`bank-test-scenarios`** (extend). The two
   invariants — double-entry and sub-ledger ↔ control — added
   as `nom-test>` assertions that run on every scenario.
@@ -925,6 +1028,28 @@ that touches a customer accrued bucket and two GL accounts):
   to the `default` balance-type. The interest reconciliation
   (Σ customer interest-accrued = 2400 balance) is a separate
   scenario-test assertion, not a hard commit-path check.
+- **Indirect-access (`CPAC`) modelling is single-sided.** A
+  bank using sponsor access sees its 1100 position as its
+  own `SACC` view of what the sponsor holds for it; the
+  sponsor's books carry the matching `CPAC` position. Today
+  Queenswood models only the bank-side view (1100); the
+  sponsor's reconciliation file would be ingested as a
+  reconciliation feed, not as a mirrored GL account. A
+  future sponsor-integration design would formalise this.
+- **`:iso-cash-account-type` defaults are best-effort.** The
+  `term-deposit` → `LLSV` mapping is the closest standard
+  code but not exact — `LLSV` is "savings with special
+  interest and withdrawal terms", which includes term
+  deposits but isn't specific to them. Banks integrating
+  with counterparties that require a more precise
+  classification can override at open time; future ISO 20022
+  releases may add a more specific code.
+- **No `:iso-cash-account-type` for GL accounts.** The bank's
+  GL 1100 is conceptually `SACC` but doesn't carry the field
+  — the ISO classification is derived from its role at
+  message-emission time. Mixed-purpose GL accounts (rare in
+  the seeded chart) would need explicit classification when
+  they appear on the wire.
 - **Suspense workflow isn't designed.** Suspense as a GL
   account (2500) is straightforward; the workflow for items
   landing there (review queue, resolution rules, posting
@@ -991,13 +1116,19 @@ that touches a customer accrued bucket and two GL accounts):
 - [processor-bricks.md](processor-bricks.md) — Processor
   brick conventions (relevant if a future processor variant
   emerges)
+- [ISO 20022 external codes](https://www.iso20022.org/external-code-lists) —
+  Source for `ExternalCashAccountType1Code`
+  (`CACC`, `SVGS`, `LLSV`, `TRAN`, `SACC`, `CPAC`, etc.),
+  maintained by the ISO 20022 Registration Authority and
+  republished periodically
 - `bank-chart-of-accounts` brick interface (proposed)
 - `bank-transaction` / `bank-transaction-processor` brick
   interfaces
 - `bank-balance` brick interface
 - `bank-bank` brick interface (bootstrap extension)
 - `bank-cash-account` brick interface
-  (`:gl-control-code` extension)
+  (`:gl-control-code` and `:iso-cash-account-type`
+  extensions)
 - `bank-schema` brick (proto messages for `GLAccount` and
   `GLEntry`)
 - `bank-test-scenarios` brick (invariant assertions)

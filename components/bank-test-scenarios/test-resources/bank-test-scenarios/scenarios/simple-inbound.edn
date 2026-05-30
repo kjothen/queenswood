@@ -2,7 +2,7 @@
  :tags #{:transfers :inbound}
 
  :given
- [{:command :create-org :args []}]
+ [{:command :create-bank :args []}]
 
  :when
  [{:command :inbound-transfer :args [:acct-0 1000]}]

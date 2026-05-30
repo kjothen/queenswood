@@ -10,12 +10,12 @@
  ;; covered by the property test, so it isn't repeated here.
 
  :given
- [{:command :create-org       :args []}
-  {:command :create-person-party :args [:org-0 :ni-shared]}
+ [{:command :create-bank       :args []}
+  {:command :create-person-party :args [:bank-0 :ni-shared]}
   {:command :assert-no-anomaly  :args []}]
 
  :when
- [{:command :create-person-party :args [:org-0 :ni-shared]}]
+ [{:command :create-person-party :args [:bank-0 :ni-shared]}]
 
  :then
  [{:command :assert-outcome :args [:denied]}

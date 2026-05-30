@@ -2,7 +2,7 @@
  :tags #{:policies :curative}
 
  :given
- [{:command :create-org     :args []}
+ [{:command :create-bank     :args []}
   {:command :inbound-transfer :args [:acct-0 100]}
   {:command :apply-fee        :args [:acct-0 250]}]
 

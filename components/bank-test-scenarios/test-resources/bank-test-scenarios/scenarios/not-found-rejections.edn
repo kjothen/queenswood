@@ -7,7 +7,7 @@
  ;; and the bank-api error-mapping layer keys off these kinds.
 
  :given
- [{:command :create-org      :args []}
+ [{:command :create-bank      :args []}
   {:command :assert-outcome  :args [:succeeded]}]
 
  :when []
@@ -15,47 +15,47 @@
  :then
  [;; --- Org-scoped reads -------------------------------------------
   {:command :get-account
-   :args [:org-0 "acc.unknown"]}
+   :args [:bank-0 "acc.unknown"]}
   {:command :assert-rejection-kind
    :args [:cash-account/not-found]}
 
   {:command :get-party
-   :args [:org-0 "pty.unknown"]}
+   :args [:bank-0 "pty.unknown"]}
   {:command :assert-rejection-kind
    :args [:party/not-found]}
 
   {:command :get-idv
-   :args [:org-0 "idv.unknown"]}
+   :args [:bank-0 "idv.unknown"]}
   {:command :assert-rejection-kind
    :args [:idv/not-found]}
 
   {:command :get-payee-check
-   :args [:org-0 "pck.unknown"]}
+   :args [:bank-0 "pck.unknown"]}
   {:command :assert-rejection-kind
    :args [:payee-check/not-found]}
 
   {:command :get-product
-   :args [:org-0 "prd.unknown"]}
+   :args [:bank-0 "prd.unknown"]}
   {:command :assert-rejection-kind
    :args [:cash-account-product/product-not-found]}
 
   ;; product exists; version doesn't
   {:command :create-product
-   :args [:org-0 :current 0]}
+   :args [:bank-0 :current 0]}
   {:command :assert-outcome :args [:succeeded]}
 
   {:command :get-product-version
-   :args [:org-0 :prod-1 "prv.unknown"]}
+   :args [:bank-0 :prod-1 "prv.unknown"]}
   {:command :assert-rejection-kind
    :args [:cash-account-product/version-not-found]}
 
   {:command :publish-product
-   :args [:org-0 :prod-1 "prv.unknown"]}
+   :args [:bank-0 :prod-1 "prv.unknown"]}
   {:command :assert-rejection-kind
    :args [:cash-account-product/version-not-found]}
 
   {:command :update-product-draft
-   :args [:org-0 :prod-1 "prv.unknown"]}
+   :args [:bank-0 :prod-1 "prv.unknown"]}
   {:command :assert-rejection-kind
    :args [:cash-account-product/version-not-found]}
 

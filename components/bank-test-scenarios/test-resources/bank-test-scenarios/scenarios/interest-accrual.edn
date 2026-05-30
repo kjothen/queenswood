@@ -21,17 +21,17 @@
  ;; task 6.x); this scenario checks the wiring runs without an
  ;; anomaly.
  :given
- [{:command :create-org           :args []}                         ; org-0, prod-0 (settlement), party-0 (org), acct-0
-  {:command :create-product       :args [:org-0 :savings 3650]}     ; prod-1 (savings, draft, 36.5% AER)
+ [{:command :create-bank           :args []}                         ; org-0, prod-0 (settlement), party-0 (org), acct-0
+  {:command :create-product       :args [:bank-0 :savings 3650]}     ; prod-1 (savings, draft, 36.5% AER)
   {:command :publish-product      :args [:prod-1]}                  ; prod-1 published
-  {:command :create-person-party  :args [:org-0]}                   ; party-1 (person, auto-active)
-  {:command :open-account         :args [:org-0 :party-1 :prod-1]}  ; acct-1 (savings, customer)
+  {:command :create-person-party  :args [:bank-0]}                   ; party-1 (person, auto-active)
+  {:command :open-account         :args [:bank-0 :party-1 :prod-1]}  ; acct-1 (savings, customer)
   {:command :inbound-transfer     :args [:acct-0 100000]}           ; £1,000 into settlement
   {:command :internal-transfer    :args [:acct-0 :acct-1 100000]}]  ; settlement → savings
 
  :when
- [{:command :accrue-interest     :args [:org-0 20260501]}
-  {:command :capitalize-interest :args [:org-0 20260501]}]
+ [{:command :accrue-interest     :args [:bank-0 20260501]}
+  {:command :capitalize-interest :args [:bank-0 20260501]}]
 
  :then
  [{:command :assert-no-anomaly :args []}]}

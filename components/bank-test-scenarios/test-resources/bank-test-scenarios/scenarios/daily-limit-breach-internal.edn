@@ -11,12 +11,12 @@
  ;; gate in the payment domain. The platform-tier `100,000/day`
  ;; rule still applies — it just isn't the binding constraint.
  :given
- [{:command :create-org           :args []}
-  {:command :create-person-party  :args [:org-0]}
-  {:command :open-account         :args [:org-0 :party-1 :prod-0]}
+ [{:command :create-bank           :args []}
+  {:command :create-person-party  :args [:bank-0]}
+  {:command :open-account         :args [:bank-0 :party-1 :prod-0]}
   {:command :inbound-transfer     :args [:acct-0 1000]}
   {:command :bind-policy
-   :args [:org-0
+   :args [:bank-0
           {:name "Test: max 2 internal payments per day"
            :category :policy-category-restricted
            :limits [{:kind {:internal-payment {}}
