@@ -82,6 +82,15 @@
   [{:keys [bank counter next-model-id next-org-id next-product-id next-party-id
            id-mapping]
     :as ctx} _command]
+  ;; The model treats `:create-org` as "bank + one usable account in
+  ;; one go". Reality post-CoA seeds 7 GL accounts on the bank's own
+  ;; org-party at provisioning, but none of them are scenario-usable
+  ;; (no `:gl-control-code`, no spendable default-posted bucket the
+  ;; model recognises). So we additionally create + publish a
+  ;; settlement product and open a single customer-style account on
+  ;; the bank's org-party — that account is what gets tracked as
+  ;; `:acct-0`. The 7 GL accounts stay off-model (projections only
+  ;; look at `id-mapping`).
   (let [model-acct (model-id-for-next-account next-model-id)
         model-org (model-id-for-next-org next-org-id)
         model-prod (model-id-for-next-product next-product-id)
@@ -93,30 +102,59 @@
                                "micro" ["GBP"])
         org (:bank result)
         real-org-id (:bank-id org)
-        real-acct-id (get-in org [:accounts 0 :account-id])
+        real-party-id (get-in org [:party :party-id])
+        settlement-product (when-not (error/anomaly? result)
+                             (products/new-product bank
+                                                   real-org-id
+                                                   {:name "Scenario Settlement"
+                                                    :product-type
+                                                    :product-type-settlement
+                                                    :currency "GBP"}))
+        settlement-product-id (:product-id settlement-product)
+        settlement-version-id (:version-id settlement-product)
+        _ (when (and settlement-product-id
+                     (not (error/anomaly? settlement-product)))
+            (products/publish bank
+                              real-org-id
+                              settlement-product-id
+                              settlement-version-id))
+        settlement-account (when settlement-product-id
+                             (cash-accounts/new-account
+                              bank
+                              {:bank-id real-org-id
+                               :party-id real-party-id
+                               :product-id settlement-product-id
+                               :currency "GBP"
+                               :name "Scenario Settlement Account"}))
+        real-acct-id (:account-id settlement-account)
+        real-bban (:bban settlement-account)
         _ (when real-acct-id (seed-opened bank real-org-id real-acct-id))]
     (-> ctx
-        (assoc :id-mapping (id-mapping/add id-mapping model-acct real-acct-id))
+        (cond-> real-acct-id
+                (assoc :id-mapping
+                       (id-mapping/add id-mapping model-acct real-acct-id)))
         (assoc-in [:orgs model-org] {:real-id real-org-id :currency "GBP"})
-        ;; Auto-settlement product is born already-published; track v1
-        ;; as :published so open-draft / publish-product eligibility
-        ;; matches the model.
-        (assoc-in [:products model-prod]
-                  {:real-id (get-in org [:accounts 0 :product-id])
-                   :org model-org
-                   :versions [{:real-id (get-in org [:accounts 0 :version-id])
-                               :status :published
-                               :number 1}]})
+        ;; The settlement product is born already-published (we
+        ;; publish above) so track v1 as :published; matches the
+        ;; model's auto-settlement product semantics.
+        (cond-> settlement-product-id
+                (assoc-in [:products model-prod]
+                 {:real-id settlement-product-id
+                  :org model-org
+                  :versions [{:real-id settlement-version-id
+                              :status :published
+                              :number 1}]}))
         (assoc-in [:parties model-party]
-                  {:real-id (get-in org [:party :party-id]) :org model-org})
-        (assoc-in [:accounts model-acct]
-                  {:org model-org :bban (get-in org [:accounts 0 :bban])})
+                  {:real-id real-party-id :org model-org})
+        (cond-> real-acct-id
+                (assoc-in [:accounts model-acct]
+                 {:org model-org :bban real-bban}))
         (update :next-model-id inc)
         (update :next-org-id inc)
         (update :next-product-id inc)
         (update :next-party-id inc)
         (update :counter inc)
-        (track result))))
+        (track (or settlement-account result)))))
 
 (defn- product-payload
   [product-name product-type & [extras]]

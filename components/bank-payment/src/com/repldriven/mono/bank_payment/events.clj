@@ -14,7 +14,6 @@
     [com.repldriven.mono.log.interface :as log]
     [com.repldriven.mono.utility.interface :as utility]))
 
-(def ^:private gl-code-suspense "2500")
 (def ^:private gl-code-pending-outbound "1200")
 (def ^:private gl-code-cash-at-correspondent "1100")
 
@@ -35,17 +34,21 @@
     (store/transact
      config
      (fn [txn]
+       ;; Creditor is known (matched via BBAN) so the inbound settles
+       ;; directly to the bank's correspondent cash account; suspense
+       ;; (2500) is reserved for unmatched inbounds — a workflow for
+       ;; a later wave.
        (let-nom>
-         [suspense (cash-accounts/get-account-by-gl-code
-                    txn
-                    bank-id
-                    gl-code-suspense)
-          _ (when (nil? suspense)
+         [cash (cash-accounts/get-account-by-gl-code
+                txn
+                bank-id
+                gl-code-cash-at-correspondent)
+          _ (when (nil? cash)
               (error/fail
-               :payment/no-suspense-account
+               :payment/no-cash-at-correspondent-account
                {:message
-                (str "Bank has no 2500 suspense account in its chart"
-                     " of accounts")
+                (str "Bank has no 1100 cash-at-correspondent account"
+                     " in its chart of accounts")
                 :bank-id bank-id}))
           policies (policy/get-effective-policies
                     txn
@@ -59,7 +62,7 @@
           transaction (domain/inbound-payment->transaction
                        data
                        account
-                       (:account-id suspense)
+                       (:account-id cash)
                        policies
                        aggregates)
           expanded-legs (chart-of-accounts/expand-legs

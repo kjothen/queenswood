@@ -27,7 +27,10 @@
          (= :open (:status account)))))
 
 (defn- accrue-account
-  [state settlement-acct customer-acct]
+  [state customer-acct]
+  ;; Post-CoA: the bank-side leg lands on GL 2400 Interest payable,
+  ;; not on the settlement-style tracked account. So the settlement
+  ;; available and leg count stay untouched here.
   (let [account (get-in state [:accounts customer-acct])
         product-id (:product account)
         rate (get-in state [:products product-id :interest-rate-bps] 0)
@@ -47,20 +50,14 @@
                       whole-units)
            (assoc-in [:accounts customer-acct :credit-carry] carry)
            (update-in [:accounts customer-acct :transaction-legs]
-                      (fnil inc 0))
-           (update-in [:accounts settlement-acct :available]
-                      -
-                      whole-units)
-           (update-in [:accounts settlement-acct :transaction-legs]
                       (fnil inc 0)))))))
 
 (defn- accrue-org
   [state org-id]
   (let [org (get-in state [:orgs org-id])
-        settlement (:settlement-account org)
         custs (filter (fn [a] (customer-account? state a))
                       (:accounts org))]
-    (reduce (fn [s a] (accrue-account s settlement a)) state custs)))
+    (reduce accrue-account state custs)))
 
 (def accrue-interest
   {:run? (fn [state] (seq (state/known-orgs state)))
@@ -90,23 +87,13 @@
 
 (defn- capitalize-org
   [state org-id]
+  ;; Post-CoA: capitalisation's bank-side legs land on GL 2400, not
+  ;; on the settlement-style tracked account. Settlement stays
+  ;; untouched.
   (let [org (get-in state [:orgs org-id])
-        settlement (:settlement-account org)
         custs (filter (fn [a] (customer-account? state a))
-                      (:accounts org))
-        capitalised (filter
-                     (fn [a]
-                       (pos? (get-in state
-                                     [:accounts a :interest-accrued]
-                                     0)))
-                     custs)]
-    (-> (reduce capitalize-account state custs)
-        ;; Each capitalised customer triggers a transaction with 2
-        ;; legs touching settlement (default debit, interest-payable
-        ;; credit). settlement.available stays unchanged net.
-        (update-in [:accounts settlement :transaction-legs]
-                   (fnil + 0)
-                   (* 2 (count capitalised))))))
+                      (:accounts org))]
+    (reduce capitalize-account state custs)))
 
 (def capitalize-interest
   {:run? (fn [state] (seq (state/known-orgs state)))

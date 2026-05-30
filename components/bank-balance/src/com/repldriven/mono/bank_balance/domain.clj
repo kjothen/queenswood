@@ -60,6 +60,13 @@
             :product-type-internal
             default-posted
 
+            ;; Chart-of-accounts GL rows (1100/1200/2400/2500 etc.)
+            ;; have no customer-facing "available" concept; they're
+            ;; the bank's own books. Report 0 so the user-driven
+            ;; min-0 balance limit treats them as neutral.
+            :product-type-chart-of-accounts
+            0
+
             default-posted)]
     {:value v :currency currency}))
 
