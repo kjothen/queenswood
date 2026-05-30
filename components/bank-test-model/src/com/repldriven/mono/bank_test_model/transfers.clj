@@ -119,11 +119,11 @@
    :valid? (fn [state {[pmt-id] :args}] (contains? (:payments state) pmt-id))})
 
 (defn- accounts-by-org
-  "Returns a map of org-id → vector of account-ids for known
+  "Returns a map of bank-id → vector of account-ids for known
   accounts. Used to constrain `internal-transfer` to same-org
   pairs (the production API enforces same-org)."
   [state]
-  (group-by (fn [a] (get-in state [:accounts a :org]))
+  (group-by (fn [a] (get-in state [:accounts a :bank]))
             (state/known-accounts state)))
 
 (def internal-transfer
@@ -152,8 +152,8 @@
                  ;; non-GBP explicit currency is a mismatch.
                  (if (and (pos? amount)
                           (not= from to)
-                          (= (get-in state [:accounts from :org])
-                             (get-in state [:accounts to :org]))
+                          (= (get-in state [:accounts from :bank])
+                             (get-in state [:accounts to :bank]))
                           (or (nil? currency) (= "GBP" currency)))
                    (transfer-between state from to amount)
                    state))

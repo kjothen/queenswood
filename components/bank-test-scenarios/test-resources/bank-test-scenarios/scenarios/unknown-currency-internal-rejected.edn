@@ -6,9 +6,9 @@
  ;; with `:currency "EUR"` must reject at the domain
  ;; `ensure-currency-matches` guard before any leg is recorded.
  :given
- [{:command :create-org           :args []}
-  {:command :create-person-party  :args [:org-0]}
-  {:command :open-account         :args [:org-0 :party-1 :prod-0]}
+ [{:command :create-bank           :args []}
+  {:command :create-person-party  :args [:bank-0]}
+  {:command :open-account         :args [:bank-0 :party-1 :prod-0]}
   {:command :inbound-transfer     :args [:acct-0 1000]}]
 
  :when

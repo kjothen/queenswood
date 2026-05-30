@@ -57,17 +57,17 @@
           (is (contains? known (:command c)))
           (is (vector? (:args c))))))))
 
-(defn- enrich-with-org-real-id
-  "Walks `:products` / `:parties` in ctx and tacks the owning org's
+(defn- enrich-with-bank-real-id
+  "Walks `:products` / `:parties` in ctx and tacks the owning bank's
   real-id on each, so a projection that reads from the real bank
-  can resolve `(get-product org-id prod-id)` etc. without re-doing
-  the lookup. Returns `{model-id {:real-id ... :org-real-id ...}}`."
-  [model->real orgs]
+  can resolve `(get-product bank-id prod-id)` etc. without re-doing
+  the lookup. Returns `{model-id {:real-id ... :bank-real-id ...}}`."
+  [model->real banks]
   (->> model->real
-       (map (fn [[model-id {:keys [real-id org]}]]
+       (map (fn [[model-id {:keys [real-id bank]}]]
               [model-id
                {:real-id real-id
-                :org-real-id (get-in orgs [org :real-id])}]))
+                :bank-real-id (get-in banks [bank :real-id])}]))
        (into {})))
 
 (defn- project-real
@@ -76,11 +76,11 @@
     {:balances (projections/project-balances bank real->model)
      :products (projections/project-products
                 bank
-                (enrich-with-org-real-id (:products ctx) (:orgs ctx)))
+                (enrich-with-bank-real-id (:products ctx) (:banks ctx)))
      :parties (projections/project-parties
                bank
-               (enrich-with-org-real-id (:parties ctx) (:orgs ctx)))
-     :orgs (projections/project-orgs bank ctx)
+               (enrich-with-bank-real-id (:parties ctx) (:banks ctx)))
+     :banks (projections/project-banks bank ctx)
      :accounts (projections/project-accounts bank ctx)
      :transactions (projections/project-transactions bank real->model)
      :outbound-payments (projections/project-outbound-payments
@@ -97,7 +97,7 @@
   {:balances (projections/project-model-balances model-state)
    :products (projections/project-model-products model-state)
    :parties (projections/project-model-parties model-state)
-   :orgs (projections/project-model-orgs model-state)
+   :banks (projections/project-model-banks model-state)
    :accounts (projections/project-model-accounts model-state)
    :transactions (projections/project-model-transactions model-state)
    :outbound-payments (projections/project-model-outbound-payments

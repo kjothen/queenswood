@@ -5,28 +5,28 @@
     [clojure.test.check.generators :as gen]))
 
 (defn- new-product-state
-  [org-id product-type interest-rate-bps]
-  {:org org-id
+  [bank-id product-type interest-rate-bps]
+  {:bank bank-id
    :product-type product-type
    :interest-rate-bps interest-rate-bps
    :versions [{:status :draft :number 1}]})
 
 (def create-product
-  {:run? (fn [state] (seq (state/known-orgs state)))
+  {:run? (fn [state] (seq (state/known-banks state)))
    :args (fn [state]
-           (gen/let [org (gen/elements (state/known-orgs state))
+           (gen/let [org (gen/elements (state/known-banks state))
                      type (gen/elements [:current :savings])
                      rate (gen/choose 100 10000)]
              [org type (if (= :savings type) rate 0)]))
-   :next-state (fn [state {[org-id type rate-bps] :args}]
-                 (let [prod-id (state/next-product-id state)]
-                   (->
-                     state
-                     (assoc-in [:products prod-id]
-                               (new-product-state org-id type rate-bps))
-                     (update-in [:orgs org-id :products] (fnil conj []) prod-id)
-                     (update :next-product-id inc))))
-   :valid? (fn [state {[org-id] :args}] (contains? (:orgs state) org-id))})
+   :next-state
+   (fn [state {[bank-id type rate-bps] :args}]
+     (let [prod-id (state/next-product-id state)]
+       (-> state
+           (assoc-in [:products prod-id]
+                     (new-product-state bank-id type rate-bps))
+           (update-in [:banks bank-id :products] (fnil conj []) prod-id)
+           (update :next-product-id inc))))
+   :valid? (fn [state {[bank-id] :args}] (contains? (:banks state) bank-id))})
 
 (defn- flip-latest
   [state prod-id f]

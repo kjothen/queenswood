@@ -40,12 +40,12 @@
            (balances/apply-legs txn (:legs r) (:transaction-type r))))))))
 
 (defn- seed-opened
-  [bank org-real-id real-acct-id]
-  (cash-accounts/seed-opened-account bank org-real-id real-acct-id))
+  [bank bank-real-id real-acct-id]
+  (cash-accounts/seed-opened-account bank bank-real-id real-acct-id))
 
 (defn- seed-closed
-  [bank org-real-id real-acct-id]
-  (cash-accounts/seed-closed-account bank org-real-id real-acct-id))
+  [bank bank-real-id real-acct-id]
+  (cash-accounts/seed-closed-account bank bank-real-id real-acct-id))
 
 (defn- track
   [ctx result]
@@ -60,9 +60,9 @@
   [next-model-id]
   (keyword (str "acct-" next-model-id)))
 
-(defn- model-id-for-next-org
-  [next-org-id]
-  (keyword (str "org-" next-org-id)))
+(defn- model-id-for-next-bank
+  [next-bank-id]
+  (keyword (str "bank-" next-bank-id)))
 
 (defn- model-id-for-next-product
   [next-product-id]
@@ -78,34 +78,35 @@
 
 (defmulti dispatch (fn [_ctx command] (:command command)))
 
-(defmethod dispatch :create-org
-  [{:keys [bank counter next-model-id next-org-id next-product-id next-party-id
+(defmethod dispatch :create-bank
+  [{:keys [bank counter next-model-id next-bank-id next-product-id next-party-id
            id-mapping]
     :as ctx} _command]
-  ;; The model treats `:create-org` as "bank + one usable account in
-  ;; one go". Reality post-CoA seeds 7 GL accounts on the bank's own
-  ;; org-party at provisioning, but none of them are scenario-usable
+  ;; The model treats `:create-bank` as "bank + one usable account in one
+  ;; go". Reality post-CoA seeds 7 GL accounts on the bank's own
+  ;; organization-party at provisioning, but none of them are
+  ;; scenario-usable
   ;; (no `:gl-control-code`, no spendable default-posted bucket the
   ;; model recognises). So we additionally create + publish a
   ;; settlement product and open a single customer-style account on
-  ;; the bank's org-party — that account is what gets tracked as
+  ;; the bank's organization-party — that account is what gets tracked as
   ;; `:acct-0`. The 7 GL accounts stay off-model (projections only
   ;; look at `id-mapping`).
   (let [model-acct (model-id-for-next-account next-model-id)
-        model-org (model-id-for-next-org next-org-id)
+        model-bank (model-id-for-next-bank next-bank-id)
         model-prod (model-id-for-next-product next-product-id)
         model-party (model-id-for-next-party next-party-id)
-        org-name (str "Scenario Customer " counter)
+        bank-name (str "Scenario Customer " counter)
         result (banks/new-bank bank
-                               org-name
+                               bank-name
                                :bank-type-customer :bank-status-test
                                "micro" ["GBP"])
-        org (:bank result)
-        real-org-id (:bank-id org)
-        real-party-id (get-in org [:party :party-id])
+        bank-entity (:bank result)
+        real-bank-id (:bank-id bank-entity)
+        real-party-id (get-in bank-entity [:party :party-id])
         settlement-product (when-not (error/anomaly? result)
                              (products/new-product bank
-                                                   real-org-id
+                                                   real-bank-id
                                                    {:name "Scenario Settlement"
                                                     :product-type
                                                     :product-type-settlement
@@ -115,42 +116,43 @@
         _ (when (and settlement-product-id
                      (not (error/anomaly? settlement-product)))
             (products/publish bank
-                              real-org-id
+                              real-bank-id
                               settlement-product-id
                               settlement-version-id))
         settlement-account (when settlement-product-id
                              (cash-accounts/new-account
                               bank
-                              {:bank-id real-org-id
+                              {:bank-id real-bank-id
                                :party-id real-party-id
                                :product-id settlement-product-id
                                :currency "GBP"
                                :name "Scenario Settlement Account"}))
         real-acct-id (:account-id settlement-account)
         real-bban (:bban settlement-account)
-        _ (when real-acct-id (seed-opened bank real-org-id real-acct-id))]
+        _ (when real-acct-id (seed-opened bank real-bank-id real-acct-id))]
     (-> ctx
         (cond-> real-acct-id
                 (assoc :id-mapping
                        (id-mapping/add id-mapping model-acct real-acct-id)))
-        (assoc-in [:orgs model-org] {:real-id real-org-id :currency "GBP"})
+        (assoc-in [:banks model-bank] {:real-id real-bank-id :currency "GBP"})
         ;; The settlement product is born already-published (we
         ;; publish above) so track v1 as :published; matches the
         ;; model's auto-settlement product semantics.
         (cond-> settlement-product-id
                 (assoc-in [:products model-prod]
                  {:real-id settlement-product-id
-                  :org model-org
+                  :bank model-bank
+                  :product-type :settlement
                   :versions [{:real-id settlement-version-id
                               :status :published
                               :number 1}]}))
         (assoc-in [:parties model-party]
-                  {:real-id real-party-id :org model-org})
+                  {:real-id real-party-id :bank model-bank})
         (cond-> real-acct-id
                 (assoc-in [:accounts model-acct]
-                 {:org model-org :bban real-bban}))
+                 {:bank model-bank :bban real-bban}))
         (update :next-model-id inc)
-        (update :next-org-id inc)
+        (update :next-bank-id inc)
         (update :next-product-id inc)
         (update :next-party-id inc)
         (update :counter inc)
@@ -164,12 +166,13 @@
          extras))
 
 (defn- record-fresh-product
-  [ctx model-prod model-org result]
+  [ctx model-prod model-bank product-type result]
   (cond-> ctx
           (not (error/anomaly? result))
           (assoc-in [:products model-prod]
            {:real-id (:product-id result)
-            :org model-org
+            :bank model-bank
+            :product-type product-type
             :versions [{:real-id (:version-id result)
                         :status :draft
                         :number 1}]})))
@@ -178,10 +181,10 @@
   {:current :product-type-current :savings :product-type-savings})
 
 (defmethod dispatch :create-product
-  [{:keys [bank counter next-product-id orgs] :as ctx}
-   {[model-org type rate-bps] :args}]
+  [{:keys [bank counter next-product-id banks] :as ctx}
+   {[model-bank type rate-bps] :args}]
   (let [model-prod (model-id-for-next-product next-product-id)
-        {:keys [real-id]} (get orgs model-org)
+        {:keys [real-id]} (get banks model-bank)
         kind (get product-type->kind type :product-type-current)
         name
         (str (if (= :savings type) "Savings" "Current") " Product " counter)
@@ -190,7 +193,7 @@
         result
         (products/new-product bank real-id (product-payload name kind extras))]
     (-> ctx
-        (record-fresh-product model-prod model-org result)
+        (record-fresh-product model-prod model-bank type result)
         (update :next-product-id inc)
         (update :counter inc)
         (track result))))
@@ -212,14 +215,14 @@
     product-ref))
 
 (defmethod dispatch :publish-product
-  [{:keys [bank orgs products] :as ctx} {args :args}]
+  [{:keys [bank banks products] :as ctx} {args :args}]
   (case (count args)
     1 (let [[model-prod] args
             product (get products model-prod)
-            {:keys [real-id org]} product
+            {model-bank :bank :keys [real-id]} product
             {version-real-id :real-id} (latest-version product)
-            org-real-id (get-in orgs [org :real-id])
-            result (products/publish bank org-real-id real-id version-real-id)]
+            bank-real-id (get-in banks [model-bank :real-id])
+            result (products/publish bank bank-real-id real-id version-real-id)]
         (-> ctx
             (cond-> (not (error/anomaly? result))
                     (update-latest-version model-prod
@@ -227,22 +230,22 @@
                                              (assoc v :status :published))))
             (update :counter inc)
             (track result)))
-    3 (let [[model-org product-ref version-id] args
-            org-real-id (get-in orgs [model-org :real-id])
+    3 (let [[model-bank product-ref version-id] args
+            bank-real-id (get-in banks [model-bank :real-id])
             product-id (resolve-product-id products product-ref)
-            result (products/publish bank org-real-id product-id version-id)]
+            result (products/publish bank bank-real-id product-id version-id)]
         (-> ctx
             (update :counter inc)
             (track result)))))
 
 (defmethod dispatch :open-draft
-  [{:keys [bank orgs products] :as ctx} {[model-prod] :args}]
+  [{:keys [bank banks products] :as ctx} {[model-prod] :args}]
   (let [product (get products model-prod)
-        {:keys [real-id org]} product
-        org-real-id (get-in orgs [org :real-id])
+        {model-bank :bank :keys [real-id]} product
+        bank-real-id (get-in banks [model-bank :real-id])
         next-number (inc (:number (latest-version product)))
         result (products/open-draft bank
-                                    org-real-id
+                                    bank-real-id
                                     real-id
                                     (product-payload (str "Draft Version "
                                                           next-number)
@@ -258,13 +261,13 @@
         (track result))))
 
 (defmethod dispatch :discard-draft
-  [{:keys [bank orgs products] :as ctx} {[model-prod] :args}]
+  [{:keys [bank banks products] :as ctx} {[model-prod] :args}]
   (let [product (get products model-prod)
-        {:keys [real-id org]} product
+        {model-bank :bank :keys [real-id]} product
         {version-real-id :real-id} (latest-version product)
-        org-real-id (get-in orgs [org :real-id])
+        bank-real-id (get-in banks [model-bank :real-id])
         result
-        (products/discard-draft bank org-real-id real-id version-real-id)]
+        (products/discard-draft bank bank-real-id real-id version-real-id)]
     (-> ctx
         (cond-> (not (error/anomaly? result))
                 (update-latest-version model-prod
@@ -273,15 +276,15 @@
         (track result))))
 
 (defmethod dispatch :create-person-party
-  [{:keys [bank counter next-party-id orgs] :as ctx}
-   {[model-org ni-marker] :args}]
+  [{:keys [bank counter next-party-id banks] :as ctx}
+   {[model-bank ni-marker] :args}]
   (let [model-party (model-id-for-next-party next-party-id)
-        {org-real-id :real-id} (get orgs model-org)
+        {bank-real-id :real-id} (get banks model-bank)
         ni (when ni-marker
              {:type :identifier-type-national-insurance
               :value (name ni-marker)
               :issuing-country "GB"})
-        payload (cond-> {:bank-id org-real-id
+        payload (cond-> {:bank-id bank-real-id
                          :type :party-type-person
                          :display-name (str "Scenario Person " counter)
                          :given-name "Scenario"
@@ -305,7 +308,7 @@
         result' (if (error/anomaly? result)
                   result
                   (let [q (quiescence/wait-for-party-active bank
-                                                            org-real-id
+                                                            bank-real-id
                                                             (:party-id result))]
                     (if (error/anomaly? q) q result)))]
     (-> ctx
@@ -313,60 +316,181 @@
          (not (error/anomaly? result'))
          (assoc-in [:parties model-party]
           {:real-id (:party-id result)
-           :org model-org}))
+           :bank model-bank}))
         (update :next-party-id inc)
         (update :counter inc)
         (track result'))))
 
 (defmethod dispatch :activate-party
-  [{:keys [bank orgs parties] :as ctx} {[model-party] :args}]
+  [{:keys [bank banks parties] :as ctx} {[model-party] :args}]
   ;; The IDV chain auto-activates a "Scenario"-named party, so this
   ;; verb degrades to a wait-and-verify. Kept for EDN scenarios that
   ;; emit it; fugato never selects it because no parties enter
   ;; pending in the model.
-  (let [{party-real-id :real-id :keys [org]} (get parties model-party)
-        org-real-id (get-in orgs [org :real-id])
+  (let [{party-real-id :real-id model-bank :bank} (get parties model-party)
+        bank-real-id (get-in banks [model-bank :real-id])
         result
-        (quiescence/wait-for-party-active bank org-real-id party-real-id)]
+        (quiescence/wait-for-party-active bank bank-real-id party-real-id)]
     (-> ctx
         (update :counter inc)
         (track result))))
 
 (defmethod dispatch :open-account
-  [{:keys [bank counter next-model-id id-mapping orgs products parties] :as ctx}
-   {[model-org model-party model-prod] :args}]
+  [{:keys [bank counter next-model-id id-mapping banks products parties]
+    :as ctx} {[model-bank model-party model-prod] :args}]
   (let [model-acct (model-id-for-next-account next-model-id)
-        {org-real-id :real-id :keys [currency]} (get orgs model-org)
+        {bank-real-id :real-id :keys [currency]} (get banks model-bank)
         {prod-real-id :real-id} (get products model-prod)
         {party-real-id :real-id} (get parties model-party)
         result (cash-accounts/new-account bank
-                                          {:bank-id org-real-id
+                                          {:bank-id bank-real-id
                                            :party-id party-real-id
                                            :product-id prod-real-id
                                            :currency currency
                                            :name (str "Scenario Account "
                                                       counter)})
         real-acct-id (:account-id result)
-        _ (when real-acct-id (seed-opened bank org-real-id real-acct-id))]
+        _ (when real-acct-id (seed-opened bank bank-real-id real-acct-id))]
     (-> ctx
         (cond-> real-acct-id
                 (assoc :id-mapping
                        (id-mapping/add id-mapping model-acct real-acct-id)))
-        (assoc-in [:accounts model-acct] {:org model-org :bban (:bban result)})
+        (assoc-in [:accounts model-acct]
+                  {:bank model-bank :bban (:bban result)})
         (update :next-model-id inc)
         (update :counter inc)
         (track result))))
 
+(defn- find-current-product
+  "Returns the first tracked **published** `:current` product on
+  `model-bank`, or nil if none. Draft / discarded products can't
+  back an account-open, so they're skipped. Mirrors the model's
+  lookup."
+  [products model-bank]
+  (some (fn [[model-prod entry]]
+          (when (and (= model-bank (:bank entry))
+                     (= :current (:product-type entry))
+                     (= :published
+                        (:status (peek (:versions entry)))))
+            model-prod))
+        products))
+
+(defmethod dispatch :create-customer
+  ;; Macro verb: open a customer (person party + cash account on a
+  ;; current product) on `model-bank`. Composes the existing
+  ;; :create-person-party + :open-account flows and auto-creates a
+  ;; current product the first time it's called on a bank.
+  ;;
+  ;;   Args:
+  ;;   - `[model-bank]` — auto-finds or creates a current product.
+  ;;   - `[model-bank model-prod]` — uses the given product.
+  [{:keys [bank counter next-model-id next-party-id next-product-id id-mapping
+           banks products]
+    :as ctx} {args :args}]
+  (let [[model-bank explicit-prod] args
+        existing-prod (find-current-product products model-bank)
+        ;; Decide whether to create a product first.
+        create-prod? (and (nil? explicit-prod) (nil? existing-prod))
+        prod-model-id (cond
+                       explicit-prod
+                       explicit-prod
+                       existing-prod
+                       existing-prod
+                       :else
+                       (model-id-for-next-product next-product-id))
+        {bank-real-id :real-id :keys [currency]} (get banks model-bank)
+        prod-result (when create-prod?
+                      (products/new-product bank
+                                            bank-real-id
+                                            (product-payload
+                                             (str "Scenario Current Product "
+                                                  counter)
+                                             :product-type-current)))
+        _
+        (when (and create-prod? prod-result (not (error/anomaly? prod-result)))
+          (products/publish bank
+                            bank-real-id
+                            (:product-id prod-result)
+                            (:version-id prod-result)))
+        prod-real-id (or (get-in products [prod-model-id :real-id])
+                         (:product-id prod-result))
+        ;; Onboard the person party (mirror of :create-person-party).
+        model-party (model-id-for-next-party next-party-id)
+        party-payload {:bank-id bank-real-id
+                       :type :party-type-person
+                       :display-name (str "Scenario Customer " counter)
+                       :given-name "Scenario"
+                       :family-name (str "Customer" counter)
+                       :date-of-birth 19700101
+                       :nationality "GB"
+                       :address {:building-number "155"
+                                 :street "Country Lane"
+                                 :town "Cottington"
+                                 :postcode "CT12 4XY"
+                                 :country "GBR"}}
+        party-result (party/new-party bank party-payload)
+        party-result (if (error/anomaly? party-result)
+                       party-result
+                       (let [q (quiescence/wait-for-party-active
+                                bank
+                                bank-real-id
+                                (:party-id party-result))]
+                         (if (error/anomaly? q) q party-result)))
+        party-real-id (:party-id party-result)
+        ;; Open the customer account.
+        model-acct (model-id-for-next-account next-model-id)
+        acct-result (when (and party-real-id
+                               prod-real-id
+                               (not (error/anomaly? party-result)))
+                      (cash-accounts/new-account
+                       bank
+                       {:bank-id bank-real-id
+                        :party-id party-real-id
+                        :product-id prod-real-id
+                        :currency currency
+                        :name (str "Scenario Customer Account " counter)}))
+        real-acct-id (:account-id acct-result)
+        _ (when real-acct-id (seed-opened bank bank-real-id real-acct-id))
+        outcome (cond
+                 (error/anomaly? party-result)
+                 party-result
+                 (and acct-result (error/anomaly? acct-result))
+                 acct-result
+                 :else
+                 (or acct-result party-result))]
+    (-> ctx
+        (cond-> create-prod?
+                (-> (assoc-in [:products prod-model-id]
+                              {:real-id prod-real-id
+                               :bank model-bank
+                               :product-type :current
+                               :versions [{:real-id (:version-id prod-result)
+                                           :status :published
+                                           :number 1}]})
+                    (update :next-product-id inc)))
+        (cond-> (not (error/anomaly? party-result))
+                (assoc-in [:parties model-party]
+                 {:real-id party-real-id :bank model-bank}))
+        (cond-> real-acct-id
+                (-> (assoc :id-mapping
+                           (id-mapping/add id-mapping model-acct real-acct-id))
+                    (assoc-in [:accounts model-acct]
+                              {:bank model-bank :bban (:bban acct-result)})
+                    (update :next-model-id inc)))
+        (update :next-party-id inc)
+        (update :counter inc)
+        (track outcome))))
+
 (defmethod dispatch :close-account
-  [{:keys [bank id-mapping accounts orgs] :as ctx} {[model-acct] :args}]
-  (let [model-org (get-in accounts [model-acct :org])
-        org-real-id (get-in orgs [model-org :real-id])
+  [{:keys [bank id-mapping accounts banks] :as ctx} {[model-acct] :args}]
+  (let [model-bank (get-in accounts [model-acct :bank])
+        bank-real-id (get-in banks [model-bank :real-id])
         real-acct-id (get-in id-mapping [:model->real model-acct])
         result (cash-accounts/close-account bank
-                                            {:bank-id org-real-id
+                                            {:bank-id bank-real-id
                                              :account-id real-acct-id})
         _ (when-not (error/anomaly? result)
-            (seed-closed bank org-real-id real-acct-id))]
+            (seed-closed bank bank-real-id real-acct-id))]
     (-> ctx
         (update :counter inc)
         (track result))))
@@ -391,8 +515,8 @@
 
 (defn- bank-id-for-account
   "Resolve the bank-id that owns `model-acct`."
-  [orgs accounts model-acct]
-  (get-in orgs [(get-in accounts [model-acct :org]) :real-id]))
+  [banks accounts model-acct]
+  (get-in banks [(get-in accounts [model-acct :bank]) :real-id]))
 
 (defmethod dispatch :inbound-transfer
   [{:keys [bank accounts next-inbound-id run-id] :as ctx}
@@ -418,10 +542,10 @@
         (track result))))
 
 (defmethod dispatch :outbound-transfer
-  [{:keys [bank counter id-mapping orgs accounts run-id] :as ctx}
+  [{:keys [bank counter id-mapping banks accounts run-id] :as ctx}
    {[model-id amount] :args}]
   (let [real-id (id-mapping/real id-mapping model-id)
-        bank-id (bank-id-for-account orgs accounts model-id)
+        bank-id (bank-id-for-account banks accounts model-id)
         pending-outbound (gl-account-for bank bank-id "1200")
         result
         (if (or (nil? pending-outbound) (error/anomaly? pending-outbound))
@@ -449,29 +573,29 @@
         (track result))))
 
 (defmethod dispatch :bind-policy
-  [{:keys [bank orgs] :as ctx} {[model-org policy-data] :args}]
-  (let [org-real-id (get-in orgs [model-org :real-id])
+  [{:keys [bank banks] :as ctx} {[model-bank policy-data] :args}]
+  (let [bank-real-id (get-in banks [model-bank :real-id])
         result (let [created (policy/new-policy bank policy-data)]
                  (if (error/anomaly? created)
                    created
                    (policy/new-binding
                     bank
                     {:policy-id (:policy-id created)
-                     :target {:kind {:bank {:bank-id org-real-id}}}
+                     :target {:kind {:bank {:bank-id bank-real-id}}}
                      :reason "scenario-bound test policy"})))]
     (track ctx result)))
 
 (defmethod dispatch :internal-transfer
-  [{:keys [bank counter id-mapping run-id orgs accounts] :as ctx}
+  [{:keys [bank counter id-mapping run-id banks accounts] :as ctx}
    {[from-model to-model amount currency] :args}]
   (let [from-real (id-mapping/real id-mapping from-model)
         to-real (id-mapping/real id-mapping to-model)
-        model-org (get-in accounts [from-model :org])
-        org-real-id (get-in orgs [model-org :real-id])
+        model-bank (get-in accounts [from-model :bank])
+        bank-real-id (get-in banks [model-bank :real-id])
         result (payment/submit-internal
                 bank
                 {:idempotency-key (str "scen-int-" run-id "-" counter)
-                 :bank-id org-real-id
+                 :bank-id bank-real-id
                  :debtor-account-id from-real
                  :creditor-account-id to-real
                  :currency (or currency "GBP")
@@ -482,7 +606,7 @@
         (track result))))
 
 (defmethod dispatch :outbound-payment
-  [{:keys [bank counter id-mapping orgs accounts run-id next-payment-id]
+  [{:keys [bank counter id-mapping banks accounts run-id next-payment-id]
     :as ctx} {args :args}]
   ;; Two-arg `[debtor amount]` pays an external creditor with a
   ;; fixed BBAN. Three-arg `[debtor creditor amount]` pays a known
@@ -502,8 +626,8 @@
         real-acct-id (id-mapping/real id-mapping model-acct)
         creditor-real-id (when internal-creditor
                            (id-mapping/real id-mapping internal-creditor))
-        model-org (get-in accounts [model-acct :org])
-        org-real-id (get-in orgs [model-org :real-id])
+        model-bank (get-in accounts [model-acct :bank])
+        bank-real-id (get-in banks [model-bank :real-id])
         model-pmt (model-id-for-next-payment next-payment-id)
         creditor-pre-net
         (when creditor-real-id
@@ -516,7 +640,7 @@
         result (payment/submit-outbound
                 bank
                 {:idempotency-key (str "scen-pay-" run-id "-" counter)
-                 :bank-id org-real-id
+                 :bank-id bank-real-id
                  :debtor-account-id real-acct-id
                  :scheme "FPS"
                  :currency "GBP"
@@ -594,13 +718,13 @@
         (track result))))
 
 (defmethod dispatch :apply-fee
-  [{:keys [bank counter id-mapping orgs accounts run-id] :as ctx}
+  [{:keys [bank counter id-mapping banks accounts run-id] :as ctx}
    {[model-id amount] :args}]
   ;; Scenario fee: DEBIT customer.default, CREDIT 1100.default
   ;; (the bank takes the fee onto its cash position — placeholder
   ;; until 4100 fee-income lands in a future wave).
   (let [real-id (id-mapping/real id-mapping model-id)
-        bank-id (bank-id-for-account orgs accounts model-id)
+        bank-id (bank-id-for-account banks accounts model-id)
         cash (gl-account-for bank bank-id "1100")
         result
         (if (or (nil? cash) (error/anomaly? cash))
@@ -627,40 +751,40 @@
         (track result))))
 
 (defmethod dispatch :accrue-interest
-  [{:keys [bank orgs] :as ctx} {[model-org as-of-date] :args}]
-  (let [{org-real-id :real-id} (get orgs model-org)
+  [{:keys [bank banks] :as ctx} {[model-bank as-of-date] :args}]
+  (let [{bank-real-id :real-id} (get banks model-bank)
         result (interest/accrue-daily bank
-                                      {:bank-id org-real-id
+                                      {:bank-id bank-real-id
                                        :as-of-date as-of-date})]
     (-> ctx
         (update :counter inc)
         (track result))))
 
 (defmethod dispatch :capitalize-interest
-  [{:keys [bank orgs] :as ctx} {[model-org as-of-date] :args}]
-  (let [{org-real-id :real-id} (get orgs model-org)
+  [{:keys [bank banks] :as ctx} {[model-bank as-of-date] :args}]
+  (let [{bank-real-id :real-id} (get banks model-bank)
         result (interest/capitalize-monthly bank
-                                            {:bank-id org-real-id
+                                            {:bank-id bank-real-id
                                              :as-of-date as-of-date})]
     (-> ctx
         (update :counter inc)
         (track result))))
 
 (defmethod dispatch :get-product
-  [{:keys [bank orgs products] :as ctx} {[model-org product-ref] :args}]
-  (let [org-real-id (get-in orgs [model-org :real-id])
+  [{:keys [bank banks products] :as ctx} {[model-bank product-ref] :args}]
+  (let [bank-real-id (get-in banks [model-bank :real-id])
         product-id (resolve-product-id products product-ref)
-        result (products/get-product bank org-real-id product-id)]
+        result (products/get-product bank bank-real-id product-id)]
     (-> ctx
         (update :counter inc)
         (track result))))
 
 (defmethod dispatch :get-product-version
-  [{:keys [bank orgs products] :as ctx}
-   {[model-org product-ref version-id] :args}]
-  (let [org-real-id (get-in orgs [model-org :real-id])
+  [{:keys [bank banks products] :as ctx}
+   {[model-bank product-ref version-id] :args}]
+  (let [bank-real-id (get-in banks [model-bank :real-id])
         product-id (resolve-product-id products product-ref)
-        result (products/get-version bank org-real-id product-id version-id)]
+        result (products/get-version bank bank-real-id product-id version-id)]
     (-> ctx
         (update :counter inc)
         (track result))))
@@ -672,45 +796,45 @@
     key-or-literal))
 
 (defmethod dispatch :get-account
-  [{:keys [bank orgs id-mapping] :as ctx} {[model-org account-ref] :args}]
-  (let [org-real-id (get-in orgs [model-org :real-id])
+  [{:keys [bank banks id-mapping] :as ctx} {[model-bank account-ref] :args}]
+  (let [bank-real-id (get-in banks [model-bank :real-id])
         account-id (if (keyword? account-ref)
                      (get-in id-mapping [:model->real account-ref])
                      account-ref)
-        result (cash-accounts/get-account bank org-real-id account-id)]
+        result (cash-accounts/get-account bank bank-real-id account-id)]
     (-> ctx
         (update :counter inc)
         (track result))))
 
 (defmethod dispatch :get-party
-  [{:keys [bank orgs parties] :as ctx} {[model-org party-ref] :args}]
-  (let [org-real-id (get-in orgs [model-org :real-id])
+  [{:keys [bank banks parties] :as ctx} {[model-bank party-ref] :args}]
+  (let [bank-real-id (get-in banks [model-bank :real-id])
         party-id (resolve-real-id parties party-ref)
-        result (party/get-party bank org-real-id party-id)]
+        result (party/get-party bank bank-real-id party-id)]
     (-> ctx
         (update :counter inc)
         (track result))))
 
 (defmethod dispatch :get-bank
-  [{:keys [bank orgs] :as ctx} {[org-ref] :args}]
-  (let [bank-id (resolve-real-id orgs org-ref)
+  [{:keys [bank banks] :as ctx} {[bank-ref] :args}]
+  (let [bank-id (resolve-real-id banks bank-ref)
         result (banks/get-bank bank bank-id)]
     (-> ctx
         (update :counter inc)
         (track result))))
 
 (defmethod dispatch :get-idv
-  [{:keys [bank orgs] :as ctx} {[model-org verification-id] :args}]
-  (let [org-real-id (get-in orgs [model-org :real-id])
-        result (idv/get-idv bank org-real-id verification-id)]
+  [{:keys [bank banks] :as ctx} {[model-bank verification-id] :args}]
+  (let [bank-real-id (get-in banks [model-bank :real-id])
+        result (idv/get-idv bank bank-real-id verification-id)]
     (-> ctx
         (update :counter inc)
         (track result))))
 
 (defmethod dispatch :get-payee-check
-  [{:keys [bank orgs] :as ctx} {[model-org check-id] :args}]
-  (let [org-real-id (get-in orgs [model-org :real-id])
-        result (payee-check/get-check bank org-real-id check-id)]
+  [{:keys [bank banks] :as ctx} {[model-bank check-id] :args}]
+  (let [bank-real-id (get-in banks [model-bank :real-id])
+        result (payee-check/get-check bank bank-real-id check-id)]
     (-> ctx
         (update :counter inc)
         (track result))))
@@ -745,12 +869,12 @@
         (track result))))
 
 (defmethod dispatch :update-product-draft
-  [{:keys [bank orgs products] :as ctx}
-   {[model-org product-ref version-id data] :args :or {data {}}}]
-  (let [org-real-id (get-in orgs [model-org :real-id])
+  [{:keys [bank banks products] :as ctx}
+   {[model-bank product-ref version-id data] :args :or {data {}}}]
+  (let [bank-real-id (get-in banks [model-bank :real-id])
         product-id (resolve-product-id products product-ref)
         result
-        (products/update-draft bank org-real-id product-id version-id data)]
+        (products/update-draft bank bank-real-id product-id version-id data)]
     (-> ctx
         (update :counter inc)
         (track result))))

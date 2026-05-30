@@ -5,9 +5,9 @@
  ;; the auto-published settlement product. Funds flow into the org's
  ;; settlement account and a portion is then moved to the customer one.
  :given
- [{:command :create-org           :args []}                         ; org-0, prod-0, party-0 (org), acct-0
-  {:command :create-person-party  :args [:org-0]}                   ; party-1 (person, auto-active)
-  {:command :open-account         :args [:org-0 :party-1 :prod-0]}  ; acct-1 (customer)
+ [{:command :create-bank           :args []}                         ; org-0, prod-0, party-0 (org), acct-0
+  {:command :create-person-party  :args [:bank-0]}                   ; party-1 (person, auto-active)
+  {:command :open-account         :args [:bank-0 :party-1 :prod-0]}  ; acct-1 (customer)
   {:command :inbound-transfer     :args [:acct-0 1000]}]
 
  :when

@@ -18,12 +18,12 @@
 
 (defn project-products
   [bank model->real]
-  (let [by-org (group-by (fn [[_ entry]] (:org-real-id entry))
-                         model->real)]
-    (->> by-org
-         (mapcat (fn [[org-real-id entries]]
+  (let [by-bank (group-by (fn [[_ entry]] (:bank-real-id entry))
+                          model->real)]
+    (->> by-bank
+         (mapcat (fn [[bank-real-id entries]]
                    (let [{:keys [items]} (products/get-products bank
-                                                                org-real-id)
+                                                                bank-real-id)
                          items-by-id (into {}
                                            (map (juxt :product-id identity))
                                            items)]

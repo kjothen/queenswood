@@ -16,19 +16,19 @@
 
 (defn project-accounts
   [bank ctx]
-  (let [{:keys [id-mapping accounts orgs products parties]} ctx
-        org-real->model (reverse-by-real-id orgs)
+  (let [{:keys [id-mapping accounts banks products parties]} ctx
+        bank-real->model (reverse-by-real-id banks)
         prod-real->model (reverse-by-real-id products)
         party-real->model (reverse-by-real-id parties)]
     (->> (:real->model id-mapping)
          (map (fn [[real-acct-id model-acct-id]]
-                (let [model-org (get-in accounts [model-acct-id :org])
-                      org-real-id (get-in orgs [model-org :real-id])
+                (let [model-bank (get-in accounts [model-acct-id :bank])
+                      bank-real-id (get-in banks [model-bank :real-id])
                       account (cash-accounts/get-account bank
-                                                         org-real-id
+                                                         bank-real-id
                                                          real-acct-id)]
                   [model-acct-id
-                   {:org (org-real->model (:bank-id account))
+                   {:bank (bank-real->model (:bank-id account))
                     :product (prod-real->model (:product-id account))
                     :party (party-real->model (:party-id account))
                     :status (normalise-status (:account-status account))}])))
@@ -37,9 +37,9 @@
 (defn project-model-accounts
   [model-state]
   (->> (:accounts model-state)
-       (map (fn [[acct-id {:keys [org product party status]}]]
+       (map (fn [[acct-id {:keys [bank product party status]}]]
               [acct-id
-               {:org org
+               {:bank bank
                 :product product
                 :party party
                 :status status}]))

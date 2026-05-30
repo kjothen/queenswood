@@ -7,9 +7,9 @@
  ;; canonical "Arthur opens his current account" shape (modulo
  ;; product-type, which we leave at settlement here).
  :given
- [{:command :create-org           :args []}                         ; org-0, prod-0, party-0 (org), acct-0
-  {:command :create-person-party  :args [:org-0]}                   ; party-1 (person, auto-active)
-  {:command :open-account         :args [:org-0 :party-1 :prod-0]}  ; acct-1 owned by person
+ [{:command :create-bank           :args []}                         ; org-0, prod-0, party-0 (org), acct-0
+  {:command :create-person-party  :args [:bank-0]}                   ; party-1 (person, auto-active)
+  {:command :open-account         :args [:bank-0 :party-1 :prod-0]}  ; acct-1 owned by person
   {:command :inbound-transfer     :args [:acct-0 1000]}]            ; fund settlement-side
 
  :when

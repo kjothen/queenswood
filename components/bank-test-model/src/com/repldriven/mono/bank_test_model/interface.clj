@@ -20,10 +20,11 @@
   account) is intentionally absent — its preconditions (active
   person party + published tenant product) are heavy for the
   marginal coverage on top of the settlement account that ships
-  with `:create-org`. EDN scenarios still drive `:open-account`
+  with `:create-bank`. EDN scenarios still drive `:open-account`
   explicitly when they need a second account."}
   model
-  {:create-org balances/create-org
+  {:create-bank balances/create-bank
+   :create-customer balances/create-customer
    :close-account balances/close-account
    :create-product products/create-product
    :publish-product products/publish-product
@@ -59,11 +60,11 @@
 
 (def
   ^{:doc
-    "Synthetic org ids the model knows about, as a vector.
+    "Synthetic bank ids the model knows about, as a vector.
   Args:
   - state: model state map."}
-  known-orgs
-  state/known-orgs)
+  known-banks
+  state/known-banks)
 
 (def
   ^{:doc

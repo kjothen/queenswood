@@ -53,22 +53,22 @@
                       (fnil inc 0)))))))
 
 (defn- accrue-org
-  [state org-id]
-  (let [org (get-in state [:orgs org-id])
+  [state bank-id]
+  (let [org (get-in state [:banks bank-id])
         custs (filter (fn [a] (customer-account? state a))
                       (:accounts org))]
     (reduce accrue-account state custs)))
 
 (def accrue-interest
-  {:run? (fn [state] (seq (state/known-orgs state)))
+  {:run? (fn [state] (seq (state/known-banks state)))
    :args (fn [state]
-           (gen/tuple (gen/elements (state/known-orgs state))
+           (gen/tuple (gen/elements (state/known-banks state))
                       (gen/return (state/next-interest-date state))))
-   :next-state (fn [state {[org-id _date] :args}]
+   :next-state (fn [state {[bank-id _date] :args}]
                  (-> state
-                     (accrue-org org-id)
+                     (accrue-org bank-id)
                      (update :next-interest-date inc)))
-   :valid? (fn [state {[org-id] :args}] (contains? (:orgs state) org-id))})
+   :valid? (fn [state {[bank-id] :args}] (contains? (:banks state) bank-id))})
 
 (defn- capitalize-account
   [state customer-acct]
@@ -86,22 +86,22 @@
                      4)))))
 
 (defn- capitalize-org
-  [state org-id]
+  [state bank-id]
   ;; Post-CoA: capitalisation's bank-side legs land on GL 2400, not
   ;; on the settlement-style tracked account. Settlement stays
   ;; untouched.
-  (let [org (get-in state [:orgs org-id])
+  (let [org (get-in state [:banks bank-id])
         custs (filter (fn [a] (customer-account? state a))
                       (:accounts org))]
     (reduce capitalize-account state custs)))
 
 (def capitalize-interest
-  {:run? (fn [state] (seq (state/known-orgs state)))
+  {:run? (fn [state] (seq (state/known-banks state)))
    :args (fn [state]
-           (gen/tuple (gen/elements (state/known-orgs state))
+           (gen/tuple (gen/elements (state/known-banks state))
                       (gen/return (state/next-interest-date state))))
-   :next-state (fn [state {[org-id _date] :args}]
+   :next-state (fn [state {[bank-id _date] :args}]
                  (-> state
-                     (capitalize-org org-id)
+                     (capitalize-org bank-id)
                      (update :next-interest-date inc)))
-   :valid? (fn [state {[org-id] :args}] (contains? (:orgs state) org-id))})
+   :valid? (fn [state {[bank-id] :args}] (contains? (:banks state) bank-id))})

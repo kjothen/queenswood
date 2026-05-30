@@ -6,10 +6,10 @@
  ;; (see `bank-policy/capability.clj`). Submitting an outbound
  ;; payment must reject with `:policy/denied`; balance unchanged.
  :given
- [{:command :create-org      :args []}
+ [{:command :create-bank      :args []}
   {:command :inbound-transfer :args [:acct-0 1000]}
   {:command :bind-policy
-   :args [:org-0
+   :args [:bank-0
           {:name "Test: deny outbound-payment capability"
            :category :policy-category-restricted
            :capabilities [{:effect :effect-deny

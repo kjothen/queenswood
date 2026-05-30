@@ -4,10 +4,10 @@
 
     [clojure.test.check.generators :as gen]))
 
-(def create-org
+(def create-bank
   {:args (fn [_state] (gen/return []))
    :next-state (fn [state _command]
-                 (let [org-id (state/next-org-id state)
+                 (let [bank-id (state/next-bank-id state)
                        acct-id (state/next-id state)
                        prod-id (state/next-product-id state)
                        party-id (state/next-party-id state)]
@@ -17,24 +17,24 @@
                                   :credit-carry 0
                                   :interest-accrued 0
                                   :status :open
-                                  :org org-id
+                                  :bank bank-id
                                   :product prod-id
                                   :party party-id})
-                       (assoc-in [:orgs org-id]
+                       (assoc-in [:banks bank-id]
                                  {:accounts [acct-id]
                                   :products [prod-id]
                                   :parties [party-id]
                                   :settlement-account acct-id})
                        (assoc-in [:products prod-id]
-                                 {:org org-id
+                                 {:bank bank-id
                                   :product-type :settlement
                                   :interest-rate-bps 0
                                   :versions [{:status :published :number 1}]})
                        (assoc-in
                         [:parties party-id]
-                        {:org org-id :type :organization :status :active})
+                        {:bank bank-id :type :organization :status :active})
                        (update :next-id inc)
-                       (update :next-org-id inc)
+                       (update :next-bank-id inc)
                        (update :next-product-id inc)
                        (update :next-party-id inc))))})
 
@@ -45,3 +45,60 @@
                  (assoc-in state [:accounts acct-id :status] :closed))
    :valid? (fn [state {[acct-id] :args}]
              (= :open (get-in state [:accounts acct-id :status])))})
+
+(defn- first-current-product
+  "First tracked **published** `:current` product on `bank-id`, or
+  nil. Draft / discarded products can't back a cash-account open."
+  [state bank-id]
+  (some (fn [prod-id]
+          (when (and (= :current
+                        (get-in state [:products prod-id :product-type]))
+                     (= :published
+                        (:status (peek (get-in state
+                                               [:products prod-id
+                                                :versions])))))
+            prod-id))
+        (get-in state [:banks bank-id :products])))
+
+(def create-customer
+  "Macro command: open a customer (person party + cash account on a
+  current product) on `bank-id`. If `prod-id` is supplied uses it;
+  otherwise reuses the bank's first tracked current product or
+  auto-creates one. Mirrors the `:create-customer` verb."
+  {:run? (fn [state] (seq (state/known-banks state)))
+   :args (fn [state] (gen/tuple (gen/elements (state/known-banks state))))
+   :next-state
+   (fn [state {[bank-id explicit-prod-id] :args}]
+     (let [existing (first-current-product state bank-id)
+           prod-id (or explicit-prod-id existing (state/next-product-id state))
+           created-prod? (and (nil? explicit-prod-id) (nil? existing))
+           party-id (state/next-party-id state)
+           acct-id (state/next-id state)]
+       (cond->
+        state
+
+        created-prod?
+        (-> (assoc-in [:products prod-id]
+                      {:bank bank-id
+                       :product-type :current
+                       :interest-rate-bps 0
+                       :versions [{:status :published :number 1}]})
+            (update-in [:banks bank-id :products] (fnil conj []) prod-id)
+            (update :next-product-id inc))
+
+        true
+        (-> (assoc-in [:parties party-id]
+                      {:bank bank-id :type :person :status :active})
+            (update-in [:banks bank-id :parties] (fnil conj []) party-id)
+            (update :next-party-id inc)
+            (assoc-in [:accounts acct-id]
+                      {:available 0
+                       :credit-carry 0
+                       :interest-accrued 0
+                       :status :open
+                       :bank bank-id
+                       :product prod-id
+                       :party party-id})
+            (update-in [:banks bank-id :accounts] (fnil conj []) acct-id)
+            (update :next-id inc)))))
+   :valid? (fn [state {[bank-id] :args}] (contains? (:banks state) bank-id))})

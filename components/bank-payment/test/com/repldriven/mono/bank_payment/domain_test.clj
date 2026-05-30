@@ -99,11 +99,15 @@
     (testing "scheme-transaction-id becomes the idempotency-key"
       (is (= "stx-1" (:idempotency-key tx)))
       (is (= :transaction-type-inbound-transfer (:transaction-type tx))))
-    (testing "settlement (suspense) debited, customer (default) credited"
+    (testing
+      "GL 1100 cash-at-correspondent debited, customer (default) credited"
+      ;; Post-CoA: when the creditor is identified via BBAN match, inbound
+      ;; settles direct to the bank's 1100 Cash at correspondent on
+      ;; `:balance-type-default :balance-status-posted`.
       (let [debit (side tx :leg-side-debit)
             credit (side tx :leg-side-credit)]
         (is (= "internal" (:account-id debit)))
-        (is (= :balance-type-suspense (:balance-type debit)))
+        (is (= :balance-type-default (:balance-type debit)))
         (is (= :balance-status-posted (:balance-status debit)))
         (is (= 1000 (:amount debit)))
         (is (= "creditor" (:account-id credit)))
@@ -125,14 +129,18 @@
     (testing "envelope shape"
       (is (= "ob-1" (:idempotency-key tx)))
       (is (= :transaction-type-outbound-transfer (:transaction-type tx))))
-    (testing "customer (default) debited, settlement (suspense) credited"
+    (testing
+      "customer (default) debited, GL 1200 pending-outbound (default) credited"
+      ;; Post-CoA: outbound submission credits the bank's 1200. Pending
+      ;; outbound payments on `:balance-type-default
+      ;; :balance-status-posted`.
       (let [debit (side tx :leg-side-debit)
             credit (side tx :leg-side-credit)]
         (is (= "debtor" (:account-id debit)))
         (is (= :balance-type-default (:balance-type debit)))
         (is (= 250 (:amount debit)))
         (is (= "internal" (:account-id credit)))
-        (is (= :balance-type-suspense (:balance-type credit)))
+        (is (= :balance-type-default (:balance-type credit)))
         (is (= 250 (:amount credit)))))))
 
 (deftest currency-mismatch-test

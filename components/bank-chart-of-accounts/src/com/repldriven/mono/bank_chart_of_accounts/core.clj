@@ -140,8 +140,10 @@
               (cond
                (error/anomaly? extra)
                (reduced extra)
+
                extra
                (conj acc leg extra)
+
                :else
                (conj acc leg))))
           []
