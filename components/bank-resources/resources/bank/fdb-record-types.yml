@@ -36,6 +36,12 @@ cash-accounts:
       field: bban
     - name: CashAccount_by_bank_product
       fields: [bank_id, product_id]
+ledger-accounts:
+  record-type: LedgerAccount
+  primary-key: [bank_id, ledger_account_id]
+  indexes:
+    - name: LedgerAccount_by_bank_gl_code
+      fields: [bank_id, gl_code]
 companies:
   record-type: Company
   primary-key: [company_number]

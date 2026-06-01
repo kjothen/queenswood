@@ -22,6 +22,8 @@
   {:local/root "../../components/bank-chart-of-accounts"}
   component/bank-idempotency {:local/root "../../components/bank-idempotency"}
   component/bank-idv {:local/root "../../components/bank-idv"}
+  component/bank-ledger-account
+  {:local/root "../../components/bank-ledger-account"}
   component/bank-membership {:local/root "../../components/bank-membership"}
   component/bank-bank {:local/root "../../components/bank-bank"}
   component/bank-party {:local/root "../../components/bank-party"}

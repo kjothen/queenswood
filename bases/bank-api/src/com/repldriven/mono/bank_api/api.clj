@@ -18,6 +18,11 @@
     [com.repldriven.mono.bank-api.cash-account.examples :as
      cash-account.examples]
     [com.repldriven.mono.bank-api.cash-account.routes :as cash-account]
+    [com.repldriven.mono.bank-api.ledger-account.components :as
+     ledger-account.components]
+    [com.repldriven.mono.bank-api.ledger-account.examples :as
+     ledger-account.examples]
+    [com.repldriven.mono.bank-api.ledger-account.routes :as ledger-account]
     [com.repldriven.mono.bank-api.me.components :as me.components]
     [com.repldriven.mono.bank-api.me.examples :as me.examples]
     [com.repldriven.mono.bank-api.me.routes :as me]
@@ -109,6 +114,7 @@
                                balance.components/registry
                                cash-account-product.components/registry
                                cash-account.components/registry
+                               ledger-account.components/registry
                                me.components/registry
                                oauth.components/registry
                                onboarding.components/registry
@@ -147,6 +153,7 @@
                     balance.examples/registry
                     cash-account-product.examples/registry
                     cash-account.examples/registry
+                    ledger-account.examples/registry
                     me.examples/registry
                     oauth.examples/registry
                     onboarding.examples/registry
@@ -176,6 +183,7 @@
           (concat balance/routes
                   cash-account-product/routes
                   cash-account/routes
+                  ledger-account/routes
                   me/routes
                   onboarding/routes
                   bank/routes

@@ -13,6 +13,7 @@
     [com.repldriven.mono.schemas.company :as company]
     [com.repldriven.mono.schemas.idempotency :as idempotency]
     [com.repldriven.mono.schemas.idv :as idv]
+    [com.repldriven.mono.schemas.ledger_accounts :as ledger-accounts]
     [com.repldriven.mono.schemas.memberships :as memberships]
     [com.repldriven.mono.schemas.banks :as banks]
     [com.repldriven.mono.schemas.party :as party]
@@ -42,6 +43,8 @@
     (com.repldriven.mono.schemas.idempotency IdempotencyProto$Idempotency)
     (com.repldriven.mono.schemas.idv IdvProto$Idv
                                      IdvChangelogProto$IdvChangelog)
+    (com.repldriven.mono.schemas.ledger_accounts
+     LedgerAccountProto$LedgerAccount)
     (com.repldriven.mono.schemas.banks
      BankProto$Bank
      BankProto$BankType
@@ -401,6 +404,36 @@
   - m: CashAccount map matching the generated schema."
   [m]
   (CashAccountProto$CashAccount/parseFrom (CashAccount->pb m)))
+
+(defn pb->LedgerAccount
+  "Parse LedgerAccount protobuf bytes into a Clojure map, dropping the
+  proto2 default `:sub-ledger-kind-unknown` emitted for an unset
+  optional `sub_ledger_kind` so callers see `:sub-ledger-kind` only on
+  control accounts that carry a real cohort.
+
+  Args:
+  - input: protobuf bytes."
+  [input]
+  (let [account (ledger-accounts/pb->LedgerAccount input)]
+    (cond-> account
+            (= :sub-ledger-kind-unknown (:sub-ledger-kind account))
+            (dissoc :sub-ledger-kind))))
+
+(defn LedgerAccount->pb
+  "Serialise a LedgerAccount map to protobuf bytes.
+
+  Args:
+  - m: LedgerAccount map matching the generated schema."
+  [m]
+  (proto/->pb (ledger-accounts/new-LedgerAccount m)))
+
+(defn LedgerAccount->java
+  "Parse a LedgerAccount map into the generated Java protobuf class.
+
+  Args:
+  - m: LedgerAccount map matching the generated schema."
+  [m]
+  (LedgerAccountProto$LedgerAccount/parseFrom (LedgerAccount->pb m)))
 
 (def ^{:doc "Parse CashAccountChangelog protobuf bytes into a
   Clojure map."}

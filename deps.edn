@@ -102,6 +102,8 @@
     components/bank-onfido-webhook {:local/root
                                     "components/bank-onfido-webhook"}
     components/bank-interest {:local/root "components/bank-interest"}
+    components/bank-ledger-account {:local/root
+                                    "components/bank-ledger-account"}
     components/bank-membership {:local/root "components/bank-membership"}
     components/bank-bank {:local/root "components/bank-bank"}
     components/bank-party {:local/root "components/bank-party"}
@@ -142,6 +144,8 @@
                  "components/bank-idv/test-resources"
                  "components/bank-interest/test"
                  "components/bank-interest/test-resources"
+                 "components/bank-ledger-account/test"
+                 "components/bank-ledger-account/test-resources"
                  "components/bank-party/test"
                  "components/bank-policy/test"
                  "components/bank-policy/test-resources"
