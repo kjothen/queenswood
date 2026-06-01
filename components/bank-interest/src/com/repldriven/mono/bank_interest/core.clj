@@ -8,8 +8,8 @@
      cash-accounts]
     [com.repldriven.mono.bank-cash-account-product.interface :as
      products]
-    [com.repldriven.mono.bank-chart-of-accounts.interface :as
-     chart-of-accounts]
+    [com.repldriven.mono.bank-ledger-account.interface :as
+     ledger-accounts]
     [com.repldriven.mono.bank-transaction.interface :as
      transactions]
 
@@ -75,7 +75,7 @@
                                                     as-of-date))
           _ (when transaction
               (let-nom>
-                [expanded-legs (chart-of-accounts/expand-legs
+                [expanded-legs (ledger-accounts/expand-legs
                                 txn
                                 bank-id
                                 (:legs transaction))
@@ -114,7 +114,7 @@
           _
           (when transaction
             (let-nom>
-              [expanded-legs (chart-of-accounts/expand-legs
+              [expanded-legs (ledger-accounts/expand-legs
                               txn
                               bank-id
                               (:legs transaction))
@@ -127,7 +127,7 @@
 
 (defn- get-interest-payable-account
   [config bank-id]
-  (let [result (chart-of-accounts/find-gl-account-by-code
+  (let [result (ledger-accounts/find-by-code
                 config
                 bank-id
                 gl-code-interest-payable)]
@@ -168,7 +168,7 @@
       (let [processed (process-customer-accounts
                        config
                        bank-id
-                       (:account-id interest-payable)
+                       (:ledger-account-id interest-payable)
                        as-of-date
                        accrue-account)]
         (if (error/anomaly? processed)
@@ -189,7 +189,7 @@
       (let [processed (process-customer-accounts
                        config
                        bank-id
-                       (:account-id interest-payable)
+                       (:ledger-account-id interest-payable)
                        as-of-date
                        capitalize-account)]
         (if (error/anomaly? processed)

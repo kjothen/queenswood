@@ -72,11 +72,13 @@
         :transaction-type :transaction-type-internal-transfer
         :currency currency
         :legs [{:account-id debtor-account-id
+                :product-type (:product-type debtor-account)
                 :balance-type :balance-type-default
                 :balance-status :balance-status-posted
                 :side :leg-side-debit
                 :amount amount}
                {:account-id creditor-account-id
+                :product-type (:product-type creditor-account)
                 :balance-type :balance-type-default
                 :balance-status :balance-status-posted
                 :side :leg-side-credit
@@ -104,6 +106,7 @@
                 :side :leg-side-debit
                 :amount amount}
                {:account-id creditor-account-id
+                :product-type (:product-type creditor-account)
                 :balance-type :balance-type-default
                 :balance-status :balance-status-posted
                 :side :leg-side-credit
@@ -150,6 +153,7 @@
         :transaction-type :transaction-type-outbound-transfer
         :currency currency
         :legs [{:account-id debtor-account-id
+                :product-type (:product-type debtor-account)
                 :balance-type :balance-type-default
                 :balance-status :balance-status-posted
                 :side :leg-side-debit

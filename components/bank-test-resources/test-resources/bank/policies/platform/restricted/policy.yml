@@ -28,7 +28,6 @@ limits: !concat
   - !include bank/policies/platform/restricted/limits/cash-accounts.yml
   - !include bank/policies/platform/restricted/limits/idvs.yml
   - !include bank/policies/platform/restricted/limits/interest.yml
-  - !include bank/policies/platform/restricted/limits/banks.yml
   - !include bank/policies/platform/restricted/limits/parties.yml
   - !include bank/policies/platform/restricted/limits/payee-checks.yml
   - !include bank/policies/platform/restricted/limits/payments.yml

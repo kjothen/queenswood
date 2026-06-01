@@ -20,8 +20,7 @@
            :status 404
            :detail "Bank not found"}})
 
-(def registry
-  (examples-registry [#'BankLimitExceeded #'BankNotFound]))
+(def registry (examples-registry [#'BankLimitExceeded #'BankNotFound]))
 
 (def BankId "bnk.01kprbmgcj35ptc8npmybhh4s7")
 
@@ -30,7 +29,6 @@
 (def Bank
   {:bank-id BankId
    :name "Galactic Bank"
-   :type :customer
    :status :test
    :created-at "2025-01-01T00:00:00Z"
    :updated-at "2025-01-01T00:00:00Z"
@@ -45,5 +43,4 @@
 (def CreateBankRequest
   {:name "Galactic Bank" :status :test :tier "micro" :currencies ["GBP"]})
 
-(def CreateBankResponse
-  (assoc Bank :client-secret ClientSecret))
+(def CreateBankResponse (assoc Bank :client-secret ClientSecret))

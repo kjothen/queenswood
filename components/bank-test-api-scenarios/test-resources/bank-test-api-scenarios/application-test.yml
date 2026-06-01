@@ -5,8 +5,6 @@ system:
   avro: !include avro/avro-test.yml
   keycloak: !include bank/keycloak-test.yml
   policies: !include bank/policy-test.yml
-  banks: !include bank/bank-test.yml
-  policy-bindings: !include bank/policy-binding-test.yml
   idv: !include bank/idv-test.yml
   parties: !include bank-test-api-scenarios/party-test.yml
   cash-accounts: !include bank/cash-account-test.yml
@@ -42,7 +40,6 @@ system:
       audiences-by-status:
         bank-status-test: queenswood-api-test
         bank-status-live: queenswood-api-live
-      internal-bank-id: !system/ref banks.internal.bank.bank-id
       dispatchers:
         parties: !system/ref parties.dispatcher
         cash-accounts: !system/ref cash-accounts.dispatcher

@@ -6,8 +6,8 @@
     [com.repldriven.mono.bank-balance.interface :as balances]
     [com.repldriven.mono.bank-cash-account.interface :as
      cash-accounts]
-    [com.repldriven.mono.bank-chart-of-accounts.interface :as
-     chart-of-accounts]
+    [com.repldriven.mono.bank-ledger-account.interface :as
+     ledger-accounts]
     [com.repldriven.mono.bank-policy.interface :as policy]
     [com.repldriven.mono.bank-transaction.interface :as
      transactions]
@@ -67,7 +67,7 @@
                                 creditor-account
                                 policies
                                 aggregates)
-           expanded-legs (chart-of-accounts/expand-legs
+           expanded-legs (ledger-accounts/expand-legs
                           txn
                           bank-id
                           (:legs payment-transaction))
@@ -138,7 +138,7 @@
                                         bank-id
                                         debtor-account-id)
                         pending-outbound
-                        (chart-of-accounts/find-gl-account-by-code
+                        (ledger-accounts/find-by-code
                          txn
                          bank-id
                          gl-code-pending-outbound)
@@ -159,10 +159,10 @@
                         transaction (domain/outbound-payment->transaction
                                      data
                                      debtor-account
-                                     (:account-id pending-outbound)
+                                     (:ledger-account-id pending-outbound)
                                      policies
                                      aggregates)
-                        expanded-legs (chart-of-accounts/expand-legs
+                        expanded-legs (ledger-accounts/expand-legs
                                        txn
                                        bank-id
                                        (:legs transaction))

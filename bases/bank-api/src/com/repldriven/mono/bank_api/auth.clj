@@ -2,8 +2,7 @@
   "Two-path JWT authentication. (1) A Keycloak-issued service JWT
   minted by a tenant's service-account client (`client_credentials`
   flow); principal type `:service`. The `queenswood-admin` service
-  account carries the `admin` realm role, which flips the principal's
-  `:bank-id` to the internal-bank-id and grants `:admin` —
+  account carries the `admin` realm role, which grants `:admin` —
   giving operators a Keycloak-minted admin bearer in place of a
   static env-var key. (2) A Keycloak-issued user JWT minted by either
   the `queenswood-console` SPA against the `queenswood` realm (org
@@ -43,18 +42,17 @@
   The client_id (== bank-id by convention) appears as `:azp`.
   When the realm's role mapper has flagged the service account with
   `admin` (the `queenswood-admin` operator client), the principal
-  flips its `:bank-id` to the internal-bank-id and picks up
-  `:admin` alongside `:org`."
-  [request claims]
+  picks up `:admin` alongside `:org`. Admins carry no implicit
+  `:bank-id` — admin routes operate platform-wide or take the bank
+  from the request path."
+  [claims]
   (let [realm-roles (->> (get-in claims [:realm_access :roles])
                          (map keyword)
                          (into #{}))
         is-admin? (contains? realm-roles :admin)]
     {:principal-type :service
      :principal-id (:azp claims)
-     :bank-id (if is-admin?
-                (:internal-bank-id request)
-                (:azp claims))
+     :bank-id (when-not is-admin? (:azp claims))
      :roles (into #{:org} realm-roles)
      :token-jti (:jti claims)}))
 
@@ -79,11 +77,10 @@
   changed. Roles always include `:user`; `:admin` is added when the
   realm carries it via `realm_access.roles`; `:org` is added when the
   user has at least one membership OR is admin (so existing org-
-  scoped routes accept ops JWTs). The principal's `:bank-id`
-  defaults to the internal-bank-id for admins, the first membership's
-  bank for normal users, nil otherwise."
+  scoped routes accept ops JWTs). The principal's `:bank-id` is the
+  first membership's bank, or nil — admins carry no implicit bank-id."
   [request claims]
-  (let [{:keys [record-db record-store internal-bank-id]} request
+  (let [{:keys [record-db record-store]} request
         txn {:record-db record-db :record-store record-store}
         user (nilable-result
               (users/upsert-by-sub txn (claims/claims->user-claims claims)))
@@ -109,10 +106,7 @@
                      (conj :org))
       :token-jti (:jti claims)}
      :bank-id
-     (cond is-admin?
-           internal-bank-id
-           primary
-           (:bank-id primary)))))
+     (:bank-id primary))))
 
 (defn- decode-unverified-payload
   "Best-effort base64url-decode of a JWT's middle segment into the
@@ -181,7 +175,7 @@
             :else
             (assoc-in ctx
              [:request :auth]
-             (service-auth request claims)))))))})
+             (service-auth claims)))))))})
 
 (defn- required-roles
   "Derive the role set a route requires from its OpenAPI metadata.

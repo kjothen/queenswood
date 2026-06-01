@@ -7,9 +7,6 @@
 
 (def BankId (schema/id-schema "BankId" "bnk" examples/BankId))
 
-(def BankType
-  (coercion/bank-type-enum-schema {:json-schema/example "customer"}))
-
 (def BankStatus
   (coercion/bank-status-enum-schema {:json-schema/example "test"}))
 
@@ -24,7 +21,6 @@
   [:map {:json-schema/example examples/Bank}
    [:bank-id [:ref "BankId"]]
    [:name [:ref "Name"]]
-   [:type [:ref "BankType"]]
    [:status [:ref "BankStatus"]]
    [:party [:ref "Party"]]
    [:accounts [:vector [:ref "CashAccount"]]]
@@ -40,7 +36,6 @@
   [:map {:json-schema/example examples/CreateBankResponse}
    [:bank-id [:ref "BankId"]]
    [:name [:ref "Name"]]
-   [:type [:ref "BankType"]]
    [:status [:ref "BankStatus"]]
    [:party [:ref "Party"]]
    [:accounts [:vector [:ref "CashAccount"]]]
@@ -50,5 +45,5 @@
    [:updated-at [:ref "Timestamp"]]])
 
 (def registry
-  (components-registry [#'BankId #'BankType #'BankStatus #'CreateBankRequest
-                        #'Bank #'BankList #'CreateBankResponse]))
+  (components-registry [#'BankId #'BankStatus #'CreateBankRequest #'Bank
+                        #'BankList #'CreateBankResponse]))

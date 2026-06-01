@@ -23,7 +23,6 @@
         result (banks/new-bank
                 config
                 name
-                :bank-type-customer
                 status
                 tier
                 currencies

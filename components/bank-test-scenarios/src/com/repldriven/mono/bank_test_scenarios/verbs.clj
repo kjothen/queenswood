@@ -6,8 +6,8 @@
     [com.repldriven.mono.bank-balance.interface :as balances]
     [com.repldriven.mono.bank-cash-account-product.interface :as products]
     [com.repldriven.mono.bank-cash-account.interface :as cash-accounts]
-    [com.repldriven.mono.bank-chart-of-accounts.interface :as
-     chart-of-accounts]
+    [com.repldriven.mono.bank-ledger-account.interface :as
+     ledger-accounts]
     [com.repldriven.mono.bank-idv.interface :as idv]
     [com.repldriven.mono.bank-interest.interface :as interest]
     [com.repldriven.mono.bank-bank.interface :as banks]
@@ -23,6 +23,19 @@
 
     [clojure.test :refer [is]]))
 
+(defn- tag-leg-product-type
+  "Stamp a customer leg with its cash-account's `:product-type` so
+  `ledger-accounts/expand-legs` can fan it out to the matching control.
+  GL legs (account-id resolves to no cash account) pass through
+  untouched."
+  [txn bank-id leg]
+  (let [account (cash-accounts/get-account txn bank-id (:account-id leg))
+        product-type (when (and (map? account) (not (error/anomaly? account)))
+                       (:product-type account))]
+    (cond-> leg
+            product-type
+            (assoc :product-type product-type))))
+
 (defn- record-and-apply
   "Record a transaction directly (bypassing the payment processor)
   and apply its legs to balances. Fans out customer sub-ledger legs
@@ -31,7 +44,8 @@
   (fdb/transact
    bank
    (fn [txn]
-     (let [expanded (chart-of-accounts/expand-legs txn bank-id (:legs tx-data))]
+     (let [tagged (mapv #(tag-leg-product-type txn bank-id %) (:legs tx-data))
+           expanded (ledger-accounts/expand-legs txn bank-id tagged)]
        (if (error/anomaly? expanded)
          expanded
          (let [r (transactions/record-transaction
@@ -111,10 +125,7 @@
         model-prod (model-id-for-next-product next-product-id)
         model-party (model-id-for-next-party next-party-id)
         bank-name (str "Scenario Customer " counter)
-        result (banks/new-bank bank
-                               bank-name
-                               :bank-type-customer :bank-status-test
-                               "micro" ["GBP"])
+        result (banks/new-bank bank bank-name :bank-status-test "micro" ["GBP"])
         bank-entity (:bank result)
         real-bank-id (:bank-id bank-entity)
         real-party-id (get-in bank-entity [:party :party-id])
@@ -254,9 +265,9 @@
         result (products/open-draft bank
                                     bank-real-id
                                     real-id
-                                    (product-payload (str "Draft Version "
-                                                          next-number)
-                                                     :product-type-current))]
+                                    (product-payload
+                                     (str "Draft Version " next-number)
+                                     :product-type-sub-ledger-current))]
     (-> ctx
         (cond-> (not (error/anomaly? result))
                 (update-in [:products model-prod :versions]
@@ -518,7 +529,7 @@
 (defn- gl-account-for
   "Look up the bank's `gl-code` GL account on its own books."
   [bank bank-id gl-code]
-  (chart-of-accounts/find-gl-account-by-code bank bank-id gl-code))
+  (ledger-accounts/find-by-code bank bank-id gl-code))
 
 (defn- bank-id-for-account
   "Resolve the bank-id that owns `model-acct`."
@@ -565,7 +576,8 @@
            (transfer-tx {:transaction-type :transaction-type-outbound-transfer
                          :idempotency-key (str "scen-out-" run-id "-" counter)
                          :reference (str "scenario outbound " counter)
-                         :gl-leg {:account-id (:account-id pending-outbound)
+                         :gl-leg {:account-id (:ledger-account-id
+                                               pending-outbound)
                                   :balance-type :balance-type-default
                                   :balance-status :balance-status-posted
                                   :side :leg-side-credit
@@ -743,7 +755,7 @@
            (transfer-tx {:transaction-type :transaction-type-fee
                          :idempotency-key (str "scen-fee-" run-id "-" counter)
                          :reference (str "scenario fee " counter)
-                         :gl-leg {:account-id (:account-id cash)
+                         :gl-leg {:account-id (:ledger-account-id cash)
                                   :balance-type :balance-type-default
                                   :balance-status :balance-status-posted
                                   :side :leg-side-credit

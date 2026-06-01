@@ -24,7 +24,6 @@
       (let-nom> [bank-result (banks/new-bank
                               txn
                               bank-name
-                              :bank-type-customer
                               default-status
                               default-tier
                               default-currencies

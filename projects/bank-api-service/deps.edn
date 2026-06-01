@@ -18,8 +18,6 @@
   component/bank-cash-account {:local/root "../../components/bank-cash-account"}
   component/bank-cash-account-product
   {:local/root "../../components/bank-cash-account-product"}
-  component/bank-chart-of-accounts
-  {:local/root "../../components/bank-chart-of-accounts"}
   component/bank-idempotency {:local/root "../../components/bank-idempotency"}
   component/bank-idv {:local/root "../../components/bank-idv"}
   component/bank-ledger-account

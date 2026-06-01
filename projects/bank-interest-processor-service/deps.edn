@@ -18,8 +18,8 @@
   component/bank-cash-account {:local/root "../../components/bank-cash-account"}
   component/bank-cash-account-product
   {:local/root "../../components/bank-cash-account-product"}
-  component/bank-chart-of-accounts
-  {:local/root "../../components/bank-chart-of-accounts"}
+  component/bank-ledger-account
+  {:local/root "../../components/bank-ledger-account"}
   component/bank-interest {:local/root "../../components/bank-interest"}
   component/bank-party {:local/root "../../components/bank-party"}
   component/bank-person-identification
