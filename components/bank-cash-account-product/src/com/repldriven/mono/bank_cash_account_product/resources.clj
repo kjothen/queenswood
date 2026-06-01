@@ -1,22 +1,23 @@
 (ns com.repldriven.mono.bank-cash-account-product.resources
   "Static per-product-type defaults loaded once at namespace init
-  from `bank-resources` classpath. The map fills in the derived
+  from `bank-resources` classpath. The map fills in derived sub-ledger
   fields (`:balance-sheet-side`, `:balance-products`,
   `:allowed-payment-address-schemes`, the menu of
-  `:allowed-currencies`) on product creation and update — callers
-  pick a name, a product-type, a single currency from the menu, and
-  optionally an interest rate / valid-from."
+  `:allowed-currencies`) on customer-product creation — callers pick a
+  name, a product-type, a single currency, and optionally an interest
+  rate / valid-from.
+
+  GL products do NOT use this map. They carry their fields explicitly
+  via the `GeneralLedgerProductKind` variant; the canonical seed lives
+  in `bank-chart-of-accounts.domain/template`."
   (:require
     [clojure.edn :as edn]
     [clojure.java.io :as io]))
 
 (def ^:private product-types
-  [:product-type-current
-   :product-type-savings
-   :product-type-term-deposit
-   :product-type-settlement
-   :product-type-internal
-   :product-type-chart-of-accounts])
+  [:product-type-sub-ledger-current
+   :product-type-sub-ledger-savings
+   :product-type-sub-ledger-term-deposit])
 
 (defn- type->resource
   [product-type]
@@ -33,5 +34,6 @@
     (edn/read-string (slurp url))))
 
 (def product-defaults
-  "Map from product-type keyword to its derived-field defaults."
+  "Map from sub-ledger product-type keyword to its derived-field
+  defaults."
   (into {} (map (fn [t] [t (load-one t)])) product-types))

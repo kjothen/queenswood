@@ -16,12 +16,10 @@
    (balance :balance-type-default :balance-status-pending-incoming 500 0)
    (balance :balance-type-default :balance-status-pending-outgoing 0 300)])
 
-(def ^:private settlement-balances
-  [(balance :balance-type-default :balance-status-posted 50000 10000)
-   (balance :balance-type-interest-payable :balance-status-posted 0 1500)])
-
-(def ^:private internal-balances
-  [(balance :balance-type-default :balance-status-posted 100000 20000)])
+(def ^:private gl-balances
+  "Bank-side GL account — single default/posted bucket; nothing
+  customer-facing about it."
+  [(balance :balance-type-default :balance-status-posted 50000 10000)])
 
 (deftest posted-balance-test
   (testing "returns net of default/posted"
@@ -34,39 +32,29 @@
   (testing "current = posted + pending-incoming + pending-outgoing"
     ;; 8000 + 500 + (-300) = 8200
     (is (= {:value 8200 :currency "GBP"}
-           (SUT/available-balance :product-type-current
+           (SUT/available-balance :product-type-sub-ledger-current
                                   customer-balances
                                   "GBP")))))
 
 (deftest available-balance-savings-test
   (testing "savings same formula as current"
     (is (= {:value 8200 :currency "GBP"}
-           (SUT/available-balance :product-type-savings
+           (SUT/available-balance :product-type-sub-ledger-savings
                                   customer-balances
                                   "GBP")))))
 
 (deftest available-balance-term-deposit-test
   (testing "term-deposit same formula as current"
     (is (= {:value 8200 :currency "GBP"}
-           (SUT/available-balance :product-type-term-deposit
+           (SUT/available-balance :product-type-sub-ledger-term-deposit
                                   customer-balances
                                   "GBP")))))
 
-(deftest available-balance-settlement-test
-  (testing "settlement = posted + interest-payable"
-    ;; 40000 + (-1500) = 38500
-    (is (= {:value 38500 :currency "GBP"}
-           (SUT/available-balance :product-type-settlement
-                                  settlement-balances
-                                  "GBP")))))
-
-(deftest available-balance-internal-test
-  (testing "internal = posted"
-    ;; 100000 - 20000 = 80000
-    (is (= {:value 80000 :currency "GBP"}
-           (SUT/available-balance :product-type-internal
-                                  internal-balances
-                                  "GBP")))))
+(deftest available-balance-gl-account-test
+  (testing "GL accounts (nil :product-type) fall back to default-posted net"
+    ;; 40000 net default-posted; no "available" concept for GL accounts.
+    (is (= {:value 40000 :currency "GBP"}
+           (SUT/available-balance nil gl-balances "GBP")))))
 
 (deftest available-balance-unknown-type-test
   (testing "unknown type falls back to posted"
@@ -78,4 +66,4 @@
 (deftest available-balance-empty-test
   (testing "empty balances returns zero"
     (is (= {:value 0 :currency "GBP"}
-           (SUT/available-balance :product-type-current [] "GBP")))))
+           (SUT/available-balance :product-type-sub-ledger-current [] "GBP")))))

@@ -138,7 +138,7 @@
                                         bank-id
                                         debtor-account-id)
                         pending-outbound
-                        (cash-accounts/get-account-by-gl-code
+                        (chart-of-accounts/find-gl-account-by-code
                          txn
                          bank-id
                          gl-code-pending-outbound)

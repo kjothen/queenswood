@@ -37,9 +37,9 @@
                            :balance-type-default
                            :balance-status-posted))
         v (case product-type
-            (:product-type-current
-             :product-type-savings
-             :product-type-term-deposit)
+            (:product-type-sub-ledger-current
+             :product-type-sub-ledger-savings
+             :product-type-sub-ledger-term-deposit)
             (+ default-posted
                (net (find-balance
                      balances
@@ -50,23 +50,11 @@
                      :balance-type-default
                      :balance-status-pending-outgoing)))
 
-            :product-type-settlement
-            (+ default-posted
-               (net (find-balance
-                     balances
-                     :balance-type-interest-payable
-                     :balance-status-posted)))
-
-            :product-type-internal
-            default-posted
-
-            ;; Chart-of-accounts GL rows (1100/1200/2400/2500 etc.)
-            ;; have no customer-facing "available" concept; they're
-            ;; the bank's own books. Report 0 so the user-driven
-            ;; min-0 balance limit treats them as neutral.
-            :product-type-chart-of-accounts
-            0
-
+            ;; GL accounts (chart of accounts rows) carry
+            ;; :product-type-general-ledger — they aren't customer
+            ;; instruments and have no "available" concept; they're the
+            ;; bank's own books. The default-posted fallback covers them
+            ;; plus nil/unknown product-type and any unrecognised value.
             default-posted)]
     {:value v :currency currency}))
 
@@ -115,19 +103,26 @@
 
 (defn- check-available
   [pre post transaction-type policies]
-  (let [{:keys [product-type currency]} (first post)
-        pre-amount (available-balance product-type pre currency)
-        post-amount (available-balance product-type post currency)]
-    (policy/check-limit policies
-                        :balance
-                        {:kind {:computed {:name "available"}}
-                         :transaction-type transaction-type
-                         :aggregate :amount
-                         :window :time-window-instant
-                         :pre-value {:value (:value pre-amount)
-                                     :currency currency}
-                         :value {:value (:value post-amount)
-                                 :currency currency}})))
+  (let [{:keys [product-type currency]} (first post)]
+    ;; Only sub-ledger (customer) accounts get the "user-driven
+    ;; transfer" available-balance limit. GL accounts
+    ;; (:product-type-general-ledger) are the bank's own books, and
+    ;; proto2 defaults absent enums to *_UNKNOWN — exclude both (and nil).
+    (when (and product-type
+               (not (#{:product-type-general-ledger :product-type-unknown}
+                     product-type)))
+      (let [pre-amount (available-balance product-type pre currency)
+            post-amount (available-balance product-type post currency)]
+        (policy/check-limit policies
+                            :balance
+                            {:kind {:computed {:name "available"}}
+                             :transaction-type transaction-type
+                             :aggregate :amount
+                             :window :time-window-instant
+                             :pre-value {:value (:value pre-amount)
+                                         :currency currency}
+                             :value {:value (:value post-amount)
+                                     :currency currency}})))))
 
 (defn- changed
   [old new]
@@ -167,13 +162,16 @@
     (let [{:keys [account-id product-type balance-type balance-status currency]}
           data
           now (utility/now)]
-      {:account-id account-id
-       :product-type product-type
-       :balance-type balance-type
-       :balance-status balance-status
-       :currency currency
-       :credit 0
-       :debit 0
-       :credit-carry 0
-       :created-at now
-       :updated-at now})))
+      (cond-> {:account-id account-id
+               :balance-type balance-type
+               :balance-status balance-status
+               :currency currency
+               :credit 0
+               :debit 0
+               :credit-carry 0
+               :created-at now
+               :updated-at now}
+
+              ;; product-type is sub-ledger-only — GL balances omit it.
+              product-type
+              (assoc :product-type product-type)))))

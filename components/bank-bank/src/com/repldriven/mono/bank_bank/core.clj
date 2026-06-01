@@ -6,6 +6,8 @@
     [com.repldriven.mono.bank-balance.interface :as balances]
     [com.repldriven.mono.bank-cash-account.interface
      :as cash-accounts]
+    [com.repldriven.mono.bank-cash-account-product.interface
+     :as products]
     [com.repldriven.mono.bank-chart-of-accounts.interface
      :as chart-of-accounts]
     [com.repldriven.mono.identity-provider.interface
@@ -31,13 +33,27 @@
           nil
           policies))
 
+(defn- account-gl-code
+  "Resolve the GL code for an account by reading its product version's
+  denormalised top-level gl-code. Nil for customer (sub-ledger)
+  accounts. Lets callers select a specific GL account (e.g. the 1100
+  settlement) by code rather than by seed order."
+  [txn bank-id {:keys [product-id version-id]}]
+  (let [version (products/get-version txn bank-id product-id version-id)]
+    (when-not (error/anomaly? version)
+      (:gl-code version))))
+
 (defn- enrich-accounts
-  [txn accounts]
+  [txn bank-id accounts]
   (reduce (fn [acc account]
-            (let [result (balances/get-balances txn (:account-id account))]
-              (if (error/anomaly? result)
-                (reduced result)
-                (conj acc (merge account result)))))
+            (let [bal (balances/get-balances txn (:account-id account))]
+              (if (error/anomaly? bal)
+                (reduced bal)
+                (let [gl-code (account-gl-code txn bank-id account)
+                      enriched (cond-> (merge account bal)
+                                       gl-code
+                                       (assoc :gl-code gl-code))]
+                  (conj acc enriched)))))
           []
           accounts))
 
@@ -47,7 +63,7 @@
     (let-nom>
       [{:keys [parties]} (party/get-parties txn bank-id)
        accounts (cash-accounts/get-accounts txn bank-id)
-       enriched (enrich-accounts txn (:accounts accounts))]
+       enriched (enrich-accounts txn bank-id (:accounts accounts))]
       (cond->
        {:bank
         (assoc bank

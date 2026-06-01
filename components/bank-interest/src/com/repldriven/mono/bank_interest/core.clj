@@ -19,12 +19,16 @@
 
 (def ^:private gl-code-interest-payable "2400")
 
+(def ^:private customer-product-types
+  "Product types whose cash-accounts should earn interest. GL accounts
+  carry nil :product-type and are excluded by this set membership
+  check."
+  #{:product-type-sub-ledger-current :product-type-sub-ledger-savings
+    :product-type-sub-ledger-term-deposit})
+
 (defn- customer-accounts
   [accounts]
-  (filter #(and (not= :product-type-internal
-                      (:product-type %))
-                (not= :product-type-settlement
-                      (:product-type %))
+  (filter #(and (contains? customer-product-types (:product-type %))
                 (= :cash-account-status-opened
                    (:account-status %)))
           accounts))
@@ -48,10 +52,9 @@
      config
      (fn [txn]
        (let-nom>
-         [{:keys [interest-rate-bps]} (get-product-version
-                                       config
-                                       bank-id
-                                       account)
+         [version (get-product-version config bank-id account)
+          interest-rate-bps (get-in version
+                                    [:kind :sub-ledger :interest-rate-bps])
           balance (balances/get-balance txn
                                         account-id
                                         :balance-type-default
@@ -124,7 +127,7 @@
 
 (defn- get-interest-payable-account
   [config bank-id]
-  (let [result (cash-accounts/get-account-by-gl-code
+  (let [result (chart-of-accounts/find-gl-account-by-code
                 config
                 bank-id
                 gl-code-interest-payable)]

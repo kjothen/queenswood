@@ -16,6 +16,10 @@ cash-account-products:
     - name: CashAccountProduct_count_by_bank
       fields: [bank_id, product_id]
       type: count
+    - name: CashAccountProduct_by_bank_gl_code
+      fields: [bank_id, gl_code]
+    - name: CashAccountProduct_by_bank_product_type
+      fields: [bank_id, product_type]
 cash-accounts:
   record-type: CashAccount
   primary-key: [bank_id, account_id]
@@ -30,8 +34,8 @@ cash-accounts:
       type: count
     - name: CashAccount_by_bban
       field: bban
-    - name: CashAccount_by_bank_gl_code
-      fields: [bank_id, gl_code]
+    - name: CashAccount_by_bank_product
+      fields: [bank_id, product_id]
 companies:
   record-type: Company
   primary-key: [company_number]

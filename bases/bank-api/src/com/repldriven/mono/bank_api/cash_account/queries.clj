@@ -34,10 +34,18 @@
     (if (error/anomaly? result)
       (errors/anomaly->response result)
       ;; Customer-facing cash accounts only — the bank's own chart-of-
-      ;; accounts rows (gl-code set) are listed via
-      ;; `GET /v1/chart-of-accounts` instead.
+      ;; accounts rows carry `:product-type-general-ledger` (and proto2
+      ;; reads an unset enum back as `:product-type-unknown`); both are
+      ;; listed via the chart-of-accounts surface instead.
       (let [{:keys [accounts before after]} result
-            customer-accounts (filterv (comp nil? :gl-code) accounts)
+            customer-accounts (filterv
+                               (fn [a]
+                                 (let [pt (:product-type a)]
+                                   (and (some? pt)
+                                        (not (#{:product-type-unknown
+                                                :product-type-general-ledger}
+                                              pt)))))
+                               accounts)
             links (when (seq customer-accounts)
                     (cursor/build-links "/v1/cash-accounts"
                                         size

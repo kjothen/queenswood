@@ -40,6 +40,7 @@
    [:product-id [:ref "ProductId"]]
    [:version-id [:ref "VersionId"]]
    [:product-type [:ref "ProductType"]]
+   [:gl-code {:optional true} string?]
    [:account-type [:ref "AccountType"]]
    [:account-status [:ref "CashAccountStatus"]]
    [:payment-addresses [:vector [:ref "PaymentAddress"]]]

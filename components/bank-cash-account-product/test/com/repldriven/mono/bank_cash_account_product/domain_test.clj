@@ -29,11 +29,13 @@
    :version-number 1
    :status :cash-account-product-status-published
    :name "Published"
-   :product-type :product-type-current
-   :balance-sheet-side :balance-sheet-side-liability
-   :balance-products [{:balance-type :balance-type-default
-                       :balance-status :balance-status-posted}]
-   :interest-rate-bps 0
+   :allowed-currencies ["GBP"]
+   :kind {:sub-ledger {:product-type :product-type-sub-ledger-current
+                       :balance-sheet-side :balance-sheet-side-liability
+                       :balance-products [{:balance-type :balance-type-default
+                                           :balance-status
+                                           :balance-status-posted}]
+                       :interest-rate-bps 0}}
    :created-at 1700000000000
    :updated-at 1700000000000})
 
@@ -50,7 +52,9 @@
          :status :cash-account-product-status-draft))
 
 (def ^:private good-data
-  {:name "v2" :product-type :product-type-current :currency "GBP"})
+  {:name "v2"
+   :currency "GBP"
+   :kind {:sub-ledger {:product-type :product-type-sub-ledger-current}}})
 
 (deftest update-version-test
   (testing "rejects with :version-immutable when existing is published"
@@ -122,16 +126,21 @@
     (let [v (SUT/new-version "bnk.1" "prd.1" [] good-data permissive-policies)]
       (is (= 1 (:version-number v)))
       (is (= :cash-account-product-status-draft (:status v)))))
-  (testing "fills derived fields from the per-product-type template"
+  (testing "fills derived sub-ledger fields from the per-product-type template"
     (let [v (SUT/new-version "bnk.1" "prd.1" [] good-data permissive-policies)]
-      (is (= :balance-sheet-side-liability (:balance-sheet-side v)))
+      (is (= :product-type-sub-ledger-current (:product-type v))
+          "denormalised top-level product-type mirrors the sub-ledger variant")
+      (is (= :balance-sheet-side-liability
+             (get-in v [:kind :sub-ledger :balance-sheet-side])))
       (is (= ["GBP"] (:allowed-currencies v)))
       (is (= [:payment-address-scheme-scan]
-             (:allowed-payment-address-schemes v)))
+             (get-in v
+                     [:kind :sub-ledger
+                      :allowed-payment-address-schemes])))
       (is (some #(= %
                     {:balance-type :balance-type-default
                      :balance-status :balance-status-posted})
-                (:balance-products v))
+                (get-in v [:kind :sub-ledger :balance-products]))
           "template provides at least the default-posted balance bucket")))
   (testing
     "rejects with :currency-not-allowed when currency is outside the menu"
@@ -141,4 +150,21 @@
                              (assoc good-data :currency "USD")
                              permissive-policies)]
       (is (error/rejection? r))
-      (is (= :cash-account-product/currency-not-allowed (error/kind r))))))
+      (is (= :cash-account-product/currency-not-allowed (error/kind r)))))
+  (testing "GL-kind product passes through gl fields without template lookup"
+    (let [gl-data {:name "Customer deposits — current"
+                   :currency "GBP"
+                   :kind {:general-ledger
+                          {:gl-code "2100"
+                           :gl-account-type :gl-account-type-liability
+                           :gl-account-class :gl-account-class-control
+                           :required :required-mandatory
+                           :sub-ledger-kind
+                           :sub-ledger-kind-cash-account-current}}}
+          v (SUT/new-version "bnk.1" "prd.1" [] gl-data permissive-policies)]
+      (is (= "2100" (get-in v [:kind :general-ledger :gl-code])))
+      (is (= :product-type-general-ledger (:product-type v))
+          "GL products carry general-ledger as their top-level product-type")
+      (is (= :gl-account-class-control
+             (get-in v [:kind :general-ledger :gl-account-class])))
+      (is (= :cash-account-product-status-draft (:status v))))))

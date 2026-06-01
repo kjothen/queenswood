@@ -28,13 +28,15 @@
   (:import
     (com.repldriven.mono.schemas.balances BalanceProto$Balance)
     (com.repldriven.mono.schemas.cash_account_products
-     CashAccountProductProto$CashAccountProduct)
+     CashAccountProductProto$CashAccountProduct
+     CashAccountProductProto$GlAccountType
+     CashAccountProductProto$GlAccountClass
+     CashAccountProductProto$Required
+     CashAccountProductProto$IsoCashAccountType
+     CashAccountProductProto$SubLedgerKind)
     (com.repldriven.mono.schemas.types ProductTypeProto$ProductType)
     (com.repldriven.mono.schemas.cash_accounts
      CashAccountProto$CashAccount
-     CashAccountProto$GlAccountType
-     CashAccountProto$GlAccountClass
-     CashAccountProto$Required
      CashAccountChangelogProto$CashAccountChangelog)
     (com.repldriven.mono.schemas.company CompanyProto$Company)
     (com.repldriven.mono.schemas.idempotency IdempotencyProto$Idempotency)
@@ -118,10 +120,9 @@
      account-type->int
   cash-accounts/AccountType-label2val)
 
-(def ^{:doc "Map of CashAccount GlAccountType label to protobuf int
-  value."}
+(def ^{:doc "Map of GlAccountType label to protobuf int value."}
      gl-account-type->int
-  cash-accounts/GlAccountType-label2val)
+  cash-account-products/GlAccountType-label2val)
 
 (defn gl-account-type->pb-enum
   "Convert a gl-account-type keyword to the protobuf enum value, for
@@ -130,13 +131,12 @@
   Args:
   - gl-account-type: `:gl-account-type-*` keyword."
   [gl-account-type]
-  (CashAccountProto$GlAccountType/forNumber
+  (CashAccountProductProto$GlAccountType/forNumber
    (gl-account-type->int gl-account-type)))
 
-(def ^{:doc "Map of CashAccount GlAccountClass label to protobuf int
-  value."}
+(def ^{:doc "Map of GlAccountClass label to protobuf int value."}
      gl-account-class->int
-  cash-accounts/GlAccountClass-label2val)
+  cash-account-products/GlAccountClass-label2val)
 
 (defn gl-account-class->pb-enum
   "Convert a gl-account-class keyword to the protobuf enum value, for
@@ -145,13 +145,11 @@
   Args:
   - gl-account-class: `:gl-account-class-*` keyword."
   [gl-account-class]
-  (CashAccountProto$GlAccountClass/forNumber
+  (CashAccountProductProto$GlAccountClass/forNumber
    (gl-account-class->int gl-account-class)))
 
-(def ^{:doc "Map of CashAccount Required label to protobuf int
-  value."}
-     required->int
-  cash-accounts/Required-label2val)
+(def ^{:doc "Map of Required label to protobuf int value."} required->int
+  cash-account-products/Required-label2val)
 
 (defn required->pb-enum
   "Convert a required keyword to the protobuf enum value, for use in
@@ -160,8 +158,36 @@
   Args:
   - required: `:required-*` keyword."
   [required]
-  (CashAccountProto$Required/forNumber
+  (CashAccountProductProto$Required/forNumber
    (required->int required)))
+
+(def ^{:doc "Map of IsoCashAccountType label to protobuf int value."}
+     iso-cash-account-type->int
+  cash-account-products/IsoCashAccountType-label2val)
+
+(defn iso-cash-account-type->pb-enum
+  "Convert an iso-cash-account-type keyword to the protobuf enum
+  value, for use in FDB index queries.
+
+  Args:
+  - iso-cash-account-type: `:iso-cash-account-type-*` keyword."
+  [iso-cash-account-type]
+  (CashAccountProductProto$IsoCashAccountType/forNumber
+   (iso-cash-account-type->int iso-cash-account-type)))
+
+(def ^{:doc "Map of SubLedgerKind label to protobuf int value."}
+     sub-ledger-kind->int
+  cash-account-products/SubLedgerKind-label2val)
+
+(defn sub-ledger-kind->pb-enum
+  "Convert a sub-ledger-kind keyword to the protobuf enum value, for
+  use in FDB index queries.
+
+  Args:
+  - sub-ledger-kind: `:sub-ledger-kind-*` keyword."
+  [sub-ledger-kind]
+  (CashAccountProductProto$SubLedgerKind/forNumber
+   (sub-ledger-kind->int sub-ledger-kind)))
 
 (def ^{:doc "Map of BankType label to protobuf int value."} bank-type->int
   banks/BankType-label2val)
@@ -344,9 +370,21 @@
   [m]
   (IdvProto$Idv/parseFrom (Idv->pb m)))
 
-(def ^{:doc "Parse CashAccount protobuf bytes into a Clojure map."}
-     pb->CashAccount
-  cash-accounts/pb->CashAccount)
+(defn pb->CashAccount
+  "Parse CashAccount protobuf bytes into a Clojure map. Strips
+  optional string fields that deserialise as the proto2 empty-string
+  default (`bban`, `gl-control-account-id`) — GL chart-of-accounts
+  rows leave both unset, and downstream read sites use `(when (:bban
+  account) ...)` semantics to distinguish customer instruments from
+  GL rows."
+  [input]
+  (let [account (cash-accounts/pb->CashAccount input)]
+    (cond-> account
+            (= "" (:bban account))
+            (dissoc :bban)
+
+            (= "" (:gl-control-account-id account))
+            (dissoc :gl-control-account-id))))
 
 (defn CashAccount->pb
   "Serialise a CashAccount map to protobuf bytes.

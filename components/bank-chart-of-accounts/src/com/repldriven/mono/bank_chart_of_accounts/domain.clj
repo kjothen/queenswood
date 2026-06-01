@@ -44,13 +44,13 @@
     :required :required-mandatory}])
 
 (def control-code-for-product-type
-  "Customer cash accounts inherit a `:gl-control-code` from their
+  "Customer cash accounts inherit a `:gl-control-account-id` from their
   product type — payments and interest postings on customer accounts
   fan out to the matching control GL account so the control balance
   is always the live roll-up of its sub-ledger."
-  {:product-type-current "2100"
-   :product-type-savings "2200"
-   :product-type-term-deposit "2300"})
+  {:product-type-sub-ledger-current "2100"
+   :product-type-sub-ledger-savings "2200"
+   :product-type-sub-ledger-term-deposit "2300"})
 
 (def ^:private by-gl-code (into {} (map (juxt :gl-code identity)) template))
 

@@ -20,6 +20,10 @@
   [x]
   (and (vector? x) (= :ref (first x))))
 
+(defn- ref-find?
+  [x]
+  (and (vector? x) (= :ref-find (first x))))
+
 (defn- str-marker?
   [x]
   (and (vector? x) (= :str (first x))))
@@ -28,6 +32,17 @@
   [captures [_ alias & path]]
   (let [bound (get captures alias)]
     (if (seq path) (get-in bound path) bound)))
+
+(defn resolve-ref-find
+  "Resolve `[:ref-find alias coll-key match-key match-val & path]` by
+  selecting the first item in the captured `alias`'s `coll-key`
+  collection whose `match-key` equals `match-val`, then reading `path`
+  out of it. Lets scenarios target an account by stable attribute
+  (e.g. `:gl-code \"1100\"`) instead of a brittle seed-order index."
+  [captures [_ alias coll-key match-key match-val & path]]
+  (let [coll (get-in captures [alias coll-key])
+        item (first (filter #(= match-val (get % match-key)) coll))]
+    (if (seq path) (get-in item path) item)))
 
 (defn resolve-all
   "Walk `form`, replacing every `[:ref ...]` marker with its
@@ -39,6 +54,8 @@
      (cond
       (ref? x)
       (resolve-ref captures x)
+      (ref-find? x)
+      (resolve-ref-find captures x)
       (str-marker? x)
       (apply str (rest x))
       :else
