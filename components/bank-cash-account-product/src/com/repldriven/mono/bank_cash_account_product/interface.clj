@@ -1,12 +1,19 @@
 (ns com.repldriven.mono.bank-cash-account-product.interface
   "Cash-account product catalog: per-bank product definitions
-  that drive cash-account opening (allowed currencies, balance bucket
-  layout, payment-address schemes, interest rate). Products are
-  versioned through draft, published, and discarded states; only
-  published versions can back live accounts."
+  that drive cash-account opening. Products carry a `:kind`
+  discriminator with two variants — `:sub-ledger` (customer-facing
+  instruments — current, savings, term-deposit) and
+  `:general-ledger` (bank-owned chart-of-accounts entries). Sub-ledger
+  products drive instrument opening (allowed currencies, balance
+  bucket layout, payment-address schemes, interest rate); GL products
+  drive chart-of-accounts seeding (gl-code, gl-account-type,
+  gl-account-class). Both kinds versioned through draft, published,
+  and discarded states; only published versions can back live
+  accounts."
   (:require
     [com.repldriven.mono.bank-cash-account-product.core :as core]
-    [com.repldriven.mono.bank-cash-account-product.resources :as resources]))
+    [com.repldriven.mono.bank-cash-account-product.resources :as resources]
+    [com.repldriven.mono.bank-cash-account-product.store :as store]))
 
 (defn new-product
   "Create a new product as an initial draft v1. Returns the
@@ -15,10 +22,23 @@
   Args:
   - txn: FDB transaction or db handle.
   - bank-id: owning bank id.
-  - data: version fields (`:name`, `:product-type`,
-    `:balance-sheet-side`, `:allowed-currencies`,
-    `:balance-products`, `:allowed-payment-address-schemes`,
-    `:interest-rate-bps`, `:valid-from`).
+  - data: version fields:
+    - `:name` — product display name (required).
+    - `:currency` — ISO 4217 string, single currency per product.
+    - `:valid-from` — optional ISO timestamp.
+    - `:kind` — discriminator map naming the variant. For a
+      customer-facing product:
+      `{:sub-ledger {:product-type :product-type-sub-ledger-current
+                     :interest-rate-bps 0
+                     :iso-cash-account-type
+                     :iso-cash-account-type-cacc}}`
+      For a GL product:
+      `{:general-ledger {:gl-code \"2100\"
+                         :gl-account-type :gl-account-type-liability
+                         :gl-account-class :gl-account-class-control
+                         :required :required-mandatory
+                         :sub-ledger-kind
+                         :sub-ledger-kind-cash-account-current}}`
   - opts (optional): map; `:policies` overrides policy resolution."
   ([txn bank-id data]
    (core/new-product txn bank-id data))
@@ -123,6 +143,21 @@
   - opts (optional): map; `:limit`, `:order`."
   ([txn bank-id] (core/get-products txn bank-id))
   ([txn bank-id opts] (core/get-products txn bank-id opts)))
+
+(defn find-product-by-gl-code
+  "Return the first CashAccountProduct whose general_ledger variant
+  has the given `gl-code` for this bank, or nil. Used by
+  `bank-chart-of-accounts` and by cash-account opening to resolve a GL
+  account from its code. Composes with
+  `bank-cash-account/find-account-by-product` to fetch the actual
+  CashAccount.
+
+  Args:
+  - txn: FDB transaction or db handle.
+  - bank-id: owning bank id.
+  - gl-code: GL account code string (e.g. \"2100\")."
+  [txn bank-id gl-code]
+  (store/find-product-by-gl-code txn bank-id gl-code))
 
 (defn list-templates
   "Return all per-product-type templates as a vector of maps with a

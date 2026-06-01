@@ -222,7 +222,7 @@
              :path-params {:bank-id [:ref :bank-0 :bank-id]}
              :auth :admin
              :headers {:idempotency-key "ik-fhp-inbound-settlement"}
-             :body {:account-id [:ref :bank-0 :accounts 0 :account-id]
+             :body {:account-id [:ref-find :bank-0 :accounts :gl-code "1100" :account-id]
                     :amount 5000000
                     :currency "GBP"}}
    :assert {:status 200}}
@@ -233,7 +233,7 @@
              :path "/v1/payments/internal"
              :auth :bank-0-token
              :headers {:idempotency-key "ik-fhp-reward-arthur"}
-             :body {:debtor-account-id [:ref :bank-0 :accounts 0 :account-id]
+             :body {:debtor-account-id [:ref-find :bank-0 :accounts :gl-code "1100" :account-id]
                     :creditor-account-id [:ref :arthur-current :account-id]
                     :currency "GBP"
                     :amount 100000
@@ -244,7 +244,7 @@
              :path "/v1/payments/internal"
              :auth :bank-0-token
              :headers {:idempotency-key "ik-fhp-reward-ford"}
-             :body {:debtor-account-id [:ref :bank-0 :accounts 0 :account-id]
+             :body {:debtor-account-id [:ref-find :bank-0 :accounts :gl-code "1100" :account-id]
                     :creditor-account-id [:ref :ford-current :account-id]
                     :currency "GBP"
                     :amount 100000
@@ -308,7 +308,7 @@
   {:command :api/request
    :request {:method :get
              :path "/v1/cash-accounts/{account-id}/balances"
-             :path-params {:account-id [:ref :bank-0 :accounts 0 :account-id]}
+             :path-params {:account-id [:ref-find :bank-0 :accounts :gl-code "1100" :account-id]}
              :auth :bank-0-token}
    :assert {:status 200
             :body {:available-balance {:value 4800000 :currency "GBP"}}}}
@@ -360,7 +360,7 @@
   {:command :api/request
    :request {:method :get
              :path "/v1/cash-accounts/{account-id}/balances"
-             :path-params {:account-id [:ref :bank-0 :accounts 0 :account-id]}
+             :path-params {:account-id [:ref-find :bank-0 :accounts :gl-code "1100" :account-id]}
              :auth :bank-0-token}
    :assert {:status 200
             :body {:available-balance {:value 4800000 :currency "GBP"}}}}
@@ -382,7 +382,7 @@
   {:command :api/request
    :request {:method :get
              :path "/v1/cash-accounts/{account-id}/balances"
-             :path-params {:account-id [:ref :bank-0 :accounts 0 :account-id]}
+             :path-params {:account-id [:ref-find :bank-0 :accounts :gl-code "1100" :account-id]}
              :auth :bank-0-token}
    :assert {:status 200
             :body {:available-balance {:value 4800000 :currency "GBP"}}}}

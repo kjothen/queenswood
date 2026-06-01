@@ -30,12 +30,15 @@
       (is (= :gl-account-class-detail (by-code "2500"))))))
 
 (deftest control-code-for-product-type-test
-  (is (= "2100" (SUT/control-code-for-product-type :product-type-current)))
-  (is (= "2200" (SUT/control-code-for-product-type :product-type-savings)))
-  (is (= "2300" (SUT/control-code-for-product-type :product-type-term-deposit)))
+  (is (= "2100"
+         (SUT/control-code-for-product-type :product-type-sub-ledger-current)))
+  (is (= "2200"
+         (SUT/control-code-for-product-type :product-type-sub-ledger-savings)))
+  (is (= "2300"
+         (SUT/control-code-for-product-type
+          :product-type-sub-ledger-term-deposit)))
   (testing "non-customer product types have no control"
-    (is (nil? (SUT/control-code-for-product-type :product-type-settlement)))
-    (is (nil? (SUT/control-code-for-product-type :product-type-internal)))
+    (is (nil? (SUT/control-code-for-product-type :product-type-general-ledger)))
     (is (nil? (SUT/control-code-for-product-type :product-type-unknown)))))
 
 (deftest mandatory?-test

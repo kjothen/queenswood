@@ -39,7 +39,7 @@
        ;; (2500) is reserved for unmatched inbounds — a workflow for
        ;; a later wave.
        (let-nom>
-         [cash (cash-accounts/get-account-by-gl-code
+         [cash (chart-of-accounts/find-gl-account-by-code
                 txn
                 bank-id
                 gl-code-cash-at-correspondent)
@@ -131,7 +131,7 @@
      config
      (fn [txn]
        (let-nom>
-         [pending (cash-accounts/get-account-by-gl-code
+         [pending (chart-of-accounts/find-gl-account-by-code
                    txn
                    bank-id
                    gl-code-pending-outbound)
@@ -141,7 +141,7 @@
                            (str "Bank has no 1200 account during "
                                 "outbound settlement")
                            :bank-id bank-id}))
-          cash (cash-accounts/get-account-by-gl-code
+          cash (chart-of-accounts/find-gl-account-by-code
                 txn
                 bank-id
                 gl-code-cash-at-correspondent)

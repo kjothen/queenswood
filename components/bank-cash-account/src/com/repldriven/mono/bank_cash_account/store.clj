@@ -124,19 +124,19 @@
                 :cash-account/get-by-type
                 "Failed to get account by type"))
 
-(defn get-account-by-gl-code
-  [txn bank-id gl-code]
+(defn find-account-by-product
+  [txn bank-id product-id]
   (fdb/transact txn
                 (fn [txn]
                   (some-> (fdb/query-record-compound
                            (fdb/open txn store-name)
                            "CashAccount"
                            [["bank_id" bank-id]
-                            ["gl_code" gl-code]]
-                           {:index "CashAccount_by_bank_gl_code"})
+                            ["product_id" product-id]]
+                           {:index "CashAccount_by_bank_product"})
                           schema/pb->CashAccount))
-                :cash-account/get-by-gl-code
-                "Failed to get account by gl-code"))
+                :cash-account/find-by-product
+                "Failed to find account by product"))
 
 (defn get-account-by-bban
   [txn bban]

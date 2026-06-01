@@ -76,22 +76,36 @@
   [next-payment-id]
   (keyword (str "pmt-" next-payment-id)))
 
+(defn- product-payload
+  "Build a sub-ledger product input for new-product/update-draft. Wraps
+  the product-type into the :kind discriminator, optionally merging
+  caller-supplied :kind extras such as :interest-rate-bps. Non-:kind
+  extras (like :name overrides) are merged at the top level."
+  [product-name product-type & [extras]]
+  (let [{kind-extras :kind :as extras} (or extras {})
+        top-extras (dissoc extras :kind)]
+    (merge {:name product-name
+            :currency "GBP"
+            :kind {:sub-ledger
+                   (merge {:product-type product-type}
+                          kind-extras)}}
+           top-extras)))
+
 (defmulti dispatch (fn [_ctx command] (:command command)))
 
 (defmethod dispatch :create-bank
   [{:keys [bank counter next-model-id next-bank-id next-product-id next-party-id
            id-mapping]
     :as ctx} _command]
-  ;; The model treats `:create-bank` as "bank + one usable account in one
-  ;; go". Reality post-CoA seeds 7 GL accounts on the bank's own
+  ;; The model treats `:create-bank` as "bank + one usable account in
+  ;; one go". Reality post-CoA seeds 7 GL accounts on the bank's own
   ;; organization-party at provisioning, but none of them are
-  ;; scenario-usable
-  ;; (no `:gl-control-code`, no spendable default-posted bucket the
-  ;; model recognises). So we additionally create + publish a
-  ;; settlement product and open a single customer-style account on
-  ;; the bank's organization-party — that account is what gets tracked as
-  ;; `:acct-0`. The 7 GL accounts stay off-model (projections only
-  ;; look at `id-mapping`).
+  ;; scenario-usable (no `:gl-control-account-id`, no spendable
+  ;; default-posted bucket the model recognises). So we additionally
+  ;; create + publish a scenario customer-current product and open a
+  ;; single customer-style account on the bank's organization-party —
+  ;; that account is what gets tracked as `:acct-0`. The 7 GL accounts
+  ;; stay off-model (projections only look at `id-mapping`).
   (let [model-acct (model-id-for-next-account next-model-id)
         model-bank (model-id-for-next-bank next-bank-id)
         model-prod (model-id-for-next-product next-product-id)
@@ -104,46 +118,45 @@
         bank-entity (:bank result)
         real-bank-id (:bank-id bank-entity)
         real-party-id (get-in bank-entity [:party :party-id])
-        settlement-product (when-not (error/anomaly? result)
-                             (products/new-product bank
-                                                   real-bank-id
-                                                   {:name "Scenario Settlement"
-                                                    :product-type
-                                                    :product-type-settlement
-                                                    :currency "GBP"}))
-        settlement-product-id (:product-id settlement-product)
-        settlement-version-id (:version-id settlement-product)
-        _ (when (and settlement-product-id
-                     (not (error/anomaly? settlement-product)))
+        scenario-product (when-not (error/anomaly? result)
+                           (products/new-product
+                            bank
+                            real-bank-id
+                            (product-payload "Scenario Current"
+                                             :product-type-sub-ledger-current)))
+        scenario-product-id (:product-id scenario-product)
+        scenario-version-id (:version-id scenario-product)
+        _ (when (and scenario-product-id
+                     (not (error/anomaly? scenario-product)))
             (products/publish bank
                               real-bank-id
-                              settlement-product-id
-                              settlement-version-id))
-        settlement-account (when settlement-product-id
-                             (cash-accounts/new-account
-                              bank
-                              {:bank-id real-bank-id
-                               :party-id real-party-id
-                               :product-id settlement-product-id
-                               :currency "GBP"
-                               :name "Scenario Settlement Account"}))
-        real-acct-id (:account-id settlement-account)
-        real-bban (:bban settlement-account)
+                              scenario-product-id
+                              scenario-version-id))
+        scenario-account (when scenario-product-id
+                           (cash-accounts/new-account
+                            bank
+                            {:bank-id real-bank-id
+                             :party-id real-party-id
+                             :product-id scenario-product-id
+                             :currency "GBP"
+                             :name "Scenario Account"}))
+        real-acct-id (:account-id scenario-account)
+        real-bban (:bban scenario-account)
         _ (when real-acct-id (seed-opened bank real-bank-id real-acct-id))]
     (-> ctx
         (cond-> real-acct-id
                 (assoc :id-mapping
                        (id-mapping/add id-mapping model-acct real-acct-id)))
         (assoc-in [:banks model-bank] {:real-id real-bank-id :currency "GBP"})
-        ;; The settlement product is born already-published (we
-        ;; publish above) so track v1 as :published; matches the
-        ;; model's auto-settlement product semantics.
-        (cond-> settlement-product-id
+        ;; The scenario product is born already-published (we publish
+        ;; above) so track v1 as :published; matches the model's
+        ;; auto-scenario-product semantics.
+        (cond-> scenario-product-id
                 (assoc-in [:products model-prod]
-                 {:real-id settlement-product-id
+                 {:real-id scenario-product-id
                   :bank model-bank
-                  :product-type :settlement
-                  :versions [{:real-id settlement-version-id
+                  :product-type :current
+                  :versions [{:real-id scenario-version-id
                               :status :published
                               :number 1}]}))
         (assoc-in [:parties model-party]
@@ -156,14 +169,7 @@
         (update :next-product-id inc)
         (update :next-party-id inc)
         (update :counter inc)
-        (track (or settlement-account result)))))
-
-(defn- product-payload
-  [product-name product-type & [extras]]
-  (merge {:name product-name
-          :product-type product-type
-          :currency "GBP"}
-         extras))
+        (track (or scenario-account result)))))
 
 (defn- record-fresh-product
   [ctx model-prod model-bank product-type result]
@@ -178,18 +184,19 @@
                         :number 1}]})))
 
 (def ^:private product-type->kind
-  {:current :product-type-current :savings :product-type-savings})
+  {:current :product-type-sub-ledger-current
+   :savings :product-type-sub-ledger-savings})
 
 (defmethod dispatch :create-product
   [{:keys [bank counter next-product-id banks] :as ctx}
    {[model-bank type rate-bps] :args}]
   (let [model-prod (model-id-for-next-product next-product-id)
         {:keys [real-id]} (get banks model-bank)
-        kind (get product-type->kind type :product-type-current)
+        kind (get product-type->kind type :product-type-sub-ledger-current)
         name
         (str (if (= :savings type) "Savings" "Current") " Product " counter)
         extras (when (and rate-bps (pos? rate-bps))
-                 {:interest-rate-bps rate-bps})
+                 {:kind {:interest-rate-bps rate-bps}})
         result
         (products/new-product bank real-id (product-payload name kind extras))]
     (-> ctx
@@ -405,7 +412,7 @@
                                             (product-payload
                                              (str "Scenario Current Product "
                                                   counter)
-                                             :product-type-current)))
+                                             :product-type-sub-ledger-current)))
         _
         (when (and create-prod? prod-result (not (error/anomaly? prod-result)))
           (products/publish bank
@@ -511,7 +518,7 @@
 (defn- gl-account-for
   "Look up the bank's `gl-code` GL account on its own books."
   [bank bank-id gl-code]
-  (cash-accounts/get-account-by-gl-code bank bank-id gl-code))
+  (chart-of-accounts/find-gl-account-by-code bank bank-id gl-code))
 
 (defn- bank-id-for-account
   "Resolve the bank-id that owns `model-acct`."

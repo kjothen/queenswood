@@ -32,7 +32,7 @@ In scope: the `bank-chart-of-accounts` brick; GL account data
 model; A/L/E/I/E grouping; per-product-type control accounts
 that aggregate customer cash-accounts of each product type;
 the rule that GL leg-sets must balance per currency; the
-canonical seeded chart and its codes; the `:gl-control-code`
+canonical seeded chart and its codes; the `:gl-control-account-id`
 mapping carried on cash accounts; the reframing of today's
 settlement and internal cash-account products as GL accounts
 proper; the two scenario-testing invariants that prove
@@ -97,47 +97,71 @@ balanced.
 
 ### Architecture
 
-A new brick `bank-chart-of-accounts` owns the chart of
-accounts and the GL account records. Pure-domain: it owns the
-GL account entity, the classes, the normal-side rule, and the
-canonical seeded template as data. It does not own legs or
-balances — `bank-transaction` and `bank-balance` are reused.
-A GL account is another kind of `:account-id` for those
-bricks; the existing balance-bucket model
-`(account-id, balance-type, balance-status, currency)` carries
-GL bucket totals exactly as it carries customer bucket totals.
+The chart of accounts is **modelled inside
+`bank-cash-account-product`** via a discriminated-union
+(`oneof kind`) on the product, mirroring how `Limit` is
+modelled in `bank-policy`. There are two kinds of
+cash-account-product:
 
-The two account classes are distinguished by an
-`:account-class` field carried alongside `:account-id`, and
-(as a soft discriminator) by ID prefix:
+- **Sub-ledger product** — the template for customer-facing
+  instruments. Carries product-type
+  (current / savings / term-deposit), balance-sheet-side,
+  balance-products, allowed-payment-address-schemes,
+  interest-rate-bps, and ISO 20022 cash-account-type. Each
+  instance spawns many customer cash-accounts (one per
+  customer).
+- **GL product** — the template for bank-owned GL accounts.
+  Carries gl-code, gl-account-type, gl-account-class,
+  required, parent-gl-code, sub-ledger-kind. Each instance
+  spawns exactly one CashAccount (the GL account itself).
 
-- `acc.<ulid>` — customer cash-account
-  (`:account-class-customer`)
-- `gla.<ulid>` — GL account (`:account-class-gl`)
+Both kinds share identity and lifecycle fields (name, status,
+version-number, timestamps) and the existing draft → published
+→ discarded lifecycle.
 
-`bank-transaction` and `bank-balance` stay account-class
-agnostic. The leg-recording flow is extended in one place:
-when any leg in a posting targets a GL account, the full
-leg-set must balance per currency before commit (see
-"Double-entry" below).
+A **`CashAccount`** record is the storage unit for both
+customer and GL accounts; the kind is implied by the account's
+product. The record carries shared fields (`bank_id`,
+`account_id`, `currency`, `name`, `account_status`,
+`party_id`, `product_id`, `version_id`) and sub-ledger-only
+fields (`payment_addresses`, `bban`, `gl_control_account_id`
+pointing at the customer's matching control). GL-discriminator
+fields live on the product, not on the account.
+
+`bank-chart-of-accounts` is a **thin veneer** over
+`bank-cash-account-product` and `bank-cash-account`:
+
+- Owns the canonical template (data) — the seven-row CoA
+  every bank starts with
+- `seed!` provisions one GL product per template row per
+  currency, each spawning one GL account
+- `expand-legs` performs paired-leg construction at posting
+  time, following each customer-account leg with a
+  control-account leg
+- `mandatory?` predicate consults the seeded template
 
 ```mermaid
 graph LR
-    SL["Customer cash-accounts<br/>(sub-ledger)<br/>bank-cash-account"]
-    GL["GL accounts<br/>(chart of accounts)<br/>bank-chart-of-accounts"]
+    P["CashAccountProduct<br/>oneof kind {<br/>  sub_ledger<br/>  general_ledger<br/>}<br/>bank-cash-account-product"]
+    A["CashAccount<br/>bank-cash-account"]
+    COA["Seed + expand-legs<br/>bank-chart-of-accounts"]
     TX["Legs + Balances<br/>bank-transaction<br/>bank-balance"]
     FDB[("FDB<br/>one transaction")]
 
-    SL -->|customer legs| TX
-    GL -->|GL legs| TX
-    TX -->|paired postings| FDB
+    P -->|opens| A
+    COA -->|seeds| P
+    COA -->|seeds| A
+    A -->|legs| TX
+    COA -->|expand-legs| TX
+    TX -->|postings| FDB
 ```
 
-Like `bank-cash-account-product`, the chart-of-accounts brick
-has no commands and no watchers — GL account create / update /
-close are synchronous interface calls from a request handler.
-The lifecycle is short enough not to need eventual
-consistency.
+`bank-transaction` and `bank-balance` treat customer
+cash-accounts and GL accounts uniformly — both are
+`CashAccount` `account_id`s, and the existing balance-bucket
+model `(account-id, balance-type, balance-status, currency)`
+carries GL bucket totals exactly as it carries customer bucket
+totals. The bricks don't distinguish.
 
 The CoA is **per-bank**. Each tenant defines its own structure
 within the fixed A/L/E/I/E top-level grouping. Banks on the
@@ -165,61 +189,133 @@ confusing trial balance.
 
 ### Data model
 
-A GL account:
+`CashAccountProduct` carries a `oneof kind` that determines
+whether the product spawns customer accounts or a GL account:
 
-```clojure
-{:bank-id
- :gl-account-id     "gla.<ulid>"
- :code              "2100"          ;; bank-defined account number
- :name              "Customer deposits — current accounts"
- :description       "..."           ;; optional, free text
+```protobuf
+message CashAccountProduct {
+  // shared identity + lifecycle
+  required string bank_id = 1;
+  required string product_id = 2;
+  required string version_id = 3;
+  required int32 version_number = 4;
+  required CashAccountProductStatus status = 5;
+  required string name = 6;
+  optional string valid_from = 7;
+  repeated string allowed_currencies = 8;
+  required int64 created_at = 9;
+  required int64 updated_at = 10;
+  optional int64 discarded_at = 11;
 
- :gl-account-type   :gl-account-type-liability
-                    ;; -asset, -equity, -income, -expense
- :gl-account-class  :gl-account-class-control
-                    ;; -detail (leaf, no children),
-                    ;; -summary (rolls up children, no postings),
-                    ;; -control (leaf, aggregates a sub-ledger)
- :parent-id         <gla-id or nil>     ;; for hierarchy
- :normal-side       :credit             ;; or :debit
- :currency          "GBP"               ;; ISO 4217, or nil on parents
+  oneof kind {
+    SubLedgerProductKind sub_ledger = 20;
+    GeneralLedgerProductKind general_ledger = 21;
+  }
+}
 
- :sub-ledger-kind   :sub-ledger-kind-cash-account-current
-                    ;; or -cash-account-savings,
-                    ;; -cash-account-term-deposit, ... ;
-                    ;; only on -control accounts; nil otherwise
+message SubLedgerProductKind {
+  required ProductType product_type = 1;
+                                       // current, savings, term-deposit
+  required BalanceSheetSide balance_sheet_side = 2;
+  repeated BalanceProduct balance_products = 3;
+  repeated PaymentAddressScheme allowed_payment_address_schemes = 4;
+  optional int32 interest_rate_bps = 5;
+  optional IsoCashAccountType iso_cash_account_type = 6;
+}
 
- :status            :gl-account-status-open  ;; or -closed
- :created-at
- :updated-at}
+message GeneralLedgerProductKind {
+  required string gl_code = 1;                  // "1100", "2400", ...
+  required GlAccountType gl_account_type = 2;
+                                       // A/L/E/I/E (one of the five classes)
+  required GlAccountClass gl_account_class = 3;
+                                       // detail, summary, control
+  required Required required = 4;       // mandatory, optional
+  optional string parent_gl_code = 5;           // summary hierarchy
+  optional SubLedgerKind sub_ledger_kind = 6;
+                                       // only on control accounts
+}
+```
+
+The shared fields stay on the outer message (matching the
+`Limit` proto pattern). Kind-specific fields live in the
+variant where they apply.
+
+`CashAccount` is a single record type for both customer and
+GL accounts, with the kind implied by the account's product:
+
+```protobuf
+message CashAccount {
+  // shared identity + lifecycle
+  required string bank_id = 1;
+  required string account_id = 2;
+  required string party_id = 4;
+  required string product_id = 5;
+  required string version_id = 6;
+  required string currency = 9;
+  required string name = 8;
+  required CashAccountStatus account_status = 10;
+  required int64 created_at = 13;
+  required int64 updated_at = 14;
+
+  // cached from product for fast lookups
+  optional ProductType product_type = 7;
+
+  // sub-ledger-specific (nil/empty on GL accounts)
+  optional AccountType account_type = 3;        // personal, business
+  repeated PaymentAddress payment_addresses = 11;
+  optional string bban = 12;
+  optional string gl_control_account_id = 15;
+                                       // pointer to control GL account
+}
 ```
 
 Notes:
 
-- **`:code`** is the bank's own account number. Free-form
-  (typically 4 digits in retail-banking practice); unique per
-  bank. The system doesn't interpret it.
-- **`:normal-side`** records the side a balance accumulates
-  on for this account type — debit for assets and expenses,
-  credit for liabilities, equity, and income. Reporting uses
-  this to present sign-convention output.
-- **`:gl-account-class`** distinguishes three roles:
-  - `-detail` — leaf, accepts legs.
-  - `-summary` — rolls up children, never receives legs
+- **`gl_code`, `gl_account_type`, `gl_account_class`,
+  `required`** live on the product's `general_ledger`
+  variant, not on the account record. Reading them is one
+  product-version cache hit — 60-second TTL, see
+  [interest.md](interest.md).
+- **`gl_control_account_id`** is the direct pointer to a
+  customer cash-account's matching control GL account.
+  Resolved at open-time by chasing
+  `:product-type` → control-code → GL product → GL account.
+  Stored on the account as a denormalised cache so
+  `expand-legs` is a single lookup at posting time, not a
+  four-hop chain. Customer accounts have it set; GL accounts
+  leave it nil.
+- **`product_type`** stays denormalised on customer accounts
+  for the existing
+  `CashAccount_by_bank_product_type` /
+  `CashAccount_count_by_bank_product_account_type_currency`
+  indices. GL accounts leave it nil (or set to a sentinel
+  the indices skip).
+- **`account_type`** (personal / business) only applies to
+  customer accounts and is derived from the holder party.
+  Nil on GL accounts (the bank's own org-party isn't
+  personal-or-business in the customer-classification sense).
+- **`gl_account_class`** distinguishes three roles:
+  - `detail` — leaf, accepts legs.
+  - `summary` — rolls up children, never receives legs
     directly.
-  - `-control` — special leaf that aggregates a sub-ledger.
+  - `control` — special leaf that aggregates a sub-ledger.
     Detail lives elsewhere (in customer cash-accounts); the
     control account is the GL's single line item for that
     sub-ledger cohort.
-- **`:sub-ledger-kind`** is set only on control accounts.
-  Today's kinds are
-  `:sub-ledger-kind-cash-account-current`,
-  `-cash-account-savings`, `-cash-account-term-deposit` — one
+- **`sub_ledger_kind`** is set only on control products.
+  Today's kinds are `cash-account-current`,
+  `cash-account-savings`, `cash-account-term-deposit` — one
   per cash-account product type. Loans, cards, and other
   future instruments add new kinds.
-- **`:currency`** is one-currency per leaf. A multi-currency
-  GL position is expressed as a `-summary` parent with
-  per-currency `-detail` or `-control` children.
+- **Normal side** is *derived*, not stored — assets and
+  expenses are debit-normal; liabilities, equity, and income
+  are credit-normal. Reporting derives at read time.
+- **`currency`** lives on the CashAccount record (one
+  currency per account). A multi-currency GL "position"
+  (e.g. "all of Interest payable") is computed as the sum
+  of per-currency GL accounts under the same gl-code prefix
+  or summary parent. There's no shared-currency
+  product/account at any layer.
 
 ### The seeded standard chart
 
@@ -280,7 +376,7 @@ sub-controls) extends the CoA itself.
 
 Customer cash-accounts remain the **sub-ledger** for the
 matching control account. The link is the
-`:gl-control-code` on each customer cash-account, derived at
+`:gl-control-account-id` on each customer cash-account, derived at
 open time from the product's `:product-type`:
 
 | Product type           | Control code |
@@ -294,7 +390,7 @@ The mapping is a property of the bank's CoA (callable through
 `control-code-for-product-type`), not a constant. A bank that
 re-codes its CoA — moving "current accounts" from 2100 to
 2110, say — re-points the mapping; existing cash accounts
-keep their `:gl-control-code` field as the value at open
+keep their `:gl-control-account-id` field as the value at open
 time, and a migration step re-points old accounts if needed.
 
 `:product-type-settlement` and `:product-type-internal`
@@ -384,7 +480,7 @@ control balance per (default, status, currency)
   =
 Σ default balance per (status, currency)
   across every open customer cash-account
-  whose :gl-control-code matches this control
+  whose :gl-control-account-id points to this control
 ```
 
 Same-side mirror plus the bucket-per-bucket pairing rule means
@@ -490,7 +586,7 @@ DEBIT  1100 Cash at correspondent         default / posted  100  GBP
 ```
 
 The control account is found via the customer cash-account's
-`:gl-control-code`. Pairing is automatic and server-side; the
+`:gl-control-account-id`. Pairing is automatic and server-side; the
 leg-recording API accepts the customer-side legs and the
 pipeline appends the matching control legs and validates the
 combined set balances.
@@ -624,7 +720,7 @@ DEBIT  GL 2400 Interest payable             default / posted  amount
 ```
 
 `21x0` resolves at construction time via the customer
-account's `:gl-control-code`. The GL leg-set balances:
+account's `:gl-control-account-id`. The GL leg-set balances:
 debit 2400, credit 21x0 — the reclassification of the bank's
 liability from "interest payable" to "customer deposits". The
 customer's interest-accrued leg has no auto-pair (no control
@@ -749,94 +845,79 @@ table extends naturally.
 
 ### Brick extensions
 
-The TDD is `bank-chart-of-accounts` (new) plus extensions to
-existing bricks:
+The bricks involved:
 
-- **`bank-chart-of-accounts`** (new). GL account entity, the
-  canonical template as data, classes, normal-side, and the
-  control-account mapping (product-type → gl-code). Pure
-  domain. Synchronous interface; no commands, no watchers.
-- **`bank-bank`** (extend). Bootstrap creates the CoA for a
-  new tenant bank by instantiating the canonical template at
-  bank-creation time.
-- **`bank-cash-account`** (extend). Each cash account now
-  carries a `:gl-control-code`, derived at open time from the
-  product's `:product-type` via
-  `bank-chart-of-accounts/control-code-for-product-type`, and
-  an `:iso-cash-account-type` field (`CACC` / `SVGS` / `LLSV`
-  / `TRAN`) defaulted from `:product-type` and used when
-  emitting outbound ISO 20022 payment messages.
+- **`bank-cash-account-product`** (extend). Top-level
+  `CashAccountProduct` shape gains the `oneof kind`
+  discriminator. `new-product` / `update-draft` / `publish`
+  route through the variant. Validation reads the kind to
+  enforce kind-specific invariants.
+- **`bank-cash-account`** (extend). `CashAccount` record
+  drops `gl_code`, `gl_account_type`, `gl_account_class`,
+  `required`. Gains `gl_control_account_id` (replacing
+  `gl_control_code` — a direct pointer instead of a code
+  lookup). `new-account` no longer accepts GL fields;
+  GL-account opens still use the same call but the GL
+  fields come from the product, not the input.
+- **`bank-chart-of-accounts`** (existing, refactor).
+  Canonical template stays as data. `seed!` creates one GL
+  product per template row per currency (seven products per
+  currency instead of one), each spawning one GL account.
+  `mandatory?` reads `required` from the product, not the
+  account. `expand-legs` follows
+  `gl_control_account_id` directly — one lookup instead of
+  two.
+- **`bank-bank`** (extend). Bank-creation calls `seed!` to
+  provision the canonical chart.
 - **`bank-transaction-processor`** (extend). Every leg that
   hits a customer cash account also posts to its control
-  account (paired-leg construction). Legs can also target GL
-  accounts directly (interest payable, fee income, etc.). The
-  combined leg-set is balance-checked when any GL leg is
-  present.
-- **`bank-schema`** (extend). Protobuf messages for
-  `GLAccount`, `GLEntry`, and the control mapping; new
-  enums for `:gl-account-type`, `:gl-account-class`,
-  `:sub-ledger-kind`, `:iso-cash-account-type`.
+  account (via `expand-legs`). Legs can also target GL
+  accounts directly. The combined leg-set is balance-checked
+  when any GL leg is present.
+- **`bank-schema`** (extend). New messages
+  (`SubLedgerProductKind`, `GeneralLedgerProductKind`); new
+  enums (`GlAccountType`, `GlAccountClass`, `Required`,
+  `SubLedgerKind`, `IsoCashAccountType`); `oneof kind` added
+  to `CashAccountProduct`; GL fields stripped from
+  `CashAccount`. Record-types YAML adds the nested index on
+  `CashAccountProduct.general_ledger.gl_code` and removes
+  `CashAccount_by_bank_gl_code`.
 - **`bank-test-scenarios`** (extend). The two
-  invariants — double-entry and sub-ledger ↔ control — added
-  as `nom-test>` assertions that run on every scenario.
+  invariants — double-entry and sub-ledger ↔ control — run
+  as `nom-test>` assertions on every scenario.
 
-Two product-type enum values disappear at the same time:
+Two product-type enum values retire at the same time:
 
-- **`:product-type-settlement`** — its function (holding the
+- **`PRODUCT_TYPE_SETTLEMENT`** — its function (holding the
   bank's interest-payable) moves to GL 2400.
-- **`:product-type-internal`** — its function (suspense,
+- **`PRODUCT_TYPE_INTERNAL`** — its function (suspense,
   bank-side P&L smear) moves to GL 2500 / 3100 / 4100 / 5100.
+- **`PRODUCT_TYPE_CHART_OF_ACCOUNTS`** — also retires; the
+  CoA template is no longer a single mega-product but seven
+  per-row GL products. The kind discriminator replaces the
+  product-type tag.
 
-The product-type enum drops to three:
-`-current`, `-savings`, `-term-deposit`.
+The remaining `ProductType` enum values are
+`-current`, `-savings`, `-term-deposit` (still used by
+sub-ledger products to drive interest-rate, balance-bucket
+layout, available-balance derivation, etc.).
 
 ### Migration
 
-For each existing bank, the migration is:
+There are no production deployments today; the refactor lands
+as a code-only change. Existing tests are updated to use the
+new shape; seed code is rewritten; the
+`:product-type-chart-of-accounts` /
+`:product-type-settlement` / `:product-type-internal` enum
+values disappear from generated code and from test fixtures
+in the same PR. No data migration.
 
-1. **Seed the CoA.** Instantiate the canonical template
-   (GL accounts 1100 / 1200 / 1300 / 2100 / 2200 / 2300 /
-   2400 / 2500 / 3100 / 4100 / 5100) in GBP.
-2. **Re-point customer cash-accounts.** For each open
-   customer cash-account, write
-   `:gl-control-code` based on its `:product-type` (2100 /
-   2200 / 2300). No balance movement at this step.
-3. **Open-balance journal per customer.** For each open
-   customer cash-account, sum its
-   `:balance-type-default / posted` to a net value and post
-   a paired wash entry — customer side stays at the same
-   number, control side gains the same amount on the credit
-   side. The pipeline's auto-pairing produces the right
-   shape; the call just records each customer-side leg at
-   its existing balance.
-4. **Drain settlement.** Move the existing settlement
-   account's `interest-payable` balance to GL 2400; move
-   `default` to GL 1100. Close the settlement cash-account.
-5. **Drain internal.** Move the existing internal account's
-   `suspense` balance to GL 2500. Any residual `default` on
-   the internal account is investigated and posted to GL
-   3100 (or 4100 / 5100 if origin is identifiable). Close
-   the internal cash-account.
-6. **Reconcile.** Assert both invariants — double-entry
-   across every posting, sub-ledger sum == control balance
-   per (bank, control, currency). Reject the migration if
-   either fails.
-
-The migration runs per bank, in bounded batches per the
-discipline in
-[transactions-and-balances.md](transactions-and-balances.md).
-Idempotency keys per (bank-id, migration-step) make re-runs
-safe.
-
-Phasing the rollout: this TDD pins the design first; a
-follow-up scaffolds `bank-chart-of-accounts` with the
-canonical template and the `bank-bank` bootstrap (no posting
-changes yet — just stand up the chart); a third PR wires the
-paired-leg construction into `bank-transaction-processor`
-with the reconciliation invariant as the forcing function;
-subsequent PRs migrate interest, fees, and the existing
-banks. Four to six PRs total; the invariant fails loudly the
-moment paired-leg construction goes wrong.
+A future production rollout would seed the new chart per
+bank, re-point existing customer accounts'
+`gl_control_account_id`, post one wash entry per customer to
+rebuild the control balance, and drain today's settlement /
+internal balances into the appropriate GL detail accounts.
+The mechanics are straightforward but out of scope here.
 
 ### Policy integration
 
@@ -863,7 +944,7 @@ A caller that posts a customer-side transaction:
 2. Calls `bank-transaction/record-transaction` with those
    legs.
 3. The pipeline appends the paired control legs server-side
-   (using each customer account's `:gl-control-code`).
+   (using each customer account's `:gl-control-account-id`).
 4. The combined leg-set is checked for GL balance and
    committed.
 
@@ -947,14 +1028,33 @@ that touches a customer accrued bucket and two GL accounts):
   doesn't. Server-side construction is the only way to
   guarantee the sub-ledger / control invariant by
   construction.
-- **Reuse `bank-cash-account` with an `:account-class`
-  discriminator** instead of a new brick. One store, two
-  conceptual roles. Rejected — overloads a brick whose name
-  and interface are about customer-facing instruments; a GL
-  account has different lifecycle, different hierarchy
-  semantics, different validation, and different policy
-  capabilities. Splitting the brick keeps each one's
-  interface honest.
+- **Split `bank-cash-account` and introduce a separate
+  `bank-gl-account` brick with its own record type.**
+  Customer cash-accounts and GL accounts stored in two
+  distinct FDB record types, with two separate stores,
+  lookups, and lifecycles. Considered. Rejected — the
+  paired-leg construction needs a single lookup path for
+  any leg's target account (`get-account`); two record
+  types means a discriminator at every lookup site. The
+  `expand-legs` machinery, the leg-recording pipeline, and
+  balance buckets all stay simpler with one
+  `CashAccount` record type. The product is where the
+  discrimination lives cleanly — via `oneof kind` — without
+  forcing a brick split that would ripple through every
+  consumer.
+- **Put GL discriminator fields directly on the
+  `CashAccount` record alongside the customer-only fields.**
+  This was the initial implementation (PR #134) and surfaced
+  the modelling pressure that motivated the
+  `oneof kind` on the product. Rejected as the steady
+  state — the CashAccount schema ends up with two disjoint
+  optional field sets with no enforcement that the
+  combinations are valid, and consumers must
+  guard-read by checking for `gl_code` presence. Pushing
+  the discriminator up to the product (where the
+  classification belongs) gives the schema honest semantics
+  and matches how `Limit` already models its variant
+  kinds.
 - **Keep `:product-type-settlement` / `-internal` as
   cash-account-products** even after the GL lands. Considered
   — easier migration, no enum change. Rejected — leaves two
@@ -1097,7 +1197,7 @@ that touches a customer accrued bucket and two GL accounts):
 - [cash-accounts.md](cash-accounts.md) — Cash accounts (the
   sub-ledger; the `:balance-sheet-side` field that this TDD
   generalises to a full A/L/E/I/E chart;
-  `:gl-control-code` extension lands here)
+  `:gl-control-account-id` extension lands here)
 - [cash-account-products.md](cash-account-products.md) —
   Cash account products (where `:product-type-settlement`
   and `:product-type-internal` live today, prior to the
@@ -1127,7 +1227,7 @@ that touches a customer accrued bucket and two GL accounts):
 - `bank-balance` brick interface
 - `bank-bank` brick interface (bootstrap extension)
 - `bank-cash-account` brick interface
-  (`:gl-control-code` and `:iso-cash-account-type`
+  (`:gl-control-account-id` and `:iso-cash-account-type`
   extensions)
 - `bank-schema` brick (proto messages for `GLAccount` and
   `GLEntry`)

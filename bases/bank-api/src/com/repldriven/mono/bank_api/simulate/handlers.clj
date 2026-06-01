@@ -3,7 +3,6 @@
     [com.repldriven.mono.bank-api.commands :as commands]
     [com.repldriven.mono.bank-api.errors :as errors]
     [com.repldriven.mono.bank-bank.interface :as banks]
-    [com.repldriven.mono.bank-cash-account.interface :as cash-accounts]
     [com.repldriven.mono.bank-chart-of-accounts.interface :as
      chart-of-accounts]
     [com.repldriven.mono.error.interface :as error]))
@@ -40,7 +39,7 @@
             {:keys [path body]} parameters
             {:keys [bank-id]} path
             {:keys [account-id amount currency]} body
-            suspense (cash-accounts/get-account-by-gl-code
+            suspense (chart-of-accounts/find-gl-account-by-code
                       {:record-db record-db :record-store record-store}
                       bank-id
                       "2500")]

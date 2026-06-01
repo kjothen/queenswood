@@ -27,7 +27,12 @@
                                   :settlement-account acct-id})
                        (assoc-in [:products prod-id]
                                  {:bank bank-id
-                                  :product-type :settlement
+                                  ;; Post-CoA the scenario product is
+                                  ;; a customer-current (the legacy
+                                  ;; "settlement" product type retired
+                                  ;; when GL accounts became
+                                  ;; first-class).
+                                  :product-type :current
                                   :interest-rate-bps 0
                                   :versions [{:status :published :number 1}]})
                        (assoc-in

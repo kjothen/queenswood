@@ -70,19 +70,19 @@
   [txn bank-id product-type]
   (core/get-account-by-type txn bank-id product-type))
 
-(defn get-account-by-gl-code
-  "Return the bank's chart-of-accounts row matching `gl-code`, or
-  nil. CoA accounts are unique per `(bank-id, gl-code)` so the
-  result is at most one. Used by the payment and interest processors
-  to resolve counter-leg accounts (1100 cash at correspondent, 1200
-  pending outbound, 2400 interest payable, 2500 suspense).
+(defn find-account-by-product
+  "Return the first CashAccount whose `(bank-id, product-id)` match,
+  or nil. Used to find a GL account given its product (GL products
+  spawn exactly one account each). Composes with
+  `bank-cash-account-product/find-product-by-gl-code` to resolve a GL
+  account from its code.
 
   Args:
   - txn: FDB transaction or db handle.
   - bank-id: owning bank id.
-  - gl-code: GL account code string (e.g. \"1100\")."
-  [txn bank-id gl-code]
-  (core/get-account-by-gl-code txn bank-id gl-code))
+  - product-id: product id."
+  [txn bank-id product-id]
+  (core/find-account-by-product txn bank-id product-id))
 
 (defn get-account-by-bban
   "Return the account matching the given BBAN, or nil.

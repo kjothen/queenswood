@@ -1,5 +1,6 @@
 (ns com.repldriven.mono.bank-api.cash-account-product.handlers
   (:require
+    [com.repldriven.mono.bank-api.cash-account-product.coercion :as coercion]
     [com.repldriven.mono.bank-api.errors :as errors]
     [com.repldriven.mono.bank-cash-account-product.interface :as
      cash-account-products]
@@ -17,12 +18,12 @@
         result (cash-account-products/new-product
                 {:record-db record-db :record-store record-store}
                 bank-id
-                body)]
+                (coercion/request->sub-ledger body))]
     (if (error/anomaly? result)
       (errors/anomaly->response result)
       {:status 201
        :headers {"Location" (version-uri result)}
-       :body result})))
+       :body (coercion/version->response result)})))
 
 (defn open-draft
   [request]
@@ -34,12 +35,12 @@
                 {:record-db record-db :record-store record-store}
                 bank-id
                 product-id
-                body)]
+                (coercion/request->sub-ledger body))]
     (if (error/anomaly? result)
       (errors/anomaly->response result)
       {:status 201
        :headers {"Location" (version-uri result)}
-       :body result})))
+       :body (coercion/version->response result)})))
 
 (defn update-draft
   [request]
@@ -52,10 +53,10 @@
                 bank-id
                 product-id
                 version-id
-                body)]
+                (coercion/request->sub-ledger body))]
     (if (error/anomaly? result)
       (errors/anomaly->response result)
-      {:status 200 :body result})))
+      {:status 200 :body (coercion/version->response result)})))
 
 (defn discard-draft
   [request]
@@ -85,4 +86,4 @@
                 version-id)]
     (if (error/anomaly? result)
       (errors/anomaly->response result)
-      {:status 200 :body result})))
+      {:status 200 :body (coercion/version->response result)})))
