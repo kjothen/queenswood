@@ -47,7 +47,6 @@
      LedgerAccountProto$LedgerAccount)
     (com.repldriven.mono.schemas.banks
      BankProto$Bank
-     BankProto$BankType
      BankChangelogProto$BankChangelog)
     (com.repldriven.mono.schemas.party
      PartyProto$Party
@@ -191,19 +190,6 @@
   [sub-ledger-kind]
   (CashAccountProductProto$SubLedgerKind/forNumber
    (sub-ledger-kind->int sub-ledger-kind)))
-
-(def ^{:doc "Map of BankType label to protobuf int value."} bank-type->int
-  banks/BankType-label2val)
-
-(defn bank-type->pb-enum
-  "Convert a bank-type keyword to the protobuf enum value,
-  for use in FDB index queries.
-
-  Args:
-  - bank-type: `:bank-type-*` keyword."
-  [bank-type]
-  (BankProto$BankType/forNumber
-   (bank-type->int bank-type)))
 
 (defn pb->CashAccountProduct
   "Parse CashAccountProduct protobuf bytes into a Clojure map,

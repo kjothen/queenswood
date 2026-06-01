@@ -45,29 +45,3 @@
                          {:limit limit :order order})))))
     :bank/list
     "Failed to list banks")))
-
-(defn count-banks-by-type
-  [txn bank-type]
-  (fdb/transact txn
-                (fn [txn]
-                  (fdb/count-records
-                   (fdb/open txn store-name)
-                   "Bank_count_by_type"
-                   (.getNumber
-                    (schema/bank-type->pb-enum bank-type))))
-                :bank/count-by-type
-                "Failed to count banks by type"))
-
-(defn get-banks-by-type
-  [txn bank-type]
-  (fdb/transact txn
-                (fn [txn]
-                  (mapv schema/pb->Bank
-                        (fdb/query-records
-                         (fdb/open txn store-name)
-                         "Bank"
-                         "type"
-                         (schema/bank-type->pb-enum bank-type)
-                         {:index "Bank_by_type"})))
-                :bank/list-by-type
-                "Failed to list banks by type"))

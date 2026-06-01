@@ -11,8 +11,6 @@ system:
   transactions: !include bank/transaction-test.yml
   idv: !include bank/idv-test.yml
   policies: !include bank/policy-test.yml
-  policy-bindings: !include bank/policy-binding-test.yml
-  banks: !include bank/bank-test.yml
   telemetry:
     otel-sdk: !profile
       dev: !system/component
@@ -47,7 +45,6 @@ system:
       audiences-by-status:
         bank-status-test: queenswood-api-test
         bank-status-live: queenswood-api-live
-      internal-bank-id: !system/ref banks.internal.bank.bank-id
       dispatchers:
         cash-accounts: !system/ref cash-accounts.dispatcher
         parties: !system/ref parties.dispatcher

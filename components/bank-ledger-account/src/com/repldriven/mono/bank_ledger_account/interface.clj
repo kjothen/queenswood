@@ -10,22 +10,14 @@
   `bank-balance` and `bank-transaction` — which is what keeps a
   customer leg and its control-account leg atomic in one posting.
 
-  This brick owns: the canonical seven-row template, the
-  product-type to control-code mapping, the `mandatory?` predicate,
-  the `seed!` provisioning call, code/id lookups, and the
-  `expand-legs` paired-leg construction posting sites use to fan a
-  customer leg out to its control account."
+  This brick owns: the product-type to control-code mapping, the
+  `new-account` creation call (callers loop it over their own chart
+  of accounts), code/id lookups, and the `expand-legs` paired-leg
+  construction posting sites use to fan a customer leg out to its
+  control account."
   (:require
     [com.repldriven.mono.bank-ledger-account.core :as core]
     [com.repldriven.mono.bank-ledger-account.domain :as domain]))
-
-(def
-  ^{:doc
-    "The canonical chart of accounts a customer bank starts with,
-  as a vector of template rows (`:gl-code`, `:name`,
-  `:gl-account-type`, `:gl-account-class`, `:required`)."}
-  template
-  domain/template)
 
 (def
   ^{:doc
@@ -36,29 +28,21 @@
   control-code-for-product-type
   domain/control-code-for-product-type)
 
-(defn mandatory?
-  "True if `gl-code` names a mandatory seeded account; false for
-  optional and unknown codes. The ledger-account API uses this to
-  reject deletes of system-required accounts.
-
-  Args:
-  - gl-code: GL account code string (e.g. \"2100\")."
-  [gl-code]
-  (domain/mandatory? gl-code))
-
-(defn seed!
-  "Provision the canonical chart of accounts for `bank-id`. For each
-  currency, creates one `LedgerAccount` per template row (seven
-  total) and its single default-posted opening balance. Returns a
-  flat vector of every created account, or an anomaly on the first
-  failure (the surrounding transaction rolls the whole thing back).
+(defn new-account
+  "Create one bank-owned `LedgerAccount` from a chart-of-accounts
+  `row` in `currency`, along with its single default-posted opening
+  balance. Stamps a fresh `led.` id and timestamps. Returns the
+  created account, or an anomaly. Callers loop this over their own
+  chart and wrap the loop in a transaction for all-or-nothing seeding.
 
   Args:
   - txn: FDB transaction or db handle.
   - bank-id: owning bank id.
-  - currencies: vector of ISO 4217 currency strings."
-  [txn bank-id currencies]
-  (core/seed! txn bank-id currencies))
+  - currency: ISO 4217 currency string.
+  - row: chart-of-accounts row (`:gl-code`, `:name`,
+    `:gl-account-type`, `:gl-account-class`, `:required`)."
+  [txn bank-id currency row]
+  (core/new-account txn bank-id currency row))
 
 (defn get-account
   "Return the `LedgerAccount` matching `(bank-id, ledger-account-id)`,

@@ -13,14 +13,14 @@
    :assert {:status 201
             :body {:name "Galactic Bank"
                    :status "live"
-                   :type "customer"
                    :bank-id [:m/regex "^bnk\\."]
                    :client-id [:m/regex "^bnk\\."]
                    :client-secret [:m/regex ".+"]
                    :party {:party-id [:m/regex "^pty\\."]}
-                   :accounts [:m/embeds
-                              [{:account-id [:m/regex "^acc\\."]
-                                :balances [:m/non-empty]}]]}}}]
+                   ;; A fresh bank owns its chart of bank-owned ledger
+                   ;; accounts (see /ledger-accounts) but no customer
+                   ;; cash accounts yet.
+                   :accounts []}}}]
  :then
  [{:command :api/request
    :request {:method :get

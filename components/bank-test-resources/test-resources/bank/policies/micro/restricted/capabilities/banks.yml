@@ -1,7 +1,5 @@
 - effect: !keyword effect-allow
-  reason: "Allow creating customer test banks"
+  reason: "Allow creating banks"
   kind:
     bank:
       action: !keyword bank-action-create
-      filters:
-        - type: !keyword bank-type-customer

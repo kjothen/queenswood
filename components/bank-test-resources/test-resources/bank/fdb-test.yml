@@ -69,12 +69,7 @@ _record-types: !strs &record-types
         unique: true
   banks:
     record-type: Bank
-    indexes:
-      - name: Bank_by_type
-        field: type
-      - name: Bank_count_by_type
-        field: type
-        type: count
+    indexes: []
   payee-checks:
     record-type: PayeeCheck
     primary-key: [bank_id, check_id]

@@ -9,14 +9,6 @@
 
 (def default-sort-code "040004")
 
-;; Duplicated from bank-chart-of-accounts.domain to avoid a brick
-;; dependency cycle (bank-chart-of-accounts already depends on
-;; bank-cash-account for seeding). Keep these two maps in sync.
-(def control-code-for-product-type
-  {:product-type-sub-ledger-current "2100"
-   :product-type-sub-ledger-savings "2200"
-   :product-type-sub-ledger-term-deposit "2300"})
-
 (defn- party->account-type
   [party]
   (if (= :party-type-person (:type party))
@@ -83,17 +75,13 @@
   fields directly; those live on the product's :kind variant.
 
   For sub-ledger products: derives account-type from the holder
-  party, allocates payment-addresses, and (if supplied by the caller)
-  records a `:gl-control-account-id` pointing at the matching control
-  GL account. The caller is responsible for resolving the control
-  account-id before calling (composed in `core/open-account`).
+  party and allocates payment-addresses.
 
   For GL products: skips the party-account-type derivation and the
   payment-address allocation; the product's variant fields drive
   everything."
   [data product-version party address-fountain-fn aggregates policies]
-  (let [{:keys [bank-id party-id product-id currency name
-                gl-control-account-id]}
+  (let [{:keys [bank-id party-id product-id currency name]}
         data
         {:keys [version-id]} product-version
         product-type (:product-type product-version)
@@ -160,10 +148,7 @@
                 (assoc :account-type account-type)
 
                 bban
-                (assoc :bban bban)
-
-                gl-control-account-id
-                (assoc :gl-control-account-id gl-control-account-id))))))
+                (assoc :bban bban))))))
 
 (defn opening-balances
   [account currency product-version]

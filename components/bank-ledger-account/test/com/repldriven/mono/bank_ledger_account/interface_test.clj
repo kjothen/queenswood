@@ -17,20 +17,58 @@
   {:record-db (system/instance sys [:fdb :record-db])
    :record-store (system/instance sys [:fdb :store])})
 
-;; --- Pure template / mapping checks -------------------------------------
+(def ^:private template
+  "Test chart of accounts passed into seed!, mirroring the canonical
+  set bank-bank seeds at provisioning time."
+  [{:gl-code "1100"
+    :name "Cash at correspondent"
+    :gl-account-type :gl-account-type-asset
+    :gl-account-class :gl-account-class-detail
+    :required :required-mandatory}
+   {:gl-code "1200"
+    :name "Pending outbound payments"
+    :gl-account-type :gl-account-type-asset
+    :gl-account-class :gl-account-class-detail
+    :required :required-mandatory}
+   {:gl-code "2100"
+    :name "Customer deposits - current"
+    :gl-account-type :gl-account-type-liability
+    :gl-account-class :gl-account-class-control
+    :required :required-mandatory}
+   {:gl-code "2200"
+    :name "Customer deposits - savings"
+    :gl-account-type :gl-account-type-liability
+    :gl-account-class :gl-account-class-control
+    :required :required-mandatory}
+   {:gl-code "2300"
+    :name "Customer deposits - term deposits"
+    :gl-account-type :gl-account-type-liability
+    :gl-account-class :gl-account-class-control
+    :required :required-mandatory}
+   {:gl-code "2400"
+    :name "Interest payable"
+    :gl-account-type :gl-account-type-liability
+    :gl-account-class :gl-account-class-detail
+    :required :required-mandatory}
+   {:gl-code "2500"
+    :name "Suspense - unreconciled inbound"
+    :gl-account-type :gl-account-type-liability
+    :gl-account-class :gl-account-class-detail
+    :required :required-mandatory}])
 
-(deftest template-test
-  (testing "exactly the seven canonical ledger accounts"
-    (is (= ["1100" "1200" "2100" "2200" "2300" "2400" "2500"]
-           (mapv :gl-code SUT/template))))
-  (testing "2100/2200/2300 are control accounts; others are detail"
-    (let [by-code
-          (into {} (map (juxt :gl-code :gl-account-class)) SUT/template)]
-      (is (= :gl-account-class-control (by-code "2100")))
-      (is (= :gl-account-class-control (by-code "2200")))
-      (is (= :gl-account-class-control (by-code "2300")))
-      (is (= :gl-account-class-detail (by-code "1100")))
-      (is (= :gl-account-class-detail (by-code "2400"))))))
+(defn- seed!
+  "Test helper: create every template row in GBP, returning the
+  created accounts or the first anomaly."
+  [config bank-id]
+  (reduce (fn [acc row]
+            (let [result (SUT/new-account config bank-id "GBP" row)]
+              (if (error/anomaly? result)
+                (reduced result)
+                (conj acc result))))
+          []
+          template))
+
+;; --- Pure mapping checks ------------------------------------------------
 
 (deftest control-code-for-product-type-test
   (is (= "2100"
@@ -43,14 +81,6 @@
   (testing "non-customer product types have no control"
     (is (nil? (SUT/control-code-for-product-type :product-type-unknown)))))
 
-(deftest mandatory?-test
-  (testing "every seeded gl-code is mandatory in this wave"
-    (doseq [code ["1100" "1200" "2100" "2200" "2300" "2400" "2500"]]
-      (is (true? (SUT/mandatory? code)) (str code " should be mandatory"))))
-  (testing "unknown gl-codes are not mandatory"
-    (is (false? (SUT/mandatory? "9999")))
-    (is (false? (SUT/mandatory? nil)))))
-
 ;; --- FDB-backed seed / lookup / expand-legs -----------------------------
 
 (deftest seed!-test
@@ -59,7 +89,7 @@
    (let [config (fdb-config sys)
          bank-id "bnk.test-seed"]
      (testing "seeds seven ledger accounts per currency, each with a led. id"
-       (nom-test> [accounts (SUT/seed! config bank-id ["GBP"])
+       (nom-test> [accounts (seed! config bank-id)
                    _ (is (= 7 (count accounts)))
                    _ (is (every? #(re-find #"^led\." (:ledger-account-id %))
                                  accounts))
@@ -77,7 +107,7 @@
    [sys "classpath:bank-ledger-account/application-test.yml"]
    (let [config (fdb-config sys)
          bank-id "bnk.test-lookup"]
-     (nom-test> [_ (SUT/seed! config bank-id ["GBP"])
+     (nom-test> [_ (seed! config bank-id)
                  control (SUT/find-by-code config bank-id "2100")
                  _ (is (= "2100" (:gl-code control)))
                  _ (is (= :gl-account-class-control
@@ -95,7 +125,7 @@
    [sys "classpath:bank-ledger-account/application-test.yml"]
    (let [config (fdb-config sys)
          bank-id "bnk.test-expand"]
-     (nom-test> [_ (SUT/seed! config bank-id ["GBP"])
+     (nom-test> [_ (seed! config bank-id)
                  control (SUT/find-by-code config bank-id "2100")
                  customer-leg {:account-id "acc.customer1"
                                :product-type :product-type-sub-ledger-current

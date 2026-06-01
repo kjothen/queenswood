@@ -36,9 +36,9 @@
   assigned in the test realm JSON, and the queenswood-admin client
   carries a realm-roles protocol mapper, so the minted token's
   `realm_access.roles` includes `admin` — bank-api's service-auth
-  picks that up and flips `:bank-id` to the internal-bank-id,
-  giving the same principal shape as the legacy env-var admin
-  bearer."
+  picks that up and grants the `:admin` role (admins carry no
+  implicit `:bank-id`), giving the same principal shape as the
+  legacy env-var admin bearer."
   [base-url]
   (let [res (http/request
              {:method :post

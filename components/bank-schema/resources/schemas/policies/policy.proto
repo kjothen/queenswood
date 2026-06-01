@@ -124,7 +124,6 @@ enum BankAction {
 }
 
 message BankCapabilityFilter {
-  optional com.repldriven.mono.schemas.banks.BankType type = 1;
   optional com.repldriven.mono.schemas.banks.BankStatus status = 2;
 }
 
@@ -336,7 +335,6 @@ message InternalPaymentLimit {}
 message InterestLimit {}
 
 message BankLimitFilter {
-  optional com.repldriven.mono.schemas.banks.BankType type = 1;
   optional com.repldriven.mono.schemas.banks.BankStatus status = 2;
 }
 

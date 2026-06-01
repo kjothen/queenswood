@@ -5,8 +5,8 @@
 
     [com.repldriven.mono.bank-balance.interface :as balances]
     [com.repldriven.mono.bank-cash-account.interface :as cash-accounts]
-    [com.repldriven.mono.bank-chart-of-accounts.interface :as
-     chart-of-accounts]
+    [com.repldriven.mono.bank-ledger-account.interface :as
+     ledger-accounts]
     [com.repldriven.mono.bank-policy.interface :as policy]
     [com.repldriven.mono.bank-transaction.interface :as transactions]
 
@@ -39,7 +39,7 @@
        ;; (2500) is reserved for unmatched inbounds — a workflow for
        ;; a later wave.
        (let-nom>
-         [cash (chart-of-accounts/find-gl-account-by-code
+         [cash (ledger-accounts/find-by-code
                 txn
                 bank-id
                 gl-code-cash-at-correspondent)
@@ -62,10 +62,10 @@
           transaction (domain/inbound-payment->transaction
                        data
                        account
-                       (:account-id cash)
+                       (:ledger-account-id cash)
                        policies
                        aggregates)
-          expanded-legs (chart-of-accounts/expand-legs
+          expanded-legs (ledger-accounts/expand-legs
                          txn
                          bank-id
                          (:legs transaction))
@@ -131,7 +131,7 @@
      config
      (fn [txn]
        (let-nom>
-         [pending (chart-of-accounts/find-gl-account-by-code
+         [pending (ledger-accounts/find-by-code
                    txn
                    bank-id
                    gl-code-pending-outbound)
@@ -141,7 +141,7 @@
                            (str "Bank has no 1200 account during "
                                 "outbound settlement")
                            :bank-id bank-id}))
-          cash (chart-of-accounts/find-gl-account-by-code
+          cash (ledger-accounts/find-by-code
                 txn
                 bank-id
                 gl-code-cash-at-correspondent)
@@ -151,8 +151,8 @@
                            (str "Bank has no 1100 account during "
                                 "outbound settlement")
                            :bank-id bank-id}))
-          tx (settlement-transaction (:account-id pending)
-                                     (:account-id cash)
+          tx (settlement-transaction (:ledger-account-id pending)
+                                     (:ledger-account-id cash)
                                      payment)
           recorded (transactions/record-transaction txn tx)
           {:keys [transaction-type legs]} recorded

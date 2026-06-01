@@ -61,27 +61,6 @@
   [product-version]
   (get-in product-version [:kind :sub-ledger :product-type]))
 
-(defn- resolve-control-account-id
-  "Find the GL control account-id matching the customer cash-account
-  being opened. Returns nil if the control product or account doesn't
-  exist yet (e.g. mid-seed). Returns the account-id string when
-  resolved."
-  [txn bank-id product-type]
-  (when-let [control-code (get domain/control-code-for-product-type
-                               product-type)]
-    (let-nom>
-      [control-product (products/find-product-by-gl-code
-                        txn
-                        bank-id
-                        control-code)]
-      (when control-product
-        (let-nom>
-          [control-account (store/find-account-by-product
-                            txn
-                            bank-id
-                            (:product-id control-product))]
-          (:account-id control-account))))))
-
 (defn open-account
   ([txn data]
    (open-account txn data {}))
@@ -102,16 +81,8 @@
                                 (product-type-of product-version)
                                 (party->account-type party)
                                 currency))
-           gl-control-account-id (when sub-ledger?
-                                   (resolve-control-account-id
-                                    txn
-                                    bank-id
-                                    (product-type-of product-version)))
            account (domain/open-account
-                    (cond-> data
-                            gl-control-account-id
-                            (assoc :gl-control-account-id
-                                   gl-control-account-id))
+                    data
                     product-version
                     party
                     (fn [counter]

@@ -8,18 +8,44 @@
      :as cash-accounts]
     [com.repldriven.mono.bank-cash-account-product.interface
      :as products]
-    [com.repldriven.mono.bank-chart-of-accounts.interface
-     :as chart-of-accounts]
+    [com.repldriven.mono.bank-ledger-account.interface
+     :as ledger-accounts]
     [com.repldriven.mono.identity-provider.interface
      :as identity-provider]
     [com.repldriven.mono.bank-party.interface :as party]
     [com.repldriven.mono.bank-policy.interface :as policy]
 
-    [com.repldriven.mono.error.interface :as error :refer [let-nom>]]))
+    [com.repldriven.mono.error.interface :as error :refer [let-nom>]]
 
-(def ^:private bank-type->party-type
-  {:bank-type-internal :party-type-internal
-   :bank-type-customer :party-type-organization})
+    [clojure.edn :as edn]
+    [clojure.java.io :as io]))
+
+(def ^:private default-ledger-accounts
+  "The default chart of bank-owned ledger accounts every customer bank
+  is seeded with, loaded once from the bank-bank resource."
+  (let [path "bank-bank/ledger-accounts.edn"
+        url (io/resource path)]
+    (when (nil? url)
+      (throw (ex-info "Default ledger-accounts resource missing" {:path path})))
+    (edn/read-string (slurp url))))
+
+(defn- new-ledger-accounts
+  "Seed the customer bank's default chart of bank-owned ledger
+  accounts — one `LedgerAccount` per default row per currency. Unlike
+  customer cash accounts these are bank-owned and flat: no party, no
+  product, no policy. Runs inside `new-bank`'s transaction, so a
+  failed row rolls the whole bank creation back."
+  [txn bank-id currencies]
+  (reduce (fn [_ [currency row]]
+            (let [result (ledger-accounts/new-account txn
+                                                      bank-id
+                                                      currency
+                                                      row)]
+              (if (error/anomaly? result) (reduced result) nil)))
+          nil
+          (for [currency currencies
+                row default-ledger-accounts]
+            [currency row])))
 
 (defn- bind-policies
   [txn bank-id policies]
@@ -92,26 +118,15 @@
              []
              banks))))
 
-(defn get-banks-by-type
-  [txn bank-type]
-  (store/get-banks-by-type txn bank-type))
-
-(defn- counts
-  [txn bank-type]
-  (let-nom>
-    [total (store/count-banks-by-type txn bank-type)]
-    {:bank {#{:type} total}}))
-
 (defn new-bank
-  ([txn bank-name bank-type bank-status tier currencies]
+  ([txn bank-name bank-status tier currencies]
    (new-bank txn
              bank-name
-             bank-type
              bank-status
              tier
              currencies
              {}))
-  ([txn bank-name bank-type bank-status tier currencies opts]
+  ([txn bank-name bank-status tier currencies opts]
    (store/transact
     txn
     (fn [txn]
@@ -121,19 +136,12 @@
          tier-policies (if (some? tier)
                          (policy/get-policies-by-tier txn tier)
                          [])
-         aggregates (counts txn bank-type)
-         bank (domain/new-bank bank-name
-                               bank-type
-                               bank-status
-                               aggregates
-                               policies)
+         bank (domain/new-bank bank-name bank-status policies)
          bank-id (:bank-id bank)
 
          ;; Issue the service-account client BEFORE the FDB write so an
          ;; identity-provider failure aborts the transaction cleanly.
-         ;; Client-id == bank-id (deterministic mapping). The
-         ;; internal-bank bootstrap provisions no IDP because the
-         ;; queenswood bank itself authenticates as admin; only callers
+         ;; Client-id == bank-id (deterministic mapping). Only callers
          ;; that pass `:identity-provider` get a client. `:audience`
          ;; is the JWT `aud` claim the IDP will stamp on tokens for
          ;; this client — the bank-api handler picks it from its own
@@ -148,23 +156,14 @@
 
          _ (store/create txn bank)
 
-         {:keys [party-id]} (party/new-party
-                             txn
-                             {:bank-id bank-id
-                              :type (bank-type->party-type bank-type)
-                              :display-name bank-name}
-                             {:policies policies})
+         _ (party/new-party
+            txn
+            {:bank-id bank-id
+             :type :party-type-organization
+             :display-name bank-name}
+            {:policies policies})
 
-         ;; The internal Queenswood bank doesn't transact and has no
-         ;; chart of accounts. Only customer banks seed the canonical
-         ;; CoA (1100/1200/2100/2200/2300/2400/2500) on their own
-         ;; organization-party.
-         _ (when (= :bank-type-customer bank-type)
-             (chart-of-accounts/seed! txn
-                                      bank-id
-                                      party-id
-                                      currencies
-                                      policies))
+         _ (new-ledger-accounts txn bank-id currencies)
 
          _ (bind-policies txn bank-id tier-policies)
 

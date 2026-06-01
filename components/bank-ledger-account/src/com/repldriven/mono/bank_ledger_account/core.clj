@@ -7,38 +7,13 @@
 
     [com.repldriven.mono.error.interface :as error :refer [let-nom>]]))
 
-(defn- seed-row
+(defn new-account
   [txn bank-id currency row]
   (let [account (domain/new-ledger-account bank-id currency row)]
     (let-nom>
       [_ (store/save-account txn account)
        _ (balances/new-balances txn [(domain/opening-balance account)])]
       account)))
-
-(defn- seed-currency
-  [txn bank-id currency]
-  (reduce (fn [acc row]
-            (let [result (seed-row txn bank-id currency row)]
-              (if (error/anomaly? result)
-                (reduced result)
-                (conj acc result))))
-          []
-          domain/template))
-
-(defn seed!
-  [txn bank-id currencies]
-  (store/transact
-   txn
-   (fn [txn]
-     (reduce (fn [acc currency]
-               (let [result (seed-currency txn bank-id currency)]
-                 (if (error/anomaly? result)
-                   (reduced result)
-                   (into acc result))))
-             []
-             currencies))
-   :ledger-account/seed
-   "Failed to seed ledger accounts"))
 
 (defn get-account
   [txn bank-id ledger-account-id]
