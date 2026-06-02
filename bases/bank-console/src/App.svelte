@@ -28,7 +28,7 @@
     // Kicker is the org name when /v1/me has surfaced it. If absent
     // (older bank-api that hasn't been restarted yet), pass undefined
     // — PageHeader hides empty kickers cleanly.
-    const kicker = memberships?.[0]?.["organization-name"];
+    const kicker = memberships?.[0]?.["bank-name"];
     authRoutes = {
       "/products": wrap({
         component: Products,

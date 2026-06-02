@@ -7,19 +7,19 @@
   // Read `defaultName` inside onMount, not at module scope: Svelte 5
   // would otherwise snapshot the prop and never see later updates,
   // and the static analysis fires `state_referenced_locally`.
-  let organization_name = $state("");
+  let bank_name = $state("");
   let submitting = $state(false);
   let error_message = $state(null);
 
   onMount(() => {
-    organization_name = defaultName;
+    bank_name = defaultName;
   });
 
   async function submit() {
-    if (!organization_name.trim() || submitting) return;
+    if (!bank_name.trim() || submitting) return;
     submitting = true;
     error_message = null;
-    const { status, body } = await onboard(organization_name.trim());
+    const { status, body } = await onboard(bank_name.trim());
     submitting = false;
     if (status === 201) {
       onComplete(body);
@@ -35,14 +35,14 @@
   <main class="wrap">
     <span class="eyebrow">Console · onboarding</span>
     <h2>Welcome to <em>Queenswood.</em></h2>
-    <p class="lede">Name your organization to finish setting up your account.</p>
+    <p class="lede">Name your bank to finish setting up your account.</p>
 
     <form class="card" onsubmit={(e) => { e.preventDefault(); submit(); }}>
-      <label for="org">Organization name</label>
+      <label for="bank">Bank name</label>
       <input
-        id="org"
+        id="bank"
         type="text"
-        bind:value={organization_name}
+        bind:value={bank_name}
         placeholder="Acme Bank"
         disabled={submitting}
         required
@@ -53,7 +53,7 @@
       <button
         type="submit"
         class="btn solid"
-        disabled={!organization_name.trim() || submitting}
+        disabled={!bank_name.trim() || submitting}
       >
         {submitting ? "Creating…" : "Continue"}
       </button>

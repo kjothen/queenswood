@@ -36,7 +36,7 @@
   let drawerMode = $state("read");
   let drawerTarget = $state(null);
 
-  const kicker = $derived(memberships?.[0]?.["organization-name"]);
+  const kicker = $derived(memberships?.[0]?.["bank-name"]);
 
   // bank-api `PartyStatus` enum → bank-ui Badge tones.
   const TONE = {

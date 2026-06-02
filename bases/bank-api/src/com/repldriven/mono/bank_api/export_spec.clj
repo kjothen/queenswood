@@ -10,10 +10,16 @@
   [& [out-path]]
   (let [path (or out-path "docs/openapi.yaml")
         handler (api/app {:interceptors []})
-        body (-> {:request-method :get :uri "/openapi.json"}
-                 handler
-                 :body)
-        spec (json/read-str (slurp body) :key-fn keyword)]
+        {:keys [status body]} (handler {:request-method :get
+                                        :uri "/openapi.json"})
+        body-str (slurp body)
+        ;; Fail loudly rather than write the error body as the "spec" —
+        ;; a silently-stubbed openapi.yaml is how the broken build went
+        ;; unnoticed.
+        _ (when (not= 200 status)
+            (throw (ex-info (str "OpenAPI build failed (status " status ")")
+                            {:status status :body body-str})))
+        spec (json/read-str body-str :key-fn keyword)]
     (io/make-parents path)
     (spit path
           (yaml/generate-string spec
