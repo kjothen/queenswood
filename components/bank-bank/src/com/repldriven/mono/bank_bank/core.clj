@@ -47,6 +47,50 @@
                 row default-ledger-accounts]
             [currency row])))
 
+(defn- new-house-account
+  "Create the bank's own-funds product in `currency` and open the
+  house cash account under it on the bank's org party. This is the
+  bank's own money: it rolls up into the 3100 own-funds control (not a
+  customer-deposit control), and the bank pre-funds it so it can pay
+  customers from inside the bank (rewards, etc.). An ordinary
+  `CashAccount` — BBAN-addressable, transactable — so external funding
+  can land in it and internal transfers can move out of it."
+  [txn bank-id party-id currency policies]
+  (let-nom>
+    [version (products/new-product
+              txn
+              bank-id
+              {:name "Bank own funds"
+               :currency currency
+               :kind {:sub-ledger
+                      {:product-type :product-type-sub-ledger-own-funds}}}
+              {:policies policies})
+     _ (products/publish txn
+                         bank-id
+                         (:product-id version)
+                         (:version-id version)
+                         {:policies policies})]
+    (cash-accounts/new-account
+     txn
+     {:bank-id bank-id
+      :party-id party-id
+      :product-id (:product-id version)
+      :currency currency
+      :name "Bank own funds"}
+     {:policies policies})))
+
+(defn- new-house-accounts
+  [txn bank-id party-id currencies policies]
+  (reduce (fn [_ currency]
+            (let [result (new-house-account txn
+                                            bank-id
+                                            party-id
+                                            currency
+                                            policies)]
+              (if (error/anomaly? result) (reduced result) nil)))
+          nil
+          currencies))
+
 (defn- bind-policies
   [txn bank-id policies]
   (reduce (fn [_ {:keys [policy-id]}]
@@ -156,14 +200,16 @@
 
          _ (store/create txn bank)
 
-         _ (party/new-party
-            txn
-            {:bank-id bank-id
-             :type :party-type-organization
-             :display-name bank-name}
-            {:policies policies})
+         {:keys [party-id]} (party/new-party
+                             txn
+                             {:bank-id bank-id
+                              :type :party-type-organization
+                              :display-name bank-name}
+                             {:policies policies})
 
          _ (new-ledger-accounts txn bank-id currencies)
+
+         _ (new-house-accounts txn bank-id party-id currencies policies)
 
          _ (bind-policies txn bank-id tier-policies)
 

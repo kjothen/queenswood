@@ -26,7 +26,8 @@
                            "PRODUCT_TYPE_GENERAL_LEDGER",
                            "PRODUCT_TYPE_SUB_LEDGER_CURRENT",
                            "PRODUCT_TYPE_SUB_LEDGER_SAVINGS",
-                           "PRODUCT_TYPE_SUB_LEDGER_TERM_DEPOSIT"]}},
+                           "PRODUCT_TYPE_SUB_LEDGER_TERM_DEPOSIT",
+                           "PRODUCT_TYPE_SUB_LEDGER_OWN_FUNDS"]}},
     {"name": "payment_addresses",
      "type": {"type": "array",
               "items": {

@@ -41,22 +41,27 @@
          {:keys [path body]} parameters
          {:keys [bank-id]} path
          {:keys [account-id amount currency]} body
-         suspense (ledger-accounts/find-by-code
-                   {:record-db record-db :record-store record-store}
-                   bank-id
-                   "2500")]
-     (if (or (nil? suspense) (error/anomaly? suspense))
+         ;; A simulated inbound is money arriving from another bank for
+         ;; a known account, so it lands in the bank's 1100 cash-at-
+         ;; correspondent (asset up) and credits the target account.
+         ;; Suspense (2500) is reserved for genuinely unmatched inbounds.
+         cash (ledger-accounts/find-by-code
+               {:record-db record-db :record-store record-store}
+               bank-id
+               "1100")]
+     (if (or (nil? cash) (error/anomaly? cash))
        (errors/anomaly->response
-        (error/fail :simulate/no-suspense-account
-                    {:message
-                     "Bank has no 2500 suspense account in its chart"
-                     :bank-id bank-id}))
+        (error/fail
+         :simulate/no-cash-at-correspondent-account
+         {:message
+          "Bank has no 1100 cash-at-correspondent account in its chart"
+          :bank-id bank-id}))
        (let [txn {:record-db record-db :record-store record-store}
              account (cash-accounts/get-account txn bank-id account-id)
              product-type (when (and (map? account)
                                      (not (error/anomaly? account)))
                             (:product-type account))
-             legs [{:account-id (:ledger-account-id suspense)
+             legs [{:account-id (:ledger-account-id cash)
                     :balance-type :balance-type-default
                     :balance-status :balance-status-posted
                     :side :leg-side-debit

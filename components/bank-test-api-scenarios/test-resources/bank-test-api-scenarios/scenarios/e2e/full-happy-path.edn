@@ -4,12 +4,14 @@
  ;; Mirrors bank-test-scenarios/full-happy-path.edn end-to-end via
  ;; the API:
  ;;
- ;;   - Customer bank (settlement account auto-created)
+ ;;   - Customer bank (own-funds house account auto-created)
  ;;   - Two products: current (rate 0) and savings (rate 3650 bps)
  ;;   - Two person parties — Arthur and Ford — each with a current
  ;;     and a savings account
- ;;   - Settlement funded with £50,000 via the simulate endpoint
- ;;   - Each party rewarded £1,000 into their current account
+ ;;   - The bank's own-funds account funded with £50,000 from outside
+ ;;     via the simulate endpoint (DEBIT 1100 cash-at-correspondent)
+ ;;   - Each party rewarded £1,000 from the bank's own funds via an
+ ;;     internal transfer (the bank pays customers from inside)
  ;;   - Arthur moves £750 current → savings
  ;;   - Ford moves £350 current → savings
  ;;   - Ford pays £25 outbound through the scheme path
@@ -215,14 +217,16 @@
    :until {:status 200 :body {:account-status "opened"}}}
 
   ;; --- Money in ---------------------------------------------------
-  ;; £50,000 into settlement
+  ;; £50,000 from outside into the bank's own-funds house account
+  ;; (DEBIT 1100 cash-at-correspondent / CREDIT the house account,
+  ;; which rolls up into the 3100 own-funds control)
   {:command :api/request
    :request {:method :post
              :path "/v1/simulate/banks/{bank-id}/inbound-transfer"
              :path-params {:bank-id [:ref :bank-0 :bank-id]}
              :auth :admin
              :headers {:idempotency-key "ik-fhp-inbound-settlement"}
-             :body {:account-id [:ref-find :bank-0 :accounts :gl-code "1100" :account-id]
+             :body {:account-id [:ref :bank-0 :accounts 0 :account-id]
                     :amount 5000000
                     :currency "GBP"}}
    :assert {:status 200}}
@@ -233,7 +237,7 @@
              :path "/v1/payments/internal"
              :auth :bank-0-token
              :headers {:idempotency-key "ik-fhp-reward-arthur"}
-             :body {:debtor-account-id [:ref-find :bank-0 :accounts :gl-code "1100" :account-id]
+             :body {:debtor-account-id [:ref :bank-0 :accounts 0 :account-id]
                     :creditor-account-id [:ref :arthur-current :account-id]
                     :currency "GBP"
                     :amount 100000
@@ -244,7 +248,7 @@
              :path "/v1/payments/internal"
              :auth :bank-0-token
              :headers {:idempotency-key "ik-fhp-reward-ford"}
-             :body {:debtor-account-id [:ref-find :bank-0 :accounts :gl-code "1100" :account-id]
+             :body {:debtor-account-id [:ref :bank-0 :accounts 0 :account-id]
                     :creditor-account-id [:ref :ford-current :account-id]
                     :currency "GBP"
                     :amount 100000
@@ -299,7 +303,7 @@
  ;; Give the chain ~2s to settle before checking balances.
  ;;
  ;; --- Pre-interest balances --------------------------------------
- ;;   settlement (acct-0): 5_000_000 - 100_000 - 100_000 = 4_800_000
+ ;;   own-funds (house): 5_000_000 - 100_000 - 100_000 = 4_800_000
  ;;   Arthur cur          1_000_00 - 750_00 + 25_00   =    27_500
  ;;   Arthur sav                  + 750_00            =    75_000
  ;;   Ford   cur          1_000_00 - 350_00 - 25_00   =    62_500
@@ -308,7 +312,7 @@
   {:command :api/request
    :request {:method :get
              :path "/v1/cash-accounts/{account-id}/balances"
-             :path-params {:account-id [:ref-find :bank-0 :accounts :gl-code "1100" :account-id]}
+             :path-params {:account-id [:ref :bank-0 :accounts 0 :account-id]}
              :auth :bank-0-token}
    :assert {:status 200
             :body {:available-balance {:value 4800000 :currency "GBP"}}}}
@@ -346,7 +350,8 @@
   ;;   Arthur sav  75_000 → 75p accrued
   ;;   Ford   sav  35_000 → 35p accrued
   ;; Both land in customer.interest-accrued (not visible in
-  ;; available); settlement.interest-payable goes -110.
+  ;; available); the offset is the bank's 2400 interest-payable
+  ;; ledger account. The own-funds house account is untouched.
   {:command :api/request
    :request {:method :post
              :path "/v1/simulate/banks/{bank-id}/accrue"
@@ -356,20 +361,22 @@
              :body {:as-of-date "2026-05-01"}}
    :assert {:status 200}}
 
-  ;; settlement now also has interest-payable -110
+  ;; The own-funds house account is unaffected by interest (the
+  ;; offset is the 2400 interest-payable ledger control), so it
+  ;; still reads 4_800_000.
   {:command :api/request
    :request {:method :get
              :path "/v1/cash-accounts/{account-id}/balances"
-             :path-params {:account-id [:ref-find :bank-0 :accounts :gl-code "1100" :account-id]}
+             :path-params {:account-id [:ref :bank-0 :accounts 0 :account-id]}
              :auth :bank-0-token}
    :assert {:status 200
             :body {:available-balance {:value 4800000 :currency "GBP"}}}}
 
-  ;; Capitalisation:
-  ;;   settlement.default      -= 75 + 35 → 4_799_890
+  ;; Capitalisation moves each saver's accrued interest into their
+  ;; spendable default-posted balance, offset by the 2400 ledger:
   ;;   Arthur savings.default  += 75      →    75_075
   ;;   Ford   savings.default  += 35      →    35_035
-  ;;   current accounts unchanged.
+  ;;   current + own-funds accounts unchanged.
   {:command :api/request
    :request {:method :post
              :path "/v1/simulate/banks/{bank-id}/capitalize"
@@ -382,7 +389,7 @@
   {:command :api/request
    :request {:method :get
              :path "/v1/cash-accounts/{account-id}/balances"
-             :path-params {:account-id [:ref-find :bank-0 :accounts :gl-code "1100" :account-id]}
+             :path-params {:account-id [:ref :bank-0 :accounts 0 :account-id]}
              :auth :bank-0-token}
    :assert {:status 200
             :body {:available-balance {:value 4800000 :currency "GBP"}}}}
