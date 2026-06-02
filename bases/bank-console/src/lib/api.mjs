@@ -35,10 +35,10 @@ export function get_me() {
   return request("/v1/me");
 }
 
-export function onboard(organization_name) {
+export function onboard(bank_name) {
   return mutate("/v1/onboarding/me", {
     method: "POST",
-    body: JSON.stringify({ "organization-name": organization_name }),
+    body: JSON.stringify({ "bank-name": bank_name }),
   });
 }
 

@@ -64,12 +64,17 @@
       rateBps = target["interest-rate-bps"] ?? 0;
       nameTouched = true;
     } else {
-      productType = templates[0]?.["product-type"] ?? "current";
+      // Compute from locals, not the productType/currency state we're
+      // assigning — reading that state here would make this effect
+      // depend on it and re-fire (resetting to the default) on every
+      // edit, pinning the form to templates[0].
+      const t = templates[0]?.["product-type"] ?? "current";
       const allowed = templates[0]?.["allowed-currencies"] ?? ["GBP"];
+      productType = t;
       currency = allowed[0];
       rateBps = 0;
       nameTouched = false;
-      name = defaultName(productType, currency);
+      name = defaultName(t, allowed[0]);
     }
   });
 
@@ -92,7 +97,7 @@
   const productTypes = $derived(
     templates.length > 0
       ? templates.map((t) => t["product-type"])
-      : ["current", "savings", "loan", "deposit"],
+      : ["current", "savings", "term-deposit"],
   );
 
   // Recompute the default name when type/currency change, unless the
@@ -187,7 +192,7 @@
 >
   <form id="product-form" onsubmit={submit}>
     <Field label="Account type" htmlFor="f-type">
-      <Select id="f-type" value={productType} onchange={onTypeChange}>
+      <Select id="f-type" bind:value={productType} onchange={onTypeChange}>
         {#each productTypes as t (t)}
           <option value={t}>{t}</option>
         {/each}
@@ -195,7 +200,7 @@
     </Field>
 
     <Field label="Currency" htmlFor="f-ccy">
-      <Select id="f-ccy" value={currency} onchange={onCurrencyChange}>
+      <Select id="f-ccy" bind:value={currency} onchange={onCurrencyChange}>
         {#each allowedCurrencies as c (c)}
           <option value={c}>{c}</option>
         {/each}

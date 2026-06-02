@@ -46,7 +46,7 @@
   // The kicker is the org's name when /v1/me has surfaced it.
   // When absent we leave it undefined; PageHeader hides empty
   // kickers cleanly, which beats a stand-in "Console" placeholder.
-  const kicker = $derived(memberships?.[0]?.["organization-name"]);
+  const kicker = $derived(memberships?.[0]?.["bank-name"]);
 
   // Backend statuses map straight to bank-ui badge tones except for
   // `discarded`, which is conceptually archived from the UI's POV.

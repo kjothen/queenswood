@@ -14,10 +14,7 @@
     {:openapi {:tags ["OAuth"] :security []}}
     ["/token"
      {:post {:summary "Exchange client_credentials for a JWT"
-             :openapi {:operationId "TokenExchange"
-                       :requestBody {:content
-                                     {"application/x-www-form-urlencoded"
-                                      {:schema [:ref "TokenRequest"]}}}}
+             :openapi {:operationId "TokenExchange"}
              :parameters {:form [:ref "TokenRequest"]}
              :responses {200 {:body [:ref "TokenResponse"]}
                          400 {:body [:ref "TokenError"]}

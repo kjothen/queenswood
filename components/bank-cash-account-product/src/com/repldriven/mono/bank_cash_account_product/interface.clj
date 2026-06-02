@@ -159,14 +159,21 @@
   [txn bank-id gl-code]
   (store/find-product-by-gl-code txn bank-id gl-code))
 
+(def ^:private internal-product-types
+  "Product types the bank provisions for its own internal accounts
+  (not customer-facing instruments), excluded from the product-template
+  menu an operator chooses from."
+  #{:product-type-sub-ledger-own-funds})
+
 (defn list-templates
-  "Return all per-product-type templates as a vector of maps with a
-  `:product-type` key plus the derived fields applied at product
-  creation. Static today, loaded from classpath at brick init;
+  "Return the customer-facing per-product-type templates as a vector of
+  maps with a `:product-type` key plus the derived fields applied at
+  product creation. Static today, loaded from classpath at brick init;
   intended to move to per-organization FDB records later so an
   operator can author their own product templates."
   []
   (->> resources/product-defaults
+       (remove (fn [[t _]] (contains? internal-product-types t)))
        (map (fn [[t fields]] (assoc fields :product-type t)))
        (sort-by :product-type)
        vec))
