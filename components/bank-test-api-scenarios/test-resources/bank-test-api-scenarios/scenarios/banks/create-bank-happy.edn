@@ -17,10 +17,13 @@
                    :client-id [:m/regex "^bnk\\."]
                    :client-secret [:m/regex ".+"]
                    :party {:party-id [:m/regex "^pty\\."]}
-                   ;; A fresh bank owns its chart of bank-owned ledger
-                   ;; accounts (see /ledger-accounts) but no customer
-                   ;; cash accounts yet.
-                   :accounts []}}}]
+                   ;; A fresh bank owns its chart of ledger accounts
+                   ;; (see /ledger-accounts) plus one cash account: the
+                   ;; own-funds house account it funds and pays
+                   ;; customers from.
+                   :accounts [:m/embeds
+                              [{:account-id [:m/regex "^acc\\."]
+                                :balances [:m/non-empty]}]]}}}]
  :then
  [{:command :api/request
    :request {:method :get

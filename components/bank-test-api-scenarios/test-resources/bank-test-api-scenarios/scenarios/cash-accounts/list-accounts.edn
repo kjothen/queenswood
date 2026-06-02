@@ -125,9 +125,9 @@
    :until {:status 200 :body {:account-status "opened"}}}]
 
  :when
- ;; Exactly the 2 accounts we opened: a fresh bank owns its chart of
- ;; bank-owned ledger accounts (see /ledger-accounts) but no customer
- ;; cash accounts of its own. Walk the size=1 pagination across both.
+ ;; 3 cash-accounts exist: the bank's own-funds house account (created
+ ;; at provisioning) plus the 2 we opened. Walk the size=1 pagination
+ ;; chain across all three pages.
  [{:command :api/request
    :request {:method :get
              :path "/v1/cash-accounts"
@@ -138,6 +138,7 @@
             :body {:cash-accounts
                    [{:account-id
                      [:m/any-of
+                      [:m/equals [:ref :org-0 :accounts 0 :account-id]]
                       [:m/equals [:ref :account-1 :account-id]]
                       [:m/equals [:ref :account-2 :account-id]]]}]
                    :links {:next [:m/regex ".+"]
@@ -146,10 +147,25 @@
    :request {:method :get
              :url [:ref :page-1 :links :next]
              :auth :org-0-token}
+   :as :page-2
    :assert {:status 200
             :body {:cash-accounts
                    [{:account-id
                      [:m/any-of
+                      [:m/equals [:ref :org-0 :accounts 0 :account-id]]
+                      [:m/equals [:ref :account-1 :account-id]]
+                      [:m/equals [:ref :account-2 :account-id]]]}]
+                   :links {:next [:m/regex ".+"]
+                           :prev [:m/regex ".+"]}}}}
+  {:command :api/request
+   :request {:method :get
+             :url [:ref :page-2 :links :next]
+             :auth :org-0-token}
+   :assert {:status 200
+            :body {:cash-accounts
+                   [{:account-id
+                     [:m/any-of
+                      [:m/equals [:ref :org-0 :accounts 0 :account-id]]
                       [:m/equals [:ref :account-1 :account-id]]
                       [:m/equals [:ref :account-2 :account-id]]]}]
                    :links {:next [:m/absent]

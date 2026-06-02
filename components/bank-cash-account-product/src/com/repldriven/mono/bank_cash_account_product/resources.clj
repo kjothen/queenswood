@@ -17,7 +17,8 @@
 (def ^:private product-types
   [:product-type-sub-ledger-current
    :product-type-sub-ledger-savings
-   :product-type-sub-ledger-term-deposit])
+   :product-type-sub-ledger-term-deposit
+   :product-type-sub-ledger-own-funds])
 
 (defn- type->resource
   [product-type]

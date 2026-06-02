@@ -1,7 +1,8 @@
 ;; The default chart of bank-owned ledger accounts every customer bank
 ;; is seeded with at provisioning time. One LedgerAccount per row per
-;; currency. 2100/2200/2300 are sub-ledger control accounts; the rest
-;; are detail accounts.
+;; currency. 2100/2200/2300 (customer deposits) and 3100 (the bank's
+;; own funds) are sub-ledger control accounts; the rest are detail
+;; accounts.
 [{:gl-code "1100"
   :name "Cash at correspondent"
   :gl-account-type :gl-account-type-asset
@@ -36,4 +37,9 @@
   :name "Suspense - unreconciled inbound"
   :gl-account-type :gl-account-type-liability
   :gl-account-class :gl-account-class-detail
+  :required :required-mandatory}
+ {:gl-code "3100"
+  :name "Bank own funds"
+  :gl-account-type :gl-account-type-equity
+  :gl-account-class :gl-account-class-control
   :required :required-mandatory}]

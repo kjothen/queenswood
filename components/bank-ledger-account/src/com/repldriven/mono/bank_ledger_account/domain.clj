@@ -3,13 +3,15 @@
     [com.repldriven.mono.utility.interface :as utility]))
 
 (def control-code-for-product-type
-  "Maps a customer cash-account product type to the `:gl-code` of the
-  control ledger account its balance rolls up into. Postings on
-  customer accounts fan out to the matching control so the control
-  balance is always the live roll-up of its sub-ledger."
+  "Maps a cash-account product type to the `:gl-code` of the control
+  ledger account its balance rolls up into. Postings on those accounts
+  fan out to the matching control so the control balance is always the
+  live roll-up of its sub-ledger. Customer deposits roll into
+  2100/2200/2300; the bank's own funding account rolls into 3100."
   {:product-type-sub-ledger-current "2100"
    :product-type-sub-ledger-savings "2200"
-   :product-type-sub-ledger-term-deposit "2300"})
+   :product-type-sub-ledger-term-deposit "2300"
+   :product-type-sub-ledger-own-funds "3100"})
 
 (defn new-ledger-account
   "Build a `LedgerAccount` map for one template `row` in `currency`,

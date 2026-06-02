@@ -6,6 +6,7 @@
   (coercion/enum-coercion {"current" :product-type-sub-ledger-current
                            "savings" :product-type-sub-ledger-savings
                            "term-deposit" :product-type-sub-ledger-term-deposit
+                           "own-funds" :product-type-sub-ledger-own-funds
                            "general-ledger" :product-type-general-ledger}
                           :product-type-unknown))
 

@@ -14,7 +14,10 @@
   [:map
    [:leg-id [:ref "LegId"]]
    [:transaction-id [:ref "TransactionId"]]
-   [:account-id [:ref "CashAccountId"]]
+   ;; A leg targets any account in the shared account-id space: a
+   ;; customer/house cash account (acc.) or a bank-owned ledger
+   ;; control/detail account (led.) added by control fan-out.
+   [:account-id [:or [:ref "CashAccountId"] [:ref "LedgerAccountId"]]]
    [:balance-type [:ref "BalanceType"]]
    [:balance-status [:ref "BalanceStatus"]]
    [:side [:ref "LegSide"]]
