@@ -52,6 +52,6 @@
    (fn [txn]
      (mapv schema/pb->LedgerAccount
            (:records (fdb/scan-records (fdb/open txn store-name)
-                                       {:prefix [bank-id]}))))
+                                       {:prefix [bank-id] :limit 1000}))))
    :ledger-account/list
    "Failed to list ledger accounts"))

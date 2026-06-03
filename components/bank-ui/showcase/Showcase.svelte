@@ -16,6 +16,7 @@
     Sidenav, SidenavGroup, SidenavItem,
     PageHeader, Drawer,
     Table, Thead, Tbody, Tr, Th, Td,
+    Expander, MoneyCell, Phase, sumMinor,
     Field, Input, Select,
     Card, CardHeader, CardBody, CardFooter, CodeCard,
     themeState, resolvedTheme,
@@ -37,6 +38,7 @@
     { id: "sidenav",    label: "Sidenav" },
     { id: "drawer",     label: "Drawer" },
     { id: "cards",      label: "Cards" },
+    { id: "ledger",     label: "Ledger tree-table" },
   ];
 
   const VARIANTS = [
@@ -102,6 +104,47 @@
   let demoCcy  = $state("GBP");
   let demoRate = $state(265);
   let drawerDemoOpen = $state(false);
+
+  // Demo state for the ledger tree-table (§16). Shapes mirror what the
+  // bank-console Ledger page builds from the ledger API: each balance is
+  // keyed by (balance-type, balance-status) and its `minor` is the signed
+  // net (credit − debit, credit-positive). The account total is the sum.
+  const LEDGER_ACCOUNTS = [
+    {
+      id: "led.01jq8wm4zr5k2c7d9f3h6n0pqx",
+      name: "Customer Deposits — GBP Pool", gl: "2100", ccy: "GBP",
+      balances: [
+        { type: "default", phase: "posted",            currency: "GBP", minor:  482014055 },
+        { type: "default", phase: "pending-incoming",  currency: "GBP", minor:    1230000 },
+        { type: "default", phase: "pending-outgoing",  currency: "GBP", minor:   -4598020 },
+      ],
+    },
+    {
+      id: "led.01jq8wmd2k7n3p6r9t1w4y8b5e",
+      name: "Cash at Correspondent — GBP", gl: "1100", ccy: "GBP",
+      balances: [
+        { type: "default",          phase: "posted", currency: "GBP", minor: -12845000 },
+        { type: "interest-accrued", phase: "posted", currency: "GBP", minor:   -120466 },
+      ],
+    },
+    {
+      id: "led.01jq8wmr3w6y9b2d5g8k1n4q7t",
+      name: "Settlement Suspense — GBP", gl: "1900", ccy: "GBP",
+      balances: [
+        { type: "default", phase: "posted",           currency: "GBP", minor:        0 },
+        { type: "default", phase: "pending-incoming", currency: "GBP", minor:  2450000 },
+        { type: "default", phase: "pending-outgoing", currency: "GBP", minor: -2450000 },
+      ],
+    },
+  ];
+
+  let ledgerOpen = $state(
+    Object.fromEntries(LEDGER_ACCOUNTS.map((a) => [a.id, true])),
+  );
+  const ledgerToggle = (id) => (ledgerOpen[id] = !ledgerOpen[id]);
+  const ledgerKey = (e, id) => {
+    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); ledgerToggle(id); }
+  };
 </script>
 
 <AppNav user={DEMO_USER} onSignOut={noop} />
@@ -736,6 +779,61 @@
 <span class="syn-comment">#</span> <span class="syn-emphasis">&#123; "id": "org_01HW7…",</span>
 <span class="syn-comment">#  </span>  <span class="syn-emphasis">"status": "active" &#125;</span></pre>
       </CodeCard>
+    </section>
+
+    <!-- =================== 16 Ledger tree-table =================== -->
+    <section id="ledger" class="section">
+      <div class="section-head">
+        <span class="kicker">16 — Ledger tree-table</span>
+        <h2>Accounts that decompose into their balances.</h2>
+        <p class="lead"><code>&lt;Table tree&gt;</code> turns a table into an expandable tree-table. An account row expands to the balances that comprise it; the available figure is their sum via <code>sumMinor</code>, so the tree is a real decomposition. <code>MoneyCell</code> tones by sign (negative → danger, zero → muted) and <code>Phase</code> marks the balance status. Rows are <code>role=button</code> + <code>tabindex=0</code> — Enter / Space toggle.</p>
+      </div>
+
+      <Table tree>
+        <Thead>
+          <Tr>
+            <Th />
+            <Th>ID</Th>
+            <Th>Name</Th>
+            <Th>GL Code</Th>
+            <Th align="right">Available Balance</Th>
+          </Tr>
+        </Thead>
+        <Tbody>
+          {#each LEDGER_ACCOUNTS as acc (acc.id)}
+            <Tr
+              expandable
+              expanded={ledgerOpen[acc.id]}
+              onclick={() => ledgerToggle(acc.id)}
+              onkeydown={(e) => ledgerKey(e, acc.id)}
+            >
+              <Td expander><Expander /></Td>
+              <Td mono muted>{acc.id}</Td>
+              <Td emphasized>{acc.name}<span class="qw-denom">{acc.ccy}</span></Td>
+              <Td mono>{acc.gl}</Td>
+              <MoneyCell
+                minor={sumMinor(acc.balances)} ccy={acc.ccy} emphasized
+                meta={`${acc.balances.length} balance${acc.balances.length === 1 ? "" : "s"}`} />
+            </Tr>
+            {#if ledgerOpen[acc.id]}
+              {#each acc.balances as b, i (b.type + ":" + b.phase)}
+                <Tr balance last={i === acc.balances.length - 1}>
+                  <Td expander />
+                  <Td />
+                  <Td addr>
+                    <span class="qw-tree-mark">
+                      <span class="qw-addr-path">{b.type}</span>
+                      <Phase phase={b.phase} />
+                    </span>
+                  </Td>
+                  <Td mono muted>{b.currency}</Td>
+                  <MoneyCell minor={b.minor} ccy={acc.ccy} />
+                </Tr>
+              {/each}
+            {/if}
+          {/each}
+        </Tbody>
+      </Table>
     </section>
 
     <footer class="foot">

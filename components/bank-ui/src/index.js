@@ -6,9 +6,11 @@
 //     Sidenav, SidenavGroup, SidenavItem,
 //     PageHeader, Drawer,
 //     Table, Thead, Tbody, Tr, Th, Td,
+//     Expander, MoneyCell, Phase,        // ← ledger tree-table
 //     Field, Input, Select,
 //     Card, CardHeader, CardBody, CardFooter, CodeCard,
 //   } from "@queenswood/bank-ui";
+//   import { formatMoney, moneyTone, sumMinor } from "@queenswood/bank-ui";
 //   import { bootstrapTheme, setTheme, themeState, resolvedTheme }
 //     from "@queenswood/bank-ui";
 //   import "@queenswood/bank-ui/tokens.css";
@@ -34,6 +36,12 @@ export { default as Tbody } from "./Tbody.svelte";
 export { default as Tr } from "./Tr.svelte";
 export { default as Th } from "./Th.svelte";
 export { default as Td } from "./Td.svelte";
+
+// Tree-table additions (ledger accounts → constituent balances).
+export { default as Expander } from "./Expander.svelte";
+export { default as MoneyCell } from "./MoneyCell.svelte";
+export { default as Phase } from "./Phase.svelte";
+export { formatMoney, moneyTone, sumMinor, CCY_SYMBOLS } from "./money.js";
 
 export { default as Field } from "./Field.svelte";
 export { default as Input } from "./Input.svelte";
