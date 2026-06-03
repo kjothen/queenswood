@@ -9,6 +9,7 @@
   import AppShell from "./lib/AppShell.svelte";
   import Products from "./lib/Products.svelte";
   import LegalPersons from "./lib/LegalPersons.svelte";
+  import LedgerAccounts from "./lib/LedgerAccounts.svelte";
   import ComingSoon from "./lib/ComingSoon.svelte";
 
   // Unauthenticated surfaces are URL-routed so /#/sign-in is shareable
@@ -36,6 +37,10 @@
       }),
       "/parties": wrap({
         component: LegalPersons,
+        props: { user, memberships },
+      }),
+      "/ledger": wrap({
+        component: LedgerAccounts,
         props: { user, memberships },
       }),
       "/accounts": wrap({

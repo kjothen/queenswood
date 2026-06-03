@@ -112,6 +112,22 @@ export function publish_cash_account_product(product_id, version_id) {
   );
 }
 
+// ─── Ledger accounts (org-scoped, read-only) ───
+//
+// The bank's chart of accounts (GL accounts). The list endpoint returns
+// the accounts without balances; each account's constituent balances —
+// keyed by (balance-type, balance-status) with credit/debit minor units —
+// come from a separate per-account endpoint. The Ledger page fetches the
+// list, then the balances for each account, to render the tree-table.
+
+export function list_ledger_accounts() {
+  return request("/v1/ledger-accounts");
+}
+
+export function list_ledger_account_balances(account_id) {
+  return request(`/v1/ledger-accounts/${account_id}/balances`);
+}
+
 // ─── Parties (org-scoped) ───
 //
 // bank-api `Party` shape carries summary fields only (party-id, type,

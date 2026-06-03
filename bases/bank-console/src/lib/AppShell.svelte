@@ -54,6 +54,16 @@
         {/snippet}
         Legal Persons
       </SidenavItem>
+      <SidenavItem href="#/ledger" title="Ledger Accounts" current={isCurrent("/ledger")}>
+        {#snippet icon()}
+          <svg viewBox="0 0 16 16" aria-hidden="true">
+            <path d="M3 2.5 H11 A1.5 1.5 0 0 1 12.5 4 V13.5 H4.5 A1.5 1.5 0 0 1 3 12 Z" />
+            <path d="M3 12 A1.5 1.5 0 0 1 4.5 10.5 H12.5" />
+            <path d="M5.5 5.5 H10" />
+          </svg>
+        {/snippet}
+        Ledger
+      </SidenavItem>
       <SidenavItem href="#/accounts" title="Accounts" current={isCurrent("/accounts")}>
         {#snippet icon()}
           <svg viewBox="0 0 16 16" aria-hidden="true">

@@ -7,13 +7,21 @@
        tabular     tabular numeric figures (numbers in columns)
        align       "right" | "center" (default left)
 
-     Combine freely: <Td mono muted>...</Td>, <Td align="right" mono tabular>...</Td>. */
+     Tree-table modifiers:
+       expander    narrow leftmost cell that holds the <Expander /> chevron
+       addr        balance-address cell — monospace, indented, draws the
+                   tree connector elbow before its content
+
+     Combine freely: <Td mono muted>…</Td>, <Td align="right" mono tabular>…</Td>.
+     For currency figures prefer <MoneyCell> over <Td tabular>. */
 
   let {
     mono = false,
     muted = false,
     emphasized = false,
     tabular = false,
+    expander = false,
+    addr = false,
     align,
     children,
     ...rest
@@ -25,6 +33,8 @@
   class:qw-td-muted={muted}
   class:qw-td-emphasized={emphasized}
   class:qw-td-tabular={tabular}
+  class:qw-cell-expander={expander}
+  class:qw-cell-addr={addr}
   class:qw-cell-right={align === "right"}
   class:qw-cell-center={align === "center"}
   {...rest}
