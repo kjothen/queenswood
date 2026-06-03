@@ -17,6 +17,7 @@
     PageHeader, Drawer,
     Table, Thead, Tbody, Tr, Th, Td,
     Expander, MoneyCell, Phase, sumMinor,
+    PolicyMatrix, CATEGORY_TONE,
     Field, Input, Select,
     Card, CardHeader, CardBody, CardFooter, CodeCard,
     themeState, resolvedTheme,
@@ -39,6 +40,7 @@
     { id: "drawer",     label: "Drawer" },
     { id: "cards",      label: "Cards" },
     { id: "ledger",     label: "Ledger tree-table" },
+    { id: "policies",   label: "Policies" },
   ];
 
   const VARIANTS = [
@@ -145,6 +147,69 @@
   const ledgerKey = (e, id) => {
     if (e.key === "Enter" || e.key === " ") { e.preventDefault(); ledgerToggle(id); }
   };
+
+  // Demo state for the policy matrix (§17). The two sample policies are
+  // already in the flattened view-model shape (the bank-console adapter
+  // produces this from the wire) — amounts in MINOR units.
+  const cap = (effect, domain, action, reason, filters = []) =>
+    ({ effect, domain, action, reason, filters });
+  const lim = (domain, bound, reason, extra = {}) =>
+    ({ domain, bound, reason, filters: extra.filters ?? [], allow: extra.allow ?? null });
+  const maxC = (value, window) => ({ kind: "max", aggregate: { type: "count", value, window } });
+  const minA = (minor, ccy, window) => ({ kind: "min", aggregate: { type: "amount", minor, ccy, window } });
+  const rangeA = (loMinor, hiMinor, ccy, window) => ({
+    kind: "range",
+    min: { type: "amount", minor: loMinor, ccy, window },
+    max: { type: "amount", minor: hiMinor, ccy, window },
+  });
+
+  const POLICIES = [
+    {
+      policyId: "pol.00000000000000000000000001",
+      name: "Platform policy",
+      description: "The platform baseline bound to every bank. Grants every domain action and caps each with a platform ceiling.",
+      enabled: true,
+      category: "restricted",
+      capabilities: [
+        cap("allow", "balance", "create", "Allow creating balances"),
+        cap("allow", "balance", "apply", "Allow applying transaction legs to balances"),
+        cap("allow", "cash_account", "open", "Allow opening cash accounts"),
+        cap("allow", "outbound_payment", "send", "Allow outbound payments"),
+        cap("allow", "party", "create", "Allow creating parties"),
+      ],
+      limits: [
+        lim("balance", minA(0, "GBP", "instant"), "Available balance must stay non-negative on user-driven transfers.", {
+          allow: "improving",
+          filters: [{ key: "computed", value: "available" }, { key: "txn", value: "internal-transfer" }, { key: "txn", value: "outbound-transfer" }],
+        }),
+        lim("outbound_payment", maxC(100000, "daily"), "Max 100,000 outbound payments per day."),
+        lim("party", maxC(100000, "instant"), "Max 100,000 parties."),
+      ],
+    },
+    {
+      policyId: "pol.0000000000000000000000000a",
+      name: "Standard tier policy",
+      description: "The everyday tenant tier. Move money over Faster Payments within daily ceilings; cannot publish products.",
+      enabled: true,
+      category: "standard",
+      capabilities: [
+        cap("allow", "party", "create", "Register natural-person customers.", [{ key: "type", value: "natural-person" }]),
+        cap("allow", "outbound_payment", "send", "Send via UK Faster Payments.", [{ key: "scheme", value: "fps" }]),
+        cap("deny", "cash_account_product", "publish", "Standard tenants cannot publish their own products."),
+      ],
+      limits: [
+        lim("outbound_payment", rangeA(100, 1_000_000, "GBP", "instant"), "Single outbound payment between £1 and £10,000.", {
+          filters: [{ key: "scheme", value: "fps" }],
+        }),
+        lim("outbound_payment", { kind: "max", aggregate: { type: "amount", minor: 2_500_000, ccy: "GBP", window: "daily" } }, "Up to £25,000 sent per day."),
+      ],
+    },
+  ];
+
+  let policySelected = $state(0);
+  let policyShowUngoverned = $state(false);
+  let policyQuery = $state("");
+  const selectedPolicy = $derived(POLICIES[policySelected]);
 </script>
 
 <AppNav user={DEMO_USER} onSignOut={noop} />
@@ -836,6 +901,50 @@
       </Table>
     </section>
 
+    <!-- =================== 17 Policies =================== -->
+    <section id="policies" class="section">
+      <div class="section-head">
+        <span class="kicker">17 — Policies</span>
+        <h2>Capabilities and limits, per domain.</h2>
+        <p class="lead">A policy grants <strong>capabilities</strong> (an <code>allow</code>/<code>deny</code> on a domain action) and bounds them with <strong>limits</strong>. Pick a policy from the master table; <code>PolicyMatrix</code> reads it one row per domain, capabilities and limits side by side. <code>Effect</code>/<code>Bound</code>/<code>Improving</code>/<code>FilterChips</code> are the atoms; a limit marked <code>improving</code> is a curative permit.</p>
+      </div>
+
+      <Table>
+        <Thead>
+          <Tr>
+            <Th>Policy</Th>
+            <Th>Category</Th>
+            <Th align="right">Capabilities</Th>
+            <Th align="right">Limits</Th>
+          </Tr>
+        </Thead>
+        <Tbody>
+          {#each POLICIES as p, i (p.policyId)}
+            <Tr
+              role="button"
+              tabindex="0"
+              aria-selected={i === policySelected}
+              onclick={() => (policySelected = i)}
+              onkeydown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); policySelected = i; } }}
+            >
+              <Td emphasized>{p.name}</Td>
+              <Td><Badge tone={CATEGORY_TONE[p.category]}>{p.category}</Badge></Td>
+              <Td align="right" mono tabular>{p.capabilities.length}</Td>
+              <Td align="right" mono tabular>{p.limits.length}</Td>
+            </Tr>
+          {/each}
+        </Tbody>
+      </Table>
+
+      <div class="policy-controls">
+        <input type="search" bind:value={policyQuery} placeholder="Filter domains, actions, reasons…" />
+        <label><input type="checkbox" bind:checked={policyShowUngoverned} /> Show ungoverned domains</label>
+      </div>
+
+      <h3 class="policy-sub">{selectedPolicy.name}</h3>
+      <PolicyMatrix policy={selectedPolicy} showUngoverned={policyShowUngoverned} query={policyQuery} />
+    </section>
+
     <footer class="foot">
       <span class="foot-mark"><Logo variant="C" size={36} idPrefix="sc-foot" /></span>
       <span class="foot-text">
@@ -1383,4 +1492,40 @@
     gap: 20px;
   }
   .foot-text { font-size: 13px; color: var(--fg-muted); max-width: 60ch; }
+
+  /* §17 policy controls */
+  .policy-controls {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin: 16px 0 6px;
+  }
+  .policy-controls input[type="search"] {
+    height: 34px;
+    padding: 0 12px;
+    border-radius: 6px;
+    border: 1px solid var(--rule);
+    background: var(--surface-raised);
+    color: var(--fg);
+    font: inherit;
+    font-size: 13px;
+    min-width: 280px;
+  }
+  .policy-controls label {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 12px;
+    color: var(--fg-muted);
+  }
+  .policy-sub {
+    font-family: var(--grotesk);
+    font-weight: 600;
+    font-size: 16px;
+    margin: 6px 0 0;
+    color: var(--fg);
+  }
+  .section :global(.qw-table tbody tr[aria-selected="true"] td) {
+    background: light-dark(oklch(0.95 0.022 145), oklch(0.235 0.035 145));
+  }
 </style>

@@ -13,6 +13,20 @@
       (errors/anomaly->response result)
       {:status 200 :body {:policies (or (:items result) [])}})))
 
+(defn list-effective-policies
+  "Org-scoped: the policies effective for the caller's own bank — the
+  always-on platform tier plus any policies bound to the bank. Reads
+  `bank-id` from the request auth (a tenant principal carries it); an
+  admin without a bank-id sees just the platform tier."
+  [request]
+  (let [{:keys [record-db record-store auth]} request
+        {:keys [bank-id]} auth
+        config {:record-db record-db :record-store record-store}
+        result (policies/get-effective-policies config {:bank-id bank-id})]
+    (if (error/anomaly? result)
+      (errors/anomaly->response result)
+      {:status 200 :body {:policies result}})))
+
 (defn get-policy
   [request]
   (let [{:keys [record-db record-store parameters]} request

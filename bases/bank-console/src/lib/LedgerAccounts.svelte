@@ -38,8 +38,9 @@
   let loading = $state(true);
   let error = $state(null);
   let accounts = $state([]);
-  // Open-state map keyed by account id. Accounts start expanded so the
-  // decomposition is visible by default.
+  // Open-state map keyed by account id. Accounts start collapsed; the
+  // balance count sits in its own column, and Expand all reveals the
+  // decomposition on demand.
   let open = $state({});
 
   const kicker = $derived(memberships?.[0]?.["bank-name"]);
@@ -95,7 +96,7 @@
         }),
       );
       accounts = enriched;
-      open = Object.fromEntries(enriched.map((a) => [a.id, true]));
+      open = Object.fromEntries(enriched.map((a) => [a.id, false]));
     } catch (err) {
       error = err.message;
       accounts = [];
@@ -159,6 +160,7 @@
         <Th>ID</Th>
         <Th>Name</Th>
         <Th>GL Code</Th>
+        <Th align="right">Balances</Th>
         <Th align="right">Available Balance</Th>
       </Tr>
     </Thead>
@@ -174,12 +176,8 @@
           <Td mono muted>{acc.id}</Td>
           <Td emphasized>{acc.name}<span class="qw-denom">{acc.ccy}</span></Td>
           <Td mono>{acc.gl}</Td>
-          <MoneyCell
-            minor={sumMinor(acc.balances)}
-            ccy={acc.ccy}
-            emphasized
-            meta={`${acc.balances.length} balance${acc.balances.length === 1 ? "" : "s"}`}
-          />
+          <Td align="right" mono muted tabular>{acc.balances.length}</Td>
+          <MoneyCell minor={sumMinor(acc.balances)} ccy={acc.ccy} emphasized />
         </Tr>
         {#if open[acc.id]}
           {#each acc.balances as b, i (b.type + ":" + b.phase)}
@@ -193,6 +191,7 @@
                 </span>
               </Td>
               <Td mono muted>{b.currency}</Td>
+              <Td />
               <MoneyCell minor={b.minor} ccy={acc.ccy} />
             </Tr>
           {/each}

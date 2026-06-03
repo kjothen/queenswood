@@ -19,4 +19,11 @@
              :openapi {:operationId "GetPolicy"}
              :responses {200 {:body [:ref "Policy"]}
                          404 (ErrorResponse [#'PolicyNotFound])}
-             :handler queries/get-policy}}]]]])
+             :handler queries/get-policy}}]]]
+   ["/me/policies"
+    {:openapi {:tags ["Policies"] :security [{"bearerAuth" ["org"]}]}}
+    [""
+     {:get {:summary "List the policies effective for my bank"
+            :openapi {:operationId "ListEffectivePolicies"}
+            :responses {200 {:body [:ref "PolicyList"]}}
+            :handler queries/list-effective-policies}}]]])
