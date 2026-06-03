@@ -128,6 +128,18 @@ export function list_ledger_account_balances(account_id) {
   return request(`/v1/ledger-accounts/${account_id}/balances`);
 }
 
+// ─── Policies (org-scoped, read-only) ───
+//
+// The policies effective for the caller's own bank — the always-on
+// platform tier plus any bound to the bank. `/v1/policies` proper is
+// admin-only (the ops console); this `/me` variant is scoped to the
+// tenant via the bank-id on their token. The wire shape is the nested
+// protojure policy; policy-adapter.mjs flattens it for the matrix.
+
+export function list_my_policies() {
+  return request("/v1/me/policies");
+}
+
 // ─── Parties (org-scoped) ───
 //
 // bank-api `Party` shape carries summary fields only (party-id, type,

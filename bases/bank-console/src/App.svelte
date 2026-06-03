@@ -10,6 +10,7 @@
   import Products from "./lib/Products.svelte";
   import LegalPersons from "./lib/LegalPersons.svelte";
   import LedgerAccounts from "./lib/LedgerAccounts.svelte";
+  import Policies from "./lib/Policies.svelte";
   import ComingSoon from "./lib/ComingSoon.svelte";
 
   // Unauthenticated surfaces are URL-routed so /#/sign-in is shareable
@@ -48,8 +49,8 @@
         props: { name: "Accounts", kicker },
       }),
       "/policies": wrap({
-        component: ComingSoon,
-        props: { name: "Policies", kicker },
+        component: Policies,
+        props: { user, memberships },
       }),
       // Catch-all: render Products. Anyone landing on /#/ or a bad
       // path sees the default surface, matching what onboarding push.

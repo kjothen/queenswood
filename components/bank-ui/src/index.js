@@ -43,6 +43,24 @@ export { default as MoneyCell } from "./MoneyCell.svelte";
 export { default as Phase } from "./Phase.svelte";
 export { formatMoney, moneyTone, sumMinor, CCY_SYMBOLS } from "./money.js";
 
+// Policy matrix — atoms + the composed per-domain table, plus the
+// view-model helpers (DOMAINS / grouping) and bound formatting.
+export { default as Effect } from "./Effect.svelte";
+export { default as Bound } from "./Bound.svelte";
+export { default as Improving } from "./Improving.svelte";
+export { default as FilterChips } from "./FilterChips.svelte";
+export { default as PolicyMatrix } from "./PolicyMatrix.svelte";
+export {
+  DOMAINS,
+  DOMAIN_ORDER,
+  GROUP_ORDER,
+  CATEGORY_TONE,
+  groupByDomain,
+  sectionRows,
+} from "./policy.js";
+// CCY_SYMBOLS already exported from money.js (same constant); don't re-export.
+export { formatAggregate, boundOp, boundWindow, WINDOW_LABEL } from "./bounds.js";
+
 export { default as Field } from "./Field.svelte";
 export { default as Input } from "./Input.svelte";
 export { default as Select } from "./Select.svelte";

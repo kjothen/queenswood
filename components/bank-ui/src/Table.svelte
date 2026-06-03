@@ -108,6 +108,12 @@
     border-bottom: 1px solid var(--rule-2);
     white-space: nowrap;
   }
+  /* The header's default left-align outranks the .qw-cell-right utility
+     (more element selectors), so a `<Th align="right">` would otherwise
+     stay left while its body cells align right. Re-assert alignment on
+     the header with matching specificity so numeric columns line up. */
+  :global(.qw-table thead th.qw-cell-right)  { text-align: right; }
+  :global(.qw-table thead th.qw-cell-center) { text-align: center; }
   :global(.qw-table tbody td) {
     padding: 14px 16px;
     border-bottom: 1px solid var(--rule-2);
