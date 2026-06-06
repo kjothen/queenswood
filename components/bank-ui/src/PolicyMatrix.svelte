@@ -38,14 +38,21 @@
   // balances" next to an `allow create` badge is noise; suppress it.
   const capShowsReason = (c) => Boolean(c.reason) && (c.effect === "deny" || c.filters.length > 0);
 
+  // Provenance: present only on the effective (merged) view. The badge
+  // shows the origin tier (platform / micro / …), falling back to the
+  // policy name; the full name + id sit in the tooltip.
+  const originLabel = (o) => o?.tier ?? o?.name ?? null;
+  const originTitle = (o) => [o?.name, o?.policyId].filter(Boolean).join(" · ");
+  const originText = (o) => (o ? `${o.tier ?? ""} ${o.name ?? ""}` : "");
+
   function matchesQuery(row) {
     if (!q) return true;
     let hay = row.label.toLowerCase();
     if (row.data) {
       for (const c of row.data.caps)
-        hay += ` ${c.effect} ${c.action} ${c.reason ?? ""} ${c.filters.map((f) => f.key + f.value).join(" ")}`;
+        hay += ` ${c.effect} ${c.action} ${c.reason ?? ""} ${c.filters.map((f) => f.key + f.value).join(" ")} ${originText(c.origin)}`;
       for (const l of row.data.lims)
-        hay += ` ${l.reason ?? ""} ${l.allow ?? ""} ${l.filters.map((f) => f.key + f.value).join(" ")}`;
+        hay += ` ${l.reason ?? ""} ${l.allow ?? ""} ${l.filters.map((f) => f.key + f.value).join(" ")} ${originText(l.origin)}`;
     }
     return hay.toLowerCase().includes(q);
   }
@@ -101,6 +108,9 @@
                         <Effect effect={c.effect} />
                         <span class="m-action">{c.action}</span>
                         {#if c.filters.length}<FilterChips filters={c.filters} />{/if}
+                        {#if originLabel(c.origin)}
+                          <span class="m-origin" title={originTitle(c.origin)}>{originLabel(c.origin)}</span>
+                        {/if}
                       </div>
                       {#if capShowsReason(c)}<div class="m-reason">{c.reason}</div>{/if}
                     </div>
@@ -120,6 +130,9 @@
                       <div class="m-head">
                         <Bound bound={l.bound} />
                         {#if l.allow === "improving"}<Improving />{/if}
+                        {#if originLabel(l.origin)}
+                          <span class="m-origin" title={originTitle(l.origin)}>{originLabel(l.origin)}</span>
+                        {/if}
                       </div>
                       {#if l.filters.length}<FilterChips filters={l.filters} />{/if}
                       {#if l.reason}<div class="m-reason">{l.reason}</div>{/if}
@@ -203,6 +216,25 @@
   .m-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
   .m-action { font-family: var(--grotesk); font-weight: 500; font-size: 14px; color: var(--fg); letter-spacing: -0.005em; }
   .m-reason { font-size: 12px; color: var(--fg-muted); margin-top: 5px; line-height: 1.45; text-wrap: pretty; }
+
+  /* provenance badge — which policy/tier decided this entry (effective
+     view only). Sits to the right of the head, set apart from filter
+     chips by an accent ring. */
+  .m-origin {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    height: 18px;
+    padding: 0 7px;
+    border-radius: 9px;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.02em;
+    color: var(--fg-2);
+    background: var(--surface-sunk);
+    border: 1px solid var(--rule);
+    white-space: nowrap;
+  }
 
   .m-none { color: var(--fg-muted); font-size: 13px; opacity: 0.8; }
   .m-inherit { color: var(--fg-muted); font-size: 12.5px; font-style: italic; opacity: 0.75; }

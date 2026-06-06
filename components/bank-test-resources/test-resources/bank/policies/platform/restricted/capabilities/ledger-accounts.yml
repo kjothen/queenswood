@@ -1,0 +1,10 @@
+- effect: !keyword effect-allow
+  reason: "Allow opening ledger accounts"
+  kind:
+    ledger-account:
+      action: !keyword ledger-account-action-open
+- effect: !keyword effect-allow
+  reason: "Allow closing ledger accounts"
+  kind:
+    ledger-account:
+      action: !keyword ledger-account-action-close

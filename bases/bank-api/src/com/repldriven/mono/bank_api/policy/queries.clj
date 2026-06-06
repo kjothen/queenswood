@@ -27,6 +27,20 @@
       (errors/anomaly->response result)
       {:status 200 :body {:policies result}})))
 
+(defn get-effective-policy
+  "Org-scoped: the caller's effective policies collapsed into the
+  resolved decision set — `{:capabilities [...] :limits [...]}`, one
+  survivor per scope, each tagged with its origin policy. Reads
+  `bank-id` from the request auth as `list-effective-policies` does."
+  [request]
+  (let [{:keys [record-db record-store auth]} request
+        {:keys [bank-id]} auth
+        config {:record-db record-db :record-store record-store}
+        result (policies/get-effective-policy config {:bank-id bank-id})]
+    (if (error/anomaly? result)
+      (errors/anomaly->response result)
+      {:status 200 :body result})))
+
 (defn get-policy
   [request]
   (let [{:keys [record-db record-store parameters]} request

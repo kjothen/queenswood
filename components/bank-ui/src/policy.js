@@ -34,13 +34,14 @@
 // Keep the flatten in the API/adapter layer; the components only ever see
 // this shape.
 
-// The thirteen domains, in display order, each tagged with the section it
+// The domains, in display order, each tagged with the section it
 // belongs to in the matrix. "Core Banking" folds the ledger + accounts
 // domains together; Payments / Identity / Platform are their own sections.
 export const DOMAINS = {
   balance:              { label: "Balance",              group: "Core Banking" },
   transaction:          { label: "Transaction",          group: "Core Banking" },
   interest:             { label: "Interest",             group: "Core Banking" },
+  ledger_account:       { label: "Ledger Account",       group: "Core Banking" },
   cash_account:         { label: "Cash Account",         group: "Core Banking" },
   cash_account_product: { label: "Cash Account Product", group: "Core Banking" },
   outbound_payment:     { label: "Outbound Payment",     group: "Payments" },

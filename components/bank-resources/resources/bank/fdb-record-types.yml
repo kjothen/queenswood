@@ -113,6 +113,9 @@ outbound-payments:
     - name: OutboundPayment_count_by_bank_business_day
       fields: [bank_id, business_day]
       type: count
+    - name: OutboundPayment_sum_amount_by_bank_business_day
+      fields: [bank_id, business_day, amount]
+      type: sum
 internal-payments:
   record-type: InternalPayment
   indexes:

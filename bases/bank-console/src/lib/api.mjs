@@ -140,6 +140,13 @@ export function list_my_policies() {
   return request("/v1/me/policies");
 }
 
+// The resolved effective decision for my bank: capabilities/limits
+// collapsed (deny-wins, most-restrictive) to one survivor per scope,
+// each carrying its origin policy. policy-adapter.mjs flattens it.
+export function list_my_effective_policies() {
+  return request("/v1/me/effective-policies");
+}
+
 // ─── Parties (org-scoped) ───
 //
 // bank-api `Party` shape carries summary fields only (party-id, type,

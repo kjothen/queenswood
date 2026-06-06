@@ -26,4 +26,11 @@
      {:get {:summary "List the policies effective for my bank"
             :openapi {:operationId "ListEffectivePolicies"}
             :responses {200 {:body [:ref "PolicyList"]}}
-            :handler queries/list-effective-policies}}]]])
+            :handler queries/list-effective-policies}}]]
+   ["/me/effective-policies"
+    {:openapi {:tags ["Policies"] :security [{"bearerAuth" ["org"]}]}}
+    [""
+     {:get {:summary "Resolve my effective policies into one decision set"
+            :openapi {:operationId "GetEffectivePolicies"}
+            :responses {200 {:body [:ref "EffectivePolicy"]}}
+            :handler queries/get-effective-policy}}]]])

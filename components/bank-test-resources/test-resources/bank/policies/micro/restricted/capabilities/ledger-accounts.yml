@@ -1,0 +1,10 @@
+- effect: !keyword effect-deny
+  reason: "Micro tier - deny opening ledger accounts"
+  kind:
+    ledger-account:
+      action: !keyword ledger-account-action-open
+- effect: !keyword effect-deny
+  reason: "Micro tier - deny closing ledger accounts"
+  kind:
+    ledger-account:
+      action: !keyword ledger-account-action-close

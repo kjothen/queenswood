@@ -1,6 +1,7 @@
 (ns com.repldriven.mono.bank-policy.core
   (:require
     [com.repldriven.mono.bank-policy.domain :as domain]
+    [com.repldriven.mono.bank-policy.effective :as effective]
     [com.repldriven.mono.bank-policy.store :as store]
 
     [com.repldriven.mono.error.interface :as error :refer [let-nom>]]))
@@ -66,6 +67,11 @@
   (let-nom> [platform (store/get-policies-by-label txn "tier" "platform")
              bound (bound-policies txn selectors)]
     (vec (concat platform bound))))
+
+(defn get-effective-policy
+  [txn selectors]
+  (let-nom> [policies (get-effective-policies txn selectors)]
+    (effective/resolve-effective policies)))
 
 (defn get-policies-by-tier
   [txn tier]

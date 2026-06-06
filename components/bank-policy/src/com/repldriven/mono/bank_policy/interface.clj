@@ -122,6 +122,21 @@
   [txn selectors]
   (core/get-effective-policies txn selectors))
 
+(defn get-effective-policy
+  "Return the resolved effective decision for the selector's target:
+  the effective policies collapsed the way evaluation would resolve
+  them — capabilities deny-wins, limits most-restrictive — as
+  `{:capabilities [...] :limits [...]}`. Each survivor carries an
+  `:origin {:tier :policy-id :name}` naming the policy that decided
+  it. Returns the map or an anomaly.
+
+  Args:
+  - txn: FDB config or open transaction.
+  - selectors: map keyed by target id field
+    (e.g. `{:bank-id <id>}`)."
+  [txn selectors]
+  (core/get-effective-policy txn selectors))
+
 (defn get-policies-by-tier
   "Return policies whose `tier=<tier>` label matches. Used at
   bank creation time to bind the selected tier's policies to a

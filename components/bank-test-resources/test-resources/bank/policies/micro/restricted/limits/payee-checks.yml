@@ -1,0 +1,11 @@
+- kind:
+    payee-check: {}
+  bound:
+    kind:
+      max:
+        aggregate:
+          kind:
+            count:
+              value: 500
+              window: !keyword time-window-daily
+  reason: "Micro tier - max 500 payee checks per day"

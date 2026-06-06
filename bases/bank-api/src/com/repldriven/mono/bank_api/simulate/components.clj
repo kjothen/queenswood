@@ -38,12 +38,12 @@
 
 (def SimulateInterestRequest
   [:map {:closed true :json-schema/example examples/SimulateInterestRequest}
-   [:as-of-date [:ref "Date"]]])
+   [:as-of-date [:ref "BusinessDay"]]])
 
 (def SimulateInterestResponse
   [:map {:json-schema/example examples/SimulateInterestResponse}
    [:bank-id [:ref "BankId"]]
-   [:as-of-date [:ref "Date"]]
+   [:as-of-date [:ref "BusinessDay"]]
    [:accounts-processed int?]])
 
 (def registry
