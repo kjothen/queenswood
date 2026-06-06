@@ -6,6 +6,8 @@
   (:require
     [com.repldriven.mono.bank-interest.domain :as SUT]
 
+    [com.repldriven.mono.error.interface :as error]
+
     [clojure.test :refer [deftest is testing]]))
 
 (deftest daily-interest-test
@@ -125,3 +127,40 @@
                          +
                          legs)]
           (is (= debit-total credit-total)))))))
+
+(def ^:private accrual-limit-policies
+  "One platform policy: at most one accrual run per org per day."
+  [{:enabled true
+    :limits [{:kind {:interest {:filters [{:action :interest-action-accrue}]}}
+              :bound {:kind {:max {:aggregate {:kind {:count
+                                                      {:value 1
+                                                       :window
+                                                       :time-window-daily}}}}}}
+              :reason "at most one accrual run per day"}]}])
+
+(deftest check-daily-count-test
+  (testing "first run of the day passes — post-state count 1 is within max 1"
+    (is (true? (SUT/check-daily-count accrual-limit-policies
+                                      :accrual
+                                      {:accrual {#{:bank-id :business-day}
+                                                 0}}))))
+  (testing "second run of the day is rejected — post-state 2 exceeds max 1"
+    (let [result (SUT/check-daily-count accrual-limit-policies
+                                        :accrual
+                                        {:accrual {#{:bank-id :business-day}
+                                                   1}})]
+      (is (error/rejection? result))
+      (is (= :policy/limit-exceeded (error/kind result)))))
+  (testing "a kind with no matching limit is unconstrained"
+    (is (true? (SUT/check-daily-count accrual-limit-policies
+                                      :capitalize
+                                      {:capitalize {#{:bank-id :business-day}
+                                                    5}})))))
+
+(deftest new-interest-run-test
+  (testing "builds a run marker carrying org, business-day and status"
+    (let [run (SUT/new-interest-run "org.1" 20260501 :interest-accrue-done)]
+      (is (= "org.1" (:bank-id run)))
+      (is (= 20260501 (:business-day run)))
+      (is (= :interest-accrue-done (:status run)))
+      (is (number? (:created-at run))))))

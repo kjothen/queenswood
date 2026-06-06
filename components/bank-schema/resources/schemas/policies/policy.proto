@@ -332,7 +332,13 @@ message InboundPaymentLimit {
 
 message InternalPaymentLimit {}
 
-message InterestLimit {}
+message InterestLimitFilter {
+  optional InterestAction action = 1;
+}
+
+message InterestLimit {
+  repeated InterestLimitFilter filters = 1;
+}
 
 message BankLimitFilter {
   optional com.repldriven.mono.schemas.banks.BankStatus status = 2;

@@ -97,8 +97,9 @@
   registry. The simulator stores webhooks keyed by
   `[sort-code type]` so re-POSTing is idempotent at storage level
   (no duplicates accumulate); we re-register the FULL set to
-  recover cleanly from total state loss in one pass. Daemon-typed
-  so it doesn't keep the JVM alive past system stop."
+  recover cleanly from total state loss in one pass. Returns the
+  thread so the registrar's stop can interrupt it; also daemon-typed
+  as a backstop against a leak past process exit."
   [simulator-url webhook-url webhooks poll-ms]
   (doto (Thread.
          (fn []
@@ -127,29 +128,39 @@
   {:system/start
    (fn [{:system/keys [config instance]}]
      (or instance
-         (let [{:keys [simulator-url webhook-url webhooks readiness]} config]
+         (let [{:keys [simulator-url webhook-url webhooks readiness]} config
+               loop-thread (atom nil)
+               stopped? (atom false)]
            (log/info "Registering ClearBank webhooks (async)"
                      {:simulator simulator-url :webhook webhook-url})
-           (future (let [results (doall (map (fn [webhook]
-                                               (register-webhook-with-retry
-                                                simulator-url
-                                                webhook-url
-                                                webhook))
-                                             webhooks))]
-                     (when (every? ok-response? results)
-                       (reset! readiness true)
-                       (log/info
-                        "ClearBank webhook registration complete; pod ready")
-                       (start-re-register-loop simulator-url
+           (let [fut (future
+                      (let [results (doall (map (fn [webhook]
+                                                  (register-webhook-with-retry
+                                                   simulator-url
+                                                   webhook-url
+                                                   webhook))
+                                                webhooks))]
+                        (when (and (every? ok-response? results)
+                                   (not @stopped?))
+                          (reset! readiness true)
+                          (log/info
+                           "ClearBank webhook registration complete; pod ready")
+                          (reset! loop-thread (start-re-register-loop
+                                               simulator-url
                                                webhook-url
                                                webhooks
-                                               re-register-poll-ms))))
-           :running)))
+                                               re-register-poll-ms)))))]
+             {:fut fut :loop-thread loop-thread :stopped? stopped?}))))
+   :system/stop (fn [{:system/keys [instance]}]
+                  (when-let [{:keys [fut loop-thread stopped?]} instance]
+                    (reset! stopped? true)
+                    (future-cancel fut)
+                    (when-let [^Thread t @loop-thread] (.interrupt t))))
    :system/config {:simulator-url system/required-component
                    :webhook-url system/required-component
                    :webhooks nil
                    :readiness system/required-component}
-   :system/instance-schema keyword?})
+   :system/instance-schema map?})
 
 (def ^:private command-processor
   {:system/start (fn [{:system/keys [config instance]}]

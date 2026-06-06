@@ -57,6 +57,13 @@ _record-types: !strs &record-types
       - name: Idv_by_party
         field: party_id
         unique: true
+  interest-runs:
+    record-type: InterestRun
+    primary-key: [bank_id, business_day, status]
+    indexes:
+      - name: InterestRun_count_by_bank_status_business_day
+        fields: [bank_id, status, business_day]
+        type: count
   memberships:
     record-type: Membership
     indexes:

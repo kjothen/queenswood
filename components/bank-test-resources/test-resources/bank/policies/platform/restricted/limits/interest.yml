@@ -1,5 +1,7 @@
 - kind:
-    interest: {}
+    interest:
+      filters:
+        - action: !keyword interest-action-accrue
   bound:
     kind:
       max:
@@ -9,3 +11,16 @@
               value: 1
               window: !keyword time-window-daily
   reason: "Platform-restricted - at most one interest accrual run per day"
+- kind:
+    interest:
+      filters:
+        - action: !keyword interest-action-capitalize
+  bound:
+    kind:
+      max:
+        aggregate:
+          kind:
+            count:
+              value: 1
+              window: !keyword time-window-daily
+  reason: "Platform-restricted - at most one interest capitalisation run per day"

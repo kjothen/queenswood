@@ -105,7 +105,10 @@
   [system]
   (try-nom :system/stop
            "System STOP threw an exception"
-           (ds/stop system)))
+           ;; Return nil, not the stopped system map: it holds every
+           ;; started instance (e.g. the full Lancaster schema set) and
+           ;; floods a REPL that prints the result.
+           (do (ds/stop system) nil)))
 
 (defmacro with-system
   {:clj-kondo/lint-as 'clojure.core/let}

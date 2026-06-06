@@ -17,9 +17,15 @@
 (comment
   (def sys (main/start "classpath:bank-monolith/application-test.yml" :dev))
   (tap> sys)
-  (main/stop sys))
+  (main/stop sys)
 
-;)
-
-
-
+  (require '[dev.inspect :as i])
+  ;; rank component instances by retained heap (infra components that
+  ;; hold FDB/Jetty/Pulsar lambdas come back :unmeasurable)
+  (i/instances-by-size sys)
+  ;; size just your data — measurable, and tiny next to its print size
+  (i/mem-size (get-in sys [:donut.system/instances :avro :serde]))
+  (println (i/mem-footprint (get-in sys
+                                    [:donut.system/instances :avro :serde])))
+  ;
+)

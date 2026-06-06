@@ -88,8 +88,8 @@
   arriving with no error visible to the adapter. With the
   simulator-side URL dedup, re-registration is a cheap no-op when
   the URL is already present, so polling doesn't accumulate state.
-  Daemon-typed so it doesn't keep the JVM alive past system stop;
-  no explicit stop signal needed."
+  Returns the thread so the registrar's stop can interrupt it;
+  also daemon-typed as a backstop against a leak past process exit."
   [onfido-url adapter-url poll-ms]
   (doto (Thread.
          (fn []
@@ -123,22 +123,32 @@
   {:system/start
    (fn [{:system/keys [config instance]}]
      (or instance
-         (let [{:keys [onfido-url adapter-url readiness]} config]
+         (let [{:keys [onfido-url adapter-url readiness]} config
+               loop-thread (atom nil)
+               stopped? (atom false)]
            (log/info "Registering Onfido webhook (async)"
                      {:onfido onfido-url :adapter adapter-url})
-           (future
-            (let [res (register-webhook-with-retry onfido-url adapter-url)]
-              (when (ok-response? res)
-                (reset! readiness true)
-                (log/info "Onfido webhook registration complete; pod ready")
-                (start-re-register-loop onfido-url
-                                        adapter-url
-                                        re-register-poll-ms))))
-           :running)))
+           (let [fut (future
+                      (let [res (register-webhook-with-retry onfido-url
+                                                             adapter-url)]
+                        (when (and (ok-response? res) (not @stopped?))
+                          (reset! readiness true)
+                          (log/info
+                           "Onfido webhook registration complete; pod ready")
+                          (reset! loop-thread (start-re-register-loop
+                                               onfido-url
+                                               adapter-url
+                                               re-register-poll-ms)))))]
+             {:fut fut :loop-thread loop-thread :stopped? stopped?}))))
+   :system/stop (fn [{:system/keys [instance]}]
+                  (when-let [{:keys [fut loop-thread stopped?]} instance]
+                    (reset! stopped? true)
+                    (future-cancel fut)
+                    (when-let [^Thread t @loop-thread] (.interrupt t))))
    :system/config {:onfido-url system/required-component
                    :adapter-url system/required-component
                    :readiness system/required-component}
-   :system/instance-schema keyword?})
+   :system/instance-schema map?})
 
 (def ^:private command-processor
   {:system/start (fn [{:system/keys [config instance]}]

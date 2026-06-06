@@ -47,7 +47,7 @@
     org.clojure/clojure {:mvn/version "1.12.4"}
     org.clojure/core.async {:mvn/version "1.9.865"}
     djblue/portal {:mvn/version "0.63.0"}}
-   :extra-paths ["development/resources"]
+   :extra-paths ["development/src" "development/resources"]
    :jvm-opts
    ["-Dclojure.tools.logging.factory=clojure.tools.logging.impl/slf4j-factory"]}
   :test {:extra-paths ["components/avro/test"
@@ -187,5 +187,7 @@
                                                   "bases/external-test-runner"}}
          :main-opts ["-m" "polylith.clj.core.poly-cli.core"]}
   :rebel {:extra-deps {com.bhauman/rebel-readline {:mvn/version "0.1.7"}}
-          :main-opts ["-m" "rebel-readline.main"]}}
+          :main-opts ["-m" "rebel-readline.main"]}
+  :jol {:extra-deps {org.openjdk.jol/jol-core {:mvn/version "0.17"}}
+        :jvm-opts   ["-Djdk.attach.allowAttachSelf"]}}
  :mvn/repos {"maven" {:url "https://packages.confluent.io/maven"}}}
