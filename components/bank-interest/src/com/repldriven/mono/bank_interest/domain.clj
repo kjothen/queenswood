@@ -1,6 +1,31 @@
-(ns com.repldriven.mono.bank-interest.domain)
+(ns com.repldriven.mono.bank-interest.domain
+  (:require
+    [com.repldriven.mono.bank-policy.interface :as policy]
+    [com.repldriven.mono.utility.interface :as utility]))
 
 (def ^:private micro-scale 1000000)
+
+;; A daily-count limit is one `interest` policy limit scoped to a single
+;; action via the limit filter; map the internal run kind to that action.
+(def ^:private kind->action
+  {:accrual :interest-action-accrue :capitalize :interest-action-capitalize})
+
+(defn check-daily-count
+  [policies kind aggregates]
+  (policy/check-limit
+   policies
+   :interest
+   {:action (kind->action kind)
+    :aggregate :count
+    :window :time-window-daily
+    :value (inc (get-in aggregates [kind #{:bank-id :business-day}]))}))
+
+(defn new-interest-run
+  [bank-id business-day status]
+  {:bank-id bank-id
+   :business-day business-day
+   :status status
+   :created-at (utility/now)})
 
 (defn- net-balance
   [balance]

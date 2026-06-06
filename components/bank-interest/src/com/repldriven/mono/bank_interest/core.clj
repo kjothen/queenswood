@@ -10,6 +10,7 @@
      products]
     [com.repldriven.mono.bank-ledger-account.interface :as
      ledger-accounts]
+    [com.repldriven.mono.bank-policy.interface :as policy]
     [com.repldriven.mono.bank-transaction.interface :as
      transactions]
 
@@ -161,44 +162,54 @@
               (recur (:after page) processed)
               processed)))))))
 
-(defn accrue-daily
-  [config data]
+(defn- run-interest
+  "Run an interest pass (`account-fn` per customer account) under the
+  platform daily-count limit for `kind`. Counts prior runs of this
+  `status` for the org on `as-of-date`, rejects if the limit is
+  reached, then processes accounts and records the run. The run record
+  has primary key `[bank_id, business_day, status]`, so a duplicate
+  save is idempotent — the count never exceeds the limit even if two
+  runs race. Each step is its own short FDB transaction (no long
+  transaction held across account processing)."
+  [config data status kind account-fn]
   (let [{:keys [bank-id as-of-date]} data]
     (if-let [interest-payable (get-interest-payable-account config bank-id)]
-      (let [processed (process-customer-accounts
-                       config
-                       bank-id
-                       (:ledger-account-id interest-payable)
-                       as-of-date
-                       accrue-account)]
-        (if (error/anomaly? processed)
-          processed
-          {:bank-id bank-id
-           :as-of-date as-of-date
-           :accounts-processed processed}))
+      (let-nom>
+        [policies (policy/get-effective-policies config {:bank-id bank-id})
+         today-count (store/count-by-org-business-day-per-kind
+                      config
+                      bank-id
+                      status
+                      as-of-date)
+         aggregates {kind {#{:bank-id :business-day} today-count}}
+         _ (domain/check-daily-count policies kind aggregates)
+         processed (process-customer-accounts
+                    config
+                    bank-id
+                    (:ledger-account-id interest-payable)
+                    as-of-date
+                    account-fn)
+         _ (store/save-run config
+                           (domain/new-interest-run bank-id
+                                                    as-of-date
+                                                    status))]
+        {:bank-id bank-id
+         :as-of-date as-of-date
+         :accounts-processed processed})
       (error/reject :interest/no-interest-payable-account
                     {:message
                      (str "Bank has no 2400 interest-payable account"
                           " in its chart of accounts")
                      :bank-id bank-id}))))
 
+(defn accrue-daily
+  [config data]
+  (run-interest config data :interest-accrue-done :accrual accrue-account))
+
 (defn capitalize-monthly
   [config data]
-  (let [{:keys [bank-id as-of-date]} data]
-    (if-let [interest-payable (get-interest-payable-account config bank-id)]
-      (let [processed (process-customer-accounts
-                       config
-                       bank-id
-                       (:ledger-account-id interest-payable)
-                       as-of-date
-                       capitalize-account)]
-        (if (error/anomaly? processed)
-          processed
-          {:bank-id bank-id
-           :as-of-date as-of-date
-           :accounts-processed processed}))
-      (error/reject :interest/no-interest-payable-account
-                    {:message
-                     (str "Bank has no 2400 interest-payable account"
-                          " in its chart of accounts")
-                     :bank-id bank-id}))))
+  (run-interest config
+                data
+                :interest-capitalize-done
+                :capitalize
+                capitalize-account))

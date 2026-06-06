@@ -11,6 +11,7 @@ import "schemas/cash-accounts/account.proto";
 import "schemas/company/company.proto";
 import "schemas/idempotency/idempotency.proto";
 import "schemas/idv/idv.proto";
+import "schemas/interest/interest-run.proto";
 import "schemas/ledger-accounts/ledger-account.proto";
 import "schemas/memberships/membership.proto";
 import "schemas/banks/bank.proto";
@@ -60,4 +61,5 @@ message RecordTypeUnion {
   optional com.repldriven.mono.schemas.assertion.Assertion _Assertion = 24;
   optional com.repldriven.mono.schemas.company.Company _Company = 25;
   optional com.repldriven.mono.schemas.ledger_accounts.LedgerAccount _LedgerAccount = 26;
+  optional com.repldriven.mono.schemas.interest.InterestRun _InterestRun = 27;
 }

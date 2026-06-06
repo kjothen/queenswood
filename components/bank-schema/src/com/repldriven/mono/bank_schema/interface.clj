@@ -13,6 +13,7 @@
     [com.repldriven.mono.schemas.company :as company]
     [com.repldriven.mono.schemas.idempotency :as idempotency]
     [com.repldriven.mono.schemas.idv :as idv]
+    [com.repldriven.mono.schemas.interest :as interest]
     [com.repldriven.mono.schemas.ledger_accounts :as ledger-accounts]
     [com.repldriven.mono.schemas.memberships :as memberships]
     [com.repldriven.mono.schemas.banks :as banks]
@@ -43,6 +44,8 @@
     (com.repldriven.mono.schemas.idempotency IdempotencyProto$Idempotency)
     (com.repldriven.mono.schemas.idv IdvProto$Idv
                                      IdvChangelogProto$IdvChangelog)
+    (com.repldriven.mono.schemas.interest
+     InterestRunProto$InterestRun)
     (com.repldriven.mono.schemas.ledger_accounts
      LedgerAccountProto$LedgerAccount)
     (com.repldriven.mono.schemas.banks
@@ -358,6 +361,34 @@
   - m: Idv map matching the generated schema."
   [m]
   (IdvProto$Idv/parseFrom (Idv->pb m)))
+
+(def ^{:doc "Map of InterestRunStatus label to protobuf int value."}
+     interest-run-status->int
+  interest/InterestRun-InterestRunStatus-label2val)
+
+(def ^{:doc "Map of InterestRunStatus protobuf int value to label."}
+     int->interest-run-status
+  interest/InterestRun-InterestRunStatus-val2label)
+
+(def ^{:doc "Parse InterestRun protobuf bytes into a Clojure map."}
+     pb->InterestRun
+  interest/pb->InterestRun)
+
+(defn InterestRun->pb
+  "Serialise an InterestRun map to protobuf bytes.
+
+  Args:
+  - m: InterestRun map matching the generated schema."
+  [m]
+  (proto/->pb (interest/new-InterestRun m)))
+
+(defn InterestRun->java
+  "Parse an InterestRun map into the generated Java protobuf class.
+
+  Args:
+  - m: InterestRun map matching the generated schema."
+  [m]
+  (InterestRunProto$InterestRun/parseFrom (InterestRun->pb m)))
 
 (defn pb->CashAccount
   "Parse CashAccount protobuf bytes into a Clojure map. Strips
