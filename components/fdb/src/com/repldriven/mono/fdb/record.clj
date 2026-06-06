@@ -218,6 +218,30 @@
         (.join)
         (.getLong 0))))
 
+(defn sum-records
+  "Sums the trailing value column of a SUM index over the group whose
+  grouping key is `key` (a single value or vector for compound keys).
+  Uses evaluateAggregateFunction for O(1) lookup; an empty group
+  sums to 0."
+  [store index-name key]
+  (let [key-tuple (if (vector? key)
+                    (Tuple/from (into-array Object key))
+                    (Tuple/from (into-array Object [key])))
+        index (.getIndex (.getRecordMetaData store)
+                         index-name)
+        agg-fn (IndexAggregateFunction.
+                IndexTypes/SUM
+                (.getRootExpression index)
+                index-name)
+        result (-> (.evaluateAggregateFunction
+                    store
+                    (java.util.Collections/emptyList)
+                    agg-fn
+                    (TupleRange/allOf key-tuple)
+                    com.apple.foundationdb.record.IsolationLevel/SERIALIZABLE)
+                   (.join))]
+    (if (nil? result) 0 (.getLong result 0))))
+
 (defrecord Txn [open])
 
 (defn open

@@ -17,6 +17,7 @@ capabilities: !concat
   - !include bank/policies/platform/restricted/capabilities/idvs.yml
   - !include bank/policies/platform/restricted/capabilities/interest.yml
   - !include bank/policies/platform/restricted/capabilities/banks.yml
+  - !include bank/policies/platform/restricted/capabilities/ledger-accounts.yml
   - !include bank/policies/platform/restricted/capabilities/parties.yml
   - !include bank/policies/platform/restricted/capabilities/payee-checks.yml
   - !include bank/policies/platform/restricted/capabilities/payments.yml

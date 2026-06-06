@@ -1,5 +1,7 @@
 (ns com.repldriven.mono.bank-ledger-account.domain
   (:require
+    [com.repldriven.mono.bank-policy.interface :as policy]
+    [com.repldriven.mono.error.interface :refer [let-nom>]]
     [com.repldriven.mono.utility.interface :as utility]))
 
 (def control-code-for-product-type
@@ -15,17 +17,25 @@
 
 (defn new-ledger-account
   "Build a `LedgerAccount` map for one template `row` in `currency`,
-  stamping a fresh `led.` id and timestamps."
-  [bank-id currency row]
-  (let [now (utility/now)]
-    (assoc (select-keys row
-                        [:gl-code :name :gl-account-type
-                         :gl-account-class :required])
-           :bank-id bank-id
-           :currency currency
-           :ledger-account-id (utility/generate-id "led")
-           :created-at now
-           :updated-at now)))
+  stamping a fresh `led.` id and timestamps. Gated on the
+  `:ledger-account` open capability in `policies` (opening a ledger
+  account mirrors opening a cash account), so a tier that denies it
+  (e.g. micro) cannot mint ledger accounts; returns the account map or
+  the deny anomaly."
+  [bank-id currency row policies]
+  (let-nom>
+    [_ (policy/check-capability policies
+                                :ledger-account
+                                {:action :ledger-account-action-open})]
+    (let [now (utility/now)]
+      (assoc (select-keys row
+                          [:gl-code :name :gl-account-type
+                           :gl-account-class :required])
+             :bank-id bank-id
+             :currency currency
+             :ledger-account-id (utility/generate-id "led")
+             :created-at now
+             :updated-at now))))
 
 (defn opening-balance
   "The single default-posted balance bucket a ledger account opens

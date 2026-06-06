@@ -153,9 +153,15 @@
                                      txn
                                      bank-id
                                      business-day)
+                        today-sum (store/sum-outbound-by-org-business-day
+                                   txn
+                                   bank-id
+                                   business-day)
                         aggregates {:outbound-payment
                                     {#{:bank-id :business-day}
-                                     today-count}}
+                                     today-count
+                                     #{:bank-id :business-day :amount}
+                                     today-sum}}
                         transaction (domain/outbound-payment->transaction
                                      data
                                      debtor-account

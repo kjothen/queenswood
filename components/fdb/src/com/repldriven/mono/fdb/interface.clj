@@ -80,6 +80,13 @@
   [store index-name key]
   (record/count-records store index-name key))
 
+(defn sum-records
+  "Sums the trailing value column of a SUM index over the group
+  whose grouping key is `key`. O(1) via the aggregate index; an
+  empty group sums to 0."
+  [store index-name key]
+  (record/sum-records store index-name key))
+
 (defn count-groups
   "Counts distinct grouping-key entries in a COUNT index whose
   group key starts with `prefix` — one per group, not the sum

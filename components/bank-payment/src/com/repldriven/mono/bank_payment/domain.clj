@@ -53,6 +53,19 @@
     :value (inc (get-in aggregates
                         [kind #{:bank-id :business-day}]))}))
 
+(defn- check-amount
+  "Check an amount limit on `kind` for `window`: the per-transaction
+  cap (`:time-window-instant`, `value` = this payment) or the running
+  daily value cap (`:time-window-daily`, `value` = today's total plus
+  this payment)."
+  [policies kind window currency value]
+  (policy/check-limit
+   policies
+   kind
+   {:aggregate :amount
+    :window window
+    :value {:currency currency :value value}}))
+
 (defn internal-payment->transaction
   [data debtor-account creditor-account policies aggregates]
   (let [{:keys [idempotency-key debtor-account-id
@@ -147,7 +160,20 @@
        _ (check-capability policies
                            :outbound-payment
                            :outbound-payment-action-send)
-       _ (check-daily-count policies :outbound-payment aggregates)]
+       _ (check-daily-count policies :outbound-payment aggregates)
+       _ (check-amount policies
+                       :outbound-payment
+                       :time-window-instant
+                       currency
+                       amount)
+       _ (check-amount policies
+                       :outbound-payment
+                       :time-window-daily
+                       currency
+                       (+ (get-in aggregates
+                                  [:outbound-payment
+                                   #{:bank-id :business-day :amount}])
+                          amount))]
       (utility/assoc-some
        {:idempotency-key idempotency-key
         :transaction-type :transaction-type-outbound-transfer

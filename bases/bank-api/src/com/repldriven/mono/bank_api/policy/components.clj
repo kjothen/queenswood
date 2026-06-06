@@ -36,6 +36,29 @@
   [:map {:json-schema/example examples/PolicyList}
    [:policies [:vector [:ref "Policy"]]]])
 
+;; Effective policies: the resolved decision set for a bank. Each
+;; capability/limit is the Capability/Limit open map plus the origin
+;; of the policy that decided it.
+(def Origin
+  [:map {:json-schema/example examples/Origin}
+   [:tier {:optional true} [:maybe string?]]
+   [:policy-id [:ref "PolicyId"]]
+   [:name {:optional true} [:maybe [:ref "Name"]]]])
+
+(def EffectiveCapability
+  [:map {:json-schema/example examples/EffectiveCapability}
+   [:origin [:ref "Origin"]]])
+
+(def EffectiveLimit
+  [:map {:json-schema/example examples/EffectiveLimit}
+   [:origin [:ref "Origin"]]])
+
+(def EffectivePolicy
+  [:map {:json-schema/example examples/EffectivePolicy}
+   [:capabilities [:vector [:ref "EffectiveCapability"]]]
+   [:limits [:vector [:ref "EffectiveLimit"]]]])
+
 (def registry
   (components-registry [#'PolicyId #'PolicyCategory #'Capability #'Limit
-                        #'Policy #'PolicyList]))
+                        #'Policy #'PolicyList #'Origin #'EffectiveCapability
+                        #'EffectiveLimit #'EffectivePolicy]))

@@ -8,4 +8,12 @@ labels: !strs
 category: !keyword policy-category-restricted
 capabilities: !concat
   - !include bank/policies/micro/restricted/capabilities/banks.yml
-limits:
+  - !include bank/policies/micro/restricted/capabilities/ledger-accounts.yml
+limits: !concat
+  - !include bank/policies/micro/restricted/limits/transactions.yml
+  - !include bank/policies/micro/restricted/limits/cash-accounts.yml
+  - !include bank/policies/micro/restricted/limits/cash-account-products.yml
+  - !include bank/policies/micro/restricted/limits/payments.yml
+  - !include bank/policies/micro/restricted/limits/payee-checks.yml
+  - !include bank/policies/micro/restricted/limits/parties.yml
+  - !include bank/policies/micro/restricted/limits/idvs.yml

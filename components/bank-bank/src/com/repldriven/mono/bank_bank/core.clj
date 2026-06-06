@@ -33,14 +33,18 @@
   "Seed the customer bank's default chart of bank-owned ledger
   accounts — one `LedgerAccount` per default row per currency. Unlike
   customer cash accounts these are bank-owned and flat: no party, no
-  product, no policy. Runs inside `new-bank`'s transaction, so a
-  failed row rolls the whole bank creation back."
-  [txn bank-id currencies]
+  product. Gated on the `:ledger-account` create capability; we pass
+  the bootstrap `policies` (the platform tier, which grants it) so
+  seeding is allowed even for a tier that denies the capability
+  per-bank. Runs inside `new-bank`'s transaction, so a failed row
+  rolls the whole bank creation back."
+  [txn bank-id currencies policies]
   (reduce (fn [_ [currency row]]
             (let [result (ledger-accounts/new-account txn
                                                       bank-id
                                                       currency
-                                                      row)]
+                                                      row
+                                                      {:policies policies})]
               (if (error/anomaly? result) (reduced result) nil)))
           nil
           (for [currency currencies
@@ -207,7 +211,7 @@
                               :display-name bank-name}
                              {:policies policies})
 
-         _ (new-ledger-accounts txn bank-id currencies)
+         _ (new-ledger-accounts txn bank-id currencies policies)
 
          _ (new-house-accounts txn bank-id party-id currencies policies)
 

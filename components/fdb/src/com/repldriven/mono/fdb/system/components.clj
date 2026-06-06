@@ -171,15 +171,19 @@
                             KeyExpression$FanType/FanOut
                             KeyExpression$FanType/None))))
 
-(def ^:private index-type->str {"count" IndexTypes/COUNT})
+(def ^:private index-type->str {"count" IndexTypes/COUNT "sum" IndexTypes/SUM})
 
 (defn- add-indexes
   [builder record-type indexes]
   (doseq [{:strs [name unique type] :as idx-cfg} indexes]
     (let [expr (key-expression idx-cfg)
           idx-type (get index-type->str type "value")
-          grouped-expr (if (= idx-type IndexTypes/COUNT)
-                         (GroupingKeyExpression. expr 0)
+          ;; COUNT groups by every field (0 grouped columns, count entries
+          ;; per group). SUM groups by all but the last field and sums that
+          ;; trailing value column (1 grouped column).
+          grouped-expr (condp = idx-type
+                         IndexTypes/COUNT (GroupingKeyExpression. expr 0)
+                         IndexTypes/SUM (GroupingKeyExpression. expr 1)
                          expr)
           opts (if unique
                  IndexOptions/UNIQUE_OPTIONS

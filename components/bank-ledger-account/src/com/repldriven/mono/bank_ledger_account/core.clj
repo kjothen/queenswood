@@ -4,16 +4,25 @@
     [com.repldriven.mono.bank-ledger-account.store :as store]
 
     [com.repldriven.mono.bank-balance.interface :as balances]
+    [com.repldriven.mono.bank-policy.interface :as policy]
 
     [com.repldriven.mono.error.interface :as error :refer [let-nom>]]))
 
+(defn- get-policies
+  [txn bank-id opts]
+  (or (:policies opts)
+      (policy/get-effective-policies txn {:bank-id bank-id})))
+
 (defn new-account
-  [txn bank-id currency row]
-  (let [account (domain/new-ledger-account bank-id currency row)]
-    (let-nom>
-      [_ (store/save-account txn account)
-       _ (balances/new-balances txn [(domain/opening-balance account)])]
-      account)))
+  ([txn bank-id currency row]
+   (new-account txn bank-id currency row {}))
+  ([txn bank-id currency row opts]
+   (let-nom>
+     [policies (get-policies txn bank-id opts)
+      account (domain/new-ledger-account bank-id currency row policies)
+      _ (store/save-account txn account)
+      _ (balances/new-balances txn [(domain/opening-balance account)])]
+     account)))
 
 (defn get-account
   [txn bank-id ledger-account-id]

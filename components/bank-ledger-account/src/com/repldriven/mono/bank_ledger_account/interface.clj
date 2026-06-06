@@ -35,14 +35,23 @@
   created account, or an anomaly. Callers loop this over their own
   chart and wrap the loop in a transaction for all-or-nothing seeding.
 
+  Gated on the `:ledger-account` create capability: `opts` may carry
+  `:policies` (the caller's already-resolved effective policies, as
+  bank bootstrap passes); absent that, the bank's effective policies
+  are resolved from `txn`. A tier that denies the capability (e.g.
+  micro) gets a deny anomaly instead of an account.
+
   Args:
   - txn: FDB transaction or db handle.
   - bank-id: owning bank id.
   - currency: ISO 4217 currency string.
   - row: chart-of-accounts row (`:gl-code`, `:name`,
-    `:gl-account-type`, `:gl-account-class`, `:required`)."
-  [txn bank-id currency row]
-  (core/new-account txn bank-id currency row))
+    `:gl-account-type`, `:gl-account-class`, `:required`).
+  - opts (optional): `:policies` to check against."
+  ([txn bank-id currency row]
+   (core/new-account txn bank-id currency row))
+  ([txn bank-id currency row opts]
+   (core/new-account txn bank-id currency row opts)))
 
 (defn get-account
   "Return the `LedgerAccount` matching `(bank-id, ledger-account-id)`,

@@ -38,3 +38,12 @@
    :updated-at "2026-01-01T00:00:00Z"})
 
 (def PolicyList {:policies [Policy]})
+
+(def Origin {:tier "platform" :policy-id PolicyId :name "Platform policy"})
+
+(def EffectiveCapability (assoc Capability :origin Origin))
+
+(def EffectiveLimit (assoc Limit :origin Origin))
+
+(def EffectivePolicy
+  {:capabilities [EffectiveCapability] :limits [EffectiveLimit]})

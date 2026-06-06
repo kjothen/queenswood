@@ -1,0 +1,11 @@
+- kind:
+    idv: {}
+  bound:
+    kind:
+      max:
+        aggregate:
+          kind:
+            count:
+              value: 50
+              window: !keyword time-window-daily
+  reason: "Micro tier - max 50 IDV submissions per day"

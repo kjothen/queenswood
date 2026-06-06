@@ -194,6 +194,16 @@ message TransactionCapability {
   required TransactionAction action = 1;
 }
 
+enum LedgerAccountAction {
+  LEDGER_ACCOUNT_ACTION_UNKNOWN = 0;
+  LEDGER_ACCOUNT_ACTION_OPEN = 1;
+  LEDGER_ACCOUNT_ACTION_CLOSE = 2;
+}
+
+message LedgerAccountCapability {
+  required LedgerAccountAction action = 1;
+}
+
 enum Effect {
   EFFECT_UNKNOWN = 0;
   EFFECT_ALLOW = 1;
@@ -220,6 +230,7 @@ message Capability {
     PayeeCheckCapability payee_check = 112;
     PolicyCapability policy = 113;
     TransactionCapability transaction = 114;
+    LedgerAccountCapability ledger_account = 115;
   }
 }
 
