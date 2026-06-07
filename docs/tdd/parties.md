@@ -24,7 +24,7 @@ that drives person-party activation; name-matching; party
 identifiers and person identifications.
 
 Out of scope: the HTTP-edge auth model and user identity —
-see [api-keys.md](api-keys.md), with parties distinct from
+see [authentication.md](authentication.md), with parties distinct from
 users; see Background; cash account ownership and SCAN
 assignment, see [cash-accounts.md](cash-accounts.md);
 Confirmation of Payee callers, covered in
@@ -49,7 +49,7 @@ each with different lifecycle rules.
 
 A note on terminology that often confuses: **a party is not
 a user**. A `User` (the authenticated human, an OIDC identity
-— see [api-keys.md](api-keys.md)) now exists and is
+— see [authentication.md](authentication.md)) now exists and is
 deliberately separate from a party. A party is the
 customer-of-the-customer or counterparty the bank deals with
 as a *customer of the bank's customer*; a user is the
@@ -522,7 +522,7 @@ already know the model. Both costs are accepted.
   IDV event channel)
 - [ADR-0008](../adr/0008-changelog-watchers.md) — Changelog
   watchers (the activation chain endpoints)
-- [api-keys.md](api-keys.md) — Authentication (the `User`
+- [authentication.md](authentication.md) — Authentication (the `User`
   identity, distinct from parties)
 - [payments.md](payments.md) — Payments (CoP consumes
   `match-name`; the same adapter/simulator pattern lives

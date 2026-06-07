@@ -88,9 +88,10 @@ platform takes on.
   comparison is deliberately simple. It isn't a
   fuzzy-matching library and isn't a Confirmation of Payee
   scoring engine.
-- **A user model.** Parties are not users. The platform has
-  no concept of the human triggering a request — see Open
-  questions and [tdd/api-keys](../tdd/api-keys.md).
+- **Party–user link.** Parties are not users. A `User` (the
+  authenticated human) now exists and is separate from
+  parties; what's missing is a *link* between them — see Open
+  questions and [tdd/authentication](../tdd/authentication.md).
 - **Know-your-business (KYB) for organisation parties.**
   Non-person parties activate on creation without
   beneficial-owner checks, sanctions screening, or
@@ -294,9 +295,10 @@ name comparison belongs here.
   beneficial-owner checks, sanctions screening, or
   registration-document capture. A real platform offering
   business banking needs KYB.
-- **Party–user relationship.** Once a user model exists —
-  see [tdd/api-keys](../tdd/api-keys.md) — the relationship
-  between parties and users needs modelling. A user might
+- **Party–user relationship.** A `User` model now exists —
+  see [tdd/authentication](../tdd/authentication.md) — but the
+  relationship between parties and users still needs
+  modelling. A user might
   act on behalf of a party, or be a party in self-service
   flows. Neither link exists today.
 
@@ -312,6 +314,6 @@ name comparison belongs here.
   — accounts are owned by parties;
   [payments](payments.md) — payments name parties on both
   sides and use the name comparison.
-- **Auth model evolution**: [tdd/api-keys](../tdd/api-keys.md)
-  — Future direction, for the user-model gap that sits
+- **Authentication**: [tdd/authentication](../tdd/authentication.md)
+  — the `User` identity and the party–user link gap that sits
   alongside parties.

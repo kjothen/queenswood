@@ -202,9 +202,9 @@ The bank is documented:
 - **[docs/tdd/](docs/tdd/)** — technical design documents
   covering the substrate (transaction processing, transactions
   and balances, traceability, scenario testing, idempotency
-  proposal), the API surface and auth (service-apis, api-keys),
-  the policy engine, and every domain (organisations, parties,
-  products, accounts, payments, interest).
+  proposal), the API surface and auth (service-apis,
+  authentication), the policy engine, and every domain (banks,
+  parties, products, accounts, payments, interest).
 - **[docs/adr/](docs/adr/)** — architecture decision records
   (mono fork, FoundationDB, message-bus abstraction, Avro,
   anomalies, kebab-case keys, system-as-data, changelog watchers,

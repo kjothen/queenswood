@@ -1,11 +1,10 @@
 # Banks
 
-> This file is still named `organizations.md` for link stability.
 > The "organization" concept was renamed to **bank** (brick
 > `bank-organization` → `bank-bank`, record `Bank`, ids `bnk.*`,
 > `new-organization` → `new-bank`) and bank-type was dropped
-> (#139). The content below describes the current model. A rename
-> to `banks.md` is a pending follow-up.
+> (#139); this doc describes the current model. (It was
+> previously named `organizations.md`.)
 
 ## Objective
 
@@ -27,7 +26,7 @@ chart, own-funds house accounts, tier bindings); the
 enrich-on-read pattern.
 
 Out of scope: the service-account/JWT mechanics
-([api-keys.md](api-keys.md)); each foundational brick's own rules
+([authentication.md](authentication.md)); each foundational brick's own rules
 — party creation [parties.md](parties.md), the ledger chart
 [chart-of-accounts.md](chart-of-accounts.md), product publish
 [cash-account-products.md](cash-account-products.md), account
@@ -46,7 +45,7 @@ tenant's data fully separate from another's. Queenswood carries
 operate, a new tenant needs:
 
 - A **service-account client** so its backend can authenticate
-  (see [api-keys.md](api-keys.md)).
+  (see [authentication.md](authentication.md)).
 - A **party** representing the bank itself in its own books.
 - A **chart of bank-owned ledger accounts** per currency, so
   postings have somewhere to land (see
@@ -273,7 +272,7 @@ written here is load-bearing at evaluation time.
 - **No closure or off-boarding.** A bank once created is
   permanent. Closing every account, revoking the service-account
   client (`revoke-service-account` is unwired — see
-  [api-keys.md](api-keys.md)), and archiving party data are all
+  [authentication.md](authentication.md)), and archiving party data are all
   manual.
 - **No bank-level audit trail.** `created-at` is the only history;
   which platform admin created the bank isn't recorded — only that
@@ -293,7 +292,7 @@ written here is load-bearing at evaluation time.
   platform-tier rule ever needed the about-to-be-created bank.
 - **The create is admin-only by convention, not by code.** The
   route requires the `admin` role (see
-  [api-keys.md](api-keys.md)), but `new-bank` itself runs only a
+  [authentication.md](authentication.md)), but `new-bank` itself runs only a
   `:bank-action-create` capability check, not a principal check.
   Calling it from non-admin code would bypass the intended gate.
 
@@ -304,7 +303,7 @@ written here is load-bearing at evaluation time.
   flow)
 - [ADR-0005](../adr/0005-error-handling-with-anomalies.md) — Error
   handling with anomalies (rollback on partial failure)
-- [api-keys.md](api-keys.md) — Authentication (the service-account
+- [authentication.md](authentication.md) — Authentication (the service-account
   client provisioned at bank creation)
 - [parties.md](parties.md) — Parties (the bank's org party)
 - [chart-of-accounts.md](chart-of-accounts.md) — Chart of accounts

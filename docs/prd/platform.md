@@ -268,14 +268,14 @@ Things deliberately left unresolved or future work.
   a simulator today; the production target is a clearing-bank
   partner with scheme API access. The architecture is
   pluggable; the production integration isn't yet deployed.
-- **User model.** Today every authenticated request resolves
-  to an organisation, not a user. End-customer-attributable
-  audit ("which human did this?") needs a user model
-  alongside the organisation model. Likely paired with a
-  customer-supplied OIDC identity provider for end-user
-  authentication. See
-  [tdd/api-keys](../tdd/api-keys.md) — Future direction —
-  for the auth-model evolution.
+- **End-customer attribution.** A `User` model now exists —
+  operators and org users sign in via Keycloak OIDC, so a
+  request can resolve to a specific human. What's still thin
+  is *end-customer*-attributable audit ("which of the
+  tenant's customers did this?"): that needs end-customer
+  identity federated to the tenant's own OIDC provider, which
+  isn't modelled. See
+  [tdd/authentication](../tdd/authentication.md).
 - **Multi-currency rate support.** A product version carries
   a single interest rate; multi-currency products earning
   different rates per currency would need rate-per-currency.

@@ -293,7 +293,7 @@ console-driven traffic.
 - **Platform identity siblings**: [onboarding](onboarding.md)
   for the operator-driven tenant-creation path that still
   works alongside user-driven sign-in;
-  [tdd/api-keys](../tdd/api-keys.md) for the API-key model
-  these users sit alongside.
+  [tdd/authentication](../tdd/authentication.md) for the
+  JWT / Keycloak model these users authenticate through.
 - **Banking-domain sibling**: [parties](parties.md) — users
   are not parties; the distinction is load-bearing.
