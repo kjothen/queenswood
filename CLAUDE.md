@@ -118,9 +118,9 @@ rationale live in the docs.
 ### Domain reference
 
 - **Per-capability designs** — `docs/tdd/` has one TDD per
-  capability or subsystem (api-keys, cash-account-products,
-  cash-accounts, idempotency, infrastructure, interest,
-  onboarding, organizations, parties, payments,
+  capability or subsystem (authentication, banks,
+  cash-account-products, cash-accounts, idempotency,
+  infrastructure, interest, onboarding, parties, payments,
   policy-evaluation, scenario-testing, service-apis,
   traceability, transaction-processing,
   transactions-and-balances).

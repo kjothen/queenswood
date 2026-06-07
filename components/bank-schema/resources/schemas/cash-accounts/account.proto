@@ -57,7 +57,7 @@ message CashAccount {
   // Customer accounts (current/savings/term-deposit) inherit a direct
   // pointer to the matching GL control account, resolved at open-time by
   // chasing product-type → control gl-code → GL product → GL account. The
-  // expand-legs paired-leg construction reads this pointer directly so
+  // add-control-legs paired-leg construction reads this pointer directly so
   // posting is one extra lookup per leg, not a four-hop chase. GL
   // accounts leave it unset (they ARE the controls; they don't roll up).
   optional string gl_control_account_id = 20;

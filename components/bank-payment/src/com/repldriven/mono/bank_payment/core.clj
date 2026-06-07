@@ -67,7 +67,7 @@
                                 creditor-account
                                 policies
                                 aggregates)
-           expanded-legs (ledger-accounts/expand-legs
+           expanded-legs (ledger-accounts/add-control-legs
                           txn
                           bank-id
                           (:legs payment-transaction))
@@ -168,7 +168,7 @@
                                      (:ledger-account-id pending-outbound)
                                      policies
                                      aggregates)
-                        expanded-legs (ledger-accounts/expand-legs
+                        expanded-legs (ledger-accounts/add-control-legs
                                        txn
                                        bank-id
                                        (:legs transaction))

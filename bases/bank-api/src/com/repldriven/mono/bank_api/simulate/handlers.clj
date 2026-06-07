@@ -73,7 +73,7 @@
                             :amount amount}
                            product-type
                            (assoc :product-type product-type))]
-             expanded-legs (ledger-accounts/expand-legs
+             expanded-legs (ledger-accounts/add-control-legs
                             txn
                             bank-id
                             legs)]

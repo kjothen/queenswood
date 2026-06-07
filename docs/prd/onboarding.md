@@ -183,30 +183,30 @@ is a known gap — see Open questions.
   fixed. The api-key prefix was determined at create time,
   so retrofitting a status change has implications beyond
   one record.
-- **Multi-key issuance flow.** A polished flow for issuing
-  additional keys post-creation — naming, scoping, audit —
-  isn't in place.
+- **Service-account credential self-service.** A tenant gets
+  one service-account credential at creation; there's no
+  self-service flow to provision or scope additional
+  credentials.
 - **Key rotation and revocation.** Neither is exposed.
   Both are real gaps; emergency revocation is
   operationally sketchy today.
 - **Per-tenant audit.** Who created the tenant, when, on
   what authority — none of this is recorded today.
 - **Billing.** No metering or invoicing for tenants.
-- **Auth model evolution.** Long-term the API-key model is
-  being replaced by certificate-based authentication for
-  service accounts, OIDC for user accounts, and a user model
-  alongside the organisation model. See
-  [tdd/api-keys](../tdd/api-keys.md) — Future direction.
-  Onboarding will look quite different in that future:
-  service-account certificates issued at tenant creation,
-  end-user identity federated to the tenant's own IDP.
+- **End-customer identity federation.** Authentication is
+  Keycloak-issued JWTs today — service-account credentials
+  for a tenant's backend and OIDC sign-in for operators and
+  org users (a `User` model already exists). What's still
+  future is federating a tenant's *end customers* to the
+  tenant's own identity provider. See
+  [tdd/authentication](../tdd/authentication.md).
 
 ## References
 
-- **Engineering view**: [tdd/organizations](../tdd/organizations.md)
+- **Engineering view**: [tdd/banks](../tdd/banks.md)
   for the all-or-nothing bootstrap;
-  [tdd/api-keys](../tdd/api-keys.md) for the credential
-  mechanism.
+  [tdd/authentication](../tdd/authentication.md) for the
+  credential mechanism.
 - **Platform context**: [platform](platform.md).
 - **Bootstrap side-effects** (each has its own PRD):
   [parties](parties.md) — the tenant's party is created

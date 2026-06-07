@@ -339,9 +339,15 @@ A caller of `record-transaction` + `apply-legs` must:
 3. Pass legs whose currencies match the transaction
    currency. Cross-currency operations need explicit FX
    legs.
-4. Ensure debits and credits balance across legs *as a
-   matter of caller discipline* — the bricks don't enforce
-   strict double-entry today (see Known Limitations).
+4. Ensure debits and credits balance across legs.
+   `validate-legs` enforces this — the debit amounts must sum
+   to the credit amounts, excluding roll-up control-account
+   legs (`:control`, same-side duplicates of a sub-ledger
+   posting) — rejecting `:transaction/legs-unbalanced`
+   otherwise. The `:control` legs aren't blindly dropped: each
+   must duplicate a real posting leg by side and amount
+   (`:transaction/control-leg-mismatch`), so the flag can't
+   smuggle an unbacked amount past the balance.
 
 ## Alternatives Considered
 
@@ -372,18 +378,14 @@ A caller of `record-transaction` + `apply-legs` must:
   others pass.
 - **Strict double-entry validation in the brick.** Reject
   any transaction whose debits don't sum to credits.
-  Considered. Not enforced today because fees and similar
-  one-sided operations don't always model the counterparty
-  side (P&L, fees-receivable). Worth revisiting if we ever
-  model the bank's own books symmetrically.
+  **Adopted** — `validate-legs` enforces it. The earlier
+  worry that one-sided fees would trip it proved unfounded:
+  every posting path books a counter-leg (the fee path routes
+  to 1100). Roll-up control-account legs are excluded from the
+  sum, since they're same-side duplicates, not double-entry.
 
 ## Known Limitations
 
-- **Double-entry is by-discipline, not by-construction.**
-  The bricks accept any list of legs; they don't assert
-  debits sum to credits. A fee today is one debit leg with
-  no matching credit. Worth tightening if we model the
-  bank's P&L explicitly.
 - **No leg-reversal helper.** Reversing a transaction means
   writing a new transaction with reversed legs (debit
   ↔ credit). The pattern is straightforward but a

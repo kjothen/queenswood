@@ -1,9 +1,8 @@
 # Authentication
 
-> This file is still named `api-keys.md` for link stability. API
-> keys were removed (#82) and replaced by Keycloak-issued JWTs;
-> the content below describes the current model. A rename to
-> `authentication.md` is a pending follow-up.
+> Static API keys were removed (#82) and replaced by
+> Keycloak-issued JWTs; this doc describes the current model. (It
+> was previously named `api-keys.md`.)
 
 ## Objective
 
@@ -27,7 +26,7 @@ service-account lifecycle, the realm and client layout, and the
 `:auth` shape the rest of the system reads.
 
 Out of scope: the bank-creation flow that provisions a bank's
-service-account client (see [organizations.md](organizations.md));
+service-account client (see [banks.md](banks.md));
 policy authorization of domain operations (see
 [policy-evaluation.md](policy-evaluation.md)); the SPA-side OIDC
 redirect/PKCE dance, which lives in the front-ends and Keycloak,
@@ -279,7 +278,7 @@ The API stamps a status-derived audience on a bank's tokens:
   (authorization of domain operations, distinct from edge authn)
 - [service-apis.md](service-apis.md) — Service APIs (the
   interceptor chain the auth interceptors sit in)
-- [organizations.md](organizations.md) — Banks (bank creation
+- [banks.md](banks.md) — Banks (bank creation
   provisions the service-account client)
 - `bank-api` auth interceptors (`auth.clj`)
 - `identity-provider` brick interface (`verify-token`,
