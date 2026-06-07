@@ -25,7 +25,7 @@
 
 (defn- tag-leg-product-type
   "Stamp a customer leg with its cash-account's `:product-type` so
-  `ledger-accounts/expand-legs` can fan it out to the matching control.
+  `ledger-accounts/add-control-legs` can fan it out to the matching control.
   GL legs (account-id resolves to no cash account) pass through
   untouched."
   [txn bank-id leg]
@@ -45,7 +45,7 @@
    bank
    (fn [txn]
      (let [tagged (mapv #(tag-leg-product-type txn bank-id %) (:legs tx-data))
-           expanded (ledger-accounts/expand-legs txn bank-id tagged)]
+           expanded (ledger-accounts/add-control-legs txn bank-id tagged)]
        (if (error/anomaly? expanded)
          expanded
          (let [r (transactions/record-transaction

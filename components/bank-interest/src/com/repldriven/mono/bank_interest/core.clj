@@ -75,7 +75,7 @@
                                                     as-of-date))
           _ (when transaction
               (let-nom>
-                [expanded-legs (ledger-accounts/expand-legs
+                [expanded-legs (ledger-accounts/add-control-legs
                                 txn
                                 bank-id
                                 (:legs transaction))
@@ -114,7 +114,7 @@
           _
           (when transaction
             (let-nom>
-              [expanded-legs (ledger-accounts/expand-legs
+              [expanded-legs (ledger-accounts/add-control-legs
                               txn
                               bank-id
                               (:legs transaction))

@@ -81,7 +81,8 @@
   (testing "non-customer product types have no control"
     (is (nil? (SUT/control-code-for-product-type :product-type-unknown)))))
 
-;; --- FDB-backed seed / lookup / expand-legs -----------------------------
+;; --- FDB-backed seed / lookup / add-control-legs
+;; -----------------------------
 
 (deftest seed!-test
   (with-test-system
@@ -120,7 +121,7 @@
        (is (nil? (SUT/find-by-code config bank-id "9999")))
        (is (nil? (SUT/get-account config bank-id "led.nope")))))))
 
-(deftest expand-legs-test
+(deftest add-control-legs-test
   (with-test-system
    [sys "classpath:bank-ledger-account/application-test.yml"]
    (let [config (fdb-config sys)
@@ -133,7 +134,7 @@
                                :balance-status :balance-status-posted
                                :side :side-credit
                                :amount 1000}
-                 expanded (SUT/expand-legs config bank-id [customer-leg])
+                 expanded (SUT/add-control-legs config bank-id [customer-leg])
                  _ (is (= 2 (count expanded)))
                  _ (is (= customer-leg (first expanded)))
                  control-leg (second expanded)
@@ -147,6 +148,6 @@
                      :balance-status :balance-status-posted
                      :side :side-debit
                      :amount 1000}
-             result (SUT/expand-legs config bank-id [gl-leg])]
+             result (SUT/add-control-legs config bank-id [gl-leg])]
          (is (not (error/anomaly? result)))
          (is (= [gl-leg] result)))))))

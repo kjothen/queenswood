@@ -108,7 +108,7 @@ Each cash-account rolls up to a GL **control account** via its
 - `control-code-for-product-type` — the product-type → control
   `:gl-code` mapping;
 - `find-by-code` — resolve a GL account by its code;
-- `expand-legs` — paired-leg construction at posting time,
+- `add-control-legs` — paired-leg construction at posting time,
   following each sub-ledger `default` leg with a
   control-account leg, keyed off the leg's `:product-type`.
 
@@ -122,7 +122,7 @@ graph LR
     L["LedgerAccount<br/>(GL: controls + detail)<br/>bank-ledger-account"]
     A["CashAccount<br/>(customer + own-funds)<br/>bank-cash-account"]
     BANK["new-bank: seed chart<br/>+ own-funds account<br/>bank-bank"]
-    EL["expand-legs<br/>(product-type → control)<br/>bank-ledger-account"]
+    EL["add-control-legs<br/>(product-type → control)<br/>bank-ledger-account"]
     TX["Legs + Balances<br/>bank-transaction<br/>bank-balance"]
     FDB[("FDB<br/>one transaction")]
 
@@ -230,7 +230,7 @@ Notes:
   There is no `gl_control_account_id`. A leg carrying a
   sub-ledger `:product-type` is mapped to its control
   `:gl-code` (`control-code-for-product-type`) at posting time
-  by `expand-legs`, which resolves the control `LedgerAccount`
+  by `add-control-legs`, which resolves the control `LedgerAccount`
   by code. Keying the fan-out off the leg's product-type — not
   a stored pointer — means re-coding the chart needs no
   per-account migration.
@@ -532,7 +532,7 @@ DEBIT  1100 Cash at correspondent         default / posted  100  GBP
 The control account is found by mapping the leg's
 `:product-type` to its control `:gl-code`
 (`control-code-for-product-type`) and resolving that
-`LedgerAccount` by code — `bank-ledger-account/expand-legs`.
+`LedgerAccount` by code — `bank-ledger-account/add-control-legs`.
 Pairing is automatic and server-side; the leg-recording API
 accepts the sub-ledger legs (each tagged with its account's
 `:product-type`) and the pipeline appends the matching control
@@ -699,7 +699,7 @@ table extends naturally.
   type and the GL surface: `new-account` (create one GL account
   plus its opening balance), `find-by-code`, `get-account`,
   `list-accounts`, `control-code-for-product-type`, and
-  `expand-legs` (paired-leg fan-out, keyed on a leg's
+  `add-control-legs` (paired-leg fan-out, keyed on a leg's
   `:product-type`).
 - **`bank-bank`** holds the canonical chart template in a
   resource; `new-bank` seeds one `LedgerAccount` per row per
@@ -711,7 +711,7 @@ table extends naturally.
   control 3100; customer products map to 2100 / 2200 / 2300.
 - **`bank-payment` / `bank-interest`** resolve GL accounts via
   `bank-ledger-account/find-by-code`, tag their customer legs
-  with `:product-type`, and fan out via `expand-legs`.
+  with `:product-type`, and fan out via `add-control-legs`.
 - **`bank-transaction` / `bank-balance`** record legs and
   maintain bucket balances uniformly across cash (`acc.`) and
   ledger (`led.`) account-ids; the combined leg-set is
@@ -1011,7 +1011,7 @@ that touches a customer accrued bucket and two GL accounts):
   maintained by the ISO 20022 Registration Authority and
   republished periodically
 - `bank-ledger-account` brick interface (the `LedgerAccount`
-  record type, `find-by-code`, `expand-legs`,
+  record type, `find-by-code`, `add-control-legs`,
   `control-code-for-product-type`)
 - `bank-transaction` / `bank-balance` brick interfaces (the
   leg + bucket substrate, shared across cash and ledger ids)

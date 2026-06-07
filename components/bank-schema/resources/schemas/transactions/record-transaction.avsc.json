@@ -37,7 +37,9 @@
                                                        "name": "LegSide",
                                                        "symbols": ["LEG_SIDE_DEBIT",
                                                                     "LEG_SIDE_CREDIT"]}},
-                  {"name": "amount",         "type": "long", "doc": "minor units, always > 0"}
+                  {"name": "amount",         "type": "long", "doc": "minor units, always > 0"},
+                  {"name": "control",        "type": ["null", "boolean"], "default": null,
+                   "doc": "true for a control-account roll-up mirror; excluded from the double-entry balance check"}
                 ]}}}
   ]
 }

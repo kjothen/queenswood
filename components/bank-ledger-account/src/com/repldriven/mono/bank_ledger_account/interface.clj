@@ -12,7 +12,7 @@
 
   This brick owns: the product-type to control-code mapping, the
   `new-account` creation call (callers loop it over their own chart
-  of accounts), code/id lookups, and the `expand-legs` paired-leg
+  of accounts), code/id lookups, and the `add-control-legs` paired-leg
   construction posting sites use to fan a customer leg out to its
   control account."
   (:require
@@ -87,7 +87,7 @@
   [txn bank-id]
   (core/list-accounts txn bank-id))
 
-(defn expand-legs
+(defn add-control-legs
   "Walk `legs` and append a matching control-side leg for every
   customer default-posted leg carrying a sub-ledger `:product-type`,
   resolving the control ledger account from that product type.
@@ -102,4 +102,4 @@
   - legs: original transaction legs (customer legs carry
     `:product-type`)."
   [txn bank-id legs]
-  (core/expand-legs txn bank-id legs))
+  (core/add-control-legs txn bank-id legs))

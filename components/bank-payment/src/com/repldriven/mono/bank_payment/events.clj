@@ -65,7 +65,7 @@
                        (:ledger-account-id cash)
                        policies
                        aggregates)
-          expanded-legs (ledger-accounts/expand-legs
+          expanded-legs (ledger-accounts/add-control-legs
                          txn
                          bank-id
                          (:legs transaction))
@@ -123,7 +123,7 @@
 
 (defn- record-settlement-leg
   "Drain 1200 → 1100 on the customer bank's books. GL-only legs (no
-  sub-ledger) so `expand-legs` is a no-op, but we route through it
+  sub-ledger) so `add-control-legs` is a no-op, but we route through it
   anyway for consistency."
   [config payment]
   (let [{:keys [bank-id]} payment]
