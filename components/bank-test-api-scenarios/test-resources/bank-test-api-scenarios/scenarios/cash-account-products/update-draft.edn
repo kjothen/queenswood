@@ -24,7 +24,7 @@
                     :product-type "current"
                     :currency "GBP"
                     :interest-rate-bps 0
-                    :valid-from "2026-01-01"}}
+                    :effective-from "2026-01-01"}}
    :as :draft
    :assert {:status 201
             :body {:status "draft" :name "Initial Name"}}}]
@@ -39,7 +39,7 @@
                     :product-type "current"
                     :currency "GBP"
                     :interest-rate-bps 150
-                    :valid-from "2026-01-01"}}
+                    :effective-from "2026-01-01"}}
    :assert {:status 200
             :body {:product-id [:ref :draft :product-id]
                    :version-id [:ref :draft :version-id]

@@ -55,7 +55,7 @@
                     :product-type "current"
                     :currency "GBP"
                     :interest-rate-bps 0
-                    :valid-from "2026-01-01"}}
+                    :effective-from "2026-01-01"}}
    :as :current-draft
    :assert {:status 201 :body {:status "draft"}}}
   {:command :api/request
@@ -75,7 +75,7 @@
                     :product-type "savings"
                     :currency "GBP"
                     :interest-rate-bps 250
-                    :valid-from "2026-01-01"}}
+                    :effective-from "2026-01-01"}}
    :as :savings-draft
    :assert {:status 201 :body {:status "draft"}}}
   {:command :api/request

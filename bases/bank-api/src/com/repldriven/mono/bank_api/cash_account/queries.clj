@@ -33,18 +33,14 @@
 
     (if (error/anomaly? result)
       (errors/anomaly->response result)
-      ;; Customer-facing cash accounts only — the bank's own chart-of-
-      ;; accounts rows carry `:product-type-general-ledger` (and proto2
-      ;; reads an unset enum back as `:product-type-unknown`); both are
-      ;; listed via the chart-of-accounts surface instead.
+      ;; Skip any account whose product-type reads back unset — proto2
+      ;; deserialises an absent enum as `:product-type-unknown`.
       (let [{:keys [accounts before after]} result
             customer-accounts (filterv
                                (fn [a]
                                  (let [pt (:product-type a)]
                                    (and (some? pt)
-                                        (not (#{:product-type-unknown
-                                                :product-type-general-ledger}
-                                              pt)))))
+                                        (not= :product-type-unknown pt))))
                                accounts)
             links (when (seq customer-accounts)
                     (cursor/build-links "/v1/cash-accounts"

@@ -30,12 +30,12 @@
    :status :cash-account-product-status-published
    :name "Published"
    :allowed-currencies ["GBP"]
-   :kind {:sub-ledger {:product-type :product-type-sub-ledger-current
-                       :balance-sheet-side :balance-sheet-side-liability
-                       :balance-products [{:balance-type :balance-type-default
-                                           :balance-status
-                                           :balance-status-posted}]
-                       :interest-rate-bps 0}}
+   :product-type :product-type-sub-ledger-current
+   :balance-sheet-side :balance-sheet-side-liability
+   :balance-products [{:balance-type :balance-type-default
+                       :balance-status :balance-status-posted}]
+   :interest-rate-bps 0
+   :effective-from 20089
    :created-at 1700000000000
    :updated-at 1700000000000})
 
@@ -54,7 +54,8 @@
 (def ^:private good-data
   {:name "v2"
    :currency "GBP"
-   :kind {:sub-ledger {:product-type :product-type-sub-ledger-current}}})
+   :product-type :product-type-sub-ledger-current
+   :effective-from 20089})
 
 (deftest update-version-test
   (testing "rejects with :version-immutable when existing is published"
@@ -126,21 +127,17 @@
     (let [v (SUT/new-version "bnk.1" "prd.1" [] good-data permissive-policies)]
       (is (= 1 (:version-number v)))
       (is (= :cash-account-product-status-draft (:status v)))))
-  (testing "fills derived sub-ledger fields from the per-product-type template"
+  (testing "fills derived fields from the per-product-type template"
     (let [v (SUT/new-version "bnk.1" "prd.1" [] good-data permissive-policies)]
-      (is (= :product-type-sub-ledger-current (:product-type v))
-          "denormalised top-level product-type mirrors the sub-ledger variant")
-      (is (= :balance-sheet-side-liability
-             (get-in v [:kind :sub-ledger :balance-sheet-side])))
+      (is (= :product-type-sub-ledger-current (:product-type v)))
+      (is (= :balance-sheet-side-liability (:balance-sheet-side v)))
       (is (= ["GBP"] (:allowed-currencies v)))
       (is (= [:payment-address-scheme-scan]
-             (get-in v
-                     [:kind :sub-ledger
-                      :allowed-payment-address-schemes])))
+             (:allowed-payment-address-schemes v)))
       (is (some #(= %
                     {:balance-type :balance-type-default
                      :balance-status :balance-status-posted})
-                (get-in v [:kind :sub-ledger :balance-products]))
+                (:balance-products v))
           "template provides at least the default-posted balance bucket")))
   (testing
     "rejects with :currency-not-allowed when currency is outside the menu"
@@ -150,21 +147,52 @@
                              (assoc good-data :currency "USD")
                              permissive-policies)]
       (is (error/rejection? r))
-      (is (= :cash-account-product/currency-not-allowed (error/kind r)))))
-  (testing "GL-kind product passes through gl fields without template lookup"
-    (let [gl-data {:name "Customer deposits — current"
-                   :currency "GBP"
-                   :kind {:general-ledger
-                          {:gl-code "2100"
-                           :gl-account-type :gl-account-type-liability
-                           :gl-account-class :gl-account-class-control
-                           :required :required-mandatory
-                           :sub-ledger-kind
-                           :sub-ledger-kind-cash-account-current}}}
-          v (SUT/new-version "bnk.1" "prd.1" [] gl-data permissive-policies)]
-      (is (= "2100" (get-in v [:kind :general-ledger :gl-code])))
-      (is (= :product-type-general-ledger (:product-type v))
-          "GL products carry general-ledger as their top-level product-type")
-      (is (= :gl-account-class-control
-             (get-in v [:kind :general-ledger :gl-account-class])))
-      (is (= :cash-account-product-status-draft (:status v))))))
+      (is (= :cash-account-product/currency-not-allowed (error/kind r))))))
+
+(deftest effective-window-test
+  (testing "a product without effective-from is rejected"
+    (let [r (SUT/new-version "bnk.1"
+                             "prd.1"
+                             []
+                             (dissoc good-data :effective-from)
+                             permissive-policies)]
+      (is (error/rejection? r))
+      (is (= :cash-account-product/effective-from-required (error/kind r)))))
+  (testing "effective-to not strictly after effective-from is rejected"
+    (let [r (SUT/new-version
+             "bnk.1"
+             "prd.1"
+             []
+             (assoc good-data :effective-from 20089 :effective-to 20089)
+             permissive-policies)]
+      (is (error/rejection? r))
+      (is (= :cash-account-product/invalid-effective-window (error/kind r))))))
+
+(defn- pub
+  [vn from to]
+  (cond-> {:version-id (str "prv." vn)
+           :version-number vn
+           :status :cash-account-product-status-published
+           :effective-from from}
+          to
+          (assoc :effective-to to)))
+
+(deftest active-version-test
+  (let [product {:versions [(pub 1 100 200)    ;; [100, 200)
+                            (pub 2 200 nil)    ;; [200, inf)
+                            (pub 3 300 nil)]}] ;; [300, inf)
+    (testing "picks the window containing the day"
+      (is (= 1 (:version-number (SUT/active-version product 150))))
+      (is (= 2 (:version-number (SUT/active-version product 250)))
+          "day 250: v1 expired, v2 active, v3 not yet"))
+    (testing "overlap resolves to the greatest effective-from"
+      (is (= 3 (:version-number (SUT/active-version product 350)))
+          "day 350: both v2 and v3 apply; v3 has the later from"))
+    (testing "no version effective on the day yields nil"
+      (is (nil? (SUT/active-version {:versions [(pub 1 100 200)]} 250))))
+    (testing "drafts are never active"
+      (is (nil? (SUT/active-version
+                 {:versions [(assoc (pub 1 100 nil)
+                                    :status
+                                    :cash-account-product-status-draft)]}
+                 250))))))

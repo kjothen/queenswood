@@ -9,26 +9,6 @@
 
 (def transact fdb/transact)
 
-(defn find-product-by-gl-code
-  "Return the first CashAccountProduct whose top-level (denormalised)
-  `gl_code` matches the given code for this bank, or nil. The
-  denormalised field mirrors `general_ledger.gl_code` from the kind
-  variant; only GL products carry it. Used by bank-chart-of-accounts
-  and by cash-account opening to resolve a GL account from its code."
-  [txn bank-id gl-code]
-  (fdb/transact
-   txn
-   (fn [txn]
-     (some-> (fdb/query-record-compound
-              (fdb/open txn store-name)
-              "CashAccountProduct"
-              [["bank_id" bank-id]
-               ["gl_code" gl-code]]
-              {:index "CashAccountProduct_by_bank_gl_code"})
-             schema/pb->CashAccountProduct))
-   :cash-account-product/find-by-gl-code
-   "Failed to find product by gl-code"))
-
 (defn save-version
   [txn version]
   (fdb/transact

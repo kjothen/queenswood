@@ -26,28 +26,11 @@
   [{:keys [sort-code account-number]}]
   (str sort-code account-number))
 
-(defn- sub-ledger-kind-of
-  "Read the sub-ledger variant fields from a product version; nil if
-  this is not a sub-ledger product."
-  [product-version]
-  (get-in product-version [:kind :sub-ledger]))
-
-(defn- gl-kind-of
-  "Read the general-ledger variant fields from a product version; nil
-  if this is not a GL product."
-  [product-version]
-  (get-in product-version [:kind :general-ledger]))
-
 (defn- new-addresses
   [product-version address-fountain-fn]
-  (let [{:keys [allowed-payment-address-schemes]} (sub-ledger-kind-of
-                                                   product-version)]
+  (let [schemes (:allowed-payment-address-schemes product-version)]
     (cond
-     (nil? allowed-payment-address-schemes)
-     ;; GL products have no payment-address schemes; that's normal.
-     []
-
-     (empty? allowed-payment-address-schemes)
+     (empty? schemes)
      (error/reject :cash-account/no-payment-schemes
                    "Product has no allowed payment address schemes")
 
@@ -67,26 +50,18 @@
                                          "Unsupported payment address scheme: "
                                          (clojure.core/name scheme))))))
              []
-             allowed-payment-address-schemes))))
+             schemes))))
 
 (defn open-account
-  "Build a cash-account record from input data and a published
-  product version. The input no longer accepts GL discriminator
-  fields directly; those live on the product's :kind variant.
-
-  For sub-ledger products: derives account-type from the holder
-  party and allocates payment-addresses.
-
-  For GL products: skips the party-account-type derivation and the
-  payment-address allocation; the product's variant fields drive
-  everything."
+  "Build a cash-account record from input data and a published product
+  version: derives account-type from the holder party, runs the open
+  capability + count limits, and allocates payment-addresses."
   [data product-version party address-fountain-fn aggregates policies]
   (let [{:keys [bank-id party-id product-id currency name]}
         data
         {:keys [version-id]} product-version
         product-type (:product-type product-version)
-        gl-kind (gl-kind-of product-version)
-        account-type (when-not gl-kind (party->account-type party))]
+        account-type (party->account-type party)]
     (let-nom>
       [_ (when (nil? product-version)
            (error/reject :cash-account/open
@@ -95,31 +70,25 @@
        _ (validation/valid-product? product-version)
        _ (validation/valid-currency? currency product-version)
        _ (validation/valid-party? party)
-       _ (when-not gl-kind
-           (check-capability :cash-account-action-open
-                             account-type
-                             policies))
-       _ (when-not gl-kind
-           (policy/check-limit
-            policies
-            :cash-account
-            {:aggregate :count
-             :window :time-window-instant
-             :value (inc (get-in aggregates
-                                 [:cash-account #{:bank-id}]))}))
-       _ (when-not gl-kind
-           (policy/check-limit
-            policies
-            :cash-account
-            {:aggregate :count
-             :window :time-window-instant
-             :product-type product-type
-             :account-type account-type
-             :currency currency
-             :value (inc (get-in aggregates
-                                 [:cash-account
-                                  #{:bank-id :product-type
-                                    :account-type :currency}]))}))
+       _ (check-capability :cash-account-action-open account-type policies)
+       _ (policy/check-limit
+          policies
+          :cash-account
+          {:aggregate :count
+           :window :time-window-instant
+           :value (inc (get-in aggregates [:cash-account #{:bank-id}]))})
+       _ (policy/check-limit
+          policies
+          :cash-account
+          {:aggregate :count
+           :window :time-window-instant
+           :product-type product-type
+           :account-type account-type
+           :currency currency
+           :value (inc (get-in aggregates
+                               [:cash-account
+                                #{:bank-id :product-type
+                                  :account-type :currency}]))})
        payment-addresses (new-addresses product-version
                                         address-fountain-fn)]
       (let [now (utility/now)
@@ -137,13 +106,9 @@
                  :created-at now
                  :updated-at now}
 
-                ;; product-type is set for every account — the customer
-                ;; type for sub-ledger accounts, :product-type-general-
-                ;; ledger for GL accounts.
                 product-type
                 (assoc :product-type product-type)
 
-                ;; Customer-account-only fields
                 account-type
                 (assoc :account-type account-type)
 
@@ -153,10 +118,9 @@
 (defn opening-balances
   [account currency product-version]
   (let [{:keys [account-id product-type]} account
-        {:keys [balance-products]} (get-in product-version
-                                           [:kind :sub-ledger])
-        ;; GL products carry one bucket — default/posted — implicitly.
-        bp (or balance-products
+        ;; Fall back to a single default/posted bucket if the product
+        ;; declares none.
+        bp (or (:balance-products product-version)
                [{:balance-type :balance-type-default
                  :balance-status :balance-status-posted}])]
     (mapv (fn [{:keys [balance-type balance-status]}]
@@ -165,9 +129,6 @@
                      :balance-status balance-status
                      :currency currency}
 
-                    ;; product-type mirrors the account: the customer
-                    ;; type for sub-ledger accounts, general-ledger for
-                    ;; GL accounts.
                     product-type
                     (assoc :product-type product-type)))
           bp)))

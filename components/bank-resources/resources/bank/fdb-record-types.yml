@@ -16,8 +16,6 @@ cash-account-products:
     - name: CashAccountProduct_count_by_bank
       fields: [bank_id, product_id]
       type: count
-    - name: CashAccountProduct_by_bank_gl_code
-      fields: [bank_id, gl_code]
     - name: CashAccountProduct_by_bank_product_type
       fields: [bank_id, product_type]
 cash-accounts:

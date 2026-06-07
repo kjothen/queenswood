@@ -72,10 +72,7 @@
 
 (defn find-account-by-product
   "Return the first CashAccount whose `(bank-id, product-id)` match,
-  or nil. Used to find a GL account given its product (GL products
-  spawn exactly one account each). Composes with
-  `bank-cash-account-product/find-product-by-gl-code` to resolve a GL
-  account from its code.
+  or nil.
 
   Args:
   - txn: FDB transaction or db handle.

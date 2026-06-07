@@ -8,13 +8,6 @@ import "schemas/types/product-type.proto";
 
 option java_outer_classname = "CashAccountProductProto";
 
-// product_type (tag 6) is denormalised from the kind variant so the FDB
-// index CashAccountProduct_by_bank_product_type can be a flat
-// [bank_id, product_type] concat. Sub-ledger products mirror
-// sub_ledger.product_type; GL products carry
-// PRODUCT_TYPE_GENERAL_LEDGER. The domain layer keeps it in sync at
-// write time.
-
 enum BalanceSheetSide {
   BALANCE_SHEET_SIDE_UNKNOWN = 0;
   BALANCE_SHEET_SIDE_ASSET = 1;
@@ -44,43 +37,6 @@ enum IsoCashAccountType {
   ISO_CASH_ACCOUNT_TYPE_CPAC = 6;
 }
 
-// Five accounting classes. Asset and Expense are debit-normal; Liability,
-// Equity, and Income are credit-normal (derived at read time, not stored).
-enum GlAccountType {
-  GL_ACCOUNT_TYPE_UNKNOWN = 0;
-  GL_ACCOUNT_TYPE_ASSET = 1;
-  GL_ACCOUNT_TYPE_LIABILITY = 2;
-  GL_ACCOUNT_TYPE_EQUITY = 3;
-  GL_ACCOUNT_TYPE_INCOME = 4;
-  GL_ACCOUNT_TYPE_EXPENSE = 5;
-}
-
-// Role of a GL account in the chart hierarchy. detail = leaf, accepts
-// legs. summary = rolls up children, no legs directly. control = special
-// leaf that aggregates a sub-ledger (customer cash-accounts).
-enum GlAccountClass {
-  GL_ACCOUNT_CLASS_UNKNOWN = 0;
-  GL_ACCOUNT_CLASS_DETAIL = 1;
-  GL_ACCOUNT_CLASS_CONTROL = 2;
-  GL_ACCOUNT_CLASS_SUMMARY = 3;
-}
-
-enum Required {
-  REQUIRED_UNKNOWN = 0;
-  REQUIRED_MANDATORY = 1;
-  REQUIRED_OPTIONAL = 2;
-}
-
-// Sub-ledger cohort a control GL account aggregates. One per
-// customer-deposit product type today; loans, cards, and other instruments
-// add new kinds when those product families land.
-enum SubLedgerKind {
-  SUB_LEDGER_KIND_UNKNOWN = 0;
-  SUB_LEDGER_KIND_CASH_ACCOUNT_CURRENT = 1;
-  SUB_LEDGER_KIND_CASH_ACCOUNT_SAVINGS = 2;
-  SUB_LEDGER_KIND_CASH_ACCOUNT_TERM_DEPOSIT = 3;
-}
-
 enum CashAccountProductStatus {
   CASH_ACCOUNT_PRODUCT_STATUS_UNKNOWN = 0;
   CASH_ACCOUNT_PRODUCT_STATUS_DRAFT = 1;
@@ -88,58 +44,35 @@ enum CashAccountProductStatus {
   CASH_ACCOUNT_PRODUCT_STATUS_DISCARDED = 3;
 }
 
-// Customer-facing instrument template: drives cash-account opening
-// (allowed balance buckets, payment schemes, interest rate) and the
+// A versioned customer-facing instrument template: drives cash-account
+// opening (allowed balance buckets, payment schemes, interest rate) and the
 // outbound ISO 20022 account-type classification.
-message SubLedgerProductKind {
-  required com.repldriven.mono.schemas.types.ProductType product_type = 1;
-  required BalanceSheetSide balance_sheet_side = 2;
-  repeated com.repldriven.mono.schemas.balances.BalanceProduct balance_products = 3;
-  repeated PaymentAddressScheme allowed_payment_address_schemes = 4;
-  optional int32 interest_rate_bps = 5;
-  optional IsoCashAccountType iso_cash_account_type = 6;
-}
-
-// Bank-owned GL account template: drives chart-of-accounts placement
-// (asset/liability/etc., detail/control/summary, parent hierarchy). Each
-// GeneralLedgerProductKind product spawns exactly one CashAccount.
-message GeneralLedgerProductKind {
-  required string gl_code = 1;
-  required GlAccountType gl_account_type = 2;
-  required GlAccountClass gl_account_class = 3;
-  required Required required = 4;
-  optional string parent_gl_code = 5;
-  optional SubLedgerKind sub_ledger_kind = 6;
-}
-
 message CashAccountProduct {
   option (com.apple.foundationdb.record.record).usage = RECORD;
+
+  reserved 9;                          // was: optional string valid_from
+  reserved "valid_from";
+  reserved 20, 21, 22;                 // was: oneof kind { sub_ledger,
+  reserved "sub_ledger", "general_ledger", "gl_code";  // general_ledger }, gl_code
 
   required string bank_id = 1;
   required string product_id = 2;
   required string version_id = 3;
   required int32 version_number = 4;
   required CashAccountProductStatus status = 5;
-  optional com.repldriven.mono.schemas.types.ProductType product_type = 6;
+  required com.repldriven.mono.schemas.types.ProductType product_type = 6;
+  required BalanceSheetSide balance_sheet_side = 7;
   required string name = 8;
-  optional string valid_from = 9;
   repeated string allowed_currencies = 10;
+  // Effective window (epoch-day, int64) over which a published version is the
+  // active one for opening accounts. effective_to is open-ended when absent.
+  optional int64 effective_from = 11;
+  optional int64 effective_to = 12;
+  repeated com.repldriven.mono.schemas.balances.BalanceProduct balance_products = 13;
   required int64 created_at = 14;
   required int64 updated_at = 15;
   optional int64 discarded_at = 16;
-
-  // Discriminated union: every product is either a customer-facing
-  // sub-ledger product or a bank-owned GL product.
-  oneof kind {
-    SubLedgerProductKind sub_ledger = 20;
-    GeneralLedgerProductKind general_ledger = 21;
-  }
-
-  // Denormalised from general_ledger.gl_code so the FDB index
-  // CashAccountProduct_by_bank_gl_code can be a simple [bank_id,
-  // gl_code] concat instead of needing nested-field index syntax. Set
-  // only on general-ledger products; nil on sub-ledger products. The
-  // source of truth stays inside the oneof variant; this field is the
-  // index cache the domain layer must keep in sync at write time.
-  optional string gl_code = 22;
+  repeated PaymentAddressScheme allowed_payment_address_schemes = 17;
+  optional int32 interest_rate_bps = 18;
+  optional IsoCashAccountType iso_cash_account_type = 19;
 }

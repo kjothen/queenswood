@@ -16,6 +16,7 @@
     [com.repldriven.mono.bank-policy.interface :as policy]
 
     [com.repldriven.mono.error.interface :as error :refer [let-nom>]]
+    [com.repldriven.mono.utility.interface :as utility]
 
     [clojure.edn :as edn]
     [clojure.java.io :as io]))
@@ -66,8 +67,8 @@
               bank-id
               {:name "Bank own funds"
                :currency currency
-               :kind {:sub-ledger
-                      {:product-type :product-type-sub-ledger-own-funds}}}
+               :product-type :product-type-sub-ledger-own-funds
+               :effective-from (utility/today)}
               {:policies policies})
      _ (products/publish txn
                          bank-id

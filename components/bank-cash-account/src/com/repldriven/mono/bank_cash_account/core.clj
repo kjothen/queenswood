@@ -9,7 +9,8 @@
     [com.repldriven.mono.bank-policy.interface :as policy]
     [com.repldriven.mono.bank-transaction.interface :as transactions]
 
-    [com.repldriven.mono.error.interface :as error :refer [let-nom>]]))
+    [com.repldriven.mono.error.interface :as error :refer [let-nom>]]
+    [com.repldriven.mono.utility.interface :as utility]))
 
 (defn- get-policies
   ([txn bank-id opts]
@@ -59,7 +60,7 @@
 
 (defn- product-type-of
   [product-version]
-  (get-in product-version [:kind :sub-ledger :product-type]))
+  (:product-type product-version))
 
 (defn open-account
   ([txn data]
@@ -73,9 +74,8 @@
           [policies (get-policies txn bank-id opts)
            party (parties/get-party txn bank-id party-id)
            product (products/get-product txn bank-id product-id)
-           product-version (products/published-version product)
-           sub-ledger? (some? (product-type-of product-version))
-           aggregates (when sub-ledger?
+           product-version (products/active-version product (utility/today))
+           aggregates (when product-version
                         (counts txn
                                 bank-id
                                 (product-type-of product-version)

@@ -1,6 +1,5 @@
 (ns com.repldriven.mono.bank-api.cash-account-product.queries
   (:require
-    [com.repldriven.mono.bank-api.cash-account-product.coercion :as coercion]
     [com.repldriven.mono.bank-api.cursor :as cursor]
     [com.repldriven.mono.bank-api.errors :as errors]
     [com.repldriven.mono.bank-cash-account-product.interface :as
@@ -64,10 +63,7 @@
     (if (error/anomaly? result)
       (errors/anomaly->response result)
       (let [{:keys [items]} result
-            ;; GL chart-of-accounts rows are tenant-private; the
-            ;; public products list only surfaces sub-ledger products.
-            sub-ledger-items (filterv coercion/sub-ledger? (or items []))
-            windowed (paginate sub-ledger-items
+            windowed (paginate (or items [])
                                {:after after-id :before before-id :size size})
             {windowed-items :page
              next-cursor :after
@@ -80,7 +76,7 @@
                                         next-cursor))]
         {:status 200
          :body (utility/assoc-seq
-                {:items (mapv coercion/product->response windowed-items)}
+                {:items windowed-items}
                 :links
                 links)}))))
 
@@ -96,7 +92,7 @@
                 product-id)]
     (if (error/anomaly? result)
       (errors/anomaly->response result)
-      {:status 200 :body (coercion/product->response result)})))
+      {:status 200 :body result})))
 
 (defn get-version
   [request]
@@ -111,7 +107,7 @@
                 version-id)]
     (if (error/anomaly? result)
       (errors/anomaly->response result)
-      {:status 200 :body (coercion/version->response result)})))
+      {:status 200 :body result})))
 
 (defn list-templates
   [_request]

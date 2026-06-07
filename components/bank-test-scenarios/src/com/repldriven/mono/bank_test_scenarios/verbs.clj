@@ -91,19 +91,17 @@
   (keyword (str "pmt-" next-payment-id)))
 
 (defn- product-payload
-  "Build a sub-ledger product input for new-product/update-draft. Wraps
-  the product-type into the :kind discriminator, optionally merging
-  caller-supplied :kind extras such as :interest-rate-bps. Non-:kind
-  extras (like :name overrides) are merged at the top level."
+  "Build a flat product input for new-product/update-draft, optionally
+  merging caller-supplied extras such as :interest-rate-bps."
   [product-name product-type & [extras]]
-  (let [{kind-extras :kind :as extras} (or extras {})
-        top-extras (dissoc extras :kind)]
-    (merge {:name product-name
-            :currency "GBP"
-            :kind {:sub-ledger
-                   (merge {:product-type product-type}
-                          kind-extras)}}
-           top-extras)))
+  (merge {:name product-name
+          :currency "GBP"
+          :product-type product-type
+          ;; A fixed past effective-from (epoch-day 20089 = 2025-01-01)
+          ;; so the published version is always active when accounts
+          ;; open during the run.
+          :effective-from 20089}
+         (or extras {})))
 
 (defmulti dispatch (fn [_ctx command] (:command command)))
 
@@ -207,7 +205,7 @@
         name
         (str (if (= :savings type) "Savings" "Current") " Product " counter)
         extras (when (and rate-bps (pos? rate-bps))
-                 {:kind {:interest-rate-bps rate-bps}})
+                 {:interest-rate-bps rate-bps})
         result
         (products/new-product bank real-id (product-payload name kind extras))]
     (-> ctx

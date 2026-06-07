@@ -25,7 +25,7 @@
                     :product-type "current"
                     :currency "GBP"
                     :interest-rate-bps 0
-                    :valid-from "2026-01-01"}}
+                    :effective-from "2026-01-01"}}
    :as :product-0
    :assert {:status 201
             :body {:product-id [:m/regex "^prd\\."]
@@ -38,4 +38,4 @@
                    :allowed-currencies ["GBP"]
                    :allowed-payment-address-schemes ["scan"]
                    :interest-rate-bps 0
-                   :valid-from "2026-01-01"}}}]}
+                   :effective-from "2026-01-01"}}}]}

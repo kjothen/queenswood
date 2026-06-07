@@ -146,6 +146,14 @@
   now-rfc3339
   util.time/now-rfc3339)
 
+(def
+  ^{:doc
+    "Current UTC calendar day as an epoch-day (long), derived from
+  `now`. Use to compare against persisted epoch-day fields like a
+  product version's effective window."}
+  today
+  util.time/today)
+
 (def ^{:doc "Name of a var as a string. Args:
   - v: a Clojure var."} vname
   vars/vname)

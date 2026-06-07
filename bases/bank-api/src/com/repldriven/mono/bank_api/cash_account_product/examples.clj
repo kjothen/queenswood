@@ -52,7 +52,7 @@
    :balance-products [{:balance-type :default :balance-status :posted}]
    :allowed-payment-address-schemes [:scan]
    :interest-rate-bps 0
-   :valid-from "2025-01-01"
+   :effective-from "2025-01-01"
    :created-at "2025-01-01T00:00:00Z"
    :updated-at "2025-01-01T00:00:00Z"})
 
@@ -66,7 +66,7 @@
    :product-type :current
    :currency "GBP"
    :interest-rate-bps 0
-   :valid-from "2025-01-01"})
+   :effective-from "2025-01-01"})
 
 (def CashAccountProductTemplate
   {:product-type :current
