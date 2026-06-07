@@ -236,9 +236,8 @@ Notes:
   per-account migration.
 - **`product_type`** stays denormalised on cash accounts for
   the existing
-  `CashAccount_by_bank_product_type` /
   `CashAccount_count_by_bank_product_account_type_currency`
-  indices, and now distinguishes customer instruments
+  index, and now distinguishes customer instruments
   (`-current` / `-savings` / `-term-deposit`) from the bank's
   own-funds account (`-own-funds`).
 - **`account_type`** (personal / business) is derived from the
@@ -899,10 +898,14 @@ that touches a customer accrued bucket and two GL accounts):
   platform's GL to mirror to it has no built-in export. A
   changelog watcher publishing GL postings to an export topic
   would be the shape; out of scope for v1.
-- **No regulatory taxonomy mapping.** The bank's CoA is
-  free-form within A/L/E/I/E. Mapping to FRS 102 or other
-  published taxonomies for regulatory reporting is left to
-  the bank.
+- **No regulatory taxonomy mapping.** The five top-level
+  classes follow FRS 102's element definitions (asset /
+  liability / equity / income / expense), but the chart is
+  otherwise entity-specific — neither FRS 102 nor any
+  standard prescribes a CoA. Mapping to the statutory
+  banking statement format (liquidity-ordered, per the Bank
+  Accounts Directive lineage) and to FINREP for prudential
+  reporting is left to the bank.
 - **Code convention isn't enforced.** A bank can code a
   liability as 5500 or an income as 1000; the system stores
   whatever it's given. Reporting that orders by code will

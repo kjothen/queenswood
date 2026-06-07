@@ -248,22 +248,25 @@ property under test.
 
 ## Known Limitations
 
-- **No log/trace correlation.** The `log` brick produces
-  string log lines that don't include the OTEL trace ID. A
-  span and its log lines can't be joined by anything other
-  than timestamp. Worth addressing — at minimum a logback
-  pattern that pulls trace ID from MDC, plus an interceptor
-  to populate MDC from the active span.
+- **No log/trace correlation.** No interceptor populates MDC
+  with the active OTEL trace ID, and the logstash encoder
+  doesn't include one, so a span and its log lines join only
+  by timestamp. Fix is an MDC-populating interceptor from the
+  active span (`log/core.clj` is a bare
+  `clojure.tools.logging` wrapper) plus an
+  `<includeMdcKeyName>` on the LogstashEncoder.
 - **Counters exist but aren't widely instrumented.** The
   `telemetry/counter` API is in place but most domain
   operations don't increment any counters. Rejection rates,
   command throughput, latency histograms, etc. are unobserved.
   Worth a separate piece of work.
-- **No structured logging.** Logs are formatted strings, not
-  JSON or EDN with queryable fields. A structured-logging
-  appender (logstash-encoder or similar) would let log
-  aggregators query by `:correlation-id`, `:causation-id`,
-  command name, etc.
+- **Structured logging lacks domain fields.** Logs are
+  already JSON via `LogstashEncoder` (all
+  `projects/*/resources/logback.xml`), but only
+  message / level / timestamp are populated. To query by
+  `:correlation-id`, `:causation-id`, or command name, those
+  values must be pushed into MDC and included as encoder
+  fields — none are today.
 - **Correlation-Id header defaults to Idempotency-Key.** When
   a client doesn't supply `Correlation-Id`, the `:id` is used.
   Two retries of the same operation share both — which is

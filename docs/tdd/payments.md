@@ -378,15 +378,20 @@ channel separation is configuration, not infrastructure.
 - **Webhook absence isn't handled.** If ClearBank confirms a
   payment but the webhook never arrives (network failure,
   endpoint downtime), the OutboundPayment stays in
-  `submitted` indefinitely. There's no sweeper that polls
+  `pending` indefinitely. There's no sweeper that polls
   ClearBank to reconcile. Worth a future
   reconciliation-sweep design.
-- **Outbound failure flow is partial.** When ClearBank
-  rejects a payment, the adapter publishes a failure event;
-  `settle-outbound` reverses the pending-outgoing leg and
-  marks the payment failed. The depth of the failure
-  taxonomy (transient vs permanent, retry vs not) is
-  shallower than ClearBank's actual error model.
+- **Outbound failure flow is unimplemented.** When ClearBank
+  rejects a payment (`TransactionRejected` /
+  `PaymentMessageAssessmentFailed`), the adapter only logs
+  the webhook — `publish-outbound-payment-rejected` and
+  `publish-outbound-payment-assessment-failed` are TODO
+  stubs that emit no event. The payment brick consumes only
+  `transaction-settled`, so nothing reverses the 1200
+  pending-outbound leg or moves the payment to `failed`. The
+  schema reserves a `failed` status, but no code path sets
+  it. A full failure taxonomy (transient vs permanent, retry
+  vs not) is future work.
 - **Settlement reordering is trusted to ClearBank.** Events
   on the bus arrive in commit order, and Queenswood handles
   them serially. If ClearBank ever delivered settlement

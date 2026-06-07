@@ -100,10 +100,11 @@ the now-`pending` entry and returns 409.
 | 2xx or 4xx      | overwrite with `completed` (EDN, 24 h TTL)   |
 | 5xx             | delete `pending` marker — retryable          |
 
-There is no `:error` stage. If the handler throws an exception
-through Sieppari's error path, the `pending` claim stays live
-until the 60 s stale-pending TTL expires. A future `:error`
-stage could release the claim immediately.
+An `:error` stage releases the `pending` claim when the
+handler throws through Sieppari's error path (Sieppari skips
+`:leave` on the throwing path). The 60 s stale-pending TTL
+remains as a backstop for hard crashes that skip `:error`
+entirely.
 
 ```mermaid
 sequenceDiagram
@@ -210,11 +211,6 @@ lookup runs.
   ADR-0003.
 
 ## Known Limitations
-
-- **No `:error` stage.** A handler that throws rather than
-  returning normally leaves a `pending` claim live for up to
-  60 s. The stale-pending TTL handles it operationally; a
-  future `:error` stage can improve this.
 
 - **No sweeper for expired `completed` entries.** Entries
   expire after 24 h but remain in FDB until overwritten or

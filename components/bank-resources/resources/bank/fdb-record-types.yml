@@ -22,8 +22,6 @@ cash-accounts:
   record-type: CashAccount
   primary-key: [bank_id, account_id]
   indexes:
-    - name: CashAccount_by_bank_product_type
-      fields: [bank_id, product_type]
     - name: CashAccount_count_by_bank
       field: bank_id
       type: count
@@ -32,6 +30,7 @@ cash-accounts:
       type: count
     - name: CashAccount_by_bban
       field: bban
+      unique: true
     - name: CashAccount_by_bank_product
       fields: [bank_id, product_id]
 ledger-accounts:

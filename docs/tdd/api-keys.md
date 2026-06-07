@@ -1,441 +1,289 @@
-# API keys
+# Authentication
+
+> This file is still named `api-keys.md` for link stability. API
+> keys were removed (#82) and replaced by Keycloak-issued JWTs;
+> the content below describes the current model. A rename to
+> `authentication.md` is a pending follow-up.
 
 ## Objective
 
-Queenswood is multi-tenant: each organisation that uses the
-bank holds its own customers, accounts, payments, and
-products. Every HTTP request needs to be attributable to an
-organisation, with cryptographic confidence that the request
-genuinely came from someone authorised to act on its behalf.
-API keys are the bearer credential that does this.
+Queenswood is multi-tenant: each **bank** that runs on the
+platform holds its own parties, cash accounts, payments, and
+products. Every HTTP request must be attributable to a bank (or
+to a platform operator), with cryptographic confidence that the
+caller is who they claim to be. Authentication is delegated to
+**Keycloak**: callers present a signed OAuth2 / OIDC bearer
+token, and the API verifies it statelessly against Keycloak's
+published signing keys.
 
-This TDD describes how API keys are minted, stored, looked
-up, and revoked; how they identify an organisation at the API
-edge; how the prefix scheme tells operators at a glance
-whether a key is for live or test traffic; and how policy
-controls issuance.
+This TDD describes how a request is authenticated at the API
+edge, how the two principal types (a bank's backend service vs a
+human user) are distinguished, what identity is attached to the
+request, and how route authorization gates on roles.
 
-API keys are the current credential model. They have
-well-known limitations and we expect to move beyond them —
-see "Future direction" for the path the auth model is heading
-down (cert-based service-account auth, OAuth with a
-customer-supplied IDP, and a proper user model).
+In scope: the `bank-api` auth interceptors, the
+`identity-provider` brick and its `keycloak` implementation, the
+service-account lifecycle, the realm and client layout, and the
+`:auth` shape the rest of the system reads.
 
-In scope: the `bank-api-key` brick, key generation and
-storage, the hash-only persistence model, the prefix
-convention, the policy integration on issuance, the
-verification path at the API edge.
-
-Out of scope: the HTTP-edge auth interceptor itself —
-covered in [service-apis.md](service-apis.md); organisation
-onboarding and lifecycle (forthcoming organisations TDD);
-the encryption brick's primitives.
+Out of scope: the bank-creation flow that provisions a bank's
+service-account client (see [organizations.md](organizations.md));
+policy authorization of domain operations (see
+[policy-evaluation.md](policy-evaluation.md)); the SPA-side OIDC
+redirect/PKCE dance, which lives in the front-ends and Keycloak,
+not this repo.
 
 ## Background
 
-Two security properties have to hold simultaneously:
+Two properties have to hold on every request:
 
-**Confidentiality of the credential.** The plain-text secret
-must never be persisted, never logged, never recoverable from
-a database compromise. The bank stores only a one-way hash;
-the secret is shown to the user once at creation time and
-then only its prefix is displayable.
+**Authenticity.** The bearer token must be provably issued by a
+trusted Keycloak realm and unaltered. The API never holds a
+shared secret for the caller — it verifies the token's RS256
+signature against Keycloak's JWKS, checks the issuer and expiry,
+and checks that the token's audience is one the API accepts.
 
-**Tenant attribution.** Every request that arrives with a
-valid Bearer token must resolve unambiguously to an
-organisation. That mapping is what makes the API multi-
-tenant: the rest of the system reads `:organization-id` off
-the authenticated request and never asks how it got there.
+**Attribution.** A verified token must resolve to a principal:
+either a specific **bank** (the rest of the system reads
+`:bank-id` off the request and never asks how it got there), or
+a platform **operator** acting bank-agnostically.
 
-The design answers both with a small set of conventions:
-
-- Generate a high-entropy secret with a status-revealing
-  prefix (`sk_live.` or `sk_test.`).
-- Store the secret's hash plus a short display prefix (first
-  twelve characters).
-- Look up at auth time by hashing the incoming Bearer token
-  and matching against the index.
-- Cache the result briefly to keep the hot-path fast.
-
-Issuance is policy-gated: a policy can deny issuance under
-certain conditions (a limit on keys per organisation, a deny
-under specific organisation states, and so on). The
-authorisation flows through the same engine as every other
-domain operation — see
-[policy-evaluation.md](policy-evaluation.md).
+The previous model met these with static, hashed API keys minted
+per tenant. That was replaced because shared secrets must be
+transmitted and stored carefully, revocation is a denylist rather
+than cryptographic, and a key says nothing about *which human*
+acted. Keycloak-issued JWTs address all three: short-lived signed
+tokens, key-rotation via JWKS, and a distinct user-identity path.
 
 ## Proposed Solution
 
 ### Architecture
 
-`bank-api-key` is the brick. It owns the ApiKey record store
-and exposes generation, lookup, and listing. The
-`bank-api`-side auth interceptor consumes `get-api-key`
-by hash; everything else in the system sees the resolved
-`:organization-id` on the request and never touches keys
-directly.
+Two interceptors run at the edge, in order:
+
+- **`authenticate`** verifies the bearer token and attaches
+  `:auth` to the request. It **never short-circuits** — a
+  missing or invalid token simply leaves `:auth` absent, so the
+  request still reaches `authorize`.
+- **`authorize`** reads the roles a route requires (from its
+  OpenAPI `bearerAuth` security) and the principal's roles, and
+  terminates with 401 or 403, or passes through.
 
 ```mermaid
 graph LR
-    OPS["Operator / API call<br/>(create key)"]
-    BAK["bank-api-key<br/>new-api-key"]
-    POL["bank-policy<br/>(capability + limit)"]
-    ENC["encryption<br/>(generate-token, hash-token)"]
-    FDB[("FDB<br/>ApiKey index by hash")]
+    CALLER["Caller<br/>Authorization: Bearer JWT"]
+    AUTHN["bank-api authenticate<br/>(per request)"]
+    IDP["identity-provider<br/>verify-token"]
+    JWKS["keycloak JWKS<br/>(10-min cache)"]
+    AUTHZ["bank-api authorize<br/>(role intersection)"]
+    HANDLER["route handler<br/>(reads :bank-id)"]
 
-    AUTH["bank-api auth interceptor<br/>(per request)"]
-    CACHE["api-key-cache<br/>60s TTL"]
-
-    OPS -->|key-name + status| BAK
-    BAK -->|policy check| POL
-    BAK -->|generate + hash| ENC
-    BAK -->|persist hash| FDB
-
-    AUTH -->|hash incoming token| ENC
-    AUTH -->|lookup by hash| CACHE
-    CACHE -.->|cache miss| FDB
+    CALLER --> AUTHN
+    AUTHN -->|unverified iss picks provider| IDP
+    IDP -->|RS256 + iss + exp + aud| JWKS
+    AUTHN -->|attaches :auth| AUTHZ
+    AUTHZ -->|roles intersect required| HANDLER
 ```
 
-Two flows. **Issuance** is rare, policy-checked, and writes
-to FDB. **Verification** is per-request, cached, and reads
-from FDB only on cache miss.
+Verification is stateless: every request re-verifies its token
+against cached JWKS signing keys. There is no per-request
+authn-decision cache — the only caches are the JWKS keys
+(10-minute TTL) and Keycloak's admin token.
 
-### Data model
+### Token verification
 
-**ApiKey** record:
+`authenticate` does not trust the token to pick its verifier
+blindly:
+
+1. **Read `iss` unverified.** The JWT payload is base64url-decoded
+   *without* a signature check, only to read the issuer.
+2. **Pick the provider** whose `get-issuer` matches that `iss`.
+   Multiple `identity-provider` instances are wired (one per
+   realm); the unverified `iss` only routes *which* verifier runs.
+3. **Verify** via `identity-provider/verify-token`, which (in the
+   `keycloak` impl) fetches the signing key by `kid` from JWKS
+   (force-refreshing once if the `kid` is unknown, to ride key
+   rotation), then checks the **RS256 signature**, the **issuer**,
+   the **expiry**, and that the token's **audience** intersects
+   the API's `expected-audiences`. Any failure yields an
+   `:auth/unauthenticated` rejection rather than an exception.
+
+A forged `iss` only re-routes which verifier runs; the chosen
+verifier still rejects on signature or issuer mismatch.
+
+### The two principal types
+
+After verification, the principal type is decided purely by the
+**`azp`** (authorized party / client) claim:
+
+- **User** — `azp` is one of the configured user-facing SPA
+  clients (`queenswood-console`, `queenswood-app`).
+- **Service** — anything else; by convention a bank's backend
+  client, whose `client_id` *is* its `bank-id`.
+
+**Service principal.** The `:auth` map:
 
 ```clojure
-{:api-key-id     "sk.<ulid>"
- :organization-id
- :key-hash       "<SHA-256-or-similar>"   ; the only stored secret
- :key-prefix     "sk_live.AB12CDEF"       ; first 12 chars, displayable
- :name           "Bookings integration"   ; human-friendly label
- :created-at     <ms>
- :revoked-at     <ms or 0>}               ; 0 = active
+{:principal-type :service
+ :principal-id   (:azp claims)              ; == client_id
+ :bank-id        (when-not admin? (:azp claims))
+ :roles          (into #{:org} realm-roles) ; realm_access.roles
+ :token-jti      (:jti claims)}
 ```
 
-Two indices on the store:
+`client_id == bank-id`, so a bank's service token attributes
+directly to that bank. The shared `queenswood-admin` operator
+client carries the `admin` realm role and therefore no
+`:bank-id` (admin routes are platform-wide).
 
-- By `:api-key-id` (primary).
-- By `:key-hash` (auth lookup).
+**User principal.** The user path **upserts a `bank-user` row**
+keyed on `(iss, sub)` on every request (idempotent; refreshes
+email / name / avatar from the OIDC profile claims), looks up the
+user's memberships, and builds:
 
-The plain-text secret is **never stored**. The one-time
-delivery at creation is the only moment it exists outside the
-caller's possession.
+```clojure
+{:principal-type :user
+ :principal-id   (:user-id user)
+ :issuer (:iss claims) :sub (:sub claims)
+ :user user :claims claims :memberships memberships
+ :roles (cond-> #{:user}
+                admin?            (conj :admin :org)
+                (seq memberships) (conj :org))
+ :token-jti (:jti claims)
+ :bank-id   (:bank-id (first memberships))}   ; when a member
+```
 
-### Key shape and prefix
+A brand-new human with no memberships still authenticates as
+`:user` (reaching `/me` and onboarding routes) and gains `:org`
+scope once a membership exists. `:bank-id` comes from the first
+membership.
 
-The secret is a high-entropy token generated by the
-`encryption` brick, prefixed with the issuing organisation's
-status:
+### Roles and route authorization
 
-- **`sk_live.<random>`** for live organisations.
-- **`sk_test.<random>`** for test organisations (and the
-  default for unknown statuses).
+The role vocabulary is `:user`, `:org`, `:admin`. (`:service` is
+a *principal-type*, not a role — service principals carry `:org`,
+plus `:admin` if their realm roles say so.)
 
-The prefix has two purposes:
+A route declares the roles it needs in its OpenAPI security, e.g.
+`:security [{"bearerAuth" ["admin"]}]`. `authorize`:
 
-1. **Operator-visible status.** A key pasted into a config
-   file or commit message is recognisable as live or test at
-   a glance. Mistaking a test key for a live key is harder
-   when the prefix is right there.
-2. **Index discrimination.** The prefix separates the key
-   namespace by intent — a live key never collides with a
-   test key, even if the random part somehow matched.
+- passes through if the route has no security scheme;
+- returns **401** (`auth/unauthenticated`) if the principal's
+  role set is empty (no valid token);
+- returns **403** (`auth/forbidden`) if roles are present but
+  don't intersect the route's required roles.
 
-The first twelve characters are stored as `:key-prefix` for
-display. Operators can identify a key in a list ("the
-bookings one starts with sk_live.AB12CDEF") without seeing
-the secret.
+Observed gates: `["admin"]` for bank / tier / policy creation and
+the simulator, `["org"]` for cash-accounts / parties / payments /
+balances, `["user"]` for `/me` and onboarding.
 
-### Issuance flow
+### Service-account lifecycle
 
-`new-api-key` runs in one FDB transaction:
+The `identity-provider` brick (Keycloak-backed in production, a
+local impl for tests) exposes:
 
-1. Resolve effective policies for the organisation
-   (`get-effective-policies`).
-2. Count existing keys for the organisation (the
-   `:api-key #{:organization-id}` aggregate).
-3. **Capability check**: `bank-policy/check-capability` for
-   `:api-key` with `{:action :api-key-action-issue}`. A deny
-   here returns an `:unauthorized/policy-denied` anomaly.
-4. **Limit check**: `bank-policy/check-limit` for `:api-key`
-   with `{:aggregate :count :window :instant :value (inc
-   total)}` — counts including the about-to-be-created
-   key. Lets the bank cap "this org can have at most 10
-   active API keys" via policy.
-5. Generate the secret with the right prefix.
-6. Hash it (one-way).
-7. Capture the display prefix (first 12 chars).
-8. Persist the ApiKey record.
-9. Return `{:api-key <record> :key-secret <plaintext>}`.
+- **`create-service-account`** — create a bank's service-account
+  client (`client_id == bank-id`), stamping `access.token.lifespan
+  = 3600` and an audience client-scope; returns
+  `{:client-id … :client-secret …}` once.
+- **`exchange-client-credentials`** — run OAuth2
+  `client_credentials`, returning the raw token response. Proxied
+  by `POST /oauth/token` so a bank can mint its own JWT.
+- **`rotate-secret`** / **`revoke-service-account`** — reissue or
+  delete a bank's client.
+- **`verify-token`**, **`get-jwks`**, **`get-issuer`** — the
+  verification surface used by `authenticate`.
 
-The `:key-secret` is returned only here. The HTTP handler
-puts it in the response body. The client is responsible for
-storing it; if they lose it, the only recovery is to revoke
-and re-issue.
+`create-service-account` is wired into bank creation (`new-bank`,
+behind the admin-only create-bank endpoint) and runs *before* the
+FDB write so an IDP failure aborts cleanly; the `client-secret` is
+surfaced once in the create-bank response. `rotate-secret` and
+`revoke-service-account` are implemented but **not yet wired to
+any endpoint** (see Known Limitations).
 
-### Verification flow
+### Realms and clients
 
-At the API edge — per [service-apis.md](service-apis.md) —
-the auth interceptor:
+Two realms on one Keycloak instance:
 
-1. Extracts the Bearer token from the `Authorization`
-   header.
-2. Hashes it.
-3. Looks up the ApiKey record by hash via `cache/lookup` —
-   60-second in-memory cache backed by `get-api-key` on the
-   FDB store.
-4. Confirms the record is not revoked (`:revoked-at` is
-   zero).
-5. Attaches `{:role :org :organization-id <id>}` to the
-   request.
+- **`queenswood`** (orgs) — hosts the `queenswood-console` SPA
+  (Authorization Code + PKCE for a bank's human operators), the
+  per-bank service-account clients, and the `queenswood-admin`
+  operator client (carries the `admin` realm role).
+- **`queenswood-ops`** — hosts the `queenswood-app` SPA for
+  Queenswood's own operators; verification-only from the API's
+  side.
 
-If the hashed token doesn't match any record, or the record
-is revoked, no `:auth` is attached and the downstream
-`authorize` interceptor terminates with 401.
-
-The hashed-lookup-with-cache shape is intentional: every
-authenticated request hits this path, so the FDB read is
-amortised over many requests within the cache window.
-
-### Admin access vs org keys
-
-Operator-grade `admin` access does not flow through this
-brick. It is a Keycloak-issued JWT carrying the `admin` realm
-role — either a user JWT minted by the `bank-app` SPA against
-the `queenswood-ops` realm, or a service JWT minted via
-`client_credentials` against the `queenswood-admin` client.
-The `bank-api` auth interceptor maps either to
-`{:roles #{:admin :org} :organization-id <internal-org-id>}`;
-see [service-apis.md](service-apis.md).
-
-The keys this brick issues are **org keys**: per-organisation,
-generated and stored hashed, resolving to
-`{:role :org :organization-id <their-org-id>}`. They authorise
-tenant-scope API traffic. Routes opt into the right scheme via
-OpenAPI `:security` (see service-apis TDD).
-
-### Policy integration
-
-Issuance goes through `bank-policy`. Two kinds of rule the
-engine can express:
-
-- **Capability denies** — "this organisation cannot issue
-  any API keys right now" (e.g. during suspension, before
-  KYC is complete, or during a tier-restricted state).
-- **Count limits** — "this organisation can have at most N
-  active API keys at once" — using the aggregate count
-  passed in to `check-limit`.
-
-Both are policy-data, not code. Adding a new constraint is
-adding a policy + binding (see policy-evaluation TDD).
+The API stamps a status-derived audience on a bank's tokens:
+`bank-status-test → queenswood-api-test`,
+`bank-status-live → queenswood-api-live`.
 
 ## Alternatives Considered
 
-- **Plaintext secret storage.** Could simplify lookup
-  (compare strings directly). Rejected for the obvious
-  reason — a database leak would expose every customer's
-  API key in usable form.
-- **Bcrypt / Argon2 hashing instead of SHA-256.** Slow,
-  CPU-intensive hashes designed for password hashing, where
-  the source string is low-entropy. Rejected because API
-  keys are high-entropy random tokens — a fast cryptographic
-  hash is sufficient and the latency on the auth hot path
-  matters. (If keys were *user-chosen passwords* rather than
-  random tokens, bcrypt-style would be the right answer.)
-- **JWT-based bearer tokens.** Self-contained, signed; no
-  database lookup at auth. Rejected because revocation
-  becomes a denylist problem; rotation requires JWKS
-  machinery; the simplicity of "lookup by hash, ack or
-  reject" beats the complexity of JWT at our scale.
-- **mTLS with client certificates.** Stronger than bearer
-  tokens but operationally heavier — clients need cert
-  management, our edge needs cert validation, and the
-  fintech consumer base typically prefers bearer tokens for
-  integration ease. Worth revisiting if a high-security
-  partner integration ever needs it.
-- **Different key prefixes per environment** (e.g.
-  `sk_dev.`, `sk_staging.`, `sk_prod.`). Rejected — the
-  organisation's status (live vs test) is the signal that
-  matters; environment-as-prefix would couple keys to
-  deployment topology rather than tenant intent.
-- **Storing only the hash, no display prefix.** Cleaner from
-  a "minimum information stored" perspective. Rejected
-  because the operator needs *some* way to identify a key in
-  a list. Twelve characters of high-entropy prefix isn't
-  enough to reverse the secret in any practical attack.
-- **Admin keys in FDB alongside org keys.** Would let admin
-  bearers be rotated via the same flow as org keys. Moot
-  now that admin access is a Keycloak-issued JWT minted via
-  `client_credentials` against the `queenswood-admin` client
-  — rotation lives in Keycloak, not in this brick.
+- **Static hashed API keys** (the previous model). Simple lookup
+  by hash, no IDP dependency. Replaced — shared secrets must be
+  transmitted/stored carefully, revocation is a denylist, and a
+  key carries no human identity. The Keycloak model gives
+  short-lived signed tokens, JWKS rotation, and a user path.
+- **Opaque tokens with introspection.** Verify by calling
+  Keycloak's introspection endpoint per request. Rejected — that
+  reintroduces a synchronous IDP round-trip on the hot path;
+  stateless JWKS verification keeps the edge fast and
+  IDP-availability-tolerant within the token's lifetime.
+- **A self-managed user store.** Own the password / MFA / profile
+  lifecycle in-house. Rejected — Keycloak owns identity; the API
+  is a relying party and only *projects* verified claims into a
+  `bank-user` row keyed on `(iss, sub)`.
+- **mTLS client certificates for service traffic.** Stronger
+  machine identity, cryptographic revocation. Heavier
+  operationally (cert management, CA infra) and the fintech
+  consumer base expects bearer tokens. Worth revisiting for a
+  high-security partner integration.
+- **Per-request authn-decision cache.** Cache the verified result
+  to skip re-verification. Rejected — JWKS verification is cheap
+  and cacheing decisions would *delay* revocation; token expiry
+  already bounds validity.
 
 ## Known Limitations
 
-- **Revocation isn't exposed on the brick interface.** The
-  `:revoked-at` field is consulted at auth time, but
-  `bank-api-key` doesn't currently expose a `revoke-api-key`
-  function. Revocation today requires a direct FDB write or
-  a future API. This is a real gap.
-- **Rotation isn't supported.** "Rotate this key — issue a
-  new secret, mark the old one revoked, return the new
-  secret in one transaction" is a common operational need
-  not packaged today. Caller can simulate via separate
-  revoke + issue calls once revoke exists.
-- **The 60-second auth cache delays revocation.** A revoked
-  key remains valid for up to 60 seconds across each API
-  instance until the cache entry expires. Acceptable for
-  most cases; not acceptable for emergency revocation.
-  Mitigation would be cache invalidation on revoke (across
-  instances, which needs the message-bus) or a shorter TTL.
-- **The `queenswood-admin` service account is shared.** The
-  `client_credentials` admin path issues tokens that all
-  identify as the same service principal; audit attribution
-  for back-office automation is "the queenswood-admin client
-  did this." Per-operator humans sign in through the
-  `bank-app` SPA, which does carry per-user identity; the
-  shared-credential gap is only the machine-to-machine
-  path.
-- **Per-organisation count limits are the only quantitative
-  policy today.** The capability/limit machinery could
-  express more (rate limits per key, time-bound keys, scoped
-  keys), but only the count limit and the binary
-  "can-issue?" capability are wired up.
-- **No scoped keys.** An org-issued key can do anything an
-  org-authenticated request can do. Scoped keys ("this key
-  can read but not write", "this key can only access these
-  accounts") aren't modelled. The `:role` on `:auth` is the
-  only authorisation dimension at the moment; finer
-  granularity would extend the auth shape.
-- **No audit trail of issuance.** The ApiKey record records
-  who-or-when at creation but not who issued it (which
-  authenticated principal made the call). Useful for
-  compliance.
-- **The display prefix length (12) is hardcoded.** Worth
-  configurable if products want different prefix lengths;
-  not pressing.
-
-## Future direction
-
-API keys work for programmatic integration between known
-parties, but they have well-known limitations: shared
-secrets that must be transmitted and stored carefully; no
-binding to a specific machine identity; revocation is a
-denylist rather than cryptographic; and they say *nothing*
-about which human triggered an action. The model in this
-TDD is where we are; it isn't where we expect to end up.
-
-Three directions we expect to take. None are scheduled work
-yet — captured here so the auth-model evolution is on the
-record.
-
-### Service accounts → certificate-based auth
-
-For service-to-service traffic (an organisation's backend
-calling the Queenswood API), the natural successor is
-**mTLS with client certificates**. The bank issues a
-certificate to each organisation's service identity; the
-client presents it at TLS handshake; the bank verifies
-against a trusted CA chain.
-
-Trade-offs versus API keys:
-
-- **Stronger cryptographic identity.** The private key never
-  leaves the client; there's no bearer secret to leak.
-- **Cleaner revocation.** Short-lived certificates plus
-  CRL/OCSP give cryptographic revocation, not a denylist.
-- **Operationally heavier.** Clients need certificate
-  management (rotation, distribution, storage); the bank
-  needs CA infrastructure or a managed PKI.
-
-Service-to-service traffic is the natural first place to
-make this move because the operational overhead is bounded —
-known parties, controlled cert lifecycles.
-
-### User accounts → OAuth with customer-supplied IDP
-
-For end-user-facing flows (the customer of the customer
-performing actions through their banking app), the right
-pattern is **OAuth / OIDC with the customer's own identity
-provider**. The customer (the fintech using Queenswood)
-brings their existing SSO, Auth0, Okta, Cognito, or whatever
-they already run. Queenswood becomes a relying party:
-validates the OIDC token signature against the customer's
-published JWKS, trusts the verified claims.
-
-This means:
-
-- **Queenswood doesn't store user credentials.** No
-  passwords, no MFA seeds, no PII beyond what the IDP
-  exposes in claims.
-- **The customer keeps ownership of user lifecycle.**
-  Onboarding, password reset, MFA, deactivation, GDPR
-  rights — all the customer's job, not the bank's.
-- **Standard relying-party patterns apply.** Token
-  validation, audience checks, expiry handling, refresh
-  flows — well-trodden ground.
-
-This is the right shape for a B2B2C banking platform: the
-bank serves the customer, the customer serves their users,
-and the user identity layer belongs to whoever owns the
-end-user relationship.
-
-### A user model alongside the organisation model
-
-Both of the above presume a piece that's missing today:
-**there is no user concept in Queenswood**. Every
-authenticated request resolves to an organisation. The audit
-trail says "someone with this organisation's API key did
-this" — which could be any service or human in that
-organisation's environment. For compliance regimes that ask
-"which person?", and for fraud and dispute handling, this is
-a real gap.
-
-The future state pairs `:organization-id` with an optional
-`:user-id` on the authenticated request. Distinct types tell
-us how the request was authenticated: a service account
-(certificate identity) or a user (OIDC subject claim). The
-identity flows through commands and events into transaction
-records, so every posting attributes back to a specific
-service or human.
-
-That unlocks:
-
-- **Per-user audit.** Reconstructing who did what.
-- **Per-user policy.** "These users can authorise transfers,
-  these can only read." Capability rules become richer.
-- **Clean separation** of "the organisation's back-office
-  service did this" from "an end customer did this" — they
-  look different in audit, fraud, and dispute systems.
-
-### How the pieces fit together
-
-An organisation's *services* authenticate via certificates
-with a service-account identity; an organisation's *users*
-authenticate via the customer's IDP with a user identity;
-both resolve to a request shape carrying
-`{:organization-id ... :principal-id ... :principal-type
-:service | :user}`. Policy reasons about all three of those
-together. Audit attributes to the principal.
-
-This TDD will be substantially rewritten when those
-directions land. For now, it captures the API-key story as
-it stands.
+- **Rotation and revocation aren't wired.** `rotate-secret` and
+  `revoke-service-account` exist on the `identity-provider`
+  interface but have no callers — there is no rotate/revoke
+  endpoint, and bank deletion doesn't call them. Revoking a
+  bank's access today means deleting its Keycloak client by hand.
+- **JWT validity is bounded by expiry, not revocation.** Tokens
+  are stateless, so a revoked or rotated service account keeps any
+  already-minted token working until its `exp` (≤ 1 h). Revocation
+  prevents *new* tokens; it can't recall outstanding ones. The
+  `:token-jti` is captured on `:auth` but nothing consumes it —
+  there is no jti denylist.
+- **A bank's service identity is shared.** All of a bank's backend
+  callers use one service-account client (`client_id == bank-id`),
+  so machine-to-machine audit attribution is "this bank's service
+  did it," not which caller. Human operators do carry per-user
+  identity via the user path.
+- **Authorization is role-set only.** Routes gate on a principal's
+  roles (`:user` / `:org` / `:admin`) intersecting the route's
+  required roles. There is no resource scoping ("read-only", "only
+  these accounts") — finer granularity would extend `authorize`.
+- **The admin operator identity is shared.** `queenswood-admin` is
+  one service account carrying the `admin` realm role and no
+  `:bank-id`; back-office automation attributes to "the admin
+  client," not a person. Human Queenswood operators sign in
+  through `queenswood-app` and do carry per-user identity.
 
 ## References
 
-- [ADR-0002](../adr/0002-foundationdb-record-layer.md) —
-  FoundationDB Record Layer (key storage, hash-indexed)
-- [ADR-0005](../adr/0005-error-handling-with-anomalies.md) —
-  Error handling with anomalies (issuance denials)
-- [policy-evaluation.md](policy-evaluation.md) — Policy
-  evaluation (issuance capability + count limit)
+- [ADR-0013](../adr/0013-single-unified-api.md) — Single unified
+  API (the auth-bearing edge)
+- [policy-evaluation.md](policy-evaluation.md) — Policy evaluation
+  (authorization of domain operations, distinct from edge authn)
 - [service-apis.md](service-apis.md) — Service APIs (the
-  auth interceptor that consumes `get-api-key` and the
-  cache layer)
-- [system-configurations.md](../recipes/system-configurations.md)
-  — System configurations
-- `bank-api-key` brick interface
-- `encryption` brick interface (`generate-token`,
-  `hash-token`, `bytes-equals?`)
+  interceptor chain the auth interceptors sit in)
+- [organizations.md](organizations.md) — Banks (bank creation
+  provisions the service-account client)
+- `bank-api` auth interceptors (`auth.clj`)
+- `identity-provider` brick interface (`verify-token`,
+  `create-service-account`, `exchange-client-credentials`,
+  `rotate-secret`, `revoke-service-account`, `get-jwks`,
+  `get-issuer`)
+- `keycloak` brick (JWKS cache, admin token, per-bank clients)

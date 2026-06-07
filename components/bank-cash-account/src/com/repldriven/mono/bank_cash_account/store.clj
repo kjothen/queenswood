@@ -109,21 +109,6 @@
     :account-type account-type
     :currency currency}))
 
-(defn get-account-by-type
-  [txn bank-id product-type]
-  (fdb/transact txn
-                (fn [txn]
-                  (some-> (fdb/query-record-compound
-                           (fdb/open txn store-name)
-                           "CashAccount"
-                           [["bank_id" bank-id]
-                            ["product_type"
-                             (schema/product-type->pb-enum product-type)]]
-                           {:index "CashAccount_by_bank_product_type"})
-                          schema/pb->CashAccount))
-                :cash-account/get-by-type
-                "Failed to get account by type"))
-
 (defn find-account-by-product
   [txn bank-id product-id]
   (fdb/transact txn

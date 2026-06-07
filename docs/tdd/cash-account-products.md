@@ -322,12 +322,12 @@ draft creation and update: `effective-from` is required, and
 - **No version-comparison helper.** "What changed between
   v2 and v3?" is left to callers (or to UIs reading the
   versions and diffing fields).
-- **`:balance-products` is uninterpreted by the brick.**
-  A version declares which balance-type/status buckets the
-  product carries, but the cash-account-opening
-  code is responsible for actually creating those buckets at
-  open time. A mismatch (account opens with fewer buckets
-  than the product declares) wouldn't be caught here.
+- **Template buckets are trusted, not validated.** The
+  brick stores whatever `:balance-products` the
+  per-product-type template supplies and the
+  cash-account-opening code creates exactly those buckets;
+  it never checks they suit the product-type. A bad template
+  would mis-shape every account opened under it.
 - **One product is one currency.** A version pins a single
   currency (stored as a one-element `:allowed-currencies`)
   and a single `:interest-rate-bps`. Offering the "same"
@@ -345,11 +345,12 @@ draft creation and update: `effective-from` is required, and
   product changes genuinely need parallel work, there's
   no escape hatch. Could be lifted later with explicit
   conflict resolution; today it's a hard rule.
-- **No retirement / "stop accepting new accounts on this
-  product."** A product with a published version is open
-  for new accounts forever. Closing the product to new
-  business needs an explicit status (or a policy denying
-  new opens against retired products).
+- **No explicit retirement status.** A version's
+  `effective-to` already time-boxes it — set it to stop new
+  accounts opening after a date (once it passes,
+  `active-version` returns nil) — but there is no
+  product-level `retired` flag. Retirement is per-version and
+  date-driven, not an immediate status toggle.
 
 ## References
 

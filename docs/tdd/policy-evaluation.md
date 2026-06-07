@@ -127,7 +127,7 @@ contract stays uniform.
 - `:binding-id`
 - `:policy-id`
 - `:selectors` — keyed map identifying the target (e.g.
-  `{:organization-id <id>}`).
+  `{:bank-id <id>}`).
 
 Both Policy and Binding have full CRUD on the brick interface
 (`new-policy` / `get-policy` / `get-policies`; same for
@@ -221,15 +221,16 @@ let the system self-heal under defined conditions.
 ### Bindings and effective policies
 
 `get-effective-policies` takes a selectors map (e.g.
-`{:organization-id <id>}`) and returns the policies that
-apply. Conceptually the lookup follows bindings to find every
-policy whose binding matches the selectors.
+`{:bank-id <id>}`) and returns the policies that apply. The
+lookup follows bindings to find every policy whose binding
+matches the selectors.
 
-Today's reality: the function always loads platform-tier
-policies and the selectors are partially honoured —
-per-target binding resolution is the next round of work
-(see Known Limitations). `get-policies-by-tier` is used at
-organisation creation to apply tier-labelled policy sets.
+Today's reality: the function loads platform-tier policies
+plus policies bound to the selector's `:bank-id` (via
+`PolicyBinding` records); finer selectors (account-type,
+product) aren't honoured yet (see Known Limitations).
+`get-policies-by-tier` is used at bank creation to apply
+tier-labelled policy sets.
 
 ### How domains use the engine
 
@@ -240,7 +241,7 @@ through its `error/let-nom>` chain:
 (error/let-nom>
  [policies (bank-policy/get-effective-policies
             tx
-            {:organization-id org-id})
+            {:bank-id bank-id})
   _ (bank-policy/check-capability policies
                                   :cash-account/open
                                   {:account-type :savings})
@@ -315,12 +316,14 @@ turns `:unauthorized/policy-*` into 403.
 
 ## Known Limitations
 
-- **Bindings aren't fully resolved yet.**
-  `get-effective-policies` always loads platform-tier
-  policies; the per-target selector logic is reserved.
-  Until that lands, fine-grained "this policy binds only to
-  this organisation's accounts of type X" is partial. The
-  data model supports it; the resolver doesn't yet.
+- **Binding resolution is bank-scoped and unindexed.**
+  `get-effective-policies` resolves platform-tier policies
+  plus policies bound to the selector's `:bank-id` via
+  `PolicyBinding` records (`bank-policy/.../core.clj`).
+  Finer selectors (account-type, product) aren't honoured
+  yet, and `get-bindings-for-bank` does a full scan filtered
+  in memory (`store.clj`) — a `BankTarget` index is the
+  natural follow-up as binding cardinality grows.
 - **Capabilities don't have a curative-equivalent.**
   `:limit-allow-improving` is limit-only. Capabilities are
   inherently allow/deny without a quantitative dimension, so
@@ -336,11 +339,12 @@ turns `:unauthorized/policy-*` into 403.
   transfer touches two balances), each leg's check is the
   caller's responsibility. There's no engine-level "apply to
   all legs" helper.
-- **No simulation / dry-run helper on the interface.**
-  "Would this request pass?" without executing requires
-  callers to set up the policy set and request shape
-  manually. A `simulate` interface fn would aid debugging
-  and audit.
+- **No request-level simulation helper.**
+  `get-effective-policy` now returns the resolved decision
+  set with provenance (`bank-policy/.../interface.clj`), but
+  there's still no `simulate` fn answering "would *this*
+  request pass?" without executing — callers must assemble
+  the policy set and request shape manually.
 - **No policy versioning at evaluation time.** A policy
   edit takes effect for any subsequent evaluation. There's
   no "evaluate against the policy version that was current
@@ -352,12 +356,14 @@ turns `:unauthorized/policy-*` into 403.
   service, no federation across deployments. Acceptable for
   current scale; would need rethinking for multi-tenant
   policy stores at higher tenancy.
-- **Reason text is the only audit hook.** The anomaly's
-  `:message` carries the human-readable reason; richer
-  attribution (which policy, which clause, which filter
-  matched) isn't surfaced in the anomaly. A future enrichment
-  could include `:policy-id`, `:capability-index` etc. to
-  make root-cause analysis cheaper.
+- **Anomaly attribution is reason-text only.** Capability /
+  limit rejections carry only `:message`, `:kind`, `:request`
+  (`capability.clj`, `limit.clj`) — not the deciding
+  `:policy-id` or clause index. Provenance exists on the
+  resolution side (`effective.clj` `:origin`) but isn't
+  threaded into the live evaluators' anomalies. A future
+  enrichment could surface `:policy-id` / `:capability-index`
+  at rejection time.
 
 ## References
 

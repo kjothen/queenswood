@@ -59,17 +59,6 @@
   ([txn bank-id opts]
    (core/get-accounts txn bank-id opts)))
 
-(defn get-account-by-type
-  "Return the first account matching the given org and product-type,
-  or nil. Caller should expect at most one result.
-
-  Args:
-  - txn: FDB transaction or db handle.
-  - bank-id: owning bank id.
-  - product-type: product-type keyword."
-  [txn bank-id product-type]
-  (core/get-account-by-type txn bank-id product-type))
-
 (defn find-account-by-product
   "Return the first CashAccount whose `(bank-id, product-id)` match,
   or nil.

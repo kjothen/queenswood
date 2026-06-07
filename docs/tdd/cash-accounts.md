@@ -226,18 +226,16 @@ Three indexed reads on the store:
 
 - **`get-account`** by `(organization-id, account-id)` —
   primary key.
-- **`get-account-by-bban`** — secondary index on BBAN.
-  Used by the payment-event processor on inbound webhooks
-  to identify the creditor.
-- **`get-account-by-type`** by `(organization-id,
-  product-type)` — used by the interest brick to find the
-  organisation's settlement account; see
-  [interest.md](interest.md).
+- **`get-account-by-bban`** — secondary index on BBAN
+  (`CashAccount_by_bban`, unique). Used by the
+  payment-event processor on inbound webhooks to identify
+  the creditor.
+- **`find-account-by-product`** by `(bank-id, product-id)`
+  — secondary index (`CashAccount_by_bank_product`).
 
-The `get-account-by-type` index is documented as "caller
-should expect at most one result" — it's the bank's *one*
-settlement-typed account per organisation, not a general
-multi-result query.
+The bank's settlement leg is a `LedgerAccount`, not a
+cash-account, and is resolved by GL code through
+`bank-ledger-account`; see [interest.md](interest.md).
 
 ### Account-type vs product-type — why both
 
@@ -330,12 +328,13 @@ the legs need to find the right buckets.
   (`"040004"`). Bank-routing flexibility (multiple sort
   codes, dynamic routing) isn't supported. Acceptable
   while Queenswood operates under one clearing identity.
-- **Suspension isn't a lifecycle state.** The status enum
-  hints at suspend/reopen actions (the policy
-  capability vocabulary mentions them), but the lifecycle
-  today is open/close only. Operationally, the difference
-  between "this account is frozen pending review" and
-  "this account is closed" matters and isn't expressible.
+- **Suspension isn't a lifecycle state.** The lifecycle is
+  open/close only — `CashAccountStatus` has no
+  frozen/suspended state, and the policy vocabulary
+  (`CashAccountAction`) is just open/close. Operationally,
+  the difference between "this account is frozen pending
+  review" and "this account is closed" matters and isn't
+  expressible.
 - **No balance-must-be-zero check on close.** Closing an
   account with a non-zero posted balance is permitted by
   the brick. Caller-side discipline today; should likely
@@ -359,11 +358,6 @@ the legs need to find the right buckets.
   party is later suspended (when that lifecycle exists),
   the account doesn't automatically reflect that — caller
   policy would need to re-check.
-- **Get-account-by-type assumes "at most one".** The
-  index works for the bank's per-org settlement account
-  pattern but isn't a general multi-result query. Other
-  product-types (multiple savings accounts per org, for
-  instance) need a different lookup.
 - **No inactivity / dormant flow.** Real banks have
   regulatory regimes around dormant accounts (no activity
   for N years → flagged → closed → escheated). None of
@@ -373,7 +367,7 @@ the legs need to find the right buckets.
 
 - [ADR-0002](../adr/0002-foundationdb-record-layer.md) —
   FoundationDB Record Layer (account storage, secondary
-  indices on BBAN and product-type)
+  indices on BBAN and product)
 - [ADR-0008](../adr/0008-changelog-watchers.md) —
   Changelog watchers (the lifecycle transitions)
 - [parties.md](parties.md) — Parties (account-type
