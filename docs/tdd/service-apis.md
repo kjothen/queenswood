@@ -451,10 +451,13 @@ auth boundaries — go here, not into a brick's `interface_test.clj`.
 - **Exception handlers are configured at boot.** Adding a
   domain-specific handler requires modifying the router data
   before `system/start`. Not runtime-injectable.
-- **The auth cache is in-memory per process.** A revoked org
-  key takes up to 60 seconds to invalidate across instances.
-  Acceptable for current scale; would need a distributed
-  invalidation story (or shorter TTL) at higher tenancy.
+- **JWT validity is bounded by token expiry, not by a
+  cache.** Each request re-verifies the bearer token against
+  cached JWKS signing keys (10-min refresh,
+  `keycloak/core.clj`) — there is no per-request authn-decision
+  cache. A revoked or rotated service account keeps any
+  already-minted token working until its own `exp`; tighten
+  via a shorter Keycloak token lifespan.
 - **API versioning is `/v1` only.** Adding `/v2` would mean
   either coexistence (running both surfaces during migration)
   or a breaking-change protocol. Neither is automated.

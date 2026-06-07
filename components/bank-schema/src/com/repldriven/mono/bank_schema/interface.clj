@@ -32,7 +32,6 @@
     (com.repldriven.mono.schemas.cash_account_products
      CashAccountProductProto$CashAccountProduct
      CashAccountProductProto$IsoCashAccountType)
-    (com.repldriven.mono.schemas.types ProductTypeProto$ProductType)
     (com.repldriven.mono.schemas.cash_accounts
      CashAccountProto$CashAccount
      CashAccountChangelogProto$CashAccountChangelog)
@@ -105,16 +104,6 @@
 
 (def ^{:doc "Map of ProductType protobuf int value to label."} int->product-type
   types/ProductType-val2label)
-
-(defn product-type->pb-enum
-  "Convert a product-type keyword to the protobuf enum value, for
-  use in FDB index queries.
-
-  Args:
-  - product-type: `:product-type-*` keyword."
-  [product-type]
-  (ProductTypeProto$ProductType/forNumber
-   (product-type->int product-type)))
 
 (def ^{:doc "Map of CashAccount AccountType label to protobuf int
   value."}

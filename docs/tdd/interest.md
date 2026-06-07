@@ -412,11 +412,15 @@ side too because money has to come from somewhere.
   buckets (pending, accrued) don't carry. This is consistent
   with "accrual is on posted-only" but worth noting if
   multi-bucket interest models ever appear.
-- **Account-paging cursor is FDB-managed.** A run that
-  encounters an account that fails its policy check returns
-  the anomaly and stops; no skip-and-continue. A future
-  enhancement could log-and-skip and report a tally at the
-  end.
+- **Run halts on the first failing account; no
+  skip-and-continue.** `process-customer-accounts`
+  short-circuits on the first anomaly from accruing or
+  capitalising an account, returns it, and stops — accounts
+  processed in earlier pages stay committed (each is its own
+  short FDB transaction), but later accounts are never
+  reached. There's no log-and-skip or end-of-run tally. (The
+  platform daily-count policy check is separate: it runs once
+  before any account is processed, not per account.)
 
 ## References
 

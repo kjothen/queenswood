@@ -274,10 +274,12 @@ rationale and the brick organisation.
 
 ## Known Limitations
 
-- **Single reply timeout.** `command/send` defaults to 10
-  seconds with no per-command override exposed. Long-running
-  operations would need either an explicit timeout argument or
-  a different async-acknowledgement pattern.
+- **Single reply timeout in practice.** `command/send`
+  accepts a per-command `:timeout-ms` (default 10 s), but no
+  call site overrides it today, so every command rides the
+  10 s default. Long-running operations would need callers to
+  pass `:timeout-ms` or adopt a different
+  async-acknowledgement pattern.
 - **In-flight commands during processor restart.** A command on
   the bus that has been delivered but not yet processed when
   the processor restarts depends on the bus backend's

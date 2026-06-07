@@ -134,10 +134,6 @@
          :before before
          :after after})))))
 
-(defn get-account-by-type
-  [txn bank-id product-type]
-  (store/get-account-by-type txn bank-id product-type))
-
 (defn find-account-by-product
   [txn bank-id product-id]
   (store/find-account-by-product txn bank-id product-id))

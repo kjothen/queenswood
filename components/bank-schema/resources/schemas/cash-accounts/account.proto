@@ -41,11 +41,10 @@ message CashAccount {
   required string party_id = 4;
   required string product_id = 5;
   required string version_id = 6;
-  // Tag 7 (product_type) cached from the product for fast indexed lookups
-  // (CashAccount_by_bank_product_type,
-  // CashAccount_count_by_bank_product_account_type_currency). Sub-ledger
-  // accounts carry the customer product type; GL accounts carry
-  // PRODUCT_TYPE_GENERAL_LEDGER.
+  // Tag 7 (product_type) cached from the product for the
+  // CashAccount_count_by_bank_product_account_type_currency index. Customer
+  // accounts carry their product type; the bank's own-funds account carries
+  // PRODUCT_TYPE_SUB_LEDGER_OWN_FUNDS.
   optional com.repldriven.mono.schemas.types.ProductType product_type = 7;
   required string name = 8;
   required string currency = 9;

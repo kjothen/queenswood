@@ -48,12 +48,13 @@ each with different lifecycle rules.
   on). The bank's books. Status starts `active`.
 
 A note on terminology that often confuses: **a party is not
-a user**. Today there's no user concept in the system at all
-(see [api-keys.md](api-keys.md) — Future direction). A party
-is the customer-of-the-customer or counterparty the bank
-deals with as a *customer of the bank's customer*; a user
-(when modelled) will be the authenticated human triggering a
-request. They serve different concerns.
+a user**. A `User` (the authenticated human, an OIDC identity
+— see [api-keys.md](api-keys.md)) now exists and is
+deliberately separate from a party. A party is the
+customer-of-the-customer or counterparty the bank deals with
+as a *customer of the bank's customer*; a user is the
+authenticated human triggering a request. They serve
+different concerns, and there is no link between them yet.
 
 For person parties, KYC sits between creation and activation.
 The system implements this with FDB changelog watchers per
@@ -466,12 +467,13 @@ already know the model. Both costs are accepted.
   manual-review queues, document-quality failures, or
   rate limits. Useful for end-to-end tests; not a stand-
   in for production behaviour.
-- **IDV outcomes beyond accept and reject.** The
-  `idv-completed` event today carries `ACCEPTED` or
-  `REJECTED`. Onfido's real outcome model is richer
-  (manual review, expired, partially completed). The
-  event vocabulary needs broadening before pointing at
-  production.
+- **IDV outcomes beyond accept and reject aren't acted
+  on.** The `IdvStatus` enum already admits `IN_REVIEW` and
+  `FAILED` (`idv.proto`), but the party watcher only maps
+  `ACCEPTED` / `REJECTED` to a status transition
+  (`bank-party/.../watcher.clj`); manual-review and
+  technical-failure outcomes leave the party pending with no
+  follow-up.
 - **No re-verification flow.** Once a person party is
   active, there's no machinery to re-IDV them (periodic
   refresh, sanctions list re-screening, address change
@@ -483,13 +485,14 @@ already know the model. Both costs are accepted.
   status path away from active via the current API. The
   status enum admits more values; the lifecycle code
   doesn't drive them.
-- **No user model.** As noted in
-  [api-keys.md](api-keys.md), the system has no concept of
-  the human triggering a request. Once a user model lands,
-  the relationship between parties and users will need
-  modelling — a user might *act on behalf of* a party, or
-  *be* a party (in self-service flows). Today neither link
-  exists.
+- **Party and User are not linked.** A platform `User`
+  (`bank-user`, an OIDC identity) and `Membership`
+  (`bank-membership`, User→Bank) now exist and are
+  deliberately separate from `Party` (the banking-domain
+  customer). But there is still no relation tying a `User`
+  to a `Party` — no *acts on behalf of* or *is a* link for
+  self-service flows. The two identity models coexist
+  without a join.
 - **Name matching is naive.** Token-set matching after
   lower-casing. No accent folding, no transliteration, no
   edit-distance fuzziness, no honorific stripping. Real
@@ -519,8 +522,8 @@ already know the model. Both costs are accepted.
   IDV event channel)
 - [ADR-0008](../adr/0008-changelog-watchers.md) — Changelog
   watchers (the activation chain endpoints)
-- [api-keys.md](api-keys.md) — API keys (the user-model
-  gap, distinct from parties)
+- [api-keys.md](api-keys.md) — Authentication (the `User`
+  identity, distinct from parties)
 - [payments.md](payments.md) — Payments (CoP consumes
   `match-name`; the same adapter/simulator pattern lives
   there for ClearBank)

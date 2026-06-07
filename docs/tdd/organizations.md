@@ -1,376 +1,319 @@
-# Organisations
+# Banks
+
+> This file is still named `organizations.md` for link stability.
+> The "organization" concept was renamed to **bank** (brick
+> `bank-organization` → `bank-bank`, record `Bank`, ids `bnk.*`,
+> `new-organization` → `new-bank`) and bank-type was dropped
+> (#139). The content below describes the current model. A rename
+> to `banks.md` is a pending follow-up.
 
 ## Objective
 
-An **organisation** is the multi-tenant boundary in
-Queenswood. Every other domain entity — every party, every
-cash account, every payment, every product version, every
-API key, every policy binding — carries an
-`:organization-id`. The entire data model partitions along
-this axis.
+A **bank** is the multi-tenant boundary in Queenswood. Every
+other domain entity — every party, cash account, payment, product
+version, policy binding — carries a `:bank-id`, and every store
+is indexed on it. The data model partitions along this axis;
+cross-tenant queries are impossible at the data layer.
 
-This TDD describes the organisation model: the two types
-(internal / customer), the all-or-nothing creation flow that
-mints every foundational record a new tenant needs, the
-tier mechanism that binds tier-specific policies at create
-time, and the read enrichment that returns an organisation
-with its party, accounts, balances, and key in a single
-shape.
+This TDD describes the bank model: the `Bank` record and its
+status, the all-or-nothing creation flow that provisions every
+foundational record a new tenant needs, the tier mechanism that
+binds tier-specific policies at create time, and the
+enrich-on-read shape.
 
-In scope: the `bank-organization` brick; the type and status
-enums; the multi-brick atomic create flow; the tier label
-and policy-binding choreography; the enrich-on-read pattern.
+In scope: the `bank-bank` brick; the status enum; the multi-brick
+atomic create flow (service-account client, org party, ledger
+chart, own-funds house accounts, tier bindings); the
+enrich-on-read pattern.
 
-Out of scope: each foundational brick's own mechanics —
-api-key generation [api-keys.md](api-keys.md), party
-creation [parties.md](parties.md), product publish
-[cash-account-products.md](cash-account-products.md),
-account opening [cash-accounts.md](cash-accounts.md), and
-policy bindings
+Out of scope: the service-account/JWT mechanics
+([api-keys.md](api-keys.md)); each foundational brick's own rules
+— party creation [parties.md](parties.md), the ledger chart
+[chart-of-accounts.md](chart-of-accounts.md), product publish
+[cash-account-products.md](cash-account-products.md), account
+opening [cash-accounts.md](cash-accounts.md), policy bindings
 [policy-evaluation.md](policy-evaluation.md).
 
 ## Background
 
 Two needs.
 
-**Tenant isolation.** A multi-tenant bank must keep one
-customer's data fully separate from another's. Queenswood
-expresses this by carrying `:organization-id` on every
-record and by indexing every store on it. Cross-tenant
-queries are explicitly impossible at the data layer.
+**Tenant isolation.** A multi-tenant bank-of-banks must keep one
+tenant's data fully separate from another's. Queenswood carries
+`:bank-id` on every record and indexes every store on it.
 
-**Bootstrap completeness.** A bare organisation record is
-useless. To do anything, a new tenant needs:
+**Bootstrap completeness.** A bare `Bank` record is useless. To
+operate, a new tenant needs:
 
-- An API key, so requests can authenticate.
-- A party representing the organisation itself in the
-  bank's books.
-- A product, so accounts can be opened.
-- One cash account per supported currency, where the bank's
-  bookkeeping for that organisation lives (settlement
-  account for customers; internal accounts for internal
-  organisations).
-- Policy bindings that pin the tier-appropriate rule set.
+- A **service-account client** so its backend can authenticate
+  (see [api-keys.md](api-keys.md)).
+- A **party** representing the bank itself in its own books.
+- A **chart of bank-owned ledger accounts** per currency, so
+  postings have somewhere to land (see
+  [chart-of-accounts.md](chart-of-accounts.md)).
+- An **own-funds house account** per currency — a real,
+  transactable cash account the bank pre-funds to pay its
+  customers (interest, rewards).
+- **Policy bindings** that pin the tier-appropriate rule set.
 
-Without all of these, the organisation can't be authenticated
-against, can't be billed, can't accrue interest, can't be
-constrained by tier-policies. The system answers with a
-single `new-organization` operation that mints every
-foundational record in **one FDB transaction across six
-bricks** (organization, api-key, party, cash-account-product,
-cash-account, policy). Atomic. All-or-nothing.
+Without these, a tenant can't authenticate, can't post, can't
+accrue interest, can't be constrained by tier policies. The
+system answers with a single `new-bank` operation that mints
+every foundational record in **one FDB transaction** across
+several bricks. Atomic. All-or-nothing.
 
 ## Proposed Solution
 
 ### Architecture
 
-`bank-organization` is the brick. Synchronous interface — no
-command processing, no watchers. The create flow composes
-other bricks' interfaces inside one FDB transaction; ADR-0002
-makes this atomic across record stores.
+`bank-bank` is the brick. Synchronous interface — no command
+processing, no watchers. The create flow composes other bricks'
+interfaces inside one FDB transaction; ADR-0002 makes this atomic
+across record stores. The service-account client is created
+*before* the FDB write so an identity-provider failure aborts the
+transaction cleanly.
 
 ```mermaid
 graph TD
-    HTTP[HTTP create-organization<br/>admin-only]
-    BO["bank-organization<br/>new-organization"]
-    POL["bank-policy<br/>(effective + tier policies)"]
-    BAK["bank-api-key<br/>new-api-key"]
-    BP["bank-party<br/>new-party"]
-    BPP["bank-cash-account-product<br/>new-product + publish"]
-    BCA["bank-cash-account<br/>new-account × currencies"]
-    BIND["bank-policy<br/>new-binding × tier-policies"]
+    HTTP["HTTP create-bank<br/>admin-only"]
+    BB["bank-bank<br/>new-bank"]
+    IDP["identity-provider<br/>create-service-account"]
+    POL["bank-policy<br/>effective + tier policies"]
+    BP["bank-party<br/>new-party (org party)"]
+    BLA["bank-ledger-account<br/>chart x currencies"]
+    BHA["own-funds product + cash account<br/>x currencies"]
+    BIND["bank-policy<br/>new-binding x tier-policies"]
     FDB[("FDB<br/>one transaction")]
 
-    HTTP --> BO
-    BO --> POL
-    BO --> BAK
-    BO --> BP
-    BO --> BPP
-    BO --> BCA
-    BO --> BIND
-    BAK --> FDB
+    HTTP --> BB
+    BB -->|before write| IDP
+    BB --> POL
+    BB --> BP
+    BB --> BLA
+    BB --> BHA
+    BB --> BIND
     BP --> FDB
-    BPP --> FDB
-    BCA --> FDB
+    BLA --> FDB
+    BHA --> FDB
     BIND --> FDB
-    BO --> FDB
+    BB --> FDB
 ```
 
-The diagram understates the choreography — those branches
-all happen sequentially inside one
-`store/transact`, threaded through `error/let-nom>`. A
-failure at any step rolls everything back; a successful
-commit means the whole tenant is up.
+The diagram understates the choreography — those branches run
+sequentially inside one `store/transact`, threaded through
+`error/let-nom>`. A failure at any step rolls everything back; a
+successful commit means the whole tenant is up.
 
-### Two organisation types
+### The Bank record
 
 ```clojure
-:organization-type-internal   ;; Queenswood's own
-:organization-type-customer   ;; external fintech tenants
+{:bank-id    "bnk.<ulid>"
+ :name       "Acme Bank"
+ :status     :bank-status-test    ; or -live, -unknown
+ :created-at <ms>
+ :updated-at <ms>}
 ```
 
-The type drives several derivations at create time:
-
-- **Internal** organisation: party-type `:party-type-internal`,
-  default product-type `:product-type-internal`, balance
-  buckets are *default-posted* + *suspense-posted*.
-- **Customer** organisation: party-type
-  `:party-type-organization`, default product-type
-  `:product-type-settlement`, balance buckets are
-  *default-posted* + *interest-payable-posted*.
-
-An internal organisation's accounts hold the bank's own
-bookkeeping (P&L, suspense). A customer organisation's
-settlement accounts hold the bank's
-**interest-payable to that customer's customers** — the
-liability side of accrued interest before capitalisation;
-see [interest.md](interest.md).
-
-### Status and the API key prefix
-
-```clojure
-:organization-status-live   ;; production tenant
-:organization-status-test   ;; sandbox tenant
-```
-
-Status flows through to the freshly-minted API key's prefix
-— see [api-keys.md](api-keys.md). `sk_live.` for live,
-`sk_test.` for test. The visible prefix is how operators
-recognise live vs test traffic at a glance.
+That's the whole record. There is **no bank-type** — the
+internal/customer distinction was removed (#139). What
+distinguishes one bank from another is its `status` (test vs
+live, persisted) and its `tier` — and `tier` isn't even stored on
+the record: it is used only at create time to select which
+policies get bound. A `BankChangelog` record (`bank-id`,
+`status-before`, `status-after`) carries status transitions for
+the watcher path.
 
 ### The atomic create flow
 
-`new-organization` runs the following inside one FDB
-transaction:
+`new-bank txn bank-name bank-status tier currencies opts` runs
+the following inside one FDB transaction:
 
 1. **Resolve effective policies** —
-   `policy/get-effective-policies {}` for the platform-level
-   capability and limit checks (no organisation context yet
-   — the org doesn't exist).
-2. **Resolve tier policies** — `policy/get-policies-by-tier
-   tier` returns the policies labelled
-   `{:tier "<tier-name>"}`; these are the rules that should
-   bind to the new tenant.
-3. **Validate** — `domain/new-organization` runs
-   capability + count-limit checks
-   (e.g. "can a new customer organisation be created?").
-4. **Mint the API key** — `bank-api-key/new-api-key` —
-   policy-checked itself, returns
-   `{:api-key <record> :key-secret <plaintext>}`.
-5. **Persist the org and api-key together.**
-6. **Create the org's party** — `bank-party/new-party` with
-   `:type` derived from organisation type; org's name as
-   display-name.
-7. **Create the default product** —
-   `bank-cash-account-product/new-product` with
-   product-type, balance-products, and
-   allowed-payment-address-schemes derived from
-   organisation type. Returns a draft v1.
-8. **Publish the product** — `publish` flips draft to
-   published. After this, immutable per
-   [cash-account-products.md](cash-account-products.md).
-9. **Open one cash account per currency** —
-   `bank-cash-account/new-account` per entry in
-   `currencies`. Each opens in `:cash-account-status-opening`
-   state; the watcher transitions to `:opened` after commit
-   — see [cash-accounts.md](cash-accounts.md).
-10. **Bind tier policies** — for each tier policy,
-    `policy/new-binding` with selectors
-    `{:organization-id <new-id>}`.
-11. **Enrich and return** — load party, accounts (with
-    balances), and api-key, return
-    `{:organization {... :party ... :accounts [...] :api-key
-    {...}} :key-secret <plaintext>}`.
+   `policy/get-effective-policies txn {}` (empty selectors; the
+   bank doesn't exist yet), used for the create capability check.
+   `opts` may override with `:policies`.
+2. **Resolve tier policies** — `policy/get-policies-by-tier txn
+   tier` returns the policies labelled `{:tier "<name>"}`.
+3. **Build the `Bank`** — `domain/new-bank` runs the
+   `:bank-action-create` capability check, then mints the record
+   with a `bnk.*` id.
+4. **Create the service-account client** *(before the FDB write)*
+   — when `opts` carries `:identity-provider`,
+   `identity-provider/create-service-account` with
+   `client_id == bank-id` and a status-derived audience; the
+   one-time `:client-secret` is captured for the response.
+5. **Persist the bank.**
+6. **Create the bank's org party** — `party/new-party` with
+   `:type :party-type-organization` and display-name = bank name.
+7. **Seed the ledger chart** — `new-ledger-accounts` opens one
+   `LedgerAccount` per default row per currency (see below).
+8. **Open own-funds house accounts** — per currency, draft +
+   publish a `:product-type-sub-ledger-own-funds` product ("Bank
+   own funds", `effective-from` today), then open a real
+   `CashAccount` on the org party against it.
+9. **Bind tier policies** — for each tier policy,
+   `policy/new-binding` with target
+   `{:kind {:bank {:bank-id <new-id>}}}`.
+10. **Enrich and return** (see below).
 
-The `:key-secret` is returned only here — same one-time
-delivery pattern api-keys uses; see
-[api-keys.md](api-keys.md). The caller (typically a
-platform admin) is responsible for forwarding it to the
-new tenant.
+### The default ledger chart
 
-### Tier and the policy-binding model
+The chart is loaded from `bank-bank/ledger-accounts.edn` and
+seeded once per currency. Eight bank-owned, flat accounts (no
+party, no product):
 
-The `tier` argument is a string label that selects which
-policies are bound to the new organisation.
+| GL code | Name | Type | Class |
+| ------- | ---- | ---- | ----- |
+| 1100 | Cash at correspondent | asset | detail |
+| 1200 | Pending outbound payments | asset | detail |
+| 2100 | Customer deposits — current | liability | control |
+| 2200 | Customer deposits — savings | liability | control |
+| 2300 | Customer deposits — term deposits | liability | control |
+| 2400 | Interest payable | liability | detail |
+| 2500 | Suspense — unreconciled inbound | liability | detail |
+| 3100 | Bank own funds | equity | control |
 
-The mechanism:
+The control accounts (2100/2200/2300, 3100) are roll-up targets
+for sub-ledger postings; the rest are detail. See
+[chart-of-accounts.md](chart-of-accounts.md) for how legs map to
+control accounts at posting time.
 
-- Policies carry a `{:tier "<name>"}` label as part of their
-  data (the policy author decides which tier the policy
-  belongs to).
-- `policy/get-policies-by-tier "platinum"` returns every
-  policy whose label matches.
-- For each such policy, `new-organization` creates a
-  Binding tying it to the freshly-created organisation.
+### Own-funds house account
 
-This is a *hybrid* of the old tier system and the new
-policy/binding system. The bindings are written (good); the
-binding selectors are partially honoured at read time
-(per [policy-evaluation.md](policy-evaluation.md), today
-`get-effective-policies` always loads platform-tier policies
-regardless of selectors). So a tier binding is durable but
-not yet load-bearing for runtime evaluation.
-
-The implication: today, an organisation's effective rule
-set is the platform tier plus whatever bindings are read by
-the partial resolver. As selector resolution lands properly
-(per the policy TDD's known limitations), the bindings
-written here become live without any change to the create
-flow.
+Distinct from the ledger chart: per currency, `new-bank` drafts
+and publishes a `:product-type-sub-ledger-own-funds` product and
+opens a real, BBAN-addressable `CashAccount` on the bank's org
+party. This is the bank's own money — pre-funded so it can pay
+customers (interest, rewards). It rolls up into the 3100 own-funds
+control. (Earlier designs bootstrapped a single "settlement
+product"; that was replaced by the ledger chart plus this house
+account.)
 
 ### Enrichment for reads
 
-`get-organization` returns more than the bare organisation
-record — it walks the related bricks and assembles:
+The interface `get-bank txn bank-id` returns the **flat** record.
+The enriched read — used by `get-banks` and by `new-bank`'s
+return — walks the related bricks:
 
 ```clojure
-{:organization
- {:organization-id ...
-  :name ...
-  :type ...
-  :status ...
-  :tier ...
-  :created-at ...
-  :updated-at ...
-  :party {...}                ; the org's party
-  :accounts [{...}]           ; with embedded balances
-  :api-key {...}              ; metadata only — no secret}
- :key-secret "..."}            ; only when freshly minted
+{:bank
+ {:bank-id ... :name ... :status ...
+  :created-at ... :updated-at ...
+  :party {...}            ; the bank's org party
+  :accounts [{...}]       ; with embedded balances + :gl-code
+  :client-id "bnk...."}   ; == bank-id
+ :client-secret "..."}     ; only when freshly minted
 ```
 
-The api-key shape carried in the response is metadata only:
-`:api-key-id`, `:key-prefix`, `:name`, `:created-at`. The
-key-hash never appears in the response; the secret is shown
-only on creation.
+`:client-secret` (the service-account secret, the one-time
+credential) appears only when an `:identity-provider` was supplied
+at create — there is no API key. The enriched shape walks the org
+party and the cash accounts (with balances and resolved
+`:gl-code`); it does not list the seeded ledger accounts.
 
-`get-organizations` returns the same enriched shape
-list-wise. `get-organizations-by-type` is a thinner lookup
-without the enrich (used internally for routing — for
-example, finding the platform's internal organisation to
-attribute system fees against).
+### Tier and the policy-binding model
+
+`tier` is a string label selecting which policies bind to the new
+bank:
+
+- Policies carry a `{:tier "<name>"}` label.
+- `policy/get-policies-by-tier "<name>"` returns the matches.
+- `new-bank` writes a `PolicyBinding` per match, targeting
+  `{:kind {:bank {:bank-id <id>}}}`.
+
+`get-effective-policies` resolves platform-tier policies plus
+those bound to a bank's `:bank-id` (see
+[policy-evaluation.md](policy-evaluation.md)), so a tier binding
+written here is load-bearing at evaluation time.
 
 ## Alternatives Considered
 
-- **Separate creation commands.** Have the platform admin
-  call create-org, then create-api-key, then create-party,
-  and so on. Rejected — partial failure at any step leaves
-  the tenant in an inconsistent state (an organisation
-  with no API key, or a product with no accounts). The
-  one-transaction approach is the only way to guarantee
+- **Separate creation commands.** Have the admin call create-bank,
+  then create-party, then seed-ledger, and so on. Rejected —
+  partial failure leaves a half-built tenant (a bank with no
+  ledger, a product with no accounts). One transaction guarantees
   bootstrap completeness.
-- **No type distinction (everything's a customer).**
-  Internal bookkeeping (P&L, suspense) and customer
-  bookkeeping (settlement, interest-payable) differ in
-  what balance buckets they need; collapsing them into one
-  type would force every internal bookkeeping concern into
-  the customer shape.
-- **Lazy account creation.** Open accounts on first use of
-  a currency, not at create time. Rejected — the per-org
-  settlement account is needed before any payment, fee, or
-  interest activity can happen for that org. Bootstrap
-  upfront is simpler and predictable.
-- **No tier mechanism — all policies bound explicitly.**
-  Force callers to specify exactly which policies bind.
-  Rejected for ergonomics — most tenants fall into named
-  buckets ("free", "pro", "enterprise") that map to
-  bundles of policies; the tier label is a shorthand for
-  the bundle. Explicit bindings can still be added on top.
-- **Tier as a numeric ordering.** Tiers as `1, 2, 3, ...`
-  with implicit precedence. Rejected — tiers don't always
-  form a clean total order (a "developer" tier and a
-  "production" tier are different shapes, not different
-  levels). String labels are flexible.
-- **Org records writable post-creation through the same
-  flow.** Treat the create as just another write; allow
-  edits. Rejected for the foundational records (api-key,
-  party, default product) — those have their own lifecycle
-  rules. Editing an org's name or status is a separate
-  concern (see Known Limitations).
+- **A bank-type discriminator.** Keep the old internal/customer
+  split. Removed (#139) — the difference that mattered (own books
+  vs customer books) is now expressed by the ledger chart plus the
+  own-funds house account, not by a type on the record. One shape,
+  differentiated by tier bindings and status.
+- **A single settlement product at bootstrap.** The earlier model
+  gave each tenant one settlement/internal product. Replaced by
+  the explicit ledger chart + own-funds house account, which
+  models the bank's books directly rather than overloading a
+  product.
+- **Lazy account creation.** Open ledger/house accounts on first
+  use of a currency. Rejected — postings need their accounts to
+  exist before any payment, fee, or interest activity. Upfront
+  bootstrap is simpler and predictable.
+- **No tier mechanism.** Force callers to bind every policy
+  explicitly. Rejected for ergonomics — most tenants fall into
+  named buckets that map to bundles; the tier label is the
+  shorthand. Explicit bindings can still be added on top.
+- **Tier as a numeric ordering.** `1, 2, 3` with implicit
+  precedence. Rejected — tiers don't form a clean total order (a
+  "developer" tier and a "production" tier are different shapes,
+  not levels). String labels are flexible.
+- **Random service-account `client_id`.** Rejected in favour of
+  `client_id == bank-id`: a deterministic mapping means a service
+  token's `azp` *is* the bank-id, so attribution needs no lookup.
 
 ## Known Limitations
 
-- **Tier-binding selectors are partially resolved.** The
-  bindings are written at create, but
-  `policy/get-effective-policies` doesn't yet honour the
-  selectors fully (per policy-evaluation TDD). The bindings
-  are durable; the runtime resolution is the gap.
-- **Tier is a string label, not a structure.** No
-  hierarchical relationships expressed
-  (`platinum > gold > silver`). Each policy carries one
-  tier label and that's the granularity.
-- **No tier change after creation.** No exposed flow moves
-  an organisation between tiers. Would need to recompute
-  the binding set (drop old tier-bindings, add new
-  tier-bindings). Operationally needed if a customer
-  upgrades or downgrades; not implemented.
-- **No status change after creation.** A live organisation
-  stays live; a test organisation stays test. The api-key
-  prefix was minted at create time off the original status,
-  so retrofitting a status change has implications beyond
-  one record.
-- **No organisation closure or off-boarding.** An
-  organisation once created is permanent. Closing a
-  customer relationship has no machinery — closing
-  every account, revoking every api-key, archiving party
-  data are all manual today.
-- **No org-level audit trail.** Created-at is the only
-  history. Who created the organisation (which platform
-  admin operator) isn't recorded — only that an admin
-  principal made the call.
-- **Single default product.** The create flow gives the
-  organisation one settlement (or internal) product.
-  Customers wanting additional products of different
-  shapes (savings, current, term-deposit) create them
-  separately via the products API afterwards. Multi-product
-  bootstrap isn't supported.
-- **Currencies are committed at create.** The default
-  product's `:allowed-currencies` is set from the
-  `currencies` argument. Adding a currency later means
-  publishing a new version of the default product (per
-  cash-account-products TDD) — feasible, but not exposed
-  as a "add-currency" convenience.
-- **Org name and party display-name are coupled.** The
-  party for an organisation is created with display-name
-  = organisation-name. If the org renames itself later,
-  the party doesn't follow automatically (and there's no
-  rename flow).
-- **Effective-policies-during-create has no organisation
-  context.** Step 1 of the create flow calls
-  `get-effective-policies {}` (empty selectors), since the
-  org doesn't yet exist. This means platform-tier policies
-  govern the create — fine in principle, but a subtle
-  point if the platform-tier rules ever needed to know the
-  about-to-be-created organisation.
-- **The create is admin-only by convention, not by code.**
-  The route requires the admin auth scheme — see
-  [service-apis.md](service-apis.md) — but
-  `new-organization` itself doesn't check the principal.
-  Calling it directly from non-admin code paths would
-  bypass the intended gate.
+- **No tier change after creation.** No exposed flow moves a bank
+  between tiers; it would need to recompute the binding set (drop
+  old tier bindings, add new). Needed when a customer upgrades or
+  downgrades; not implemented. `tier` isn't even stored on the
+  record — only the resulting bindings are.
+- **No status change after creation.** A test bank stays test. The
+  service-account audience was derived from status at create time,
+  so retrofitting a status change touches the Keycloak client, not
+  just the record.
+- **No closure or off-boarding.** A bank once created is
+  permanent. Closing every account, revoking the service-account
+  client (`revoke-service-account` is unwired — see
+  [api-keys.md](api-keys.md)), and archiving party data are all
+  manual.
+- **No bank-level audit trail.** `created-at` is the only history;
+  which platform admin created the bank isn't recorded — only that
+  an admin principal made the call.
+- **Currencies are committed at create.** `new-bank` fans the
+  `currencies` argument across the ledger chart and own-funds
+  house accounts. Adding a currency to an existing bank means
+  creating the extra ledger and house accounts by hand — there is
+  no add-currency convenience.
+- **Bank name and party display-name are coupled.** The org party
+  is created with display-name = bank name; renaming the bank
+  later doesn't propagate, and there's no rename flow.
+- **Effective-policies-during-create has no bank context.** Step 1
+  calls `get-effective-policies txn {}` with empty selectors,
+  since the bank doesn't yet exist — platform-tier policies govern
+  the create. Fine in principle, but a subtle point if a
+  platform-tier rule ever needed the about-to-be-created bank.
+- **The create is admin-only by convention, not by code.** The
+  route requires the `admin` role (see
+  [api-keys.md](api-keys.md)), but `new-bank` itself runs only a
+  `:bank-action-create` capability check, not a principal check.
+  Calling it from non-admin code would bypass the intended gate.
 
 ## References
 
 - [ADR-0002](../adr/0002-foundationdb-record-layer.md) —
-  FoundationDB Record Layer (multi-store atomicity for the
-  create flow)
-- [ADR-0005](../adr/0005-error-handling-with-anomalies.md) —
-  Error handling with anomalies (rollback on partial
-  failure)
-- [api-keys.md](api-keys.md) — API keys (default key minted
-  at organisation creation; prefix derived from status)
-- [parties.md](parties.md) — Parties (the organisation's
-  party; party-type derived from organisation type)
-- [cash-account-products.md](cash-account-products.md) —
-  Cash account products (the default product drafted and
-  published per organisation)
+  FoundationDB Record Layer (multi-store atomicity for the create
+  flow)
+- [ADR-0005](../adr/0005-error-handling-with-anomalies.md) — Error
+  handling with anomalies (rollback on partial failure)
+- [api-keys.md](api-keys.md) — Authentication (the service-account
+  client provisioned at bank creation)
+- [parties.md](parties.md) — Parties (the bank's org party)
+- [chart-of-accounts.md](chart-of-accounts.md) — Chart of accounts
+  (the seeded ledger chart and own-funds account)
+- [cash-account-products.md](cash-account-products.md) — Cash
+  account products (the own-funds house product)
 - [cash-accounts.md](cash-accounts.md) — Cash accounts (one
-  per currency, opened at organisation creation)
-- [policy-evaluation.md](policy-evaluation.md) — Policy
-  evaluation (tier label, binding selectors, partial
-  resolution)
-- [interest.md](interest.md) — Interest (settlement account
-  per customer organisation, internal account per internal
-  organisation)
-- [service-apis.md](service-apis.md) — Service APIs (admin
-  auth scheme for the create endpoint)
-- `bank-organization` brick interface
+  own-funds account per currency, opened at creation)
+- [policy-evaluation.md](policy-evaluation.md) — Policy evaluation
+  (tier label, binding selectors, effective-policy resolution)
+- `bank-bank` brick interface (`new-bank`, `get-bank`,
+  `get-banks`)
