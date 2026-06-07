@@ -24,7 +24,7 @@
                     :product-type "current"
                     :currency "GBP"
                     :interest-rate-bps 0
-                    :valid-from "2026-01-01"}}
+                    :effective-from "2026-01-01"}}
    :as :product-1
    :assert {:status 201}}
   {:command :api/request
@@ -35,7 +35,7 @@
                     :product-type "savings"
                     :currency "GBP"
                     :interest-rate-bps 250
-                    :valid-from "2026-01-01"}}
+                    :effective-from "2026-01-01"}}
    :as :product-2
    :assert {:status 201}}]
  :when

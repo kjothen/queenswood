@@ -24,7 +24,7 @@
                     :product-type "current"
                     :currency "GBP"
                     :interest-rate-bps 0
-                    :valid-from "2026-01-01"}}
+                    :effective-from "2026-01-01"}}
    :as :v1
    :assert {:status 201 :body {:status "draft"}}}]
  :when
@@ -37,6 +37,6 @@
                     :product-type "current"
                     :currency "GBP"
                     :interest-rate-bps 0
-                    :valid-from "2026-02-01"}}
+                    :effective-from "2026-02-01"}}
    :assert {:status 409
             :problem {:type ":cash-account-product/draft-already-exists"}}}]}

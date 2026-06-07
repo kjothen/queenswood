@@ -3,12 +3,16 @@
 ## Objective
 
 A **cash account product** is the template under which cash
-accounts are opened — it defines the currency set, the
-balance buckets the account will carry, the interest rate,
-the payment-address schemes accepted, and so on. Products
-are organisation-scoped (each organisation defines its own)
-and **versioned**: terms change over time, but accounts
-opened under a previous version keep its terms.
+accounts are opened — it defines the currency, the balance
+buckets the account will carry, the interest rate, the
+payment-address schemes accepted, and so on. Products are
+bank-scoped (each bank defines its own) and **versioned**:
+terms change over time, but accounts opened under a previous
+version keep its terms.
+
+The bank's own chart-of-accounts entries are a separate
+concern — `LedgerAccount` records owned by
+`bank-ledger-account`, not products.
 
 This TDD describes the product/version model, the
 draft → published lifecycle, the immutability rule that
@@ -66,12 +70,16 @@ draft on a published product starts the next version.
 
 `bank-cash-account-product` is the brick. Internally:
 
-- `domain.clj` — record shapes, the lifecycle transitions,
-  the immutability and single-draft invariants.
-- `store.clj` — FDB record store, indexed by org-id,
-  product-id, version-id.
+- `domain.clj` — record shapes, the per-product-type template
+  merge, the lifecycle transitions, the immutability and
+  single-draft invariants.
+- `store.clj` — FDB record store, keyed by
+  `[bank-id, product-id, version-id]`.
 - `validation.clj` — Malli schema validation for product
   data shapes.
+- `resources.clj` — the static per-product-type templates
+  (loaded once from `bank-resources` on the classpath) that
+  fill in a product's derived fields.
 - `core.clj` — orchestrates store + domain + policy
   resolution.
 - `interface.clj` — the public API.
@@ -84,35 +92,42 @@ lifecycle is short enough not to need eventual consistency.
 
 The product has no record of its own; it's implicit from the
 set of versions sharing a `:product-id`. A **version** is
-the unit of storage:
+the unit of storage. The caller supplies `:name`,
+`:currency`, `:product-type`, an effective window, and
+optionally an `:interest-rate-bps` / `:iso-cash-account-type`;
+the rest of the instrument terms are filled from a
+per-product-type template (see `resources.clj`):
 
 ```clojure
-{:organization-id
- :product-id              "prd.<ulid>"
- :version-id              "prv.<ulid>"
- :version-number          1               ;; 1, 2, 3, ...
- :status                  :cash-account-product-status-draft
-                          ;; or -published, -discarded
- :name                    "Premier Savings"
- :product-type            :product-type-savings
-                          ;; or -current, -term-deposit,
-                          ;; -settlement, -internal
- :balance-sheet-side      :balance-sheet-side-liability
-                          ;; (or -asset, for the bank's view)
- :allowed-currencies      ["GBP" "EUR"]   ;; ISO 4217 strings
- :balance-products        [...]           ;; balance buckets to create
- :allowed-payment-address-schemes  [...]  ;; FPS, BACS, ...
- :interest-rate-bps       550             ;; 550 bps = 5.5% APR
- :valid-from              <ms or absent>
+{:bank-id
+ :product-id          "prd.<ulid>"
+ :version-id          "prv.<ulid>"
+ :version-number      1             ;; 1, 2, 3, ...
+ :status              :cash-account-product-status-draft
+                      ;; or -published, -discarded
+ :name                "Premier Savings"
+ :allowed-currencies  ["GBP"]       ;; one currency per
+                                    ;; product, wrapped in a vec
+ :product-type        :product-type-sub-ledger-savings
+ :balance-sheet-side  :balance-sheet-side-liability  ;; template
+ :balance-products    [...]         ;; balance buckets, template
+ :allowed-payment-address-schemes [...]              ;; template
+ :interest-rate-bps   550           ;; 550 bps = 5.5% APR
+ :iso-cash-account-type :iso-cash-account-type-svgs  ;; optional
+ :effective-from      20089         ;; epoch-day (required)
+ :effective-to        <epoch-day or absent>  ;; open-ended if absent
  :created-at
  :updated-at}
 ```
 
-Versions live under their `:product-id`. `get-product`
-returns the aggregate (`{:versions [...]}` sorted
-newest-first); `published-version` filters to status
-published and returns the first — the "currently active"
-version of the product.
+Versions are stored under the
+`[bank-id, product-id, version-id]` primary key.
+`get-product` returns the aggregate (`{:versions [...]}`
+sorted newest-first); `active-version` returns the version
+in effect on a given day — the published version whose
+`[effective-from, effective-to)` window contains that day,
+choosing the greatest `effective-from`. That's the version
+account-opening pins (see **Effective dating** below).
 
 ### Lifecycle
 
@@ -162,10 +177,15 @@ data.
 - **`publish`** — flips a draft to published.
   Capability-checked. After this, immutability holds.
 
-All operations resolve effective policies via
-`bank-policy/get-effective-policies` (with selectors
-`{:organization-id ... :cash-product-id ...}`) before the
-domain check.
+The mutating operations resolve effective policies via
+`bank-policy/get-effective-policies` before the domain check
+— keyed by `{:bank-id ...}` for `new-product`, and by
+`{:bank-id ... :cash-product-id ...}` for the version-scoped
+operations. The read operations (`get-version`,
+`get-product`, `get-products`, `list-templates`) are not
+policy-gated. A caller may pass
+`{:policies ...}` in `opts` to supply already-resolved
+policies and skip the lookup.
 
 ### Why immutability matters
 
@@ -199,17 +219,19 @@ draft is the natural workspace for them.
 
 ### Policy integration
 
-Two policy checks apply at draft creation and update:
+Policy checks apply at draft creation/update and at publish:
 
 - **Capability** — `:cash-account-product` with
   `{:action :cash-account-product-action-draft
-    :product-type <type>}`. Lets policies deny draft
-  creation entirely, or by product-type
-  ("this organisation cannot offer term-deposit products").
+    :product-type <type>}` on draft creation and update, and
+  `:cash-account-product-action-publish` on publish. Lets
+  policies deny the action entirely, or by product-type
+  ("this bank cannot offer term-deposit products") via the
+  `:product-type` filter on the capability request.
 - **Count limit** — `:cash-account-product` with
   `{:aggregate :count :window :instant
-    :value <existing+1>}` keyed by `:organization-id`.
-  Caps the number of products an org can have.
+    :value <existing+1>}` on `new-product`, keyed by
+  `:bank-id`. Caps the number of products a bank can have.
 
 Both flow through the same engine as every other domain
 operation — see
@@ -235,6 +257,26 @@ pinning is immutable as long as the version itself is.
 The product-version cache — 60-second TTL, see
 [interest.md](interest.md) — sits in front of these reads
 on hot paths.
+
+### Effective dating
+
+A version carries an `effective-from` (required) and an
+optional `effective-to`, both epoch-day ints. They
+define the window over which the version is the **active**
+one. Publishing alone doesn't make a version live: the
+active version on a given day is the published version whose
+`[effective-from, effective-to)` window contains that day,
+breaking ties by the greatest `effective-from` (then version
+number).
+
+Account opening resolves `active-version` for *today*
+(`utility/today`) and pins it. A future-dated version is
+published but dormant until its `effective-from`; an expired
+one (past its `effective-to`) drops out. Overlap needs no
+mutation of older versions — the latest-effective-from rule
+selects the right one. Validation enforces the window at
+draft creation and update: `effective-from` is required, and
+`effective-to`, when present, must fall strictly after it.
 
 ## Alternatives Considered
 
@@ -272,20 +314,8 @@ on hot paths.
 
 ## Known Limitations
 
-- **No effective-from / effective-to dating.** Publishing
-  takes effect immediately. The `:valid-from` field exists
-  on the version but isn't enforced — there's no "this
-  version takes effect on a future date" gate. Future
-  scheduling would need an effective-date interpreter
-  (probably a watcher checking date passage).
-- **No explicit supersession marker.** When a new version
-  publishes, the previous published version isn't marked
-  superseded — it just stops being the highest-numbered
-  published version. Querying "which versions are still in
-  use by accounts" requires walking accounts; the product
-  brick can't answer it directly.
 - **Discarded drafts accumulate.** No cleanup. They're
-  kept as history, but if an organisation rapid-iterates
+  kept as history, but if a bank rapid-iterates
   and discards many drafts, the version list grows
   without bound. Worth a cleanup or archival pass at some
   threshold.
@@ -293,21 +323,24 @@ on hot paths.
   v2 and v3?" is left to callers (or to UIs reading the
   versions and diffing fields).
 - **`:balance-products` is uninterpreted by the brick.**
-  It declares which balance-type/status buckets the
-  product carries, but the cash-account-opening code is
-  responsible for actually creating those buckets at open
-  time. A mismatch (account opens with fewer buckets than
-  the product declares) wouldn't be caught here.
-- **No multi-currency rate support.** A version carries a
-  single `:interest-rate-bps`. Multi-currency products
-  earning different rates per currency would need rate-
-  per-currency on the version (see
-  [interest.md](interest.md) Known Limitations).
-- **No product templates across organisations.** Each
-  organisation builds its own products from scratch. A
-  shared library of common starter shapes (a "savings
-  template", a "term-deposit template") would cut
-  duplication for common products but doesn't exist today.
+  A version declares which balance-type/status buckets the
+  product carries, but the cash-account-opening
+  code is responsible for actually creating those buckets at
+  open time. A mismatch (account opens with fewer buckets
+  than the product declares) wouldn't be caught here.
+- **One product is one currency.** A version pins a single
+  currency (stored as a one-element `:allowed-currencies`)
+  and a single `:interest-rate-bps`. Offering the "same"
+  product in another currency means a separate product —
+  there is no multi-currency product with per-currency rates
+  (see [interest.md](interest.md) Known Limitations).
+- **Product templates are static and global.** A fixed
+  per-product-type menu (`list-templates`, backed by
+  classpath resources) fills in a product's derived fields,
+  but a bank can't author or customise its
+  own templates — they are the same for every bank and only
+  change with a redeploy. Intended to move to per-bank FDB
+  records later.
 - **The single-draft invariant has no override.** If two
   product changes genuinely need parallel work, there's
   no escape hatch. Could be lifted later with explicit

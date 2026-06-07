@@ -29,7 +29,8 @@
    [:product-type [:ref "ProductType"]]
    [:currency [:ref "Currency"]]
    [:interest-rate-bps {:optional true} [:ref "SignedBasisPoints"]]
-   [:valid-from {:optional true} [:ref "Date"]]])
+   [:effective-from [:ref "BusinessDay"]]
+   [:effective-to {:optional true} [:maybe [:ref "BusinessDay"]]]])
 
 (def CashAccountProductVersion
   [:map {:json-schema/example examples/CashAccountProductVersion}
@@ -46,7 +47,8 @@
    [:allowed-payment-address-schemes
     [:unique-vector-lax {:min 1} [:ref "PaymentAddressScheme"]]]
    [:interest-rate-bps {:optional true} [:ref "SignedBasisPoints"]]
-   [:valid-from {:optional true} [:maybe [:ref "Date"]]]
+   [:effective-from {:optional true} [:maybe [:ref "BusinessDay"]]]
+   [:effective-to {:optional true} [:maybe [:ref "BusinessDay"]]]
    [:created-at [:ref "Timestamp"]]
    [:updated-at [:ref "Timestamp"]]
    [:discarded-at {:optional true} [:maybe [:ref "Timestamp"]]]])

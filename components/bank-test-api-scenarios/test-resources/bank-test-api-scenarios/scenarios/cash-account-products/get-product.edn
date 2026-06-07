@@ -24,7 +24,7 @@
                     :product-type "savings"
                     :currency "GBP"
                     :interest-rate-bps 250
-                    :valid-from "2026-01-01"}}
+                    :effective-from "2026-01-01"}}
    :as :product-0
    :assert {:status 201}}]
  :when

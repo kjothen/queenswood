@@ -31,11 +31,7 @@
     (com.repldriven.mono.schemas.balances BalanceProto$Balance)
     (com.repldriven.mono.schemas.cash_account_products
      CashAccountProductProto$CashAccountProduct
-     CashAccountProductProto$GlAccountType
-     CashAccountProductProto$GlAccountClass
-     CashAccountProductProto$Required
-     CashAccountProductProto$IsoCashAccountType
-     CashAccountProductProto$SubLedgerKind)
+     CashAccountProductProto$IsoCashAccountType)
     (com.repldriven.mono.schemas.types ProductTypeProto$ProductType)
     (com.repldriven.mono.schemas.cash_accounts
      CashAccountProto$CashAccount
@@ -125,47 +121,6 @@
      account-type->int
   cash-accounts/AccountType-label2val)
 
-(def ^{:doc "Map of GlAccountType label to protobuf int value."}
-     gl-account-type->int
-  cash-account-products/GlAccountType-label2val)
-
-(defn gl-account-type->pb-enum
-  "Convert a gl-account-type keyword to the protobuf enum value, for
-  use in FDB index queries.
-
-  Args:
-  - gl-account-type: `:gl-account-type-*` keyword."
-  [gl-account-type]
-  (CashAccountProductProto$GlAccountType/forNumber
-   (gl-account-type->int gl-account-type)))
-
-(def ^{:doc "Map of GlAccountClass label to protobuf int value."}
-     gl-account-class->int
-  cash-account-products/GlAccountClass-label2val)
-
-(defn gl-account-class->pb-enum
-  "Convert a gl-account-class keyword to the protobuf enum value, for
-  use in FDB index queries.
-
-  Args:
-  - gl-account-class: `:gl-account-class-*` keyword."
-  [gl-account-class]
-  (CashAccountProductProto$GlAccountClass/forNumber
-   (gl-account-class->int gl-account-class)))
-
-(def ^{:doc "Map of Required label to protobuf int value."} required->int
-  cash-account-products/Required-label2val)
-
-(defn required->pb-enum
-  "Convert a required keyword to the protobuf enum value, for use in
-  FDB index queries.
-
-  Args:
-  - required: `:required-*` keyword."
-  [required]
-  (CashAccountProductProto$Required/forNumber
-   (required->int required)))
-
 (def ^{:doc "Map of IsoCashAccountType label to protobuf int value."}
      iso-cash-account-type->int
   cash-account-products/IsoCashAccountType-label2val)
@@ -180,33 +135,23 @@
   (CashAccountProductProto$IsoCashAccountType/forNumber
    (iso-cash-account-type->int iso-cash-account-type)))
 
-(def ^{:doc "Map of SubLedgerKind label to protobuf int value."}
-     sub-ledger-kind->int
-  cash-account-products/SubLedgerKind-label2val)
-
-(defn sub-ledger-kind->pb-enum
-  "Convert a sub-ledger-kind keyword to the protobuf enum value, for
-  use in FDB index queries.
-
-  Args:
-  - sub-ledger-kind: `:sub-ledger-kind-*` keyword."
-  [sub-ledger-kind]
-  (CashAccountProductProto$SubLedgerKind/forNumber
-   (sub-ledger-kind->int sub-ledger-kind)))
 
 (defn pb->CashAccountProduct
-  "Parse CashAccountProduct protobuf bytes into a Clojure map,
-  dropping the empty-string default emitted by proto2 for an unset
-  optional `valid_from` so callers see `:valid-from` only when it
-  carries a real ISO date.
+  "Parse CashAccountProduct protobuf bytes into a Clojure map, dropping
+  the `0` default proto2 emits for an unset optional `effective_from` /
+  `effective_to` so callers see those keys only when a real epoch-day
+  is set (epoch-day 0 is 1970-01-01, never a real product window).
 
   Args:
   - input: protobuf bytes."
   [input]
   (let [version (cash-account-products/pb->CashAccountProduct input)]
     (cond-> version
-            (not (seq (:valid-from version)))
-            (dissoc :valid-from))))
+            (zero? (:effective-from version 0))
+            (dissoc :effective-from)
+
+            (zero? (:effective-to version 0))
+            (dissoc :effective-to))))
 
 (defn CashAccountProduct->pb
   "Serialise a CashAccountProduct map to protobuf bytes.

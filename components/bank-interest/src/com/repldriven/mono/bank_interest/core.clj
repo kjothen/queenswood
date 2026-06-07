@@ -54,8 +54,7 @@
      (fn [txn]
        (let-nom>
          [version (get-product-version config bank-id account)
-          interest-rate-bps (get-in version
-                                    [:kind :sub-ledger :interest-rate-bps])
+          interest-rate-bps (:interest-rate-bps version)
           balance (balances/get-balance txn
                                         account-id
                                         :balance-type-default

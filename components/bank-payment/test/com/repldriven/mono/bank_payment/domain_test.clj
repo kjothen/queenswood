@@ -45,11 +45,13 @@
                                            :window :time-window-daily}}}}}}}]}])
 
 (defn- empty-aggregates
-  "Aggregates fixture where today's count is zero for the given
-  payment kind. Combined with `allow-all`, leg-shape tests stay clear
+  "Aggregates fixture where today's count and value are both zero for
+  the given payment kind — the shape `core/submit-*` builds before the
+  domain checks. Combined with `allow-all`, leg-shape tests stay clear
   of any limit boundary."
   [kind]
-  {kind {#{:bank-id :business-day} 0}})
+  {kind {#{:bank-id :business-day} 0
+         #{:bank-id :business-day :amount} 0}})
 
 (defn- account
   "Minimal cash-account fixture — just the fields the domain guards

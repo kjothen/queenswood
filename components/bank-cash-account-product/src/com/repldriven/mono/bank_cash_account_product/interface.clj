@@ -1,19 +1,14 @@
 (ns com.repldriven.mono.bank-cash-account-product.interface
-  "Cash-account product catalog: per-bank product definitions
-  that drive cash-account opening. Products carry a `:kind`
-  discriminator with two variants — `:sub-ledger` (customer-facing
-  instruments — current, savings, term-deposit) and
-  `:general-ledger` (bank-owned chart-of-accounts entries). Sub-ledger
-  products drive instrument opening (allowed currencies, balance
-  bucket layout, payment-address schemes, interest rate); GL products
-  drive chart-of-accounts seeding (gl-code, gl-account-type,
-  gl-account-class). Both kinds versioned through draft, published,
-  and discarded states; only published versions can back live
-  accounts."
+  "Cash-account product catalog: per-bank customer-product definitions
+  that drive cash-account opening — allowed currencies, balance bucket
+  layout, payment-address schemes, interest rate, and the ISO 20022
+  account-type classification. A product is versioned through draft,
+  published, and discarded states; the published version effective
+  today (see `active-version`) backs newly-opened accounts."
   (:require
     [com.repldriven.mono.bank-cash-account-product.core :as core]
-    [com.repldriven.mono.bank-cash-account-product.resources :as resources]
-    [com.repldriven.mono.bank-cash-account-product.store :as store]))
+    [com.repldriven.mono.bank-cash-account-product.domain :as domain]
+    [com.repldriven.mono.bank-cash-account-product.resources :as resources]))
 
 (defn new-product
   "Create a new product as an initial draft v1. Returns the
@@ -25,20 +20,13 @@
   - data: version fields:
     - `:name` — product display name (required).
     - `:currency` — ISO 4217 string, single currency per product.
-    - `:valid-from` — optional ISO timestamp.
-    - `:kind` — discriminator map naming the variant. For a
-      customer-facing product:
-      `{:sub-ledger {:product-type :product-type-sub-ledger-current
-                     :interest-rate-bps 0
-                     :iso-cash-account-type
-                     :iso-cash-account-type-cacc}}`
-      For a GL product:
-      `{:general-ledger {:gl-code \"2100\"
-                         :gl-account-type :gl-account-type-liability
-                         :gl-account-class :gl-account-class-control
-                         :required :required-mandatory
-                         :sub-ledger-kind
-                         :sub-ledger-kind-cash-account-current}}`
+    - `:product-type` — e.g. `:product-type-sub-ledger-current`; the
+      per-type template fills in the derived instrument fields.
+    - `:interest-rate-bps` — optional; defaults to 0.
+    - `:iso-cash-account-type` — optional ISO 20022 type.
+    - `:effective-from` — epoch-day (required), the date the version
+      becomes active.
+    - `:effective-to` — optional epoch-day; open-ended when absent.
   - opts (optional): map; `:policies` overrides policy resolution."
   ([txn bank-id data]
    (core/new-product txn bank-id data))
@@ -144,21 +132,6 @@
   ([txn bank-id] (core/get-products txn bank-id))
   ([txn bank-id opts] (core/get-products txn bank-id opts)))
 
-(defn find-product-by-gl-code
-  "Return the first CashAccountProduct whose general_ledger variant
-  has the given `gl-code` for this bank, or nil. Used by
-  `bank-chart-of-accounts` and by cash-account opening to resolve a GL
-  account from its code. Composes with
-  `bank-cash-account/find-account-by-product` to fetch the actual
-  CashAccount.
-
-  Args:
-  - txn: FDB transaction or db handle.
-  - bank-id: owning bank id.
-  - gl-code: GL account code string (e.g. \"2100\")."
-  [txn bank-id gl-code]
-  (store/find-product-by-gl-code txn bank-id gl-code))
-
 (def ^:private internal-product-types
   "Product types the bank provisions for its own internal accounts
   (not customer-facing instruments), excluded from the product-template
@@ -178,16 +151,15 @@
        (sort-by :product-type)
        vec))
 
-(defn published-version
-  "Return the highest-version-number `:published` version in a
-  product aggregate (as returned by `get-product`), or nil if
-  none. Relies on the aggregate's `:versions` being sorted
-  newest-first.
+(defn active-version
+  "Return the published version of a product aggregate (as returned by
+  `get-product`) effective on epoch-day `as-of`, or nil if none — the
+  published version whose `[effective-from, effective-to)` window
+  contains `as-of`, choosing the greatest effective-from.
 
   Args:
-  - product: a product aggregate map with a `:versions` vector."
-  [{:keys [versions]}]
-  (->> versions
-       (filter (fn [v]
-                 (= :cash-account-product-status-published (:status v))))
-       first))
+  - product: a product aggregate map with a `:versions` vector.
+  - as-of: epoch-day (long) to evaluate the window at (e.g.
+    `utility/today`)."
+  [product as-of]
+  (domain/active-version product as-of))

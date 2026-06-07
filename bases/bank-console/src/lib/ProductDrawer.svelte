@@ -37,10 +37,18 @@
 
   // Form state. Reset by the $effect below whenever the drawer opens
   // so re-opening doesn't leak the previous edit's values.
+  function todayISO() {
+    return new Date().toISOString().slice(0, 10);
+  }
+
   let productType = $state("current");
   let currency = $state("GBP");
   let name = $state("");
   let rateBps = $state(0);
+  // Effective window (ISO date strings). effective-from defaults to
+  // today; effective-to is optional (blank = open-ended).
+  let effectiveFrom = $state(todayISO());
+  let effectiveTo = $state("");
   let submitting = $state(false);
   let formError = $state(null);
   // Track whether the user has manually overridden the name. If not,
@@ -55,13 +63,19 @@
       currency = target.currency ?? "GBP";
       name = target.name ?? "";
       rateBps = target["interest-rate-bps"] ?? 0;
+      // Keep the draft's own window.
+      effectiveFrom = target["effective-from"] ?? todayISO();
+      effectiveTo = target["effective-to"] ?? "";
       nameTouched = true;
     } else if (mode === "new-version" && target) {
-      // Pre-fill from the published version we're revising.
+      // Pre-fill from the published version we're revising, but the new
+      // version's terms start today by default.
       productType = target["product-type"] ?? "current";
       currency = target.currency ?? "GBP";
       name = target.name ?? "";
       rateBps = target["interest-rate-bps"] ?? 0;
+      effectiveFrom = todayISO();
+      effectiveTo = "";
       nameTouched = true;
     } else {
       // Compute from locals, not the productType/currency state we're
@@ -73,6 +87,8 @@
       productType = t;
       currency = allowed[0];
       rateBps = 0;
+      effectiveFrom = todayISO();
+      effectiveTo = "";
       nameTouched = false;
       name = defaultName(t, allowed[0]);
     }
@@ -140,7 +156,9 @@
       "product-type": productType,
       currency,
       "interest-rate-bps": Number(rateBps) || 0,
+      "effective-from": effectiveFrom,
     };
+    if (effectiveTo) data["effective-to"] = effectiveTo;
     try {
       let res;
       if (mode === "create") {
@@ -222,6 +240,22 @@
       {/snippet}
     </Field>
 
+    <Field
+      label="Effective from"
+      htmlFor="f-eff-from"
+      hint="The date this version becomes the active product for new accounts."
+    >
+      <Input id="f-eff-from" type="date" bind:value={effectiveFrom} />
+    </Field>
+
+    <Field
+      label="Effective to"
+      htmlFor="f-eff-to"
+      hint="Optional. Leave blank for no end date."
+    >
+      <Input id="f-eff-to" type="date" min={effectiveFrom} bind:value={effectiveTo} />
+    </Field>
+
     {#if formError}
       <p class="error" role="alert">{formError}</p>
     {/if}
@@ -234,7 +268,7 @@
       block
       type="submit"
       form="product-form"
-      disabled={submitting || !name.trim()}
+      disabled={submitting || !name.trim() || !effectiveFrom}
     >
       {submitting ? "Saving…" : ctaFor}
     </Button>

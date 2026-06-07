@@ -63,6 +63,12 @@ function product_request_body(data) {
   if (data["interest-rate-bps"]) {
     body["interest-rate-bps"] = data["interest-rate-bps"];
   }
+  if (data["effective-from"]) {
+    body["effective-from"] = data["effective-from"];
+  }
+  if (data["effective-to"]) {
+    body["effective-to"] = data["effective-to"];
+  }
   return body;
 }
 

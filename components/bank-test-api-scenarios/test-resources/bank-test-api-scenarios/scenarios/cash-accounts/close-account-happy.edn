@@ -55,7 +55,7 @@
                     :product-type "current"
                     :currency "GBP"
                     :interest-rate-bps 0
-                    :valid-from "2026-01-01"}}
+                    :effective-from "2026-01-01"}}
    :as :draft
    :assert {:status 201 :body {:status "draft"}}}
   {:command :api/request
