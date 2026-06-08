@@ -59,3 +59,12 @@
   [leg]
   (and (= :balance-type-default (:balance-type leg))
        (= :balance-status-posted (:balance-status leg))))
+
+(defn debit-normal?
+  "True for the debit-normal account families (asset, expense); false
+  for the credit-normal ones (liability, equity, income). A trial
+  balance places a debit-normal account's balance in the debit column
+  and a credit-normal account's in the credit column."
+  [gl-account-type]
+  (contains? #{:gl-account-type-asset :gl-account-type-expense}
+             gl-account-type))

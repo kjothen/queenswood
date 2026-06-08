@@ -87,6 +87,16 @@
   [txn bank-id]
   (core/list-accounts txn bank-id))
 
+(defn debit-normal?
+  "True for debit-normal account families (asset, expense), false for
+  credit-normal (liability, equity, income) — which column a ledger
+  account's balance falls in when assembling a trial balance.
+
+  Args:
+  - gl-account-type: a `:gl-account-type-*` keyword."
+  [gl-account-type]
+  (domain/debit-normal? gl-account-type))
+
 (defn add-control-legs
   "Walk `legs` and append a matching control-side leg for every
   customer default-posted leg carrying a sub-ledger `:product-type`,

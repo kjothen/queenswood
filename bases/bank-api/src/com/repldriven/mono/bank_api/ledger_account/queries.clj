@@ -16,15 +16,49 @@
   [account]
   (set/rename-keys account {:ledger-account-id :account-id}))
 
+(defn- with-posted-balances
+  "Attach each ledger account's derived `:posted-balance` ({value,
+  currency}) — the same per-account read the balances endpoint does,
+  batched server-side so the list carries the headline figure and the
+  trial balance can be summed here rather than in the client. Returns the
+  enriched accounts, or the first balance anomaly."
+  [config accounts]
+  (reduce (fn [acc account]
+            (let [balances (balances/get-balances
+                            config
+                            (:ledger-account-id account))]
+              (if (error/anomaly? balances)
+                (reduced balances)
+                (conj
+                 acc
+                 (assoc account :posted-balance (:posted-balance balances))))))
+          []
+          accounts))
+
+(defn- trial-balance-entry
+  "Project an enriched account into a bank-balance trial-balance entry:
+  its currency, normal side (from the gl-account-type), and posted net."
+  [account]
+  {:currency (:currency account)
+   :normal-side (if (ledger-accounts/debit-normal? (:gl-account-type account))
+                  :debit
+                  :credit)
+   :value (:value (:posted-balance account))})
+
 (defn list-ledger-accounts
   [request]
   (let [{:keys [record-db record-store auth]} request
         {:keys [bank-id]} auth
         config {:record-db record-db :record-store record-store}
-        result (ledger-accounts/list-accounts config bank-id)]
+        result (let-nom>
+                 [accounts (ledger-accounts/list-accounts config bank-id)
+                  enriched (with-posted-balances config accounts)]
+                 {:ledger-accounts (mapv ->api enriched)
+                  :trial-balance (balances/trial-balance
+                                  (map trial-balance-entry enriched))})]
     (if (error/anomaly? result)
       (errors/anomaly->response result)
-      {:status 200 :body {:ledger-accounts (mapv ->api result)}})))
+      {:status 200 :body result})))
 
 (defn get-ledger-account
   [request]

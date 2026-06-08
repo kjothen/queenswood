@@ -62,3 +62,27 @@
            (SUT/available-balance gl-balances "GBP"))))
   (testing "empty balances returns zero"
     (is (= {:value 0 :currency "GBP"} (SUT/available-balance [] "GBP")))))
+
+(deftest trial-balance-test
+  (testing "a balanced currency: Σdebit equals Σcredit, accounts counted"
+    ;; asset £1000 (debit-normal, posted −100000) balances liability £900
+    ;; + equity £100 (credit-normal).
+    (is (= [{:currency "GBP" :debit 100000 :credit 100000 :accounts 3}]
+           (SUT/trial-balance
+            [{:currency "GBP" :normal-side :debit :value -100000}
+             {:currency "GBP" :normal-side :credit :value 90000}
+             {:currency "GBP" :normal-side :credit :value 10000}]))))
+  (testing "currencies are grouped, never summed together"
+    (is (= #{{:currency "GBP" :debit 100000 :credit 100000 :accounts 2}
+             {:currency "USD" :debit 5000 :credit 5000 :accounts 2}}
+           (set (SUT/trial-balance
+                 [{:currency "GBP" :normal-side :debit :value -100000}
+                  {:currency "GBP" :normal-side :credit :value 100000}
+                  {:currency "USD" :normal-side :debit :value -5000}
+                  {:currency "USD" :normal-side :credit :value 5000}])))))
+  (testing "an unbalanced currency surfaces the gap (debit not equal credit)"
+    (is (= [{:currency "GBP" :debit 100000 :credit 90000 :accounts 2}]
+           (SUT/trial-balance
+            [{:currency "GBP" :normal-side :debit :value -100000}
+             {:currency "GBP" :normal-side :credit :value 90000}]))))
+  (testing "no entries yields no blocks" (is (= [] (SUT/trial-balance [])))))

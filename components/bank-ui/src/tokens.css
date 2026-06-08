@@ -91,6 +91,47 @@
   --brand-action:        var(--gold);
   --brand-action-hover:  var(--gold-deep);
   --brand-action-fg:     #161310;
+
+  /* ===== GL account tones — chips for the chart of accounts =====
+     Two dimensions, each a bg/fg pair in light-dark(oklch ...) like
+     Badge/Phase. class = a ledger account's role in the hierarchy
+     (control = an emphasised sub-ledger rollup, summary = structural
+     parent, detail = posting leaf). type = the accounting family, hued
+     by normal side: warm = debit-normal (asset, expense), cool =
+     credit-normal (liability, equity, income). */
+
+  /* class (hierarchy) */
+  --gl-control-bg: light-dark(oklch(0.90 0.072 80),  oklch(0.31 0.082 78));
+  --gl-control-fg: light-dark(oklch(0.45 0.130 70),  oklch(0.86 0.120 82));
+  --gl-summary-bg: light-dark(oklch(0.92 0.040 145), oklch(0.26 0.050 145));
+  --gl-summary-fg: light-dark(oklch(0.37 0.070 145), oklch(0.81 0.060 145));
+  --gl-detail-bg:  var(--surface-sunk);
+  --gl-detail-fg:  var(--fg-muted);
+
+  /* type — warm = debit-normal */
+  --gl-asset-bg:   light-dark(oklch(0.92 0.038 68),  oklch(0.27 0.046 66));
+  --gl-asset-fg:   light-dark(oklch(0.45 0.072 64),  oklch(0.83 0.066 72));
+  --gl-expense-bg: light-dark(oklch(0.92 0.044 42),  oklch(0.27 0.052 40));
+  --gl-expense-fg: light-dark(oklch(0.46 0.085 40),  oklch(0.83 0.078 44));
+
+  /* type — cool = credit-normal */
+  --gl-liability-bg: light-dark(oklch(0.92 0.038 248), oklch(0.27 0.048 248));
+  --gl-liability-fg: light-dark(oklch(0.46 0.078 250), oklch(0.83 0.070 246));
+  --gl-equity-bg:    light-dark(oklch(0.92 0.038 214), oklch(0.27 0.046 214));
+  --gl-equity-fg:    light-dark(oklch(0.44 0.076 216), oklch(0.82 0.068 212));
+  --gl-income-bg:    light-dark(oklch(0.92 0.040 188), oklch(0.26 0.048 188));
+  --gl-income-fg:    light-dark(oklch(0.43 0.078 190), oklch(0.82 0.068 186));
+
+  /* ===== Trial balance — debit/credit legs + balance assertion =====
+     --debit / --credit are pulled straight off the GL type encoding
+     (warm = debit-normal, cool = credit-normal) so the band and the
+     <GlType> chips read as one system. --ok is the calm "books tie"
+     tone; an out-of-balance currency reuses --danger — no new alarm
+     colour, because only the assertion should ever shout. */
+
+  --debit:  light-dark(oklch(0.52 0.090 55),  oklch(0.78 0.080 60));
+  --credit: light-dark(oklch(0.50 0.080 245), oklch(0.78 0.072 245));
+  --ok:     light-dark(oklch(0.46 0.070 145), oklch(0.66 0.065 145));
 }
 
 /* Explicit user choice — overrides the system preference. */

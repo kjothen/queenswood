@@ -19,9 +19,12 @@
    :gl-account-type :liability
    :gl-account-class :control
    :required :mandatory
+   :posted-balance {:value 90000 :currency "GBP"}
    :created-at "2025-01-01T00:00:00Z"
    :updated-at "2025-01-01T00:00:00Z"})
 
 (def LedgerAccountId (:account-id LedgerAccount))
 
-(def LedgerAccountList {:ledger-accounts [LedgerAccount]})
+(def LedgerAccountList
+  {:ledger-accounts [LedgerAccount]
+   :trial-balance [{:currency "GBP" :debit 90000 :credit 90000 :accounts 8}]})

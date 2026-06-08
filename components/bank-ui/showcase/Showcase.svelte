@@ -17,6 +17,7 @@
     PageHeader, Drawer,
     Table, Thead, Tbody, Tr, Th, Td,
     Expander, MoneyCell, Phase, sumMinor,
+    TrialBalance,
     PolicyMatrix, CATEGORY_TONE,
     Field, Input, Select,
     Card, CardHeader, CardBody, CardFooter, CodeCard,
@@ -943,6 +944,21 @@
 
       <h3 class="policy-sub">{selectedPolicy.name}</h3>
       <PolicyMatrix policy={selectedPolicy} showUngoverned={policyShowUngoverned} query={policyQuery} />
+    </section>
+
+    <section id="trial-balance" class="section">
+      <div class="section-head">
+        <h2>Trial balance band</h2>
+        <p class="lead"><code>&lt;TrialBalance&gt;</code> summarises the ledger as one balanced block per currency — Σ debits against Σ credits, with the assertion (<code>Σ&nbsp;debit&nbsp;===&nbsp;Σ&nbsp;credit</code>) as the hero. Currencies never sum together; there is no grand total. Each <code>&lt;TrialBalanceCard&gt;</code> derives <code>balanced</code> / <code>diff</code> from the two minor figures (integer equality on pence) — debit/credit dots share the <code>&lt;GlType&gt;</code> warm/cool encoding. A currency can sit out of balance intraday by the in-flight amount, shown here by USD.</p>
+      </div>
+      <TrialBalance
+        asOf="09:42 UTC"
+        blocks={[
+          { ccy: "GBP", sym: "£", name: "Sterling", accounts: 14, debitMinor: 2431077542000, creditMinor: 2431077542000 },
+          { ccy: "EUR", sym: "€", name: "Euro", accounts: 6, debitMinor: 590244010000, creditMinor: 590244010000 },
+          { ccy: "USD", sym: "$", name: "US Dollar", accounts: 5, debitMinor: 215000000000, creditMinor: 183979955000 },
+        ]}
+      />
     </section>
 
     <footer class="foot">

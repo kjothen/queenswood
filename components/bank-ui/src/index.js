@@ -41,6 +41,14 @@ export { default as Td } from "./Td.svelte";
 export { default as Expander } from "./Expander.svelte";
 export { default as MoneyCell } from "./MoneyCell.svelte";
 export { default as Phase } from "./Phase.svelte";
+// Chart-of-accounts chips: a GL account's role (class) and accounting
+// family (type). Same chip family as Phase.
+export { default as GlClass } from "./GlClass.svelte";
+export { default as GlType } from "./GlType.svelte";
+// Trial-balance band — per-currency Σ debit / Σ credit + the balance
+// assertion, summarised in cards above the ledger list.
+export { default as TrialBalance } from "./TrialBalance.svelte";
+export { default as TrialBalanceCard } from "./TrialBalanceCard.svelte";
 export { formatMoney, moneyTone, sumMinor, CCY_SYMBOLS } from "./money.js";
 
 // Policy matrix — atoms + the composed per-domain table, plus the

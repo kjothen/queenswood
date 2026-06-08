@@ -6,6 +6,7 @@
   credit-carry maintenance for capitalisation."
   (:require
     [com.repldriven.mono.bank-balance.core :as core]
+    [com.repldriven.mono.bank-balance.domain :as domain]
     [com.repldriven.mono.bank-balance.store :as store]))
 
 (defn new-balance
@@ -64,6 +65,19 @@
   - account-id: owning account id."
   [txn account-id]
   (core/get-balances txn account-id))
+
+(defn trial-balance
+  "Aggregate per-account posted balances into a per-currency trial
+  balance — `[{:currency :debit :credit :accounts}]`, one block per
+  currency, Σdebit equal to Σcredit when the currency's books balance.
+  Pure: pass `entries` as a collection of `{:currency :normal-side
+  :value}` where `:normal-side` is `:debit`/`:credit` (the account's
+  normal side) and `:value` is the credit-positive posted net.
+
+  Args:
+  - entries: collection of `{:currency :normal-side :value}`."
+  [entries]
+  (domain/trial-balance entries))
 
 (defn apply-legs
   "Apply each leg to its target balance (with the
