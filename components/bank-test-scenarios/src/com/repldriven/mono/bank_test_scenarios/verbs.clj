@@ -106,8 +106,8 @@
 (defmulti dispatch (fn [_ctx command] (:command command)))
 
 (defmethod dispatch :create-bank
-  [{:keys [bank counter next-model-id next-bank-id next-product-id next-party-id
-           id-mapping]
+  [{:keys [bank identity-provider counter next-model-id next-bank-id
+           next-product-id next-party-id id-mapping]
     :as ctx} _command]
   ;; The model treats `:create-bank` as "bank + one usable account in
   ;; one go". Reality post-CoA seeds 7 GL accounts on the bank's own
@@ -123,7 +123,13 @@
         model-prod (model-id-for-next-product next-product-id)
         model-party (model-id-for-next-party next-party-id)
         bank-name (str "Scenario Customer " counter)
-        result (banks/new-bank bank bank-name :bank-status-test "micro" ["GBP"])
+        result (banks/new-bank bank
+                               bank-name
+                               :bank-status-test
+                               "micro"
+                               ["GBP"]
+                               {:identity-provider identity-provider
+                                :audience "queenswood-api-test"})
         bank-entity (:bank result)
         real-bank-id (:bank-id bank-entity)
         real-party-id (get-in bank-entity [:party :party-id])

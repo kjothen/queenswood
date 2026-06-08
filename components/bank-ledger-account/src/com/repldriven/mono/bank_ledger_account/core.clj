@@ -45,7 +45,7 @@
   account isn't seeded yet."
   [txn bank-id leg]
   (when (domain/fans-out? leg)
-    (when-let [code (get domain/control-code-for-product-type
+    (when-let [code (get domain/product-type->control-code
                          (:product-type leg))]
       (let-nom>
         [control (store/find-by-code txn bank-id code)]

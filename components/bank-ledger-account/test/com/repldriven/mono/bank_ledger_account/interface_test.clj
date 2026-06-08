@@ -70,16 +70,16 @@
 
 ;; --- Pure mapping checks ------------------------------------------------
 
-(deftest control-code-for-product-type-test
+(deftest product-type->control-code-test
   (is (= "2100"
-         (SUT/control-code-for-product-type :product-type-sub-ledger-current)))
+         (SUT/product-type->control-code :product-type-sub-ledger-current)))
   (is (= "2200"
-         (SUT/control-code-for-product-type :product-type-sub-ledger-savings)))
+         (SUT/product-type->control-code :product-type-sub-ledger-savings)))
   (is (= "2300"
-         (SUT/control-code-for-product-type
+         (SUT/product-type->control-code
           :product-type-sub-ledger-term-deposit)))
   (testing "non-customer product types have no control"
-    (is (nil? (SUT/control-code-for-product-type :product-type-unknown)))))
+    (is (nil? (SUT/product-type->control-code :product-type-unknown)))))
 
 ;; --- FDB-backed seed / lookup / add-control-legs
 ;; -----------------------------

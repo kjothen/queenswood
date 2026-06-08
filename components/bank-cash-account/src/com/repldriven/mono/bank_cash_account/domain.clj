@@ -4,8 +4,9 @@
     [com.repldriven.mono.bank-cash-account.validation :as validation]
 
     [com.repldriven.mono.bank-policy.interface :as policy]
+
     [com.repldriven.mono.error.interface :as error :refer [let-nom>]]
-    [com.repldriven.mono.utility.interface :as utility]))
+    [com.repldriven.mono.utility.interface :as utility :refer [assoc-some]]))
 
 (def default-sort-code "040004")
 
@@ -21,6 +22,29 @@
                            :cash-account
                            {:action action
                             :account-type account-type}))
+
+(defn- check-total-limit
+  [aggregates policies]
+  (policy/check-limit
+   policies
+   :cash-account
+   {:aggregate :count
+    :window :time-window-instant
+    :value (inc (get-in aggregates [:cash-account #{:bank-id}]))}))
+
+(defn- check-subtotal-limit
+  [product-type account-type currency aggregates policies]
+  (policy/check-limit
+   policies
+   :cash-account
+   {:aggregate :count
+    :window :time-window-instant
+    :product-type product-type
+    :account-type account-type
+    :currency currency
+    :value (inc (get-in aggregates
+                        [:cash-account
+                         #{:bank-id :product-type :account-type :currency}]))}))
 
 (defn- scan->bban
   [{:keys [sort-code account-number]}]
@@ -71,49 +95,32 @@
        _ (validation/valid-currency? currency product-version)
        _ (validation/valid-party? party)
        _ (check-capability :cash-account-action-open account-type policies)
-       _ (policy/check-limit
-          policies
-          :cash-account
-          {:aggregate :count
-           :window :time-window-instant
-           :value (inc (get-in aggregates [:cash-account #{:bank-id}]))})
-       _ (policy/check-limit
-          policies
-          :cash-account
-          {:aggregate :count
-           :window :time-window-instant
-           :product-type product-type
-           :account-type account-type
-           :currency currency
-           :value (inc (get-in aggregates
-                               [:cash-account
-                                #{:bank-id :product-type
-                                  :account-type :currency}]))})
+       _ (check-total-limit aggregates policies)
+       _ (check-subtotal-limit product-type
+                               account-type
+                               currency
+                               aggregates
+                               policies)
        payment-addresses (new-addresses product-version
                                         address-fountain-fn)]
       (let [now (utility/now)
             bban (some (fn [{:keys [scan]}] (when scan (scan->bban scan)))
                        payment-addresses)]
-        (cond-> {:bank-id bank-id
-                 :party-id party-id
-                 :product-id product-id
-                 :version-id version-id
-                 :currency currency
-                 :name name
-                 :account-id (utility/generate-id "acc")
-                 :account-status :cash-account-status-opening
-                 :payment-addresses payment-addresses
-                 :created-at now
-                 :updated-at now}
-
-                product-type
-                (assoc :product-type product-type)
-
-                account-type
-                (assoc :account-type account-type)
-
-                bban
-                (assoc :bban bban))))))
+        (assoc-some {:bank-id bank-id
+                     :party-id party-id
+                     :product-id product-id
+                     :version-id version-id
+                     :product-type product-type
+                     :account-type account-type
+                     :currency currency
+                     :name name
+                     :account-id (utility/generate-id "acc")
+                     :account-status :cash-account-status-opening
+                     :payment-addresses payment-addresses
+                     :created-at now
+                     :updated-at now}
+                    :bban
+                    bban)))))
 
 (defn opening-balances
   [account currency product-version]
@@ -124,13 +131,11 @@
                [{:balance-type :balance-type-default
                  :balance-status :balance-status-posted}])]
     (mapv (fn [{:keys [balance-type balance-status]}]
-            (cond-> {:account-id account-id
-                     :balance-type balance-type
-                     :balance-status balance-status
-                     :currency currency}
-
-                    product-type
-                    (assoc :product-type product-type)))
+            {:account-id account-id
+             :product-type product-type
+             :balance-type balance-type
+             :balance-status balance-status
+             :currency currency})
           bp)))
 
 (defn opened-account

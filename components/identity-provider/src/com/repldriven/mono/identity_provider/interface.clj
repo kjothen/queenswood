@@ -12,12 +12,21 @@
   (:require
     com.repldriven.mono.identity-provider.system.core
 
+    [com.repldriven.mono.identity-provider.local :as local]
     [com.repldriven.mono.identity-provider.protocol :as protocol]))
 
 ;; Re-export so external implementers can pull the protocol off the
 ;; interface namespace — same pattern as `message-bus.interface`
 ;; does for Producer/Consumer.
 (def IdentityProvider protocol/IdentityProvider)
+
+(def
+  ^{:doc
+    "Build an in-memory `LocalIdentityProvider` for fast brick tests
+  that need a real IDP without a system or external service. `config`
+  may carry `:issuer`. Production wires an adapter via the system YAML."}
+  local-provider
+  local/->client)
 
 (defn create-service-account
   "Create a service-account client for a bank. Returns
