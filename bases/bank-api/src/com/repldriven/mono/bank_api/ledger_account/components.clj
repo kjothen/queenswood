@@ -32,12 +32,25 @@
    [:gl-account-class [:ref "GlAccountClass"]]
    [:required [:ref "Required"]]
    [:sub-ledger-kind {:optional true} [:ref "SubLedgerKind"]]
+   ;; Present on the list (derived server-side); absent on the single-get.
+   [:posted-balance {:optional true} [:ref "SignedAmount"]]
    [:created-at [:ref "Timestamp"]]
    [:updated-at [:ref "Timestamp"]]])
 
+(def TrialBalanceEntry
+  "One currency's trial balance — total debits against total credits
+  over its accounts. Equal (so the block balances) when the books tie;
+  currencies never sum together, so there is no grand total."
+  [:map
+   [:currency [:ref "CurrencyCode"]]
+   [:debit [:int {:json-schema/format "int64"}]]
+   [:credit [:int {:json-schema/format "int64"}]]
+   [:accounts nat-int?]])
+
 (def LedgerAccountList
   [:map {:json-schema/example examples/LedgerAccountList}
-   [:ledger-accounts [:vector [:ref "LedgerAccount"]]]])
+   [:ledger-accounts [:vector [:ref "LedgerAccount"]]]
+   [:trial-balance [:vector [:ref "TrialBalanceEntry"]]]])
 
 (def LedgerBalance
   [:map
@@ -59,5 +72,5 @@
 (def registry
   (components-registry [#'LedgerAccountId #'GlAccountType #'GlAccountClass
                         #'Required #'SubLedgerKind #'LedgerAccount
-                        #'LedgerAccountList #'LedgerBalance
+                        #'TrialBalanceEntry #'LedgerAccountList #'LedgerBalance
                         #'LedgerBalanceList]))

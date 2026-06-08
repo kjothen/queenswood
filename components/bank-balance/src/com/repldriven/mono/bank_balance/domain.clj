@@ -71,6 +71,30 @@
   [balances currency]
   (net-balance balances currency available?))
 
+(defn trial-balance
+  "Aggregate account-level posted balances into a per-currency trial
+  balance — total debits vs total credits, plus the account count — one
+  block per currency. `entries` is a collection of
+  `{:currency :normal-side :value}`, where `:normal-side` is `:debit` or
+  `:credit` (the account's normal side) and `:value` is the
+  credit-positive posted net (credit − debit). A debit-normal account
+  contributes its magnitude (− value) to debits; a credit-normal account
+  contributes + value to credits. Σdebit equals Σcredit within a currency
+  exactly when its books balance; currencies never sum together."
+  [entries]
+  (->> entries
+       (group-by :currency)
+       (mapv (fn [[currency es]]
+               (reduce (fn [block {:keys [normal-side value]}]
+                         (let [debit? (= :debit normal-side)]
+                           (-> block
+                               (update :accounts inc)
+                               (update (if debit? :debit :credit)
+                                       +
+                                       (if debit? (- value) value)))))
+                       {:currency currency :debit 0 :credit 0 :accounts 0}
+                       es)))))
+
 (defn- find-balance-index
   [balances balance-type balance-status]
   (some (fn [[i b]]
