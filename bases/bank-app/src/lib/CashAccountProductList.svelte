@@ -76,7 +76,8 @@
     try {
       const body = {
         "name": reviseName,
-        "product-type": reviseProductType,
+        // Tied to a template at creation; one template per type.
+        "template-id": templateFor(reviseProductType)?.["template-id"],
         "currency": reviseCurrency,
         "interest-rate-bps": reviseInterestRateBps,
       };
@@ -159,7 +160,8 @@
     try {
       const res = await create_cash_account_product({
         "name": name,
-        "product-type": accountType,
+        // Tied to a template at creation; one template per type.
+        "template-id": templateFor(accountType)?.["template-id"],
         "currency": currency,
         "interest-rate-bps": interestRateBps,
       });

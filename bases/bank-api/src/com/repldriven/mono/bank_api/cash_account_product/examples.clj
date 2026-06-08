@@ -38,6 +38,7 @@
 
 (def ProductId "prd.01kprbmgcj35ptc8npmybhh4se")
 (def VersionId "prv.01kprbmgcj35ptc8npmybhh4sf")
+(def TemplateId "tpl.00000000000000000000000001")
 
 (def CashAccountProductVersion
   {:bank-id "bnk.01kprbmgcj35ptc8npmybhh4s7"
@@ -46,6 +47,7 @@
    :version-number 1
    :status :draft
    :name "Current Account"
+   :template-id TemplateId
    :product-type :current
    :balance-sheet-side :liability
    :allowed-currencies ["GBP"]
@@ -63,13 +65,15 @@
 
 (def CashAccountProductRequest
   {:name "Current Account"
-   :product-type :current
+   :template-id TemplateId
    :currency "GBP"
    :interest-rate-bps 0
    :effective-from "2025-01-01"})
 
 (def CashAccountProductTemplate
-  {:product-type :current
+  {:template-id TemplateId
+   :name "Current Account"
+   :product-type :current
    :balance-sheet-side :liability
    :allowed-currencies ["GBP"]
    :balance-products [{:balance-type :default :balance-status :posted}]
@@ -77,13 +81,11 @@
 
 (def CashAccountProductTemplateList
   {:items [CashAccountProductTemplate
-           (assoc CashAccountProductTemplate :product-type :savings)
            (assoc CashAccountProductTemplate
-                  :product-type :term-deposit
-                  :allowed-payment-address-schemes [])
+                  :template-id "tpl.00000000000000000000000002"
+                  :name "Savings account"
+                  :product-type :savings)
            (assoc CashAccountProductTemplate
-                  :product-type :settlement
-                  :balance-sheet-side :asset)
-           (assoc CashAccountProductTemplate
-                  :product-type :internal
-                  :allowed-payment-address-schemes [])]})
+                  :template-id "tpl.00000000000000000000000003"
+                  :name "Term deposit"
+                  :product-type :term-deposit)]})

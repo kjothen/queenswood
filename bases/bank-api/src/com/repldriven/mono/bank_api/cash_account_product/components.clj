@@ -11,6 +11,8 @@
 
 (def VersionId (schema/id-schema "VersionId" "prv" examples/VersionId))
 
+(def TemplateId (schema/id-schema "TemplateId" "tpl" examples/TemplateId))
+
 (def ProductType
   (coercion/product-type-enum-schema {:json-schema/example "current"}))
 
@@ -26,7 +28,7 @@
 (def CashAccountProductRequest
   [:map {:closed true :json-schema/example examples/CashAccountProductRequest}
    [:name [:ref "Name"]]
-   [:product-type [:ref "ProductType"]]
+   [:template-id [:ref "TemplateId"]]
    [:currency [:ref "Currency"]]
    [:interest-rate-bps {:optional true} [:ref "SignedBasisPoints"]]
    [:effective-from [:ref "BusinessDay"]]
@@ -40,6 +42,7 @@
    [:version-number int?]
    [:status [:ref "VersionStatus"]]
    [:name {:optional true} [:ref "Name"]]
+   [:template-id {:optional true} [:ref "TemplateId"]]
    [:product-type [:ref "ProductType"]]
    [:balance-sheet-side [:ref "BalanceSheetSide"]]
    [:allowed-currencies [:unique-vector-lax {:min 1} [:ref "Currency"]]]
@@ -70,6 +73,8 @@
 
 (def CashAccountProductTemplate
   [:map {:json-schema/example examples/CashAccountProductTemplate}
+   [:template-id [:ref "TemplateId"]]
+   [:name {:optional true} [:ref "Name"]]
    [:product-type [:ref "ProductType"]]
    [:balance-sheet-side [:ref "BalanceSheetSide"]]
    [:allowed-currencies [:unique-vector-lax {:min 1} [:ref "Currency"]]]
@@ -82,9 +87,9 @@
    [:items [:vector [:ref "CashAccountProductTemplate"]]]])
 
 (def registry
-  (components-registry [#'ProductId #'VersionId #'ProductType #'BalanceSheetSide
-                        #'PaymentAddressScheme #'VersionStatus
-                        #'CashAccountProductRequest #'CashAccountProductVersion
-                        #'CashAccountProduct #'CashAccountProductListLinks
-                        #'CashAccountProductList #'CashAccountProductTemplate
-                        #'CashAccountProductTemplateList]))
+  (components-registry
+   [#'ProductId #'VersionId #'TemplateId #'ProductType #'BalanceSheetSide
+    #'PaymentAddressScheme #'VersionStatus #'CashAccountProductRequest
+    #'CashAccountProductVersion #'CashAccountProduct
+    #'CashAccountProductListLinks #'CashAccountProductList
+    #'CashAccountProductTemplate #'CashAccountProductTemplateList]))

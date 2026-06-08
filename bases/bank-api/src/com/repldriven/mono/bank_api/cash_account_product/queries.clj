@@ -110,6 +110,10 @@
       {:status 200 :body result})))
 
 (defn list-templates
-  [_request]
-  {:status 200
-   :body {:items (cash-account-products/list-templates)}})
+  [request]
+  (let [{:keys [record-db record-store]} request
+        result (cash-account-products/list-templates
+                {:record-db record-db :record-store record-store})]
+    (if (error/anomaly? result)
+      (errors/anomaly->response result)
+      {:status 200 :body {:items result}})))

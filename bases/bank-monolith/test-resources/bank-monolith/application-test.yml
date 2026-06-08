@@ -11,6 +11,7 @@ system:
   transactions: !include bank/transaction-test.yml
   idv: !include bank/idv-test.yml
   policies: !include bank/policy-test.yml
+  templates: !include bank/templates-test.yml
   telemetry:
     otel-sdk: !profile
       dev: !system/component

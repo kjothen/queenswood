@@ -6,8 +6,44 @@
     [com.repldriven.mono.fdb.interface :as fdb]))
 
 (def ^:private store-name "cash-account-products")
+(def ^:private templates-store-name "cash-account-product-templates")
 
 (def transact fdb/transact)
+
+(defn save-template
+  [txn template]
+  (fdb/transact
+   txn
+   (fn [txn]
+     (fdb/save-record (fdb/open txn templates-store-name)
+                      (schema/CashAccountProductTemplate->java template)))
+   :cash-account-product/save-template
+   "Failed to save template"))
+
+(defn get-template
+  [txn template-id]
+  (fdb/transact
+   txn
+   (fn [txn]
+     (if-let [record (fdb/load-record (fdb/open txn templates-store-name)
+                                      template-id)]
+       (schema/pb->CashAccountProductTemplate record)
+       (error/reject :cash-account-product/template-not-found
+                     {:message "Template not found"
+                      :template-id template-id})))
+   :cash-account-product/get-template
+   "Failed to load template"))
+
+(defn get-templates
+  [txn]
+  (fdb/transact
+   txn
+   (fn [txn]
+     (mapv schema/pb->CashAccountProductTemplate
+           (:records (fdb/scan-records (fdb/open txn templates-store-name)
+                                       {:limit 1000 :order :asc}))))
+   :cash-account-product/list-templates
+   "Failed to list templates"))
 
 (defn save-version
   [txn version]

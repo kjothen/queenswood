@@ -4,6 +4,7 @@ system:
   fdb: !include bank/fdb-test.yml
   avro: !include avro/avro-test.yml
   policies: !include bank/policy-test.yml
+  templates: !include bank/templates-test.yml
   idv: !include bank/idv-test.yml
   parties: !include bank-test-scenarios/party-test.yml
   payments: !include bank-test-scenarios/payment-test.yml

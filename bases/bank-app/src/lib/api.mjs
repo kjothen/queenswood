@@ -303,7 +303,7 @@ export function list_transactions(account_id) {
 function product_request_body(data) {
   const body = {
     name: data.name,
-    "product-type": data["product-type"],
+    "template-id": data["template-id"],
     currency: data.currency,
   };
   if (data["interest-rate-bps"])

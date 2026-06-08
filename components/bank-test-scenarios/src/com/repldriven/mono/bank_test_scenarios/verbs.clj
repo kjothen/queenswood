@@ -90,13 +90,24 @@
   [next-payment-id]
   (keyword (str "pmt-" next-payment-id)))
 
+(def ^:private product-type->template-id
+  "Maps the internal product-type kind to the stable id of the platform
+  template seeded at bootstrap (see bank/templates/*.yml). Products are
+  now created from a template-id; the product-type is snapshotted from
+  the template."
+  {:product-type-sub-ledger-current "tpl.00000000000000000000000001"
+   :product-type-sub-ledger-savings "tpl.00000000000000000000000002"
+   :product-type-sub-ledger-term-deposit "tpl.00000000000000000000000003"
+   :product-type-sub-ledger-own-funds "tpl.00000000000000000000000004"})
+
 (defn- product-payload
   "Build a flat product input for new-product/update-draft, optionally
-  merging caller-supplied extras such as :interest-rate-bps."
+  merging caller-supplied extras such as :interest-rate-bps. The
+  `product-type` kind selects the seeded template by id."
   [product-name product-type & [extras]]
   (merge {:name product-name
           :currency "GBP"
-          :product-type product-type
+          :template-id (product-type->template-id product-type)
           ;; A fixed past effective-from (epoch-day 20089 = 2025-01-01)
           ;; so the published version is always active when accounts
           ;; open during the run.

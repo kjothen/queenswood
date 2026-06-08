@@ -6,9 +6,10 @@
   published, and discarded states; the published version effective
   today (see `active-version`) backs newly-opened accounts."
   (:require
+    com.repldriven.mono.bank-cash-account-product.system
+
     [com.repldriven.mono.bank-cash-account-product.core :as core]
-    [com.repldriven.mono.bank-cash-account-product.domain :as domain]
-    [com.repldriven.mono.bank-cash-account-product.resources :as resources]))
+    [com.repldriven.mono.bank-cash-account-product.domain :as domain]))
 
 (defn new-product
   "Create a new product as an initial draft v1. Returns the
@@ -19,11 +20,13 @@
   - bank-id: owning bank id.
   - data: version fields:
     - `:name` — product display name (required).
+    - `:template-id` — the platform template this product is created
+      from (required). product-type and the derived instrument fields
+      (balance-sheet-side, balance buckets, payment-address schemes,
+      ISO 20022 type) are snapshotted from it at creation, so later
+      template edits never change an existing product.
     - `:currency` — ISO 4217 string, single currency per product.
-    - `:product-type` — e.g. `:product-type-sub-ledger-current`; the
-      per-type template fills in the derived instrument fields.
     - `:interest-rate-bps` — optional; defaults to 0.
-    - `:iso-cash-account-type` — optional ISO 20022 type.
     - `:effective-from` — epoch-day (required), the date the version
       becomes active.
     - `:effective-to` — optional epoch-day; open-ended when absent.
@@ -132,24 +135,39 @@
   ([txn bank-id] (core/get-products txn bank-id))
   ([txn bank-id opts] (core/get-products txn bank-id opts)))
 
-(def ^:private internal-product-types
-  "Product types the bank provisions for its own internal accounts
-  (not customer-facing instruments), excluded from the product-template
-  menu an operator chooses from."
-  #{:product-type-sub-ledger-own-funds})
+(defn new-template
+  "Idempotently seed a platform cash-account-product template (no
+  bank-id) — products are created from these. A stable `:template-id`
+  makes re-seeding a no-op, preserving the original `:created-at`.
+  Returns the template or an anomaly.
+
+  Args:
+  - config: FDB config (`:record-db` / `:record-store`).
+  - data: template fields (`:product-type`, `:balance-sheet-side`,
+    `:balance-products`, `:allowed-payment-address-schemes`,
+    `:allowed-currencies`, `:iso-cash-account-type`, optional
+    `:name` / `:internal`)."
+  [config data]
+  (core/new-template config data))
+
+(defn get-template
+  "Load a template by id. Returns the template map or a
+  `:cash-account-product/template-not-found` rejection.
+
+  Args:
+  - txn: FDB transaction or db handle.
+  - template-id: template id."
+  [txn template-id]
+  (core/get-template txn template-id))
 
 (defn list-templates
-  "Return the customer-facing per-product-type templates as a vector of
-  maps with a `:product-type` key plus the derived fields applied at
-  product creation. Static today, loaded from classpath at brick init;
-  intended to move to per-organization FDB records later so an
-  operator can author their own product templates."
-  []
-  (->> resources/product-defaults
-       (remove (fn [[t _]] (contains? internal-product-types t)))
-       (map (fn [[t fields]] (assoc fields :product-type t)))
-       (sort-by :product-type)
-       vec))
+  "Return the customer-facing platform templates (internal ones such as
+  own-funds excluded), sorted by product-type.
+
+  Args:
+  - txn: FDB transaction or db handle."
+  [txn]
+  (core/list-templates txn))
 
 (defn active-version
   "Return the published version of a product aggregate (as returned by

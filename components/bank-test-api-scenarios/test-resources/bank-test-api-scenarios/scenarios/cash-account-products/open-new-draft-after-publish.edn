@@ -21,7 +21,7 @@
              :path "/v1/cash-account-products"
              :auth :org-0-token
              :body {:name "v1"
-                    :product-type "current"
+                    :template-id "tpl.00000000000000000000000001"
                     :currency "GBP"
                     :interest-rate-bps 0
                     :effective-from "2026-01-01"}}
@@ -41,7 +41,7 @@
              :path-params {:product-id [:ref :v1 :product-id]}
              :auth :org-0-token
              :body {:name "v2"
-                    :product-type "current"
+                    :template-id "tpl.00000000000000000000000001"
                     :currency "GBP"
                     :interest-rate-bps 100
                     :effective-from "2026-06-01"}}

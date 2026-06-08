@@ -31,6 +31,7 @@
     (com.repldriven.mono.schemas.balances BalanceProto$Balance)
     (com.repldriven.mono.schemas.cash_account_products
      CashAccountProductProto$CashAccountProduct
+     CashAccountProductProto$CashAccountProductTemplate
      CashAccountProductProto$IsoCashAccountType)
     (com.repldriven.mono.schemas.cash_accounts
      CashAccountProto$CashAccount
@@ -129,7 +130,9 @@
   "Parse CashAccountProduct protobuf bytes into a Clojure map, dropping
   the `0` default proto2 emits for an unset optional `effective_from` /
   `effective_to` so callers see those keys only when a real epoch-day
-  is set (epoch-day 0 is 1970-01-01, never a real product window).
+  is set (epoch-day 0 is 1970-01-01, never a real product window), and
+  the `false` default for `internal` so the flag is present only on
+  internal products (which never reach a customer response).
 
   Args:
   - input: protobuf bytes."
@@ -140,7 +143,10 @@
             (dissoc :effective-from)
 
             (zero? (:effective-to version 0))
-            (dissoc :effective-to))))
+            (dissoc :effective-to)
+
+            (not (:internal version))
+            (dissoc :internal))))
 
 (defn CashAccountProduct->pb
   "Serialise a CashAccountProduct map to protobuf bytes.
@@ -159,6 +165,28 @@
   [m]
   (CashAccountProductProto$CashAccountProduct/parseFrom
    (CashAccountProduct->pb m)))
+
+(def ^{:doc "Parse CashAccountProductTemplate protobuf bytes into a map."}
+     pb->CashAccountProductTemplate
+  cash-account-products/pb->CashAccountProductTemplate)
+
+(defn CashAccountProductTemplate->pb
+  "Serialise a CashAccountProductTemplate map to protobuf bytes.
+
+  Args:
+  - m: CashAccountProductTemplate map matching the generated schema."
+  [m]
+  (proto/->pb (cash-account-products/new-CashAccountProductTemplate m)))
+
+(defn CashAccountProductTemplate->java
+  "Parse a CashAccountProductTemplate map into the generated Java
+  protobuf class.
+
+  Args:
+  - m: CashAccountProductTemplate map matching the generated schema."
+  [m]
+  (CashAccountProductProto$CashAccountProductTemplate/parseFrom
+   (CashAccountProductTemplate->pb m)))
 
 (def ^{:doc "Parse Company protobuf bytes into a Clojure map."} pb->Company
   company/pb->Company)
