@@ -35,8 +35,10 @@ message CashAccount {
 
   required string bank_id = 1;
   required string account_id = 2;
-  // Tag 3 (account_type) is optional now — only customer accounts derive
-  // it from the holder party; GL accounts leave it unset.
+  // Tag 3 (account_type) derived from the holder party — personal for a
+  // person party, business otherwise (incl. the bank's org party). Always
+  // set by the domain; kept optional at the wire level only for record
+  // compatibility.
   optional AccountType account_type = 3;
   required string party_id = 4;
   required string product_id = 5;

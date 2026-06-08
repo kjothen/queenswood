@@ -19,7 +19,7 @@
 (defn- type->resource
   [product-type]
   (let [stem (subs (name product-type) (count "product-type-"))]
-    (str "bank/cash-account-products/" stem ".edn")))
+    (str "bank/ledgers/" stem ".edn")))
 
 (defn- load-one
   [product-type]

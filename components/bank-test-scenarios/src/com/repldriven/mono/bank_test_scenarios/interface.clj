@@ -11,6 +11,7 @@
     [com.repldriven.mono.bank-test-scenarios.verbs :as verbs]
 
     [com.repldriven.mono.error.interface :as error]
+    [com.repldriven.mono.identity-provider.interface :as identity-provider]
     [com.repldriven.mono.utility.interface :as util]))
 
 (defn fresh-context
@@ -25,6 +26,7 @@
   - bank: FDB config map (`:record-db` / `:record-store`)."
   [bank]
   {:bank bank
+   :identity-provider (identity-provider/local-provider {})
    :id-mapping id-mapping/init
    :banks {}
    :products {}

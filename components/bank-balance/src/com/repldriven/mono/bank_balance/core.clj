@@ -51,13 +51,10 @@
   [txn account-id]
   (let-nom>
     [result (store/get-balances txn account-id)]
-    (let [currency (:currency (first result) "")
-          product-type (:product-type (first result))]
+    (let [currency (:currency (first result) "")]
       {:balances result
        :posted-balance (domain/posted-balance result currency)
-       :available-balance (domain/available-balance product-type
-                                                    result
-                                                    currency)})))
+       :available-balance (domain/available-balance result currency)})))
 
 (defn set-carry
   [txn account-id balance-type currency balance-status carry]

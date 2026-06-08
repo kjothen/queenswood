@@ -29,9 +29,11 @@ message Balance {
   option (com.apple.foundationdb.record.record).usage = RECORD;
 
   required string account_id = 1;
-  // GL accounts (CoA rows) have no customer-facing product_type — it's a
-  // sub-ledger-only concept. Optional now; read sites treat nil as "GL
-  // account" and fall through to the bare default-posted available-balance.
+  // Every balance declares its account kind: a customer sub-ledger type,
+  // or PRODUCT_TYPE_GENERAL_LEDGER for the bank's own books (CoA rows).
+  // The domain requires it on create; read sites discriminate on it
+  // directly rather than inferring "GL" from an absent value. Kept
+  // optional at the wire level only for record compatibility.
   optional com.repldriven.mono.schemas.types.ProductType product_type = 2;
   required BalanceType balance_type = 3;
   required BalanceStatus balance_status = 4;

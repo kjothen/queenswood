@@ -25,8 +25,8 @@
   ledger account's `:gl-code` its balance rolls up into. Postings on
   customer accounts of these product types fan out to a matching leg
   on the control."}
-  control-code-for-product-type
-  domain/control-code-for-product-type)
+  product-type->control-code
+  domain/product-type->control-code)
 
 (defn new-account
   "Create one bank-owned `LedgerAccount` from a chart-of-accounts

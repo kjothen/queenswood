@@ -22,25 +22,19 @@
   - tier: tier name (string) selecting `tier=<name>`-labelled
     policies to bind to the new bank, or nil for none.
   - currencies: collection of ISO 4217 currency strings.
-  - opts (optional): map; `:policies` overrides the platform
-    policies used for the capability check;
-    `:identity-provider` enables service-account-client creation;
+  - opts: map; `:identity-provider` (required) is the IDP component
+    that issues the bank's service-account client — without one a bank
+    has no credentials, so creation is rejected `:bank/missing-identity-provider`;
     `:audience` (string) is the `aud` claim stamped on tokens minted
-    for the new client — required when `:identity-provider` is
-    present."
-  ([txn bank-name bank-status tier currencies]
-   (core/new-bank txn
-                  bank-name
-                  bank-status
-                  tier
-                  currencies))
-  ([txn bank-name bank-status tier currencies opts]
-   (core/new-bank txn
-                  bank-name
-                  bank-status
-                  tier
-                  currencies
-                  opts)))
+    for the new client; `:policies` overrides the platform policies
+    used for the capability check."
+  [txn bank-name bank-status tier currencies opts]
+  (core/new-bank txn
+                 bank-name
+                 bank-status
+                 tier
+                 currencies
+                 opts))
 
 (defn get-bank
   "Load a flat bank map by id. Returns the bank or a

@@ -4,7 +4,7 @@
     [com.repldriven.mono.error.interface :refer [let-nom>]]
     [com.repldriven.mono.utility.interface :as utility]))
 
-(def control-code-for-product-type
+(def product-type->control-code
   "Maps a cash-account product type to the `:gl-code` of the control
   ledger account its balance rolls up into. Postings on those accounts
   fan out to the matching control so the control balance is always the
@@ -39,13 +39,16 @@
 
 (defn opening-balance
   "The single default-posted balance bucket a ledger account opens
-  with. Carries no `:product-type` — that is a sub-ledger-only
-  concept."
+  with, tagged `:product-type-general-ledger` so read sites can tell the
+  bank's own books from a customer instrument without inferring it from
+  an absent product-type."
   [ledger-account]
-  {:account-id (:ledger-account-id ledger-account)
-   :balance-type :balance-type-default
-   :balance-status :balance-status-posted
-   :currency (:currency ledger-account)})
+  (let [{:keys [ledger-account-id :currency]} ledger-account]
+    {:account-id ledger-account-id
+     :product-type :product-type-general-ledger
+     :balance-type :balance-type-default
+     :balance-status :balance-status-posted
+     :currency currency}))
 
 (defn fans-out?
   "Only customer-deposit legs touching the default-posted bucket roll

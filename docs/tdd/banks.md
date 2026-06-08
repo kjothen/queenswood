@@ -157,9 +157,9 @@ the following inside one FDB transaction:
 
 ### The default ledger chart
 
-The chart is loaded from `bank-bank/ledger-accounts.edn` and
-seeded once per currency. Eight bank-owned, flat accounts (no
-party, no product):
+The chart is loaded from `bank/ledgers/general-ledger.edn` (in
+`bank-resources`) and seeded once per currency. Eight bank-owned,
+flat accounts (no party, no product):
 
 | GL code | Name | Type | Class |
 | ------- | ---- | ---- | ----- |
