@@ -153,7 +153,11 @@
     formError = null;
     const data = {
       name: name.trim(),
-      "product-type": productType,
+      // The request is tied to a template at creation, not a product-type;
+      // one template per type, so resolve the chosen type's template id.
+      "template-id": templates.find((t) => t["product-type"] === productType)?.[
+        "template-id"
+      ],
       currency,
       "interest-rate-bps": Number(rateBps) || 0,
       "effective-from": effectiveFrom,

@@ -1,0 +1,14 @@
+# Internal template (excluded from the customer-facing list-templates).
+# The bank's own-funds house product is created from this at bank
+# provisioning; a single settled bucket, no interest accrual.
+template-id: tpl.00000000000000000000000004
+name: Bank own funds
+product-type: !keyword product-type-sub-ledger-own-funds
+balance-sheet-side: !keyword balance-sheet-side-liability
+internal: true
+allowed-currencies: [GBP]
+allowed-payment-address-schemes:
+  - !keyword payment-address-scheme-scan
+balance-products: !keywords
+  - balance-type: balance-type-default
+    balance-status: balance-status-posted

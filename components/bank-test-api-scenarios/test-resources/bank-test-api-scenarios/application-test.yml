@@ -5,6 +5,7 @@ system:
   avro: !include avro/avro-test.yml
   keycloak: !include bank/keycloak-test.yml
   policies: !include bank/policy-test.yml
+  templates: !include bank/templates-test.yml
   idv: !include bank/idv-test.yml
   parties: !include bank-test-api-scenarios/party-test.yml
   cash-accounts: !include bank/cash-account-test.yml

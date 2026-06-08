@@ -18,6 +18,9 @@ _record-types: !strs &record-types
         type: count
       - name: CashAccountProduct_by_bank_product_type
         fields: [bank_id, product_type]
+  cash-account-product-templates:
+    record-type: CashAccountProductTemplate
+    indexes: []
   cash-accounts:
     record-type: CashAccount
     primary-key: [bank_id, account_id]

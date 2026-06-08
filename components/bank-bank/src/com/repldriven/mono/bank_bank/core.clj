@@ -48,6 +48,11 @@
                 row default-ledger-accounts]
             [currency row])))
 
+(def ^:private own-funds-template-id
+  "The internal own-funds template seeded at bootstrap (see
+  bank/templates/own-funds.yml); the house product is created from it."
+  "tpl.00000000000000000000000004")
+
 (defn- new-house-account
   "Create the bank's own-funds product in `currency` and open the
   house cash account under it on the bank's org party. This is the
@@ -63,7 +68,7 @@
               bank-id
               {:name "Bank own funds"
                :currency currency
-               :product-type :product-type-sub-ledger-own-funds
+               :template-id own-funds-template-id
                :effective-from (utility/today)}
               {:policies policies})
      _ (products/publish txn

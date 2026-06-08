@@ -75,4 +75,32 @@ message CashAccountProduct {
   repeated PaymentAddressScheme allowed_payment_address_schemes = 17;
   optional int32 interest_rate_bps = 18;
   optional IsoCashAccountType iso_cash_account_type = 19;
+  // The template this version was created from. The template's fields are
+  // snapshotted into the version at creation, so later edits to the template
+  // never change an existing product; this records the provenance only.
+  optional string template_id = 23;
+  // Snapshotted from the template: an internal product (e.g. the bank's
+  // own-funds house product) is excluded from the customer-facing product
+  // listing, mirroring how internal templates are hidden.
+  optional bool internal = 24;
+}
+
+// A platform-scoped template (no bank_id) that defines the derived instrument
+// fields a product is created from. Seeded at bootstrap, like platform
+// policies; `internal` ones (e.g. own-funds) are excluded from the
+// customer-facing template list.
+message CashAccountProductTemplate {
+  option (com.apple.foundationdb.record.record).usage = RECORD;
+
+  required string template_id = 1 [(com.apple.foundationdb.record.field).primary_key = true];
+  optional string name = 2;
+  required com.repldriven.mono.schemas.types.ProductType product_type = 3;
+  required BalanceSheetSide balance_sheet_side = 4;
+  repeated string allowed_currencies = 5;
+  repeated com.repldriven.mono.schemas.balances.BalanceProduct balance_products = 6;
+  repeated PaymentAddressScheme allowed_payment_address_schemes = 7;
+  optional IsoCashAccountType iso_cash_account_type = 8;
+  optional bool internal = 9;
+  required int64 created_at = 10;
+  required int64 updated_at = 11;
 }

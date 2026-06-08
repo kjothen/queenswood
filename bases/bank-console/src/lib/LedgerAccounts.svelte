@@ -6,13 +6,13 @@
 
      The list endpoint returns accounts without balances, so we fetch
      the list and then each account's balances (a small, fixed chart —
-     a handful of accounts — so the N+1 is fine). A balance is keyed by
-     (balance-type, balance-status) and carries credit/debit in minor
-     units; its signed net is credit − debit (credit-positive), which is
-     what the backend's own available-balance derivation uses. The
-     account's available figure is the sum of its balances' nets — the
-     tree is a real decomposition, so we derive the total via sumMinor
-     rather than trusting a separate field. */
+     a handful of accounts — so the N+1 is fine). The balances response
+     embeds the derived `posted-balance` / `available-balance` totals
+     (a {value, currency} each); we show the posted figure as the
+     account's headline rather than re-deriving it client-side. Each
+     balance is keyed by (balance-type, balance-status) and carries
+     credit/debit in minor units; its signed net is credit − debit
+     (credit-positive), which is what the per-bucket rows show. */
 
   import {
     PageHeader,
@@ -26,7 +26,6 @@
     Expander,
     MoneyCell,
     Phase,
-    sumMinor,
   } from "@queenswood/bank-ui";
   import {
     list_ledger_accounts,
@@ -82,16 +81,18 @@
         list.map(async (a) => {
           const id = a["account-id"];
           const bres = await list_ledger_account_balances(id);
-          const balances =
-            bres.status >= 200 && bres.status < 300
-              ? (bres.body?.balances ?? []).map(mapBalance)
-              : [];
+          const body =
+            bres.status >= 200 && bres.status < 300 ? (bres.body ?? {}) : {};
+          const balances = (body.balances ?? []).map(mapBalance);
           return {
             id,
             name: a.name,
             gl: a["gl-code"],
             ccy: a.currency,
             balances,
+            // Backend-derived posted total ({value, currency}); shown as
+            // the account headline rather than summed in the client.
+            postedMinor: body["posted-balance"]?.value ?? 0,
           };
         }),
       );
@@ -129,7 +130,7 @@
 <PageHeader
   {kicker}
   title="Ledger Accounts"
-  sub="The bank's chart of accounts. Each account decomposes into the balances that comprise it; the available figure is their sum."
+  sub="The bank's chart of accounts. Each account decomposes into the balances that comprise it; the headline figure is the posted balance."
 >
   {#snippet actions()}
     <Button variant="ghost" onclick={load}>Refresh</Button>
@@ -161,7 +162,7 @@
         <Th>Name</Th>
         <Th>GL Code</Th>
         <Th align="right">Balances</Th>
-        <Th align="right">Available Balance</Th>
+        <Th align="right">Posted Balance</Th>
       </Tr>
     </Thead>
     <Tbody>
@@ -177,7 +178,7 @@
           <Td emphasized>{acc.name}<span class="qw-denom">{acc.ccy}</span></Td>
           <Td mono>{acc.gl}</Td>
           <Td align="right" mono muted tabular>{acc.balances.length}</Td>
-          <MoneyCell minor={sumMinor(acc.balances)} ccy={acc.ccy} emphasized />
+          <MoneyCell minor={acc.postedMinor} ccy={acc.ccy} emphasized />
         </Tr>
         {#if open[acc.id]}
           {#each acc.balances as b, i (b.type + ":" + b.phase)}

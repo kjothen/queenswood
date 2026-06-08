@@ -52,7 +52,7 @@
              :path "/v1/cash-account-products"
              :auth :org-0-token
              :body {:name "Current"
-                    :product-type "current"
+                    :template-id "tpl.00000000000000000000000001"
                     :currency "GBP"
                     :interest-rate-bps 0
                     :effective-from "2026-01-01"}}
@@ -72,7 +72,7 @@
              :path "/v1/cash-account-products"
              :auth :org-0-token
              :body {:name "Savings"
-                    :product-type "savings"
+                    :template-id "tpl.00000000000000000000000002"
                     :currency "GBP"
                     :interest-rate-bps 250
                     :effective-from "2026-01-01"}}

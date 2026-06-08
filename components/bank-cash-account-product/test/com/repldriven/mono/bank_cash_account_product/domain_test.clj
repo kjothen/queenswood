@@ -4,6 +4,9 @@
   on update/publish/discard against non-draft versions, and
   `:draft-already-exists` on new-version when a draft is open.
 
+  The template is the resolved record core looks up by id and passes
+  in; here it's a fixture map.
+
   Replaces the slow integration paths in interface_test.clj that
   spun up FDB just to assert these anomaly kinds."
   (:require
@@ -22,6 +25,16 @@
   [{:enabled true
     :capabilities [{:kind {:cash-account-product {}} :effect :effect-allow}]}])
 
+(def ^:private template
+  {:template-id "tpl.00000000000000000000000001"
+   :product-type :product-type-sub-ledger-current
+   :balance-sheet-side :balance-sheet-side-liability
+   :allowed-currencies ["GBP"]
+   :balance-products [{:balance-type :balance-type-default
+                       :balance-status :balance-status-posted}]
+   :allowed-payment-address-schemes [:payment-address-scheme-scan]
+   :iso-cash-account-type :iso-cash-account-type-cacc})
+
 (def ^:private published-version
   {:bank-id "bnk.1"
    :product-id "prd.1"
@@ -31,6 +44,7 @@
    :name "Published"
    :allowed-currencies ["GBP"]
    :product-type :product-type-sub-ledger-current
+   :template-id "tpl.00000000000000000000000001"
    :balance-sheet-side :balance-sheet-side-liability
    :balance-products [{:balance-type :balance-type-default
                        :balance-status :balance-status-posted}]
@@ -51,25 +65,26 @@
          :version-number 3
          :status :cash-account-product-status-draft))
 
-(def ^:private good-data
-  {:name "v2"
-   :currency "GBP"
-   :product-type :product-type-sub-ledger-current
-   :effective-from 20089})
+(def ^:private good-data {:name "v2" :currency "GBP" :effective-from 20089})
 
 (deftest update-version-test
   (testing "rejects with :version-immutable when existing is published"
-    (let [r
-          (SUT/update-version published-version good-data permissive-policies)]
+    (let [r (SUT/update-version published-version
+                                template
+                                good-data
+                                permissive-policies)]
       (is (error/rejection? r))
       (is (= :cash-account-product/version-immutable (error/kind r)))))
   (testing "rejects with :version-immutable when existing is discarded"
-    (let [r
-          (SUT/update-version discarded-version good-data permissive-policies)]
+    (let [r (SUT/update-version discarded-version
+                                template
+                                good-data
+                                permissive-policies)]
       (is (error/rejection? r))
       (is (= :cash-account-product/version-immutable (error/kind r)))))
   (testing "succeeds when existing is a draft, preserving id and number"
     (let [v (SUT/update-version draft-version
+                                template
                                 (assoc good-data :name "renamed")
                                 permissive-policies)]
       (is (= "prv.3" (:version-id v)))
@@ -111,6 +126,7 @@
     (let [r (SUT/new-version "bnk.1"
                              "prd.1"
                              [draft-version]
+                             template
                              good-data
                              permissive-policies)]
       (is (error/rejection? r))
@@ -119,18 +135,31 @@
     (let [v (SUT/new-version "bnk.1"
                              "prd.1"
                              [published-version discarded-version]
+                             template
                              good-data
                              permissive-policies)]
       (is (= :cash-account-product-status-draft (:status v)))
       (is (= 3 (:version-number v)) "version-number is 1 + (count versions)")))
   (testing "succeeds with no prior versions — fresh product flow"
-    (let [v (SUT/new-version "bnk.1" "prd.1" [] good-data permissive-policies)]
+    (let [v (SUT/new-version "bnk.1"
+                             "prd.1"
+                             []
+                             template
+                             good-data
+                             permissive-policies)]
       (is (= 1 (:version-number v)))
       (is (= :cash-account-product-status-draft (:status v)))))
-  (testing "fills derived fields from the per-product-type template"
-    (let [v (SUT/new-version "bnk.1" "prd.1" [] good-data permissive-policies)]
+  (testing "snapshots the derived fields from the template"
+    (let [v (SUT/new-version "bnk.1"
+                             "prd.1"
+                             []
+                             template
+                             good-data
+                             permissive-policies)]
+      (is (= "tpl.00000000000000000000000001" (:template-id v)))
       (is (= :product-type-sub-ledger-current (:product-type v)))
       (is (= :balance-sheet-side-liability (:balance-sheet-side v)))
+      (is (= :iso-cash-account-type-cacc (:iso-cash-account-type v)))
       (is (= ["GBP"] (:allowed-currencies v)))
       (is (= [:payment-address-scheme-scan]
              (:allowed-payment-address-schemes v)))
@@ -144,6 +173,7 @@
     (let [r (SUT/new-version "bnk.1"
                              "prd.1"
                              []
+                             template
                              (assoc good-data :currency "USD")
                              permissive-policies)]
       (is (error/rejection? r))
@@ -154,6 +184,7 @@
     (let [r (SUT/new-version "bnk.1"
                              "prd.1"
                              []
+                             template
                              (dissoc good-data :effective-from)
                              permissive-policies)]
       (is (error/rejection? r))
@@ -163,6 +194,7 @@
              "bnk.1"
              "prd.1"
              []
+             template
              (assoc good-data :effective-from 20089 :effective-to 20089)
              permissive-policies)]
       (is (error/rejection? r))

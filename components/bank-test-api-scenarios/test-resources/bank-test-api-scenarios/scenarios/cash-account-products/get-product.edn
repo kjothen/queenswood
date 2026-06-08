@@ -21,7 +21,7 @@
              :path "/v1/cash-account-products"
              :auth :org-0-token
              :body {:name "Savings Account"
-                    :product-type "savings"
+                    :template-id "tpl.00000000000000000000000002"
                     :currency "GBP"
                     :interest-rate-bps 250
                     :effective-from "2026-01-01"}}

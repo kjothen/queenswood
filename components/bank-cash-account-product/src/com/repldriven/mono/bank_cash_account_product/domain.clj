@@ -1,7 +1,5 @@
 (ns com.repldriven.mono.bank-cash-account-product.domain
   (:require
-    [com.repldriven.mono.bank-cash-account-product.resources :as resources]
-
     [com.repldriven.mono.bank-policy.interface :as policy]
     [com.repldriven.mono.error.interface :as error :refer [let-nom>]]
     [com.repldriven.mono.utility.interface :as utility]))
@@ -22,43 +20,48 @@
                      :status status}))))
 
 ;; ---------------------------------------------------------------------------
-;; Instrument fields — resolve the per-product-type template
-
-(defn- resolve-template
-  [product-type]
-  (or (get resources/product-defaults product-type)
-      (error/reject :cash-account-product/unknown-product-type
-                    {:message "No template defined for product-type"
-                     :product-type product-type})))
+;; Instrument fields — snapshot the resolved template into the version
 
 (defn- ensure-currency-allowed
   [template currency]
   (when-not (contains? (set (:allowed-currencies template)) currency)
     (error/reject :cash-account-product/currency-not-allowed
-                  {:message "Currency not allowed for this product-type"
+                  {:message "Currency not allowed for this template"
                    :currency currency
                    :allowed-currencies (:allowed-currencies template)})))
 
 (defn- product-fields
-  "Merge the caller's `:product-type` / `:interest-rate-bps` /
-  `:iso-cash-account-type` with the per-product-type template defaults
-  (balance-sheet-side, balance buckets, payment-address schemes,
-  allowed currencies). Returns the instrument fields or an anomaly on
-  unknown product-type or currency-not-allowed."
-  [data currency]
-  (let [{:keys [product-type interest-rate-bps iso-cash-account-type]} data]
+  "Snapshot the derived instrument fields from the resolved `template`
+  (product-type, balance-sheet-side, balance buckets, payment-address
+  schemes, iso type) plus the caller's `:interest-rate-bps`, and stamp
+  the originating `:template-id` for provenance. Returns the fields or
+  an anomaly when the caller's currency isn't allowed."
+  [template data]
+  (let [{:keys [currency interest-rate-bps]} data]
     (let-nom>
-      [template (resolve-template product-type)
-       _ (ensure-currency-allowed template currency)]
+      [_ (ensure-currency-allowed template currency)]
       (utility/assoc-some
-       {:product-type product-type
+       {:product-type (:product-type template)
+        :template-id (:template-id template)
         :balance-sheet-side (:balance-sheet-side template)
         :balance-products (:balance-products template)
         :allowed-payment-address-schemes
         (:allowed-payment-address-schemes template)
         :interest-rate-bps (or interest-rate-bps 0)}
        :iso-cash-account-type
-       iso-cash-account-type))))
+       (:iso-cash-account-type template)
+       :internal
+       (when (:internal template) true)))))
+
+(defn new-template
+  "Build a template record from seed data: stamp a stable `tpl.` id when
+  the seed doesn't carry one, plus timestamps."
+  [data]
+  (let [now (utility/now)]
+    (assoc data
+           :template-id (or (:template-id data) (utility/generate-id "tpl"))
+           :created-at now
+           :updated-at now)))
 
 ;; ---------------------------------------------------------------------------
 ;; Capability + limit checks
@@ -121,14 +124,14 @@
 ;; Public domain operations
 
 (defn new-version
-  [bank-id product-id versions data policies]
-  (let [{:keys [name currency product-type effective-from effective-to]} data
+  [bank-id product-id versions template data policies]
+  (let [{:keys [name currency effective-from effective-to]} data
         now (utility/now)]
     (let-nom>
-      [fields (product-fields data currency)
+      [fields (product-fields template data)
        _ (ensure-effective-window effective-from effective-to)
        _ (check-capability :cash-account-product-action-draft
-                           product-type
+                           (:product-type template)
                            policies)
        _ (when (some draft? versions)
            (error/reject :cash-account-product/draft-already-exists
@@ -151,7 +154,7 @@
        :effective-to effective-to))))
 
 (defn new-product
-  [bank-id data aggregates policies]
+  [bank-id template data aggregates policies]
   (let-nom>
     [_ (check-limit :count
                     :time-window-instant
@@ -161,21 +164,22 @@
     (new-version bank-id
                  (utility/generate-id "prd")
                  []
+                 template
                  data
                  policies)))
 
 (defn update-version
-  [existing data policies]
+  [existing template data policies]
   (let [{:keys [bank-id product-id version-id
                 version-number status created-at]}
         existing
-        {:keys [name currency product-type effective-from effective-to]} data]
+        {:keys [name currency effective-from effective-to]} data]
     (let-nom>
       [_ (ensure-draft existing)
-       fields (product-fields data currency)
+       fields (product-fields template data)
        _ (ensure-effective-window effective-from effective-to)
        _ (check-capability :cash-account-product-action-draft
-                           product-type
+                           (:product-type template)
                            policies)]
       (utility/assoc-some
        (merge {:bank-id bank-id

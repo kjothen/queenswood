@@ -1,0 +1,19 @@
+template-id: tpl.00000000000000000000000003
+name: Term deposit
+product-type: !keyword product-type-sub-ledger-term-deposit
+balance-sheet-side: !keyword balance-sheet-side-liability
+iso-cash-account-type: !keyword iso-cash-account-type-llsv
+allowed-currencies: [GBP]
+allowed-payment-address-schemes:
+  - !keyword payment-address-scheme-scan
+balance-products: !keywords
+  - balance-type: balance-type-default
+    balance-status: balance-status-posted
+  - balance-type: balance-type-default
+    balance-status: balance-status-pending-incoming
+  - balance-type: balance-type-default
+    balance-status: balance-status-pending-outgoing
+  - balance-type: balance-type-interest-accrued
+    balance-status: balance-status-posted
+  - balance-type: balance-type-interest-paid
+    balance-status: balance-status-posted
