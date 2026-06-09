@@ -18,7 +18,8 @@
         "OUTBOUND_PAYMENT_STATUS_PENDING",
         "OUTBOUND_PAYMENT_STATUS_PROCESSING",
         "OUTBOUND_PAYMENT_STATUS_COMPLETED",
-        "OUTBOUND_PAYMENT_STATUS_FAILED"
+        "OUTBOUND_PAYMENT_STATUS_FAILED",
+        "OUTBOUND_PAYMENT_STATUS_HELD"
       ]
     }},
     {"name": "transaction_id",      "type": "string"},

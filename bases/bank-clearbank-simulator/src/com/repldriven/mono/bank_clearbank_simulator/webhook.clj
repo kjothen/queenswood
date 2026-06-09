@@ -27,6 +27,7 @@
                    :Version (case type
                               "TransactionSettled" 6
                               "TransactionRejected" 2
+                              "OutboundHeldTransaction" 1
                               1)
                    :Payload payload
                    :Nonce (nonce)})
@@ -67,7 +68,25 @@
            :CounterpartAccount
            {:OwnerName (or debtor-name "Simulated Debtor")}})))
 
+(defn fire-outbound-held-transaction
+  [config sort-code e2e-id body]
+  (let [{:keys [amount currency reference debtor-bban creditor-bban]} body]
+    (fire config
+          sort-code
+          "OutboundHeldTransaction"
+          {:TimestampCreated (now)
+           :Scheme "FasterPayments"
+           :Account {:BBAN debtor-bban}
+           :CounterpartAccount {:BBAN creditor-bban}
+           :TransactionAmount amount
+           :CurrencyCode (or currency "GBP")
+           :PaymentReference (or reference "")
+           :EndToEndTransactionId e2e-id})))
+
 (defn fire-transaction-rejected
+  "Fires a TransactionRejected webhook for a held outbound transaction
+  that ClearBank declined: funds are returned (`IsReturn true`) and the
+  HOPRJ cancellation code is raised."
   [config sort-code e2e-id]
   (fire config
         sort-code
@@ -76,10 +95,11 @@
          :Status "Rejected"
          :Scheme "FasterPayments"
          :EndToEndTransactionId e2e-id
-         :CancellationCode "AM09"
-         :CancellationReason "Insufficient funds"
+         :CancellationCode "HOPRJ"
+         :CancellationReason "Held transaction declined"
+         :TimestampModified (now)
          :DebitCreditCode "Debit"
-         :IsReturn false
+         :IsReturn true
          :Account {}
          :CounterpartAccount {}}))
 

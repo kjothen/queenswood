@@ -41,6 +41,17 @@
              :responses {200 {:body [:map
                                      [:Nonce int?]]}}
              :handler (handlers/inbound-held-transaction nil)}}]
+    ["/outbound-held-transaction"
+     {:post {:summary "Receive an OutboundHeldTransaction webhook"
+             :openapi {:operationId "OutboundHeldTransaction"}
+             :parameters {:body [:map
+                                 [:Type string?]
+                                 [:Version int?]
+                                 [:Payload map?]
+                                 [:Nonce int?]]}
+             :responses {200 {:body [:map
+                                     [:Nonce int?]]}}
+             :handler (handlers/outbound-held-transaction nil)}}]
     ["/inbound-cop-request-received"
      {:post {:summary "Receive an InboundCopRequestReceived webhook"
              :openapi {:operationId "InboundCopRequestReceived"}

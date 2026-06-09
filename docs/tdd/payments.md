@@ -381,17 +381,24 @@ channel separation is configuration, not infrastructure.
   `pending` indefinitely. There's no sweeper that polls
   ClearBank to reconcile. Worth a future
   reconciliation-sweep design.
-- **Outbound failure flow is unimplemented.** When ClearBank
-  rejects a payment (`TransactionRejected` /
-  `PaymentMessageAssessmentFailed`), the adapter only logs
-  the webhook — `publish-outbound-payment-rejected` and
-  `publish-outbound-payment-assessment-failed` are TODO
-  stubs that emit no event. The payment brick consumes only
-  `transaction-settled`, so nothing reverses the 1200
-  pending-outbound leg or moves the payment to `failed`. The
-  schema reserves a `failed` status, but no code path sets
-  it. A full failure taxonomy (transient vs permanent, retry
-  vs not) is future work.
+- **Outbound held → declined/returned is implemented; other
+  failure modes are not.** Modelled on ClearBank's documented
+  behaviour: an outbound payment whose creditor name is the
+  sandbox sentinel `6a41a29eafcf455493` is held for screening
+  (`OutboundHeldTransaction`) and then declined — funds returned,
+  `TransactionRejected` with `CancellationCode HOPRJ`. The adapter
+  publishes a `transaction-held` event (discriminated by
+  `debit-credit-code`, like settlement) and a `transaction-rejected`
+  event; the payment event-processor flips the payment to `held`,
+  then on rejection reverses the in-flight legs (DEBIT 1200
+  pending-outbound / CREDIT debtor) and flips it to `failed` with
+  the cancellation code/reason. The simulator auto-resolves the
+  held sentinel to a decline, since ClearBank exposes no sandbox
+  control for release-vs-decline; the held → released → settled
+  outcome is therefore not yet exercised, and
+  `PaymentMessageAssessmentFailed` remains a TODO stub. A full
+  failure taxonomy (transient vs permanent, retry vs not) and
+  acting on inbound holds beyond logging are future work.
 - **Settlement reordering is trusted to ClearBank.** Events
   on the bus arrive in commit order, and Queenswood handles
   them serially. If ClearBank ever delivered settlement

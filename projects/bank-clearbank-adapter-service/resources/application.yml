@@ -74,8 +74,12 @@ system:
       webhooks:
         - type: TransactionSettled
           path: /webhooks/transaction-settled
+        - type: TransactionRejected
+          path: /webhooks/transaction-rejected
         - type: InboundHeldTransaction
           path: /webhooks/inbound-held-transaction
+        - type: OutboundHeldTransaction
+          path: /webhooks/outbound-held-transaction
         - type: InboundCopRequestReceived
           path: /webhooks/inbound-cop-request-received
     command-processor-impl: !system/component

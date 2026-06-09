@@ -6,7 +6,8 @@
   (coercion/enum-coercion {"pending" :outbound-payment-status-pending
                            "processing" :outbound-payment-status-processing
                            "completed" :outbound-payment-status-completed
-                           "failed" :outbound-payment-status-failed}
+                           "failed" :outbound-payment-status-failed
+                           "held" :outbound-payment-status-held}
                           :outbound-payment-status-unknown))
 
 (def outbound-payment-status-enum-schema

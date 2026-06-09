@@ -70,6 +70,21 @@
                         {:message "Unknown debit-credit-code"
                          :debit-credit-code debit-credit-code}))
 
+          "transaction-held"
+          (case debit-credit-code
+            :debit-credit-code-credit
+            (events/hold-inbound config data)
+
+            :debit-credit-code-debit
+            (events/hold-outbound config data)
+
+            (error/fail :payment/unknown-debit-credit-code
+                        {:message "Unknown debit-credit-code"
+                         :debit-credit-code debit-credit-code}))
+
+          "transaction-rejected"
+          (events/reject-outbound config data)
+
           (error/fail :payment/unknown-event
                       {:message "Unknown event"
                        :event event}))))))

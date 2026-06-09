@@ -223,6 +223,43 @@
          :payment-status :outbound-payment-status-completed
          :updated-at (utility/now)))
 
+(defn held-outbound-payment
+  [payment]
+  (assoc payment
+         :payment-status :outbound-payment-status-held
+         :updated-at (utility/now)))
+
+(defn failed-outbound-payment
+  [payment cancellation-code cancellation-reason]
+  (utility/assoc-some
+   (assoc payment
+          :payment-status :outbound-payment-status-failed
+          :updated-at (utility/now))
+   :cancellation-code cancellation-code
+   :cancellation-reason cancellation-reason))
+
+(defn outbound-reversal->transaction
+  "DEBIT 1200 pending-outbound / CREDIT debtor — reverse an unsettled
+  outbound payment when the scheme declines or returns it. Returns money
+  to the customer and drains the in-flight bucket. The mirror of
+  `outbound-payment->transaction`."
+  [payment debtor-account pending-outbound-account-id]
+  (let [{:keys [amount currency payment-id debtor-account-id]} payment]
+    {:idempotency-key (str "reverse-out-" payment-id)
+     :transaction-type :transaction-type-outbound-transfer
+     :currency currency
+     :legs [{:account-id pending-outbound-account-id
+             :balance-type :balance-type-default
+             :balance-status :balance-status-posted
+             :side :leg-side-debit
+             :amount amount}
+            {:account-id debtor-account-id
+             :product-type (:product-type debtor-account)
+             :balance-type :balance-type-default
+             :balance-status :balance-status-posted
+             :side :leg-side-credit
+             :amount amount}]}))
+
 (defn new-internal-payment
   [data business-day transaction-id]
   (let [{:keys [idempotency-key bank-id debtor-account-id

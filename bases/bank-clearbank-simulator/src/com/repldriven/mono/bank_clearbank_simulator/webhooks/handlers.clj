@@ -6,6 +6,7 @@
    "PaymentMessageAssessmentFailed"
    "/webhooks/payment-message-assessment-failed"
    "InboundHeldTransaction" "/webhooks/inbound-held-transaction"
+   "OutboundHeldTransaction" "/webhooks/outbound-held-transaction"
    "InboundCopRequestReceived" "/webhooks/inbound-cop-request-received"})
 
 (defn list-webhooks
