@@ -85,6 +85,22 @@
    {:message "Failed to count products by org"
     :bank-id bank-id}))
 
+(defn count-by-org-product-type
+  [txn bank-id product-type]
+  (fdb/transact
+   txn
+   (fn [txn]
+     ;; Group key is [bank_id, product_type, product_id]; counting groups
+     ;; under the [bank_id, product_type] prefix yields distinct products
+     ;; of that type (not their versions).
+     (fdb/count-groups (fdb/open txn store-name)
+                       "CashAccountProduct_count_by_bank_product_type"
+                       [bank-id (schema/product-type->int product-type)]))
+   :cash-account-product/count-by-org-product-type
+   {:message "Failed to count products by org/product-type"
+    :bank-id bank-id
+    :product-type product-type}))
+
 (defn get-versions
   ([txn bank-id]
    (get-versions txn bank-id nil))

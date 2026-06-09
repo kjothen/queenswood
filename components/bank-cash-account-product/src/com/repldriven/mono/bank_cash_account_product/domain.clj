@@ -81,6 +81,21 @@
                          :window window
                          :value value})))
 
+(defn- check-product-type-limit
+  "Per-product-type product cap. Passes `:product-type` so a policy limit
+  whose filter enumerates that type matches; `:value` is the count of
+  existing products of this type, +1. Internal types with no matching
+  filter (own-funds) pass through."
+  [product-type aggregates policies]
+  (let [value (inc (get-in aggregates
+                           [:cash-account-product #{:bank-id :product-type}]))]
+    (policy/check-limit policies
+                        :cash-account-product
+                        {:aggregate :count
+                         :window :time-window-instant
+                         :product-type product-type
+                         :value value})))
+
 ;; ---------------------------------------------------------------------------
 ;; Effective window
 ;;
@@ -160,7 +175,8 @@
                     :time-window-instant
                     #{:bank-id}
                     aggregates
-                    policies)]
+                    policies)
+     _ (check-product-type-limit (:product-type template) aggregates policies)]
     (new-version bank-id
                  (utility/generate-id "prd")
                  []

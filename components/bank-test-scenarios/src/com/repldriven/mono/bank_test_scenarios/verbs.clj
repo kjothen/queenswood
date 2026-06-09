@@ -134,10 +134,17 @@
         model-prod (model-id-for-next-product next-product-id)
         model-party (model-id-for-next-party next-party-id)
         bank-name (str "Scenario Customer " counter)
+        ;; The test-scenario tier is a thin, test-owned policy (it adds no
+        ;; caps; the always-on platform policy governs). Binding it keeps
+        ;; this model-equality suite decoupled from the production micro
+        ;; tier, whose limits change for production reasons. The narrower
+        ;; micro caps (e.g. one product per type) are exercised by the API
+        ;; scenarios; per-scenario `bind-policy` supplies any tight limit a
+        ;; case needs.
         result (banks/new-bank bank
                                bank-name
                                :bank-status-test
-                               "micro"
+                               "test-scenario"
                                ["GBP"]
                                {:identity-provider identity-provider
                                 :audience "queenswood-api-test"})

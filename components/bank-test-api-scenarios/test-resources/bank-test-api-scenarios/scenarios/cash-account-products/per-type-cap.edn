@@ -1,0 +1,42 @@
+{:name "Micro tier caps cash-account-products at one per product type"
+ :tags #{:cash-account-products :api :unhappy :policy}
+ :given
+ [{:command :api/request
+   :request {:method :post
+             :path "/v1/banks"
+             :auth :admin
+             :body {:name "Per-Type Cap Org"
+                    :status "live"
+                    :tier "micro"
+                    :currencies ["GBP"]}}
+   :as :org-0
+   :assert {:status 201}}
+  {:command :auth/mint-token
+   :for {:client-id [:ref :org-0 :client-id]
+         :client-secret [:ref :org-0 :client-secret]
+         :status :live}
+   :as :org-0-token}
+  ;; First current product is fine (the own-funds house product is a
+  ;; separate, internal product type that the cap excludes).
+  {:command :api/request
+   :request {:method :post
+             :path "/v1/cash-account-products"
+             :auth :org-0-token
+             :body {:name "Current Account"
+                    :template-id "tpl.00000000000000000000000001"
+                    :currency "GBP"
+                    :effective-from "2026-01-01"}}
+   :as :product-0
+   :assert {:status 201}}]
+ :when
+ ;; A second product of the same type trips the micro per-type limit.
+ [{:command :api/request
+   :request {:method :post
+             :path "/v1/cash-account-products"
+             :auth :org-0-token
+             :body {:name "Second Current"
+                    :template-id "tpl.00000000000000000000000001"
+                    :currency "GBP"
+                    :effective-from "2026-01-01"}}
+   :assert {:status 429
+            :problem {:type ":policy/limit-exceeded"}}}]}

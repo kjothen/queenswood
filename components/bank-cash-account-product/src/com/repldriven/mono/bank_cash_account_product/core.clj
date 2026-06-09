@@ -17,10 +17,12 @@
                                        :cash-product-id product-id}))))
 
 (defn- counts
-  [txn bank-id]
+  [txn bank-id product-type]
   (let-nom>
-    [total (store/count-by-org txn bank-id)]
-    {:cash-account-product {#{:bank-id} total}}))
+    [total (store/count-by-org txn bank-id)
+     by-type (store/count-by-org-product-type txn bank-id product-type)]
+    {:cash-account-product {#{:bank-id} total
+                            #{:bank-id :product-type} by-type}}))
 
 (defn new-product
   ([txn bank-id data]
@@ -28,8 +30,8 @@
   ([txn bank-id data opts]
    (let-nom>
      [policies (get-policies txn bank-id opts)
-      aggregates (counts txn bank-id)
       template (store/get-template txn (:template-id data))
+      aggregates (counts txn bank-id (:product-type template))
       version (domain/new-product bank-id template data aggregates policies)
       _ (store/save-version txn version)]
      version)))
