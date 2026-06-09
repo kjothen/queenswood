@@ -9,6 +9,7 @@
     [com.repldriven.mono.bank-ledger-account.interface :as ledger-accounts]
     [com.repldriven.mono.bank-party.interface :as party]
     [com.repldriven.mono.bank-policy.interface :as policy]
+    [com.repldriven.mono.bank-scheduler.interface :as scheduler]
 
     [com.repldriven.mono.error.interface :as error :refer [let-nom>]]
     [com.repldriven.mono.identity-provider.interface :as identity-provider]
@@ -206,6 +207,7 @@
           _ (new-ledger-accounts txn bank-id currencies policies)
           _ (new-house-accounts txn bank-id party-id currencies policies)
           _ (bind-tier-policies txn bank-id tier)
+          _ (scheduler/seed-jobs txn bank-id)
           result (get-bank txn bank client-secret)]
          result)))
    :bank/create

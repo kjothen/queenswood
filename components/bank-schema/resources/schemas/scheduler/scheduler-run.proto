@@ -1,0 +1,41 @@
+syntax = "proto2";
+
+package com.repldriven.mono.schemas.scheduler;
+
+import "record_metadata_options.proto";
+
+option java_outer_classname = "SchedulerRunProto";
+
+enum SchedulerRunStatus {
+  SCHEDULER_RUN_STATUS_UNKNOWN = 0;
+  SCHEDULER_RUN_STATUS_RUNNING = 1;
+  SCHEDULER_RUN_STATUS_SUCCEEDED = 2;
+  SCHEDULER_RUN_STATUS_FAILED = 3;
+}
+
+enum SchedulerTriggerSource {
+  SCHEDULER_TRIGGER_SOURCE_UNKNOWN = 0;
+  SCHEDULER_TRIGGER_SOURCE_SCHEDULED = 1;
+  SCHEDULER_TRIGGER_SOURCE_FORCED = 2;
+}
+
+// One execution of a SchedulerJob. run_id is a uuidv7 (time-ordered).
+// Progress is task-granular: tasks_completed / tasks_total, with the
+// current task's label; expected_end_at is started_at + the previous
+// successful run's duration (absent on the first run).
+message SchedulerRun {
+  option (com.apple.foundationdb.record.record).usage = RECORD;
+
+  required string bank_id = 1;
+  required string run_id = 2;
+  required string job_id = 3;
+  required SchedulerRunStatus status = 4;
+  required SchedulerTriggerSource trigger_source = 5;
+  required int64 started_at = 6;
+  optional int64 finished_at = 7;
+  required int32 tasks_total = 8;
+  required int32 tasks_completed = 9;
+  optional string current_task = 10;
+  optional int64 expected_end_at = 11;
+  optional string error = 12;
+}

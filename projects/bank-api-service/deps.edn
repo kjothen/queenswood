@@ -24,6 +24,8 @@
   {:local/root "../../components/bank-ledger-account"}
   component/bank-membership {:local/root "../../components/bank-membership"}
   component/bank-bank {:local/root "../../components/bank-bank"}
+  component/bank-interest {:local/root "../../components/bank-interest"}
+  component/bank-scheduler {:local/root "../../components/bank-scheduler"}
   component/bank-party {:local/root "../../components/bank-party"}
   component/bank-payee-check {:local/root "../../components/bank-payee-check"}
   component/bank-payment {:local/root "../../components/bank-payment"}
@@ -36,6 +38,7 @@
   component/bank-user {:local/root "../../components/bank-user"}
 
   component/avro {:local/root "../../components/avro"}
+  component/cache {:local/root "../../components/cache"}
   component/cli {:local/root "../../components/cli"}
   component/command {:local/root "../../components/command"}
   component/command-processor {:local/root "../../components/command-processor"}
@@ -54,6 +57,7 @@
   component/processor {:local/root "../../components/processor"}
   component/pulsar {:local/root "../../components/pulsar"}
   component/server {:local/root "../../components/server"}
+  component/scheduler {:local/root "../../components/scheduler"}
   component/system {:local/root "../../components/system"}
   component/telemetry {:local/root "../../components/telemetry"}
   component/utility {:local/root "../../components/utility"}

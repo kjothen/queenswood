@@ -1,0 +1,45 @@
+syntax = "proto2";
+
+package com.repldriven.mono.schemas.scheduler;
+
+import "record_metadata_options.proto";
+
+option java_outer_classname = "SchedulerJobProto";
+
+// The preset operations a job can run, in order. Wired to domain
+// functions by the bank-scheduler task registry.
+enum SchedulerTaskKind {
+  SCHEDULER_TASK_KIND_UNKNOWN = 0;
+  SCHEDULER_TASK_KIND_ACCRUE = 1;
+  SCHEDULER_TASK_KIND_CAPITALIZE = 2;
+  SCHEDULER_TASK_KIND_ACCOUNT_MIGRATION = 3;
+}
+
+// How often a job runs. A job's editable periodicity is constrained by
+// the intersection of its tasks' allowed periodicities (accrue is
+// daily-only; capitalize allows daily/monthly/yearly).
+enum SchedulerPeriodicity {
+  SCHEDULER_PERIODICITY_UNKNOWN = 0;
+  SCHEDULER_PERIODICITY_DAILY = 1;
+  SCHEDULER_PERIODICITY_MONTHLY = 2;
+  SCHEDULER_PERIODICITY_YEARLY = 3;
+}
+
+// A per-bank scheduled job — an ordered sequence of tasks run on a
+// schedule. Seeded from a resource at bank provisioning, then editable
+// (time + periodicity, within the task constraints) by the operator.
+message SchedulerJob {
+  option (com.apple.foundationdb.record.record).usage = RECORD;
+
+  required string bank_id = 1;
+  required string job_id = 2;
+  required string name = 3;
+  repeated SchedulerTaskKind task_kinds = 4;
+  required SchedulerPeriodicity periodicity = 5;
+  required int32 run_time_minutes = 6; // minutes past midnight, UTC
+  required bool enabled = 7;
+  optional int64 last_run_at = 8;
+  optional int64 next_run_at = 9;
+  required int64 created_at = 10;
+  required int64 updated_at = 11;
+}

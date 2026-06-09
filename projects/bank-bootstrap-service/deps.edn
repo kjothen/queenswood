@@ -21,6 +21,8 @@
   component/bank-ledger-account
   {:local/root "../../components/bank-ledger-account"}
   component/bank-bank {:local/root "../../components/bank-bank"}
+  component/bank-interest {:local/root "../../components/bank-interest"}
+  component/bank-scheduler {:local/root "../../components/bank-scheduler"}
   component/bank-party {:local/root "../../components/bank-party"}
   component/bank-person-identification
   {:local/root "../../components/bank-person-identification"}
@@ -32,6 +34,7 @@
   component/bank-transaction {:local/root "../../components/bank-transaction"}
 
   component/avro {:local/root "../../components/avro"}
+  component/cache {:local/root "../../components/cache"}
   component/cli {:local/root "../../components/cli"}
   component/env {:local/root "../../components/env"}
   component/error {:local/root "../../components/error"}
@@ -39,6 +42,7 @@
   component/identity-provider {:local/root "../../components/identity-provider"}
   component/log {:local/root "../../components/log"}
   component/processor {:local/root "../../components/processor"}
+  component/scheduler {:local/root "../../components/scheduler"}
   component/system {:local/root "../../components/system"}
   component/telemetry {:local/root "../../components/telemetry"}
   component/utility {:local/root "../../components/utility"}
