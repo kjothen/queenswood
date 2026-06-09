@@ -37,7 +37,11 @@ message SchedulerJob {
   repeated SchedulerTaskKind task_kinds = 4;
   required SchedulerPeriodicity periodicity = 5;
   required int32 run_time_minutes = 6; // minutes past midnight, UTC
-  required bool enabled = 7;
+  // Optional, not required: protojure omits a false bool on the wire, and
+  // a proto2 `required` field missing from the bytes fails the Java parse
+  // used to bridge into FDB. Optional decodes an unset value back to
+  // false, so a disabled (paused) job round-trips cleanly.
+  optional bool enabled = 7;
   optional int64 last_run_at = 8;
   optional int64 next_run_at = 9;
   required int64 created_at = 10;
