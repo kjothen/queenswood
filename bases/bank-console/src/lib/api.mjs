@@ -172,6 +172,23 @@ export function list_job_runs(job_id) {
   return request(`/v1/jobs/${job_id}/runs`);
 }
 
+// Force-start a job now. Runs the pipeline synchronously server-side and
+// returns the completed run; idempotent (the daily-limit policy guards
+// double-accrual).
+export function force_start_job(job_id) {
+  return mutate(`/v1/jobs/${job_id}/runs`, { method: "POST" });
+}
+
+// Edit a job's schedule — any of periodicity / run-time-minutes /
+// enabled (omitted fields keep their current value). Toggling enabled is
+// the pause/resume control.
+export function update_job_schedule(job_id, body) {
+  return mutate(`/v1/jobs/${job_id}/schedule`, {
+    method: "PUT",
+    body: JSON.stringify(body),
+  });
+}
+
 // ─── Parties (org-scoped) ───
 //
 // bank-api `Party` shape carries summary fields only (party-id, type,

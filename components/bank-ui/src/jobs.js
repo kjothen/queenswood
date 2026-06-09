@@ -92,9 +92,22 @@ export function fmtDur(secs) {
   return s ? `${m}m ${pad(s)}s` : `${m}m`;
 }
 
+// Coerce an API timestamp to epoch milliseconds, or null. bank-api
+// serialises timestamps as ISO-8601 strings (the Timestamp schema's
+// encode), not epoch-ms numbers, so anything doing arithmetic on them
+// (fmtRel, durations) must normalise first or it gets NaN.
+export function toMs(v) {
+  if (v == null) return null;
+  if (typeof v === "number") return v;
+  const t = Date.parse(v);
+  return Number.isNaN(t) ? null : t;
+}
+
 // "21 Apr · 02:00" (UTC), with the year appended only when it differs
 // from the current one.
-export function fmtAbs(ms) {
+export function fmtAbs(v) {
+  const ms = toMs(v);
+  if (ms == null) return "—";
   const d = new Date(ms);
   const yr = d.getUTCFullYear();
   const yrPart = yr !== new Date().getUTCFullYear() ? ` ${yr}` : "";
@@ -105,7 +118,9 @@ export function fmtAbs(ms) {
 
 // "in 14h" / "3d ago" — coarse relative phrasing against `nowMs`.
 export function fmtRel(targetMs, nowMs) {
-  const diff = targetMs - nowMs;
+  const target = toMs(targetMs);
+  if (target == null) return "—";
+  const diff = target - nowMs;
   const abs = Math.abs(diff);
   const mins = abs / 60000;
   const hrs = mins / 60;
@@ -127,4 +142,57 @@ export function lastOutcome(run) {
   if (!run) return "scheduled";
   if (run.status === "running") return "running";
   return run.status;
+}
+
+// Wall-clock duration of a run in whole seconds, or null when it hasn't
+// finished (or never started).
+export function runDurationSecs(run) {
+  const started = toMs(run?.["started-at"]);
+  const finished = toMs(run?.["finished-at"]);
+  if (started == null || finished == null) return null;
+  return Math.max(0, Math.round((finished - started) / 1000));
+}
+
+// Per-task pipeline view for a run. The API run carries only ordered
+// progress (tasks-completed) and a status, not per-task records, so the
+// task labels come from the job's ordered task-kinds and each node's
+// state is derived: the tasks before the cursor are `ok`, the one at the
+// cursor is `running`/`failed` by the run status, and the rest are
+// `pending` (a live run) or `skipped` (a failed run — the first failure
+// ends it). With no run yet, every task is `pending`.
+export function pipelineSteps(taskKinds, run) {
+  const tasks = taskKinds ?? [];
+  if (!run) return tasks.map((name) => ({ name, status: "pending" }));
+  const done = run["tasks-completed"] ?? 0;
+  const { status } = run;
+  return tasks.map((name, i) => {
+    if (i < done) return { name, status: "ok" };
+    if (i === done) {
+      if (status === "failed") return { name, status: "failed" };
+      if (status === "running") return { name, status: "running" };
+      return { name, status: "ok" };
+    }
+    return { name, status: status === "failed" ? "skipped" : "pending" };
+  });
+}
+
+// The next `n` fire times (epoch ms, UTC) strictly after `fromMs`, for
+// the drawer's schedule preview. Walks `nextRunAt` forward.
+export function nextRuns(job, fromMs, n) {
+  const out = [];
+  let from = fromMs;
+  for (let i = 0; i < n; i += 1) {
+    const t = nextRunAt(job, from);
+    if (t == null) break;
+    out.push(t);
+    from = t;
+  }
+  return out;
+}
+
+// "HH:MM" → minutes past midnight, or null when unparseable.
+export function minutesFromHHMM(s) {
+  const [h, m] = (s ?? "").split(":").map(Number);
+  if (Number.isNaN(h) || Number.isNaN(m)) return null;
+  return h * 60 + m;
 }
