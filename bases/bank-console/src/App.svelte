@@ -10,6 +10,7 @@
   import Products from "./lib/Products.svelte";
   import LegalPersons from "./lib/LegalPersons.svelte";
   import LedgerAccounts from "./lib/LedgerAccounts.svelte";
+  import Jobs from "./lib/Jobs.svelte";
   import Policies from "./lib/Policies.svelte";
   import ComingSoon from "./lib/ComingSoon.svelte";
 
@@ -47,6 +48,10 @@
       "/accounts": wrap({
         component: ComingSoon,
         props: { name: "Accounts", kicker },
+      }),
+      "/jobs": wrap({
+        component: Jobs,
+        props: { user, memberships },
       }),
       "/policies": wrap({
         component: Policies,

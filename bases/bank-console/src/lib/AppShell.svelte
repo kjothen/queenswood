@@ -75,6 +75,17 @@
         Accounts
       </SidenavItem>
     </SidenavGroup>
+    <SidenavGroup title="Operations">
+      <SidenavItem href="#/jobs" title="Jobs" current={isCurrent("/jobs")}>
+        {#snippet icon()}
+          <svg viewBox="0 0 16 16" aria-hidden="true">
+            <circle cx="8" cy="8" r="5.5" />
+            <path d="M8 5.2 V8 L10 9.4" />
+          </svg>
+        {/snippet}
+        Jobs
+      </SidenavItem>
+    </SidenavGroup>
     <SidenavGroup title="Compliance">
       <SidenavItem href="#/policies" title="Policies" current={isCurrent("/policies")}>
         {#snippet icon()}

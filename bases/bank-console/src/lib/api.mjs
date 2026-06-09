@@ -153,6 +153,25 @@ export function list_my_effective_policies() {
   return request("/v1/me/effective-policies");
 }
 
+// ─── Jobs (scheduler, org-scoped, read-only) ───
+//
+// The bank's scheduled jobs — preset task pipelines run on a cadence
+// (daily interest accrual + capitalisation today). The list endpoint
+// returns the jobs with their schedule (periodicity, run-time-minutes,
+// enabled) and last/next-run timestamps, but not the run outcome; the
+// status an operator watches — succeeded/failed/running — comes from a
+// job's runs (newest-first), so the Jobs page fetches the latest run
+// per job to drive its badge. Read-only: force-start and schedule
+// edits aren't surfaced yet.
+
+export function list_jobs() {
+  return request("/v1/jobs");
+}
+
+export function list_job_runs(job_id) {
+  return request(`/v1/jobs/${job_id}/runs`);
+}
+
 // ─── Parties (org-scoped) ───
 //
 // bank-api `Party` shape carries summary fields only (party-id, type,
