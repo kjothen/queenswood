@@ -63,15 +63,25 @@
                     {:event-channel event-channel})))
 
 (defn publish-outbound-payment-rejected
-  [_config payload]
-  (let [{:keys [EndToEndTransactionId CancellationCode
-                CancellationReason TimestampModified]}
+  [config payload]
+  (let [{:keys [bus avro event-channel]} config
+        {:keys [EndToEndTransactionId Scheme CancellationCode
+                CancellationReason IsReturn TimestampModified]}
         payload]
-    (log/info "TODO publish outbound-payment-rejected"
-              {:end-to-end-id EndToEndTransactionId
-               :cancellation-code CancellationCode
-               :cancellation-reason CancellationReason
-               :timestamp TimestampModified})))
+    (events/publish bus
+                    avro
+                    "transaction-rejected"
+                    (str (utility/uuidv7))
+                    (str (utility/uuidv7))
+                    {:end-to-end-id EndToEndTransactionId
+                     :scheme (or Scheme "FasterPayments")
+                     :cancellation-code CancellationCode
+                     :cancellation-reason CancellationReason
+                     :is-return IsReturn
+                     :timestamp-rejected (if TimestampModified
+                                           (iso->epoch-millis TimestampModified)
+                                           (utility/now))}
+                    {:event-channel event-channel})))
 
 (defn publish-outbound-payment-assessment-failed
   [_config payload]
@@ -82,7 +92,7 @@
 
 (defn publish-inbound-payment-held
   [config payload]
-  (let [{:keys [bus avro]} config
+  (let [{:keys [bus avro event-channel]} config
         {:keys [EndToEndTransactionId TransactionAmount
                 Scheme TimestampCreated Account]}
         payload
@@ -94,7 +104,30 @@
                     (str (utility/uuidv7))
                     {:end-to-end-id EndToEndTransactionId
                      :scheme Scheme
-                     :amount TransactionAmount
+                     :debit-credit-code :debit-credit-code-credit
+                     :amount (amount->minor-units TransactionAmount)
                      :currency "GBP"
                      :creditor-bban BBAN
-                     :timestamp-held TimestampCreated})))
+                     :timestamp-held (iso->epoch-millis TimestampCreated)}
+                    {:event-channel event-channel})))
+
+(defn publish-outbound-payment-held
+  [config payload]
+  (let [{:keys [bus avro event-channel]} config
+        {:keys [EndToEndTransactionId TransactionAmount
+                Scheme TimestampCreated CounterpartAccount]}
+        payload
+        {:keys [BBAN]} CounterpartAccount]
+    (events/publish bus
+                    avro
+                    "transaction-held"
+                    (str (utility/uuidv7))
+                    (str (utility/uuidv7))
+                    {:end-to-end-id EndToEndTransactionId
+                     :scheme Scheme
+                     :debit-credit-code :debit-credit-code-debit
+                     :amount (amount->minor-units TransactionAmount)
+                     :currency "GBP"
+                     :creditor-bban BBAN
+                     :timestamp-held (iso->epoch-millis TimestampCreated)}
+                    {:event-channel event-channel})))

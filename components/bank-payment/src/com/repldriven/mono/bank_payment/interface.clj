@@ -2,7 +2,10 @@
   "Internal, inbound, and outbound payment processing. Submission
   records balance legs and persists the payment record; settlement
   events flip outbound payments to completed and post the customer
-  legs for inbound payments. Returns the payment map or an anomaly."
+  legs for inbound payments. Hold events mark an outbound payment held
+  while the scheme screens it; rejection events reverse the in-flight
+  legs (1200 → debtor) and flip the payment to failed. Returns the
+  payment map or an anomaly."
   (:require
     com.repldriven.mono.bank-payment.system
 
@@ -106,3 +109,33 @@
   Returns the updated payment map or an anomaly."
   [config data]
   (events/settle-outbound config data))
+
+(defn hold-outbound
+  "Process an outbound `transaction-held` event by flipping the matching
+  OutboundPayment from pending to held. No balance move — the money stays
+  in the 1200 pending-outbound bucket while the scheme screens it. A
+  payment that is not pending is left untouched.
+
+  Args:
+  - config: FDB handle.
+  - data: held event payload (end-to-end-id is our payment-id).
+
+  Returns the updated payment map or an anomaly."
+  [config data]
+  (events/hold-outbound config data))
+
+(defn reject-outbound
+  "Process an outbound `transaction-rejected` event. Reverses the
+  in-flight payment (DEBIT the bank's 1200 pending-outbound GL account /
+  CREDIT the debtor's customer account) and flips the OutboundPayment to
+  failed with the scheme's cancellation code/reason. Pending and held
+  payments are reversible; an already-failed payment is an idempotent
+  no-op; a settled payment cannot be reversed here.
+
+  Args:
+  - config: FDB handle.
+  - data: rejection event payload (end-to-end-id is our payment-id).
+
+  Returns the updated payment map or an anomaly."
+  [config data]
+  (events/reject-outbound config data))

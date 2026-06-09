@@ -183,3 +183,118 @@
          (log/infof "Outbound payment settlement now completed: %s"
                     {:payment-id payment-id})
          completed)))))
+
+(defn hold-outbound
+  "Mark an outbound payment held while the scheme screens it. The money
+  stays parked in 1200 pending-outbound, so there is no balance move —
+  only the payment status flips pending → held."
+  [config data]
+  (let [{payment-id :end-to-end-id} data]
+    (let-nom> [payment (store/get-outbound-payment config payment-id)]
+      (cond
+       (nil? payment)
+       (error/fail
+        :payment/hold-outbound
+        {:message "Failed to find corresponding outbound payment to hold"
+         :payment-id payment-id})
+
+       (not= :outbound-payment-status-pending (:payment-status payment))
+       (do (log/infof "Outbound payment hold ignored, not pending: %s"
+                      {:payment-id payment-id
+                       :payment-status (:payment-status payment)})
+           payment)
+
+       :else
+       (let-nom>
+         [held (domain/held-outbound-payment payment)
+          _ (store/save-outbound-payment config held)]
+         (log/infof "Outbound payment now held: %s" {:payment-id payment-id})
+         held)))))
+
+(defn hold-inbound
+  "Inbound held transactions are informational for now — log and move on.
+  A held-inbound workflow (suspense + release) is a later wave."
+  [_config data]
+  (log/infof "Inbound transaction held: %s"
+             {:end-to-end-id (:end-to-end-id data)})
+  data)
+
+(defn- record-reversal-leg
+  "DEBIT 1200 pending-outbound / CREDIT debtor — reverse the submission of
+  an outbound payment the scheme declined or returned. The debtor leg is a
+  sub-ledger account, so route through `add-control-legs`."
+  [config payment]
+  (let [{:keys [bank-id debtor-account-id]} payment]
+    (store/transact
+     config
+     (fn [txn]
+       (let-nom>
+         [pending (ledger-accounts/find-by-code
+                   txn
+                   bank-id
+                   gl-code-pending-outbound)
+          _ (when (nil? pending)
+              (error/fail :payment/no-pending-outbound-account
+                          {:message
+                           (str "Bank has no 1200 account during "
+                                "outbound reversal")
+                           :bank-id bank-id}))
+          debtor-account (cash-accounts/get-account
+                          txn
+                          bank-id
+                          debtor-account-id)
+          tx (domain/outbound-reversal->transaction
+              payment
+              debtor-account
+              (:ledger-account-id pending))
+          expanded-legs (ledger-accounts/add-control-legs
+                         txn
+                         bank-id
+                         (:legs tx))
+          recorded (transactions/record-transaction
+                    txn
+                    (assoc tx :legs expanded-legs))
+          {:keys [transaction-type legs]} recorded
+          _ (balances/apply-legs txn legs transaction-type)]
+         recorded)))))
+
+(defn reject-outbound
+  "Process an outbound `transaction-rejected` event. Reverses the in-flight
+  payment (DEBIT 1200 / CREDIT debtor) and flips the OutboundPayment to
+  failed with the scheme's cancellation code/reason. Pending and held
+  payments are reversible; an already-failed payment is an idempotent
+  no-op; a completed (settled) payment cannot be reversed here."
+  [config data]
+  (let [{payment-id :end-to-end-id
+         :keys [cancellation-code cancellation-reason]}
+        data]
+    (let-nom> [payment (store/get-outbound-payment config payment-id)]
+      (cond
+       (nil? payment)
+       (error/fail
+        :payment/reject-outbound
+        {:message "Failed to find corresponding outbound payment to reject"
+         :payment-id payment-id})
+
+       (= :outbound-payment-status-failed (:payment-status payment))
+       (do (log/infof "Outbound payment rejection already processed: %s"
+                      {:payment-id payment-id})
+           payment)
+
+       (= :outbound-payment-status-completed (:payment-status payment))
+       (error/fail
+        :payment/reject-outbound
+        {:message "Cannot reverse an already-settled outbound payment"
+         :payment-id payment-id})
+
+       :else
+       (let-nom>
+         [failed (domain/failed-outbound-payment payment
+                                                 cancellation-code
+                                                 cancellation-reason)
+          _ (store/save-outbound-payment config failed)
+          _ (record-reversal-leg config payment)]
+         (log/infof "Outbound payment rejected and reversed: %s"
+                    {:payment-id payment-id
+                     :cancellation-code cancellation-code})
+         failed)))))

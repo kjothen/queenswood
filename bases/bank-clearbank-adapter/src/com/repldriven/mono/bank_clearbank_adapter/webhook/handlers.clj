@@ -38,17 +38,21 @@
        :body {:Nonce Nonce}})))
 
 (defn transaction-rejected
-  [config]
+  [_config]
   (fn [request]
     (let [{:keys [parameters]} request
           {:keys [body]} parameters
           {:keys [Payload Nonce]} body
-          {:keys [EndToEndTransactionId CancellationCode]} Payload]
+          {:keys [EndToEndTransactionId CancellationCode]} Payload
+          config (request-config request)]
       (log/info "transaction-rejected webhook received"
                 {:e2e-id EndToEndTransactionId
                  :code CancellationCode})
       (nonce/record Nonce)
-      (publisher/publish-outbound-payment-rejected config Payload)
+      (let [result (publisher/publish-outbound-payment-rejected config
+                                                                Payload)]
+        (when (error/anomaly? result)
+          (log/error "Failed to publish event" result)))
       {:status 200
        :body {:Nonce Nonce}})))
 
@@ -75,6 +79,24 @@
                 {:payload Payload})
       (nonce/record Nonce)
       (publisher/publish-inbound-payment-held config Payload)
+      {:status 200
+       :body {:Nonce Nonce}})))
+
+(defn outbound-held-transaction
+  [_config]
+  (fn [request]
+    (let [{:keys [parameters]} request
+          {:keys [body]} parameters
+          {:keys [Payload Nonce]} body
+          {:keys [EndToEndTransactionId Scheme]} Payload
+          config (request-config request)]
+      (log/info "outbound-held-transaction webhook received"
+                {:e2e-id EndToEndTransactionId
+                 :scheme Scheme})
+      (nonce/record Nonce)
+      (let [result (publisher/publish-outbound-payment-held config Payload)]
+        (when (error/anomaly? result)
+          (log/error "Failed to publish event" result)))
       {:status 200
        :body {:Nonce Nonce}})))
 

@@ -5,6 +5,11 @@
 
     [com.repldriven.mono.utility.interface :refer [uuidv7]]))
 
+;; ClearBank's documented sandbox trigger: a Faster Payment whose creditor
+;; Name is this value is held for screening (OutboundHeldTransaction). It is
+;; then declined or released via the /simulate/outbound-held endpoints.
+(def ^:private held-magic-name "6a41a29eafcf455493")
+
 (defn payment
   [_config]
   (fn [request]
@@ -33,11 +38,25 @@
       (future
        (when (pos? (or webhook-delay-ms 0))
          (Thread/sleep webhook-delay-ms))
-       (if (= "REJECT" name)
-         (webhook/fire-transaction-rejected
-          config
-          sort-code
-          endToEndIdentification)
+       (if (= held-magic-name name)
+         ;; ClearBank holds the payment for screening, then (in the sim)
+         ;; declines it: the held webhook lands first, the decline —
+         ;; funds returned, HOPRJ — follows after the same delay.
+         (do
+           (webhook/fire-outbound-held-transaction
+            config
+            sort-code
+            endToEndIdentification
+            {:amount instructedAmount
+             :currency currency
+             :reference reference
+             :creditor-bban creditor-bban})
+           (when (pos? (or webhook-delay-ms 0))
+             (Thread/sleep webhook-delay-ms))
+           (webhook/fire-transaction-rejected
+            config
+            sort-code
+            endToEndIdentification))
          (do
            (webhook/fire-transaction-settled
             config
