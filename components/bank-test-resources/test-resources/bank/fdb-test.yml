@@ -157,6 +157,16 @@ _record-types: !strs &record-types
         unique: true
       - name: User_by_email
         field: email
+  scheduler-jobs:
+    record-type: SchedulerJob
+    primary-key: [bank_id, job_id]
+    indexes: []
+  scheduler-runs:
+    record-type: SchedulerRun
+    primary-key: [bank_id, run_id]
+    indexes:
+      - name: SchedulerRun_by_bank_job
+        fields: [bank_id, job_id]
 
 container: !system/component
   system/component-kind: fdb/container

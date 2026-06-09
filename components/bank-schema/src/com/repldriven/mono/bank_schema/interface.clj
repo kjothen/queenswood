@@ -15,6 +15,7 @@
     [com.repldriven.mono.schemas.idv :as idv]
     [com.repldriven.mono.schemas.interest :as interest]
     [com.repldriven.mono.schemas.ledger_accounts :as ledger-accounts]
+    [com.repldriven.mono.schemas.scheduler :as scheduler]
     [com.repldriven.mono.schemas.memberships :as memberships]
     [com.repldriven.mono.schemas.banks :as banks]
     [com.repldriven.mono.schemas.party :as party]
@@ -44,6 +45,9 @@
      InterestRunProto$InterestRun)
     (com.repldriven.mono.schemas.ledger_accounts
      LedgerAccountProto$LedgerAccount)
+    (com.repldriven.mono.schemas.scheduler
+     SchedulerJobProto$SchedulerJob
+     SchedulerRunProto$SchedulerRun)
     (com.repldriven.mono.schemas.banks
      BankProto$Bank
      BankChangelogProto$BankChangelog)
@@ -351,6 +355,46 @@
   - m: InterestRun map matching the generated schema."
   [m]
   (InterestRunProto$InterestRun/parseFrom (InterestRun->pb m)))
+
+(def ^{:doc "Parse SchedulerJob protobuf bytes into a Clojure map."}
+     pb->SchedulerJob
+  scheduler/pb->SchedulerJob)
+
+(defn SchedulerJob->pb
+  "Serialise a SchedulerJob map to protobuf bytes.
+
+  Args:
+  - m: SchedulerJob map matching the generated schema."
+  [m]
+  (proto/->pb (scheduler/new-SchedulerJob m)))
+
+(defn SchedulerJob->java
+  "Parse a SchedulerJob map into the generated Java protobuf class.
+
+  Args:
+  - m: SchedulerJob map matching the generated schema."
+  [m]
+  (SchedulerJobProto$SchedulerJob/parseFrom (SchedulerJob->pb m)))
+
+(def ^{:doc "Parse SchedulerRun protobuf bytes into a Clojure map."}
+     pb->SchedulerRun
+  scheduler/pb->SchedulerRun)
+
+(defn SchedulerRun->pb
+  "Serialise a SchedulerRun map to protobuf bytes.
+
+  Args:
+  - m: SchedulerRun map matching the generated schema."
+  [m]
+  (proto/->pb (scheduler/new-SchedulerRun m)))
+
+(defn SchedulerRun->java
+  "Parse a SchedulerRun map into the generated Java protobuf class.
+
+  Args:
+  - m: SchedulerRun map matching the generated schema."
+  [m]
+  (SchedulerRunProto$SchedulerRun/parseFrom (SchedulerRun->pb m)))
 
 (defn pb->CashAccount
   "Parse CashAccount protobuf bytes into a Clojure map. Strips

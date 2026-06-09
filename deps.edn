@@ -25,6 +25,7 @@
     components/pulsar {:local/root "components/pulsar"}
     components/pulsar-vault-crypto {:local/root
                                     "components/pulsar-vault-crypto"}
+    components/scheduler {:local/root "components/scheduler"}
     components/server {:local/root "components/server"}
     components/spec {:local/root "components/spec"}
     components/sql {:local/root "components/sql"}
@@ -73,6 +74,7 @@
                        "components/pulsar/test-resources"
                        "components/pulsar-vault-crypto/test"
                        "components/pulsar-vault-crypto/test-resources"
+                       "components/scheduler/test"
                        "components/server/test"
                        "components/server/test-resources"
                        "components/spec/test"
@@ -109,6 +111,7 @@
                                            "components/bank-person-identification"}
     components/bank-policy {:local/root "components/bank-policy"}
     components/bank-resources {:local/root "components/bank-resources"}
+    components/bank-scheduler {:local/root "components/bank-scheduler"}
     components/bank-schema {:local/root "components/bank-schema"}
     components/bank-test-api-scenarios {:local/root
                                         "components/bank-test-api-scenarios"}
@@ -129,6 +132,7 @@
     bases/bank-onfido-adapter {:local/root "bases/bank-onfido-adapter"}
     bases/bank-uk-companies-house-simulator
     {:local/root "bases/bank-uk-companies-house-simulator"}
+    bases/bank-scheduler-processor {:local/root "bases/bank-scheduler-processor"}
     bases/bank-monolith {:local/root "bases/bank-monolith"}}
    :extra-paths ["components/bank-balance/test"
                  "components/bank-balance/test-resources"
@@ -146,6 +150,7 @@
                  "components/bank-party/test"
                  "components/bank-policy/test"
                  "components/bank-policy/test-resources"
+                 "components/bank-scheduler/test"
                  "components/bank-test-api-scenarios/test"
                  "components/bank-test-api-scenarios/test-resources"
                  "components/bank-test-scenarios/test"

@@ -15,6 +15,7 @@
     [com.repldriven.mono.bank-payee-check.interface :as payee-check]
     [com.repldriven.mono.bank-payment.interface :as payment]
     [com.repldriven.mono.bank-policy.interface :as policy]
+    [com.repldriven.mono.bank-scheduler.interface :as scheduler]
     [com.repldriven.mono.bank-test-projections.interface :as projections]
     [com.repldriven.mono.bank-transaction.interface :as transactions]
 
@@ -807,6 +808,14 @@
         result (interest/capitalize-monthly bank
                                             {:bank-id bank-real-id
                                              :as-of-date as-of-date})]
+    (-> ctx
+        (update :counter inc)
+        (track result))))
+
+(defmethod dispatch :force-start-job
+  [{:keys [bank banks] :as ctx} {[model-bank job-id] :args}]
+  (let [{bank-real-id :real-id} (get banks model-bank)
+        result (scheduler/force-start bank bank-real-id job-id)]
     (-> ctx
         (update :counter inc)
         (track result))))

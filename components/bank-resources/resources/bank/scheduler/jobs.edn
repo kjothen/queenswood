@@ -1,0 +1,11 @@
+;; Default scheduled jobs seeded into every bank at provisioning.
+;; Templates carry no :bank-id / timestamps — those are stamped at
+;; seed time. :job-id is stable so re-seeding overwrites in place.
+;; A job's allowed periodicities are the intersection of its tasks'
+;; limits (accrue is daily-only), so [accrue capitalize] is daily.
+[{:job-id "daily-interest"
+  :name "Daily interest"
+  :task-kinds [:scheduler-task-kind-accrue :scheduler-task-kind-capitalize]
+  :periodicity :scheduler-periodicity-daily
+  :run-time-minutes 120
+  :enabled true}]

@@ -13,6 +13,8 @@ import "schemas/idempotency/idempotency.proto";
 import "schemas/idv/idv.proto";
 import "schemas/interest/interest-run.proto";
 import "schemas/ledger-accounts/ledger-account.proto";
+import "schemas/scheduler/scheduler-job.proto";
+import "schemas/scheduler/scheduler-run.proto";
 import "schemas/memberships/membership.proto";
 import "schemas/banks/bank.proto";
 import "schemas/party/party-national-identifier.proto";
@@ -63,4 +65,6 @@ message RecordTypeUnion {
   optional com.repldriven.mono.schemas.ledger_accounts.LedgerAccount _LedgerAccount = 26;
   optional com.repldriven.mono.schemas.interest.InterestRun _InterestRun = 27;
   optional com.repldriven.mono.schemas.cash_account_products.CashAccountProductTemplate _CashAccountProductTemplate = 28;
+  optional com.repldriven.mono.schemas.scheduler.SchedulerJob _SchedulerJob = 29;
+  optional com.repldriven.mono.schemas.scheduler.SchedulerRun _SchedulerRun = 30;
 }
