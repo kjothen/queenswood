@@ -68,6 +68,15 @@
   [:map {:json-schema/example examples/RunList}
    [:runs [:vector [:ref "Run"]]]])
 
+(def JobScheduleUpdate
+  "Editable schedule fields. All optional — an omitted field keeps its
+  current value. Toggling `enabled` is the pause/resume control."
+  [:map {:closed true :json-schema/example examples/JobScheduleUpdate}
+   [:periodicity {:optional true} [:ref "Periodicity"]]
+   [:run-time-minutes {:optional true} [:int {:min 0 :max 1439}]]
+   [:enabled {:optional true} boolean?]])
+
 (def registry
   (components-registry [#'JobId #'RunId #'Periodicity #'JobTaskKind #'RunStatus
-                        #'TriggerSource #'Job #'JobList #'Run #'RunList]))
+                        #'TriggerSource #'Job #'JobList #'Run #'RunList
+                        #'JobScheduleUpdate]))

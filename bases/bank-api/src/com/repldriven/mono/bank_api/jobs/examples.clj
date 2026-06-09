@@ -14,7 +14,14 @@
            :status 404
            :detail "Scheduled run not found"}})
 
-(def registry (examples-registry [#'JobNotFound #'RunNotFound]))
+(def PeriodicityNotAllowed
+  {:value {:title "REJECTED"
+           :type "scheduler/periodicity-not-allowed"
+           :status 422
+           :detail "Periodicity not allowed for this job's tasks"}})
+
+(def registry
+  (examples-registry [#'JobNotFound #'RunNotFound #'PeriodicityNotAllowed]))
 
 (def Job
   {:bank-id "bnk.01kprbmgcj35ptc8npmybhh4s7"
@@ -32,6 +39,11 @@
 (def JobId (:job-id Job))
 
 (def JobList {:jobs [Job]})
+
+(def JobScheduleUpdate
+  {:periodicity :scheduler-periodicity-daily
+   :run-time-minutes 120
+   :enabled true})
 
 (def Run
   {:bank-id "bnk.01kprbmgcj35ptc8npmybhh4s7"
