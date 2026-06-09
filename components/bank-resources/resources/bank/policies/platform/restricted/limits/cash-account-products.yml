@@ -9,3 +9,18 @@
               value: 1000
               window: !keyword time-window-instant
   reason: "Platform-restricted - max 1,000 cash account products"
+- kind:
+    cash-account-product:
+      filters:
+        - product-type: !keyword product-type-sub-ledger-current
+        - product-type: !keyword product-type-sub-ledger-savings
+        - product-type: !keyword product-type-sub-ledger-term-deposit
+  bound:
+    kind:
+      max:
+        aggregate:
+          kind:
+            count:
+              value: 100
+              window: !keyword time-window-instant
+  reason: "Platform-restricted - max 100 cash account products per product type"
