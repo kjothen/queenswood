@@ -1,0 +1,34 @@
+{:name "Tenant lists its scheduled jobs"
+ :tags #{:jobs :api :happy}
+ :given
+ [{:command :api/request
+   :request {:method :post
+             :path "/v1/banks"
+             :auth :admin
+             :body {:name "Jobs Test Bank"
+                    :status "live"
+                    :tier "micro"
+                    :currencies ["GBP"]}}
+   :as :org-0
+   :assert {:status 201}}
+  {:command :auth/mint-token
+   :for {:client-id [:ref :org-0 :client-id]
+         :client-secret [:ref :org-0 :client-secret]
+         :status :live}
+   :as :org-0-token}]
+ :when
+ ;; Every bank is seeded the default daily-interest job at provisioning,
+ ;; so a freshly created bank already lists it — daily, accrue then
+ ;; capitalize, enabled, and not yet run.
+ [{:command :api/request
+   :request {:method :get
+             :path "/v1/jobs"
+             :auth :org-0-token}
+   :assert {:status 200
+            :body {:jobs [:m/embeds
+                          [{:job-id "daily-interest"
+                            :name "Daily interest"
+                            :task-kinds ["accrue" "capitalize"]
+                            :periodicity "daily"
+                            :run-time-minutes 120
+                            :enabled true}]]}}}]}
