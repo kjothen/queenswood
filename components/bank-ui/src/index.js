@@ -69,6 +69,20 @@ export {
 // CCY_SYMBOLS already exported from money.js (same constant); don't re-export.
 export { formatAggregate, boundOp, boundWindow, WINDOW_LABEL } from "./bounds.js";
 
+// Scheduler (Jobs) — the run-status badge plus the schedule/format
+// view-model helpers. The page itself lives in bank-console.
+export { default as JobStatusBadge } from "./JobStatusBadge.svelte";
+export {
+  hhmm,
+  humanSchedule,
+  cronOf,
+  nextRunAt,
+  fmtDur,
+  fmtAbs,
+  fmtRel,
+  lastOutcome,
+} from "./jobs.js";
+
 export { default as Field } from "./Field.svelte";
 export { default as Input } from "./Input.svelte";
 export { default as Select } from "./Select.svelte";

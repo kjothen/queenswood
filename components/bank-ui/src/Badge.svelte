@@ -14,6 +14,14 @@
        restricted amber  — cautionary, narrowed permissions
        emergency  red    — break-glass / alarming
 
+     Job run states reuse the same hue conventions (145 pine = good,
+     30 rust = bad, 80 amber = in-progress, 270 violet = waiting):
+       succeeded  pine   — last run completed cleanly
+       failed     rust   — last run errored
+       running    amber  — a run is in progress (dot pulses)
+       scheduled  violet — never run yet, awaiting first fire
+     (a paused schedule reuses `archived`.)
+
      Text is lowercased visually so callers can pass "Published" or
      "PUBLISHED" interchangeably without worrying about case. */
 
@@ -83,5 +91,35 @@
   .badge.emergency {
     background: light-dark(oklch(0.94 0.04 30),  oklch(0.27 0.055 30));
     color:      light-dark(oklch(0.45 0.12 30),  oklch(0.84 0.10 30));
+  }
+
+  /* Job run states — hue conventions shared with the status tones. */
+  .badge.succeeded {
+    background: light-dark(oklch(0.92 0.04 145), oklch(0.26 0.05 145));
+    color:      light-dark(oklch(0.34 0.075 145), oklch(0.82 0.06 145));
+  }
+  .badge.failed {
+    background: light-dark(oklch(0.92 0.04 30),  oklch(0.27 0.055 30));
+    color:      light-dark(oklch(0.44 0.140 30), oklch(0.82 0.115 30));
+  }
+  .badge.running {
+    background: light-dark(oklch(0.93 0.055 80), oklch(0.29 0.060 78));
+    color:      light-dark(oklch(0.46 0.120 68), oklch(0.86 0.115 82));
+  }
+  .badge.scheduled {
+    background: light-dark(oklch(0.92 0.04 270), oklch(0.27 0.05 270));
+    color:      light-dark(oklch(0.40 0.08 270), oklch(0.80 0.07 270));
+  }
+
+  /* running's dot breathes; respect reduced-motion. */
+  .badge.running::before {
+    animation: qw-pulse 1.3s ease-in-out infinite;
+  }
+  @keyframes qw-pulse {
+    0%, 100% { opacity: 0.9; }
+    50%      { opacity: 0.2; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .badge.running::before { animation: none; }
   }
 </style>
