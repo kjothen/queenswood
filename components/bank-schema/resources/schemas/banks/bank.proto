@@ -12,6 +12,21 @@ enum BankStatus {
   BANK_STATUS_LIVE = 2;
 }
 
+// A snapshot of the legal entity a bank is bound to, taken from the
+// company registry at onboarding. Immutable — the bank records exactly
+// what was confirmed. Optional throughout for banks created without a
+// binding (e.g. the admin provisioning path).
+message BankCompanyBinding {
+  optional string registry = 1; // e.g. "uk-companies-house"
+  optional string company_number = 2;
+  optional string company_name = 3;
+  optional string company_status = 4;
+  optional string type = 5;
+  optional string jurisdiction = 6;
+  optional string date_of_creation = 7;
+  optional string registered_office_address = 8; // joined address lines
+}
+
 message Bank {
   option (com.apple.foundationdb.record.record).usage = RECORD;
 
@@ -20,4 +35,5 @@ message Bank {
   required string name = 5;
   required int64 created_at = 6;
   required int64 updated_at = 7;
+  optional BankCompanyBinding company_binding = 8;
 }

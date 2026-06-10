@@ -172,7 +172,7 @@
   (store/transact
    txn
    (fn [txn]
-     (let [{:keys [identity-provider]} opts]
+     (let [{:keys [identity-provider company-binding]} opts]
        (let-nom>
          [_
           (when-not identity-provider
@@ -183,7 +183,11 @@
               :bank-name bank-name}))
           policies (or (:policies opts)
                        (policy/get-effective-policies txn {}))
-          bank (domain/new-bank bank-name bank-status policies)
+          ;; Snapshot of the bound legal entity (onboarding path); absent
+          ;; for admin-provisioned banks.
+          bank (cond-> (domain/new-bank bank-name bank-status policies)
+                       company-binding
+                       (assoc :company-binding company-binding))
           bank-id (:bank-id bank)
 
           ;; Issue the service-account client BEFORE the FDB write so an

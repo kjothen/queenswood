@@ -37,14 +37,15 @@
      #(assoc-in % [:system/defs :server :handler] api/app)]]
    (let [config (check-config sys)]
      (testing "fetches a known company and persists it under company_number"
-       (nom-test> [company (company-check/check-company config "00006400")
-                   _ (is (= "00006400" (:company-number company)))
-                   _ (is (= "TESCO PLC" (:company-name company)))
+       (nom-test> [company (company-check/check-company config "SC998137")
+                   _ (is (= "SC998137" (:company-number company)))
+                   _ (is (= "SIRIUS CYBERNETICS CORPORATION LTD"
+                            (:company-name company)))
                    _ (is (= "active" (:company-status company)))
                    _ (is (= "United Kingdom"
                             (get-in company
                                     [:registered-office-address :country])))
-                   stored (company-check/get-company config "00006400")
+                   stored (company-check/get-company config "SC998137")
                    _ (is (= company (->plain stored)))]))
      (testing "returns a :company-check/not-found anomaly for unknown numbers"
        (let [result (company-check/check-company config "99999999")]

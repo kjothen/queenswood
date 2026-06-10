@@ -37,6 +37,12 @@
     [com.repldriven.mono.bank-api.onboarding.examples :as
      onboarding.examples]
     [com.repldriven.mono.bank-api.onboarding.routes :as onboarding]
+    [com.repldriven.mono.bank-api.company-registries.components :as
+     company-registries.components]
+    [com.repldriven.mono.bank-api.company-registries.examples :as
+     company-registries.examples]
+    [com.repldriven.mono.bank-api.company-registries.routes :as
+     company-registries]
     [com.repldriven.mono.bank-api.bank.components :as
      bank.components]
     [com.repldriven.mono.bank-api.bank.examples :as
@@ -122,6 +128,7 @@
                                me.components/registry
                                oauth.components/registry
                                onboarding.components/registry
+                               company-registries.components/registry
                                bank.components/registry
                                party.components/registry
                                payee-check.components/registry
@@ -162,6 +169,7 @@
                     me.examples/registry
                     oauth.examples/registry
                     onboarding.examples/registry
+                    company-registries.examples/registry
                     bank.examples/registry
                     party.examples/registry
                     payee-check.examples/registry
@@ -192,6 +200,7 @@
                   jobs/routes
                   me/routes
                   onboarding/routes
+                  company-registries/routes
                   bank/routes
                   party/routes
                   payee-check/routes

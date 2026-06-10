@@ -43,4 +43,16 @@
 (def CreateBankRequest
   {:name "Galactic Bank" :status :test :tier "micro" :currencies ["GBP"]})
 
-(def CreateBankResponse (assoc Bank :client-secret ClientSecret))
+(def CompanyBinding
+  {:registry "uk-companies-house"
+   :company-number "SC998137"
+   :company-name "SIRIUS CYBERNETICS CORPORATION LTD"
+   :company-status "active"
+   :type "ltd"
+   :jurisdiction "england-wales"
+   :date-of-creation "2009-02-11"
+   :registered-office-address
+   "42 Improbability Way, London, QZ1 9ZX, United Kingdom"})
+
+(def CreateBankResponse
+  (assoc Bank :client-secret ClientSecret :company-binding CompanyBinding))

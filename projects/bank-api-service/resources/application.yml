@@ -228,6 +228,7 @@ system:
       record-db: !system/ref fdb.record-db
       record-store: !system/ref fdb.meta-store
       clearbank-adapter-url: !env CLEARBANK_ADAPTER_URL
+      companies-house-url: !env COMPANIES_HOUSE_URL
     jetty-adapter: !system/component
       system/component-kind: server/jetty-adapter
       handler: !system/ref server.handler

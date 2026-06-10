@@ -41,11 +41,12 @@
    (let [jetty (system/instance sys [:server :jetty-adapter])]
      (binding [*base-url* (server/http-local-url jetty)]
        (testing "GET /company/{number} returns a known fixture"
-         (nom-test> [res (get "/company/00006400")
+         (nom-test> [res (get "/company/SC998137")
                      _ (is (= 200 (:status res)))
                      body (http/res->edn res)
-                     _ (is (= "00006400" (:company_number body)))
-                     _ (is (= "TESCO PLC" (:company_name body)))
+                     _ (is (= "SC998137" (:company_number body)))
+                     _ (is (= "SIRIUS CYBERNETICS CORPORATION LTD"
+                              (:company_name body)))
                      _ (is (= "active" (:company_status body)))
                      _ (is (= "United Kingdom"
                               (get-in body

@@ -11,6 +11,7 @@
     com.repldriven.mono.bank-onfido-adapter.system
     com.repldriven.mono.bank-onfido-simulator.system
     com.repldriven.mono.bank-onfido-webhook.interface
+    com.repldriven.mono.bank-uk-companies-house-simulator.system
     com.repldriven.mono.bank-interest.interface
     com.repldriven.mono.bank-party.interface
     com.repldriven.mono.bank-payment.interface
