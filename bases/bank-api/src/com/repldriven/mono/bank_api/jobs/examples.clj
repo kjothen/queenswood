@@ -20,16 +20,27 @@
            :status 422
            :detail "Periodicity not allowed for this job's tasks"}})
 
+(def SystemJobLocked
+  {:value
+   {:title "REJECTED"
+    :type "scheduler/system-job-locked"
+    :status 422
+    :detail
+    "System jobs have a fixed cadence; only the time of day is editable"}})
+
 (def registry
-  (examples-registry [#'JobNotFound #'RunNotFound #'PeriodicityNotAllowed]))
+  (examples-registry [#'JobNotFound #'RunNotFound #'PeriodicityNotAllowed
+                      #'SystemJobLocked]))
 
 (def Job
   {:bank-id "bnk.01kprbmgcj35ptc8npmybhh4s7"
    :job-id "daily-interest"
    :name "Daily interest"
+   :kind :scheduler-job-kind-user
    :task-kinds [:scheduler-task-kind-accrue :scheduler-task-kind-capitalize]
    :periodicity :scheduler-periodicity-daily
-   :run-time-minutes 120
+   :allowed-periodicities [:scheduler-periodicity-daily]
+   :run-time-minutes 1020
    :enabled true
    :last-run-at 1735696800000
    :next-run-at 1735783200000
@@ -42,7 +53,7 @@
 
 (def JobScheduleUpdate
   {:periodicity :scheduler-periodicity-daily
-   :run-time-minutes 120
+   :run-time-minutes 1020
    :enabled true})
 
 (def Run

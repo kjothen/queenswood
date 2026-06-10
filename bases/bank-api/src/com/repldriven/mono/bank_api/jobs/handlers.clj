@@ -1,6 +1,7 @@
 (ns com.repldriven.mono.bank-api.jobs.handlers
   (:require
     [com.repldriven.mono.bank-api.errors :as errors]
+    [com.repldriven.mono.bank-api.jobs.view :as view]
 
     [com.repldriven.mono.bank-scheduler.interface :as scheduler]
 
@@ -37,4 +38,4 @@
         result (scheduler/update-schedule config bank-id job-id body)]
     (if (error/anomaly? result)
       (errors/anomaly->response result)
-      {:status 200 :body result})))
+      {:status 200 :body (view/job->api result)})))

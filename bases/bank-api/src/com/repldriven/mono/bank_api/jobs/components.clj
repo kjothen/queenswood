@@ -30,13 +30,24 @@
 (def TriggerSource
   (coercion/trigger-source-enum-schema {:json-schema/example "scheduled"}))
 
+(def MonthlyDay
+  (coercion/monthly-day-enum-schema {:json-schema/example "last"}))
+
+(def JobKind (coercion/kind-enum-schema {:json-schema/example "user"}))
+
 (def Job
   [:map {:json-schema/example examples/Job}
    [:bank-id [:ref "BankId"]]
    [:job-id [:ref "JobId"]]
    [:name [:ref "Name"]]
+   [:kind [:ref "JobKind"]]
    [:task-kinds [:vector [:ref "JobTaskKind"]]]
    [:periodicity [:ref "Periodicity"]]
+   ;; Present only for monthly jobs.
+   [:monthly-day {:optional true} [:ref "MonthlyDay"]]
+   ;; The cadences this job's tasks permit; the editable set for a user
+   ;; job (a system job's cadence is fixed regardless).
+   [:allowed-periodicities [:vector [:ref "Periodicity"]]]
    ;; Minutes past midnight (UTC) the job fires on each scheduled day.
    [:run-time-minutes [:int {:min 0 :max 1439}]]
    [:enabled boolean?]
@@ -70,13 +81,16 @@
 
 (def JobScheduleUpdate
   "Editable schedule fields. All optional — an omitted field keeps its
-  current value. Toggling `enabled` is the pause/resume control."
+  current value. Toggling `enabled` is the pause/resume control.
+  `monthly-day` applies to monthly jobs. A system job's cadence is fixed:
+  only `run-time-minutes` is editable on one."
   [:map {:closed true :json-schema/example examples/JobScheduleUpdate}
    [:periodicity {:optional true} [:ref "Periodicity"]]
+   [:monthly-day {:optional true} [:ref "MonthlyDay"]]
    [:run-time-minutes {:optional true} [:int {:min 0 :max 1439}]]
    [:enabled {:optional true} boolean?]])
 
 (def registry
   (components-registry [#'JobId #'RunId #'Periodicity #'JobTaskKind #'RunStatus
-                        #'TriggerSource #'Job #'JobList #'Run #'RunList
-                        #'JobScheduleUpdate]))
+                        #'TriggerSource #'MonthlyDay #'JobKind #'Job #'JobList
+                        #'Run #'RunList #'JobScheduleUpdate]))

@@ -1,6 +1,7 @@
 (ns com.repldriven.mono.bank-api.jobs.queries
   (:require
     [com.repldriven.mono.bank-api.errors :as errors]
+    [com.repldriven.mono.bank-api.jobs.view :as view]
 
     [com.repldriven.mono.bank-scheduler.interface :as scheduler]
 
@@ -18,7 +19,7 @@
         config {:record-db record-db :record-store record-store}
         result (let-nom>
                  [jobs (scheduler/list-jobs config bank-id)]
-                 {:jobs jobs})]
+                 {:jobs (mapv view/job->api jobs)})]
     (if (error/anomaly? result)
       (errors/anomaly->response result)
       {:status 200 :body result})))
@@ -32,7 +33,7 @@
         result (let-nom>
                  [job (scheduler/get-job config bank-id job-id)
                   _ (when (nil? job) (job-not-found job-id))]
-                 job)]
+                 (view/job->api job))]
     (if (error/anomaly? result)
       (errors/anomaly->response result)
       {:status 200 :body result})))

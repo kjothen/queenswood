@@ -3,9 +3,23 @@
 ;; seed time. :job-id is stable so re-seeding overwrites in place.
 ;; A job's allowed periodicities are the intersection of its tasks'
 ;; limits (accrue is daily-only), so [accrue capitalize] is daily.
+;; :kind is user (operator-editable) or system (platform-fixed cadence,
+;; only the time of day editable). :monthly-day (first/last) applies to
+;; monthly jobs.
 [{:job-id "daily-interest"
   :name "Daily interest"
   :task-kinds [:scheduler-task-kind-accrue :scheduler-task-kind-capitalize]
   :periodicity :scheduler-periodicity-daily
-  :run-time-minutes 120
-  :enabled true}]
+  :run-time-minutes 1020 ; 17:00 UTC
+  :enabled true
+  :kind :scheduler-job-kind-user}
+ ;; System job: account migration runs every day at 00:00 UTC. The
+ ;; migration task is a no-op placeholder until the domain op exists
+ ;; (see the task registry), so it schedules and runs harmlessly.
+ {:job-id "account-migration"
+  :name "Account migration"
+  :task-kinds [:scheduler-task-kind-account-migration]
+  :periodicity :scheduler-periodicity-daily
+  :run-time-minutes 0
+  :enabled true
+  :kind :scheduler-job-kind-system}]

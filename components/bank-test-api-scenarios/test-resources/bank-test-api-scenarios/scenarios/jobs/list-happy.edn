@@ -17,9 +17,11 @@
          :status :live}
    :as :org-0-token}]
  :when
- ;; Every bank is seeded the default daily-interest job at provisioning,
- ;; so a freshly created bank already lists it — daily, accrue then
- ;; capitalize, enabled, and not yet run.
+ ;; Every bank is seeded two default jobs at provisioning: the
+ ;; user-owned daily-interest (daily; accrue then capitalize; allowed
+ ;; cadence is daily-only since accrue is) and the system-owned
+ ;; account-migration (daily at 00:00; cadence fixed, though its task
+ ;; allows any cadence).
  [{:command :api/request
    :request {:method :get
              :path "/v1/jobs"
@@ -28,7 +30,15 @@
             :body {:jobs [:m/embeds
                           [{:job-id "daily-interest"
                             :name "Daily interest"
+                            :kind "user"
                             :task-kinds ["accrue" "capitalize"]
                             :periodicity "daily"
-                            :run-time-minutes 120
-                            :enabled true}]]}}}]}
+                            :allowed-periodicities ["daily"]
+                            :run-time-minutes 1020
+                            :enabled true}
+                           {:job-id "account-migration"
+                            :kind "system"
+                            :periodicity "daily"
+                            :run-time-minutes 0
+                            :allowed-periodicities
+                            ["daily" "monthly" "yearly"]}]]}}}]}

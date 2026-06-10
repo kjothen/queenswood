@@ -13,9 +13,7 @@
 
 ;; Code-defined registry of preset tasks. Each `:run` takes the FDB+
 ;; interfaces config, the bank id, and an as-of date (epoch-day), and
-;; returns a result map or an anomaly. account-migration has no run yet
-;; (net-new domain op) — a job carrying it fails at run with an
-;; unknown-task rejection until one is registered.
+;; returns a result map or an anomaly.
 (def ^:private task-registry
   {:scheduler-task-kind-accrue
    {:label "accrue"
@@ -27,7 +25,14 @@
                                            (interest/capitalize-monthly
                                             config
                                             {:bank-id bank-id
-                                             :as-of-date as-of-date}))}})
+                                             :as-of-date as-of-date}))}
+   ;; Placeholder: the account-migration domain op isn't built yet, so
+   ;; this runs as a no-op and reports nothing migrated. Replaced when
+   ;; the migration logic lands; lets the seeded system job schedule and
+   ;; run harmlessly in the meantime.
+   :scheduler-task-kind-account-migration
+   {:label "migrate"
+    :run (fn [_config _bank-id _as-of-date] {:migrated 0})}})
 
 (defn- task-label
   [task-kind]
@@ -41,7 +46,7 @@
 
 (defn- job-cron
   [job]
-  (domain/->cron (:periodicity job) (:run-time-minutes job)))
+  (domain/->cron (:periodicity job) (:run-time-minutes job) (:monthly-day job)))
 
 (def ^:private default-jobs
   "Default scheduled jobs seeded into every bank at provisioning,
@@ -170,7 +175,8 @@
   periodicities its tasks allow. Persists the change, recomputes
   `next-run-at`, and reflects it on the live trigger when a scheduler is
   present in `config`."
-  [config bank-id job-id {:keys [periodicity run-time-minutes enabled]}]
+  [config bank-id job-id
+   {:keys [periodicity run-time-minutes enabled monthly-day] :as edits}]
   (let [job (store/get-job config bank-id job-id)]
     (cond
      (error/anomaly? job)
@@ -183,14 +189,17 @@
      :else
      (let [periodicity (or periodicity (:periodicity job))
            run-time-minutes (or run-time-minutes (:run-time-minutes job))
-           enabled (if (some? enabled) enabled (:enabled job))]
-       (let-nom> [_ (domain/validate-periodicity (:task-kinds job) periodicity)]
+           enabled (if (some? enabled) enabled (:enabled job))
+           monthly-day (or monthly-day (:monthly-day job))]
+       (let-nom> [_ (domain/validate-system-edits job edits)
+                  _ (domain/validate-periodicity (:task-kinds job) periodicity)]
          (let [now (utility/now)
-               cron (domain/->cron periodicity run-time-minutes)
+               cron (domain/->cron periodicity run-time-minutes monthly-day)
                updated (assoc job
                               :periodicity periodicity
                               :run-time-minutes run-time-minutes
                               :enabled enabled
+                              :monthly-day monthly-day
                               :next-run-at (scheduler/next-fire-at cron now)
                               :updated-at now)
                result (store/save-job config updated)]
@@ -220,7 +229,8 @@
   (reduce (fn [_ template]
             (let [now (utility/now)
                   cron (domain/->cron (:periodicity template)
-                                      (:run-time-minutes template))
+                                      (:run-time-minutes template)
+                                      (:monthly-day template))
                   job (assoc template
                              :bank-id bank-id
                              :next-run-at (scheduler/next-fire-at cron now)
