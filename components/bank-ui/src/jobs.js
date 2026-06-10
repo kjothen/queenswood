@@ -18,15 +18,21 @@ export function hhmm(minutes) {
   return `${pad(Math.floor(m / 60))}:${pad(m % 60)}`;
 }
 
+// Whether a monthly job fires on the last day (else the first). Defaults
+// to first for non-monthly jobs or an unset value.
+export function isLastDay(job) {
+  return job["monthly-day"] === "last";
+}
+
 // Human phrasing: "Daily · 02:00 UTC" | "Monthly · 1st · 02:00 UTC" |
-// "Annually · 1 Jan · 02:00 UTC".
+// "Monthly · last day · 02:00 UTC" | "Annually · 1 Jan · 02:00 UTC".
 export function humanSchedule(job) {
   const t = `${hhmm(job["run-time-minutes"])} UTC`;
   switch (job.periodicity) {
     case "daily":
       return `Daily · ${t}`;
     case "monthly":
-      return `Monthly · 1st · ${t}`;
+      return `Monthly · ${isLastDay(job) ? "last day" : "1st"} · ${t}`;
     case "yearly":
       return `Annually · 1 Jan · ${t}`;
     default:
@@ -35,7 +41,8 @@ export function humanSchedule(job) {
 }
 
 // Standard 5-field unix cron mirroring the server's Quartz schedule —
-// the form operators recognise. "m h * * *" | "m h 1 * *" | "m h 1 1 *".
+// the form operators recognise. Monthly uses the Quartz `L` for last
+// day. "m h * * *" | "m h 1 * *" | "m h L * *" | "m h 1 1 *".
 export function cronOf(job) {
   const mins = job["run-time-minutes"] ?? 0;
   const h = Math.floor(mins / 60);
@@ -44,7 +51,7 @@ export function cronOf(job) {
     case "daily":
       return `${m} ${h} * * *`;
     case "monthly":
-      return `${m} ${h} 1 * *`;
+      return `${m} ${h} ${isLastDay(job) ? "L" : "1"} * *`;
     case "yearly":
       return `${m} ${h} 1 1 *`;
     default:
@@ -70,8 +77,12 @@ export function nextRunAt(job, fromMs) {
     return t;
   }
   if (job.periodicity === "monthly") {
+    const last = isLastDay(job);
     for (let i = 0; i < 120; i++) {
-      const t = Date.UTC(y, mo + i, 1, hh, mm);
+      // Day 0 of the next month is the last day of this one.
+      const t = last
+        ? Date.UTC(y, mo + i + 1, 0, hh, mm)
+        : Date.UTC(y, mo + i, 1, hh, mm);
       if (t > fromMs) return t;
     }
   }

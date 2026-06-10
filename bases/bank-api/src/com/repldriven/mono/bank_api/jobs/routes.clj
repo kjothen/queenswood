@@ -3,7 +3,7 @@
     [com.repldriven.mono.bank-api.jobs.handlers :as handlers]
     [com.repldriven.mono.bank-api.jobs.queries :as queries]
     [com.repldriven.mono.bank-api.jobs.examples :refer
-     [JobNotFound RunNotFound PeriodicityNotAllowed]]
+     [JobNotFound RunNotFound PeriodicityNotAllowed SystemJobLocked]]
     [com.repldriven.mono.bank-api.schema :refer [ErrorResponse]]))
 
 (def ^:private run-location-header
@@ -32,7 +32,8 @@
              :parameters {:body [:ref "JobScheduleUpdate"]}
              :responses {200 {:body [:ref "Job"]}
                          404 (ErrorResponse [#'JobNotFound])
-                         422 (ErrorResponse [#'PeriodicityNotAllowed])}
+                         422 (ErrorResponse [#'PeriodicityNotAllowed
+                                             #'SystemJobLocked])}
              :handler handlers/update-schedule}}]
      ["/runs"
       [""

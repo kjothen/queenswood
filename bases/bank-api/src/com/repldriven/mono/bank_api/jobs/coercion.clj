@@ -26,7 +26,19 @@
                            "forced" :scheduler-trigger-source-forced}
                           :scheduler-trigger-source-unknown))
 
+(def ^:private monthly-day-enum
+  (coercion/enum-coercion {"first" :scheduler-monthly-day-first
+                           "last" :scheduler-monthly-day-last}
+                          :scheduler-monthly-day-unknown))
+
+(def ^:private kind-enum
+  (coercion/enum-coercion {"user" :scheduler-job-kind-user
+                           "system" :scheduler-job-kind-system}
+                          :scheduler-job-kind-unknown))
+
 (def periodicity-enum-schema (:enum-schema periodicity-enum))
 (def task-kind-enum-schema (:enum-schema task-kind-enum))
 (def run-status-enum-schema (:enum-schema run-status-enum))
 (def trigger-source-enum-schema (:enum-schema trigger-source-enum))
+(def monthly-day-enum-schema (:enum-schema monthly-day-enum))
+(def kind-enum-schema (:enum-schema kind-enum))

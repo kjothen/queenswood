@@ -73,6 +73,7 @@ export { formatAggregate, boundOp, boundWindow, WINDOW_LABEL } from "./bounds.js
 // menu, plus the schedule/format view-model helpers. The page itself
 // lives in bank-console.
 export { default as JobStatusBadge } from "./JobStatusBadge.svelte";
+export { default as JobKindChip } from "./JobKindChip.svelte";
 export { default as TaskPipeline } from "./TaskPipeline.svelte";
 export { default as Menu } from "./Menu.svelte";
 export {
@@ -88,6 +89,7 @@ export {
   runDurationSecs,
   pipelineSteps,
   minutesFromHHMM,
+  isLastDay,
 } from "./jobs.js";
 
 export { default as Field } from "./Field.svelte";

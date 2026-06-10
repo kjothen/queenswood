@@ -31,6 +31,7 @@
     Select,
     Menu,
     JobStatusBadge,
+    JobKindChip,
     TaskPipeline,
     humanSchedule,
     cronOf,
@@ -45,6 +46,9 @@
     hhmm,
     minutesFromHHMM,
   } from "@queenswood/bank-ui";
+
+  const FREQ_LABEL = { daily: "Daily", monthly: "Monthly", yearly: "Annually" };
+  const freqLabel = (p) => FREQ_LABEL[p] ?? p;
   import {
     list_jobs,
     list_job_runs,
@@ -70,7 +74,7 @@
 
   // Schedule drawer working copy.
   let editing = $state(null);
-  let draft = $state({ periodicity: "daily", time: "00:00" });
+  let draft = $state({ periodicity: "daily", monthlyDay: "first", time: "00:00" });
   let saving = $state(false);
   let saveError = $state(null);
 
@@ -79,6 +83,7 @@
 
   const draftJob = $derived({
     periodicity: draft.periodicity,
+    "monthly-day": draft.monthlyDay,
     "run-time-minutes": minutesFromHHMM(draft.time) ?? 0,
   });
 
@@ -92,11 +97,15 @@
     return {
       id: job["job-id"],
       name: job.name,
+      kind: job.kind ?? "user",
+      isSystem: job.kind === "system",
       taskKinds: job["task-kinds"] ?? [],
       tasksLabel: (job["task-kinds"] ?? []).join(" → "),
       schedule: humanSchedule(job),
       cron: cronOf(job),
       periodicity: job.periodicity,
+      monthlyDay: job["monthly-day"] ?? "first",
+      allowedPeriodicities: job["allowed-periodicities"] ?? [job.periodicity],
       runTimeMinutes: job["run-time-minutes"],
       enabled: job.enabled,
       outcome: lastOutcome(latest),
@@ -203,7 +212,11 @@
 
   function openEdit(job) {
     editing = job;
-    draft = { periodicity: job.periodicity, time: hhmm(job.runTimeMinutes) };
+    draft = {
+      periodicity: job.periodicity,
+      monthlyDay: job.monthlyDay,
+      time: hhmm(job.runTimeMinutes),
+    };
     saveError = null;
   }
 
@@ -216,10 +229,19 @@
     saving = true;
     saveError = null;
     try {
-      const res = await update_job_schedule(editing.id, {
-        periodicity: draft.periodicity,
-        "run-time-minutes": minutesFromHHMM(draft.time) ?? 0,
-      });
+      const minutes = minutesFromHHMM(draft.time) ?? 0;
+      // A system job's cadence is locked — send only the time. A user job
+      // sends its cadence too, with the day-of-month when monthly.
+      const body = editing.isSystem
+        ? { "run-time-minutes": minutes }
+        : {
+            periodicity: draft.periodicity,
+            "run-time-minutes": minutes,
+            ...(draft.periodicity === "monthly"
+              ? { "monthly-day": draft.monthlyDay }
+              : {}),
+          };
+      const res = await update_job_schedule(editing.id, body);
       if (res.status >= 200 && res.status < 300) {
         closeDrawer();
         await load();
@@ -244,6 +266,8 @@
       {
         label: job.enabled ? "Pause schedule" : "Resume schedule",
         onClick: () => pauseResume(job),
+        // System jobs can't be paused — the cadence is platform-fixed.
+        disabled: job.isSystem || busy[job.id],
       },
     ];
   }
@@ -292,7 +316,7 @@
         >
           <Td expander><Expander /></Td>
           <Td emphasized>
-            {job.name}
+            <span class="job-name">{job.name}<JobKindChip kind={job.kind} /></span>
             {#if job.tasksLabel}<span class="sub mono">{job.tasksLabel}</span>{/if}
           </Td>
           <Td>
@@ -402,17 +426,48 @@
   onClose={closeDrawer}
   kicker="Schedule"
   title={editing?.name}
-  sub="Choose how often the job runs and at what UTC time. Some cadences may be fixed by the job's tasks."
+  sub={editing?.isSystem
+    ? "System job. The platform fixes the cadence; you can set the time of day."
+    : "Choose how often the job runs and at what UTC time."}
   width={460}
 >
   {#if editing}
-    <Field label="Frequency">
-      <Select bind:value={draft.periodicity}>
-        <option value="daily">Daily</option>
-        <option value="monthly">Monthly (1st)</option>
-        <option value="yearly">Annually (1 Jan)</option>
-      </Select>
-    </Field>
+    {#if editing.isSystem}
+      <div class="locked-note">
+        🔒 System job — the cadence is fixed by the platform. You can change
+        the time it fires, but not how often.
+      </div>
+      <Field label="Frequency">
+        <Select disabled value={editing.periodicity}>
+          <option value={editing.periodicity}>{freqLabel(editing.periodicity)} (fixed)</option>
+        </Select>
+      </Field>
+      {#if editing.periodicity === "monthly"}
+        <Field label="Day of month">
+          <Select disabled value={editing.monthlyDay}>
+            <option value={editing.monthlyDay}>
+              {editing.monthlyDay === "last" ? "Last day" : "First day"} (fixed)
+            </option>
+          </Select>
+        </Field>
+      {/if}
+    {:else}
+      <Field label="Frequency">
+        <Select bind:value={draft.periodicity}>
+          {#each editing.allowedPeriodicities as p (p)}
+            <option value={p}>{freqLabel(p)}</option>
+          {/each}
+        </Select>
+      </Field>
+      {#if draft.periodicity === "monthly"}
+        <Field label="Day of month" hint="Fires on the first or last day each month.">
+          <Select bind:value={draft.monthlyDay}>
+            <option value="first">First day</option>
+            <option value="last">Last day</option>
+          </Select>
+        </Field>
+      {/if}
+    {/if}
 
     <Field label="Time of day" hint="When the job fires each scheduled day (UTC).">
       <Input type="time" step="60" affix="UTC" bind:value={draft.time} />
@@ -472,6 +527,19 @@
   .sub.mono,
   .mono { font-family: var(--mono); }
   .muted { color: var(--fg-muted); }
+
+  .job-name { display: inline-flex; align-items: center; gap: 8px; }
+
+  /* Drawer notice for a locked (system) job. */
+  .locked-note {
+    padding: 10px 12px;
+    border: 1px solid var(--rule-2);
+    border-radius: 8px;
+    background: var(--surface-sunk);
+    color: var(--fg-2);
+    font-size: 12.5px;
+    line-height: 1.45;
+  }
 
   .row-actions {
     display: inline-flex;

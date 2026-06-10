@@ -33,8 +33,13 @@ message SchedulerRun {
   required SchedulerTriggerSource trigger_source = 5;
   required int64 started_at = 6;
   optional int64 finished_at = 7;
-  required int32 tasks_total = 8;
-  required int32 tasks_completed = 9;
+  // Optional, not required: protojure omits a zero int on the wire, and a
+  // proto2 `required` field missing from the bytes fails the Java parse
+  // used to bridge into FDB. tasks_completed is 0 at the start of a run,
+  // and tasks_total is 0 for a job with no tasks. Optional decodes an
+  // unset value back to 0.
+  optional int32 tasks_total = 8;
+  optional int32 tasks_completed = 9;
   optional string current_task = 10;
   optional int64 expected_end_at = 11;
   optional string error = 12;

@@ -36,10 +36,51 @@
 (deftest ->cron-test
   (testing "run-time-minutes splits into hour/minute; 120 = 02:00"
     (is (= "0 0 2 * * ?" (SUT/->cron :scheduler-periodicity-daily 120))))
-  (testing "monthly fires on the 1st"
+  (testing "monthly defaults to the 1st"
     (is (= "0 30 6 1 * ?" (SUT/->cron :scheduler-periodicity-monthly 390))))
+  (testing "monthly first day is explicit day 1"
+    (is (= "0 30 6 1 * ?"
+           (SUT/->cron :scheduler-periodicity-monthly
+                       390
+                       :scheduler-monthly-day-first))))
+  (testing "monthly last day uses the Quartz L token"
+    (is (= "0 30 6 L * ?"
+           (SUT/->cron :scheduler-periodicity-monthly
+                       390
+                       :scheduler-monthly-day-last))))
+  (testing "an unknown monthly-day falls back to the 1st"
+    (is (= "0 30 6 1 * ?"
+           (SUT/->cron :scheduler-periodicity-monthly
+                       390
+                       :scheduler-monthly-day-unknown))))
   (testing "yearly fires on Jan 1"
     (is (= "0 0 0 1 1 ?" (SUT/->cron :scheduler-periodicity-yearly 0)))))
+
+(deftest system?-test
+  (testing "system kind is system"
+    (is (SUT/system? {:kind :scheduler-job-kind-system})))
+  (testing "user / unknown / absent kinds are not system"
+    (is (not (SUT/system? {:kind :scheduler-job-kind-user})))
+    (is (not (SUT/system? {:kind :scheduler-job-kind-unknown})))
+    (is (not (SUT/system? {})))))
+
+(deftest validate-system-edits-test
+  (let [system {:job-id "account-migration" :kind :scheduler-job-kind-system}
+        user {:job-id "daily-interest" :kind :scheduler-job-kind-user}]
+    (testing "editing only the time of a system job is allowed (nil)"
+      (is (nil? (SUT/validate-system-edits system {:run-time-minutes 300}))))
+    (testing "a system job rejects cadence / enabled edits"
+      (doseq [edit [{:periodicity :scheduler-periodicity-daily}
+                    {:monthly-day :scheduler-monthly-day-first}
+                    {:enabled false}]]
+        (let [result (SUT/validate-system-edits system edit)]
+          (is (error/rejection? result))
+          (is (= :scheduler/system-job-locked (error/kind result))))))
+    (testing "a user job allows any edit (nil)"
+      (is (nil? (SUT/validate-system-edits user
+                                           {:periodicity
+                                            :scheduler-periodicity-monthly
+                                            :enabled false}))))))
 
 (deftest expected-end-at-test
   (testing "started-at plus the prior run's duration"

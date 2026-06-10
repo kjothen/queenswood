@@ -11,7 +11,20 @@
   (:require
     com.repldriven.mono.bank-scheduler.system
 
-    [com.repldriven.mono.bank-scheduler.core :as core]))
+    [com.repldriven.mono.bank-scheduler.core :as core]
+    [com.repldriven.mono.bank-scheduler.domain :as domain]))
+
+(defn allowed-periodicities
+  "The periodicities a job built from `task-kinds` may use — the
+  intersection of its tasks' allowed periodicities (accrue is daily-only;
+  capitalize and account-migration allow daily/monthly/yearly). A pure
+  derivation, surfaced so callers (the API, the console) can constrain
+  the cadence picker without duplicating the rule.
+
+  Args:
+  - task-kinds: the job's ordered task kinds."
+  [task-kinds]
+  (domain/job-allowed-periods task-kinds))
 
 (defn seed-jobs
   "Seed `bank-id`'s default scheduled jobs (FDB only — no triggers).
@@ -36,16 +49,19 @@
   (core/force-start config bank-id job-id))
 
 (defn update-schedule
-  "Edit a job's `:periodicity`, `:run-time-minutes`, and/or `:enabled`,
-  within the periodicities its tasks allow. Persists, recomputes
-  next-run, and updates the live trigger when `config` has `:scheduler`.
-  Returns the updated job or an anomaly.
+  "Edit a job's `:periodicity`, `:monthly-day`, `:run-time-minutes`,
+  and/or `:enabled`, within the periodicities its tasks allow. Persists,
+  recomputes next-run, and updates the live trigger when `config` has
+  `:scheduler`. System jobs have a fixed cadence — only `:run-time-minutes`
+  is editable; touching `:periodicity` / `:monthly-day` / `:enabled` on
+  one is rejected. Returns the updated job or an anomaly.
 
   Args:
   - config: FDB+interfaces map.
   - bank-id: the bank owning the job.
   - job-id: the job to edit.
-  - edits: map of any of `:periodicity` `:run-time-minutes` `:enabled`."
+  - edits: map of any of `:periodicity` `:monthly-day` `:run-time-minutes`
+    `:enabled`."
   [config bank-id job-id edits]
   (core/update-schedule config bank-id job-id edits))
 
