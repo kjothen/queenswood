@@ -1,7 +1,7 @@
 (ns com.repldriven.mono.bank-clearbank-adapter.publisher
   (:require
+    [clojure.string :as str]
     [com.repldriven.mono.bank-clearbank-adapter.events :as events]
-    [com.repldriven.mono.log.interface :as log]
     [com.repldriven.mono.utility.interface :as utility])
   (:import
     (java.time Instant)))
@@ -84,11 +84,29 @@
                     {:event-channel event-channel})))
 
 (defn publish-outbound-payment-assessment-failed
-  [_config payload]
-  (let [{:keys [MessageId AssessmentFailure]} payload]
-    (log/info "TODO publish outbound-payment-assessment-failed"
-              {:message-id MessageId
-               :failures AssessmentFailure})))
+  "ClearBank assessed the message and rejected it before settlement. One
+  webhook can carry several failed instructions; each `EndToEndId` is an
+  OutboundPayment to reverse. Routed through `transaction-rejected` — the
+  pre-flight failure has the same outcome as a scheme decline (reverse the
+  pending leg, flip to failed). Returns the seq of publish results."
+  [config payload]
+  (let [{:keys [bus avro event-channel]} config
+        {:keys [PaymentMethodType AssessmentFailure]} payload]
+    (mapv
+     (fn [{:keys [EndToEndId Reasons]}]
+       (events/publish bus
+                       avro
+                       "transaction-rejected"
+                       (str (utility/uuidv7))
+                       (str (utility/uuidv7))
+                       {:end-to-end-id EndToEndId
+                        :scheme (or PaymentMethodType "FasterPayments")
+                        :cancellation-code "CB_AssessmentFailed"
+                        :cancellation-reason (str/join "; " Reasons)
+                        :is-return false
+                        :timestamp-rejected (utility/now)}
+                       {:event-channel event-channel}))
+     AssessmentFailure)))
 
 (defn publish-inbound-payment-held
   [config payload]

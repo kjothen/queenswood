@@ -1,0 +1,154 @@
+{:name "Outbound rejected at message assessment — funds reversed"
+ :tags #{:payments :outbound :unhappy :api}
+
+ ;; ClearBank assesses a submitted outbound payment against scheme rules
+ ;; before settlement; on failure it fires PaymentMessageAssessmentFailed
+ ;; (no settle/held). Here the creditor BBAN's sort code is 000000 — an
+ ;; unreachable sort code the simulator treats as an assessment failure.
+ ;; The adapter routes it through the transaction-rejected event, so the
+ ;; payment brick reverses the in-flight legs (DEBIT 1200 / CREDIT debtor)
+ ;; and flips the payment to "failed" with code CB_AssessmentFailed.
+ ;; All amounts in pence.
+
+ :given
+ [{:command :api/request
+   :request {:method :post
+             :path "/v1/banks"
+             :auth :admin
+             :body {:name "Assessment Fail Test"
+                    :status "live"
+                    :tier "micro"
+                    :currencies ["GBP"]}}
+   :as :bank-0
+   :assert {:status 201}}
+  {:command :auth/mint-token
+   :for {:client-id [:ref :bank-0 :client-id]
+         :client-secret [:ref :bank-0 :client-secret]
+         :status :live}
+   :as :bank-0-token}
+
+  ;; Current product (0 bps), published.
+  {:command :api/request
+   :request {:method :post
+             :path "/v1/cash-account-products"
+             :auth :bank-0-token
+             :body {:name "Current"
+                    :template-id "tpl.00000000000000000000000001"
+                    :currency "GBP"
+                    :interest-rate-bps 0
+                    :effective-from "2026-01-01"}}
+   :as :current-draft
+   :assert {:status 201 :body {:status "draft"}}}
+  {:command :api/request
+   :request {:method :post
+             :path "/v1/cash-account-products/{product-id}/versions/{version-id}/publish"
+             :path-params {:product-id [:ref :current-draft :product-id]
+                           :version-id [:ref :current-draft :version-id]}
+             :auth :bank-0-token}
+   :assert {:status 200 :body {:status "published"}}}
+
+  ;; Party → active.
+  {:command :api/request
+   :request {:method :post
+             :path "/v1/parties"
+             :auth :bank-0-token
+             :headers {:idempotency-key "ik-oaf-create-party"}
+             :body {:type "person"
+                    :display-name "Trillian Astra"
+                    :given-name "Trillian"
+                    :family-name "Astra"
+                    :date-of-birth "1958-09-03"
+                    :nationality "GB"
+                    :address {:building-number "42"
+                              :street "Improbability Drive"
+                              :town "Cottington"
+                              :postcode "CT12 4XY"
+                              :country "GBR"}
+                    :national-identifier {:type "national-insurance"
+                                          :value "TN555101D"
+                                          :issuing-country "GB"}}}
+   :as :trillian
+   :assert {:status 200 :body {:status "pending"}}}
+  {:command :api/poll
+   :request {:method :get
+             :path "/v1/parties/{party-id}"
+             :path-params {:party-id [:ref :trillian :party-id]}
+             :auth :bank-0-token}
+   :until {:status 200 :body {:status "active"}}}
+
+  ;; Debtor account → opened.
+  {:command :api/request
+   :request {:method :post
+             :path "/v1/cash-accounts"
+             :auth :bank-0-token
+             :headers {:idempotency-key "ik-oaf-open-debtor"}
+             :body {:party-id [:ref :trillian :party-id]
+                    :name "Trillian Current"
+                    :currency "GBP"
+                    :product-id [:ref :current-draft :product-id]}}
+   :as :debtor
+   :assert {:status 200 :body {:account-status "opening"}}}
+  {:command :api/poll
+   :request {:method :get
+             :path "/v1/cash-accounts/{account-id}"
+             :path-params {:account-id [:ref :debtor :account-id]}
+             :auth :bank-0-token}
+   :until {:status 200 :body {:account-status "opened"}}
+   :as :debtor}
+
+  ;; Fund the debtor with £1,000 from outside.
+  {:command :api/request
+   :request {:method :post
+             :path "/v1/simulate/banks/{bank-id}/inbound-transfer"
+             :path-params {:bank-id [:ref :bank-0 :bank-id]}
+             :auth :admin
+             :headers {:idempotency-key "ik-oaf-fund-debtor"}
+             :body {:account-id [:ref :debtor :account-id]
+                    :amount 100000
+                    :currency "GBP"}}
+   :assert {:status 200}}
+  {:command :api/poll
+   :request {:method :get
+             :path "/v1/cash-accounts/{account-id}/balances"
+             :path-params {:account-id [:ref :debtor :account-id]}
+             :auth :bank-0-token}
+   :until {:status 200
+           :body {:available-balance {:value 100000 :currency "GBP"}}}}]
+
+ :when
+ ;; Outbound £25 to a creditor whose sort code (000000) fails assessment.
+ [{:command :api/request
+   :request {:method :post
+             :path "/v1/payments/outbound"
+             :auth :bank-0-token
+             :headers {:idempotency-key "ik-oaf-outbound-001"}
+             :body {:debtor-account-id [:ref :debtor :account-id]
+                    :creditor-bban "00000000000001"
+                    :creditor-name "Unreachable Creditor"
+                    :currency "GBP"
+                    :amount 2500
+                    :scheme "fps"
+                    :reference "Assessment failure"}}
+   :as :payment
+   :assert {:status 200}}]
+
+ :then
+ ;; ClearBank rejects at assessment: the payment lands on "failed" with
+ ;; the CB_AssessmentFailed code, and the £25 returns to the debtor.
+ [{:command :api/poll
+   :request {:method :get
+             :path "/v1/payments/outbound/{payment-id}"
+             :path-params {:payment-id [:ref :payment :payment-id]}
+             :auth :bank-0-token}
+   :until {:status 200
+           :body {:payment-status "failed"
+                  :cancellation-code "CB_AssessmentFailed"}}
+   :timeout-ms 10000}
+  {:command :api/poll
+   :request {:method :get
+             :path "/v1/cash-accounts/{account-id}/balances"
+             :path-params {:account-id [:ref :debtor :account-id]}
+             :auth :bank-0-token}
+   :until {:status 200
+           :body {:available-balance {:value 100000 :currency "GBP"}}}
+   :timeout-ms 10000}]}
