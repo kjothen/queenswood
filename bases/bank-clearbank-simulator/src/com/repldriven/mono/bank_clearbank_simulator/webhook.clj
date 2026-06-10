@@ -28,6 +28,7 @@
                               "TransactionSettled" 6
                               "TransactionRejected" 2
                               "OutboundHeldTransaction" 1
+                              "InboundHeldTransaction" 1
                               "PaymentMessageAssessmentFailed" 1
                               1)
                    :Payload payload
@@ -84,6 +85,24 @@
            :PaymentReference (or reference "")
            :EndToEndTransactionId e2e-id})))
 
+(defn fire-inbound-held-transaction
+  "Fires an InboundHeldTransaction webhook — ClearBank is holding an inbound
+  for screening. `Account` is the recipient (one of our BBANs);
+  `CounterpartAccount` is the remitter."
+  [config sort-code e2e-id body]
+  (let [{:keys [bban amount currency reference debtor-name]} body]
+    (fire config
+          sort-code
+          "InboundHeldTransaction"
+          {:TimestampCreated (now)
+           :Scheme "FasterPayments"
+           :Account {:BBAN bban}
+           :CounterpartAccount {:OwnerName (or debtor-name "Simulated Debtor")}
+           :TransactionAmount amount
+           :CurrencyCode (or currency "GBP")
+           :PaymentReference (or reference "")
+           :EndToEndTransactionId e2e-id})))
+
 (defn fire-transaction-rejected
   "Fires a TransactionRejected webhook for a held outbound transaction
   that ClearBank declined: funds are returned (`IsReturn true`) and the
@@ -100,6 +119,25 @@
          :CancellationReason "Held transaction declined"
          :TimestampModified (now)
          :DebitCreditCode "Debit"
+         :IsReturn true
+         :Account {}
+         :CounterpartAccount {}}))
+
+(defn fire-inbound-transaction-returned
+  "Fires a TransactionRejected (Credit) webhook for a held inbound ClearBank
+  declined — the funds go back to the remitting bank."
+  [config sort-code e2e-id]
+  (fire config
+        sort-code
+        "TransactionRejected"
+        {:TransactionId (str (uuidv7))
+         :Status "Rejected"
+         :Scheme "FasterPayments"
+         :EndToEndTransactionId e2e-id
+         :CancellationCode "RR04"
+         :CancellationReason "Held inbound declined"
+         :TimestampModified (now)
+         :DebitCreditCode "Credit"
          :IsReturn true
          :Account {}
          :CounterpartAccount {}}))

@@ -308,6 +308,12 @@ HTTP API that Queenswood uses:
 - **TransactionSettled webhook firing** — after a configurable
   delay, fires the same shape of webhook back to the
   adapter, completing the round-trip.
+- **`/simulate/inbound-payment`** — fires an inbound
+  `TransactionSettled` (credit). The sandbox sentinel debtor
+  name `6a41a29eafcf455493` instead fires an
+  `InboundHeldTransaction`, then auto-resolves per the request
+  `outcome` (`release` → settled, `return` → declined) — the
+  trigger side of the held-inbound lifecycle.
 - **CoP endpoints** — same idea for Confirmation of Payee.
 
 The simulator is approximate (happy paths plus a small set of
