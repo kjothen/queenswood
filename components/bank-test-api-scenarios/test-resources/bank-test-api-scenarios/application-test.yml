@@ -17,6 +17,7 @@ system:
   onfido-adapter: !include bank-test-api-scenarios/onfido-adapter-test.yml
   clearbank-simulator-server: !include bank-test-api-scenarios/clearbank-simulator-test.yml
   clearbank-adapter-server: !include bank-test-api-scenarios/clearbank-adapter-server-test.yml
+  companies-house-simulator-server: !include bank-test-api-scenarios/companies-house-simulator-test.yml
   clearbank-adapter: !include bank-test-api-scenarios/clearbank-adapter-test.yml
   server:
     handler: !system/required-component
@@ -51,6 +52,7 @@ system:
       record-db: !system/ref fdb.record-db
       record-store: !system/ref fdb.meta-store
       clearbank-adapter-url: !system/ref clearbank-adapter-server.http-url
+      companies-house-url: !system/ref companies-house-simulator-server.http-url
     jetty-adapter: !system/component
       system/component-kind: server/jetty-adapter
       handler: !system/ref server.handler

@@ -17,6 +17,9 @@
     [com.repldriven.mono.bank-clearbank-simulator.api :as cb-simulator]
     [com.repldriven.mono.bank-onfido-adapter.api :as onfido-adapter]
     [com.repldriven.mono.bank-onfido-simulator.api :as onfido-simulator]
+    com.repldriven.mono.bank-uk-companies-house-simulator.system
+    [com.repldriven.mono.bank-uk-companies-house-simulator.api :as
+     ch-simulator]
 
     [com.repldriven.mono.http-client.interface :as http]
     [com.repldriven.mono.log.interface :as log]
@@ -64,7 +67,9 @@
       (assoc-in [:system/defs :onfido-simulator-server :handler]
                 onfido-simulator/app)
       (assoc-in [:system/defs :onfido-adapter-server :handler]
-                onfido-adapter/app)))
+                onfido-adapter/app)
+      (assoc-in [:system/defs :companies-house-simulator-server :handler]
+                ch-simulator/app)))
 
 (defn- scenario-files
   "Walk `bank-test-api-scenarios/scenarios/` recursively, returning

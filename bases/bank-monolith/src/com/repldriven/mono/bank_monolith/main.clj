@@ -11,6 +11,8 @@
      :as onfido-simulator-api]
     [com.repldriven.mono.bank-onfido-adapter.api
      :as onfido-adapter-api]
+    [com.repldriven.mono.bank-uk-companies-house-simulator.api
+     :as ch-simulator-api]
     [com.repldriven.mono.cli.interface :as cli]
     [com.repldriven.mono.env.interface :as env]
     [com.repldriven.mono.error.interface :as error :refer [nom->]]
@@ -35,6 +37,9 @@
          (assoc-in [:system/defs :onfido-adapter-server
                     :handler]
           onfido-adapter-api/app)
+         (assoc-in [:system/defs :companies-house-simulator-server
+                    :handler]
+          ch-simulator-api/app)
          system/start))
 
 (defn stop [system] (system/stop system))

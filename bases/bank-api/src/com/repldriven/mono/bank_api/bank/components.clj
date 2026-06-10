@@ -33,6 +33,19 @@
   [:map {:json-schema/example examples/BankList}
    [:banks [:vector [:ref "Bank"]]]])
 
+(def CompanyBinding
+  "The confirmed legal-entity snapshot a bank is bound to (onboarding
+  via a company registry). Absent for admin-provisioned banks."
+  [:map {:json-schema/example examples/CompanyBinding}
+   [:registry string?]
+   [:company-number string?]
+   [:company-name string?]
+   [:company-status string?]
+   [:type {:optional true} string?]
+   [:jurisdiction {:optional true} string?]
+   [:date-of-creation {:optional true} string?]
+   [:registered-office-address {:optional true} string?]])
+
 (def CreateBankResponse
   [:map {:json-schema/example examples/CreateBankResponse}
    [:bank-id [:ref "BankId"]]
@@ -43,9 +56,10 @@
    [:accounts [:vector [:ref "CashAccount"]]]
    [:client-id [:ref "BankId"]]
    [:client-secret string?]
+   [:company-binding {:optional true} [:ref "CompanyBinding"]]
    [:created-at [:ref "Timestamp"]]
    [:updated-at [:ref "Timestamp"]]])
 
 (def registry
   (components-registry [#'BankId #'BankStatus #'CreateBankRequest #'Bank
-                        #'BankList #'CreateBankResponse]))
+                        #'BankList #'CompanyBinding #'CreateBankResponse]))

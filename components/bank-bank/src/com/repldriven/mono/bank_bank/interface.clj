@@ -26,8 +26,10 @@
     that issues the bank's service-account client — without one a bank
     has no credentials, so creation is rejected `:bank/missing-identity-provider`;
     `:audience` (string) is the `aud` claim stamped on tokens minted
-    for the new client; `:policies` overrides the platform policies
-    used for the capability check."
+    for the new client; `:company-binding` (map, optional) is the
+    confirmed legal-entity snapshot to bind the bank to (onboarding);
+    `:policies` overrides the platform policies used for the capability
+    check."
   [txn bank-name bank-status tier currencies opts]
   (core/new-bank txn
                  bank-name
