@@ -200,6 +200,73 @@
      :reference
      reference)))
 
+(defn held-inbound-payment
+  "A held inbound — recorded `held` with the creditor resolved by BBAN, no
+  posted transaction yet (funds are held at ClearBank, not ours). The held
+  webhook carries no scheme transaction id, so a placeholder is generated;
+  it is replaced with the real one on release."
+  [data creditor-account-id bank-id business-day]
+  (let [{:keys [end-to-end-id scheme currency amount debtor-name reference]}
+        data
+        now (utility/now)]
+    (utility/assoc-some
+     {:payment-id (utility/generate-id "pmt")
+      :scheme-transaction-id (str "held-" (utility/uuidv7))
+      :end-to-end-id end-to-end-id
+      :scheme scheme
+      :creditor-account-id creditor-account-id
+      :bank-id bank-id
+      :business-day business-day
+      :currency currency
+      :amount amount
+      :payment-status :inbound-payment-status-held
+      :created-at now
+      :updated-at now}
+     :debtor-name
+     debtor-name
+     :reference
+     reference)))
+
+(defn inbound-release->transaction
+  "DEBIT 1100 cash-at-correspondent / CREDIT creditor — settle a held inbound
+  on release. No policy/capability checks: the payment was already accepted
+  when it was held."
+  [held creditor-account cash-at-correspondent-id]
+  (let [{:keys [currency amount payment-id]} held
+        {creditor-account-id :account-id} creditor-account]
+    {:idempotency-key (str "release-in-" payment-id)
+     :transaction-type :transaction-type-inbound-transfer
+     :currency currency
+     :legs [{:account-id cash-at-correspondent-id
+             :balance-type :balance-type-default
+             :balance-status :balance-status-posted
+             :side :leg-side-debit
+             :amount amount}
+            {:account-id creditor-account-id
+             :product-type (:product-type creditor-account)
+             :balance-type :balance-type-default
+             :balance-status :balance-status-posted
+             :side :leg-side-credit
+             :amount amount}]}))
+
+(defn settled-from-held
+  "Transition a held inbound to `settled` on release: stamp the real scheme
+  transaction id and the posted transaction id."
+  [held scheme-transaction-id transaction-id]
+  (assoc held
+         :payment-status :inbound-payment-status-settled
+         :scheme-transaction-id scheme-transaction-id
+         :transaction-id transaction-id
+         :updated-at (utility/now)))
+
+(defn returned-inbound-payment
+  "Transition a held inbound to `returned` on decline — the funds went back
+  to the remitter, so nothing posts on our books."
+  [held]
+  (assoc held
+         :payment-status :inbound-payment-status-returned
+         :updated-at (utility/now)))
+
 (defn outbound-payment->transaction
   [data debtor-account pending-outbound-account-id policies aggregates]
   (let [{:keys [idempotency-key debtor-account-id

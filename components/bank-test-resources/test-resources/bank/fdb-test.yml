@@ -107,6 +107,8 @@ _record-types: !strs &record-types
       - name: InboundPayment_by_scheme_transaction_id
         field: scheme_transaction_id
         unique: true
+      - name: InboundPayment_by_end_to_end_id
+        field: end_to_end_id
       - name: InboundPayment_count_by_bank_business_day
         fields: [bank_id, business_day]
         type: count

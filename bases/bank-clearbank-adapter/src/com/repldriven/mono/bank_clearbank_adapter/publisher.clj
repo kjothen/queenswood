@@ -62,10 +62,16 @@
                                          TimestampSettled)}
                     {:event-channel event-channel})))
 
+(defn- debit-credit-code->kw
+  [code]
+  (if (= "Credit" code)
+    :debit-credit-code-credit
+    :debit-credit-code-debit))
+
 (defn publish-outbound-payment-rejected
   [config payload]
   (let [{:keys [bus avro event-channel]} config
-        {:keys [EndToEndTransactionId Scheme CancellationCode
+        {:keys [EndToEndTransactionId Scheme DebitCreditCode CancellationCode
                 CancellationReason IsReturn TimestampModified]}
         payload]
     (events/publish bus
@@ -75,6 +81,7 @@
                     (str (utility/uuidv7))
                     {:end-to-end-id EndToEndTransactionId
                      :scheme (or Scheme "FasterPayments")
+                     :debit-credit-code (debit-credit-code->kw DebitCreditCode)
                      :cancellation-code CancellationCode
                      :cancellation-reason CancellationReason
                      :is-return IsReturn
@@ -101,6 +108,7 @@
                        (str (utility/uuidv7))
                        {:end-to-end-id EndToEndId
                         :scheme (or PaymentMethodType "FasterPayments")
+                        :debit-credit-code :debit-credit-code-debit
                         :cancellation-code "CB_AssessmentFailed"
                         :cancellation-reason (str/join "; " Reasons)
                         :is-return false

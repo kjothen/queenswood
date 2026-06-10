@@ -140,18 +140,66 @@
           _ (store/save-inbound-payment txn payment)]
          payment)))))
 
+(defn- record-inbound-release
+  "Release a held inbound: post DEBIT 1100 / CREDIT creditor and transition
+  the held record to `settled`. No policy/count checks — the payment was
+  already accepted (and counted) when it was held."
+  [config data account held]
+  (let [{:keys [bank-id]} account
+        {:keys [scheme-transaction-id]} data]
+    (store/transact
+     config
+     (fn [txn]
+       (let-nom>
+         [cash (ledger-accounts/find-by-code
+                txn
+                bank-id
+                gl-code-cash-at-correspondent)
+          _ (when (nil? cash)
+              (error/fail :payment/no-cash-at-correspondent-account
+                          {:message
+                           (str "Bank has no 1100 cash-at-correspondent"
+                                " account in its chart of accounts")
+                           :bank-id bank-id}))
+          transaction (domain/inbound-release->transaction
+                       held
+                       account
+                       (:ledger-account-id cash))
+          expanded-legs (ledger-accounts/add-control-legs
+                         txn
+                         bank-id
+                         (:legs transaction))
+          recorded (transactions/record-transaction
+                    txn
+                    (assoc transaction :legs expanded-legs))
+          {:keys [transaction-id transaction-type legs]} recorded
+          _ (balances/apply-legs txn legs transaction-type)
+          released (domain/settled-from-held held
+                                             scheme-transaction-id
+                                             transaction-id)
+          _ (store/save-inbound-payment txn released)]
+         released)))))
+
 (defn settle-inbound
   [config data]
-  (let [{:keys [debit-credit-code creditor-bban scheme-transaction-id]} data]
+  (let [{:keys [debit-credit-code creditor-bban
+                scheme-transaction-id end-to-end-id]}
+        data]
     (let-nom>
       [_ (check-debit-credit-code debit-credit-code)
        account (cash-accounts/get-account-by-bban config creditor-bban)
-       settled (store/get-inbound-payment config scheme-transaction-id)]
+       settled (store/get-inbound-payment config scheme-transaction-id)
+       held (store/get-held-inbound-by-end-to-end-id config end-to-end-id)]
       (cond
        settled
        (do (log/infof "Inbound payment settlement already processed: %s"
                       scheme-transaction-id)
            settled)
+
+       ;; Release of a previously-held inbound — settle it to the account
+       ;; and flip the held record to settled.
+       (and held account)
+       (record-inbound-release config data account held)
 
        ;; No account matches the BBAN — park the funds in 2500 suspense
        ;; rather than losing the receipt (it stays recoverable).
@@ -273,12 +321,55 @@
          held)))))
 
 (defn hold-inbound
-  "Inbound held transactions are informational for now — log and move on.
-  A held-inbound workflow (suspense + release) is a later wave."
-  [_config data]
-  (log/infof "Inbound transaction held: %s"
-             {:end-to-end-id (:end-to-end-id data)})
-  data)
+  "An inbound ClearBank is holding for screening. Record it `held` (creditor
+  resolved by BBAN); no money moves — the funds are held at ClearBank, not
+  ours yet. Idempotent on an existing held; a held to an unmatched BBAN is
+  logged and ignored (held inbounds are to known accounts)."
+  [config data]
+  (let [{:keys [creditor-bban end-to-end-id]} data]
+    (let-nom>
+      [account (cash-accounts/get-account-by-bban config creditor-bban)
+       existing (store/get-held-inbound-by-end-to-end-id config end-to-end-id)]
+      (cond
+       existing
+       (do (log/infof "Inbound hold already recorded: %s" end-to-end-id)
+           existing)
+
+       (nil? account)
+       (do (log/infof "Inbound held for unmatched BBAN, ignored: %s"
+                      {:bban creditor-bban})
+           data)
+
+       :else
+       (let [{:keys [account-id bank-id]} account
+             business-day (domain/current-business-day
+                           (utility/now)
+                           (:business-day-cutoff config))
+             payment (domain/held-inbound-payment data
+                                                  account-id
+                                                  bank-id
+                                                  business-day)]
+         (let-nom> [_ (store/save-inbound-payment config payment)]
+           (log/infof "Inbound now held: %s" {:end-to-end-id end-to-end-id})
+           payment))))))
+
+(defn return-inbound
+  "An inbound held transaction ClearBank declined — the funds returned to
+  the remitter, so nothing posts on our books. Transition the matching held
+  record to `returned`. Idempotent / no-op when there's no open held."
+  [config data]
+  (let [{:keys [end-to-end-id]} data]
+    (let-nom>
+      [held (store/get-held-inbound-by-end-to-end-id config end-to-end-id)]
+      (if (nil? held)
+        (do (log/infof "Inbound return with no held inbound, ignored: %s"
+                       end-to-end-id)
+            data)
+        (let-nom> [returned (domain/returned-inbound-payment held)
+                   _ (store/save-inbound-payment config returned)]
+          (log/infof "Inbound held transaction returned: %s"
+                     {:end-to-end-id end-to-end-id})
+          returned)))))
 
 (defn- record-reversal-leg
   "DEBIT 1200 pending-outbound / CREDIT debtor — reverse the submission of

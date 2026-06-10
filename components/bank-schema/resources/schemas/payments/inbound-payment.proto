@@ -10,6 +10,8 @@ enum InboundPaymentStatus {
   INBOUND_PAYMENT_STATUS_UNKNOWN = 0;
   INBOUND_PAYMENT_STATUS_SETTLED = 1;
   INBOUND_PAYMENT_STATUS_SUSPENDED = 2;
+  INBOUND_PAYMENT_STATUS_HELD = 3;
+  INBOUND_PAYMENT_STATUS_RETURNED = 4;
 }
 
 message InboundPayment {
@@ -21,7 +23,7 @@ message InboundPayment {
   optional string creditor_account_id = 5;
   required string currency = 6;
   required int64 amount = 7;
-  required string transaction_id = 8;
+  optional string transaction_id = 8;
   optional string debtor_name = 9;
   optional string reference = 10;
   required int64 created_at = 11;

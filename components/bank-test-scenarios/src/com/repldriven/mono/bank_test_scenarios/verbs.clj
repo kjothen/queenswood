@@ -590,6 +590,64 @@
         (update :counter inc)
         (track result))))
 
+;; Held-inbound lifecycle — reality-only verbs (no model counterpart). The
+;; model-eq runner stops tracking after the first of these but still runs the
+;; scenario's explicit `:assert-balance` calls.
+
+(defmethod dispatch :hold-inbound
+  [{:keys [bank accounts next-inbound-id run-id] :as ctx}
+   {[model-acct amount] :args}]
+  (let [bban (get-in accounts [model-acct :bban])
+        e2e (str "scen-held-" run-id "-" next-inbound-id)
+        result (payment/hold-inbound bank
+                                     {:end-to-end-id e2e
+                                      :scheme "FPS"
+                                      :debit-credit-code
+                                      :debit-credit-code-credit
+                                      :amount amount
+                                      :currency "GBP"
+                                      :creditor-bban bban
+                                      :debtor-name "Scenario Held Sender"})]
+    (-> ctx
+        (assoc-in [:held-inbounds model-acct] {:e2e e2e :amount amount})
+        (update :next-inbound-id inc)
+        (update :counter inc)
+        (track result))))
+
+(defmethod dispatch :release-inbound
+  [{:keys [bank accounts held-inbounds run-id counter] :as ctx}
+   {[model-acct] :args}]
+  (let [{:keys [e2e amount]} (get held-inbounds model-acct)
+        bban (get-in accounts [model-acct :bban])
+        result (payment/settle-inbound
+                bank
+                {:scheme-transaction-id (str "scen-rel-" run-id "-" counter)
+                 :end-to-end-id e2e
+                 :scheme "FPS"
+                 :debit-credit-code :debit-credit-code-credit
+                 :amount amount
+                 :currency "GBP"
+                 :creditor-bban bban
+                 :debtor-name "Scenario Held Sender"
+                 :timestamp-settled (System/currentTimeMillis)})]
+    (-> ctx
+        (update :counter inc)
+        (track result))))
+
+(defmethod dispatch :return-inbound
+  [{:keys [bank held-inbounds] :as ctx} {[model-acct] :args}]
+  (let [{:keys [e2e]} (get held-inbounds model-acct)
+        result (payment/return-inbound
+                bank
+                {:end-to-end-id e2e
+                 :scheme "FPS"
+                 :debit-credit-code :debit-credit-code-credit
+                 :cancellation-code "HELD_DECLINED"
+                 :timestamp-rejected (System/currentTimeMillis)})]
+    (-> ctx
+        (update :counter inc)
+        (track result))))
+
 (defmethod dispatch :outbound-transfer
   [{:keys [bank counter id-mapping banks accounts run-id] :as ctx}
    {[model-id amount] :args}]
