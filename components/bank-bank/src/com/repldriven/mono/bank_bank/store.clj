@@ -9,6 +9,33 @@
 
 (def transact fdb/transact)
 
+(defn allocate-sort-code
+  "Allocate the next sort code from a global monotonic fountain, formatted
+  as a 6-digit string (000001, 000002, ...). `00`-prefixed sort codes are
+  unallocated in the real world, so the range is safe."
+  [txn]
+  (fdb/transact txn
+                (fn [txn]
+                  (format "%06d"
+                          (fdb/allocate-counter (fdb/open txn store-name)
+                                                "bank"
+                                                "sort-codes")))
+                :bank/allocate-sort-code
+                "Failed to allocate sort code"))
+
+(defn get-bank-by-sort-code
+  [txn sort-code]
+  (fdb/transact txn
+                (fn [txn]
+                  (some-> (fdb/query-record (fdb/open txn store-name)
+                                            "Bank"
+                                            "sort_code"
+                                            sort-code
+                                            {:index "Bank_by_sort_code"})
+                          schema/pb->Bank))
+                :bank/get-by-sort-code
+                "Failed to get bank by sort code"))
+
 (defn create
   [txn bank]
   (fdb/transact txn
