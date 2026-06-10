@@ -57,15 +57,21 @@
        :body {:Nonce Nonce}})))
 
 (defn payment-message-assessment-failed
-  [config]
+  [_config]
   (fn [request]
     (let [{:keys [parameters]} request
           {:keys [body]} parameters
-          {:keys [Payload Nonce]} body]
+          {:keys [Payload Nonce]} body
+          {:keys [MessageId]} Payload
+          config (request-config request)]
       (log/info "payment-message-assessment-failed webhook received"
-                {:payload Payload})
+                {:message-id MessageId})
       (nonce/record Nonce)
-      (publisher/publish-outbound-payment-assessment-failed config Payload)
+      (let [results (publisher/publish-outbound-payment-assessment-failed
+                     config
+                     Payload)]
+        (when (some error/anomaly? results)
+          (log/error "Failed to publish event" results)))
       {:status 200
        :body {:Nonce Nonce}})))
 
