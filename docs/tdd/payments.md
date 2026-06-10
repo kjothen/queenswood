@@ -234,6 +234,18 @@ prior HTTP request. The webhook arrives, the adapter
 publishes an event, the event processor settles. The whole
 flow is reactive.
 
+**Unmatched inbound → suspense.** When the creditor BBAN
+matches no account, the receipt is *not* dropped: the owning
+bank is resolved from the BBAN's sort code
+(`bank/get-bank-by-sort-code`, per-bank sort codes), and the
+funds are parked in that bank's `2500` suspense GL account
+(DEBIT `1100` / CREDIT `2500`) with a `suspended` InboundPayment
+(no creditor) recorded for later reconciliation. A sort code
+that matches no bank is genuinely foreign and fails (we only
+receive inbounds for sort codes we own). Resolving a suspended
+inbound — matching it to an account, or returning it — is a
+later operational workflow.
+
 Idempotency on inbound: the lookup by `scheme-transaction-id`
 is the dedup. If ClearBank retries a webhook (network blip,
 adapter crash before ack), the second pass finds the existing
