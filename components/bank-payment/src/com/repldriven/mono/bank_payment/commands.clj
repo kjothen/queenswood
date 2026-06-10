@@ -83,7 +83,13 @@
                          :debit-credit-code debit-credit-code}))
 
           "transaction-rejected"
-          (events/reject-outbound config data)
+          (case debit-credit-code
+            :debit-credit-code-credit
+            (events/return-inbound config data)
+
+            ;; Outbound declines default to debit; treat an absent/unknown
+            ;; code as the outbound path for backward compatibility.
+            (events/reject-outbound config data))
 
           (error/fail :payment/unknown-event
                       {:message "Unknown event"

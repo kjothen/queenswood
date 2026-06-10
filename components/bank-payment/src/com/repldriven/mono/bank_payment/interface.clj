@@ -139,3 +139,29 @@
   Returns the updated payment map or an anomaly."
   [config data]
   (events/reject-outbound config data))
+
+(defn hold-inbound
+  "Process an inbound `transaction-held` event. Records the inbound `held`
+  (creditor resolved by BBAN) with no balance move — the funds are held at
+  ClearBank until released or returned. Idempotent on an existing held.
+
+  Args:
+  - config: FDB handle.
+  - data: held event payload (end-to-end-id is the scheme's identifier).
+
+  Returns the held InboundPayment map or an anomaly."
+  [config data]
+  (events/hold-inbound config data))
+
+(defn return-inbound
+  "Process an inbound `transaction-rejected` event. Transitions the matching
+  held InboundPayment to `returned` — the funds went back to the remitter,
+  so nothing posts. A no-op when there's no open held for the end-to-end-id.
+
+  Args:
+  - config: FDB handle.
+  - data: rejection event payload.
+
+  Returns the updated payment map or an anomaly."
+  [config data]
+  (events/return-inbound config data))

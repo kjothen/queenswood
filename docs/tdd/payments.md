@@ -246,6 +246,30 @@ receive inbounds for sort codes we own). Resolving a suspended
 inbound — matching it to an account, or returning it — is a
 later operational workflow.
 
+**Held inbound → release / return.** ClearBank can hold an
+inbound for screening (`InboundHeldTransaction` →
+`transaction-held` credit). It's recorded `held` — the creditor
+resolved by BBAN, but **no money moves**, because the funds are
+held *at* ClearBank, not ours yet. The hold then resolves:
+
+- **Release** — a `TransactionSettled` (credit) arrives. If it
+  matches an open `held` (by `end_to_end_id`), it settles
+  normally (DEBIT `1100` / CREDIT creditor) and the held record
+  flips `held → settled`, stamped with the now-known scheme
+  transaction id.
+- **Return** — a `TransactionRejected` (credit) arrives; the
+  held record flips `held → returned` and nothing posts (the
+  funds went back to the remitter).
+
+`transaction-rejected` carries a `debit-credit-code` so the
+event processor routes the debit side to the outbound reversal
+and the credit side to the inbound return. The held → release /
+return match is on `end_to_end_id` — the held webhook carries no
+scheme transaction id, and ClearBank doesn't guarantee inbound
+end-to-end ids are unique, so we match the open `held` record and
+accept the residual ambiguity (a fuller dedup would need a scheme
+id ClearBank doesn't send on the held webhook).
+
 Idempotency on inbound: the lookup by `scheme-transaction-id`
 is the dedup. If ClearBank retries a webhook (network blip,
 adapter crash before ack), the second pass finds the existing

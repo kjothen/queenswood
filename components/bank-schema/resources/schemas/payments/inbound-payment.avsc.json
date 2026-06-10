@@ -10,7 +10,7 @@
     {"name": "creditor_account_id",  "type": ["null", "string"], "default": null},
     {"name": "currency",             "type": "string"},
     {"name": "amount",               "type": "long"},
-    {"name": "transaction_id",       "type": "string"},
+    {"name": "transaction_id",       "type": ["null", "string"], "default": null},
     {"name": "debtor_name",          "type": ["null", "string"], "default": null},
     {"name": "reference",            "type": ["null", "string"], "default": null},
     {"name": "created_at", "type": {"type": "long", "logicalType": "timestamp-millis"}},
@@ -23,7 +23,9 @@
       "symbols": [
         "INBOUND_PAYMENT_STATUS_UNKNOWN",
         "INBOUND_PAYMENT_STATUS_SETTLED",
-        "INBOUND_PAYMENT_STATUS_SUSPENDED"
+        "INBOUND_PAYMENT_STATUS_SUSPENDED",
+        "INBOUND_PAYMENT_STATUS_HELD",
+        "INBOUND_PAYMENT_STATUS_RETURNED"
       ]
     }}
   ]
