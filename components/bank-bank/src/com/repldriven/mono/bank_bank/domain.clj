@@ -5,7 +5,7 @@
     [com.repldriven.mono.utility.interface :as utility]))
 
 (defn new-bank
-  [bank-name bank-status policies]
+  [bank-name bank-status sort-code policies]
   (let-nom>
     [_ (policy/check-capability policies
                                 :bank
@@ -15,5 +15,6 @@
       {:bank-id (utility/generate-id "bnk")
        :name bank-name
        :status bank-status
+       :sort-code sort-code
        :created-at now
        :updated-at now})))

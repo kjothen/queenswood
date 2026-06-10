@@ -30,6 +30,7 @@
   {:bank-id BankId
    :name "Galactic Bank"
    :status :test
+   :sort-code "000001"
    :created-at "2025-01-01T00:00:00Z"
    :updated-at "2025-01-01T00:00:00Z"
    :party (assoc party-examples/Party :type :organization)

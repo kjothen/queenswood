@@ -234,6 +234,18 @@ prior HTTP request. The webhook arrives, the adapter
 publishes an event, the event processor settles. The whole
 flow is reactive.
 
+**Unmatched inbound → suspense.** When the creditor BBAN
+matches no account, the receipt is *not* dropped: the owning
+bank is resolved from the BBAN's sort code
+(`bank/get-bank-by-sort-code`, per-bank sort codes), and the
+funds are parked in that bank's `2500` suspense GL account
+(DEBIT `1100` / CREDIT `2500`) with a `suspended` InboundPayment
+(no creditor) recorded for later reconciliation. A sort code
+that matches no bank is genuinely foreign and fails (we only
+receive inbounds for sort codes we own). Resolving a suspended
+inbound — matching it to an account, or returning it — is a
+later operational workflow.
+
 Idempotency on inbound: the lookup by `scheme-transaction-id`
 is the dedup. If ClearBank retries a webhook (network blip,
 adapter crash before ack), the second pass finds the existing
@@ -395,10 +407,23 @@ channel separation is configuration, not infrastructure.
   the cancellation code/reason. The simulator auto-resolves the
   held sentinel to a decline, since ClearBank exposes no sandbox
   control for release-vs-decline; the held → released → settled
-  outcome is therefore not yet exercised, and
-  `PaymentMessageAssessmentFailed` remains a TODO stub. A full
-  failure taxonomy (transient vs permanent, retry vs not) and
-  acting on inbound holds beyond logging are future work.
+  outcome is therefore not yet exercised. A full failure taxonomy
+  (transient vs permanent, retry vs not) and acting on inbound holds
+  beyond logging are future work.
+- **Outbound message-assessment failure is implemented.** When
+  ClearBank rejects a payment at pre-settlement assessment it fires
+  `PaymentMessageAssessmentFailed` (a batch webhook carrying an
+  `AssessmentFailure` list of `{EndToEndId, Reasons}`). The adapter
+  publishes one `transaction-rejected` event per `EndToEndId` with a
+  synthesized `CB_AssessmentFailed` code and the joined reasons, so
+  the existing reversal path flips each payment to `failed` and
+  returns the in-flight funds — assessment fails before settlement,
+  so the payment is still `pending`. The simulator triggers this on a
+  creditor BBAN whose sort code is `000000` (ClearBank documents no
+  sandbox trigger). Note ClearBank's real payload misspells the type
+  and key as `PaymentMessageAssesmentFailed` / `AssesmentFailure`
+  (one `s`); we use the corrected spelling, so the adapter must
+  tolerate the typo before going live.
 - **Settlement reordering is trusted to ClearBank.** Events
   on the bus arrive in commit order, and Queenswood handles
   them serially. If ClearBank ever delivered settlement

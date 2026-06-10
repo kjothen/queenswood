@@ -144,9 +144,59 @@
       :currency currency
       :amount amount
       :transaction-id transaction-id
+      :payment-status :inbound-payment-status-settled
       :debtor-name debtor-name
       :created-at now
       :updated-at now}
+     :reference
+     reference)))
+
+(defn inbound-suspense->transaction
+  "DEBIT 1100 cash-at-correspondent / CREDIT 2500 suspense — an inbound
+  arrived for a BBAN that matches no account, so the funds land in
+  suspense (a liability) pending reconciliation. GL-only legs."
+  [data cash-at-correspondent-id suspense-account-id]
+  (let [{:keys [scheme-transaction-id currency amount reference]} data]
+    (utility/assoc-some
+     {:idempotency-key scheme-transaction-id
+      :transaction-type :transaction-type-inbound-transfer
+      :currency currency
+      :legs [{:account-id cash-at-correspondent-id
+              :balance-type :balance-type-default
+              :balance-status :balance-status-posted
+              :side :leg-side-debit
+              :amount amount}
+             {:account-id suspense-account-id
+              :balance-type :balance-type-default
+              :balance-status :balance-status-posted
+              :side :leg-side-credit
+              :amount amount}]}
+     :reference
+     reference)))
+
+(defn suspended-inbound-payment
+  "An inbound with no matching creditor account — recorded with status
+  `suspended` and no creditor, the credit posted to 2500 suspense."
+  [data bank-id business-day transaction-id]
+  (let [{:keys [scheme-transaction-id end-to-end-id scheme
+                currency amount debtor-name reference]}
+        data
+        now (utility/now)]
+    (utility/assoc-some
+     {:payment-id (utility/generate-id "pmt")
+      :scheme-transaction-id scheme-transaction-id
+      :end-to-end-id end-to-end-id
+      :scheme scheme
+      :bank-id bank-id
+      :business-day business-day
+      :currency currency
+      :amount amount
+      :transaction-id transaction-id
+      :payment-status :inbound-payment-status-suspended
+      :created-at now
+      :updated-at now}
+     :debtor-name
+     debtor-name
      :reference
      reference)))
 

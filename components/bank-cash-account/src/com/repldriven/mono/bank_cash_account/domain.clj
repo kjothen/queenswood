@@ -8,8 +8,6 @@
     [com.repldriven.mono.error.interface :as error :refer [let-nom>]]
     [com.repldriven.mono.utility.interface :as utility :refer [assoc-some]]))
 
-(def default-sort-code "040004")
-
 (defn- party->account-type
   [party]
   (if (= :party-type-person (:type party))
@@ -51,7 +49,7 @@
   (str sort-code account-number))
 
 (defn- new-addresses
-  [product-version address-fountain-fn]
+  [product-version address-fountain-fn sort-code]
   (let [schemes (:allowed-payment-address-schemes product-version)]
     (cond
      (empty? schemes)
@@ -62,8 +60,7 @@
      (reduce (fn [addresses scheme]
                (case scheme
                  :payment-address-scheme-scan
-                 (let [sort-code default-sort-code
-                       account-number (address-fountain-fn sort-code)]
+                 (let [account-number (address-fountain-fn sort-code)]
                    (conj addresses
                          {:scheme :payment-address-scheme-scan
                           :scan {:sort-code sort-code
@@ -81,7 +78,7 @@
   version: derives account-type from the holder party, runs the open
   capability + count limits, and allocates payment-addresses."
   [data product-version party address-fountain-fn aggregates policies]
-  (let [{:keys [bank-id party-id product-id currency name]}
+  (let [{:keys [bank-id party-id product-id currency name sort-code]}
         data
         {:keys [version-id]} product-version
         product-type (:product-type product-version)
@@ -91,6 +88,10 @@
            (error/reject :cash-account/open
                          {:message "Product is not published"
                           :product-id product-id}))
+       _ (when (nil? sort-code)
+           (error/reject :cash-account/missing-sort-code
+                         {:message "No sort code supplied for account opening"
+                          :bank-id bank-id}))
        _ (validation/valid-product? product-version)
        _ (validation/valid-currency? currency product-version)
        _ (validation/valid-party? party)
@@ -102,7 +103,8 @@
                                aggregates
                                policies)
        payment-addresses (new-addresses product-version
-                                        address-fountain-fn)]
+                                        address-fountain-fn
+                                        sort-code)]
       (let [now (utility/now)
             bban (some (fn [{:keys [scan]}] (when scan (scan->bban scan)))
                        payment-addresses)]

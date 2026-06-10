@@ -28,6 +28,7 @@
                               "TransactionSettled" 6
                               "TransactionRejected" 2
                               "OutboundHeldTransaction" 1
+                              "PaymentMessageAssessmentFailed" 1
                               1)
                    :Payload payload
                    :Nonce (nonce)})
@@ -102,6 +103,21 @@
          :IsReturn true
          :Account {}
          :CounterpartAccount {}}))
+
+(defn fire-payment-message-assessment-failed
+  "Fires a PaymentMessageAssessmentFailed webhook — ClearBank rejected the
+  payment during pre-settlement message assessment. `reasons` is the list
+  of scheme assessment failures for this instruction."
+  [config sort-code e2e-id reasons]
+  (fire config
+        sort-code
+        "PaymentMessageAssessmentFailed"
+        {:MessageId (str (uuidv7))
+         :PaymentMethodType "FasterPayments"
+         :AssessmentFailure [{:EndToEndId e2e-id
+                              :Reasons reasons}]
+         :AccountIdentification {:Debtor {}
+                                 :Creditors []}}))
 
 (defn fire-inbound-cop-request
   [config sort-code request-id body]

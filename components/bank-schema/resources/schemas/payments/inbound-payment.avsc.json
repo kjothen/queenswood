@@ -7,7 +7,7 @@
     {"name": "scheme_transaction_id", "type": "string"},
     {"name": "end_to_end_id",               "type": "string"},
     {"name": "scheme",               "type": "string"},
-    {"name": "creditor_account_id",  "type": "string"},
+    {"name": "creditor_account_id",  "type": ["null", "string"], "default": null},
     {"name": "currency",             "type": "string"},
     {"name": "amount",               "type": "long"},
     {"name": "transaction_id",       "type": "string"},
@@ -16,6 +16,15 @@
     {"name": "created_at", "type": {"type": "long", "logicalType": "timestamp-millis"}},
     {"name": "updated_at", "type": {"type": "long", "logicalType": "timestamp-millis"}},
     {"name": "bank_id",     "type": "string"},
-    {"name": "business_day",        "type": "long"}
+    {"name": "business_day",        "type": "long"},
+    {"name": "payment_status",      "type": {
+      "type": "enum",
+      "name": "InboundPaymentStatus",
+      "symbols": [
+        "INBOUND_PAYMENT_STATUS_UNKNOWN",
+        "INBOUND_PAYMENT_STATUS_SETTLED",
+        "INBOUND_PAYMENT_STATUS_SUSPENDED"
+      ]
+    }}
   ]
 }

@@ -10,6 +10,15 @@
 ;; then declined or released via the /simulate/outbound-held endpoints.
 (def ^:private held-magic-name "6a41a29eafcf455493")
 
+;; Sim convention (ClearBank documents no sandbox trigger): a creditor BBAN
+;; with this sort code fails pre-settlement message assessment
+;; (PaymentMessageAssessmentFailed), as an unreachable sort code would.
+(def ^:private assessment-fail-sort-code "000000")
+
+(defn- sort-code-of
+  [bban]
+  (when (and bban (>= (count bban) 6)) (subs bban 0 6)))
+
 (defn payment
   [_config]
   (fn [request]
@@ -38,46 +47,58 @@
       (future
        (when (pos? (or webhook-delay-ms 0))
          (Thread/sleep webhook-delay-ms))
-       (if (= held-magic-name name)
-         ;; ClearBank holds the payment for screening, then (in the sim)
-         ;; declines it: the held webhook lands first, the decline —
-         ;; funds returned, HOPRJ — follows after the same delay.
-         (do
-           (webhook/fire-outbound-held-transaction
-            config
-            sort-code
-            endToEndIdentification
-            {:amount instructedAmount
-             :currency currency
-             :reference reference
-             :creditor-bban creditor-bban})
-           (when (pos? (or webhook-delay-ms 0))
-             (Thread/sleep webhook-delay-ms))
-           (webhook/fire-transaction-rejected
-            config
-            sort-code
-            endToEndIdentification))
-         (do
-           (webhook/fire-transaction-settled
-            config
-            sort-code
-            endToEndIdentification
-            :debit
-            {:amount instructedAmount
-             :currency currency
-             :reference reference})
-           (when (pos? (or webhook-delay-ms 0))
-             (Thread/sleep webhook-delay-ms))
-           (webhook/fire-transaction-settled
-            config
-            sort-code
-            (str (uuidv7))
-            :credit
-            {:amount instructedAmount
-             :currency currency
-             :creditor-bban creditor-bban
-             :debtor-name name
-             :reference reference}))))
+       (cond
+        (= assessment-fail-sort-code (sort-code-of creditor-bban))
+        ;; ClearBank rejects the payment at message assessment, before
+        ;; any settle/held — an unreachable creditor sort code here.
+        (webhook/fire-payment-message-assessment-failed
+         config
+         sort-code
+         endToEndIdentification
+         ["No internal account located for Creditor"])
+
+        (= held-magic-name name)
+        ;; ClearBank holds the payment for screening, then (in the sim)
+        ;; declines it: the held webhook lands first, the decline —
+        ;; funds returned, HOPRJ — follows after the same delay.
+        (do
+          (webhook/fire-outbound-held-transaction
+           config
+           sort-code
+           endToEndIdentification
+           {:amount instructedAmount
+            :currency currency
+            :reference reference
+            :creditor-bban creditor-bban})
+          (when (pos? (or webhook-delay-ms 0))
+            (Thread/sleep webhook-delay-ms))
+          (webhook/fire-transaction-rejected
+           config
+           sort-code
+           endToEndIdentification))
+
+        :else
+        (do
+          (webhook/fire-transaction-settled
+           config
+           sort-code
+           endToEndIdentification
+           :debit
+           {:amount instructedAmount
+            :currency currency
+            :reference reference})
+          (when (pos? (or webhook-delay-ms 0))
+            (Thread/sleep webhook-delay-ms))
+          (webhook/fire-transaction-settled
+           config
+           sort-code
+           (str (uuidv7))
+           :credit
+           {:amount instructedAmount
+            :currency currency
+            :creditor-bban creditor-bban
+            :debtor-name name
+            :reference reference}))))
       {:status 202
        :body
        {:transactions

@@ -11,6 +11,8 @@ registrar: !system/component
       path: /webhooks/transaction-settled
     - type: TransactionRejected
       path: /webhooks/transaction-rejected
+    - type: PaymentMessageAssessmentFailed
+      path: /webhooks/payment-message-assessment-failed
     - type: InboundHeldTransaction
       path: /webhooks/inbound-held-transaction
     - type: OutboundHeldTransaction

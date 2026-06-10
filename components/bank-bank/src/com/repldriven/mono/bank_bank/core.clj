@@ -62,7 +62,7 @@
   customers from inside the bank (rewards, etc.). An ordinary
   `CashAccount` — BBAN-addressable, transactable — so external funding
   can land in it and internal transfers can move out of it."
-  [txn bank-id party-id currency policies]
+  [txn bank-id party-id sort-code currency policies]
   (let-nom>
     [version (products/new-product
               txn
@@ -83,15 +83,17 @@
       :party-id party-id
       :product-id (:product-id version)
       :currency currency
+      :sort-code sort-code
       :name "Bank own funds"}
      {:policies policies})))
 
 (defn- new-house-accounts
-  [txn bank-id party-id currencies policies]
+  [txn bank-id party-id sort-code currencies policies]
   (reduce (fn [_ currency]
             (let [result (new-house-account txn
                                             bank-id
                                             party-id
+                                            sort-code
                                             currency
                                             policies)]
               (if (error/anomaly? result) (reduced result) nil)))
@@ -183,9 +185,13 @@
               :bank-name bank-name}))
           policies (or (:policies opts)
                        (policy/get-effective-policies txn {}))
+          sort-code (store/allocate-sort-code txn)
           ;; Snapshot of the bound legal entity (onboarding path); absent
           ;; for admin-provisioned banks.
-          bank (cond-> (domain/new-bank bank-name bank-status policies)
+          bank (cond-> (domain/new-bank bank-name
+                                        bank-status
+                                        sort-code
+                                        policies)
                        company-binding
                        (assoc :company-binding company-binding))
           bank-id (:bank-id bank)
@@ -209,7 +215,12 @@
                                :display-name bank-name}
                               {:policies policies})
           _ (new-ledger-accounts txn bank-id currencies policies)
-          _ (new-house-accounts txn bank-id party-id currencies policies)
+          _ (new-house-accounts txn
+                                bank-id
+                                party-id
+                                sort-code
+                                currencies
+                                policies)
           _ (bind-tier-policies txn bank-id tier)
           _ (scheduler/seed-jobs txn bank-id)
           result (get-bank txn bank client-secret)]

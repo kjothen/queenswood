@@ -4,6 +4,7 @@
     [com.repldriven.mono.bank-payment.store :as store]
 
     [com.repldriven.mono.bank-balance.interface :as balances]
+    [com.repldriven.mono.bank-bank.interface :as banks]
     [com.repldriven.mono.bank-cash-account.interface :as cash-accounts]
     [com.repldriven.mono.bank-ledger-account.interface :as
      ledger-accounts]
@@ -16,6 +17,7 @@
 
 (def ^:private gl-code-pending-outbound "1200")
 (def ^:private gl-code-cash-at-correspondent "1100")
+(def ^:private gl-code-suspense "2500")
 
 (defn- check-debit-credit-code
   [debit-credit-code]
@@ -82,23 +84,82 @@
           _ (store/save-inbound-payment txn payment)]
          payment)))))
 
+(defn- sort-code-of
+  [bban]
+  (when (and bban (>= (count bban) 6)) (subs bban 0 6)))
+
+(defn- record-inbound-suspense
+  "An inbound for a BBAN that matches no account: resolve the owning bank
+  from the BBAN's sort code, then DEBIT 1100 / CREDIT 2500 suspense and
+  persist a `suspended` InboundPayment for later reconciliation. A sort
+  code that matches no bank is genuinely foreign and fails."
+  [config data]
+  (let [{:keys [creditor-bban]} data
+        sort-code (sort-code-of creditor-bban)
+        business-day (domain/current-business-day
+                      (utility/now)
+                      (:business-day-cutoff config))]
+    (store/transact
+     config
+     (fn [txn]
+       (let-nom>
+         [bank (banks/get-bank-by-sort-code txn sort-code)
+          _ (when (nil? bank)
+              (error/fail :payment/no-bank-for-sort-code
+                          {:message "No bank owns the inbound BBAN's sort code"
+                           :bban creditor-bban
+                           :sort-code sort-code}))
+          {:keys [bank-id]} bank
+          cash (ledger-accounts/find-by-code
+                txn
+                bank-id
+                gl-code-cash-at-correspondent)
+          _ (when (nil? cash)
+              (error/fail :payment/no-cash-at-correspondent-account
+                          {:message
+                           (str "Bank has no 1100 cash-at-correspondent"
+                                " account in its chart of accounts")
+                           :bank-id bank-id}))
+          suspense (ledger-accounts/find-by-code txn bank-id gl-code-suspense)
+          _ (when (nil? suspense)
+              (error/fail :payment/no-suspense-account
+                          {:message
+                           "Bank has no 2500 suspense account in its chart"
+                           :bank-id bank-id}))
+          transaction (domain/inbound-suspense->transaction
+                       data
+                       (:ledger-account-id cash)
+                       (:ledger-account-id suspense))
+          recorded (transactions/record-transaction txn transaction)
+          {:keys [transaction-id transaction-type legs]} recorded
+          _ (balances/apply-legs txn legs transaction-type)
+          payment (domain/suspended-inbound-payment data
+                                                    bank-id
+                                                    business-day
+                                                    transaction-id)
+          _ (store/save-inbound-payment txn payment)]
+         payment)))))
+
 (defn settle-inbound
   [config data]
   (let [{:keys [debit-credit-code creditor-bban scheme-transaction-id]} data]
     (let-nom>
       [_ (check-debit-credit-code debit-credit-code)
        account (cash-accounts/get-account-by-bban config creditor-bban)
-       _ (when-not account
-           (error/fail :payment/settle-inbound
-                       {:message "No account found for creditor BBAN"
-                        :bban creditor-bban}))
        settled (store/get-inbound-payment config scheme-transaction-id)]
-      (if settled
-        (do (log/infof
-             "Inbound payment settlement already processed: %s"
-             scheme-transaction-id)
-            settled)
-        (record-inbound-settlement config data account)))))
+      (cond
+       settled
+       (do (log/infof "Inbound payment settlement already processed: %s"
+                      scheme-transaction-id)
+           settled)
+
+       ;; No account matches the BBAN — park the funds in 2500 suspense
+       ;; rather than losing the receipt (it stays recoverable).
+       (nil? account)
+       (record-inbound-suspense config data)
+
+       :else
+       (record-inbound-settlement config data account)))))
 
 (defn- settlement-transaction
   "DEBIT 1200 pending-outbound / CREDIT 1100 cash-at-correspondent —
