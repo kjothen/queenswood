@@ -173,6 +173,7 @@
                              :party-id real-party-id
                              :product-id scenario-product-id
                              :currency "GBP"
+                             :sort-code (:sort-code bank-entity)
                              :name "Scenario Account"}))
         real-acct-id (:account-id scenario-account)
         real-bban (:bban scenario-account)
@@ -181,7 +182,10 @@
         (cond-> real-acct-id
                 (assoc :id-mapping
                        (id-mapping/add id-mapping model-acct real-acct-id)))
-        (assoc-in [:banks model-bank] {:real-id real-bank-id :currency "GBP"})
+        (assoc-in [:banks model-bank]
+                  {:real-id real-bank-id
+                   :currency "GBP"
+                   :sort-code (:sort-code bank-entity)})
         ;; The scenario product is born already-published (we publish
         ;; above) so track v1 as :published; matches the model's
         ;; auto-scenario-product semantics.
@@ -380,7 +384,8 @@
   [{:keys [bank counter next-model-id id-mapping banks products parties]
     :as ctx} {[model-bank model-party model-prod] :args}]
   (let [model-acct (model-id-for-next-account next-model-id)
-        {bank-real-id :real-id :keys [currency]} (get banks model-bank)
+        {bank-real-id :real-id sort-code :sort-code :keys [currency]}
+        (get banks model-bank)
         {prod-real-id :real-id} (get products model-prod)
         {party-real-id :real-id} (get parties model-party)
         result (cash-accounts/new-account bank
@@ -388,6 +393,7 @@
                                            :party-id party-real-id
                                            :product-id prod-real-id
                                            :currency currency
+                                           :sort-code sort-code
                                            :name (str "Scenario Account "
                                                       counter)})
         real-acct-id (:account-id result)
@@ -439,7 +445,8 @@
                        existing-prod
                        :else
                        (model-id-for-next-product next-product-id))
-        {bank-real-id :real-id :keys [currency]} (get banks model-bank)
+        {bank-real-id :real-id sort-code :sort-code :keys [currency]}
+        (get banks model-bank)
         prod-result (when create-prod?
                       (products/new-product bank
                                             bank-real-id
@@ -489,6 +496,7 @@
                         :party-id party-real-id
                         :product-id prod-real-id
                         :currency currency
+                        :sort-code sort-code
                         :name (str "Scenario Customer Account " counter)}))
         real-acct-id (:account-id acct-result)
         _ (when real-acct-id (seed-opened bank bank-real-id real-acct-id))

@@ -46,6 +46,17 @@
   [txn bank-id]
   (store/get-bank txn bank-id))
 
+(defn get-bank-by-sort-code
+  "Load a flat bank map by its sort code (the first 6 digits of its
+  accounts' BBANs). Returns the bank, or nil if no bank owns that sort
+  code.
+
+  Args:
+  - txn: FDB transaction or db handle.
+  - sort-code: 6-digit sort code string."
+  [txn sort-code]
+  (store/get-bank-by-sort-code txn sort-code))
+
 (defn get-banks
   "List banks enriched with party and accounts (with balances).
   Returns a vector of rich bank maps or an anomaly.

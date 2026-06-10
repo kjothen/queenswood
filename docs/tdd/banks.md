@@ -109,9 +109,20 @@ successful commit means the whole tenant is up.
 {:bank-id    "bnk.<ulid>"
  :name       "Acme Bank"
  :status     :bank-status-test    ; or -live, -unknown
+ :sort-code  "000001"             ; 6-digit, fountain-allocated
  :created-at <ms>
  :updated-at <ms>}
 ```
+
+Each bank has its **own 6-digit sort code**, allocated from a
+monotonic fountain at creation (`000001`, `000002`, …) and unique
+across banks (`Bank_by_sort_code`). `00`-prefixed sort codes are
+unallocated in the real world, so the range is safe. The sort code
+prefixes every BBAN the bank issues, so an inbound payment can be
+attributed to its bank by the BBAN's first six digits
+(`get-bank-by-sort-code`). Replaces the former single shared
+`040004` default. Future: allocate at sign-up, or accept a
+bank-supplied code.
 
 That's the whole record. There is **no bank-type** — the
 internal/customer distinction was removed (#139). What
@@ -133,27 +144,30 @@ the following inside one FDB transaction:
    `opts` may override with `:policies`.
 2. **Resolve tier policies** — `policy/get-policies-by-tier txn
    tier` returns the policies labelled `{:tier "<name>"}`.
-3. **Build the `Bank`** — `domain/new-bank` runs the
+3. **Allocate the sort code** — `store/allocate-sort-code` draws
+   the next value from the global fountain, formatted `%06d`.
+4. **Build the `Bank`** — `domain/new-bank` runs the
    `:bank-action-create` capability check, then mints the record
-   with a `bnk.*` id.
-4. **Create the service-account client** *(before the FDB write)*
+   with a `bnk.*` id and the allocated sort code.
+5. **Create the service-account client** *(before the FDB write)*
    — when `opts` carries `:identity-provider`,
    `identity-provider/create-service-account` with
    `client_id == bank-id` and a status-derived audience; the
    one-time `:client-secret` is captured for the response.
-5. **Persist the bank.**
-6. **Create the bank's org party** — `party/new-party` with
+6. **Persist the bank.**
+7. **Create the bank's org party** — `party/new-party` with
    `:type :party-type-organization` and display-name = bank name.
-7. **Seed the ledger chart** — `new-ledger-accounts` opens one
+8. **Seed the ledger chart** — `new-ledger-accounts` opens one
    `LedgerAccount` per default row per currency (see below).
-8. **Open own-funds house accounts** — per currency, draft +
+9. **Open own-funds house accounts** — per currency, draft +
    publish a `:product-type-sub-ledger-own-funds` product ("Bank
    own funds", `effective-from` today), then open a real
-   `CashAccount` on the org party against it.
-9. **Bind tier policies** — for each tier policy,
+   `CashAccount` on the org party against it — its BBAN carries the
+   bank's sort code.
+10. **Bind tier policies** — for each tier policy,
    `policy/new-binding` with target
    `{:kind {:bank {:bank-id <new-id>}}}`.
-10. **Enrich and return** (see below).
+11. **Enrich and return** (see below).
 
 ### The default ledger chart
 
