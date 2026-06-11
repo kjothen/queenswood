@@ -7,6 +7,11 @@
   :test
   {:extra-deps
    {bases/external-test-runner {:local/root "../../bases/external-test-runner"}
+    ;; bank-company-check's interface_test drives the Companies House
+    ;; simulator base for its test system, so the base must be on the test
+    ;; classpath even though the service uses the real adapter at runtime.
+    bases/bank-uk-companies-house-simulator
+    {:local/root "../../bases/bank-uk-companies-house-simulator"}
     component/bank-test-resources {:local/root
                                    "../../components/bank-test-resources"}
     component/test-resources {:local/root "../../components/test-resources"}
