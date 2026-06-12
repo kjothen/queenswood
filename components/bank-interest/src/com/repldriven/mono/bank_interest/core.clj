@@ -18,7 +18,7 @@
     [com.repldriven.mono.error.interface :as error
      :refer [let-nom>]]))
 
-(def ^:private gl-code-interest-payable "2400")
+(def ^:private gl-code-interest-expense "5100")
 
 (def ^:private customer-product-types
   "Product types whose cash-accounts should earn interest. GL accounts
@@ -46,9 +46,21 @@
                           (:product-id account)
                           (:version-id account))))
 
+(defn- tag-customer-legs
+  "Stamp the customer `account-id` legs with `product-type` so they fan
+  out to the right control: a default bucket into the deposit control
+  (2100/2200/2300), an interest-accrued bucket into 2400. The GL expense
+  leg carries a different account-id and posts directly."
+  [legs account-id product-type]
+  (mapv (fn [leg]
+          (if (= (:account-id leg) account-id)
+            (assoc leg :product-type product-type)
+            leg))
+        legs))
+
 (defn- accrue-account
-  [config interest-payable-id account as-of-date]
-  (let [{:keys [bank-id account-id currency]} account]
+  [config interest-expense-id account as-of-date]
+  (let [{:keys [bank-id account-id currency product-type]} account]
     (store/transact
      config
      (fn [txn]
@@ -68,7 +80,7 @@
           ;; only), and 0 is truthy. accrual-transaction returns nil in
           ;; that case. Mirror in capitalize-account.
           transaction (when whole-units
-                        (domain/accrual-transaction interest-payable-id
+                        (domain/accrual-transaction interest-expense-id
                                                     account-id
                                                     currency
                                                     whole-units
@@ -78,7 +90,9 @@
                 [expanded-legs (ledger-accounts/add-control-legs
                                 txn
                                 bank-id
-                                (:legs transaction))
+                                (tag-customer-legs (:legs transaction)
+                                                   account-id
+                                                   product-type))
                  transaction+legs (transactions/record-transaction
                                    txn
                                    (assoc transaction :legs expanded-legs))
@@ -94,8 +108,8 @@
                                   carry))])))))
 
 (defn- capitalize-account
-  [config interest-payable-id account as-of-date]
-  (let [{:keys [bank-id account-id currency]} account]
+  [config _interest-expense-id account as-of-date]
+  (let [{:keys [bank-id account-id currency product-type]} account]
     (store/transact
      config
      (fn [txn]
@@ -106,7 +120,6 @@
                                         currency
                                         :balance-status-posted)
           transaction (domain/capitalization-transaction
-                       interest-payable-id
                        account-id
                        currency
                        balance
@@ -117,7 +130,9 @@
               [expanded-legs (ledger-accounts/add-control-legs
                               txn
                               bank-id
-                              (:legs transaction))
+                              (tag-customer-legs (:legs transaction)
+                                                 account-id
+                                                 product-type))
                transaction+legs (transactions/record-transaction
                                  txn
                                  (assoc transaction :legs expanded-legs))
@@ -125,16 +140,16 @@
                                       (:legs transaction+legs)
                                       (:transaction-type transaction+legs))]))])))))
 
-(defn- get-interest-payable-account
+(defn- get-interest-expense-account
   [config bank-id]
   (let [result (ledger-accounts/find-by-code
                 config
                 bank-id
-                gl-code-interest-payable)]
+                gl-code-interest-expense)]
     (when-not (error/anomaly? result) result)))
 
 (defn- process-customer-accounts
-  [config bank-id interest-payable-id as-of-date f]
+  [config bank-id interest-expense-id as-of-date f]
   (loop [cursor nil
          n 0]
     (let [page (cash-accounts/get-accounts
@@ -147,7 +162,7 @@
               (reduce
                (fn [n account]
                  (let [result (f config
-                                 interest-payable-id
+                                 interest-expense-id
                                  account
                                  as-of-date)]
                    (if (error/anomaly? result)
@@ -172,7 +187,7 @@
   transaction held across account processing)."
   [config data status kind account-fn]
   (let [{:keys [bank-id as-of-date]} data]
-    (if-let [interest-payable (get-interest-payable-account config bank-id)]
+    (if-let [interest-expense (get-interest-expense-account config bank-id)]
       (let-nom>
         [policies (policy/get-effective-policies config {:bank-id bank-id})
          today-count (store/count-by-org-business-day-per-kind
@@ -185,7 +200,7 @@
          processed (process-customer-accounts
                     config
                     bank-id
-                    (:ledger-account-id interest-payable)
+                    (:ledger-account-id interest-expense)
                     as-of-date
                     account-fn)
          _ (store/save-run config
@@ -195,9 +210,9 @@
         {:bank-id bank-id
          :as-of-date as-of-date
          :accounts-processed processed})
-      (error/reject :interest/no-interest-payable-account
+      (error/reject :interest/no-interest-expense-account
                     {:message
-                     (str "Bank has no 2400 interest-payable account"
+                     (str "Bank has no 5100 interest-expense account"
                           " in its chart of accounts")
                      :bank-id bank-id}))))
 

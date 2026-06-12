@@ -54,7 +54,11 @@
   (str "capitalize-" account-id "-" as-of-date))
 
 (defn accrual-transaction
-  [interest-payable-id account-id currency whole-units
+  "Daily accrual double-entry: DR 5100 Interest expense / CR the
+  customer's interest-accrued bucket. The expense leg posts directly
+  (5100 is a detail GL account); the customer leg fans out to the 2400
+  Interest payable control. Both legs carry the same `whole-units`."
+  [interest-expense-id account-id currency whole-units
    as-of-date]
   (when-not (zero? whole-units)
     {:idempotency-key (accrual-idempotency-key
@@ -63,7 +67,7 @@
      :transaction-type :transaction-type-interest-accrual
      :currency currency
      :reference (str "Daily interest accrual " as-of-date)
-     :legs [{:account-id interest-payable-id
+     :legs [{:account-id interest-expense-id
              :balance-type :balance-type-default
              :balance-status :balance-status-posted
              :side :leg-side-debit
@@ -75,7 +79,13 @@
              :amount whole-units}]}))
 
 (defn capitalization-transaction
-  [interest-payable-id account-id currency balance as-of-date]
+  "Capitalisation double-entry: DR the customer's interest-accrued
+  bucket / CR its default bucket, for the whole accrued amount. The
+  accrued leg fans out to 2400 (clearing the payable back toward zero);
+  the default leg fans out to the deposit control (2100/2200/2300), so
+  the capitalised interest becomes spendable. `balance` is the
+  account's interest-accrued balance."
+  [account-id currency balance as-of-date]
   (let [accrued (net-balance balance)]
     (when-not (zero? accrued)
       {:idempotency-key (capitalization-idempotency-key
@@ -86,36 +96,13 @@
        :currency currency
        :reference (str "Monthly interest capitalization "
                        as-of-date)
-       :legs [{:account-id interest-payable-id
+       :legs [{:account-id account-id
+               :balance-type :balance-type-interest-accrued
+               :balance-status :balance-status-posted
+               :side :leg-side-debit
+               :amount accrued}
+              {:account-id account-id
                :balance-type :balance-type-default
-               :balance-status :balance-status-posted
-               :side :leg-side-debit
-               :amount accrued}
-              {:account-id account-id
-               :balance-type :balance-type-interest-paid
-               :balance-status :balance-status-posted
-               :side :leg-side-credit
-               :amount accrued}
-              {:account-id account-id
-               :balance-type
-               :balance-type-interest-accrued
-               :balance-status :balance-status-posted
-               :side :leg-side-debit
-               :amount accrued}
-              {:account-id interest-payable-id
-               :balance-type :balance-type-default
-               :balance-status :balance-status-posted
-               :side :leg-side-credit
-               :amount accrued}
-              {:account-id account-id
-               :balance-type
-               :balance-type-interest-paid
-               :balance-status :balance-status-posted
-               :side :leg-side-debit
-               :amount accrued}
-              {:account-id account-id
-               :balance-type
-               :balance-type-default
                :balance-status :balance-status-posted
                :side :leg-side-credit
                :amount accrued}]})))

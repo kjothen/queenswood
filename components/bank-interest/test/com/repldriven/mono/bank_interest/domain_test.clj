@@ -63,21 +63,21 @@
 
 (deftest accrual-transaction-test
   (testing "zero whole-units returns nil — no transaction posted"
-    (is (nil? (SUT/accrual-transaction "iface-2400" "cust" "GBP" 0 20260501))))
+    (is (nil? (SUT/accrual-transaction "iface-5100" "cust" "GBP" 0 20260501))))
   (testing "positive whole-units builds a 2-leg accrual"
-    (let [tx (SUT/accrual-transaction "iface-2400" "cust" "GBP" 75 20260501)]
+    (let [tx (SUT/accrual-transaction "iface-5100" "cust" "GBP" 75 20260501)]
       (is (= "accrue-cust-20260501" (:idempotency-key tx)))
       (is (= :transaction-type-interest-accrual (:transaction-type tx)))
       (is (= "GBP" (:currency tx)))
       (is (= 2 (count (:legs tx))))
-      (testing "interest-payable (GL 2400) debit on default / posted"
+      (testing "interest-expense (GL 5100) debit on default / posted"
         (let [debit (first (:legs tx))]
-          (is (= "iface-2400" (:account-id debit)))
+          (is (= "iface-5100" (:account-id debit)))
           (is (= :balance-type-default (:balance-type debit)))
           (is (= :balance-status-posted (:balance-status debit)))
           (is (= :leg-side-debit (:side debit)))
           (is (= 75 (:amount debit)))))
-      (testing "customer credit on interest-accrued / posted"
+      (testing "customer credit on interest-accrued / posted (fans to 2400)"
         (let [credit (second (:legs tx))]
           (is (= "cust" (:account-id credit)))
           (is (= :balance-type-interest-accrued (:balance-type credit)))
@@ -87,35 +87,40 @@
 
 (deftest capitalization-transaction-test
   (testing "zero accrued returns nil — no transaction posted"
-    (is (nil? (SUT/capitalization-transaction "settle"
-                                              "cust"
+    (is (nil? (SUT/capitalization-transaction "cust"
                                               "GBP"
                                               {:credit 0 :debit 0}
                                               20260501))))
   (testing "credit minus debit equal to zero also returns nil"
-    (is (nil? (SUT/capitalization-transaction "settle"
-                                              "cust"
+    (is (nil? (SUT/capitalization-transaction "cust"
                                               "GBP"
                                               {:credit 100 :debit 100}
                                               20260501))))
-  (testing "positive accrued builds the 6-leg capitalisation"
-    (let [tx (SUT/capitalization-transaction "settle"
-                                             "cust"
+  (testing "positive accrued builds the 2-leg capitalisation"
+    (let [tx (SUT/capitalization-transaction "cust"
                                              "GBP"
                                              {:credit 110 :debit 0}
                                              20260501)
           legs (:legs tx)]
       (is (= "capitalize-cust-20260501" (:idempotency-key tx)))
       (is (= :transaction-type-interest-capital (:transaction-type tx)))
-      (is (= 6 (count legs)))
-      (testing "every leg uses the accrued amount (110)"
-        (is (every? (fn [leg] (= 110 (:amount leg))) legs)))
-      (testing "every leg is on :balance-status-posted"
+      (is (= 2 (count legs)))
+      (testing "every leg uses the accrued amount (110) on posted"
+        (is (every? (fn [leg] (= 110 (:amount leg))) legs))
         (is (every? (fn [leg] (= :balance-status-posted (:balance-status leg)))
                     legs)))
-      (testing "legs net to zero per side per account-balance-type"
-        ;; The 6 legs should pair up — total debits == total credits
-        ;; for the transaction as a whole.
+      (testing
+        "DR the customer interest-accrued bucket — clears it, fans to 2400"
+        (let [debit (first legs)]
+          (is (= "cust" (:account-id debit)))
+          (is (= :balance-type-interest-accrued (:balance-type debit)))
+          (is (= :leg-side-debit (:side debit)))))
+      (testing "CR the customer default bucket — fans to the deposit control"
+        (let [credit (second legs)]
+          (is (= "cust" (:account-id credit)))
+          (is (= :balance-type-default (:balance-type credit)))
+          (is (= :leg-side-credit (:side credit)))))
+      (testing "legs balance — Σdebit == Σcredit"
         (let [debit-total (transduce
                            (comp (filter (fn [l] (= :leg-side-debit (:side l))))
                                  (map :amount))

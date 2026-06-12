@@ -7,14 +7,23 @@
 
 (def product-type->control-code
   "Maps a cash-account product type to the `:gl-code` of the control
-  ledger account its balance rolls up into. Postings on those accounts
-  fan out to the matching control so the control balance is always the
-  live roll-up of its sub-ledger. Customer deposits roll into
+  ledger account its *default* balance rolls up into. Postings on those
+  accounts fan out to the matching control so the control balance is
+  always the live roll-up of its sub-ledger. Customer deposits roll into
   2100/2200/2300; the bank's own funding account rolls into 3100."
   {:product-type-sub-ledger-current "2100"
    :product-type-sub-ledger-savings "2200"
    :product-type-sub-ledger-term-deposit "2300"
    :product-type-sub-ledger-own-funds "3100"})
+
+(def balance-type->control-code
+  "Maps a non-default customer balance bucket to the `:gl-code` of the
+  control it rolls up into, regardless of product type. The customer
+  `interest-accrued` buckets reconcile to 2400 Interest payable, the
+  same way default buckets reconcile to the deposit controls. Checked
+  ahead of `product-type->control-code`, so a savings account's accrued
+  interest rolls into 2400, not 2200."
+  {:balance-type-interest-accrued "2400"})
 
 (defn new-ledger-account
   "Build a `LedgerAccount` map for one template `row` in `currency`,
@@ -52,13 +61,14 @@
      :currency currency}))
 
 (defn fans-out?
-  "Only customer-deposit legs touching the default-posted bucket roll
-  up into a control. Non-default buckets (interest-accrued,
-  interest-paid) and non-posted statuses are sub-ledger-only and don't
-  have a control counterpart."
+  "Posted customer legs that have a control counterpart roll up into it:
+  default buckets into the product-type deposit control (2100/2200/2300/
+  3100), interest-accrued buckets into 2400. Other buckets (interest-
+  paid) and non-posted statuses are sub-ledger-only and don't fan out."
   [leg]
-  (and (= :balance-type-default (:balance-type leg))
-       (= :balance-status-posted (:balance-status leg))))
+  (and (= :balance-status-posted (:balance-status leg))
+       (contains? #{:balance-type-default :balance-type-interest-accrued}
+                  (:balance-type leg))))
 
 (defn debit-normal?
   "True for the debit-normal account families (asset, expense); false

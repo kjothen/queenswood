@@ -1,0 +1,70 @@
+(ns com.repldriven.mono.bank-test-scenarios.invariants
+  "Standing accounting invariant, asserted after every scenario step:
+  every bank's trial balance ties — Σdebit == Σcredit per currency
+  across the whole chart of accounts. A failure means a step committed
+  an unbalanced or mis-routed set of posted legs (e.g. a posting whose
+  offset never reached the GL, or fanned out to the wrong control).
+  This is the check that would have caught interest accrual landing off
+  the books, and it guards the next class of bug too — a reversal that
+  only reverses one leg, a new transaction type that forgets a control.
+
+  Cheap by construction: it reads only `default/posted` balances (the
+  same set `trial-balance` aggregates), so in-flight buckets (held,
+  pending, interest-accrued sub-ledger) don't perturb it — they roll up
+  into their control accounts via the fan-out before they count."
+  (:require
+    [com.repldriven.mono.bank-balance.interface :as balances]
+    [com.repldriven.mono.bank-ledger-account.interface :as ledger-accounts]
+
+    [com.repldriven.mono.error.interface :as error]
+
+    [clojure.test :refer [is]]))
+
+(defn- posted-value
+  "The credit-positive posted net (credit − debit) of one ledger
+  account, or 0 if its balances can't be read."
+  [config account-id]
+  (let [bs (balances/get-balances config account-id)]
+    (if (error/anomaly? bs)
+      0
+      (:value (:posted-balance bs)))))
+
+(defn- trial-balance-entries
+  [config accounts]
+  (mapv (fn [account]
+          {:currency (:currency account)
+           :normal-side (if (ledger-accounts/debit-normal?
+                             (:gl-account-type account))
+                          :debit
+                          :credit)
+           :value (posted-value config (:ledger-account-id account))})
+        accounts))
+
+(defn assert-bank-ties
+  "Assert the trial balance ties for one bank, per currency."
+  [config bank-id]
+  (let [accounts (ledger-accounts/list-accounts config bank-id)]
+    (when-not (error/anomaly? accounts)
+      (doseq [{:keys [currency debit credit]}
+              (balances/trial-balance (trial-balance-entries config accounts))]
+        (is (= debit credit)
+            (str "trial balance must tie — bank "
+                 bank-id
+                 " "
+                 currency
+                 " (Dr "
+                 debit
+                 " / Cr "
+                 credit
+                 ")"))))))
+
+(defn verify-books-tie
+  "Assert every bank created so far in the run still has tying books.
+  Returns `ctx` unchanged so it can be threaded through the step
+  reducer. `ctx` is the runner context — `:bank` is the FDB config and
+  `:banks` holds the per-model `{:real-id ...}` entries."
+  [{:keys [bank banks] :as ctx}]
+  (doseq [{:keys [real-id]} (vals banks)]
+    (when real-id
+      (assert-bank-ties bank real-id)))
+  ctx)
