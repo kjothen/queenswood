@@ -6,6 +6,7 @@
   into a projection for equality checks."
   (:require
     [com.repldriven.mono.bank-test-scenarios.id-mapping :as id-mapping]
+    [com.repldriven.mono.bank-test-scenarios.invariants :as invariants]
     [com.repldriven.mono.bank-test-scenarios.quiescence :as quiescence]
     [com.repldriven.mono.bank-test-scenarios.scenario :as scenario]
     [com.repldriven.mono.bank-test-scenarios.verbs :as verbs]
@@ -48,11 +49,19 @@
   threading the runner context through. Waits for read-side
   quiescence before returning the final context.
 
+  After every step the standing books-tie invariant fires (see
+  `invariants/verify-books-tie`), so any command that leaves a bank's
+  trial balance out of balance fails the scenario at the offending step.
+
   Args:
   - ctx: runner context (typically from `fresh-context`).
   - commands: sequence of `{:command kw :args [...]}` maps."
   [ctx commands]
-  (let [final (reduce verbs/dispatch ctx commands)]
+  (let [final (reduce (fn [ctx command]
+                        (invariants/verify-books-tie (verbs/dispatch ctx
+                                                                     command)))
+                      ctx
+                      commands)]
     (quiescence/wait (:bank final))
     final))
 
