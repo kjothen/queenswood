@@ -21,6 +21,7 @@
     PolicyMatrix, CATEGORY_TONE,
     Field, Input, Select,
     Card, CardHeader, CardBody, CardFooter, CodeCard,
+    ProgressSpine, BankStateBand, SceneCard, RawCalls, TaskPipeline,
     themeState, resolvedTheme,
   } from "../src/index.js";
 
@@ -42,7 +43,15 @@
     { id: "cards",      label: "Cards" },
     { id: "ledger",     label: "Ledger tree-table" },
     { id: "policies",   label: "Policies" },
+    { id: "trial-balance",  label: "Trial balance band" },
+    { id: "progressspine",  label: "Progress spine" },
+    { id: "bankstateband",  label: "Bank-state band" },
+    { id: "scenecard",      label: "Scene card" },
+    { id: "rawcalls",       label: "Raw calls" },
   ];
+
+  // Scenario sandbox demos
+  let scOpen = $state(true);
 
   const VARIANTS = [
     { id: "A", note: "Eight-tree forest, gold band + teeth, baubles." },
@@ -957,6 +966,92 @@
           { ccy: "GBP", sym: "£", name: "Sterling", accounts: 14, debitMinor: 2431077542000, creditMinor: 2431077542000 },
           { ccy: "EUR", sym: "€", name: "Euro", accounts: 6, debitMinor: 590244010000, creditMinor: 590244010000 },
           { ccy: "USD", sym: "$", name: "US Dollar", accounts: 5, debitMinor: 215000000000, creditMinor: 183979955000 },
+        ]}
+      />
+    </section>
+
+    <section id="progressspine" class="section">
+      <div class="section-head">
+        <h2>Progress spine</h2>
+        <p class="lead"><code>&lt;ProgressSpine&gt;</code> draws a multi-step narrative arc — numbered nodes joined by connectors, one per step, in <code>locked / ready / running / done</code> states. A done node fills and its connector fills; a ready node wears a gold ring; a running node spins; a locked node shows a lock. Clicking a node calls <code>onJump(i)</code>.</p>
+      </div>
+      <ProgressSpine
+        title="A bank opening its doors"
+        progressLabel="scenes run"
+        steps={[
+          { num: "01", label: "Stock the shelves", status: "done" },
+          { num: "02", label: "Identity decides the account", status: "done" },
+          { num: "03", label: "Money in, double-entry out", status: "running" },
+          { num: "04", label: "Nothing is ever lost", status: "ready" },
+          { num: "05", label: "Send it out", status: "locked" },
+          { num: "06", label: "Runs itself overnight", status: "locked" },
+        ]}
+      />
+    </section>
+
+    <section id="bankstateband" class="section">
+      <div class="section-head">
+        <h2>Bank-state band</h2>
+        <p class="lead"><code>&lt;BankStateBand&gt;</code> is a horizontal evidence strip — a row of figure cells (a muted cell reads as still-zero) plus a flexible attention cell whose tone (<code>idle / good / gold</code>) tints the icon tile. The page supplies the attention copy via the <code>icon</code>, <code>title</code>, <code>sub</code>, and <code>action</code> snippets.</p>
+      </div>
+      <BankStateBand
+        cells={[
+          { figure: 3, unit: "/ 6", label: "Scenes run" },
+          { figure: 2, label: "Products live" },
+          { figure: 2, unit: "/ 3", label: "Active customers" },
+          { figure: "£2,500.00", label: "Customer money held" },
+        ]}
+        attentionTone="good"
+      >
+        {#snippet icon()}
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6.4" stroke-opacity="0.4" /><path d="M5.2 8.2 L7.1 10 L10.8 6" /></svg>
+        {/snippet}
+        {#snippet title()}Books tie — debits equal credits{/snippet}
+        {#snippet sub()}2 customers · <span class="mono">£2,500.00</span> held{/snippet}
+        {#snippet action()}<Button variant="brand" size="sm">Run Scene 04</Button>{/snippet}
+      </BankStateBand>
+    </section>
+
+    <section id="scenecard" class="section">
+      <div class="section-head">
+        <h2>Scene card</h2>
+        <p class="lead"><code>&lt;SceneCard&gt;</code> is one sequential-unlock card: head (number, title, payoff chip, story, status badge + run button + chevron) over an expandable body the page supplies as the <code>body</code> snippet. <code>status</code> drives the border, badge, and run button. The body here mounts <code>&lt;TaskPipeline&gt;</code>, including its new <code>exception</code> (flagged) step status.</p>
+      </div>
+      <SceneCard
+        num="03"
+        title="Money in, double-entry out"
+        story="Open accounts for two customers and fund one with an inbound Faster Payment. The books move — debits equal credits, to the penny."
+        status="ready"
+        payoffLabel="ledger"
+        open={scOpen}
+        onToggle={() => (scOpen = !scOpen)}
+        onRun={() => {}}
+      >
+        {#snippet body()}
+          <TaskPipeline
+            steps={[
+              { name: "Mint admin token", status: "exception" },
+              { name: "Open accounts", status: "ok" },
+              { name: "Fund · inbound FPS", status: "running" },
+              { name: "Trial balance ties", status: "pending" },
+            ]}
+          />
+        {/snippet}
+      </SceneCard>
+    </section>
+
+    <section id="rawcalls" class="section">
+      <div class="section-head">
+        <h2>Raw calls</h2>
+        <p class="lead"><code>&lt;RawCalls&gt;</code> is a dark terminal block revealing the underlying API calls behind a friendly step list — method, path, and the runner verb tag — with a footer naming the backing scenario id(s). Hidden until <code>show</code>.</p>
+      </div>
+      <RawCalls
+        show
+        backing={["create-product-happy", "publish-draft"]}
+        rows={[
+          { method: "POST", path: "/v1/cash-account-products", tag: "request" },
+          { method: "POST", path: "/v1/cash-account-products/prd…/versions/1/publish", tag: "request" },
+          { method: "GET", path: "/v1/cash-account-products/prd…/versions/1", tag: "poll" },
         ]}
       />
     </section>

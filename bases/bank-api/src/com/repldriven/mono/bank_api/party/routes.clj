@@ -14,6 +14,9 @@
 (def ^:private list-parties-query-schema
   [:map {:closed true} [:page {:optional true} [:ref "PageQuery"]]])
 
+(def ^:private get-party-query-schema
+  [:map {:closed true} [:embed {:optional true} [:ref "PartyEmbedQuery"]]])
+
 (def routes
   [["/parties" {:openapi {:tags ["Parties"] :security [{"bearerAuth" ["org"]}]}}
     [""
@@ -38,7 +41,11 @@
     ["/{party-id}" {:parameters {:path {:party-id [:ref "PartyId"]}}}
      [""
       {:get {:summary "Retrieve a party"
-             :openapi {:operationId "RetrieveParty"}
-             :responses {200 {:body [:ref "Party"]}
+             :openapi {:operationId "RetrieveParty"
+                       :parameters ^:replace
+                                   [shared.parameters/ref-party-id
+                                    shared.parameters/ref-party-embed]}
+             :parameters {:query get-party-query-schema}
+             :responses {200 {:body [:ref "PartyDetail"]}
                          404 (ErrorResponse [#'PartyNotFound])}
              :handler queries/get-party}}]]]])

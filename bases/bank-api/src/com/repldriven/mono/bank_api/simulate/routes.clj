@@ -18,7 +18,11 @@
     ["/banks/{bank-id}"
      {:parameters {:path {:bank-id [:ref "BankId"]}}}
      ["/inbound-transfer"
-      {:post {:summary "Simulate an inbound transfer"
+      ;; Sandbox affordance: a bank tenant can fund its own bank from the
+      ;; console, so this one simulate route drops to the org tier (accrue
+      ;; / capitalize stay admin-only via the /simulate subtree default).
+      {:openapi {:security ^:replace [{"bearerAuth" ["org"]}]}
+       :post {:summary "Simulate an inbound transfer"
               :openapi {:operationId "SimulateInboundTransfer"
                         :requestBody {:required true}
                         :parameters ^:replace

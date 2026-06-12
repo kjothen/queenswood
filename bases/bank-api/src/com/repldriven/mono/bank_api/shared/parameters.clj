@@ -152,9 +152,30 @@
    :required true
    :schema {:$ref "#/components/schemas/BalanceStatus"}})
 
+(def PartyEmbedQuery
+  "`embed` query parameter for optional sub-resource embedding on the
+  party detail endpoint. deepObject-styled so clients send
+  `embed[person-identification]=true&embed[address]=true&embed[national-identifier]=true`."
+  {:name "embed"
+   :in "query"
+   :required false
+   :style "deepObject"
+   :explode true
+   :schema {:type "object"
+            :additionalProperties false
+            :properties
+            {:person-identification
+             {:type "boolean"
+              :description
+              "Embed person identification (names, date of birth, nationality)"}
+             :address {:type "boolean" :description "Embed address"}
+             :national-identifier {:type "boolean"
+                                   :description "Embed national identifier"}}}})
+
 (def ref-idempotency-key {:$ref "#/components/parameters/IdempotencyKey"})
 (def ref-page {:$ref "#/components/parameters/PageQuery"})
 (def ref-embed {:$ref "#/components/parameters/EmbedQuery"})
+(def ref-party-embed {:$ref "#/components/parameters/PartyEmbedQuery"})
 (def ref-account-id {:$ref "#/components/parameters/AccountId"})
 (def ref-bank-id {:$ref "#/components/parameters/BankId"})
 (def ref-party-id {:$ref "#/components/parameters/PartyId"})
@@ -173,6 +194,7 @@
   {"IdempotencyKey" IdempotencyKey
    "PageQuery" PageQuery
    "EmbedQuery" EmbedQuery
+   "PartyEmbedQuery" PartyEmbedQuery
    "AccountId" AccountId
    "BankId" BankId
    "PartyId" PartyId

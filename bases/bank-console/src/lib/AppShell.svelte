@@ -86,6 +86,16 @@
         Jobs
       </SidenavItem>
     </SidenavGroup>
+    <SidenavGroup title="Sandbox">
+      <SidenavItem href="#/scenarios" title="Scenarios" current={isCurrent("/scenarios")}>
+        {#snippet icon()}
+          <svg viewBox="0 0 16 16" aria-hidden="true">
+            <path d="M5 3.5 L12.5 8 L5 12.5 Z" />
+          </svg>
+        {/snippet}
+        Scenarios
+      </SidenavItem>
+    </SidenavGroup>
     <SidenavGroup title="Compliance">
       <SidenavItem href="#/policies" title="Policies" current={isCurrent("/policies")}>
         {#snippet icon()}

@@ -38,9 +38,16 @@
   [request]
   (let [{:keys [auth parameters]} request
         {:keys [bank-id]} auth
-        {:keys [path]} parameters
+        {:keys [path query]} parameters
         {:keys [party-id]} path
-        result (parties/get-party request bank-id party-id)]
+        {:keys [embed]} query
+        {pi :person-identification addr :address ni :national-identifier} embed
+        result (parties/get-party-detail request
+                                         bank-id
+                                         party-id
+                                         {:person-identification pi
+                                          :address addr
+                                          :national-identifier ni})]
     (if (error/anomaly? result)
       (errors/anomaly->response result)
       {:status 200 :body result})))

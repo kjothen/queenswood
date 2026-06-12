@@ -92,6 +92,13 @@ export {
   isLastDay,
 } from "./jobs.js";
 
+// Scenario sandbox — the Scenarios screen's narrative primitives. The
+// page (the run engine + scene data) lives in bank-console.
+export { default as ProgressSpine } from "./ProgressSpine.svelte";
+export { default as BankStateBand } from "./BankStateBand.svelte";
+export { default as SceneCard } from "./SceneCard.svelte";
+export { default as RawCalls } from "./RawCalls.svelte";
+
 export { default as Field } from "./Field.svelte";
 export { default as Input } from "./Input.svelte";
 export { default as Select } from "./Select.svelte";

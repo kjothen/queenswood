@@ -66,6 +66,47 @@
    [:address [:ref "Address"]]
    [:national-identifier [:ref "NationalIdentifier"]]])
 
+(def PartyDetail
+  "Party-by-id detail: the summary fields plus the person
+  identification and national identifier the record was created with.
+  Open map — internal/organisation parties carry only the summary, and
+  email/phone aren't persisted so they're never present."
+  [:map {:json-schema/example examples/Party}
+   [:bank-id [:ref "BankId"]]
+   [:party-id [:ref "PartyId"]]
+   [:type [:ref "PartyType"]]
+   [:display-name [:ref "Name"]]
+   [:status [:ref "PartyStatus"]]
+   [:created-at [:ref "Timestamp"]]
+   [:updated-at [:ref "Timestamp"]]
+   ;; Enriched fields are deliberately lenient. The merged record carries
+   ;; raw protobuf values — an integer date-of-birth, a keyword
+   ;; identifier type, a default-filled address — and putting those
+   ;; through strict refs (DateOfBirth's int→ISO encoder, the closed
+   ;; Address / NationalIdentifier schemas) trips response coercion. Held
+   ;; as plain types here, they pass straight through; the console
+   ;; formats them for display.
+   [:given-name {:optional true} [:maybe :string]]
+   [:middle-names {:optional true} [:maybe :string]]
+   [:family-name {:optional true} [:maybe :string]]
+   [:date-of-birth {:optional true} [:maybe :int]]
+   [:nationality {:optional true} [:maybe :string]]
+   [:address {:optional true} [:maybe [:map]]]
+   [:national-identifier {:optional true} [:maybe [:map]]]])
+
+(def PartyEmbedQuery
+  "Nested `embed` deepObject query parameter for the party detail
+  endpoint. Wire form is
+  `embed[person-identification]=true&embed[address]=true&embed[national-identifier]=true`,
+  nested into `{:person-identification …}` by the
+  `nest-bracket-query-params` interceptor before validation. Each flag
+  opts the corresponding sub-record into the response; omitted, the GET
+  returns just the summary party."
+  [:map {:closed true}
+   [:person-identification {:optional true} boolean?]
+   [:address {:optional true} boolean?]
+   [:national-identifier {:optional true} boolean?]])
+
 (def CreatePartyResponse [:ref "Party"])
 
 (def PartyList
@@ -78,6 +119,6 @@
 
 (def registry
   (components-registry [#'PartyId #'PartyType #'PartyStatus #'IdentifierType
-                        #'Party #'NationalIdentifier #'Address
-                        #'CreatePartyRequest #'CreatePartyResponse
-                        #'PartyList]))
+                        #'Party #'PartyDetail #'PartyEmbedQuery
+                        #'NationalIdentifier #'Address #'CreatePartyRequest
+                        #'CreatePartyResponse #'PartyList]))
