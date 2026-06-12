@@ -49,6 +49,22 @@
    :party/get
    "Failed to load party"))
 
+(defn get-party-national-identifier
+  [txn party-id]
+  (fdb/transact
+   txn
+   (fn [txn]
+     ;; The store's primary key is compound [party-id type] — a party
+     ;; can hold one identifier per type — so scan the party-id prefix
+     ;; and take the first rather than load-record by an exact key.
+     (let [result (fdb/scan-records
+                   (fdb/open txn party-national-identifiers-store-name)
+                   {:prefix [party-id] :limit 1})]
+       (some-> (first (:records result))
+               schema/pb->PartyNationalIdentifier)))
+   :party/get-party-national-identifier
+   "Failed to load party national identifier"))
+
 (defn get-parties
   ([txn bank-id]
    (get-parties txn bank-id nil))

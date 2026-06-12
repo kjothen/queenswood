@@ -11,6 +11,7 @@
     kicker,
     title,
     sub,
+    titleAside,
     actions,
   } = $props();
 </script>
@@ -18,7 +19,16 @@
 <header class="page-header">
   <div class="page-header-text">
     {#if kicker}<span class="page-kicker">{kicker}</span>{/if}
-    {#if title}<h1 class="page-title">{title}</h1>{/if}
+    {#if title}
+      {#if titleAside}
+        <div class="page-title-row">
+          <h1 class="page-title">{title}</h1>
+          {@render titleAside()}
+        </div>
+      {:else}
+        <h1 class="page-title">{title}</h1>
+      {/if}
+    {/if}
     {#if sub}<p class="page-sub">{sub}</p>{/if}
   </div>
   {#if actions}
@@ -47,6 +57,12 @@
     letter-spacing: 0.08em;
     text-transform: uppercase;
     color: var(--gold-deep);
+  }
+  .page-title-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
   }
   .page-title {
     font-family: var(--grotesk);

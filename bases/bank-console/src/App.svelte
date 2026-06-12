@@ -12,6 +12,7 @@
   import LedgerAccounts from "./lib/LedgerAccounts.svelte";
   import Jobs from "./lib/Jobs.svelte";
   import Policies from "./lib/Policies.svelte";
+  import Scenarios from "./lib/Scenarios.svelte";
   import ComingSoon from "./lib/ComingSoon.svelte";
 
   // Unauthenticated surfaces are URL-routed so /#/sign-in is shareable
@@ -51,6 +52,10 @@
       }),
       "/jobs": wrap({
         component: Jobs,
+        props: { user, memberships },
+      }),
+      "/scenarios": wrap({
+        component: Scenarios,
         props: { user, memberships },
       }),
       "/policies": wrap({

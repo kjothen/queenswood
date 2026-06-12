@@ -214,12 +214,86 @@ export function list_parties() {
   return request("/v1/parties");
 }
 
-export function get_party(party_id) {
-  return request(`/v1/parties/${party_id}`);
+// Fetch a party. Pass `embed` (e.g. ["person-identification", "address",
+// "national-identifier"]) to opt sub-records into the detail response;
+// without it the GET returns just the summary.
+export function get_party(party_id, { embed } = {}) {
+  const q =
+    embed && embed.length
+      ? "?" + embed.map((e) => `embed[${e}]=true`).join("&")
+      : "";
+  return request(`/v1/parties/${party_id}${q}`);
 }
 
 export function create_party(data) {
   return mutate("/v1/parties", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+// ─── Cash accounts (org-scoped) ───
+//
+// Open an account against a party + published product (returns
+// `account-status: "opening"`; poll the GET until `"opened"`, at which
+// point the record carries its assigned SCAN `bban`). Used by the
+// Scenarios sandbox; the standalone Accounts page isn't wired yet.
+
+export function list_cash_accounts() {
+  return request("/v1/cash-accounts");
+}
+
+export function get_cash_account(account_id) {
+  return request(`/v1/cash-accounts/${account_id}`);
+}
+
+export function get_cash_account_balances(account_id) {
+  return request(`/v1/cash-accounts/${account_id}/balances`);
+}
+
+export function open_cash_account(data) {
+  return mutate("/v1/cash-accounts", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+// ─── Payments (org-scoped) ───
+//
+// Internal transfers move money between two accounts at this bank;
+// outbound payments leave via the scheme adapter. ClearBank-sim magic
+// values force outcomes: creditor-name "6a41a29eafcf455493" → held then
+// declined; a creditor-bban whose sort code (first 6) matches the bank
+// + a non-existent account number returns as an unmatched inbound that
+// parks in 2500 suspense.
+
+export function submit_internal_payment(data) {
+  return mutate("/v1/payments/internal", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export function submit_outbound_payment(data) {
+  return mutate("/v1/payments/outbound", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export function get_outbound_payment(payment_id) {
+  return request(`/v1/payments/outbound/${payment_id}`);
+}
+
+// ─── Simulate (sandbox) ───
+//
+// Drives money onto the books the way the scheme would. The
+// inbound-transfer route is org-tier (a bank can fund its own bank);
+// accrue/capitalize remain admin-only, so the sandbox runs interest via
+// the bank-tier daily-interest job force-start instead.
+
+export function simulate_inbound_transfer(bank_id, data) {
+  return mutate(`/v1/simulate/banks/${bank_id}/inbound-transfer`, {
     method: "POST",
     body: JSON.stringify(data),
   });

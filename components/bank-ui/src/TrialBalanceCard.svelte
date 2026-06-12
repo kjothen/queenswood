@@ -8,10 +8,10 @@
      that can be trusted to tie. Don't pass a pre-computed flag; it could
      drift from the totals. `formatMoney` is display-only.
 
-     A currency can legitimately sit out of balance intraday by the
-     in-flight (pending-settlement) amount — not a data error, an
-     unsettled leg. Out-of-balance reuses --danger (no bespoke alarm
-     colour); only the assertion line + the 3px left edge change. */
+     A currency can sit out of balance; the card states that and the
+     signed difference, but not a cause — we don't analyse why here.
+     Out-of-balance reuses --danger (no bespoke alarm colour); only the
+     assertion line + the 3px left edge change. */
 
   import { formatMoney } from "./money.js";
 
@@ -63,7 +63,6 @@
         <span class="txt">Out of balance</span>
       </div>
       <div class="tb-diff">{diff > 0 ? "Dr " : "Cr "}{formatMoney(Math.abs(diff), ccy)}</div>
-      <div class="tb-hint">In-flight leg, pending settlement. Ties once it posts.</div>
     {/if}
   </div>
 </div>
@@ -216,11 +215,5 @@
     font-variant-numeric: tabular-nums;
     color: var(--danger);
     white-space: nowrap;
-  }
-  .tb-hint {
-    margin-top: 6px;
-    font-size: 11px;
-    color: var(--fg-muted);
-    line-height: 1.4;
   }
 </style>

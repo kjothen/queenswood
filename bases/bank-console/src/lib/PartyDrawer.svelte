@@ -9,12 +9,13 @@
                surface a small notice so the user knows.
 
      The list endpoint only returns the Party summary (party-id,
-     type, display-name, status, timestamps). Identity / address /
-     identification fields shown in read mode fall back to "—" until
-     bank-api surfaces them on the detail endpoint. */
+     type, display-name, status, timestamps). Read mode fetches the
+     detail endpoint (GET /v1/parties/{id}) for the identity, address,
+     and identification fields. Email and phone aren't persisted, so
+     they stay "—". */
 
   import { Drawer, Field, Input, Select, Button, Badge } from "@queenswood/bank-ui";
-  import { create_party } from "./api.mjs";
+  import { create_party, get_party } from "./api.mjs";
 
   let {
     open,
@@ -92,6 +93,58 @@
   });
 
   const readSplit = $derived(splitName(target?.["display-name"]));
+
+  // Read mode fetches the full party detail (identity, address,
+  // identification); the list summary the drawer is handed only carries
+  // the display name. Guard against a stale response landing after the
+  // user has moved to a different party.
+  let detail = $state(null);
+  $effect(() => {
+    if (!(open && mode === "read")) return;
+    const id = target?.["party-id"];
+    if (!id) return;
+    detail = null;
+    get_party(id, {
+      embed: ["person-identification", "address", "national-identifier"],
+    }).then((r) => {
+      if (r.status === 200 && r.body?.["party-id"] === id) detail = r.body;
+    });
+  });
+
+  const ALPHA3 = { GBR: "United Kingdom", IRL: "Ireland", USA: "United States", HKG: "Hong Kong", DEU: "Germany", FRA: "France" };
+  const ALPHA2 = { GB: "United Kingdom", IE: "Ireland", US: "United States", HK: "Hong Kong", DE: "Germany", FR: "France" };
+  function fmtDob(v) {
+    if (v == null || v === "") return "—";
+    if (typeof v === "number") {
+      const s = String(v).padStart(8, "0");
+      return `${s.slice(0, 4)}-${s.slice(4, 6)}-${s.slice(6, 8)}`;
+    }
+    return v;
+  }
+  function prettyIdType(t) {
+    if (t == null || t === "") return "—";
+    // Tolerate however the enum serialises — a plain string, or a
+    // keyword rendered as ":identifier-type-national-insurance".
+    return String(t)
+      .replace(/^:/, "")
+      .replace(/^identifier-type-/, "")
+      .replace(/-/g, " ")
+      .replace(/\b\w/g, (c) => c.toUpperCase());
+  }
+
+  const addr = $derived(detail?.address ?? {});
+  const idn = $derived(detail?.["national-identifier"]);
+  const readFirst = $derived(detail?.["given-name"] ?? readSplit.first);
+  const readLast = $derived(detail?.["family-name"] ?? readSplit.last);
+  const readDob = $derived(fmtDob(detail?.["date-of-birth"]));
+  const readNat = $derived(ALPHA2[detail?.nationality] ?? detail?.nationality ?? "");
+  const readLine1 = $derived([addr["building-number"], addr.street].filter(Boolean).join(" "));
+  const readLine2 = $derived(addr["sub-street"] ?? "");
+  const readCity = $derived(addr.town ?? "");
+  const readPostcode = $derived(addr.postcode ?? "");
+  const readCountry = $derived(ALPHA3[addr.country] ?? addr.country ?? "");
+  const readIdType = $derived(prettyIdType(idn?.type));
+  const readIdNumber = $derived(idn?.value ?? "");
 
   // bank-api status → Badge tone. Matches LegalPersons.svelte.
   const TONE = {
@@ -240,9 +293,10 @@
     <section class="drawer-section">
       <h3 class="drawer-section-title">Identity</h3>
       <dl class="detail-list">
-        <dt>First name</dt> <dd>{readSplit.first || "—"}</dd>
-        <dt>Last name</dt>  <dd>{readSplit.last || "—"}</dd>
-        <dt>Date of birth</dt> <dd class="mono empty">—</dd>
+        <dt>First name</dt> <dd class:empty={!readFirst}>{readFirst || "—"}</dd>
+        <dt>Last name</dt>  <dd class:empty={!readLast}>{readLast || "—"}</dd>
+        <dt>Date of birth</dt> <dd class="mono" class:empty={readDob === "—"}>{readDob}</dd>
+        <dt>Nationality</dt> <dd class:empty={!readNat}>{readNat || "—"}</dd>
         <dt>Email</dt>      <dd class="empty">—</dd>
         <dt>Phone</dt>      <dd class="mono empty">—</dd>
       </dl>
@@ -251,19 +305,19 @@
     <section class="drawer-section">
       <h3 class="drawer-section-title">Address</h3>
       <dl class="detail-list">
-        <dt>Line 1</dt>     <dd class="empty">—</dd>
-        <dt>Line 2</dt>     <dd class="empty">—</dd>
-        <dt>City</dt>       <dd class="empty">—</dd>
-        <dt>Postcode</dt>   <dd class="mono empty">—</dd>
-        <dt>Country</dt>    <dd class="empty">—</dd>
+        <dt>Line 1</dt>     <dd class:empty={!readLine1}>{readLine1 || "—"}</dd>
+        <dt>Line 2</dt>     <dd class:empty={!readLine2}>{readLine2 || "—"}</dd>
+        <dt>City</dt>       <dd class:empty={!readCity}>{readCity || "—"}</dd>
+        <dt>Postcode</dt>   <dd class="mono" class:empty={!readPostcode}>{readPostcode || "—"}</dd>
+        <dt>Country</dt>    <dd class:empty={!readCountry}>{readCountry || "—"}</dd>
       </dl>
     </section>
 
     <section class="drawer-section">
       <h3 class="drawer-section-title">Identification</h3>
       <dl class="detail-list">
-        <dt>Type</dt>       <dd class="empty">—</dd>
-        <dt>Number</dt>     <dd class="mono empty">—</dd>
+        <dt>Type</dt>       <dd class:empty={readIdType === "—"}>{readIdType}</dd>
+        <dt>Number</dt>     <dd class="mono" class:empty={!readIdNumber}>{readIdNumber || "—"}</dd>
       </dl>
     </section>
   {:else}
