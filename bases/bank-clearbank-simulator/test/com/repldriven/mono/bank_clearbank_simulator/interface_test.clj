@@ -129,6 +129,26 @@
      body (http/res->edn res)
      _ (is (string? (:endToEndIdentification body)))]))
 
+(defn- test-simulate-inbound-held
+  "The sandbox sentinel debtor name holds the inbound, then auto-resolves
+  per `outcome` (released by default, or returned)."
+  []
+  (nom-test>
+    [released (post "/simulate/inbound-payment"
+                    {:bban "04000412345678"
+                     :amount 100.00
+                     :currency "GBP"
+                     :debtor-name "6a41a29eafcf455493"
+                     :outcome "release"})
+     _ (is (= 202 (:status released)))
+     returned (post "/simulate/inbound-payment"
+                    {:bban "04000412345678"
+                     :amount 100.00
+                     :currency "GBP"
+                     :debtor-name "6a41a29eafcf455493"
+                     :outcome "return"})
+     _ (is (= 202 (:status returned)))]))
+
 (deftest clearbank-simulator-test
   (with-test-system [sys
                      ["classpath:bank-clearbank-simulator/application-test.yml"
@@ -141,4 +161,6 @@
                         (testing "POST /v3/payments/fps returns 202"
                           (test-fps-payment))
                         (testing "POST /simulate/inbound-payment returns 202"
-                          (test-simulate-inbound-payment))))))
+                          (test-simulate-inbound-payment))
+                        (testing "POST /simulate/inbound-payment held trigger"
+                          (test-simulate-inbound-held))))))

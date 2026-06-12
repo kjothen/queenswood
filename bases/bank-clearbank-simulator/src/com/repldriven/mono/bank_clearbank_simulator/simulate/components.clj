@@ -11,7 +11,11 @@
    [:bban string?]
    [:amount number?]
    [:currency string?]
-   [:reference {:optional true} [:maybe string?]]])
+   [:reference {:optional true} [:maybe string?]]
+   ;; Sender name; the sandbox sentinel 6a41a29eafcf455493 holds the
+   ;; inbound for screening, then auto-resolves per `outcome`.
+   [:debtor-name {:optional true} [:maybe string?]]
+   [:outcome {:optional true} [:enum "release" "return"]]])
 
 (def InboundPaymentResponse
   [:map
