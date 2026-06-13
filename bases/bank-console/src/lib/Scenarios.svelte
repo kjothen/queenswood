@@ -1,19 +1,21 @@
 <script>
   /* Scenarios — a customer-facing SANDBOX that proves the platform
-     works by running real, HTTP-driven scenarios live. Six scenes tell
+     works by running real, HTTP-driven scenarios live. Seven scenes tell
      one continuous story — a bank opening its doors — fired manually in
      order. State is CUMULATIVE: each scene builds on the last, and the
      bank-state band accumulates the evidence as scenes complete.
 
      This runner fires REAL calls against bank-api as the signed-in bank
-     (org tier): products, parties (poll until IDV flips), accounts,
-     funding via the now-org-tier simulate inbound-transfer, internal +
-     outbound payments (with the ClearBank-sim decline magic), and
-     interest via the bank-tier daily-interest job force-start. Real ids
-     discovered during a run are threaded through `ctx` and persisted, so
-     later scenes reference the entities earlier scenes actually created.
-     Re-running writes real server state; creation steps reuse an
-     existing entity where they can so a re-run doesn't hard-fail. */
+     (org tier): products, parties (poll until IDV flips), accounts (a
+     current and a savings each for Arthur and Ford), funding via the
+     now-org-tier simulate inbound-transfer, internal transfers (current
+     → savings), a deliberately overdrawing transfer the non-negative-
+     balance policy refuses, and interest via the bank-tier daily-interest
+     job force-start. Real ids discovered during a run are threaded
+     through `ctx` and persisted, so later scenes reference the entities
+     earlier scenes actually created. Re-running writes real server state;
+     creation steps reuse an existing entity where they can so a re-run
+     doesn't hard-fail. */
 
   import { fly } from "svelte/transition";
   import {
@@ -54,12 +56,11 @@
   const TPL_CURRENT = "tpl.00000000000000000000000001";
   const TPL_SAVINGS = "tpl.00000000000000000000000002";
   // Amounts in pence.
-  const FUND = 250000; // £2,500 funded to Arthur
-  const SUSPENSE = 18000; // £180 to a non-existent account → suspense
-  const XFER = 40000; // £400 Arthur → Ford
-  const DECLINE = 100000; // £1,000 outbound the scheme declines
-  // ClearBank-sim magic creditor name → held then declined.
-  const DECLINE_NAME = "6a41a29eafcf455493";
+  const FUND_EACH = 100000; // £1,000 funded to each current account
+  const ARTHUR_SAVE = 75000; // £750 Arthur current → savings
+  const FORD_SAVE = 35000; // £350 Ford current → savings
+  const OVERDRAW = 50000; // £500 Arthur tries to move with only £250 left
+  const INTEREST = 110; // £0.75 + £0.35 capitalised across both savers
 
   const ADDRESS = {
     "building-number": "155",
@@ -96,7 +97,9 @@
   const VIEWS = {
     products: { label: "Products", href: "#/products" },
     parties: { label: "Legal Persons", href: "#/parties" },
+    accounts: { label: "Accounts", href: "#/accounts" },
     ledger: { label: "Ledger", href: "#/ledger" },
+    policies: { label: "Policies", href: "#/policies" },
     jobs: { label: "Jobs", href: "#/jobs" },
   };
 
@@ -130,46 +133,54 @@
       ],
     },
     {
-      id: "s3", num: "03", title: "Money in, double-entry out", view: "ledger",
+      id: "s3", num: "03", title: "Open the accounts", view: "accounts",
       story:
-        "Open a savings account for Arthur and a current account for Ford, then fund Arthur with an inbound Faster Payment of £2,500. The books move — debits equal credits, to the penny.",
-      backing: ["cash-accounts/create-account-happy", "simulate/inbound-transfer"],
+        "Open a current and a savings account for both Arthur and Ford — four accounts in all. Each opens, then settles to opened with its own sort-code and account number.",
+      backing: ["cash-accounts/create-account-happy"],
       steps: [
+        { name: "Open Arthur's current account", raw: [{ method: "POST", path: "/v1/cash-accounts", tag: "request" }] },
         { name: "Open Arthur's savings account", raw: [{ method: "POST", path: "/v1/cash-accounts", tag: "request" }] },
         { name: "Open Ford's current account", raw: [{ method: "POST", path: "/v1/cash-accounts", tag: "request" }] },
-        { name: "Fund Arthur · inbound FPS £2,500", raw: [{ method: "POST", path: "/v1/simulate/banks/{bank-id}/inbound-transfer", tag: "request" }] },
+        { name: "Open Ford's savings account", raw: [{ method: "POST", path: "/v1/cash-accounts", tag: "request" }] },
+        { name: "All four settle to opened", raw: [{ method: "GET", path: "/v1/cash-accounts/{id}", tag: "poll" }] },
+      ],
+    },
+    {
+      id: "s4", num: "04", title: "Money in, double-entry out", view: "ledger",
+      story:
+        "Fund both current accounts with an inbound Faster Payment of £1,000 each. The books move — 1100 cash-at-correspondent debited, customer balances credited — debits equal credits, to the penny.",
+      backing: ["simulate/inbound-transfer"],
+      steps: [
+        { name: "Fund Arthur · inbound FPS £1,000", raw: [{ method: "POST", path: "/v1/simulate/banks/{bank-id}/inbound-transfer", tag: "request" }] },
+        { name: "Fund Ford · inbound FPS £1,000", raw: [{ method: "POST", path: "/v1/simulate/banks/{bank-id}/inbound-transfer", tag: "request" }] },
         { name: "Await settlement", raw: [{ method: "GET", path: "/v1/cash-accounts/{id}/balances", tag: "poll" }] },
         { name: "Trial balance ties", raw: [{ method: "GET", path: "/v1/ledger-accounts", tag: "request" }] },
       ],
     },
     {
-      id: "s4", num: "04", title: "Nothing is ever lost", view: "ledger",
+      id: "s5", num: "05", title: "Customers save", view: "ledger",
       story:
-        "Pay £180 to an account number that doesn't exist. Rather than bounce or vanish, the returned funds park in the 2500 suspense account, flagged for reconciliation.",
-      backing: ["payments/inbound-unmatched-suspense"],
+        "Arthur moves £750 from current to savings; Ford moves £350. Internal transfers settle instantly and the savings balances climb — money moving between a customer's own accounts.",
+      backing: ["intra-bank-internal-transfer"],
       steps: [
-        { name: "Pay £180 → non-existent account", raw: [{ method: "POST", path: "/v1/payments/outbound", tag: "request" }] },
-        { name: "No matching account", tone: "exception", raw: [{ method: "GET", path: "/v1/ledger-accounts/2500/balances", tag: "poll" }] },
-        { name: "Parks in 2500 suspense", raw: [{ method: "GET", path: "/v1/ledger-accounts", tag: "request" }] },
-        { name: "Flag for reconciliation", raw: [{ method: "GET", path: "/v1/ledger-accounts", tag: "request" }] },
+        { name: "Arthur saves £750 · current → savings", raw: [{ method: "POST", path: "/v1/payments/internal", tag: "request" }] },
+        { name: "Ford saves £350 · current → savings", raw: [{ method: "POST", path: "/v1/payments/internal", tag: "request" }] },
+        { name: "Savings balances climb", raw: [{ method: "GET", path: "/v1/cash-accounts/{id}/balances", tag: "poll" }] },
       ],
     },
     {
-      id: "s5", num: "05", title: "Send it out — and unwind cleanly", view: "ledger",
+      id: "s6", num: "06", title: "Policy holds the line", view: "policies",
       story:
-        "Move £400 from Arthur to Ford — it settles, and Ford's balance goes from £0 to £400. Then send an outbound payment the scheme declines: the in-flight legs reverse and it flips to failed, leaving the books exactly where they were.",
-      backing: ["intra-bank-internal-transfer", "outbound-held-then-declined"],
+        "Arthur tries to move £500 to savings — but his current only holds £250. The platform's non-negative-balance policy refuses the transfer before any money moves. Nothing posts; the books are untouched.",
+      backing: ["curative-inbound-when-in-breach"],
       steps: [
-        { name: "Transfer £400 · Arthur → Ford", raw: [{ method: "POST", path: "/v1/payments/internal", tag: "request" }] },
-        { name: "Settles → Ford credited", raw: [{ method: "GET", path: "/v1/cash-accounts/{id}/balances", tag: "poll" }] },
-        { name: "Send outbound FPS · £1,000", raw: [{ method: "POST", path: "/v1/payments/outbound", tag: "request" }] },
-        { name: "Scheme declines", tone: "exception", raw: [{ method: "GET", path: "/v1/payments/outbound/{id}", tag: "poll" }] },
-        { name: "Reverse in-flight legs", raw: [{ method: "GET", path: "/v1/ledger-accounts", tag: "request" }] },
-        { name: "Payment flips to failed", raw: [{ method: "GET", path: "/v1/payments/outbound/{id}", tag: "poll" }] },
+        { name: "Arthur sends £500 · current → savings", raw: [{ method: "POST", path: "/v1/payments/internal", tag: "request" }] },
+        { name: "Refused · available must stay ≥ £0", tone: "exception", raw: [{ method: "GET", path: "/v1/me/effective-policies", tag: "request" }] },
+        { name: "Nothing posted · current still £250", raw: [{ method: "GET", path: "/v1/cash-accounts/{id}/balances", tag: "poll" }] },
       ],
     },
     {
-      id: "s6", num: "06", title: "The bank runs itself overnight", view: "jobs",
+      id: "s7", num: "07", title: "The bank runs itself overnight", view: "jobs",
       story:
         "Force-start the seeded daily-interest job. The accrue → capitalise pipeline posts the six-leg interest entry per funded savings account — and it ties to the penny.",
       backing: ["scheduler-force-start", "interest-accrual"],
@@ -187,11 +198,12 @@
   const sceneIndex = (id) => SCENES.findIndex((s) => s.id === id);
 
   // ── persisted state ───────────────────────────────────────────────
-  // Versioned keys: the v1 timer-mock persisted fake completions to the
-  // unversioned key. Bumping to v2 discards that stale state so the real
-  // runner starts fresh (Scene 01 ready, the rest locked).
-  const DONE_KEY = "queenswood.scenarios.v2.done";
-  const CTX_KEY = "queenswood.scenarios.v2.ctx";
+  // Versioned keys: bumped whenever scene semantics change so stale
+  // localStorage doesn't strand the runner. v3 re-cut the back half
+  // (four accounts per the happy-path shape, a save scene, a policy
+  // refusal) and rekeyed ctx.accounts, so v2 state must be discarded.
+  const DONE_KEY = "queenswood.scenarios.v3.done";
+  const CTX_KEY = "queenswood.scenarios.v3.ctx";
   const load = (k, fb) => {
     try {
       const r = localStorage.getItem(k);
@@ -247,13 +259,13 @@
     const productsLive = d("s1") ? 2 : 0;
     const applicants = d("s2") ? 3 : 0;
     const activeCustomers = d("s2") ? 2 : 0;
+    const accountsOpen = d("s3") ? 4 : 0;
     let cash = 0;
-    if (d("s3")) cash += FUND; // Arthur funded £2,500
-    if (d("s4")) cash -= SUSPENSE; // £180 left for the bogus account → suspense
-    // The Arthur → Ford transfer (s5) moves money between two in-bank
-    // accounts; the declined outbound reverses to nil — net unchanged.
-    const suspense = d("s4") ? SUSPENSE : 0;
-    return { productsLive, applicants, activeCustomers, cash, suspense };
+    if (d("s4")) cash += 2 * FUND_EACH; // both currents funded £1,000
+    // Saving (s5) moves money between a customer's own accounts and the
+    // refused overdraw (s6) posts nothing — both leave the total flat.
+    if (d("s7")) cash += INTEREST; // overnight interest capitalised
+    return { productsLive, applicants, activeCustomers, accountsOpen, cash };
   });
 
   const spineSteps = $derived(
@@ -403,57 +415,51 @@
       await step(5, () => pollParty(zaphod, "rejected"));
     },
     async s3({ step }) {
-      const a = await step(0, () =>
-        ensureAccount("arthurSavings", { "party-id": ctx.parties.arthur, name: "Arthur Savings", currency: "GBP", "product-id": ctx.products.savings.productId }));
-      await step(1, () =>
-        ensureAccount("fordCurrent", { "party-id": ctx.parties.ford, name: "Ford Current", currency: "GBP", "product-id": ctx.products.current.productId }));
-      await step(2, async () => {
-        const r = await api.simulate_inbound_transfer(bankId, { "account-id": a.accountId, amount: FUND, currency: "GBP" });
-        if (!ok2xx(r)) throw new Error(`fund Arthur: ${r.status}`);
-      });
-      await step(3, () =>
-        poll(() => api.get_cash_account_balances(a.accountId), (r) => r.status === 200 && (r.body?.["available-balance"]?.value ?? 0) >= FUND));
+      const open = (key, party, name, kind) => () =>
+        ensureAccount(key, { "party-id": ctx.parties[party], name, currency: "GBP", "product-id": ctx.products[kind].productId });
+      await step(0, open("arthurCurrent", "arthur", "Arthur Current", "current"));
+      await step(1, open("arthurSavings", "arthur", "Arthur Savings", "savings"));
+      await step(2, open("fordCurrent", "ford", "Ford Current", "current"));
+      await step(3, open("fordSavings", "ford", "Ford Savings", "savings"));
       await step(4, () => tick());
     },
     async s4({ step }) {
-      const a = ctx.accounts.arthurSavings;
-      const sortCode = (a.bban || "").slice(0, 6) || "000000";
-      await step(0, async () => {
-        const r = await api.submit_outbound_payment({
-          "debtor-account-id": a.accountId, "creditor-bban": sortCode + "99999999",
-          "creditor-name": "Nonexistent Account", currency: "GBP", amount: SUSPENSE,
-          scheme: "fps", reference: "Unmatched inbound",
-        });
-        if (!ok2xx(r)) throw new Error(`suspense send: ${r.status}`);
-      });
-      await step(1, () => sleep(1500)); // settle + unmatched detection
-      await step(2, () => api.list_ledger_accounts());
-      await step(3, () => tick());
+      const ac = ctx.accounts.arthurCurrent;
+      const fc = ctx.accounts.fordCurrent;
+      const fund = (acct) => async () => {
+        const r = await api.simulate_inbound_transfer(bankId, { "account-id": acct.accountId, amount: FUND_EACH, currency: "GBP" });
+        if (!ok2xx(r)) throw new Error(`fund ${acct.accountId}: ${r.status}`);
+      };
+      await step(0, fund(ac));
+      await step(1, fund(fc));
+      await step(2, () =>
+        poll(() => api.get_cash_account_balances(ac.accountId), (r) => r.status === 200 && (r.body?.["available-balance"]?.value ?? 0) >= FUND_EACH));
+      await step(3, () => api.list_ledger_accounts());
     },
     async s5({ step }) {
-      const a = ctx.accounts.arthurSavings;
-      const f = ctx.accounts.fordCurrent;
-      await step(0, async () => {
-        const r = await api.submit_internal_payment({ "debtor-account-id": a.accountId, "creditor-account-id": f.accountId, currency: "GBP", amount: XFER, reference: "Arthur pays Ford" });
-        if (!ok2xx(r)) throw new Error(`internal transfer: ${r.status}`);
-      });
-      await step(1, () =>
-        poll(() => api.get_cash_account_balances(f.accountId), (r) => r.status === 200 && (r.body?.["available-balance"]?.value ?? 0) >= XFER));
-      const out = await step(2, async () => {
-        const r = await api.submit_outbound_payment({
-          "debtor-account-id": a.accountId, "creditor-bban": "04000412345678",
-          "creditor-name": DECLINE_NAME, currency: "GBP", amount: DECLINE,
-          scheme: "fps", reference: "Declined demo",
-        });
-        if (!ok2xx(r)) throw new Error(`outbound send: ${r.status}`);
-        return r.body["payment-id"];
-      });
-      await step(3, () =>
-        poll(() => api.get_outbound_payment(out), (r) => r.status === 200 && /fail|declin|reject|return|cancel/i.test(r.body?.["payment-status"] || ""), { tries: 30, delay: 600 }));
-      await step(4, () => tick());
-      await step(5, () => tick());
+      const { arthurCurrent, arthurSavings, fordCurrent, fordSavings } = ctx.accounts;
+      const save = (from, to, amount, who) => async () => {
+        const r = await api.submit_internal_payment({ "debtor-account-id": from.accountId, "creditor-account-id": to.accountId, currency: "GBP", amount, reference: `${who} saves` });
+        if (!ok2xx(r)) throw new Error(`${who} save: ${r.status}`);
+      };
+      await step(0, save(arthurCurrent, arthurSavings, ARTHUR_SAVE, "Arthur"));
+      await step(1, save(fordCurrent, fordSavings, FORD_SAVE, "Ford"));
+      await step(2, () =>
+        poll(() => api.get_cash_account_balances(arthurSavings.accountId), (r) => r.status === 200 && (r.body?.["available-balance"]?.value ?? 0) >= ARTHUR_SAVE));
     },
     async s6({ step }) {
+      const ac = ctx.accounts.arthurCurrent;
+      await step(0, async () => {
+        // Arthur's current holds £250; £500 out would breach the
+        // platform non-negative-balance limit. Expect a synchronous 429.
+        const r = await api.submit_internal_payment({ "debtor-account-id": ac.accountId, "creditor-account-id": ctx.accounts.arthurSavings.accountId, currency: "GBP", amount: OVERDRAW, reference: "Overdraw attempt" });
+        if (r.status !== 429) throw new Error(`expected 429 policy limit, got ${r.status}`);
+      });
+      await step(1, () => api.list_my_effective_policies());
+      await step(2, () =>
+        poll(() => api.get_cash_account_balances(ac.accountId), (r) => r.status === 200 && (r.body?.["available-balance"]?.value ?? 0) === FUND_EACH - ARTHUR_SAVE));
+    },
+    async s7({ step }) {
       await step(0, async () => {
         const list = await api.list_jobs();
         const jobs = list.body?.jobs ?? list.body?.["jobs"] ?? [];
@@ -556,7 +562,7 @@
 <PageHeader
   {kicker}
   title="Scenarios"
-  sub="Watch the platform run for real. Six scenes tell one story — a bank opening its doors — fired in order against the live API. State carries across the whole session, so the books you see are the books the scenarios actually moved."
+  sub="Watch the platform run for real. Seven scenes tell one story — a bank opening its doors — fired in order against the live API. State carries across the whole session, so the books you see are the books the scenarios actually moved."
 >
   {#snippet titleAside()}
     <span class="cum-chip" title="State carries across scenes — each builds on the last.">
@@ -585,16 +591,16 @@
   {/snippet}
   {#snippet title()}
     {#if done.length === 0}The bank hasn't opened yet
-    {:else if nextIdx === -1}The bank is open, funded, and reconciled
+    {:else if nextIdx === -1}The bank is open, funded, and running
     {:else}Books tie — debits equal credits{/if}
   {/snippet}
   {#snippet sub()}
     {#if done.length === 0}
       Run Scene 01 to stock the shelves and watch the platform build a bank, live.
     {:else if nextIdx === -1}
-      All six scenes complete · books tie to the penny{#if bank.suspense} · <span class="mono">{fmtMoney(bank.suspense)}</span> parked in 2500 suspense{/if}
+      All seven scenes complete · books tie to the penny
     {:else}
-      {bank.activeCustomers} customer{bank.activeCustomers === 1 ? "" : "s"} · <span class="mono">{fmtMoney(bank.cash)}</span> held{#if bank.suspense} · <span class="mono">{fmtMoney(bank.suspense)}</span> in suspense{/if}
+      {bank.activeCustomers} customer{bank.activeCustomers === 1 ? "" : "s"} · <span class="mono">{fmtMoney(bank.cash)}</span> held
     {/if}
   {/snippet}
   {#snippet action()}
@@ -675,27 +681,33 @@
       <div class="party-line"><span class="pl-name">Zaphod Beeblebrox</span><span class="pl-flow"><Badge tone="archived">pending</Badge><span class="arr">→</span><Badge tone="rejected">rejected</Badge></span></div>
     </div>
   {:else if s.id === "s3"}
-    <div class="tb">
-      <div class="tb-row head"><span>Code</span><span>Account</span><span>Debit</span><span>Credit</span></div>
-      <div class="tb-row"><span class="tb-code">1100</span><span class="tb-acct">Customer cash at bank</span><span class="tb-dr">£2,500.00</span><span class="tb-cr"></span></div>
-      <div class="tb-row"><span class="tb-code">2100</span><span class="tb-acct">Customer account balances</span><span class="tb-dr"></span><span class="tb-cr">£2,500.00</span></div>
-      <div class="tb-row total"><span class="tb-code"></span><span class="tb-acct">Trial balance</span><span class="tb-dr">£2,500.00</span><span class="tb-cr">£2,500.00</span></div>
+    <div class="prod-chips">
+      <div class="prod-chip"><span class="pc-name">Arthur · Current</span><Badge tone="published">opened</Badge></div>
+      <div class="prod-chip"><span class="pc-name">Arthur · Savings</span><Badge tone="published">opened</Badge></div>
+      <div class="prod-chip"><span class="pc-name">Ford · Current</span><Badge tone="published">opened</Badge></div>
+      <div class="prod-chip"><span class="pc-name">Ford · Savings</span><Badge tone="published">opened</Badge></div>
     </div>
-    <div class="tb-tie">{@render icoCheck()}<span>Debits equal credits — the books tie to the penny.</span></div>
+    <div class="tb-tie">{@render icoCheck()}<span>Four accounts open — each with its own sort code and account number.</span></div>
   {:else if s.id === "s4"}
     <div class="tb">
       <div class="tb-row head"><span>Code</span><span>Account</span><span>Debit</span><span>Credit</span></div>
-      <div class="tb-row"><span class="tb-code">1100</span><span class="tb-acct">Customer cash at bank</span><span class="tb-dr">£180.00</span><span class="tb-cr"></span></div>
-      <div class="tb-row suspense"><span class="tb-code">2500</span><span class="tb-acct">Suspense — unreconciled</span><span class="tb-dr"></span><span class="tb-cr">£180.00</span></div>
+      <div class="tb-row"><span class="tb-code">1100</span><span class="tb-acct">Customer cash at bank</span><span class="tb-dr">£2,000.00</span><span class="tb-cr"></span></div>
+      <div class="tb-row"><span class="tb-code">2100</span><span class="tb-acct">Customer account balances</span><span class="tb-dr"></span><span class="tb-cr">£2,000.00</span></div>
+      <div class="tb-row total"><span class="tb-code"></span><span class="tb-acct">Trial balance</span><span class="tb-dr">£2,000.00</span><span class="tb-cr">£2,000.00</span></div>
     </div>
-    <div class="tb-tie neutral">{@render icoSpark()}<span><span class="hl">£180.00 parked in 2500 suspense</span> — held safely, flagged for reconciliation. Nothing bounced, nothing lost.</span></div>
+    <div class="tb-tie">{@render icoCheck()}<span>Two £1,000 credits · debits equal credits — the books tie to the penny.</span></div>
   {:else if s.id === "s5"}
     <div class="pay-lines">
-      <div class="pay-line"><span class="py-amt">£400.00</span><Badge tone="published">settled</Badge><span class="py-desc">Arthur → Ford · Ford's balance <span class="mono">£0 → £400</span></span></div>
-      <div class="pay-line"><span class="py-amt">−£1,000.00</span><Badge tone="rejected">failed</Badge><span class="py-desc">Scheme declined · in-flight legs reversed · balance unchanged</span></div>
+      <div class="pay-line"><span class="py-amt">£750.00</span><Badge tone="published">settled</Badge><span class="py-desc">Arthur · current → savings · savings <span class="mono">£0 → £750</span></span></div>
+      <div class="pay-line"><span class="py-amt">£350.00</span><Badge tone="published">settled</Badge><span class="py-desc">Ford · current → savings · savings <span class="mono">£0 → £350</span></span></div>
     </div>
-    <div class="tb-tie">{@render icoCheck()}<span>Money moved between two real customers, and the declined payment unwound cleanly — debits still equal credits.</span></div>
+    <div class="tb-tie">{@render icoCheck()}<span>Each customer moved money between their own accounts — debits still equal credits.</span></div>
   {:else if s.id === "s6"}
+    <div class="pay-lines">
+      <div class="pay-line"><span class="py-amt">−£500.00</span><Badge tone="rejected">refused</Badge><span class="py-desc">Arthur · current → savings · current holds only <span class="mono">£250</span></span></div>
+    </div>
+    <div class="tb-tie neutral">{@render icoSpark()}<span><span class="hl">Available balance must stay at or above £0</span> — the platform policy refused the transfer before any money moved. Nothing posted.</span></div>
+  {:else if s.id === "s7"}
     <div class="joblet">
       <TaskPipeline steps={[{ name: "accrue", status: "ok" }, { name: "capitalise", status: "ok" }]} />
       <div class="jl-note">The daily-interest job posts a <span class="mono">six-leg</span> interest entry per funded savings account, accrued then capitalised in one run. See the run in <span class="mono">Jobs</span> and the postings in the <span class="mono">Ledger</span>.</div>
@@ -853,7 +865,6 @@
   }
   .tb-row .tb-dr { color: var(--debit); }
   .tb-row .tb-cr { color: var(--credit); }
-  .tb-row.suspense { background: light-dark(oklch(0.97 0.03 84), oklch(0.30 0.05 80)); }
   .tb-row.total { background: var(--surface-sunk); font-weight: 500; }
   .tb-row.total .tb-acct { color: var(--fg); }
 
