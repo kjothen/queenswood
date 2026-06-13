@@ -96,7 +96,8 @@
     components/bank-cash-account {:local/root "components/bank-cash-account"}
     components/bank-clearbank-webhook {:local/root
                                        "components/bank-clearbank-webhook"}
-    components/bank-company-check {:local/root "components/bank-company-check"}
+    components/bank-company-registry {:local/root
+                                      "components/bank-company-registry"}
     components/bank-idempotency {:local/root "components/bank-idempotency"}
     components/bank-idv {:local/root "components/bank-idv"}
     components/bank-onfido-webhook {:local/root
@@ -139,8 +140,8 @@
                  "components/bank-cash-account-product/test"
                  "components/bank-cash-account-product/test-resources"
                  "components/bank-cash-account/test"
-                 "components/bank-company-check/test"
-                 "components/bank-company-check/test-resources"
+                 "components/bank-company-registry/test"
+                 "components/bank-company-registry/test-resources"
                  "components/bank-idv/test"
                  "components/bank-idv/test-resources"
                  "components/bank-interest/test"
