@@ -15,9 +15,8 @@
         {:status "ACCEPTED" :payload payload}))))
 
 (def ^:private command-handlers
-  {"record-transaction" (fn [config data]
-                          (->response config
-                                      (core/record-transaction config data)))})
+  {"record-transaction"
+   (fn [config data] (->response config (core/record-and-post config data)))})
 
 (defn- dispatch
   [config message]
