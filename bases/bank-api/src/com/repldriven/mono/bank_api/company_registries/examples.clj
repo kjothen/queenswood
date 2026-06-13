@@ -4,13 +4,13 @@
 
 (def CompanyNotFound
   {:value {:title "REJECTED"
-           :type "company-check/not-found"
+           :type "company-registry/company-not-found"
            :status 404
            :detail "No active company found for that number"}})
 
 (def RegistryNotFound
   {:value {:title "REJECTED"
-           :type "company-registry/not-found"
+           :type "company-registry/registry-not-found"
            :status 404
            :detail "Company registry not supported"}})
 

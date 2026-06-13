@@ -1,7 +1,7 @@
 (ns com.repldriven.mono.bank-api.onboarding.handlers
   (:require
-    [com.repldriven.mono.bank-api.company-registries.lookup :as lookup]
     [com.repldriven.mono.bank-api.errors :as errors]
+    [com.repldriven.mono.bank-company-registry.interface :as company-registry]
     [com.repldriven.mono.bank-membership.interface :as memberships]
     [com.repldriven.mono.bank-bank.interface :as banks]
 
@@ -40,7 +40,7 @@
   User row has already been upserted by the auth interceptor. Looks up
   and confirms the company, then provisions the bank bound to it plus
   the owner membership."
-  [request txn user identity-provider audience registry company-number
+  [lookup-config txn user identity-provider audience registry company-number
    bank-name]
   (let-nom> [existing (memberships/list-by-user txn (:user-id user))]
     (if (seq existing)
@@ -48,7 +48,9 @@
                     {:message "User already belongs to a bank"
                      :user-id (:user-id user)
                      :bank-id (:bank-id (first existing))})
-      (let-nom> [company (lookup/find-company request registry company-number)
+      (let-nom> [company (company-registry/lookup-company lookup-config
+                                                          registry
+                                                          company-number)
                  _ (when-not (= "active" (:company-status company))
                      (error/reject
                       :onboarding/company-not-active
@@ -91,10 +93,13 @@
         {:keys [user]} auth
         {:keys [body]} parameters
         {:keys [registry company-number bank-name]} body
-        registry (or registry lookup/supported-registry)
+        registry (or registry company-registry/default-registry)
         txn {:record-db record-db :record-store record-store}
+        lookup-config (select-keys request
+                                   [:companies-house-url :record-db
+                                    :record-store])
         audience (get audiences-by-status default-status)
-        result (run-onboard request
+        result (run-onboard lookup-config
                             txn
                             user
                             identity-provider

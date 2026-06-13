@@ -1,4 +1,4 @@
-(ns com.repldriven.mono.bank-company-check.store
+(ns com.repldriven.mono.bank-company-registry.store
   (:require
     [com.repldriven.mono.bank-schema.interface :as schema]
     [com.repldriven.mono.fdb.interface :as fdb]))
@@ -13,7 +13,7 @@
      (let [store (fdb/open txn store-name)]
        (fdb/save-record store (schema/Company->java company))
        company))
-   :company-check/save
+   :company-registry/save
    "Failed to save company"))
 
 (defn get-company
@@ -23,5 +23,5 @@
    (fn [txn]
      (some-> (fdb/load-record (fdb/open txn store-name) company-number)
              schema/pb->Company))
-   :company-check/get
+   :company-registry/get
    "Failed to load company"))
