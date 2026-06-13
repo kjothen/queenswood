@@ -24,7 +24,7 @@
           _ (store/save-legs txn legs')]
          (assoc transaction :legs legs'))))))
 
-(defn record-transaction
+(defn record-and-post
   [txn data]
   (let [result (store/transact
                 txn
