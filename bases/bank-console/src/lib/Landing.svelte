@@ -275,10 +275,11 @@
     { num: "04", label: "Money in, double-entry out", status: "done" },
     { num: "05", label: "Customers save", status: "running" },
     { num: "06", label: "Policy holds the line", status: "ready" },
-    { num: "07", label: "Runs itself overnight", status: "locked" },
+    { num: "07", label: "Friends settle up", status: "locked" },
+    { num: "08", label: "Runs itself overnight", status: "locked" },
   ];
   const DEMO_BANK_CELLS = [
-    { figure: 4, unit: "/ 7", label: "Scenes run" },
+    { figure: 4, unit: "/ 8", label: "Scenes run" },
     { figure: 2, label: "Products live" },
     { figure: 2, unit: "/ 3", label: "Active customers" },
     { figure: "£2,000.00", label: "Customer money held" },
@@ -371,12 +372,12 @@
   -H <span class="syn-string">"Authorization: Bearer $QW_OAUTH_TOKEN"</span> \
   -H <span class="syn-string">"Content-Type: application/json"</span> \
   -d <span class="syn-string">{`'{ "name": "Northwind FS",
-       "status": "test",
-       "tier": "standard",
-       "currencies": ["GBP"] }'`}</span>
+        "status": "test",
+        "tier": "standard",
+        "currencies": ["GBP"] }'`}</span>
 
 <span class="syn-comment">#</span> <span class="syn-emphasis">{`{ "bank-id": "bnk.01HW7…",`}</span>
-<span class="syn-comment">#  </span>  <span class="syn-emphasis">{`"sort-code": "04-00-12" }`}</span></pre>
+<span class="syn-comment">#</span>   <span class="syn-emphasis">{`"sort-code": "04-00-12" }`}</span></pre>
         </CodeCard>
       </div>
     </div>
@@ -420,7 +421,7 @@
     <h2>A bank opening its <em>doors.</em></h2>
     <p class="lead">
       The console ships a sandbox that fires these capabilities against the live
-      API, in order — seven scenes that build one cumulative story. The screens
+      API, in order — eight scenes that build one cumulative story. The screens
       below are those scenes, rendered with the real components, not mockups.
     </p>
     <div class="spine-wrap">
@@ -654,7 +655,7 @@
   <div class="wrap">
     <div class="grid">
       <div>
-        <span class="num">05 — Policies</span>
+        <span class="num">06 — Policies</span>
         <h3>Policy holds the <em>line.</em></h3>
         <p>
           Capabilities and limits are data, not hard-coded rules. The platform's
@@ -685,7 +686,7 @@
   <div class="wrap">
     <div class="grid">
       <div>
-        <span class="num">06 — Interest &amp; Jobs</span>
+        <span class="num">08 — Interest &amp; Jobs</span>
         <h3>Runs itself <em>overnight.</em></h3>
         <p>
           A seeded daily job accrues interest with micro-unit precision, then

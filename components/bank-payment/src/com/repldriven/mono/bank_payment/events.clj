@@ -209,33 +209,13 @@
        :else
        (record-inbound-settlement config data account)))))
 
-(defn- settlement-transaction
-  "DEBIT 1200 pending-outbound / CREDIT 1100 cash-at-correspondent —
-  the second hop of an outbound payment, fired when ClearBank
-  confirms settlement. Drains the in-flight asset bucket and reduces
-  the bank's correspondent-account claim."
-  [pending-outbound-id cash-at-correspondent-id payment]
-  (let [{:keys [amount currency payment-id]} payment]
-    {:idempotency-key (str "settle-out-" payment-id)
-     :transaction-type :transaction-type-outbound-transfer
-     :currency currency
-     :legs [{:account-id pending-outbound-id
-             :balance-type :balance-type-default
-             :balance-status :balance-status-posted
-             :side :leg-side-debit
-             :amount amount}
-            {:account-id cash-at-correspondent-id
-             :balance-type :balance-type-default
-             :balance-status :balance-status-posted
-             :side :leg-side-credit
-             :amount amount}]}))
-
 (defn- record-settlement-leg
-  "Drain 1200 → 1100 on the customer bank's books. GL-only legs (no
-  sub-ledger) so `add-control-legs` is a no-op, but we route through it
-  anyway for consistency."
+  "Settle an outbound: clear the debtor's pending-outgoing reservation and
+  post the real outflow, draining 1200 → 1100. The debtor's posted debit is
+  a sub-ledger leg, so route through `add-control-legs` to fan it up to the
+  deposit control."
   [config payment]
-  (let [{:keys [bank-id]} payment]
+  (let [{:keys [bank-id debtor-account-id]} payment]
     (store/transact
      config
      (fn [txn]
@@ -260,10 +240,22 @@
                            (str "Bank has no 1100 account during "
                                 "outbound settlement")
                            :bank-id bank-id}))
-          tx (settlement-transaction (:ledger-account-id pending)
-                                     (:ledger-account-id cash)
-                                     payment)
-          recorded (transactions/record-transaction txn tx)
+          debtor-account (cash-accounts/get-account
+                          txn
+                          bank-id
+                          debtor-account-id)
+          tx (domain/outbound-settlement->transaction
+              payment
+              debtor-account
+              (:ledger-account-id pending)
+              (:ledger-account-id cash))
+          expanded-legs (ledger-accounts/add-control-legs
+                         txn
+                         bank-id
+                         (:legs tx))
+          recorded (transactions/record-transaction
+                    txn
+                    (assoc tx :legs expanded-legs))
           {:keys [transaction-type legs]} recorded
           _ (balances/apply-legs txn legs transaction-type)]
          recorded)))))

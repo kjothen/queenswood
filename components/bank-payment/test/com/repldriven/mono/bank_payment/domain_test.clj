@@ -14,6 +14,24 @@
   [tx leg-side]
   (some (fn [leg] (when (= leg-side (:side leg)) leg)) (:legs tx)))
 
+(defn- leg
+  "Returns the leg matching both side and balance-status, or nil — needed
+  once a transaction carries several legs across balance buckets."
+  [tx leg-side balance-status]
+  (some (fn [l]
+          (when (and (= leg-side (:side l))
+                     (= balance-status (:balance-status l)))
+            l))
+        (:legs tx)))
+
+(defn- balanced?
+  "Σ debit == Σ credit over a transaction's postings."
+  [tx]
+  (let [legs (:legs tx)
+        total (fn [s]
+                (reduce + 0 (map :amount (filter #(= s (:side %)) legs))))]
+    (= (total :leg-side-debit) (total :leg-side-credit))))
+
 (defn- allow-all
   "Minimal policy fixture that allow-lists every payment action and
   permits a high daily count, so the leg-shape assertions don't get
@@ -131,19 +149,69 @@
     (testing "envelope shape"
       (is (= "ob-1" (:idempotency-key tx)))
       (is (= :transaction-type-outbound-transfer (:transaction-type tx))))
-    (testing
-      "customer (default) debited, GL 1200 pending-outbound (default) credited"
-      ;; Post-CoA: outbound submission credits the bank's 1200. Pending
-      ;; outbound payments on `:balance-type-default
-      ;; :balance-status-posted`.
-      (let [debit (side tx :leg-side-debit)
-            credit (side tx :leg-side-credit)]
+    (testing "reserves: customer + GL 1200 both on pending-outgoing"
+      ;; Submit doesn't post — it reserves. The customer's funds move to
+      ;; their pending-outgoing bucket (available drops, posted untouched)
+      ;; and the bank's 1200 claim is pending too, so nothing hits a posted
+      ;; bucket and the trial balance is undisturbed until settlement.
+      (let [debit (leg tx :leg-side-debit :balance-status-pending-outgoing)
+            credit (leg tx :leg-side-credit :balance-status-pending-outgoing)]
         (is (= "debtor" (:account-id debit)))
         (is (= :balance-type-default (:balance-type debit)))
         (is (= 250 (:amount debit)))
         (is (= "internal" (:account-id credit)))
         (is (= :balance-type-default (:balance-type credit)))
-        (is (= 250 (:amount credit)))))))
+        (is (= 250 (:amount credit)))))
+    (testing "legs balance" (is (balanced? tx)))))
+
+(deftest outbound-settlement->transaction-test
+  (let [payment {:payment-id "pmt-1"
+                 :debtor-account-id "debtor"
+                 :currency "GBP"
+                 :amount 250
+                 :reference "Beer and nuts"}
+        tx (SUT/outbound-settlement->transaction payment
+                                                 (account "debtor" "GBP")
+                                                 "1200"
+                                                 "1100")]
+    (testing "carries the payment reference onto the settled debit"
+      (is (= "Beer and nuts" (:reference tx))))
+    (testing "clears the reservation and posts the real outflow"
+      ;; Customer: credit pending-outgoing (clear the reservation) and
+      ;; debit posted (the money now actually leaves).
+      (let [clear (leg tx :leg-side-credit :balance-status-pending-outgoing)
+            post (leg tx :leg-side-debit :balance-status-posted)]
+        (is (= "debtor" (:account-id clear)))
+        (is (= 250 (:amount clear)))
+        (is (= "debtor" (:account-id post)))
+        (is (= 250 (:amount post)))))
+    (testing "drains 1200 (pending claim) out via 1100 (posted)"
+      (let [drain (leg tx :leg-side-debit :balance-status-pending-outgoing)
+            out (leg tx :leg-side-credit :balance-status-posted)]
+        (is (= "1200" (:account-id drain)))
+        (is (= "1100" (:account-id out)))))
+    (testing "legs balance" (is (balanced? tx)))))
+
+(deftest outbound-reversal->transaction-test
+  (let [payment {:payment-id "pmt-2"
+                 :debtor-account-id "debtor"
+                 :currency "GBP"
+                 :amount 250}
+        tx (SUT/outbound-reversal->transaction payment
+                                               (account "debtor" "GBP")
+                                               "1200")]
+    (testing "releases the reservation — every leg on pending-outgoing"
+      ;; The money never left the debtor's posted balance, so nothing
+      ;; posted is reversed: just drain 1200 and release the reservation.
+      (is (every? #(= :balance-status-pending-outgoing (:balance-status %))
+                  (:legs tx)))
+      (let [drain (leg tx :leg-side-debit :balance-status-pending-outgoing)
+            release (leg tx :leg-side-credit :balance-status-pending-outgoing)]
+        (is (= "1200" (:account-id drain)))
+        (is (= 250 (:amount drain)))
+        (is (= "debtor" (:account-id release)))
+        (is (= 250 (:amount release)))))
+    (testing "legs balance" (is (balanced? tx)))))
 
 (deftest currency-mismatch-test
   (testing "internal-payment: debtor currency must match payment currency"

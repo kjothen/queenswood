@@ -291,6 +291,12 @@
                                   [:outbound-payment
                                    #{:bank-id :business-day :amount}])
                           amount))]
+      ;; Reserve, don't post: the customer's funds move to their
+      ;; pending-outgoing bucket (available drops, posted untouched) and
+      ;; the bank's 1200 claim is likewise pending — the whole transfer
+      ;; is in-flight until the scheme settles. Nothing hits a posted
+      ;; bucket, so the trial balance is undisturbed at submit, and a
+      ;; non-posted leg doesn't fan out a control leg.
       (utility/assoc-some
        {:idempotency-key idempotency-key
         :transaction-type :transaction-type-outbound-transfer
@@ -298,12 +304,12 @@
         :legs [{:account-id debtor-account-id
                 :product-type (:product-type debtor-account)
                 :balance-type :balance-type-default
-                :balance-status :balance-status-posted
+                :balance-status :balance-status-pending-outgoing
                 :side :leg-side-debit
                 :amount amount}
                {:account-id pending-outbound-account-id
                 :balance-type :balance-type-default
-                :balance-status :balance-status-posted
+                :balance-status :balance-status-pending-outgoing
                 :side :leg-side-credit
                 :amount amount}]}
        :reference
@@ -355,11 +361,53 @@
    :cancellation-code cancellation-code
    :cancellation-reason cancellation-reason))
 
+(defn outbound-settlement->transaction
+  "The second hop, fired when the scheme confirms settlement. Converts the
+  in-flight reservation into a real outflow: CREDIT the debtor's
+  pending-outgoing (clear the reservation) and DEBIT its posted (the money
+  now leaves), DEBIT 1200 pending-outbound (clear the in-flight claim) and
+  CREDIT 1100 cash-at-correspondent (out to the scheme). Only the customer's
+  posted debit and the 1100 credit touch posted buckets, and they tie — so
+  the trial balance moves only now, at settlement. Carries the payment's
+  reference so the settled debit reads as the customer wrote it."
+  [payment debtor-account pending-outbound-id cash-at-correspondent-id]
+  (let [{:keys [amount currency payment-id debtor-account-id reference]}
+        payment]
+    (utility/assoc-some
+     {:idempotency-key (str "settle-out-" payment-id)
+      :transaction-type :transaction-type-outbound-transfer
+      :currency currency
+      :legs [{:account-id debtor-account-id
+              :product-type (:product-type debtor-account)
+              :balance-type :balance-type-default
+              :balance-status :balance-status-pending-outgoing
+              :side :leg-side-credit
+              :amount amount}
+             {:account-id debtor-account-id
+              :product-type (:product-type debtor-account)
+              :balance-type :balance-type-default
+              :balance-status :balance-status-posted
+              :side :leg-side-debit
+              :amount amount}
+             {:account-id pending-outbound-id
+              :balance-type :balance-type-default
+              :balance-status :balance-status-pending-outgoing
+              :side :leg-side-debit
+              :amount amount}
+             {:account-id cash-at-correspondent-id
+              :balance-type :balance-type-default
+              :balance-status :balance-status-posted
+              :side :leg-side-credit
+              :amount amount}]}
+     :reference
+     reference)))
+
 (defn outbound-reversal->transaction
-  "DEBIT 1200 pending-outbound / CREDIT debtor — reverse an unsettled
-  outbound payment when the scheme declines or returns it. Returns money
-  to the customer and drains the in-flight bucket. The mirror of
-  `outbound-payment->transaction`."
+  "Reverse an unsettled outbound when the scheme declines or returns it:
+  CREDIT the debtor's pending-outgoing (release the reservation) and DEBIT
+  1200 pending-outbound (clear the in-flight claim). The money never left
+  the debtor's posted balance, so there is nothing posted to reverse — only
+  the reservation is released. The mirror of `outbound-payment->transaction`."
   [payment debtor-account pending-outbound-account-id]
   (let [{:keys [amount currency payment-id debtor-account-id]} payment]
     {:idempotency-key (str "reverse-out-" payment-id)
@@ -367,13 +415,13 @@
      :currency currency
      :legs [{:account-id pending-outbound-account-id
              :balance-type :balance-type-default
-             :balance-status :balance-status-posted
+             :balance-status :balance-status-pending-outgoing
              :side :leg-side-debit
              :amount amount}
             {:account-id debtor-account-id
              :product-type (:product-type debtor-account)
              :balance-type :balance-type-default
-             :balance-status :balance-status-posted
+             :balance-status :balance-status-pending-outgoing
              :side :leg-side-credit
              :amount amount}]}))
 

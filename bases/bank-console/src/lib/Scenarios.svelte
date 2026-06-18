@@ -1,6 +1,6 @@
 <script>
   /* Scenarios — a customer-facing SANDBOX that proves the platform
-     works by running real, HTTP-driven scenarios live. Seven scenes tell
+     works by running real, HTTP-driven scenarios live. Eight scenes tell
      one continuous story — a bank opening its doors — fired manually in
      order. State is CUMULATIVE: each scene builds on the last, and the
      bank-state band accumulates the evidence as scenes complete.
@@ -10,8 +10,9 @@
      current and a savings each for Arthur and Ford), funding via the
      now-org-tier simulate inbound-transfer, internal transfers (current
      → savings), a deliberately overdrawing transfer the non-negative-
-     balance policy refuses, and interest via the bank-tier daily-interest
-     job force-start. Real ids discovered during a run are threaded
+     balance policy refuses, an outbound Faster Payment over the scheme
+     (Ford pays Arthur for beer and nuts), and interest via the bank-tier
+     daily-interest job force-start. Real ids discovered during a run are threaded
      through `ctx` and persisted, so later scenes reference the entities
      earlier scenes actually created. Re-running writes real server state;
      creation steps reuse an existing entity where they can so a re-run
@@ -60,6 +61,7 @@
   const ARTHUR_SAVE = 75000; // £750 Arthur current → savings
   const FORD_SAVE = 35000; // £350 Ford current → savings
   const OVERDRAW = 50000; // £500 Arthur tries to move with only £250 left
+  const FORD_PAYS = 2000; // £20.00 Ford → Arthur, outbound FPS (beer and nuts)
   const INTEREST = 110; // £0.75 + £0.35 capitalised across both savers
 
   const ADDRESS = {
@@ -179,8 +181,22 @@
         { name: "Nothing posted · current still £250", raw: [{ method: "GET", path: "/v1/cash-accounts/{id}/balances", tag: "poll" }] },
       ],
     },
+    // Outbound must follow the policy scene: s6 asserts Arthur sits at
+    // exactly £250, and this credits him £20. Scene ids are stable keys —
+    // display order is the array order, so s8 sits before s7 here.
     {
-      id: "s7", num: "07", title: "The bank runs itself overnight", view: "jobs",
+      id: "s8", num: "07", title: "Friends settle up", view: "accounts",
+      story:
+        "Ford pays Arthur £20.00 for beer and nuts — an outbound Faster Payment to Arthur's account number. It leaves Ford's current through the ClearBank scheme path and lands back in Arthur's: money out one door, in another.",
+      backing: ["e2e/full-happy-path", "payments/outbound-held-then-declined"],
+      steps: [
+        { name: "Ford pays Arthur £20.00 · outbound FPS", raw: [{ method: "POST", path: "/v1/payments/outbound", tag: "request" }] },
+        { name: "Scheme settles → completed", raw: [{ method: "GET", path: "/v1/payments/outbound/{id}", tag: "poll" }] },
+        { name: "Ford −£20 · Arthur +£20", raw: [{ method: "GET", path: "/v1/cash-accounts/{id}/balances", tag: "poll" }] },
+      ],
+    },
+    {
+      id: "s7", num: "08", title: "The bank runs itself overnight", view: "jobs",
       story:
         "Force-start the seeded daily-interest job. The accrue → capitalise pipeline posts the six-leg interest entry per funded savings account — and it ties to the penny.",
       backing: ["scheduler-force-start", "interest-accrual"],
@@ -201,9 +217,10 @@
   // Versioned keys: bumped whenever scene semantics change so stale
   // localStorage doesn't strand the runner. v3 re-cut the back half
   // (four accounts per the happy-path shape, a save scene, a policy
-  // refusal) and rekeyed ctx.accounts, so v2 state must be discarded.
-  const DONE_KEY = "queenswood.scenarios.v3.done";
-  const CTX_KEY = "queenswood.scenarios.v3.ctx";
+  // refusal) and rekeyed ctx.accounts; v4 inserts the outbound-payment
+  // scene (Ford pays Arthur), renumbering the scenes after it.
+  const DONE_KEY = "queenswood.scenarios.v4.done";
+  const CTX_KEY = "queenswood.scenarios.v4.ctx";
   const load = (k, fb) => {
     try {
       const r = localStorage.getItem(k);
@@ -393,7 +410,7 @@
     return rec;
   }
 
-  // ── the six scene programs ────────────────────────────────────────
+  // ── the scene programs ────────────────────────────────────────────
   const PROD_CURRENT = { name: "Current Account", "template-id": TPL_CURRENT, currency: "GBP", "interest-rate-bps": 0, "effective-from": TODAY };
   const PROD_SAVINGS = { name: "Savings", "template-id": TPL_SAVINGS, currency: "GBP", "interest-rate-bps": 3650, "effective-from": TODAY };
 
@@ -472,6 +489,44 @@
       await step(2, () => tick());
       await step(3, () => api.list_ledger_accounts());
       await step(4, () => tick());
+    },
+    async s8({ step }) {
+      const ford = ctx.accounts.fordCurrent;
+      const arthur = ctx.accounts.arthurCurrent;
+      let paymentId;
+      await step(0, async () => {
+        // Arthur's BBAN is sort-code ++ account-number from the SCAN
+        // address on his current account — the scheme delivers there.
+        const bban =
+          arthur.bban ?? (await api.get_cash_account(arthur.accountId)).body?.bban;
+        if (!bban) throw new Error("Arthur's current has no SCAN bban yet");
+        const r = await api.submit_outbound_payment({
+          "debtor-account-id": ford.accountId,
+          "creditor-bban": bban,
+          "creditor-name": "Arthur Dent",
+          currency: "GBP",
+          amount: FORD_PAYS,
+          scheme: "fps",
+          reference: "Beer and nuts",
+        });
+        if (!ok2xx(r)) throw new Error(`outbound submit: ${r.status}`);
+        paymentId = r.body?.["payment-id"];
+      });
+      await step(1, () =>
+        poll(
+          () => api.get_outbound_payment(paymentId),
+          (r) => r.status === 200 && r.body?.["payment-status"] === "completed",
+          { tries: 40, delay: 600 },
+        ));
+      // Outbound to a same-bank account round-trips back as an inbound:
+      // Ford −£20, Arthur +£20, so Arthur's current climbs to £270.
+      await step(2, () =>
+        poll(
+          () => api.get_cash_account_balances(arthur.accountId),
+          (r) =>
+            r.status === 200 &&
+            (r.body?.["available-balance"]?.value ?? 0) >= FUND_EACH - ARTHUR_SAVE + FORD_PAYS,
+        ));
     },
   };
 
@@ -562,7 +617,7 @@
 <PageHeader
   {kicker}
   title="Scenarios"
-  sub="Watch the platform run for real. Seven scenes tell one story — a bank opening its doors — fired in order against the live API. State carries across the whole session, so the books you see are the books the scenarios actually moved."
+  sub="Watch the platform run for real. Eight scenes tell one story — a bank opening its doors — fired in order against the live API. State carries across the whole session, so the books you see are the books the scenarios actually moved."
 >
   {#snippet titleAside()}
     <span class="cum-chip" title="State carries across scenes — each builds on the last.">
@@ -598,7 +653,7 @@
     {#if done.length === 0}
       Run Scene 01 to stock the shelves and watch the platform build a bank, live.
     {:else if nextIdx === -1}
-      All seven scenes complete · books tie to the penny
+      All eight scenes complete · books tie to the penny
     {:else}
       {bank.activeCustomers} customer{bank.activeCustomers === 1 ? "" : "s"} · <span class="mono">{fmtMoney(bank.cash)}</span> held
     {/if}
@@ -713,6 +768,11 @@
       <div class="jl-note">The daily-interest job posts a <span class="mono">six-leg</span> interest entry per funded savings account, accrued then capitalised in one run. See the run in <span class="mono">Jobs</span> and the postings in the <span class="mono">Ledger</span>.</div>
     </div>
     <div class="tb-tie">{@render icoCheck()}<span>Interest posting ties to the penny.</span></div>
+  {:else if s.id === "s8"}
+    <div class="pay-lines">
+      <div class="pay-line"><span class="py-amt">£20.00</span><Badge tone="published">completed</Badge><span class="py-desc">Ford → Arthur · outbound FPS · ref <span class="mono">Beer and nuts</span></span></div>
+    </div>
+    <div class="tb-tie">{@render icoCheck()}<span>Ford <span class="mono">−£20</span>, Arthur <span class="mono">+£20</span> — it left over the scheme and arrived back, and the books still tie.</span></div>
   {/if}
 {/snippet}
 

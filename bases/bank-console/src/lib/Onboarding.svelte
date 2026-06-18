@@ -66,7 +66,9 @@
   }
 
   function fillExample() {
-    number = "WY002122";
+    // Sirius Cybernetics — the H2G2 company, so a bank chartered to it
+    // matches the demo customers Ford and Arthur.
+    number = "SC998137";
     lookupError = null;
   }
 
@@ -204,9 +206,9 @@
             aria-label={registry.idLabel}
           />
           <span class="hint">
-            Eight characters, e.g. <code>SC998137</code> or <code>TY046601</code>.
+            Eight characters, e.g. <code>TY046601</code> or <code>WY002122</code>.
             We'll look it up on the live register.
-            <button type="button" class="link" onclick={fillExample}>Try WY002122</button>.
+            <button type="button" class="link" onclick={fillExample}>Try SC998137</button>.
           </span>
           {#if lookupError}
             <p class="error" role="alert">
