@@ -88,6 +88,10 @@
   --danger-hover:   light-dark(oklch(0.47 0.135 30), oklch(0.65 0.135 30));
   --danger-fg:      #fbf9f4;
 
+  /* Credit / positive amounts — pine, the money-good tone. Paired with
+     --danger for debits; the Accounts screen tones amounts by sign. */
+  --pos:            light-dark(oklch(0.42 0.075 145), oklch(0.74 0.075 145));
+
   --brand-action:        var(--gold);
   --brand-action-hover:  var(--gold-deep);
   --brand-action-fg:     #161310;

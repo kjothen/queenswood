@@ -158,7 +158,7 @@
       ],
     },
     {
-      id: "s5", num: "05", title: "Customers save", view: "ledger",
+      id: "s5", num: "05", title: "Customers save", view: "accounts",
       story:
         "Arthur moves £750 from current to savings; Ford moves £350. Internal transfers settle instantly and the savings balances climb — money moving between a customer's own accounts.",
       backing: ["intra-bank-internal-transfer"],

@@ -236,11 +236,16 @@ export function create_party(data) {
 //
 // Open an account against a party + published product (returns
 // `account-status: "opening"`; poll the GET until `"opened"`, at which
-// point the record carries its assigned SCAN `bban`). Used by the
-// Scenarios sandbox; the standalone Accounts page isn't wired yet.
+// point the record carries its assigned SCAN `bban`). The Accounts page
+// lists accounts (with `embed[balances]` so the rail can show each
+// available balance) and fetches the selected account's transactions.
 
-export function list_cash_accounts() {
-  return request("/v1/cash-accounts");
+export function list_cash_accounts({ embed, after } = {}) {
+  const params = [];
+  if (embed?.length) params.push(...embed.map((e) => `embed[${e}]=true`));
+  if (after) params.push(`page[after]=${encodeURIComponent(after)}`);
+  const q = params.length ? "?" + params.join("&") : "";
+  return request(`/v1/cash-accounts${q}`);
 }
 
 export function get_cash_account(account_id) {
@@ -249,6 +254,10 @@ export function get_cash_account(account_id) {
 
 export function get_cash_account_balances(account_id) {
   return request(`/v1/cash-accounts/${account_id}/balances`);
+}
+
+export function get_cash_account_transactions(account_id) {
+  return request(`/v1/cash-accounts/${account_id}/transactions`);
 }
 
 export function open_cash_account(data) {

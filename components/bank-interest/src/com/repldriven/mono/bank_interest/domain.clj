@@ -66,7 +66,8 @@
                        as-of-date)
      :transaction-type :transaction-type-interest-accrual
      :currency currency
-     :reference (str "Daily interest accrual " as-of-date)
+     :reference (str "Daily interest accrual "
+                     (utility/epoch-day->iso-date as-of-date))
      :legs [{:account-id interest-expense-id
              :balance-type :balance-type-default
              :balance-status :balance-status-posted
@@ -95,7 +96,7 @@
        :transaction-type-interest-capital
        :currency currency
        :reference (str "Monthly interest capitalization "
-                       as-of-date)
+                       (utility/epoch-day->iso-date as-of-date))
        :legs [{:account-id account-id
                :balance-type :balance-type-interest-accrued
                :balance-status :balance-status-posted

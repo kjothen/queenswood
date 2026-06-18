@@ -49,7 +49,12 @@ export { default as GlType } from "./GlType.svelte";
 // assertion, summarised in cards above the ledger list.
 export { default as TrialBalance } from "./TrialBalance.svelte";
 export { default as TrialBalanceCard } from "./TrialBalanceCard.svelte";
-export { formatMoney, moneyTone, sumMinor, CCY_SYMBOLS } from "./money.js";
+export { formatMoney, formatSigned, moneyTone, sumMinor, CCY_SYMBOLS } from "./money.js";
+
+// Accounts screen — a reusable search input + the cash-account status
+// badge (opening / opened / closing / closed → Badge tones).
+export { default as SearchField } from "./SearchField.svelte";
+export { default as AccountStatusBadge } from "./AccountStatusBadge.svelte";
 
 // Policy matrix — atoms + the composed per-domain table, plus the
 // view-model helpers (DOMAINS / grouping) and bound formatting.

@@ -12,3 +12,9 @@
   ^long []
   (.toEpochDay (LocalDate/ofInstant (Instant/ofEpochMilli (now))
                                     ZoneOffset/UTC)))
+
+(defn epoch-day->iso-date
+  "An epoch-day (long) as an ISO-8601 calendar date string
+  (`2026-06-18`). Inverse of the epoch-day produced by `today`."
+  ^String [^long epoch-day]
+  (str (LocalDate/ofEpochDay epoch-day)))

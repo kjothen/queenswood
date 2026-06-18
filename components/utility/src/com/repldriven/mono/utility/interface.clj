@@ -154,6 +154,13 @@
   today
   util.time/today)
 
+(def
+  ^{:doc
+    "An epoch-day (long) as an ISO-8601 date string (`2026-06-18`).
+  Inverse of `today`; use when surfacing an epoch-day field to people."}
+  epoch-day->iso-date
+  util.time/epoch-day->iso-date)
+
 (def ^{:doc "Name of a var as a string. Args:
   - v: a Clojure var."} vname
   vars/vname)

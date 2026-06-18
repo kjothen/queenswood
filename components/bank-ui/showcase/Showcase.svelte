@@ -12,7 +12,8 @@
 
   import {
     Logo, Wordmark, AppNav, ThemeToggle,
-    Button, Badge,
+    Button, Badge, AccountStatusBadge,
+    SearchField,
     Sidenav, SidenavGroup, SidenavItem,
     PageHeader, Drawer,
     Table, Thead, Tbody, Tr, Th, Td,
@@ -36,6 +37,7 @@
     { id: "buttons",    label: "Buttons" },
     { id: "badges",     label: "Badges" },
     { id: "fields",     label: "Fields" },
+    { id: "searchfield", label: "Search field" },
     { id: "tables",     label: "Tables" },
     { id: "pageheader", label: "PageHeader" },
     { id: "sidenav",    label: "Sidenav" },
@@ -111,6 +113,7 @@
   // Demo state for Fields + Drawer sections. Fields and Drawer share
   // bindings so editing in one section updates the other — useful to
   // see the binding semantics live.
+  let scSearch = $state("");
   let demoName = $state("GBP Current Account");
   let demoType = $state("Current Account");
   let demoCcy  = $state("GBP");
@@ -593,6 +596,14 @@
         <Badge tone="pending">pending</Badge>
         <Badge tone="neutral">neutral</Badge>
       </div>
+
+      <p class="lead">Cash-account lifecycle, mapped onto those tones via <code>AccountStatusBadge</code>.</p>
+      <div class="badge-row">
+        <AccountStatusBadge status="opened" />
+        <AccountStatusBadge status="opening" />
+        <AccountStatusBadge status="closing" />
+        <AccountStatusBadge status="closed" />
+      </div>
     </section>
 
     <!-- =================== 10 Fields =================== -->
@@ -629,6 +640,20 @@
         <Field label="Interest rate" htmlFor="sc-rate" hint="Basis points. 100 bps = 1.00%.">
           <Input id="sc-rate" type="number" affix="bps" bind:value={demoRate} />
         </Field>
+      </form>
+    </section>
+
+    <!-- =================== 10b Search field =================== -->
+    <section id="searchfield" class="section">
+      <div class="section-head">
+        <span class="kicker">10b — Search field</span>
+        <h2>Search, with a clear.</h2>
+        <p class="lead">Leading magnifier, gold focus ring, and a trailing ✕ that shows only once there's a value. <code>size="sm"</code> is the 34px compact variant used inside panel headers. Two-way bound via <code>bind:value</code>.</p>
+      </div>
+
+      <form class="field-demo" onsubmit={(e) => e.preventDefault()}>
+        <SearchField bind:value={scSearch} placeholder="Search by account number…" />
+        <SearchField bind:value={scSearch} size="sm" placeholder="Search transactions…" />
       </form>
     </section>
 
