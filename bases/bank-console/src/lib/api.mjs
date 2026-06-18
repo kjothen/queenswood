@@ -205,7 +205,7 @@ export function update_job_schedule(job_id, body) {
 //
 // bank-api `Party` shape carries summary fields only (party-id, type,
 // display-name, status, created-at, updated-at). The richer record
-// the Legal Persons drawer wants — given/family names, dob, address,
+// the Parties drawer wants — given/family names, dob, address,
 // national identifier — is what `create_party` accepts but not what
 // `list_parties` returns. The drawer falls back to "—" for the
 // per-field detail until the read endpoint surfaces it.

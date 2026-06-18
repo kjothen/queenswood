@@ -8,7 +8,7 @@
   import Onboarding from "./lib/Onboarding.svelte";
   import AppShell from "./lib/AppShell.svelte";
   import Products from "./lib/Products.svelte";
-  import LegalPersons from "./lib/LegalPersons.svelte";
+  import Parties from "./lib/Parties.svelte";
   import LedgerAccounts from "./lib/LedgerAccounts.svelte";
   import Jobs from "./lib/Jobs.svelte";
   import Policies from "./lib/Policies.svelte";
@@ -39,7 +39,7 @@
         props: { user, memberships },
       }),
       "/parties": wrap({
-        component: LegalPersons,
+        component: Parties,
         props: { user, memberships },
       }),
       "/ledger": wrap({

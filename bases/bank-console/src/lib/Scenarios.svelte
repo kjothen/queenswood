@@ -71,7 +71,7 @@
   };
   // Zaphod's middle name carries the Onfido-sim reject trigger (the
   // applicant first name must contain "reject"); his display name stays
-  // clean, so the Legal Persons list just shows "Zaphod Beeblebrox".
+  // clean, so the Parties list just shows "Zaphod Beeblebrox".
   const PARTY = {
     arthur: {
       type: "person", "display-name": "Arthur Dent",
@@ -96,7 +96,7 @@
   // The console views each scene "pays off" in.
   const VIEWS = {
     products: { label: "Products", href: "#/products" },
-    parties: { label: "Legal Persons", href: "#/parties" },
+    parties: { label: "Parties", href: "#/parties" },
     accounts: { label: "Accounts", href: "#/accounts" },
     ledger: { label: "Ledger", href: "#/ledger" },
     policies: { label: "Policies", href: "#/policies" },
