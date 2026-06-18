@@ -8,7 +8,9 @@ A multi-tenant banking platform: core banking with double-entry
 transactions and interest accrual, UK Faster Payments, and bank
 onboarding with IDV.
 
-[![Queenswood Bank](thumbnail.png)](https://github.com/user-attachments/assets/d6941c18-54c6-4954-aa7d-b8150f5d2891)
+[![Spin up a Bank](thumbnail.png)](https://github.com/user-attachments/assets/7d325be3-2d29-4e29-aea6-8959e6860110)
+[![Open the doors!](thumbnail.png)](https://github.com/user-attachments/assets/c35c1605-cf0e-4581-8ace-4e674b2efc56)
+
 
 ## Capabilities
 
