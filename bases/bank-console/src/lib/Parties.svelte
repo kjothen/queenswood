@@ -1,16 +1,10 @@
 <script>
-  /* Legal Persons page — the customer submits the people who hold a
-     role at the organisation (directors, beneficial owners,
-     signatories, customers). Approving / rejecting happens in the ops
+  /* Parties page — the parties (organizations and people) that hold a
+     role at the organisation: directors, beneficial owners,
+     signatories, customers. Approving / rejecting happens in the ops
      console (separate app), so there are no per-row actions here —
      clicking a row opens the read drawer; the drawer's Edit button
-     switches to the form.
-
-     Naming note: the mockup calls the screen "Legal Persons" rather
-     than "Parties" because end-customer parties belong on a separate
-     screen we haven't built yet. Route stays at /parties for now to
-     keep the sidenav highlight working; the on-screen title is the
-     thing the user actually reads. */
+     switches to the form. */
 
   import {
     PageHeader,
@@ -98,12 +92,12 @@
 
 <PageHeader
   {kicker}
-  title="Legal Persons"
-  sub="The people who hold a role at your organization — directors, beneficial owners, signatories, customers. Submit and update their details; reviewers approve or reject them in the ops console."
+  title="Parties"
+  sub="The organizations and people who hold a role at your organization — directors, beneficial owners, signatories, customers. Submit and update their details; reviewers approve or reject them in the ops console."
 >
   {#snippet actions()}
     <Button variant="ghost" onclick={load}>Refresh</Button>
-    <Button variant="primary" onclick={openCreate}>New legal person</Button>
+    <Button variant="primary" onclick={openCreate}>Onboard Person</Button>
   {/snippet}
 </PageHeader>
 
@@ -115,8 +109,8 @@
   <div class="loading">Loading…</div>
 {:else if parties.length === 0}
   <div class="empty">
-    <p>No legal persons yet.</p>
-    <p class="hint">Click <strong>New legal person</strong> to submit your first one.</p>
+    <p>No parties yet.</p>
+    <p class="hint">Click <strong>Onboard Person</strong> to add your first one.</p>
   </div>
 {:else}
   <Table>
@@ -188,7 +182,7 @@
     font-weight: 500;
   }
   /* Row click affordance — the row opens the read drawer for that
-     legal person. Matches the mockup's `.qw-table.parties tbody tr`. */
+     party. Matches the mockup's `.qw-table.parties tbody tr`. */
   :global(.row-clickable) {
     cursor: pointer;
   }

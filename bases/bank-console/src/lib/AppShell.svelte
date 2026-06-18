@@ -45,14 +45,14 @@
         {/snippet}
         Products
       </SidenavItem>
-      <SidenavItem href="#/parties" title="Legal Persons" current={isCurrent("/parties")}>
+      <SidenavItem href="#/parties" title="Parties" current={isCurrent("/parties")}>
         {#snippet icon()}
           <svg viewBox="0 0 16 16" aria-hidden="true">
             <circle cx="8" cy="6" r="2.6" />
             <path d="M3 14c0.8-3 2.6-4.6 5-4.6s4.2 1.6 5 4.6" />
           </svg>
         {/snippet}
-        Legal Persons
+        Parties
       </SidenavItem>
       <SidenavItem href="#/ledger" title="Ledger Accounts" current={isCurrent("/ledger")}>
         {#snippet icon()}

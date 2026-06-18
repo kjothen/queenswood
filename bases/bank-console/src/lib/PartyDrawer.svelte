@@ -1,7 +1,12 @@
 <script>
-  /* Drawer-hosted detail view + create/edit form for a Legal Person.
+  /* Drawer-hosted detail view + create/edit form for a Party.
 
-     Modes:
+     Organizations carry only the base summary (display-name, status,
+     timestamps) — no person identity — so read mode renders a plain
+     Organization view with no Edit affordance. Persons get the full
+     identity / address / identification view and the create/edit form.
+
+     Modes (person only):
        read    pre-filled detail view with an Edit affordance.
        create  blank form. Calls create_party on Save.
        edit    pre-filled form. bank-api has no PUT for parties yet,
@@ -9,10 +14,10 @@
                surface a small notice so the user knows.
 
      The list endpoint only returns the Party summary (party-id,
-     type, display-name, status, timestamps). Read mode fetches the
-     detail endpoint (GET /v1/parties/{id}) for the identity, address,
-     and identification fields. Email and phone aren't persisted, so
-     they stay "—". */
+     type, display-name, status, timestamps). For persons, read mode
+     fetches the detail endpoint (GET /v1/parties/{id}) for the
+     identity, address, and identification fields. Email and phone
+     aren't persisted, so they stay "—". */
 
   import { Drawer, Field, Input, Select, Button, Badge } from "@queenswood/bank-ui";
   import { create_party, get_party } from "./api.mjs";
@@ -25,6 +30,8 @@
     onModeChange,
     onSaved,
   } = $props();
+
+  const isOrg = $derived(target?.type === "organization");
 
   // Form state — reset whenever the drawer enters create/edit mode.
   let firstName = $state("");
@@ -100,7 +107,8 @@
   // user has moved to a different party.
   let detail = $state(null);
   $effect(() => {
-    if (!(open && mode === "read")) return;
+    // Only persons carry embeddable detail; organizations are summary-only.
+    if (!(open && mode === "read" && target?.type === "person")) return;
     const id = target?.["party-id"];
     if (!id) return;
     detail = null;
@@ -146,7 +154,19 @@
   const readIdType = $derived(prettyIdType(idn?.type));
   const readIdNumber = $derived(idn?.value ?? "");
 
-  // bank-api status → Badge tone. Matches LegalPersons.svelte.
+  // Organization read view — orgs carry only the base summary.
+  function fmtDate(iso) {
+    if (!iso) return "—";
+    return new Date(iso).toLocaleDateString(undefined, {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  }
+  const readCreated = $derived(fmtDate(target?.["created-at"]));
+  const readUpdated = $derived(formatRelative(target?.["updated-at"]));
+
+  // bank-api status → Badge tone. Matches Parties.svelte.
   const TONE = {
     active: "published",
     pending: "pending",
@@ -174,7 +194,7 @@
 
   const kickerFor = $derived(
     mode === "read"
-      ? `Legal person · ${shortId(target?.["party-id"])}`
+      ? `${isOrg ? "Organization" : "Person"} · ${shortId(target?.["party-id"])}`
       : mode === "edit"
         ? "Edit"
         : "Identify",
@@ -182,10 +202,10 @@
 
   const titleFor = $derived(
     mode === "read"
-      ? (target?.["display-name"] ?? "Legal person")
+      ? (target?.["display-name"] ?? (isOrg ? "Organization" : "Person"))
       : mode === "edit"
-        ? "Edit legal person"
-        : "New legal person",
+        ? "Edit person"
+        : "Onboard Person",
   );
 
   const subFor = $derived(
@@ -290,6 +310,16 @@
       <Badge tone={TONE[target?.status] ?? "neutral"}>{target?.status ?? "—"}</Badge>
     </div>
 
+    {#if isOrg}
+    <section class="drawer-section">
+      <h3 class="drawer-section-title">Organization</h3>
+      <dl class="detail-list">
+        <dt>Organization name</dt> <dd class:empty={!target?.["display-name"]}>{target?.["display-name"] || "—"}</dd>
+        <dt>Created</dt>           <dd class:empty={readCreated === "—"}>{readCreated}</dd>
+        <dt>Last updated</dt>      <dd class:empty={readUpdated === "—"}>{readUpdated}</dd>
+      </dl>
+    </section>
+    {:else}
     <section class="drawer-section">
       <h3 class="drawer-section-title">Identity</h3>
       <dl class="detail-list">
@@ -320,6 +350,7 @@
         <dt>Number</dt>     <dd class="mono" class:empty={!readIdNumber}>{readIdNumber || "—"}</dd>
       </dl>
     </section>
+    {/if}
   {:else}
     <form id="party-form" onsubmit={save}>
       {#if mode === "edit"}
@@ -414,7 +445,9 @@
     {#if mode === "read"}
       <div class="foot-row">
         <Button variant="ghost" onclick={() => onClose?.()}>Close</Button>
-        <Button variant="primary" onclick={() => onModeChange?.("edit")}>Edit</Button>
+        {#if !isOrg}
+          <Button variant="primary" onclick={() => onModeChange?.("edit")}>Edit</Button>
+        {/if}
       </div>
     {:else}
       <div class="foot-row">
