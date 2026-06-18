@@ -9,9 +9,10 @@ transactions and interest accrual, UK Faster Payments, and bank
 onboarding with IDV.
 
 ## Demos
-https://github.com/user-attachments/assets/7d325be3-2d29-4e29-aea6-8959e6860110
-https://github.com/user-attachments/assets/c35c1605-cf0e-4581-8ace-4e674b2efc56
-
+- Spin up a bank
+<video src="https://github.com/user-attachments/assets/7d325be3-2d29-4e29-aea6-8959e6860110" controls></video>
+- Walkthrough
+<video src="https://github.com/user-attachments/assets/c35c1605-cf0e-4581-8ace-4e674b2efc56" controls></video>
 
 ## Capabilities
 
