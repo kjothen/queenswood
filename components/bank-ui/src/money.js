@@ -21,6 +21,20 @@ export function formatMoney(minor, ccy = "GBP", { locale = "en-GB" } = {}) {
   return (neg ? "−" : "") + sym + body;
 }
 
+// Like formatMoney but ALWAYS shows a leading sign (+ or −) — for
+// transaction amounts and breakdown deltas where direction matters.
+//   formatSigned(245000, "GBP")  -> "+£2,450.00"
+//   formatSigned(-540, "GBP")    -> "−£5.40"
+export function formatSigned(minor, ccy = "GBP", { locale = "en-GB" } = {}) {
+  const sym = CCY_SYMBOLS[ccy] ?? "";
+  const abs = Math.abs(minor) / 100;
+  const body = abs.toLocaleString(locale, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+  return (minor < 0 ? "−" : "+") + sym + body;
+}
+
 export function moneyTone(minor) {
   return minor < 0 ? "neg" : minor === 0 ? "zero" : "pos";
 }

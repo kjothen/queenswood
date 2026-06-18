@@ -8,12 +8,12 @@
   import Onboarding from "./lib/Onboarding.svelte";
   import AppShell from "./lib/AppShell.svelte";
   import Products from "./lib/Products.svelte";
+  import Accounts from "./lib/Accounts.svelte";
   import Parties from "./lib/Parties.svelte";
   import LedgerAccounts from "./lib/LedgerAccounts.svelte";
   import Jobs from "./lib/Jobs.svelte";
   import Policies from "./lib/Policies.svelte";
   import Scenarios from "./lib/Scenarios.svelte";
-  import ComingSoon from "./lib/ComingSoon.svelte";
 
   // Unauthenticated surfaces are URL-routed so /#/sign-in is shareable
   // and the marketing landing has a stable home.
@@ -24,8 +24,7 @@
   };
 
   // Authenticated routes live inside the AppShell. Products is the
-  // default landing; the other Sidenav targets render a ComingSoon
-  // stub until they get wired up.
+  // default landing and the catch-all.
   let authRoutes = $state({});
 
   function buildAuthRoutes() {
@@ -47,8 +46,8 @@
         props: { user, memberships },
       }),
       "/accounts": wrap({
-        component: ComingSoon,
-        props: { name: "Accounts", kicker },
+        component: Accounts,
+        props: { user, memberships },
       }),
       "/jobs": wrap({
         component: Jobs,
