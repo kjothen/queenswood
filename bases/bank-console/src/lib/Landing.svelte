@@ -14,6 +14,28 @@
     CardBody,
     CardFooter,
     CodeCard,
+    // Embedded screens — real components mounted with static data, so the
+    // "screenshots" are the actual UI and theme + stay in sync.
+    Table,
+    Thead,
+    Tbody,
+    Tr,
+    Th,
+    Td,
+    Badge,
+    MoneyCell,
+    Phase,
+    Expander,
+    sumMinor,
+    TrialBalance,
+    PolicyMatrix,
+    ProgressSpine,
+    BankStateBand,
+    TaskPipeline,
+    AccountStatusBadge,
+    Button,
+    formatMoney,
+    formatSigned,
   } from "@queenswood/bank-ui";
   import DocViewer from "./DocViewer.svelte";
 
@@ -147,6 +169,120 @@
   function goSignIn() {
     push("/sign-in");
   }
+
+  /* ── Embedded-screen data ─────────────────────────────────────────
+     Each feature screen below is a SNIPPET — a few rows of the real
+     component, never the full page (no search, drawers, or headers).
+     The figures mirror the Scenarios sandbox story (Arthur Dent / Ford
+     Prefect; current @ 0 bps, savings @ 3.65%; £1,000 in; £750 / £350
+     saved) so the whole page reads as one coherent bank. Shapes match
+     what the console builds from the API — see bank-ui/showcase. */
+
+  // 01 · Products — a draft/published/archived slice.
+  const DEMO_PRODUCTS = [
+    { name: "Everyday Current", type: "current", rate: 0, ccy: "GBP", status: "published" },
+    { name: "Instant Saver", type: "savings", rate: 365, ccy: "GBP", status: "published" },
+    { name: "Term Deposit 12m", type: "savings", rate: 410, ccy: "GBP", status: "draft" },
+    { name: "Instant Saver", type: "savings", rate: 250, ccy: "GBP", status: "archived" },
+  ];
+
+  // 02 · Parties — IDV clears two, rejects one; an org awaits review.
+  const DEMO_PARTIES = [
+    { name: "Arthur Dent", type: "person", status: "active" },
+    { name: "Ford Prefect", type: "person", status: "active" },
+    { name: "Zaphod Beeblebrox", type: "person", status: "rejected" },
+    { name: "Milliways Ltd", type: "organization", status: "pending" },
+  ];
+  const PARTY_TONE = { active: "published", pending: "pending", rejected: "rejected" };
+
+  // 03 · Accounts — Arthur's current after the £1,000 in and the £750 save.
+  const DEMO_ACCOUNT = {
+    sortCode: "04-00-04",
+    number: "12345678",
+    ccy: "GBP",
+    available: 25000,
+    txns: [
+      { date: "18 Jun", desc: "Saved to Instant Saver", minor: -75000, bal: 25000 },
+      { date: "18 Jun", desc: "Inbound Faster Payment", minor: 100000, bal: 100000 },
+    ],
+  };
+
+  // 04 · Ledger — the two accounts that moved when £2,000 came in. Minor
+  // is the signed net (credit − debit, credit-positive): the asset reads
+  // negative, the deposit liability positive — and the books tie.
+  const DEMO_LEDGER = [
+    {
+      id: "led.1100", name: "Cash at Correspondent", gl: "1100", ccy: "GBP",
+      balances: [{ type: "default", phase: "posted", currency: "GBP", minor: -200000 }],
+    },
+    {
+      id: "led.2100", name: "Customer Deposits — GBP", gl: "2100", ccy: "GBP",
+      balances: [{ type: "default", phase: "posted", currency: "GBP", minor: 200000 }],
+    },
+  ];
+  let ledgerOpen = $state(Object.fromEntries(DEMO_LEDGER.map((a) => [a.id, true])));
+  const ledgerToggle = (id) => (ledgerOpen[id] = !ledgerOpen[id]);
+  const ledgerKey = (e, id) => {
+    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); ledgerToggle(id); }
+  };
+
+  // 05 · Policies — the platform baseline. Leads with the non-negative
+  // balance limit (a curative/improving permit) that refuses overdrafts.
+  const DEMO_POLICY = {
+    policyId: "pol.00000000000000000000000001",
+    name: "Platform policy",
+    description: "The platform baseline bound to every bank.",
+    enabled: true,
+    category: "restricted",
+    capabilities: [
+      { effect: "allow", domain: "cash_account", action: "open", reason: "Allow opening cash accounts", filters: [] },
+      { effect: "allow", domain: "outbound_payment", action: "send", reason: "Allow outbound payments", filters: [] },
+      { effect: "allow", domain: "party", action: "create", reason: "Allow creating parties", filters: [] },
+    ],
+    limits: [
+      {
+        domain: "balance",
+        bound: { kind: "min", aggregate: { type: "amount", minor: 0, ccy: "GBP", window: "instant" } },
+        reason: "Available balance must stay non-negative on user-driven transfers.",
+        allow: "improving",
+        filters: [
+          { key: "computed", value: "available" },
+          { key: "txn", value: "internal-transfer" },
+        ],
+      },
+      {
+        domain: "outbound_payment",
+        bound: { kind: "max", aggregate: { type: "count", value: 100000, window: "daily" } },
+        reason: "Max 100,000 outbound payments per day.",
+        allow: null,
+        filters: [],
+      },
+    ],
+  };
+
+  // 06 · Jobs — the seeded daily-interest pipeline, run to completion.
+  const DEMO_PIPELINE = [
+    { name: "Accrue daily interest", status: "ok" },
+    { name: "Capitalise — six-leg entry", status: "ok" },
+    { name: "Trial balance ties", status: "ok" },
+  ];
+
+  // The Scenarios spine that frames the page — a bank opening its doors.
+  const DEMO_SCENES = [
+    { num: "01", label: "Stock the shelves", status: "done" },
+    { num: "02", label: "Identity decides the account", status: "done" },
+    { num: "03", label: "Open the accounts", status: "done" },
+    { num: "04", label: "Money in, double-entry out", status: "done" },
+    { num: "05", label: "Customers save", status: "running" },
+    { num: "06", label: "Policy holds the line", status: "ready" },
+    { num: "07", label: "Runs itself overnight", status: "locked" },
+  ];
+  const DEMO_BANK_CELLS = [
+    { figure: 4, unit: "/ 7", label: "Scenes run" },
+    { figure: 2, label: "Products live" },
+    { figure: 2, unit: "/ 3", label: "Active customers" },
+    { figure: "£2,000.00", label: "Customer money held" },
+  ];
 </script>
 
 <DocViewer
@@ -158,7 +294,7 @@
   <span class="pill">v0.1.0</span>
   <span>
     Bring your own <strong>ClearBank</strong> and <strong>Onfido</strong> — bundled
-    simulators for development, plug in your own accounts per organisation.
+    simulators for development, plug in your own accounts per bank.
   </span>
   <a target="_blank" rel="noreferrer"
     href="https://github.com/repldriven/queenswood/tree/main/bases/bank-clearbank-adapter"
@@ -201,9 +337,10 @@
           Core banking,<br /><em>modernized.</em>
         </h1>
         <p class="lede">
-          Everything a modern fintech needs to operate as a bank — double-entry
-          ledgers, UK Faster Payments, customer KYC — under one unified OpenAPI.
-          Use the hosted edition, or self-host the open core. MIT-licensed.
+          Everything a modern fintech needs to operate as a bank — a double-entry
+          ledger, UK Faster Payments, customer KYC, configurable policies, and
+          scheduled interest — under one unified OpenAPI. Use the hosted edition,
+          or self-host the open core. MIT-licensed.
         </p>
         <div class="ctas">
           <button class="btn solid" onclick={goSignIn}>Sign in</button>
@@ -229,15 +366,17 @@
       </div>
       <div>
         <CodeCard filename="~/queenswood · zsh">
-          <pre><span class="syn-comment"># Authed via OAuth (Keycloak). Issue an API key for machine-to-machine.</span>
-<span class="syn-keyword">curl</span> -X POST https://api.queenswood.local/v1/organisations \
+          <pre><span class="syn-comment"># Signed in via OAuth (Keycloak). Charter a bank.</span>
+<span class="syn-keyword">curl</span> -X POST https://api.queenswood.local/v1/banks \
   -H <span class="syn-string">"Authorization: Bearer $QW_OAUTH_TOKEN"</span> \
   -H <span class="syn-string">"Content-Type: application/json"</span> \
-  -d <span class="syn-string">{`'{ "name": "northwind-fs",
-       "jurisdiction": "GB" }'`}</span>
+  -d <span class="syn-string">{`'{ "name": "Northwind FS",
+       "status": "test",
+       "tier": "standard",
+       "currencies": ["GBP"] }'`}</span>
 
-<span class="syn-comment">#</span> <span class="syn-emphasis">{`{ "id": "org.01HW7…",`}</span>
-<span class="syn-comment">#  </span>  <span class="syn-emphasis">{`"status": "active" }`}</span></pre>
+<span class="syn-comment">#</span> <span class="syn-emphasis">{`{ "bank-id": "bnk.01HW7…",`}</span>
+<span class="syn-comment">#  </span>  <span class="syn-emphasis">{`"sort-code": "04-00-12" }`}</span></pre>
         </CodeCard>
       </div>
     </div>
@@ -253,7 +392,7 @@
       </div>
       <div class="cap">
         <span class="cap-label">Multi-tenant</span>
-        <p class="cap-desc">Onboard, isolate, bill per organisation.</p>
+        <p class="cap-desc">Onboard, isolate, bill per bank.</p>
       </div>
       <div class="cap">
         <span class="cap-label">KYC</span>
@@ -275,74 +414,70 @@
   </div>
 </section>
 
+<section class="story">
+  <div class="wrap">
+    <span class="eyebrow">See it run</span>
+    <h2>A bank opening its <em>doors.</em></h2>
+    <p class="lead">
+      The console ships a sandbox that fires these capabilities against the live
+      API, in order — seven scenes that build one cumulative story. The screens
+      below are those scenes, rendered with the real components, not mockups.
+    </p>
+    <div class="spine-wrap">
+      <ProgressSpine
+        title="A bank opening its doors"
+        progressLabel="scenes run"
+        steps={DEMO_SCENES}
+      />
+      <BankStateBand cells={DEMO_BANK_CELLS} attentionTone="good">
+        {#snippet icon()}
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6.4" stroke-opacity="0.4" /><path d="M5.2 8.2 L7.1 10 L10.8 6" /></svg>
+        {/snippet}
+        {#snippet title()}Books tie — debits equal credits{/snippet}
+        {#snippet sub()}2 customers · £2,000.00 held{/snippet}
+      </BankStateBand>
+    </div>
+  </div>
+</section>
+
 <section class="feat">
   <div class="wrap">
     <div class="grid">
       <div>
-        <span class="num">01 — Up and Running</span>
-        <h3>Sign in. <em>Spin up a bank.</em> Go.</h3>
+        <span class="num">01 — Products</span>
+        <h3>Stock the <em>shelves.</em></h3>
         <p>
-          Humans sign in through Keycloak — OAuth, SSO, social login, whatever
-          your IdP supports. They land in their console, charter an
-          organisation, and issue API keys for the services that need them.
-          Operators get a separate console for platform-wide policy and review.
+          Define cash-account products — a current account, a savings product —
+          then publish to commit a version. Revise whenever you like; publishing
+          the new version auto-archives the one it supersedes.
         </p>
         <ul>
-          <li>Two consoles — one for Queenswood operators, one for bank teams</li>
-          <li>OAuth via bundled Keycloak — swap in your own IdP at deploy</li>
-          <li>
-            API keys for machine-to-machine — returned once, stored hashed
-          </li>
-          <li>
-            Capabilities &amp; limits as editable policy data, not hard-coded
-            rules
-          </li>
+          <li>Draft → publish → archive, versioned at publish</li>
+          <li>Interest rate in basis points, per product</li>
+          <li>Per-product currency and account type</li>
         </ul>
       </div>
       <div class="visual">
         <div class="topbar">
-          <div class="dots">
-            <span class="dot"></span><span class="dot"></span><span class="dot"
-            ></span>
-          </div>
-          console / organisations
+          <div class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+          console / products
         </div>
         <div class="inner">
-          <table class="org-table">
-            <thead
-              ><tr
-                ><th>Bank</th><th>Created</th><th>Cash accts</th><th>Status</th
-                ></tr
-              ></thead
-            >
-            <tbody>
-              <tr
-                ><td>org.01HW7Z…</td><td>just now</td><td>0</td><td
-                  ><span class="status">Active</span></td
-                ></tr
-              >
-              <tr
-                ><td>org.01HW5K…</td><td>3 days ago</td><td>1,284</td><td
-                  ><span class="status">Active</span></td
-                ></tr
-              >
-              <tr
-                ><td>org.01HVTM…</td><td>1 week ago</td><td>602</td><td
-                  ><span class="status">Active</span></td
-                ></tr
-              >
-              <tr
-                ><td>org.01HVQ4…</td><td>2 weeks ago</td><td>14</td><td
-                  ><span class="status pending">Onboarding</span></td
-                ></tr
-              >
-              <tr
-                ><td>org.01HV9P…</td><td>1 month ago</td><td>3,901</td><td
-                  ><span class="status">Active</span></td
-                ></tr
-              >
-            </tbody>
-          </table>
+          <Table>
+            <Thead>
+              <Tr><Th>Name</Th><Th>Type</Th><Th align="right">Rate</Th><Th>Status</Th></Tr>
+            </Thead>
+            <Tbody>
+              {#each DEMO_PRODUCTS as p (p.name + p.status + p.rate)}
+                <Tr>
+                  <Td emphasized>{p.name}</Td>
+                  <Td mono muted>{p.type}</Td>
+                  <Td align="right" mono tabular>{p.rate} bps</Td>
+                  <Td><Badge tone={p.status}>{p.status}</Badge></Td>
+                </Tr>
+              {/each}
+            </Tbody>
+          </Table>
         </div>
       </div>
     </div>
@@ -353,76 +488,39 @@
   <div class="wrap">
     <div class="grid">
       <div>
-        <span class="num">02 — KYC</span>
-        <h3>Identity in. <em>Account active.</em></h3>
+        <span class="num">02 — Parties &amp; IDV</span>
+        <h3>Identity decides the <em>account.</em></h3>
         <p>
-          Every person-party goes through IDV before their account activates. A <code
-            >bank-idv</code
-          > watcher fires the Onfido check on party creation; the webhook flips the
-          party to active (or rejected) automatically — no operator click.
+          Onboard people and organisations. An Onfido identity check runs
+          automatically and flips each party to active or rejected — no operator
+          click. A rejected check means no account.
         </p>
         <ul>
           <li>Bring your own Onfido — simulator bundled for dev &amp; tests</li>
-          <li>Standard Onfido reports: document + facial similarity</li>
-          <li>Webhook → party activates (or rejects) automatically</li>
-          <li>Per-party audit trail of IDV submissions and outcomes</li>
+          <li>Async accept / reject, webhook-driven</li>
+          <li>People and organisations in one register</li>
         </ul>
       </div>
       <div class="visual">
         <div class="topbar">
-          <div class="dots">
-            <span class="dot"></span><span class="dot"></span><span class="dot"
-            ></span>
-          </div>
-          idv / pty.01HW9X…
+          <div class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+          console / parties
         </div>
         <div class="inner">
-          <div class="trail">
-            <div class="step done">
-              <span class="t">09:14:21</span>
-              <span class="pin"></span>
-              <span class="desc"
-                >party-created<span class="ref"
-                  >Arthur Dent · status pending</span
-                ></span
-              >
-              <span class="kind">api</span>
-            </div>
-            <div class="step done">
-              <span class="t">09:14:21</span>
-              <span class="pin"></span>
-              <span class="desc"
-                >submit-idv-check<span class="ref">scheme channel · Onfido</span
-                ></span
-              >
-              <span class="kind">pulsar</span>
-            </div>
-            <div class="step done">
-              <span class="t">09:14:22</span>
-              <span class="pin"></span>
-              <span class="desc"
-                >applicant-created<span class="ref">Onfido id 9b6e8d8f…</span
-                ></span
-              >
-              <span class="kind">onfido</span>
-            </div>
-            <div class="step active">
-              <span class="t">09:14:24</span>
-              <span class="pin"></span>
-              <span class="desc"
-                >check-completed<span class="ref"
-                  >document + facial · clear</span
-                ></span
-              >
-              <span class="kind">webhook</span>
-            </div>
-            <div class="step">
-              <span class="t">—</span>
-              <span class="pin"></span>
-              <span class="desc">party-activated</span>
-              <span class="kind">api</span>
-            </div>
-          </div>
+          <Table>
+            <Thead>
+              <Tr><Th>Name</Th><Th>Type</Th><Th>Status</Th></Tr>
+            </Thead>
+            <Tbody>
+              {#each DEMO_PARTIES as p (p.name)}
+                <Tr>
+                  <Td emphasized>{p.name}</Td>
+                  <Td mono muted>{p.type}</Td>
+                  <Td><Badge tone={PARTY_TONE[p.status]}>{p.status}</Badge></Td>
+                </Tr>
+              {/each}
+            </Tbody>
+          </Table>
         </div>
       </div>
     </div>
@@ -433,81 +531,150 @@
   <div class="wrap">
     <div class="grid">
       <div>
-        <span class="num">03 — Payments</span>
-        <h3>UK Faster Payments. <em>Double-entry,</em> all the way down.</h3>
+        <span class="num">03 — Accounts</span>
+        <h3>Open the <em>accounts.</em></h3>
         <p>
-          Internal transfers and outbound FPS via a pluggable scheme adapter.
-          Inbound settlement with BBAN lookup and idempotency. Every transfer is
-          a balanced pair of postings against typed accounts — every step a
-          typed event your team can observe.
+          Each customer account leads with its available balance, then the
+          posting history with a running balance — an inbound Faster Payment in,
+          a transfer to savings out, settled to the penny.
         </p>
         <ul>
-          <li>SCAN payment addresses — sort code &amp; account number</li>
-          <li>
-            ClearBank adapter for FPS, with a simulator for dev &amp; tests
-          </li>
-          <li>
-            Idempotent submit — duplicate requests are safe by construction
-          </li>
+          <li>Available balance, broken down by phase</li>
+          <li>SCAN address — sort code &amp; account number</li>
+          <li>Posting history with a running balance</li>
         </ul>
       </div>
       <div class="visual">
         <div class="topbar">
-          <div class="dots">
-            <span class="dot"></span><span class="dot"></span><span class="dot"
-            ></span>
-          </div>
-          payment / pmt.01HW8Z…
+          <div class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+          console / accounts
         </div>
         <div class="inner">
-          <div class="trail">
-            <div class="step done">
-              <span class="t">09:41:02</span>
-              <span class="pin"></span>
-              <span class="desc"
-                >payment-submitted<span class="ref"
-                  >12,400.00 GBP → 04-00-04 / 12345678</span
-                ></span
-              >
-              <span class="kind">api</span>
+          <div class="acct-snap">
+            <div class="snap-head">
+              <div class="snap-figs">
+                <span class="snap-label">Available balance</span>
+                <span class="snap-figure">{formatMoney(DEMO_ACCOUNT.available, DEMO_ACCOUNT.ccy)}<span class="snap-ccy">{DEMO_ACCOUNT.ccy}</span></span>
+                <span class="snap-coords">Sort {DEMO_ACCOUNT.sortCode} · Acct {DEMO_ACCOUNT.number}</span>
+              </div>
+              <AccountStatusBadge status="opened" />
             </div>
-            <div class="step done">
-              <span class="t">09:41:02</span>
-              <span class="pin"></span>
-              <span class="desc"
-                >policy-evaluated<span class="ref"
-                  >limits ok · curative-permit not required</span
-                ></span
-              >
-              <span class="kind">policy</span>
-            </div>
-            <div class="step done">
-              <span class="t">09:41:03</span>
-              <span class="pin"></span>
-              <span class="desc"
-                >submit-payment<span class="ref"
-                  >scheme channel · ClearBank</span
-                ></span
-              >
-              <span class="kind">pulsar</span>
-            </div>
-            <div class="step active">
-              <span class="t">09:41:04</span>
-              <span class="pin"></span>
-              <span class="desc"
-                >transaction-settled<span class="ref"
-                  >FPS webhook · two postings written</span
-                ></span
-              >
-              <span class="kind">fdb</span>
-            </div>
-            <div class="step">
-              <span class="t">—</span>
-              <span class="pin"></span>
-              <span class="desc">payment-completed</span>
-              <span class="kind">api</span>
-            </div>
+            <Table>
+              <Thead>
+                <Tr><Th>Date</Th><Th>Description</Th><Th align="right">Amount</Th><Th align="right">Balance</Th></Tr>
+              </Thead>
+              <Tbody>
+                {#each DEMO_ACCOUNT.txns as t (t.desc)}
+                  <Tr>
+                    <Td mono muted>{t.date}</Td>
+                    <Td>{t.desc}</Td>
+                    <Td align="right"><span class="amt {t.minor < 0 ? 'debit' : 'credit'}">{formatSigned(t.minor, DEMO_ACCOUNT.ccy)}</span></Td>
+                    <Td align="right" mono muted>{formatMoney(t.bal, DEMO_ACCOUNT.ccy)}</Td>
+                  </Tr>
+                {/each}
+              </Tbody>
+            </Table>
           </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="feat reverse">
+  <div class="wrap">
+    <div class="grid">
+      <div>
+        <span class="num">04 — Ledger</span>
+        <h3>Money in, <em>double-entry</em> out.</h3>
+        <p>
+          Funding an account moves the books — cash-at-correspondent debited,
+          customer deposits credited. Every posting is half of a balanced pair,
+          accounts decompose into their balances, and the trial balance ties to
+          the penny.
+        </p>
+        <ul>
+          <li>Double-entry general ledger</li>
+          <li>Accounts decompose into their balances</li>
+          <li>Trial balance — Σ debit ≡ Σ credit</li>
+        </ul>
+      </div>
+      <div class="visual">
+        <div class="topbar">
+          <div class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+          console / ledger
+        </div>
+        <div class="inner">
+          <TrialBalance
+            asOf="09:42 UTC"
+            blocks={[{ ccy: "GBP", sym: "£", name: "Sterling", accounts: 2, debitMinor: 200000, creditMinor: 200000 }]}
+          />
+          <Table tree>
+            <Thead>
+              <Tr><Th /><Th>Name</Th><Th>GL</Th><Th align="right">Balance</Th></Tr>
+            </Thead>
+            <Tbody>
+              {#each DEMO_LEDGER as acc (acc.id)}
+                <Tr
+                  expandable
+                  expanded={ledgerOpen[acc.id]}
+                  onclick={() => ledgerToggle(acc.id)}
+                  onkeydown={(e) => ledgerKey(e, acc.id)}
+                >
+                  <Td expander><Expander /></Td>
+                  <Td emphasized>{acc.name}</Td>
+                  <Td mono>{acc.gl}</Td>
+                  <MoneyCell minor={sumMinor(acc.balances)} ccy={acc.ccy} emphasized />
+                </Tr>
+                {#if ledgerOpen[acc.id]}
+                  {#each acc.balances as b, i (b.type + ":" + b.phase)}
+                    <Tr balance last={i === acc.balances.length - 1}>
+                      <Td expander />
+                      <Td addr>
+                        <span class="qw-tree-mark">
+                          <span class="qw-addr-path">{b.type}</span>
+                          <Phase phase={b.phase} />
+                        </span>
+                      </Td>
+                      <Td mono muted>{b.currency}</Td>
+                      <MoneyCell minor={b.minor} ccy={acc.ccy} />
+                    </Tr>
+                  {/each}
+                {/if}
+              {/each}
+            </Tbody>
+          </Table>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="feat">
+  <div class="wrap">
+    <div class="grid">
+      <div>
+        <span class="num">05 — Policies</span>
+        <h3>Policy holds the <em>line.</em></h3>
+        <p>
+          Capabilities and limits are data, not hard-coded rules. The platform's
+          non-negative-balance limit refuses an overdraft before any money
+          moves; where policies overlap a deny wins, and the tightest limit
+          applies.
+        </p>
+        <ul>
+          <li>Capabilities &amp; limits as editable records</li>
+          <li>Deny-wins resolution, tightest limit applies</li>
+          <li>Curative permits — breach only to move back toward compliance</li>
+        </ul>
+      </div>
+      <div class="visual">
+        <div class="topbar">
+          <div class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+          console / policies
+        </div>
+        <div class="inner">
+          <PolicyMatrix policy={DEMO_POLICY} showUngoverned={false} query="" />
         </div>
       </div>
     </div>
@@ -518,69 +685,28 @@
   <div class="wrap">
     <div class="grid">
       <div>
-        <span class="num">04 — Interest</span>
-        <h3>Daily accrual that <em>conserves pennies.</em></h3>
+        <span class="num">06 — Interest &amp; Jobs</span>
+        <h3>Runs itself <em>overnight.</em></h3>
         <p>
-          Integer micro-unit arithmetic with sub-minor-unit carry — fractional
-          interest accrues precisely every day, and capitalisation ties to the
-          penny. Cadence is the operator's choice.
+          A seeded daily job accrues interest with micro-unit precision, then
+          capitalises it as a six-leg entry per account — accrued, then paid,
+          and it ties to the penny. Operators set the cadence, or force a run.
         </p>
         <ul>
-          <li>Micro-unit precision · no floating point anywhere</li>
-          <li>Capitalisation that ties to the penny exactly</li>
-          <li>Configurable per cash-account product, versioned at publish</li>
+          <li>Micro-unit arithmetic · no floating point</li>
+          <li>Six-leg capitalisation that ties to the penny</li>
+          <li>Scheduled, or force-run on demand</li>
         </ul>
       </div>
       <div class="visual">
         <div class="topbar">
-          <div class="dots">
-            <span class="dot"></span><span class="dot"></span><span class="dot"
-            ></span>
-          </div>
-          interest / acc.treasury-01
+          <div class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+          jobs / daily-interest
         </div>
         <div class="inner">
-          <div class="accrual">
-            <div class="day">
-              <span class="lab">DAY</span><span class="lab">Balance · GBP</span
-              ><span class="lab">Accrued · GBP</span><span class="lab"
-                >Carry · μGBP</span
-              >
-            </div>
-            <div class="day">
-              <span class="micro">01 May</span><span class="micro"
-                >100,000.00</span
-              ><span class="micro">13.69</span><span class="carry"
-                >+863,013</span
-              >
-            </div>
-            <div class="day">
-              <span class="micro">02 May</span><span class="micro"
-                >100,000.00</span
-              ><span class="micro">13.70</span><span class="carry"
-                >+726,026</span
-              >
-            </div>
-            <div class="day">
-              <span class="micro">03 May</span><span class="micro"
-                >100,000.00</span
-              ><span class="micro">13.70</span><span class="carry"
-                >+589,039</span
-              >
-            </div>
-            <div class="day">
-              <span class="micro">…</span><span class="micro"
-                >stable · 100k</span
-              ><span class="micro">31 days · 424.66</span><span class="carry"
-                >+175,342</span
-              >
-            </div>
-            <div class="day cap">
-              <span class="micro cap-day">31 May · CAP</span>
-              <span class="micro">capitalised</span>
-              <span class="post">+424.66 GBP</span>
-              <span class="carry">·6 legs</span>
-            </div>
+          <div class="pipe-snap">
+            <span class="pipe-label">accrue → capitalise</span>
+            <TaskPipeline steps={DEMO_PIPELINE} />
           </div>
         </div>
       </div>
@@ -644,15 +770,13 @@
       </div>
       <div>
         <CodeCard filename="install · Kubernetes">
-          <pre><span class="syn-comment"># Install the chart (Keycloak, both consoles, all services included)</span>
+          <pre><span class="syn-comment"># Install the chart — Keycloak, the console, and all services.</span>
 <span class="syn-keyword">helm</span> install queenswood \
   oci://ghcr.io/repldriven/queenswood \
   -n queenswood --create-namespace \
   --wait --timeout 10m
 
-<span class="syn-comment"># Sign in via Keycloak at:</span>
-<span class="syn-comment">#</span>   <span class="syn-emphasis">localhost:8081</span>  <span class="syn-comment">for Queenswood operators</span>
-<span class="syn-comment">#</span>   <span class="syn-emphasis">localhost:8082</span>  <span class="syn-comment">for bank teams</span></pre>
+<span class="syn-comment"># Then port-forward the console and sign in via Keycloak.</span></pre>
         </CodeCard>
       </div>
     </div>
@@ -1185,7 +1309,7 @@
       0 1px 0 rgba(255, 255, 255, 0.7) inset,
       0 24px 60px -32px rgba(20, 15, 10, 0.3);
     overflow: hidden;
-    aspect-ratio: 4/3;
+    min-height: 280px;
     position: relative;
   }
   .visual .topbar {
@@ -1214,147 +1338,116 @@
   }
   .visual .inner {
     padding: 22px;
-    height: calc(100% - 38px);
+    height: auto;
+    max-height: 440px;
     display: flex;
     flex-direction: column;
     gap: 14px;
     overflow: auto;
   }
 
-  .org-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-family: var(--mono);
-    font-size: 12px;
+  /* Story band — frames the feature screens as the Scenarios arc. */
+  .story {
+    padding: 88px 0 24px;
+    text-align: center;
   }
-  .org-table th,
-  .org-table td {
-    text-align: left;
-    padding: 10px 12px;
-    border-bottom: 1px solid var(--rule-2);
-    color: var(--fg-2);
-    letter-spacing: 0.01em;
-  }
-  .org-table th {
-    color: var(--fg-muted);
+  .story h2 {
+    font-family: var(--serif);
     font-weight: 500;
-    text-transform: uppercase;
-    letter-spacing: 0.16em;
-    font-size: 10px;
+    font-size: 46px;
+    line-height: 1.06;
+    letter-spacing: -0.008em;
+    margin: 10px 0 14px;
   }
-  .org-table .status {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    color: var(--pine-2);
-  }
-  .org-table .status::before {
-    content: "";
-    width: 6px;
-    height: 6px;
-    background: var(--pine-3);
-    border-radius: 50%;
-  }
-  .org-table .status.pending {
+  .story h2 em {
+    font-style: italic;
     color: var(--gold-deep);
   }
-  .org-table .status.pending::before {
-    background: var(--gold);
+  .story .lead {
+    font-size: 17px;
+    color: var(--fg-2);
+    line-height: 1.55;
+    max-width: 60ch;
+    margin: 0 auto 36px;
+    text-wrap: pretty;
   }
-
-  .trail {
+  .story .eyebrow {
+    justify-content: center;
+  }
+  .spine-wrap {
     display: flex;
     flex-direction: column;
-    gap: 0;
-    font-family: var(--mono);
-    font-size: 12px;
-  }
-  .trail .step {
-    display: grid;
-    grid-template-columns: 70px 24px 1fr 90px;
-    gap: 12px;
-    padding: 9px 0;
-    align-items: center;
-    border-bottom: 1px dashed var(--rule-2);
-  }
-  .trail .step:last-child {
-    border-bottom: 0;
-  }
-  .trail .step .t {
-    color: var(--fg-muted);
-    font-size: 11px;
-  }
-  .trail .step .pin {
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    background: var(--surface-raised);
-    border: 2px solid var(--pine-3);
-  }
-  .trail .step.done .pin {
-    background: var(--pine-2);
-    border-color: var(--pine-2);
-  }
-  .trail .step.active .pin {
-    background: var(--gold);
-    border-color: var(--gold-deep);
-    box-shadow: 0 0 0 4px rgba(170, 120, 30, 0.12);
-  }
-  .trail .step .desc {
-    color: var(--fg);
-  }
-  .trail .step .kind {
-    color: var(--fg-muted);
-    font-size: 11px;
-    text-align: right;
-  }
-  .trail .step .desc .ref {
-    color: var(--fg-muted);
-    font-size: 11px;
-    margin-left: 6px;
+    gap: 20px;
+    text-align: left;
   }
 
-  .accrual {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 8px;
+  /* Accounts snippet — a balance headline above a few postings. */
+  .acct-snap {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .snap-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+  }
+  .snap-figs {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .snap-label {
     font-family: var(--mono);
-    font-size: 12px;
-  }
-  .accrual .day {
-    display: grid;
-    grid-template-columns: 70px 1fr 130px 80px;
-    gap: 12px;
-    padding: 7px 10px;
-    align-items: center;
-    border-bottom: 1px solid var(--rule-2);
-  }
-  .accrual .day.cap {
-    background: rgba(170, 120, 30, 0.06);
-    border-radius: 6px;
-    border-bottom: 0;
-    padding: 10px;
-  }
-  .accrual .day .lab {
-    color: var(--fg-muted);
     font-size: 10px;
     letter-spacing: 0.16em;
     text-transform: uppercase;
+    color: var(--fg-muted);
   }
-  .accrual .day .micro {
+  .snap-figure {
+    font-family: var(--mono);
+    font-variant-numeric: tabular-nums;
+    font-weight: 500;
+    font-size: 32px;
+    line-height: 1;
+    letter-spacing: -0.01em;
     color: var(--fg);
   }
-  .accrual .day .cap-day {
-    color: var(--gold-deep);
-    font-weight: 500;
+  .snap-ccy {
+    font-size: 15px;
+    color: var(--fg-muted);
+    margin-left: 7px;
+    letter-spacing: 0.04em;
   }
-  .accrual .day .carry {
-    color: var(--gold-deep);
+  .snap-coords {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--fg-muted);
+    margin-top: 2px;
+  }
+  .amt {
+    font-family: var(--mono);
+    font-variant-numeric: tabular-nums;
+  }
+  .amt.credit {
+    color: var(--pos);
+  }
+  .amt.debit {
+    color: var(--fg);
+  }
+
+  /* Jobs snippet — the task pipeline with a mono kicker. */
+  .pipe-snap {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .pipe-label {
+    font-family: var(--mono);
     font-size: 11px;
-  }
-  .accrual .day .post {
-    color: var(--pine-2);
-    text-align: right;
+    letter-spacing: 0.12em;
+    color: var(--gold-deep);
   }
 
   .principles {
