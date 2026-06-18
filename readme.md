@@ -1,11 +1,11 @@
 <p align="center">
-  <img src="docs/assets/logo-240.png" alt="Queenswood Bank" width="240" />
+  <img src="docs/assets/logo.svg" alt="Queenswood" width="200" />
 </p>
 
 # Queenswood
 
 A multi-tenant banking platform: core banking with double-entry
-transactions and interest accrual, UK Faster Payments, and tenant
+transactions and interest accrual, UK Faster Payments, and bank
 onboarding with IDV.
 
 [![Queenswood Bank](thumbnail.png)](https://github.com/user-attachments/assets/d6941c18-54c6-4954-aa7d-b8150f5d2891)
@@ -14,12 +14,13 @@ onboarding with IDV.
 
 | Capability                   | Description                                                                                                                                                       |
 | ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Payments & Transactions**  | Internal transfers, outbound UK Faster Payments via a pluggable scheme adapter, inbound settlement with BBAN lookup and idempotency                               |
-| **Interest**                 | Daily accrual and monthly capitalisation with fractional carry at sub-minor-unit precision                                                                        |
+| **Payments & Transactions**  | Internal transfers; outbound UK Faster Payments via a pluggable scheme adapter, reserved on submit and settled (or released) on the scheme's confirmation; inbound settlement with BBAN lookup and idempotency |
+| **Interest**                 | Daily accrual and monthly capitalisation with fractional carry at sub-minor-unit precision |
 | **Cash Accounts**            | Open accounts against published products, assigned UK SCAN payment addresses (sort code + account number). Lifecycle: `opening` → `opened` → `closing` → `closed` |
-| **Cash Account Products**    | Draft products with balance configurations, publish versioned releases                                                                                            |
-| **Parties & Identity**       | Register customers with national identifiers; Onfido-shaped IDV via pluggable adapter drives `pending` → `active` (or rejected)                                   |
-| **Organisations & API Keys** | Multi-tenant onboarding — create a tenant, issue API keys (returned once, stored hashed)                                                                          |
+| **Cash Account Products**    | Draft products with balance configurations, publish versioned releases |
+| **Parties & Identity**       | Register customers with national identifiers; Onfido-shaped IDV via pluggable adapter drives `pending` → `active` (or rejected) |
+| **Policies**                 | Capabilities and limits as editable records; deny-wins resolution and a curative-permit pattern — a breaching action is allowed only when it moves the position back toward compliance |
+| **Banks & API Keys**         | Multi-tenant onboarding — create a bank (`POST /v1/banks`), which returns a service-account credential (client-id / secret, shown once) that authenticates via Keycloak OAuth2 bearer tokens |
 
 API documentation:
 [repldriven.github.io/queenswood](https://repldriven.github.io/queenswood/)
@@ -75,7 +76,7 @@ providers in development and tests.
 
 ```mermaid
 graph TB
-    APP["bank-app<br/>(Svelte UI)"]
+    CONSOLE["bank-console<br/>(Svelte UI)"]
 
     subgraph http ["HTTP services"]
         direction LR
@@ -84,6 +85,7 @@ graph TB
         CBS[bank-clearbank-<br/>simulator-service]
         OFA[bank-onfido-<br/>adapter-service]
         OFS[bank-onfido-<br/>simulator-service]
+        CHS[bank-uk-companies-<br/>house-simulator-service]
     end
 
     PULSAR[("Apache Pulsar<br/>command + event topics")]
@@ -96,6 +98,7 @@ graph TB
         PIN[interest-<br/>processor]
         PTX[transaction-<br/>processor]
         PID[idv-<br/>processor]
+        PSCH[scheduler-<br/>processor]
     end
 
     FDB[("FoundationDB<br/>Record Layer + changelog")]
@@ -110,15 +113,20 @@ graph TB
         direction LR
         CB[ClearBank FPS]
         OF[Onfido]
+        CH[Companies House]
     end
 
-    APP -->|HTTP| API
+    CONSOLE -->|HTTP| API
     API -->|commands| PULSAR
-    API -->|direct CRUD<br/>org, api-key, product, policy| FDB
+    API -->|direct CRUD<br/>bank, api-key, product, policy| FDB
+    API -->|company lookup| CHS
+    API -.->|company lookup| CH
 
     PULSAR -->|consume commands| processors
     processors -->|read + write| FDB
     FDB -->|changelog| processors
+
+    PSCH -->|scheduled<br/>interest commands| PULSAR
 
     PPY -->|submit-payment| PULSAR
     PULSAR -->|consume| CBA
@@ -143,10 +151,13 @@ surface (Reitit + Malli + Sieppari + Muuntaja). The
 adapter/simulator pairs serve their own HTTP surfaces:
 adapters host webhook receivers and call out to providers;
 simulators stand in for the providers in development and
-tests.
+tests. `bank-api-service` also calls a UK Companies House
+simulator directly over HTTP for the onboarding company
+lookup; the dotted edge marks the real Companies House it
+stands in for.
 
 **Direct path** — low-volume, idempotent records
-(organisations, products, policies, API keys) are created
+(banks, products, policies, API keys) are created
 and updated directly by `bank-api-service` against FDB. All
 records query on-demand using FDB record primary key
 ordering.
@@ -158,6 +169,11 @@ Pulsar to a domain processor. Each processor writes to FDB
 and replies via the same bus. Envelope statuses: `ACCEPTED`
 (2xx), `REJECTED` (4xx), `FAILED` (5xx). See
 [transaction-processing](docs/tdd/transaction-processing.md).
+
+**Scheduled work** — `bank-scheduler-processor-service` fires
+seeded jobs (e.g. daily interest) on a cron, publishing the
+interest commands onto the same bus for the interest
+processor to consume.
 
 **Scheme + IDV paths** — outbound payments publish a
 `submit-payment` command on a scheme channel;
@@ -244,7 +260,7 @@ This boots the full system — FDB, Pulsar, HTTP server — inside
 Testcontainers. Then start the Svelte front-end:
 
 ```bash
-just bank-app-start
+just bank-console-start
 ```
 
 ### Kubernetes
@@ -286,27 +302,22 @@ helm install queenswood \
   --wait --timeout 10m
 ```
 
-**Reach the API and the SPAs** (separate terminals):
+**Reach the API and the console** (separate terminals):
 
 ```bash
 kubectl -n queenswood port-forward svc/queenswood-bank-api-service 8080:8080
-kubectl -n queenswood port-forward svc/queenswood-bank-app         8081:8080
-kubectl -n queenswood port-forward svc/queenswood-bank-console     8082:8080
+kubectl -n queenswood port-forward svc/queenswood-bank-console     8081:8080
 ```
 
-Each SPA's nginx reverse-proxies its realm's Keycloak at
+The console's nginx reverse-proxies its realm's Keycloak at
 `/keycloak/*`, so no separate Keycloak port-forward is
 needed for sign-in. Then open:
 
-- <http://localhost:8081> — operator console
-  (`bank-app`). Sign in with `ops` / `ops` against the
-  `queenswood-ops` realm.
-- <http://localhost:8082> — organisation console
-  (`bank-console`). Sign in with `dev` / `dev` against the
-  `queenswood` realm.
+- <http://localhost:8081> — the console (`bank-console`).
+  Sign in with `dev` / `dev` against the `queenswood` realm.
 
 If you need the Keycloak admin UI (to inspect or edit the
-realms directly), it rides the same proxy:
+realm directly), it rides the same proxy:
 <http://localhost:8081/keycloak/admin> with `admin` /
 `admin`. OpenAPI docs at <http://localhost:8080/scalar>.
 The full quickstart — including tear-down — ships with
