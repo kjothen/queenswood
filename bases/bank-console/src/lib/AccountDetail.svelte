@@ -61,9 +61,35 @@
     { label: "pending_out", phase: "pending", minor: defaultBucket("pending-outgoing") },
   ]);
 
-  // Transactions for the selected account. Keep only default-balance,
-  // settled-or-pending legs so the running balance reconciles to the
-  // posted balance (interest-accrual legs live on their own bucket).
+  // Transactions for the selected account. A leg's phase is its
+  // balance-status (the immutable accounting fact), not a transaction
+  // lifecycle: `posted` legs are settled; `pending-outgoing` /
+  // `pending-incoming` are in-flight. We keep default-balance legs only
+  // (interest-accrual legs live on their own bucket) so the running
+  // balance reconciles to the posted balance.
+  //
+  // An in-flight outbound reserves in pending-outgoing at submit, then on
+  // settlement clears that reservation (a pending-outgoing credit) and
+  // posts the real debit. So a settled outbound leaves three customer
+  // legs; net the reservation against its clearing so it collapses to one
+  // pending row in-flight, then one settled (posted) row once it settles.
+  const at = (t) => t["created-at"] ?? "";
+  const byAtAsc = (a, b) => (at(a) < at(b) ? -1 : at(a) > at(b) ? 1 : 0);
+
+  function toRow(t, phase) {
+    const minor =
+      shortEnum(t.side) === "credit" ? (t.amount ?? 0) : -(t.amount ?? 0);
+    return {
+      id: t["leg-id"],
+      date: fmtDate(t["created-at"]),
+      at: at(t),
+      desc: t.reference || prettyType(t["transaction-type"]),
+      type: prettyType(t["transaction-type"]),
+      minor,
+      phase,
+    };
+  }
+
   $effect(() => {
     const id = account?.id;
     if (!id) {
@@ -75,29 +101,38 @@
     get_cash_account_transactions(id).then((r) => {
       if (account?.id !== id) return;
       if (r.status < 200 || r.status >= 300) return;
-      const legs = (r.body?.transactions ?? [])
-        .filter((t) => {
-          const bt = shortEnum(t["balance-type"]);
-          const st = shortEnum(t.status);
-          return (bt === "default" || bt === "") && (st === "posted" || st === "pending");
-        })
-        .map((t) => {
-          const minor =
-            shortEnum(t.side) === "credit" ? (t.amount ?? 0) : -(t.amount ?? 0);
-          return {
-            id: t["leg-id"],
-            date: fmtDate(t["created-at"]),
-            at: t["created-at"] ?? "",
-            desc: t.reference || prettyType(t["transaction-type"]),
-            type: prettyType(t["transaction-type"]),
-            minor,
-            phase: shortEnum(t.status) === "pending" ? "pending" : "posted",
-          };
-        })
-        .sort((a, b) => (a.at < b.at ? 1 : a.at > b.at ? -1 : 0));
+      const def = (r.body?.transactions ?? []).filter((t) => {
+        const bt = shortEnum(t["balance-type"]);
+        return bt === "default" || bt === "";
+      });
+
+      const posted = def.filter((t) => shortEnum(t["balance-status"]) === "posted");
+      const pendIn = def.filter((t) => shortEnum(t["balance-status"]) === "pending-incoming");
+      const pendOut = def.filter((t) => shortEnum(t["balance-status"]) === "pending-outgoing");
+
+      // Pair each reservation (pending-outgoing debit) with its clearing
+      // (pending-outgoing credit) by amount, oldest first; an unmatched
+      // reservation is still in-flight and shown as one pending row.
+      const clearings = pendOut.filter((t) => shortEnum(t.side) === "credit").sort(byAtAsc);
+      const used = new Set();
+      const outstanding = [];
+      for (const res of pendOut.filter((t) => shortEnum(t.side) === "debit").sort(byAtAsc)) {
+        const match = clearings.find(
+          (c) => !used.has(c["leg-id"]) && (c.amount ?? 0) === (res.amount ?? 0),
+        );
+        if (match) used.add(match["leg-id"]);
+        else outstanding.push(res);
+      }
+
+      const legs = [
+        ...posted.map((t) => toRow(t, "posted")),
+        ...outstanding.map((t) => toRow(t, "pending")),
+        ...pendIn.map((t) => toRow(t, "pending")),
+      ].sort((a, b) => (a.at < b.at ? 1 : a.at > b.at ? -1 : 0));
 
       // Running balance: newest settled posting sits on the posted
       // balance, each older settled posting steps back by its amount.
+      // Pending rows carry no settled balance yet.
       let bal = account.posted ?? 0;
       txns = legs.map((t) => {
         if (t.phase === "pending") return { ...t, balanceAfter: null };

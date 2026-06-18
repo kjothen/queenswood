@@ -125,13 +125,36 @@
       (let [field (if (= :leg-side-debit side) :debit :credit)]
         (update balance field + amount)))))
 
+(defn- new-zero-balance
+  "A fresh zero balance for a leg whose bucket doesn't exist yet — posting
+  to a (balance-type, balance-status) opens it (e.g. the first time funds
+  are reserved into pending-outgoing). A leg without a product-type is a
+  ledger-account (GL) leg, matching how GL balances are seeded."
+  [leg]
+  (let [now (utility/now)]
+    {:account-id (:account-id leg)
+     :product-type (or (:product-type leg) :product-type-general-ledger)
+     :balance-type (:balance-type leg)
+     :balance-status (:balance-status leg)
+     :currency (:currency leg)
+     :credit 0
+     :debit 0
+     :credit-carry 0
+     :created-at now
+     :updated-at now}))
+
 (defn- apply-leg-to-balances
   [balances leg policies]
   (let [{:keys [balance-type balance-status]} leg]
-    (update-balance balances
-                    balance-type
-                    balance-status
-                    (fn [balance] (apply-leg balance leg policies)))))
+    (if (find-balance-index balances balance-type balance-status)
+      (update-balance balances
+                      balance-type
+                      balance-status
+                      (fn [balance] (apply-leg balance leg policies)))
+      ;; Open the bucket on demand: a posting to a not-yet-existing
+      ;; (balance-type, balance-status) creates it, then applies the leg.
+      (let-nom> [opened (apply-leg (new-zero-balance leg) leg policies)]
+        (conj balances opened)))))
 
 (defn- apply-legs-to-balances
   [balances legs policies]
@@ -158,10 +181,16 @@
                                  :currency currency}})))
 
 (defn- changed
+  "Balances in `new` that were added or modified versus `old`, matched by
+  (balance-type, balance-status) — so a freshly-opened bucket (appended,
+  with no positional counterpart in `old`) is still captured."
   [old new]
-  (->> (map vector old new)
-       (keep (fn [[a b]] (when (not= a b) b)))
-       vec))
+  (let [old-by (into {}
+                     (map (fn [b] [[(:balance-type b) (:balance-status b)] b]))
+                     old)]
+    (filterv (fn [b]
+               (not= b (get old-by [(:balance-type b) (:balance-status b)])))
+             new)))
 
 (defn apply-legs
   [account-balances legs transaction-type policies]

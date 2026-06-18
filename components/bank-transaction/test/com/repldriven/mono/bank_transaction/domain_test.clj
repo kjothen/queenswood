@@ -42,3 +42,19 @@
                                      (assoc (debit 500) :control true)])]
       (is (error/rejection? result))
       (is (= :transaction/control-leg-mismatch (error/kind result))))))
+
+(deftest new-transaction-status-test
+  (testing "internal and inbound transfers are born posted"
+    (is (= :transaction-status-posted
+           (:status (SUT/new-transaction {:transaction-type
+                                          :transaction-type-internal-transfer
+                                          :currency "GBP"}))))
+    (is (= :transaction-status-posted
+           (:status (SUT/new-transaction {:transaction-type
+                                          :transaction-type-inbound-transfer
+                                          :currency "GBP"})))))
+  (testing "an outbound transfer is born pending — in-flight at the scheme"
+    (is (= :transaction-status-pending
+           (:status (SUT/new-transaction {:transaction-type
+                                          :transaction-type-outbound-transfer
+                                          :currency "GBP"}))))))
