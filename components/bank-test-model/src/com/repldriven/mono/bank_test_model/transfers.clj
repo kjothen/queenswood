@@ -91,6 +91,12 @@
              state
              (let [pmt-id (state/next-payment-id advanced)]
                (-> advanced
+                   ;; Reservation model: the debtor carries three legs by
+                   ;; settlement — the pending-outgoing reservation at
+                   ;; submit, then its clearing credit plus the posted
+                   ;; debit at settle. `apply-delta` / `transfer-between`
+                   ;; counted the first; add the two settlement legs.
+                   (update-in [:accounts debtor :transaction-legs] (fnil + 0) 2)
                    (assoc-in [:payments pmt-id]
                              (cond-> {:debtor debtor
                                       :amount amount
