@@ -16,7 +16,7 @@ onboarding with IDV.
     <td align="center"><strong>Use the Bank</strong></td>
   </tr>
   <tr>
-    <td><video src="https://github.com/user-attachments/assets/3a1ac465-211d-491d-a4b4-b02852397d73" controls></video></td>
+    <td><video src="https://github.com/user-attachments/assets/1dcf2a74-b198-4757-b271-84896f0daec8" controls></video></td>
     <td><video src="https://github.com/user-attachments/assets/1c26eb99-70f2-46ae-a910-e68fb85d36e8" controls></video></td>
   </tr>
 </table>
