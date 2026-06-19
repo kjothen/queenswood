@@ -10,11 +10,16 @@ onboarding with IDV.
 
 ## Demos
 
-### Spin up a bank
-<video src="https://github.com/user-attachments/assets/7d325be3-2d29-4e29-aea6-8959e6860110" controls></video>
-
-### Scenario walkthrough
-<video src="https://github.com/user-attachments/assets/c35c1605-cf0e-4581-8ace-4e674b2efc56" controls></video>
+<table>
+  <tr>
+    <td align="center"><strong>Spin up a Bank</strong></td>
+    <td align="center"><strong>Use the Bank</strong></td>
+  </tr>
+  <tr>
+    <td><video src="https://github.com/user-attachments/assets/3a1ac465-211d-491d-a4b4-b02852397d73" controls></video></td>
+    <td><video src="https://github.com/user-attachments/assets/1c26eb99-70f2-46ae-a910-e68fb85d36e8" controls></video></td>
+  </tr>
+</table>
 
 ## Capabilities
 
