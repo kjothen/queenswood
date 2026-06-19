@@ -17,7 +17,7 @@ onboarding with IDV.
   </tr>
   <tr>
     <td><video src="https://github.com/user-attachments/assets/1dcf2a74-b198-4757-b271-84896f0daec8" controls></video></td>
-    <td><video src="https://github.com/user-attachments/assets/1c26eb99-70f2-46ae-a910-e68fb85d36e8" controls></video></td>
+    <td><video src="https://github.com/user-attachments/assets/5f5403c2-3ada-4985-826b-209e1826f550" controls></video></td>
   </tr>
 </table>
 
