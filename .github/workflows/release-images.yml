@@ -136,11 +136,12 @@ jobs:
             bank-interest-processor-service
             bank-transaction-processor-service
             bank-idv-processor-service
+            bank-scheduler-processor-service
             bank-clearbank-adapter-service
             bank-clearbank-simulator-service
             bank-onfido-adapter-service
             bank-onfido-simulator-service
-            bank-app
+            bank-uk-companies-house-simulator-service
             bank-console
           )
           for img in "${images[@]}"; do

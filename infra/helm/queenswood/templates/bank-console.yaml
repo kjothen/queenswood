@@ -1,8 +1,8 @@
 {{- if .Values.bankConsole.enabled }}
 ---
-# Human-identity SPA. Mirrors bank-app's standalone template (TCP
-# probes, no FDB volumes, no bootstrap dependency) — the SPA only
-# proxies to bank-api at runtime, so a TCP-only probe is sufficient.
+# Human-identity SPA. Standalone template (TCP probes, no FDB
+# volumes, no bootstrap dependency) — the SPA only proxies to
+# bank-api at runtime, so a TCP-only probe is sufficient.
 apiVersion: apps/v1
 kind: Deployment
 metadata:

@@ -9,12 +9,14 @@ Kubernetes:
   operator (subchart provides the operator + CRDs; this
   chart provides the `FoundationDBCluster` CR)
 - **bank-api-service** (HTTP REST API + dispatchers)
-- **bank-clearbank-{adapter,simulator}-service** and
-  **bank-onfido-{adapter,simulator}-service** (HTTP)
+- **bank-clearbank-{adapter,simulator}-service**,
+  **bank-onfido-{adapter,simulator}-service**, and
+  **bank-uk-companies-house-simulator-service** (HTTP)
 - **bank-{cash-account,party,payment,interest,transaction,idv}-processor-service**
-  (Pulsar processors)
-- **bank-app** and **bank-console** (Svelte SPAs served
-  via nginx)
+  (Pulsar processors) and
+  **bank-scheduler-processor-service** (cron-driven, no
+  Pulsar)
+- **bank-console** (Svelte SPA served via nginx)
 - **Keycloak** with embedded H2 for standalone installs
   (`keycloak.dev.enabled: true` by default). GKE
   deployments turn this off and use the operator-driven
