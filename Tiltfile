@@ -51,10 +51,12 @@ SERVICES = [
     'bank-interest-processor-service',
     'bank-transaction-processor-service',
     'bank-idv-processor-service',
+    'bank-scheduler-processor-service',
     'bank-clearbank-adapter-service',
     'bank-clearbank-simulator-service',
     'bank-onfido-adapter-service',
     'bank-onfido-simulator-service',
+    'bank-uk-companies-house-simulator-service',
 ]
 
 # Build each service image. The chart renders image refs as
@@ -132,6 +134,16 @@ for svc, port in HTTP_PORTS.items():
         resource_deps=[BOOTSTRAP_JOB],
     )
 
+# Companies House simulator. Its container listens on 8084 (the same
+# port onfido-adapter forwards on the host), so forward it to host
+# 8085 to avoid the collision.
+k8s_resource(
+    workload='%s-bank-uk-companies-house-simulator-service' % RELEASE,
+    port_forwards='8085:8084',
+    labels=['http'],
+    resource_deps=[BOOTSTRAP_JOB],
+)
+
 # Pulsar processors: group + gate on bootstrap.
 PROCESSORS = [
     'bank-cash-account-processor-service',
@@ -140,6 +152,7 @@ PROCESSORS = [
     'bank-interest-processor-service',
     'bank-transaction-processor-service',
     'bank-idv-processor-service',
+    'bank-scheduler-processor-service',
 ]
 for svc in PROCESSORS:
     k8s_resource(

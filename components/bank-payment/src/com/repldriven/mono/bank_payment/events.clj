@@ -84,7 +84,7 @@
           _ (store/save-inbound-payment txn payment)]
          payment)))))
 
-(defn- sort-code-of
+(defn- bban->sort-code
   [bban]
   (when (and bban (>= (count bban) 6)) (subs bban 0 6)))
 
@@ -95,7 +95,7 @@
   code that matches no bank is genuinely foreign and fails."
   [config data]
   (let [{:keys [creditor-bban]} data
-        sort-code (sort-code-of creditor-bban)
+        sort-code (bban->sort-code creditor-bban)
         business-day (domain/current-business-day
                       (utility/now)
                       (:business-day-cutoff config))]

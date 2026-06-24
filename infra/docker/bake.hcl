@@ -17,14 +17,16 @@ services = [
   "bank-interest-processor-service",
   "bank-transaction-processor-service",
   "bank-idv-processor-service",
+  "bank-scheduler-processor-service",
   "bank-clearbank-adapter-service",
   "bank-clearbank-simulator-service",
   "bank-onfido-adapter-service",
   "bank-onfido-simulator-service",
+  "bank-uk-companies-house-simulator-service",
 ]
 
 group "default" {
-  targets = concat(services, ["bank-app", "bank-console"])
+  targets = concat(services, ["bank-console"])
 }
 
 // Multi-platform builds are gated on the `MULTI_ARCH` variable so
@@ -48,21 +50,10 @@ target "service" {
   output     = ["type=docker"]
 }
 
-// Frontend SPA — Node build → nginx serve. Separate target because
-// the Dockerfile and base images are unrelated to the JVM services
-// above; the Clojure base layer wouldn't share.
-target "bank-app" {
-  context    = "."
-  dockerfile = "infra/docker/bank-app/Dockerfile"
-  tags       = ["${REGISTRY}/bank-app:${TAG}"]
-  platforms  = platforms_default
-  output     = ["type=docker"]
-}
-
-// Human-identity SPA: sign-in + onboarding + dashboard. Same Node →
-// nginx pattern as bank-app, with the SPA reading /env.js at runtime
-// so a single image works under both kind (Keycloak port-forward)
-// and GKE (Keycloak at https://keycloak.<env>.repldriven.com).
+// Human-identity SPA: sign-in + onboarding + dashboard. Node →
+// nginx, with the SPA reading /env.js at runtime so a single image
+// works under both kind (Keycloak port-forward) and GKE (Keycloak
+// at https://keycloak.<env>.repldriven.com).
 target "bank-console" {
   context    = "."
   dockerfile = "infra/docker/bank-console/Dockerfile"

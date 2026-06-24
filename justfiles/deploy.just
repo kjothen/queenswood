@@ -14,16 +14,23 @@ helm-validate tag="dev":
       | kubeconform -strict -ignore-missing-schemas -summary
 
 # Install or upgrade the chart
-helm-install tag="dev" registry="ghcr.io/repldriven" values_file="":
+helm-install tag="dev" registry="ghcr.io/repldriven" values_file="" pull_policy="":
     #!/usr/bin/env zsh
     # `registry` lets `kind-up` point at the local registry so containerd
     # pulls from there. `values_file` layers an extra values file on top
     # of values.yaml -- kind-up passes values-dev.yaml to enable the
-    # bundled dev Keycloak.
+    # bundled dev Keycloak. `pull_policy` overrides image.pullPolicy --
+    # kind-up sets IfNotPresent so containerd pulls the freshly pushed
+    # images from the local registry (values-dev.yaml's Never is for the
+    # Tilt flow, which loads images straight into the kind node).
     set -e
     extra_values=()
     if [[ -n "{{ values_file }}" ]]; then
       extra_values=(-f infra/helm/queenswood/{{ values_file }})
+    fi
+    extra_sets=()
+    if [[ -n "{{ pull_policy }}" ]]; then
+      extra_sets=(--set image.pullPolicy={{ pull_policy }})
     fi
     helm dependency update infra/helm/queenswood
     helm upgrade --install queenswood infra/helm/queenswood \
@@ -31,6 +38,7 @@ helm-install tag="dev" registry="ghcr.io/repldriven" values_file="":
       "${extra_values[@]}" \
       --set image.tag={{ tag }} \
       --set image.registry={{ registry }} \
+      "${extra_sets[@]}" \
       --wait --timeout 10m
 
 # Create kind cluster, push images to local registry, and install the chart
@@ -40,17 +48,16 @@ kind-up tag="dev":
     # faster than `kind load docker-image` for iterative rebuilds.
     set -e
     bash {{ justfile_directory() }}/infra/kind/with-registry.sh queenswood
-    just docker-build-all {{ tag }}
-    # bank-app + bank-console live at bases/* (Svelte SPAs, not
-    # Polylith service projects), so the projects/*-service/ glob
-    # misses them. docker-build-all's `default` group in
-    # infra/docker/bake.hcl already builds both -- we just need to
-    # push them alongside the services.
-    for svc in projects/*-service/(:t) bank-app bank-console; do
+    # just docker-build-all {{ tag }}
+    # bank-console lives at bases/* (Svelte SPA, not a Polylith service
+    # project), so the projects/*-service/ glob misses it.
+    # docker-build-all's `default` group in infra/docker/bake.hcl already
+    # builds it -- we just need to push it alongside the services.
+    for svc in projects/*-service/(:t) bank-console; do
       docker tag {{ DOCKER_REGISTRY }}/$svc:{{ tag }} localhost:5001/$svc:{{ tag }}
       docker push localhost:5001/$svc:{{ tag }}
     done
-    just helm-install {{ tag }} localhost:5001 values-dev.yaml
+    just helm-install {{ tag }} localhost:5001 values-dev.yaml IfNotPresent
 
 # Create kind cluster and install the chart from ghcr.io/repldriven (no local build).
 kind-up-remote tag="latest":

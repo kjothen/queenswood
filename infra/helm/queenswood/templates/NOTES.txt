@@ -41,25 +41,19 @@ to each SPA is all you need for sign-in (no separate Keycloak
 port-forward).
 
   kubectl -n {{ .Release.Namespace }} port-forward svc/{{ .Release.Name }}-bank-api-service 8080:8080
-{{- if .Values.bankApp.enabled }}
-  kubectl -n {{ .Release.Namespace }} port-forward svc/{{ .Release.Name }}-bank-app 8081:{{ .Values.bankApp.port }}
-{{- end }}
 {{- if .Values.bankConsole.enabled }}
-  kubectl -n {{ .Release.Namespace }} port-forward svc/{{ .Release.Name }}-bank-console 8082:{{ .Values.bankConsole.port }}
+  kubectl -n {{ .Release.Namespace }} port-forward svc/{{ .Release.Name }}-bank-console 8081:{{ .Values.bankConsole.port }}
 {{- end }}
 
 Then open:
   http://localhost:8080/scalar       (bank-api OpenAPI)
-{{- if .Values.bankApp.enabled }}
-  http://localhost:8081              (bank-app -- operator console, sign in as `ops` / `ops`)
-{{- end }}
 {{- if .Values.bankConsole.enabled }}
-  http://localhost:8082              (bank-console -- organisation sign-in, sign in as `dev` / `dev`)
+  http://localhost:8081              (bank-console -- organisation sign-in, sign in as `dev` / `dev`)
 {{- end }}
 {{- if .Values.keycloak.dev.enabled }}
 
-The bundled Keycloak admin console is reachable through either SPA
-at /keycloak/admin (e.g. http://localhost:8081/keycloak/admin),
+The bundled Keycloak admin console is reachable through the console
+SPA at /keycloak/admin (e.g. http://localhost:8081/keycloak/admin),
 credentials `admin` / `admin`. No direct port-forward needed.
 {{- end }}
 

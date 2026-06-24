@@ -1,0 +1,18 @@
+system:
+  fdb: !include bank/fdb.yml
+  avro: !include bank/avro.yml
+  scheduler:
+    scheduler: !system/component
+      system/component-kind: scheduler/scheduler
+  bank-scheduler:
+    runner: !system/component
+      system/component-kind: bank-scheduler/runner
+      record-db: !system/ref fdb.record-db
+      record-store: !system/ref fdb.meta-store
+      schemas: !system/ref avro.serde
+      scheduler: !system/ref scheduler.scheduler
+  telemetry:
+    otel-sdk: !system/component
+      system/component-kind: telemetry/otel-sdk
+      service-name: !env SERVICE_NAME
+      endpoint: !env OTEL_ENDPOINT

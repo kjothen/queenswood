@@ -37,24 +37,25 @@ keycloak:
   # Code + PKCE. Must match the `clientId` of the corresponding
   # `clients[]` entry in `files/keycloak-realm.json`.
   consoleClientId: queenswood-console
-  # Second realm hosting Queenswood operator users (bank-app SPA).
-  # Same Keycloak instance, separate realm. bank-api wires a second
-  # identity-provider pointed at this realm.
+  # Second realm hosting Queenswood operator users. Same Keycloak
+  # instance, separate realm. bank-api wires a second identity-provider
+  # pointed at this realm so it still accepts operator JWTs; there is
+  # no operator SPA in this chart any more (bank-app was removed), so
+  # the realm currently has no first-party browser client.
   opsRealm: queenswood-ops
-  # Override the iss claim the verifier expects on the ops realm
-  # when base-url is an in-cluster Service URL but Keycloak embeds
-  # its public hostname in tokens. Default matches the bank-app
-  # SPA's same-origin Keycloak proxy at `localhost:8081/keycloak`
-  # (the URL the dev Keycloak builds into JWTs via the SPA nginx's
-  # X-Forwarded-* headers); GKE overrides to the public hostname.
+  # Override the iss claim the verifier expects on the ops realm when
+  # base-url is an in-cluster Service URL but Keycloak embeds its
+  # public hostname in tokens. The localhost:8081 default is a legacy
+  # value from the removed operator SPA's same-origin Keycloak proxy;
+  # GKE overrides to the public hostname.
   opsExpectedIssuer: "http://localhost:8081/keycloak/realms/queenswood-ops"
-  # Public client id the bank-app SPA uses against the ops realm.
+  # Operator-realm client id retained for the second identity-provider.
   opsClientId: queenswood-app
   # Override the iss the verifier expects on incoming JWTs. Same
   # shape as opsExpectedIssuer above: default matches the bank-console
-  # SPA's same-origin Keycloak proxy at `localhost:8082/keycloak`;
+  # SPA's same-origin Keycloak proxy at `localhost:8081/keycloak`;
   # GKE overrides to the public hostname.
-  expectedIssuer: "http://localhost:8082/keycloak/realms/queenswood"
+  expectedIssuer: "http://localhost:8081/keycloak/realms/queenswood"
   # -- Bundled dev Keycloak for any standalone install of this chart
   # (local kind/k3s, the published OCI artifact). Renders a single-
   # replica Deployment + matching Service + ConfigMap-mounted realm
@@ -102,7 +103,7 @@ bootstrap:
     limits: { cpu: "1000m", memory: "1Gi" }
     requests: { cpu: "100m", memory: "512Mi" }
 
-# -- Public Gateway for the bank-app SPA (which proxies `/v1/*` to
+# -- Public Gateway for the bank-console SPA (which proxies `/v1/*` to
 # bank-api internally). When `gcp.enabled` is true the templates
 # emit a Gateway with gatewayClassName gke-l7-regional-external-managed,
 # a NamedAddress reference to a regional Address, an annotation
@@ -127,54 +128,23 @@ gateway:
     # infra/gcp/certificates.yml.
     certManagerCerts: queenswood-cert
 
-# -- Frontend SPA (Svelte/Vite served by nginx). Image name is `bank-app`
-# under {{ image.registry }}. The container's nginx proxies `/v1/*` to
-# `apiUpstream`; the value supports `{{ .Release.Name }}` interpolation
-# so the default points at the in-cluster bank-api service.
-bankApp:
-  enabled: true
-  port: 8080
-  replicas: 1
-  apiUpstream: "http://{{ .Release.Name }}-bank-api-service:8080"
-  # In-cluster Service the nginx `/keycloak/*` reverse-proxies to so
-  # the SPA stays same-origin and the user only needs a single
-  # port-forward to bank-app. Defaults to the bundled dev Keycloak
-  # Service; GKE overrides to the operator-published Service URL
-  # (functionally the same name in either mode, but kept overridable
-  # so a sidecar Keycloak or external instance can be wired in).
-  keycloakUpstream: "http://queenswood-keycloak-keycloak-service:8080"
-  # Public URL of the realm the bank-app SPA authenticates against
-  # (the browser reads this from /env.js at runtime). The default is
-  # the SPA's own same-origin `/keycloak` path so a bare `helm install`
-  # works after one `kubectl port-forward svc/<release>-bank-app
-  # 8081:8080`; queenswood-platform overrides to the public hostname
-  # on GKE.
-  keycloakPublicUrl: "http://localhost:8081/keycloak"
-  # Optional federated IdP alias for skip-straight-to-Google flows.
-  # Empty in dev so the Keycloak login form renders for the seeded
-  # `ops` / `ops` user; set to `google` once real Google OAuth
-  # credentials are wired into the ops realm.
-  keycloakIdpHint: ""
-  resources:
-    limits: { cpu: "200m", memory: "128Mi" }
-    requests: { cpu: "50m", memory: "64Mi" }
-
 # -- Human-identity SPA. nginx in the pod proxies `/v1/*` to bank-api
-# (same pattern as bank-app) and serves a synthesised /env.js so the
-# SPA picks up its Keycloak URL at runtime. Image name is `bank-console`.
+# and serves a synthesised /env.js so the SPA picks up its Keycloak
+# URL at runtime. Image name is `bank-console`.
 bankConsole:
   enabled: true
   port: 8080
   replicas: 1
   apiUpstream: "http://{{ .Release.Name }}-bank-api-service:8080"
-  # In-cluster Service the nginx `/keycloak/*` reverse-proxies to.
-  # Same shape as bankApp.keycloakUpstream above.
+  # In-cluster Service the nginx `/keycloak/*` reverse-proxies to so
+  # the SPA stays same-origin. Defaults to the bundled dev Keycloak
+  # Service; GKE overrides to the operator-published Service URL.
   keycloakUpstream: "http://queenswood-keycloak-keycloak-service:8080"
   # Public URL of the realm endpoint the browser calls. Default is
   # the SPA's own same-origin `/keycloak` path so a bare `helm install`
   # works after one `kubectl port-forward svc/<release>-bank-console
-  # 8082:8080`; GKE overrides via queenswood-platform.
-  keycloakPublicUrl: "http://localhost:8082/keycloak"
+  # 8081:8080`; GKE overrides via queenswood-platform.
+  keycloakPublicUrl: "http://localhost:8081/keycloak"
   # Optional federated IdP alias. When set (e.g. "google"), the SPA
   # skips Keycloak's own login form and redirects straight to that
   # provider. Empty by default so the realm's login screen renders;
@@ -201,6 +171,7 @@ services:
       requests: { cpu: "200m", memory: "768Mi" }
     extraEnv:
       CLEARBANK_ADAPTER_URL: "http://{{ .Release.Name }}-bank-clearbank-adapter-service:8082"
+      COMPANIES_HOUSE_URL: "http://{{ .Release.Name }}-bank-uk-companies-house-simulator-service:8084"
 
   bank-cash-account-processor-service:
     enabled: true
@@ -226,6 +197,13 @@ services:
     replicas: 1
 
   bank-idv-processor-service:
+    enabled: true
+    replicas: 1
+
+  # Cron-driven processor (no Pulsar): registers a Quartz trigger per
+  # enabled scheduled job at startup and runs interest accrue/capitalize
+  # tasks straight against FDB.
+  bank-scheduler-processor-service:
     enabled: true
     replicas: 1
 
@@ -264,6 +242,13 @@ services:
     enabled: true
     http: true
     port: 8083
+    replicas: 1
+
+  bank-uk-companies-house-simulator-service:
+    # Disabled in production values; enable for dev/non-prod.
+    enabled: true
+    http: true
+    port: 8084
     replicas: 1
 
 # ---------------------------------------------------------------------

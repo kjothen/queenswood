@@ -89,7 +89,11 @@
     (-verify-token [this jwt-string opts]
       (verify-token-impl this jwt-string opts))
     (-get-jwks [this] (core/jwks! this))
-    (-get-issuer [this] (core/issuer this)))
+    ;; Match the verifier's expected iss (`:expected-issuer` override,
+    ;; else base-url-derived) so provider selection keys on the same
+    ;; issuer the token actually carries — base-url is the in-cluster
+    ;; Service, but tokens embed the public frontchannel hostname.
+    (-get-issuer [this] (or (:expected-issuer config) (core/issuer this))))
 
 (defn ->client
   "Build a `KeycloakIdentityProvider`. `config` carries `:base-url`,
