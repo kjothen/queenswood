@@ -425,9 +425,8 @@
   payments are reversible; an already-failed payment is an idempotent
   no-op; a completed (settled) payment cannot be reversed here."
   [config data]
-  (let [{payment-id :end-to-end-id
-         :keys [cancellation-code cancellation-reason]}
-        data]
+  (let [{payment-id :end-to-end-id} data
+        {:keys [cancellation-code cancellation-reason]} data]
     (store/transact
      config
      (fn [txn]
