@@ -48,7 +48,7 @@
          cash (ledger-accounts/find-by-code
                {:record-db record-db :record-store record-store}
                bank-id
-               "1100")]
+               :gl-account-code-cash-at-correspondent)]
      (if (or (nil? cash) (error/anomaly? cash))
        (errors/anomaly->response
         (error/fail

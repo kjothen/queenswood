@@ -1,29 +1,39 @@
 (ns com.repldriven.mono.bank-ledger-account.domain
   (:require
     [com.repldriven.mono.bank-policy.interface :as policy]
+    [com.repldriven.mono.bank-schema.interface :as schema]
 
     [com.repldriven.mono.error.interface :refer [let-nom>]]
     [com.repldriven.mono.utility.interface :as utility]))
 
 (def product-type->control-code
-  "Maps a cash-account product type to the `:gl-code` of the control
+  "Maps a cash-account product type to the `:gl-account-code` of the control
   ledger account its *default* balance rolls up into. Postings on those
   accounts fan out to the matching control so the control balance is
   always the live roll-up of its sub-ledger. Customer deposits roll into
-  2100/2200/2300; the bank's own funding account rolls into 3100."
-  {:product-type-sub-ledger-current "2100"
-   :product-type-sub-ledger-savings "2200"
-   :product-type-sub-ledger-term-deposit "2300"
-   :product-type-sub-ledger-own-funds "3100"})
+  the 2100/2200/2300 deposit controls; the bank's own funding account
+  rolls into own funds (3100)."
+  {:product-type-sub-ledger-current :gl-account-code-customer-deposits-current
+   :product-type-sub-ledger-savings :gl-account-code-customer-deposits-savings
+   :product-type-sub-ledger-term-deposit :gl-account-code-customer-deposits-term
+   :product-type-sub-ledger-own-funds :gl-account-code-own-funds})
 
 (def balance-type->control-code
-  "Maps a non-default customer balance bucket to the `:gl-code` of the
-  control it rolls up into, regardless of product type. The customer
-  `interest-accrued` buckets reconcile to 2400 Interest payable, the
+  "Maps a non-default customer balance bucket to the `:gl-account-code` of
+  the control it rolls up into, regardless of product type. The customer
+  `interest-accrued` buckets reconcile to interest payable (2400), the
   same way default buckets reconcile to the deposit controls. Checked
   ahead of `product-type->control-code`, so a savings account's accrued
-  interest rolls into 2400, not 2200."
-  {:balance-type-interest-accrued "2400"})
+  interest rolls into interest payable, not the savings deposit control."
+  {:balance-type-interest-accrued :gl-account-code-interest-payable})
+
+(defn gl-account-code->gl-code
+  "The chart number, as a string, for a `gl-account-code` role — the
+  enum's own integer value (e.g. `:gl-account-code-suspense` -> `\"2500\"`).
+  The number is a display/reporting concern; code resolves accounts by
+  role, so this is only reconstituted at the API edge."
+  [gl-account-code]
+  (str (schema/gl-account-code->int gl-account-code)))
 
 (defn new-ledger-account
   "Build a `LedgerAccount` map for one template `row` in `currency`,
@@ -39,7 +49,7 @@
                                 {:action :ledger-account-action-open})]
     (let [now (utility/now)]
       (assoc (select-keys row
-                          [:gl-code :name :gl-account-type
+                          [:gl-account-code :name :gl-account-type
                            :gl-account-class :required])
              :bank-id bank-id
              :currency currency

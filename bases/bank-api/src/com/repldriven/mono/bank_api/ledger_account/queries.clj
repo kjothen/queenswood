@@ -11,10 +11,17 @@
 
 (defn- ->api
   "Present a stored LedgerAccount over the wire: the internal
-  `:ledger-account-id` is exposed as `:account-id` so the resource
-  speaks the same id key as the path parameter and the balance API."
+  `:ledger-account-id` is exposed as `:account-id` so the resource speaks
+  the same id key as the path parameter and the balance API, and the
+  `:gl-account-code` role is rendered back to its chart number as the
+  `:gl-code` string clients (and the console's ledger view) expect."
   [account]
-  (set/rename-keys account {:ledger-account-id :account-id}))
+  (-> account
+      (set/rename-keys {:ledger-account-id :account-id})
+      (assoc :gl-code
+             (ledger-accounts/gl-account-code->gl-code
+              (:gl-account-code account)))
+      (dissoc :gl-account-code)))
 
 (defn- with-posted-balances
   "Attach each ledger account's derived `:posted-balance` ({value,

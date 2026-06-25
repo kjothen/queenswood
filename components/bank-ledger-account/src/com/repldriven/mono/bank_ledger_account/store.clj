@@ -31,7 +31,7 @@
    "Failed to load ledger account"))
 
 (defn find-by-code
-  [txn bank-id gl-code]
+  [txn bank-id gl-account-code]
   (fdb/transact
    txn
    (fn [txn]
@@ -39,11 +39,13 @@
               (fdb/open txn store-name)
               "LedgerAccount"
               [["bank_id" bank-id]
-               ["gl_code" gl-code]]
-              {:index "LedgerAccount_by_bank_gl_code"})
+               ["gl_account_code"
+                (schema/gl-account-code->pb-enum
+                 gl-account-code)]]
+              {:index "LedgerAccount_by_bank_gl_account_code"})
              schema/pb->LedgerAccount))
    :ledger-account/find-by-code
-   "Failed to find ledger account by gl-code"))
+   "Failed to find ledger account by gl-account-code"))
 
 (defn list-by-bank
   [txn bank-id]

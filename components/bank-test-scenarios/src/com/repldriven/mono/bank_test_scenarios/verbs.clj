@@ -558,9 +558,9 @@
    :legs [gl-leg customer-leg]})
 
 (defn- gl-account-for
-  "Look up the bank's `gl-code` GL account on its own books."
-  [bank bank-id gl-code]
-  (ledger-accounts/find-by-code bank bank-id gl-code))
+  "Look up the bank's GL account by `gl-account-code` role on its own books."
+  [bank bank-id gl-account-code]
+  (ledger-accounts/find-by-code bank bank-id gl-account-code))
 
 (defn- bank-id-for-account
   "Resolve the bank-id that owns `model-acct`."
@@ -653,7 +653,8 @@
    {[model-id amount] :args}]
   (let [real-id (id-mapping/real id-mapping model-id)
         bank-id (bank-id-for-account banks accounts model-id)
-        pending-outbound (gl-account-for bank bank-id "1200")
+        pending-outbound
+        (gl-account-for bank bank-id :gl-account-code-pending-outbound)
         result
         (if (or (nil? pending-outbound) (error/anomaly? pending-outbound))
           (error/reject :scenario/no-pending-outbound-account
@@ -833,7 +834,8 @@
   ;; until 4100 fee-income lands in a future wave).
   (let [real-id (id-mapping/real id-mapping model-id)
         bank-id (bank-id-for-account banks accounts model-id)
-        cash (gl-account-for bank bank-id "1100")
+        cash
+        (gl-account-for bank bank-id :gl-account-code-cash-at-correspondent)
         result
         (if (or (nil? cash) (error/anomaly? cash))
           (error/reject :scenario/no-cash-at-correspondent-account

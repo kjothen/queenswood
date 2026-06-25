@@ -23,10 +23,6 @@
 ;; anomaly. The `record-*` helpers take `txn` (plus a precomputed
 ;; `business-day`, since the raw txn doesn't carry `:business-day-cutoff`).
 
-(def ^:private gl-code-pending-outbound "1200")
-(def ^:private gl-code-cash-at-correspondent "1100")
-(def ^:private gl-code-suspense "2500")
-
 (defn- check-debit-credit-code
   [debit-credit-code]
   (when (not= :debit-credit-code-credit debit-credit-code)
@@ -46,7 +42,7 @@
       [cash (ledger-accounts/find-by-code
              txn
              bank-id
-             gl-code-cash-at-correspondent)
+             :gl-account-code-cash-at-correspondent)
        _ (when (nil? cash)
            (error/fail
             :payment/no-cash-at-correspondent-account
@@ -109,14 +105,17 @@
        cash (ledger-accounts/find-by-code
              txn
              bank-id
-             gl-code-cash-at-correspondent)
+             :gl-account-code-cash-at-correspondent)
        _ (when (nil? cash)
            (error/fail :payment/no-cash-at-correspondent-account
                        {:message
                         (str "Bank has no 1100 cash-at-correspondent"
                              " account in its chart of accounts")
                         :bank-id bank-id}))
-       suspense (ledger-accounts/find-by-code txn bank-id gl-code-suspense)
+       suspense (ledger-accounts/find-by-code
+                 txn
+                 bank-id
+                 :gl-account-code-suspense)
        _ (when (nil? suspense)
            (error/fail :payment/no-suspense-account
                        {:message
@@ -147,7 +146,7 @@
       [cash (ledger-accounts/find-by-code
              txn
              bank-id
-             gl-code-cash-at-correspondent)
+             :gl-account-code-cash-at-correspondent)
        _ (when (nil? cash)
            (error/fail :payment/no-cash-at-correspondent-account
                        {:message
@@ -221,7 +220,7 @@
       [pending (ledger-accounts/find-by-code
                 txn
                 bank-id
-                gl-code-pending-outbound)
+                :gl-account-code-pending-outbound)
        _ (when (nil? pending)
            (error/fail :payment/no-pending-outbound-account
                        {:message
@@ -231,7 +230,7 @@
        cash (ledger-accounts/find-by-code
              txn
              bank-id
-             gl-code-cash-at-correspondent)
+             :gl-account-code-cash-at-correspondent)
        _ (when (nil? cash)
            (error/fail :payment/no-cash-at-correspondent-account
                        {:message
@@ -392,7 +391,7 @@
       [pending (ledger-accounts/find-by-code
                 txn
                 bank-id
-                gl-code-pending-outbound)
+                :gl-account-code-pending-outbound)
        _ (when (nil? pending)
            (error/fail :payment/no-pending-outbound-account
                        {:message

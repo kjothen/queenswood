@@ -106,8 +106,8 @@ Each cash-account rolls up to a GL **control account** via its
 - the `new-account` call that creates one `LedgerAccount` plus
   its opening balance (callers loop it over a supplied chart);
 - `control-code-for-product-type` — the product-type → control
-  `:gl-code` mapping;
-- `find-by-code` — resolve a GL account by its code;
+  `:gl-account-code` role mapping;
+- `find-by-code` — resolve a GL account by its role;
 - `add-control-legs` — paired-leg construction at posting time,
   following each sub-ledger `default` leg with a
   control-account leg, keyed off the leg's `:product-type`.
@@ -158,13 +158,16 @@ Five top-level classes, numbered by convention:
 | 4xxx  | Income    | Credit      |
 | 5xxx  | Expense   | Debit       |
 
-The numbering is **convention, not enforcement** — codes are
-free-form strings within a bank, but the seeded chart follows
-the convention and downstream tooling (reporting,
-trial-balance ordering) expects it. A bank that picks
-different codes for its custom accounts is free to do so; a
-bank that picks `4xxx` for an expense is asking for a
-confusing trial balance.
+The numbering is **convention, not enforcement** for reporting
+and trial-balance ordering. The well-known accounts code
+actually relies on, though, carry a typed **role** rather than a
+bare number: each is a value of the `GlAccountCode` enum, and the
+enum's integer value *is* the chart number
+(`GL_ACCOUNT_CODE_SUSPENSE = 2500`). Posting sites resolve an
+account by role (`:gl-account-code-suspense`), never by the
+literal string — so renumbering the chart can't silently break
+posting logic. The number is reconstituted as a string only at
+the API/reporting edge (`gl-account-code->gl-code`).
 
 ### Data model
 
@@ -173,9 +176,10 @@ one row of the chart:
 
 ```protobuf
 message LedgerAccount {
+  reserved 3;
+  reserved "gl_code";                  // replaced by typed gl_account_code
   required string bank_id = 1;
   required string ledger_account_id = 2;   // "led.<uuidv7>"
-  required string gl_code = 3;             // "1100", "2400", ...
   required string name = 4;
   required string currency = 5;            // ISO 4217
   required GlAccountType gl_account_type = 6;
@@ -187,12 +191,14 @@ message LedgerAccount {
                                        // only on control accounts
   required int64 created_at = 10;
   required int64 updated_at = 11;
+  required GlAccountCode gl_account_code = 12;
+                                       // role; enum value = chart number
 }
 ```
 
 Indexed primary key `(bank_id, ledger_account_id)`, with a
-`LedgerAccount_by_bank_gl_code` index so `find-by-code`
-resolves a GL account by code.
+`LedgerAccount_by_bank_gl_account_code` index so `find-by-code`
+resolves a GL account by its role.
 
 A cash-account (customer or own-funds) is an ordinary
 `CashAccount` record; the only field that matters for the GL is
@@ -222,14 +228,14 @@ Notes:
 
 - **GL accounts and cash accounts are separate record types.**
   A `LedgerAccount` carries the GL classification fields
-  (`gl_code`, `gl_account_type`, `gl_account_class`,
+  (`gl_account_code`, `gl_account_type`, `gl_account_class`,
   `required`) directly on the record; there is no product
   behind it. A `CashAccount` carries no GL fields — its
   control is derived from `product_type`.
 - **The control link is *not* stored on the cash account.**
   There is no `gl_control_account_id`. A leg carrying a
   sub-ledger `:product-type` is mapped to its control
-  `:gl-code` (`control-code-for-product-type`) at posting time
+  `:gl-account-code` (`control-code-for-product-type`) at posting time
   by `add-control-legs`, which resolves the control `LedgerAccount`
   by code. Keying the fan-out off the leg's product-type — not
   a stored pointer — means re-coding the chart needs no
@@ -256,7 +262,7 @@ Notes:
   control accounts naming the cohort they aggregate. The
   seeded chart leaves it unset — the sub-ledger → control
   fan-out is driven by `control-code-for-product-type`, which
-  maps a leg's `:product-type` to the control `:gl-code`
+  maps a leg's `:product-type` to the control `:gl-account-code`
   directly. The field is reserved for finer cohort
   classification (loans, cards) when those instruments land.
 - **Normal side** is *derived*, not stored — assets and
@@ -265,7 +271,7 @@ Notes:
 - **`currency`** lives on the `LedgerAccount` record (one
   currency per account). A multi-currency GL "position"
   (e.g. "all of Interest payable") is computed as the sum
-  of per-currency GL accounts under the same gl-code prefix
+  of per-currency GL accounts under the same gl-account-code role
   or summary parent. There's no shared-currency
   product/account at any layer.
 
@@ -328,7 +334,7 @@ sub-controls) extends the CoA itself.
 
 Cash-accounts are the **sub-ledger** for the matching control
 account. The link is the account's `:product-type`, mapped to
-a control `:gl-code` by `control-code-for-product-type`:
+a control `:gl-account-code` by `control-code-for-product-type`:
 
 | Product type           | Control code | Cohort            |
 |------------------------|--------------|-------------------|
@@ -530,7 +536,7 @@ DEBIT  1100 Cash at correspondent         default / posted  100  GBP
 ```
 
 The control account is found by mapping the leg's
-`:product-type` to its control `:gl-code`
+`:product-type` to its control `:gl-account-code`
 (`control-code-for-product-type`) and resolving that
 `LedgerAccount` by code — `bank-ledger-account/add-control-legs`.
 Pairing is automatic and server-side; the leg-recording API
@@ -718,9 +724,9 @@ table extends naturally.
   balance-checked when any GL leg is present.
 - **`bank-schema`** defines the `LedgerAccount` message and the
   `GlAccountType` / `GlAccountClass` / `Required` /
-  `SubLedgerKind` enums, the `LedgerAccount` entry in
-  `RecordTypeUnion`, and the `LedgerAccount_by_bank_gl_code`
-  index. `ProductType` carries the sub-ledger values
+  `SubLedgerKind` / `GlAccountCode` enums, the `LedgerAccount`
+  entry in `RecordTypeUnion`, and the
+  `LedgerAccount_by_bank_gl_account_code` index. `ProductType` carries the sub-ledger values
   `-current` / `-savings` / `-term-deposit` / `-own-funds`
   plus `-general-ledger`.
 - **`bank-api`** exposes a read-only `/ledger-accounts` surface
