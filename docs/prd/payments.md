@@ -53,13 +53,24 @@ simulator standing in for a real partner.
   outbound payment, the amount is immediately held in a
   *pending-outgoing* state on the debtor's account
   (visible in the available balance, unavailable for
-  further spending). Settlement is recorded once the
-  scheme confirms.
+  further spending). The scheme may hold the payment for
+  screening first — the platform records it as *held*,
+  the amount still reserved — and settlement is recorded
+  once the scheme confirms.
 - **Inbound is two-stage too.** When an inbound payment
   arrives, the platform identifies the account by its UK
   payment address, records the receipt, and credits the
-  balance. The tenant doesn't have to do anything to
-  receive it.
+  balance. The scheme may hold an inbound for screening
+  first; the platform records it as *held* — nothing
+  reaches the account yet — and then either releases it
+  (the credit lands) or returns it to the sender (the
+  account is never credited). The tenant doesn't have to
+  do anything to receive it.
+- **Unmatched inbound payments are parked, not lost.**
+  When an inbound payment names an address that matches
+  no account on the platform, the platform parks it in a
+  suspense holding state rather than rejecting it, so the
+  receipt stays recoverable and can be reconciled later.
 - **Confirmation of Payee.** Outbound payments can be
   checked against the beneficiary's bank for name
   agreement before going out. The platform compares the
@@ -150,12 +161,16 @@ straight away — the customer can't double-spend the held
 amount. The reply confirms the intent has been accepted.
 
 The platform then submits the payment to the scheme
-through the clearing partner. Some moments later, the
-scheme confirms settlement; the platform completes the
-payment by moving the amount out of pending-outgoing and
-marking the payment *settled*.
+through the clearing partner. The scheme may hold the
+payment for screening before it settles; while it is
+held the amount stays reserved and the payment reads as
+*held*. Some moments later, the scheme confirms
+settlement; the platform completes the payment by moving
+the amount out of pending-outgoing and marking the
+payment *settled*.
 
-If the scheme rejects the payment, the platform marks it
+If the scheme rejects the payment — whether it was still
+in flight or held for screening — the platform marks it
 *failed* and returns the held amount to the debtor's
 available balance.
 
@@ -170,6 +185,21 @@ notifies the platform. The platform:
   already processed.
 - Records the payment.
 - Credits the receiving account.
+
+Sometimes the scheme holds an inbound payment for
+screening before it settles. The platform records the
+held payment against the receiving account but credits
+nothing yet — the funds sit with the clearing partner.
+When the hold is released, the platform credits the
+account; if the payment is instead returned to the
+sender, the account is never credited and the record
+reads as *returned*.
+
+If the address on an inbound payment matches no account
+on the platform, the platform doesn't discard it. It
+parks the receipt in a suspense holding state for later
+reconciliation, so an inbound that arrives slightly
+early — or with a mistyped address — stays recoverable.
 
 The tenant doesn't have to do anything to receive an
 inbound payment. They observe it by reading the account's
@@ -236,7 +266,7 @@ sequenceDiagram
     Q->>Q: validate + record<br/>hold amount as pending-outgoing
     Q-->>T: submitted (intent accepted)
     Q->>S: submit to scheme
-    Note over Q,S: scheme processes
+    Note over Q,S: scheme processes (may hold for screening first)
     S-->>Q: settlement notification
     Q->>Q: move pending-outgoing to settled
 ```
@@ -284,9 +314,37 @@ sequenceDiagram
 
 The platform handles inbound payments without any tenant
 action. The tenant sees the payment when they next read
-the account or its payments.
+the account or its payments. If the address matches no
+account, the receipt is parked in suspense for
+reconciliation rather than discarded.
 
-### 5. Confirmation of Payee before sending
+### 5. Inbound held, then released or returned
+
+```mermaid
+sequenceDiagram
+    participant S as Clearing partner
+    participant Q as Queenswood
+    participant T as Tenant engineer
+
+    S->>Q: inbound held for screening
+    Q->>Q: record held<br/>(account not yet credited)
+    alt hold released
+        S-->>Q: release
+        Q->>Q: credit the account<br/>mark settled
+    else returned to sender
+        S-->>Q: return
+        Q->>Q: mark returned<br/>(account never credited)
+    end
+    T->>Q: read account or payment
+    Q-->>T: held, settled, or returned visible
+```
+
+While an inbound is held, nothing reaches the account.
+The platform credits the account only when the scheme
+releases the hold; if the scheme returns the payment to
+the sender instead, the account is never touched.
+
+### 6. Confirmation of Payee before sending
 
 ```mermaid
 sequenceDiagram
@@ -305,7 +363,7 @@ sequenceDiagram
 The tenant uses the result to inform the end customer or
 to decide whether to send.
 
-### 6. Idempotent retry
+### 7. Idempotent retry
 
 ```mermaid
 sequenceDiagram
@@ -342,11 +400,13 @@ result; no duplicate payment is created.
   payment is submitted, the tenant can't recall it. UK
   FPS does have an indemnity-claim recall flow; the
   platform doesn't expose it.
-- **Payment statuses for the end customer.** "Submitted",
-  "settled", "failed" are the platform's vocabulary. The
-  tenant's customer-facing surface may want richer states
-  ("being processed", "received by recipient", "returned")
-  that map onto these.
+- **Payment statuses for the end customer.** The platform
+  speaks in terms of *submitted*, *held*, *settled*, and
+  *failed* for outbound payments, and *held*, *settled*,
+  *returned*, and *suspended* for inbound. The tenant's
+  customer-facing surface may want a simpler or
+  differently-worded set ("being processed", "received by
+  recipient", "bounced") that maps onto these.
 - **Bulk payments.** No way to submit a batch in one
   call. A tenant moving a salary file or a supplier run
   has to issue many submissions.

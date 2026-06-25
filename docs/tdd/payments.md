@@ -117,20 +117,121 @@ Two distinct paths through the message bus:
 Three record types in `bank-payment`:
 
 - **InternalPayment** — debtor account, creditor account,
-  amount, reference, transaction-id, status (`submitted` /
-  `settled`).
+  amount, reference, transaction-id. No status field: an
+  internal transfer is settled atomically at submission.
 - **OutboundPayment** — debtor account, creditor BBAN +
   name, amount, reference, transaction-id, status
-  (`submitted` / `settled` / `failed`).
-- **InboundPayment** — creditor account, debtor name + BBAN,
-  amount, reference, transaction-id, scheme-transaction-id
-  (ClearBank's identifier), status.
+  (`pending` / `held` / `completed` / `failed`), plus
+  cancellation code + reason on failure.
+- **InboundPayment** — creditor account (absent when
+  suspended), debtor name + BBAN, amount, reference,
+  transaction-id, scheme-transaction-id (ClearBank's
+  identifier), end-to-end-id, status (`settled` / `held` /
+  `returned` / `suspended`).
 
 Each payment links to a Transaction via `:transaction-id`.
 The Payment record carries the user-facing intent and the
 external-scheme metadata; the Transaction record carries the
 double-entry posting. They live in different bricks; they
 join via the id.
+
+### Payment state machines
+
+A payment's lifecycle is driven by two processors, both wired in
+`bank-payment` and dispatched in `commands.clj`:
+
+- **`PaymentProcessor`** (`dispatch`) consumes tenant commands off
+  the bus — `submit-internal-payment` and `submit-outbound-payment`
+  — and creates the payment record. Submission handlers live in
+  `core.clj`.
+- **`PaymentEventProcessor`** (`dispatch-event`) consumes scheme
+  events republished by the ClearBank adapter —
+  `transaction-settled`, `transaction-held`, `transaction-rejected`
+  — and drives every post-submission transition. Event handlers
+  live in `events.clj`.
+
+The same three scheme events serve both inbound and outbound; the
+`debit-credit-code` on the event discriminates. A **debit** is the
+outbound side (our customer paying out), a **credit** the inbound
+side (money arriving). `dispatch-event` routes on the
+`(event, debit-credit-code)` pair:
+
+| Event | debit → outbound | credit → inbound |
+|-------|------------------|-------------------|
+| `transaction-settled` | `settle-outbound` | `settle-inbound` |
+| `transaction-held` | `hold-outbound` | `hold-inbound` |
+| `transaction-rejected` | `reject-outbound` | `return-inbound` |
+
+A `transaction-rejected` with an absent or unknown code defaults to
+the outbound path.
+
+#### Internal payment
+
+No status field and no state machine: an internal transfer is
+recorded and posted in one FDB transaction at
+`submit-internal-payment`, so it is settled the moment it exists.
+There is no scheme leg and no later event.
+
+#### Outbound payment
+
+States are `OutboundPaymentStatus`: `pending`, `held`, `completed`,
+`failed`. (`processing` is defined in the enum but unused, and
+`unknown` is the proto zero-value guard.)
+
+```mermaid
+stateDiagram-v2
+    [*] --> pending: submit-outbound-payment<br/>reserve in pending-outgoing + 1200
+    pending --> held: transaction-held (debit)<br/>no money move
+    pending --> completed: transaction-settled (debit)<br/>drain 1200 to 1100
+    pending --> failed: transaction-rejected (debit)<br/>release reservation
+    held --> completed: transaction-settled (debit)
+    held --> failed: transaction-rejected (debit)
+    completed --> [*]
+    failed --> [*]
+```
+
+| From | Driving event | To | Funds |
+|------|---------------|----|-------|
+| (new) | `submit-outbound-payment` command | `pending` | reserve: debtor pending-outgoing debited, 1200 credited |
+| `pending` | `transaction-held` (debit) | `held` | none — stays in 1200 while the scheme screens |
+| `pending` / `held` | `transaction-settled` (debit) | `completed` | post the outflow: 1200 → 1100, debtor posted debited |
+| `pending` / `held` | `transaction-rejected` (debit) | `failed` | reverse reservation: 1200 → debtor, available restored |
+| `completed` | `transaction-settled` (debit) | `completed` | idempotent no-op |
+| `failed` | `transaction-rejected` (debit) | `failed` | idempotent no-op |
+| `completed` | `transaction-rejected` (debit) | (rejected) | anomaly — a settled outbound cannot be reversed here |
+
+#### Inbound payment
+
+States are `InboundPaymentStatus`: `settled`, `held`, `returned`,
+`suspended`. Inbound has no submission command — every transition is
+event-driven, and the entry state depends on whether the creditor
+BBAN matches an account.
+
+```mermaid
+stateDiagram-v2
+    [*] --> settled: transaction-settled (credit)<br/>BBAN matches, credit creditor
+    [*] --> suspended: transaction-settled (credit)<br/>no matching BBAN, park in 2500
+    [*] --> held: transaction-held (credit)<br/>BBAN matches, no money move
+    held --> settled: transaction-settled (credit)<br/>release: credit creditor
+    held --> returned: transaction-rejected (credit)<br/>return to remitter, nothing posts
+    settled --> [*]
+    returned --> [*]
+    suspended --> [*]
+```
+
+| From | Driving event | Guard | To | Funds |
+|------|---------------|-------|----|-------|
+| (new) | `transaction-settled` (credit) | BBAN matches an account | `settled` | credit the creditor (1100 → creditor) |
+| (new) | `transaction-settled` (credit) | no matching BBAN | `suspended` | park in 2500 suspense (1100 → 2500) |
+| (new) | `transaction-held` (credit) | BBAN matches an account | `held` | none — funds held at ClearBank |
+| (new) | `transaction-held` (credit) | no matching BBAN | (ignored) | none — not recorded |
+| `held` | `transaction-settled` (credit) | matched by end-to-end-id | `settled` | release: credit the creditor |
+| `held` | `transaction-rejected` (credit) | matched by end-to-end-id | `returned` | none — funds returned to remitter |
+| `settled` | `transaction-settled` (credit) | duplicate scheme-transaction-id | `settled` | idempotent no-op |
+
+`suspended` and `returned` are terminal in the platform today;
+resolving a suspended inbound — matching it to an account or
+returning it — is a later operational workflow.
 
 ### Internal payment flow
 

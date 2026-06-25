@@ -17,6 +17,7 @@
     [com.repldriven.mono.bank-ledger-account.interface :as ledger-accounts]
 
     [com.repldriven.mono.error.interface :as error]
+    [com.repldriven.mono.fdb.interface :as fdb]
 
     [clojure.test :refer [is]]))
 
@@ -41,12 +42,23 @@
         accounts))
 
 (defn assert-bank-ties
-  "Assert the trial balance ties for one bank, per currency."
+  "Assert the trial balance ties for one bank, per currency. Reads the
+  whole chart — `list-accounts` plus every account's posted balance — in
+  a single FDB snapshot, so an async settlement commit landing mid-read
+  (e.g. `settle-outbound` posting its 1100/2100 legs on a webhook thread
+  while this runs on the scenario thread) can't tear the per-account
+  reads into a spurious imbalance."
   [config bank-id]
-  (let [accounts (ledger-accounts/list-accounts config bank-id)]
-    (when-not (error/anomaly? accounts)
-      (doseq [{:keys [currency debit credit]}
-              (balances/trial-balance (trial-balance-entries config accounts))]
+  (let [entries (fdb/transact
+                 config
+                 (fn [txn]
+                   (let [accounts (ledger-accounts/list-accounts txn bank-id)]
+                     (when-not (error/anomaly? accounts)
+                       (trial-balance-entries txn accounts))))
+                 :scenario/trial-balance-snapshot
+                 "Failed to read trial balance snapshot")]
+    (when (and (some? entries) (not (error/anomaly? entries)))
+      (doseq [{:keys [currency debit credit]} (balances/trial-balance entries)]
         (is (= debit credit)
             (str "trial balance must tie — bank "
                  bank-id
