@@ -43,8 +43,8 @@ _record-types: !strs &record-types
     record-type: LedgerAccount
     primary-key: [bank_id, ledger_account_id]
     indexes:
-      - name: LedgerAccount_by_bank_gl_code
-        fields: [bank_id, gl_code]
+      - name: LedgerAccount_by_bank_gl_account_code
+        fields: [bank_id, gl_account_code]
   companies:
     record-type: Company
     primary-key: [company_number]

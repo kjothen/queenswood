@@ -18,8 +18,6 @@
     [com.repldriven.mono.error.interface :as error
      :refer [let-nom>]]))
 
-(def ^:private gl-code-interest-expense "5100")
-
 (def ^:private customer-product-types
   "Product types whose cash-accounts should earn interest. GL accounts
   carry nil :product-type and are excluded by this set membership
@@ -145,7 +143,7 @@
   (let [result (ledger-accounts/find-by-code
                 config
                 bank-id
-                gl-code-interest-expense)]
+                :gl-account-code-interest-expense)]
     (when-not (error/anomaly? result) result)))
 
 (defn- process-customer-accounts

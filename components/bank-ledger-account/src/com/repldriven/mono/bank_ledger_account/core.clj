@@ -29,8 +29,8 @@
   (store/find-by-id txn bank-id ledger-account-id))
 
 (defn find-by-code
-  [txn bank-id gl-code]
-  (store/find-by-code txn bank-id gl-code))
+  [txn bank-id gl-account-code]
+  (store/find-by-code txn bank-id gl-account-code))
 
 (defn list-accounts
   [txn bank-id]

@@ -20,37 +20,37 @@
 (def ^:private template
   "Test chart of accounts passed into seed!, mirroring the canonical
   set bank-bank seeds at provisioning time."
-  [{:gl-code "1100"
+  [{:gl-account-code :gl-account-code-cash-at-correspondent
     :name "Cash at correspondent"
     :gl-account-type :gl-account-type-asset
     :gl-account-class :gl-account-class-detail
     :required :required-mandatory}
-   {:gl-code "1200"
+   {:gl-account-code :gl-account-code-pending-outbound
     :name "Pending outbound payments"
     :gl-account-type :gl-account-type-asset
     :gl-account-class :gl-account-class-detail
     :required :required-mandatory}
-   {:gl-code "2100"
+   {:gl-account-code :gl-account-code-customer-deposits-current
     :name "Customer deposits - current"
     :gl-account-type :gl-account-type-liability
     :gl-account-class :gl-account-class-control
     :required :required-mandatory}
-   {:gl-code "2200"
+   {:gl-account-code :gl-account-code-customer-deposits-savings
     :name "Customer deposits - savings"
     :gl-account-type :gl-account-type-liability
     :gl-account-class :gl-account-class-control
     :required :required-mandatory}
-   {:gl-code "2300"
+   {:gl-account-code :gl-account-code-customer-deposits-term
     :name "Customer deposits - term deposits"
     :gl-account-type :gl-account-type-liability
     :gl-account-class :gl-account-class-control
     :required :required-mandatory}
-   {:gl-code "2400"
+   {:gl-account-code :gl-account-code-interest-payable
     :name "Interest payable"
     :gl-account-type :gl-account-type-liability
     :gl-account-class :gl-account-class-detail
     :required :required-mandatory}
-   {:gl-code "2500"
+   {:gl-account-code :gl-account-code-suspense
     :name "Suspense - unreconciled inbound"
     :gl-account-type :gl-account-type-liability
     :gl-account-class :gl-account-class-detail
@@ -71,11 +71,11 @@
 ;; --- Pure mapping checks ------------------------------------------------
 
 (deftest product-type->control-code-test
-  (is (= "2100"
+  (is (= :gl-account-code-customer-deposits-current
          (SUT/product-type->control-code :product-type-sub-ledger-current)))
-  (is (= "2200"
+  (is (= :gl-account-code-customer-deposits-savings
          (SUT/product-type->control-code :product-type-sub-ledger-savings)))
-  (is (= "2300"
+  (is (= :gl-account-code-customer-deposits-term
          (SUT/product-type->control-code
           :product-type-sub-ledger-term-deposit)))
   (testing "non-customer product types have no control"
@@ -96,7 +96,10 @@
                                  accounts))
                    _ (is (every? #(= "GBP" (:currency %)) accounts))]))
      (testing "each seeded account opens a default-posted balance"
-       (nom-test> [control (SUT/find-by-code config bank-id "2100")
+       (nom-test> [control (SUT/find-by-code
+                            config
+                            bank-id
+                            :gl-account-code-customer-deposits-current)
                    bals (balances/get-balances config
                                                (:ledger-account-id control))
                    _ (is (= 1 (count (:balances bals))))
@@ -109,16 +112,21 @@
    (let [config (fdb-config sys)
          bank-id "bnk.test-lookup"]
      (nom-test> [_ (seed! config bank-id)
-                 control (SUT/find-by-code config bank-id "2100")
-                 _ (is (= "2100" (:gl-code control)))
+                 control (SUT/find-by-code
+                          config
+                          bank-id
+                          :gl-account-code-customer-deposits-current)
+                 _ (is (= :gl-account-code-customer-deposits-current
+                          (:gl-account-code control)))
                  _ (is (= :gl-account-class-control
                           (:gl-account-class control)))
                  fetched
                  (SUT/get-account config bank-id (:ledger-account-id control))
                  _ (is (= (:ledger-account-id control)
                           (:ledger-account-id fetched)))])
-     (testing "unknown code / id resolve to nil"
-       (is (nil? (SUT/find-by-code config bank-id "9999")))
+     (testing "unseeded code / unknown id resolve to nil"
+       ;; own-funds is a valid role but absent from this test chart
+       (is (nil? (SUT/find-by-code config bank-id :gl-account-code-own-funds)))
        (is (nil? (SUT/get-account config bank-id "led.nope")))))))
 
 (deftest add-control-legs-test
@@ -127,7 +135,10 @@
    (let [config (fdb-config sys)
          bank-id "bnk.test-expand"]
      (nom-test> [_ (seed! config bank-id)
-                 control (SUT/find-by-code config bank-id "2100")
+                 control (SUT/find-by-code
+                          config
+                          bank-id
+                          :gl-account-code-customer-deposits-current)
                  customer-leg {:account-id "acc.customer1"
                                :product-type :product-type-sub-ledger-current
                                :balance-type :balance-type-default

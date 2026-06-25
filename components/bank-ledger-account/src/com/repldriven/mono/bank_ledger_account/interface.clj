@@ -22,11 +22,22 @@
 (def
   ^{:doc
     "Map from cash-account product-type keyword to the control
-  ledger account's `:gl-code` its balance rolls up into. Postings on
-  customer accounts of these product types fan out to a matching leg
-  on the control."}
+  ledger account's `:gl-account-code` role its balance rolls up into.
+  Postings on customer accounts of these product types fan out to a
+  matching leg on the control."}
   product-type->control-code
   domain/product-type->control-code)
+
+(defn gl-account-code->gl-code
+  "The chart number, as a string, for a `gl-account-code` role (the enum's
+  integer value — e.g. `:gl-account-code-suspense` -> `\"2500\"`). The one
+  place the bare number is reconstituted, for display/reporting at the API
+  edge; code itself resolves accounts by role.
+
+  Args:
+  - gl-account-code: a `:gl-account-code-*` role keyword."
+  [gl-account-code]
+  (domain/gl-account-code->gl-code gl-account-code))
 
 (defn new-account
   "Create one bank-owned `LedgerAccount` from a chart-of-accounts
@@ -45,7 +56,7 @@
   - txn: FDB transaction or db handle.
   - bank-id: owning bank id.
   - currency: ISO 4217 currency string.
-  - row: chart-of-accounts row (`:gl-code`, `:name`,
+  - row: chart-of-accounts row (`:gl-account-code`, `:name`,
     `:gl-account-type`, `:gl-account-class`, `:required`).
   - opts (optional): `:policies` to check against."
   ([txn bank-id currency row]
@@ -65,17 +76,17 @@
   (core/get-account txn bank-id ledger-account-id))
 
 (defn find-by-code
-  "Resolve a ledger account from its `gl-code`. Returns the
-  `LedgerAccount` map (or nil if not seeded). Used by posting sites
-  to find counter-leg accounts like 1100 (cash at correspondent),
-  2400 (interest payable), 2500 (suspense).
+  "Resolve a ledger account from its `gl-account-code` role. Returns the
+  `LedgerAccount` map (or nil if not seeded). Used by posting sites to find
+  counter-leg accounts by role — `:gl-account-code-cash-at-correspondent`,
+  `:gl-account-code-interest-payable`, `:gl-account-code-suspense`, etc.
 
   Args:
   - txn: FDB transaction or db handle.
   - bank-id: owning bank id.
-  - gl-code: GL account code string (e.g. \"1100\")."
-  [txn bank-id gl-code]
-  (core/find-by-code txn bank-id gl-code))
+  - gl-account-code: a `:gl-account-code-*` role keyword."
+  [txn bank-id gl-account-code]
+  (core/find-by-code txn bank-id gl-account-code))
 
 (defn list-accounts
   "Return every `LedgerAccount` for `bank-id` (the bank's full chart),

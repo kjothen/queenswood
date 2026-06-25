@@ -19,8 +19,6 @@
     [com.repldriven.mono.message-bus.interface :as message-bus]
     [com.repldriven.mono.utility.interface :as utility]))
 
-(def ^:private gl-code-pending-outbound "1200")
-
 (defn- or-already-submitted
   "Translate the store's low-level uniqueness anomaly into the
   domain-level `:payment/already-submitted` rejection. Pass any
@@ -141,7 +139,7 @@
                         (ledger-accounts/find-by-code
                          txn
                          bank-id
-                         gl-code-pending-outbound)
+                         :gl-account-code-pending-outbound)
                         _ (when (nil? pending-outbound)
                             (error/reject
                              :payment/no-pending-outbound-account

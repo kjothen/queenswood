@@ -44,7 +44,8 @@
     (com.repldriven.mono.schemas.interest
      InterestRunProto$InterestRun)
     (com.repldriven.mono.schemas.ledger_accounts
-     LedgerAccountProto$LedgerAccount)
+     LedgerAccountProto$LedgerAccount
+     LedgerAccountProto$GlAccountCode)
     (com.repldriven.mono.schemas.scheduler
      SchedulerJobProto$SchedulerJob
      SchedulerRunProto$SchedulerRun)
@@ -118,6 +119,24 @@
 (def ^{:doc "Map of IsoCashAccountType label to protobuf int value."}
      iso-cash-account-type->int
   cash-account-products/IsoCashAccountType-label2val)
+
+(def
+  ^{:doc
+    "Map of GlAccountCode role label to protobuf int value — the
+  chart number itself, e.g. :gl-account-code-suspense -> 2500."}
+  gl-account-code->int
+  ledger-accounts/GlAccountCode-label2val)
+
+(def ^{:doc "Map of GlAccountCode protobuf int value to role label."}
+     int->gl-account-code
+  ledger-accounts/GlAccountCode-val2label)
+
+(defn gl-account-code->pb-enum
+  "Convert a gl-account-code role keyword to the protobuf enum value, for
+  use as the comparand in an FDB enum-field index query."
+  [gl-account-code]
+  (LedgerAccountProto$GlAccountCode/forNumber
+   (gl-account-code->int gl-account-code)))
 
 (defn iso-cash-account-type->pb-enum
   "Convert an iso-cash-account-type keyword to the protobuf enum
