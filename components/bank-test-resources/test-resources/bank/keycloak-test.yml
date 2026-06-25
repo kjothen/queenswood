@@ -20,6 +20,19 @@ container: !system/component
   host-port: !profile
     dev: 8090
     default: 0
+  # Google IdP client secret for one-click Google sign-in from the
+  # host SPAs. `dev` only: the secret is read from `pass` at container
+  # boot and written into Keycloak's files-plaintext vault, so it never
+  # reaches the host environment or git. The realm references it as
+  # ${vault.google-client-secret}. Tests (default profile) leave the
+  # vault off, so the expression stays an inert literal as before.
+  vault-dir: !profile
+    dev: /opt/keycloak/data/vault
+    default: ~
+  vault-secrets: !profile
+    dev:
+      "queenswood_google-client-secret": ["pass", "show", "queenswood/google-client-secret"]
+    default: {}
 
 auth-server-url: !system/component
   system/component-kind: keycloak/auth-server-url

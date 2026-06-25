@@ -26,6 +26,7 @@
     components/pulsar-vault-crypto {:local/root
                                     "components/pulsar-vault-crypto"}
     components/scheduler {:local/root "components/scheduler"}
+    components/secret {:local/root "components/secret"}
     components/server {:local/root "components/server"}
     components/spec {:local/root "components/spec"}
     components/sql {:local/root "components/sql"}
@@ -75,6 +76,8 @@
                        "components/pulsar-vault-crypto/test"
                        "components/pulsar-vault-crypto/test-resources"
                        "components/scheduler/test"
+                       "components/secret/test"
+                       "components/secret/test-resources"
                        "components/server/test"
                        "components/server/test-resources"
                        "components/spec/test"
