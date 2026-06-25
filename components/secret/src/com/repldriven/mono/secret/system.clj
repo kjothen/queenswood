@@ -1,5 +1,6 @@
 (ns com.repldriven.mono.secret.system
   (:require
+    [com.repldriven.mono.secret.env :as env]
     [com.repldriven.mono.secret.fixture :as fixture]
     [com.repldriven.mono.secret.gcp :as gcp]
     [com.repldriven.mono.secret.pass :as pass]
@@ -20,6 +21,12 @@
    :system/config {:project system/required-component :secret-map {}}
    :system/instance-schema some?})
 
+(def env-provider
+  {:system/start (fn [{:system/keys [config instance]}]
+                   (or instance (env/->EnvSecretProvider (:secret-map config))))
+   :system/config {:secret-map {}}
+   :system/instance-schema some?})
+
 (def fixture-provider
   {:system/start (fn [{:system/keys [config instance]}]
                    (or instance
@@ -29,5 +36,6 @@
 
 (system/defcomponents :secret
                       {:pass-provider pass-provider
+                       :env-provider env-provider
                        :gcp-provider gcp-provider
                        :fixture-provider fixture-provider})
