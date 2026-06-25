@@ -7,10 +7,13 @@
   surfaces the full base URL the `keycloak/identity-provider`
   component can be pointed at."
   (:require
+    [clojure.java.shell :as shell]
+    [clojure.string :as str]
     [com.repldriven.mono.log.interface :as log]
     [com.repldriven.mono.system.interface :as system])
   (:import
     (dasniko.testcontainers.keycloak KeycloakContainer)
+    (org.testcontainers.images.builder Transferable)
     (org.testcontainers.utility MountableFile)))
 
 (def default-docker-image-name "quay.io/keycloak/keycloak:26.0")
@@ -32,35 +35,67 @@
                                 (MountableFile/forClasspathResource src)
                                 dst))))
 
+(defn- resolve-secret
+  [command]
+  (let [{:keys [exit out err]} (apply shell/sh command)]
+    (when-not (zero? exit)
+      (throw (ex-info "Keycloak vault secret command failed"
+                      {:command command :exit exit :err err})))
+    ;; Keycloak's files-plaintext vault reads the file's raw bytes as
+    ;; the secret, so a trailing newline would corrupt it. Strip only
+    ;; newlines, never significant whitespace.
+    (str/trim-newline out)))
+
+(defn- mount-vault-secrets!
+  [^KeycloakContainer c vault-dir secrets]
+  (.withEnv c "KC_VAULT" "file")
+  (.withEnv c "KC_VAULT_DIR" vault-dir)
+  (doseq [[k command] secrets]
+    ;; `(name k)` so a YAML map key reaches the container as the exact
+    ;; filename the REALM_UNDERSCORE_KEY resolver expects
+    ;; (<realm>_<key>); the value runs at boot, never on the host env.
+    (.withCopyToContainer c
+                          (Transferable/of ^String (resolve-secret command))
+                          (str vault-dir "/" (name k)))))
+
 (def container
   {:system/start
    (fn [{:system/keys [config instance]}]
-     (or instance
-         (let [{:keys [docker-image-name realm-import-file realm-import-files
-                       host-port theme-resource theme-name]}
-               config
-               ;; Singular `:realm-import-file` stays supported for
-               ;; back-compat; `:realm-import-files` (vector) wins when
-               ;; both are set, so a system YAML can mount multiple
-               ;; realms into the same container.
-               files (or (seq realm-import-files)
-                         (when realm-import-file [realm-import-file]))]
-           (log/info "Starting keycloak container" docker-image-name)
-           (let [c (KeycloakContainer. docker-image-name)]
-             (doseq [f files] (.withRealmImportFile c f))
-             ;; Optional custom login theme. `theme-resource` is a
-             ;; classpath prefix containing `login/theme.properties`
-             ;; and `login/resources/css/styles.css`; they get copied
-             ;; into the container at `/opt/keycloak/themes/<theme-
-             ;; name>/login/...` where Keycloak picks them up.
-             (when theme-resource (mount-theme! c theme-resource theme-name))
-             ;; Fixed `host-port` pins :8080 to a known host port so a
-             ;; host-running SPA can reach it; nil/0 keeps the random
-             ;; mapping parallel test runs need.
-             (when (and host-port (pos? host-port))
-               (.setPortBindings c [(str host-port ":8080")]))
-             (.start c)
-             {:container c}))))
+     (or
+      instance
+      (let [{:keys [docker-image-name realm-import-file realm-import-files
+                    host-port theme-resource theme-name vault-dir
+                    vault-secrets]}
+            config
+            ;; Singular `:realm-import-file` stays supported for
+            ;; back-compat; `:realm-import-files` (vector) wins when
+            ;; both are set, so a system YAML can mount multiple
+            ;; realms into the same container.
+            files (or (seq realm-import-files)
+                      (when realm-import-file [realm-import-file]))]
+        (log/info "Starting keycloak container" docker-image-name)
+        (let [c (KeycloakContainer. docker-image-name)]
+          (doseq [f files] (.withRealmImportFile c f))
+          ;; Optional custom login theme. `theme-resource` is a
+          ;; classpath prefix containing `login/theme.properties`
+          ;; and `login/resources/css/styles.css`; they get copied
+          ;; into the container at `/opt/keycloak/themes/<theme-
+          ;; name>/login/...` where Keycloak picks them up.
+          (when theme-resource (mount-theme! c theme-resource theme-name))
+          ;; Fixed `host-port` pins :8080 to a known host port so a
+          ;; host-running SPA can reach it; nil/0 keeps the random
+          ;; mapping parallel test runs need.
+          (when (and host-port (pos? host-port))
+            (.setPortBindings c [(str host-port ":8080")]))
+          ;; Optional Keycloak files-plaintext vault. Each secret is
+          ;; obtained by running its command at boot and written into
+          ;; the container's vault dir, so values referenced from a
+          ;; realm as ${vault.<key>} resolve without the secret ever
+          ;; touching the host environment or the realm JSON.
+          (when (seq vault-secrets)
+            (mount-vault-secrets! c vault-dir vault-secrets))
+          (.start c)
+          {:container c}))))
    :system/stop (fn [{:system/keys [instance]}]
                   (when-let [c (:container instance)]
                     (log/info "Stopping keycloak container")
@@ -70,7 +105,9 @@
                    :realm-import-files nil
                    :host-port nil
                    :theme-resource nil
-                   :theme-name "queenswood"}
+                   :theme-name "queenswood"
+                   :vault-dir nil
+                   :vault-secrets nil}
    :system/instance-schema map?})
 
 (def auth-server-url

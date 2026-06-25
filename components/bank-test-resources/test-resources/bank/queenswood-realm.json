@@ -94,7 +94,7 @@
       "firstBrokerLoginFlowAlias": "first broker login",
       "config": {
         "clientId": "REPLACE-ME-GOOGLE-CLIENT-ID",
-        "clientSecret": "REPLACE-ME-GOOGLE-CLIENT-SECRET",
+        "clientSecret": "${vault.google-client-secret}",
         "syncMode": "IMPORT",
         "useJwksUrl": "true"
       }
