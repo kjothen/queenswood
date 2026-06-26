@@ -81,7 +81,11 @@ kind-up-monolith tag="dev":
       docker tag {{ DOCKER_REGISTRY }}/$svc:{{ tag }} localhost:5001/$svc:{{ tag }}
       docker push localhost:5001/$svc:{{ tag }}
     done
-    just helm-install {{ tag }} localhost:5001 "values-dev.yaml values-monolith.yaml" IfNotPresent
+    # Always pull so a re-pushed `:{{ tag }}` actually lands on the node —
+    # IfNotPresent keeps the stale cached image and silently ignores the
+    # new push (the `crictl rmi` dance). The registry is local, so the
+    # re-pull is cheap.
+    just helm-install {{ tag }} localhost:5001 "values-dev.yaml values-monolith.yaml" Always
 
 # Create kind cluster and install the chart from ghcr.io/repldriven (no local build).
 kind-up-remote tag="latest":
