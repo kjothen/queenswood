@@ -186,6 +186,13 @@ jobs:
           helm template queenswood infra/helm/queenswood \
             --set image.tag=ci \
             | kubeconform -strict -ignore-missing-schemas -summary
+          # Also validate the modular-monolith profile (Pulsar off,
+          # single bank-monolith service enabled).
+          helm lint infra/helm/queenswood -f infra/helm/queenswood/values-monolith.yaml
+          helm template queenswood infra/helm/queenswood \
+            -f infra/helm/queenswood/values-monolith.yaml \
+            --set image.tag=ci \
+            | kubeconform -strict -ignore-missing-schemas -summary
 
   # Gate job for branch protection — produces a single required check
   tests:

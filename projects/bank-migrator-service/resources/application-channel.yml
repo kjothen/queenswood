@@ -1,0 +1,10 @@
+# Migrator config for the channel-bus (modular-monolith) deploy: applies
+# FDB record metadata only. There is no Pulsar broker to declare topology
+# on, so the `pulsar` subsystem is omitted versus application.yml.
+system:
+  fdb: !include bank/fdb.yml
+  telemetry:
+    otel-sdk: !system/component
+      system/component-kind: telemetry/otel-sdk
+      service-name: !env SERVICE_NAME
+      endpoint: !env OTEL_ENDPOINT

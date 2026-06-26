@@ -64,6 +64,17 @@ spec:
         - name: bank-migrator
           image: "{{ .Values.image.registry }}/bank-migrator-service:{{ .Values.image.tag }}"
           imagePullPolicy: {{ include "queenswood.imagePullPolicy" $ }}
+          # Override the baked config file so the channel-bus monolith
+          # can point the migrator at a Pulsar-free config (FDB metadata
+          # only — no broker to declare topology on).
+          command:
+            - java
+            - -jar
+            - /app/app.jar
+            - -c
+            - classpath:{{ .Values.migrator.configFile | default "application.yml" }}
+            - -p
+            - default
           env:
             - name: SERVICE_NAME
               value: "bank-migrator-service"

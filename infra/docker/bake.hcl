@@ -11,6 +11,7 @@ services = [
   "bank-migrator-service",
   "bank-bootstrap-service",
   "bank-api-service",
+  "bank-monolith-service",
   "bank-cash-account-processor-service",
   "bank-party-processor-service",
   "bank-payment-processor-service",
