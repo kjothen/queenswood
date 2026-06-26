@@ -121,6 +121,12 @@ topics: !system/component
     - topic: "persistent://tenant-1/namespace-1/topic-idv-event"
       partitions: 1
       schema: !keyword event
+    - topic: "persistent://tenant-1/namespace-1/topic-payee-checks-command"
+      partitions: 1
+      schema: !keyword command
+    - topic: "persistent://tenant-1/namespace-1/topic-payee-checks-command-response"
+      partitions: 1
+      schema: !keyword command-response
 
 producers: !system/component
   system/component-kind: pulsar/producers
@@ -251,6 +257,22 @@ producers: !system/component
       accessMode: !pulsar/access-mode Shared
       schema: !keyword event
       topicName: "persistent://tenant-1/namespace-1/topic-idv-event"
+    schemas: !system/local-ref schemas
+  payee-checks-command:
+    _: !system/local-ref topics
+    client: !system/local-ref client
+    conf:
+      accessMode: !pulsar/access-mode Shared
+      schema: !keyword command
+      topicName: "persistent://tenant-1/namespace-1/topic-payee-checks-command"
+    schemas: !system/local-ref schemas
+  payee-checks-command-response:
+    _: !system/local-ref topics
+    client: !system/local-ref client
+    conf:
+      accessMode: !pulsar/access-mode Shared
+      schema: !keyword command-response
+      topicName: "persistent://tenant-1/namespace-1/topic-payee-checks-command-response"
     schemas: !system/local-ref schemas
 
 consumers: !system/component
@@ -443,6 +465,28 @@ consumers: !system/component
       topicNames:
         ["persistent://tenant-1/namespace-1/topic-idv-event"]
     schemas: !system/local-ref schemas
+  payee-checks-command:
+    _: !system/local-ref topics
+    client: !system/local-ref client
+    conf:
+      cryptoFailureAction: !pulsar/crypto-failure-action CONSUME
+      schema: !pulsar/schema AUTO_CONSUME
+      subscriptionName: bank-monolith-payee-checks-command
+      subscriptionType: !pulsar/subscription-type Shared
+      topicNames:
+        ["persistent://tenant-1/namespace-1/topic-payee-checks-command"]
+    schemas: !system/local-ref schemas
+  payee-checks-command-response:
+    _: !system/local-ref topics
+    client: !system/local-ref client
+    conf:
+      cryptoFailureAction: !pulsar/crypto-failure-action CONSUME
+      schema: !pulsar/schema AUTO_CONSUME
+      subscriptionName: bank-monolith-payee-checks-command-response
+      subscriptionType: !pulsar/subscription-type Shared
+      topicNames:
+        ["persistent://tenant-1/namespace-1/topic-payee-checks-command-response"]
+    schemas: !system/local-ref schemas
 
 message-bus-producers: !system/component
   system/component-kind: pulsar/message-bus-producers
@@ -478,6 +522,10 @@ message-bus-producers: !system/component
     producer: !system/local-ref producers.idv-command-response
   idv-event:
     producer: !system/local-ref producers.idv-event
+  payee-checks-command:
+    producer: !system/local-ref producers.payee-checks-command
+  payee-checks-command-response:
+    producer: !system/local-ref producers.payee-checks-command-response
 
 message-bus-consumers: !system/component
   system/component-kind: pulsar/message-bus-consumers
@@ -513,3 +561,7 @@ message-bus-consumers: !system/component
     consumer: !system/local-ref consumers.idv-command-response
   idv-event:
     consumer: !system/local-ref consumers.idv-event
+  payee-checks-command:
+    consumer: !system/local-ref consumers.payee-checks-command
+  payee-checks-command-response:
+    consumer: !system/local-ref consumers.payee-checks-command-response

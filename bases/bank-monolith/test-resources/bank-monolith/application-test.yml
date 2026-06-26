@@ -10,6 +10,7 @@ system:
   interest: !include bank/interest-test.yml
   transactions: !include bank/transaction-test.yml
   idv: !include bank/idv-test.yml
+  payee-checks: !include bank/payee-check-test.yml
   policies: !include bank/policy-test.yml
   templates: !include bank/templates-test.yml
   telemetry:
@@ -52,10 +53,10 @@ system:
         payments: !system/ref payments.dispatcher
         interest: !system/ref interest.dispatcher
         transactions: !system/ref transactions.dispatcher
+        payee-checks: !system/ref payee-checks.dispatcher
       avro: !system/ref avro.serde
       record-db: !system/ref fdb.record-db
       record-store: !system/ref fdb.meta-store
-      clearbank-adapter-url: !system/ref clearbank-adapter-server.http-url
       companies-house-url: !system/ref companies-house-simulator-server.http-url
     jetty-adapter: !system/component
       system/component-kind: server/jetty-adapter

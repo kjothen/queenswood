@@ -5,6 +5,7 @@
     [com.repldriven.mono.avro.interface :as avro]
     [com.repldriven.mono.command.interface :as command]
     [com.repldriven.mono.error.interface :as error :refer [let-nom>]]
+    [com.repldriven.mono.utility.interface :as utility]
 
     [clojure.string :as str]))
 
@@ -44,6 +45,13 @@
   [dispatcher request command-name response-schema data]
   (let [{:keys [avro]} request
         envelope (command/req->command-request request command-name)
+        ;; Routes without `require-idempotency-key` carry no client key, so
+        ;; the envelope's id/correlation-id are nil. Assign a server id —
+        ;; correlation-id must be unique or request-reply replies collide.
+        id (or (:id envelope) (str (utility/uuidv7)))
+        envelope (assoc envelope
+                        :id id
+                        :correlation-id (or (:correlation-id envelope) id))
         result (let-nom>
                  [schema (get-schema avro command-name)
                   payload (avro/serialize schema data)]
