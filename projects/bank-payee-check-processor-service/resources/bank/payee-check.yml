@@ -1,0 +1,13 @@
+processor: !system/component
+  system/component-kind: payee-check/processor
+  record-db: !system/ref fdb.record-db
+  record-store: !system/ref fdb.meta-store
+  schemas: !system/ref avro.serde
+  clearbank-adapter-url: !env CLEARBANK_ADAPTER_URL
+
+command-processor: !system/component
+  system/component-kind: command-processor/command-processor
+  bus: !system/ref message-bus.bus
+  processor: !system/local-ref processor
+  command-channel: !keyword payee-checks-command
+  command-response-channel: !keyword payee-checks-command-response

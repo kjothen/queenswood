@@ -109,6 +109,7 @@ graph TB
         PIN[interest-<br/>processor]
         PTX[transaction-<br/>processor]
         PID[idv-<br/>processor]
+        PPC[payee-check-<br/>processor]
         PSCH[scheduler-<br/>processor]
     end
 
@@ -136,6 +137,7 @@ graph TB
     PULSAR -->|consume commands| processors
     processors -->|read + write| FDB
     FDB -->|changelog| processors
+    PPC -->|CoP lookup| CBA
 
     PSCH -->|scheduled<br/>interest commands| PULSAR
 
@@ -174,11 +176,14 @@ records query on-demand using FDB record primary key
 ordering.
 
 **Commands path** — high-volume activity (parties, cash
-accounts, payments, interest, transactions) flows as
-Avro-serialised commands from `bank-api-service` through
-Pulsar to a domain processor. Each processor writes to FDB
-and replies via the same bus. Envelope statuses: `ACCEPTED`
-(2xx), `REJECTED` (4xx), `FAILED` (5xx). See
+accounts, payments, interest, transactions, payee checks)
+flows as Avro-serialised commands from `bank-api-service`
+through Pulsar to a domain processor. Each processor writes to
+FDB and replies via the same bus. Envelope statuses:
+`ACCEPTED` (2xx), `REJECTED` (4xx), `FAILED` (5xx).
+`bank-payee-check-processor-service` additionally calls the
+ClearBank adapter over HTTP for the Confirmation of Payee
+lookup before persisting and replying. See
 [transaction-processing](docs/tdd/transaction-processing.md).
 
 **Scheduled work** — `bank-scheduler-processor-service` fires

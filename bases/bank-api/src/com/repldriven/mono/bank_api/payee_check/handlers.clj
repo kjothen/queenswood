@@ -1,57 +1,23 @@
 (ns com.repldriven.mono.bank-api.payee-check.handlers
   (:require
-    [com.repldriven.mono.bank-api.errors :as errors]
+    [com.repldriven.mono.bank-api.commands :as commands]))
 
-    [com.repldriven.mono.bank-payee-check.interface :as payee-checks]
-
-    [com.repldriven.mono.error.interface :as error]
-    [com.repldriven.mono.http-client.interface :as http]
-    [com.repldriven.mono.json.interface :as json]))
-
-(defn- perform-cop-check
-  [adapter-url body]
-  (let [{:keys [creditor-name account account-type]} body
-        {:keys [sort-code account-number]} account
-        res (error/try-nom
-             :payee-check/cop
-             "CoP request to adapter failed"
-             (http/request
-              {:method :post
-               :url (str adapter-url "/cop/outbound")
-               :headers {"Content-Type" "application/json"}
-               :body (json/write-str
-                      {:creditor-name creditor-name
-                       :account {:sort-code sort-code
-                                 :account-number account-number}
-                       :account-type account-type})}))]
-    (if (error/anomaly? res)
-      {:match-result :match-result-unavailable
-       :reason-code "ACNS"
-       :reason "CoP service unavailable"}
-      (if (= 200 (:status res))
-        (let [{:keys [match-result actual-name reason-code reason]}
-              (http/res->edn res)]
-          {:match-result (keyword match-result)
-           :actual-name actual-name
-           :reason-code reason-code
-           :reason reason})
-        {:match-result :match-result-unavailable
-         :reason-code "ACNS"
-         :reason "CoP service unavailable"}))))
+(defn- dispatcher
+  [request]
+  (-> request
+      :dispatchers
+      :payee-checks))
 
 (defn create-check
   [request]
-  (let [{:keys [record-db record-store clearbank-adapter-url
-                auth parameters]}
-        request
-        {:keys [body]} parameters
+  (let [{:keys [auth parameters]} request
         {:keys [bank-id]} auth
-        config {:record-db record-db :record-store record-store}
-        cop-result (perform-cop-check clearbank-adapter-url body)
-        result (payee-checks/check-payee config
-                                         bank-id
-                                         body
-                                         cop-result)]
-    (if (error/anomaly? result)
-      (errors/anomaly->response result)
-      {:status 201 :body result})))
+        {:keys [body]} parameters
+        result (commands/send (dispatcher request)
+                              request
+                              "check-payee"
+                              "payee-check"
+                              (assoc body :bank-id bank-id))]
+    (cond-> result
+            (= 200 (:status result))
+            (assoc :status 201))))

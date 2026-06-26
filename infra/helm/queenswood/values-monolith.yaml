@@ -44,6 +44,7 @@ services:
   bank-interest-processor-service: { enabled: false }
   bank-transaction-processor-service: { enabled: false }
   bank-idv-processor-service: { enabled: false }
+  bank-payee-check-processor-service: { enabled: false }
   bank-scheduler-processor-service: { enabled: false }
   bank-clearbank-adapter-service: { enabled: false }
   bank-clearbank-simulator-service: { enabled: false }

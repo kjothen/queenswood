@@ -42,6 +42,12 @@
                            "bank-schema" "bank-test-resources" "test-schema"
                            "command-schema" "event-schema"
                            "test-resources"]},
+            "bank-payee-check-processor-service"
+              {:alias "pyc",
+               :necessary ["bank-resources"
+                           "bank-schema" "bank-test-resources" "test-schema"
+                           "command-schema" "event-schema"
+                           "test-resources"]},
             "bank-api-service"
               {:alias "api",
                :necessary ["bank-resources"

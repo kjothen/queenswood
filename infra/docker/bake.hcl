@@ -18,6 +18,7 @@ services = [
   "bank-interest-processor-service",
   "bank-transaction-processor-service",
   "bank-idv-processor-service",
+  "bank-payee-check-processor-service",
   "bank-scheduler-processor-service",
   "bank-clearbank-adapter-service",
   "bank-clearbank-simulator-service",

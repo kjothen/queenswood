@@ -54,6 +54,13 @@ system:
           schema: !keyword command
           topicName: "persistent://tenant-1/namespace-1/topic-interest-command"
         schemas: !system/local-ref schemas
+      payee-checks-command:
+        client: !system/local-ref client
+        conf:
+          accessMode: !pulsar/access-mode Shared
+          schema: !keyword command
+          topicName: "persistent://tenant-1/namespace-1/topic-payee-checks-command"
+        schemas: !system/local-ref schemas
     consumers: !system/component
       system/component-kind: pulsar/consumers
       cash-accounts-command-response:
@@ -106,6 +113,16 @@ system:
           topicNames:
             ["persistent://tenant-1/namespace-1/topic-interest-command-response"]
         schemas: !system/local-ref schemas
+      payee-checks-command-response:
+        client: !system/local-ref client
+        conf:
+          cryptoFailureAction: !pulsar/crypto-failure-action CONSUME
+          schema: !pulsar/schema AUTO_CONSUME
+          subscriptionName: bank-api-service-payee-checks-command-response
+          subscriptionType: !pulsar/subscription-type Shared
+          topicNames:
+            ["persistent://tenant-1/namespace-1/topic-payee-checks-command-response"]
+        schemas: !system/local-ref schemas
     message-bus-producers: !system/component
       system/component-kind: pulsar/message-bus-producers
       cash-accounts-command:
@@ -118,6 +135,8 @@ system:
         producer: !system/local-ref producers.transactions-command
       interest-command:
         producer: !system/local-ref producers.interest-command
+      payee-checks-command:
+        producer: !system/local-ref producers.payee-checks-command
     message-bus-consumers: !system/component
       system/component-kind: pulsar/message-bus-consumers
       cash-accounts-command-response:
@@ -130,6 +149,8 @@ system:
         consumer: !system/local-ref consumers.transactions-command-response
       interest-command-response:
         consumer: !system/local-ref consumers.interest-command-response
+      payee-checks-command-response:
+        consumer: !system/local-ref consumers.payee-checks-command-response
   message-bus: !include bank/message-bus.yml
   fdb: !include bank/fdb.yml
   avro: !include bank/avro.yml
@@ -184,6 +205,12 @@ system:
       bus: !system/ref message-bus.bus
       command-channel: !keyword interest-command
       command-response-channel: !keyword interest-command-response
+  payee-checks:
+    dispatcher: !system/component
+      system/component-kind: command/dispatcher
+      bus: !system/ref message-bus.bus
+      command-channel: !keyword payee-checks-command
+      command-response-channel: !keyword payee-checks-command-response
   telemetry:
     otel-sdk: !system/component
       system/component-kind: telemetry/otel-sdk
@@ -224,10 +251,10 @@ system:
         payments: !system/ref payments.dispatcher
         interest: !system/ref interest.dispatcher
         transactions: !system/ref transactions.dispatcher
+        payee-checks: !system/ref payee-checks.dispatcher
       avro: !system/ref avro.serde
       record-db: !system/ref fdb.record-db
       record-store: !system/ref fdb.meta-store
-      clearbank-adapter-url: !env CLEARBANK_ADAPTER_URL
       companies-house-url: !env COMPANIES_HOUSE_URL
     jetty-adapter: !system/component
       system/component-kind: server/jetty-adapter
