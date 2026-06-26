@@ -23,6 +23,8 @@ system:
         - idv-command
         - idv-command-response
         - idv-event
+        - payee-checks-command
+        - payee-checks-command-response
   fdb: !include bank/fdb.yml
   avro: !include bank/avro.yml
   keycloak:
@@ -46,6 +48,7 @@ system:
   interest: !include bank/interest.yml
   transactions: !include bank/transaction.yml
   idv: !include bank/idv.yml
+  payee-checks: !include bank/payee-check.yml
   policies: !include bank/policy.yml
   templates: !include bank/templates.yml
   scheduler:
@@ -88,12 +91,14 @@ system:
         payments: !system/ref payments.dispatcher
         interest: !system/ref interest.dispatcher
         transactions: !system/ref transactions.dispatcher
+        payee-checks: !system/ref payee-checks.dispatcher
       avro: !system/ref avro.serde
       record-db: !system/ref fdb.record-db
       record-store: !system/ref fdb.meta-store
-      # Adapters + Companies House run in-process; reach them via the
-      # bound http-url of their embedded jetty server, not an env URL.
-      clearbank-adapter-url: !system/ref clearbank-adapter-server.http-url
+      # Companies House runs in-process; reach it via the bound http-url
+      # of its embedded jetty server, not an env URL. (The ClearBank
+      # adapter is reached the same way, but now from the payee-check
+      # processor's config rather than the API server.)
       companies-house-url: !system/ref companies-house-simulator-server.http-url
     jetty-adapter: !system/component
       system/component-kind: server/jetty-adapter
