@@ -15,10 +15,10 @@ pulsar:
   adminUrl: "disabled"
   cluster: "disabled"
 
-# Migrator runs FDB metadata only; `channel` profile drops the Pulsar
-# topology step.
+# Migrator runs FDB metadata only — a Pulsar-free config (no broker to
+# declare topology on).
 migrator:
-  profile: channel
+  configFile: application-channel.yml
 
 # SPA proxies /v1/* to the monolith pod, not the (disabled) bank-api.
 bankConsole:
