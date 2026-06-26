@@ -1,0 +1,52 @@
+# Modular-monolith profile of the queenswood chart: one bank-monolith
+# pod hosts the API + all processors + adapters + simulators in-process
+# over the core.async channel bus. No Pulsar broker; FDB + Keycloak/
+# Postgres are the only external infra (shared with the microservice
+# deploy). Install with:
+#   helm install <rel> infra/helm/queenswood -f values-monolith.yaml
+
+# No Pulsar subchart. The dummy URLs satisfy the chart helpers (which
+# require them when pulsar.enabled=false); nothing consumes them — the
+# monolith uses the local channel bus and the migrator runs under the
+# `channel` profile.
+pulsar:
+  enabled: false
+  serviceUrl: "disabled"
+  adminUrl: "disabled"
+  cluster: "disabled"
+
+# Migrator runs FDB metadata only; `channel` profile drops the Pulsar
+# topology step.
+migrator:
+  profile: channel
+
+# SPA proxies /v1/* to the monolith pod, not the (disabled) bank-api.
+bankConsole:
+  apiUpstream: "http://{{ .Release.Name }}-bank-monolith-service:8080"
+
+services:
+  # The single all-in-one service. Adapters + simulators reach each
+  # other in-process via bound http-urls, so no adapter env URLs.
+  bank-monolith-service:
+    enabled: true
+    http: true
+    port: 8080
+    replicas: 1
+    resources:
+      limits: { cpu: "2000m", memory: "3Gi" }
+      requests: { cpu: "500m", memory: "1536Mi" }
+
+  # Everything the monolith subsumes is turned off.
+  bank-api-service: { enabled: false }
+  bank-cash-account-processor-service: { enabled: false }
+  bank-party-processor-service: { enabled: false }
+  bank-payment-processor-service: { enabled: false }
+  bank-interest-processor-service: { enabled: false }
+  bank-transaction-processor-service: { enabled: false }
+  bank-idv-processor-service: { enabled: false }
+  bank-scheduler-processor-service: { enabled: false }
+  bank-clearbank-adapter-service: { enabled: false }
+  bank-clearbank-simulator-service: { enabled: false }
+  bank-onfido-adapter-service: { enabled: false }
+  bank-onfido-simulator-service: { enabled: false }
+  bank-uk-companies-house-simulator-service: { enabled: false }

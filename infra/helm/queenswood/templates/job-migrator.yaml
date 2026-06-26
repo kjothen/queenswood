@@ -64,6 +64,17 @@ spec:
         - name: bank-migrator
           image: "{{ .Values.image.registry }}/bank-migrator-service:{{ .Values.image.tag }}"
           imagePullPolicy: {{ include "queenswood.imagePullPolicy" $ }}
+          # Override the image's default `-p default` so the channel-bus
+          # monolith can run the migrator under the `channel` profile,
+          # which drops the Pulsar topology step (no broker to declare on).
+          command:
+            - java
+            - -jar
+            - /app/app.jar
+            - -c
+            - classpath:application.yml
+            - -p
+            - {{ .Values.migrator.profile | default "default" | quote }}
           env:
             - name: SERVICE_NAME
               value: "bank-migrator-service"

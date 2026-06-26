@@ -1,5 +1,10 @@
 system:
-  pulsar: !include bank/pulsar-bootstrap.yml
+  # Pulsar topology is only declared for the Pulsar-backed (microservice)
+  # deploy. The channel-bus monolith has no broker, so the `channel`
+  # profile drops it and the migrator does the FDB metadata step only.
+  pulsar: !profile
+    default: !include bank/pulsar-bootstrap.yml
+    channel: {}
   fdb: !include bank/fdb.yml
   telemetry:
     otel-sdk: !system/component
