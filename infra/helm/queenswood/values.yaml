@@ -170,7 +170,6 @@ services:
       limits: { cpu: "1000m", memory: "1500Mi" }
       requests: { cpu: "200m", memory: "768Mi" }
     extraEnv:
-      CLEARBANK_ADAPTER_URL: "http://{{ .Release.Name }}-bank-clearbank-adapter-service:8082"
       COMPANIES_HOUSE_URL: "http://{{ .Release.Name }}-bank-uk-companies-house-simulator-service:8084"
 
   bank-cash-account-processor-service:
@@ -199,6 +198,15 @@ services:
   bank-idv-processor-service:
     enabled: true
     replicas: 1
+
+  # Invokes the ClearBank adapter for Confirmation of Payee, so it
+  # carries CLEARBANK_ADAPTER_URL (moved off bank-api, which no longer
+  # calls the adapter directly).
+  bank-payee-check-processor-service:
+    enabled: true
+    replicas: 1
+    extraEnv:
+      CLEARBANK_ADAPTER_URL: "http://{{ .Release.Name }}-bank-clearbank-adapter-service:8082"
 
   # Cron-driven processor (no Pulsar): registers a Quartz trigger per
   # enabled scheduled job at startup and runs interest accrue/capitalize

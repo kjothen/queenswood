@@ -135,23 +135,37 @@ idempotency-keyed routes (their id is always set).
 - `clearbank-adapter-server` and `clearbank-simulator-server` are already in
   those systems, so the moved invoke has its target.
 
-## Part B: standalone deployable plus prod wiring (matches `bank-idv`)
+## Part B: standalone deployable plus prod wiring (as implemented)
 
-Needed for production (the prod bank-api service and a dedicated processor
-service) - Part A only wires the monolith and scenario test systems:
+The dedicated processor service and all production wiring (Part A only wired
+the monolith and scenario test systems). Modelled on the synchronous
+`bank-cash-account-processor-service`, not the async `bank-idv` one.
 
-- `bases/bank-payee-check-processor/` - `main.clj` plus `system.clj` bare-require
-  bundle (copy `bank-idv-processor`, swap requires).
-- `projects/bank-payee-check-processor-service/deps.edn` (copy
-  `bank-idv-processor-service`).
-- `projects/bank-api-service/resources/application.yml`: add the
+- `bases/bank-payee-check-processor/` - `deps.edn`, `main.clj`, and a
+  `system.clj` bare-require bundle that registers every component-kind the
+  processor needs.
+- `projects/bank-payee-check-processor-service/` - `deps.edn` (mirrors the
+  cash-account processor service plus `component/json`, which `core.clj`
+  uses), `resources/application.yml` (consumes `payee-checks-command`,
+  produces `payee-checks-command-response`), `resources/bank/payee-check.yml`
+  (processor + command-processor, `clearbank-adapter-url: !env
+  CLEARBANK_ADAPTER_URL`), and the two `logback` files.
+- `workspace.edn` - register the project (alias `pyc`).
+- `projects/bank-api-service/resources/application.yml` - add the
   `payee-checks-command` producer, `payee-checks-command-response` consumer,
   their message-bus entries, the `payee-checks` dispatcher, and
   `payee-checks: !system/ref payee-checks.dispatcher` under server dispatchers;
   drop the now-unused `clearbank-adapter-url: !env CLEARBANK_ADAPTER_URL`.
-  (Left untouched in Part A - dead config, not exercised by the test matrix.)
-- Production processor-service system config plus Helm wiring for the new
-  service.
+- Deploy manifests: `infra/helm/queenswood/values.yaml` (new service entry
+  carrying `CLEARBANK_ADAPTER_URL`, removed from `bank-api-service`),
+  `infra/docker/bake.hcl`, `Tiltfile` (SERVICES + PROCESSORS lists),
+  `.github/workflows/release-images.yml`, `.github/workflows/prune-ghcr.yml`.
+- `readme.md` - architecture diagram node + `CoP lookup` edge to the ClearBank
+  adapter, and the commands-path prose.
+
+Verified: `poly check` clean; the service `main` namespace loads against the
+project classpath (all component deps resolve, system bundle registers); all
+edited YAML/JSON parses.
 
 ## Decisions and risks
 
