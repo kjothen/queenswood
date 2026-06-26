@@ -24,10 +24,12 @@ helm-install tag="dev" registry="ghcr.io/repldriven" values_file="" pull_policy=
     # images from the local registry (values-dev.yaml's Never is for the
     # Tilt flow, which loads images straight into the kind node).
     set -e
+    # `values_file` is a space-separated list layered left-to-right
+    # (later files win), e.g. "values-dev.yaml values-monolith.yaml".
     extra_values=()
-    if [[ -n "{{ values_file }}" ]]; then
-      extra_values=(-f infra/helm/queenswood/{{ values_file }})
-    fi
+    for vf in {{ values_file }}; do
+      extra_values+=(-f infra/helm/queenswood/$vf)
+    done
     extra_sets=()
     if [[ -n "{{ pull_policy }}" ]]; then
       extra_sets=(--set image.pullPolicy={{ pull_policy }})
@@ -58,6 +60,28 @@ kind-up tag="dev":
       docker push localhost:5001/$svc:{{ tag }}
     done
     just helm-install {{ tag }} localhost:5001 values-dev.yaml IfNotPresent
+
+# Build/push/install only the modular-monolith on kind (channel bus, no Pulsar)
+kind-up-monolith tag="dev":
+    #!/usr/bin/env zsh
+    # One bank-monolith pod over the core.async channel bus. Only the
+    # four images the profile needs are built/pushed; values-monolith.yaml
+    # disables every other service and the Pulsar subchart, layered over
+    # values-dev.yaml so the bundled dev Keycloak stays enabled.
+    set -e
+    bash {{ justfile_directory() }}/infra/kind/with-registry.sh queenswood
+    # The three JVM services share the parameterised service Dockerfile.
+    for svc in bank-monolith-service bank-migrator-service bank-bootstrap-service; do
+      just docker-build $svc {{ tag }}
+    done
+    # bank-console has its own Dockerfile; build it via its bake target.
+    REGISTRY={{ DOCKER_REGISTRY }} TAG={{ tag }} \
+      docker buildx bake -f infra/docker/bake.hcl bank-console
+    for svc in bank-monolith-service bank-migrator-service bank-bootstrap-service bank-console; do
+      docker tag {{ DOCKER_REGISTRY }}/$svc:{{ tag }} localhost:5001/$svc:{{ tag }}
+      docker push localhost:5001/$svc:{{ tag }}
+    done
+    just helm-install {{ tag }} localhost:5001 "values-dev.yaml values-monolith.yaml" IfNotPresent
 
 # Create kind cluster and install the chart from ghcr.io/repldriven (no local build).
 kind-up-remote tag="latest":
