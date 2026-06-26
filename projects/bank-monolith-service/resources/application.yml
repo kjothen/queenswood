@@ -1,0 +1,110 @@
+system:
+  # Channel-based in-process message bus (core.async) — the monolith
+  # replaces Pulsar with a LocalProducer/LocalConsumer per channel,
+  # so the only external infra is FDB + Keycloak/Postgres. Channel
+  # names mirror the Pulsar topic set the microservice deploy uses.
+  message-bus:
+    bus: !system/component
+      system/component-kind: message-bus/local-bus
+      channels:
+        - cash-accounts-command
+        - cash-accounts-command-response
+        - parties-command
+        - parties-command-response
+        - transactions-command
+        - transactions-command-response
+        - payments-command
+        - payments-command-response
+        - interest-command
+        - interest-command-response
+        - schemes-payments-event
+        - schemes-payment-command
+        - schemes-payment-command-response
+        - idv-command
+        - idv-command-response
+        - idv-event
+  fdb: !include bank/fdb.yml
+  avro: !include bank/avro.yml
+  keycloak:
+    identity-provider: !system/component
+      system/component-kind: keycloak/identity-provider
+      base-url: !env KEYCLOAK_BASE_URL
+      realm: !env KEYCLOAK_REALM
+      admin-client-id: !env KEYCLOAK_ADMIN_CLIENT_ID
+      admin-client-secret: !env KEYCLOAK_ADMIN_CLIENT_SECRET
+      expected-issuer: !env KEYCLOAK_EXPECTED_ISSUER
+    identity-provider-ops: !system/component
+      system/component-kind: keycloak/identity-provider
+      base-url: !env KEYCLOAK_BASE_URL
+      realm: !env KEYCLOAK_OPS_REALM
+      admin-client-id: !env KEYCLOAK_ADMIN_CLIENT_ID
+      admin-client-secret: !env KEYCLOAK_ADMIN_CLIENT_SECRET
+      expected-issuer: !env KEYCLOAK_OPS_EXPECTED_ISSUER
+  cash-accounts: !include bank/cash-account.yml
+  parties: !include bank/party.yml
+  payments: !include bank/payment.yml
+  interest: !include bank/interest.yml
+  transactions: !include bank/transaction.yml
+  idv: !include bank/idv.yml
+  policies: !include bank/policy.yml
+  templates: !include bank/templates.yml
+  scheduler:
+    scheduler: !system/component
+      system/component-kind: scheduler/scheduler
+  bank-scheduler:
+    runner: !system/component
+      system/component-kind: bank-scheduler/runner
+      record-db: !system/ref fdb.record-db
+      record-store: !system/ref fdb.meta-store
+      schemas: !system/ref avro.serde
+      scheduler: !system/ref scheduler.scheduler
+  telemetry:
+    otel-sdk: !system/component
+      system/component-kind: telemetry/otel-sdk
+      service-name: !env SERVICE_NAME
+      endpoint: !env OTEL_ENDPOINT
+  server:
+    handler: !system/required-component
+    interceptors: !system/component
+      system/component-kind: server/interceptors
+      identity-provider: !system/ref keycloak.identity-provider
+      identity-providers:
+        - !system/ref keycloak.identity-provider
+        - !system/ref keycloak.identity-provider-ops
+      expected-audiences:
+        - queenswood-api-test
+        - queenswood-api-live
+        - queenswood-console
+        - queenswood-app
+      user-client-ids:
+        - queenswood-console
+        - queenswood-app
+      audiences-by-status:
+        bank-status-test: queenswood-api-test
+        bank-status-live: queenswood-api-live
+      dispatchers:
+        cash-accounts: !system/ref cash-accounts.dispatcher
+        parties: !system/ref parties.dispatcher
+        payments: !system/ref payments.dispatcher
+        interest: !system/ref interest.dispatcher
+        transactions: !system/ref transactions.dispatcher
+      avro: !system/ref avro.serde
+      record-db: !system/ref fdb.record-db
+      record-store: !system/ref fdb.meta-store
+      # Adapters + Companies House run in-process; reach them via the
+      # bound http-url of their embedded jetty server, not an env URL.
+      clearbank-adapter-url: !system/ref clearbank-adapter-server.http-url
+      companies-house-url: !system/ref companies-house-simulator-server.http-url
+    jetty-adapter: !system/component
+      system/component-kind: server/jetty-adapter
+      handler: !system/ref server.handler
+      interceptors: !system/ref server.interceptors
+      options:
+        port: 8080
+  clearbank-simulator-server: !include bank-monolith/clearbank-simulator.yml
+  clearbank-adapter-server: !include bank-monolith/clearbank-adapter-server.yml
+  clearbank-adapter: !include bank-monolith/clearbank-adapter.yml
+  onfido-simulator-server: !include bank-monolith/onfido-simulator.yml
+  onfido-adapter-server: !include bank-monolith/onfido-adapter-server.yml
+  onfido-adapter: !include bank-monolith/onfido-adapter.yml
+  companies-house-simulator-server: !include bank-monolith/companies-house-simulator.yml

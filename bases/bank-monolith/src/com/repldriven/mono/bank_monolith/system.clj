@@ -15,6 +15,7 @@
     com.repldriven.mono.bank-interest.interface
     com.repldriven.mono.bank-party.interface
     com.repldriven.mono.bank-payment.interface
+    com.repldriven.mono.bank-scheduler.interface
     com.repldriven.mono.bank-schema.interface
     com.repldriven.mono.bank-transaction.interface
     com.repldriven.mono.bank-user.interface
@@ -25,4 +26,5 @@
     com.repldriven.mono.fdb.interface
     com.repldriven.mono.message-bus.interface
     com.repldriven.mono.pulsar.interface
+    com.repldriven.mono.scheduler.interface
     com.repldriven.mono.server.interface))
