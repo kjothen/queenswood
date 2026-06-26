@@ -81,6 +81,13 @@ kind-up-monolith tag="dev":
       docker tag {{ DOCKER_REGISTRY }}/$svc:{{ tag }} localhost:5001/$svc:{{ tag }}
       docker push localhost:5001/$svc:{{ tag }}
     done
+    # Drop the one-shot Jobs so helm recreates them on new code: their
+    # name embeds the tag+chart version and the pod spec is immutable, so
+    # a plain upgrade skips them and they never re-run. --ignore-not-found
+    # + `|| true` keeps the first run (no namespace yet) from tripping set -e.
+    kubectl delete job -n queenswood \
+      -l 'app.kubernetes.io/component in (bank-migrator,bank-bootstrap)' \
+      --ignore-not-found 2>/dev/null || true
     # Always pull so a re-pushed `:{{ tag }}` actually lands on the node —
     # IfNotPresent keeps the stale cached image and silently ignores the
     # new push (the `crictl rmi` dance). The registry is local, so the
