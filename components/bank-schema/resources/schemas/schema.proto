@@ -69,4 +69,5 @@ message RecordTypeUnion {
   optional com.repldriven.mono.schemas.scheduler.SchedulerJob _SchedulerJob = 29;
   optional com.repldriven.mono.schemas.scheduler.SchedulerRun _SchedulerRun = 30;
   optional com.repldriven.mono.schemas.clearbank.ClearbankOutboxEvent _ClearbankOutboxEvent = 31;
+  optional com.repldriven.mono.schemas.clearbank.ClearbankOutboundIntent _ClearbankOutboundIntent = 32;
 }

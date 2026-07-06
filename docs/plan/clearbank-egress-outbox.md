@@ -77,7 +77,20 @@ downstream dedupes) and matches ADR-0008. If republish noise matters later,
 extract an out-of-transaction drain (read → publish → checkpoint-committed
 entries) — which Phase 2 needs anyway.
 
-### Phase 2 — command → outbound HTTP (distinct shape)
+### Phase 2 — command → outbound HTTP (distinct shape) — DONE
+
+Implemented. `submit-payment` is consumed into a `ClearbankOutboundIntent`
+(pending, unique `dedup_key` = end-to-end id, `status` index) in one FDB
+transaction, then acked. A daemon `outbound-runner` scans pending intents and
+POSTs the stored FPS body to ClearBank *outside* any FDB transaction (the
+5s-limit constraint), marking each sent on 2xx or bumping/capping attempts on
+failure — ClearBank dedupes on `endToEndIdentification`, so a retried POST is
+safe, and a retried submit that produces a duplicate settlement is absorbed by
+the Phase-1 outbox dedup. Note: the command harness acks regardless of
+processor outcome, so the intent persist (local, reliable) replaces the old
+inline HTTP (external, lost on failure) — a rare FDB-down persist failure is
+the residual pre-existing gap. Details below describe the shipped design.
+
 
 Consume `submit-payment` → one FDB transaction: idempotency-check → save a
 `ClearbankOutboundIntent` (pending FPS call: url, body, `dedup-key =

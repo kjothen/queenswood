@@ -2,6 +2,8 @@
     com.repldriven.mono.bank-clearbank-relay.interface-test
   (:require
     [com.repldriven.mono.bank-clearbank-relay.interface :as SUT]
+    [com.repldriven.mono.bank-clearbank-relay.intent :as intent]
+    [com.repldriven.mono.bank-clearbank-relay.outbound :as outbound]
     [com.repldriven.mono.bank-clearbank-relay.relay :as relay]
 
     [com.repldriven.mono.fdb.interface :as fdb]
@@ -52,3 +54,36 @@
            (when (not= ::timeout e)
              (is (= "transaction-settled" (:event e)))
              (is (= "corr-1" (:correlation-id e))))))))))
+
+(defn- intent-of
+  [intent-id dedup-key]
+  {:intent-id intent-id
+   :dedup-key dedup-key
+   :request "{\"paymentInstructions\":[]}"
+   :status "pending"
+   :attempts 0
+   :created-at (utility/now)})
+
+(deftest outbound-intent-queue-test
+  (with-test-system
+   [sys "classpath:bank-clearbank-relay/application-test.yml"]
+   (let [config {:record-db (system/instance sys [:fdb :record-db])
+                 :record-store (system/instance sys [:fdb :store])}]
+     (testing "a duplicate dedup-key (redelivered submit) is rejected"
+       (nom-test> [_ (SUT/save-intent config (intent-of "int.1" "e2e-A"))])
+       (is (SUT/uniqueness-violation?
+            (SUT/save-intent config (intent-of "int.2" "e2e-A")))))
+     (testing "a sent intent leaves the pending work-queue"
+       (nom-test> [_ (SUT/save-intent config (intent-of "int.3" "e2e-B"))])
+       (is (some #(= "int.3" (:intent-id %)) (intent/pending-intents config)))
+       (nom-test> [_ (intent/mark-sent config "int.3")])
+       (is (not (some #(= "int.3" (:intent-id %))
+                      (intent/pending-intents config)))))
+     (testing "a failed POST keeps the intent pending and bumps its attempt"
+       (nom-test> [_ (SUT/save-intent config (intent-of "int.4" "e2e-C"))])
+       (outbound/drain-once
+        (assoc config :clearbank-url "http://localhost:1" :max-attempts 10))
+       (let [i4 (first (filter #(= "int.4" (:intent-id %))
+                               (intent/pending-intents config)))]
+         (is (some? i4) "still pending after an unreachable POST")
+         (is (= 1 (:attempts i4)) "attempt count bumped"))))))

@@ -182,3 +182,12 @@ clearbank-outbox:
     - name: ClearbankOutboxEvent_by_dedup_key
       field: dedup_key
       unique: true
+clearbank-outbound-intents:
+  record-type: ClearbankOutboundIntent
+  primary-key: [intent_id]
+  indexes:
+    - name: ClearbankOutboundIntent_by_dedup_key
+      field: dedup_key
+      unique: true
+    - name: ClearbankOutboundIntent_by_status
+      field: status

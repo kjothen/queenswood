@@ -23,7 +23,8 @@ registrar: !system/component
 command-processor-impl: !system/component
   system/component-kind: clearbank-adapter/command-processor
   schemas: !system/ref avro.serde
-  clearbank-url: !system/ref clearbank-simulator-server.http-url
+  record-db: !system/ref fdb.record-db
+  record-store: !system/ref fdb.meta-store
 
 command-processor: !system/component
   system/component-kind: command-processor/command-processor
@@ -44,3 +45,9 @@ watchers: !system/component
     consumer-id: clearbank-relay
     store-name: clearbank-outbox
     handler: !system/local-ref relay-handler
+
+outbound-runner: !system/component
+  system/component-kind: clearbank-relay/outbound-runner
+  record-db: !system/ref fdb.record-db
+  record-store: !system/ref fdb.meta-store
+  clearbank-url: !system/ref clearbank-simulator-server.http-url

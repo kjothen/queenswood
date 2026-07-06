@@ -66,7 +66,8 @@
     (com.repldriven.mono.schemas.payee_check
      PayeeCheckProto$PayeeCheck)
     (com.repldriven.mono.schemas.clearbank
-     ClearbankOutboxProto$ClearbankOutboxEvent)
+     ClearbankOutboxProto$ClearbankOutboxEvent
+     ClearbankOutboxProto$ClearbankOutboundIntent)
     (com.repldriven.mono.schemas.policies
      PolicyProto$Policy
      PolicyProto$PolicyBinding)
@@ -718,6 +719,27 @@
   [m]
   (ClearbankOutboxProto$ClearbankOutboxEvent/parseFrom
    (ClearbankOutboxEvent->pb m)))
+
+(def ^{:doc "Parse ClearbankOutboundIntent protobuf bytes into a Clojure map."}
+     pb->ClearbankOutboundIntent
+  clearbank/pb->ClearbankOutboundIntent)
+
+(defn ClearbankOutboundIntent->pb
+  "Serialise a ClearbankOutboundIntent map to protobuf bytes.
+
+  Args:
+  - m: ClearbankOutboundIntent map matching the generated schema."
+  [m]
+  (proto/->pb (clearbank/new-ClearbankOutboundIntent m)))
+
+(defn ClearbankOutboundIntent->java
+  "Parse a ClearbankOutboundIntent map into the generated Java protobuf class.
+
+  Args:
+  - m: ClearbankOutboundIntent map matching the generated schema."
+  [m]
+  (ClearbankOutboxProto$ClearbankOutboundIntent/parseFrom
+   (ClearbankOutboundIntent->pb m)))
 
 (def ^{:doc "Parse Policy protobuf bytes into a Clojure map."} pb->Policy
   policies/pb->Policy)

@@ -90,7 +90,8 @@ system:
     command-processor-impl: !system/component
       system/component-kind: clearbank-adapter/command-processor
       schemas: !system/ref avro.serde
-      clearbank-url: !env CLEARBANK_SIMULATOR_URL
+      record-db: !system/ref fdb.record-db
+      record-store: !system/ref fdb.meta-store
     command-processor: !system/component
       system/component-kind: command-processor/command-processor
       bus: !system/ref message-bus.bus
@@ -108,6 +109,11 @@ system:
         consumer-id: clearbank-relay
         store-name: clearbank-outbox
         handler: !system/local-ref relay-handler
+    outbound-runner: !system/component
+      system/component-kind: clearbank-relay/outbound-runner
+      record-db: !system/ref fdb.record-db
+      record-store: !system/ref fdb.meta-store
+      clearbank-url: !env CLEARBANK_SIMULATOR_URL
   clearbank-adapter-server:
     handler: !system/required-component
     interceptors: !system/component
