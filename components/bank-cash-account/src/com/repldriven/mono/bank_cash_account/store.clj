@@ -9,6 +9,23 @@
 
 (def transact fdb/transact)
 
+(def uniqueness-violation? fdb/uniqueness-violation?)
+
+(defn find-account-by-idempotency-key
+  [txn bank-id idempotency-key]
+  (fdb/transact
+   txn
+   (fn [txn]
+     (some-> (fdb/query-record-compound
+              (fdb/open txn store-name)
+              "CashAccount"
+              [["bank_id" bank-id]
+               ["idempotency_key" idempotency-key]]
+              {:index "CashAccount_by_idempotency_key"})
+             schema/pb->CashAccount))
+   :cash-account/find-by-idempotency-key
+   "Failed to find account by idempotency key"))
+
 (defn find-account
   [txn bank-id account-id]
   (fdb/transact

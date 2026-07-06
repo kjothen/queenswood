@@ -42,6 +42,9 @@ system:
           schema: !pulsar/schema AUTO_CONSUME
           subscriptionName: bank-payment-service-payments-command
           subscriptionType: !pulsar/subscription-type Shared
+          deadLetterPolicy:
+            maxRedeliverCount: 5
+            deadLetterTopic: "persistent://tenant-1/namespace-1/topic-payments-command-dlq"
           topicNames:
             ["persistent://tenant-1/namespace-1/topic-payments-command"]
         schemas: !system/local-ref schemas

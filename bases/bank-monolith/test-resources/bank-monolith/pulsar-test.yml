@@ -285,6 +285,9 @@ consumers: !system/component
       schema: !pulsar/schema AUTO_CONSUME
       subscriptionName: bank-monolith-cash-accounts-command
       subscriptionType: !pulsar/subscription-type Shared
+      deadLetterPolicy:
+        maxRedeliverCount: 5
+        deadLetterTopic: "persistent://tenant-1/namespace-1/topic-cash-accounts-command-dlq"
       topicNames:
         [
           "persistent://tenant-1/namespace-1/topic-cash-accounts-command",
@@ -311,6 +314,9 @@ consumers: !system/component
       schema: !pulsar/schema AUTO_CONSUME
       subscriptionName: bank-monolith-parties-command
       subscriptionType: !pulsar/subscription-type Shared
+      deadLetterPolicy:
+        maxRedeliverCount: 5
+        deadLetterTopic: "persistent://tenant-1/namespace-1/topic-parties-command-dlq"
       topicNames:
         ["persistent://tenant-1/namespace-1/topic-parties-command"]
     schemas: !system/local-ref schemas
@@ -333,6 +339,9 @@ consumers: !system/component
       schema: !pulsar/schema AUTO_CONSUME
       subscriptionName: bank-monolith-transactions-command
       subscriptionType: !pulsar/subscription-type Shared
+      deadLetterPolicy:
+        maxRedeliverCount: 5
+        deadLetterTopic: "persistent://tenant-1/namespace-1/topic-transactions-command-dlq"
       topicNames:
         ["persistent://tenant-1/namespace-1/topic-transactions-command"]
     schemas: !system/local-ref schemas
@@ -357,6 +366,9 @@ consumers: !system/component
       schema: !pulsar/schema AUTO_CONSUME
       subscriptionName: bank-monolith-payments-command
       subscriptionType: !pulsar/subscription-type Shared
+      deadLetterPolicy:
+        maxRedeliverCount: 5
+        deadLetterTopic: "persistent://tenant-1/namespace-1/topic-payments-command-dlq"
       topicNames:
         ["persistent://tenant-1/namespace-1/topic-payments-command"]
     schemas: !system/local-ref schemas
@@ -381,6 +393,9 @@ consumers: !system/component
       schema: !pulsar/schema AUTO_CONSUME
       subscriptionName: bank-monolith-interest-command
       subscriptionType: !pulsar/subscription-type Shared
+      deadLetterPolicy:
+        maxRedeliverCount: 5
+        deadLetterTopic: "persistent://tenant-1/namespace-1/topic-interest-command-dlq"
       topicNames:
         ["persistent://tenant-1/namespace-1/topic-interest-command"]
     schemas: !system/local-ref schemas
@@ -416,6 +431,9 @@ consumers: !system/component
       schema: !pulsar/schema AUTO_CONSUME
       subscriptionName: bank-monolith-schemes-payment-command
       subscriptionType: !pulsar/subscription-type Shared
+      deadLetterPolicy:
+        maxRedeliverCount: 5
+        deadLetterTopic: "persistent://tenant-1/namespace-1/topic-schemes-payment-command-dlq"
       topicNames:
         ["persistent://tenant-1/namespace-1/topic-schemes-payment-command"]
     schemas: !system/local-ref schemas
@@ -440,6 +458,9 @@ consumers: !system/component
       schema: !pulsar/schema AUTO_CONSUME
       subscriptionName: bank-monolith-idv-command
       subscriptionType: !pulsar/subscription-type Shared
+      deadLetterPolicy:
+        maxRedeliverCount: 5
+        deadLetterTopic: "persistent://tenant-1/namespace-1/topic-idv-command-dlq"
       topicNames:
         ["persistent://tenant-1/namespace-1/topic-idv-command"]
     schemas: !system/local-ref schemas
@@ -473,6 +494,9 @@ consumers: !system/component
       schema: !pulsar/schema AUTO_CONSUME
       subscriptionName: bank-monolith-payee-checks-command
       subscriptionType: !pulsar/subscription-type Shared
+      deadLetterPolicy:
+        maxRedeliverCount: 5
+        deadLetterTopic: "persistent://tenant-1/namespace-1/topic-payee-checks-command-dlq"
       topicNames:
         ["persistent://tenant-1/namespace-1/topic-payee-checks-command"]
     schemas: !system/local-ref schemas

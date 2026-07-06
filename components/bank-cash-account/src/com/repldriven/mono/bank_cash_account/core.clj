@@ -62,41 +62,60 @@
   [product-version]
   (:product-type product-version))
 
+(defn- or-already-opened
+  "On a uniqueness violation — a redelivered or retried
+  open-cash-account command carrying an already-seen idempotency-key —
+  read the existing account back and return it, so the caller gets the
+  original resource instead of a duplicate account or a bare rejection.
+  Any other value passes through unchanged."
+  [txn data result]
+  (if (and (store/uniqueness-violation? result)
+           (:idempotency-key data))
+    (let-nom> [existing (store/find-account-by-idempotency-key
+                         txn
+                         (:bank-id data)
+                         (:idempotency-key data))]
+      (or existing result))
+    result))
+
 (defn open-account
   ([txn data]
    (open-account txn data {}))
   ([txn data opts]
-   (store/transact
+   (or-already-opened
     txn
-    (fn [txn]
-      (let [{:keys [bank-id party-id product-id currency]} data]
-        (let-nom>
-          [policies (get-policies txn bank-id opts)
-           party (parties/get-party txn bank-id party-id)
-           product (products/get-product txn bank-id product-id)
-           product-version (products/active-version product (utility/today))
-           aggregates (when product-version
-                        (counts txn
-                                bank-id
-                                (product-type-of product-version)
-                                (party->account-type party)
-                                currency))
-           account (domain/open-account
-                    data
-                    product-version
-                    party
-                    (fn [counter]
-                      (store/allocate-payment-address txn counter))
-                    aggregates
-                    policies)
-           _ (balances/new-balances
-              txn
-              (domain/opening-balances account currency product-version))
-           _ (store/save-account txn
-                                 account
-                                 {:account-id (:account-id account)
-                                  :status-after (:account-status account)})]
-          account))))))
+    data
+    (store/transact
+     txn
+     (fn [txn]
+       (let [{:keys [bank-id party-id product-id currency]} data]
+         (let-nom>
+           [policies (get-policies txn bank-id opts)
+            party (parties/get-party txn bank-id party-id)
+            product (products/get-product txn bank-id product-id)
+            product-version (products/active-version product (utility/today))
+            aggregates (when product-version
+                         (counts txn
+                                 bank-id
+                                 (product-type-of product-version)
+                                 (party->account-type party)
+                                 currency))
+            account (domain/open-account
+                     data
+                     product-version
+                     party
+                     (fn [counter]
+                       (store/allocate-payment-address txn counter))
+                     aggregates
+                     policies)
+            _ (balances/new-balances
+               txn
+               (domain/opening-balances account currency product-version))
+            _ (store/save-account txn
+                                  account
+                                  {:account-id (:account-id account)
+                                   :status-after (:account-status account)})]
+           account)))))))
 
 (defn get-account
   ([txn bank-id account-id]

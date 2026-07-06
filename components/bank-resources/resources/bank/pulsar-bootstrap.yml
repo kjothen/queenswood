@@ -49,10 +49,16 @@ topics: !system/component
     - topic: "persistent://tenant-1/namespace-1/topic-cash-accounts-command"
       partitions: 1
       schema: !keyword command
+    - topic: "persistent://tenant-1/namespace-1/topic-cash-accounts-command-dlq"
+      partitions: 1
+      schema: !keyword command
     - topic: "persistent://tenant-1/namespace-1/topic-cash-accounts-command-response"
       partitions: 1
       schema: !keyword command-response
     - topic: "persistent://tenant-1/namespace-1/topic-parties-command"
+      partitions: 1
+      schema: !keyword command
+    - topic: "persistent://tenant-1/namespace-1/topic-parties-command-dlq"
       partitions: 1
       schema: !keyword command
     - topic: "persistent://tenant-1/namespace-1/topic-parties-command-response"
@@ -61,16 +67,25 @@ topics: !system/component
     - topic: "persistent://tenant-1/namespace-1/topic-transactions-command"
       partitions: 1
       schema: !keyword command
+    - topic: "persistent://tenant-1/namespace-1/topic-transactions-command-dlq"
+      partitions: 1
+      schema: !keyword command
     - topic: "persistent://tenant-1/namespace-1/topic-transactions-command-response"
       partitions: 1
       schema: !keyword command-response
     - topic: "persistent://tenant-1/namespace-1/topic-payments-command"
       partitions: 1
       schema: !keyword command
+    - topic: "persistent://tenant-1/namespace-1/topic-payments-command-dlq"
+      partitions: 1
+      schema: !keyword command
     - topic: "persistent://tenant-1/namespace-1/topic-payments-command-response"
       partitions: 1
       schema: !keyword command-response
     - topic: "persistent://tenant-1/namespace-1/topic-interest-command"
+      partitions: 1
+      schema: !keyword command
+    - topic: "persistent://tenant-1/namespace-1/topic-interest-command-dlq"
       partitions: 1
       schema: !keyword command
     - topic: "persistent://tenant-1/namespace-1/topic-interest-command-response"
@@ -82,10 +97,16 @@ topics: !system/component
     - topic: "persistent://tenant-1/namespace-1/topic-schemes-payment-command"
       partitions: 1
       schema: !keyword command
+    - topic: "persistent://tenant-1/namespace-1/topic-schemes-payment-command-dlq"
+      partitions: 1
+      schema: !keyword command
     - topic: "persistent://tenant-1/namespace-1/topic-schemes-payment-command-response"
       partitions: 1
       schema: !keyword command-response
     - topic: "persistent://tenant-1/namespace-1/topic-idv-command"
+      partitions: 1
+      schema: !keyword command
+    - topic: "persistent://tenant-1/namespace-1/topic-idv-command-dlq"
       partitions: 1
       schema: !keyword command
     - topic: "persistent://tenant-1/namespace-1/topic-idv-command-response"
@@ -94,3 +115,12 @@ topics: !system/component
     - topic: "persistent://tenant-1/namespace-1/topic-idv-event"
       partitions: 1
       schema: !keyword event
+    - topic: "persistent://tenant-1/namespace-1/topic-payee-checks-command"
+      partitions: 1
+      schema: !keyword command
+    - topic: "persistent://tenant-1/namespace-1/topic-payee-checks-command-dlq"
+      partitions: 1
+      schema: !keyword command
+    - topic: "persistent://tenant-1/namespace-1/topic-payee-checks-command-response"
+      partitions: 1
+      schema: !keyword command-response
