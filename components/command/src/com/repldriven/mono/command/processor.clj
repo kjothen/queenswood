@@ -74,7 +74,14 @@
            parent-ctx
            (select-keys data [:id :command :correlation-id :causation-id])
            (fn []
-             (let [result (process-fn data)
+             ;; process-fn is expected to return anomalies, not throw —
+             ;; but an unexpected throw must not escape the consumer loop.
+             ;; Convert it to a FAILED result so a reply is always sent
+             ;; and the caller never hangs waiting.
+             (let [result (error/try-nom
+                           :command/uncaught
+                           "Command processing threw an uncaught exception"
+                           (process-fn data))
                    resp (response/command-response data result)]
                ;; Log the ORIGINAL result so any captured exception
                ;; surfaces to the operator log; the response sent

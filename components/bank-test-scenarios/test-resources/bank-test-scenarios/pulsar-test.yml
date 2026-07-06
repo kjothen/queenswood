@@ -153,6 +153,9 @@ consumers: !system/component
       schema: !pulsar/schema AUTO_CONSUME
       subscriptionName: bank-test-scenarios-idv-command
       subscriptionType: !pulsar/subscription-type Shared
+      deadLetterPolicy:
+        maxRedeliverCount: 5
+        deadLetterTopic: "persistent://tenant-1/namespace-1/topic-idv-command-dlq"
       topicNames:
         ["persistent://tenant-1/namespace-1/topic-idv-command"]
     schemas: !system/local-ref schemas
@@ -186,6 +189,9 @@ consumers: !system/component
       schema: !pulsar/schema AUTO_CONSUME
       subscriptionName: bank-test-scenarios-schemes-payment-command
       subscriptionType: !pulsar/subscription-type Shared
+      deadLetterPolicy:
+        maxRedeliverCount: 5
+        deadLetterTopic: "persistent://tenant-1/namespace-1/topic-schemes-payment-command-dlq"
       topicNames:
         ["persistent://tenant-1/namespace-1/topic-schemes-payment-command"]
     schemas: !system/local-ref schemas

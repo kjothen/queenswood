@@ -215,11 +215,19 @@ The harness wraps the outcome in `command/command-response` and
 publishes the reply.
 
 **Idempotency.** The caller-supplied `:id` (idempotency-key
-header) is what processors use to deduplicate retries. Each
-processor stores the idempotency key alongside the transaction
-record so that a replay returns the prior outcome rather than
-re-applying. The pipeline carries the key but does not enforce
-dedup — that's processor-side discipline.
+header) rides every command. Dedup has two layers. At the HTTP
+edge, the idempotency cache — keyed by principal, operation, and
+client key — replays the original response on a client retry;
+this is the exact-replay guarantee for HTTP-level retries. Below
+it, processors that carry a unique idempotency-key index
+(payments, transactions, cash-accounts) deduplicate a *bus
+redelivery* at the store: the second write violates the index.
+Cash-accounts additionally read the existing account back on that
+violation, so a redelivery returns the original resource rather
+than a rejection. A timeout is deliberately not cached (it maps
+to a 5xx, which the cache skips so the caller can retry), so the
+store-level index is what keeps that retry safe. Command families
+without such an index inherit only the HTTP-edge layer.
 
 **Correlation and causation.** `:correlation-id` is set once at
 the HTTP edge and threaded through every command, reply, and
@@ -240,6 +248,44 @@ envelope assembly.
 Avro-encoded for transport. Schemas live in `bank-schema`
 alongside the proto record schemas. See ADR-0004 for the
 rationale and the brick organisation.
+
+**Delivery guarantees and failure modes.** The synchronous
+caller experience is a facade over an at-least-once bus, so a
+reply timeout means "no reply within the window", not "not
+executed" — the command may have committed while its reply was
+lost. Callers treat a timeout as retryable and retry with the
+same idempotency key; the store-level dedup above makes that
+safe.
+
+Processing is at-least-once: the consumer acks only after the
+process-fn returns and the reply is published, so a crash before
+the ack redelivers the command. Three things bound the failure
+envelope:
+
+- The consume loop wraps the handler. An unexpected throw is
+  caught and negative-acked for redelivery instead of killing the
+  loop (which would silently wedge the whole channel), and the
+  process-fn is itself wrapped so a thrown exception becomes a
+  `FAILED` reply — the caller always gets a response.
+- A 30 s `ackTimeout` on every consumer redelivers a message that
+  was delivered but never acked (a stuck handler, a dropped loop)
+  even while the consumer stays connected — Pulsar's default
+  leaves such a message undelivered indefinitely.
+- A `deadLetterPolicy` (maxRedeliverCount 5, per-channel
+  `*-command-dlq` topic) moves a genuinely poison command aside
+  rather than redelivering it forever. Routing a message to the
+  DLQ is silent until something watches the DLQ topic — alerting
+  on it is an operational task, not a code one.
+
+A reply can still be lost — a reply publish that fails, or one
+that arrives after the caller's timeout — but the command ran, so
+the idempotent retry path recovers it.
+
+**Local channel bus.** The single-pod deployment replaces Pulsar
+with an in-process core.async bus. It is at-most-once — no ack,
+no redelivery, lost on crash — so durability there rests on FDB
+plus idempotent retry, not the bus. The consume loop is still
+throw-safe (a handler exception is logged, not fatal).
 
 ## Alternatives Considered
 
@@ -283,11 +329,22 @@ rationale and the brick organisation.
 - **In-flight commands during processor restart.** A command on
   the bus that has been delivered but not yet processed when
   the processor restarts depends on the bus backend's
-  redelivery semantics. The Pulsar backend acks on success;
-  the channel-based backend has different semantics. Test- and
-  prod-shape behaviour can diverge here; covered by scenario
+  redelivery semantics. The Pulsar backend acks on success and
+  redelivers otherwise (bounded by `ackTimeout` and the DLQ);
+  the channel-based backend is at-most-once and loses it. Test-
+  and prod-shape behaviour can diverge here; covered by scenario
   testing — see
   [ADR-0009](../adr/0009-model-equality-property-testing.md).
+- **Retried success returns a rejection on some paths.** When a
+  bus redelivery re-runs a command whose reply was lost, payments
+  and transactions dedup at the store but reply with
+  `:already-submitted` / `:already-recorded` rather than the
+  original resource (the HTTP idempotency cache masks this for
+  HTTP retries). Cash-accounts read the original back; extending
+  that read-back to payments and transactions is a deliberate
+  follow-up, kept out of this change because those paths already
+  dedup safely and altering money-movement reply semantics
+  warrants its own tested change.
 - **Authorisation is not pipeline-aware.** The auth interceptor
   short-circuits before commands are dispatched; the pipeline
   treats every received command as already-authorised. If a
@@ -296,10 +353,15 @@ rationale and the brick organisation.
 - **No multi-step saga coordination.** Per the alternative
   above — if cross-processor atomicity is ever required, this
   becomes a gap.
-- **Idempotency is processor-side discipline.** The pipeline
-  carries `:id` but doesn't enforce dedup. A processor that
-  forgets to check its idempotency table is a real bug class
-  worth a dedicated recipe.
+- **Store-level idempotency is per-processor and opt-in.** The
+  pipeline carries `:id`, and the HTTP-edge cache covers client
+  retries, but bus-redelivery dedup depends on each processor
+  wiring a unique idempotency-key index. Payments, transactions,
+  and cash-accounts do; a processor that adds a write path
+  without one reopens the double-effect class. Confirmation of
+  Payee, for example, has no such index — a redelivered CoP
+  command records a duplicate check, accepted because it carries
+  no financial effect and the records are short-lived.
 
 ## References
 

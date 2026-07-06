@@ -1,0 +1,62 @@
+(ns ^:eftest/synchronized com.repldriven.mono.bank-cash-account.store-test
+  (:require
+    [com.repldriven.mono.bank-cash-account.store :as store]
+
+    [com.repldriven.mono.fdb.interface]
+    [com.repldriven.mono.system.interface :as system]
+    [com.repldriven.mono.testcontainers.interface]
+    [com.repldriven.mono.test-system.interface :refer
+     [with-test-system nom-test>]]
+    [com.repldriven.mono.utility.interface :as utility]
+
+    [clojure.test :refer [deftest is testing]]))
+
+(def ^:private test-bank-id "bnk_idem_test")
+
+(defn- account
+  [account-id idempotency-key]
+  {:bank-id test-bank-id
+   :account-id account-id
+   :party-id "pty.test"
+   :product-id "prd.test"
+   :version-id "v1"
+   :name "Idempotency Test Account"
+   :currency "GBP"
+   :account-status :cash-account-status-opening
+   :created-at (utility/now)
+   :updated-at (utility/now)
+   :idempotency-key idempotency-key})
+
+(defn- changelog
+  [account-id]
+  {:account-id account-id :status-after :cash-account-status-opening})
+
+(deftest idempotency-key-unique-index-and-read-back-test
+  (with-test-system
+   [sys "classpath:bank-cash-account/application-test.yml"]
+   (let [config {:record-db (system/instance sys [:fdb :record-db])
+                 :record-store (system/instance sys [:fdb :store])}
+         key "idem-key-0000000000000001"]
+     (testing "first open with an idempotency-key is saved"
+       (nom-test> [_ (store/save-account config
+                                         (account "acc.1" key)
+                                         (changelog "acc.1"))]))
+     (testing
+       "a second, different account reusing the same
+               [bank-id, idempotency-key] hits the unique index"
+       (let [result (store/save-account config
+                                        (account "acc.2" key)
+                                        (changelog "acc.2"))]
+         (is (store/uniqueness-violation? result)
+             "duplicate idempotency-key for the same bank must violate")))
+     (testing "read-back returns the original account, not the duplicate"
+       (nom-test> [found (store/find-account-by-idempotency-key config
+                                                                test-bank-id
+                                                                key)
+                   _ (is (= "acc.1" (:account-id found)))
+                   _ (is (= key (:idempotency-key found)))]))
+     (testing "a different idempotency-key for the same bank is allowed"
+       (nom-test> [_ (store/save-account config
+                                         (account "acc.3"
+                                                  "idem-key-0000000000000002")
+                                         (changelog "acc.3"))])))))

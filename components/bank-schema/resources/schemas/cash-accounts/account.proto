@@ -64,6 +64,13 @@ message CashAccount {
   // accounts leave it unset (they ARE the controls; they don't roll up).
   optional string gl_control_account_id = 20;
 
+  // Client idempotency key (the command envelope :id, sourced from the
+  // required Idempotency-Key header) that opened this account. Unique-indexed
+  // per bank so a redelivered or retried open-cash-account command reads the
+  // existing account back instead of creating a duplicate. Optional at the
+  // wire level for compatibility with accounts written before this field.
+  optional string idempotency_key = 21;
+
   enum CashAccountStatus {
     CASH_ACCOUNT_STATUS_UNKNOWN = 0;
     CASH_ACCOUNT_STATUS_OPENING = 1;

@@ -122,7 +122,9 @@
                      :created-at now
                      :updated-at now}
                     :bban
-                    bban)))))
+                    bban
+                    :idempotency-key
+                    (:idempotency-key data))))))
 
 (defn opening-balances
   [account currency product-version]
