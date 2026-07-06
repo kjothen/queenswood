@@ -107,6 +107,8 @@
     components/bank-idv {:local/root "components/bank-idv"}
     components/bank-onfido-webhook {:local/root
                                     "components/bank-onfido-webhook"}
+    components/bank-onfido-relay {:local/root
+                                  "components/bank-onfido-relay"}
     components/bank-interest {:local/root "components/bank-interest"}
     components/bank-ledger-account {:local/root
                                     "components/bank-ledger-account"}
@@ -170,6 +172,8 @@
                  "components/bank-transaction/test-resources"
                  "components/bank-clearbank-relay/test"
                  "components/bank-clearbank-relay/test-resources"
+                 "components/bank-onfido-relay/test"
+                 "components/bank-onfido-relay/test-resources"
                  "bases/bank-clearbank-simulator/test"
                  "bases/bank-clearbank-simulator/test-resources"
                  "bases/bank-clearbank-adapter/test"

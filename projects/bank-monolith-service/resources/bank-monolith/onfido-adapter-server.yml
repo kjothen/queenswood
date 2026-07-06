@@ -5,6 +5,8 @@ interceptors: !system/component
   bus: !system/ref message-bus.bus
   avro: !system/ref avro.serde
   event-channel: !keyword idv-event
+  record-db: !system/ref fdb.record-db
+  record-store: !system/ref fdb.meta-store
 
 jetty-adapter: !system/component
   system/component-kind: server/jetty-adapter

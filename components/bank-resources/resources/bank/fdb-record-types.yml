@@ -191,3 +191,19 @@ clearbank-outbound-intents:
       unique: true
     - name: ClearbankOutboundIntent_by_status
       field: status
+onfido-outbox:
+  record-type: OnfidoOutboxEvent
+  primary-key: [outbox_id]
+  indexes:
+    - name: OnfidoOutboxEvent_by_dedup_key
+      field: dedup_key
+      unique: true
+onfido-outbound-intents:
+  record-type: OnfidoOutboundIntent
+  primary-key: [intent_id]
+  indexes:
+    - name: OnfidoOutboundIntent_by_dedup_key
+      field: dedup_key
+      unique: true
+    - name: OnfidoOutboundIntent_by_status
+      field: status

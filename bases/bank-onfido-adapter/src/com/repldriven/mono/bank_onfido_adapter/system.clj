@@ -154,7 +154,8 @@
   {:system/start (fn [{:system/keys [config instance]}]
                    (or instance (commands/->OnfidoCommandProcessor config)))
    :system/config {:schemas system/required-component
-                   :onfido-url system/required-component}
+                   :record-db system/required-component
+                   :record-store system/required-component}
    :system/instance-schema some?})
 
 (system/defcomponents :onfido-adapter
