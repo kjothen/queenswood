@@ -175,3 +175,10 @@ scheduler-runs:
   indexes:
     - name: SchedulerRun_by_bank_job
       fields: [bank_id, job_id]
+clearbank-outbox:
+  record-type: ClearbankOutboxEvent
+  primary-key: [outbox_id]
+  indexes:
+    - name: ClearbankOutboxEvent_by_dedup_key
+      field: dedup_key
+      unique: true

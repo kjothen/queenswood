@@ -2,11 +2,12 @@
     com.repldriven.mono.bank-clearbank-adapter.interface-test
   (:require
     [com.repldriven.mono.bank-clearbank-adapter.api :as api]
-    [com.repldriven.mono.bank-clearbank-adapter.nonce :as nonce]
 
+    [com.repldriven.mono.fdb.interface]
     [com.repldriven.mono.http-client.interface :as http]
     [com.repldriven.mono.server.interface :as server]
     [com.repldriven.mono.system.interface :as system]
+    [com.repldriven.mono.testcontainers.interface]
     [com.repldriven.mono.test-system.interface :refer
      [with-test-system nom-test>]]
 
@@ -46,8 +47,7 @@
                   :Nonce nonce})
        _ (is (= 200 (:status res)))
        body (http/res->edn res)
-       _ (is (= nonce (:Nonce body)))
-       _ (is (nonce/seen? nonce))])))
+       _ (is (= nonce (:Nonce body)))])))
 
 (defn- test-transaction-settled-debit
   []
@@ -130,7 +130,6 @@
        _ (is (= nonce (:Nonce body)))])))
 
 (deftest clearbank-adapter-test
-  (reset! nonce/nonces #{})
   (with-test-system [sys
                      ["classpath:bank-clearbank-adapter/application-test.yml"
                       #(assoc-in % [:system/defs :server :handler] api/app)]]
