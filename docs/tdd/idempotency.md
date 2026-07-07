@@ -14,9 +14,10 @@ In scope: all write routes (cash accounts, parties, payments,
 simulate endpoints); the `Idempotency-Key` header contract;
 the FDB-backed cache; concurrent-duplicate handling.
 
-Out of scope: read endpoints (idempotent by nature); event
-processing on the bus (deduplication is the bus backend's
-responsibility — see ADR-0003).
+Out of scope: read endpoints (idempotent by nature); the
+consume-then-ack and outbox de-duplication that processors and
+adapters do on the bus — that boundary model lives in
+[transaction-processing.md](transaction-processing.md).
 
 ## Background
 
@@ -33,10 +34,11 @@ message payload.
 
 FDB record stores that own writes carry a per-store
 idempotency-key index. The processor checks it before writing
-— see `bank-transaction` and `bank-payment` stores. This
-inner-loop check is atomic with the write (same FDB
-transaction). The API-layer cache described below is layered
-on top.
+— see `bank-transaction` and `bank-payment` stores, and the
+adapter outbox and intent stores, which dedup a redelivered
+webhook or command on a unique `dedup-key`. This inner-loop
+check is atomic with the write (same FDB transaction). The
+API-layer cache described below is layered on top.
 
 ## Solution
 
