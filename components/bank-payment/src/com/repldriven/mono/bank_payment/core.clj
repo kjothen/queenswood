@@ -20,18 +20,23 @@
     [com.repldriven.mono.utility.interface :as utility]))
 
 (defn- or-already-submitted
-  "Translate the store's low-level uniqueness anomaly into the
-  domain-level `:payment/already-submitted` rejection. Pass any
-  other value through unchanged."
-  [result]
-  (if (store/uniqueness-violation? result)
-    (error/reject :payment/already-submitted
-                  "Payment already submitted")
+  "On a uniqueness violation — a redelivered submit-payment command
+  carrying an already-seen idempotency-key — read the existing payment
+  back via `find-fn` and return it, so the caller gets the original
+  resource instead of a bare rejection. Any other value passes through
+  unchanged."
+  [txn data result find-fn]
+  (if (and (store/uniqueness-violation? result)
+           (:idempotency-key data))
+    (let-nom> [existing (find-fn txn (:idempotency-key data))]
+      (or existing result))
     result))
 
 (defn submit-internal
   [config data]
   (or-already-submitted
+   config
+   data
    (store/transact
     config
     (fn [txn]
@@ -78,7 +83,8 @@
                                                 business-day
                                                 transaction-id)
            _ (store/save-internal-payment txn payment)]
-          payment))))))
+          payment))))
+   store/find-internal-payment-by-idempotency-key))
 
 (defn- publish-scheme-command
   [config payment data]
@@ -120,69 +126,74 @@
 (defn submit-outbound
   [config data]
   (let [{:keys [bank-id debtor-account-id]} data
-        result (or-already-submitted
-                (store/transact
-                 config
-                 (fn [txn]
-                   (let [business-day (domain/current-business-day
-                                       (utility/now)
-                                       (:business-day-cutoff config))
-                         policies (policy/get-effective-policies
-                                   txn
-                                   {:bank-id bank-id})]
-                     (let-nom>
-                       [debtor-account (cash-accounts/get-account
-                                        txn
-                                        bank-id
-                                        debtor-account-id)
-                        pending-outbound
-                        (ledger-accounts/find-by-code
-                         txn
-                         bank-id
-                         :gl-account-code-pending-outbound)
-                        _ (when (nil? pending-outbound)
-                            (error/reject
-                             :payment/no-pending-outbound-account
-                             {:message
-                              (str "Bank has no 1200 pending-outbound"
-                                   " account in its chart of accounts")
-                              :bank-id bank-id}))
-                        today-count (store/count-outbound-by-org-business-day
-                                     txn
-                                     bank-id
-                                     business-day)
-                        today-sum (store/sum-outbound-by-org-business-day
+        raw (store/transact
+             config
+             (fn [txn]
+               (let [business-day (domain/current-business-day
+                                   (utility/now)
+                                   (:business-day-cutoff config))
+                     policies (policy/get-effective-policies
+                               txn
+                               {:bank-id bank-id})]
+                 (let-nom>
+                   [debtor-account (cash-accounts/get-account
+                                    txn
+                                    bank-id
+                                    debtor-account-id)
+                    pending-outbound
+                    (ledger-accounts/find-by-code
+                     txn
+                     bank-id
+                     :gl-account-code-pending-outbound)
+                    _ (when (nil? pending-outbound)
+                        (error/reject
+                         :payment/no-pending-outbound-account
+                         {:message
+                          (str "Bank has no 1200 pending-outbound"
+                               " account in its chart of accounts")
+                          :bank-id bank-id}))
+                    today-count (store/count-outbound-by-org-business-day
+                                 txn
+                                 bank-id
+                                 business-day)
+                    today-sum (store/sum-outbound-by-org-business-day
+                               txn
+                               bank-id
+                               business-day)
+                    aggregates {:outbound-payment
+                                {#{:bank-id :business-day}
+                                 today-count
+                                 #{:bank-id :business-day :amount}
+                                 today-sum}}
+                    transaction (domain/outbound-payment->transaction
+                                 data
+                                 debtor-account
+                                 (:ledger-account-id pending-outbound)
+                                 policies
+                                 aggregates)
+                    expanded-legs (ledger-accounts/add-control-legs
                                    txn
                                    bank-id
-                                   business-day)
-                        aggregates {:outbound-payment
-                                    {#{:bank-id :business-day}
-                                     today-count
-                                     #{:bank-id :business-day :amount}
-                                     today-sum}}
-                        transaction (domain/outbound-payment->transaction
-                                     data
-                                     debtor-account
-                                     (:ledger-account-id pending-outbound)
-                                     policies
-                                     aggregates)
-                        expanded-legs (ledger-accounts/add-control-legs
-                                       txn
-                                       bank-id
-                                       (:legs transaction))
-                        transaction+legs (transactions/record-transaction
-                                          txn
-                                          (assoc transaction
-                                                 :legs
-                                                 expanded-legs))
-                        {:keys [transaction-id transaction-type legs]}
-                        transaction+legs
-                        _ (balances/apply-legs txn legs transaction-type)
-                        payment (domain/new-outbound-payment data
-                                                             business-day
-                                                             transaction-id)
-                        _ (store/save-outbound-payment txn payment)]
-                       payment)))))]
-    (when-not (error/anomaly? result)
+                                   (:legs transaction))
+                    transaction+legs (transactions/record-transaction
+                                      txn
+                                      (assoc transaction
+                                             :legs
+                                             expanded-legs))
+                    {:keys [transaction-id transaction-type legs]}
+                    transaction+legs
+                    _ (balances/apply-legs txn legs transaction-type)
+                    payment (domain/new-outbound-payment data
+                                                         business-day
+                                                         transaction-id)
+                    _ (store/save-outbound-payment txn payment)]
+                   payment))))
+        result (or-already-submitted
+                config
+                data
+                raw
+                store/find-outbound-payment-by-idempotency-key)]
+    (when (and (not (store/uniqueness-violation? raw))
+               (not (error/anomaly? result)))
       (publish-scheme-command config result data))
     result))

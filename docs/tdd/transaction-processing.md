@@ -344,8 +344,8 @@ this is the exact-replay guarantee for HTTP-level retries. Below
 it, processors that carry a unique idempotency-key index
 (payments, transactions, cash-accounts) deduplicate a *bus
 redelivery* at the store: the second write violates the index.
-Cash-accounts additionally read the existing account back on that
-violation, so a redelivery returns the original resource rather
+All three read the existing record back on that violation, so a
+redelivery returns the original resource as `ACCEPTED` rather
 than a rejection. A timeout is deliberately not cached (it maps
 to a 5xx, which the cache skips so the caller can retry), so the
 store-level index is what keeps that retry safe. Command families
@@ -457,16 +457,6 @@ throw-safe (a handler exception is logged, not fatal).
   and prod-shape behaviour can diverge here; covered by scenario
   testing — see
   [ADR-0009](../adr/0009-model-equality-property-testing.md).
-- **Retried success returns a rejection on some paths.** When a
-  bus redelivery re-runs a command whose reply was lost, payments
-  and transactions dedup at the store but reply with
-  `:already-submitted` / `:already-recorded` rather than the
-  original resource (the HTTP idempotency cache masks this for
-  HTTP retries). Cash-accounts read the original back; extending
-  that read-back to payments and transactions is a deliberate
-  follow-up, kept out of this change because those paths already
-  dedup safely and altering money-movement reply semantics
-  warrants its own tested change.
 - **Authorisation is not pipeline-aware.** The auth interceptor
   short-circuits before commands are dispatched; the pipeline
   treats every received command as already-authorised. If a

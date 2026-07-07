@@ -38,6 +38,22 @@
    :transaction/save-legs
    "Failed to save transaction legs"))
 
+(defn find-transaction-by-idempotency-key
+  [txn transaction-type idempotency-key]
+  (fdb/transact
+   txn
+   (fn [txn]
+     (some-> (fdb/query-record-compound
+              (fdb/open txn store-name)
+              "Transaction"
+              [["transaction_type"
+                (schema/transaction-type->pb-enum transaction-type)]
+               ["idempotency_key" idempotency-key]]
+              {:index "Transaction_by_idempotency_key"})
+             schema/pb->Transaction))
+   :transaction/find-by-idempotency-key
+   "Failed to find transaction by idempotency key"))
+
 (defn get-transactions
   ([txn account-id]
    (get-transactions txn account-id nil))
