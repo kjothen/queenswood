@@ -47,6 +47,15 @@ rationale live in the docs.
   ignorant of cross-brick effects.
   See [ADR-0008](docs/adr/0008-changelog-watchers.md) and
   [recipes/components.md](docs/recipes/components.md).
+- **Transactional guarantees** — the line between work inside FDB
+  (one transaction, commit-then-ack) and work that crosses a
+  boundary (ingress idempotent consume-then-ack; egress via an
+  outbox for events and an intent for external calls, drained by
+  a relay). The external adapters (ClearBank, Onfido) are the
+  worked example.
+  See [tdd/transaction-processing.md](docs/tdd/transaction-processing.md),
+  [tdd/payments.md](docs/tdd/payments.md), and
+  [ADR-0008](docs/adr/0008-changelog-watchers.md).
 - **Processor bricks** — paired `bank-X-processor` base and
   `bank-X` component (commands / core / domain / store /
   watcher), the `txn-or-config` threading convention, FDB

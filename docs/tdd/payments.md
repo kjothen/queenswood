@@ -259,38 +259,31 @@ scheme; no pending state. The reply returns immediately.
 
 ```mermaid
 sequenceDiagram
-    participant H as HTTP handler
     participant P as PaymentProcessor
-    participant F as FDB
+    participant F as bank-payment FDB
     participant B as message-bus
-    participant A as bank-clearbank-adapter
+    participant A as clearbank-adapter
+    participant AF as adapter FDB
     participant C as ClearBank
     participant E as PaymentEventProcessor
 
-    H->>P: submit-outbound-payment
-    P->>F: BEGIN
-    P->>F: get-account (debtor)
-    P->>F: record-transaction (status=pending)
-    P->>F: apply-legs<br/>(debit debtor pending-outgoing)
-    P->>F: save OutboundPayment (status=submitted)
-    P->>F: COMMIT
+    Note over P,F: intent accepted, one transaction
+    P->>F: debit debtor pending-outgoing, save OutboundPayment, COMMIT
     P->>B: submit-payment (scheme command)
-    P-->>H: ACCEPTED + payment
 
-    Note over B,C: Asynchronous from here
-
+    Note over B,AF: outbound call, relayed
     B->>A: consume submit-payment
-    A->>C: POST /v3/payments/fps
-    C-->>A: 2xx
-    C-->>A: webhook TransactionSettled<br/>(debit-credit-code-debit)
-    A->>B: transaction-settled event
-    B->>E: consume event
-    E->>F: BEGIN
-    E->>F: locate OutboundPayment
-    E->>F: record-transaction (settle)
-    E->>F: apply-legs<br/>(move pending-outgoing to posted)
-    E->>F: update OutboundPayment (status=settled)
-    E->>F: COMMIT
+    A->>AF: save outbound intent (pending), COMMIT, then ack
+    A->>C: relay POSTs FPS outside any FDB txn, marks intent sent
+
+    Note over C,B: settlement, outbox-relayed
+    C->>A: webhook TransactionSettled (debit)
+    A->>AF: save outbox event, COMMIT, return 200
+    A->>B: relay publishes transaction-settled
+
+    Note over B,F: downstream settles, one transaction
+    B->>E: consume transaction-settled
+    E->>F: settle OutboundPayment, pending-outgoing to posted, COMMIT
 ```
 
 The HTTP response returns *intent accepted*, not *money sent*.
@@ -298,23 +291,32 @@ The amount is held in `pending-outgoing` (visible to the
 customer via the available-balance derivation) until ClearBank
 confirms.
 
-The submit-payment command published on a separate scheme
-channel is fire-and-forget from `bank-payment`'s perspective:
-the adapter is responsible for retry, error mapping, and
-eventually publishing the settlement event.
+`submit-payment` is fire-and-forget from `bank-payment`'s
+perspective — it publishes and returns. The adapter makes it
+durable from there: it persists the outbound call as an intent
+in its own FDB store and acks, an out-of-transaction relay POSTs
+to ClearBank with retry (ClearBank de-duplicates on the
+end-to-end id), and the settlement webhook is persisted to an
+outbox and relayed back as a `transaction-settled` event. So a
+failed POST or a crash mid-flight retries rather than dropping
+the submission. See
+[transaction-processing.md](transaction-processing.md) for the
+general outbox-and-intent model.
 
 ### Inbound payment flow
 
 ```mermaid
 sequenceDiagram
     participant C as ClearBank
-    participant A as bank-clearbank-adapter
+    participant A as clearbank-adapter
+    participant AF as adapter FDB
     participant B as message-bus
     participant E as PaymentEventProcessor
     participant F as FDB
 
-    C->>A: webhook TransactionSettled<br/>(debit-credit-code-credit)
-    A->>B: transaction-settled event
+    C->>A: webhook TransactionSettled (credit)
+    A->>AF: save outbox event, COMMIT, return 200
+    A->>B: relay publishes transaction-settled
     B->>E: consume event
     E->>F: BEGIN
     E->>F: get-account-by-bban (creditor)
@@ -378,25 +380,35 @@ InboundPayment and returns it without re-posting.
 
 ### ClearBank adapter
 
-`bank-clearbank-adapter` is its own base. It owns:
+`bank-clearbank-adapter` is its own base with its own FDB store.
+Its egress is a transactional outbox on both edges — it owns:
 
 - **Webhook receiver** — HTTP endpoints under its own server
   (separate from `bank-api`), receiving signed webhooks from
-  ClearBank. Verifies signatures, parses the
-  scheme-specific payload, normalises into an internal
-  `transaction-settled` shape.
+  ClearBank. Verifies signatures, normalises the scheme-specific
+  payload into an internal event, and writes it to an outbox in
+  one transaction, returning 200 only on commit — a failed write
+  is retried by ClearBank rather than silently lost.
 - **Scheme command consumer** — Pulsar consumer for
-  `submit-payment` commands; for each, calls ClearBank's
-  `/v3/payments/fps` endpoint with the appropriate FPS
-  payload.
+  `submit-payment` commands. Each is persisted as a pending
+  outbound intent and acked; the consumer makes no HTTP call.
+- **Outbound relay** — a daemon that drains pending intents and
+  POSTs to ClearBank's `/v3/payments/fps` outside any FDB
+  transaction, with retry. ClearBank de-duplicates on the
+  end-to-end id, so a retried POST is safe.
+- **Changelog relay** — a watcher that reads the outbox changelog
+  and publishes each recorded webhook event to the bus, so
+  "webhook received" and "downstream told" cannot diverge.
 - **Confirmation of Payee (CoP)** — separate code path under
-  `cop/` that handles CoP lookups; not directly part of the
+  `cop/` handling CoP lookups; not part of the
   payment-settlement path but co-located in the adapter.
-- **Event publisher** — converts webhook receipts into bus
-  events on the event channel.
 
 The adapter is the only Queenswood code that talks HTTP to
-ClearBank. The rest of the system sees only bus messages.
+ClearBank. Its outbox, intent store, and relays live in the
+`bank-clearbank-relay` component; the Onfido adapter uses the
+same pattern via `bank-onfido-relay`. See
+[transaction-processing.md](transaction-processing.md) for the
+general model.
 
 ### ClearBank simulator
 
@@ -564,14 +576,18 @@ channel separation is configuration, not infrastructure.
   and a small set of named rejection scenarios. Real-world
   edge cases (partial scheme acceptance, retry storms,
   malformed webhooks) aren't simulated.
-- **Scheme-command publication is best-effort.** The
-  fire-and-forget publish from `bank-payment` to the adapter
-  channel relies on Pulsar's durability. If Pulsar is
-  unavailable at the moment of publish, the command is
-  lost; the OutboundPayment exists but the adapter never
-  sees the submission. A durable-outbox pattern at the
-  payment-side commit would close this gap; today the
-  reliability story leans on Pulsar.
+- **The payment-side publish is still best-effort.** Once the
+  adapter consumes `submit-payment`, the flow is durable — the
+  submission becomes a persisted intent, and settlement flows
+  back through the outbox. But the publish from `bank-payment`
+  to the adapter channel is still fire-and-forget after its FDB
+  commit: if Pulsar is unavailable at that moment the command
+  is lost, so the OutboundPayment exists while the adapter never
+  sees it. Closing this needs the same outbox on the payment
+  side — a producer-edge follow-up, deferred with the other
+  producer edges in
+  [transaction-processing.md](transaction-processing.md). Today
+  it leans on Pulsar.
 - **No FX.** Inbound and outbound payments are
   single-currency end-to-end. Cross-currency would need
   explicit FX legs (transactions-and-balances TDD) plus

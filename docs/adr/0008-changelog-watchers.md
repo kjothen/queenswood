@@ -2,7 +2,8 @@
 
 ## Status
 
-Accepted, with a known scale-out limitation. See "Future" below.
+Accepted, with a known scale-out limitation. The relay path in
+"Future" is now built for external-adapter egress — see below.
 
 ## Context
 
@@ -141,6 +142,19 @@ pattern with the added property that the outbox is FDB's changelog
 itself — exactly the property ADR-0002 highlighted. Implementing
 leader election for the relay watcher is then the only piece of new
 infrastructure required.
+
+**Update: the relay path is now built for external egress.** The
+ClearBank and Onfido adapters realize exactly this shape. The adapter's
+own record store is the outbox: a relay watcher reads its changelog and
+publishes each recorded webhook event to the bus, and an
+out-of-transaction runner drains persisted intents to make outbound HTTP
+calls. Internal reactive flows (party activation, cash-account close)
+still use in-JVM watchers as described above; the relay is used where an
+effect crosses a process or service boundary. The single-writer
+constraint applies to the relay too — one relay per store, with leader
+election still the open piece for an active-active topology. See
+[transaction-processing.md](../tdd/transaction-processing.md) and
+[payments.md](../tdd/payments.md).
 
 The watcher primitives are inherited from `mono` (ADR-0001); the
 choice to use them rather than message-bus events is a Queenswood

@@ -15,7 +15,8 @@ and the status semantics that thread these together.
 
 In scope: the `command`, `command-processor`, `event`, and
 `event-processor` bricks; envelope shape; status semantics;
-correlation; reply round-trip.
+correlation; reply round-trip; and the transactional guarantees
+that separate work inside FDB from work that crosses a boundary.
 
 Out of scope: the message-bus abstraction per
 [ADR-0003](../adr/0003-message-bus-abstraction.md), Avro
@@ -198,6 +199,127 @@ sequenceDiagram
 
 A subscriber's handler may itself emit further commands or
 events, continuing the causation chain.
+
+### Transactional guarantees: inside FDB, across the boundary
+
+One rule runs through the pipeline: everything that fits in a single FDB
+transaction stays synchronous and atomic, and everything that crosses a
+process or service boundary is at-least-once, made effectively-once by
+de-duplicating on a key. The two halves need different handling, and
+conflating them is where correctness bugs hide.
+
+**Inside the FDB ecosystem — commit, then ack.** FDB gives multi-record
+ACID in one transaction, so a processor does all its reads and writes,
+across as many records and bricks as the operation touches, in a single
+transaction that commits or refuses as a unit. A transfer's debit,
+credit, both posting legs, and the transaction record commit together or
+not at all. Nothing here goes through the bus: intra-FDB work is a call
+inside `fdb/transact`, not a message. The one ordering rule for a
+consumer is commit before ack — the processor commits its transaction,
+and only then is the bus message acknowledged. Ack-before-commit loses
+the command on a crash; commit-then-crash-before-ack redelivers it, and
+idempotency makes the reprocess safe.
+
+```mermaid
+sequenceDiagram
+    participant B as message-bus
+    participant P as Processor
+    participant F as FDB
+
+    B->>P: deliver command
+    P->>F: BEGIN
+    P->>F: reads and writes, one transaction, N records
+    F-->>P: COMMIT
+    P->>B: ack
+    Note over P,B: ack only after commit, so a crash before ack redelivers
+```
+
+**As consumer across a boundary — idempotent consume-then-ack.** Anything
+arriving over the bus (a command, a settlement event, a webhook-derived
+event) is at-least-once: Pulsar redelivers on failure, and a crash
+between commit and ack reprocesses. The consumer absorbs that by making
+the effect idempotent on a key, in the same transaction: check or write
+the idempotency key — a unique index, or a `bank-idempotency` record —
+alongside the state change, so a second delivery either no-ops or is
+refused by the index rather than doubling the effect. This is not an
+outbox: the outbox is for producing, not consuming.
+
+```mermaid
+sequenceDiagram
+    participant B as message-bus
+    participant P as Processor
+    participant F as FDB
+
+    B->>P: deliver, possibly redelivered
+    P->>F: BEGIN
+    P->>F: dedup-key check or unique-index write
+    alt already applied
+        P->>F: COMMIT, no-op
+    else first delivery
+        P->>F: apply state change
+        P->>F: COMMIT
+    end
+    P->>B: ack
+```
+
+**As producer across a boundary — outbox and intent, then relay.** A
+message a processor must emit as a result of a committed change (a domain
+event, a next command, or an external HTTP call) cannot be sent inside
+the FDB transaction without risking divergence: send-then-crash-before-
+commit tells the world about a change that never happened;
+commit-then-crash-before-send hides one that did. So write what to emit
+into FDB in the same transaction as the state change, and relay it
+separately. Two shapes, by what is emitted:
+
+- A bus event becomes an outbox entry. Write the event to FDB atomically
+  with the state change. FDB's changelog is the outbox, per
+  [ADR-0008](../adr/0008-changelog-watchers.md) — a relay watcher reads
+  the cursor, publishes to the bus, and advances the cursor,
+  at-least-once, because the cursor only advances after a successful
+  publish. A failed publish leaves the cursor unmoved and the entry is
+  redriven; the consumer de-duplicates.
+- An external call becomes an intent. Write the pending call to FDB as
+  an intent record, then ack the trigger. A relay makes the call outside
+  any FDB transaction — an HTTP round-trip cannot run inside one (FDB
+  caps a transaction at five seconds, and a transaction retry would
+  re-issue the call), so the relay reads the intent, calls out, and
+  records the outcome in a separate transaction. The external service
+  de-duplicates on its own idempotency field, so a retried call is safe.
+
+The dedup key travels with each emitted message — the outbox entry's own
+id, not only the originating command's key — so one command can produce
+several distinct events without colliding at the consumer.
+
+```mermaid
+sequenceDiagram
+    participant P as Processor or webhook
+    participant F as FDB
+    participant R as Relay
+    participant X as Bus or external service
+
+    P->>F: BEGIN
+    P->>F: state change plus outbox or intent write
+    F-->>P: COMMIT
+    P->>P: ack trigger
+
+    Note over R,X: separately, at-least-once
+    R->>F: read outbox entry or pending intent
+    R->>X: publish event, or POST outside any FDB txn
+    X-->>R: ok
+    R->>F: advance cursor, or mark intent sent
+```
+
+**Effectively-once, not exactly-once.** There is no exactly-once across
+the bus boundary — that is the guarantee a durable log gives you, and
+reaching for synchronous cross-service calls to fake it reintroduces the
+timeout problem the pipeline exists to avoid. Every consumer
+de-duplicates on a key, which makes the end-to-end behaviour
+effectively-once: a message may be delivered, or a relay may publish,
+more than once, but the effect lands once. The external adapters
+(ClearBank, Onfido) apply exactly this — ingress-idempotent
+consume-then-ack, egress via an outbox for events and an intent for the
+outbound HTTP call. See [payments.md](payments.md) for the concrete
+adapter flows.
 
 ### Detailed design
 

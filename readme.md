@@ -193,15 +193,18 @@ processor to consume.
 
 **Scheme + IDV paths** — outbound payments publish a
 `submit-payment` command on a scheme channel;
-`bank-clearbank-adapter-service` consumes, calls FPS, and
-republishes settlement webhooks as `transaction-settled`
-events. The IDV path mirrors this:
-`bank-idv-processor-service` publishes `submit-idv-check`,
-`bank-onfido-adapter-service` calls Onfido, the
-`check.completed` webhook becomes an `idv-completed` event.
-The simulator services stand in for ClearBank FPS and
-Onfido respectively; the dotted edges to ClearBank and
-Onfido mark the production targets.
+`bank-clearbank-adapter-service` consumes it into a durable
+outbound intent, and a relay POSTs to FPS outside any FDB
+transaction. Settlement webhooks are persisted to an outbox and
+relayed back as `transaction-settled` events. The IDV path
+mirrors this: `bank-idv-processor-service` publishes
+`submit-idv-check`, the Onfido adapter relays the outbound call
+and turns the `check.completed` webhook into an `idv-completed`
+event. Both adapters own an FDB store and follow the
+transactional outbox-and-intent model — see
+[transaction-processing](docs/tdd/transaction-processing.md). The
+simulator services stand in for ClearBank FPS and Onfido; the
+dotted edges to ClearBank and Onfido mark the production targets.
 
 **Watchers** — FDB changelog triggers drive reactive
 state transitions inside the processor services: cash
