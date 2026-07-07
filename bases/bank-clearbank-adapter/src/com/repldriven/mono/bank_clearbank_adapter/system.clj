@@ -166,7 +166,8 @@
   {:system/start (fn [{:system/keys [config instance]}]
                    (or instance (commands/->ClearBankCommandProcessor config)))
    :system/config {:schemas system/required-component
-                   :clearbank-url system/required-component}
+                   :record-db system/required-component
+                   :record-store system/required-component}
    :system/instance-schema some?})
 
 (system/defcomponents :clearbank-adapter

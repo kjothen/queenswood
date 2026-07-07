@@ -23,6 +23,8 @@
     [com.repldriven.mono.schemas.person_identification :as
      person-identification]
     [com.repldriven.mono.schemas.payee_check :as payee-check]
+    [com.repldriven.mono.schemas.clearbank :as clearbank]
+    [com.repldriven.mono.schemas.onfido :as onfido]
     [com.repldriven.mono.schemas.policies :as policies]
     [com.repldriven.mono.schemas.transactions :as transactions]
     [com.repldriven.mono.schemas.types :as types]
@@ -64,6 +66,12 @@
      OutboundPaymentProto$OutboundPayment)
     (com.repldriven.mono.schemas.payee_check
      PayeeCheckProto$PayeeCheck)
+    (com.repldriven.mono.schemas.clearbank
+     ClearbankOutboxProto$ClearbankOutboxEvent
+     ClearbankOutboxProto$ClearbankOutboundIntent)
+    (com.repldriven.mono.schemas.onfido
+     OnfidoOutboxProto$OnfidoOutboxEvent
+     OnfidoOutboxProto$OnfidoOutboundIntent)
     (com.repldriven.mono.schemas.policies
      PolicyProto$Policy
      PolicyProto$PolicyBinding)
@@ -694,6 +702,77 @@
   - m: PayeeCheck map matching the generated schema."
   [m]
   (PayeeCheckProto$PayeeCheck/parseFrom (PayeeCheck->pb m)))
+
+(def ^{:doc "Parse ClearbankOutboxEvent protobuf bytes into a Clojure map."}
+     pb->ClearbankOutboxEvent
+  clearbank/pb->ClearbankOutboxEvent)
+
+(defn ClearbankOutboxEvent->pb
+  "Serialise a ClearbankOutboxEvent map to protobuf bytes.
+
+  Args:
+  - m: ClearbankOutboxEvent map matching the generated schema."
+  [m]
+  (proto/->pb (clearbank/new-ClearbankOutboxEvent m)))
+
+(defn ClearbankOutboxEvent->java
+  "Parse a ClearbankOutboxEvent map into the generated Java protobuf class.
+
+  Args:
+  - m: ClearbankOutboxEvent map matching the generated schema."
+  [m]
+  (ClearbankOutboxProto$ClearbankOutboxEvent/parseFrom
+   (ClearbankOutboxEvent->pb m)))
+
+(def ^{:doc "Parse ClearbankOutboundIntent protobuf bytes into a Clojure map."}
+     pb->ClearbankOutboundIntent
+  clearbank/pb->ClearbankOutboundIntent)
+
+(defn ClearbankOutboundIntent->pb
+  "Serialise a ClearbankOutboundIntent map to protobuf bytes.
+
+  Args:
+  - m: ClearbankOutboundIntent map matching the generated schema."
+  [m]
+  (proto/->pb (clearbank/new-ClearbankOutboundIntent m)))
+
+(defn ClearbankOutboundIntent->java
+  "Parse a ClearbankOutboundIntent map into the generated Java protobuf class.
+
+  Args:
+  - m: ClearbankOutboundIntent map matching the generated schema."
+  [m]
+  (ClearbankOutboxProto$ClearbankOutboundIntent/parseFrom
+   (ClearbankOutboundIntent->pb m)))
+
+(def ^{:doc "Parse OnfidoOutboxEvent protobuf bytes into a Clojure map."}
+     pb->OnfidoOutboxEvent
+  onfido/pb->OnfidoOutboxEvent)
+
+(defn OnfidoOutboxEvent->pb
+  "Serialise an OnfidoOutboxEvent map to protobuf bytes."
+  [m]
+  (proto/->pb (onfido/new-OnfidoOutboxEvent m)))
+
+(defn OnfidoOutboxEvent->java
+  "Parse an OnfidoOutboxEvent map into the generated Java protobuf class."
+  [m]
+  (OnfidoOutboxProto$OnfidoOutboxEvent/parseFrom (OnfidoOutboxEvent->pb m)))
+
+(def ^{:doc "Parse OnfidoOutboundIntent protobuf bytes into a Clojure map."}
+     pb->OnfidoOutboundIntent
+  onfido/pb->OnfidoOutboundIntent)
+
+(defn OnfidoOutboundIntent->pb
+  "Serialise an OnfidoOutboundIntent map to protobuf bytes."
+  [m]
+  (proto/->pb (onfido/new-OnfidoOutboundIntent m)))
+
+(defn OnfidoOutboundIntent->java
+  "Parse an OnfidoOutboundIntent map into the generated Java protobuf class."
+  [m]
+  (OnfidoOutboxProto$OnfidoOutboundIntent/parseFrom
+   (OnfidoOutboundIntent->pb m)))
 
 (def ^{:doc "Parse Policy protobuf bytes into a Clojure map."} pb->Policy
   policies/pb->Policy)

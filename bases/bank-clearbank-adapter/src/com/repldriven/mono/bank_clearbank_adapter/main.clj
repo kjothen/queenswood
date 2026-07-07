@@ -2,6 +2,7 @@
   (:require
     com.repldriven.mono.avro.interface
     com.repldriven.mono.bank-clearbank-adapter.system
+    com.repldriven.mono.bank-clearbank-relay.interface
     com.repldriven.mono.bank-clearbank-webhook.interface
     com.repldriven.mono.bank-schema.interface
     com.repldriven.mono.command-processor.interface

@@ -17,6 +17,8 @@ import "schemas/scheduler/scheduler-job.proto";
 import "schemas/scheduler/scheduler-run.proto";
 import "schemas/memberships/membership.proto";
 import "schemas/banks/bank.proto";
+import "schemas/onfido/outbox.proto";
+import "schemas/clearbank/outbox.proto";
 import "schemas/party/party-national-identifier.proto";
 import "schemas/party/party.proto";
 import "schemas/payee-check/payee_check.proto";
@@ -67,4 +69,8 @@ message RecordTypeUnion {
   optional com.repldriven.mono.schemas.cash_account_products.CashAccountProductTemplate _CashAccountProductTemplate = 28;
   optional com.repldriven.mono.schemas.scheduler.SchedulerJob _SchedulerJob = 29;
   optional com.repldriven.mono.schemas.scheduler.SchedulerRun _SchedulerRun = 30;
+  optional com.repldriven.mono.schemas.clearbank.ClearbankOutboxEvent _ClearbankOutboxEvent = 31;
+  optional com.repldriven.mono.schemas.clearbank.ClearbankOutboundIntent _ClearbankOutboundIntent = 32;
+  optional com.repldriven.mono.schemas.onfido.OnfidoOutboxEvent _OnfidoOutboxEvent = 33;
+  optional com.repldriven.mono.schemas.onfido.OnfidoOutboundIntent _OnfidoOutboundIntent = 34;
 }

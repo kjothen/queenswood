@@ -2,4 +2,5 @@ system:
   message-bus: !include bank-onfido-adapter/message-bus-test.yml
   avro: !include avro/avro-test.yml
   event: !include bank-onfido-adapter/event-test.yml
+  fdb: !include bank/fdb-test.yml
   server: !include bank-onfido-adapter/server-test.yml

@@ -74,13 +74,30 @@ system:
     command-processor-impl: !system/component
       system/component-kind: onfido-adapter/command-processor
       schemas: !system/ref avro.serde
-      onfido-url: !env ONFIDO_URL
+      record-db: !system/ref fdb.record-db
+      record-store: !system/ref fdb.meta-store
     command-processor: !system/component
       system/component-kind: command-processor/command-processor
       bus: !system/ref message-bus.bus
       processor: !system/local-ref command-processor-impl
       command-channel: !keyword idv-command
       command-response-channel: !keyword idv-command-response
+    relay-handler: !system/component
+      system/component-kind: onfido-relay/relay-handler
+      bus: !system/ref message-bus.bus
+      event-channel: !keyword idv-event
+    watchers: !system/component
+      system/component-kind: fdb/watchers
+      onfido-outbox:
+        record-db: !system/ref fdb.record-db
+        consumer-id: onfido-relay
+        store-name: onfido-outbox
+        handler: !system/local-ref relay-handler
+    outbound-runner: !system/component
+      system/component-kind: onfido-relay/outbound-runner
+      record-db: !system/ref fdb.record-db
+      record-store: !system/ref fdb.meta-store
+      onfido-url: !env ONFIDO_URL
   onfido-adapter-server:
     handler: !system/required-component
     interceptors: !system/component
@@ -88,6 +105,8 @@ system:
       bus: !system/ref message-bus.bus
       avro: !system/ref avro.serde
       event-channel: !keyword idv-event
+      record-db: !system/ref fdb.record-db
+      record-store: !system/ref fdb.meta-store
     jetty-adapter: !system/component
       system/component-kind: server/jetty-adapter
       handler: !system/ref onfido-adapter-server.handler

@@ -1,11 +1,12 @@
-(ns ^:eftest/synchronized
-    com.repldriven.mono.bank-onfido-adapter.interface-test
+(ns ^:eftest/synchronized com.repldriven.mono.bank-onfido-adapter.interface-test
   (:require
     [com.repldriven.mono.bank-onfido-adapter.api :as api]
 
+    [com.repldriven.mono.fdb.interface]
     [com.repldriven.mono.http-client.interface :as http]
     [com.repldriven.mono.server.interface :as server]
     [com.repldriven.mono.system.interface :as system]
+    [com.repldriven.mono.testcontainers.interface]
     [com.repldriven.mono.test-system.interface :refer
      [with-test-system nom-test>]]
 
@@ -30,15 +31,15 @@
      (binding [*base-url* (server/http-local-url jetty)]
        (testing "POST /webhooks/onfido/check-completed acknowledges 200"
          (nom-test> [res (post "/webhooks/onfido/check-completed"
-                               {:payload {:resource_type "check"
-                                          :action "check.completed"
-                                          :object {:id "ch.test-001"
-                                                   :status "complete"
-                                                   :result "clear"
-                                                   :completed_at_iso8601
-                                                   "2026-05-02T12:00:00Z"
-                                                   :external_id
-                                                   "iv.test-001"}}})
+                               {:payload
+                                {:resource_type "check"
+                                 :action "check.completed"
+                                 :object
+                                 {:id "ch.test-001"
+                                  :status "complete"
+                                  :result "clear"
+                                  :completed_at_iso8601 "2026-05-02T12:00:00Z"
+                                  :external_id "bnk.test-001|iv.test-001"}}})
                      _ (is (= 200 (:status res)))
                      body (http/res->edn res)
                      _ (is (true? (:received body)))]))))))

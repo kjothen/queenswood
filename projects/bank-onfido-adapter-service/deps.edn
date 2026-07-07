@@ -16,6 +16,8 @@
  :deps
  {component/bank-onfido-webhook
   {:local/root "../../components/bank-onfido-webhook"}
+  component/bank-onfido-relay
+  {:local/root "../../components/bank-onfido-relay"}
   component/bank-resources {:local/root "../../components/bank-resources"}
   component/bank-schema {:local/root "../../components/bank-schema"}
 
