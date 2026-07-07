@@ -403,6 +403,28 @@ A reply can still be lost — a reply publish that fails, or one
 that arrives after the caller's timeout — but the command ran, so
 the idempotent retry path recovers it.
 
+**Late replies are discarded, not cached.** The dispatcher's
+in-flight registry is keyed by `correlation-id` and holds only the
+callers currently waiting; `send` removes its entry the moment it
+returns, whether a reply arrived or the timeout fired. So a reply
+that lands after the timeout matches no waiter and is dropped —
+nothing stashes it for a later request. Recovery is the idempotent
+retry, not a replayed reply: the HTTP idempotency cache
+deliberately does not cache a timeout (it is a 5xx), so the retry
+re-runs the command and the store-level dedup makes that
+re-execution safe.
+
+One subtlety follows from `correlation-id` doubling as both the
+trace id and the reply-matching key: it defaults to the
+idempotency key, so a sequential retry reuses it. If the first
+attempt's straggling reply arrives while the retry is waiting, it
+can satisfy the retry's promise — so the retry may return the
+original `ACCEPTED` reply or its own de-duplicated one. Both are
+safe (the effect landed once), but the reply status can differ
+(200 versus an already-submitted 4xx). Making that deterministic
+would mean per-attempt correlation ids and relying purely on
+store-level dedup.
+
 **Local channel bus.** The single-pod deployment replaces Pulsar
 with an in-process core.async bus. It is at-most-once — no ack,
 no redelivery, lost on crash — so durability there rests on FDB
