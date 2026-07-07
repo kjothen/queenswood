@@ -421,9 +421,15 @@ attempt's straggling reply arrives while the retry is waiting, it
 can satisfy the retry's promise — so the retry may return the
 original `ACCEPTED` reply or its own de-duplicated one. Both are
 safe (the effect landed once), but the reply status can differ
-(200 versus an already-submitted 4xx). Making that deterministic
-would mean per-attempt correlation ids and relying purely on
-store-level dedup.
+(200 versus an already-submitted 4xx). Two follow-ups close this,
+and both are wanted in the end. The read-back (see Known
+Limitations) is the higher-value one and comes first: returning
+the original resource on a de-duplicated retry, as cash-accounts
+already do, makes both possible replies a 200 with the resource,
+so the status no longer flips and the race stops mattering.
+Per-attempt reply-routing keys, kept distinct from the trace
+correlation id, then make reply matching deterministic in its own
+right.
 
 **Local channel bus.** The single-pod deployment replaces Pulsar
 with an in-process core.async bus. It is at-most-once — no ack,
@@ -488,7 +494,9 @@ throw-safe (a handler exception is logged, not fatal).
   that read-back to payments and transactions is a deliberate
   follow-up, kept out of this change because those paths already
   dedup safely and altering money-movement reply semantics
-  warrants its own tested change.
+  warrants its own tested change. This is the preferred fix — it
+  also makes the late-reply race above moot, since both possible
+  replies then carry the same 200 and resource.
 - **Authorisation is not pipeline-aware.** The auth interceptor
   short-circuits before commands are dispatched; the pipeline
   treats every received command as already-authorised. If a
