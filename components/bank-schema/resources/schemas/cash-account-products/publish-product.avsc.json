@@ -1,0 +1,10 @@
+{
+  "type": "record",
+  "name": "PublishCashAccountProduct",
+  "namespace": "com.repldriven.mono.cash_account_products.cash_account_product_lifecycle",
+  "fields": [
+    {"name": "bank_id", "type": "string"},
+    {"name": "product_id", "type": "string"},
+    {"name": "version_id", "type": "string"}
+  ]
+}

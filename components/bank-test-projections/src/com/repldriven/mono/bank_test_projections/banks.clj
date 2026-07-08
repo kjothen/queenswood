@@ -1,6 +1,6 @@
 (ns com.repldriven.mono.bank-test-projections.banks
   (:require
-    [com.repldriven.mono.bank-cash-account-product.interface :as products]
+    [com.repldriven.mono.bank-cash-account-product-query.interface :as products]
     [com.repldriven.mono.bank-cash-account-query.interface :as cash-accounts]
     [com.repldriven.mono.bank-party-query.interface :as party]))
 

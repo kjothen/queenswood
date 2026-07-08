@@ -21,6 +21,9 @@ cash-account-products:
       type: count
     - name: CashAccountProduct_by_bank_product_type
       fields: [bank_id, product_type]
+    - name: CashAccountProduct_by_idempotency_key
+      fields: [bank_id, idempotency_key]
+      unique: true
 cash-account-product-templates:
   record-type: CashAccountProductTemplate
   indexes: []

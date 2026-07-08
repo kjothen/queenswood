@@ -2,7 +2,7 @@
   (:require
     [com.repldriven.mono.bank-api.cursor :as cursor]
     [com.repldriven.mono.bank-api.errors :as errors]
-    [com.repldriven.mono.bank-cash-account-product.interface :as
+    [com.repldriven.mono.bank-cash-account-product-query.interface :as
      cash-account-products]
     [com.repldriven.mono.error.interface :as error]
     [com.repldriven.mono.utility.interface :as utility]))

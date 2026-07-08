@@ -12,6 +12,12 @@
                            "bank-schema" "bank-test-resources" "test-schema"
                            "command-schema" "event-schema"
                            "test-resources"]},
+            "bank-cash-account-product-processor-service"
+              {:alias "prd",
+               :necessary ["bank-resources"
+                           "bank-schema" "bank-test-resources" "test-schema"
+                           "command-schema" "event-schema"
+                           "test-resources"]},
             "bank-party-processor-service"
               {:alias "pty",
                :necessary ["bank-resources"

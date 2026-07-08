@@ -10,6 +10,7 @@ system:
   payee-checks: !include bank/payee-check-test.yml
   parties: !include bank-test-api-scenarios/party-test.yml
   cash-accounts: !include bank/cash-account-test.yml
+  cash-account-products: !include bank/cash-account-product-test.yml
   payments: !include bank/payment-test.yml
   interest: !include bank/interest-test.yml
   transactions: !include bank/transaction-test.yml
@@ -46,6 +47,7 @@ system:
       dispatchers:
         parties: !system/ref parties.dispatcher
         cash-accounts: !system/ref cash-accounts.dispatcher
+        cash-account-products: !system/ref cash-account-products.dispatcher
         payments: !system/ref payments.dispatcher
         interest: !system/ref interest.dispatcher
         transactions: !system/ref transactions.dispatcher
