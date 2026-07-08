@@ -3,7 +3,7 @@
     [com.repldriven.mono.bank-api.cursor :as cursor]
     [com.repldriven.mono.bank-api.errors :as errors]
 
-    [com.repldriven.mono.bank-party.interface :as parties]
+    [com.repldriven.mono.bank-party-query.interface :as parties]
 
     [com.repldriven.mono.error.interface :as error]
     [com.repldriven.mono.utility.interface :as utility]))

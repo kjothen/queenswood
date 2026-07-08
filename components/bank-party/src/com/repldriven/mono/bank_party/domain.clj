@@ -1,9 +1,7 @@
 (ns com.repldriven.mono.bank-party.domain
   (:refer-clojure :exclude [type])
   (:require
-    [com.repldriven.mono.utility.interface :as utility]
-
-    [clojure.string :as str]))
+    [com.repldriven.mono.utility.interface :as utility]))
 
 (defn new-party
   [data]
@@ -41,33 +39,4 @@
      :value value
      :issuing-country issuing-country
      :created-at (System/currentTimeMillis)}))
-
-(defn- normalize-name
-  [s]
-  (-> (or s "")
-      str/trim
-      str/lower-case
-      (str/replace #"\s+" " ")))
-
-(defn- tokenize
-  [s]
-  (set (str/split s #"\s+")))
-
-(defn match-name
-  [party-name query-name]
-  (let [a (normalize-name party-name)
-        b (normalize-name query-name)]
-    (cond
-     (= a b)
-     :match
-
-     (let [ta (tokenize a)
-           tb (tokenize b)
-           shorter (if (<= (count ta) (count tb)) ta tb)
-           longer (if (<= (count ta) (count tb)) tb ta)]
-       (every? longer shorter))
-     :close-match
-
-     :else
-     :no-match)))
 

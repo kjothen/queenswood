@@ -1,6 +1,6 @@
 (ns com.repldriven.mono.bank-test-projections.parties
   (:require
-    [com.repldriven.mono.bank-party.interface :as party]))
+    [com.repldriven.mono.bank-party-query.interface :as party]))
 
 (defn- bare-status
   [v]

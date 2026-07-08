@@ -25,6 +25,8 @@
   component/bank-clearbank-relay
   {:local/root "../../components/bank-clearbank-relay"}
   component/bank-party {:local/root "../../components/bank-party"}
+  component/bank-party-query
+  {:local/root "../../components/bank-party-query"}
   component/bank-person-identification
   {:local/root "../../components/bank-person-identification"}
   component/bank-policy {:local/root "../../components/bank-policy"}

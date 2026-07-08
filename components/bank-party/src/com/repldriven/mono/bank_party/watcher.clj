@@ -3,6 +3,7 @@
     [com.repldriven.mono.bank-party.domain :as domain]
     [com.repldriven.mono.bank-party.store :as store]
 
+    [com.repldriven.mono.bank-party-query.interface :as q]
     [com.repldriven.mono.bank-schema.interface :as schema]
 
     [com.repldriven.mono.error.interface :refer [let-nom>]]
@@ -21,7 +22,7 @@
           transition (idv-status->party-transition status)]
       (when transition
         (let-nom> [txn (fdb/ctx->txn ctx record-store)
-                   party (store/get-party txn bank-id party-id)]
+                   party (q/get-party txn bank-id party-id)]
           (when (= :party-status-pending (:status party))
             (let [updated-party (transition party)]
               (store/save-party txn

@@ -39,6 +39,8 @@
   component/bank-onfido-relay
   {:local/root "../../components/bank-onfido-relay"}
   component/bank-party {:local/root "../../components/bank-party"}
+  component/bank-party-query
+  {:local/root "../../components/bank-party-query"}
   component/bank-payee-check {:local/root "../../components/bank-payee-check"}
   component/bank-payment {:local/root "../../components/bank-payment"}
   component/bank-person-identification
