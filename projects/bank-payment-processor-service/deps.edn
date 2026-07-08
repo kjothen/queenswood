@@ -29,6 +29,8 @@
   component/bank-party-query
   {:local/root "../../components/bank-party-query"}
   component/bank-payment {:local/root "../../components/bank-payment"}
+  component/bank-payment-query
+  {:local/root "../../components/bank-payment-query"}
   component/bank-person-identification
   {:local/root "../../components/bank-person-identification"}
   component/bank-policy {:local/root "../../components/bank-policy"}

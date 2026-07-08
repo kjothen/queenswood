@@ -134,6 +134,8 @@
                                       "components/bank-test-projections"}
     components/bank-payee-check {:local/root "components/bank-payee-check"}
     components/bank-payment {:local/root "components/bank-payment"}
+    components/bank-payment-query
+    {:local/root "components/bank-payment-query"}
     components/bank-transaction {:local/root "components/bank-transaction"}
     components/bank-user {:local/root "components/bank-user"}
     bases/bank-api {:local/root "bases/bank-api"}

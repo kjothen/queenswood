@@ -2,7 +2,7 @@
   (:require
     [com.repldriven.mono.bank-balance.interface :as balance]
     [com.repldriven.mono.bank-party-query.interface :as party]
-    [com.repldriven.mono.bank-payment.interface :as payment]
+    [com.repldriven.mono.bank-payment-query.interface :as payment]
 
     [com.repldriven.mono.error.interface :as error]))
 

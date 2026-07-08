@@ -8,6 +8,7 @@
     [com.repldriven.mono.bank-cash-account-query.interface :as cash-accounts]
     [com.repldriven.mono.bank-ledger-account.interface :as
      ledger-accounts]
+    [com.repldriven.mono.bank-payment-query.interface :as q]
     [com.repldriven.mono.bank-policy.interface :as policy]
     [com.repldriven.mono.bank-transaction.interface :as transactions]
 
@@ -53,7 +54,7 @@
        policies (policy/get-effective-policies
                  txn
                  {:bank-id bank-id})
-       today-count (store/count-inbound-by-org-business-day
+       today-count (q/count-inbound-by-org-business-day
                     txn
                     bank-id
                     business-day)
@@ -186,8 +187,8 @@
        (let-nom>
          [_ (check-debit-credit-code debit-credit-code)
           account (cash-accounts/get-account-by-bban txn creditor-bban)
-          settled (store/get-inbound-payment txn scheme-transaction-id)
-          held (store/get-held-inbound-by-end-to-end-id txn end-to-end-id)]
+          settled (q/get-inbound-payment txn scheme-transaction-id)
+          held (q/get-held-inbound-by-end-to-end-id txn end-to-end-id)]
          (cond
           settled
           (do (log/infof "Inbound payment settlement already processed: %s"
@@ -263,7 +264,7 @@
     (store/transact
      config
      (fn [txn]
-       (let-nom> [payment (store/get-outbound-payment txn payment-id)]
+       (let-nom> [payment (q/get-outbound-payment txn payment-id)]
          (cond
           (nil? payment)
           (error/fail
@@ -297,7 +298,7 @@
     (store/transact
      config
      (fn [txn]
-       (let-nom> [payment (store/get-outbound-payment txn payment-id)]
+       (let-nom> [payment (q/get-outbound-payment txn payment-id)]
          (cond
           (nil? payment)
           (error/fail
@@ -335,7 +336,7 @@
      (fn [txn]
        (let-nom>
          [account (cash-accounts/get-account-by-bban txn creditor-bban)
-          existing (store/get-held-inbound-by-end-to-end-id txn end-to-end-id)]
+          existing (q/get-held-inbound-by-end-to-end-id txn end-to-end-id)]
          (cond
           existing
           (do (log/infof "Inbound hold already recorded: %s" end-to-end-id)
@@ -368,7 +369,7 @@
      config
      (fn [txn]
        (let-nom>
-         [held (store/get-held-inbound-by-end-to-end-id txn end-to-end-id)]
+         [held (q/get-held-inbound-by-end-to-end-id txn end-to-end-id)]
          (if (nil? held)
            (do (log/infof "Inbound return with no held inbound, ignored: %s"
                           end-to-end-id)
@@ -429,7 +430,7 @@
     (store/transact
      config
      (fn [txn]
-       (let-nom> [payment (store/get-outbound-payment txn payment-id)]
+       (let-nom> [payment (q/get-outbound-payment txn payment-id)]
          (cond
           (nil? payment)
           (error/fail

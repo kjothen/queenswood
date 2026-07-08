@@ -1,6 +1,6 @@
 (ns com.repldriven.mono.bank-test-projections.payments
   (:require
-    [com.repldriven.mono.bank-payment.interface :as payment]))
+    [com.repldriven.mono.bank-payment-query.interface :as payment]))
 
 (defn- bare-status
   [v]
