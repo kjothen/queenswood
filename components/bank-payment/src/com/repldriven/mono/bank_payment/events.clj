@@ -5,7 +5,7 @@
 
     [com.repldriven.mono.bank-balance.interface :as balances]
     [com.repldriven.mono.bank-bank.interface :as banks]
-    [com.repldriven.mono.bank-cash-account.interface :as cash-accounts]
+    [com.repldriven.mono.bank-cash-account-query.interface :as cash-accounts]
     [com.repldriven.mono.bank-ledger-account.interface :as
      ledger-accounts]
     [com.repldriven.mono.bank-policy.interface :as policy]

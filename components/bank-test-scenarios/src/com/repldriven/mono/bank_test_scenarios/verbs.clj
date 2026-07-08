@@ -6,6 +6,8 @@
     [com.repldriven.mono.bank-balance.interface :as balances]
     [com.repldriven.mono.bank-cash-account-product.interface :as products]
     [com.repldriven.mono.bank-cash-account.interface :as cash-accounts]
+    [com.repldriven.mono.bank-cash-account-query.interface :as
+     cash-accounts-query]
     [com.repldriven.mono.bank-ledger-account.interface :as
      ledger-accounts]
     [com.repldriven.mono.bank-idv.interface :as idv]
@@ -30,7 +32,7 @@
   GL legs (account-id resolves to no cash account) pass through
   untouched."
   [txn bank-id leg]
-  (let [account (cash-accounts/get-account txn bank-id (:account-id leg))
+  (let [account (cash-accounts-query/get-account txn bank-id (:account-id leg))
         product-type (when (and (map? account) (not (error/anomaly? account)))
                        (:product-type account))]
     (cond-> leg
@@ -919,7 +921,7 @@
         account-id (if (keyword? account-ref)
                      (get-in id-mapping [:model->real account-ref])
                      account-ref)
-        result (cash-accounts/get-account bank bank-real-id account-id)]
+        result (cash-accounts-query/get-account bank bank-real-id account-id)]
     (-> ctx
         (update :counter inc)
         (track result))))

@@ -4,7 +4,7 @@
     [com.repldriven.mono.bank-interest.store :as store]
 
     [com.repldriven.mono.bank-balance.interface :as balances]
-    [com.repldriven.mono.bank-cash-account.interface :as
+    [com.repldriven.mono.bank-cash-account-query.interface :as
      cash-accounts]
     [com.repldriven.mono.bank-cash-account-product.interface :as
      products]

@@ -1,16 +1,22 @@
 (ns com.repldriven.mono.bank-cash-account.interface
-  "Cash account lifecycle (open, close, lookup) for banks.
-  Open allocates payment addresses, derives account-type from the
-  party, validates the chosen product version, and seeds the
-  product's balance buckets. Status transitions are driven via the
-  changelog watcher; `seed-opened-account` and `seed-closed-account`
-  are admin/test shortcuts that bypass it."
+  "Cash account write side: open and close for banks. Open allocates
+  payment addresses, derives account-type from the party, validates the
+  chosen product version, and seeds the product's balance buckets.
+  Status transitions are driven via the changelog watcher;
+  `seed-opened-account` and `seed-closed-account` are admin/test
+  shortcuts that bypass it.
+
+  Reads live in `bank-cash-account-query`; this brick reuses them inside
+  its own transactions. `bank-api` requires the query brick, not this
+  one — state changes reach the processor as commands over the bus."
   (:require
     com.repldriven.mono.bank-cash-account.system
 
     [com.repldriven.mono.bank-cash-account.core :as core]
     [com.repldriven.mono.bank-cash-account.domain :as domain]
     [com.repldriven.mono.bank-cash-account.store :as store]
+
+    [com.repldriven.mono.bank-cash-account-query.interface :as q]
 
     [com.repldriven.mono.error.interface :refer [let-nom>]]))
 
@@ -29,55 +35,6 @@
    (core/open-account txn data))
   ([txn data opts]
    (core/open-account txn data opts)))
-
-(defn get-account
-  "Load a single cash account. Returns the account map or a
-  `:cash-account/not-found` rejection anomaly.
-
-  Args:
-  - txn: FDB transaction or db handle.
-  - bank-id: owning bank id.
-  - account-id: account id.
-  - opts (optional): map; `:embed-balances` and
-    `:embed-transactions` enrich the result."
-  ([txn bank-id account-id]
-   (core/get-account txn bank-id account-id))
-  ([txn bank-id account-id opts]
-   (core/get-account txn bank-id account-id opts)))
-
-(defn get-accounts
-  "List cash accounts for a bank. Returns
-  `{:accounts [...] :before id|nil :after id|nil}` or an anomaly.
-
-  Args:
-  - txn: FDB transaction or db handle.
-  - bank-id: owning bank id.
-  - opts (optional): map; `:after`, `:before`, `:limit`,
-    `:embed-balances`, `:embed-transactions`."
-  ([txn bank-id]
-   (core/get-accounts txn bank-id))
-  ([txn bank-id opts]
-   (core/get-accounts txn bank-id opts)))
-
-(defn find-account-by-product
-  "Return the first CashAccount whose `(bank-id, product-id)` match,
-  or nil.
-
-  Args:
-  - txn: FDB transaction or db handle.
-  - bank-id: owning bank id.
-  - product-id: product id."
-  [txn bank-id product-id]
-  (core/find-account-by-product txn bank-id product-id))
-
-(defn get-account-by-bban
-  "Return the account matching the given BBAN, or nil.
-
-  Args:
-  - txn: FDB transaction or db handle.
-  - bban: basic bank account number string."
-  [txn bban]
-  (core/get-account-by-bban txn bban))
 
 (defn close-account
   "Close an account. Returns the updated account
@@ -107,7 +64,7 @@
   - account-id: account id."
   [txn bank-id account-id]
   (let-nom>
-    [account (core/get-account txn bank-id account-id)
+    [account (q/get-account txn bank-id account-id)
      opened (domain/opened-account account)
      saved (store/save-account txn
                                opened
@@ -128,7 +85,7 @@
   - account-id: account id."
   [txn bank-id account-id]
   (let-nom>
-    [account (core/get-account txn bank-id account-id)
+    [account (q/get-account txn bank-id account-id)
      closed (domain/closed-account account)
      saved (store/save-account txn
                                closed
