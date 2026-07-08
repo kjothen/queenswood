@@ -102,23 +102,31 @@ graph LR
 {:command         "<command-name>"
  :id              "<idempotency-key>"
  :correlation-id  "<trace-id>"
+ :command-id      "<per-send-uuid>"  ; stamped by the dispatcher
  :causation-id    nil
  :traceparent     "<otel>"
  :tracestate      nil
  :payload         {...}             ; command-specific
- :reply-to        nil}              ; set by dispatcher
+ :reply-to        nil}              ; reply topic address, unused
 ```
 
 `:id` is the caller-supplied idempotency key.
 `:correlation-id` threads through the whole chain and defaults
-to `:id` if no header was supplied. `:causation-id` links a
-downstream message to its predecessor.
+to `:id` if no header was supplied. `:command-id` is minted fresh
+by the dispatcher on every send and identifies this one attempt —
+it is the reply-matching key (see below), distinct from `:id` and
+`:correlation-id`, both of which a retry reuses. `:causation-id`
+links a downstream message to its predecessor. `:reply-to` is the
+reply topic address — designed to name a destination like
+`pulsar:a/b/c`, but there is one shared response channel today, so
+it stays unused.
 
 **Response envelope** (reply from processor to caller):
 
 ```clojure
 {:id              "<fresh-uuidv7>"
  :correlation-id  "<from-request>"
+ :command-id      "<from-request>"   ; echoed — the reply-matching key
  :causation-id    "<request :id>"
  :traceparent     "<otel>"
  :status          "ACCEPTED" | "REJECTED" | "FAILED"
@@ -166,7 +174,7 @@ sequenceDiagram
     F-->>P: ack
     P->>P: command-response (ACCEPTED)
     P->>-B: reply envelope
-    B-->>-H: reply matched by correlation-id
+    B-->>-H: reply matched by command-id
     H->>H: 2xx response
 ```
 
@@ -324,11 +332,19 @@ adapter flows.
 ### Detailed design
 
 **Dispatcher and reply matching.** `command/send` on the caller
-side keeps a registry of in-flight requests keyed by
-`:correlation-id`. When a reply arrives on the reply channel,
-the dispatcher resolves it against the registry and returns the
-response (or anomaly) to the caller. Default timeout is 10
-seconds; expired requests return a timeout anomaly.
+side mints a fresh `:command-id` for the send, stamps it on the
+envelope, and keeps a registry of in-flight requests keyed by that
+`:command-id`. The processor echoes the `:command-id` back on the
+reply; when a reply arrives on the shared reply channel, the
+dispatcher resolves it against the registry by `:command-id` and
+returns the response (or anomaly) to the caller. Default timeout
+is 10 seconds; expired requests return a timeout anomaly. Keying
+on the per-send `:command-id` — rather than `:correlation-id`,
+which a retry reuses — is what keeps a straggling reply from one
+attempt from satisfying another attempt's waiter. The reply
+travels the one shared response channel regardless; `:command-id`
+demultiplexes it in process, so no per-attempt reply *topic* is
+needed.
 
 **Processor harness.** `command/process` runs a consume-loop on
 the bus, handing each envelope to the supplied process-fn. The
@@ -404,7 +420,7 @@ that arrives after the caller's timeout — but the command ran, so
 the idempotent retry path recovers it.
 
 **Late replies are discarded, not cached.** The dispatcher's
-in-flight registry is keyed by `correlation-id` and holds only the
+in-flight registry is keyed by `command-id` and holds only the
 callers currently waiting; `send` removes its entry the moment it
 returns, whether a reply arrived or the timeout fired. So a reply
 that lands after the timeout matches no waiter and is dropped —
@@ -414,19 +430,17 @@ deliberately does not cache a timeout (it is a 5xx), so the retry
 re-runs the command and the store-level dedup makes that
 re-execution safe.
 
-One subtlety follows from `correlation-id` doubling as both the
-trace id and the reply-matching key: it defaults to the
-idempotency key, so a sequential retry reuses it. If the first
-attempt's straggling reply arrives while the retry is waiting, it
-can satisfy the retry's promise — so the retry may return the
-original reply or its own de-duplicated one. Both are safe (the
-effect landed once), and because payments, transactions, and
+Because `command-id` is minted per send, a retry — which reuses
+the idempotency key and the correlation id — waits on a fresh key
+of its own. A straggling reply from the first attempt carries that
+attempt's `command-id`, so it can only ever match that attempt's
+already-departed waiter and is dropped; it can never satisfy the
+retry, which resolves to its own reply. This is independent of the
+read-back above, and the two compose: the retry gets a
+deterministic reply, and because payments, transactions, and
 cash-accounts read the original resource back on a de-duplicated
-retry (see Idempotency above), both replies carry the same 200 and
-resource — the status no longer flips. Making reply matching
-deterministic in its own right would still need per-attempt
-reply-routing keys, kept distinct from the trace correlation id:
-the remaining follow-up.
+retry (see Idempotency above), that reply carries a 200 with the
+original resource rather than a rejection.
 
 **Local channel bus.** The single-pod deployment replaces Pulsar
 with an in-process core.async bus. It is at-most-once — no ack,

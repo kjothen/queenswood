@@ -46,8 +46,9 @@
   (let [{:keys [avro]} request
         envelope (command/req->command-request request command-name)
         ;; Routes without `require-idempotency-key` carry no client key, so
-        ;; the envelope's id/correlation-id are nil. Assign a server id —
-        ;; correlation-id must be unique or request-reply replies collide.
+        ;; the envelope's id/correlation-id are nil. Assign a server id so
+        ;; the command and its trace are addressable. Reply matching is on
+        ;; the dispatcher's per-send command-id, not correlation-id.
         id (or (:id envelope) (str (utility/uuidv7)))
         envelope (assoc envelope
                         :id id
