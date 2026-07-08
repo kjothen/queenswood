@@ -10,6 +10,7 @@
     [com.repldriven.mono.bank-cash-account-product.interface :as products]
     [com.repldriven.mono.bank-ledger-account.interface :as ledger-accounts]
     [com.repldriven.mono.bank-party.interface :as party]
+    [com.repldriven.mono.bank-party-query.interface :as party-query]
     [com.repldriven.mono.bank-policy.interface :as policy]
     [com.repldriven.mono.bank-scheduler.interface :as scheduler]
 
@@ -144,7 +145,7 @@
   [txn bank client-secret]
   (let [{:keys [bank-id]} bank]
     (let-nom>
-      [{:keys [parties]} (party/get-parties txn bank-id)
+      [{:keys [parties]} (party-query/get-parties txn bank-id)
        {:keys [accounts]} (cash-accounts-query/get-accounts txn bank-id)
        enriched (enrich-accounts txn bank-id accounts)]
       {:bank (assoc bank

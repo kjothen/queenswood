@@ -4,7 +4,7 @@
 
     [com.repldriven.mono.bank-cash-account-query.interface :as cash-accounts]
     [com.repldriven.mono.bank-clearbank-relay.interface :as relay]
-    [com.repldriven.mono.bank-party.interface :as parties]
+    [com.repldriven.mono.bank-party-query.interface :as parties]
 
     [com.repldriven.mono.avro.interface :as avro]
     [com.repldriven.mono.error.interface :as error :refer [let-nom>]]

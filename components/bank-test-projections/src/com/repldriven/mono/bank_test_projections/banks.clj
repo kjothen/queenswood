@@ -2,7 +2,7 @@
   (:require
     [com.repldriven.mono.bank-cash-account-product.interface :as products]
     [com.repldriven.mono.bank-cash-account-query.interface :as cash-accounts]
-    [com.repldriven.mono.bank-party.interface :as party]))
+    [com.repldriven.mono.bank-party-query.interface :as party]))
 
 (defn- model-ids
   [real->model real-id-key records]

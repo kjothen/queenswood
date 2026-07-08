@@ -1,51 +1,20 @@
 (ns com.repldriven.mono.bank-payment.interface
-  "Internal, inbound, and outbound payment processing. Submission
-  records balance legs and persists the payment record; settlement
-  events flip outbound payments to completed and post the customer
-  legs for inbound payments. Hold events mark an outbound payment held
-  while the scheme screens it; rejection events reverse the in-flight
-  legs (1200 → debtor) and flip the payment to failed. Returns the
-  payment map or an anomaly."
+  "Internal, inbound, and outbound payment write side: submission and
+  settlement. Submission records balance legs and persists the payment
+  record; settlement events flip outbound payments to completed and post
+  the customer legs for inbound payments. Hold events mark an outbound
+  payment held while the scheme screens it; rejection events reverse the
+  in-flight legs (1200 → debtor) and flip the payment to failed. Returns
+  the payment map or an anomaly.
+
+  Reads live in `bank-payment-query`; this brick reuses them inside its
+  own transactions. `bank-api` requires the query brick, not this one —
+  submissions reach the processor as commands, settlements as events."
   (:require
     com.repldriven.mono.bank-payment.system
 
     [com.repldriven.mono.bank-payment.core :as core]
-    [com.repldriven.mono.bank-payment.events :as events]
-    [com.repldriven.mono.bank-payment.store :as store]))
-
-(defn get-internal-payment
-  "Load an internal payment by id.
-
-  Args:
-  - txn: FDB handle or open transaction.
-  - payment-id: the payment's id.
-
-  Returns the payment map or nil."
-  [txn payment-id]
-  (store/get-internal-payment txn payment-id))
-
-(defn get-outbound-payment
-  "Load an outbound payment by id.
-
-  Args:
-  - txn: FDB handle or open transaction.
-  - payment-id: the payment's id.
-
-  Returns the payment map or nil."
-  [txn payment-id]
-  (store/get-outbound-payment txn payment-id))
-
-(defn get-inbound-payment
-  "Load an inbound payment by its scheme-transaction-id (the
-  unique secondary index).
-
-  Args:
-  - txn: FDB handle or open transaction.
-  - scheme-transaction-id: scheme-side unique id.
-
-  Returns the payment map or nil."
-  [txn scheme-transaction-id]
-  (store/get-inbound-payment txn scheme-transaction-id))
+    [com.repldriven.mono.bank-payment.events :as events]))
 
 (defn submit-internal
   "Submit an internal (same-org) payment between two cash accounts.

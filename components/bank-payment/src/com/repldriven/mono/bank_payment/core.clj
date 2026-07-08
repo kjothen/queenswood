@@ -8,6 +8,7 @@
      cash-accounts]
     [com.repldriven.mono.bank-ledger-account.interface :as
      ledger-accounts]
+    [com.repldriven.mono.bank-payment-query.interface :as q]
     [com.repldriven.mono.bank-policy.interface :as policy]
     [com.repldriven.mono.bank-transaction.interface :as
      transactions]
@@ -58,7 +59,7 @@
                              txn
                              bank-id
                              creditor-account-id)
-           today-count (store/count-internal-by-org-business-day
+           today-count (q/count-internal-by-org-business-day
                         txn
                         bank-id
                         business-day)
@@ -84,7 +85,7 @@
                                                 transaction-id)
            _ (store/save-internal-payment txn payment)]
           payment))))
-   store/find-internal-payment-by-idempotency-key))
+   q/find-internal-payment-by-idempotency-key))
 
 (defn- publish-scheme-command
   [config payment data]
@@ -152,11 +153,11 @@
                           (str "Bank has no 1200 pending-outbound"
                                " account in its chart of accounts")
                           :bank-id bank-id}))
-                    today-count (store/count-outbound-by-org-business-day
+                    today-count (q/count-outbound-by-org-business-day
                                  txn
                                  bank-id
                                  business-day)
-                    today-sum (store/sum-outbound-by-org-business-day
+                    today-sum (q/sum-outbound-by-org-business-day
                                txn
                                bank-id
                                business-day)
@@ -192,7 +193,7 @@
                 config
                 data
                 raw
-                store/find-outbound-payment-by-idempotency-key)]
+                q/find-outbound-payment-by-idempotency-key)]
     (when (and (not (store/uniqueness-violation? raw))
                (not (error/anomaly? result)))
       (publish-scheme-command config result data))

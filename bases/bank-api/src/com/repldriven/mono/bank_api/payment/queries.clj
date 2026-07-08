@@ -1,7 +1,7 @@
 (ns com.repldriven.mono.bank-api.payment.queries
   (:require
     [com.repldriven.mono.bank-api.errors :as errors]
-    [com.repldriven.mono.bank-payment.interface :as payments]
+    [com.repldriven.mono.bank-payment-query.interface :as payments]
     [com.repldriven.mono.error.interface :as error]))
 
 (defn get-internal-payment

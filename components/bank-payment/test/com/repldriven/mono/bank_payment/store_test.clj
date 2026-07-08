@@ -2,6 +2,7 @@
   (:require
     [com.repldriven.mono.bank-payment.store :as store]
 
+    [com.repldriven.mono.bank-payment-query.interface :as q]
     [com.repldriven.mono.fdb.interface]
     [com.repldriven.mono.system.interface :as system]
     [com.repldriven.mono.testcontainers.interface]
@@ -56,8 +57,7 @@
                                          config
                                          (internal-payment "pmt.i2" key)))))
      (testing "read-back returns the original payment, not the duplicate"
-       (nom-test> [found (store/find-internal-payment-by-idempotency-key config
-                                                                         key)
+       (nom-test> [found (q/find-internal-payment-by-idempotency-key config key)
                    _ (is (= "pmt.i1" (:payment-id found)))
                    _ (is (= key (:idempotency-key found)))])))))
 
@@ -76,7 +76,6 @@
                                          config
                                          (outbound-payment "pmt.o2" key)))))
      (testing "read-back returns the original payment, not the duplicate"
-       (nom-test> [found (store/find-outbound-payment-by-idempotency-key config
-                                                                         key)
+       (nom-test> [found (q/find-outbound-payment-by-idempotency-key config key)
                    _ (is (= "pmt.o1" (:payment-id found)))
                    _ (is (= key (:idempotency-key found)))])))))

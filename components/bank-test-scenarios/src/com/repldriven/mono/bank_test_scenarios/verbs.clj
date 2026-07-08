@@ -14,6 +14,7 @@
     [com.repldriven.mono.bank-interest.interface :as interest]
     [com.repldriven.mono.bank-bank.interface :as banks]
     [com.repldriven.mono.bank-party.interface :as party]
+    [com.repldriven.mono.bank-party-query.interface :as party-query]
     [com.repldriven.mono.bank-payee-check.interface :as payee-check]
     [com.repldriven.mono.bank-payment.interface :as payment]
     [com.repldriven.mono.bank-policy.interface :as policy]
@@ -930,7 +931,7 @@
   [{:keys [bank banks parties] :as ctx} {[model-bank party-ref] :args}]
   (let [bank-real-id (get-in banks [model-bank :real-id])
         party-id (resolve-real-id parties party-ref)
-        result (party/get-party bank bank-real-id party-id)]
+        result (party-query/get-party bank bank-real-id party-id)]
     (-> ctx
         (update :counter inc)
         (track result))))

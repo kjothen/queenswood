@@ -6,7 +6,7 @@
     [com.repldriven.mono.bank-balance.interface :as balances]
     [com.repldriven.mono.bank-cash-account-product.interface :as products]
     [com.repldriven.mono.bank-cash-account-query.interface :as q]
-    [com.repldriven.mono.bank-party.interface :as parties]
+    [com.repldriven.mono.bank-party-query.interface :as parties]
     [com.repldriven.mono.bank-policy.interface :as policy]
 
     [com.repldriven.mono.error.interface :refer [let-nom>]]
