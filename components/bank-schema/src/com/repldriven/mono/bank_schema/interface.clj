@@ -77,7 +77,8 @@
      PolicyProto$PolicyBinding)
     (com.repldriven.mono.schemas.transactions
      TransactionProto$Transaction
-     TransactionProto$TransactionLeg)
+     TransactionProto$TransactionLeg
+     TransactionProto$TransactionType)
     (com.repldriven.mono.schemas.users
      UserProto$User
      UserProto$IdentityProvider
@@ -155,6 +156,15 @@
   [iso-cash-account-type]
   (CashAccountProductProto$IsoCashAccountType/forNumber
    (iso-cash-account-type->int iso-cash-account-type)))
+
+(def transaction-type->int transactions/TransactionType-label2val)
+
+(defn transaction-type->pb-enum
+  "Convert a transaction-type keyword to the protobuf enum value, for
+  use as the comparand in an FDB enum-field index query."
+  [transaction-type]
+  (TransactionProto$TransactionType/forNumber
+   (transaction-type->int transaction-type)))
 
 
 (defn pb->CashAccountProduct

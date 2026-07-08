@@ -66,6 +66,36 @@
    :payment/get-outbound-payment
    "Failed to get outbound payment"))
 
+(defn find-internal-payment-by-idempotency-key
+  [txn idempotency-key]
+  (fdb/transact
+   txn
+   (fn [txn]
+     (some-> (fdb/query-record
+              (fdb/open txn internal-payments-store-name)
+              "InternalPayment"
+              "idempotency_key"
+              idempotency-key
+              {:index "InternalPayment_by_idempotency_key"})
+             schema/pb->InternalPayment))
+   :payment/find-internal-by-idempotency-key
+   "Failed to find internal payment by idempotency key"))
+
+(defn find-outbound-payment-by-idempotency-key
+  [txn idempotency-key]
+  (fdb/transact
+   txn
+   (fn [txn]
+     (some-> (fdb/query-record
+              (fdb/open txn outbound-payments-store-name)
+              "OutboundPayment"
+              "idempotency_key"
+              idempotency-key
+              {:index "OutboundPayment_by_idempotency_key"})
+             schema/pb->OutboundPayment))
+   :payment/find-outbound-by-idempotency-key
+   "Failed to find outbound payment by idempotency key"))
+
 (defn get-inbound-payment
   [txn scheme-transaction-id]
   (fdb/transact
