@@ -2,6 +2,7 @@
   (:require
     [com.repldriven.mono.bank-cash-account.store :as store]
 
+    [com.repldriven.mono.bank-cash-account-query.interface :as q]
     [com.repldriven.mono.fdb.interface]
     [com.repldriven.mono.system.interface :as system]
     [com.repldriven.mono.testcontainers.interface]
@@ -50,9 +51,8 @@
          (is (store/uniqueness-violation? result)
              "duplicate idempotency-key for the same bank must violate")))
      (testing "read-back returns the original account, not the duplicate"
-       (nom-test> [found (store/find-account-by-idempotency-key config
-                                                                test-bank-id
-                                                                key)
+       (nom-test> [found
+                   (q/find-account-by-idempotency-key config test-bank-id key)
                    _ (is (= "acc.1" (:account-id found)))
                    _ (is (= key (:idempotency-key found)))]))
      (testing "a different idempotency-key for the same bank is allowed"

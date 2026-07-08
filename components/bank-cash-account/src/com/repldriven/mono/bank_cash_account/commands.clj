@@ -2,6 +2,7 @@
   (:require
     [com.repldriven.mono.bank-cash-account.core :as core]
 
+    [com.repldriven.mono.bank-cash-account-query.interface :as q]
     [com.repldriven.mono.avro.interface :as avro]
     [com.repldriven.mono.error.interface :as error
      :refer [let-nom>]]
@@ -23,7 +24,7 @@
    "get-cash-account"
    (fn [config data]
      (let [{:keys [bank-id account-id]} data]
-       (->response config (core/get-account config bank-id account-id))))})
+       (->response config (q/get-account config bank-id account-id))))})
 
 (defn- dispatch
   [config message]

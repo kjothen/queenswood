@@ -196,3 +196,27 @@ if [ ${#SRC_CLJ[@]} -gt 0 ]; then
   ' "${SRC_CLJ[@]}" 2>/dev/null)
 fi
 report 'comment-block-bloat' "$out"
+
+# 6. bank-api reads are query-only.
+# A domain brick that has a `components/<brick>-query` sibling is split into a
+# read side (`-query`) and a write side (the plain name). `bank-api` request
+# code may require the `-query` interface but must not require the write
+# brick's interface — writes go over the bus as commands. The `system.clj`
+# registration bundle is exempt: it bare-requires interfaces to register
+# component-kinds (not to call them), and stays until the write brick leaves
+# the API project (`poly check` Tier-2 enforcement).
+section 'bank-api reads are query-only'
+out=""
+API_SRC=( $(printf '%s\n' "${SRC_CLJ[@]}" \
+             | grep -E '^bases/bank-api/src/' | grep -v '/system\.clj$') )
+if [ ${#API_SRC[@]} -gt 0 ]; then
+  for qdir in components/*-query; do
+    [ -d "$qdir" ] || continue
+    write_brick=$(basename "${qdir%-query}")
+    hits=$(grep -nE "com\.repldriven\.mono\.${write_brick}\.interface\b" \
+             "${API_SRC[@]}" 2>/dev/null)
+    [ -n "$hits" ] && out="${out}${hits}"$'\n'
+  done
+  out=$(printf '%s' "$out" | grep -v '^$' || true)
+fi
+report 'bank-api-reads-are-query-only' "$out"

@@ -5,6 +5,8 @@
 
     [com.repldriven.mono.bank-balance.interface :as balances]
     [com.repldriven.mono.bank-cash-account.interface :as cash-accounts]
+    [com.repldriven.mono.bank-cash-account-query.interface :as
+     cash-accounts-query]
     [com.repldriven.mono.bank-cash-account-product.interface :as products]
     [com.repldriven.mono.bank-ledger-account.interface :as ledger-accounts]
     [com.repldriven.mono.bank-party.interface :as party]
@@ -143,7 +145,7 @@
   (let [{:keys [bank-id]} bank]
     (let-nom>
       [{:keys [parties]} (party/get-parties txn bank-id)
-       {:keys [accounts]} (cash-accounts/get-accounts txn bank-id)
+       {:keys [accounts]} (cash-accounts-query/get-accounts txn bank-id)
        enriched (enrich-accounts txn bank-id accounts)]
       {:bank (assoc bank
                     :party (first parties)

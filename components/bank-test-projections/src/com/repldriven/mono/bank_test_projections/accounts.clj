@@ -1,6 +1,6 @@
 (ns com.repldriven.mono.bank-test-projections.accounts
   (:require
-    [com.repldriven.mono.bank-cash-account.interface :as cash-accounts]))
+    [com.repldriven.mono.bank-cash-account-query.interface :as cash-accounts]))
 
 (defn- reverse-by-real-id
   [m]

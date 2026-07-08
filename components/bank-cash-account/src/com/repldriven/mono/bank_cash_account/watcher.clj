@@ -3,6 +3,7 @@
     [com.repldriven.mono.bank-cash-account.domain :as domain]
     [com.repldriven.mono.bank-cash-account.store :as store]
 
+    [com.repldriven.mono.bank-cash-account-query.interface :as q]
     [com.repldriven.mono.bank-schema.interface :as schema]
 
     [com.repldriven.mono.fdb.interface :as fdb]))
@@ -15,7 +16,7 @@
       (when (#{:cash-account-status-opening :cash-account-status-closing}
              status-after)
         (let [txn (fdb/ctx->txn ctx record-store)
-              account (store/find-account txn bank-id account-id)]
+              account (q/find-account txn bank-id account-id)]
           (when account
             (let [transitioned
                   (case status-after

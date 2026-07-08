@@ -3,7 +3,7 @@
     [com.repldriven.mono.bank-api.errors :as errors]
 
     [com.repldriven.mono.bank-balance.interface :as balances]
-    [com.repldriven.mono.bank-cash-account.interface :as cash-accounts]
+    [com.repldriven.mono.bank-cash-account-query.interface :as cash-accounts]
 
     [com.repldriven.mono.error.interface :as error :refer [let-nom>]]))
 

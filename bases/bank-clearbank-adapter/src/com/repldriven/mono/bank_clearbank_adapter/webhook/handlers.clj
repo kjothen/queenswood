@@ -2,7 +2,7 @@
   (:require
     [com.repldriven.mono.bank-clearbank-adapter.publisher :as publisher]
 
-    [com.repldriven.mono.bank-cash-account.interface :as cash-accounts]
+    [com.repldriven.mono.bank-cash-account-query.interface :as cash-accounts]
     [com.repldriven.mono.bank-clearbank-relay.interface :as relay]
     [com.repldriven.mono.bank-party.interface :as parties]
 
