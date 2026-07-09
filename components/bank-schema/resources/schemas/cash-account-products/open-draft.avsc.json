@@ -1,0 +1,15 @@
+{
+  "type": "record",
+  "name": "OpenCashAccountProductDraft",
+  "namespace": "com.repldriven.mono.cash_account_products.cash_account_product_lifecycle",
+  "fields": [
+    {"name": "bank_id", "type": "string"},
+    {"name": "product_id", "type": "string"},
+    {"name": "name", "type": "string"},
+    {"name": "template_id", "type": "string"},
+    {"name": "currency", "type": "string"},
+    {"name": "interest_rate_bps", "type": ["null", "int"], "default": null},
+    {"name": "effective_from", "type": "long"},
+    {"name": "effective_to", "type": ["null", "long"], "default": null}
+  ]
+}

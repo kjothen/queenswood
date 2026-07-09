@@ -83,6 +83,13 @@ message CashAccountProduct {
   // own-funds house product) is excluded from the customer-facing product
   // listing, mirroring how internal templates are hidden.
   optional bool internal = 24;
+  // Client idempotency key (the command envelope :id) that created this
+  // product. Unique-indexed per bank so a redelivered or retried
+  // create-cash-account-product command reads the existing product back
+  // instead of minting a duplicate draft. Only new-product stamps it;
+  // versions created by other operations leave it unset (protojure drops
+  // the empty default, so they take no unique-index entry).
+  optional string idempotency_key = 25;
 }
 
 // A platform-scoped template (no bank_id) that defines the derived instrument

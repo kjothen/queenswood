@@ -1,6 +1,7 @@
 (ns com.repldriven.mono.bank-test-projections.products
   (:require
-    [com.repldriven.mono.bank-cash-account-product.interface :as products]))
+    [com.repldriven.mono.bank-cash-account-product-query.interface :as
+     products]))
 
 (defn- normalise-status
   [status]

@@ -173,7 +173,9 @@
   `effective_to` so callers see those keys only when a real epoch-day
   is set (epoch-day 0 is 1970-01-01, never a real product window), and
   the `false` default for `internal` so the flag is present only on
-  internal products (which never reach a customer response).
+  internal products (which never reach a customer response), and the
+  empty-string default for `idempotency_key` so only new-product
+  versions carry one (others never took a unique-index entry).
 
   Args:
   - input: protobuf bytes."
@@ -187,7 +189,10 @@
             (dissoc :effective-to)
 
             (not (:internal version))
-            (dissoc :internal))))
+            (dissoc :internal)
+
+            (= "" (:idempotency-key version))
+            (dissoc :idempotency-key))))
 
 (defn CashAccountProduct->pb
   "Serialise a CashAccountProduct map to protobuf bytes.

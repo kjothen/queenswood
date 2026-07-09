@@ -5,6 +5,8 @@
 
     [com.repldriven.mono.bank-balance.interface :as balances]
     [com.repldriven.mono.bank-cash-account-product.interface :as products]
+    [com.repldriven.mono.bank-cash-account-product-query.interface :as
+     products-query]
     [com.repldriven.mono.bank-cash-account.interface :as cash-accounts]
     [com.repldriven.mono.bank-cash-account-query.interface :as
      cash-accounts-query]
@@ -895,7 +897,7 @@
   [{:keys [bank banks products] :as ctx} {[model-bank product-ref] :args}]
   (let [bank-real-id (get-in banks [model-bank :real-id])
         product-id (resolve-product-id products product-ref)
-        result (products/get-product bank bank-real-id product-id)]
+        result (products-query/get-product bank bank-real-id product-id)]
     (-> ctx
         (update :counter inc)
         (track result))))
@@ -905,7 +907,8 @@
    {[model-bank product-ref version-id] :args}]
   (let [bank-real-id (get-in banks [model-bank :real-id])
         product-id (resolve-product-id products product-ref)
-        result (products/get-version bank bank-real-id product-id version-id)]
+        result
+        (products-query/get-version bank bank-real-id product-id version-id)]
     (-> ctx
         (update :counter inc)
         (track result))))

@@ -26,6 +26,13 @@ system:
           schema: !keyword command
           topicName: "persistent://tenant-1/namespace-1/topic-cash-accounts-command"
         schemas: !system/local-ref schemas
+      cash-account-products-command:
+        client: !system/local-ref client
+        conf:
+          accessMode: !pulsar/access-mode Shared
+          schema: !keyword command
+          topicName: "persistent://tenant-1/namespace-1/topic-cash-account-products-command"
+        schemas: !system/local-ref schemas
       parties-command:
         client: !system/local-ref client
         conf:
@@ -72,6 +79,16 @@ system:
           subscriptionType: !pulsar/subscription-type Shared
           topicNames:
             ["persistent://tenant-1/namespace-1/topic-cash-accounts-command-response"]
+        schemas: !system/local-ref schemas
+      cash-account-products-command-response:
+        client: !system/local-ref client
+        conf:
+          cryptoFailureAction: !pulsar/crypto-failure-action CONSUME
+          schema: !pulsar/schema AUTO_CONSUME
+          subscriptionName: bank-api-service-cash-account-products-command-response
+          subscriptionType: !pulsar/subscription-type Shared
+          topicNames:
+            ["persistent://tenant-1/namespace-1/topic-cash-account-products-command-response"]
         schemas: !system/local-ref schemas
       parties-command-response:
         client: !system/local-ref client
@@ -127,6 +144,8 @@ system:
       system/component-kind: pulsar/message-bus-producers
       cash-accounts-command:
         producer: !system/local-ref producers.cash-accounts-command
+      cash-account-products-command:
+        producer: !system/local-ref producers.cash-account-products-command
       parties-command:
         producer: !system/local-ref producers.parties-command
       payments-command:
@@ -141,6 +160,8 @@ system:
       system/component-kind: pulsar/message-bus-consumers
       cash-accounts-command-response:
         consumer: !system/local-ref consumers.cash-accounts-command-response
+      cash-account-products-command-response:
+        consumer: !system/local-ref consumers.cash-account-products-command-response
       parties-command-response:
         consumer: !system/local-ref consumers.parties-command-response
       payments-command-response:
@@ -181,6 +202,12 @@ system:
       bus: !system/ref message-bus.bus
       command-channel: !keyword cash-accounts-command
       command-response-channel: !keyword cash-accounts-command-response
+  cash-account-products:
+    dispatcher: !system/component
+      system/component-kind: command/dispatcher
+      bus: !system/ref message-bus.bus
+      command-channel: !keyword cash-account-products-command
+      command-response-channel: !keyword cash-account-products-command-response
   parties:
     dispatcher: !system/component
       system/component-kind: command/dispatcher
@@ -247,6 +274,7 @@ system:
         bank-status-live: queenswood-api-live
       dispatchers:
         cash-accounts: !system/ref cash-accounts.dispatcher
+        cash-account-products: !system/ref cash-account-products.dispatcher
         parties: !system/ref parties.dispatcher
         payments: !system/ref payments.dispatcher
         interest: !system/ref interest.dispatcher

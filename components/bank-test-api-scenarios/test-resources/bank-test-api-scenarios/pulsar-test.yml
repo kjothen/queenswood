@@ -79,6 +79,12 @@ topics: !system/component
     - topic: "persistent://tenant-1/namespace-1/topic-cash-accounts-command-response"
       partitions: 1
       schema: !keyword command-response
+    - topic: "persistent://tenant-1/namespace-1/topic-cash-account-products-command"
+      partitions: 1
+      schema: !keyword command
+    - topic: "persistent://tenant-1/namespace-1/topic-cash-account-products-command-response"
+      partitions: 1
+      schema: !keyword command-response
     - topic: "persistent://tenant-1/namespace-1/topic-parties-command"
       partitions: 1
       schema: !keyword command
@@ -145,6 +151,22 @@ producers: !system/component
       accessMode: !pulsar/access-mode Shared
       schema: !keyword command-response
       topicName: "persistent://tenant-1/namespace-1/topic-cash-accounts-command-response"
+    schemas: !system/local-ref schemas
+  cash-account-products-command:
+    _: !system/local-ref topics
+    client: !system/local-ref client
+    conf:
+      accessMode: !pulsar/access-mode Shared
+      schema: !keyword command
+      topicName: "persistent://tenant-1/namespace-1/topic-cash-account-products-command"
+    schemas: !system/local-ref schemas
+  cash-account-products-command-response:
+    _: !system/local-ref topics
+    client: !system/local-ref client
+    conf:
+      accessMode: !pulsar/access-mode Shared
+      schema: !keyword command-response
+      topicName: "persistent://tenant-1/namespace-1/topic-cash-account-products-command-response"
     schemas: !system/local-ref schemas
   parties-command:
     _: !system/local-ref topics
@@ -301,6 +323,31 @@ consumers: !system/component
       subscriptionType: !pulsar/subscription-type Shared
       topicNames:
         ["persistent://tenant-1/namespace-1/topic-cash-accounts-command-response"]
+    schemas: !system/local-ref schemas
+  cash-account-products-command:
+    _: !system/local-ref topics
+    client: !system/local-ref client
+    conf:
+      cryptoFailureAction: !pulsar/crypto-failure-action CONSUME
+      schema: !pulsar/schema AUTO_CONSUME
+      subscriptionName: bank-test-api-scenarios-cash-account-products-command
+      subscriptionType: !pulsar/subscription-type Shared
+      deadLetterPolicy:
+        maxRedeliverCount: 5
+        deadLetterTopic: "persistent://tenant-1/namespace-1/topic-cash-account-products-command-dlq"
+      topicNames:
+        ["persistent://tenant-1/namespace-1/topic-cash-account-products-command"]
+    schemas: !system/local-ref schemas
+  cash-account-products-command-response:
+    _: !system/local-ref topics
+    client: !system/local-ref client
+    conf:
+      cryptoFailureAction: !pulsar/crypto-failure-action CONSUME
+      schema: !pulsar/schema AUTO_CONSUME
+      subscriptionName: bank-test-api-scenarios-cash-account-products-command-response
+      subscriptionType: !pulsar/subscription-type Shared
+      topicNames:
+        ["persistent://tenant-1/namespace-1/topic-cash-account-products-command-response"]
     schemas: !system/local-ref schemas
   parties-command:
     _: !system/local-ref topics
@@ -506,6 +553,10 @@ message-bus-producers: !system/component
     producer: !system/local-ref producers.cash-accounts-command
   cash-accounts-command-response:
     producer: !system/local-ref producers.cash-accounts-command-response
+  cash-account-products-command:
+    producer: !system/local-ref producers.cash-account-products-command
+  cash-account-products-command-response:
+    producer: !system/local-ref producers.cash-account-products-command-response
   parties-command:
     producer: !system/local-ref producers.parties-command
   parties-command-response:
@@ -545,6 +596,10 @@ message-bus-consumers: !system/component
     consumer: !system/local-ref consumers.cash-accounts-command
   cash-accounts-command-response:
     consumer: !system/local-ref consumers.cash-accounts-command-response
+  cash-account-products-command:
+    consumer: !system/local-ref consumers.cash-account-products-command
+  cash-account-products-command-response:
+    consumer: !system/local-ref consumers.cash-account-products-command-response
   parties-command:
     consumer: !system/local-ref consumers.parties-command
   parties-command-response:

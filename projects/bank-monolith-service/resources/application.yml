@@ -9,6 +9,8 @@ system:
       channels:
         - cash-accounts-command
         - cash-accounts-command-response
+        - cash-account-products-command
+        - cash-account-products-command-response
         - parties-command
         - parties-command-response
         - transactions-command
@@ -43,6 +45,7 @@ system:
       admin-client-secret: !env KEYCLOAK_ADMIN_CLIENT_SECRET
       expected-issuer: !env KEYCLOAK_OPS_EXPECTED_ISSUER
   cash-accounts: !include bank/cash-account.yml
+  cash-account-products: !include bank/cash-account-product.yml
   parties: !include bank/party.yml
   payments: !include bank/payment.yml
   interest: !include bank/interest.yml
@@ -87,6 +90,7 @@ system:
         bank-status-live: queenswood-api-live
       dispatchers:
         cash-accounts: !system/ref cash-accounts.dispatcher
+        cash-account-products: !system/ref cash-account-products.dispatcher
         parties: !system/ref parties.dispatcher
         payments: !system/ref payments.dispatcher
         interest: !system/ref interest.dispatcher

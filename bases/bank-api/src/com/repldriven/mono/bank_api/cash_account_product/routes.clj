@@ -1,6 +1,6 @@
 (ns com.repldriven.mono.bank-api.cash-account-product.routes
   (:require
-    [com.repldriven.mono.bank-api.cash-account-product.handlers :as handlers]
+    [com.repldriven.mono.bank-api.cash-account-product.commands :as commands]
     [com.repldriven.mono.bank-api.cash-account-product.links :as links]
     [com.repldriven.mono.bank-api.cash-account-product.queries :as queries]
     [com.repldriven.mono.bank-api.cash-account-product.examples :refer
@@ -47,7 +47,7 @@
                               :openapi {:headers {"Location" location-header}
                                         :links links/from-draft}}
                          422 (ErrorResponse [#'CurrencyNotAllowed])}
-             :handler handlers/create-product}}]
+             :handler commands/create-product}}]
     ["/{product-id}" {:parameters {:path {:product-id [:ref "ProductId"]}}}
      [""
       {:get {:summary "Retrieve a product with its version history inline"
@@ -67,7 +67,7 @@
                           404 (ErrorResponse [#'ProductNotFound])
                           409 (ErrorResponse [#'DraftAlreadyExists])
                           422 (ErrorResponse [#'CurrencyNotAllowed])}
-              :handler handlers/open-draft}}]
+              :handler commands/open-draft}}]
      ["/versions/{version-id}"
       {:parameters {:path {:version-id [:ref "VersionId"]}}}
       [""
@@ -87,13 +87,13 @@
                           404 (ErrorResponse [#'VersionNotFound])
                           409 (ErrorResponse [#'VersionImmutable])
                           422 (ErrorResponse [#'CurrencyNotAllowed])}
-              :handler handlers/update-draft}
+              :handler commands/update-draft}
         :delete {:summary "Discard the draft version (draft state only)"
                  :openapi {:operationId "DiscardCashAccountProductDraft"}
                  :responses {204 {}
                              404 (ErrorResponse [#'VersionNotFound])
                              409 (ErrorResponse [#'VersionImmutable])}
-                 :handler handlers/discard-draft}}]
+                 :handler commands/discard-draft}}]
       ["/publish"
        {:post {:summary "Publish the draft version (draft state only)"
                :openapi {:operationId "PublishCashAccountProductDraft"}
@@ -101,4 +101,4 @@
                                 :openapi {:links links/from-published}}
                            404 (ErrorResponse [#'VersionNotFound])
                            409 (ErrorResponse [#'VersionImmutable])}
-               :handler handlers/publish-draft}}]]]]])
+               :handler commands/publish-draft}}]]]]])

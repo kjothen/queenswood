@@ -8,6 +8,8 @@
     [com.repldriven.mono.bank-cash-account-query.interface :as
      cash-accounts-query]
     [com.repldriven.mono.bank-cash-account-product.interface :as products]
+    [com.repldriven.mono.bank-cash-account-product-query.interface :as
+     products-query]
     [com.repldriven.mono.bank-ledger-account.interface :as ledger-accounts]
     [com.repldriven.mono.bank-party.interface :as party]
     [com.repldriven.mono.bank-party-query.interface :as party-query]
@@ -123,7 +125,7 @@
   accounts. Lets callers select a specific GL account (e.g. the 1100
   settlement) by code rather than by seed order."
   [txn bank-id {:keys [product-id version-id]}]
-  (let [version (products/get-version txn bank-id product-id version-id)]
+  (let [version (products-query/get-version txn bank-id product-id version-id)]
     (when-not (error/anomaly? version)
       (:gl-code version))))
 
