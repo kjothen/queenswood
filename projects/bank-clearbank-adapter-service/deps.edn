@@ -15,6 +15,10 @@
     component/testcontainers {:local/root "../../components/testcontainers"}}}}
  :deps
  {component/bank-balance {:local/root "../../components/bank-balance"}
+  component/bank-balance-domain
+  {:local/root "../../components/bank-balance-domain"}
+  component/bank-balance-query
+  {:local/root "../../components/bank-balance-query"}
   component/bank-cash-account {:local/root "../../components/bank-cash-account"}
   component/bank-cash-account-query
   {:local/root "../../components/bank-cash-account-query"}

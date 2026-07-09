@@ -94,6 +94,10 @@
   :+bank
   {:extra-deps
    {components/bank-balance {:local/root "components/bank-balance"}
+    components/bank-balance-domain
+    {:local/root "components/bank-balance-domain"}
+    components/bank-balance-query
+    {:local/root "components/bank-balance-query"}
     components/bank-cash-account-product
     {:local/root "components/bank-cash-account-product"}
     components/bank-cash-account-product-query
@@ -152,6 +156,7 @@
     bases/bank-monolith {:local/root "bases/bank-monolith"}}
    :extra-paths ["components/bank-balance/test"
                  "components/bank-balance/test-resources"
+                 "components/bank-balance-domain/test"
                  "components/bank-cash-account-product/test"
                  "components/bank-cash-account-product/test-resources"
                  "components/bank-cash-account-product-query/test"

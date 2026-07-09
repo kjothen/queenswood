@@ -2,7 +2,7 @@
   (:require
     [com.repldriven.mono.bank-ledger-account.interface :as SUT]
 
-    [com.repldriven.mono.bank-balance.interface :as balances]
+    [com.repldriven.mono.bank-balance-query.interface :as balances]
     [com.repldriven.mono.error.interface :as error]
     [com.repldriven.mono.fdb.interface]
     [com.repldriven.mono.system.interface :as system]

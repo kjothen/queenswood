@@ -2,7 +2,7 @@
   (:require
     [com.repldriven.mono.bank-cash-account-query.store :as store]
 
-    [com.repldriven.mono.bank-balance.interface :as balances]
+    [com.repldriven.mono.bank-balance-query.interface :as balances]
     [com.repldriven.mono.bank-transaction.interface :as transactions]
 
     [com.repldriven.mono.error.interface :as error :refer [let-nom>]]))

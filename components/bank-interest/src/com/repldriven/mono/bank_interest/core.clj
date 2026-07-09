@@ -4,6 +4,7 @@
     [com.repldriven.mono.bank-interest.store :as store]
 
     [com.repldriven.mono.bank-balance.interface :as balances]
+    [com.repldriven.mono.bank-balance-query.interface :as balances-query]
     [com.repldriven.mono.bank-cash-account-query.interface :as
      cash-accounts]
     [com.repldriven.mono.bank-cash-account-product-query.interface :as
@@ -65,11 +66,11 @@
        (let-nom>
          [version (get-product-version config bank-id account)
           interest-rate-bps (:interest-rate-bps version)
-          balance (balances/get-balance txn
-                                        account-id
-                                        :balance-type-default
-                                        currency
-                                        :balance-status-posted)
+          balance (balances-query/get-balance txn
+                                              account-id
+                                              :balance-type-default
+                                              currency
+                                              :balance-status-posted)
           {:keys [whole-units carry]} (domain/daily-interest
                                        balance
                                        interest-rate-bps)
@@ -112,11 +113,11 @@
      config
      (fn [txn]
        (let-nom>
-         [balance (balances/get-balance txn
-                                        account-id
-                                        :balance-type-interest-accrued
-                                        currency
-                                        :balance-status-posted)
+         [balance (balances-query/get-balance txn
+                                              account-id
+                                              :balance-type-interest-accrued
+                                              currency
+                                              :balance-status-posted)
           transaction (domain/capitalization-transaction
                        account-id
                        currency

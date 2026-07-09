@@ -1,6 +1,6 @@
 (ns com.repldriven.mono.bank-test-projections.balances
   (:require
-    [com.repldriven.mono.bank-balance.interface :as balance]))
+    [com.repldriven.mono.bank-balance-query.interface :as balance]))
 
 (defn- available
   [bank account-id]

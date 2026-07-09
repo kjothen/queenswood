@@ -2,7 +2,7 @@
   (:require
     [com.repldriven.mono.bank-api.errors :as errors]
 
-    [com.repldriven.mono.bank-balance.interface :as balances]
+    [com.repldriven.mono.bank-balance-query.interface :as balances]
     [com.repldriven.mono.bank-ledger-account.interface :as ledger-accounts]
 
     [com.repldriven.mono.error.interface :as error :refer [let-nom>]]

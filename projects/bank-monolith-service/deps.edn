@@ -16,6 +16,10 @@
  :deps
  {component/avro {:local/root "../../components/avro"}
   component/bank-balance {:local/root "../../components/bank-balance"}
+  component/bank-balance-domain
+  {:local/root "../../components/bank-balance-domain"}
+  component/bank-balance-query
+  {:local/root "../../components/bank-balance-query"}
   component/bank-bank {:local/root "../../components/bank-bank"}
   component/bank-cash-account {:local/root "../../components/bank-cash-account"}
   component/bank-cash-account-query

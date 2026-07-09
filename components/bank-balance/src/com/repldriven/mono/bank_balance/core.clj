@@ -3,6 +3,7 @@
     [com.repldriven.mono.bank-balance.domain :as domain]
     [com.repldriven.mono.bank-balance.store :as store]
 
+    [com.repldriven.mono.bank-balance-query.interface :as q]
     [com.repldriven.mono.bank-policy.interface :as policy]
     [com.repldriven.mono.error.interface :as error :refer [let-nom>]]))
 
@@ -21,11 +22,11 @@
       (let [{:keys [account-id balance-type currency balance-status]} data]
         (let-nom>
           [policies (get-policies txn account-id opts)
-           existing (store/find-balance txn
-                                        account-id
-                                        balance-type
-                                        currency
-                                        balance-status)
+           existing (q/find-balance txn
+                                    account-id
+                                    balance-type
+                                    currency
+                                    balance-status)
            balance (domain/new-balance data (some? existing) policies)
            _ (store/save-balance txn balance)]
           balance))))))
@@ -47,26 +48,17 @@
                 []
                 data))))))
 
-(defn get-balances
-  [txn account-id]
-  (let-nom>
-    [result (store/get-balances txn account-id)]
-    (let [currency (:currency (first result) "")]
-      {:balances result
-       :posted-balance (domain/posted-balance result currency)
-       :available-balance (domain/available-balance result currency)})))
-
 (defn set-carry
   [txn account-id balance-type currency balance-status carry]
   (store/transact
    txn
    (fn [txn]
      (let-nom>
-       [balance (store/get-balance txn
-                                   account-id
-                                   balance-type
-                                   currency
-                                   balance-status)
+       [balance (q/get-balance txn
+                               account-id
+                               balance-type
+                               currency
+                               balance-status)
         updated (assoc balance :credit-carry carry)
         _ (store/save-balance txn updated)]
        updated))))
@@ -74,7 +66,7 @@
 (defn- load-account-balances
   [txn legs]
   (reduce (fn [acc account-id]
-            (let [result (store/get-balances txn account-id)]
+            (let [result (q/list-balances txn account-id)]
               (if (error/anomaly? result)
                 (reduced result)
                 (assoc acc account-id result))))
