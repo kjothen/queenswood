@@ -1,6 +1,6 @@
 (ns com.repldriven.mono.bank-test-scenarios.quiescence
   (:require
-    [com.repldriven.mono.bank-balance.interface :as balance]
+    [com.repldriven.mono.bank-balance-query.interface :as balance]
     [com.repldriven.mono.bank-party-query.interface :as party]
     [com.repldriven.mono.bank-payment-query.interface :as payment]
 

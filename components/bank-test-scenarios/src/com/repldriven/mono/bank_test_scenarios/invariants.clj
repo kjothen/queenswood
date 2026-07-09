@@ -13,7 +13,7 @@
   pending, interest-accrued sub-ledger) don't perturb it — they roll up
   into their control accounts via the fan-out before they count."
   (:require
-    [com.repldriven.mono.bank-balance.interface :as balances]
+    [com.repldriven.mono.bank-balance-query.interface :as balances]
     [com.repldriven.mono.bank-ledger-account.interface :as ledger-accounts]
 
     [com.repldriven.mono.error.interface :as error]

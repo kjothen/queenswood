@@ -8,7 +8,7 @@
   storage (fdb), serialization (avro, bank-schema), and the HTTP
   server and telemetry."
   (:require
-    com.repldriven.mono.bank-balance.interface
+    com.repldriven.mono.bank-balance-query.interface
     com.repldriven.mono.bank-bank.interface
     com.repldriven.mono.bank-cash-account.interface
     com.repldriven.mono.bank-cash-account-product.interface

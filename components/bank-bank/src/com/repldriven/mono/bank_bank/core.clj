@@ -3,7 +3,7 @@
     [com.repldriven.mono.bank-bank.domain :as domain]
     [com.repldriven.mono.bank-bank.store :as store]
 
-    [com.repldriven.mono.bank-balance.interface :as balances]
+    [com.repldriven.mono.bank-balance-query.interface :as balances]
     [com.repldriven.mono.bank-cash-account.interface :as cash-accounts]
     [com.repldriven.mono.bank-cash-account-query.interface :as
      cash-accounts-query]
