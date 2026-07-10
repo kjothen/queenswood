@@ -20,7 +20,10 @@ way.
 
 We want the read/write separation to be structural, not just
 disciplined: the API can only call read paths, and every state change
-is a command consumed by a processor.
+is a command consumed by a processor. This applies to the domains
+that earn a command path — which writes those are is decided by
+[ADR-0018](0018-command-writes-are-earned.md); synchronous
+configuration writes are exempt by design.
 
 The shortlist of how to enforce it:
 
