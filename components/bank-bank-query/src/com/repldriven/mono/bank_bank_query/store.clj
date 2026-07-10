@@ -3,12 +3,26 @@
     [com.repldriven.mono.bank-schema.interface :as schema]
 
     [com.repldriven.mono.error.interface :as error]
-    [com.repldriven.mono.fdb.interface :as fdb]))
+    [com.repldriven.mono.fdb.interface :as fdb]
+    [com.repldriven.mono.utility.interface :as utility]))
 
 ;; must match bank-bank.store/store-name — same FDB store
 (def ^:private store-name "banks")
 
 (def transact fdb/transact)
+
+(defn- ->bank
+  "Translate a Bank protobuf record to a plain map. The protojure
+  record carries `:company-binding nil` for admin-provisioned banks;
+  the key must be absent so API response coercion (optional key, no
+  nil) passes."
+  [record]
+  (let [{:keys [company-binding] :as bank} (schema/pb->Bank record)]
+    (-> (into {} bank)
+        (dissoc :company-binding)
+        (utility/assoc-some :company-binding
+                            (some->> company-binding
+                                     (into {}))))))
 
 (defn get-bank
   [txn bank-id]
@@ -16,7 +30,7 @@
                 (fn [txn]
                   (if-let [record (fdb/load-record (fdb/open txn store-name)
                                                    bank-id)]
-                    (schema/pb->Bank record)
+                    (->bank record)
                     (error/reject :bank/not-found
                                   {:message "Bank not found"
                                    :bank-id bank-id})))
@@ -32,7 +46,7 @@
                                             "sort_code"
                                             sort-code
                                             {:index "Bank_by_sort_code"})
-                          schema/pb->Bank))
+                          ->bank))
                 :bank/get-by-sort-code
                 "Failed to get bank by sort code"))
 
@@ -44,7 +58,7 @@
     txn
     (fn [txn]
       (let [{:keys [limit order] :or {limit 100 order :desc}} opts]
-        (mapv schema/pb->Bank
+        (mapv ->bank
               (:records (fdb/scan-records
                          (fdb/open txn store-name)
                          {:limit limit :order order})))))

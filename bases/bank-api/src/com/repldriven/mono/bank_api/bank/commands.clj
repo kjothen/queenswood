@@ -34,9 +34,7 @@
                                 identity-provider
                                 bank-id)
        bank (banks/get-bank-view txn bank-id)]
-      (-> bank
-          (assoc :client-secret client-secret)
-          (update :company-binding #(when % (into {} %)))))))
+      (assoc bank :client-secret client-secret))))
 
 (defn create-bank
   [request]
