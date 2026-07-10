@@ -1,5 +1,6 @@
 (ns com.repldriven.mono.bank-balance.domain
   (:require
+    [com.repldriven.mono.bank-balance-domain.interface :as balance-math]
     [com.repldriven.mono.bank-policy.interface :as policy]
     [com.repldriven.mono.error.interface :as error :refer [let-nom>]]
     [com.repldriven.mono.utility.interface :as utility]))
@@ -29,71 +30,6 @@
                            {:action action
                             :balance-type balance-type
                             :balance-status balance-status}))
-
-(defn- net
-  [balance]
-  (if balance (- (:credit balance 0) (:debit balance 0)) 0))
-
-(defmulti ^:private posted? (fn [b] [(:balance-type b) (:balance-status b)]))
-
-(defmethod posted? [:balance-type-default :balance-status-posted] [_] true)
-
-(defmethod posted? :default [_] false)
-
-(defmulti ^:private available?
-  (fn [b] [(= :product-type-general-ledger (:product-type b)) (:balance-type b)
-           (:balance-status b)]))
-
-(defmethod available? [false :balance-type-default :balance-status-posted]
-  [_]
-  true)
-
-(defmethod available? [false :balance-type-default
-                       :balance-status-pending-outgoing]
-  [_]
-  true)
-
-(defmethod available? :default [_] false)
-
-(defn net-balance
-  [balances currency pred-fn]
-  {:value (->> balances
-               (filter pred-fn)
-               (map net)
-               (reduce + 0))
-   :currency currency})
-
-(defn posted-balance
-  [balances currency]
-  (net-balance balances currency posted?))
-
-(defn available-balance
-  [balances currency]
-  (net-balance balances currency available?))
-
-(defn trial-balance
-  "Aggregate account-level posted balances into a per-currency trial
-  balance — total debits vs total credits, plus the account count — one
-  block per currency. `entries` is a collection of
-  `{:currency :normal-side :value}`, where `:normal-side` is `:debit` or
-  `:credit` (the account's normal side) and `:value` is the
-  credit-positive posted net (credit − debit). A debit-normal account
-  contributes its magnitude (− value) to debits; a credit-normal account
-  contributes + value to credits. Σdebit equals Σcredit within a currency
-  exactly when its books balance; currencies never sum together."
-  [entries]
-  (->> entries
-       (group-by :currency)
-       (mapv (fn [[currency es]]
-               (reduce (fn [block {:keys [normal-side value]}]
-                         (let [debit? (= :debit normal-side)]
-                           (-> block
-                               (update :accounts inc)
-                               (update (if debit? :debit :credit)
-                                       +
-                                       (if debit? (- value) value)))))
-                       {:currency currency :debit 0 :credit 0 :accounts 0}
-                       es)))))
 
 (defn- find-balance-index
   [balances balance-type balance-status]
@@ -167,8 +103,8 @@
 (defn- check-available
   [pre post transaction-type policies]
   (let [{:keys [currency]} (first post)
-        pre-amount (available-balance pre currency)
-        post-amount (available-balance post currency)]
+        pre-amount (balance-math/available-balance pre currency)
+        post-amount (balance-math/available-balance post currency)]
     (policy/check-limit policies
                         :balance
                         {:kind {:computed {:name "available"}}

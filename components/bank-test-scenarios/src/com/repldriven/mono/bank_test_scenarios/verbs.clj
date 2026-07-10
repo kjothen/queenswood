@@ -4,6 +4,7 @@
     [com.repldriven.mono.bank-test-scenarios.quiescence :as quiescence]
 
     [com.repldriven.mono.bank-balance.interface :as balances]
+    [com.repldriven.mono.bank-balance-query.interface :as balances-query]
     [com.repldriven.mono.bank-cash-account-product.interface :as products]
     [com.repldriven.mono.bank-cash-account-product-query.interface :as
      products-query]
@@ -745,11 +746,11 @@
         model-pmt (model-id-for-next-payment next-payment-id)
         creditor-pre-net
         (when creditor-real-id
-          (let [b (balances/get-balance bank
-                                        creditor-real-id
-                                        :balance-type-default
-                                        "GBP"
-                                        :balance-status-posted)]
+          (let [b (balances-query/get-balance bank
+                                              creditor-real-id
+                                              :balance-type-default
+                                              "GBP"
+                                              :balance-status-posted)]
             (when-not (error/anomaly? b) (- (:credit b 0) (:debit b 0)))))
         result (payment/submit-outbound
                 bank
@@ -983,11 +984,11 @@
   (let [account-id (if (keyword? account-ref)
                      (get-in id-mapping [:model->real account-ref])
                      account-ref)
-        result (balances/get-balance bank
-                                     account-id
-                                     balance-type
-                                     currency
-                                     balance-status)]
+        result (balances-query/get-balance bank
+                                           account-id
+                                           balance-type
+                                           currency
+                                           balance-status)]
     (-> ctx
         (update :counter inc)
         (track result))))

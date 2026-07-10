@@ -28,14 +28,6 @@
    [:posted-balance [:ref "SignedAmount"]]
    [:available-balance [:ref "SignedAmount"]]])
 
-(def CreateBalanceRequest
-  [:map {:json-schema/example examples/CreateBalanceRequest}
-   [:balance-type [:ref "BalanceType"]]
-   [:balance-status [:ref "BalanceStatus"]]
-   [:currency [:ref "Currency"]]])
-
-(def CreateBalanceResponse [:ref "Balance"])
-
 (def BalanceProduct
   [:map {:closed true :json-schema/example examples/BalanceProduct}
    [:balance-type [:ref "BalanceType"]]
@@ -43,5 +35,4 @@
 
 (def registry
   (components-registry [#'BalanceType #'BalanceStatus #'Balance #'BalanceList
-                        #'CreateBalanceRequest #'CreateBalanceResponse
                         #'BalanceProduct]))

@@ -8,13 +8,7 @@
            :status 404
            :detail "Balance not found"}})
 
-(def BalanceAlreadyExists
-  {:value {:title "REJECTED"
-           :type "balance/already-exists"
-           :status 409
-           :detail "Balance already exists"}})
-
-(def registry (examples-registry [#'BalanceNotFound #'BalanceAlreadyExists]))
+(def registry (examples-registry [#'BalanceNotFound]))
 
 (def Balance
   {:account-id "acc.01kprbmgcj35ptc8npmybhh4s8"
@@ -31,8 +25,5 @@
   {:balances [Balance]
    :posted-balance {:value 0 :currency "GBP"}
    :available-balance {:value 0 :currency "GBP"}})
-
-(def CreateBalanceRequest
-  {:balance-type :default :balance-status :posted :currency "GBP"})
 
 (def BalanceProduct {:balance-type :default :balance-status :posted})

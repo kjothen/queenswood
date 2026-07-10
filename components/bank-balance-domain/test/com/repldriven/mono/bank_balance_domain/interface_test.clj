@@ -1,6 +1,6 @@
-(ns com.repldriven.mono.bank-balance.domain-test
+(ns com.repldriven.mono.bank-balance-domain.interface-test
   (:require
-    [com.repldriven.mono.bank-balance.domain :as SUT]
+    [com.repldriven.mono.bank-balance-domain.interface :as SUT]
 
     [clojure.test :refer [deftest is testing]]))
 

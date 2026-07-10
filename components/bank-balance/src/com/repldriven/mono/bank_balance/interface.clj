@@ -1,28 +1,16 @@
 (ns com.repldriven.mono.bank-balance.interface
-  "Per-account balance buckets keyed by `(account-id, balance-type,
-  currency, balance-status)`. Provides creation, lookup, listing
-  with derived posted/available totals, application of transaction
-  legs with policy-gated capability and limit checks, and
-  credit-carry maintenance for capitalisation."
+  "Balance write side: create an account's balance buckets, apply
+  transaction legs to them (with policy-gated capability and limit
+  checks), and maintain credit-carry for capitalisation. Buckets are
+  keyed by `(account-id, balance-type, currency, balance-status)`.
+
+  Reads (lookup, listing with posted/available totals, trial-balance)
+  live in `bank-balance-query`, which this brick reuses inside its own
+  transactions. These writes are called by other bricks' processors
+  (cash-account open, payment/interest/transaction posting) inside their
+  FDB transactions, not as standalone commands."
   (:require
-    [com.repldriven.mono.bank-balance.core :as core]
-    [com.repldriven.mono.bank-balance.domain :as domain]
-    [com.repldriven.mono.bank-balance.store :as store]))
-
-(defn new-balance
-  "Create a single balance bucket. Rejects if a balance with the
-  same composite key already exists. Returns the balance or an
-  anomaly.
-
-  Args:
-  - txn: FDB transaction or db handle.
-  - data: map with `:account-id`, `:product-type`, `:balance-type`,
-    `:balance-status`, `:currency`.
-  - opts (optional): map; `:policies` overrides policy resolution."
-  ([txn data]
-   (core/new-balance txn data))
-  ([txn data opts]
-   (core/new-balance txn data opts)))
+    [com.repldriven.mono.bank-balance.core :as core]))
 
 (defn new-balances
   "Create multiple balances in a single transaction; short-circuits
@@ -30,54 +18,13 @@
 
   Args:
   - txn: FDB transaction or db handle.
-  - data: collection of balance creation maps (see `new-balance`).
+  - data: collection of balance creation maps, each with `:account-id`,
+    `:product-type`, `:balance-type`, `:balance-status`, `:currency`.
   - opts (optional): map; `:policies` overrides policy resolution."
   ([txn data]
    (core/new-balances txn data))
   ([txn data opts]
    (core/new-balances txn data opts)))
-
-(defn get-balance
-  "Look up a single balance by its composite primary key. Returns
-  the balance map or a `:balance/not-found` rejection anomaly.
-
-  Args:
-  - txn: FDB transaction or db handle.
-  - account-id: owning account id.
-  - balance-type: balance-type keyword.
-  - currency: ISO 4217 currency string.
-  - balance-status: balance-status keyword."
-  [txn account-id balance-type currency balance-status]
-  (store/get-balance txn
-                     account-id
-                     balance-type
-                     currency
-                     balance-status))
-
-(defn get-balances
-  "List all balances for an account, enriched with derived
-  posted-balance and available-balance totals. Returns
-  `{:balances [...] :posted-balance {...} :available-balance {...}}`
-  or an anomaly.
-
-  Args:
-  - txn: FDB transaction or db handle.
-  - account-id: owning account id."
-  [txn account-id]
-  (core/get-balances txn account-id))
-
-(defn trial-balance
-  "Aggregate per-account posted balances into a per-currency trial
-  balance — `[{:currency :debit :credit :accounts}]`, one block per
-  currency, Σdebit equal to Σcredit when the currency's books balance.
-  Pure: pass `entries` as a collection of `{:currency :normal-side
-  :value}` where `:normal-side` is `:debit`/`:credit` (the account's
-  normal side) and `:value` is the credit-positive posted net.
-
-  Args:
-  - entries: collection of `{:currency :normal-side :value}`."
-  [entries]
-  (domain/trial-balance entries))
 
 (defn apply-legs
   "Apply each leg to its target balance (with the
