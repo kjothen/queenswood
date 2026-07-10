@@ -179,6 +179,10 @@ services:
       limits: { cpu: "750m", memory: "1Gi" }
       requests: { cpu: "100m", memory: "512Mi" }
 
+  bank-bank-processor-service:
+    enabled: true
+    replicas: 1
+
   bank-party-processor-service:
     enabled: true
     replicas: 1

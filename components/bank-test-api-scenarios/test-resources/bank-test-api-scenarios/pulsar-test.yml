@@ -73,6 +73,12 @@ topics: !system/component
   admin: !system/local-ref admin
   schemas: !system/local-ref schemas
   topics:
+    - topic: "persistent://tenant-1/namespace-1/topic-banks-command"
+      partitions: 1
+      schema: !keyword command
+    - topic: "persistent://tenant-1/namespace-1/topic-banks-command-response"
+      partitions: 1
+      schema: !keyword command-response
     - topic: "persistent://tenant-1/namespace-1/topic-cash-accounts-command"
       partitions: 1
       schema: !keyword command
@@ -136,6 +142,22 @@ topics: !system/component
 
 producers: !system/component
   system/component-kind: pulsar/producers
+  banks-command:
+    _: !system/local-ref topics
+    client: !system/local-ref client
+    conf:
+      accessMode: !pulsar/access-mode Shared
+      schema: !keyword command
+      topicName: "persistent://tenant-1/namespace-1/topic-banks-command"
+    schemas: !system/local-ref schemas
+  banks-command-response:
+    _: !system/local-ref topics
+    client: !system/local-ref client
+    conf:
+      accessMode: !pulsar/access-mode Shared
+      schema: !keyword command-response
+      topicName: "persistent://tenant-1/namespace-1/topic-banks-command-response"
+    schemas: !system/local-ref schemas
   cash-accounts-command:
     _: !system/local-ref topics
     client: !system/local-ref client
@@ -312,6 +334,31 @@ consumers: !system/component
         deadLetterTopic: "persistent://tenant-1/namespace-1/topic-cash-accounts-command-dlq"
       topicNames:
         ["persistent://tenant-1/namespace-1/topic-cash-accounts-command"]
+    schemas: !system/local-ref schemas
+  banks-command:
+    _: !system/local-ref topics
+    client: !system/local-ref client
+    conf:
+      cryptoFailureAction: !pulsar/crypto-failure-action CONSUME
+      schema: !pulsar/schema AUTO_CONSUME
+      subscriptionName: bank-test-api-scenarios-banks-command
+      subscriptionType: !pulsar/subscription-type Shared
+      deadLetterPolicy:
+        maxRedeliverCount: 5
+        deadLetterTopic: "persistent://tenant-1/namespace-1/topic-banks-command-dlq"
+      topicNames:
+        ["persistent://tenant-1/namespace-1/topic-banks-command"]
+    schemas: !system/local-ref schemas
+  banks-command-response:
+    _: !system/local-ref topics
+    client: !system/local-ref client
+    conf:
+      cryptoFailureAction: !pulsar/crypto-failure-action CONSUME
+      schema: !pulsar/schema AUTO_CONSUME
+      subscriptionName: bank-test-api-scenarios-banks-command-response
+      subscriptionType: !pulsar/subscription-type Shared
+      topicNames:
+        ["persistent://tenant-1/namespace-1/topic-banks-command-response"]
     schemas: !system/local-ref schemas
   cash-accounts-command-response:
     _: !system/local-ref topics
@@ -549,6 +596,10 @@ consumers: !system/component
 
 message-bus-producers: !system/component
   system/component-kind: pulsar/message-bus-producers
+  banks-command:
+    producer: !system/local-ref producers.banks-command
+  banks-command-response:
+    producer: !system/local-ref producers.banks-command-response
   cash-accounts-command:
     producer: !system/local-ref producers.cash-accounts-command
   cash-accounts-command-response:
@@ -592,6 +643,10 @@ message-bus-producers: !system/component
 
 message-bus-consumers: !system/component
   system/component-kind: pulsar/message-bus-consumers
+  banks-command:
+    consumer: !system/local-ref consumers.banks-command
+  banks-command-response:
+    consumer: !system/local-ref consumers.banks-command-response
   cash-accounts-command:
     consumer: !system/local-ref consumers.cash-accounts-command
   cash-accounts-command-response:

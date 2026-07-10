@@ -38,6 +38,7 @@ services:
 
   # Everything the monolith subsumes is turned off.
   bank-api-service: { enabled: false }
+  bank-bank-processor-service: { enabled: false }
   bank-cash-account-processor-service: { enabled: false }
   bank-party-processor-service: { enabled: false }
   bank-payment-processor-service: { enabled: false }

@@ -1,0 +1,4 @@
+system:
+  fdb: !include bank/fdb-test.yml
+  policies: !include bank/policy-test.yml
+  templates: !include bank/templates-test.yml

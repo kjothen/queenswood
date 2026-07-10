@@ -11,6 +11,7 @@
     [com.repldriven.mono.bank-cash-account-product-query.interface :as
      products-query]
     [com.repldriven.mono.bank-ledger-account.interface :as ledger-accounts]
+    [com.repldriven.mono.bank-membership.interface :as memberships]
     [com.repldriven.mono.bank-party.interface :as party]
     [com.repldriven.mono.bank-party-query.interface :as party-query]
     [com.repldriven.mono.bank-policy.interface :as policy]
@@ -179,7 +180,8 @@
   (store/transact
    txn
    (fn [txn]
-     (let [{:keys [identity-provider company-binding]} opts]
+     (let [{:keys [identity-provider company-binding membership]} opts
+           {:keys [user-id role]} membership]
        (let-nom>
          [_
           (when-not identity-provider
@@ -188,17 +190,20 @@
              {:message
               "A bank requires an identity-provider to issue its service-account client"
               :bank-name bank-name}))
+          ;; Sole-membership check first, so a redelivered onboarding
+          ;; command aborts before any write.
+          existing (if membership
+                     (memberships/list-by-user txn user-id)
+                     [])
+          _ (domain/check-sole-membership user-id existing)
           policies (or (:policies opts)
                        (policy/get-effective-policies txn {}))
           sort-code (store/allocate-sort-code txn)
-          ;; Snapshot of the bound legal entity (onboarding path); absent
-          ;; for admin-provisioned banks.
-          bank (cond-> (domain/new-bank bank-name
-                                        bank-status
-                                        sort-code
-                                        policies)
-                       company-binding
-                       (assoc :company-binding company-binding))
+          bank (domain/new-bank bank-name
+                                bank-status
+                                sort-code
+                                company-binding
+                                policies)
           bank-id (:bank-id bank)
 
           ;; Issue the service-account client BEFORE the FDB write so an
@@ -206,12 +211,14 @@
           ;; Client-id == bank-id (deterministic mapping). `:audience` is
           ;; the JWT `aud` claim the IDP stamps on tokens for this client
           ;; — the bank-api handler picks it from its own status→audience
-          ;; config and forwards it here.
-          {:keys [client-secret]} (identity-provider/create-service-account
-                                   identity-provider
-                                   {:bank-id bank-id
-                                    :name bank-name
-                                    :audience (:audience opts)})
+          ;; config and forwards it here. The secret it mints is
+          ;; discarded: callers rotate a fresh one after the reply so no
+          ;; credential crosses the bus.
+          _ (identity-provider/create-service-account
+             identity-provider
+             {:bank-id bank-id
+              :name bank-name
+              :audience (:audience opts)})
           _ (store/create txn bank)
           {:keys [party-id]} (party/new-party
                               txn
@@ -228,7 +235,11 @@
                                 policies)
           _ (bind-tier-policies txn bank-id tier)
           _ (scheduler/seed-jobs txn bank-id)
-          result (get-bank txn bank client-secret)]
-         result)))
+          owner (when membership
+                  (memberships/new-membership txn
+                                              {:user-id user-id
+                                               :bank-id bank-id
+                                               :role role}))]
+         {:bank bank :membership owner})))
    :bank/create
    "Failed to create bank"))

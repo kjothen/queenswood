@@ -5,15 +5,21 @@
   the new bank. Read paths return the bank enriched with its party and
   accounts (with balances)."
   (:require
+    com.repldriven.mono.bank-bank.system
+
     [com.repldriven.mono.bank-bank.core :as core]
-    [com.repldriven.mono.bank-bank.store :as store]))
+    [com.repldriven.mono.bank-bank.store :as store]
+
+    [com.repldriven.mono.error.interface :refer [let-nom>]]))
 
 (defn new-bank
   "Provision a new bank with a service-account client, an organization
   party, and a default chart of ledger accounts per currency, and bind
-  the tier policies to it. Returns
-  `{:bank {... :client-id …} :client-secret <one-time-string>}`
-  or an anomaly. The client_secret is only returned at creation time.
+  the tier policies to it. When `:membership` is supplied, also create
+  the owner membership in the same transaction. Returns
+  `{:bank {…} :membership <map-or-nil>}` or an anomaly. The
+  service-account secret is not returned — callers needing one mint it
+  via `identity-provider/rotate-secret` after creation.
 
   Args:
   - txn: FDB transaction or db handle.
@@ -27,9 +33,13 @@
     has no credentials, so creation is rejected `:bank/missing-identity-provider`;
     `:audience` (string) is the `aud` claim stamped on tokens minted
     for the new client; `:company-binding` (map, optional) is the
-    confirmed legal-entity snapshot to bind the bank to (onboarding);
-    `:policies` overrides the platform policies used for the capability
-    check."
+    confirmed legal-entity snapshot to bind the bank to (onboarding) —
+    creation is rejected `:onboarding/company-not-active` unless its
+    `:company-status` is active; `:membership` (map, optional) is
+    `{:user-id … :role …}` for the owner membership — rejected
+    `:membership/already-exists` when the user already belongs to a
+    bank; `:policies` overrides the platform policies used for the
+    capability check."
   [txn bank-name bank-status tier currencies opts]
   (core/new-bank txn
                  bank-name
@@ -68,3 +78,16 @@
   - opts (optional): map; `:limit` and `:order` (default `:desc`)."
   ([txn] (core/get-banks txn))
   ([txn opts] (core/get-banks txn opts)))
+
+(defn get-bank-view
+  "Load a bank by id enriched with its party and accounts (with
+  balances). Returns the rich bank map, a `:bank/not-found`
+  rejection, or an anomaly.
+
+  Args:
+  - txn: FDB transaction or db handle.
+  - bank-id: bank id."
+  [txn bank-id]
+  (let-nom> [bank (store/get-bank txn bank-id)
+             result (core/get-bank txn bank)]
+    (:bank result)))

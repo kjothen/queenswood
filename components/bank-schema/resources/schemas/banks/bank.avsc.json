@@ -12,6 +12,35 @@
                                               "BANK_STATUS_LIVE"]}},
     {"name": "created_at", "type": {"type": "long", "logicalType": "timestamp-millis"}},
     {"name": "updated_at", "type": {"type": "long", "logicalType": "timestamp-millis"}},
-    {"name": "sort_code", "type": "string"}
+    {"name": "sort_code", "type": "string"},
+    {"name": "company_binding", "type": ["null", {
+      "type": "record",
+      "name": "CompanyBinding",
+      "fields": [
+        {"name": "registry",                  "type": "string"},
+        {"name": "company_number",            "type": "string"},
+        {"name": "company_name",              "type": ["null", "string"], "default": null},
+        {"name": "company_status",            "type": ["null", "string"], "default": null},
+        {"name": "type",                      "type": ["null", "string"], "default": null},
+        {"name": "jurisdiction",              "type": ["null", "string"], "default": null},
+        {"name": "date_of_creation",          "type": ["null", "string"], "default": null},
+        {"name": "registered_office_address", "type": ["null", "string"], "default": null}
+      ]
+    }], "default": null},
+    {"name": "membership", "type": ["null", {
+      "type": "record",
+      "name": "Membership",
+      "doc": "Owner membership created atomically with the bank (onboarding path)",
+      "fields": [
+        {"name": "membership_id", "type": "string"},
+        {"name": "user_id",       "type": "string"},
+        {"name": "bank_id",       "type": "string"},
+        {"name": "role", "type": {"type": "enum",
+                                  "name": "Role",
+                                  "symbols": ["ROLE_UNKNOWN", "ROLE_OWNER"]}},
+        {"name": "created_at", "type": {"type": "long", "logicalType": "timestamp-millis"}},
+        {"name": "updated_at", "type": {"type": "long", "logicalType": "timestamp-millis"}}
+      ]
+    }], "default": null}
   ]
 }

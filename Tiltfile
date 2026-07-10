@@ -45,6 +45,7 @@ SERVICES = [
     'bank-migrator-service',
     'bank-bootstrap-service',
     'bank-api-service',
+    'bank-bank-processor-service',
     'bank-cash-account-processor-service',
     'bank-party-processor-service',
     'bank-payment-processor-service',
@@ -147,6 +148,7 @@ k8s_resource(
 
 # Pulsar processors: group + gate on bootstrap.
 PROCESSORS = [
+    'bank-bank-processor-service',
     'bank-cash-account-processor-service',
     'bank-party-processor-service',
     'bank-payment-processor-service',

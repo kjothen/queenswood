@@ -157,7 +157,11 @@
                                 :audience "queenswood-api-test"})
         bank-entity (:bank result)
         real-bank-id (:bank-id bank-entity)
-        real-party-id (get-in bank-entity [:party :party-id])
+        real-party-id (when-not (error/anomaly? result)
+                        (-> (party-query/get-parties bank real-bank-id)
+                            :parties
+                            first
+                            :party-id))
         scenario-product (when-not (error/anomaly? result)
                            (products/new-product
                             bank

@@ -2,7 +2,7 @@
   (:require
     [com.repldriven.mono.bank-api.bank.examples :refer
      [BankLimitExceeded]]
-    [com.repldriven.mono.bank-api.bank.handlers :as handlers]
+    [com.repldriven.mono.bank-api.bank.commands :as bank-commands]
     [com.repldriven.mono.bank-api.bank.queries :as queries]
     [com.repldriven.mono.bank-api.schema :refer [ErrorResponse]]))
 
@@ -19,4 +19,4 @@
              :parameters {:body [:ref "CreateBankRequest"]}
              :responses {201 {:body [:ref "CreateBankResponse"]}
                          422 (ErrorResponse [#'BankLimitExceeded])}
-             :handler handlers/create-bank}}]]])
+             :handler bank-commands/create-bank}}]]])
