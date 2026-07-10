@@ -1,7 +1,7 @@
 (ns com.repldriven.mono.bank-api.me.handlers
   (:require
     [com.repldriven.mono.bank-api.errors :as errors]
-    [com.repldriven.mono.bank-bank.interface :as banks]
+    [com.repldriven.mono.bank-bank-query.interface :as banks]
 
     [com.repldriven.mono.error.interface :as error]))
 

@@ -4,7 +4,7 @@
   `system/start`; nothing else lives here."
   (:require
     com.repldriven.mono.avro.interface
-    com.repldriven.mono.bank-bank.interface
+    com.repldriven.mono.bank-bank-query.interface
     com.repldriven.mono.bank-payment.interface
     com.repldriven.mono.bank-schema.interface
     com.repldriven.mono.command-processor.interface

@@ -2,7 +2,7 @@
   (:require
     [com.repldriven.mono.bank-api.commands :as commands]
     [com.repldriven.mono.bank-api.errors :as errors]
-    [com.repldriven.mono.bank-bank.interface :as banks]
+    [com.repldriven.mono.bank-bank-query.interface :as banks]
     [com.repldriven.mono.bank-cash-account-query.interface :as cash-accounts]
     [com.repldriven.mono.bank-ledger-account.interface :as
      ledger-accounts]

@@ -20,6 +20,8 @@
   component/bank-balance-query
   {:local/root "../../components/bank-balance-query"}
   component/bank-bank {:local/root "../../components/bank-bank"}
+  component/bank-bank-query
+  {:local/root "../../components/bank-bank-query"}
   component/bank-cash-account {:local/root "../../components/bank-cash-account"}
   component/bank-cash-account-query
   {:local/root "../../components/bank-cash-account-query"}

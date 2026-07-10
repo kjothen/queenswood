@@ -37,6 +37,8 @@
   {:local/root "../../components/bank-ledger-account"}
   component/bank-membership {:local/root "../../components/bank-membership"}
   component/bank-bank {:local/root "../../components/bank-bank"}
+  component/bank-bank-query
+  {:local/root "../../components/bank-bank-query"}
   component/bank-company-registry
   {:local/root "../../components/bank-company-registry"}
   component/bank-interest {:local/root "../../components/bank-interest"}

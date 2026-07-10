@@ -2,7 +2,7 @@
   (:require
     [com.repldriven.mono.bank-api.errors :as errors]
     [com.repldriven.mono.error.interface :as error]
-    [com.repldriven.mono.bank-bank.interface :as banks]))
+    [com.repldriven.mono.bank-bank-query.interface :as banks]))
 
 (defn list-banks
   [request]

@@ -2,7 +2,7 @@
   (:require
     [com.repldriven.mono.bank-api.commands :as commands]
     [com.repldriven.mono.bank-api.errors :as errors]
-    [com.repldriven.mono.bank-bank.interface :as banks]
+    [com.repldriven.mono.bank-bank-query.interface :as banks]
 
     [com.repldriven.mono.error.interface :as error :refer [let-nom>]]
     [com.repldriven.mono.identity-provider.interface :as identity-provider]))

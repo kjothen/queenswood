@@ -1,16 +1,16 @@
 (ns com.repldriven.mono.bank-bank.interface
-  "Bank tenant lifecycle: provisions a bank with a service-account
-  client, an organization party, and a default chart of bank-owned
-  ledger accounts per currency, and binds tier-specific policies to
-  the new bank. Read paths return the bank enriched with its party and
-  accounts (with balances)."
+  "Bank write side: provisions a bank with a service-account client,
+  an organization party, a default chart of bank-owned ledger accounts
+  per currency, tier-specific policy bindings, and (onboarding) the
+  owner membership — all in one transaction.
+
+  Reads live in `bank-bank-query`; `bank-api` requires the query
+  brick, not this one — bank creation reaches the processor as a
+  command over the bus."
   (:require
     com.repldriven.mono.bank-bank.system
 
-    [com.repldriven.mono.bank-bank.core :as core]
-    [com.repldriven.mono.bank-bank.store :as store]
-
-    [com.repldriven.mono.error.interface :refer [let-nom>]]))
+    [com.repldriven.mono.bank-bank.core :as core]))
 
 (defn new-bank
   "Provision a new bank with a service-account client, an organization
@@ -47,47 +47,3 @@
                  tier
                  currencies
                  opts))
-
-(defn get-bank
-  "Load a flat bank map by id. Returns the bank or a
-  `:bank/not-found` rejection anomaly.
-
-  Args:
-  - txn: FDB transaction or db handle.
-  - bank-id: bank id."
-  [txn bank-id]
-  (store/get-bank txn bank-id))
-
-(defn get-bank-by-sort-code
-  "Load a flat bank map by its sort code (the first 6 digits of its
-  accounts' BBANs). Returns the bank, or nil if no bank owns that sort
-  code.
-
-  Args:
-  - txn: FDB transaction or db handle.
-  - sort-code: 6-digit sort code string."
-  [txn sort-code]
-  (store/get-bank-by-sort-code txn sort-code))
-
-(defn get-banks
-  "List banks enriched with party and accounts (with balances).
-  Returns a vector of rich bank maps or an anomaly.
-
-  Args:
-  - txn: FDB transaction or db handle.
-  - opts (optional): map; `:limit` and `:order` (default `:desc`)."
-  ([txn] (core/get-banks txn))
-  ([txn opts] (core/get-banks txn opts)))
-
-(defn get-bank-view
-  "Load a bank by id enriched with its party and accounts (with
-  balances). Returns the rich bank map, a `:bank/not-found`
-  rejection, or an anomaly.
-
-  Args:
-  - txn: FDB transaction or db handle.
-  - bank-id: bank id."
-  [txn bank-id]
-  (let-nom> [bank (store/get-bank txn bank-id)
-             result (core/get-bank txn bank)]
-    (:bank result)))

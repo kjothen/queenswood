@@ -122,6 +122,7 @@
                                     "components/bank-ledger-account"}
     components/bank-membership {:local/root "components/bank-membership"}
     components/bank-bank {:local/root "components/bank-bank"}
+    components/bank-bank-query {:local/root "components/bank-bank-query"}
     components/bank-party {:local/root "components/bank-party"}
     components/bank-party-query
     {:local/root "components/bank-party-query"}
@@ -157,6 +158,8 @@
    :extra-paths ["components/bank-balance/test"
                  "components/bank-balance/test-resources"
                  "components/bank-balance-domain/test"
+                 "components/bank-bank/test"
+                 "components/bank-bank/test-resources"
                  "components/bank-cash-account-product/test"
                  "components/bank-cash-account-product/test-resources"
                  "components/bank-cash-account-product-query/test"
