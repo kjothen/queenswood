@@ -1,0 +1,27 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<script src="./node_modules/react/umd/react.production.min.js"></script>
+<script src="./node_modules/react-dom/umd/react-dom.production.min.js"></script>
+<script src="./node_modules/@excalidraw/excalidraw/dist/excalidraw.production.min.js"></script>
+</head>
+<body>
+<script>
+  window.doExport = async (scene, dark) => {
+    const { exportToSvg } = window.ExcalidrawLib;
+    const svg = await exportToSvg({
+      elements: scene.elements,
+      appState: {
+        ...(scene.appState || {}),
+        exportBackground: false,
+        exportWithDarkMode: dark,
+        exportEmbedScene: false,
+      },
+      files: scene.files || null,
+    });
+    return svg.outerHTML;
+  };
+</script>
+</body>
+</html>
