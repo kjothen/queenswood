@@ -6,10 +6,11 @@
 
 Every domain that owns an FDB-backed write — cash accounts,
 parties, payments, transactions, interest, IDV — is implemented
-as a *domain component* (`components/bank-X/`) hosted by the
-shared *processors base* (`bases/bank-processors/`) inside one of
-the combined processor services
-([ADR-0019](../adr/0019-processor-packaging.md)). This TDD
+as a *domain component* (`components/bank-X/`) hosted by its
+group's *processors base* (`bases/bank-financial-processors/` or
+`bases/bank-operational-processors/`) inside a combined processor
+service — see
+[ADR-0019](../adr/0019-processor-packaging.md). This TDD
 describes the file layout inside the component, how FDB
 transactions thread through it, and where rejections originate.
 
@@ -68,22 +69,23 @@ components/bank-X/
     validation.clj     # (optional) predicate-style validators
     system.clj         # defcomponents :processor + :watcher-handler
 
-bases/bank-processors/            # shared by all processor groups
-  src/com/repldriven/mono/bank_processors/
+bases/bank-<group>-processors/    # one per processor group
+  src/com/repldriven/mono/bank_<group>_processors/
     main.clj           # entry point
-    system.clj         # bare-require bundle (superset)
+    system.clj         # bare-require bundle for the group
 ```
 
 The base contains no business logic — its `system.clj` is a
-bundle of `require` forms so every processor's component-kinds
-are registered, and `main.clj` starts the system per
+bundle of `require` forms so the group's component-kinds are
+registered, and `main.clj` starts the system per
 [recipes/bases.md](../recipes/bases.md). Which processors a
 given service actually runs is decided by its project's
-`application.yml`: a new processor adds its brick, its
-`bank/X.yml` system config, and pulsar wiring to the group its
-boundary dictates — financial or operational, per
-[ADR-0019](../adr/0019-processor-packaging.md) — instead of
-scaffolding a base and service of its own.
+`application.yml`: a new processor adds its brick to the group
+its boundary dictates — financial or operational, per
+[ADR-0019](../adr/0019-processor-packaging.md) — wiring its
+`bank/X.yml` system config, pulsar entries, bundle require, and
+deps into that group's project and base instead of scaffolding a
+base and service of its own.
 
 ### The `txn-or-config` parameter
 

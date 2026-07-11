@@ -23,11 +23,15 @@ uniformity, not necessity.
 
 ## Decision
 
-Processors are packaged by deployment-time composition: one generic
-`bases/bank-processors` (boilerplate main plus a superset require
-bundle registering every processor brick's component-kinds), and one
-project per *service group*, whose `application.yml` alone decides
-which processors, watchers, and event consumers that JVM hosts.
+Processors are packaged by deployment-time composition: one thin
+base per *service group* (boilerplate main plus a require bundle
+registering that group's component-kinds), and one project per
+group, whose `application.yml` alone decides which processors,
+watchers, and event consumers that JVM hosts. The bases are
+group-scoped rather than one shared superset so each project's
+deps carry only the bricks its group runs — `poly check`'s
+unnecessary-component warning stays meaningful for these projects
+instead of being structurally silenced.
 
 Grouping is by boundary, not throughput:
 
@@ -68,9 +72,10 @@ Easier:
 
 - Three processor deployments instead of ten; CI's per-project
   matrix and the Helm/Tilt/bake/release inventories shrink to match.
-- Regrouping is YAML. Promoting a hot domain to its own deployment
-  (or demoting a quiet one) is a new project with moved include
-  lines — the require-bundle base and the bricks are untouched.
+- Regrouping is configuration and plumbing, never brick code.
+  Promoting a hot domain to its own deployment (or moving one
+  between groups) relocates its YAML, pulsar wiring, bundle require,
+  and deps — the `bank-X` brick itself is untouched.
 - A new processor no longer scaffolds a base and a service: it adds
   its brick, its `bank/X.yml`, and pulsar wiring to the group its
   boundary dictates.
@@ -82,6 +87,7 @@ Harder:
   payment consumption; the boundary rule keeps the blast radius on
   one side of the financial line.
 - Per-domain resource attribution needs metrics, not `kubectl top`.
-- Both group images carry every processor brick (the superset base
-  makes each project's deps identical); image size and startup
-  registration are marginally larger than a bespoke build.
+- Moving a processor between groups touches three places instead of
+  one: the domain YAML and pulsar wiring move between projects, the
+  brick moves between the two bases' require bundles, and the deps
+  move between the two projects' `deps.edn`s.

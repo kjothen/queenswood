@@ -1,6 +1,6 @@
 ---
 name: new-processor
-description: Scaffold or extend a Queenswood processor brick — a `components/bank-X/` domain component with the canonical commands/core/domain/store/watcher/system file set, hosted by the shared `bases/bank-processors/` base inside a group service (ADR-0019). Threads the `txn-or-config` transaction parameter through every layer, confines `fdb/*` requires to `store.clj` plus the `watcher.clj` carve-out, and originates `:rejection/anomaly` only in `domain.clj`. Use when scaffolding a new processor ("new processor for X", "add a domain brick that handles commands and writes to FDB") or when adding a new command to an existing processor ("add open-Y command to bank-X", "extend bank-payment to handle a new instruction").
+description: Scaffold or extend a Queenswood processor brick — a `components/bank-X/` domain component with the canonical commands/core/domain/store/watcher/system file set, hosted by its group's processors base (financial or operational) inside a group service (ADR-0019). Threads the `txn-or-config` transaction parameter through every layer, confines `fdb/*` requires to `store.clj` plus the `watcher.clj` carve-out, and originates `:rejection/anomaly` only in `domain.clj`. Use when scaffolding a new processor ("new processor for X", "add a domain brick that handles commands and writes to FDB") or when adding a new command to an existing processor ("add open-Y command to bank-X", "extend bank-payment to handle a new instruction").
 ---
 
 # new-processor
@@ -89,17 +89,19 @@ For a brand-new processor `bank-Y` with a paired
      consumes (`bank-schema`, `error`, `utility`, plus any
      other bricks the core orchestrator reads from).
 
-3. **Register the brick in the shared processors base.** Add
-   `com.repldriven.mono.bank-Y.interface` to the require bundle
-   in `bases/bank-processors/src/com/repldriven/mono/bank_processors/system.clj`.
-   There is no per-processor base — processors are hosted by
-   group services per
-   [ADR-0019](../../../docs/adr/0019-processor-packaging.md).
+3. **Pick the group and register the brick in its base.** Pick
+   by boundary (financial: posts/settles/accrues/gates a
+   payment; operational: provisions or verifies) per
+   [ADR-0019](../../../docs/adr/0019-processor-packaging.md),
+   then add `com.repldriven.mono.bank-Y.interface` to that
+   group base's require bundle
+   (`bases/bank-financial-processors/` or
+   `bases/bank-operational-processors/`). There is no
+   per-processor base — processors are hosted by group
+   services.
 
-4. **Wire the processor into its group's project.** Pick the
-   group by boundary (financial: posts/settles/accrues/gates a
-   payment; operational: provisions or verifies) and edit that
-   project — `projects/bank-financial-processors-service/` or
+4. **Wire the processor into the same group's project** —
+   `projects/bank-financial-processors-service/` or
    `projects/bank-operational-processors-service/`:
 
    - `resources/bank/Y.yml` — the domain's processor /
@@ -108,9 +110,8 @@ For a brand-new processor `bank-Y` with a paired
      for the new topics (subscription named
      `bank-Y-service-<topic>`), message-bus entries, and the
      `!include bank/Y.yml` line.
-   - `deps.edn` — add the brick to **both** group projects (the
-     shared base requires it, so every project using the base
-     must carry it).
+   - `deps.edn` — add the brick (and any new transitive
+     bricks); `poly check` confirms.
 
 5. **Add Avro schemas** for the new commands and events under
    the schema brick, per

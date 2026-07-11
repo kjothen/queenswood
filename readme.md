@@ -4,9 +4,10 @@
 
 # Queenswood
 
-A multi-tenant banking platform: core banking with double-entry
-transactions and interest accrual, UK Faster Payments, and bank
-onboarding with IDV.
+**A bank in a box.** Provision a fully-formed tenant bank —
+double-entry ledgers, UK Faster Payments, interest accrual, and
+identity-checked onboarding — from a single API call. Core banking,
+rebuilt as a clean Clojure/Polylith workspace you can actually read.
 
 ## Demos
 
@@ -21,26 +22,77 @@ onboarding with IDV.
   </tr>
 </table>
 
-## Capabilities
+## What it does
 
-| Capability                   | Description                                                                                                                                                       |
-| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Payments & Transactions**  | Internal transfers; outbound UK Faster Payments via a pluggable scheme adapter, reserved on submit and settled (or released) on the scheme's confirmation; inbound settlement with BBAN lookup and idempotency |
-| **Interest**                 | Daily accrual and monthly capitalisation with fractional carry at sub-minor-unit precision |
-| **Cash Accounts**            | Open accounts against published products, assigned UK SCAN payment addresses (sort code + account number). Lifecycle: `opening` → `opened` → `closing` → `closed` |
-| **Cash Account Products**    | Draft products with balance configurations, publish versioned releases |
-| **Parties & Identity**       | Register customers with national identifiers; Onfido-shaped IDV via pluggable adapter drives `pending` → `active` (or rejected) |
-| **Policies**                 | Capabilities and limits as editable records; deny-wins resolution and a curative-permit pattern — a breaching action is allowed only when it moves the position back toward compliance |
-| **Banks & API Keys**         | Multi-tenant onboarding — create a bank (`POST /v1/banks`), which returns a service-account credential (client-id / secret, shown once) that authenticates via Keycloak OAuth2 bearer tokens |
+Everything a tenant bank needs, from the same API:
 
-API documentation:
-[repldriven.github.io/queenswood](https://repldriven.github.io/queenswood/)
-| OpenAPI at [localhost:8080](http://localhost:8080) when running.
+- **Payments** — internal transfers and outbound UK Faster Payments;
+  funds reserved on submit, settled or released on the scheme's word.
+- **Ledger** — double-entry postings on every movement, penny-exact,
+  always balancing.
+- **Interest** — daily accrual, monthly capitalisation, fractional
+  carry below the minor unit so nothing rounds away.
+- **Accounts & products** — publish versioned account products, then
+  open accounts against them with real UK sort-code / account-number
+  addresses.
+- **Onboarding & identity** — register customers, run identity
+  verification through a pluggable adapter, activate on the result.
+- **Policies** — capabilities and limits as editable records, not
+  hardcoded rules; deny-wins, with a curative-permit escape so a
+  customer can act their way back into compliance.
+- **Multi-tenancy** — one `POST /v1/banks` provisions a bank and hands
+  back an OAuth2 service credential, shown once.
+
+API reference:
+[repldriven.github.io/queenswood](https://repldriven.github.io/queenswood/),
+or live OpenAPI at [localhost:8080](http://localhost:8080) when
+running.
+
+## Architecture
+
+CQRS on two substrates: Apache Pulsar carries commands and events,
+FoundationDB's Record Layer holds state and its own changelog.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)"  srcset="docs/diagrams/system-diagram-dark.svg">
+  <source media="(prefers-color-scheme: light)" srcset="docs/diagrams/system-diagram-light.svg">
+  <img alt="Queenswood system diagram" src="docs/diagrams/system-diagram-light.svg">
+</picture>
+
+**Writes are commands.** The API turns a request into an
+Avro-serialised command on the bus; a processor consumes it, does the
+whole operation in one FDB transaction, and replies — `ACCEPTED` (2xx),
+`REJECTED` (4xx), or `FAILED` (5xx). Processors are packaged into two
+services along the financial boundary (payment / transaction / interest
+/ payee-check, versus bank / party / account / product / idv); the
+grouping is YAML composition, not code. A handful of low-stakes
+config writes — API keys, policies, seeded jobs — still go straight to
+FDB. See [transaction-processing](docs/tdd/transaction-processing.md).
+
+**Reads are queries.** The read side loads records directly by primary
+key, off a separate query surface — no command round-trip. Write bricks
+and their query siblings are distinct components, so the API can only
+call read paths.
+
+**The changelog is the engine room.** Every committed write lands on
+FoundationDB's changelog in order, atomically with the write — so it
+doubles as a transactional outbox. In-process watchers drain it to
+drive reactive transitions (an account opening, an IDV result
+activating a party) and to relay events onto the bus. See
+[changelog watchers](docs/adr/0008-changelog-watchers.md).
+
+**Egress crosses a boundary carefully.** Outbound Faster Payments and
+identity checks never call out from inside a transaction: the write
+records an intent, and a relay makes the external call and folds the
+provider's webhook back in as an event. Adapter/simulator pairs front
+the real providers (ClearBank FPS, Onfido) — the simulators stand in
+during development and tests. See
+[deployment](docs/recipes/deployment.md).
 
 ## What's interesting
 
-The engineering choices that shape this codebase, each linked to
-the doc that goes deep on it:
+The decisions that make this codebase worth reading — each with a
+doc that goes deep:
 
 - **One unified API for the whole bank, with full OpenAPI 3.x
   compliance.** Bank-shaped, not implementation-shaped; the spec
@@ -76,171 +128,10 @@ the doc that goes deep on it:
   the workspace, not pulled in as a library.
   See [ADR-0001](docs/adr/0001-reuse-mono-as-upstream.md).
 
-## Architecture
-
-Per-domain deployable services on two substrates — Apache Pulsar
-for command and event flow, FoundationDB Record Layer for
-storage and changelog. Adapter/simulator pairs front the two
-external integrations (UK Faster Payments via ClearBank, IDV
-via Onfido); the simulators stand in for the production
-providers in development and tests.
-
-```mermaid
-graph TB
-    CONSOLE["bank-console<br/>(Svelte UI)"]
-
-    subgraph http ["HTTP services"]
-        direction LR
-        API[bank-api-service]
-        CBA[bank-clearbank-<br/>adapter-service]
-        CBS[bank-clearbank-<br/>simulator-service]
-        OFA[bank-onfido-<br/>adapter-service]
-        OFS[bank-onfido-<br/>simulator-service]
-        CHS[bank-uk-companies-<br/>house-simulator-service]
-    end
-
-    PULSAR[("Apache Pulsar<br/>command + event topics")]
-
-    subgraph processors ["Processor services (Pulsar consumers)"]
-        direction LR
-        subgraph FIN ["financial-processors"]
-            direction TB
-            PPY[payment]
-            PTX[transaction]
-            PIN[interest]
-            PPC[payee-check]
-        end
-        subgraph OPS ["operational-processors"]
-            direction TB
-            PBK[bank]
-            PPT[party]
-            PCA[cash-account]
-            PPR[product]
-            PID[idv]
-        end
-        PSCH[scheduler-<br/>processor]
-    end
-
-    FDB[("FoundationDB<br/>Record Layer + changelog")]
-
-    subgraph oneshots ["Cold-start (one-shot k8s Jobs)"]
-        direction LR
-        MIG[migrator-service]
-        BS[bootstrap-service]
-    end
-
-    subgraph external ["External (production targets)"]
-        direction LR
-        CB[ClearBank FPS]
-        OF[Onfido]
-        CH[Companies House]
-    end
-
-    CONSOLE -->|HTTP| API
-    API -->|commands| PULSAR
-    API -->|direct CRUD<br/>api-key, policy, jobs| FDB
-    API -->|company lookup| CHS
-    API -.->|company lookup| CH
-
-    PULSAR -->|consume commands| processors
-    processors -->|read + write| FDB
-    FDB -->|changelog| processors
-    PPC -->|CoP lookup| CBA
-
-    PSCH -->|scheduled<br/>interest commands| PULSAR
-
-    PPY -->|submit-payment| PULSAR
-    PULSAR -->|consume| CBA
-    CBA <-->|HTTP + webhook| CBS
-    CBA <-.->|HTTP + webhook| CB
-    CBA -->|transaction-settled| PULSAR
-
-    PID -->|submit-idv-check| PULSAR
-    PULSAR -->|consume| OFA
-    OFA <-->|HTTP + webhook| OFS
-    OFA <-.->|HTTP + webhook| OF
-    OFA -->|idv-completed| PULSAR
-
-    MIG -->|FDB metadata| FDB
-    MIG -->|topics + schemas| PULSAR
-    MIG --> BS
-    BS -->|internal org,<br/>platform policies| FDB
-```
-
-**HTTP services** — `bank-api-service` is the public banking
-surface (Reitit + Malli + Sieppari + Muuntaja). The
-adapter/simulator pairs serve their own HTTP surfaces:
-adapters host webhook receivers and call out to providers;
-simulators stand in for the providers in development and
-tests. `bank-api-service` also calls a UK Companies House
-simulator directly over HTTP for the onboarding company
-lookup; the dotted edge marks the real Companies House it
-stands in for.
-
-**Direct path** — low-volume, idempotent records
-(banks, products, policies, API keys) are created
-and updated directly by `bank-api-service` against FDB. All
-records query on-demand using FDB record primary key
-ordering.
-
-**Commands path** — domain writes (banks, parties, cash
-accounts, products, payments, interest, transactions, payee
-checks) flow as Avro-serialised commands from
-`bank-api-service` through Pulsar to a domain processor. Each
-processor writes to FDB and replies via the same bus. Envelope
-statuses: `ACCEPTED` (2xx), `REJECTED` (4xx), `FAILED` (5xx).
-Processors are packaged into two services along the financial
-boundary — `bank-financial-processors-service` (payment,
-transaction, interest, payee-check) and
-`bank-operational-processors-service` (bank, party,
-cash-account, product, idv) — which processors a service hosts
-is YAML composition, not code. The payee-check processor
-additionally calls the ClearBank adapter over HTTP for the
-Confirmation of Payee lookup before persisting and replying.
-See [transaction-processing](docs/tdd/transaction-processing.md).
-
-**Scheduled work** — `bank-scheduler-processor-service` fires
-seeded jobs (e.g. daily interest) on a cron, publishing the
-interest commands onto the same bus for the interest
-processor to consume.
-
-**Scheme + IDV paths** — outbound payments publish a
-`submit-payment` command on a scheme channel;
-`bank-clearbank-adapter-service` consumes it into a durable
-outbound intent, and a relay POSTs to FPS outside any FDB
-transaction. Settlement webhooks are persisted to an outbox and
-relayed back as `transaction-settled` events. The IDV path
-mirrors this: the idv processor publishes
-`submit-idv-check`, the Onfido adapter relays the outbound call
-and turns the `check.completed` webhook into an `idv-completed`
-event. Both adapters own an FDB store and follow the
-transactional outbox-and-intent model — see
-[transaction-processing](docs/tdd/transaction-processing.md). The
-simulator services stand in for ClearBank FPS and Onfido; the
-dotted edges to ClearBank and Onfido mark the production targets.
-
-**Watchers** — FDB changelog triggers drive reactive
-state transitions inside the processor services: cash
-account `opening` → `opened` and `closing` → `closed`;
-the party–IDV–party activation chain (party-processor
-writes a pending party, idv-processor reacts to the
-party changelog and initiates IDV, the `idv-completed`
-event flips the IDV record, party-processor reacts to
-the IDV changelog and activates the party). See
-[ADR-0008](docs/adr/0008-changelog-watchers.md) and
-[parties](docs/tdd/parties.md).
-
-**Cold-start** — `bank-migrator-service` applies FDB
-record metadata and Pulsar topics/schemas;
-`bank-bootstrap-service` seeds the singleton internal
-organisation and the platform/micro policies. Both run as
-one-shot k8s Jobs; services wait on the bootstrap Job
-before starting. See
-[deployment](docs/recipes/deployment.md).
-
 ## Documentation
 
-The bank is documented:
+The bank is documented end to end — the why, the how, and the
+decisions in between:
 
 - **[docs/prd/](docs/prd/)** — product requirements documents:
   a platform-wide umbrella plus one per capability (onboarding,
