@@ -1,0 +1,16 @@
+{
+  "name": "diagram-export",
+  "private": true,
+  "type": "module",
+  "description": "Headless light/dark SVG export for the Excalidraw diagrams in docs/diagrams.",
+  "scripts": {
+    "postinstall": "playwright install chromium",
+    "export": "node export-diagrams.mjs"
+  },
+  "dependencies": {
+    "@excalidraw/excalidraw": "0.16.1",
+    "playwright": "1.55.0",
+    "react": "18.2.0",
+    "react-dom": "18.2.0"
+  }
+}
