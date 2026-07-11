@@ -1,0 +1,13 @@
+processor: !system/component
+  system/component-kind: bank/processor
+  record-db: !system/ref fdb.record-db
+  record-store: !system/ref fdb.meta-store
+  schemas: !system/ref avro.serde
+  identity-provider: !system/ref keycloak.identity-provider
+
+command-processor: !system/component
+  system/component-kind: command-processor/command-processor
+  bus: !system/ref message-bus.bus
+  processor: !system/local-ref processor
+  command-channel: !keyword banks-command
+  command-response-channel: !keyword banks-command-response

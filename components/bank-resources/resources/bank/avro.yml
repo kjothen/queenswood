@@ -16,6 +16,9 @@ serde: !system/component
     party: schemas/party/party.avsc.json
     create-party: schemas/party/create-party.avsc.json
 
+    bank: schemas/banks/bank.avsc.json
+    create-bank: schemas/banks/create-bank.avsc.json
+
     idv: schemas/idv/idv.avsc.json
     initiate-idv: schemas/idv/initiate-idv.avsc.json
     get-idv: schemas/idv/get-idv.avsc.json

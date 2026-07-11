@@ -16,6 +16,7 @@
     [com.repldriven.mono.bank-idv.interface :as idv]
     [com.repldriven.mono.bank-interest.interface :as interest]
     [com.repldriven.mono.bank-bank.interface :as banks]
+    [com.repldriven.mono.bank-bank-query.interface :as banks-query]
     [com.repldriven.mono.bank-party.interface :as party]
     [com.repldriven.mono.bank-party-query.interface :as party-query]
     [com.repldriven.mono.bank-payee-check.interface :as payee-check]
@@ -157,7 +158,11 @@
                                 :audience "queenswood-api-test"})
         bank-entity (:bank result)
         real-bank-id (:bank-id bank-entity)
-        real-party-id (get-in bank-entity [:party :party-id])
+        real-party-id (when-not (error/anomaly? result)
+                        (-> (party-query/get-parties bank real-bank-id)
+                            :parties
+                            first
+                            :party-id))
         scenario-product (when-not (error/anomaly? result)
                            (products/new-product
                             bank
@@ -943,7 +948,7 @@
 (defmethod dispatch :get-bank
   [{:keys [bank banks] :as ctx} {[bank-ref] :args}]
   (let [bank-id (resolve-real-id banks bank-ref)
-        result (banks/get-bank bank bank-id)]
+        result (banks-query/get-bank bank bank-id)]
     (-> ctx
         (update :counter inc)
         (track result))))

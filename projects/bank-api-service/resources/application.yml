@@ -19,6 +19,13 @@ system:
         type: AVRO
     producers: !system/component
       system/component-kind: pulsar/producers
+      banks-command:
+        client: !system/local-ref client
+        conf:
+          accessMode: !pulsar/access-mode Shared
+          schema: !keyword command
+          topicName: "persistent://tenant-1/namespace-1/topic-banks-command"
+        schemas: !system/local-ref schemas
       cash-accounts-command:
         client: !system/local-ref client
         conf:
@@ -70,6 +77,16 @@ system:
         schemas: !system/local-ref schemas
     consumers: !system/component
       system/component-kind: pulsar/consumers
+      banks-command-response:
+        client: !system/local-ref client
+        conf:
+          cryptoFailureAction: !pulsar/crypto-failure-action CONSUME
+          schema: !pulsar/schema AUTO_CONSUME
+          subscriptionName: bank-api-service-banks-command-response
+          subscriptionType: !pulsar/subscription-type Shared
+          topicNames:
+            ["persistent://tenant-1/namespace-1/topic-banks-command-response"]
+        schemas: !system/local-ref schemas
       cash-accounts-command-response:
         client: !system/local-ref client
         conf:
@@ -142,6 +159,8 @@ system:
         schemas: !system/local-ref schemas
     message-bus-producers: !system/component
       system/component-kind: pulsar/message-bus-producers
+      banks-command:
+        producer: !system/local-ref producers.banks-command
       cash-accounts-command:
         producer: !system/local-ref producers.cash-accounts-command
       cash-account-products-command:
@@ -158,6 +177,8 @@ system:
         producer: !system/local-ref producers.payee-checks-command
     message-bus-consumers: !system/component
       system/component-kind: pulsar/message-bus-consumers
+      banks-command-response:
+        consumer: !system/local-ref consumers.banks-command-response
       cash-accounts-command-response:
         consumer: !system/local-ref consumers.cash-accounts-command-response
       cash-account-products-command-response:
@@ -196,6 +217,12 @@ system:
       admin-client-id: !env KEYCLOAK_ADMIN_CLIENT_ID
       admin-client-secret: !env KEYCLOAK_ADMIN_CLIENT_SECRET
       expected-issuer: !env KEYCLOAK_OPS_EXPECTED_ISSUER
+  banks:
+    dispatcher: !system/component
+      system/component-kind: command/dispatcher
+      bus: !system/ref message-bus.bus
+      command-channel: !keyword banks-command
+      command-response-channel: !keyword banks-command-response
   cash-accounts:
     dispatcher: !system/component
       system/component-kind: command/dispatcher
@@ -273,6 +300,7 @@ system:
         bank-status-test: queenswood-api-test
         bank-status-live: queenswood-api-live
       dispatchers:
+        banks: !system/ref banks.dispatcher
         cash-accounts: !system/ref cash-accounts.dispatcher
         cash-account-products: !system/ref cash-account-products.dispatcher
         parties: !system/ref parties.dispatcher

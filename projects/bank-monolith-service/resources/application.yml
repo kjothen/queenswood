@@ -7,6 +7,8 @@ system:
     bus: !system/component
       system/component-kind: message-bus/local-bus
       channels:
+        - banks-command
+        - banks-command-response
         - cash-accounts-command
         - cash-accounts-command-response
         - cash-account-products-command
@@ -44,6 +46,7 @@ system:
       admin-client-id: !env KEYCLOAK_ADMIN_CLIENT_ID
       admin-client-secret: !env KEYCLOAK_ADMIN_CLIENT_SECRET
       expected-issuer: !env KEYCLOAK_OPS_EXPECTED_ISSUER
+  banks: !include bank/bank.yml
   cash-accounts: !include bank/cash-account.yml
   cash-account-products: !include bank/cash-account-product.yml
   parties: !include bank/party.yml
@@ -89,6 +92,7 @@ system:
         bank-status-test: queenswood-api-test
         bank-status-live: queenswood-api-live
       dispatchers:
+        banks: !system/ref banks.dispatcher
         cash-accounts: !system/ref cash-accounts.dispatcher
         cash-account-products: !system/ref cash-account-products.dispatcher
         parties: !system/ref parties.dispatcher

@@ -1,19 +1,25 @@
 (ns com.repldriven.mono.bank-bank.interface
-  "Bank tenant lifecycle: provisions a bank with a service-account
-  client, an organization party, and a default chart of bank-owned
-  ledger accounts per currency, and binds tier-specific policies to
-  the new bank. Read paths return the bank enriched with its party and
-  accounts (with balances)."
+  "Bank write side: provisions a bank with a service-account client,
+  an organization party, a default chart of bank-owned ledger accounts
+  per currency, tier-specific policy bindings, and (onboarding) the
+  owner membership — all in one transaction.
+
+  Reads live in `bank-bank-query`; `bank-api` requires the query
+  brick, not this one — bank creation reaches the processor as a
+  command over the bus."
   (:require
-    [com.repldriven.mono.bank-bank.core :as core]
-    [com.repldriven.mono.bank-bank.store :as store]))
+    com.repldriven.mono.bank-bank.system
+
+    [com.repldriven.mono.bank-bank.core :as core]))
 
 (defn new-bank
   "Provision a new bank with a service-account client, an organization
   party, and a default chart of ledger accounts per currency, and bind
-  the tier policies to it. Returns
-  `{:bank {... :client-id …} :client-secret <one-time-string>}`
-  or an anomaly. The client_secret is only returned at creation time.
+  the tier policies to it. When `:membership` is supplied, also create
+  the owner membership in the same transaction. Returns
+  `{:bank {…} :membership <map-or-nil>}` or an anomaly. The
+  service-account secret is not returned — callers needing one mint it
+  via `identity-provider/rotate-secret` after creation.
 
   Args:
   - txn: FDB transaction or db handle.
@@ -27,9 +33,13 @@
     has no credentials, so creation is rejected `:bank/missing-identity-provider`;
     `:audience` (string) is the `aud` claim stamped on tokens minted
     for the new client; `:company-binding` (map, optional) is the
-    confirmed legal-entity snapshot to bind the bank to (onboarding);
-    `:policies` overrides the platform policies used for the capability
-    check."
+    confirmed legal-entity snapshot to bind the bank to (onboarding) —
+    creation is rejected `:onboarding/company-not-active` unless its
+    `:company-status` is active; `:membership` (map, optional) is
+    `{:user-id … :role …}` for the owner membership — rejected
+    `:membership/already-exists` when the user already belongs to a
+    bank; `:policies` overrides the platform policies used for the
+    capability check."
   [txn bank-name bank-status tier currencies opts]
   (core/new-bank txn
                  bank-name
@@ -37,34 +47,3 @@
                  tier
                  currencies
                  opts))
-
-(defn get-bank
-  "Load a flat bank map by id. Returns the bank or a
-  `:bank/not-found` rejection anomaly.
-
-  Args:
-  - txn: FDB transaction or db handle.
-  - bank-id: bank id."
-  [txn bank-id]
-  (store/get-bank txn bank-id))
-
-(defn get-bank-by-sort-code
-  "Load a flat bank map by its sort code (the first 6 digits of its
-  accounts' BBANs). Returns the bank, or nil if no bank owns that sort
-  code.
-
-  Args:
-  - txn: FDB transaction or db handle.
-  - sort-code: 6-digit sort code string."
-  [txn sort-code]
-  (store/get-bank-by-sort-code txn sort-code))
-
-(defn get-banks
-  "List banks enriched with party and accounts (with balances).
-  Returns a vector of rich bank maps or an anomaly.
-
-  Args:
-  - txn: FDB transaction or db handle.
-  - opts (optional): map; `:limit` and `:order` (default `:desc`)."
-  ([txn] (core/get-banks txn))
-  ([txn opts] (core/get-banks txn opts)))

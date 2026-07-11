@@ -1,5 +1,6 @@
 (ns com.repldriven.mono.bank-monolith.system
   (:require
+    com.repldriven.mono.bank-bank.interface
     com.repldriven.mono.bank-cash-account.interface
     com.repldriven.mono.bank-clearbank-adapter.system
     com.repldriven.mono.bank-clearbank-simulator.system

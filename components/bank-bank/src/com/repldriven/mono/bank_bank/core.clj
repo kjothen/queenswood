@@ -3,16 +3,11 @@
     [com.repldriven.mono.bank-bank.domain :as domain]
     [com.repldriven.mono.bank-bank.store :as store]
 
-    [com.repldriven.mono.bank-balance-query.interface :as balances]
     [com.repldriven.mono.bank-cash-account.interface :as cash-accounts]
-    [com.repldriven.mono.bank-cash-account-query.interface :as
-     cash-accounts-query]
     [com.repldriven.mono.bank-cash-account-product.interface :as products]
-    [com.repldriven.mono.bank-cash-account-product-query.interface :as
-     products-query]
     [com.repldriven.mono.bank-ledger-account.interface :as ledger-accounts]
+    [com.repldriven.mono.bank-membership.interface :as memberships]
     [com.repldriven.mono.bank-party.interface :as party]
-    [com.repldriven.mono.bank-party-query.interface :as party-query]
     [com.repldriven.mono.bank-policy.interface :as policy]
     [com.repldriven.mono.bank-scheduler.interface :as scheduler]
 
@@ -119,67 +114,13 @@
             nil
             policies)))
 
-(defn- account-gl-code
-  "Resolve the GL code for an account by reading its product version's
-  denormalised top-level gl-code. Nil for customer (sub-ledger)
-  accounts. Lets callers select a specific GL account (e.g. the 1100
-  settlement) by code rather than by seed order."
-  [txn bank-id {:keys [product-id version-id]}]
-  (let [version (products-query/get-version txn bank-id product-id version-id)]
-    (when-not (error/anomaly? version)
-      (:gl-code version))))
-
-(defn- enrich-accounts
-  [txn bank-id accounts]
-  (reduce (fn [acc account]
-            (let [bal (balances/get-balances txn (:account-id account))]
-              (if (error/anomaly? bal)
-                (reduced bal)
-                (let [gl-code (account-gl-code txn bank-id account)
-                      enriched (cond-> (merge account bal)
-                                       gl-code
-                                       (assoc :gl-code gl-code))]
-                  (conj acc enriched)))))
-          []
-          accounts))
-
-(defn- enrich
-  [txn bank client-secret]
-  (let [{:keys [bank-id]} bank]
-    (let-nom>
-      [{:keys [parties]} (party-query/get-parties txn bank-id)
-       {:keys [accounts]} (cash-accounts-query/get-accounts txn bank-id)
-       enriched (enrich-accounts txn bank-id accounts)]
-      {:bank (assoc bank
-                    :party (first parties)
-                    :accounts enriched
-                    :client-id bank-id)
-       :client-secret client-secret})))
-
-(defn get-bank
-  ([txn bank]
-   (get-bank txn bank nil))
-  ([txn bank client-secret]
-   (store/transact txn (fn [txn] (enrich txn bank client-secret)))))
-
-(defn get-banks
-  ([txn] (get-banks txn nil))
-  ([txn opts]
-   (let-nom> [banks (store/get-banks txn opts)]
-     (reduce (fn [acc bank]
-               (let [result (get-bank txn bank)]
-                 (if (error/anomaly? result)
-                   (reduced result)
-                   (conj acc (:bank result)))))
-             []
-             banks))))
-
 (defn new-bank
   [txn bank-name bank-status tier currencies opts]
   (store/transact
    txn
    (fn [txn]
-     (let [{:keys [identity-provider company-binding]} opts]
+     (let [{:keys [identity-provider company-binding membership]} opts
+           {:keys [user-id role]} membership]
        (let-nom>
          [_
           (when-not identity-provider
@@ -188,17 +129,20 @@
              {:message
               "A bank requires an identity-provider to issue its service-account client"
               :bank-name bank-name}))
+          ;; Sole-membership check first, so a redelivered onboarding
+          ;; command aborts before any write.
+          existing (if membership
+                     (memberships/list-by-user txn user-id)
+                     [])
+          _ (domain/check-sole-membership user-id existing)
           policies (or (:policies opts)
                        (policy/get-effective-policies txn {}))
           sort-code (store/allocate-sort-code txn)
-          ;; Snapshot of the bound legal entity (onboarding path); absent
-          ;; for admin-provisioned banks.
-          bank (cond-> (domain/new-bank bank-name
-                                        bank-status
-                                        sort-code
-                                        policies)
-                       company-binding
-                       (assoc :company-binding company-binding))
+          bank (domain/new-bank bank-name
+                                bank-status
+                                sort-code
+                                company-binding
+                                policies)
           bank-id (:bank-id bank)
 
           ;; Issue the service-account client BEFORE the FDB write so an
@@ -206,12 +150,14 @@
           ;; Client-id == bank-id (deterministic mapping). `:audience` is
           ;; the JWT `aud` claim the IDP stamps on tokens for this client
           ;; — the bank-api handler picks it from its own status→audience
-          ;; config and forwards it here.
-          {:keys [client-secret]} (identity-provider/create-service-account
-                                   identity-provider
-                                   {:bank-id bank-id
-                                    :name bank-name
-                                    :audience (:audience opts)})
+          ;; config and forwards it here. The secret it mints is
+          ;; discarded: callers rotate a fresh one after the reply so no
+          ;; credential crosses the bus.
+          _ (identity-provider/create-service-account
+             identity-provider
+             {:bank-id bank-id
+              :name bank-name
+              :audience (:audience opts)})
           _ (store/create txn bank)
           {:keys [party-id]} (party/new-party
                               txn
@@ -228,7 +174,11 @@
                                 policies)
           _ (bind-tier-policies txn bank-id tier)
           _ (scheduler/seed-jobs txn bank-id)
-          result (get-bank txn bank client-secret)]
-         result)))
+          owner (when membership
+                  (memberships/new-membership txn
+                                              {:user-id user-id
+                                               :bank-id bank-id
+                                               :role role}))]
+         {:bank bank :membership owner})))
    :bank/create
    "Failed to create bank"))

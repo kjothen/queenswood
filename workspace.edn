@@ -18,6 +18,12 @@
                            "bank-schema" "bank-test-resources" "test-schema"
                            "command-schema" "event-schema"
                            "test-resources"]},
+            "bank-bank-processor-service"
+              {:alias "bnk",
+               :necessary ["bank-resources"
+                           "bank-schema" "bank-test-resources" "test-schema"
+                           "command-schema" "event-schema"
+                           "test-resources"]},
             "bank-party-processor-service"
               {:alias "pty",
                :necessary ["bank-resources"
