@@ -1,6 +1,6 @@
-(ns com.repldriven.mono.bank-processors.main
+(ns com.repldriven.mono.bank-financial-processors.main
   (:require
-    com.repldriven.mono.bank-processors.system
+    com.repldriven.mono.bank-financial-processors.system
     [com.repldriven.mono.cli.interface :as cli]
     [com.repldriven.mono.env.interface :as env]
     [com.repldriven.mono.error.interface :as error :refer [nom->]]
@@ -16,7 +16,7 @@
   [& args]
   (log/info args)
   (let [{:keys [options exit-message ok?]}
-        (cli/validate-args "bank-processors" args)]
+        (cli/validate-args "bank-financial-processors" args)]
     (if exit-message
       (cli/exit ok? exit-message)
       (let [{:keys [config-file profile]} options

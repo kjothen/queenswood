@@ -1,7 +1,7 @@
 {:aliases
  {:build {:deps {bases/build {:local/root "../../bases/build"}}
           :exec-args {:lib 'com.repldriven.mono/bank-operational-processors-service
-                      :main com.repldriven.mono.bank-processors.main
+                      :main com.repldriven.mono.bank-operational-processors.main
                       :major-minor-version "0.0"}
           :ns-default com.repldriven.mono.build.build}
   :test
@@ -20,8 +20,6 @@
   component/bank-balance-query
   {:local/root "../../components/bank-balance-query"}
   component/bank-bank {:local/root "../../components/bank-bank"}
-  component/bank-bank-query
-  {:local/root "../../components/bank-bank-query"}
   component/bank-cash-account {:local/root "../../components/bank-cash-account"}
   component/bank-cash-account-query
   {:local/root "../../components/bank-cash-account-query"}
@@ -37,10 +35,6 @@
   component/bank-party {:local/root "../../components/bank-party"}
   component/bank-party-query
   {:local/root "../../components/bank-party-query"}
-  component/bank-payee-check {:local/root "../../components/bank-payee-check"}
-  component/bank-payment {:local/root "../../components/bank-payment"}
-  component/bank-payment-query
-  {:local/root "../../components/bank-payment-query"}
   component/bank-person-identification
   {:local/root "../../components/bank-person-identification"}
   component/bank-policy {:local/root "../../components/bank-policy"}
@@ -76,7 +70,8 @@
   component/telemetry {:local/root "../../components/telemetry"}
   component/utility {:local/root "../../components/utility"}
 
-  base/bank-processors {:local/root "../../bases/bank-processors"}
+  base/bank-operational-processors
+  {:local/root "../../bases/bank-operational-processors"}
   ;; protojure brings protobuf-java 4.x which breaks FDB Record Layer
   ;; at runtime — pin to 3.x for binary compatibility
   com.google.protobuf/protobuf-java {:mvn/version "3.25.8"}
