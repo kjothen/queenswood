@@ -6,10 +6,12 @@
 
 Every domain that owns an FDB-backed write — cash accounts,
 parties, payments, transactions, interest, IDV — is implemented
-as a paired *processor base* (`bases/bank-X-processor/`) and a
-*domain component* (`components/bank-X/`). This TDD describes the
-file layout inside the component, how FDB transactions thread
-through it, and where rejections originate.
+as a *domain component* (`components/bank-X/`) hosted by the
+shared *processors base* (`bases/bank-processors/`) inside one of
+the combined processor services
+([ADR-0019](../adr/0019-processor-packaging.md)). This TDD
+describes the file layout inside the component, how FDB
+transactions thread through it, and where rejections originate.
 
 In scope: the internal architecture of a `bank-X` component
 (commands, core, domain, store, watcher); the `txn-or-config`
@@ -66,16 +68,22 @@ components/bank-X/
     validation.clj     # (optional) predicate-style validators
     system.clj         # defcomponents :processor + :watcher-handler
 
-bases/bank-X-processor/
-  src/com/repldriven/mono/bank_X_processor/
+bases/bank-processors/            # shared by all processor groups
+  src/com/repldriven/mono/bank_processors/
     main.clj           # entry point
-    system.clj         # bare-require bundle
+    system.clj         # bare-require bundle (superset)
 ```
 
 The base contains no business logic — its `system.clj` is a
-bundle of `require` forms so the processor's component-kinds are
-registered, and `main.clj` starts the system per
-[recipes/bases.md](../recipes/bases.md).
+bundle of `require` forms so every processor's component-kinds
+are registered, and `main.clj` starts the system per
+[recipes/bases.md](../recipes/bases.md). Which processors a
+given service actually runs is decided by its project's
+`application.yml`: a new processor adds its brick, its
+`bank/X.yml` system config, and pulsar wiring to the group its
+boundary dictates — financial or operational, per
+[ADR-0019](../adr/0019-processor-packaging.md) — instead of
+scaffolding a base and service of its own.
 
 ### The `txn-or-config` parameter
 

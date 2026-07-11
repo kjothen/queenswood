@@ -37,7 +37,11 @@ Naming: HTTP services keep their bare name
 (`bank-api-service`,
 `bank-clearbank-{adapter,simulator}-service`,
 `bank-onfido-{adapter,simulator}-service`). Pulsar
-processors are `bank-<domain>-processor-service`. The two
+processors are grouped along the financial boundary into
+`bank-financial-processors-service` and
+`bank-operational-processors-service`, with the Quartz
+singleton in `bank-scheduler-processor-service` — see
+[ADR-0019](../adr/0019-processor-packaging.md). The two
 one-shots are `bank-migrator-service` and
 `bank-bootstrap-service`.
 
@@ -213,15 +217,15 @@ after a code change.
 
 ## Discussion
 
-The split into per-processor projects is a consequence of
-operational independence. Each processor — party,
-cash-account, payment, interest, transaction, idv — owns
-its Pulsar consumer group and its own scaling profile. A
-spike in inbound payments shouldn't require restarting
-the interest accrual processor. One project per processor
-also keeps the deployable's deps tight: the cash-account
-processor doesn't ship the IDV processor's Avro schemas,
-adapter HTTP client, or watcher wiring.
+Processors were originally one project each; at current
+volume that meant ten under-utilised JVMs, so they are
+packaged into boundary groups instead, per
+[ADR-0019](../adr/0019-processor-packaging.md). Each
+processor still owns its Pulsar subscription and changelog
+cursors — the group a processor runs in is deployment-time
+YAML composition, so a domain that develops its own scaling
+profile can be promoted back to a dedicated deployment
+without touching code.
 
 The shared parameterised Dockerfile is what makes the
 per-service split tolerable. Without it, every deployable
