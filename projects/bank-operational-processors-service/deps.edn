@@ -1,0 +1,85 @@
+{:aliases
+ {:build {:deps {bases/build {:local/root "../../bases/build"}}
+          :exec-args {:lib 'com.repldriven.mono/bank-operational-processors-service
+                      :main com.repldriven.mono.bank-processors.main
+                      :major-minor-version "0.0"}
+          :ns-default com.repldriven.mono.build.build}
+  :test
+  {:extra-deps
+   {bases/external-test-runner {:local/root "../../bases/external-test-runner"}
+    component/bank-test-resources {:local/root
+                                   "../../components/bank-test-resources"}
+    component/test-resources {:local/root "../../components/test-resources"}
+    component/test-schema {:local/root "../../components/test-schema"}
+    component/test-system {:local/root "../../components/test-system"}
+    component/testcontainers {:local/root "../../components/testcontainers"}}}}
+ :deps
+ {component/bank-balance {:local/root "../../components/bank-balance"}
+  component/bank-balance-domain
+  {:local/root "../../components/bank-balance-domain"}
+  component/bank-balance-query
+  {:local/root "../../components/bank-balance-query"}
+  component/bank-bank {:local/root "../../components/bank-bank"}
+  component/bank-bank-query
+  {:local/root "../../components/bank-bank-query"}
+  component/bank-cash-account {:local/root "../../components/bank-cash-account"}
+  component/bank-cash-account-query
+  {:local/root "../../components/bank-cash-account-query"}
+  component/bank-cash-account-product
+  {:local/root "../../components/bank-cash-account-product"}
+  component/bank-cash-account-product-query
+  {:local/root "../../components/bank-cash-account-product-query"}
+  component/bank-idv {:local/root "../../components/bank-idv"}
+  component/bank-interest {:local/root "../../components/bank-interest"}
+  component/bank-ledger-account
+  {:local/root "../../components/bank-ledger-account"}
+  component/bank-membership {:local/root "../../components/bank-membership"}
+  component/bank-party {:local/root "../../components/bank-party"}
+  component/bank-party-query
+  {:local/root "../../components/bank-party-query"}
+  component/bank-payee-check {:local/root "../../components/bank-payee-check"}
+  component/bank-payment {:local/root "../../components/bank-payment"}
+  component/bank-payment-query
+  {:local/root "../../components/bank-payment-query"}
+  component/bank-person-identification
+  {:local/root "../../components/bank-person-identification"}
+  component/bank-policy {:local/root "../../components/bank-policy"}
+  component/bank-resources {:local/root "../../components/bank-resources"}
+  component/bank-scheduler {:local/root "../../components/bank-scheduler"}
+  component/bank-schema {:local/root "../../components/bank-schema"}
+  component/bank-transaction {:local/root "../../components/bank-transaction"}
+
+  component/avro {:local/root "../../components/avro"}
+  component/cache {:local/root "../../components/cache"}
+  component/cli {:local/root "../../components/cli"}
+  component/command {:local/root "../../components/command"}
+  component/command-processor {:local/root "../../components/command-processor"}
+  component/command-schema {:local/root "../../components/command-schema"}
+  component/encryption {:local/root "../../components/encryption"}
+  component/env {:local/root "../../components/env"}
+  component/error {:local/root "../../components/error"}
+  component/event {:local/root "../../components/event"}
+  component/event-processor {:local/root "../../components/event-processor"}
+  component/event-schema {:local/root "../../components/event-schema"}
+  component/fdb {:local/root "../../components/fdb"}
+  component/http-client {:local/root "../../components/http-client"}
+  component/identity-provider
+  {:local/root "../../components/identity-provider"}
+  component/json {:local/root "../../components/json"}
+  component/keycloak {:local/root "../../components/keycloak"}
+  component/log {:local/root "../../components/log"}
+  component/message-bus {:local/root "../../components/message-bus"}
+  component/processor {:local/root "../../components/processor"}
+  component/pulsar {:local/root "../../components/pulsar"}
+  component/scheduler {:local/root "../../components/scheduler"}
+  component/system {:local/root "../../components/system"}
+  component/telemetry {:local/root "../../components/telemetry"}
+  component/utility {:local/root "../../components/utility"}
+
+  base/bank-processors {:local/root "../../bases/bank-processors"}
+  ;; protojure brings protobuf-java 4.x which breaks FDB Record Layer
+  ;; at runtime — pin to 3.x for binary compatibility
+  com.google.protobuf/protobuf-java {:mvn/version "3.25.8"}
+  org.clojure/clojure {:mvn/version "1.12.4"}
+  org.clojure/core.async {:mvn/version "1.9.865"}}
+ :paths ["resources"]}

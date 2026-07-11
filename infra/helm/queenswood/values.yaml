@@ -172,45 +172,27 @@ services:
     extraEnv:
       COMPANIES_HOUSE_URL: "http://{{ .Release.Name }}-bank-uk-companies-house-simulator-service:8084"
 
-  bank-cash-account-processor-service:
+  # Money path: payment, transaction, interest, payee-check processors
+  # in one JVM. Payee-check invokes the ClearBank adapter for
+  # Confirmation of Payee, hence CLEARBANK_ADAPTER_URL.
+  bank-financial-processors-service:
     enabled: true
     replicas: 1
     resources:
-      limits: { cpu: "750m", memory: "1Gi" }
-      requests: { cpu: "100m", memory: "512Mi" }
-
-  bank-bank-processor-service:
-    enabled: true
-    replicas: 1
-
-  bank-party-processor-service:
-    enabled: true
-    replicas: 1
-
-  bank-payment-processor-service:
-    enabled: true
-    replicas: 1
-
-  bank-interest-processor-service:
-    enabled: true
-    replicas: 1
-
-  bank-transaction-processor-service:
-    enabled: true
-    replicas: 1
-
-  bank-idv-processor-service:
-    enabled: true
-    replicas: 1
-
-  # Invokes the ClearBank adapter for Confirmation of Payee, so it
-  # carries CLEARBANK_ADAPTER_URL (moved off bank-api, which no longer
-  # calls the adapter directly).
-  bank-payee-check-processor-service:
-    enabled: true
-    replicas: 1
+      limits: { cpu: "1500m", memory: "2Gi" }
+      requests: { cpu: "300m", memory: "1Gi" }
     extraEnv:
       CLEARBANK_ADAPTER_URL: "http://{{ .Release.Name }}-bank-clearbank-adapter-service:8082"
+
+  # Provisioning + identity: bank, party, cash-account, product, idv
+  # processors in one JVM. Bank provisioning issues service-account
+  # clients, hence the Keycloak env (from the shared env block).
+  bank-operational-processors-service:
+    enabled: true
+    replicas: 1
+    resources:
+      limits: { cpu: "1000m", memory: "1536Mi" }
+      requests: { cpu: "200m", memory: "768Mi" }
 
   # Cron-driven processor (no Pulsar): registers a Quartz trigger per
   # enabled scheduled job at startup and runs interest accrue/capitalize

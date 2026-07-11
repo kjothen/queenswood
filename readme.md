@@ -103,13 +103,21 @@ graph TB
 
     subgraph processors ["Processor services (Pulsar consumers)"]
         direction LR
-        PCA[cash-account-<br/>processor]
-        PPT[party-<br/>processor]
-        PPY[payment-<br/>processor]
-        PIN[interest-<br/>processor]
-        PTX[transaction-<br/>processor]
-        PID[idv-<br/>processor]
-        PPC[payee-check-<br/>processor]
+        subgraph FIN ["financial-processors"]
+            direction TB
+            PPY[payment]
+            PTX[transaction]
+            PIN[interest]
+            PPC[payee-check]
+        end
+        subgraph OPS ["operational-processors"]
+            direction TB
+            PBK[bank]
+            PPT[party]
+            PCA[cash-account]
+            PPR[product]
+            PID[idv]
+        end
         PSCH[scheduler-<br/>processor]
     end
 
@@ -130,7 +138,7 @@ graph TB
 
     CONSOLE -->|HTTP| API
     API -->|commands| PULSAR
-    API -->|direct CRUD<br/>bank, api-key, product, policy| FDB
+    API -->|direct CRUD<br/>api-key, policy, jobs| FDB
     API -->|company lookup| CHS
     API -.->|company lookup| CH
 
@@ -175,16 +183,21 @@ and updated directly by `bank-api-service` against FDB. All
 records query on-demand using FDB record primary key
 ordering.
 
-**Commands path** — high-volume activity (parties, cash
-accounts, payments, interest, transactions, payee checks)
-flows as Avro-serialised commands from `bank-api-service`
-through Pulsar to a domain processor. Each processor writes to
-FDB and replies via the same bus. Envelope statuses:
-`ACCEPTED` (2xx), `REJECTED` (4xx), `FAILED` (5xx).
-`bank-payee-check-processor-service` additionally calls the
-ClearBank adapter over HTTP for the Confirmation of Payee
-lookup before persisting and replying. See
-[transaction-processing](docs/tdd/transaction-processing.md).
+**Commands path** — domain writes (banks, parties, cash
+accounts, products, payments, interest, transactions, payee
+checks) flow as Avro-serialised commands from
+`bank-api-service` through Pulsar to a domain processor. Each
+processor writes to FDB and replies via the same bus. Envelope
+statuses: `ACCEPTED` (2xx), `REJECTED` (4xx), `FAILED` (5xx).
+Processors are packaged into two services along the financial
+boundary — `bank-financial-processors-service` (payment,
+transaction, interest, payee-check) and
+`bank-operational-processors-service` (bank, party,
+cash-account, product, idv) — which processors a service hosts
+is YAML composition, not code. The payee-check processor
+additionally calls the ClearBank adapter over HTTP for the
+Confirmation of Payee lookup before persisting and replying.
+See [transaction-processing](docs/tdd/transaction-processing.md).
 
 **Scheduled work** — `bank-scheduler-processor-service` fires
 seeded jobs (e.g. daily interest) on a cron, publishing the
@@ -197,7 +210,7 @@ processor to consume.
 outbound intent, and a relay POSTs to FPS outside any FDB
 transaction. Settlement webhooks are persisted to an outbox and
 relayed back as `transaction-settled` events. The IDV path
-mirrors this: `bank-idv-processor-service` publishes
+mirrors this: the idv processor publishes
 `submit-idv-check`, the Onfido adapter relays the outbound call
 and turns the `check.completed` webhook into an `idv-completed`
 event. Both adapters own an FDB store and follow the

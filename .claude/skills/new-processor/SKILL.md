@@ -1,6 +1,6 @@
 ---
 name: new-processor
-description: Scaffold or extend a Queenswood processor brick — a paired `bases/bank-X-processor/` base and `components/bank-X/` domain component with the canonical commands/core/domain/store/watcher/system file set. Threads the `txn-or-config` transaction parameter through every layer, confines `fdb/*` requires to `store.clj` plus the `watcher.clj` carve-out, and originates `:rejection/anomaly` only in `domain.clj`. Use when scaffolding a new processor ("new processor for X", "scaffold bank-Y-processor", "add a domain brick that handles commands and writes to FDB") or when adding a new command to an existing processor ("add open-Y command to bank-X", "extend bank-payment to handle a new instruction").
+description: Scaffold or extend a Queenswood processor brick — a `components/bank-X/` domain component with the canonical commands/core/domain/store/watcher/system file set, hosted by the shared `bases/bank-processors/` base inside a group service (ADR-0019). Threads the `txn-or-config` transaction parameter through every layer, confines `fdb/*` requires to `store.clj` plus the `watcher.clj` carve-out, and originates `:rejection/anomaly` only in `domain.clj`. Use when scaffolding a new processor ("new processor for X", "add a domain brick that handles commands and writes to FDB") or when adding a new command to an existing processor ("add open-Y command to bank-X", "extend bank-payment to handle a new instruction").
 ---
 
 # new-processor
@@ -89,40 +89,43 @@ For a brand-new processor `bank-Y` with a paired
      consumes (`bank-schema`, `error`, `utility`, plus any
      other bricks the core orchestrator reads from).
 
-3. **Create the base skeleton** at `bases/bank-Y-processor/`,
-   copying from `bases/bank-cash-account-processor/`:
+3. **Register the brick in the shared processors base.** Add
+   `com.repldriven.mono.bank-Y.interface` to the require bundle
+   in `bases/bank-processors/src/com/repldriven/mono/bank_processors/system.clj`.
+   There is no per-processor base — processors are hosted by
+   group services per
+   [ADR-0019](../../../docs/adr/0019-processor-packaging.md).
 
-   - `src/com/repldriven/mono/bank_Y_processor/main.clj` —
-     entry point.
-   - `src/com/repldriven/mono/bank_Y_processor/system.clj` —
-     bare-require bundle of every brick whose component-kinds
-     the processor needs registered. Match the layout in the
-     `bank-cash-account-processor` version.
-   - `deps.edn` — copy and update `:local/root` references.
+4. **Wire the processor into its group's project.** Pick the
+   group by boundary (financial: posts/settles/accrues/gates a
+   payment; operational: provisions or verifies) and edit that
+   project — `projects/bank-financial-processors-service/` or
+   `projects/bank-operational-processors-service/`:
 
-4. **Add a project** at `projects/bank-Y-processor-service/`,
-   copying from `projects/bank-cash-account-processor-service/`.
-   Update the `deps.edn` to reference the new base and any
-   bricks it pulls in transitively.
+   - `resources/bank/Y.yml` — the domain's processor /
+     command-processor (/ watchers) system config.
+   - `resources/application.yml` — pulsar producers/consumers
+     for the new topics (subscription named
+     `bank-Y-service-<topic>`), message-bus entries, and the
+     `!include bank/Y.yml` line.
+   - `deps.edn` — add the brick to **both** group projects (the
+     shared base requires it, so every project using the base
+     must carry it).
 
-5. **Register the project in `workspace.edn`** under
-   `:projects` with an `:alias` and the `:necessary` list (copy
-   the shape from `bank-cash-account-processor-service`).
-
-6. **Add Avro schemas** for the new commands and events under
+5. **Add Avro schemas** for the new commands and events under
    the schema brick, per
    [recipes/code-generation.md](../../../docs/recipes/code-generation.md).
    Run `clj -X:deps prep :aliases '[:+bank :dev]' :force true`
    to regenerate.
 
-7. **Verify the invariants** below before considering the brick
+6. **Verify the invariants** below before considering the brick
    complete.
 
-8. **Deployment plumbing** (Helm chart, Docker image, Tilt
-   wiring) per
+7. **Deployment plumbing** — none, in the common case: the
+   group services' Helm/Tilt/CI entries already exist. Only a
+   processor needing its own dedicated deployment (a boundary
+   or scaling case per ADR-0019) adds chart entries, per
    [recipes/deployment.md](../../../docs/recipes/deployment.md).
-   Out of scope for this skill — call it out to the user as a
-   follow-up.
 
 ## Invariants (verify on every change)
 
