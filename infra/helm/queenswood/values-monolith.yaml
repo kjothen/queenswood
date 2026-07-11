@@ -38,14 +38,8 @@ services:
 
   # Everything the monolith subsumes is turned off.
   bank-api-service: { enabled: false }
-  bank-bank-processor-service: { enabled: false }
-  bank-cash-account-processor-service: { enabled: false }
-  bank-party-processor-service: { enabled: false }
-  bank-payment-processor-service: { enabled: false }
-  bank-interest-processor-service: { enabled: false }
-  bank-transaction-processor-service: { enabled: false }
-  bank-idv-processor-service: { enabled: false }
-  bank-payee-check-processor-service: { enabled: false }
+  bank-financial-processors-service: { enabled: false }
+  bank-operational-processors-service: { enabled: false }
   bank-scheduler-processor-service: { enabled: false }
   bank-clearbank-adapter-service: { enabled: false }
   bank-clearbank-simulator-service: { enabled: false }

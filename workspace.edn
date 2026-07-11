@@ -6,56 +6,14 @@
             ;; and shared classpath resources (Testcontainers configs,
             ;; application-test.yml files). Polylith tracks source imports
             ;; only, so :necessary suppresses false-positive warnings.
-            "bank-cash-account-processor-service"
-              {:alias "acc",
+            "bank-operational-processors-service"
+              {:alias "ops",
                :necessary ["bank-resources"
                            "bank-schema" "bank-test-resources" "test-schema"
                            "command-schema" "event-schema"
                            "test-resources"]},
-            "bank-cash-account-product-processor-service"
-              {:alias "prd",
-               :necessary ["bank-resources"
-                           "bank-schema" "bank-test-resources" "test-schema"
-                           "command-schema" "event-schema"
-                           "test-resources"]},
-            "bank-bank-processor-service"
-              {:alias "bnk",
-               :necessary ["bank-resources"
-                           "bank-schema" "bank-test-resources" "test-schema"
-                           "command-schema" "event-schema"
-                           "test-resources"]},
-            "bank-party-processor-service"
-              {:alias "pty",
-               :necessary ["bank-resources"
-                           "bank-schema" "bank-test-resources" "test-schema"
-                           "command-schema" "event-schema"
-                           "test-resources"]},
-            "bank-payment-processor-service"
-              {:alias "pay",
-               :necessary ["bank-resources"
-                           "bank-schema" "bank-test-resources" "test-schema"
-                           "command-schema" "event-schema"
-                           "test-resources"]},
-            "bank-interest-processor-service"
-              {:alias "int",
-               :necessary ["bank-resources"
-                           "bank-schema" "bank-test-resources" "test-schema"
-                           "command-schema" "event-schema"
-                           "test-resources"]},
-            "bank-transaction-processor-service"
-              {:alias "txn",
-               :necessary ["bank-resources"
-                           "bank-schema" "bank-test-resources" "test-schema"
-                           "command-schema" "event-schema"
-                           "test-resources"]},
-            "bank-idv-processor-service"
-              {:alias "idv",
-               :necessary ["bank-resources"
-                           "bank-schema" "bank-test-resources" "test-schema"
-                           "command-schema" "event-schema"
-                           "test-resources"]},
-            "bank-payee-check-processor-service"
-              {:alias "pyc",
+            "bank-financial-processors-service"
+              {:alias "fin",
                :necessary ["bank-resources"
                            "bank-schema" "bank-test-resources" "test-schema"
                            "command-schema" "event-schema"

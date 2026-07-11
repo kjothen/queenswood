@@ -131,13 +131,8 @@ jobs:
             bank-bootstrap-service
             bank-api-service
             bank-monolith-service
-            bank-cash-account-processor-service
-            bank-party-processor-service
-            bank-payment-processor-service
-            bank-interest-processor-service
-            bank-transaction-processor-service
-            bank-idv-processor-service
-            bank-payee-check-processor-service
+            bank-financial-processors-service
+            bank-operational-processors-service
             bank-scheduler-processor-service
             bank-clearbank-adapter-service
             bank-clearbank-simulator-service
