@@ -22,7 +22,9 @@ orange egress adapters.
 The exports are produced headlessly from the `.excalidraw` sources by the
 tooling in [`tooling/`](tooling), which drives Excalidraw's own
 `exportToSvg` so fonts and hand-drawn strokes match the editor exactly.
-From the workspace root:
+The hand-drawn font (Excalifont) is inlined into each SVG as a base64
+`@font-face` — GitHub's SVG sanitiser strips external font URLs, so the
+font has to travel inside the file to render. From the workspace root:
 
 ```bash
 just diagram                       # the system diagram (default)
@@ -30,8 +32,8 @@ just diagram Idempotency.excalidraw   # a single named scene
 just diagrams                      # every docs/diagrams/*.excalidraw
 ```
 
-The first run installs the tooling's npm deps and a headless Chromium.
-Output lands next to the sources as `<slug>-light.svg` and
-`<slug>-dark.svg`; re-run after editing a scene and commit the refreshed
-SVGs alongside it. To run the exporter directly instead of via `just`,
-see [`tooling/`](tooling).
+The first run installs the tooling's npm deps and a headless Chromium,
+and bundles a headless `exportToSvg` with esbuild. Output lands next to
+the sources as `<slug>-light.svg` and `<slug>-dark.svg`; re-run after
+editing a scene and commit the refreshed SVGs alongside it. To run the
+exporter directly instead of via `just`, see [`tooling/`](tooling).
