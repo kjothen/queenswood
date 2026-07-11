@@ -1,0 +1,6 @@
+{
+  "name": "queenswood/skills",
+  "version": "0.1.0",
+  "description": "Queenswood platform skills — authoring, guardrails, and workflow skills for the Clojure core-banking workspace. Built and evaluated with Tessl.",
+  "private": true
+}
