@@ -23,4 +23,5 @@
           res (event/publish bus envelope {:event-channel event-channel})]
       (when (error/anomaly? res)
         (log/error "ClearBank relay publish failed; will redrive" res)
+        ;; nosemgrep: no-raw-throw
         (throw (ex-info "ClearBank relay publish failed" {:anomaly res}))))))

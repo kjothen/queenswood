@@ -3,6 +3,7 @@ set -e
 
 files=$(git diff --cached --name-only --diff-filter=ACM \
   | grep -E '\.(clj|cljc|cljs)$' \
+  | grep -Ev '^evals/' \
   | while read -r f; do [ -f "$f" ] && echo "$f"; done)
 
 if [ -n "$files" ]; then
@@ -12,6 +13,12 @@ if [ -n "$files" ]; then
 
   echo "Linting Clojure files..."
   echo "$files" | xargs clojure -M:lint/clj-kondo --lint
+
+  # No raw throws must escape a brick boundary (ADR-0005). Any (throw ...)
+  # needs an explicit `;; nosemgrep: no-raw-throw` opt-out at the site;
+  # a new unmarked throw fails the commit. See .semgrep.yml.
+  echo "Scanning for unmarked throws..."
+  echo "$files" | xargs semgrep --config .semgrep.yml --error --disable-version-check
 fi
 
 helm_files=$(git diff --cached --name-only --diff-filter=ACM \

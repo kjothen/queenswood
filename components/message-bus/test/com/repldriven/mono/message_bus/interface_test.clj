@@ -49,6 +49,7 @@
                         :command
                         (fn [data]
                           (if (= 1 (swap! calls inc))
+                            ;; nosemgrep: no-raw-throw
                             (throw (ex-info "boom" {}))
                             (deliver received data))))
          (nom-test> [_ (SUT/send bus

@@ -1,0 +1,21 @@
+# Queenswood lint rules for semgrep (generic/token mode — Clojure has no
+# first-class semgrep parser). Run over changed .clj/.cljc by the
+# pre-commit hook; see scripts/hooks/pre-commit.
+rules:
+  - id: no-raw-throw
+    languages: [generic]
+    severity: ERROR
+    message: >-
+      Raw `throw`: exceptions must not escape a brick boundary — an
+      interface returns a value or an anomaly, never raises (ADR-0005,
+      recipes/error-handling.md). Convert exceptions at library edges
+      with `error/try-nom` / `error/nom->`, or reject via
+      `error/reject`. If a throw is genuinely required (startup fatal,
+      InterruptedException rethrow, boundary conversion, test), mark it
+      on the same line with `; nosemgrep: no-raw-throw — <reason>`.
+    patterns:
+      - pattern: (throw ...)
+    paths:
+      include:
+        - "*.clj"
+        - "*.cljc"

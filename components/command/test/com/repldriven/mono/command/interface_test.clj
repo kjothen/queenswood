@@ -18,6 +18,7 @@
        (let [calls (atom 0)
              process-fn (fn [_envelope]
                           (if (= 1 (swap! calls inc))
+                            ;; nosemgrep: no-raw-throw
                             (throw (ex-info "boom" {}))
                             {:status "ACCEPTED" :payload nil}))
              replies (atom [])

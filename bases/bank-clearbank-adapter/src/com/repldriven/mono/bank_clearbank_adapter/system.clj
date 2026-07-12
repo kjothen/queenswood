@@ -111,6 +111,7 @@
                   "One or more ClearBank webhooks missing; re-registering all"
                   {:simulator simulator-url})
                  (re-register-missing simulator-url webhook-url webhooks))
+               ;; nosemgrep: no-raw-throw
                (catch InterruptedException _ (throw (InterruptedException.)))
                (catch Throwable t
                  (log/error

@@ -32,6 +32,7 @@
                    (deliver p response)))))
         stop-fn (fn [] (message-bus/unsubscribe bus command-response-channel))]
     (if (error/anomaly? sub)
+      ;; nosemgrep: no-raw-throw
       (throw (ex-info "Failed to start command dispatcher" {:anomaly sub}))
       {:bus bus
        :command-channel command-channel

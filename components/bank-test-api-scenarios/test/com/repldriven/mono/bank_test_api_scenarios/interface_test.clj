@@ -53,6 +53,7 @@
                          "&scope=queenswood-api-test+realm-roles")})
         body (http/res->edn res)]
     (or (:access_token body)
+        ;; nosemgrep: no-raw-throw
         (throw (ex-info "Failed to mint scenario admin token"
                         {:status (:status res) :body body})))))
 

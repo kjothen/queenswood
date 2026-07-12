@@ -39,6 +39,7 @@
   [command]
   (let [{:keys [exit out err]} (apply shell/sh command)]
     (when-not (zero? exit)
+      ;; nosemgrep: no-raw-throw
       (throw (ex-info "Keycloak vault secret command failed"
                       {:command command :exit exit :err err})))
     ;; Keycloak's files-plaintext vault reads the file's raw bytes as

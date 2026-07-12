@@ -22,4 +22,5 @@
           res (event/publish bus envelope {:event-channel event-channel})]
       (when (error/anomaly? res)
         (log/error "Onfido relay publish failed; will redrive" res)
+        ;; nosemgrep: no-raw-throw
         (throw (ex-info "Onfido relay publish failed" {:anomaly res}))))))
