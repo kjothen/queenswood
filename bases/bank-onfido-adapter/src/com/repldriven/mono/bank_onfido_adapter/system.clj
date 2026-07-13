@@ -106,6 +106,7 @@
                                    :status (:status res)})
                         (log/error "Onfido webhook re-registration failed"
                                    {:adapter adapter-url :res res}))))
+                  ;; nosemgrep: no-raw-throw
                   (catch InterruptedException _ (throw (InterruptedException.)))
                   (catch Throwable t
                     (log/error

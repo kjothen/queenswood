@@ -1,0 +1,26 @@
+{
+  "context": "The agent must write deposit-test into an empty test namespace, with no existing test to mirror. The task explicitly rules out hand-constructing a system map, forcing the agent to reach for some real lifecycle mechanism. Key discriminator: without the idiom, an agent's known tool for clojure.test setup/teardown is use-fixtures, which it falls back to; with the idiom loaded, it recalls the Queenswood-specific with-test-system for system lifecycle and nom-test> for asserting the result, and knows never to use use-fixtures.",
+  "type": "weighted_checklist",
+  "checklist": [
+    {
+      "name": "Uses with-test-system",
+      "description": "The test manages system lifecycle with with-test-system rather than constructing a system map by hand or booting it another way",
+      "max_score": 18
+    },
+    {
+      "name": "No use-fixtures introduced",
+      "description": "The diff introduces no use-fixtures call anywhere in the file",
+      "max_score": 16
+    },
+    {
+      "name": "Uses nom-test> around the system call",
+      "description": "The deposit call and its assertion are threaded through a nom-test> bindings vector rather than a bare is form",
+      "max_score": 10
+    },
+    {
+      "name": "Correct assertion",
+      "description": "Asserts the resulting balance is 150 after depositing 50 onto a balance of 100",
+      "max_score": 10
+    }
+  ]
+}

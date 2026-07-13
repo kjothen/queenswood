@@ -283,6 +283,7 @@
                                        message
                                        (f (->Txn open-fn)))]
                    (if (error/anomaly? result)
+                     ;; nosemgrep: no-raw-throw
                      (throw (ex-info "Transaction rolled back"
                                      {::anomaly result}))
                      result))))

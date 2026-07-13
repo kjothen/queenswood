@@ -24,6 +24,7 @@
   (let [path "bank/ledgers/general-ledger.edn"
         url (io/resource path)]
     (when (nil? url)
+      ;; nosemgrep: no-raw-throw
       (throw (ex-info "Default ledger-accounts resource missing" {:path path})))
     (edn/read-string (slurp url))))
 

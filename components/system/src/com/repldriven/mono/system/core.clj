@@ -28,6 +28,7 @@
                           to-ns-map)
           result (f args)]
       (if-let [[path anomaly] (util/deep-some error/anomaly? result)]
+        ;; nosemgrep: no-raw-throw
         (throw (ex-info (or (:message (error/payload anomaly))
                             "Component lifecycle returned an anomaly")
                         {:kind (error/kind anomaly)

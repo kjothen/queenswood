@@ -31,8 +31,7 @@
    ;; the migration logic lands; lets the seeded system job schedule and
    ;; run harmlessly in the meantime.
    :scheduler-task-kind-account-migration
-   {:label "migrate"
-    :run (fn [_config _bank-id _as-of-date] {:migrated 0})}})
+   {:label "migrate" :run (fn [_config _bank-id _as-of-date] {:migrated 0})}})
 
 (defn- task-label
   [task-kind]
@@ -55,6 +54,7 @@
   (let [path "bank/scheduler/jobs.edn"
         url (io/resource path)]
     (when (nil? url)
+      ;; nosemgrep: no-raw-throw
       (throw (ex-info "Default scheduler jobs resource missing" {:path path})))
     (edn/read-string (slurp url))))
 

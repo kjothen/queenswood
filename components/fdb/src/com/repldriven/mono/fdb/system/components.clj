@@ -219,6 +219,7 @@
                              store-names (set (keys record-types))]
                          (fn [ctx store-name]
                            (when-not (store-names store-name)
+                             ;; nosemgrep: no-raw-throw
                              (throw (ex-info "Unknown record store"
                                              {:store store-name})))
                            (-> (FDBRecordStore/newBuilder)
@@ -304,6 +305,7 @@
                                   (or (.getMessage ^Throwable root) "")))
                   (log/info
                    "FDB meta-data already persisted at >= current version; skipping save")
+                  ;; nosemgrep: no-raw-throw
                   (throw e))))))
         (fn [ctx store-name]
           (open-meta-store ctx ks-path file-desc store-name)))))

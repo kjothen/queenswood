@@ -1,5 +1,12 @@
 {
-  "name": "queenswood/skills",
+  "name": "mca",
   "mode": "vendored",
-  "dependencies": {}
+  "dependencies": {
+    "queenswood/idioms": {
+      "source": "file:./plugins/idioms"
+    },
+    "queenswood/workflow": {
+      "source": "file:./plugins/workflow"
+    }
+  }
 }

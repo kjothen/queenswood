@@ -1,0 +1,31 @@
+{
+  "context": "The agent must add open-account to bank_account/core.clj, which has no existing id/timestamp-generating code to mirror. Key discriminator: without the idiom, an agent's default Clojure instinct is random-uuid/UUID/randomUUID for the id and Instant/now/System/currentTimeMillis for the timestamp; with the idiom loaded, it reaches for util/uuidv7 and util/now instead.",
+  "type": "weighted_checklist",
+  "checklist": [
+    {
+      "name": "Uses util/uuidv7 for the id",
+      "description": ":id is generated with util/uuidv7, not random-uuid or (java.util.)UUID/randomUUID",
+      "max_score": 14
+    },
+    {
+      "name": "Uses util/now for the timestamp",
+      "description": ":opened-at is generated with util/now, not Instant/now or System/currentTimeMillis",
+      "max_score": 14
+    },
+    {
+      "name": "No raw time/id primitive introduced",
+      "description": "The diff contains no direct call to random-uuid, UUID/randomUUID, Instant/now, or System/currentTimeMillis",
+      "max_score": 10
+    },
+    {
+      "name": "Correct map shape",
+      "description": "Returns a map with :id, :owner, :balance, :status :open, and :opened-at as specified",
+      "max_score": 10
+    },
+    {
+      "name": "deposit left unchanged",
+      "description": "deposit is unmodified other than the new function being added",
+      "max_score": 6
+    }
+  ]
+}

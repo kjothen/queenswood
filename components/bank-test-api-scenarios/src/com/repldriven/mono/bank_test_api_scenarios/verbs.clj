@@ -45,6 +45,7 @@
   [[tag & args]]
   (if-let [ctor (get matcher-constructors tag)]
     (apply ctor args)
+    ;; nosemgrep: no-raw-throw
     (throw (ex-info "Unknown matcher marker"
                     {:tag tag
                      :args args

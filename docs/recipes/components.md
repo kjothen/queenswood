@@ -40,17 +40,27 @@ registration patterns.
 ### Accessing other components
 
 A component reaches another's API through its `interface.clj`,
-never through internal namespaces:
+never through internal namespaces — but that reaching happens from
+this component's own `core.clj` (or `domain.clj`, `store.clj`,
+etc.), never from its own `interface.clj`. `interface.clj` requires
+only this component's own namespaces — nothing from any other
+brick, not even that brick's `interface.clj`, and not even a
+library-wrapper brick like `error` or `utility`:
 
 ```clojure
-;; OK
+;; OK, from core.clj (or domain.clj, store.clj, ...)
 [com.repldriven.mono.error.interface :as error]
 
-;; Not OK
+;; Not OK, from core.clj: reaching into a peer's internals
 [com.repldriven.mono.error.core :as error-core]
+
+;; Not OK, from interface.clj: reaching into any other brick at
+;; all, even through its interface — that's composition, and it
+;; belongs one level down, in core.clj
+[com.repldriven.mono.error.interface :as error]
 ```
 
-Don't add other components to `deps.edn`. Polylith resolves
+Don't add other components to a brick's `deps.edn`. Polylith resolves
 inter-component dependencies through interface namespace
 references in source code. Only third-party libraries belong in
 a brick's `deps.edn`.
@@ -61,13 +71,17 @@ a brick's `deps.edn`.
 
 - Components define their public API in `interface.clj`.
 - `interface.clj` delegates to other namespaces in the same
-  component.
-- Other components are accessed via their `interface.clj`.
+  component, and only to namespaces in the same component.
+- Other components are accessed via their `interface.clj` — from
+  this component's own `core`/`domain`/`store`/etc., never from
+  `interface.clj` itself.
 
 **MUST NOT:**
 
 - Implement logic directly in `interface.clj`.
 - Reach into another component's internal namespaces.
+- Require any other component from `interface.clj` — including
+  that component's own `interface.clj`.
 - Include other components in `deps.edn`.
 
 ## Discussion

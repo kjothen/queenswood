@@ -1,0 +1,36 @@
+{
+  "context": "The agent must add close-account to bank_account/core.clj, which has no existing anomaly-handling code to mirror — nothing in the file hints at how a rejection should be signalled. Key discriminator: without the idiom, an agent's default Clojure instinct is to raise ex-info/throw for the non-zero-balance case; with the idiom loaded, it recognizes a Queenswood component boundary never throws and reaches for error/reject instead.",
+  "type": "weighted_checklist",
+  "checklist": [
+    {
+      "name": "Uses error/reject for the rejection",
+      "description": "close-account rejects a non-zero balance by calling error/reject (or an equivalent anomaly-producing call), not by raising an exception",
+      "max_score": 14
+    },
+    {
+      "name": "No raw throw introduced",
+      "description": "The diff introduces no (throw ...), ex-info raise, or other exception-raising code",
+      "max_score": 12
+    },
+    {
+      "name": "Rejection keyword is namespaced",
+      "description": "The rejection uses a namespaced keyword (e.g. :account/non-zero-balance), consistent with the anomaly convention",
+      "max_score": 8
+    },
+    {
+      "name": "Correct precondition",
+      "description": "Only rejects when balance is non-zero; succeeds when balance is exactly zero",
+      "max_score": 10
+    },
+    {
+      "name": "Success path sets :status :closed",
+      "description": "On success, the returned account map has :status set to :closed",
+      "max_score": 8
+    },
+    {
+      "name": "deposit left unchanged",
+      "description": "deposit is unmodified other than the new function being added",
+      "max_score": 6
+    }
+  ]
+}

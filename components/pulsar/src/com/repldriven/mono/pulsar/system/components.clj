@@ -276,6 +276,7 @@
             (and (map? consumer)
                  (not (instance? org.apache.pulsar.client.api.Consumer
                                  consumer))))
+    ;; nosemgrep: no-raw-throw
     (throw (ex-info (str "Pulsar consumer for channel "
                          channel-key
                          " did not resolve to a Consumer instance — "

@@ -19,6 +19,7 @@
       (.toPath dir)
       (if-let [parent (.getParentFile dir)]
         (recur parent)
+        ;; nosemgrep: no-raw-throw
         (throw (ex-info
                 "Could not find workspace.edn - are we in a Polylith project?"
                 {}))))))

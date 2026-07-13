@@ -1,15 +1,18 @@
 #!/usr/bin/env bash
-# Critical-guardrail checks for Queenswood Clojure code.
-# Sources the rules listed under "Critical guardrails" in CLAUDE.md.
-# Prints PASS/FAIL per check; FAIL includes file:line refs.
+# Deterministic guardrail linter for Queenswood Clojure code.
+# Enforces the "Critical guardrails" from CLAUDE.md that a deterministic
+# grep can decide; the `no-raw-throw` throw check is owned by semgrep
+# (.semgrep.yml). Run by the pre-commit hook in --staged mode; also
+# runnable standalone for a whole-branch or explicit-path sweep.
 #
-# Default scope: files changed on the current branch (commits ahead
-# of main, plus working-tree modifications and untracked files).
+# Exit status: non-zero if any BLOCKING check fails, so it can gate a
+# commit. `comment-block-bloat` is advisory (WARN, never blocks) — long
+# comment blocks are sometimes legitimately load-bearing.
 #
-#   bash checks.sh             # branch scope (default)
-#   bash checks.sh --staged    # only staged changes
-#   bash checks.sh --all       # every tracked Clojure file
-#   bash checks.sh <path> ...  # explicit paths
+#   bash enforce-idioms.sh           # branch scope (default)
+#   bash enforce-idioms.sh --staged  # only staged changes (pre-commit)
+#   bash enforce-idioms.sh --all     # every tracked Clojure file
+#   bash enforce-idioms.sh <path>... # explicit paths
 
 cd "$(git rev-parse --show-toplevel 2>/dev/null || pwd)" || exit 1
 
@@ -34,7 +37,8 @@ fi
 
 case "$scope" in
   branch)
-    base=$(git merge-base HEAD main 2>/dev/null \
+    base=$(git merge-base HEAD origin/main 2>/dev/null \
+             || git merge-base HEAD main 2>/dev/null \
              || git rev-parse origin/main 2>/dev/null \
              || git rev-parse main 2>/dev/null)
     RAW=( $({
@@ -57,6 +61,8 @@ esac
 # Filter to Clojure / deps.edn and keep only files that still exist.
 ALL_FILES=()
 for f in "${RAW[@]}"; do
+  # Skip eval fixtures — planted violations, test inputs, not code.
+  case "$f" in */evals/*|evals/*) continue ;; esac
   case "$f" in
     *.clj|*.cljc|*deps.edn) [ -f "$f" ] && ALL_FILES+=("$f") ;;
   esac
@@ -70,45 +76,48 @@ fi
 printf 'Scope: %s — %d file(s)\n' "$scope" "${#ALL_FILES[@]}"
 
 # Category subsets.
-INTERFACE_FILES=( $(printf '%s\n' "${ALL_FILES[@]}" | grep '/interface\.clj$') )
 TEST_FILES=(      $(printf '%s\n' "${ALL_FILES[@]}" | grep '_test\.clj$') )
 SRC_CLJ=(         $(printf '%s\n' "${ALL_FILES[@]}" | grep -E '\.(clj|cljc)$') )
 NON_UTILITY_CLJ=( $(printf '%s\n' "${SRC_CLJ[@]}"   | grep -v '^components/utility/') )
 
 # --- Helpers -------------------------------------------------------------
 
+FAILED=0
+
 section() { printf '\n### %s\n\n' "$1"; }
 
 report() {
   local label="$1"
   local out="$2"
+  local advisory="$3"   # non-empty → report as WARN, never gate the commit
   if [ -z "$out" ]; then
     printf 'PASS — %s\n' "$label"
+  elif [ -n "$advisory" ]; then
+    printf 'WARN — %s (advisory)\n\n```\n%s\n```\n' "$label" "$out"
   else
     printf 'FAIL — %s\n\n```\n%s\n```\n' "$label" "$out"
+    FAILED=1
   fi
 }
 
 # --- Checks --------------------------------------------------------------
 
-# 1. Throwing from interface.clj.
-section 'Throwing from interface.clj'
-out=""
-if [ ${#INTERFACE_FILES[@]} -gt 0 ]; then
-  out=$(grep -nE '\b(throw|ex-info|ex-cause)\b' "${INTERFACE_FILES[@]}" 2>/dev/null)
-fi
-report 'throw-from-interface' "$out"
-
-# 2. Raw time / id helpers used directly (outside the utility brick).
+# 1. Raw time / id helpers used directly (outside the utility brick).
+# Advisory until this earns a clean baseline the way `no-raw-throw` did:
+# the repo still carries pre-existing hits, some legitimate (poll-timer
+# elapsed-time math in test quiescence helpers, where `util/now`'s domain
+# Instant doesn't fit) with no opt-out marker to exempt them. Promote to
+# blocking once the domain-timestamp debt migrates to `util/now` and a
+# `nosemgrep`-style opt-out covers the legitimate millis uses.
 section 'Raw time/id helpers (use the `utility` brick)'
 out=""
 if [ ${#NON_UTILITY_CLJ[@]} -gt 0 ]; then
   out=$(grep -nE '\((random-uuid|(java\.util\.)?UUID/randomUUID|(java\.time\.)?Instant/now|System/currentTimeMillis)\b' \
           "${NON_UTILITY_CLJ[@]}" 2>/dev/null)
 fi
-report 'raw-time-id' "$out"
+report 'raw-time-id' "$out" advisory
 
-# 3. use-fixtures in tests.
+# 2. use-fixtures in tests.
 section 'use-fixtures in tests'
 out=""
 if [ ${#TEST_FILES[@]} -gt 0 ]; then
@@ -116,20 +125,22 @@ if [ ${#TEST_FILES[@]} -gt 0 ]; then
 fi
 report 'use-fixtures-in-tests' "$out"
 
-# 4. Cross-unit internal imports.
+# 3. Cross-unit internal imports.
 # Rules:
 #   - intra-unit (target == own) is always fine
 #   - target is a component: only `.interface` and `.system` are public
-#   - target is a base: only `.system`, and only when the importer is itself
-#     a base (component → base is the wrong direction)
+#   - target is a base: only `.system` or `.api` are public (`.api` is the
+#     multi-base aggregator pattern — bank-monolith wires several bases'
+#     Reitit handlers into one process), and only when the importer is
+#     itself a base (component → base is the wrong direction)
 #   - target is neither a component nor a base: ignore (generated namespaces
 #     like com.repldriven.mono.schemas.* live under a brick's gen/ tree
 #     under a non-matching prefix)
 section 'Cross-unit internal imports (components and bases)'
 out=""
 if [ ${#SRC_CLJ[@]} -gt 0 ]; then
-  bricks_us=$(ls components 2>/dev/null | tr - _ | paste -sd, -)
-  bases_us=$(ls bases 2>/dev/null | tr - _ | paste -sd, -)
+  bricks_us=$(ls components 2>/dev/null | paste -sd, -)
+  bases_us=$(ls bases 2>/dev/null | paste -sd, -)
   out=$(awk -v bricks="$bricks_us" -v bases="$bases_us" '
     BEGIN {
       n = split(bricks, a, ",")
@@ -141,7 +152,7 @@ if [ ${#SRC_CLJ[@]} -gt 0 ]; then
       n = split(p, parts, "/")
       if (n < 4 || parts[3] != "src") return ""
       if (parts[1] != "components" && parts[1] != "bases") return ""
-      b = parts[2]; gsub("-", "_", b)
+      b = parts[2]
       kind["k"] = (parts[1] == "components") ? "component" : "base"
       return b
     }
@@ -153,7 +164,7 @@ if [ ${#SRC_CLJ[@]} -gt 0 ]; then
     own == "" { next }
     {
       line = $0
-      while (match(line, /com\.repldriven\.mono\.[a-z0-9_]+\.[a-z0-9_]+/)) {
+      while (match(line, /com\.repldriven\.mono\.[a-z0-9_-]+\.[a-z0-9_-]+/)) {
         s = substr(line, RSTART, RLENGTH)
         line = substr(line, RSTART + RLENGTH)
         split(s, p, ".")
@@ -164,7 +175,7 @@ if [ ${#SRC_CLJ[@]} -gt 0 ]; then
         if (target in is_brick) {
           if (sub_ns != "interface" && sub_ns != "system") bad = 1
         } else if (target in is_base) {
-          if (!(own_kind == "base" && sub_ns == "system")) bad = 1
+          if (!(own_kind == "base" && (sub_ns == "system" || sub_ns == "api"))) bad = 1
         }
         if (bad) print FILENAME ":" FNR ": " s
       }
@@ -173,7 +184,60 @@ if [ ${#SRC_CLJ[@]} -gt 0 ]; then
 fi
 report 'cross-unit-internal' "$out"
 
+# 4. interface.clj requires only its own component's local namespaces.
+# Stricter than cross-unit-internal above: that check allows any file to
+# require a foreign brick's `.interface`, but `interface.clj` itself must
+# delegate to its own core/domain/store/etc. and never reach into another
+# brick at all — not even via that brick's `.interface`, and not even a
+# library-wrapper brick like `error`/`utility`. Composition across bricks
+# belongs one level down, in core.clj. Advisory: known pre-existing debt
+# (bank-cash-account, bank-party, bank-balance-query, bank-test-scenarios,
+# bank-test-api-scenarios, secret) hasn't migrated yet — promote to
+# blocking once it has.
+section "interface.clj requires only its own component's namespaces"
+out=""
+if [ ${#SRC_CLJ[@]} -gt 0 ]; then
+  bricks_us=$(ls components 2>/dev/null | paste -sd, -)
+  bases_us=$(ls bases 2>/dev/null | paste -sd, -)
+  out=$(awk -v bricks="$bricks_us" -v bases="$bases_us" '
+    BEGIN {
+      n = split(bricks, a, ",")
+      for (i = 1; i <= n; i++) if (a[i] != "") is_brick[a[i]] = 1
+      n = split(bases, a, ",")
+      for (i = 1; i <= n; i++) if (a[i] != "") is_base[a[i]] = 1
+    }
+    function unit_of(p,    parts, n, b) {
+      n = split(p, parts, "/")
+      if (n < 4 || parts[3] != "src") return ""
+      if (parts[1] != "components" && parts[1] != "bases") return ""
+      b = parts[2]
+      return b
+    }
+    FNR == 1 {
+      own = unit_of(FILENAME)
+      is_iface = (FILENAME ~ /\/interface\.clj$/)
+    }
+    own == "" || !is_iface { next }
+    {
+      line = $0
+      while (match(line, /com\.repldriven\.mono\.[a-z0-9_-]+\.[a-z0-9_-]+/)) {
+        s = substr(line, RSTART, RLENGTH)
+        line = substr(line, RSTART + RLENGTH)
+        split(s, p, ".")
+        target = p[4]
+        if (target == own) continue
+        if ((target in is_brick) || (target in is_base)) {
+          print FILENAME ":" FNR ": " s
+        }
+      }
+    }
+  ' "${SRC_CLJ[@]}" 2>/dev/null)
+fi
+report 'interface-imports-foreign-brick' "$out" advisory
+
 # 5. Comment-block bloat — runs of 5+ consecutive `;`-comment lines.
+# Advisory: a long block can be a legitimate load-bearing why-block, so
+# this WARNs rather than blocking the commit.
 section 'Comment-block bloat (>= 5 consecutive `;` lines)'
 out=""
 if [ ${#SRC_CLJ[@]} -gt 0 ]; then
@@ -195,16 +259,17 @@ if [ ${#SRC_CLJ[@]} -gt 0 ]; then
     END { flush() }
   ' "${SRC_CLJ[@]}" 2>/dev/null)
 fi
-report 'comment-block-bloat' "$out"
+report 'comment-block-bloat' "$out" advisory
 
 # 6. bank-api reads are query-only.
-# A domain brick that has a `components/<brick>-query` sibling is split into a
-# read side (`-query`) and a write side (the plain name). `bank-api` request
-# code may require the `-query` interface but must not require the write
-# brick's interface — writes go over the bus as commands. The `system.clj`
-# registration bundle is exempt: it bare-requires interfaces to register
-# component-kinds (not to call them), and stays until the write brick leaves
-# the API project (`poly check` Tier-2 enforcement).
+# A CQRS/design invariant riding along here until the `design` plugin owns
+# its enforcement. A domain brick with a `components/<brick>-query` sibling
+# is split into a read side (`-query`) and a write side (the plain name).
+# `bank-api` request code may require the `-query` interface but must not
+# require the write brick's interface — writes go over the bus as commands.
+# The `system.clj` registration bundle is exempt: it bare-requires
+# interfaces to register component-kinds (not to call them), and stays
+# until the write brick leaves the API project (`poly check` Tier-2).
 section 'bank-api reads are query-only'
 out=""
 API_SRC=( $(printf '%s\n' "${SRC_CLJ[@]}" \
@@ -220,3 +285,5 @@ if [ ${#API_SRC[@]} -gt 0 ]; then
   out=$(printf '%s' "$out" | grep -v '^$' || true)
 fi
 report 'bank-api-reads-are-query-only' "$out"
+
+exit "$FAILED"

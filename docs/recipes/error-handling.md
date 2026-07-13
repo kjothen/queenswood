@@ -112,13 +112,13 @@ single check with no further bindings:
 - Functions in `interface.clj` return a value or an anomaly.
 - Use `error/try-nom` (catch all) or `error/try-nom-ex` (catch a
   specific type) at every Java/library boundary that throws.
-- Anomaly category names the *call site*
+- Anomaly category names the _call site_
   (`:http-client/request`).
 - Anomaly payloads contain `:message`.
 
 **MUST NOT:**
 
-- Throw from `interface.clj`.
+- Throw from `interface.clj` directly or indirectly.
 - Use bare `try`/`catch` in component code.
 - Name categories by failure mode (`:http-client/failed`).
 - Mix the three anomaly kinds — pick the right one for the
