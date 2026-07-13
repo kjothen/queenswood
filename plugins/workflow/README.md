@@ -25,6 +25,17 @@ Planned: migrating the git-workflow-shaped Claude Code skills
 the dev loop is Tessl-managed and evaluable the same way the Clojure
 conventions are.
 
+## Evals
+
+Eval scenarios live in `evals/` and are **committed** — hand-authored,
+same as `queenswood/idioms`'s. Two scenarios, one per source-doc shape
+(recipe, ADR), each with a fixture rule section and a fixture recipe/ADR
+under `inputs/`, no git history:
+
+```bash
+tessl eval run queenswood/workflow   # score with-context vs baseline
+```
+
 ## Develop
 
 Run `tessl` from this directory. `tessl plugin lint` validates the

@@ -24,16 +24,24 @@ kebab-case-keys rule, split out if this file ever grows unwieldy.
 
 ## Evals
 
-Eval scenarios live in `evals/` and are **not committed** — one fixture
-carries its own `.git` (a branch-diff scenario), which can't nest
-inside this repo, and Tessl's fixture upload respects `.gitignore`, so
-ignoring them would break `eval run`. They stay untracked-but-visible.
-The recorded scenarios were authored for the earlier detection skill;
-regenerate them against the rules before scoring:
+Eval scenarios live in `evals/` and are **committed** — LLM scenario
+generation (`tessl scenario generate`) proved unreliable for this
+plugin (repeated silent failures with no diagnostic), so the five
+scenarios here are hand-authored instead: one per idiom section, plain
+example source with no git history or setup script, each testing
+whether the rule changes behavior on a task that doesn't hand the agent
+the answer. Being hand-authored work rather than regenerable output is
+exactly why they're checked in.
 
 ```bash
-tessl scenario generate . --count 5 --workspace queenswood   # new coverage
-tessl eval run queenswood/idioms                             # score vs baseline
+tessl eval run queenswood/idioms   # score with-context vs baseline
+```
+
+Generate *additional* scenarios (LLM, non-deterministic, may or may not
+work) only as a supplement, never a replacement:
+
+```bash
+tessl scenario generate . --count 5 --workspace queenswood
 ```
 
 ## Develop
