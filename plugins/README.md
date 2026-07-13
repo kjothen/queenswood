@@ -7,26 +7,30 @@ its own (`tessl install file:./plugins/<name>`).
 
 They are split by **task-trigger**, not tidiness: a plugin is the unit
 that gets loaded into an agent's context, so the goal is that any task
-pulls only the one or two plugins it needs, and nothing else. The axis
-is *portability* — code hygiene that would apply to any Clojure repo,
-versus the design that is specific to how Queenswood is built.
+pulls only the one or two plugins it needs, and nothing else. Three
+axes: *portability* — code hygiene that would apply to any Clojure
+repo; the *framework* — Polylith mechanics, independent of how
+Queenswood specifically uses them; and the *design* that's specific to
+how Queenswood is built on top of that framework.
 
 ## The map
 
 | Plugin | Reach for it when… | Status |
 |--------|--------------------|--------|
-| **[idioms](idioms/)** — `queenswood/idioms` | writing any Queenswood Clojure: anomalies-not-exceptions, `utility` helpers, kebab-case keys, brick-boundary imports, style | **live** (rule: `idioms`) |
-| **design** — `queenswood/design` | how the system is built, brick to topology: Polylith bricks, `interface.clj` discipline, the processor pattern, CQRS split, changelog-as-outbox, transaction boundaries, system-as-data | planned |
-| **[workflow](workflow/)** — `queenswood/workflow` | committing, branching, PRs, the dev loop, keeping Tessl rules in sync with their source docs | **live** (skill: `sync-rules-from-docs`) |
-| **docs** — `queenswood/docs` | writing or checking docs (wrap-80, mermaid, tone, PRD register) | planned |
+| **[idioms](idioms/)** — `queenswood/idioms` | writing any Queenswood Clojure: anomalies-not-exceptions, `utility` helpers, kebab-case keys, style | **live** (rule: `idioms`) |
+| **[framework](framework/)** — `queenswood/framework` | using Polylith itself: bases, components, projects, `interface.clj` discipline, one-brick-per-library | **live** (rule: `framework`) |
+| **[design](design/)** — `queenswood/design` | how the system is built, brick to topology: the processor pattern, CQRS split, changelog-as-outbox, transaction boundaries, system-as-data | **live** (rule: `design`) |
+| **[workflow](workflow/)** — `queenswood/workflow` | committing, branching, PRs, the dev loop, keeping Tessl rules in sync with their source docs | **live** (skill: `sync-rules-from-docs`, rule: `workflow`) |
+| **[docs](docs/)** — `queenswood/docs` | writing or checking docs (wrap-80, mermaid, tone, PRD register) | **live** (rule: `docs`) |
 | **security** — `queenswood/security` | secrets, auth, SAST, security review | planned |
-| **deployment** — `queenswood/deployment` | deploying / running the cluster (Helm, Tilt, kind, Crossplane) | planned |
+| **[deployment](deployment/)** — `queenswood/deployment` | deploying / running the cluster (Helm, Tilt, kind, Crossplane) | **live** (rule: `deployment`) |
 
 Decision rule when a new skill or rule wants a home: *would it help on
-any Clojure repo → `idioms`; is it how Queenswood specifically is built
-→ `design`.* Keep `design` whole (low-level brick shape and high-level
-topology are one body of knowledge); split it only if it ever bloats
-context.
+any Clojure repo → `idioms`; is it Polylith-the-tool, not
+Queenswood-specific → `framework`; is it how Queenswood specifically is
+built on top of Polylith → `design`.* Keep `design` whole (low-level
+system wiring and high-level topology are one body of knowledge); split
+it only if it ever bloats context.
 
 ## Toolchain
 

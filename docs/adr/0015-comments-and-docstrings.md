@@ -1,4 +1,5 @@
 # 15. Comments and docstrings
+<!-- tessl-plugin: idioms -->
 
 ## Status
 
@@ -32,6 +33,24 @@ expected to be self-explanatory under the names it picks.
 
 **Docstrings are the primary form of commentary.** Inline `;;`
 comments are exceptional.
+
+The rules:
+
+1. Every `interface.clj` opens with a one-paragraph ns docstring
+   saying what the brick is for and what it returns to callers.
+2. A public function's docstring lives on the `interface.clj`
+   re-export, not the implementation; implementation defs stay bare.
+3. Private functions and non-interface implementation files carry no
+   docstring and no comments by default — the name is the
+   description.
+4. An inline `;;` comment is added only for a non-obvious *WHY* (a
+   hidden invariant, a workaround for an upstream bug, a behaviour
+   that would surprise a reader) — never for the *what* the code
+   already says.
+5. When trimming a file: delete comments that restate the code,
+   narrate control flow, or reference the current change/PR/incident;
+   keep only a load-bearing WHY, promoted to the docstring if it
+   belongs there.
 
 ### Component interface namespace
 

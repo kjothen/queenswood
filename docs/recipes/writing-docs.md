@@ -1,4 +1,5 @@
 # Writing docs
+<!-- tessl-plugin: docs -->
 
 ## Problem
 

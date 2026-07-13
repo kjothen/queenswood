@@ -1,0 +1,6 @@
+{
+  "name": "queenswood/design",
+  "version": "0.1.0",
+  "description": "How Queenswood specifically is built on top of Polylith and mono: FoundationDB persistence, system-as-data, changelog watchers, the message bus, Avro payloads, the command pipeline, CQRS query/write split, the unified API, and deployment-time processor composition. Built and evaluated with Tessl.",
+  "private": true
+}

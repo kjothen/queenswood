@@ -8,9 +8,14 @@ inherited from upstream.
 
 ## Topic router
 
-Before doing non-trivial work, open the doc that owns the topic and
-work from it. CLAUDE.md is the routing layer; the rules and
-rationale live in the docs.
+CLAUDE.md is the routing layer. Every `docs/recipes/*.md` and
+`docs/adr/*.md` file below is labeled `<!-- tessl-plugin: <name> -->`,
+and that plugin's rule (always loaded via `AGENTS.md`) already
+distills its `## Rules` / `## Decision` — you don't need to open the
+doc to rediscover that. Open it for the *why* behind the rule instead:
+Context, Consequences, Discussion. `docs/tdd/`, `docs/prd/`, and
+`docs/plan/` docs are the exception — nothing distills them, so open
+those in full before non-trivial work on their topic.
 
 ### Code
 
@@ -139,41 +144,19 @@ rationale live in the docs.
   payments, platform, policies, users).
 - **In-flight implementation plans** — `docs/plan/`.
 
-## Critical guardrails
+## Guardrails
 
-The rules most load-bearing across the codebase. Detail and
-rationale live in the referenced docs.
-
-- **No throwing from `interface.clj`.** Component interfaces
-  return a value or an anomaly; they never raise. Use
-  `error/try-nom` or `error/try-nom-ex` to convert exceptions
-  at library boundaries.
-  See [recipes/error-handling.md](docs/recipes/error-handling.md).
-- **Use the `utility` brick.** `util/uuidv7` for IDs, `util/now`
-  for timestamps; never `random-uuid`,
-  `(System/currentTimeMillis)`, or `(Instant/now)` directly. For
-  any helper not in `clojure.core`, check `utility` first.
-  See [recipes/common-helpers.md](docs/recipes/common-helpers.md).
-- **No `use-fixtures` in tests.** Manage system lifecycle with
-  `with-test-system`; assert anomaly-freeness with `nom-test>`.
-  See [recipes/testing.md](docs/recipes/testing.md).
-- **Pull/merge from `main` before committing.** Renovate
-  auto-merges dependency updates weekly.
-  See [recipes/git-workflow.md](docs/recipes/git-workflow.md).
-- **Cross brick boundaries only via `interface.clj`; wrap
-  every library.** Reach other components through their
-  `interface.clj`, never internal namespaces, and never list
-  components in `deps.edn`. Every third-party library has
-  exactly one wrapping brick; other bricks consume the wrapper,
-  not the library directly.
-  See [recipes/components.md](docs/recipes/components.md) and
-  [ADR-0011](docs/adr/0011-one-component-per-third-party-library.md).
-- **Minimal commentary on code.** Docstrings on `interface.clj`
-  are the documentation surface; impl files stay bare. Inline
-  `;;` comments are exceptional — only the load-bearing *why*
-  (invariant, workaround, upstream constraint), never the *what*
-  that the code already says.
-  See [ADR-0015](docs/adr/0015-comments-and-docstrings.md).
+The rules most load-bearing across the codebase — no throwing from
+`interface.clj`, ID/timestamp generation via `utility`, no
+`use-fixtures` in tests, pulling `main` before committing, crossing
+brick boundaries only via `interface.clj`, minimal inline commentary —
+live in the Tessl rule plugins (`idioms`, `framework`, `workflow`),
+always loaded via `AGENTS.md`. See
+[plugins/README.md](plugins/README.md) for the full plugin map. They
+don't need restating here, and they're already in context on every
+task. Don't hand-add a guardrail bullet to this file again — edit the
+rule (and its source recipe/ADR, kept in sync by the
+`sync-rules-from-docs` skill) instead.
 
 ## Common commands
 

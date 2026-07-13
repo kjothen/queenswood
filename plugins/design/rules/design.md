@@ -1,0 +1,171 @@
+# Queenswood system design
+
+How Queenswood specifically is built on top of Polylith and mono —
+persistence, system wiring, reactive state, messaging, the API
+surface, and how work gets packaged for deployment. Queenswood's own
+architectural choices, not portable Polylith or Clojure conventions.
+
+## Queenswood is a domain fork of `mono`
+
+Queenswood's workspace is a domain fork of `mono` — a superset
+containing mono's bricks at identical paths and namespaces, kept
+current via `git merge upstream/main`. An improvement that isn't
+bank-specific belongs in `mono`, made there and pulled down; only
+bank-specific bricks are prefixed `bank-*` and live solely in
+Queenswood.
+See [ADR-0001](../../../docs/adr/0001-reuse-mono-as-upstream.md).
+
+## Persistence is FoundationDB Record Layer
+
+Use FoundationDB with the Record Layer for all persistence. Each
+entity type lives in its own record store; an operation spanning
+multiple stores runs inside a single FDB transaction — the mechanism
+multi-record atomicity depends on.
+See [ADR-0002](../../../docs/adr/0002-foundationdb-record-layer.md).
+
+## System components are declared in YAML, registered in Clojure
+
+Component lifecycle runs through `donut.system`, with two layers per
+component kind. Implementation registers via `system/defcomponents`
+(start/stop fns, config schema, instance schema) from `system.clj`,
+or `system/core.clj` aggregating a `system/` folder once a brick has
+two or more definition clusters — never called directly from
+`interface.clj`. A brick's `interface.clj` bare-requires that system
+namespace, in the bracketed unaliased form, so multimethods extend on
+load. Declaration lives separately, in a YAML system file with a
+top-level `system:` key: each component instance uses
+`!system/component` naming a registered `system/component-kind`; a
+slot the bootstrap must inject is `!system/required-component`,
+resolved before `system/start`. Reference another component with
+`!system/ref` / `!system/local-ref` — a bare string is never promoted
+to a ref, and an unregistered kind fails to start. Don't bake an
+environment name into a shared resource component or its config.
+Tests consolidate system-component bare requires for a base or
+project into one `test/.../system.clj` namespace rather than
+repeating them per file.
+See [ADR-0007](../../../docs/adr/0007-system-as-data.md),
+[system-components](../../../docs/recipes/system-components.md),
+[system-configurations](../../../docs/recipes/system-configurations.md).
+
+## React to a changelog, don't orchestrate across bricks
+
+Reactive state transitions run through in-process changelog watchers,
+not message-bus events, for now. A watcher is a system component
+declared alongside the rest of the system definition; it reads a
+specific record store's cursor and dispatches to handler functions
+defined in the component that owns the source record.
+See [ADR-0008](../../../docs/adr/0008-changelog-watchers.md).
+
+## The message bus stays behind an abstraction
+
+Keep the message bus behind an abstraction — the `message-bus`
+brick's `Producer` / `Consumer` protocols, never a backend directly.
+Two implementations ship: `pulsar` for production, and a
+Clojure-channels `local` backend for tests and small-footprint
+deployments.
+See [ADR-0003](../../../docs/adr/0003-message-bus-abstraction.md).
+
+## Messaging payloads are Avro
+
+Command and event payloads on the message bus are Avro, via
+Lancaster. Schemas live in `bank-schema` alongside the protobuf
+record definitions; producers and consumers bind to a schema at
+registration, so a mismatch is caught at startup, not in production.
+See [ADR-0004](../../../docs/adr/0004-avro-for-message-payloads.md).
+
+## A write earns command status, or stays synchronous
+
+A write becomes a command — sent over the bus to a processor — only
+when it has at least one of four intrinsic properties: multi-record
+atomicity under contention (spans records or bricks, must commit or
+abort as one), idempotency stakes (a redelivered or double-submitted
+write causes real damage), reaction (other bricks must respond
+asynchronously via the changelog), or unreliable ingress (originates
+from a webhook or external event needing consume-then-ack semantics).
+A write with none of these stays synchronous. Once a domain earns
+commands, it splits into two bricks: `bank-X-query` (reads only —
+`get-*` / `find-*` / `count-*` — the only cash-account-style brick
+`bank-api` may require) and `bank-X` (commands, writes, domain,
+watcher), which depends on `bank-X-query` and calls its reads inside
+its own FDB transaction, passing the live `txn`.
+See [ADR-0017](../../../docs/adr/0017-query-write-brick-split.md),
+[ADR-0018](../../../docs/adr/0018-command-writes-are-earned.md).
+
+## Processors are packaged by deployment-time composition
+
+Processors are packaged by deployment-time composition, not one
+microservice per domain: one thin base per service group (a
+boilerplate main plus a require bundle registering that group's
+component-kinds) and one project per group, whose `application.yml`
+alone decides which processors, watchers, and event consumers that
+JVM hosts. Bases are group-scoped, not one shared superset, so each
+project's deps carry only the bricks its group runs. Group by
+boundary, not throughput — financial processors (payment,
+transaction, interest, payee-check) never share a JVM with
+operational processors (bank, party, cash-account,
+cash-account-product, idv); the scheduler stays its own singleton
+group; external adapters and simulators are never grouped with
+domain processors.
+See [ADR-0019](../../../docs/adr/0019-processor-packaging.md).
+
+## One API, fully OpenAPI-compliant
+
+Expose one HTTP API for the whole bank — one base (`bank-api`), one
+base URL, one OpenAPI document, bank-shaped rather than
+implementation-shaped (a consumer integrates with "Queenswood", not
+with each domain separately). Treat full OpenAPI 3.x compliance as
+the contract itself: request/response bodies are named components
+referenced by `$ref`, never inlined; API-key auth is a
+`securitySchemes` entry applied per-operation; every operation
+carries realistic examples; every 2xx/4xx/5xx response shape is
+documented, with the rejection/error shape itself a reusable
+component; polymorphic payloads project as `oneOf` plus
+`discriminator`; the exported spec is validated against the OpenAPI
+3.x schema in CI.
+See [ADR-0013](../../../docs/adr/0013-single-unified-api.md),
+[ADR-0014](../../../docs/adr/0014-openapi-3x-compliance.md).
+
+## System-level tests prove model equality
+
+System-level correctness is proven by model-equality property
+testing: a pure-functional reimplementation of the bank's domain
+rules (the model) imports nothing from production — no FDB, Pulsar,
+protobuf, Malli, nom, or real IDs — and runs in parallel with the
+real system against fugato-generated command sequences. Projection
+functions reduce real-system state to the model's shape; the
+property is equality between the model's end-state and the projected
+real-system end-state, and fugato shrinks any divergence to a
+minimal reproducer. Hand-authored EDN scenarios share the same
+runner and projections.
+See [ADR-0009](../../../docs/adr/0009-model-equality-property-testing.md).
+
+## Testcontainer infrastructure follows the three-layer pattern
+
+Testcontainer-backed infrastructure follows a three-layer pattern:
+the container itself, an extractor that reads runtime values (host,
+port, cluster-file-path) from the started container — living in the
+relevant brick's `system/` folder, never in `testcontainers` itself
+— and the high-level component, which consumes extracted values
+exactly as it would a production literal and never branches on
+whether it's running against a container. The `testcontainers` brick
+may call builder-pattern setup methods during construction, never
+library methods against a started container.
+See [testcontainers](../../../docs/recipes/testcontainers.md).
+
+## Bank-specific code generation follows the shared prep-lib pattern
+
+Code generation from a source artefact (currently protobuf record
+definitions for `bank-schema`) uses Clojure's standard
+`:deps/prep-lib` mechanism, never a build-system plugin or a custom
+run-script. Each brick's `deps.edn` declares `:deps/prep-lib` with an
+`:fn` entry point and an `:ensure` path marking prep as up-to-date; a
+co-located `build.clj` implements the generation, delegating to
+`bases/build` so other bricks can reuse it. Generated code lands in
+a `gen/` folder with its own `.gitignore` (`*` / `!.gitignore`) —
+never committed. Regeneration is deliberate:
+`clj -X:deps prep :aliases '[:dev]'`, or `:+bank :dev` for
+bank-specific generation; after a source-schema change, `:force true`
+is required — the `:ensure` marker doesn't detect staleness on its
+own.
+See [ADR-0010](../../../docs/adr/0010-code-generation-via-prep-lib.md),
+[code-generation](../../../docs/recipes/code-generation.md).

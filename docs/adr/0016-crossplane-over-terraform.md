@@ -1,4 +1,5 @@
 # 16. Crossplane over Terraform for infrastructure
+<!-- tessl-plugin: deployment -->
 
 ## Status
 

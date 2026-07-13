@@ -1,4 +1,5 @@
 # Components
+<!-- tessl-plugin: framework -->
 
 ## Problem
 
@@ -75,6 +76,9 @@ a brick's `deps.edn`.
 - Other components are accessed via their `interface.clj` — from
   this component's own `core`/`domain`/`store`/etc., never from
   `interface.clj` itself.
+- If the symbol you need isn't yet on another component's
+  `interface.clj`, add it there first — never reach around the
+  interface to get it.
 
 **MUST NOT:**
 

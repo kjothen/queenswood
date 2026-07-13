@@ -5,6 +5,18 @@
     "queenswood/idioms": {
       "source": "file:./plugins/idioms"
     },
+    "queenswood/framework": {
+      "source": "file:./plugins/framework"
+    },
+    "queenswood/design": {
+      "source": "file:./plugins/design"
+    },
+    "queenswood/deployment": {
+      "source": "file:./plugins/deployment"
+    },
+    "queenswood/docs": {
+      "source": "file:./plugins/docs"
+    },
     "queenswood/workflow": {
       "source": "file:./plugins/workflow"
     }

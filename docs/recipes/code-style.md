@@ -1,4 +1,5 @@
 # Code style
+<!-- tessl-plugin: idioms -->
 
 ## Problem
 
@@ -269,9 +270,13 @@ lints as `clojure.core/->`, and so on.
 - Nest destructuring in function arguments.
 - Set `:response` or `:error` on a Sieppari context to
   short-circuit — use `sieppari.context/terminate`.
-- Use `random-uuid` for new IDs.
+- Use `random-uuid` or `UUID/randomUUID` for new IDs anywhere outside
+  `components/utility/` — that brick is `util/uuidv7`'s one permitted
+  caller of the raw primitive.
 - Use `(System/currentTimeMillis)`, `(Instant/now)`, or other
-  platform clock APIs directly. Go through `util/now`.
+  platform clock APIs directly anywhere outside `components/utility/`
+  — that brick is `util/now`'s one permitted caller of the raw
+  primitive. Go through `util/now` everywhere else.
 - Repeat the brick name in function names within that brick
   (`process-command` in `command`, `send-account` in
   `bank-cash-account`, and so on).
@@ -284,6 +289,8 @@ lints as `clojure.core/->`, and so on.
   meaningful value.
 - Format `cond->` / `cond->>` with each predicate and action on
   separate lines, blank lines between pairs.
+- Prefer `cond->` with `utility/assoc-some` / `assoc-seq` over a
+  chain of optional `assoc` calls.
 - Aim for referential transparency — pure functions named
   after what they return — except at clear effect boundaries.
 

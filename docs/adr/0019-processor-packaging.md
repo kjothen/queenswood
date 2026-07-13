@@ -1,4 +1,5 @@
 # 19. Processor packaging is deployment-time composition
+<!-- tessl-plugin: design -->
 
 ## Status
 
