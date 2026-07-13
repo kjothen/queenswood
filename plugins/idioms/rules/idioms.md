@@ -35,9 +35,13 @@ See [testing](../../../docs/recipes/testing.md).
 Reach another component or base through its `interface.clj` (a base may
 require another base's `.system`). Never require another unit's `.core`
 / `.store` / `.domain`; if the symbol you need isn't on the interface,
-add it there first. Wrap every third-party library in exactly one brick
-and consume the wrapper, never the library — and never list a component
-in `deps.edn`.
+add it there first. That reaching happens from your own component's
+`core`/`domain`/`store`/etc. — never from your own `interface.clj`,
+which requires only this component's own local namespaces (plus
+`clojure.core`) and nothing from any other brick, not even the
+`error`/`utility` wrapper bricks. Wrap every third-party library in
+exactly one brick and consume the wrapper, never the library — and
+never list a component in `deps.edn`.
 See [components](../../../docs/recipes/components.md),
 [ADR-0011](../../../docs/adr/0011-one-component-per-third-party-library.md).
 

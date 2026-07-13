@@ -17,7 +17,7 @@ versus the design that is specific to how Queenswood is built.
 |--------|--------------------|--------|
 | **[idioms](idioms/)** — `queenswood/idioms` | writing any Queenswood Clojure: anomalies-not-exceptions, `utility` helpers, kebab-case keys, brick-boundary imports, style | **live** (rule: `idioms`) |
 | **design** — `queenswood/design` | how the system is built, brick to topology: Polylith bricks, `interface.clj` discipline, the processor pattern, CQRS split, changelog-as-outbox, transaction boundaries, system-as-data | planned |
-| **workflow** — `queenswood/workflow` | committing, branching, PRs, the dev loop | planned |
+| **[workflow](workflow/)** — `queenswood/workflow` | committing, branching, PRs, the dev loop, keeping Tessl rules in sync with their source docs | **live** (skill: `sync-rules-from-docs`) |
 | **docs** — `queenswood/docs` | writing or checking docs (wrap-80, mermaid, tone, PRD register) | planned |
 | **security** — `queenswood/security` | secrets, auth, SAST, security review | planned |
 | **deployment** — `queenswood/deployment` | deploying / running the cluster (Helm, Tilt, kind, Crossplane) | planned |
@@ -38,13 +38,26 @@ Code's built-in skills — this is the Tessl-managed, evaluable set.
 
 ## Adding a plugin
 
+`tessl init` re-syncs the *parent* project when run from a directory
+already nested inside an initialized Tessl tree (which every
+`plugins/<name>` is, once `plugins/idioms` exists) — it won't create a
+fresh nested project. Skip it and scaffold directly with `tessl tile
+new`, then hand-write `tessl.json` to match a sibling plugin's shape:
+
 ```bash
 mkdir -p plugins/<name> && cd plugins/<name>
-tessl init --agent claude-code --name queenswood/<name>
-tessl tile new --name queenswood/<name> --rules <rule> \
-  --rule-description "…" --workspace queenswood   # scaffolds rules/<rule>.md
-# …or `tessl skill new <skill>` for a triggered skill instead of a rule
-tessl project create <name> --workspace queenswood
+tessl tile new --name queenswood/<name> --path . --workspace queenswood \
+  --rules <rule> --rule-description "…"        # scaffolds rules/<rule>.md
+# …or --skill --skill-name <skill> --skill-description "…" for a
+# triggered skill instead of a rule
+
+cat > tessl.json <<'EOF'
+{ "name": "queenswood/<name>", "mode": "vendored", "dependencies": {} }
+EOF
 ```
+
+Then register the new plugin as a dependency in the repo-root
+`tessl.json` (alongside the existing entries), and run `tessl install`
+from the repo root to link it in.
 
 Run `tessl` commands from inside the plugin directory.

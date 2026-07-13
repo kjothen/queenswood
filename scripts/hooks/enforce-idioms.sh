@@ -129,16 +129,18 @@ report 'use-fixtures-in-tests' "$out"
 # Rules:
 #   - intra-unit (target == own) is always fine
 #   - target is a component: only `.interface` and `.system` are public
-#   - target is a base: only `.system`, and only when the importer is itself
-#     a base (component → base is the wrong direction)
+#   - target is a base: only `.system` or `.api` are public (`.api` is the
+#     multi-base aggregator pattern — bank-monolith wires several bases'
+#     Reitit handlers into one process), and only when the importer is
+#     itself a base (component → base is the wrong direction)
 #   - target is neither a component nor a base: ignore (generated namespaces
 #     like com.repldriven.mono.schemas.* live under a brick's gen/ tree
 #     under a non-matching prefix)
 section 'Cross-unit internal imports (components and bases)'
 out=""
 if [ ${#SRC_CLJ[@]} -gt 0 ]; then
-  bricks_us=$(ls components 2>/dev/null | tr - _ | paste -sd, -)
-  bases_us=$(ls bases 2>/dev/null | tr - _ | paste -sd, -)
+  bricks_us=$(ls components 2>/dev/null | paste -sd, -)
+  bases_us=$(ls bases 2>/dev/null | paste -sd, -)
   out=$(awk -v bricks="$bricks_us" -v bases="$bases_us" '
     BEGIN {
       n = split(bricks, a, ",")
@@ -150,7 +152,7 @@ if [ ${#SRC_CLJ[@]} -gt 0 ]; then
       n = split(p, parts, "/")
       if (n < 4 || parts[3] != "src") return ""
       if (parts[1] != "components" && parts[1] != "bases") return ""
-      b = parts[2]; gsub("-", "_", b)
+      b = parts[2]
       kind["k"] = (parts[1] == "components") ? "component" : "base"
       return b
     }
@@ -162,7 +164,7 @@ if [ ${#SRC_CLJ[@]} -gt 0 ]; then
     own == "" { next }
     {
       line = $0
-      while (match(line, /com\.repldriven\.mono\.[a-z0-9_]+\.[a-z0-9_]+/)) {
+      while (match(line, /com\.repldriven\.mono\.[a-z0-9_-]+\.[a-z0-9_-]+/)) {
         s = substr(line, RSTART, RLENGTH)
         line = substr(line, RSTART + RLENGTH)
         split(s, p, ".")
@@ -173,7 +175,7 @@ if [ ${#SRC_CLJ[@]} -gt 0 ]; then
         if (target in is_brick) {
           if (sub_ns != "interface" && sub_ns != "system") bad = 1
         } else if (target in is_base) {
-          if (!(own_kind == "base" && sub_ns == "system")) bad = 1
+          if (!(own_kind == "base" && (sub_ns == "system" || sub_ns == "api"))) bad = 1
         }
         if (bad) print FILENAME ":" FNR ": " s
       }
@@ -182,7 +184,58 @@ if [ ${#SRC_CLJ[@]} -gt 0 ]; then
 fi
 report 'cross-unit-internal' "$out"
 
-# 4. Comment-block bloat — runs of 5+ consecutive `;`-comment lines.
+# 4. interface.clj requires only its own component's local namespaces.
+# Stricter than cross-unit-internal above: that check allows any file to
+# require a foreign brick's `.interface`, but `interface.clj` itself must
+# delegate to its own core/domain/store/etc. and never reach into another
+# brick at all — not even via that brick's `.interface`, and not even a
+# library-wrapper brick like `error`/`utility`. Composition across bricks
+# belongs one level down, in core.clj. Advisory: known pre-existing debt
+# (bank-cash-account, bank-party, bank-balance-query, bank-test-scenarios,
+# bank-test-api-scenarios, secret) hasn't migrated yet — promote to
+# blocking once it has.
+section "interface.clj requires only its own component's namespaces"
+out=""
+if [ ${#SRC_CLJ[@]} -gt 0 ]; then
+  bricks_us=$(ls components 2>/dev/null | paste -sd, -)
+  bases_us=$(ls bases 2>/dev/null | paste -sd, -)
+  out=$(awk -v bricks="$bricks_us" -v bases="$bases_us" '
+    BEGIN {
+      n = split(bricks, a, ",")
+      for (i = 1; i <= n; i++) if (a[i] != "") is_brick[a[i]] = 1
+      n = split(bases, a, ",")
+      for (i = 1; i <= n; i++) if (a[i] != "") is_base[a[i]] = 1
+    }
+    function unit_of(p,    parts, n, b) {
+      n = split(p, parts, "/")
+      if (n < 4 || parts[3] != "src") return ""
+      if (parts[1] != "components" && parts[1] != "bases") return ""
+      b = parts[2]
+      return b
+    }
+    FNR == 1 {
+      own = unit_of(FILENAME)
+      is_iface = (FILENAME ~ /\/interface\.clj$/)
+    }
+    own == "" || !is_iface { next }
+    {
+      line = $0
+      while (match(line, /com\.repldriven\.mono\.[a-z0-9_-]+\.[a-z0-9_-]+/)) {
+        s = substr(line, RSTART, RLENGTH)
+        line = substr(line, RSTART + RLENGTH)
+        split(s, p, ".")
+        target = p[4]
+        if (target == own) continue
+        if ((target in is_brick) || (target in is_base)) {
+          print FILENAME ":" FNR ": " s
+        }
+      }
+    }
+  ' "${SRC_CLJ[@]}" 2>/dev/null)
+fi
+report 'interface-imports-foreign-brick' "$out" advisory
+
+# 5. Comment-block bloat — runs of 5+ consecutive `;`-comment lines.
 # Advisory: a long block can be a legitimate load-bearing why-block, so
 # this WARNs rather than blocking the commit.
 section 'Comment-block bloat (>= 5 consecutive `;` lines)'
@@ -208,7 +261,7 @@ if [ ${#SRC_CLJ[@]} -gt 0 ]; then
 fi
 report 'comment-block-bloat' "$out" advisory
 
-# 5. bank-api reads are query-only.
+# 6. bank-api reads are query-only.
 # A CQRS/design invariant riding along here until the `design` plugin owns
 # its enforcement. A domain brick with a `components/<brick>-query` sibling
 # is split into a read side (`-query`) and a write side (the plain name).

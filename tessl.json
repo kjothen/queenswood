@@ -4,6 +4,9 @@
   "dependencies": {
     "queenswood/idioms": {
       "source": "file:./plugins/idioms"
+    },
+    "queenswood/workflow": {
+      "source": "file:./plugins/workflow"
     }
   }
 }
