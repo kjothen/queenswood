@@ -3,7 +3,7 @@ set -e
 
 files=$(git diff --cached --name-only --diff-filter=ACM \
   | grep -E '\.(clj|cljc|cljs)$' \
-  | grep -Ev '^evals/' \
+  | grep -Ev '(^|/)evals/' \
   | while read -r f; do [ -f "$f" ] && echo "$f"; done)
 
 if [ -n "$files" ]; then
@@ -19,6 +19,12 @@ if [ -n "$files" ]; then
   # a new unmarked throw fails the commit. See .semgrep.yml.
   echo "Scanning for unmarked throws..."
   echo "$files" | xargs semgrep --config .semgrep.yml --error --disable-version-check
+
+  # Deterministic guardrails grep can decide (use-fixtures, cross-unit
+  # imports, query-only bank-api reads block; raw-time-id and comment
+  # bloat warn). Staged scope so it gates only what's being committed.
+  echo "Checking Queenswood guardrails..."
+  bash scripts/hooks/enforce-idioms.sh --staged
 fi
 
 helm_files=$(git diff --cached --name-only --diff-filter=ACM \

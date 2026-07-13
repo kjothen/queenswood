@@ -198,3 +198,5 @@ clj -X:deps prep :aliases '[:+bank :dev]' :force true
 cp scripts/hooks/pre-commit .git/hooks/pre-commit
 chmod +x .git/hooks/pre-commit
 ```
+
+@AGENTS.md

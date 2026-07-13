@@ -71,10 +71,11 @@ stack has no write verb in scope top to bottom.
 
 **Two tiers of enforcement, both real:**
 
-- **Guardrail** — a `bank-guardrails` check fails if `bank-api`
-  request code requires a write brick's interface that has a `-query`
-  sibling. This holds in every project, including `development`, which
-  includes every brick and so cannot rely on project exclusion. The
+- **Guardrail** — a pre-commit guardrail check
+  (`scripts/hooks/enforce-idioms.sh`) fails if `bank-api` request code
+  requires a write brick's interface that has a `-query` sibling. This
+  holds in every project, including `development`, which includes every
+  brick and so cannot rely on project exclusion. The
   `system.clj` registration bundle is exempt: it bare-requires
   interfaces to register component-kinds, not to call them.
 - **`poly check`** — once a service project no longer lists the write
