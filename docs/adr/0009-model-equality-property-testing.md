@@ -1,4 +1,5 @@
 # 9. Model-equality property testing
+<!-- tessl-plugin: design -->
 
 ## Status
 

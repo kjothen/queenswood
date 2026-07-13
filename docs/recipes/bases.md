@@ -1,4 +1,5 @@
 # Bases
+<!-- tessl-plugin: framework -->
 
 ## Problem
 
@@ -89,8 +90,10 @@ namespaces — the same rule as for components themselves:
 [com.repldriven.mono.server.interface :as server]
 ```
 
-Bases never depend on other bases. If two bases need to share
-code, that code belongs in a component.
+Bases never depend on other bases, with one bounded exception:
+`bank-monolith`, the single designated multi-base aggregator (see
+Discussion). If two bases need to share code, that code belongs in a
+component.
 
 ## Rules
 
@@ -105,7 +108,8 @@ code, that code belongs in a component.
 
 **MUST NOT:**
 
-- Bases depend on other bases.
+- Bases depend on other bases — except `bank-monolith`, the single
+  designated multi-base aggregator (see Discussion).
 - Bases share code with each other except through components.
 
 ## Discussion
@@ -115,8 +119,8 @@ Bases are the runnable parts of the system. The split between
 components" lets the same code run in different deployments
 — a thin processor base for one-Pulsar-consumer-per-domain
 deployables, the `bank-api` base for the HTTP service, and
-the `bank-monolith` base (test-only) bundling every
-component into one in-process system for end-to-end tests
+the `bank-monolith` base (test-only) composing several other
+bases into one in-process system for end-to-end tests
 under Testcontainers. See [deployment.md](deployment.md)
 for the per-service split that the production deployables
 follow.
@@ -124,7 +128,15 @@ follow.
 The no-base-depends-on-base rule keeps the dep graph clean. If
 two bases need shared logic, hoisting it into a component is the
 right move; the alternative is a lattice of base-on-base deps
-that loses the one-entry-point-per-artefact property.
+that loses the one-entry-point-per-artefact property. `bank-monolith`
+is the one deliberate, bounded exception: it bare-requires several
+other bases' `.system` namespaces to extend their multimethods at
+startup, and requires their `.api` (Reitit handler) namespaces to wire
+each into its own system definition, so local dev and
+Testcontainers-backed end-to-end
+tests can exercise the whole system without standing up every service
+separately. That exception is scoped to exactly this one aggregator
+base — it doesn't license any other base-to-base dependency.
 
 The bare-require list in `main.clj` looks ugly but is
 load-bearing: each entry extends the donut.system multimethods

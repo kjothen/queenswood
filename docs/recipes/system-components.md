@@ -1,4 +1,5 @@
 # System components
+<!-- tessl-plugin: design -->
 
 ## Problem
 

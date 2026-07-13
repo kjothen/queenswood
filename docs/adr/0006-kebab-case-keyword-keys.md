@@ -1,4 +1,5 @@
 # 6. Kebab-case keyword keys end-to-end
+<!-- tessl-plugin: idioms -->
 
 ## Status
 
@@ -44,7 +45,10 @@ The shortlist:
 
 We will use kebab-case keyword keys for all map data inside the
 system. Every component interface accepts and returns keyword-keyed
-maps; destructuring everywhere is `{:keys [...]}`.
+maps; destructuring everywhere is `{:keys [...]}`. The rule governs
+map *keys*, not values — currency codes stay ISO-4217 strings
+(`"GBP"`, not `:currency-gbp`), the one deliberate value-level
+exception (detail below).
 
 Boundary handling:
 

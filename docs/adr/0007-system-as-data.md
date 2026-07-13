@@ -1,4 +1,5 @@
 # 7. System-as-data via donut.system and YAML
+<!-- tessl-plugin: design -->
 
 ## Status
 

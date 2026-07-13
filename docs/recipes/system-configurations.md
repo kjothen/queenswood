@@ -1,4 +1,5 @@
 # System configurations
+<!-- tessl-plugin: design -->
 
 ## Problem
 

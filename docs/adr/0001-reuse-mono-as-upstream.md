@@ -1,4 +1,5 @@
 # 1. Reuse `mono` as upstream for shared infrastructure
+<!-- tessl-plugin: design -->
 
 ## Status
 

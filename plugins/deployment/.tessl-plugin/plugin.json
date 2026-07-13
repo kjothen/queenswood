@@ -1,0 +1,6 @@
+{
+  "name": "queenswood/deployment",
+  "version": "0.1.0",
+  "description": "Deploying and running the Queenswood cluster — the Helm chart, the Tilt dev loop, kind, and Crossplane-managed cloud infrastructure. Built and evaluated with Tessl.",
+  "private": true
+}

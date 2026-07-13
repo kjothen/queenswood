@@ -1,4 +1,5 @@
 # 10. Code generation via `:deps/prep-lib` and co-located `build.clj`
+<!-- tessl-plugin: design -->
 
 ## Status
 

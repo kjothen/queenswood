@@ -68,15 +68,37 @@ extract_adr() {
     in_decision { print }
   ' "$doc")
   [ -z "$raw" ] && return
-  printf '%s' "$raw" | awk -v RS='' '
-    NR == 1 { print; next }
-    NR == 2 {
-      if ($0 ~ /^([0-9]+\.|[-*]) /) { print; exit }
-      if ($0 ~ /:$/) { intro = $0; want_next = 1; next }
+  # Line-by-line state machine, not paragraph mode: a numbered/bulleted
+  # list item can have a blank-line-separated continuation paragraph
+  # (loose-list markdown) without the list actually ending there — e.g.
+  # ADR-0005's item 2 has an indented continuation before item 3. Stay
+  # in the list through any blank-line gap followed by either another
+  # list marker or indented content; stop only at unindented,
+  # non-list-marker content (or a code fence, or end of input).
+  printf '%s' "$raw" | awk '
+    BEGIN { state = "pre" }
+    state == "pre" {
+      if ($0 == "") { next }
+      state = "lead"
+    }
+    state == "lead" {
+      if ($0 == "") { state = "gap"; next }
+      print; next
+    }
+    state == "gap" {
+      if ($0 == "") { next }
+      if ($0 ~ /^([0-9]+\.|[-*]) /) { print; state = "list"; next }
+      if ($0 ~ /:$/) { print; state = "list"; next }
       exit
     }
-    NR == 3 {
-      if (want_next && $0 ~ /^([0-9]+\.|[-*]) /) { print intro "\n"; print }
+    state == "list" {
+      if ($0 == "") { state = "listgap"; next }
+      print; next
+    }
+    state == "listgap" {
+      if ($0 == "") { next }
+      if ($0 ~ /^([0-9]+\.|[-*]) /) { print ""; print; state = "list"; next }
+      if ($0 ~ /^[[:space:]]/) { print ""; print; state = "list"; next }
       exit
     }
   '

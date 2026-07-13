@@ -1,0 +1,6 @@
+{
+  "name": "queenswood/framework",
+  "version": "0.1.0",
+  "description": "How to use Polylith itself in Queenswood — bricks, components, bases, projects, interface.clj discipline, one-brick-per-library. Portable to any Polylith workspace, independent of Queenswood's own design choices. Built and evaluated with Tessl.",
+  "private": true
+}

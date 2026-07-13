@@ -1,4 +1,5 @@
 # 18. Command writes are earned, not default
+<!-- tessl-plugin: design -->
 
 ## Status
 

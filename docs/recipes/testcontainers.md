@@ -1,4 +1,5 @@
 # Testcontainers
+<!-- tessl-plugin: design -->
 
 ## Problem
 
