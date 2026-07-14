@@ -13,8 +13,8 @@
       "max_score": 14
     },
     {
-      "name": "Uses error/reject for the missing-customer case",
-      "description": "open-account signals a missing customer via error/reject (or an equivalent anomaly-producing call), not by raising an exception",
+      "name": "Guards against a missing customer",
+      "description": "open-account does not produce an :open account map when the customer doesn't exist. Any failure mechanism counts here (returned nil/false, an anomaly, a raised exception) — this scenario tests the brick-boundary discipline, not a specific failure-signaling convention",
       "max_score": 10
     },
     {
