@@ -1,0 +1,31 @@
+{
+  "context": "The agent must add open-account to bank_account/core.clj, calling into the sibling bank-customers component to check customer-exists?. bank-customers exposes both interface.clj (public) and core.clj (private impl) as inputs, presented neutrally with no statement of which is the correct one to require. Key discriminator: without the idiom, an agent tends to require com.repldriven.mono.bank-customers.core directly since it's right there and works just as well at compile time; with the idiom loaded, it knows a component's only public surface is its interface.clj and requires that instead.",
+  "type": "weighted_checklist",
+  "checklist": [
+    {
+      "name": "Requires bank-customers via its interface",
+      "description": "bank_account/core.clj requires com.repldriven.mono.bank-customers.interface to call customer-exists?",
+      "max_score": 16
+    },
+    {
+      "name": "Does not require bank-customers.core directly",
+      "description": "The diff does not add a require of com.repldriven.mono.bank-customers.core in bank_account/core.clj",
+      "max_score": 14
+    },
+    {
+      "name": "Uses error/reject for the missing-customer case",
+      "description": "open-account signals a missing customer via error/reject (or an equivalent anomaly-producing call), not by raising an exception",
+      "max_score": 10
+    },
+    {
+      "name": "Correct happy-path account map",
+      "description": "On success returns a map with :owner customer-id, :balance initial-balance, and :status :open",
+      "max_score": 8
+    },
+    {
+      "name": "bank-customers files left unchanged",
+      "description": "Neither bank_customers/interface.clj nor bank_customers/core.clj is modified",
+      "max_score": 6
+    }
+  ]
+}

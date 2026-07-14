@@ -1,0 +1,9 @@
+apiVersion: compute.gcp.m.upbound.io/v1beta1
+kind: Network
+metadata:
+  name: queenswood-vpc
+spec:
+  forProvider:
+    autoCreateSubnetworks: false
+  providerConfigRef:
+    name: gcp-provider

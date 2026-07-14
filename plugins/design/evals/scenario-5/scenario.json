@@ -1,0 +1,1 @@
+{ "description": "Avro messaging payloads — add a new event schema", "include": ["./inputs"] }

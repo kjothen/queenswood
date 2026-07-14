@@ -1,0 +1,1 @@
+{ "description": "Testcontainer three-layer pattern — wire up a widget-store testcontainer group", "include": ["./inputs"] }

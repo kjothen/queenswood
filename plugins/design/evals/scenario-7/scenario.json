@@ -1,0 +1,1 @@
+{ "description": "Processor packaging — register a new processor in its service group", "include": ["./inputs"] }

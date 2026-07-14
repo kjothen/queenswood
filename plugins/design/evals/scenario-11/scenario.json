@@ -1,0 +1,1 @@
+{ "description": "Prep-lib code generation — wire up a new proto-generated brick", "include": ["./inputs"] }

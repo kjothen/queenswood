@@ -1,0 +1,26 @@
+{
+  "context": "The agent must add a new service entry to the Helm chart's values.yaml, in a task framed around 'the dev environment' specifically. Key discriminator: without the idiom, an agent may bake the environment into the resource name (bank-widget-service-dev), since the task is explicitly about setting it up for dev; with the idiom loaded, it knows resource names must stay environment-agnostic — environments are discriminated via values.yaml overrides and env vars, not via the name itself — so the entry is named plain bank-widget-service regardless of which environment prompted adding it.",
+  "type": "weighted_checklist",
+  "checklist": [
+    {
+      "name": "Service name is environment-agnostic",
+      "description": "The new entry's name is bank-widget-service, with no -dev, -staging, or -prod suffix or prefix",
+      "max_score": 35
+    },
+    {
+      "name": "waitFor lists bank-widget-simulator",
+      "description": "The new entry's waitFor includes bank-widget-simulator, matching the adapter/simulator pattern",
+      "max_score": 30
+    },
+    {
+      "name": "Entry shape matches existing adapters",
+      "description": "The new entry uses the same key shape (name, waitFor) as the existing adapter entries, no ad-hoc extra fields",
+      "max_score": 20
+    },
+    {
+      "name": "Existing entries left unchanged",
+      "description": "bank-clearbank-adapter, bank-onfido-adapter, and bank-api entries are not modified",
+      "max_score": 15
+    }
+  ]
+}

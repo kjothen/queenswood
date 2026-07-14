@@ -1,0 +1,36 @@
+{
+  "context": "The agent must wire -main in widget_service/main.clj to call the widget component's start-widget-processor. Both widget/interface.clj (public, delegates) and widget/core.clj (private impl) are given as inputs, presented neutrally with no statement of which is correct to require. Key discriminator: without the idiom, an agent may require com.repldriven.mono.widget.core directly since it holds the visible implementation; with the idiom loaded, it knows a base reaches a component only through its interface.clj, the same rule as component-to-component. A second, independent discriminator: whether -main and (:gen-class) are actually present, since a base's whole job is to be a runnable Java entry point.",
+  "type": "weighted_checklist",
+  "checklist": [
+    {
+      "name": "Requires widget via its interface",
+      "description": "main.clj requires com.repldriven.mono.widget.interface to call start-widget-processor",
+      "max_score": 16
+    },
+    {
+      "name": "Does not require widget.core directly",
+      "description": "The diff does not add a require of com.repldriven.mono.widget.core in main.clj",
+      "max_score": 14
+    },
+    {
+      "name": "-main is defined",
+      "description": "The namespace defines a -main function that calls start-widget-processor with the config",
+      "max_score": 12
+    },
+    {
+      "name": "(:gen-class) present",
+      "description": "The ns form includes (:gen-class) so -main is exposed as a Java entry point",
+      "max_score": 10
+    },
+    {
+      "name": "Process blocks after starting",
+      "description": "-main blocks after starting (e.g. @(promise) or equivalent) so the JVM stays alive",
+      "max_score": 8
+    },
+    {
+      "name": "widget component files left unchanged",
+      "description": "Neither widget/interface.clj nor widget/core.clj is modified",
+      "max_score": 6
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "context": "The agent must provision a new cloud resource, with an existing Crossplane Managed Resource given as the pattern. Key discriminator: without the idiom, an agent may reach for Terraform (a new .tf file with a google_storage_bucket resource) since that's the industry-standard reflex for 'provision cloud infrastructure'; with the idiom loaded, it knows Queenswood provisions everything via Crossplane Managed Resources applied by Argo CD, so the bucket is declared as Kubernetes-native YAML matching the sibling resource's shape, never a Terraform file.",
+  "type": "weighted_checklist",
+  "checklist": [
+    {
+      "name": "Declared as a Crossplane Managed Resource",
+      "description": "widget-bucket.yaml has a kind representing a storage bucket with a GCP upjet-provider apiVersion, matching vpc.yaml's family",
+      "max_score": 35
+    },
+    {
+      "name": "No Terraform file introduced",
+      "description": "The diff does not add a .tf file or any google_storage_bucket Terraform resource",
+      "max_score": 30
+    },
+    {
+      "name": "providerConfigRef matches the existing pattern",
+      "description": "widget-bucket.yaml references the same providerConfigRef name as vpc.yaml",
+      "max_score": 20
+    },
+    {
+      "name": "vpc.yaml left unchanged",
+      "description": "The existing VPC resource is not modified",
+      "max_score": 15
+    }
+  ]
+}

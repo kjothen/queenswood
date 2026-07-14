@@ -1,0 +1,1 @@
+{ "description": "Projects are pure config — assemble a deployable project's deps.edn", "include": ["./inputs"] }

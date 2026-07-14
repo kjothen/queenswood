@@ -1,0 +1,36 @@
+{
+  "context": "The agent must complete a deployable project's deps.edn. Key discriminator: without the idiom, an agent may add a small Clojure source file under projects/widget-service/ (e.g. a helper to compute the version, or a -main shim) since that's a normal instinct when 'assembling' something; with the idiom loaded, it knows a project is pure config — deps.edn plus optional resources/, never Clojure source, never a -main (the base already has one).",
+  "type": "weighted_checklist",
+  "checklist": [
+    {
+      "name": "Lists widget and widget-service as :local/root",
+      "description": "deps.edn's :deps includes both the widget component and widget-service base as :local/root paths",
+      "max_score": 20
+    },
+    {
+      "name": ":build alias depends on bases/build",
+      "description": "A :build alias is present whose deps include bases/build as :local/root",
+      "max_score": 15
+    },
+    {
+      "name": ":build exec-args name the main namespace",
+      "description": ":exec-args sets :main to com.repldriven.mono.widget-service.main",
+      "max_score": 15
+    },
+    {
+      "name": "No Clojure source added",
+      "description": "The diff adds no .clj files anywhere under projects/widget-service/",
+      "max_score": 20
+    },
+    {
+      "name": "No -main defined in the project",
+      "description": "Nothing in the project defines -main; that's the base's responsibility",
+      "max_score": 15
+    },
+    {
+      "name": "Project depends on no other project",
+      "description": "deps.edn does not reference another projects/* path",
+      "max_score": 10
+    }
+  ]
+}

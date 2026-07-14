@@ -1,0 +1,31 @@
+{
+  "context": "The agent must implement a transfer that writes to two record stores. Key discriminator: without the idiom, an agent may call save-account and save-ledger-entry as two independent, sequential calls with no shared transaction — each individually atomic but not atomic together, a classic partial-failure bug; with the idiom loaded, it knows FDB gives multi-store atomicity only inside a single transaction, and reaches for fdb's transact macro to wrap both writes.",
+  "type": "weighted_checklist",
+  "checklist": [
+    {
+      "name": "Uses fdb/transact to wrap both writes",
+      "description": "transfer! wraps the debit and the ledger write in a single fdb/transact block (or equivalent single-transaction call)",
+      "max_score": 30
+    },
+    {
+      "name": "Both writes happen inside the same transaction",
+      "description": "save-account and save-ledger-entry are both called with the transaction bound by transact, not independently",
+      "max_score": 25
+    },
+    {
+      "name": "No two independent top-level saves",
+      "description": "The diff does not call save-account and save-ledger-entry as two separate, unwrapped calls",
+      "max_score": 25
+    },
+    {
+      "name": "record-db passed to transact",
+      "description": "transact is invoked with the store's record-db, consistent with the fdb interface shown",
+      "max_score": 10
+    },
+    {
+      "name": "fdb/interface.clj left unchanged",
+      "description": "fdb/interface.clj is not modified",
+      "max_score": 10
+    }
+  ]
+}

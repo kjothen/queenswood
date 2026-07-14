@@ -1,0 +1,1 @@
+{ "description": "Deploy each service as project+base — register a new service, no baked env name", "include": ["./inputs"] }

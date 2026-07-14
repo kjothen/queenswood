@@ -1,0 +1,12 @@
+fdb:
+  container: !system/component
+    system/component-kind: fdb/container
+    image-name: mono/foundationdb:7.3.75
+
+  cluster-file-path: !system/component
+    system/component-kind: fdb/cluster-file-path
+    container: !system/local-ref container
+
+  record-db: !system/component
+    system/component-kind: fdb/record-db
+    cluster-file-path: !system/local-ref cluster-file-path

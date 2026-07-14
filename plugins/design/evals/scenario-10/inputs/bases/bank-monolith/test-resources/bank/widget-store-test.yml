@@ -1,0 +1,11 @@
+widget-store:
+  container: !system/component
+    system/component-kind: widget/container
+    image-name: mono/widget-store:1.0
+
+  # TODO: widget/host-reader — reads the running container's host,
+  # referencing `container` via !system/local-ref
+
+  record-db: !system/component
+    system/component-kind: widget/record-db
+    host: !system/local-ref container  # TODO: point at the host-reader instead

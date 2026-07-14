@@ -1,0 +1,31 @@
+{
+  "context": "The agent must publish an event after a transfer settles, with two candidate namespaces given neutrally: message-bus/interface (the messaging abstraction, publish!) and pulsar/interface (a raw Pulsar producer wrapper, send!). Key discriminator: without the idiom, an agent may pick pulsar/interface since it's a plausible, present option and sits closer to 'sending a message' semantically; with the idiom loaded, it knows production code depends on the message-bus abstraction only, never a backend directly, so backends stay swappable and only message-bus/interface's publish! is correct here.",
+  "type": "weighted_checklist",
+  "checklist": [
+    {
+      "name": "Publishes via message-bus/interface",
+      "description": "mark-settled! calls publish! from com.repldriven.mono.message-bus.interface",
+      "max_score": 30
+    },
+    {
+      "name": "Does not use pulsar/interface",
+      "description": "The diff does not call send! from com.repldriven.mono.pulsar.interface, or require pulsar.core directly",
+      "max_score": 30
+    },
+    {
+      "name": "Correct event shape",
+      "description": "The published event uses the :transaction/settled topic/type and includes the transaction id",
+      "max_score": 20
+    },
+    {
+      "name": "Transaction status updated first",
+      "description": "The transaction's status is updated to reflect settlement before or as part of publishing",
+      "max_score": 10
+    },
+    {
+      "name": "message-bus and pulsar interfaces left unchanged",
+      "description": "Neither message-bus/interface.clj nor pulsar/interface.clj is modified",
+      "max_score": 10
+    }
+  ]
+}

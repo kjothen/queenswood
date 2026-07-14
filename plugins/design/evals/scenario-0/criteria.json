@@ -1,0 +1,31 @@
+{
+  "context": "The agent must name and scaffold a new, generic (non-bank-specific) component. Key discriminator: without the idiom, an agent working inside a repo whose README calls it a banking system may reflexively prefix the new component bank-rate-limiter, matching the visual pattern of everything else being worked on; with the idiom loaded, it knows Queenswood's workspace is a superset of mono and the bank-* prefix is reserved for bank-specific bricks — a generic wrapper belongs unprefixed, as if it were a mono brick.",
+  "type": "weighted_checklist",
+  "checklist": [
+    {
+      "name": "Component is not bank-prefixed",
+      "description": "The new component's directory and namespace do not start with bank- (e.g. rate-limiter, not bank-rate-limiter)",
+      "max_score": 30
+    },
+    {
+      "name": "interface.clj exposes allow?",
+      "description": "components/<name>/interface.clj defines allow?, delegating to core.clj",
+      "max_score": 20
+    },
+    {
+      "name": "core.clj holds the implementation",
+      "description": "components/<name>/core.clj implements allow? (or a stub thereof); interface.clj does not implement it inline",
+      "max_score": 20
+    },
+    {
+      "name": "deps.edn present",
+      "description": "components/<name>/deps.edn exists with a plausible :paths / :deps shape",
+      "max_score": 15
+    },
+    {
+      "name": "utility left unchanged",
+      "description": "components/utility/ is not modified",
+      "max_score": 15
+    }
+  ]
+}

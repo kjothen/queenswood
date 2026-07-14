@@ -1,0 +1,31 @@
+{
+  "context": "The agent must add a schema for a new messaging event, with an existing Lancaster-based schema in the same file as the pattern to follow. Key discriminator: without the idiom, an agent may reach for a plain EDN/JSON map shape, or invent a protobuf-style definition (protobuf is what FDB records use, a plausible-sounding but wrong analogy for messaging); with the idiom loaded, it knows all messaging payloads are Avro via Lancaster and schemas for the same conceptual entity space live in bank-schema, so it follows the sibling schema's def-record-schema shape and kebab-case keyword field names.",
+  "type": "weighted_checklist",
+  "checklist": [
+    {
+      "name": "Uses def-record-schema (Lancaster), matching the sibling",
+      "description": "interest-accrued-schema is defined with l/def-record-schema, following transaction-settled-schema's shape",
+      "max_score": 30
+    },
+    {
+      "name": "Fields are kebab-case keywords",
+      "description": "account-id and amount are keyword-keyed and kebab-cased, not camelCase or string keys",
+      "max_score": 20
+    },
+    {
+      "name": "Correct field types",
+      "description": "account-id is a string field, amount is a double/float numeric field",
+      "max_score": 20
+    },
+    {
+      "name": "No protobuf or plain-map schema introduced",
+      "description": "The diff does not define a protobuf message or a bare EDN/JSON map as the schema",
+      "max_score": 20
+    },
+    {
+      "name": "Existing schema left unchanged",
+      "description": "transaction-settled-schema is not modified",
+      "max_score": 10
+    }
+  ]
+}

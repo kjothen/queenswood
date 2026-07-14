@@ -1,0 +1,1 @@
+{ "description": "Command writes are earned — a synchronous admin config toggle", "include": ["./inputs"] }
