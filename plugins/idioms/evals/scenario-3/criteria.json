@@ -1,30 +1,30 @@
 {
-  "context": "The agent must add open-account to bank_account/core.clj, calling into the sibling bank-customers component to check customer-exists?. bank-customers exposes both interface.clj (public) and core.clj (private impl) as inputs, presented neutrally with no statement of which is the correct one to require. Key discriminator: without the idiom, an agent tends to require com.repldriven.mono.bank-customers.core directly since it's right there and works just as well at compile time; with the idiom loaded, it knows a component's only public surface is its interface.clj and requires that instead.",
+  "context": "The agent must add entries-for to bank_ledger/core.clj, deduplicating by :id because of a stated upstream webhook-redelivery quirk. Key discriminator: an agent without the idiom either omits the why entirely (dedup logic with no explanation), or over-explains with a multi-line comment block restating what the code does step by step instead of the one load-bearing reason it exists.",
   "type": "weighted_checklist",
   "checklist": [
     {
-      "name": "Requires bank-customers via its interface",
-      "description": "bank_account/core.clj requires com.repldriven.mono.bank-customers.interface to call customer-exists?",
-      "max_score": 16
-    },
-    {
-      "name": "Does not require bank-customers.core directly",
-      "description": "The diff does not add a require of com.repldriven.mono.bank-customers.core in bank_account/core.clj",
+      "name": "Correct functional behavior",
+      "description": "entries-for filters ledger entries by tx-type and removes duplicates by :id",
       "max_score": 14
     },
     {
-      "name": "Uses error/reject for the missing-customer case",
-      "description": "open-account signals a missing customer via error/reject (or an equivalent anomaly-producing call), not by raising an exception",
+      "name": "Captures the load-bearing why",
+      "description": "A docstring or comment explains the redelivery/dedup reason (why the dedup exists), not just that it happens",
+      "max_score": 16
+    },
+    {
+      "name": "Comment is concise, not a block",
+      "description": "The why explanation is a docstring or at most 1-2 short comment lines, not a run of 5+ consecutive ;-comment lines",
       "max_score": 10
     },
     {
-      "name": "Correct happy-path account map",
-      "description": "On success returns a map with :owner customer-id, :balance initial-balance, and :status :open",
+      "name": "No redundant what-comments",
+      "description": "No comment is added that merely restates what the code already says (e.g. '; filter entries', '; dedup by id')",
       "max_score": 8
     },
     {
-      "name": "bank-customers files left unchanged",
-      "description": "Neither bank_customers/interface.clj nor bank_customers/core.clj is modified",
+      "name": "record-entry left unchanged",
+      "description": "record-entry is unmodified other than the new function being added",
       "max_score": 6
     }
   ]

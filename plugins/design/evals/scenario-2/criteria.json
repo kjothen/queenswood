@@ -1,0 +1,31 @@
+{
+  "context": "The agent must finish wiring a component's system registration across two files. Key discriminators: (1) whether system/defcomponents is called from system.clj as shown by the existing pattern, versus being called from interface.clj directly, which the idiom forbids; (2) whether interface.clj bare-requires system.clj in the bracketed, unaliased form so the registration actually runs on load, versus requiring it aliased (which also loads it, but breaks the documented convention) or forgetting the require entirely.",
+  "type": "weighted_checklist",
+  "checklist": [
+    {
+      "name": "defcomponents called in system.clj",
+      "description": "system/defcomponents is added at the bottom of system.clj, registering :processor under group :widget",
+      "max_score": 30
+    },
+    {
+      "name": "defcomponents not called from interface.clj",
+      "description": "interface.clj does not call system/defcomponents directly",
+      "max_score": 20
+    },
+    {
+      "name": "interface.clj bare-requires system.clj",
+      "description": "interface.clj gains a bare require of com.repldriven.mono.widget.system",
+      "max_score": 25
+    },
+    {
+      "name": "Bare require is bracketed and unaliased",
+      "description": "The new require uses [com.repldriven.mono.widget.system], not a bare symbol or an aliased form",
+      "max_score": 15
+    },
+    {
+      "name": "processor component map itself unchanged",
+      "description": "The existing :system/start / :system/config / :system/instance-schema map is not altered",
+      "max_score": 10
+    }
+  ]
+}

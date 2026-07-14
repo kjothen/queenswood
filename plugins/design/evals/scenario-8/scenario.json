@@ -1,0 +1,1 @@
+{ "description": "OpenAPI compliance — add a get-widget endpoint matching the sibling route", "include": ["./inputs"] }

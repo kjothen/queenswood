@@ -1,0 +1,31 @@
+{
+  "context": "The agent must wire IDV completion to party activation. Key discriminator: without the idiom, an agent may edit bank_idv/core.clj to directly call into bank-party's activation logic once the check completes — an HTTP/domain-layer orchestrator chaining across bricks; with the idiom loaded, it knows bricks react via the changelog rather than orchestrating each other, so the fix belongs entirely in bank-party's own watcher, which reacts to bank-idv's changelog on its own. A second discriminator: whether the handler checks existing status before acting, the idempotency requirement watchers carry.",
+  "type": "weighted_checklist",
+  "checklist": [
+    {
+      "name": "Activation logic added to bank-party's watcher",
+      "description": "watcher.clj's handler is filled in to transition the party to :active on a successful IDV check",
+      "max_score": 30
+    },
+    {
+      "name": "bank_idv/core.clj left unchanged",
+      "description": "The diff does not touch bank_idv/core.clj at all",
+      "max_score": 25
+    },
+    {
+      "name": "No direct cross-brick call introduced",
+      "description": "No new code in bank-idv calls into bank-party (or vice versa) outside the changelog watcher path",
+      "max_score": 20
+    },
+    {
+      "name": "Checks existing status before acting",
+      "description": "The handler checks the party isn't already :active before transitioning it, guarding against replay/duplicate triggers",
+      "max_score": 15
+    },
+    {
+      "name": "Only reacts on a successful check",
+      "description": "A failed or pending IDV check does not activate the party",
+      "max_score": 10
+    }
+  ]
+}

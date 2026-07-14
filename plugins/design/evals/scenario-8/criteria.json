@@ -1,0 +1,31 @@
+{
+  "context": "The agent must add a new endpoint by pattern-matching onto a fully-specced sibling route, rather than needing to know the exact Reitit/Malli OpenAPI API from scratch. Key discriminator: without the idiom, an agent may inline the response shape directly in the route (:responses {200 {:body [:map ...]}}), skip the security requirement, and skip the example, since Reitit will happily emit a spec without any of that; with the idiom loaded, it knows full OpenAPI 3.x compliance is the contract itself, so it registers a named, reusable schema, declares security explicitly, and includes an example, matching the sibling route.",
+  "type": "weighted_checklist",
+  "checklist": [
+    {
+      "name": "Named, reusable response schema",
+      "description": "A new ::widget (or similarly named) schema is registered in schemas.clj alongside ::account, and the route references it by key rather than inlining the shape",
+      "max_score": 30
+    },
+    {
+      "name": "Security requirement declared",
+      "description": "The new route declares the same api-key security requirement as the accounts route",
+      "max_score": 25
+    },
+    {
+      "name": "Example included",
+      "description": "The route or schema carries a realistic response example, matching the accounts route's convention",
+      "max_score": 20
+    },
+    {
+      "name": "Route follows existing path/method convention",
+      "description": "GET /v1/widgets/:id is added under the same route-vector shape as GET /v1/accounts/:id",
+      "max_score": 15
+    },
+    {
+      "name": "Accounts route and schema left unchanged",
+      "description": "The existing account route and ::account schema are not modified",
+      "max_score": 10
+    }
+  ]
+}

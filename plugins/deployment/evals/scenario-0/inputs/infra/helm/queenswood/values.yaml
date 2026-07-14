@@ -1,0 +1,8 @@
+services:
+  - name: bank-clearbank-adapter
+    waitFor:
+      - bank-clearbank-simulator
+  - name: bank-onfido-adapter
+    waitFor:
+      - bank-onfido-simulator
+  - name: bank-api

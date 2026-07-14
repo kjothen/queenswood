@@ -1,0 +1,1 @@
+{ "description": "System components — register a processor via defcomponents", "include": ["./inputs"] }

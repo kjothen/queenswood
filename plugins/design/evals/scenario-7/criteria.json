@@ -1,0 +1,26 @@
+{
+  "context": "The agent must place a new financial-shaped processor (posts to the ledger) into the correct existing group base, not scaffold a new one. Key discriminator: without the idiom, an agent may default to creating a fresh bank-widget-processor base and project (the historical one-microservice-per-domain pattern still visible in some older docs/tooling), or add the bare-require to the operational group by not weighing 'posts to the ledger' as the financial-vs-operational boundary signal; with the idiom loaded, it knows processors are grouped by boundary (financial: posts/settles/accrues/gates a payment; operational: provisions/verifies records money moves through) at deployment time, and a ledger-posting processor is financial.",
+  "type": "weighted_checklist",
+  "checklist": [
+    {
+      "name": "Bare-require added to the financial group base",
+      "description": "com.repldriven.mono.bank-widget.system is bare-required in bank_financial_processors/main.clj",
+      "max_score": 35
+    },
+    {
+      "name": "Operational group base left unchanged",
+      "description": "bank_operational_processors/main.clj is not modified",
+      "max_score": 25
+    },
+    {
+      "name": "No new base or project scaffolded",
+      "description": "The diff does not create a new bank-widget-processor base, project, or service directory",
+      "max_score": 25
+    },
+    {
+      "name": "Existing bare-requires in the financial base preserved",
+      "description": "The existing payment/transaction/interest/payee-check bare-requires remain untouched",
+      "max_score": 15
+    }
+  ]
+}

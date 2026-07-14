@@ -1,0 +1,1 @@
+{ "description": "Cloud infrastructure is Crossplane — provision a new GCS bucket", "include": ["./inputs"] }

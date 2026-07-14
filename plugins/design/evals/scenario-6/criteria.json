@@ -1,0 +1,31 @@
+{
+  "context": "The agent must implement a config write that has none of the four command-earning properties (no multi-record atomicity under contention, no idempotency stakes, no cross-brick reaction, no unreliable ingress) and explicitly wants read-your-writes. Key discriminator: without the idiom, an agent working in a codebase full of command-processor scaffolding may default to routing this through a command envelope (an Avro schema, a processor, a bus publish) out of habit or perceived consistency; with the idiom loaded, it knows a write earns command status only via one of four intrinsic properties, and a single-record admin config toggle with no reaction and no idempotency stakes stays a plain synchronous call.",
+  "type": "weighted_checklist",
+  "checklist": [
+    {
+      "name": "Implemented as a direct synchronous write",
+      "description": "set-job-enabled! calls store/save-job directly and returns its result, with no command dispatch introduced",
+      "max_score": 30
+    },
+    {
+      "name": "No command/message-bus machinery added",
+      "description": "The diff does not introduce an Avro schema, a message-bus publish, or any processor/command scaffolding",
+      "max_score": 30
+    },
+    {
+      "name": "Correct field updated",
+      "description": "The job's :enabled? flag is set to the passed value before saving",
+      "max_score": 20
+    },
+    {
+      "name": "Returns the updated record",
+      "description": "The function returns the record produced by save-job, giving the caller read-your-writes",
+      "max_score": 10
+    },
+    {
+      "name": "store.clj left unchanged",
+      "description": "bank_scheduler/store.clj is not modified",
+      "max_score": 10
+    }
+  ]
+}

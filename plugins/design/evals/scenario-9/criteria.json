@@ -1,0 +1,31 @@
+{
+  "context": "The agent must add a model transition function, with the real production implementation given as a reference for the rule it mirrors. Key discriminator: without the idiom, an agent may take the shortcut of requiring bank-cash-account's real component (or its anomaly/error machinery) from the model to reuse the logic directly, since it's right there and 'more accurate'; with the idiom loaded, it knows the model is a small, pure-functional reimplementation that imports nothing from production — no FDB, no nom, no real component interfaces — precisely so it diverges independently and the property test can catch real bugs.",
+  "type": "weighted_checklist",
+  "checklist": [
+    {
+      "name": "close-account transition added to the model",
+      "description": "accounts.clj gains a pure close-account function implementing the same balance-must-be-zero rule",
+      "max_score": 25
+    },
+    {
+      "name": "No production namespace imported",
+      "description": "The diff does not require com.repldriven.mono.bank-cash-account.* or any other production/bank-* component from the model",
+      "max_score": 30
+    },
+    {
+      "name": "No FDB, nom, or anomaly machinery imported",
+      "description": "The diff does not require fdb, error, or any anomaly-producing library into the model",
+      "max_score": 20
+    },
+    {
+      "name": "Correct rule mirrored",
+      "description": "The model only allows closing when balance is exactly zero and sets :status :closed on success",
+      "max_score": 15
+    },
+    {
+      "name": "Production bank_cash_account/core.clj left unchanged",
+      "description": "The reference production file is not modified",
+      "max_score": 10
+    }
+  ]
+}

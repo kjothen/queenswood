@@ -1,0 +1,31 @@
+{
+  "context": "The agent must complete a three-layer testcontainer chain in YAML, with a worked fdb example given as the pattern to follow. Key discriminator: without the idiom, an agent may wire record-db's host value directly off the container component (skipping the extractor layer, since it 'still works' and is one fewer component), or put the host-extraction component-kind inside the generic testcontainers group instead of widget's own; with the idiom loaded, it knows the three-layer split is deliberate — container (generic, in testcontainers), extractor (library-aware, lives in the relevant brick, here widget), high-level component (consumes the extractor exactly like a production literal) — and keeps testcontainers ignorant of what's inside the container.",
+  "type": "weighted_checklist",
+  "checklist": [
+    {
+      "name": "host-reader component added as its own layer",
+      "description": "A widget/host-reader (or equivalently named) component-kind is added between container and record-db",
+      "max_score": 30
+    },
+    {
+      "name": "record-db references the host-reader, not the container",
+      "description": "record-db's host (or equivalent) field uses !system/local-ref pointing at the host-reader component, not the container",
+      "max_score": 30
+    },
+    {
+      "name": "host-reader references the container via local-ref",
+      "description": "The host-reader component itself references the container with !system/local-ref",
+      "max_score": 20
+    },
+    {
+      "name": "No extraction logic added to the container definition",
+      "description": "The container component-kind's YAML block itself is not changed to expose runtime values directly",
+      "max_score": 15
+    },
+    {
+      "name": "component-kind naming stays under widget, not testcontainers",
+      "description": "The new component-kind is named/scoped to widget (e.g. widget/host-reader), not testcontainers/*",
+      "max_score": 5
+    }
+  ]
+}

@@ -1,0 +1,1 @@
+{ "description": "Bases are application entry points — wire up a new base's -main", "include": ["./inputs"] }

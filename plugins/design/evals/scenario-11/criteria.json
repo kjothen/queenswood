@@ -1,0 +1,31 @@
+{
+  "context": "The agent must wire up code generation for a new brick, with bank-schema's existing wiring given as the pattern to mirror. Key discriminator: without the idiom, an agent may hand-roll a shell script or a custom Babashka task to run protoc, or reimplement the generation logic inline in the new brick's build.clj instead of delegating to the shared bases/build; with the idiom loaded, it knows generation always goes through Clojure's standard :deps/prep-lib mechanism with a thin build.clj shim delegating to bases/build, so the logic lives in exactly one place.",
+  "type": "weighted_checklist",
+  "checklist": [
+    {
+      "name": "build.clj is a thin delegating shim",
+      "description": "bank-widget-schema/build.clj defines a fn that calls build.proto/gen-proto, not a reimplementation of proto generation",
+      "max_score": 30
+    },
+    {
+      "name": ":deps/prep-lib entry added",
+      "description": "deps.edn declares :deps/prep-lib with an :alias, :fn pointing at the new build.clj fn, and an :ensure path",
+      "max_score": 25
+    },
+    {
+      "name": ":build alias added",
+      "description": "deps.edn's :aliases includes a :build alias bringing in tools.build and bases/build, matching bank-schema's shape",
+      "max_score": 20
+    },
+    {
+      "name": "No external build system or shell script introduced",
+      "description": "The diff does not add a Makefile, shell script, or Maven/Gradle config for generation",
+      "max_score": 15
+    },
+    {
+      "name": "bank-schema and bases/build left unchanged",
+      "description": "Neither the existing bank-schema wiring nor bases/build/proto.clj is modified",
+      "max_score": 10
+    }
+  ]
+}

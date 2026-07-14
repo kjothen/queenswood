@@ -1,21 +1,20 @@
-# Add a customer-checked account constructor
+# Add a deduplicated entry lookup
 
 ## Background
 
-`inputs/src/com/repldriven/mono/bank_account/core.clj` and
-`inputs/src/com/repldriven/mono/bank_customers/` are two separate
-Queenswood components. `bank-customers` has two files:
-`interface.clj`, which exposes `customer-exists?`, and `core.clj`,
-which holds that same function's implementation.
+`inputs/src/com/repldriven/mono/bank_ledger/core.clj` is a Queenswood
+`bank-ledger` component's core namespace. The upstream payment-scheme
+adapter occasionally redelivers the same webhook twice within a short
+window — a known quirk of its retry policy, not a bug in this ledger.
+A redelivered webhook must not produce two ledger entries.
 
 ## Task
 
-Add an `open-account` function to
-`inputs/src/com/repldriven/mono/bank_account/core.clj` that takes
-`system`, `customer-id`, and `initial-balance`. Before creating the
-account, use the `bank-customers` component to confirm the customer
-exists; if the customer is not on record, the operation must fail. On
-success, return a new account map with `:owner customer-id`, `:balance
-initial-balance`, and `:status :open`.
+Add an `entries-for` function to
+`inputs/src/com/repldriven/mono/bank_ledger/core.clj` that returns all
+ledger entries matching a given `tx-type`, deduplicated by `:id` so a
+redelivered webhook doesn't yield a duplicate entry. The redelivery
+cause isn't obvious from the code alone — capture it appropriately for
+the next person reading this file.
 
-Edit `inputs/src/com/repldriven/mono/bank_account/core.clj` in place.
+Edit `inputs/src/com/repldriven/mono/bank_ledger/core.clj` in place.
