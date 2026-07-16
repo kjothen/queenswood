@@ -60,6 +60,15 @@
         (let-nom> [_ (store/save-binding config binding)]
           binding)))))
 
+(defn remove-binding
+  "Remove a policy binding by id. Loads it first so a missing id rejects
+  `:policy-binding/not-found` (the store delete alone doesn't reject).
+  Returns the removed binding map or an anomaly."
+  [config binding-id]
+  (let-nom> [binding (store/get-binding config binding-id)
+             _ (store/delete-binding config binding-id)]
+    binding))
+
 (defn get-binding
   [txn binding-id]
   (store/get-binding txn binding-id))
