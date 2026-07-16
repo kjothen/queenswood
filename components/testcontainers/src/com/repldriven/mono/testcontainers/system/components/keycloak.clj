@@ -37,27 +37,47 @@
 
 (defn- resolve-secret
   [command]
-  (let [{:keys [exit out err]} (apply shell/sh command)]
-    (when-not (zero? exit)
-      ;; nosemgrep: no-raw-throw
-      (throw (ex-info "Keycloak vault secret command failed"
-                      {:command command :exit exit :err err})))
-    ;; Keycloak's files-plaintext vault reads the file's raw bytes as
-    ;; the secret, so a trailing newline would corrupt it. Strip only
-    ;; newlines, never significant whitespace.
-    (str/trim-newline out)))
+  (let [{:keys [exit out]} (apply shell/sh command)]
+    (when (zero? exit)
+      ;; Keycloak's files-plaintext vault reads the file's raw bytes as
+      ;; the secret, so a trailing newline would corrupt it. Strip only
+      ;; newlines, never significant whitespace.
+      (str/trim-newline out))))
 
 (defn- mount-vault-secrets!
   [^KeycloakContainer c vault-dir secrets]
-  (.withEnv c "KC_VAULT" "file")
-  (.withEnv c "KC_VAULT_DIR" vault-dir)
-  (doseq [[k command] secrets]
-    ;; `(name k)` so a YAML map key reaches the container as the exact
-    ;; filename the REALM_UNDERSCORE_KEY resolver expects
-    ;; (<realm>_<key>); the value runs at boot, never on the host env.
-    (.withCopyToContainer c
-                          (Transferable/of ^String (resolve-secret command))
-                          (str vault-dir "/" (name k)))))
+  ;; Each secret is optional: a missing secret (command exits non-zero, or
+  ;; `pass` isn't installed) skips just that IdP rather than aborting
+  ;; startup.
+  (let [resolved (into {}
+                       (keep (fn [[k command]]
+                               (if-let [secret (try (resolve-secret command)
+                                                    (catch Exception _ nil))]
+                                 [k secret]
+                                 (do (log/warn
+                                      "Skipping optional Keycloak vault"
+                                      "secret" (name k)
+                                      "- external IdP"
+                                      "sign-in will be unavailable until"
+                                      "it is provisioned; command:"
+                                      command)
+                                     nil))))
+                       secrets)]
+    ;; Only enable the file vault when at least one secret resolved. With
+    ;; KC_VAULT=file set but a referenced file absent, Keycloak fails to
+    ;; resolve ${vault.<key>} during realm import and never becomes
+    ;; healthy; leaving the vault off keeps the expression an inert
+    ;; literal, exactly as the default profile behaves.
+    (when (seq resolved)
+      (.withEnv c "KC_VAULT" "file")
+      (.withEnv c "KC_VAULT_DIR" vault-dir)
+      (doseq [[k secret] resolved]
+        ;; `(name k)` so a YAML map key reaches the container as the exact
+        ;; filename the REALM_UNDERSCORE_KEY resolver expects
+        ;; (<realm>_<key>); the value runs at boot, never on the host env.
+        (.withCopyToContainer c
+                              (Transferable/of ^String secret)
+                              (str vault-dir "/" (name k)))))))
 
 (def container
   {:system/start

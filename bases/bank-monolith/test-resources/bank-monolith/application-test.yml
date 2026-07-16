@@ -4,7 +4,9 @@ system:
   fdb: !include bank/fdb-test.yml
   avro: !include avro/avro-test.yml
   keycloak: !include bank/keycloak-test.yml
+  banks: !include bank/bank-test.yml
   cash-accounts: !include bank/cash-account-test.yml
+  cash-account-products: !include bank/cash-account-product-test.yml
   parties: !include bank/party-test.yml
   payments: !include bank/payment-test.yml
   interest: !include bank/interest-test.yml
@@ -48,7 +50,9 @@ system:
         bank-status-test: queenswood-api-test
         bank-status-live: queenswood-api-live
       dispatchers:
+        banks: !system/ref banks.dispatcher
         cash-accounts: !system/ref cash-accounts.dispatcher
+        cash-account-products: !system/ref cash-account-products.dispatcher
         parties: !system/ref parties.dispatcher
         payments: !system/ref payments.dispatcher
         interest: !system/ref interest.dispatcher
