@@ -79,6 +79,12 @@ topics: !system/component
     - topic: "persistent://tenant-1/namespace-1/topic-cash-accounts-command-response"
       partitions: 1
       schema: !keyword command-response
+    - topic: "persistent://tenant-1/namespace-1/topic-cash-account-products-command"
+      partitions: 1
+      schema: !keyword command
+    - topic: "persistent://tenant-1/namespace-1/topic-cash-account-products-command-response"
+      partitions: 1
+      schema: !keyword command-response
     - topic: "persistent://tenant-1/namespace-1/topic-parties-command"
       partitions: 1
       schema: !keyword command
@@ -127,6 +133,12 @@ topics: !system/component
     - topic: "persistent://tenant-1/namespace-1/topic-payee-checks-command-response"
       partitions: 1
       schema: !keyword command-response
+    - topic: "persistent://tenant-1/namespace-1/topic-banks-command"
+      partitions: 1
+      schema: !keyword command
+    - topic: "persistent://tenant-1/namespace-1/topic-banks-command-response"
+      partitions: 1
+      schema: !keyword command-response
 
 producers: !system/component
   system/component-kind: pulsar/producers
@@ -145,6 +157,22 @@ producers: !system/component
       accessMode: !pulsar/access-mode Shared
       schema: !keyword command-response
       topicName: "persistent://tenant-1/namespace-1/topic-cash-accounts-command-response"
+    schemas: !system/local-ref schemas
+  cash-account-products-command:
+    _: !system/local-ref topics
+    client: !system/local-ref client
+    conf:
+      accessMode: !pulsar/access-mode Shared
+      schema: !keyword command
+      topicName: "persistent://tenant-1/namespace-1/topic-cash-account-products-command"
+    schemas: !system/local-ref schemas
+  cash-account-products-command-response:
+    _: !system/local-ref topics
+    client: !system/local-ref client
+    conf:
+      accessMode: !pulsar/access-mode Shared
+      schema: !keyword command-response
+      topicName: "persistent://tenant-1/namespace-1/topic-cash-account-products-command-response"
     schemas: !system/local-ref schemas
   parties-command:
     _: !system/local-ref topics
@@ -274,6 +302,22 @@ producers: !system/component
       schema: !keyword command-response
       topicName: "persistent://tenant-1/namespace-1/topic-payee-checks-command-response"
     schemas: !system/local-ref schemas
+  banks-command:
+    _: !system/local-ref topics
+    client: !system/local-ref client
+    conf:
+      accessMode: !pulsar/access-mode Shared
+      schema: !keyword command
+      topicName: "persistent://tenant-1/namespace-1/topic-banks-command"
+    schemas: !system/local-ref schemas
+  banks-command-response:
+    _: !system/local-ref topics
+    client: !system/local-ref client
+    conf:
+      accessMode: !pulsar/access-mode Shared
+      schema: !keyword command-response
+      topicName: "persistent://tenant-1/namespace-1/topic-banks-command-response"
+    schemas: !system/local-ref schemas
 
 consumers: !system/component
   system/component-kind: pulsar/consumers
@@ -304,6 +348,33 @@ consumers: !system/component
       topicNames:
         [
           "persistent://tenant-1/namespace-1/topic-cash-accounts-command-response",
+        ]
+    schemas: !system/local-ref schemas
+  cash-account-products-command:
+    _: !system/local-ref topics
+    client: !system/local-ref client
+    conf:
+      cryptoFailureAction: !pulsar/crypto-failure-action CONSUME
+      schema: !pulsar/schema AUTO_CONSUME
+      subscriptionName: bank-monolith-cash-account-products-command
+      subscriptionType: !pulsar/subscription-type Shared
+      deadLetterPolicy:
+        maxRedeliverCount: 5
+        deadLetterTopic: "persistent://tenant-1/namespace-1/topic-cash-account-products-command-dlq"
+      topicNames:
+        ["persistent://tenant-1/namespace-1/topic-cash-account-products-command"]
+    schemas: !system/local-ref schemas
+  cash-account-products-command-response:
+    _: !system/local-ref topics
+    client: !system/local-ref client
+    conf:
+      cryptoFailureAction: !pulsar/crypto-failure-action CONSUME
+      schema: !pulsar/schema AUTO_CONSUME
+      subscriptionName: bank-monolith-cash-account-products-command-response
+      subscriptionType: !pulsar/subscription-type Shared
+      topicNames:
+        [
+          "persistent://tenant-1/namespace-1/topic-cash-account-products-command-response",
         ]
     schemas: !system/local-ref schemas
   parties-command:
@@ -511,6 +582,31 @@ consumers: !system/component
       topicNames:
         ["persistent://tenant-1/namespace-1/topic-payee-checks-command-response"]
     schemas: !system/local-ref schemas
+  banks-command:
+    _: !system/local-ref topics
+    client: !system/local-ref client
+    conf:
+      cryptoFailureAction: !pulsar/crypto-failure-action CONSUME
+      schema: !pulsar/schema AUTO_CONSUME
+      subscriptionName: bank-monolith-banks-command
+      subscriptionType: !pulsar/subscription-type Shared
+      deadLetterPolicy:
+        maxRedeliverCount: 5
+        deadLetterTopic: "persistent://tenant-1/namespace-1/topic-banks-command-dlq"
+      topicNames:
+        ["persistent://tenant-1/namespace-1/topic-banks-command"]
+    schemas: !system/local-ref schemas
+  banks-command-response:
+    _: !system/local-ref topics
+    client: !system/local-ref client
+    conf:
+      cryptoFailureAction: !pulsar/crypto-failure-action CONSUME
+      schema: !pulsar/schema AUTO_CONSUME
+      subscriptionName: bank-monolith-banks-command-response
+      subscriptionType: !pulsar/subscription-type Shared
+      topicNames:
+        ["persistent://tenant-1/namespace-1/topic-banks-command-response"]
+    schemas: !system/local-ref schemas
 
 message-bus-producers: !system/component
   system/component-kind: pulsar/message-bus-producers
@@ -518,6 +614,10 @@ message-bus-producers: !system/component
     producer: !system/local-ref producers.cash-accounts-command
   cash-accounts-command-response:
     producer: !system/local-ref producers.cash-accounts-command-response
+  cash-account-products-command:
+    producer: !system/local-ref producers.cash-account-products-command
+  cash-account-products-command-response:
+    producer: !system/local-ref producers.cash-account-products-command-response
   parties-command:
     producer: !system/local-ref producers.parties-command
   parties-command-response:
@@ -550,6 +650,10 @@ message-bus-producers: !system/component
     producer: !system/local-ref producers.payee-checks-command
   payee-checks-command-response:
     producer: !system/local-ref producers.payee-checks-command-response
+  banks-command:
+    producer: !system/local-ref producers.banks-command
+  banks-command-response:
+    producer: !system/local-ref producers.banks-command-response
 
 message-bus-consumers: !system/component
   system/component-kind: pulsar/message-bus-consumers
@@ -557,6 +661,10 @@ message-bus-consumers: !system/component
     consumer: !system/local-ref consumers.cash-accounts-command
   cash-accounts-command-response:
     consumer: !system/local-ref consumers.cash-accounts-command-response
+  cash-account-products-command:
+    consumer: !system/local-ref consumers.cash-account-products-command
+  cash-account-products-command-response:
+    consumer: !system/local-ref consumers.cash-account-products-command-response
   parties-command:
     consumer: !system/local-ref consumers.parties-command
   parties-command-response:
@@ -589,3 +697,7 @@ message-bus-consumers: !system/component
     consumer: !system/local-ref consumers.payee-checks-command
   payee-checks-command-response:
     consumer: !system/local-ref consumers.payee-checks-command-response
+  banks-command:
+    consumer: !system/local-ref consumers.banks-command
+  banks-command-response:
+    consumer: !system/local-ref consumers.banks-command-response

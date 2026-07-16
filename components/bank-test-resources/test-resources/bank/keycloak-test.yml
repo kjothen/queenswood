@@ -26,6 +26,10 @@ container: !system/component
   # reaches the host environment or git. The realm references it as
   # ${vault.google-client-secret}. Tests (default profile) leave the
   # vault off, so the expression stays an inert literal as before.
+  # Optional: if the secret is absent from `pass`, startup skips it with
+  # a warning and only Google sign-in is unavailable — local Keycloak
+  # principals still work. Add `queenswood/google-client-secret` to
+  # `pass` to enable it.
   vault-dir: !profile
     dev: /opt/keycloak/data/vault
     default: ~
