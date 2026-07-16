@@ -479,3 +479,73 @@
                    p (first policies)
                    _ (is (= "Platform policy" (:name p)))
                    _ (is (= "platform" (get-in p [:labels "tier"])))])))))
+
+;; Pure evaluation-exclusion: `live?` gates archived policies out of the
+;; capability/limit matchers, the same way `:enabled false` does. In-memory
+;; policy maps (no persistence) — mirrors the other check-* tests.
+(deftest archived-policy-excluded-from-evaluation-test
+  (let [cap (allow {:organization {:action :organization-action-create}})
+        req {:action :organization-action-create}
+        with-status (fn [status]
+                      {:enabled true :status status :capabilities [cap]})]
+    (testing "an active policy's capability is in effect"
+      (is (true? (SUT/check-capability [(with-status :policy-status-active)]
+                                       :organization
+                                       req))))
+    (testing "a policy with no status set is treated as active"
+      (is (true? (SUT/check-capability [{:enabled true :capabilities [cap]}]
+                                       :organization
+                                       req))))
+    (testing "an archived policy contributes no capability"
+      (is (error/unauthorized? (SUT/check-capability [(with-status
+                                                       :policy-status-archived)]
+                                                     :organization
+                                                     req))))))
+
+(defn- new-policy!
+  [config]
+  (SUT/new-policy config
+                  {:name "Lifecycle"
+                   :enabled true
+                   :category :policy-category-standard
+                   :capabilities []
+                   :limits []
+                   :labels {}}))
+
+(def ^:private a-bank-target {:kind {:bank {:bank-id "acc.archive-test"}}})
+
+(deftest archive-policy-test
+  (with-test-system
+   [sys "classpath:bank-policy/application-test.yml"]
+   (let [config (fdb-config sys)]
+     (testing "new-policy defaults to active status"
+       (nom-test> [created (new-policy! config)
+                   _ (is (= :policy-status-active (:status created)))]))
+     (testing "archiving an unbound policy persists the archived status"
+       (nom-test> [created (new-policy! config)
+                   policy-id (:policy-id created)
+                   archived (SUT/archive-policy config policy-id)
+                   _ (is (= :policy-status-archived (:status archived)))
+                   loaded (SUT/get-policy config policy-id)
+                   _ (is (= :policy-status-archived (:status loaded))
+                         "archived status round-trips through the store")]))
+     (testing "archiving a bound policy is rejected and leaves it active"
+       (let [created (new-policy! config)
+             policy-id (:policy-id created)
+             _ (SUT/new-binding config
+                                {:policy-id policy-id :target a-bank-target})
+             result (SUT/archive-policy config policy-id)
+             loaded (SUT/get-policy config policy-id)]
+         (is (error/anomaly? result))
+         (is (= :policy/still-bound (error/kind result)))
+         (is (= :policy-status-active (:status loaded))
+             "a rejected archive leaves the policy active")))
+     (testing "an archived policy cannot gain a new binding"
+       (let [created (new-policy! config)
+             policy-id (:policy-id created)
+             _ (SUT/archive-policy config policy-id)
+             result (SUT/new-binding config
+                                     {:policy-id policy-id
+                                      :target a-bank-target})]
+         (is (error/anomaly? result))
+         (is (= :policy/archived (error/kind result))))))))

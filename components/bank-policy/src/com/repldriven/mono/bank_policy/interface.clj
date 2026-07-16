@@ -19,6 +19,19 @@
   [config data]
   (core/new-policy config data))
 
+(defn archive-policy
+  "Archive a policy — a terminal lifecycle state that excludes it from
+  evaluation and blocks new bindings, distinct from the reversible
+  `:enabled` pause. Rejects `:policy/still-bound` when the policy still
+  has bindings (the operator unbinds first). Returns the archived
+  policy map or an anomaly.
+
+  Args:
+  - config: FDB config map (`:record-db` / `:record-store`).
+  - policy-id: policy id string."
+  [config policy-id]
+  (core/archive-policy config policy-id))
+
 (defn get-policy
   "Load a policy by id. Returns the policy map or a
   `:policy/not-found` rejection.

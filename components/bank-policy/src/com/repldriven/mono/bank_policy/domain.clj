@@ -1,6 +1,16 @@
 (ns com.repldriven.mono.bank-policy.domain
   (:require
+    [com.repldriven.mono.error.interface :as error]
     [com.repldriven.mono.utility.interface :as utility]))
+
+(defn live?
+  "Whether a policy participates in evaluation. `:enabled` is the
+  reversible pause; `:status` is the lifecycle — an archived policy is
+  permanently out of evaluation. An unset/`:policy-status-unknown`
+  status counts as active."
+  [policy]
+  (and (:enabled policy)
+       (not= :policy-status-archived (:status policy))))
 
 (defn new-policy
   [data]
@@ -29,10 +39,25 @@
       :limits limits
       :labels labels
       :enabled enabled
+      :status :policy-status-active
       :created-at now
       :updated-at now}
      :description
      description)))
+
+(defn archive
+  "Transition a policy to the archived lifecycle state. Rejects when
+  the policy still has `bindings` — archival is for a policy no longer
+  bound to anything, so the operator unbinds first."
+  [policy bindings]
+  (if (seq bindings)
+    (error/reject :policy/still-bound
+                  {:message "Cannot archive a policy that is still bound"
+                   :policy-id (:policy-id policy)
+                   :binding-count (count bindings)})
+    (assoc policy
+           :status :policy-status-archived
+           :updated-at (utility/now))))
 
 (defn new-binding
   [data]
