@@ -27,6 +27,19 @@ enum PolicyCategory {
 }
 
 // ==========================================================================
+// Policy lifecycle status
+// ==========================================================================
+
+// Terminal lifecycle state, distinct from the reversible `enabled` pause.
+// An ARCHIVED policy is excluded from evaluation and cannot gain new
+// bindings. UNKNOWN is the proto2 zero-default sentinel (treated as ACTIVE).
+enum PolicyStatus {
+  POLICY_STATUS_UNKNOWN = 0;
+  POLICY_STATUS_ACTIVE = 1;
+  POLICY_STATUS_ARCHIVED = 2;
+}
+
+// ==========================================================================
 // Capabilities
 // ==========================================================================
 
@@ -433,6 +446,10 @@ message Policy {
 
   required int64 created_at = 9;
   required int64 updated_at = 10;
+
+  // Optional so existing records (and the proto2 required-zero trap) are
+  // safe; an unset status is treated as ACTIVE by evaluation.
+  optional PolicyStatus status = 11;
 }
 
 // ==========================================================================

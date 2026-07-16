@@ -1,5 +1,6 @@
 (ns com.repldriven.mono.bank-policy.limit
   (:require
+    [com.repldriven.mono.bank-policy.domain :as domain]
     [com.repldriven.mono.bank-policy.match :as match]
 
     [com.repldriven.mono.error.interface :as error]))
@@ -176,7 +177,7 @@
 (defn- enabled-limits
   [policies]
   (->> policies
-       (filter :enabled)
+       (filter domain/live?)
        (mapcat :limits)))
 
 (defn check

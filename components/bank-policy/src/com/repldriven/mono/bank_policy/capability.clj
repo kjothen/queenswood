@@ -1,5 +1,6 @@
 (ns com.repldriven.mono.bank-policy.capability
   (:require
+    [com.repldriven.mono.bank-policy.domain :as domain]
     [com.repldriven.mono.bank-policy.match :as match]
 
     [com.repldriven.mono.error.interface :as error]))
@@ -7,7 +8,7 @@
 (defn check
   [policies kind request]
   (let [matching (->> policies
-                      (filter :enabled)
+                      (filter domain/live?)
                       (mapcat :capabilities)
                       (filter (fn [c] (match/matches? c kind request))))
         denies (filter (fn [c] (= :effect-deny (:effect c))) matching)

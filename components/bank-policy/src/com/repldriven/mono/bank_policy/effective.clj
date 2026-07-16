@@ -1,5 +1,6 @@
 (ns com.repldriven.mono.bank-policy.effective
   (:require
+    [com.repldriven.mono.bank-policy.domain :as domain]
     [com.repldriven.mono.bank-policy.match :as match]))
 
 ;; Resolve a bank's effective policies into the single decision that
@@ -41,7 +42,7 @@
 
 (defn- resolve-caps
   [policies]
-  (->> (for [p (filter :enabled policies)
+  (->> (for [p (filter domain/live? policies)
              c (:capabilities p)]
          (assoc c :origin (origin p)))
        (group-by cap-key)
@@ -99,7 +100,7 @@
 
 (defn- resolve-limits
   [policies]
-  (->> (for [p (filter :enabled policies)
+  (->> (for [p (filter domain/live? policies)
              l (:limits p)]
          (assoc l :origin (origin p)))
        (group-by limit-key)

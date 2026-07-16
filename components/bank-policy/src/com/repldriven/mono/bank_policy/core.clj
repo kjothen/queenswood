@@ -23,6 +23,17 @@
     (let-nom> [_ (store/save-policy config policy)]
       policy)))
 
+(defn archive-policy
+  "Archive a policy: a terminal lifecycle state that removes it from
+  evaluation. Rejects `:policy/still-bound` when the policy still has
+  bindings. Returns the archived policy map or an anomaly."
+  [config policy-id]
+  (let-nom> [policy (store/get-policy config policy-id)
+             bindings (store/get-bindings-for-policy config policy-id)
+             archived (domain/archive policy bindings)
+             _ (store/save-policy config archived)]
+    archived))
+
 (defn get-policy
   [txn policy-id]
   (store/get-policy txn policy-id))
@@ -35,9 +46,19 @@
 
 (defn new-binding
   [config data]
-  (let [binding (domain/new-binding data)]
-    (let-nom> [_ (store/save-binding config binding)]
-      binding)))
+  ;; An archived policy can't gain new bindings. A missing policy stays
+  ;; permissive (an anomaly here isn't archived), preserving the prior
+  ;; behaviour where binding doesn't assert policy existence — seed and
+  ;; bank-creation flows bind pre-existing, active tier policies.
+  (let [policy (store/get-policy config (:policy-id data))]
+    (if (and (not (error/anomaly? policy))
+             (= :policy-status-archived (:status policy)))
+      (error/reject :policy/archived
+                    {:message "Cannot bind an archived policy"
+                     :policy-id (:policy-id data)})
+      (let [binding (domain/new-binding data)]
+        (let-nom> [_ (store/save-binding config binding)]
+          binding)))))
 
 (defn get-binding
   [txn binding-id]
