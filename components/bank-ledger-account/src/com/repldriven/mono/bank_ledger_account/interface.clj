@@ -75,6 +75,29 @@
   [txn bank-id ledger-account-id]
   (core/get-account txn bank-id ledger-account-id))
 
+(defn close-account
+  "Close a bank-owned `LedgerAccount`: an Open -> Closed transition
+  guarded on the account's default-posted balance netting to zero and
+  the `:ledger-account` close capability. Rejects
+  `:ledger-account/invalid-status` if already closed,
+  `:gl/non-zero-on-close` if the balance isn't zero. Returns the
+  closed account, or an anomaly.
+
+  Gated on the `:ledger-account` close capability the same way
+  `new-account` gates open: `opts` may carry `:policies` (the
+  caller's already-resolved effective policies); absent that, the
+  bank's effective policies are resolved from `txn`.
+
+  Args:
+  - txn: FDB transaction or db handle.
+  - bank-id: owning bank id.
+  - ledger-account-id: ledger account id (`led.<uuidv7>`).
+  - opts (optional): `:policies` to check against."
+  ([txn bank-id ledger-account-id]
+   (core/close-account txn bank-id ledger-account-id))
+  ([txn bank-id ledger-account-id opts]
+   (core/close-account txn bank-id ledger-account-id opts)))
+
 (defn find-by-code
   "Resolve a ledger account from its `gl-account-code` role. Returns the
   `LedgerAccount` map (or nil if not seeded). Used by posting sites to find

@@ -3,7 +3,7 @@
     [com.repldriven.mono.bank-policy.interface :as policy]
     [com.repldriven.mono.bank-schema.interface :as schema]
 
-    [com.repldriven.mono.error.interface :refer [let-nom>]]
+    [com.repldriven.mono.error.interface :as error :refer [let-nom>]]
     [com.repldriven.mono.utility.interface :as utility]))
 
 (def product-type->control-code
@@ -54,6 +54,7 @@
              :bank-id bank-id
              :currency currency
              :ledger-account-id (utility/generate-id "led")
+             :status :ledger-account-status-open
              :created-at now
              :updated-at now))))
 
@@ -88,3 +89,52 @@
   [gl-account-type]
   (contains? #{:gl-account-type-asset :gl-account-type-expense}
              gl-account-type))
+
+(defn open?
+  "True unless `account` has been closed. An absent or unset `:status`
+  (pre-existing seeded rows, the proto2 zero-default sentinel) counts
+  as open, so no backfill is needed."
+  [account]
+  (not= :ledger-account-status-closed (:status account)))
+
+(defn ensure-open
+  "Return `account` unchanged if open, or `:ledger-account/closed`
+  when it has been closed. Used to gate a closed account out of
+  posting sites (by-role lookup, control fan-out) so a posting fails
+  outright rather than silently skipping a control leg."
+  [account]
+  (if (open? account)
+    account
+    (error/reject :ledger-account/closed
+                  {:message "Ledger account is closed"
+                   :ledger-account-id (:ledger-account-id account)})))
+
+(defn close
+  "Transition `account` to closed. Rejects
+  `:ledger-account/invalid-status` if already closed,
+  `:gl/non-zero-on-close` unless `balance`'s posted default bucket
+  nets to zero, and the `:ledger-account` close capability via
+  `policies`. `balance` is the account's default-posted bucket, read
+  by the caller inside the same transaction as this guard and the
+  save."
+  [account balance policies]
+  (let-nom>
+    [_ (when-not (open? account)
+         (error/reject :ledger-account/invalid-status
+                       {:message "Account is not in a closeable state"
+                        :ledger-account-id (:ledger-account-id account)
+                        :status (:status account)
+                        :allowed #{:ledger-account-status-open}}))
+     _ (let [{:keys [credit debit]} balance]
+         (when-not (= (or credit 0) (or debit 0))
+           (error/reject :gl/non-zero-on-close
+                         {:message "Ledger account has a non-zero balance"
+                          :ledger-account-id (:ledger-account-id account)
+                          :credit credit
+                          :debit debit})))
+     _ (policy/check-capability policies
+                                :ledger-account
+                                {:action :ledger-account-action-close})]
+    (assoc account
+           :status :ledger-account-status-closed
+           :updated-at (utility/now))))
