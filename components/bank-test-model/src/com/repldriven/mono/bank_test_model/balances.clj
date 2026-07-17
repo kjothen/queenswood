@@ -49,7 +49,8 @@
    :next-state (fn [state {[acct-id] :args}]
                  (assoc-in state [:accounts acct-id :status] :closed))
    :valid? (fn [state {[acct-id] :args}]
-             (= :open (get-in state [:accounts acct-id :status])))})
+             (and (= :open (get-in state [:accounts acct-id :status]))
+                  (zero? (state/balance state acct-id))))})
 
 (defn- first-current-product
   "First tracked **published** `:current` product on `bank-id`, or

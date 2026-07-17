@@ -63,6 +63,9 @@ enum CashAccountAction {
   CASH_ACCOUNT_ACTION_UNKNOWN = 0;
   CASH_ACCOUNT_ACTION_OPEN = 1;
   CASH_ACCOUNT_ACTION_CLOSE = 2;
+  // Tags 3-5 are reserved for QNS-18 (SUSPEND/REOPEN) and QNS-32
+  // (REINSTATE).
+  CASH_ACCOUNT_ACTION_CLOSE_NON_ZERO = 6;
 }
 
 message CashAccountCapabilityFilter {

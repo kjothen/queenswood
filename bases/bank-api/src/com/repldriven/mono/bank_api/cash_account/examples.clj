@@ -26,6 +26,12 @@
            :status 422
            :detail "Currency not allowed for this product"}})
 
+(def CashAccountNonZeroOnClose
+  {:value {:title "REJECTED"
+           :type ":cash-account/non-zero-on-close"
+           :status 409
+           :detail "Account has a non-zero balance and cannot be closed"}})
+
 (def PartyNotFound
   {:value {:title "REJECTED"
            :type ":party/not-found"
@@ -41,7 +47,7 @@
 (def registry
   (examples-registry [#'CashAccountNotFound #'CashAccountAlreadyExists
                       #'ProductNotPublished #'InvalidCurrency #'PartyNotFound
-                      #'ProductNotFound]))
+                      #'ProductNotFound #'CashAccountNonZeroOnClose]))
 
 (def CashAccount
   {:bank-id "bnk.01kprbmgcj35ptc8npmybhh4s7"

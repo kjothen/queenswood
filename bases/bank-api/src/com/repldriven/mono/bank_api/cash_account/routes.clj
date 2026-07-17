@@ -4,7 +4,8 @@
     [com.repldriven.mono.bank-api.cash-account.queries :as queries]
     [com.repldriven.mono.bank-api.cash-account.examples :refer
      [CashAccountNotFound CashAccountAlreadyExists ProductNotPublished
-      InvalidCurrency PartyNotFound ProductNotFound]]
+      InvalidCurrency PartyNotFound ProductNotFound
+      CashAccountNonZeroOnClose]]
     [com.repldriven.mono.bank-api.schema :refer [ErrorResponse]]
     [com.repldriven.mono.bank-api.cash-account.links :as links]
     [com.repldriven.mono.bank-api.shared.parameters :as shared.parameters]
@@ -76,5 +77,6 @@
                              bank-idempotency/cache-response]
               :responses {200 {:body [:ref "CloseCashAccountResponse"]
                                :openapi {:links links/from-account}}
-                          404 (ErrorResponse [#'CashAccountNotFound])}
+                          404 (ErrorResponse [#'CashAccountNotFound])
+                          409 (ErrorResponse [#'CashAccountNonZeroOnClose])}
               :handler commands/close-cash-account}}]]]])

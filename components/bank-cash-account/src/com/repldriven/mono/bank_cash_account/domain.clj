@@ -3,6 +3,7 @@
   (:require
     [com.repldriven.mono.bank-cash-account.validation :as validation]
 
+    [com.repldriven.mono.bank-balance-domain.interface :as balance-domain]
     [com.repldriven.mono.bank-policy.interface :as policy]
 
     [com.repldriven.mono.error.interface :as error :refer [let-nom>]]
@@ -148,8 +149,33 @@
          :account-status :cash-account-status-opened
          :updated-at (utility/now)))
 
+(defn- non-zero-balances
+  "Balance buckets whose credit and debit sides don't net to zero.
+  `:credit-carry` is sub-minor-unit interest residue, not
+  materialised money, so it plays no part in this check."
+  [balances]
+  (remove (fn [{:keys [credit debit]}] (= (or credit 0) (or debit 0)))
+          balances))
+
+(defn- check-non-zero-close
+  [account balances policies]
+  (let [non-zero (non-zero-balances balances)]
+    (if (empty? non-zero)
+      true
+      (if (error/anomaly? (check-capability :cash-account-action-close-non-zero
+                                            (:account-type account)
+                                            policies))
+        (error/reject :cash-account/non-zero-on-close
+                      {:message
+                       "Account has a non-zero balance and cannot be closed"
+                       :account-id (:account-id account)
+                       :posted-balance (balance-domain/posted-balance
+                                        balances
+                                        (:currency account))})
+        true))))
+
 (defn close-account
-  [account policies]
+  [account balances policies]
   (let-nom>
     [_ (when-not (= :cash-account-status-opened (:account-status account))
          (error/reject :cash-account/invalid-status
@@ -159,7 +185,8 @@
                         :allowed #{:cash-account-status-opened}}))
      _ (check-capability :cash-account-action-close
                          (:account-type account)
-                         policies)]
+                         policies)
+     _ (check-non-zero-close account balances policies)]
     (assoc account
            :account-status :cash-account-status-closing
            :updated-at (utility/now))))
