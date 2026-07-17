@@ -66,6 +66,17 @@
   [config data]
   (core/new-binding config data))
 
+(defn remove-binding
+  "Remove a policy binding by id — the unbind step that lets a bound
+  policy be archived. Returns the removed binding map or a
+  `:policy-binding/not-found` rejection.
+
+  Args:
+  - config: FDB config map (`:record-db` / `:record-store`).
+  - binding-id: binding id string."
+  [config binding-id]
+  (core/remove-binding config binding-id))
+
 (defn get-binding
   "Load a binding by id. Returns the binding map or a
   `:policy-binding/not-found` rejection.

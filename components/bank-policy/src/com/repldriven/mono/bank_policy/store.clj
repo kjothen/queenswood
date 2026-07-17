@@ -109,6 +109,15 @@
    :policy-binding/get
    "Failed to load policy binding"))
 
+(defn delete-binding
+  [txn binding-id]
+  (fdb/transact
+   txn
+   (fn [txn]
+     (fdb/delete-record (fdb/open txn bindings-store-name) binding-id))
+   :policy-binding/delete
+   "Failed to delete policy binding"))
+
 (defn get-bindings
   ([txn]
    (get-bindings txn nil))

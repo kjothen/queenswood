@@ -549,3 +549,38 @@
                                       :target a-bank-target})]
          (is (error/anomaly? result))
          (is (= :policy/archived (error/kind result))))))))
+
+(deftest remove-binding-test
+  (with-test-system
+   [sys "classpath:bank-policy/application-test.yml"]
+   (let [config (fdb-config sys)]
+     (testing "removing an existing binding returns it and it is gone"
+       (nom-test> [created (new-policy! config)
+                   policy-id (:policy-id created)
+                   binding (SUT/new-binding config
+                                            {:policy-id policy-id
+                                             :target a-bank-target})
+                   binding-id (:binding-id binding)
+                   removed (SUT/remove-binding config binding-id)
+                   _ (is (= binding-id (:binding-id removed)))
+                   _ (let [after (SUT/get-binding config binding-id)]
+                       (is (error/anomaly? after))
+                       (is (= :policy-binding/not-found (error/kind after))))]))
+     (testing "removing a missing binding is rejected"
+       (let [result (SUT/remove-binding config "bnd.does-not-exist")]
+         (is (error/anomaly? result))
+         (is (= :policy-binding/not-found (error/kind result)))))
+     (testing "unbinding lets a previously-bound policy be archived"
+       (nom-test> [created (new-policy! config)
+                   policy-id (:policy-id created)
+                   binding (SUT/new-binding config
+                                            {:policy-id policy-id
+                                             :target a-bank-target})
+                   _ (let [blocked (SUT/archive-policy config policy-id)]
+                       (is (error/anomaly? blocked))
+                       (is (= :policy/still-bound (error/kind blocked))
+                           "bound policy can't be archived"))
+                   _ (SUT/remove-binding config (:binding-id binding))
+                   archived (SUT/archive-policy config policy-id)
+                   _ (is (= :policy-status-archived (:status archived))
+                         "archives once unbound")])))))
