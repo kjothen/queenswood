@@ -4,6 +4,7 @@
     [com.repldriven.mono.bank-ledger-account.store :as store]
 
     [com.repldriven.mono.bank-balance.interface :as balances]
+    [com.repldriven.mono.bank-balance-query.interface :as balance-query]
     [com.repldriven.mono.bank-policy.interface :as policy]
 
     [com.repldriven.mono.error.interface :as error :refer [let-nom>]]))
@@ -28,9 +29,28 @@
   [txn bank-id ledger-account-id]
   (store/find-by-id txn bank-id ledger-account-id))
 
+(defn close-account
+  ([txn bank-id ledger-account-id]
+   (close-account txn bank-id ledger-account-id {}))
+  ([txn bank-id ledger-account-id opts]
+   (let-nom>
+     [policies (get-policies txn bank-id opts)
+      account (get-account txn bank-id ledger-account-id)
+      balance (balance-query/get-balance txn
+                                         ledger-account-id
+                                         :balance-type-default
+                                         (:currency account)
+                                         :balance-status-posted)
+      closed (domain/close account balance policies)
+      _ (store/save-account txn closed)]
+     closed)))
+
 (defn find-by-code
   [txn bank-id gl-account-code]
-  (store/find-by-code txn bank-id gl-account-code))
+  (let-nom>
+    [account (store/find-by-code txn bank-id gl-account-code)]
+    (some-> account
+            domain/ensure-open)))
 
 (defn list-accounts
   [txn bank-id]
@@ -55,7 +75,8 @@
   (when (domain/fans-out? leg)
     (when-let [code (control-code leg)]
       (let-nom>
-        [control (store/find-by-code txn bank-id code)]
+        [control (store/find-by-code txn bank-id code)
+         control (if control (domain/ensure-open control) control)]
         (when control
           {:account-id (:ledger-account-id control)
            :balance-type :balance-type-default

@@ -2,6 +2,7 @@
   (:require
     [com.repldriven.mono.bank-ledger-account.interface :as SUT]
 
+    [com.repldriven.mono.bank-balance.interface :as balance-writes]
     [com.repldriven.mono.bank-balance-query.interface :as balances]
     [com.repldriven.mono.error.interface :as error]
     [com.repldriven.mono.fdb.interface]
@@ -162,3 +163,109 @@
              result (SUT/add-control-legs config bank-id [gl-leg])]
          (is (not (error/anomaly? result)))
          (is (= [gl-leg] result)))))))
+
+;; --- Close lifecycle -----------------------------------------------------
+
+(defn- suspense-account
+  [config bank-id]
+  (SUT/find-by-code config bank-id :gl-account-code-suspense))
+
+(deftest close-account-zero-balance-test
+  (with-test-system
+   [sys "classpath:bank-ledger-account/application-test.yml"]
+   (let [config (fdb-config sys)
+         bank-id "bnk.test-close-zero"]
+     (nom-test> [_ (seed! config bank-id)
+                 account (suspense-account config bank-id)
+                 closed
+                 (SUT/close-account config bank-id (:ledger-account-id account))
+                 _ (is (= :ledger-account-status-closed (:status closed)))
+                 fetched
+                 (SUT/get-account config bank-id (:ledger-account-id account))
+                 _ (is (= :ledger-account-status-closed (:status fetched))
+                       "closed status round-trips through the store")]))))
+
+(deftest close-account-non-zero-balance-test
+  (with-test-system
+   [sys "classpath:bank-ledger-account/application-test.yml"]
+   (let [config (fdb-config sys)
+         bank-id "bnk.test-close-nonzero"
+         seeded (seed! config bank-id)
+         account (suspense-account config bank-id)
+         posted (balance-writes/apply-legs
+                 config
+                 [{:account-id (:ledger-account-id account)
+                   :balance-type :balance-type-default
+                   :balance-status :balance-status-posted
+                   :side :leg-side-debit
+                   :amount 500}]
+                 :transaction-type-fee)
+         result (SUT/close-account config bank-id (:ledger-account-id account))
+         fetched (SUT/get-account config bank-id (:ledger-account-id account))]
+     (is (not (error/anomaly? seeded)))
+     (is (not (error/anomaly? posted)))
+     (is (error/anomaly? result))
+     (is (= :gl/non-zero-on-close (error/kind result)))
+     (is (not= :ledger-account-status-closed (:status fetched))
+         "a rejected close leaves the account open"))))
+
+(deftest close-account-already-closed-test
+  (with-test-system
+   [sys "classpath:bank-ledger-account/application-test.yml"]
+   (let [config (fdb-config sys)
+         bank-id "bnk.test-close-double"
+         seeded (seed! config bank-id)
+         account (suspense-account config bank-id)
+         first-close
+         (SUT/close-account config bank-id (:ledger-account-id account))
+         result (SUT/close-account config bank-id (:ledger-account-id account))]
+     (is (not (error/anomaly? seeded)))
+     (is (not (error/anomaly? first-close)))
+     (is (error/anomaly? result))
+     (is (= :ledger-account/invalid-status (error/kind result))))))
+
+(deftest closed-control-rejects-fan-out-test
+  (with-test-system
+   [sys "classpath:bank-ledger-account/application-test.yml"]
+   (let [config (fdb-config sys)
+         bank-id "bnk.test-close-control"
+         seeded (seed! config bank-id)
+         control (SUT/find-by-code config
+                                   bank-id
+                                   :gl-account-code-customer-deposits-current)
+         closed (SUT/close-account config bank-id (:ledger-account-id control))
+         customer-leg {:account-id "acc.customer1"
+                       :product-type :product-type-sub-ledger-current
+                       :balance-type :balance-type-default
+                       :balance-status :balance-status-posted
+                       :side :side-credit
+                       :amount 1000}
+         result (SUT/add-control-legs config bank-id [customer-leg])]
+     (is (not (error/anomaly? seeded)))
+     (is (not (error/anomaly? closed)))
+     (is (error/anomaly? result))
+     (is (= :ledger-account/closed (error/kind result))))))
+
+(deftest close-account-policy-denied-test
+  (with-test-system
+   [sys "classpath:bank-ledger-account/application-test.yml"]
+   (let [config (fdb-config sys)
+         bank-id "bnk.test-close-denied"
+         deny-policy {:enabled true
+                      :capabilities [{:effect :effect-deny
+                                      :reason "Test deny"
+                                      :kind {:ledger-account
+                                             {:action
+                                              :ledger-account-action-close}}}]}
+         seeded (seed! config bank-id)
+         account (suspense-account config bank-id)
+         result (SUT/close-account config
+                                   bank-id
+                                   (:ledger-account-id account)
+                                   {:policies [deny-policy]})
+         fetched (SUT/get-account config bank-id (:ledger-account-id account))]
+     (is (not (error/anomaly? seeded)))
+     (is (error/anomaly? result))
+     (is (error/unauthorized? result))
+     (is (not= :ledger-account-status-closed (:status fetched))
+         "a denied close leaves the account open"))))

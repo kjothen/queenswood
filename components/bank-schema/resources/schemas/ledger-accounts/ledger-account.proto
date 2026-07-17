@@ -33,6 +33,15 @@ enum Required {
   REQUIRED_OPTIONAL = 2;
 }
 
+// Lifecycle status of a ledger account. UNKNOWN is the proto2
+// zero-default sentinel — unset is treated as OPEN, so pre-existing
+// seeded rows read back as open with no backfill.
+enum LedgerAccountStatus {
+  LEDGER_ACCOUNT_STATUS_UNKNOWN = 0;
+  LEDGER_ACCOUNT_STATUS_OPEN = 1;
+  LEDGER_ACCOUNT_STATUS_CLOSED = 2;
+}
+
 // Sub-ledger cohort a control ledger account aggregates. One per
 // customer-deposit product type today; loans, cards, and other instruments
 // add new kinds when those product families land.
@@ -83,4 +92,8 @@ message LedgerAccount {
   required int64 created_at = 10;
   required int64 updated_at = 11;
   required GlAccountCode gl_account_code = 12; // role; enum value = chart number
+
+  // Optional so the proto2 required-zero trap can't bite; an unset
+  // status is treated as OPEN by domain/open?.
+  optional LedgerAccountStatus status = 13;
 }
