@@ -220,6 +220,17 @@ The generated SCAN is bundled into the account's
 (`<sort-code><account-number>`). BBAN is the lookup key for
 inbound payments arriving via FPS (payments TDD).
 
+**Number retirement.** Account numbers are never reused. The
+fountain (`allocate-payment-address` in `store.clj`) wraps a
+monotonic FDB counter that only advances, so a closed
+account's number stays retired forever rather than returning
+to a pool. Recycling would risk a payment intended for the
+old account holder landing on whoever gets the number next;
+the closed account's record also keeps its `:bban` under the
+unique `CashAccount_by_bban` index, so an accidental re-issue
+would fail at insert regardless. The close watcher doesn't
+need to inform the fountain — there's nothing to release.
+
 ### Lookups
 
 Three indexed reads on the store:
@@ -345,10 +356,6 @@ the legs need to find the right buckets.
 - **No payment-address rotation.** SCAN is generated once
   at open time and stays for the account's life. Replacing
   it (after a fraud event, for example) isn't supported.
-- **Account-number recycling after closure isn't
-  specified.** Whether the closed account's number returns
-  to the fountain or stays retired is up to the fountain
-  implementation.
 - **`account-type` derivation is rigid.** Always
   person → personal, non-person → business. No way to
   open a "business" account on behalf of a person party

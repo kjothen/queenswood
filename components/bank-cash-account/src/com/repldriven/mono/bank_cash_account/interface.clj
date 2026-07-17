@@ -6,6 +6,12 @@
   `seed-opened-account` and `seed-closed-account` are admin/test
   shortcuts that bypass it.
 
+  Account numbers are retired forever on close, never recycled — the
+  fountain behind `store/allocate-payment-address` is a monotonic
+  counter that structurally can't re-issue a number. Closing an
+  account doesn't need to inform the fountain; there's nothing to
+  release.
+
   Reads live in `bank-cash-account-query`; this brick reuses them inside
   its own transactions. `bank-api` requires the query brick, not this
   one — state changes reach the processor as commands over the bus."

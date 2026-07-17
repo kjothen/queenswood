@@ -275,6 +275,11 @@ relationship. Closing is terminal; if the customer comes
 back, they open a fresh account with a new identifier and
 a new payment address.
 
+A closed account's payment address is retired for good —
+the platform never hands it to another customer, so there's
+no risk of a payment meant for the old customer reaching
+someone else.
+
 ## Open questions
 
 - **Suspended state.** Real banking has a "frozen pending
@@ -296,10 +301,6 @@ a new payment address.
   regimes for accounts unused for long periods (flagged,
   then closed, sometimes escheated to the state). None
   of that is modelled.
-- **Account-number recycling.** When an account closes,
-  whether its number returns to the pool or stays retired
-  is unspecified — it depends on how the platform's
-  number-generation function is configured.
 - **Multiple sort codes.** The bank operates under one
   clearing identity. Multi-bank routing or per-tenant
   sort codes aren't supported.
