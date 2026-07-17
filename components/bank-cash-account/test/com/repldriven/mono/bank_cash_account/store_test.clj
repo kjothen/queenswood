@@ -1,5 +1,6 @@
 (ns ^:eftest/synchronized com.repldriven.mono.bank-cash-account.store-test
   (:require
+    [com.repldriven.mono.bank-cash-account.interface :as cash-account]
     [com.repldriven.mono.bank-cash-account.store :as store]
 
     [com.repldriven.mono.bank-cash-account-query.interface :as q]
@@ -60,3 +61,44 @@
                                          (account "acc.3"
                                                   "idem-key-0000000000000002")
                                          (changelog "acc.3"))])))))
+
+(def ^:private test-sort-code "999999")
+
+(defn- account-with-bban
+  [account-id bban]
+  {:bank-id test-bank-id
+   :account-id account-id
+   :party-id "pty.test"
+   :product-id "prd.test"
+   :version-id "v1"
+   :name "Retirement Test Account"
+   :currency "GBP"
+   :account-status :cash-account-status-opened
+   :bban bban
+   :created-at (utility/now)
+   :updated-at (utility/now)})
+
+(deftest closed-account-number-is-never-reissued-test
+  (with-test-system
+   [sys "classpath:bank-cash-account/application-test.yml"]
+   (let [config {:record-db (system/instance sys [:fdb :record-db])
+                 :record-store (system/instance sys [:fdb :store])}]
+     (nom-test>
+       [account-number-1 (store/allocate-payment-address config test-sort-code)
+        bban-1 (str test-sort-code account-number-1)
+        _ (store/save-account config
+                              (account-with-bban "acc.retire.1" bban-1)
+                              {:account-id "acc.retire.1"
+                               :status-after :cash-account-status-opened})
+        _ (cash-account/seed-closed-account config test-bank-id "acc.retire.1")
+        found (q/get-account config test-bank-id "acc.retire.1")
+        _ (testing "the account transitions to closed"
+            (is (= :cash-account-status-closed (:account-status found))))
+        account-number-2 (store/allocate-payment-address config test-sort-code)
+        _
+        (testing
+          "closing an account doesn't return its number to the
+                   fountain"
+          (is (not= account-number-1 account-number-2)))
+        _ (testing "the closed record keeps its original, retired number"
+            (is (= bban-1 (:bban found))))]))))
