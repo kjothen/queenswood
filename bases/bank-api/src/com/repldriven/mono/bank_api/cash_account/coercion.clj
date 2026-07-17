@@ -6,7 +6,8 @@
   (coercion/enum-coercion {"opening" :cash-account-status-opening
                            "opened" :cash-account-status-opened
                            "closing" :cash-account-status-closing
-                           "closed" :cash-account-status-closed}))
+                           "closed" :cash-account-status-closed
+                           "suspended" :cash-account-status-suspended}))
 
 (def cash-account-status-enum-schema (:enum-schema cash-account-status-enum))
 

@@ -43,3 +43,29 @@
                    "cash-account"
                    {:bank-id bank-id
                     :account-id account-id})))
+
+(defn suspend-cash-account
+  [request]
+  (let [{:keys [auth parameters]} request
+        {:keys [bank-id]} auth
+        {:keys [path]} parameters
+        {:keys [account-id]} path]
+    (commands/send (dispatcher request)
+                   request
+                   "suspend-cash-account"
+                   "cash-account"
+                   {:bank-id bank-id
+                    :account-id account-id})))
+
+(defn reopen-cash-account
+  [request]
+  (let [{:keys [auth parameters]} request
+        {:keys [bank-id]} auth
+        {:keys [path]} parameters
+        {:keys [account-id]} path]
+    (commands/send (dispatcher request)
+                   request
+                   "reopen-cash-account"
+                   "cash-account"
+                   {:bank-id bank-id
+                    :account-id account-id})))

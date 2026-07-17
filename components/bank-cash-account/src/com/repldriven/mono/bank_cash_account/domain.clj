@@ -169,3 +169,35 @@
   (assoc account
          :account-status :cash-account-status-closed
          :updated-at (utility/now)))
+
+(defn suspend-account
+  [account policies]
+  (let-nom>
+    [_ (when-not (= :cash-account-status-opened (:account-status account))
+         (error/reject :cash-account/invalid-status
+                       {:message "Account is not in a suspendable state"
+                        :account-id (:account-id account)
+                        :status (:account-status account)
+                        :allowed #{:cash-account-status-opened}}))
+     _ (check-capability :cash-account-action-suspend
+                         (:account-type account)
+                         policies)]
+    (assoc account
+           :account-status :cash-account-status-suspended
+           :updated-at (utility/now))))
+
+(defn reopen-account
+  [account policies]
+  (let-nom>
+    [_ (when-not (= :cash-account-status-suspended (:account-status account))
+         (error/reject :cash-account/invalid-status
+                       {:message "Account is not in a reopenable state"
+                        :account-id (:account-id account)
+                        :status (:account-status account)
+                        :allowed #{:cash-account-status-suspended}}))
+     _ (check-capability :cash-account-action-reopen
+                         (:account-type account)
+                         policies)]
+    (assoc account
+           :account-status :cash-account-status-opened
+           :updated-at (utility/now))))

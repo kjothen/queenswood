@@ -1,10 +1,13 @@
 (ns com.repldriven.mono.bank-cash-account.interface
-  "Cash account write side: open and close for banks. Open allocates
-  payment addresses, derives account-type from the party, validates the
-  chosen product version, and seeds the product's balance buckets.
-  Status transitions are driven via the changelog watcher;
-  `seed-opened-account` and `seed-closed-account` are admin/test
-  shortcuts that bypass it.
+  "Cash account write side: open, close, suspend, and reopen for
+  banks. Open allocates payment addresses, derives account-type
+  from the party, validates the chosen product version, and seeds
+  the product's balance buckets. Open and close transitions are
+  driven via the changelog watcher; `seed-opened-account` and
+  `seed-closed-account` are admin/test shortcuts that bypass it.
+  Suspend and reopen are direct, single-phase flips between
+  `:cash-account-status-opened` and
+  `:cash-account-status-suspended` — no watcher leg.
 
   Account numbers are retired forever on close, never recycled — the
   fountain behind `store/allocate-payment-address` is a monotonic
@@ -54,6 +57,34 @@
    (core/close-account txn data))
   ([txn data opts]
    (core/close-account txn data opts)))
+
+(defn suspend-account
+  "Suspend an opened account. Direct single-phase flip, no watcher
+  leg. Returns the updated account (`:cash-account-status-suspended`)
+  or an anomaly.
+
+  Args:
+  - txn: FDB transaction or db handle.
+  - data: map with `:bank-id` and `:account-id`.
+  - opts (optional): map; `:policies` overrides policy resolution."
+  ([txn data]
+   (core/suspend-account txn data))
+  ([txn data opts]
+   (core/suspend-account txn data opts)))
+
+(defn reopen-account
+  "Reopen a suspended account. Direct single-phase flip, no watcher
+  leg. Returns the updated account (`:cash-account-status-opened`)
+  or an anomaly.
+
+  Args:
+  - txn: FDB transaction or db handle.
+  - data: map with `:bank-id` and `:account-id`.
+  - opts (optional): map; `:policies` overrides policy resolution."
+  ([txn data]
+   (core/reopen-account txn data))
+  ([txn data opts]
+   (core/reopen-account txn data opts)))
 
 (defn seed-opened-account
   "Test/admin shortcut: flip an account from

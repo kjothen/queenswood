@@ -21,6 +21,10 @@
                          (->response config (core/open-account config data)))
    "close-cash-account" (fn [config data]
                           (->response config (core/close-account config data)))
+   "suspend-cash-account"
+   (fn [config data] (->response config (core/suspend-account config data)))
+   "reopen-cash-account"
+   (fn [config data] (->response config (core/reopen-account config data)))
    "get-cash-account"
    (fn [config data]
      (let [{:keys [bank-id account-id]} data]

@@ -38,10 +38,16 @@
            :status 404
            :detail "Product not found"}})
 
+(def CashAccountInvalidStatus
+  {:value {:title "REJECTED"
+           :type "cash-account/invalid-status"
+           :status 409
+           :detail "Account is not in a valid state for this action"}})
+
 (def registry
   (examples-registry [#'CashAccountNotFound #'CashAccountAlreadyExists
                       #'ProductNotPublished #'InvalidCurrency #'PartyNotFound
-                      #'ProductNotFound]))
+                      #'ProductNotFound #'CashAccountInvalidStatus]))
 
 (def CashAccount
   {:bank-id "bnk.01kprbmgcj35ptc8npmybhh4s7"
@@ -68,3 +74,7 @@
 (def CreateCashAccountResponse CashAccount)
 
 (def CloseCashAccountResponse CashAccount)
+
+(def SuspendCashAccountResponse CashAccount)
+
+(def ReopenCashAccountResponse CashAccount)
