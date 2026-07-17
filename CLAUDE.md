@@ -80,6 +80,12 @@ those in full before non-trivial work on their topic.
   See [tdd/service-apis.md](docs/tdd/service-apis.md),
   [ADR-0013](docs/adr/0013-single-unified-api.md),
   [ADR-0014](docs/adr/0014-openapi-3x-compliance.md).
+- **Lifecycle transitions** — the ten-point definition-of-done for
+  a new entity state or transition, source-state guards in
+  `domain.clj` (`:<entity>/invalid-status`, HTTP 409), and watcher
+  guards as an idempotency gate rather than a rejection.
+  See [recipes/lifecycle-transitions.md](docs/recipes/lifecycle-transitions.md)
+  and [ADR-0008](docs/adr/0008-changelog-watchers.md).
 
 ### Tests
 

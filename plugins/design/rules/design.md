@@ -125,6 +125,25 @@ component; polymorphic payloads project as `oneOf` plus
 See [ADR-0013](../../../docs/adr/0013-single-unified-api.md),
 [ADR-0014](../../../docs/adr/0014-openapi-3x-compliance.md).
 
+## Lifecycle transitions guard their source state
+
+A transition function in `domain.clj` asserts its source state as
+the first `let-nom>` binding, before any capability or limit check,
+rejecting with a per-brick `:<entity>/invalid-status` kind and a
+payload carrying `:message`, the entity's id key, `:status`, and
+`:allowed`. A watcher's second leg gates on the loaded record's
+current status matching the expected source and skips silently
+rather than rejecting — redelivery and replay must be a no-op, not
+a failure. `:<entity>/invalid-status` maps to HTTP 409 in
+`bank-api`'s rejection→status table. Adding a new lifecycle state or
+transition works through a ten-point checklist: proto enum, Avro
+schema registered in both YAMLs, the `domain.clj` guard, `core.clj`
+orchestration, `commands.clj` dispatch, `interface.clj` fn, the
+watcher leg if two-phase, the `bank-api` route/OpenAPI/rejection
+mapping, the service-YAML watcher guard set, and tests.
+See [lifecycle-transitions](../../../docs/recipes/lifecycle-transitions.md),
+[ADR-0008](../../../docs/adr/0008-changelog-watchers.md).
+
 ## System-level tests prove model equality
 
 System-level correctness is proven by model-equality property

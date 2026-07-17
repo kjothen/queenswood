@@ -151,7 +151,13 @@
 (defn close-account
   [account policies]
   (let-nom>
-    [_ (check-capability :cash-account-action-close
+    [_ (when-not (= :cash-account-status-opened (:account-status account))
+         (error/reject :cash-account/invalid-status
+                       {:message "Account is not in a closeable state"
+                        :account-id (:account-id account)
+                        :status (:account-status account)
+                        :allowed #{:cash-account-status-opened}}))
+     _ (check-capability :cash-account-action-close
                          (:account-type account)
                          policies)]
     (assoc account
