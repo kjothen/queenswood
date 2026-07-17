@@ -4,7 +4,7 @@
     [com.repldriven.mono.bank-api.cash-account.queries :as queries]
     [com.repldriven.mono.bank-api.cash-account.examples :refer
      [CashAccountNotFound CashAccountAlreadyExists ProductNotPublished
-      InvalidCurrency PartyNotFound ProductNotFound]]
+      InvalidCurrency PartyNotFound ProductNotFound CashAccountInvalidStatus]]
     [com.repldriven.mono.bank-api.schema :refer [ErrorResponse]]
     [com.repldriven.mono.bank-api.cash-account.links :as links]
     [com.repldriven.mono.bank-api.shared.parameters :as shared.parameters]
@@ -76,5 +76,32 @@
                              bank-idempotency/cache-response]
               :responses {200 {:body [:ref "CloseCashAccountResponse"]
                                :openapi {:links links/from-account}}
-                          404 (ErrorResponse [#'CashAccountNotFound])}
-              :handler commands/close-cash-account}}]]]])
+                          404 (ErrorResponse [#'CashAccountNotFound])
+                          409 (ErrorResponse [#'CashAccountInvalidStatus])}
+              :handler commands/close-cash-account}}]
+     ["/suspend"
+      {:post {:summary "Suspend a cash account"
+              :openapi {:operationId "SuspendCashAccount"
+                        :parameters ^:replace
+                                    [shared.parameters/ref-account-id
+                                     shared.parameters/ref-idempotency-key]}
+              :interceptors [server/require-idempotency-key
+                             bank-idempotency/cache-response]
+              :responses {200 {:body [:ref "SuspendCashAccountResponse"]
+                               :openapi {:links links/from-account}}
+                          404 (ErrorResponse [#'CashAccountNotFound])
+                          409 (ErrorResponse [#'CashAccountInvalidStatus])}
+              :handler commands/suspend-cash-account}}]
+     ["/reopen"
+      {:post {:summary "Reopen a suspended cash account"
+              :openapi {:operationId "ReopenCashAccount"
+                        :parameters ^:replace
+                                    [shared.parameters/ref-account-id
+                                     shared.parameters/ref-idempotency-key]}
+              :interceptors [server/require-idempotency-key
+                             bank-idempotency/cache-response]
+              :responses {200 {:body [:ref "ReopenCashAccountResponse"]
+                               :openapi {:links links/from-account}}
+                          404 (ErrorResponse [#'CashAccountNotFound])
+                          409 (ErrorResponse [#'CashAccountInvalidStatus])}
+              :handler commands/reopen-cash-account}}]]]])

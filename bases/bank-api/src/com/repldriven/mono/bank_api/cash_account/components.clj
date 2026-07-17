@@ -71,8 +71,13 @@
 
 (def CloseCashAccountResponse [:ref "CashAccount"])
 
+(def SuspendCashAccountResponse [:ref "CashAccount"])
+
+(def ReopenCashAccountResponse [:ref "CashAccount"])
+
 (def registry
-  (components-registry [#'CashAccountId #'ScanAddress #'PaymentAddress
-                        #'CashAccountStatus #'AccountType #'CashAccount
-                        #'CreateCashAccountRequest #'CreateCashAccountResponse
-                        #'CashAccountList #'CloseCashAccountResponse]))
+  (components-registry
+   [#'CashAccountId #'ScanAddress #'PaymentAddress #'CashAccountStatus
+    #'AccountType #'CashAccount #'CreateCashAccountRequest
+    #'CreateCashAccountResponse #'CashAccountList #'CloseCashAccountResponse
+    #'SuspendCashAccountResponse #'ReopenCashAccountResponse]))

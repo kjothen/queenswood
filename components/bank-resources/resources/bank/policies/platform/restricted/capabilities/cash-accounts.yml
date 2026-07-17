@@ -8,3 +8,13 @@
   kind:
     cash-account:
       action: !keyword cash-account-action-close
+- effect: !keyword effect-allow
+  reason: "Allow suspending cash accounts"
+  kind:
+    cash-account:
+      action: !keyword cash-account-action-suspend
+- effect: !keyword effect-allow
+  reason: "Allow reopening cash accounts"
+  kind:
+    cash-account:
+      action: !keyword cash-account-action-reopen

@@ -119,3 +119,41 @@
                                   :status-before (:account-status account)
                                   :status-after (:account-status updated)})]
           updated))))))
+
+(defn suspend-account
+  ([txn data]
+   (suspend-account txn data {}))
+  ([txn data opts]
+   (store/transact
+    txn
+    (fn [txn]
+      (let [{:keys [bank-id account-id]} data]
+        (let-nom>
+          [policies (get-policies txn bank-id account-id opts)
+           account (q/get-account txn bank-id account-id)
+           updated (domain/suspend-account account policies)
+           _ (store/save-account txn
+                                 updated
+                                 {:account-id account-id
+                                  :status-before (:account-status account)
+                                  :status-after (:account-status updated)})]
+          updated))))))
+
+(defn reopen-account
+  ([txn data]
+   (reopen-account txn data {}))
+  ([txn data opts]
+   (store/transact
+    txn
+    (fn [txn]
+      (let [{:keys [bank-id account-id]} data]
+        (let-nom>
+          [policies (get-policies txn bank-id account-id opts)
+           account (q/get-account txn bank-id account-id)
+           updated (domain/reopen-account account policies)
+           _ (store/save-account txn
+                                 updated
+                                 {:account-id account-id
+                                  :status-before (:account-status account)
+                                  :status-after (:account-status updated)})]
+          updated))))))
