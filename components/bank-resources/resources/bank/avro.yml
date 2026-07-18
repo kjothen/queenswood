@@ -6,6 +6,7 @@ serde: !system/component
     close-cash-account: schemas/cash-accounts/close-account.avsc.json
     suspend-cash-account: schemas/cash-accounts/suspend-account.avsc.json
     reopen-cash-account: schemas/cash-accounts/reopen-account.avsc.json
+    rotate-cash-account-address: schemas/cash-accounts/rotate-address.avsc.json
     get-cash-account: schemas/cash-accounts/get-account.avsc.json
 
     cash-account-product: schemas/cash-account-products/product.avsc.json

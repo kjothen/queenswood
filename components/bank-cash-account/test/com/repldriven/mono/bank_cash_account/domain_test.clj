@@ -1,7 +1,7 @@
 (ns com.repldriven.mono.bank-cash-account.domain-test
-  "Pure-function tests for the close/suspend/reopen-account source-
-  state guards. No FDB, no processor — this pins the lifecycle-
-  transition convention (docs/recipes/lifecycle-transitions.md):
+  "Pure-function tests for the close/suspend/reopen/rotate-address
+  source-state guards. No FDB, no processor — this pins the
+  lifecycle-transition convention (docs/recipes/lifecycle-transitions.md):
   reject before any capability/limit check when the account isn't in
   a valid source state."
   (:require
@@ -94,3 +94,50 @@
         (is (error/rejection? result))
         (is (= :cash-account/invalid-status (error/kind result)))
         (is (= status (:status (error/payload result))))))))
+
+(defn- opened-account-with-address
+  []
+  (assoc (account :cash-account-status-opened)
+         :bban "04000412345678"
+         :payment-addresses [{:scheme :payment-address-scheme-scan
+                              :scan {:sort-code "040004"
+                                     :account-number "12345678"}}]))
+
+(def ^:private product-version
+  {:allowed-payment-address-schemes [:payment-address-scheme-scan]})
+
+(deftest rotate-address-source-state-guard-test
+  (testing
+    "rotating an account not in :cash-account-status-opened is
+           rejected, regardless of policy"
+    (doseq [status [:cash-account-status-opening
+                    :cash-account-status-closing
+                    :cash-account-status-closed
+                    :cash-account-status-suspended]]
+      (let [result (SUT/rotate-address (account status)
+                                       product-version
+                                       (constantly "99999999")
+                                       [])]
+        (is (error/rejection? result))
+        (is (= :cash-account/invalid-status (error/kind result)))
+        (is (= status (:status (error/payload result))))))))
+
+(deftest rotate-address-happy-test
+  (testing
+    "rotating replaces the payment address, rewrites the bban, and
+           retires the old address on-record"
+    (let [acct (opened-account-with-address)
+          result (SUT/rotate-address acct
+                                     product-version
+                                     (constantly "99999999")
+                                     [(policy-allowing
+                                       :cash-account-action-rotate-address)])]
+      (is (= :cash-account-status-opened (:account-status result)))
+      (is (= "04000499999999" (:bban result)))
+      (is (= [{:scheme :payment-address-scheme-scan
+               :scan {:sort-code "040004" :account-number "99999999"}}]
+             (:payment-addresses result)))
+      (is (= (:payment-addresses acct)
+             (mapv :address (:retired-payment-addresses result))))
+      (is (every? int?
+                  (map :retired-at (:retired-payment-addresses result)))))))

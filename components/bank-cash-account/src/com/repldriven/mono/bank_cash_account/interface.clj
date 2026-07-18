@@ -1,19 +1,21 @@
 (ns com.repldriven.mono.bank-cash-account.interface
-  "Cash account write side: open, close, suspend, and reopen for
-  banks. Open allocates payment addresses, derives account-type
-  from the party, validates the chosen product version, and seeds
-  the product's balance buckets. Open and close transitions are
-  driven via the changelog watcher; `seed-opened-account` and
-  `seed-closed-account` are admin/test shortcuts that bypass it.
-  Suspend and reopen are direct, single-phase flips between
-  `:cash-account-status-opened` and
-  `:cash-account-status-suspended` — no watcher leg.
+  "Cash account write side: open, close, suspend, reopen, and
+  rotate-address for banks. Open allocates payment addresses,
+  derives account-type from the party, validates the chosen product
+  version, and seeds the product's balance buckets. Open and close
+  transitions are driven via the changelog watcher; `seed-opened-account`
+  and `seed-closed-account` are admin/test shortcuts that bypass it.
+  Suspend, reopen, and rotate-address are direct, single-phase flips
+  — no watcher leg. Rotate-address stays on
+  `:cash-account-status-opened`, replacing the account's payment
+  addresses with a freshly allocated set and retiring the old ones
+  on-record.
 
-  Account numbers are retired forever on close, never recycled — the
-  fountain behind `store/allocate-payment-address` is a monotonic
-  counter that structurally can't re-issue a number. Closing an
-  account doesn't need to inform the fountain; there's nothing to
-  release.
+  Account numbers are retired forever on close or rotation, never
+  recycled — the fountain behind `store/allocate-payment-address` is
+  a monotonic counter that structurally can't re-issue a number.
+  Closing an account doesn't need to inform the fountain; there's
+  nothing to release.
 
   Reads live in `bank-cash-account-query`; this brick reuses them inside
   its own transactions. `bank-api` requires the query brick, not this
@@ -85,6 +87,21 @@
    (core/reopen-account txn data))
   ([txn data opts]
    (core/reopen-account txn data opts)))
+
+(defn rotate-address
+  "Rotate an opened account onto a freshly allocated set of payment
+  addresses, permanently retiring the old ones on-record. Direct
+  single-phase flip, no watcher leg. Returns the updated account
+  (`:cash-account-status-opened`) or an anomaly.
+
+  Args:
+  - txn: FDB transaction or db handle.
+  - data: map with `:bank-id` and `:account-id`.
+  - opts (optional): map; `:policies` overrides policy resolution."
+  ([txn data]
+   (core/rotate-address txn data))
+  ([txn data opts]
+   (core/rotate-address txn data opts)))
 
 (defn seed-opened-account
   "Test/admin shortcut: flip an account from

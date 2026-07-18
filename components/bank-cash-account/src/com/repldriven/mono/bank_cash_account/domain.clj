@@ -219,3 +219,40 @@
     (assoc account
            :account-status :cash-account-status-opened
            :updated-at (utility/now))))
+
+(defn rotate-address
+  "Replace an opened account's payment addresses with a freshly
+  allocated set drawn from the product version's allowed schemes,
+  retiring the old ones on-record (QNS-20). The old addresses are
+  never redirected — a payment landing on a retired address is a
+  lookup miss for `get-account-by-bban`, which already falls into
+  the suspense path."
+  [account product-version address-fountain-fn policies]
+  (let-nom>
+    [_ (when-not (= :cash-account-status-opened (:account-status account))
+         (error/reject :cash-account/invalid-status
+                       {:message "Account is not in a rotatable state"
+                        :account-id (:account-id account)
+                        :status (:account-status account)
+                        :allowed #{:cash-account-status-opened}}))
+     _ (check-capability :cash-account-action-rotate-address
+                         (:account-type account)
+                         policies)
+     sort-code (some (fn [{:keys [scan]}] (when scan (:sort-code scan)))
+                     (:payment-addresses account))
+     new-payment-addresses (new-addresses product-version
+                                          address-fountain-fn
+                                          sort-code)]
+    (let [now (utility/now)
+          bban (some (fn [{:keys [scan]}] (when scan (scan->bban scan)))
+                     new-payment-addresses)
+          retired (mapv (fn [address] {:address address :retired-at now})
+                        (:payment-addresses account))]
+      (assoc-some (assoc account
+                         :payment-addresses new-payment-addresses
+                         :retired-payment-addresses
+                         (into (vec (:retired-payment-addresses account))
+                               retired)
+                         :updated-at now)
+                  :bban
+                  bban))))

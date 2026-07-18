@@ -18,3 +18,8 @@
   kind:
     cash-account:
       action: !keyword cash-account-action-reopen
+- effect: !keyword effect-allow
+  reason: "Allow rotating cash account payment addresses"
+  kind:
+    cash-account:
+      action: !keyword cash-account-action-rotate-address
