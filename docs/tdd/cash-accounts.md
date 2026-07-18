@@ -231,6 +231,18 @@ unique `CashAccount_by_bban` index, so an accidental re-issue
 would fail at insert regardless. The close watcher doesn't
 need to inform the fountain — there's nothing to release.
 
+**Rotation.** `rotate-address` draws a fresh set of payment
+addresses from the same fountain against the account's bound
+product version, and rewrites `:bban` to the new SCAN. The
+old addresses are appended to `:retired-payment-addresses`
+(`CashAccount` tag 23) rather than discarded, so the record
+keeps a permanent history. There's no redirect window: a
+payment landing on a retired BBAN is a lookup miss for
+`get-account-by-bban` and falls into the existing suspense
+path, same as any other unmatched inbound. Single-phase, no
+watcher leg — the transition stays on
+`:cash-account-status-opened` throughout.
+
 ### Lookups
 
 Three indexed reads on the store:
@@ -353,9 +365,6 @@ the legs need to find the right buckets.
 - **No re-open after close.** Closed is terminal. A party
   who closes an account and wants it back must open a
   fresh one with a new account-id and new SCAN.
-- **No payment-address rotation.** SCAN is generated once
-  at open time and stays for the account's life. Replacing
-  it (after a fraud event, for example) isn't supported.
 - **`account-type` derivation is rigid.** Always
   person → personal, non-person → business. No way to
   open a "business" account on behalf of a person party

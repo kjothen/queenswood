@@ -69,3 +69,16 @@
                    "cash-account"
                    {:bank-id bank-id
                     :account-id account-id})))
+
+(defn rotate-cash-account-address
+  [request]
+  (let [{:keys [auth parameters]} request
+        {:keys [bank-id]} auth
+        {:keys [path]} parameters
+        {:keys [account-id]} path]
+    (commands/send (dispatcher request)
+                   request
+                   "rotate-cash-account-address"
+                   "cash-account"
+                   {:bank-id bank-id
+                    :account-id account-id})))

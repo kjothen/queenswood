@@ -159,3 +159,32 @@
                                   :status-before (:account-status account)
                                   :status-after (:account-status updated)})]
           updated))))))
+
+(defn rotate-address
+  ([txn data]
+   (rotate-address txn data {}))
+  ([txn data opts]
+   (store/transact
+    txn
+    (fn [txn]
+      (let [{:keys [bank-id account-id]} data]
+        (let-nom>
+          [policies (get-policies txn bank-id account-id opts)
+           account (q/get-account txn bank-id account-id)
+           product-version (products/get-version txn
+                                                 bank-id
+                                                 (:product-id account)
+                                                 (:version-id account))
+           updated (domain/rotate-address account
+                                          product-version
+                                          (fn [counter]
+                                            (store/allocate-payment-address
+                                             txn
+                                             counter))
+                                          policies)
+           _ (store/save-account txn
+                                 updated
+                                 {:account-id account-id
+                                  :status-before (:account-status account)
+                                  :status-after (:account-status updated)})]
+          updated))))))

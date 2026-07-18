@@ -24,6 +24,11 @@ message PaymentAddress {
   optional string value = 3;
 }
 
+message RetiredPaymentAddress {
+  required PaymentAddress address = 1;
+  required int64 retired_at = 2;
+}
+
 enum AccountType {
   ACCOUNT_TYPE_UNKNOWN = 0;
   ACCOUNT_TYPE_PERSONAL = 1;
@@ -70,6 +75,12 @@ message CashAccount {
   // existing account back instead of creating a duplicate. Optional at the
   // wire level for compatibility with accounts written before this field.
   optional string idempotency_key = 21;
+
+  // Rotation history (QNS-20): every payment address ever replaced by
+  // `rotate-address`, oldest first. Append-only — a rotation never
+  // removes an entry, it only adds one. Tag 22 is reserved for
+  // QNS-37's last_customer_activity_at.
+  repeated RetiredPaymentAddress retired_payment_addresses = 23;
 
   enum CashAccountStatus {
     CASH_ACCOUNT_STATUS_UNKNOWN = 0;

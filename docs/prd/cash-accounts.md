@@ -85,10 +85,6 @@ issued).
   customer who closes an account and wants it back opens
   a fresh one — with a new identifier and a new payment
   address.
-- **Rotating an account's payment address.** The sort code
-  and account number assigned at open stay for the
-  account's life. There's no flow to issue a replacement
-  (after a fraud event, for example).
 - **Overriding the account-type derivation.** A person
   party always opens personal accounts; an organisation
   party always opens business accounts. There's no way to
@@ -170,6 +166,12 @@ code.
 The address is the route money travels along: a UK Faster
 Payment to that sort code and account number lands in this
 account.
+
+A tenant can rotate an open account's address — after a
+suspected compromise, for example — trading the sort code
+and account number for a fresh pair. The old address is
+retired permanently and kept on the account's history; there
+is no window in which a payment can still reach it.
 
 ### Closing an account
 
@@ -290,9 +292,6 @@ someone else.
   a customer comes back after closing, they get a fresh
   account with a new payment address. Some operators
   prefer to retain the original identifier or address.
-- **Rotating a payment address.** After a compromise, a
-  customer might want a fresh sort code + account number
-  on the same account. There is no flow to do this today.
 - **Balance-zero on close.** The platform doesn't enforce
   it. Either the platform should refuse a non-zero close,
   or it should be configurable per tenant via policy. Today

@@ -25,6 +25,8 @@
    (fn [config data] (->response config (core/suspend-account config data)))
    "reopen-cash-account"
    (fn [config data] (->response config (core/reopen-account config data)))
+   "rotate-cash-account-address"
+   (fn [config data] (->response config (core/rotate-address config data)))
    "get-cash-account"
    (fn [config data]
      (let [{:keys [bank-id account-id]} data]
