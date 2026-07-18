@@ -201,3 +201,40 @@
     (assoc account
            :account-status :cash-account-status-opened
            :updated-at (utility/now))))
+
+(defn- current-sort-code
+  [payment-addresses]
+  (some (fn [{:keys [scan]}] (:sort-code scan)) payment-addresses))
+
+(defn rotate-address
+  "Retire an opened account's current payment-address and draw a fresh
+  one from the fountain, rewriting `:bban` to match. The retired
+  address is appended to `:retired-payment-addresses` — permanent, per
+  the same never-reissue guarantee `address-fountain-fn` gives a
+  closed account's number."
+  [account product-version address-fountain-fn policies]
+  (let [{:keys [account-type payment-addresses]} account
+        sort-code (current-sort-code payment-addresses)]
+    (let-nom>
+      [_ (when-not (= :cash-account-status-opened (:account-status account))
+           (error/reject :cash-account/invalid-status
+                         {:message "Account is not in a rotatable state"
+                          :account-id (:account-id account)
+                          :status (:account-status account)
+                          :allowed #{:cash-account-status-opened}}))
+       _ (check-capability :cash-account-action-rotate-address
+                           account-type
+                           policies)
+       new-payment-addresses (new-addresses product-version
+                                            address-fountain-fn
+                                            sort-code)]
+      (let [now (utility/now)
+            bban (some (fn [{:keys [scan]}] (when scan (scan->bban scan)))
+                       new-payment-addresses)
+            retired (mapv (fn [address] {:address address :retired-at now})
+                          payment-addresses)]
+        (-> account
+            (assoc :payment-addresses new-payment-addresses
+                   :bban bban
+                   :updated-at now)
+            (update :retired-payment-addresses (fnil into []) retired))))))

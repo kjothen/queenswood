@@ -24,6 +24,11 @@ message PaymentAddress {
   optional string value = 3;
 }
 
+message RetiredPaymentAddress {
+  required PaymentAddress address = 1;
+  required int64 retired_at = 2;
+}
+
 enum AccountType {
   ACCOUNT_TYPE_UNKNOWN = 0;
   ACCOUNT_TYPE_PERSONAL = 1;
@@ -70,6 +75,12 @@ message CashAccount {
   // existing account back instead of creating a duplicate. Optional at the
   // wire level for compatibility with accounts written before this field.
   optional string idempotency_key = 21;
+
+  // Append-only history of payment-addresses rotated away from this
+  // account (QNS-20). Retirement is permanent — the fountain behind
+  // `store/allocate-payment-address` never re-issues a retired number,
+  // so nothing here is ever removed or reused.
+  repeated RetiredPaymentAddress retired_payment_addresses = 23;
 
   enum CashAccountStatus {
     CASH_ACCOUNT_STATUS_UNKNOWN = 0;
