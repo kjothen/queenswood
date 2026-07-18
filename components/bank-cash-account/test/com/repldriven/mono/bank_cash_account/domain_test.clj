@@ -15,7 +15,16 @@
   [status]
   {:account-id "acc.test"
    :account-type :account-type-personal
-   :account-status status})
+   :account-status status
+   :currency "GBP"})
+
+(defn- policy-allowing
+  [& actions]
+  {:enabled true
+   :capabilities (mapv (fn [action]
+                         {:effect :effect-allow
+                          :kind {:cash-account {:action action}}})
+                       actions)})
 
 (deftest close-account-source-state-guard-test
   (testing
@@ -24,10 +33,41 @@
     (doseq [status [:cash-account-status-opening
                     :cash-account-status-closing
                     :cash-account-status-closed]]
-      (let [result (SUT/close-account (account status) [])]
+      (let [result (SUT/close-account (account status) [] [])]
         (is (error/rejection? result))
         (is (= :cash-account/invalid-status (error/kind result)))
         (is (= status (:status (error/payload result))))))))
+
+(deftest close-account-non-zero-balance-test
+  (let [acct (account :cash-account-status-opened)
+        balances [{:credit 500 :debit 0}]]
+    (testing "a non-zero balance bucket is rejected by default"
+      (let [result (SUT/close-account acct
+                                      balances
+                                      [(policy-allowing
+                                        :cash-account-action-close)])]
+        (is (error/rejection? result))
+        (is (= :cash-account/non-zero-on-close (error/kind result)))
+        (is (= "acc.test" (:account-id (error/payload result))))))
+    (testing "an explicit opt-out capability allows the close"
+      (let [result (SUT/close-account acct
+                                      balances
+                                      [(policy-allowing
+                                        :cash-account-action-close
+                                        :cash-account-action-close-non-zero)])]
+        (is (= :cash-account-status-closing (:account-status result)))))))
+
+(deftest close-account-zero-balance-test
+  (testing
+    "balances that net to zero across all buckets close without the
+           opt-out capability"
+    (let [acct (account :cash-account-status-opened)
+          balances [{:credit 500 :debit 500} {:credit 0 :debit 0}]
+          result (SUT/close-account acct
+                                    balances
+                                    [(policy-allowing
+                                      :cash-account-action-close)])]
+      (is (= :cash-account-status-closing (:account-status result))))))
 
 (deftest suspend-account-source-state-guard-test
   (testing

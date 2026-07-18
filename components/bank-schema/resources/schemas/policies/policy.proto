@@ -65,6 +65,7 @@ enum CashAccountAction {
   CASH_ACCOUNT_ACTION_CLOSE = 2;
   CASH_ACCOUNT_ACTION_SUSPEND = 3;
   CASH_ACCOUNT_ACTION_REOPEN = 4;
+  CASH_ACCOUNT_ACTION_CLOSE_NON_ZERO = 6;
 }
 
 message CashAccountCapabilityFilter {

@@ -3,6 +3,7 @@
   (:require
     [com.repldriven.mono.bank-cash-account.validation :as validation]
 
+    [com.repldriven.mono.bank-balance-domain.interface :as balance-domain]
     [com.repldriven.mono.bank-policy.interface :as policy]
 
     [com.repldriven.mono.error.interface :as error :refer [let-nom>]]
@@ -29,6 +30,12 @@
    {:aggregate :count
     :window :time-window-instant
     :value (inc (get-in aggregates [:cash-account #{:bank-id}]))}))
+
+(defn- non-zero-balances
+  "Balance buckets whose net (credit - debit) isn't zero, across all
+  balance-statuses (pending holds included, not just posted)."
+  [balances]
+  (remove (fn [b] (= (:credit b 0) (:debit b 0))) balances))
 
 (defn- check-subtotal-limit
   [product-type account-type currency aggregates policies]
@@ -149,7 +156,7 @@
          :updated-at (utility/now)))
 
 (defn close-account
-  [account policies]
+  [account balances policies]
   (let-nom>
     [_ (when-not (= :cash-account-status-opened (:account-status account))
          (error/reject :cash-account/invalid-status
@@ -159,7 +166,18 @@
                         :allowed #{:cash-account-status-opened}}))
      _ (check-capability :cash-account-action-close
                          (:account-type account)
-                         policies)]
+                         policies)
+     _ (when (and (seq (non-zero-balances balances))
+                  (error/anomaly?
+                   (check-capability :cash-account-action-close-non-zero
+                                     (:account-type account)
+                                     policies)))
+         (error/reject :cash-account/non-zero-on-close
+                       {:message "Account has a non-zero balance"
+                        :account-id (:account-id account)
+                        :posted-balance (balance-domain/posted-balance
+                                         balances
+                                         (:currency account))}))]
     (assoc account
            :account-status :cash-account-status-closing
            :updated-at (utility/now))))
