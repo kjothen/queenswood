@@ -11,8 +11,10 @@
 (defn- ->updated
   [idv status]
   (case status
+    "IN_REVIEW" (domain/in-review-idv idv)
     "ACCEPTED" (domain/accepted-idv idv)
     "REJECTED" (domain/rejected-idv idv)
+    "FAILED" (domain/failed-idv idv)
     nil))
 
 (defn- handle-idv-completed
@@ -29,17 +31,29 @@
 
      :else
      (let [updated (->updated idv status)]
-       (if-not updated
-         (do (log/warnf "Unknown idv-completed status: %s" status)
-             nil)
-         (let-nom>
-           [_ (core/save-idv bank
-                             updated
-                             {:bank-id bank-id
-                              :verification-id verification-id
-                              :status-before (:status idv)
-                              :status-after (:status updated)})]
-           updated))))))
+       (cond
+        (nil? updated)
+        (do (log/warnf "Unknown idv-completed status: %s" status)
+            nil)
+
+        (error/anomaly? updated)
+        (do
+          (log/info
+           "Skipping idv-completed event — IDV not in a status that accepts this transition"
+           {:verification-id verification-id
+            :status (:status idv)
+            :incoming-status status})
+          nil)
+
+        :else
+        (let-nom>
+          [_ (core/save-idv bank
+                            updated
+                            {:bank-id bank-id
+                             :verification-id verification-id
+                             :status-before (:status idv)
+                             :status-after (:status updated)})]
+          updated))))))
 
 (defn- dispatch
   [config message]

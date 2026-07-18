@@ -1,6 +1,16 @@
 (ns com.repldriven.mono.bank-idv.domain
   (:require
+    [com.repldriven.mono.error.interface :as error :refer [let-nom>]]
     [com.repldriven.mono.utility.interface :as utility]))
+
+(defn- guard-source-status
+  [idv message allowed]
+  (when-not (contains? allowed (:status idv))
+    (error/reject :idv/invalid-status
+                  {:message message
+                   :verification-id (:verification-id idv)
+                   :status (:status idv)
+                   :allowed allowed})))
 
 (defn new-idv
   [data]
@@ -13,16 +23,45 @@
      :created-at now
      :updated-at now}))
 
+(defn in-review-idv
+  [idv]
+  (let-nom>
+    [_ (guard-source-status idv
+                            "IDV is not awaiting a result"
+                            #{:idv-status-pending})]
+    (assoc idv
+           :status :idv-status-in-review
+           :updated-at (utility/now))))
+
 (defn accepted-idv
   [idv]
-  (assoc idv
-         :status :idv-status-accepted
-         :completed-at (System/currentTimeMillis)
-         :updated-at (System/currentTimeMillis)))
+  (let-nom>
+    [_ (guard-source-status idv
+                            "IDV is not in a status that can be accepted"
+                            #{:idv-status-pending :idv-status-in-review})]
+    (assoc idv
+           :status :idv-status-accepted
+           :completed-at (utility/now)
+           :updated-at (utility/now))))
 
 (defn rejected-idv
   [idv]
-  (assoc idv
-         :status :idv-status-rejected
-         :completed-at (System/currentTimeMillis)
-         :updated-at (System/currentTimeMillis)))
+  (let-nom>
+    [_ (guard-source-status idv
+                            "IDV is not in a status that can be rejected"
+                            #{:idv-status-pending :idv-status-in-review})]
+    (assoc idv
+           :status :idv-status-rejected
+           :completed-at (utility/now)
+           :updated-at (utility/now))))
+
+(defn failed-idv
+  [idv]
+  (let-nom>
+    [_ (guard-source-status idv
+                            "IDV is not in a status that can fail"
+                            #{:idv-status-pending :idv-status-in-review})]
+    (assoc idv
+           :status :idv-status-failed
+           :completed-at (utility/now)
+           :updated-at (utility/now))))
