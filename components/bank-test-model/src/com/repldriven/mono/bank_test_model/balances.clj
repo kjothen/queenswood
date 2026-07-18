@@ -46,10 +46,16 @@
 (def close-account
   {:run? (fn [state] (seq (state/open-accounts state)))
    :args (fn [state] (gen/tuple (gen/elements (state/open-accounts state))))
+   ;; Reality rejects a non-zero balance via
+   ;; `:cash-account/non-zero-on-close` — predict a no-op, same convention
+   ;; as `outbound-payment`'s non-positive-amount guard.
    :next-state (fn [state {[acct-id] :args}]
-                 (assoc-in state [:accounts acct-id :status] :closed))
+                 (if (zero? (state/balance state acct-id))
+                   (assoc-in state [:accounts acct-id :status] :closed)
+                   state))
    :valid? (fn [state {[acct-id] :args}]
-             (= :open (get-in state [:accounts acct-id :status])))})
+             (and (= :open (get-in state [:accounts acct-id :status]))
+                  (zero? (state/balance state acct-id))))})
 
 (defn- first-current-product
   "First tracked **published** `:current` product on `bank-id`, or

@@ -44,10 +44,17 @@
            :status 409
            :detail "Account is not in a valid state for this action"}})
 
+(def CashAccountNonZeroBalance
+  {:value {:title "REJECTED"
+           :type "cash-account/non-zero-on-close"
+           :status 409
+           :detail "Account has a non-zero balance"}})
+
 (def registry
   (examples-registry [#'CashAccountNotFound #'CashAccountAlreadyExists
                       #'ProductNotPublished #'InvalidCurrency #'PartyNotFound
-                      #'ProductNotFound #'CashAccountInvalidStatus]))
+                      #'ProductNotFound #'CashAccountInvalidStatus
+                      #'CashAccountNonZeroBalance]))
 
 (def CashAccount
   {:bank-id "bnk.01kprbmgcj35ptc8npmybhh4s7"

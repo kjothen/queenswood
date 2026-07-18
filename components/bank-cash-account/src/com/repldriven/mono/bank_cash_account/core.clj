@@ -4,6 +4,7 @@
     [com.repldriven.mono.bank-cash-account.store :as store]
 
     [com.repldriven.mono.bank-balance.interface :as balances]
+    [com.repldriven.mono.bank-balance-query.interface :as balances-q]
     [com.repldriven.mono.bank-cash-account-product-query.interface :as products]
     [com.repldriven.mono.bank-cash-account-query.interface :as q]
     [com.repldriven.mono.bank-party-query.interface :as parties]
@@ -112,7 +113,8 @@
         (let-nom>
           [policies (get-policies txn bank-id account-id opts)
            account (q/get-account txn bank-id account-id)
-           updated (domain/close-account account policies)
+           balances (balances-q/list-balances txn account-id)
+           updated (domain/close-account account balances policies)
            _ (store/save-account txn
                                  updated
                                  {:account-id account-id
