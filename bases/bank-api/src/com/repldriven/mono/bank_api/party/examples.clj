@@ -14,7 +14,28 @@
            :status 422
            :detail "Identification rejected for this party"}})
 
-(def registry (examples-registry [#'PartyNotFound #'IdentificationRejected]))
+(def PartyInvalidStatus
+  {:value {:title "REJECTED"
+           :type "party/invalid-status"
+           :status 409
+           :detail "Party is not in a valid state for this action"}})
+
+(def PartyOpenAccounts
+  {:value {:title "REJECTED"
+           :type "party/open-accounts"
+           :status 409
+           :detail "Party has open cash accounts"}})
+
+(def PartyMergeIntoSelf
+  {:value {:title "REJECTED"
+           :type "party/merge-into-self"
+           :status 422
+           :detail "Cannot merge a party into itself"}})
+
+(def registry
+  (examples-registry [#'PartyNotFound #'IdentificationRejected
+                      #'PartyInvalidStatus #'PartyOpenAccounts
+                      #'PartyMergeIntoSelf]))
 
 (def Party
   {:bank-id "bnk.01kprbmgcj35ptc8npmybhh4s7"
@@ -49,3 +70,10 @@
    {:type :national-insurance :value "TN000001A" :issuing-country "GB"}})
 
 (def CreatePartyResponse Party)
+
+(def MergePartyRequest {:into-party-id "pty.01kprbmgcj35ptc8npmybhh4sb"})
+
+(def MergePartyResponse
+  (assoc Party
+         :status :merged
+         :merged-into-party-id (:into-party-id MergePartyRequest)))

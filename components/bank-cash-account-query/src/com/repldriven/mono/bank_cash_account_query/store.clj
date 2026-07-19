@@ -107,6 +107,22 @@
                 :cash-account/find-by-product
                 "Failed to find account by product"))
 
+(defn find-accounts-by-party
+  [txn bank-id party-id]
+  (fdb/transact
+   txn
+   (fn [txn]
+     (filterv #(= bank-id (:bank-id %))
+              (mapv schema/pb->CashAccount
+                    (fdb/query-records
+                     (fdb/open txn store-name)
+                     "CashAccount"
+                     "party_id"
+                     party-id
+                     {:index "CashAccount_by_party"}))))
+   :cash-account/find-by-party
+   "Failed to find accounts by party"))
+
 (defn get-account-by-bban
   [txn bban]
   (fdb/transact txn

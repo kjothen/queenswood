@@ -17,6 +17,12 @@ message Party {
   required int64 created_at = 5;
   required int64 updated_at = 6;
 
+  // Set when `status` is PARTY_STATUS_MERGED, pointing at the survivor
+  // party this record was merged into (QNS-24). Never rewritten once
+  // set; IDV/KYC and other party-linked records stay on the original
+  // party-id, so this pointer is the durable audit link.
+  optional string merged_into_party_id = 8;
+
   enum PartyType {
     PARTY_TYPE_UNKNOWN = 0;
     PARTY_TYPE_PERSON = 1;
@@ -31,5 +37,6 @@ message Party {
     PARTY_STATUS_SUSPENDED = 3;
     PARTY_STATUS_CLOSED = 4;
     PARTY_STATUS_REJECTED = 5;
+    PARTY_STATUS_MERGED = 6;
   }
 }

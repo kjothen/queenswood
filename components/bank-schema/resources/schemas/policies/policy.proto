@@ -166,6 +166,7 @@ message OutboundPaymentCapability {
 enum PartyAction {
   PARTY_ACTION_UNKNOWN = 0;
   PARTY_ACTION_CREATE = 1;
+  PARTY_ACTION_MERGE = 2;
 }
 
 message PartyCapabilityFilter {

@@ -6,8 +6,9 @@
   (commands), which itself reuses these reads inside its own
   transactions.
 
-  The `find-account`, `find-account-by-idempotency-key`, `count-by-org`
-  and `count-by-org-product-account-type-currency` fns are read
+  The `find-account`, `find-account-by-idempotency-key`,
+  `find-accounts-by-party`, `count-by-org` and
+  `count-by-org-product-account-type-currency` fns are read
   primitives for the write sibling's transactions; the public reads for
   API consumers are `get-account`, `get-accounts`,
   `find-account-by-product` and `get-account-by-bban`."
@@ -88,6 +89,18 @@
   - idempotency-key: the command's idempotency key."
   [txn bank-id idempotency-key]
   (store/find-account-by-idempotency-key txn bank-id idempotency-key))
+
+(defn find-accounts-by-party
+  "Return every CashAccount held by a party, regardless of status. A
+  read primitive for the write sibling's transactions (e.g. the
+  merge-party open-accounts guard).
+
+  Args:
+  - txn: FDB transaction or db handle.
+  - bank-id: owning bank id.
+  - party-id: party id."
+  [txn bank-id party-id]
+  (core/find-accounts-by-party txn bank-id party-id))
 
 (defn count-by-org
   "Count all cash accounts for a bank. A read primitive for the write

@@ -39,6 +39,27 @@
    (let-nom> [pb (core/new-party txn data opts)]
      (schema/pb->Party pb))))
 
+(defn merge-party
+  "Merge a suspended party into an active survivor. Direct,
+  single-phase flip, no watcher leg — the merged-away party's
+  status flips to `:party-status-merged` and records
+  `:merged-into-party-id`. IDV/KYC and other party-linked records
+  stay on the original party-id; cross-domain re-pointing (e.g.
+  cash accounts) is a separate reaction (ADR-0008), not orchestrated
+  here. Returns the updated party or an anomaly.
+
+  Args:
+  - txn: FDB transaction or db handle.
+  - data: map with `:bank-id`, `:party-id` (the merged-away party)
+    and `:into-party-id` (the survivor).
+  - opts (optional): map; `:policies` overrides policy resolution
+    for the capability check."
+  ([txn data]
+   (merge-party txn data {}))
+  ([txn data opts]
+   (let-nom> [pb (core/merge-party txn data opts)]
+     (schema/pb->Party pb))))
+
 (defn seed-active-party
   "Activate a pending party by writing the status transition
   directly, bypassing the IDV → changelog-watcher path that

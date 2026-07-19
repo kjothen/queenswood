@@ -45,6 +45,8 @@ _record-types: !strs &record-types
       - name: CashAccount_by_idempotency_key
         fields: [bank_id, idempotency_key]
         unique: true
+      - name: CashAccount_by_party
+        field: party_id
   ledger-accounts:
     record-type: LedgerAccount
     primary-key: [bank_id, ledger_account_id]
