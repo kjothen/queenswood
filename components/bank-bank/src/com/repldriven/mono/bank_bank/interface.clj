@@ -47,3 +47,23 @@
                  tier
                  currencies
                  opts))
+
+(defn change-tier
+  "Rebind a bank onto a new tier's policies, in one transaction:
+  unbinds every existing binding whose policy carries a `tier` label
+  (identified from the policy, not any tier previously stored on the
+  bank — so a bank with no stored tier still transitions cleanly),
+  binds the new tier's policies, and persists the bank's `:tier`.
+  Returns the updated bank map or an anomaly.
+
+  Rejects `:bank/invalid-status` unless the bank is test or live, and
+  `:bank/unknown-tier` when `tier` resolves to no policies (a typo
+  must not silently strip all tier bindings).
+
+  Args:
+  - txn: FDB transaction or db handle.
+  - bank-id: bank id string.
+  - tier: tier name (string) selecting `tier=<name>`-labelled
+    policies to bind."
+  [txn bank-id tier]
+  (core/change-tier txn bank-id tier))

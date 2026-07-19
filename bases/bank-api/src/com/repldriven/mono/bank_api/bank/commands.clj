@@ -57,3 +57,22 @@
         (if (error/anomaly? bank)
           (errors/anomaly->response bank)
           {:status 201 :body bank})))))
+
+(defn change-bank-tier
+  [request]
+  (let [{:keys [parameters record-db record-store]} request
+        {:keys [path body]} parameters
+        {:keys [bank-id]} path
+        {:keys [tier]} body
+        result (commands/send (dispatcher request)
+                              request
+                              "change-bank-tier"
+                              "bank"
+                              {:bank-id bank-id :tier tier})]
+    (if (not= 200 (:status result))
+      result
+      (let [txn {:record-db record-db :record-store record-store}
+            bank (banks/get-bank-view txn bank-id)]
+        (if (error/anomaly? bank)
+          (errors/anomaly->response bank)
+          {:status 200 :body bank})))))

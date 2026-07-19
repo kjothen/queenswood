@@ -13,7 +13,7 @@
                    :bank-id (:bank-id (first existing))})))
 
 (defn new-bank
-  [bank-name bank-status sort-code company-binding policies]
+  [bank-name bank-status sort-code tier company-binding policies]
   (let-nom>
     [_ (policy/check-capability policies
                                 :bank
@@ -33,5 +33,29 @@
                            :sort-code sort-code
                            :created-at now
                            :updated-at now}
+                          :tier
+                          tier
                           :company-binding
                           company-binding))))
+
+(defn change-tier
+  "Rebind a bank onto a new tier's policies. `new-tier-policies` is the
+  set of policies whose `tier=<tier>` label matches — pre-fetched by
+  the caller since resolving it needs an FDB read. Rejects
+  `:bank/invalid-status` unless the bank is test or live, and
+  `:bank/unknown-tier` when the tier resolves to no policies (a typo
+  must not silently strip all tier bindings)."
+  [bank tier new-tier-policies]
+  (let-nom>
+    [_ (when-not (#{:bank-status-test :bank-status-live} (:status bank))
+         (error/reject :bank/invalid-status
+                       {:message "Bank is not in a tier-changeable state"
+                        :bank-id (:bank-id bank)
+                        :status (:status bank)
+                        :allowed #{:bank-status-test :bank-status-live}}))
+     _ (when (empty? new-tier-policies)
+         (error/reject :bank/unknown-tier
+                       {:message "No policies found for tier"
+                        :bank-id (:bank-id bank)
+                        :tier tier}))]
+    (assoc bank :tier tier :updated-at (utility/now))))

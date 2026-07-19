@@ -2,14 +2,17 @@
   "Unknown-command dispatch stays pure; the FDB-backed cases cover
   what the API scenario suite can't see — that the owner membership
   commits atomically with the bank and that a duplicate onboarding
-  aborts the whole transaction. Happy-path admin creation over the
-  bus is covered by banks/*.edn in bank-test-api-scenarios."
+  aborts the whole transaction, and that a tier change rebinds the
+  underlying `PolicyBinding` records rather than just stamping
+  `:tier`. Happy-path admin creation over the bus is covered by
+  banks/*.edn in bank-test-api-scenarios."
   (:require
     [com.repldriven.mono.bank-bank.interface :as SUT]
 
     [com.repldriven.mono.bank-bank.commands :as commands]
 
     [com.repldriven.mono.bank-membership.interface :as memberships]
+    [com.repldriven.mono.bank-policy.interface :as policy]
 
     [com.repldriven.mono.error.interface :as error]
     [com.repldriven.mono.fdb.interface]
@@ -19,6 +22,7 @@
     [com.repldriven.mono.test-system.interface :refer
      [with-test-system nom-test>]]
 
+    [clojure.set :as set]
     [clojure.test :refer [deftest is testing]]))
 
 (defn- fdb-config
@@ -69,3 +73,44 @@
          (is (= :membership/already-exists (error/kind r)))
          (nom-test> [listed (memberships/list-by-user config user-id)
                      _ (is (= 1 (count listed)))]))))))
+
+(deftest change-tier-test
+  (with-test-system
+   [sys "classpath:bank-bank/application-test.yml"]
+   (let [config (fdb-config sys)
+         idp (identity-provider/local-provider {})]
+     (nom-test> [{:keys [bank]} (SUT/new-bank config
+                                              "Tier Change Bank"
+                                              :bank-status-test
+                                              "micro"
+                                              ["GBP"]
+                                              {:identity-provider idp})
+                 bank-id (:bank-id bank)
+                 micro-policies (policy/get-policies-by-tier config "micro")
+                 bindings-before (policy/get-bindings-for-bank config bank-id)
+                 _ (testing
+                     "the new bank is bound to its creation tier's policies"
+                     (is (= (set (map :policy-id micro-policies))
+                            (set (map :policy-id bindings-before)))))
+                 test-scenario-policies
+                 (policy/get-policies-by-tier config "test-scenario")
+                 updated (SUT/change-tier config bank-id "test-scenario")
+                 bindings-after (policy/get-bindings-for-bank config bank-id)
+                 _ (testing
+                     "change-tier stamps the new tier and rebinds its policies"
+                     (is (= "test-scenario" (:tier updated)))
+                     (is (= (set (map :policy-id test-scenario-policies))
+                            (set (map :policy-id bindings-after))))
+                     (is (empty? (set/intersection
+                                  (set (map :policy-id micro-policies))
+                                  (set (map :policy-id bindings-after))))))
+                 _ (testing
+                     "an unknown tier is rejected, leaving bindings untouched"
+                     (let [r (SUT/change-tier config bank-id "no-such-tier")]
+                       (is (error/rejection? r))
+                       (is (= :bank/unknown-tier (error/kind r)))
+                       (is (= (set (map :policy-id bindings-after))
+                              (set (map :policy-id
+                                        (policy/get-bindings-for-bank
+                                         config
+                                         bank-id)))))))]))))

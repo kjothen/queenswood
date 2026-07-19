@@ -13,6 +13,7 @@
     {"name": "created_at", "type": {"type": "long", "logicalType": "timestamp-millis"}},
     {"name": "updated_at", "type": {"type": "long", "logicalType": "timestamp-millis"}},
     {"name": "sort_code", "type": "string"},
+    {"name": "tier", "type": ["null", "string"], "default": null},
     {"name": "company_binding", "type": ["null", {
       "type": "record",
       "name": "CompanyBinding",

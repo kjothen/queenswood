@@ -3,6 +3,7 @@
     [com.repldriven.mono.bank-bank.domain :as domain]
     [com.repldriven.mono.bank-bank.store :as store]
 
+    [com.repldriven.mono.bank-bank-query.interface :as bank-query]
     [com.repldriven.mono.bank-cash-account.interface :as cash-accounts]
     [com.repldriven.mono.bank-cash-account-product.interface :as products]
     [com.repldriven.mono.bank-ledger-account.interface :as ledger-accounts]
@@ -101,19 +102,48 @@
           nil
           currencies))
 
+(defn- bind-policies
+  [txn bank-id policies]
+  (reduce (fn [_ {:keys [policy-id]}]
+            (let [result (policy/new-binding
+                          txn
+                          {:policy-id policy-id
+                           :target {:kind {:bank {:bank-id bank-id}}}})]
+              (if (error/anomaly? result) (reduced result) nil)))
+          nil
+          policies))
+
 (defn- bind-tier-policies
   [txn bank-id tier]
   (when-let [policies (when (some? tier)
                         (policy/get-policies-by-tier txn tier))]
-    (reduce (fn [_ {:keys [policy-id]}]
-              (let [result (policy/new-binding
-                            txn
-                            {:policy-id policy-id
-                             :target {:kind {:bank
-                                             {:bank-id bank-id}}}})]
-                (if (error/anomaly? result) (reduced result) nil)))
+    (bind-policies txn bank-id policies)))
+
+(defn- tier-labelled-policy?
+  [txn policy-id]
+  (let [p (policy/get-policy txn policy-id)]
+    (if (error/anomaly? p) p (contains? (:labels p) "tier"))))
+
+(defn- unbind-tier-policies
+  "Drop every binding on `bank-id` whose policy carries a `tier` label
+  — identified from the policy, not from any tier previously stored on
+  the bank, so a bank with no stored tier still transitions cleanly on
+  first use."
+  [txn bank-id]
+  (let-nom>
+    [bindings (policy/get-bindings-for-bank txn bank-id)]
+    (reduce (fn [_ {:keys [binding-id policy-id]}]
+              (let [tier-labelled (tier-labelled-policy? txn policy-id)]
+                (cond
+                 (error/anomaly? tier-labelled)
+                 (reduced tier-labelled)
+                 tier-labelled
+                 (let [result (policy/remove-binding txn binding-id)]
+                   (if (error/anomaly? result) (reduced result) nil))
+                 :else
+                 nil)))
             nil
-            policies)))
+            bindings)))
 
 (defn new-bank
   [txn bank-name bank-status tier currencies opts]
@@ -142,6 +172,7 @@
           bank (domain/new-bank bank-name
                                 bank-status
                                 sort-code
+                                tier
                                 company-binding
                                 policies)
           bank-id (:bank-id bank)
@@ -183,3 +214,23 @@
          {:bank bank :membership owner})))
    :bank/create
    "Failed to create bank"))
+
+(defn change-tier
+  [txn bank-id tier]
+  (store/transact
+   txn
+   (fn [txn]
+     (let-nom>
+       [bank (bank-query/get-bank txn bank-id)
+        new-tier-policies (policy/get-policies-by-tier txn tier)
+        updated (domain/change-tier bank tier new-tier-policies)
+        _ (unbind-tier-policies txn bank-id)
+        _ (bind-policies txn bank-id new-tier-policies)
+        _ (store/save txn
+                      updated
+                      {:bank-id bank-id
+                       :status-before (name (:status bank))
+                       :status-after (name (:status updated))})]
+       updated))
+   :bank/change-tier
+   "Failed to change bank tier"))
