@@ -23,6 +23,7 @@
    [:type [:ref "PartyType"]]
    [:display-name [:ref "Name"]]
    [:status [:ref "PartyStatus"]]
+   [:merged-into-party-id {:optional true} [:maybe [:ref "PartyId"]]]
    [:created-at [:ref "Timestamp"]]
    [:updated-at [:ref "Timestamp"]]])
 
@@ -77,6 +78,7 @@
    [:type [:ref "PartyType"]]
    [:display-name [:ref "Name"]]
    [:status [:ref "PartyStatus"]]
+   [:merged-into-party-id {:optional true} [:maybe [:ref "PartyId"]]]
    [:created-at [:ref "Timestamp"]]
    [:updated-at [:ref "Timestamp"]]
    ;; Enriched fields are deliberately lenient. The merged record carries
@@ -109,6 +111,12 @@
 
 (def CreatePartyResponse [:ref "Party"])
 
+(def MergePartyRequest
+  [:map {:closed true :json-schema/example examples/MergePartyRequest}
+   [:into-party-id [:ref "PartyId"]]])
+
+(def MergePartyResponse [:ref "Party"])
+
 (def PartyList
   [:map {:json-schema/example examples/PartyList}
    [:parties [:vector [:ref "Party"]]]
@@ -121,4 +129,5 @@
   (components-registry [#'PartyId #'PartyType #'PartyStatus #'IdentifierType
                         #'Party #'PartyDetail #'PartyEmbedQuery
                         #'NationalIdentifier #'Address #'CreatePartyRequest
-                        #'CreatePartyResponse #'PartyList]))
+                        #'CreatePartyResponse #'PartyList #'MergePartyRequest
+                        #'MergePartyResponse]))

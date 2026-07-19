@@ -3,3 +3,8 @@
   kind:
     party:
       action: !keyword party-action-create
+- effect: !keyword effect-allow
+  reason: "Allow merging parties"
+  kind:
+    party:
+      action: !keyword party-action-merge

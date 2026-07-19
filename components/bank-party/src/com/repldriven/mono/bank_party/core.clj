@@ -3,6 +3,8 @@
     [com.repldriven.mono.bank-party.domain :as domain]
     [com.repldriven.mono.bank-party.store :as store]
 
+    [com.repldriven.mono.bank-cash-account-query.interface :as cash-accounts]
+    [com.repldriven.mono.bank-party-query.interface :as q]
     [com.repldriven.mono.bank-person-identification.interface :as person-id]
     [com.repldriven.mono.bank-policy.interface :as policy]
     [com.repldriven.mono.error.interface :as error :refer [let-nom>]]))
@@ -67,3 +69,38 @@
          (error/reject :party/identification-rejected
                        "Identification rejected for this party")
          result)))))
+
+(defn- has-open-accounts?
+  [txn bank-id party-id]
+  (let-nom> [accounts
+             (cash-accounts/find-accounts-by-party txn bank-id party-id)]
+    (boolean
+     (some (fn [account]
+             (not= :cash-account-status-closed (:account-status account)))
+           accounts))))
+
+(defn merge-party
+  ([txn data]
+   (merge-party txn data {}))
+  ([txn data opts]
+   (store/transact
+    txn
+    (fn [txn]
+      (let [{:keys [bank-id party-id into-party-id]} data]
+        (let-nom>
+          [policies (or (:policies opts)
+                        (policy/get-effective-policies txn {:bank-id bank-id}))
+           survivor (q/get-party txn bank-id into-party-id)
+           merged-away (q/get-party txn bank-id party-id)
+           open-accounts? (has-open-accounts? txn bank-id party-id)
+           updated (domain/merge-party survivor
+                                       merged-away
+                                       open-accounts?
+                                       policies)
+           result (store/save-party txn
+                                    updated
+                                    {:bank-id bank-id
+                                     :party-id party-id
+                                     :status-before (:status merged-away)
+                                     :status-after (:status updated)})]
+          result))))))

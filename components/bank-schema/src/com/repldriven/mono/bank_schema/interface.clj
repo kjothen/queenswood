@@ -286,8 +286,16 @@
   [m]
   (BankProto$Bank/parseFrom (Bank->pb m)))
 
-(def ^{:doc "Parse Party protobuf bytes into a Clojure map."} pb->Party
-  party/pb->Party)
+(defn pb->Party
+  "Parse Party protobuf bytes into a Clojure map. Strips
+  `merged-into-party-id` when it deserialises as the proto2
+  empty-string default — every party except a merged-away one
+  leaves it unset."
+  [input]
+  (let [party (party/pb->Party input)]
+    (cond-> party
+            (= "" (:merged-into-party-id party))
+            (dissoc :merged-into-party-id))))
 
 (defn Party->pb
   "Serialise a Party map to protobuf bytes.

@@ -18,7 +18,9 @@
 
 (def ^:private command-handlers
   {"create-party" (fn [config data]
-                    (->response config (core/new-party config data)))})
+                    (->response config (core/new-party config data)))
+   "merge-party" (fn [config data]
+                   (->response config (core/merge-party config data)))})
 
 (defn- dispatch
   [config message]

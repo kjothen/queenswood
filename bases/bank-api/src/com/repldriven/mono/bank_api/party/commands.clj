@@ -18,3 +18,18 @@
                    "create-party"
                    "party"
                    (assoc body :bank-id bank-id))))
+
+(defn merge-party
+  [request]
+  (let [{:keys [auth parameters]} request
+        {:keys [bank-id]} auth
+        {:keys [path body]} parameters
+        {:keys [party-id]} path
+        {:keys [into-party-id]} body]
+    (commands/send (dispatcher request)
+                   request
+                   "merge-party"
+                   "party"
+                   {:bank-id bank-id
+                    :party-id party-id
+                    :into-party-id into-party-id})))

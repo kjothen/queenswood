@@ -42,6 +42,8 @@
    :cash-account-product/duplicate-items 422
    :cash-account-product/version-immutable 409
    :interest/no-settlement 404
+   :party/invalid-status 409
+   :party/open-accounts 409
    :policy/limit-exceeded 429})
 
 (defn rejection-kind->status

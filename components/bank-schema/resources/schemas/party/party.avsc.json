@@ -12,8 +12,10 @@
     {"name": "status",       "type": {"type": "enum",
                                        "name": "PartyStatus",
                                        "symbols": ["PARTY_STATUS_PENDING", "PARTY_STATUS_ACTIVE",
-                                                    "PARTY_STATUS_SUSPENDED", "PARTY_STATUS_CLOSED"]}},
+                                                    "PARTY_STATUS_SUSPENDED", "PARTY_STATUS_CLOSED",
+                                                    "PARTY_STATUS_MERGED"]}},
     {"name": "created_at", "type": {"type": "long", "logicalType": "timestamp-millis"}},
-    {"name": "updated_at", "type": {"type": "long", "logicalType": "timestamp-millis"}}
+    {"name": "updated_at", "type": {"type": "long", "logicalType": "timestamp-millis"}},
+    {"name": "merged_into_party_id", "type": ["null", "string"], "default": null}
   ]
 }

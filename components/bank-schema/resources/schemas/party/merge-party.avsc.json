@@ -1,0 +1,10 @@
+{
+  "type": "record",
+  "name": "MergeParty",
+  "namespace": "com.repldriven.mono.party",
+  "fields": [
+    {"name": "bank_id", "type": "string"},
+    {"name": "party_id", "type": "string"},
+    {"name": "into_party_id", "type": "string"}
+  ]
+}

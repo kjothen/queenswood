@@ -66,3 +66,7 @@
 (defn get-account-by-bban
   [txn bban]
   (store/get-account-by-bban txn bban))
+
+(defn find-accounts-by-party
+  [txn bank-id party-id]
+  (store/find-accounts-by-party txn bank-id party-id))

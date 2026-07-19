@@ -18,6 +18,7 @@ serde: !system/component
 
     party: schemas/party/party.avsc.json
     create-party: schemas/party/create-party.avsc.json
+    merge-party: schemas/party/merge-party.avsc.json
 
     bank: schemas/banks/bank.avsc.json
     create-bank: schemas/banks/create-bank.avsc.json

@@ -13,7 +13,8 @@
                            "active" :party-status-active
                            "suspended" :party-status-suspended
                            "closed" :party-status-closed
-                           "rejected" :party-status-rejected}
+                           "rejected" :party-status-rejected
+                           "merged" :party-status-merged}
                           :party-status-unknown))
 
 (def ^:private identifier-type-enum
