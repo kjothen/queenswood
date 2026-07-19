@@ -20,7 +20,21 @@
            :status 404
            :detail "Bank not found"}})
 
-(def registry (examples-registry [#'BankLimitExceeded #'BankNotFound]))
+(def BankInvalidStatus
+  {:value {:title "REJECTED"
+           :type ":bank/invalid-status"
+           :status 409
+           :detail "Bank is not in a tier-changeable state"}})
+
+(def BankUnknownTier
+  {:value {:title "REJECTED"
+           :type ":bank/unknown-tier"
+           :status 422
+           :detail "No policies found for tier"}})
+
+(def registry
+  (examples-registry [#'BankLimitExceeded #'BankNotFound #'BankInvalidStatus
+                      #'BankUnknownTier]))
 
 (def BankId "bnk.01kprbmgcj35ptc8npmybhh4s7")
 
@@ -31,6 +45,7 @@
    :name "Galactic Bank"
    :status :test
    :sort-code "000001"
+   :tier "micro"
    :created-at "2025-01-01T00:00:00Z"
    :updated-at "2025-01-01T00:00:00Z"
    :party (assoc party-examples/Party :type :organization)
@@ -43,6 +58,8 @@
 
 (def CreateBankRequest
   {:name "Galactic Bank" :status :test :tier "micro" :currencies ["GBP"]})
+
+(def ChangeBankTierRequest {:tier "growth"})
 
 (def CompanyBinding
   {:registry "uk-companies-house"

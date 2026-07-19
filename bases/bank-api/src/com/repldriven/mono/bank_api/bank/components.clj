@@ -23,6 +23,7 @@
    [:name [:ref "Name"]]
    [:status [:ref "BankStatus"]]
    [:sort-code [:ref "SortCode"]]
+   [:tier {:optional true} [:ref "Name"]]
    [:party [:ref "Party"]]
    [:accounts [:vector [:ref "CashAccount"]]]
    [:client-id [:ref "BankId"]]
@@ -60,6 +61,13 @@
    [:created-at [:ref "Timestamp"]]
    [:updated-at [:ref "Timestamp"]]])
 
+(def ChangeBankTierRequest
+  [:map {:closed true :json-schema/example examples/ChangeBankTierRequest}
+   [:tier [:ref "Name"]]])
+
+(def ChangeBankTierResponse [:ref "Bank"])
+
 (def registry
   (components-registry [#'BankId #'BankStatus #'CreateBankRequest #'Bank
-                        #'BankList #'CompanyBinding #'CreateBankResponse]))
+                        #'BankList #'CompanyBinding #'CreateBankResponse
+                        #'ChangeBankTierRequest #'ChangeBankTierResponse]))

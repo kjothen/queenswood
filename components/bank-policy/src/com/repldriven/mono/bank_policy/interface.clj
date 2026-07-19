@@ -87,6 +87,16 @@
   [txn binding-id]
   (core/get-binding txn binding-id))
 
+(defn get-bindings-for-bank
+  "List policy bindings targeting the given bank. Returns a vector of
+  binding maps or an anomaly.
+
+  Args:
+  - txn: FDB config or open transaction.
+  - bank-id: bank id string."
+  [txn bank-id]
+  (core/get-bindings-for-bank txn bank-id))
+
 (defn get-bindings
   "List policy bindings, paginated. Returns
   `{:items [...] :before id|nil :after id|nil}` or an anomaly.

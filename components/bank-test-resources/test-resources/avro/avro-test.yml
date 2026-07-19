@@ -22,6 +22,7 @@ serde: !system/component
 
     bank: schemas/banks/bank.avsc.json
     create-bank: schemas/banks/create-bank.avsc.json
+    change-bank-tier: schemas/banks/change-bank-tier.avsc.json
 
     idv: schemas/idv/idv.avsc.json
     initiate-idv: schemas/idv/initiate-idv.avsc.json

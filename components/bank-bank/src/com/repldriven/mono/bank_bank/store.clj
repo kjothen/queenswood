@@ -2,6 +2,7 @@
   (:require
     [com.repldriven.mono.bank-schema.interface :as schema]
 
+    [com.repldriven.mono.error.interface :refer [let-nom>]]
     [com.repldriven.mono.fdb.interface :as fdb]))
 
 ;; must match bank-bank-query.store/store-name — same FDB store
@@ -31,3 +32,19 @@
                                    (schema/Bank->java bank)))
                 :bank/create
                 "Failed to create bank"))
+
+(defn save
+  [txn bank changelog]
+  (fdb/transact
+   txn
+   (fn [txn]
+     (let [store (fdb/open txn store-name)]
+       (let-nom>
+         [_ (fdb/save-record store (schema/Bank->java bank))
+          _ (fdb/write-changelog store
+                                 store-name
+                                 (:bank-id bank)
+                                 (schema/BankChangelog->pb changelog))]
+         bank)))
+   :bank/save
+   "Failed to save bank"))

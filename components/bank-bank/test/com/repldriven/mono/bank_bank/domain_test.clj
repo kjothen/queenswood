@@ -27,23 +27,35 @@
     (let [bank (SUT/new-bank "Acme"
                              :bank-status-test
                              "000001"
+                             "micro"
                              active-binding
                              permissive-policies)]
       (is (re-find #"^bnk\." (:bank-id bank)))
       (is (= :bank-status-test (:status bank)))
       (is (= "000001" (:sort-code bank)))
+      (is (= "micro" (:tier bank)))
       (is (= active-binding (:company-binding bank)))))
   (testing "omits :company-binding for admin-provisioned banks"
     (let [bank (SUT/new-bank "Acme"
                              :bank-status-test
                              "000001"
+                             "micro"
                              nil
                              permissive-policies)]
       (is (not (contains? bank :company-binding)))))
+  (testing "omits :tier when none is supplied"
+    (let [bank (SUT/new-bank "Acme"
+                             :bank-status-test
+                             "000001"
+                             nil
+                             nil
+                             permissive-policies)]
+      (is (not (contains? bank :tier)))))
   (testing "rejects a binding whose company is not active"
     (let [r (SUT/new-bank "Acme"
                           :bank-status-test
                           "000001"
+                          "micro"
                           (assoc active-binding :company-status "dissolved")
                           permissive-policies)]
       (is (error/rejection? r))
@@ -56,3 +68,23 @@
     (let [r (SUT/check-sole-membership "usr.1" [{:bank-id "bnk.1"}])]
       (is (error/rejection? r))
       (is (= :membership/already-exists (error/kind r))))))
+
+(def ^:private test-bank {:bank-id "bnk.1" :status :bank-status-live})
+
+(def ^:private new-tier-policies [{:policy-id "pol.new"}])
+
+(deftest change-tier-test
+  (testing "rebinds and stamps the new tier"
+    (let [bank (SUT/change-tier test-bank "growth" new-tier-policies)]
+      (is (= "growth" (:tier bank)))
+      (is (= "bnk.1" (:bank-id bank)))))
+  (testing "rejects a bank that isn't test or live"
+    (let [r (SUT/change-tier (assoc test-bank :status :bank-status-unknown)
+                             "growth"
+                             new-tier-policies)]
+      (is (error/rejection? r))
+      (is (= :bank/invalid-status (error/kind r)))))
+  (testing "rejects a tier with no matching policies"
+    (let [r (SUT/change-tier test-bank "unknown-tier" [])]
+      (is (error/rejection? r))
+      (is (= :bank/unknown-tier (error/kind r))))))

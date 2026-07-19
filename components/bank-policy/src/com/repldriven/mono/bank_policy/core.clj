@@ -79,6 +79,10 @@
   ([txn opts]
    (store/get-bindings txn opts)))
 
+(defn get-bindings-for-bank
+  [txn bank-id]
+  (store/get-bindings-for-bank txn bank-id))
+
 (defn- bound-policies
   "Returns the policies bound (via PolicyBinding records) to the
   bank in `selectors`, or `[]` when the selector carries no bank."

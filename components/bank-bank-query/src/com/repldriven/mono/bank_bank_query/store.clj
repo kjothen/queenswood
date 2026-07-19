@@ -13,16 +13,18 @@
 
 (defn- ->bank
   "Translate a Bank protobuf record to a plain map. The protojure
-  record carries `:company-binding nil` for admin-provisioned banks;
-  the key must be absent so API response coercion (optional key, no
-  nil) passes."
+  record carries `:company-binding nil` for admin-provisioned banks and
+  `:tier nil` for a bank with no tier bound; both keys must be absent
+  so API response coercion (optional key, no nil) passes."
   [record]
-  (let [{:keys [company-binding] :as bank} (schema/pb->Bank record)]
+  (let [{:keys [company-binding tier] :as bank} (schema/pb->Bank record)]
     (-> (into {} bank)
-        (dissoc :company-binding)
+        (dissoc :company-binding :tier)
         (utility/assoc-some :company-binding
                             (some->> company-binding
-                                     (into {}))))))
+                                     (into {}))
+                            :tier
+                            tier))))
 
 (defn get-bank
   [txn bank-id]

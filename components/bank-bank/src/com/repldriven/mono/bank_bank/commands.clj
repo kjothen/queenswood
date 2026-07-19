@@ -32,7 +32,16 @@
                                 :company-binding company-binding
                                 :membership membership}))))
 
-(def ^:private command-handlers {"create-bank" create-bank})
+(defn- change-bank-tier
+  [config data]
+  (let [{:keys [bank-id tier]} data
+        result (core/change-tier config bank-id tier)]
+    (if (error/anomaly? result)
+      result
+      (->response config {:bank result}))))
+
+(def ^:private command-handlers
+  {"create-bank" create-bank "change-bank-tier" change-bank-tier})
 
 (defn- dispatch
   [config message]
