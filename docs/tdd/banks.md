@@ -279,10 +279,16 @@ written here is load-bearing at evaluation time.
   old tier bindings, add new). Needed when a customer upgrades or
   downgrades; not implemented. `tier` isn't even stored on the
   record — only the resulting bindings are.
-- **No status change after creation.** A test bank stays test. The
-  service-account audience was derived from status at create time,
-  so retrofitting a status change touches the Keycloak client, not
-  just the record.
+- **Status change has no promotion gate.** `change-status txn
+  bank-id new-status opts` flips `:status` between test and live in
+  place — guarded on the bank currently being test or live, and
+  rejecting a flip to the same status — swapping the service-account
+  client's audience via the identity-provider before persisting, so
+  an IDP failure aborts cleanly. There is no test→live
+  onboarding-completeness check (e.g. a per-bank ClearBank
+  credential model) and no forced re-auth of already-issued tokens
+  (see [authentication.md](authentication.md)'s stateless-JWT
+  limitation).
 - **No closure or off-boarding.** A bank once created is
   permanent. Closing every account, revoking the service-account
   client (`revoke-service-account` is unwired — see

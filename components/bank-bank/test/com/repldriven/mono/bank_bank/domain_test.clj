@@ -88,3 +88,18 @@
     (let [r (SUT/change-tier test-bank "unknown-tier" [])]
       (is (error/rejection? r))
       (is (= :bank/unknown-tier (error/kind r))))))
+
+(deftest change-status-test
+  (testing "flips status"
+    (let [bank (SUT/change-status test-bank :bank-status-test)]
+      (is (= :bank-status-test (:status bank)))
+      (is (= "bnk.1" (:bank-id bank)))))
+  (testing "rejects a bank that isn't test or live"
+    (let [r (SUT/change-status (assoc test-bank :status :bank-status-unknown)
+                               :bank-status-test)]
+      (is (error/rejection? r))
+      (is (= :bank/invalid-status (error/kind r)))))
+  (testing "rejects flipping to the same status"
+    (let [r (SUT/change-status test-bank :bank-status-live)]
+      (is (error/rejection? r))
+      (is (= :bank/invalid-status (error/kind r))))))

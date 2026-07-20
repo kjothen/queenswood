@@ -67,3 +67,25 @@
     policies to bind."
   [txn bank-id tier]
   (core/change-tier txn bank-id tier))
+
+(defn change-status
+  "Flip a bank between `:bank-status-test` and `:bank-status-live` in
+  one transaction: swaps the service-account client's audience via
+  the identity-provider (before persisting, so an IDP failure aborts
+  cleanly) and persists the new `:status` with a `BankChangelog`
+  entry. Returns the updated bank map or an anomaly.
+
+  Rejects `:bank/invalid-status` unless the bank is currently test or
+  live, or when `new-status` matches the bank's current status.
+
+  Args:
+  - txn: FDB transaction or db handle.
+  - bank-id: bank id string.
+  - new-status: `:bank-status-test` or `:bank-status-live`.
+  - opts: map; `:identity-provider` (required) is the IDP component
+    used to update the client's audience; `:audience` (string) is the
+    `aud` claim to stamp on tokens for the target status — bank-api
+    resolves this from its status→audience config, same as the
+    `create-bank` pattern."
+  [txn bank-id new-status opts]
+  (core/change-status txn bank-id new-status opts))

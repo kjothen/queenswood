@@ -59,3 +59,24 @@
                         :bank-id (:bank-id bank)
                         :tier tier}))]
     (assoc bank :tier tier :updated-at (utility/now))))
+
+(defn change-status
+  "Flip a bank between `:bank-status-test` and `:bank-status-live`.
+  Rejects `:bank/invalid-status` unless the bank is currently test or
+  live, and again when `new-status` matches the bank's current
+  status (a no-op transition, not a flip)."
+  [bank new-status]
+  (let-nom>
+    [_ (when-not (#{:bank-status-test :bank-status-live} (:status bank))
+         (error/reject :bank/invalid-status
+                       {:message "Bank is not in a status-changeable state"
+                        :bank-id (:bank-id bank)
+                        :status (:status bank)
+                        :allowed #{:bank-status-test :bank-status-live}}))
+     _ (when (= new-status (:status bank))
+         (error/reject :bank/invalid-status
+                       {:message "Bank is already in the requested status"
+                        :bank-id (:bank-id bank)
+                        :status (:status bank)
+                        :allowed #{new-status}}))]
+    (assoc bank :status new-status :updated-at (utility/now))))

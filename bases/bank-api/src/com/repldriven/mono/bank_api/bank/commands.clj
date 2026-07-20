@@ -76,3 +76,28 @@
         (if (error/anomaly? bank)
           (errors/anomaly->response bank)
           {:status 200 :body bank})))))
+
+(defn change-bank-status
+  [request]
+  (let [{:keys [parameters record-db record-store audiences-by-status]} request
+        {:keys [path body]} parameters
+        {:keys [bank-id]} path
+        {:keys [status]} body
+        ;; Same status->audience resolution as `create-bank`: the
+        ;; substrate IDP brick is naive about audience naming, so the
+        ;; handler resolves the target status's audience here and
+        ;; forwards it through.
+        result (commands/send (dispatcher request)
+                              request
+                              "change-bank-status"
+                              "bank"
+                              {:bank-id bank-id
+                               :status status
+                               :audience (get audiences-by-status status)})]
+    (if (not= 200 (:status result))
+      result
+      (let [txn {:record-db record-db :record-store record-store}
+            bank (banks/get-bank-view txn bank-id)]
+        (if (error/anomaly? bank)
+          (errors/anomaly->response bank)
+          {:status 200 :body bank})))))
