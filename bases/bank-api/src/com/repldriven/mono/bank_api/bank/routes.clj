@@ -33,4 +33,14 @@
                           404 (ErrorResponse [#'BankNotFound])
                           409 (ErrorResponse [#'BankInvalidStatus])
                           422 (ErrorResponse [#'BankUnknownTier])}
-              :handler bank-commands/change-bank-tier}}]]]])
+              :handler bank-commands/change-bank-tier}}]
+     ["/change-status"
+      {:post {:summary "Change a bank's status between test and live"
+              :openapi {:operationId "ChangeBankStatus"
+                        :requestBody {:required true}
+                        :parameters ^:replace [shared.parameters/ref-bank-id]}
+              :parameters {:body [:ref "ChangeBankStatusRequest"]}
+              :responses {200 {:body [:ref "ChangeBankStatusResponse"]}
+                          404 (ErrorResponse [#'BankNotFound])
+                          409 (ErrorResponse [#'BankInvalidStatus])}
+              :handler bank-commands/change-bank-status}}]]]])

@@ -67,7 +67,14 @@
 
 (def ChangeBankTierResponse [:ref "Bank"])
 
+(def ChangeBankStatusRequest
+  [:map {:closed true :json-schema/example examples/ChangeBankStatusRequest}
+   [:status [:ref "BankStatus"]]])
+
+(def ChangeBankStatusResponse [:ref "Bank"])
+
 (def registry
   (components-registry [#'BankId #'BankStatus #'CreateBankRequest #'Bank
                         #'BankList #'CompanyBinding #'CreateBankResponse
-                        #'ChangeBankTierRequest #'ChangeBankTierResponse]))
+                        #'ChangeBankTierRequest #'ChangeBankTierResponse
+                        #'ChangeBankStatusRequest #'ChangeBankStatusResponse]))

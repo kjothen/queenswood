@@ -234,3 +234,29 @@
        updated))
    :bank/change-tier
    "Failed to change bank tier"))
+
+(defn change-status
+  [txn bank-id new-status opts]
+  (store/transact
+   txn
+   (fn [txn]
+     (let [{:keys [identity-provider audience]} opts]
+       (let-nom>
+         [bank (bank-query/get-bank txn bank-id)
+          updated (domain/change-status bank new-status)
+          ;; Swap the service-account client's audience BEFORE the FDB
+          ;; write, same rationale as `new-bank`'s IDP call: an IDP
+          ;; failure aborts the transaction cleanly rather than leaving
+          ;; the bank's status ahead of its client's audience.
+          _ (identity-provider/update-service-account-audience
+             identity-provider
+             bank-id
+             audience)
+          _ (store/save txn
+                        updated
+                        {:bank-id bank-id
+                         :status-before (name (:status bank))
+                         :status-after (name (:status updated))})]
+         updated)))
+   :bank/change-status
+   "Failed to change bank status"))

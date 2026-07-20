@@ -61,6 +61,8 @@
 
 (def ChangeBankTierRequest {:tier "growth"})
 
+(def ChangeBankStatusRequest {:status "live"})
+
 (def CompanyBinding
   {:registry "uk-companies-house"
    :company-number "SC998137"

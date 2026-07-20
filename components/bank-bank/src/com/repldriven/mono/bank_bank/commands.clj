@@ -40,8 +40,23 @@
       result
       (->response config {:bank result}))))
 
+(defn- change-bank-status
+  [config data]
+  (let [{:keys [bank-id status audience]} data
+        result (core/change-status config
+                                   bank-id
+                                   status
+                                   {:identity-provider (:identity-provider
+                                                        config)
+                                    :audience audience})]
+    (if (error/anomaly? result)
+      result
+      (->response config {:bank result}))))
+
 (def ^:private command-handlers
-  {"create-bank" create-bank "change-bank-tier" change-bank-tier})
+  {"create-bank" create-bank
+   "change-bank-tier" change-bank-tier
+   "change-bank-status" change-bank-status})
 
 (defn- dispatch
   [config message]

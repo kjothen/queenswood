@@ -114,3 +114,33 @@
                                         (policy/get-bindings-for-bank
                                          config
                                          bank-id)))))))]))))
+
+(deftest change-status-test
+  (with-test-system
+   [sys "classpath:bank-bank/application-test.yml"]
+   (let [config (fdb-config sys)
+         idp (identity-provider/local-provider {})]
+     (nom-test> [{:keys [bank]} (SUT/new-bank config
+                                              "Status Change Bank"
+                                              :bank-status-test
+                                              nil
+                                              ["GBP"]
+                                              {:identity-provider idp
+                                               :audience "queenswood-api-test"})
+                 bank-id (:bank-id bank)
+                 updated (SUT/change-status config
+                                            bank-id
+                                            :bank-status-live
+                                            {:identity-provider idp
+                                             :audience "queenswood-api-live"})
+                 _ (testing "flips test to live"
+                     (is (= :bank-status-live (:status updated))))
+                 _ (testing "rejects flipping to the same status"
+                     (let [r (SUT/change-status config
+                                                bank-id
+                                                :bank-status-live
+                                                {:identity-provider idp
+                                                 :audience
+                                                 "queenswood-api-live"})]
+                       (is (error/rejection? r))
+                       (is (= :bank/invalid-status (error/kind r)))))]))))
