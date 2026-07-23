@@ -9,47 +9,40 @@
             "bank-operational-processors-service"
               {:alias "ops",
                :necessary ["bank-resources"
-                           "bank-schema" "bank-test-resources" "test-schema"
-                           "test-resources"]},
+                           "bank-schema" "bank-test-resources"]},
             "bank-financial-processors-service"
               {:alias "fin",
                :necessary ["bank-resources"
-                           "bank-schema" "bank-test-resources" "test-schema"
-                           "test-resources"]},
+                           "bank-schema" "bank-test-resources"]},
             "bank-api-service"
               {:alias "api",
                :necessary ["bank-resources"
-                           "bank-schema" "bank-test-resources" "test-schema"
-                           "test-resources"]},
+                           "bank-schema" "bank-test-resources"]},
             "bank-bootstrap-service"
               {:alias "bbs",
                :necessary ["bank-resources" "bank-schema"
-                           "bank-test-resources" "test-schema"
-                           "test-resources"]},
+                           "bank-test-resources"]},
             "bank-migrator-service"
               {:alias "mig",
                :necessary ["bank-resources"
-                           "bank-schema" "test-schema"
-                           "test-resources"]},
+                           "bank-schema"]},
             "bank-clearbank-adapter-service"
               {:alias "cba",
                :necessary ["bank-resources"
-                           "bank-schema" "bank-test-resources"
-                           "test-resources" "test-schema"]},
+                           "bank-schema" "bank-test-resources"]},
             "bank-clearbank-simulator-service"
               {:alias "cbs",
-               :necessary ["test-resources"]},
+               :necessary []},
             "bank-onfido-adapter-service"
               {:alias "ioa",
                :necessary ["bank-resources"
-                           "bank-schema" "bank-test-resources"
-                           "test-resources"]},
+                           "bank-schema" "bank-test-resources"]},
             "bank-onfido-simulator-service"
               {:alias "ios",
-               :necessary ["test-resources"]},
+               :necessary []},
             "bank-uk-companies-house-simulator-service"
               {:alias "ucs",
-               :necessary ["test-resources"]}},
+               :necessary []}},
  :tag-patterns {:release "v[0-9]*", :stable "stable-*"},
  :test {:create-test-runner
           com.repldriven.mono.external-test-runner.core/create},

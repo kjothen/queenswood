@@ -8,8 +8,6 @@
   {:extra-deps
    {ext/mono {:local/root "../../deps/mono-test"}
     bases/external-test-runner {:local/root "../../bases/external-test-runner"}
-    component/test-resources {:local/root "../../components/test-resources"}
-    component/test-schema {:local/root "../../components/test-schema"}
 }}}
  :deps
  {ext/mono {:local/root "../../deps/mono"}
