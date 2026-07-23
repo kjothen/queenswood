@@ -53,10 +53,9 @@ code generation. The pattern, applied per brick:
   clj -X:deps prep :aliases '[:dev]' :force true
   ```
 
-For Queenswood's bank-specific generation (currently the proto
-bricks under `bank-schema`), the alias set is `:+bank :dev` rather
-than just `:dev`, because the bank-specific source files are gated
-behind the `:+bank` alias.
+Every brick, including the proto bricks under `bank-schema`, is on
+the `:dev` alias in the top-level `deps.edn`, so `:dev` is the only
+alias set generation needs.
 
 ## Consequences
 

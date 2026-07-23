@@ -182,9 +182,8 @@ co-located `build.clj` implements the generation, delegating to
 `bases/build` so other bricks can reuse it. Generated code lands in
 a `gen/` folder with its own `.gitignore` (`*` / `!.gitignore`) —
 never committed. Regeneration is deliberate:
-`clj -X:deps prep :aliases '[:dev]'`, or `:+bank :dev` for
-bank-specific generation; after a source-schema change, `:force true`
-is required — the `:ensure` marker doesn't detect staleness on its
-own.
+`clj -X:deps prep :aliases '[:dev]'`; after a source-schema change,
+`:force true` is required — the `:ensure` marker doesn't detect
+staleness on its own.
 See [ADR-0010](../../../docs/adr/0010-code-generation-via-prep-lib.md),
 [code-generation](../../../docs/recipes/code-generation.md).

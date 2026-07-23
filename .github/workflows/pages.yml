@@ -65,8 +65,8 @@ jobs:
 
       - name: Prep and export OpenAPI spec
         run: |
-          clojure -X:deps prep :aliases '[:dev :+bank]'
-          clojure -Sdeps '{:aliases {:dev {:main-opts []}}}' -M:dev:+bank -m com.repldriven.mono.bank-api.export-spec docs/openapi.yaml
+          clojure -X:deps prep :aliases '[:dev]'
+          clojure -Sdeps '{:aliases {:dev {:main-opts []}}}' -M:dev -m com.repldriven.mono.bank-api.export-spec docs/openapi.yaml
 
       - name: Setup Pages
         uses: actions/configure-pages@v6
