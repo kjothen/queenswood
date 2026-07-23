@@ -16,7 +16,7 @@ Kubernetes:
   (Pulsar processors) and
   **scheduler-processor-service** (cron-driven, no
   Pulsar)
-- **bank-console** (Svelte SPA served via nginx)
+- **console** (Svelte SPA served via nginx)
 - **Keycloak** with embedded H2 for standalone installs
   (`keycloak.dev.enabled: true` by default). GKE
   deployments turn this off and use the operator-driven

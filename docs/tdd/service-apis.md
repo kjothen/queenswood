@@ -254,7 +254,7 @@ header carries one of:
   client carries the `admin` realm role; the auth interceptor
   flips its `:organization-id` to the internal-org-id and
   grants `:admin`.
-- A Keycloak-issued user JWT minted by the `bank-console` SPA
+- A Keycloak-issued user JWT minted by the `console` SPA
   (`queenswood` realm) or the `bank-app` SPA (`queenswood-ops`
   realm).
 - A per-organisation API key (cached lookup of the hashed

@@ -25,7 +25,6 @@ lint:
   just lint-clj-kondo
 
 # Static-analysis metrics across all brick src dirs (cyclomatic, Halstead, MI).
-# Excludes bank-app (Svelte/CLJS frontend, not a Clojure brick).
 metrics:
     #!/usr/bin/env zsh
     set -euo pipefail
@@ -33,7 +32,7 @@ metrics:
       for d in components bases; do
         clojure -M:metrics -p "$d" \
           | tail -1 \
-          | jq -c '.files[] | select(.file | test("/src/") and (test("/bank-app/") | not))'
+          | jq -c '.files[] | select(.file | test("/src/"))'
       done
     } | jq -s 'sort_by(-.["cyclomatic-complexity"]) | {count: length, files: .}'
 

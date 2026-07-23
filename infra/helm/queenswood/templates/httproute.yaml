@@ -1,14 +1,14 @@
 {{- if .Values.gateway.enabled }}
-{{- if .Values.bankConsole.enabled }}
-# Production traffic on :443 → bank-console SPA. nginx in the
-# bank-console pod proxies /v1/* to the in-cluster bank-api service.
+{{- if .Values.console.enabled }}
+# Production traffic on :443 → console SPA. nginx in the
+# console pod proxies /v1/* to the in-cluster bank-api service.
 # The console keeps its own hostname so its redirectUris + webOrigins
 # stay clean (Keycloak's Authorization Code flow validates these
 # strictly per-client).
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
-  name: {{ .Release.Name }}-bank-console
+  name: {{ .Release.Name }}-console
   labels:
     {{- include "queenswood.labels" . | nindent 4 }}
 spec:
@@ -23,8 +23,8 @@ spec:
             type: PathPrefix
             value: /
       backendRefs:
-        - name: {{ .Release.Name }}-bank-console
-          port: {{ .Values.bankConsole.port }}
+        - name: {{ .Release.Name }}-console
+          port: {{ .Values.console.port }}
 {{- end }}
 ---
 # HTTP→HTTPS redirect on :80. Replaces the legacy FrontendConfig's
@@ -42,7 +42,7 @@ spec:
       sectionName: http
   hostnames:
     - {{ .Values.gateway.host | quote }}
-{{- if .Values.bankConsole.enabled }}
+{{- if .Values.console.enabled }}
     - {{ .Values.gateway.consoleHost | quote }}
 {{- end }}
   rules:

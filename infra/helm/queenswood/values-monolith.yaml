@@ -21,7 +21,7 @@ migrator:
   configFile: application-channel.yml
 
 # SPA proxies /v1/* to the monolith pod, not the (disabled) bank-api.
-bankConsole:
+console:
   apiUpstream: "http://{{ .Release.Name }}-monolith-service:8080"
 
 services:

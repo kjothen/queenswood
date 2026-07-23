@@ -139,7 +139,7 @@ jobs:
             onfido-adapter-service
             onfido-simulator-service
             uk-companies-house-simulator-service
-            bank-console
+            console
           )
           for img in "${images[@]}"; do
             docker buildx imagetools create \

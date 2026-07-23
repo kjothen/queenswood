@@ -208,7 +208,7 @@ system:
       # hostname in tokens (the deployed shape -- see ADR-TBD).
       expected-issuer: !env KEYCLOAK_EXPECTED_ISSUER
     # Operator realm — hosts the queenswood-app SPA users
-    # (bank-app). Same Keycloak instance, different realm; only used
+    # (operator SPA). Same Keycloak instance, different realm; only used
     # for JWT verification.
     identity-provider-ops: !system/component
       system/component-kind: keycloak/identity-provider

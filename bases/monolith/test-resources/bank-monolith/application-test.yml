@@ -29,7 +29,7 @@ system:
       # All identity-provider instances the auth interceptor may use
       # to verify an incoming JWT. The interceptor extracts the
       # unverified `iss` claim, picks the matching provider, then
-      # verifies. queenswood = bank-console; queenswood-ops = bank-app.
+      # verifies. queenswood = console; queenswood-ops = operator SPA.
       identity-providers:
         - !system/ref keycloak.identity-provider
         - !system/ref keycloak.identity-provider-ops

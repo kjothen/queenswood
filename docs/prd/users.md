@@ -35,7 +35,7 @@ lives inside.
 human counterpart of the existing service-account credentials.
 Operators sign in to the `bank-app` SPA against the
 `queenswood-ops` realm; users are how non-operator humans get
-in to the org-facing `bank-console`.
+in to the org-facing `console`.
 
 ## Goals
 

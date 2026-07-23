@@ -23,7 +23,7 @@ services = [
 ]
 
 group "default" {
-  targets = concat(services, ["bank-console"])
+  targets = concat(services, ["console"])
 }
 
 // Multi-platform builds are gated on the `MULTI_ARCH` variable so
@@ -51,10 +51,10 @@ target "service" {
 // nginx, with the SPA reading /env.js at runtime so a single image
 // works under both kind (Keycloak port-forward) and GKE (Keycloak
 // at https://keycloak.<env>.repldriven.com).
-target "bank-console" {
+target "console" {
   context    = "."
-  dockerfile = "infra/docker/bank-console/Dockerfile"
-  tags       = ["${REGISTRY}/bank-console:${TAG}"]
+  dockerfile = "infra/docker/console/Dockerfile"
+  tags       = ["${REGISTRY}/console:${TAG}"]
   platforms  = platforms_default
   output     = ["type=docker"]
 }
