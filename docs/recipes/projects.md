@@ -134,7 +134,7 @@ shapes:
   `clearbank-{adapter,simulator}-service` pair, the
   `onfido-{adapter,simulator}-service` pair, each
   pulling in its corresponding base.
-- **Pulsar processor services** — one per command
+- **Message-bus processor services** — one per command
   processor: cash-account, party, payment, interest,
   transaction, idv.
 - **One-shots** — `migrator-service` and

@@ -294,7 +294,7 @@ create a second IDV.
 
 `onfido-adapter` is its own base. It owns:
 
-- **Command consumer** — Pulsar consumer for
+- **Command consumer** — message-bus consumer for
   `submit-idv-check` commands. For each, calls Onfido's
   `POST /v3.6/applicants` (mapping the IDV's first-name /
   last-name / date-of-birth) and `POST /v3.6/checks`,

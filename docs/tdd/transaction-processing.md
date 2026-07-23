@@ -117,9 +117,8 @@ by the dispatcher on every send and identifies this one attempt —
 it is the reply-matching key (see below), distinct from `:id` and
 `:correlation-id`, both of which a retry reuses. `:causation-id`
 links a downstream message to its predecessor. `:reply-to` is the
-reply topic address — designed to name a destination like
-`pulsar:a/b/c`, but there is one shared response channel today, so
-it stays unused.
+reply topic address — designed to name a destination, but there is
+one shared response channel today, so it stays unused.
 
 **Response envelope** (reply from processor to caller):
 
@@ -244,7 +243,7 @@ sequenceDiagram
 
 **As consumer across a boundary — idempotent consume-then-ack.** Anything
 arriving over the bus (a command, a settlement event, a webhook-derived
-event) is at-least-once: Pulsar redelivers on failure, and a crash
+event) is at-least-once: the broker redelivers on failure, and a crash
 between commit and ack reprocesses. The consumer absorbs that by making
 the effect idempotent on a key, in the same transaction: check or write
 the idempotency key — a unique index, or an `idempotency` record —
@@ -407,7 +406,7 @@ envelope:
   `FAILED` reply — the caller always gets a response.
 - A 30 s `ackTimeout` on every consumer redelivers a message that
   was delivered but never acked (a stuck handler, a dropped loop)
-  even while the consumer stays connected — Pulsar's default
+  even while the consumer stays connected — the broker's default
   leaves such a message undelivered indefinitely.
 - A `deadLetterPolicy` (maxRedeliverCount 5, per-channel
   `*-command-dlq` topic) moves a genuinely poison command aside
@@ -442,7 +441,7 @@ cash-accounts read the original resource back on a de-duplicated
 retry (see Idempotency above), that reply carries a 200 with the
 original resource rather than a rejection.
 
-**Local channel bus.** The single-pod deployment replaces Pulsar
+**Local channel bus.** The single-pod deployment replaces the broker
 with an in-process core.async bus. It is at-most-once — no ack,
 no redelivery, lost on crash — so durability there rests on FDB
 plus idempotent retry, not the bus. The consume loop is still
@@ -490,7 +489,7 @@ throw-safe (a handler exception is logged, not fatal).
 - **In-flight commands during processor restart.** A command on
   the bus that has been delivered but not yet processed when
   the processor restarts depends on the bus backend's
-  redelivery semantics. The Pulsar backend acks on success and
+  redelivery semantics. The broker backend acks on success and
   redelivers otherwise (bounded by `ackTimeout` and the DLQ);
   the channel-based backend is at-most-once and loses it. Test-
   and prod-shape behaviour can diverge here; covered by scenario

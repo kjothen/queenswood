@@ -104,7 +104,7 @@ graph LR
 The diagram shows `api`'s shape. The simulator and adapter
 follow the same client → interceptor-chain → handler pattern,
 but their handlers don't cross into the command pipeline — they
-respond directly (simulator) or relay through Pulsar to the
+respond directly (simulator) or relay through the message bus to the
 event processor (adapter).
 
 ### Domain folder layout
@@ -381,7 +381,7 @@ Read operations skip the pipeline and query FDB directly.
 HTTP-surface tests live in **`test-api-scenarios`**, the
 sibling of `test-scenarios` covered in
 [scenario-testing.md](scenario-testing.md). It boots the full
-test system (FDB, Pulsar, ClearBank simulator, Onfido simulator)
+test system (FDB, the message bus, ClearBank simulator, Onfido simulator)
 plus a live `api` and drives real HTTP requests via
 data-driven EDN scenarios.
 

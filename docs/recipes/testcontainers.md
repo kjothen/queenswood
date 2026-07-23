@@ -3,7 +3,7 @@
 
 ## Problem
 
-You want to run brick infrastructure (FDB, Pulsar, Vault, and
+You want to run brick infrastructure (FDB, Kafka, Vault, and
 so on) in tests, using the same configuration shape that
 production uses.
 
@@ -12,7 +12,7 @@ production uses.
 We treat testcontainers as a *source* of connection details —
 mostly host and port, sometimes a cluster-file-path or similar
 token — not as a parallel test-only runtime. The high-level
-components that consume those details (the Pulsar client, the
+components that consume those details (the Kafka client, the
 FDB record store, the Vault client) see the same configuration
 shape regardless of whether the source is a testcontainer or a
 literal value in a production YAML.
@@ -31,7 +31,7 @@ YAML, wired by `!system/local-ref`:
 2. **The extractor.** Lives in the *relevant* brick's `system/`
    folder. Reads runtime values (host, port, cluster-file-path)
    from the started container and exposes them.
-3. **The high-level component.** The Pulsar client / FDB record
+3. **The high-level component.** The Kafka client / FDB record
    store / Vault client / etc. Consumes the extracted values
    the same way production would consume them from a YAML
    literal or `!env`.

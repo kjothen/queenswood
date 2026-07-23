@@ -55,7 +55,7 @@ as rows and bricks (components and bases) as columns. The principle
 is **one X in each library row.** Reality is messier — over the
 lifetime of a codebase, libraries occasionally find their way into
 more than one brick (the `clojure.data.json`, `protobuf-java`, and
-`pulsar-client-all` rows already have more than one X today). We
+`kafka-clients` rows already have more than one X today). We
 treat such rows as targets for cleanup during ordinary development:
 consolidate the import behind one component, or, where there is a
 real reason for the exception, accept it and move on. The
@@ -76,7 +76,7 @@ franca and not subject to this rule.
 Easier:
 
 - Library swaps and upgrades are contained. The message-bus →
-  channels / Pulsar swap (ADR-0003) is a worked example; a future
+  channels / broker swap (ADR-0003) is a worked example; a future
   HTTP-client swap would be another.
 - The wrapping component's `interface.clj` is the project's
   vocabulary. Callers see kebab-case Clojure functions returning

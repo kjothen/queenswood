@@ -63,7 +63,7 @@ The shape:
 - A pure-functional reimplementation of the bank's domain rules —
   the **model** — runs in parallel with the real system. The model
   is small (a few hundred lines for the whole bank) and imports
-  nothing from production: no FDB, no Pulsar, no protobuf, no Malli,
+  nothing from production: no FDB, no message bus, no protobuf, no Malli,
   no nom, no real IDs, not even `policy` (the model carries its
   own re-implementation of the policy rules it needs).
 - Fugato generates command sequences from a model spec

@@ -1,4 +1,0 @@
-:not(pre) > code:before,
-:not(pre) > code:after {
-  content: "" !important;
-}

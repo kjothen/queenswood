@@ -35,15 +35,16 @@ We will keep the message bus behind an abstraction. The `message-bus`
 brick exposes two small protocols — `Producer` and `Consumer` — and
 ships two implementations:
 
-- `pulsar` — the production backend. We chose Pulsar because we had
-  working code in `mono` and were already familiar with it. We are
-  not committed to it; "we have it to hand" is the honest reason.
+- A broker backend for production. `mono` ships both Kafka and
+  Pulsar implementations of the protocols; Queenswood runs on Kafka.
+  The choice is deliberately not load-bearing — a swappable backend
+  is the whole point.
 - A Clojure-channels backend (the `local` namespace inside
   `message-bus`), used in tests and small-footprint deployments.
 
 Component code (`command`, `command-processor`, `event`,
 `event-processor`, and so on) consumes the abstraction only. No
-production component imports `pulsar` or `local` directly — backends
+production component imports a broker backend or `local` directly — backends
 extend the `Producer` / `Consumer` protocols. The system definition
 decides which backend a given producer or consumer binds to at
 startup.
@@ -52,32 +53,32 @@ startup.
 
 Easier:
 
-- Backends are swappable. If Pulsar's licensing, performance, or
-  operations story changes — or if Kafka or anything else turns out
-  to be a better fit — swapping is a contained piece of work: write
-  a new backend, rebind in the system config. Not a sweep across
-  every component that uses messaging.
+- Backends are swappable — and have been. Queenswood moved from
+  Pulsar to Kafka with no change to any component that uses
+  messaging: a new backend in `mono`, rebound in the system config.
+  Not a sweep across every component that uses messaging.
 - Tests that do not specifically exercise the broker can run on the
   channels backend, no Testcontainers required. Faster, less flaky,
   and they cover the same producer / consumer code paths as
   production.
-- The decision to use Pulsar is reduced to "what we have to hand."
-  Future re-evaluation costs are bounded.
+- The choice of broker is reduced to a system-config concern.
+  Re-evaluation costs are bounded.
 
 Harder:
 
-- The abstraction must not leak. Pulsar-specific concepts —
-  subscription modes, topic hierarchies, namespaces, message
-  properties, delayed delivery — have to stay behind the backend
-  boundary. This requires discipline when adding features.
+- The abstraction must not leak. Broker-specific concepts —
+  subscription / consumer-group models, topic hierarchies,
+  namespaces, message properties, delayed delivery — have to stay
+  behind the backend boundary. This requires discipline when adding
+  features.
 - Two backends mean two test surfaces. Behaviour that holds on
-  channels (ordered, in-process, no network) but fails on Pulsar (or
-  vice versa) is a real risk. Production-shaped integration tests
-  must run on the production backend.
+  channels (ordered, in-process, no network) but fails on the broker
+  backend (or vice versa) is a real risk. Production-shaped
+  integration tests must run on the production backend.
 - Some broker-specific features may not fit the abstraction cleanly.
   If we ever need, say, Pulsar's geo-replication or Kafka's exactly-
   once semantics, we either extend the interface (burdening every
   backend) or accept it as backend-only — neither is free.
 
-The abstraction comes from `mono`; see ADR-0001. Future improvements
-(e.g. adding a Kafka backend) should be made upstream where possible.
+The abstraction comes from `mono`; see ADR-0001. Backend work — the
+Kafka backend, future brokers — is done upstream in `mono`.

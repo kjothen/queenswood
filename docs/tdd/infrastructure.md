@@ -34,7 +34,7 @@ flowchart LR
     qwgcp["XPlatform XR<br/>(every project-scoped MR composed)"]
   end
   subgraph gke["queenswood-gke (GKE)"]
-    qw[queenswood chart<br/>api, processors,<br/>frontend, Pulsar, FDB]
+    qw[queenswood chart<br/>api, processors,<br/>frontend, Kafka, FDB]
     kc[queenswood-keycloak<br/>Keycloak CR + proxy]
     kco[keycloak-operator chart]
   end
@@ -340,7 +340,7 @@ the first one:
    cluster (and Crossplane managing it from kind) is alive; if
    we destroy GKE with PVCs still bound, the underlying PDs
    leak as orphan disks in `europe-west2`. Two
-   `gcp-up/gcp-down` cycles of the FDB + Pulsar
+   `gcp-up/gcp-down` cycles of the FDB + Kafka
    StatefulSets is enough to exhaust the default 250 GiB
    regional SSD_TOTAL_GB quota and block the next cold start
    on a pending PVC.

@@ -232,7 +232,7 @@ doesn't belong in a PRD even when it's accurate.
 - "Atomic" is borderline — OK if framed as "all-or-nothing"
   with a quick gloss; better to say "either the tenant comes
   up complete or doesn't come up at all".
-- Internal-mechanism words (changelog, FDB, Pulsar, brick)
+- Internal-mechanism words (changelog, FDB, message bus, brick)
   never belong in a PRD.
 - Sequence diagrams in PRDs describe user-visible beats, not
   internal hops between components.
