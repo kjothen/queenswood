@@ -1,3 +1,0 @@
-{:paths ["resources"]
- :deps {}
- :aliases {:test {:extra-deps {} :extra-paths []}}}

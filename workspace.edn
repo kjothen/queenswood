@@ -10,19 +10,16 @@
               {:alias "ops",
                :necessary ["bank-resources"
                            "bank-schema" "bank-test-resources" "test-schema"
-                           "command-schema" "event-schema"
                            "test-resources"]},
             "bank-financial-processors-service"
               {:alias "fin",
                :necessary ["bank-resources"
                            "bank-schema" "bank-test-resources" "test-schema"
-                           "command-schema" "event-schema"
                            "test-resources"]},
             "bank-api-service"
               {:alias "api",
                :necessary ["bank-resources"
                            "bank-schema" "bank-test-resources" "test-schema"
-                           "command-schema" "event-schema"
                            "test-resources"]},
             "bank-bootstrap-service"
               {:alias "bbs",
@@ -33,14 +30,12 @@
               {:alias "mig",
                :necessary ["bank-resources"
                            "bank-schema" "test-schema"
-                           "command-schema" "event-schema"
                            "test-resources"]},
             "bank-clearbank-adapter-service"
               {:alias "cba",
                :necessary ["bank-resources"
                            "bank-schema" "bank-test-resources"
-                           "command-schema" "event-schema"
-                           "test-resources" "test-schema" "testcontainers"]},
+                           "test-resources" "test-schema"]},
             "bank-clearbank-simulator-service"
               {:alias "cbs",
                :necessary ["test-resources"]},
@@ -48,7 +43,6 @@
               {:alias "ioa",
                :necessary ["bank-resources"
                            "bank-schema" "bank-test-resources"
-                           "command-schema" "event-schema"
                            "test-resources"]},
             "bank-onfido-simulator-service"
               {:alias "ios",

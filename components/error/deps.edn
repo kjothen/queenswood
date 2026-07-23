@@ -1,4 +1,0 @@
-{:paths ["src"]
- :deps {de.otto/nom {:mvn/version "0.3.0"}}
- :aliases {:test {:extra-paths ["test"]
-                  :extra-deps {}}}}

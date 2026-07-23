@@ -1,2 +1,0 @@
-system:
-  vault: !include testcontainers/vault-test.yml

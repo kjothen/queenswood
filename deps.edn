@@ -1,45 +1,9 @@
 {:aliases
  {:dev
   {:extra-deps
-   {components/avro {:local/root "components/avro"}
-    components/cache {:local/root "components/cache"}
-    components/cli {:local/root "components/cli"}
-    components/command {:local/root "components/command"}
-    components/db {:local/root "components/db"}
-    components/encryption {:local/root "components/encryption"}
-    components/env {:local/root "components/env"}
-    components/error {:local/root "components/error"}
-    components/event {:local/root "components/event"}
-    components/fdb {:local/root "components/fdb"}
-    components/http-client {:local/root "components/http-client"}
-    components/identity-provider {:local/root "components/identity-provider"}
-    components/json {:local/root "components/json"}
-    components/keycloak {:local/root "components/keycloak"}
-    components/log {:local/root "components/log"}
-    components/migrator {:local/root "components/migrator"}
-    components/message-bus {:local/root "components/message-bus"}
-    components/command-processor {:local/root "components/command-processor"}
-    components/event-processor {:local/root "components/event-processor"}
-    components/processor {:local/root "components/processor"}
-    components/mqtt {:local/root "components/mqtt"}
-    components/pulsar {:local/root "components/pulsar"}
-    components/pulsar-vault-crypto {:local/root
-                                    "components/pulsar-vault-crypto"}
-    components/scheduler {:local/root "components/scheduler"}
-    components/secret {:local/root "components/secret"}
-    components/server {:local/root "components/server"}
-    components/spec {:local/root "components/spec"}
-    components/sql {:local/root "components/sql"}
-    components/system {:local/root "components/system"}
-    components/telemetry {:local/root "components/telemetry"}
-    components/command-schema {:local/root "components/command-schema"}
-    components/event-schema {:local/root "components/event-schema"}
+   {ext/mono {:local/root "deps/mono-test"}
     components/test-schema {:local/root "components/test-schema"}
-    components/test-system {:local/root "components/test-system"}
     components/test-resources {:local/root "components/test-resources"}
-    components/testcontainers {:local/root "components/testcontainers"}
-    components/utility {:local/root "components/utility"}
-    components/vault {:local/root "components/vault"}
     bases/build {:local/root "bases/build"}
     bases/external-test-runner {:local/root "bases/external-test-runner"}
     bases/service {:local/root "bases/service"}
@@ -52,42 +16,8 @@
    :extra-paths ["development/src" "development/resources"]
    :jvm-opts
    ["-Dclojure.tools.logging.factory=clojure.tools.logging.impl/slf4j-factory"]}
-  :test {:extra-paths ["components/avro/test"
-                       "components/cache/test"
-                       "components/cli/test"
-                       "components/db/test"
-                       "components/db/test-resources"
-                       "components/encryption/test"
-                       "components/env/test"
-                       "components/env/test-resources"
-                       "components/error/test"
-                       "components/fdb/test"
-                       "components/fdb/test-resources"
-                       "components/http-client/test"
-                       "components/log/test"
-                       "components/message-bus/test"
-                       "components/message-bus/test-resources"
-                       "components/migrator/test"
-                       "components/migrator/test-resources"
-                       "components/mqtt/test"
-                       "components/mqtt/test-resources"
-                       "components/pulsar/test"
-                       "components/pulsar/test-resources"
-                       "components/pulsar-vault-crypto/test"
-                       "components/pulsar-vault-crypto/test-resources"
-                       "components/scheduler/test"
-                       "components/secret/test"
-                       "components/secret/test-resources"
-                       "components/server/test"
-                       "components/server/test-resources"
-                       "components/spec/test"
-                       "components/system/test"
-                       "components/test-resources/test-resources"
-                       "components/testcontainers/test"
-                       "components/testcontainers/test-resources"
-                       "components/utility/test"
-                       "components/vault/test"
-                       "components/vault/test-resources"
+  :test {:extra-deps {ext/mono {:local/root "deps/mono-test"}}
+         :extra-paths ["components/test-resources/test-resources"
                        "bases/service/test"
                        "bases/service/test-resources"
                        "bases/external-test-runner/test"]}

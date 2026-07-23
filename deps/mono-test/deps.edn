@@ -1,0 +1,9 @@
+;; Test-superset mono coordinate. Same git sha as ../mono, mono-test-lib
+;; root (adds test-system + testcontainers). Projects reference this under
+;; :test as ext/mono so it replaces the runtime root by symbol.
+;; Bump the tag/sha to match ../mono.
+{:deps {com.repldriven/mono
+        {:git/url "https://github.com/repldriven/mono.git"
+         :git/tag "v0.0.7"
+         :git/sha "1230267dc12a103e1fe64be54a54d0924d4141b6"
+         :deps/root "projects/mono-test-lib"}}}

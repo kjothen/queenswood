@@ -1,5 +1,0 @@
-system:
-  message-bus:
-    bus: !system/component
-      system/component-kind: message-bus/local-bus
-      channels: [command, reply]
