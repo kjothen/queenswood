@@ -6,15 +6,16 @@
           :ns-default com.repldriven.mono.build.build}
   :test
   {:extra-deps
-   {bases/external-test-runner {:local/root "../../bases/external-test-runner"}
+   {ext/mono {:local/root "../../deps/mono-test"}
+    bases/external-test-runner {:local/root "../../bases/external-test-runner"}
     component/bank-test-resources {:local/root
                                    "../../components/bank-test-resources"}
     component/test-resources {:local/root "../../components/test-resources"}
     component/test-schema {:local/root "../../components/test-schema"}
-    component/test-system {:local/root "../../components/test-system"}
-    component/testcontainers {:local/root "../../components/testcontainers"}}}}
+}}}
  :deps
- {component/bank-balance {:local/root "../../components/bank-balance"}
+ {ext/mono {:local/root "../../deps/mono"}
+  component/bank-balance {:local/root "../../components/bank-balance"}
   component/bank-balance-domain
   {:local/root "../../components/bank-balance-domain"}
   component/bank-balance-query
@@ -46,19 +47,6 @@
                                  "../../components/bank-test-resources"}
   component/bank-transaction {:local/root "../../components/bank-transaction"}
 
-  component/avro {:local/root "../../components/avro"}
-  component/cache {:local/root "../../components/cache"}
-  component/cli {:local/root "../../components/cli"}
-  component/env {:local/root "../../components/env"}
-  component/error {:local/root "../../components/error"}
-  component/fdb {:local/root "../../components/fdb"}
-  component/identity-provider {:local/root "../../components/identity-provider"}
-  component/log {:local/root "../../components/log"}
-  component/processor {:local/root "../../components/processor"}
-  component/scheduler {:local/root "../../components/scheduler"}
-  component/system {:local/root "../../components/system"}
-  component/telemetry {:local/root "../../components/telemetry"}
-  component/utility {:local/root "../../components/utility"}
 
   base/bank-bootstrap {:local/root "../../bases/bank-bootstrap"}
   ;; protojure brings protobuf-java 4.x which breaks FDB Record Layer

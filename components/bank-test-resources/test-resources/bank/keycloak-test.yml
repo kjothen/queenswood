@@ -38,13 +38,18 @@ container: !system/component
       "queenswood_google-client-secret": ["pass", "show", "queenswood/google-client-secret"]
     default: {}
 
-auth-server-url: !system/component
-  system/component-kind: keycloak/auth-server-url
+container-http-port: !system/component
+  system/component-kind: keycloak/container-http-port
   container: !system/local-ref container
+  exposed-port: 8080
+
+container-auth-server-url: !system/component
+  system/component-kind: keycloak/container-auth-server-url
+  port: !system/local-ref container-http-port
 
 identity-provider: !system/component
   system/component-kind: keycloak/identity-provider
-  base-url: !system/local-ref auth-server-url
+  base-url: !system/local-ref container-auth-server-url
   realm: queenswood
   admin-client-id: queenswood-admin
   admin-client-secret: queenswood-admin-test-secret
@@ -55,7 +60,7 @@ identity-provider: !system/component
 # the admin-client-* values are unused but kept symmetric.
 identity-provider-ops: !system/component
   system/component-kind: keycloak/identity-provider
-  base-url: !system/local-ref auth-server-url
+  base-url: !system/local-ref container-auth-server-url
   realm: queenswood-ops
   admin-client-id: queenswood-admin
   admin-client-secret: queenswood-admin-test-secret

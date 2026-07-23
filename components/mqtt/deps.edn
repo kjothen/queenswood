@@ -1,4 +1,0 @@
-{:aliases {:test {:extra-deps {} :extra-paths ["test" "test-resources"]}}
- :deps {clojurewerkz/machine_head {:mvn/version "1.0.0"}
-        org.clojure/java.data {:mvn/version "1.4.120"}}
- :paths ["src"]}
