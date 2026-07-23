@@ -92,7 +92,7 @@ jobs:
       # runner has its own layer cache.
       - name: Build and push all service images (${{ matrix.arch }})
         env:
-          REGISTRY: ghcr.io/${{ github.repository_owner }}
+          REGISTRY: ghcr.io/${{ github.repository_owner }}/queenswood
           TAG: latest-${{ matrix.arch }}
         run: |
           docker buildx bake \
@@ -124,7 +124,7 @@ jobs:
       # worth saving 15 lines here.)
       - name: Stitch multi-arch manifests
         env:
-          REGISTRY: ghcr.io/${{ github.repository_owner }}
+          REGISTRY: ghcr.io/${{ github.repository_owner }}/queenswood
         run: |
           images=(
             migrator-service

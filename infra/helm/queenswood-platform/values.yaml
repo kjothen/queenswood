@@ -20,7 +20,7 @@ release:
   # keycloak-operator Release resources below.
   providerConfigRef: queenswood-gke
   image:
-    registry: ghcr.io/repldriven
+    registry: ghcr.io/repldriven/queenswood
     tag: latest
 
 # Cluster-scoped Keycloak Operator (CRDs + controller). Pulled onto
