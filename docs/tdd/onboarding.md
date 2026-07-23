@@ -65,11 +65,11 @@ creates it together with the user's first organisation.
 Two new bricks own the platform-identity records; the bank-
 api base grows a user-JWT branch on the existing auth
 interceptor and adds two endpoints; the management console is
-a new Polylith base (`bank-console`).
+a new Polylith base (`console`).
 
 ```mermaid
 graph LR
-    SPA["bank-console SPA<br/>(public client + PKCE)"]
+    SPA["console SPA<br/>(public client + PKCE)"]
     KC["Keycloak realm<br/>queenswood-console client<br/>+ Google IdP"]
     API["bank-api<br/>auth interceptor + handlers"]
     BU["bank-user<br/>(User store)"]
@@ -197,7 +197,7 @@ chart-resources sibling):
   via the `pkce.code.challenge.method` attribute.
   `redirectUris` cover the Vite dev origin
   (`http://localhost:5173/*`), the in-cluster port-forward
-  origin for bank-console (`http://localhost:8082/*`), and
+  origin for console (`http://localhost:8082/*`), and
   the public GKE-hosted console host
   (`https://console.*.repldriven.com/*`).
 
@@ -293,9 +293,9 @@ memberships are already attached by the authenticate
 interceptor, so the handler is just a shape-and-status
 decision.
 
-### bank-console SPA
+### console SPA
 
-`bases/bank-console/` is a new Polylith base. Svelte + Vite,
+`bases/console/` is a new Polylith base. Svelte + Vite,
 same pattern as the existing `bases/bank-app/` SPA. Three
 states, one screen each:
 
@@ -324,20 +324,20 @@ console stays same-origin and avoids CORS entirely.
 
 `infra/helm/queenswood/`:
 
-- `bankConsole` block in `values.yaml` mirroring `bankApp`:
+- `console` block in `values.yaml` mirroring `bankApp`:
   enabled, replicas, port, image-pull policy, plus a
   `keycloakPublicUrl` value the chart wires into the pod env.
 - `keycloak.consoleClientId` so the bank-api auth interceptor
   knows which `azp` discriminates user JWTs.
-- `templates/bank-console.yaml` — Deployment + Service.
+- `templates/console.yaml` — Deployment + Service.
 - `templates/httproute.yaml` — second HTTPRoute on
   `gateway.consoleHost` so the SPA serves on its own
   hostname; the Keycloak `redirectUris` and `webOrigins` stay
   scoped to that host.
 
-`infra/docker/bake.hcl` gets a `bank-console` target in the
+`infra/docker/bake.hcl` gets a `console` target in the
 `default` group; `justfiles/deploy.just`'s `kind-up` loop is
-extended to include `bank-console` in the local-registry
+extended to include `console` in the local-registry
 push.
 
 ## Verification
@@ -349,7 +349,7 @@ The end-to-end flow:
    `queenswood-admin` and `queenswood-console` clients plus the
    Google IdP entry.
 2. **Sign-in screen renders.** The console reaches
-   `bank-console` (port-forward or Gateway) and shows the
+   `console` (port-forward or Gateway) and shows the
    "Sign in with Google" button.
 3. **Authorization Code round-trip succeeds.** With a real
    Google OAuth client wired into the realm, clicking the
@@ -414,4 +414,4 @@ The end-to-end flow:
   via Keycloak against the `queenswood-ops` realm and
   remains in place for platform-admin workflows. The two
   consoles live side-by-side — `bank-app` for operators,
-  `bank-console` for org users.
+  `console` for org users.

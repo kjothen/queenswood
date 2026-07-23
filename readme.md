@@ -183,7 +183,7 @@ This boots the full system — FDB, Pulsar, HTTP server — inside
 Testcontainers. Then start the Svelte front-end:
 
 ```bash
-just bank-console-start
+just console-start
 ```
 
 ### Kubernetes
@@ -229,14 +229,14 @@ helm install queenswood \
 
 ```bash
 kubectl -n queenswood port-forward svc/queenswood-api-service 8080:8080
-kubectl -n queenswood port-forward svc/queenswood-bank-console     8081:8080
+kubectl -n queenswood port-forward svc/queenswood-console     8081:8080
 ```
 
 The console's nginx reverse-proxies its realm's Keycloak at
 `/keycloak/*`, so no separate Keycloak port-forward is
 needed for sign-in. Then open:
 
-- <http://localhost:8081> — the console (`bank-console`).
+- <http://localhost:8081> — the console (`console`).
   Sign in with `dev` / `dev` against the `queenswood` realm.
 
 If you need the Keycloak admin UI (to inspect or edit the

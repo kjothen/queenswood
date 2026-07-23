@@ -60,7 +60,7 @@ spec:
       # public hostname and skip the SPA-side reverse proxy.
       bankApp:
         keycloakPublicUrl: {{ printf "https://keycloak.%s" .Values.env.domain | quote }}
-      bankConsole:
+      console:
         keycloakPublicUrl: {{ printf "https://keycloak.%s" .Values.env.domain | quote }}
       secrets:
         keycloakAdminClientSecret: {{ .Values.queenswoodKeycloak.serverSide.adminClientSecret | quote }}

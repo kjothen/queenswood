@@ -45,8 +45,7 @@ jobs:
           - clearbank-simulator-service
           - onfido-adapter-service
           - onfido-simulator-service
-          - bank-app
-          - bank-console
+          - console
     steps:
       - name: Delete untagged versions of ${{ matrix.package }}
         uses: actions/delete-package-versions@v5

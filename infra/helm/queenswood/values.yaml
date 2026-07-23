@@ -33,14 +33,14 @@ keycloak:
   baseUrl: "http://queenswood-keycloak-keycloak-service:8080/keycloak"
   realm: queenswood
   adminClientId: queenswood-admin
-  # Public client id the bank-console SPA uses for Authorization
+  # Public client id the console SPA uses for Authorization
   # Code + PKCE. Must match the `clientId` of the corresponding
   # `clients[]` entry in `files/keycloak-realm.json`.
   consoleClientId: queenswood-console
   # Second realm hosting Queenswood operator users. Same Keycloak
   # instance, separate realm. bank-api wires a second identity-provider
   # pointed at this realm so it still accepts operator JWTs; there is
-  # no operator SPA in this chart any more (bank-app was removed), so
+  # no operator SPA in this chart any more, so
   # the realm currently has no first-party browser client.
   opsRealm: queenswood-ops
   # Override the iss claim the verifier expects on the ops realm when
@@ -52,7 +52,7 @@ keycloak:
   # Operator-realm client id retained for the second identity-provider.
   opsClientId: queenswood-app
   # Override the iss the verifier expects on incoming JWTs. Same
-  # shape as opsExpectedIssuer above: default matches the bank-console
+  # shape as opsExpectedIssuer above: default matches the console
   # SPA's same-origin Keycloak proxy at `localhost:8081/keycloak`;
   # GKE overrides to the public hostname.
   expectedIssuer: "http://localhost:8081/keycloak/realms/queenswood"
@@ -103,7 +103,7 @@ bootstrap:
     limits: { cpu: "1000m", memory: "1Gi" }
     requests: { cpu: "100m", memory: "512Mi" }
 
-# -- Public Gateway for the bank-console SPA (which proxies `/v1/*` to
+# -- Public Gateway for the console SPA (which proxies `/v1/*` to
 # bank-api internally). When `gcp.enabled` is true the templates
 # emit a Gateway with gatewayClassName gke-l7-regional-external-managed,
 # a NamedAddress reference to a regional Address, an annotation
@@ -116,7 +116,7 @@ gateway:
   className: ""
   host: api.local
   # Second hostname the public Gateway terminates on, routed to the
-  # bank-console SPA. Kept distinct from `host` so the SPA can keep
+  # console SPA. Kept distinct from `host` so the SPA can keep
   # its keycloak-js redirectUris + post-logout origins clean.
   consoleHost: console.api.local
   gcp:
@@ -130,8 +130,8 @@ gateway:
 
 # -- Human-identity SPA. nginx in the pod proxies `/v1/*` to bank-api
 # and serves a synthesised /env.js so the SPA picks up its Keycloak
-# URL at runtime. Image name is `bank-console`.
-bankConsole:
+# URL at runtime. Image name is `console`.
+console:
   enabled: true
   port: 8080
   replicas: 1
@@ -142,7 +142,7 @@ bankConsole:
   keycloakUpstream: "http://queenswood-keycloak-keycloak-service:8080"
   # Public URL of the realm endpoint the browser calls. Default is
   # the SPA's own same-origin `/keycloak` path so a bare `helm install`
-  # works after one `kubectl port-forward svc/<release>-bank-console
+  # works after one `kubectl port-forward svc/<release>-console
   # 8081:8080`; GKE overrides via queenswood-platform.
   keycloakPublicUrl: "http://localhost:8081/keycloak"
   # Optional federated IdP alias. When set (e.g. "google"), the SPA

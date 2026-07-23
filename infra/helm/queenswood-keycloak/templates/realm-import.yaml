@@ -9,8 +9,8 @@
 # managed realm, and the testcontainer realm all trace to one source.
 #
 # Two realms live on this Keycloak: `queenswood` is the
-# organisation-user realm (bank-console SPA + per-org service
-# accounts); `queenswood-ops` is the operator realm (bank-app SPA).
+# organisation-user realm (console SPA + per-org service
+# accounts); `queenswood-ops` is the operator realm (operator SPA).
 apiVersion: k8s.keycloak.org/v2beta1
 kind: KeycloakRealmImport
 metadata:

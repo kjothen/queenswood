@@ -8,8 +8,8 @@
 **/src/gen
 
 # Yarn 4 / npm workspace artefacts. The workspace root and every
-# JS-bearing brick (bases/bank-console, bases/bank-app,
-# components/bank-ui) shares the same set of throwaways.
+# JS-bearing brick (bases/console, bases/bank-app,
+# components/ui) shares the same set of throwaways.
 **/node_modules/
 **/dist/
 **/.vite/

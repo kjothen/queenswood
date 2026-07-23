@@ -13,8 +13,6 @@ infra/docker
 .clj-kondo
 **/node_modules
 projects/bank-web
-bases/bank-app
-projects/bank-app
 .cache
 .tilt-build
 *.log

@@ -51,11 +51,11 @@ kind-up tag="dev":
     set -e
     bash {{ justfile_directory() }}/infra/kind/with-registry.sh queenswood
     # just docker-build-all {{ tag }}
-    # bank-console lives at bases/* (Svelte SPA, not a Polylith service
+    # console lives at bases/* (Svelte SPA, not a Polylith service
     # project), so the projects/*-service/ glob misses it.
     # docker-build-all's `default` group in infra/docker/bake.hcl already
     # builds it -- we just need to push it alongside the services.
-    for svc in projects/*-service/(:t) bank-console; do
+    for svc in projects/*-service/(:t) console; do
       docker tag {{ DOCKER_REGISTRY }}/$svc:{{ tag }} localhost:5001/$svc:{{ tag }}
       docker push localhost:5001/$svc:{{ tag }}
     done
@@ -74,10 +74,10 @@ kind-up-monolith tag="dev":
     for svc in monolith-service migrator-service bootstrap-service; do
       just docker-build $svc {{ tag }}
     done
-    # bank-console has its own Dockerfile; build it via its bake target.
+    # console has its own Dockerfile; build it via its bake target.
     REGISTRY={{ DOCKER_REGISTRY }} TAG={{ tag }} \
-      docker buildx bake -f infra/docker/bake.hcl bank-console
-    for svc in monolith-service migrator-service bootstrap-service bank-console; do
+      docker buildx bake -f infra/docker/bake.hcl console
+    for svc in monolith-service migrator-service bootstrap-service console; do
       docker tag {{ DOCKER_REGISTRY }}/$svc:{{ tag }} localhost:5001/$svc:{{ tag }}
       docker push localhost:5001/$svc:{{ tag }}
     done
@@ -111,7 +111,7 @@ kind-down:
 # Run a local dev Keycloak in Docker (foreground; Ctrl+C tears it down)
 keycloak-up:
     # Listens on host :8090 to match VITE_KEYCLOAK_URL in
-    # bases/bank-console/.env.example. 8090 (not 8081) keeps the
+    # bases/console/.env.example. 8090 (not 8081) keeps the
     # port out of the way of bank-monolith, which binds 8081 for
     # the bank-clearbank-simulator dev component. Admin console
     # at http://localhost:8090/admin (admin / admin). Realm JSON

@@ -3,9 +3,8 @@
   "private": true,
   "description": "Queenswood frontend workspace root. Pairs with the Polylith Clojure workspace (workspace.edn) — each JS-bearing brick lives at its usual Polylith path and is hoisted as a yarn workspace member here. `clj -M:poly libs` already treats these package.json files as a first-class dependency source.",
   "workspaces": [
-    "bases/bank-console",
-    "bases/bank-app",
-    "components/bank-ui"
+    "bases/console",
+    "components/ui"
   ],
   "packageManager": "yarn@4.6.0"
 }
