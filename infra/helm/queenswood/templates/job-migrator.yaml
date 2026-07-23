@@ -2,7 +2,7 @@
 ---
 # One-shot Job: applies FDB record metadata (via fdb/meta-store with
 # `migrate: true` enabled by FDB_MIGRATE=true) and declares the
-# Pulsar topology (tenants/namespaces/topics/schemas). Runs first;
+# Kafka topics. Runs first;
 # bootstrap-service Job runs after this one and handles the
 # internal-organization seed + policy records.
 #
@@ -65,7 +65,7 @@ spec:
           image: "{{ .Values.image.registry }}/migrator-service:{{ .Values.image.tag }}"
           imagePullPolicy: {{ include "queenswood.imagePullPolicy" $ }}
           # Override the baked config file so the channel-bus monolith
-          # can point the migrator at a Pulsar-free config (FDB metadata
+          # can point the migrator at a Kafka-free config (FDB metadata
           # only — no broker to declare topology on).
           command:
             - java
@@ -78,12 +78,8 @@ spec:
           env:
             - name: SERVICE_NAME
               value: "migrator-service"
-            - name: PULSAR_SERVICE_URL
-              value: {{ include "queenswood.pulsarServiceUrl" . | quote }}
-            - name: PULSAR_ADMIN_URL
-              value: {{ include "queenswood.pulsarAdminUrl" . | quote }}
-            - name: PULSAR_CLUSTER
-              value: {{ include "queenswood.pulsarCluster" . | quote }}
+            - name: KAFKA_BOOTSTRAP_SERVERS
+              value: {{ include "queenswood.kafkaBootstrapServers" . | quote }}
             - name: FDB_CLUSTER_FILE
               value: "/etc/fdb/fdb.cluster"
             # Enables `fdb/meta-store` schema-write at start. Only

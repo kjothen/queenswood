@@ -1,5 +1,5 @@
 system:
-  pulsar: !include bank/pulsar-bootstrap.yml
+  kafka: !include bank/kafka-bootstrap.yml
   fdb: !include bank/fdb.yml
   telemetry:
     otel-sdk: !system/component

@@ -1,22 +1,19 @@
 # Modular-monolith profile of the queenswood chart: one bank-monolith
 # pod hosts the API + all processors + adapters + simulators in-process
-# over the core.async channel bus. No Pulsar broker; FDB + Keycloak/
+# over the core.async channel bus. No Kafka broker; FDB + Keycloak/
 # Postgres are the only external infra (shared with the microservice
 # deploy). Install with:
 #   helm install <rel> infra/helm/queenswood -f values-monolith.yaml
 
-# No Pulsar subchart. The dummy URLs satisfy the chart helpers (which
-# require them when pulsar.enabled=false); nothing consumes them — the
-# monolith uses the local channel bus and the migrator runs under the
-# `channel` profile.
-pulsar:
+# No Kafka broker. The dummy bootstrapServers satisfies the chart helper
+# (required when kafka.enabled=false); nothing consumes it — the monolith
+# uses the local channel bus and the migrator runs under the `channel`
+# profile.
+kafka:
   enabled: false
-  serviceUrl: "disabled"
-  adminUrl: "disabled"
-  cluster: "disabled"
+  bootstrapServers: "disabled"
 
-# Migrator runs FDB metadata only — a Pulsar-free config (no broker to
-# declare topology on).
+# Migrator runs FDB metadata only — no broker to create topics on.
 migrator:
   configFile: application-channel.yml
 

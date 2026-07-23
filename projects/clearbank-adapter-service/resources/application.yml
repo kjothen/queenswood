@@ -1,63 +1,54 @@
 system:
-  pulsar:
-    client: !system/component
-      system/component-kind: pulsar/client
-      service-url: !env PULSAR_SERVICE_URL
-    admin: !system/component
-      system/component-kind: pulsar/admin
-      service-http-url: !env PULSAR_ADMIN_URL
+  kafka:
     schemas: !system/component
-      system/component-kind: pulsar/schemas
-      command:
-        schema: schemas/command/command-envelope.avsc.json
-        type: AVRO
-      command-response:
-        schema: schemas/command/command-response.avsc.json
-        type: AVRO
-      event:
-        schema: schemas/event/event-envelope.avsc.json
-        type: AVRO
+      system/component-kind: avro/serde
+      schemas:
+        command: schemas/command/command-envelope.avsc.json
+        command-response: schemas/command/command-response.avsc.json
+        event: schemas/event/event-envelope.avsc.json
     producers: !system/component
-      system/component-kind: pulsar/producers
+      system/component-kind: kafka/producers
       schemes-payment-command-response:
-        client: !system/local-ref client
-        conf:
-          accessMode: !pulsar/access-mode Shared
-          schema: !keyword command-response
-          topicName: "persistent://tenant-1/namespace-1/topic-schemes-payment-command-response"
         schemas: !system/local-ref schemas
+        schema: !keyword command-response
+        conf:
+          bootstrap.servers: !env KAFKA_BOOTSTRAP_SERVERS
+          topic: topic-schemes-payment-command-response
+          acks: all
       schemes-payments-event:
-        client: !system/local-ref client
-        conf:
-          accessMode: !pulsar/access-mode Shared
-          schema: !keyword event
-          topicName: "persistent://tenant-1/namespace-1/topic-schemes-payments-event"
         schemas: !system/local-ref schemas
+        schema: !keyword event
+        conf:
+          bootstrap.servers: !env KAFKA_BOOTSTRAP_SERVERS
+          topic: topic-schemes-payments-event
+          acks: all
+      schemes-payment-command-dlq:
+        conf:
+          bootstrap.servers: !env KAFKA_BOOTSTRAP_SERVERS
+          topic: topic-schemes-payment-command-dlq
+          acks: all
     consumers: !system/component
-      system/component-kind: pulsar/consumers
+      system/component-kind: kafka/consumers
       schemes-payment-command:
-        client: !system/local-ref client
-        conf:
-          cryptoFailureAction: !pulsar/crypto-failure-action CONSUME
-          schema: !pulsar/schema AUTO_CONSUME
-          subscriptionName: clearbank-adapter-service-schemes-payment-command
-          subscriptionType: !pulsar/subscription-type Shared
-          deadLetterPolicy:
-            maxRedeliverCount: 5
-            deadLetterTopic: "persistent://tenant-1/namespace-1/topic-schemes-payment-command-dlq"
-          topicNames:
-            ["persistent://tenant-1/namespace-1/topic-schemes-payment-command"]
         schemas: !system/local-ref schemas
+        schema: !keyword command
+        topics: [topic-schemes-payment-command]
+        dead-letter-producer: !system/local-ref producers.schemes-payment-command-dlq
+        max-redeliveries: 5
+        conf:
+          bootstrap.servers: !env KAFKA_BOOTSTRAP_SERVERS
+          group.id: clearbank-adapter-service-schemes-payment-command
     message-bus-producers: !system/component
-      system/component-kind: pulsar/message-bus-producers
+      system/component-kind: kafka/message-bus-producers
       schemes-payment-command-response:
         producer: !system/local-ref producers.schemes-payment-command-response
       schemes-payments-event:
         producer: !system/local-ref producers.schemes-payments-event
     message-bus-consumers: !system/component
-      system/component-kind: pulsar/message-bus-consumers
+      system/component-kind: kafka/message-bus-consumers
       schemes-payment-command:
         consumer: !system/local-ref consumers.schemes-payment-command
+        timeout: 500
   message-bus: !include bank/message-bus.yml
   fdb: !include bank/fdb.yml
   avro: !include bank/avro.yml

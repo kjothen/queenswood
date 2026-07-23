@@ -83,9 +83,8 @@ otel:
   endpoint: ""
 
 # -- One-shot migrator Job. Applies FDB record metadata (via
-# fdb/meta-store-write) and declares the Pulsar topology
-# (tenants/namespaces/topics/schemas). Runs first; bootstrap Job
-# waits on its completion before seeding domain records.
+# fdb/meta-store-write) and creates the Kafka topics. Runs first;
+# bootstrap Job waits on its completion before seeding domain records.
 migrator:
   enabled: true
   resources:
@@ -194,7 +193,7 @@ services:
       limits: { cpu: "1000m", memory: "1536Mi" }
       requests: { cpu: "200m", memory: "768Mi" }
 
-  # Cron-driven processor (no Pulsar): registers a Quartz trigger per
+  # Cron-driven processor (no message bus): registers a Quartz trigger per
   # enabled scheduled job at startup and runs interest accrue/capitalize
   # tasks straight against FDB.
   scheduler-processor-service:
@@ -301,55 +300,16 @@ fdbOperator:
     "7.4": null
 
 # ---------------------------------------------------------------------
-# Sub-chart: Apache Pulsar. Override anything from
-# https://github.com/apache/pulsar-helm-chart/blob/master/charts/pulsar/values.yaml
-# ---------------------------------------------------------------------
-pulsar:
+# Single-broker Kafka (KRaft, no ZooKeeper) for the kind dev loop. Production
+# sets enabled=false and points services at an external broker.
+kafka:
   enabled: true
-  initialize: true
-  components:
-    bookkeeper: true
-    broker: true
-    zookeeper: true
-    proxy: false
-    autorecovery: false
-    functions: false
-    pulsar_manager: false
-    toolset: true
-  # Skip the victoria-metrics-k8s-stack sub-subchart (VMSingle, VMAgent,
-  # VMRule, VMServiceScrape, VMNodeScrape, plus operator + node-exporter)
-  # — adds significant memory pressure unsuited for dev. Pulsar chart
-  # 3.7.x switched its monitoring stack from Prometheus operator
-  # (kube-prometheus-stack) to VictoriaMetrics; the older
-  # `kube-prometheus-stack.*` keys are now no-ops. Re-enable for
-  # non-trivial environments.
-  victoria-metrics-k8s-stack:
-    enabled: false
-  prometheus-node-exporter:
-    enabled: false
-  # Per-component scrape objects (PodMonitor pre-3.7, VMServiceScrape
-  # post-3.7) depend on the monitoring stack's CRDs; disabling the stack
-  # means we must skip these too or helm install fails on `no matches
-  # for kind ...`.
-  zookeeper:
-    replicaCount: 1
-    persistence: false
-    podMonitor: { enabled: false }
-  bookkeeper:
-    replicaCount: 1
-    persistence: false
-    podMonitor: { enabled: false }
-  broker:
-    replicaCount: 1
-    podMonitor: { enabled: false }
-    configData:
-      managedLedgerDefaultEnsembleSize: "1"
-      managedLedgerDefaultWriteQuorum: "1"
-      managedLedgerDefaultAckQuorum: "1"
-      allowAutoTopicCreation: "false"
-      isAllowAutoUpdateSchemaEnabled: "false"
-      isSchemaValidationEnforced: "true"
-  proxy:
-    podMonitor: { enabled: false }
-  autorecovery:
-    podMonitor: { enabled: false }
+  image: apache/kafka:3.9.1
+  # Read only when enabled=false: external broker address (host:port).
+  bootstrapServers: ""
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      memory: 1Gi

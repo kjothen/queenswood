@@ -3,8 +3,8 @@
 Deploys the full Queenswood core-banking platform on
 Kubernetes:
 
-- **Apache Pulsar** (subchart, dev-grade single-replica
-  configuration)
+- **Apache Kafka** (single-broker KRaft, dev-grade; set
+  `kafka.enabled=false` for an external broker)
 - **FoundationDB** cluster managed by the FDB Kubernetes
   operator (subchart provides the operator + CRDs; this
   chart provides the `FoundationDBCluster` CR)
@@ -13,9 +13,9 @@ Kubernetes:
   **bank-onfido-{adapter,simulator}-service**, and
   **uk-companies-house-simulator-service** (HTTP)
 - **bank-{cash-account,party,payment,interest,transaction,idv}-processor-service**
-  (Pulsar processors) and
+  (message-bus processors) and
   **scheduler-processor-service** (cron-driven, no
-  Pulsar)
+  message bus)
 - **console** (Svelte SPA served via nginx)
 - **Keycloak** with embedded H2 for standalone installs
   (`keycloak.dev.enabled: true` by default). GKE
@@ -57,9 +57,8 @@ and the `kind-*` recipes in `Justfile`.
 `bootstrap-service` runs as a one-shot Job (named
 `<release>-bootstrap-<image.tag>`) before any service
 starts. It opens FDB (applying record metadata declared in
-`bank-resources`), declares the Pulsar
-tenant/namespace/topics/schemas from the same component,
-and idempotently seeds the internal Organization. Service
+`bank-resources`), declares the Kafka topics from the same
+component, and idempotently seeds the internal Organization. Service
 Deployments block on its completion via a
 `kubectl wait --for=condition=complete` initContainer;
 services discover the seeded organization by querying FDB
@@ -85,9 +84,10 @@ curl http://localhost:8080/openapi.json
   `initContainer` polls for the FDB-operator-written
   ConfigMap. The first install may take several minutes
   for the operator to provision FDB.
-- **Pulsar subchart dev defaults**: no persistence, single
-  replica for ZK/BK/broker. Override `pulsar.*.persistence`
-  and replicaCount for production.
+- **Kafka dev broker**: single-broker KRaft, ephemeral (no
+  persistence). Set `kafka.enabled=false` and
+  `kafka.bootstrapServers` for an external broker in
+  production.
 - **Bootstrap RBAC**: the chart binds a
   `get/watch/list jobs` Role to the namespace's `default`
   ServiceAccount so service init containers can poll the

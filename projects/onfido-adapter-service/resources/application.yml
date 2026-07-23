@@ -1,60 +1,47 @@
 system:
-  pulsar:
-    client: !system/component
-      system/component-kind: pulsar/client
-      service-url: !env PULSAR_SERVICE_URL
-    admin: !system/component
-      system/component-kind: pulsar/admin
-      service-http-url: !env PULSAR_ADMIN_URL
+  kafka:
     schemas: !system/component
-      system/component-kind: pulsar/schemas
-      command:
-        schema: schemas/command/command-envelope.avsc.json
-        type: AVRO
-      command-response:
-        schema: schemas/command/command-response.avsc.json
-        type: AVRO
-      event:
-        schema: schemas/event/event-envelope.avsc.json
-        type: AVRO
+      system/component-kind: avro/serde
+      schemas:
+        command: schemas/command/command-envelope.avsc.json
+        command-response: schemas/command/command-response.avsc.json
+        event: schemas/event/event-envelope.avsc.json
     producers: !system/component
-      system/component-kind: pulsar/producers
+      system/component-kind: kafka/producers
       idv-command-response:
-        client: !system/local-ref client
-        conf:
-          accessMode: !pulsar/access-mode Shared
-          schema: !keyword command-response
-          topicName: "persistent://tenant-1/namespace-1/topic-idv-command-response"
         schemas: !system/local-ref schemas
+        schema: !keyword command-response
+        conf:
+          bootstrap.servers: !env KAFKA_BOOTSTRAP_SERVERS
+          topic: topic-idv-command-response
+          acks: all
       idv-event:
-        client: !system/local-ref client
-        conf:
-          accessMode: !pulsar/access-mode Shared
-          schema: !keyword event
-          topicName: "persistent://tenant-1/namespace-1/topic-idv-event"
         schemas: !system/local-ref schemas
+        schema: !keyword event
+        conf:
+          bootstrap.servers: !env KAFKA_BOOTSTRAP_SERVERS
+          topic: topic-idv-event
+          acks: all
     consumers: !system/component
-      system/component-kind: pulsar/consumers
+      system/component-kind: kafka/consumers
       idv-command:
-        client: !system/local-ref client
-        conf:
-          cryptoFailureAction: !pulsar/crypto-failure-action CONSUME
-          schema: !pulsar/schema AUTO_CONSUME
-          subscriptionName: onfido-adapter-service-idv-command
-          subscriptionType: !pulsar/subscription-type Shared
-          topicNames:
-            ["persistent://tenant-1/namespace-1/topic-idv-command"]
         schemas: !system/local-ref schemas
+        schema: !keyword command
+        topics: [topic-idv-command]
+        conf:
+          bootstrap.servers: !env KAFKA_BOOTSTRAP_SERVERS
+          group.id: onfido-adapter-service-idv-command
     message-bus-producers: !system/component
-      system/component-kind: pulsar/message-bus-producers
+      system/component-kind: kafka/message-bus-producers
       idv-command-response:
         producer: !system/local-ref producers.idv-command-response
       idv-event:
         producer: !system/local-ref producers.idv-event
     message-bus-consumers: !system/component
-      system/component-kind: pulsar/message-bus-consumers
+      system/component-kind: kafka/message-bus-consumers
       idv-command:
         consumer: !system/local-ref consumers.idv-command
+        timeout: 500
   message-bus: !include bank/message-bus.yml
   fdb: !include bank/fdb.yml
   avro: !include bank/avro.yml
