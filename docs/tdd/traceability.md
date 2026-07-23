@@ -115,7 +115,7 @@ exposes a Clojure-friendly surface to domain code:
   returns an OTEL context suitable for `with-span-parent`.
 - **`telemetry/trace-span`** — Reitit/Sieppari interceptor
   vector that creates a server span from incoming HTTP W3C
-  headers. Used by the `bank-api` interceptor chain (see
+  headers. Used by the `api` interceptor chain (see
   service-apis TDD).
 - **`telemetry/counter` / `inc-counter` / `add-counter`** —
   metric primitives. The API exists; broad instrumentation
@@ -154,7 +154,7 @@ trace ID. Time spent in each span is visible.
 ### HTTP edge
 
 `telemetry/trace-span` (a vector of clj-otel
-`server-span-interceptors`) is concatenated into the `bank-api`
+`server-span-interceptors`) is concatenated into the `api`
 interceptor chain. On `:enter`:
 
 - Extracts the W3C traceparent from incoming headers.

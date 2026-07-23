@@ -178,7 +178,7 @@ ask for.
 sequenceDiagram
     participant U as User
     participant C as Console
-    participant Q as Queenswood (bank-api)
+    participant Q as Queenswood (api)
 
     U->>C: take an action
     C->>Q: banking-API call (bearer = session token)

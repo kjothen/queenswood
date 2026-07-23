@@ -8,7 +8,7 @@ workspace built the same way.
 ## Cross a brick boundary only through `interface.clj`
 
 Reach another component through its `interface.clj`; bases don't have
-one, and the single base that composes other bases (`bank-monolith`)
+one, and the single base that composes other bases (`monolith`)
 reaches them via `.system` / `.api`, never `interface.clj`. Never
 require another unit's `.core` / `.store` / `.domain`; if the symbol
 you need isn't on the interface, add it there first. That reaching
@@ -30,7 +30,7 @@ components the same way any component reaches a peer — through
 `interface.clj` — and bare-requires every brick whose system
 multimethods need to extend at startup. Bases never depend on other
 bases and share nothing between them except through components; the
-one bounded exception is `bank-monolith`, the designated multi-base
+one bounded exception is `monolith`, the designated multi-base
 aggregator, which bare-requires other bases' `.system` namespaces to
 extend their multimethods and requires their `.api` namespaces to
 compose an in-process system for end-to-end tests.

@@ -5,14 +5,15 @@ persistence, system wiring, reactive state, messaging, the API
 surface, and how work gets packaged for deployment. Queenswood's own
 architectural choices, not portable Polylith or Clojure conventions.
 
-## Queenswood is a domain fork of `mono`
+## Queenswood consumes `mono` as a pinned dependency
 
-Queenswood's workspace is a domain fork of `mono` — a superset
-containing mono's bricks at identical paths and namespaces, kept
-current via `git merge upstream/main`. An improvement that isn't
-bank-specific belongs in `mono`, made there and pulled down; only
-bank-specific bricks are prefixed `bank-*` and live solely in
-Queenswood.
+Queenswood consumes `mono` as a pinned git-dependency, not a fork. The
+workspace holds only Queenswood's own domain bricks
+(`com.repldriven.queenswood.*`); shared infrastructure comes from
+`com.repldriven/mono` on the classpath (`com.repldriven.mono.*`), pinned
+to a tag/sha via the `ext/mono` shims under `deps/`. An improvement that
+isn't domain-specific belongs in `mono` — made there, released, and
+pulled down by bumping the shim; upgrading mono is that one-line bump.
 See [ADR-0001](../../../docs/adr/0001-reuse-mono-as-upstream.md).
 
 ## Persistence is FoundationDB Record Layer
@@ -68,7 +69,7 @@ See [ADR-0003](../../../docs/adr/0003-message-bus-abstraction.md).
 ## Messaging payloads are Avro
 
 Command and event payloads on the message bus are Avro, via
-Lancaster. Schemas live in `bank-schema` alongside the protobuf
+Lancaster. Schemas live in `schema` alongside the protobuf
 record definitions; producers and consumers bind to a schema at
 registration, so a mismatch is caught at startup, not in production.
 See [ADR-0004](../../../docs/adr/0004-avro-for-message-payloads.md).
@@ -83,10 +84,10 @@ write causes real damage), reaction (other bricks must respond
 asynchronously via the changelog), or unreliable ingress (originates
 from a webhook or external event needing consume-then-ack semantics).
 A write with none of these stays synchronous. Once a domain earns
-commands, it splits into two bricks: `bank-X-query` (reads only —
+commands, it splits into two bricks: `X-query` (reads only —
 `get-*` / `find-*` / `count-*` — the only cash-account-style brick
-`bank-api` may require) and `bank-X` (commands, writes, domain,
-watcher), which depends on `bank-X-query` and calls its reads inside
+`api` may require) and `X` (commands, writes, domain,
+watcher), which depends on `X-query` and calls its reads inside
 its own FDB transaction, passing the live `txn`.
 See [ADR-0017](../../../docs/adr/0017-query-write-brick-split.md),
 [ADR-0018](../../../docs/adr/0018-command-writes-are-earned.md).
@@ -110,7 +111,7 @@ See [ADR-0019](../../../docs/adr/0019-processor-packaging.md).
 
 ## One API, fully OpenAPI-compliant
 
-Expose one HTTP API for the whole bank — one base (`bank-api`), one
+Expose one HTTP API for the whole bank — one base (`api`), one
 base URL, one OpenAPI document, bank-shaped rather than
 implementation-shaped (a consumer integrates with "Queenswood", not
 with each domain separately). Treat full OpenAPI 3.x compliance as
@@ -135,11 +136,11 @@ payload carrying `:message`, the entity's id key, `:status`, and
 current status matching the expected source and skips silently
 rather than rejecting — redelivery and replay must be a no-op, not
 a failure. `:<entity>/invalid-status` maps to HTTP 409 in
-`bank-api`'s rejection→status table. Adding a new lifecycle state or
+`api`'s rejection→status table. Adding a new lifecycle state or
 transition works through a ten-point checklist: proto enum, Avro
 schema registered in both YAMLs, the `domain.clj` guard, `core.clj`
 orchestration, `commands.clj` dispatch, `interface.clj` fn, the
-watcher leg if two-phase, the `bank-api` route/OpenAPI/rejection
+watcher leg if two-phase, the `api` route/OpenAPI/rejection
 mapping, the service-YAML watcher guard set, and tests.
 See [lifecycle-transitions](../../../docs/recipes/lifecycle-transitions.md),
 [ADR-0008](../../../docs/adr/0008-changelog-watchers.md).
@@ -174,7 +175,7 @@ See [testcontainers](../../../docs/recipes/testcontainers.md).
 ## Bank-specific code generation follows the shared prep-lib pattern
 
 Code generation from a source artefact (currently protobuf record
-definitions for `bank-schema`) uses Clojure's standard
+definitions for `schema`) uses Clojure's standard
 `:deps/prep-lib` mechanism, never a build-system plugin or a custom
 run-script. Each brick's `deps.edn` declares `:deps/prep-lib` with an
 `:fn` entry point and an `:ensure` path marking prep as up-to-date; a

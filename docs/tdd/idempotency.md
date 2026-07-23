@@ -34,7 +34,7 @@ message payload.
 
 FDB record stores that own writes carry a per-store
 idempotency-key index. The processor checks it before writing
-— see `bank-transaction` and `bank-payment` stores, and the
+— see `transaction` and `payment` stores, and the
 adapter outbox and intent stores, which dedup a redelivered
 webhook or command on a unique `dedup-key`. This inner-loop
 check is atomic with the write (same FDB transaction). The
@@ -43,7 +43,7 @@ API-layer cache described below is layered on top.
 ## Solution
 
 An API-layer idempotency cache backed by a single central FDB
-record store, operated by the `bank-idempotency` brick as a
+record store, operated by the `idempotency` brick as a
 Sieppari interceptor.
 
 ### Cache scope
@@ -77,7 +77,7 @@ atomically.
 
 ### Interceptor lifecycle
 
-The `bank-idempotency/cache-response` interceptor is added
+The `idempotency/cache-response` interceptor is added
 to every mutating route after `server/require-idempotency-key`
 and after auth.
 
@@ -167,7 +167,7 @@ Every write route must declare both interceptors:
 
 ```clojure
 :interceptors [server/require-idempotency-key
-               bank-idempotency/cache-response]
+               idempotency/cache-response]
 ```
 
 The `server/require-idempotency-key` interceptor (header
@@ -260,7 +260,7 @@ lookup runs.
   interceptor)
 - [transaction-processing.md](transaction-processing.md) —
   Transaction processing (envelope shape, `:id` semantics)
-- `bank-idempotency` brick — interceptor, core, store
+- `idempotency` brick — interceptor, core, store
 - `server` brick — `require-idempotency-key` interceptor
 - `command` brick — `req->command-request` (`:id` propagation)
 - [Stripe — Idempotent

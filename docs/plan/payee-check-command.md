@@ -1,32 +1,32 @@
 # Plan: CoP check via command request-reply
 
 Convert the Confirmation of Payee (CoP) check from a direct HTTP call made
-inside `bank-api` into a command request-reply handled by a processor, so the
+inside `api` into a command request-reply handled by a processor, so the
 Web Service API never invokes an external adapter directly. This realises the
 "Replace Invoke with Command Request/Reply" TODO on the system diagram.
 
 ## Target flow
 
 ```
-bank-api (create-check)
+api (create-check)
    |
    +- commands/send -> "check-payee" command  --> Message Bus
                                                       |
-                                   bank-payee-check PROCESSOR (new)
+                                   payee-check PROCESSOR (new)
                                      |- core: invoke CoP adapter over HTTP
                                      |- store/save-check -> FDB
                                      +- reply: saved check  --> Message Bus
-bank-api <-- Command Reply (ACCEPTED + payload) -------+   -> 201
+api <-- Command Reply (ACCEPTED + payload) -------+   -> 201
 ```
 
-`bank-payee-check` is promoted from a plain persistence component into a
-processor brick, modelled on `bank-idv` / `bank-cash-account`. The read path
+`payee-check` is promoted from a plain persistence component into a
+processor brick, modelled on `idv` / `cash-account`. The read path
 (`queries.clj` -> `get-check` / `get-checks`) is untouched; that is the
 diagram's Query-Handlers edge and stays direct-to-store.
 
 The work splits into Part A (the architecture change; keeps the workspace and
 tests green in the monolith) and Part B (the standalone deployable service, to
-match `bank-idv` having its own base and project). Part A is the tight PR;
+match `idv` having its own base and project). Part A is the tight PR;
 Part B can follow.
 
 ## Part A: the core change
@@ -37,7 +37,7 @@ The `schemas` serde map is explicitly enumerated (`avro-test.yml`), not
 auto-discovered, and `schemas/payee-check/` today holds only
 `payee_check.proto` (no Avro yet).
 
-- Add `components/bank-schema/resources/schemas/payee-check/check-payee.avsc.json`
+- Add `components/schema/resources/schemas/payee-check/check-payee.avsc.json`
   - command payload: `bank-id`, `creditor-name`,
     `account {sort-code, account-number}`, `account-type`.
 - Add `.../payee-check/payee-check.avsc.json`
@@ -45,16 +45,16 @@ auto-discovered, and `schemas/payee-check/` today holds only
     `result {match-result, actual-name, reason-code, reason}`, `created-at`,
     `expires-at`).
 - Register both in `avro-test.yml` and the prod
-  `bank-resources/.../avro.yml`:
+  `resources/.../avro.yml`:
 
   ```yaml
   check-payee: schemas/payee-check/check-payee.avsc.json
   payee-check: schemas/payee-check/payee-check.avsc.json
   ```
 
-### 2. Promote `components/bank-payee-check` to a processor brick
+### 2. Promote `components/payee-check` to a processor brick
 
-Add the two files that make it a processor (mirroring `bank-idv`):
+Add the two files that make it a processor (mirroring `idv`):
 
 - `commands.clj` - `dispatch` plus `defrecord PayeeCheckProcessor [config]`
   implementing `processor/Processor`. One handler, `"check-payee"`, which
@@ -65,8 +65,8 @@ Add the two files that make it a processor (mirroring `bank-idv`):
   `clearbank-adapter-url` (the URL moves here from the server).
 
 Change `core.clj` - add `check-and-save`, which threads invoke adapter ->
-persist. Move `perform-cop-check` out of `bank-api` to here (or a small
-`adapter.clj`; `bank-idv` keeps its external effect in `core`, so `core` is
+persist. Move `perform-cop-check` out of `api` to here (or a small
+`adapter.clj`; `idv` keeps its external effect in `core`, so `core` is
 consistent). It requires `http-client` and `json`.
 
 Preserve the soft-failure semantics: today an adapter failure does not error
@@ -78,7 +78,7 @@ unavailable result, still persists, still replies ACCEPTED.
 `domain.clj` and `store.clj` are unchanged (`save-check` already accepts
 `txn-or-config` via `fdb/transact`).
 
-### 3. `bank-api`: replace the direct call
+### 3. `api`: replace the direct call
 
 - `payee_check/handlers.clj` - delete `perform-cop-check`; drop the
   `http-client` and `json` requires. `create-check` becomes a `commands/send`:
@@ -97,14 +97,14 @@ unavailable result, still persists, still replies ACCEPTED.
 
 ### 4. Monolith and scenario system wiring
 
-- New `components/bank-test-resources/test-resources/bank/payee-check-test.yml`
+- New `components/test-resources/test-resources/bank/payee-check-test.yml`
   mirroring `cash-account-test.yml`: `processor` (kind `payee-check/processor`,
   with `clearbank-adapter-url: !system/ref clearbank-adapter-server.http-url`),
   `command-processor` (channels `payee-checks-command` /
   `payee-checks-command-response`), `dispatcher`.
 - Add `payee-checks: !include bank/payee-check-test.yml` to the two
   `application-test.yml` files that have a server + dispatchers: bank-monolith
-  and bank-test-api-scenarios. (bank-test-scenarios is domain-layer — it only
+  and bank-test-api-scenarios. (test-scenarios is domain-layer — it only
   reads via `get-check`, so it needs no processor wiring.)
 - In the server interceptors block of those two files: add `payee-checks:
   !system/ref payee-checks.dispatcher` to `dispatchers`, and remove
@@ -119,7 +119,7 @@ unavailable result, still persists, still replies ACCEPTED.
 
 The payee-check POST has no `require-idempotency-key` interceptor (a CoP check
 is non-idempotent and the API takes no client key), so the command envelope's
-`id` / `correlation-id` are nil. `bank-api.commands/send` now assigns a
+`id` / `correlation-id` are nil. `api.commands/send` now assigns a
 generated id when none is present — required because Avro rejects a null `id`
 and, more importantly, the dispatcher correlates replies by `correlation-id`,
 so a nil would collide across concurrent requests. Behaviour-preserving for
@@ -127,10 +127,10 @@ idempotency-keyed routes (their id is always set).
 
 ### 5. Tests
 
-- The HTTP contract is unchanged, so existing bank-test-api-scenarios CoP
+- The HTTP contract is unchanged, so existing test-api-scenarios CoP
   scenarios should still pass, now exercising the bus round-trip.
-- Add a brick-level processor test for `bank-payee-check` (mirror
-  `bank-idv/interface_test.clj`): match result persisted and replied;
+- Add a brick-level processor test for `payee-check` (mirror
+  `idv/interface_test.clj`): match result persisted and replied;
   adapter-down -> `match-result-unavailable` still persisted and ACCEPTED.
 - `clearbank-adapter-server` and `clearbank-simulator-server` are already in
   those systems, so the moved invoke has its target.
@@ -139,25 +139,25 @@ idempotency-keyed routes (their id is always set).
 
 The dedicated processor service and all production wiring (Part A only wired
 the monolith and scenario test systems). Modelled on the synchronous
-`bank-cash-account-processor-service`, not the async `bank-idv` one.
+`cash-account-processor-service`, not the async `idv` one.
 
-- `bases/bank-payee-check-processor/` - `deps.edn`, `main.clj`, and a
+- `bases/payee-check-processor/` - `deps.edn`, `main.clj`, and a
   `system.clj` bare-require bundle that registers every component-kind the
   processor needs.
-- `projects/bank-payee-check-processor-service/` - `deps.edn` (mirrors the
+- `projects/payee-check-processor-service/` - `deps.edn` (mirrors the
   cash-account processor service plus `component/json`, which `core.clj`
   uses), `resources/application.yml` (consumes `payee-checks-command`,
   produces `payee-checks-command-response`), `resources/bank/payee-check.yml`
   (processor + command-processor, `clearbank-adapter-url: !env
   CLEARBANK_ADAPTER_URL`), and the two `logback` files.
 - `workspace.edn` - register the project (alias `pyc`).
-- `projects/bank-api-service/resources/application.yml` - add the
+- `projects/api-service/resources/application.yml` - add the
   `payee-checks-command` producer, `payee-checks-command-response` consumer,
   their message-bus entries, the `payee-checks` dispatcher, and
   `payee-checks: !system/ref payee-checks.dispatcher` under server dispatchers;
   drop the now-unused `clearbank-adapter-url: !env CLEARBANK_ADAPTER_URL`.
 - Deploy manifests: `infra/helm/queenswood/values.yaml` (new service entry
-  carrying `CLEARBANK_ADAPTER_URL`, removed from `bank-api-service`),
+  carrying `CLEARBANK_ADAPTER_URL`, removed from `api-service`),
   `infra/docker/bake.hcl`, `Tiltfile` (SERVICES + PROCESSORS lists),
   `.github/workflows/release-images.yml`, `.github/workflows/prune-ghcr.yml`.
 - `readme.md` - architecture diagram node + `CoP lookup` edge to the ClearBank
@@ -171,7 +171,7 @@ edited YAML/JSON parses.
 
 - Synchronous invoke holds the command consumer for the adapter round-trip.
   Fine for CoP (fast, single outbound call) and within the dispatcher's 10s
-  timeout, but it is the one structural difference from `bank-idv` (which went
+  timeout, but it is the one structural difference from `idv` (which went
   async via a later event). This is the requested behaviour and matches the
   diagram.
 - FDB record type: `PayeeCheckProto$PayeeCheck` already persists today, so it is
@@ -182,17 +182,17 @@ edited YAML/JSON parses.
 ## File checklist (Part A, as implemented)
 
 - New: 2 avsc schemas (`check-payee`, `payee-check`);
-  `bank-payee-check/{commands,system}.clj`; `payee-check-test.yml`;
-  `bank-payee-check/test-resources/.../application-test.yml`;
-  `bank-payee-check/test/.../interface_test.clj`.
-- Edited: `bank-payee-check/{core,interface,deps.edn}` (interface drops
+  `payee-check/{commands,system}.clj`; `payee-check-test.yml`;
+  `payee-check/test-resources/.../application-test.yml`;
+  `payee-check/test/.../interface_test.clj`.
+- Edited: `payee-check/{core,interface,deps.edn}` (interface drops
   `check-payee`, now processor-internal; deps adds test-resources path);
-  `bank-api/payee_check/handlers.clj`; `bank-api/commands.clj` (server id);
+  `api/payee_check/handlers.clj`; `api/commands.clj` (server id);
   `avro.yml` plus `avro-test.yml`; `bank-monolith` + `bank-test-api-scenarios`
   `application-test.yml` and `pulsar-test.yml`.
-- Deleted code: `perform-cop-check` from `bank-api` (moved into
-  `bank-payee-check/core.clj`).
-- Verified: `bank-payee-check` brick test (9 assertions) and full
-  `bank-test-api-scenarios` (286 assertions, all 5 CoP scenarios) pass.
+- Deleted code: `perform-cop-check` from `api` (moved into
+  `payee-check/core.clj`).
+- Verified: `payee-check` brick test (9 assertions) and full
+  `test-api-scenarios` (286 assertions, all 5 CoP scenarios) pass.
 </content>
 </invoke>

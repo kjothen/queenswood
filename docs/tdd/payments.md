@@ -11,8 +11,8 @@ how the bank's payment records relate to the underlying
 double-entry transactions, and how Queenswood choreographs
 with ClearBank for the FPS-bound flows.
 
-In scope: the `bank-payment` brick, the
-`bank-clearbank-adapter` and `bank-clearbank-simulator` bases,
+In scope: the `payment` brick, the
+`clearbank-adapter` and `clearbank-simulator` bases,
 the three payment flows, settlement via webhook → event →
 event processor.
 
@@ -68,30 +68,30 @@ base, with a simulator for development and tests.
 
 ### Architecture
 
-Three bases collaborate around the `bank-payment` brick:
+Three bases collaborate around the `payment` brick:
 
-- **`bank-payment`** (brick) — owns InternalPayment,
+- **`payment`** (brick) — owns InternalPayment,
   OutboundPayment, and InboundPayment records. Provides a
   `PaymentProcessor` (consumes commands) and a
   `PaymentEventProcessor` (consumes settlement events).
-- **`bank-clearbank-adapter`** (base) — talks to ClearBank.
+- **`clearbank-adapter`** (base) — talks to ClearBank.
   Consumes scheme-level submit-payment commands from the
   bus, calls the real ClearBank FPS API, receives webhooks,
   and republishes them as `transaction-settled` events on
   the bus.
-- **`bank-clearbank-simulator`** (base) — mocks the ClearBank
+- **`clearbank-simulator`** (base) — mocks the ClearBank
   FPS HTTP API for development and tests. Fires
   TransactionSettled webhooks back asynchronously. Not
   deployed in production.
 
 ```mermaid
 graph LR
-    HTTP["HTTP API<br/>(bank-api)"]
-    PP["bank-payment<br/>PaymentProcessor"]
-    PEP["bank-payment<br/>PaymentEventProcessor"]
+    HTTP["HTTP API<br/>(api)"]
+    PP["payment<br/>PaymentProcessor"]
+    PEP["payment<br/>PaymentEventProcessor"]
     BUS[("message-bus")]
     FDB[("FDB")]
-    ADAPTER["bank-clearbank-adapter<br/>(base)"]
+    ADAPTER["clearbank-adapter<br/>(base)"]
     CB["ClearBank FPS<br/>(or simulator)"]
 
     HTTP -->|"submit-internal-payment<br/>submit-outbound-payment"| BUS
@@ -114,7 +114,7 @@ Two distinct paths through the message bus:
 
 ### Payment records
 
-Three record types in `bank-payment`:
+Three record types in `payment`:
 
 - **InternalPayment** — debtor account, creditor account,
   amount, reference, transaction-id. No status field: an
@@ -138,7 +138,7 @@ join via the id.
 ### Payment state machines
 
 A payment's lifecycle is driven by two processors, both wired in
-`bank-payment` and dispatched in `commands.clj`:
+`payment` and dispatched in `commands.clj`:
 
 - **`PaymentProcessor`** (`dispatch`) consumes tenant commands off
   the bus — `submit-internal-payment` and `submit-outbound-payment`
@@ -260,7 +260,7 @@ scheme; no pending state. The reply returns immediately.
 ```mermaid
 sequenceDiagram
     participant P as PaymentProcessor
-    participant F as bank-payment FDB
+    participant F as payment FDB
     participant B as message-bus
     participant A as clearbank-adapter
     participant AF as adapter FDB
@@ -291,7 +291,7 @@ The amount is held in `pending-outgoing` (visible to the
 customer via the available-balance derivation) until ClearBank
 confirms.
 
-`submit-payment` is fire-and-forget from `bank-payment`'s
+`submit-payment` is fire-and-forget from `payment`'s
 perspective — it publishes and returns. The adapter makes it
 durable from there: it persists the outbound call as an intent
 in its own FDB store and acks, an out-of-transaction relay POSTs
@@ -380,11 +380,11 @@ InboundPayment and returns it without re-posting.
 
 ### ClearBank adapter
 
-`bank-clearbank-adapter` is its own base with its own FDB store.
+`clearbank-adapter` is its own base with its own FDB store.
 Its egress is a transactional outbox on both edges — it owns:
 
 - **Webhook receiver** — HTTP endpoints under its own server
-  (separate from `bank-api`), receiving signed webhooks from
+  (separate from `api`), receiving signed webhooks from
   ClearBank. Verifies signatures, normalises the scheme-specific
   payload into an internal event, and writes it to an outbox in
   one transaction, returning 200 only on commit — a failed write
@@ -405,14 +405,14 @@ Its egress is a transactional outbox on both edges — it owns:
 
 The adapter is the only Queenswood code that talks HTTP to
 ClearBank. Its outbox, intent store, and relays live in the
-`bank-clearbank-relay` component; the Onfido adapter uses the
-same pattern via `bank-onfido-relay`. See
+`clearbank-relay` component; the Onfido adapter uses the
+same pattern via `onfido-relay`. See
 [transaction-processing.md](transaction-processing.md) for the
 general model.
 
 ### ClearBank simulator
 
-`bank-clearbank-simulator` is its own base, deployed only in
+`clearbank-simulator` is its own base, deployed only in
 development and test. It exposes the subset of ClearBank's
 HTTP API that Queenswood uses:
 
@@ -453,7 +453,7 @@ ordering follows).
 
 - **Internal and outbound payments** at submission are covered
   by the API-layer FDB-backed idempotency cache
-  (`bank-idempotency/cache-response`), scoped by
+  (`idempotency/cache-response`), scoped by
   `[principal_id, operation, idempotency_key]`. Duplicate
   requests within the 24 h window receive the original
   response. See [idempotency.md](idempotency.md).
@@ -479,7 +479,7 @@ ordering follows).
 - **HTTP-facing command channel** — submit-internal-payment
   / submit-outbound-payment commands from the API.
 - **Scheme command channel** — submit-payment commands from
-  `bank-payment` to the ClearBank adapter (separate channel
+  `payment` to the ClearBank adapter (separate channel
   to keep scheme traffic distinct).
 - **Event channel** — `transaction-settled` events from the
   adapter to subscribers.
@@ -506,7 +506,7 @@ channel separation is configuration, not infrastructure.
   posting metadata (legs, balance buckets) that the user
   doesn't see. Two records, one id link, separate concerns.
 - **Direct ClearBank dependency in the payment processor.**
-  Have `bank-payment` call ClearBank's HTTP API directly.
+  Have `payment` call ClearBank's HTTP API directly.
   Rejected — couples the payment brick to an external
   vendor's API. The adapter base is the only place that
   knows about ClearBank's wire shape; the rest of the system
@@ -579,7 +579,7 @@ channel separation is configuration, not infrastructure.
 - **The payment-side publish is still best-effort.** Once the
   adapter consumes `submit-payment`, the flow is durable — the
   submission becomes a persisted intent, and settlement flows
-  back through the outbox. But the publish from `bank-payment`
+  back through the outbox. But the publish from `payment`
   to the adapter channel is still fire-and-forget after its FDB
   commit: if Pulsar is unavailable at that moment the command
   is lost, so the OutboundPayment exists while the adapter never
@@ -600,7 +600,7 @@ channel separation is configuration, not infrastructure.
   if CoP-result handling ever needs to live alongside
   payment domain logic.
 - **Idempotency on write submissions is handled by the
-  API-layer cache** (`bank-idempotency`). See
+  API-layer cache** (`idempotency`). See
   [idempotency.md](idempotency.md).
 
 ## References
@@ -618,6 +618,6 @@ channel separation is configuration, not infrastructure.
 - [service-apis.md](service-apis.md) — Service APIs (HTTP
   surface; ClearBank simulator and adapter HTTP shapes)
 - [idempotency.md](idempotency.md) — Idempotency (proposed)
-- `bank-payment` brick interface
-- `bank-clearbank-adapter` base
-- `bank-clearbank-simulator` base
+- `payment` brick interface
+- `clearbank-adapter` base
+- `clearbank-simulator` base

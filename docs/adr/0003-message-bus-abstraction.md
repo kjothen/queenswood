@@ -9,8 +9,8 @@ Accepted.
 
 Queenswood needs asynchronous messaging in three places:
 
-- Commands from the HTTP API to processors (`bank-cash-account`,
-  `bank-payment`, and so on).
+- Commands from the HTTP API to processors (`cash-account`,
+  `payment`, and so on).
 - Replies from those processors back to the originating handler.
 - Events between components — for example `transaction-settled` from
   the ClearBank adapter to the payment settlement code.

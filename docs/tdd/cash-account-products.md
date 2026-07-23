@@ -12,14 +12,14 @@ version keep its terms.
 
 The bank's own chart-of-accounts entries are a separate
 concern — `LedgerAccount` records owned by
-`bank-ledger-account`, not products.
+`ledger-account`, not products.
 
 This TDD describes the product/version model, the
 draft → published lifecycle, the immutability rule that
 makes versioning load-bearing, and the connection from
 account to version that pins terms forward in time.
 
-In scope: the `bank-cash-account-product` brick; product and
+In scope: the `cash-account-product` brick; product and
 version data model; lifecycle operations
 (`new-product` / `open-draft` / `update-draft` /
 `discard-draft` / `publish`); policy integration on draft
@@ -68,7 +68,7 @@ draft on a published product starts the next version.
 
 ### Architecture
 
-`bank-cash-account-product` is the brick. Internally:
+`cash-account-product` is the brick. Internally:
 
 - `domain.clj` — record shapes, the per-product-type template
   merge, the lifecycle transitions, the immutability and
@@ -78,7 +78,7 @@ draft on a published product starts the next version.
 - `validation.clj` — Malli schema validation for product
   data shapes.
 - `resources.clj` — the static per-product-type templates
-  (loaded once from `bank-resources` on the classpath) that
+  (loaded once from `resources` on the classpath) that
   fill in a product's derived fields.
 - `core.clj` — orchestrates store + domain + policy
   resolution.
@@ -178,7 +178,7 @@ data.
   Capability-checked. After this, immutability holds.
 
 The mutating operations resolve effective policies via
-`bank-policy/get-effective-policies` before the domain check
+`policy/get-effective-policies` before the domain check
 — keyed by `{:bank-id ...}` for `new-product`, and by
 `{:bank-id ... :cash-product-id ...}` for the version-scoped
 operations. The read operations (`get-version`,
@@ -239,7 +239,7 @@ operation — see
 
 ### Connection to accounts
 
-When `bank-cash-account/open-account` opens an account, it
+When `cash-account/open-account` opens an account, it
 reads the published version of the chosen product and
 stores both `:product-id` and `:version-id` on the account
 record. From then on, every operation on that account that
@@ -306,7 +306,7 @@ draft creation and update: `effective-from` is required, and
   a typed rate, account opening needs the currencies and
   balance-products list, available-balance derivation
   needs the product-type. Structured fields are right.
-- **Versions stored in `bank-cash-account` (not their own
+- **Versions stored in `cash-account` (not their own
   brick).** Versions and accounts share a lifecycle.
   Rejected — products and accounts are different
   concerns: a product author and an account holder are
@@ -366,4 +366,4 @@ draft creation and update: `effective-from` is required, and
   `:interest-rate-bps` from the version)
 - [policy-evaluation.md](policy-evaluation.md) — Policy
   evaluation (draft capability, count limit)
-- `bank-cash-account-product` brick interface
+- `cash-account-product` brick interface

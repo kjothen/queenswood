@@ -35,7 +35,7 @@ groups, each matching the keyword group passed to `defcomponents`
 entries name components within it.
 
 Adapted from
-`bases/bank-monolith/test-resources/bank-monolith/application-test.yml`:
+`bases/monolith/test-resources/bank-monolith/application-test.yml`:
 
 ```yaml
 system:

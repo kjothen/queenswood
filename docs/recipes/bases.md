@@ -16,7 +16,7 @@ Each runnable Queenswood application has exactly one base.
 
 ```
 bases/<base-name>/
-  src/com/repldriven/mono/<base-name>/
+  src/com/repldriven/queenswood/<base-name>/
     main.clj    ; -main entry point and bootstrap
     ...         ; (often) interceptors, handlers, route definitions
   test/...
@@ -34,16 +34,16 @@ The base's `main.clj` does three things:
    calls `system/start`.
 3. Defines `-main` to parse CLI args and call `start`.
 
-Pattern (adapted from `bases/bank-monolith/src/.../main.clj`):
+Pattern (adapted from `bases/monolith/src/.../main.clj`):
 
 ```clojure
-(ns com.repldriven.mono.<base>.main
+(ns com.repldriven.queenswood.<base>.main
   (:require
-    [com.repldriven.mono.<some-component>.interface]
-    [com.repldriven.mono.<another>.interface]
+    [com.repldriven.queenswood.<some-component>.interface]
+    [com.repldriven.queenswood.<another>.interface]
     ;; ... bare requires for every system-extending brick
 
-    [com.repldriven.mono.<base>.api :as api]
+    [com.repldriven.queenswood.<base>.api :as api]
     [com.repldriven.mono.cli.interface :as cli]
     [com.repldriven.mono.env.interface :as env]
     [com.repldriven.mono.error.interface :as error :refer [nom->]]
@@ -91,7 +91,7 @@ namespaces — the same rule as for components themselves:
 ```
 
 Bases never depend on other bases, with one bounded exception:
-`bank-monolith`, the single designated multi-base aggregator (see
+`monolith`, the single designated multi-base aggregator (see
 Discussion). If two bases need to share code, that code belongs in a
 component.
 
@@ -108,7 +108,7 @@ component.
 
 **MUST NOT:**
 
-- Bases depend on other bases — except `bank-monolith`, the single
+- Bases depend on other bases — except `monolith`, the single
   designated multi-base aggregator (see Discussion).
 - Bases share code with each other except through components.
 
@@ -118,8 +118,8 @@ Bases are the runnable parts of the system. The split between
 "base provides `-main` and bootstrap" and "project picks the
 components" lets the same code run in different deployments
 — a thin processor base for one-Pulsar-consumer-per-domain
-deployables, the `bank-api` base for the HTTP service, and
-the `bank-monolith` base (test-only) composing several other
+deployables, the `api` base for the HTTP service, and
+the `monolith` base (test-only) composing several other
 bases into one in-process system for end-to-end tests
 under Testcontainers. See [deployment.md](deployment.md)
 for the per-service split that the production deployables
@@ -128,7 +128,7 @@ follow.
 The no-base-depends-on-base rule keeps the dep graph clean. If
 two bases need shared logic, hoisting it into a component is the
 right move; the alternative is a lattice of base-on-base deps
-that loses the one-entry-point-per-artefact property. `bank-monolith`
+that loses the one-entry-point-per-artefact property. `monolith`
 is the one deliberate, bounded exception: it bare-requires several
 other bases' `.system` namespaces to extend their multimethods at
 startup, and requires their `.api` (Reitit handler) namespaces to wire

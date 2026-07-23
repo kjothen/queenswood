@@ -1,7 +1,7 @@
 # Banks
 
 > The "organization" concept was renamed to **bank** (brick
-> `bank-organization` → `bank-bank`, record `Bank`, ids `bnk.*`,
+> `bank-organization` → `bank`, record `Bank`, ids `bnk.*`,
 > `new-organization` → `new-bank`) and bank-type was dropped
 > (#139); this doc describes the current model. (It was
 > previously named `organizations.md`.)
@@ -20,7 +20,7 @@ foundational record a new tenant needs, the tier mechanism that
 binds tier-specific policies at create time, and the
 enrich-on-read shape.
 
-In scope: the `bank-bank` brick; the status enum; the multi-brick
+In scope: the `bank` brick; the status enum; the multi-brick
 atomic create flow (service-account client, org party, ledger
 chart, own-funds house accounts, tier bindings); the
 enrich-on-read pattern.
@@ -65,7 +65,7 @@ several bricks. Atomic. All-or-nothing.
 
 ### Architecture
 
-`bank-bank` is the brick. Synchronous interface — no command
+`bank` is the brick. Synchronous interface — no command
 processing, no watchers. The create flow composes other bricks'
 interfaces inside one FDB transaction; ADR-0002 makes this atomic
 across record stores. The service-account client is created
@@ -75,13 +75,13 @@ transaction cleanly.
 ```mermaid
 graph TD
     HTTP["HTTP create-bank<br/>admin-only"]
-    BB["bank-bank<br/>new-bank"]
+    BB["bank<br/>new-bank"]
     IDP["identity-provider<br/>create-service-account"]
-    POL["bank-policy<br/>effective + tier policies"]
-    BP["bank-party<br/>new-party (org party)"]
-    BLA["bank-ledger-account<br/>chart x currencies"]
+    POL["policy<br/>effective + tier policies"]
+    BP["party<br/>new-party (org party)"]
+    BLA["ledger-account<br/>chart x currencies"]
     BHA["own-funds product + cash account<br/>x currencies"]
-    BIND["bank-policy<br/>new-binding x tier-policies"]
+    BIND["policy<br/>new-binding x tier-policies"]
     FDB[("FDB<br/>one transaction")]
 
     HTTP --> BB
@@ -172,7 +172,7 @@ the following inside one FDB transaction:
 ### The default ledger chart
 
 The chart is loaded from `bank/ledgers/general-ledger.edn` (in
-`bank-resources`) and seeded once per currency. Eight bank-owned,
+`resources`) and seeded once per currency. Eight bank-owned,
 flat accounts (no party, no product):
 
 | GL code | Name | Type | Class |
@@ -334,5 +334,5 @@ written here is load-bearing at evaluation time.
   own-funds account per currency, opened at creation)
 - [policy-evaluation.md](policy-evaluation.md) — Policy evaluation
   (tier label, binding selectors, effective-policy resolution)
-- `bank-bank` brick interface (`new-bank`, `get-bank`,
+- `bank` brick interface (`new-bank`, `get-bank`,
   `get-banks`)

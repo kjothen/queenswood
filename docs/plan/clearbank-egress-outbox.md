@@ -25,7 +25,7 @@ cursor → publish to bus → advance cursor" (ADR-0008 Future section).
 
 Decisions taken: **changelog-as-outbox** (reuse `fdb/process-changelog`), and
 **ClearBank first** as the reference implementation, structured so Onfido and
-the producer-side edges (`bank-idv` `submit-idv-check`, `bank-payment`
+the producer-side edges (`idv` `submit-idv-check`, `payment`
 `submit-payment`) follow in later branches.
 
 The adapter owns no FDB state today, so the core lift is **giving it a store**
@@ -39,11 +39,11 @@ The two edges have genuinely different shapes and are phased accordingly.
 
 Implemented and verified: full dev matrix 140 tests / 1797 assertions green,
 api-scenarios settlement path exercises webhook → outbox → relay →
-bank-payment end to end. Notes below describe the shipped design.
+payment end to end. Notes below describe the shipped design.
 
 
 The clean demonstration of changelog-as-outbox, and it fixes a real event-loss
-bug. New component `bank-clearbank-relay`:
+bug. New component `clearbank-relay`:
 
 - **Record type `ClearbankOutboxEvent`** — proto under
   `schemas/clearbank/`, registered in `schema.proto` RecordTypeUnion +
@@ -57,7 +57,7 @@ bug. New component `bank-clearbank-relay`:
 - **`relay.clj`** — the changelog handler: for each entry, deserialize the
   stored event and publish it to the bus verbatim via `events/publish`. It
   **throws on publish failure** so the checkpoint does not advance — the entry
-  is redriven next tick and downstream (`bank-payment` event processor) dedupes
+  is redriven next tick and downstream (`payment` event processor) dedupes
   on the event key. This is the at-least-once relay.
 - **`system.clj`** — a `payment-processor`-style store config plus an
   `fdb/watchers` consumer (`consumer-id: clearbank-relay`,
@@ -109,7 +109,7 @@ branch or next, to be confirmed.
 
 Ingress is idempotent consume-then-ack, not an outbox: check/write the dedup
 key in the same FDB transaction as the effect, ack Pulsar only after commit.
-`bank-idempotency` store primitives already compose into an outer transaction;
+`idempotency` store primitives already compose into an outer transaction;
 Phase 2's unique `dedup-key` index gives write-side dedup directly.
 
 ## Reusability for Onfido
@@ -120,10 +120,10 @@ record type. Keep the relay handler and store helpers generic enough to lift.
 
 ## Critical files
 
-- New: `components/bank-clearbank-relay/` (proto, store, relay, system,
+- New: `components/clearbank-relay/` (proto, store, relay, system,
   interface); `schemas/clearbank/*.proto`; record-type entries in
   `fdb-record-types.yml` + `fdb-test.yml`; `schema.proto` union slot.
-- Edited: `bases/bank-clearbank-adapter/webhook/handlers.clj` (persist instead
+- Edited: `bases/clearbank-adapter/webhook/handlers.clj` (persist instead
   of publish), the adapter `system.clj` (wire store + relay + record-db/store
   into the webhook request), the adapter `deps.edn` / project deps.
 - Test systems: the adapter store needs `record-db`/`record-store` in the
@@ -131,10 +131,10 @@ record type. Keep the relay handler and store helpers generic enough to lift.
 
 ## Verification
 
-- New brick test for `bank-clearbank-relay`: `save-event` dedups a repeated
+- New brick test for `clearbank-relay`: `save-event` dedups a repeated
   `dedup-key`; the relay publishes the stored event; a publish failure leaves
   the checkpoint unadvanced (redriven).
-- `bank-test-api-scenarios` / `bank-test-scenarios` payment settlement
-  scenarios still pass (webhook → outbox → relay → `bank-payment` settles),
+- `test-api-scenarios` / `test-scenarios` payment settlement
+  scenarios still pass (webhook → outbox → relay → `payment` settles),
   proving the end-to-end path over real Pulsar + FDB.
 - Full `clojure -M:poly test project:dev :all`.

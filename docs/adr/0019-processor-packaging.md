@@ -8,15 +8,15 @@ Accepted.
 ## Context
 
 Every command processor originally shipped as its own microservice:
-a `bank-X-processor` base (boilerplate `main.clj` plus a require
-bundle) and a `bank-X-processor-service` project (Pulsar wiring plus
+a `X-processor` base (boilerplate `main.clj` plus a require
+bundle) and a `X-processor-service` project (Pulsar wiring plus
 the domain's system YAML). Ten processor deployments existed, each
 under-utilised — ten JVMs paying the FDB Record Layer and Pulsar
 client footprint to consume a trickle of commands, ten CI project
 runs, ten Helm entries.
 
 The unit of *code* was never the service. A processor's behaviour
-lives in its `bank-X` brick; the base contributes nothing but
+lives in its `X` brick; the base contributes nothing but
 component-kind registration, and the project's `application.yml` is
 what actually composes a running system. The monolith already runs
 every processor in one JVM. Packaging was per-domain out of
@@ -36,14 +36,14 @@ instead of being structurally silenced.
 
 Grouping is by boundary, not throughput:
 
-- **`bank-financial-processors-service`** — payment, transaction,
+- **`financial-processors-service`** — payment, transaction,
   interest, payee-check. Operations that post, settle, accrue, or
   gate a payment.
-- **`bank-operational-processors-service`** — bank, party,
+- **`operational-processors-service`** — bank, party,
   cash-account, cash-account-product, idv. Operations that provision
   or verify the records money moves through; nothing posts to the
   ledger.
-- **`bank-scheduler-processor-service`** — unchanged. The Quartz
+- **`scheduler-processor-service`** — unchanged. The Quartz
   runner is a per-JVM singleton timer; it stays alone so no group's
   replica count can ever double-fire a trigger.
 - **External adapters and simulators** — unchanged, never grouped
@@ -76,7 +76,7 @@ Easier:
 - Regrouping is configuration and plumbing, never brick code.
   Promoting a hot domain to its own deployment (or moving one
   between groups) relocates its YAML, pulsar wiring, bundle require,
-  and deps — the `bank-X` brick itself is untouched.
+  and deps — the `X` brick itself is untouched.
 - A new processor no longer scaffolds a base and a service: it adds
   its brick, its `bank/X.yml`, and pulsar wiring to the group its
   boundary dictates.

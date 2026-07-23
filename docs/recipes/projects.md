@@ -34,10 +34,10 @@ via `-c classpath:application.yml -p default`. The
 `bank/<domain>.yml` files are domain-scoped includes
 referenced from `application.yml` for processor services.
 
-The test-only fall-through is different: the `bank-monolith`
+The test-only fall-through is different: the `monolith`
 base (which bundles every component for in-process
 end-to-end tests) loads its config from
-`bases/bank-monolith/test-resources/bank-monolith/application-test.yml`,
+`bases/monolith/test-resources/bank-monolith/application-test.yml`,
 not from a project's `resources/`. See
 [system-configurations.md](system-configurations.md).
 
@@ -54,16 +54,16 @@ A project's `deps.edn` typically has three sections:
   tests need (`test-resources`, `test-system`, `testcontainers`,
   `external-test-runner`).
 
-Adapted from `projects/bank-api-service/deps.edn`:
+Adapted from `projects/api-service/deps.edn`:
 
 ```clojure
 {:deps {component/bank-cash-account
-        {:local/root "../../components/bank-cash-account"}
+        {:local/root "../../components/cash-account"}
         component/bank-payment
-        {:local/root "../../components/bank-payment"}
+        {:local/root "../../components/payment"}
         ;; ... (every component the project ships)
         base/bank-api
-        {:local/root "../../bases/bank-api"}
+        {:local/root "../../bases/api"}
         ;; ... (every base the project ships)
 
         ;; Project-level pins
@@ -73,10 +73,10 @@ Adapted from `projects/bank-api-service/deps.edn`:
  :aliases
  {:build {:deps {bases/build {:local/root "../../bases/build"}}
           :exec-args
-          {:lib  'com.repldriven.mono/<project>
-           :main com.repldriven.mono.<base>.main
+          {:lib  'com.repldriven.queenswood/<project>
+           :main com.repldriven.queenswood.<base>.main
            :major-minor-version "0.0"}
-          :ns-default com.repldriven.mono.build.build}
+          :ns-default com.repldriven.queenswood.build.build}
 
   :test {:extra-deps
          {bases/external-test-runner
@@ -130,17 +130,17 @@ Projects exist so the same components can be assembled into
 different deployables. Today's deployables come in three
 shapes:
 
-- **HTTP services** — `bank-api-service`, the
-  `bank-clearbank-{adapter,simulator}-service` pair, the
-  `bank-onfido-{adapter,simulator}-service` pair, each
+- **HTTP services** — `api-service`, the
+  `clearbank-{adapter,simulator}-service` pair, the
+  `onfido-{adapter,simulator}-service` pair, each
   pulling in its corresponding base.
 - **Pulsar processor services** — one per command
   processor: cash-account, party, payment, interest,
   transaction, idv.
-- **One-shots** — `bank-migrator-service` and
-  `bank-bootstrap-service` for the cold-start chain.
+- **One-shots** — `migrator-service` and
+  `bootstrap-service` for the cold-start chain.
 
-Plus a test-only outlier: the `bank-monolith` base bundles
+Plus a test-only outlier: the `monolith` base bundles
 every component into one in-process system for end-to-end
 tests. It has no corresponding deployable project; it's
 booted under Testcontainers from a test harness.

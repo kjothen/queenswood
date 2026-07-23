@@ -8,7 +8,7 @@ Accepted.
 ## Context
 
 Some bricks need code generated from a source artefact rather than
-hand-written. The current case is `bank-schema`: protobuf record
+hand-written. The current case is `schema`: protobuf record
 definitions and the Clojure interop code that talks to FoundationDB's
 Record Layer are generated from `.proto` files. Other generation
 needs may appear later (for example, bindings to a published API
@@ -53,7 +53,7 @@ code generation. The pattern, applied per brick:
   clj -X:deps prep :aliases '[:dev]' :force true
   ```
 
-Every brick, including the proto bricks under `bank-schema`, is on
+Every brick, including the proto bricks under `schema`, is on
 the `:dev` alias in the top-level `deps.edn`, so `:dev` is the only
 alias set generation needs.
 

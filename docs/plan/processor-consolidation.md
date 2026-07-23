@@ -23,18 +23,18 @@ Target shape — 10 processor deployments become 3:
 
 | Service | Hosts | Boundary |
 |---------|-------|----------|
-| `bank-financial-processors-service` (new) | payment, transaction, interest, payee-check | money path: posts/settles/accrues or gates a payment |
-| `bank-operational-processors-service` (new) | bank, party, cash-account, cash-account-product, idv | provisioning + identity: creates and configures the records money moves through |
-| `bank-scheduler-processor-service` (unchanged) | Quartz runner | singleton timer infra; fires commands consumed by the financial group |
+| `financial-processors-service` (new) | payment, transaction, interest, payee-check | money path: posts/settles/accrues or gates a payment |
+| `operational-processors-service` (new) | bank, party, cash-account, cash-account-product, idv | provisioning + identity: creates and configures the records money moves through |
+| `scheduler-processor-service` (unchanged) | Quartz runner | singleton timer infra; fires commands consumed by the financial group |
 
-Adapters (`bank-clearbank-adapter`, `bank-onfido-adapter`) and the
+Adapters (`clearbank-adapter`, `onfido-adapter`) and the
 three simulators are out of scope and keep their own deployments.
 
 ## Design decisions
 
-1. **One generic base, two projects.** New `bases/bank-processors`:
+1. **One generic base, two projects.** New `bases/processors`:
    a `main.clj` identical to today's processor mains (CLI name
-   `bank-processors`) and a `system.clj` require bundle that is the
+   `processors`) and a `system.clj` require bundle that is the
    union of the nine absorbed bundles (all processor brick
    interfaces + avro, command-processor, event-processor, fdb,
    http-client, identity-provider, keycloak, message-bus, pulsar,
@@ -43,7 +43,7 @@ three simulators are out of scope and keep their own deployments.
    processors a service runs is decided by its `application.yml`
    alone. Regrouping later is a YAML move, no code.
 2. **Cursor continuity.** Every Pulsar `subscriptionName` (e.g.
-   `bank-payment-service-payments-command`) and every FDB watcher
+   `payment-service-payments-command`) and every FDB watcher
    `consumer-id` (e.g. `parties-watcher`) is carried over verbatim
    from the absorbed service, so the new pods resume the existing
    subscriptions and changelog cursors with no reprocessing window
@@ -56,16 +56,16 @@ three simulators are out of scope and keep their own deployments.
    down.
 4. **Names.** `financial` / `operational` (adjectival) rather than
    `transaction-processors`, which would be one character away from
-   the deleted `bank-transaction-processor-service` in every grep,
+   the deleted `transaction-processor-service` in every grep,
    Helm values file, and dashboard.
 
 ## Changes
 
 ### New base and projects
 
-- `bases/bank-processors/` — `deps.edn`, `main.clj`, `system.clj`
-  (superset bundle as above). Mirror `bases/bank-party-processor`.
-- `projects/bank-financial-processors-service/` — `deps.edn` is the
+- `bases/processors/` — `deps.edn`, `main.clj`, `system.clj`
+  (superset bundle as above). Mirror `bases/party-processor`.
+- `projects/financial-processors-service/` — `deps.edn` is the
   union of the four absorbed projects' deps plus the base;
   `resources/application.yml` merges their pulsar sections verbatim
   (payments-command(+response), schemes-payments-event and the
@@ -77,7 +77,7 @@ three simulators are out of scope and keep their own deployments.
   projects. `logback*.xml` copied. Payee-check keeps its
   `CLEARBANK_ADAPTER_URL` env (moves to this service's Helm
   `extraEnv`).
-- `projects/bank-operational-processors-service/` — same mechanics:
+- `projects/operational-processors-service/` — same mechanics:
   banks-command, parties-command, cash-accounts-command,
   cash-account-products-command, idv command/event topics;
   includes `bank/bank.yml` (with its `keycloak.identity-provider`
@@ -87,10 +87,10 @@ three simulators are out of scope and keep their own deployments.
 
 ### Deletions
 
-Nine bases and nine projects: `bank-{payment, transaction, interest,
+Nine bases and nine projects: `{payment, transaction, interest,
 payee-check, bank, party, cash-account, cash-account-product,
 idv}-processor` bases and their `-service` projects.
-`bank-scheduler-processor` (base + project) is untouched.
+`scheduler-processor` (base + project) is untouched.
 
 ### Workspace plumbing
 
@@ -103,19 +103,19 @@ idv}-processor` bases and their `-service` projects.
   300m/1Gi` for financial, slightly lower for operational, tune in
   kind). `values-monolith.yaml` — replace the nine `enabled: false`
   lines with two.
-- `bank-monolith-service` is unaffected (it composes the same
+- `monolith-service` is unaffected (it composes the same
   processor components in-process via its own YAML).
 
 ### Docs and skills
 
 - `docs/adr/0019-processor-packaging.md` — processor packaging is
-  deployment-time composition: the paired `bank-X` brick remains the
+  deployment-time composition: the paired `X` brick remains the
   unit of code; which JVM hosts it is YAML. Records the boundary
   rule (financial / operational / adapters / singleton scheduler),
   the cursor-continuity requirement when regrouping, and the
   replicas constraint. Cross-reference ADR-0018.
 - `docs/tdd/processor-bricks.md` — amend the "paired
-  `bank-X-processor` base" convention: the pair is now brick +
+  `X-processor` base" convention: the pair is now brick +
   *hosting entry* in a combined processors service; a new processor
   adds its `bank/X.yml` and pulsar wiring to the right group's
   project instead of scaffolding a base.
@@ -145,7 +145,7 @@ nine.
 ## Verification
 
 1. `clojure -M:poly check` — 0 errors (expect the deps unions to
-   need one or two iterations, as with bank-bank-processor-service).
+   need one or two iterations, as with processor-service).
 2. `clojure -M:poly test project:dev :all` — full matrix green
    (test systems unaffected, so this guards against accidental brick
    damage only).

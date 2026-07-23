@@ -39,7 +39,7 @@ its contents:
 
 The brick's `deps.edn` declares `:deps/prep-lib` and a
 `:build` alias that brings in `tools.build` and the shared
-`bases/build`. Adapted from `components/bank-schema/deps.edn`:
+`bases/build`. Adapted from `components/schema/deps.edn`:
 
 ```clojure
 {:paths ["src" "gen" "resources" "classes"]
@@ -60,7 +60,7 @@ The brick's `deps.edn` declares `:deps/prep-lib` and a
           {:mvn/version "0.10.12"}
           org.foundationdb/fdb-record-layer-core
           {:mvn/version "4.10.4.0"}}
-   :extra-deps {com.repldriven.mono/build
+   :extra-deps {com.repldriven.queenswood/build
                 {:local/root "../../bases/build"}}
    :paths ["."]}}}
 ```
@@ -84,7 +84,7 @@ A thin shim — the real logic lives in `bases/build`:
 ```clojure
 (ns build
   (:require
-    [com.repldriven.mono.build.proto :as proto]))
+    [com.repldriven.queenswood.build.proto :as proto]))
 
 (defn gen-proto [opts] (proto/gen-proto opts))
 ```
@@ -101,7 +101,7 @@ Default — prep all libraries that need preparation:
 clj -X:deps prep :aliases '[:dev]'
 ```
 
-Every brick, including the proto bricks under `bank-schema`, is
+Every brick, including the proto bricks under `schema`, is
 on the `:dev` alias in the top-level `deps.edn`, so `:dev` covers
 all generation.
 

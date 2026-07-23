@@ -18,7 +18,7 @@ account lifecycle, the SCAN address generation, and the
 distinction between *product-type* (from the product) and
 *account-type* (from the party) that policies can filter on.
 
-In scope: the `bank-cash-account` brick; account data model;
+In scope: the `cash-account` brick; account data model;
 opening and closing flow; watcher-driven status transitions;
 SCAN address generation; lookups (by id, by BBAN, by type);
 balance-bucket creation at open time.
@@ -71,7 +71,7 @@ ADR-0008 describes.
 
 ### Architecture
 
-`bank-cash-account` is the brick. Files:
+`cash-account` is the brick. Files:
 
 - `domain.clj` — record shape, lifecycle transitions, the
   validation chain (product / currency / party).
@@ -258,7 +258,7 @@ Three indexed reads on the store:
 
 The bank's settlement leg is a `LedgerAccount`, not a
 cash-account, and is resolved by GL code through
-`bank-ledger-account`; see [interest.md](interest.md).
+`ledger-account`; see [interest.md](interest.md).
 
 ### Account-type vs product-type — why both
 
@@ -291,7 +291,7 @@ on, every leg posted (transfers, fees, interest accrual,
 inbound/outbound settlement) lands in one of those buckets.
 
 The account itself doesn't carry monetary state — that
-lives entirely in `bank-balance` (transactions-and-balances
+lives entirely in `balance` (transactions-and-balances
 TDD). The account is the *identity* and *terms reference*
 the legs need to find the right buckets.
 
@@ -399,4 +399,4 @@ the legs need to find the right buckets.
   lookup by product-type)
 - [policy-evaluation.md](policy-evaluation.md) — Policy
   evaluation (open / close capability and count limits)
-- `bank-cash-account` brick interface
+- `cash-account` brick interface

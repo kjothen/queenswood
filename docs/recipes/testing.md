@@ -16,10 +16,10 @@ We use two test forms, chosen by what's being tested:
   that touches the command pipeline, persisted state, or
   multi-component interaction. Fugato property tests and
   hand-authored EDN scenarios share the same runner. Two
-  sibling bricks split the layer: `bank-test-scenarios` drives
+  sibling bricks split the layer: `test-scenarios` drives
   the domain via component interfaces (and owns the
-  model-equality property test); `bank-test-api-scenarios`
-  drives the HTTP surface via real `bank-api` requests.
+  model-equality property test); `test-api-scenarios`
+  drives the HTTP surface via real `api` requests.
 
 System tests manage lifecycle explicitly with `with-test-system`
 — not `use-fixtures` — and assert anomaly-freeness with
@@ -37,7 +37,7 @@ Specific bricks (one or more, colon-separated):
 
 ```bash
 clojure -M:poly test brick:<brick-name> project:dev
-clojure -M:poly test brick:bank-balance:bank-cash-account project:dev
+clojure -M:poly test brick:balance:cash-account project:dev
 ```
 
 ### Choosing a test form
@@ -48,10 +48,10 @@ clojure -M:poly test brick:bank-balance:bank-cash-account project:dev
 - **Cross-component behaviour** → scenario runner.
 - **Specific case to lock down explicitly** → EDN scenario.
 - **Exploring command sequences for bugs** → fugato property
-  test in `bank-test-scenarios`.
+  test in `test-scenarios`.
 - **HTTP contract — status codes, error bodies, hypermedia
   links, auth boundaries on the public API** → EDN scenario in
-  `bank-test-api-scenarios`, not a brick `interface_test.clj`.
+  `test-api-scenarios`, not a brick `interface_test.clj`.
 
 Don't write `deftest`-style integration tests against the
 command pipeline. The scenario runner is the only sanctioned
@@ -159,7 +159,7 @@ Pure-function tests don't need the marker.
 - Write `deftest`-style integration tests against the command
   pipeline.
 - Put projections inside production components — they live in
-  `bank-test-projections`; the dependency arrow points
+  `test-projections`; the dependency arrow points
   test → production, never the reverse.
 - Have the test model talk to FDB, the message bus, or any
   real infrastructure. The model is pure functions over a
@@ -172,7 +172,7 @@ Pure-function tests don't need the marker.
   tests flake in ways that look like real bugs.
 - Enrich the model to make it "more realistic." Importing
   proto schemas, Malli contracts, or production component
-  interfaces into `bank-test-model` defeats the property test.
+  interfaces into `test-model` defeats the property test.
 
 ## Discussion
 

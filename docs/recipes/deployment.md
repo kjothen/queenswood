@@ -35,16 +35,16 @@ A deployable service is a triple:
   `-c classpath:application.yml -p default`.
 
 Naming: HTTP services keep their bare name
-(`bank-api-service`,
-`bank-clearbank-{adapter,simulator}-service`,
-`bank-onfido-{adapter,simulator}-service`). Pulsar
+(`api-service`,
+`clearbank-{adapter,simulator}-service`,
+`onfido-{adapter,simulator}-service`). Pulsar
 processors are grouped along the financial boundary into
-`bank-financial-processors-service` and
-`bank-operational-processors-service`, with the Quartz
-singleton in `bank-scheduler-processor-service` — see
+`financial-processors-service` and
+`operational-processors-service`, with the Quartz
+singleton in `scheduler-processor-service` — see
 [ADR-0019](../adr/0019-processor-packaging.md). The two
-one-shots are `bank-migrator-service` and
-`bank-bootstrap-service`.
+one-shots are `migrator-service` and
+`bootstrap-service`.
 
 ### The chart
 
@@ -59,7 +59,7 @@ platform:
 - A Pulsar subchart (dev-grade single-replica config; not
   production-ready as shipped).
 - Two one-shot Jobs that gate the rest of the system:
-  `bank-migrator` and `bank-bootstrap`.
+  `migrator` and `bootstrap`.
 
 Each pod's spec carries an `initContainers` chain:
 
@@ -84,8 +84,8 @@ Each pod's spec carries an `initContainers` chain:
 These two Jobs split the cold-start work along two axes —
 metadata vs data, and platform-wide vs tenant-specific:
 
-- **`bank-migrator-service`** — opens FDB and applies
-  record metadata via the FDB YAML in `bank-resources`;
+- **`migrator-service`** — opens FDB and applies
+  record metadata via the FDB YAML in `resources`;
   declares the Pulsar tenant, namespace, topics, and
   schemas via the Pulsar YAML in the same component.
   Idempotent: skips
@@ -93,7 +93,7 @@ metadata vs data, and platform-wide vs tenant-specific:
   "meta-data version must increase" as a no-op. Exits
   non-zero with `:pulsar/topics-audit` if any declared
   topic is missing after creation.
-- **`bank-bootstrap-service`** — runs after the migrator
+- **`bootstrap-service`** — runs after the migrator
   completes; idempotently seeds the singleton internal
   Queenswood organisation and the platform/micro Policy
   records. Services discover the seeded organisation by
@@ -110,7 +110,7 @@ around for log inspection.
 
 ```bash
 # One service:
-just docker-build bank-api-service dev
+just docker-build api-service dev
 
 # Every service in parallel via docker buildx bake (shares
 # the Clojure base layer across targets — much faster than
@@ -153,7 +153,7 @@ kind node's containerd, then `helm-install`s the chart.
   `wait-for-bootstrap` initContainer before starting their
   main container.
 - Deploy flows use the same Helm release name
-  (`bank`) so resource names don't diverge between the two
+  (`queenswood`) so resource names don't diverge between the two
   flows.
 - Cross-pod startup dependencies (e.g. an adapter waiting
   for its simulator) are expressed via the deployment's

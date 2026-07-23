@@ -60,7 +60,7 @@ When a flow needs N bricks to react to one HTTP request, the
 shape is N watchers — each in the consuming brick — not one
 HTTP-layer orchestrator that chains commands across bricks.
 
-- The HTTP layer (`bank-api`) stays ignorant of downstream
+- The HTTP layer (`api`) stays ignorant of downstream
   effects. POST `/v1/parties` dispatches `create-party` and
   returns. It does not know IDV exists, does not chain
   commands, does not coordinate.
@@ -74,7 +74,7 @@ HTTP-layer orchestrator that chains commands across bricks.
   don't create duplicate records.
 
 Bricks are the unit of independence in the Polylith. If
-`bank-api` chains commands across bricks, every new brick adds
+`api` chains commands across bricks, every new brick adds
 an HTTP-layer change. If brick X writes brick Y's records, the
 dependency graph cycles. Watcher-on-changelog keeps the
 contract narrow: "I publish my changes; you decide what to do."

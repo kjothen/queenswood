@@ -38,7 +38,7 @@ The shortlist:
 ## Decision
 
 We will expose **one HTTP API for the whole bank**, served by
-one base (`bank-api`) under one base URL, documented by a
+one base (`api`) under one base URL, documented by a
 single OpenAPI document. The API surface is *bank-shaped*, not
 *implementation-shaped*: a consumer integrates with
 "Queenswood", not with "Queenswood-accounts AND
@@ -75,7 +75,7 @@ Harder:
   a new endpoint coordinates with everything else under the
   same OpenAPI document. The implementation layer doesn't have
   this constraint, but the surface does.
-- **The API base grows.** `bank-api` accumulates routes for
+- **The API base grows.** `api` accumulates routes for
   every capability. Discoverability of code inside the base
   matters more than in a smaller API.
 - **No per-domain release cadence at the API surface.** If two
@@ -93,4 +93,4 @@ to it.
 
 - [ADR-0001](0001-reuse-mono-as-upstream.md) — Reuse mono as upstream
 - [docs/tdd/transaction-processing.md](../tdd/transaction-processing.md)
-- `bank-api` base
+- `api` base

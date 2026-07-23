@@ -11,8 +11,8 @@ binding the two as owner.
 
 This TDD covers the technical pieces: the Keycloak realm
 shape that lets the console SPA mint user JWTs, the
-`bank-user` and `bank-membership` bricks that own the new
-records, the bank-api auth interceptor's user-JWT path, and the
+`user` and `membership` bricks that own the new
+records, the api auth interceptor's user-JWT path, and the
 two endpoints the console talks to (`POST /v1/onboarding/me`
 and `GET /v1/me`).
 
@@ -20,7 +20,7 @@ The user-onboarding flow is **distinct** from the existing
 operator-driven tenant onboarding documented in
 [prd/onboarding](../prd/onboarding.md): operators create
 tenants with API keys, humans create their own tenant by
-signing in. Both paths converge at `bank-organization/new-
+signing in. Both paths converge at `organization/new-
 organization`.
 
 In scope: the realm changes (Google IdP + `queenswood-console`
@@ -62,19 +62,19 @@ creates it together with the user's first organisation.
 
 ### Architecture
 
-Two new bricks own the platform-identity records; the bank-
-api base grows a user-JWT branch on the existing auth
-interceptor and adds two endpoints; the management console is
-a new Polylith base (`console`).
+Two new bricks own the platform-identity records; the api
+base grows a user-JWT branch on the existing auth interceptor
+and adds two endpoints; the management console is a new
+Polylith base (`console`).
 
 ```mermaid
 graph LR
     SPA["console SPA<br/>(public client + PKCE)"]
     KC["Keycloak realm<br/>queenswood-console client<br/>+ Google IdP"]
-    API["bank-api<br/>auth interceptor + handlers"]
-    BU["bank-user<br/>(User store)"]
-    BM["bank-membership<br/>(Membership store)"]
-    BO["bank-organization<br/>(existing tenant brick)"]
+    API["api<br/>auth interceptor + handlers"]
+    BU["user<br/>(User store)"]
+    BM["membership<br/>(Membership store)"]
+    BO["organization<br/>(existing tenant brick)"]
     FDB[("FDB")]
 
     SPA -->|sign in| KC
@@ -90,8 +90,8 @@ graph LR
 ```
 
 The SPA never talks to FDB or to other bricks directly — it
-goes through bank-api on the same origin (the console's nginx
-proxies `/v1/*` to bank-api). The bricks accept a transaction
+goes through api on the same origin (the console's nginx
+proxies `/v1/*` to api). The bricks accept a transaction
 or a `{:record-db :record-store}` config, in line with the
 project's processor / store conventions.
 
@@ -99,7 +99,7 @@ project's processor / store conventions.
 
 #### `User`
 
-Lives in `components/bank-schema/resources/schemas/users/`.
+Lives in `components/schema/resources/schemas/users/`.
 Keyed by `user-id` (ULID, prefix `usr`). The federated
 subject is the OIDC `(issuer, sub)` pair — `sub` is only
 unique within an `issuer`, so both are required for a safe
@@ -133,7 +133,7 @@ FDB record-type registrations:
 
 #### `Membership`
 
-Lives in `components/bank-schema/resources/schemas/
+Lives in `components/schema/resources/schemas/
 memberships/`. Keyed by `membership-id` (ULID, prefix `mem`).
 The (user, organisation) pair is a unique secondary index
 guarding against duplicate memberships of the same human in
@@ -161,9 +161,9 @@ FDB record-type registrations:
 
 ### Bricks
 
-#### `bank-user`
+#### `user`
 
-Polylith component at `components/bank-user/` with the
+Polylith component at `components/user/` with the
 canonical `interface / core / domain / store` split.
 `upsert-by-sub` is idempotent: first call creates a new
 record, subsequent calls apply fresh OIDC claims (email,
@@ -173,9 +173,9 @@ takes both issuer and sub explicitly and returns the record
 or `nil` (not an anomaly) so callers can drive first-sign-in
 onboarding off the nil.
 
-#### `bank-membership`
+#### `membership`
 
-Polylith component at `components/bank-membership/` with the
+Polylith component at `components/membership/` with the
 same shape. `new-membership` defaults the role to
 `role-owner`. The two list operations
 (`list-by-user` / `list-by-organization`) traverse the FDB
@@ -201,10 +201,10 @@ chart-resources sibling):
   the public GKE-hosted console host
   (`https://console.*.repldriven.com/*`).
 
-### bank-api auth
+### api auth
 
 The existing authenticate interceptor at
-`bases/bank-api/.../auth.clj` grows a user-JWT branch.
+`bases/api/.../auth.clj` grows a user-JWT branch.
 
 Discrimination is on the verified JWT's `azp` claim:
 
@@ -215,8 +215,8 @@ Discrimination is on the verified JWT's `azp` claim:
   user-JWT path.
 - anything else → existing service-JWT path.
 
-The user-JWT path looks up `bank-user/find-by-sub` (passing
-both `iss` and `sub`) and `bank-membership/list-by-user`
+The user-JWT path looks up `user/find-by-sub` (passing
+both `iss` and `sub`) and `membership/list-by-user`
 against the FDB record-store the same way handlers do. The
 resolved principal carries:
 
@@ -239,7 +239,7 @@ endpoint continues to work without per-route changes — the
 authorize interceptor already intersects the principal's
 roles with the route's required-roles set.
 
-`expected-audiences` in the bank-api system config grows the
+`expected-audiences` in the api system config grows the
 `queenswood-console` entry: the console client doesn't carry
 a custom audience mapper, so its JWTs `aud`-stamp the client
 itself.
@@ -264,12 +264,12 @@ Handler:
 2. Lists memberships for the user; if non-empty, returns 409
    with the existing organisation identifier — the MVP is one
    user, one organisation.
-3. Calls `bank-organization/new-organization` with default
+3. Calls `organization/new-organization` with default
    tier (`micro`), default currencies (`["GBP"]`), and status
    `organization-status-test`. This is the same call the
    operator-driven onboarding makes, with the user-facing
    defaults filled in.
-4. Calls `bank-membership/new-membership` with role
+4. Calls `membership/new-membership` with role
    `role-owner`.
 5. Returns 201 with the user, the rich organisation (party,
    accounts, client-id, one-time client-secret), and the
@@ -296,8 +296,8 @@ decision.
 ### console SPA
 
 `bases/console/` is a new Polylith base. Svelte + Vite,
-same pattern as the existing `bases/bank-app/` SPA. Three
-states, one screen each:
+the same pattern the operator SPA used. Three states, one
+screen each:
 
 - **Sign-in.** A single "Sign in with Google" button calls
   `kc.login({ idpHint: "google" })`. The browser navigates to
@@ -317,17 +317,17 @@ dev falls back to `VITE_KEYCLOAK_*` env vars when `/env.js`
 isn't served.
 
 The SPA's nginx also proxies `/v1/*`, `/oauth/*`, and
-`/.well-known/*` to bank-api — same as bank-app — so the
-console stays same-origin and avoids CORS entirely.
+`/.well-known/*` to api, so the console stays same-origin and
+avoids CORS entirely.
 
 ### Chart wiring
 
 `infra/helm/queenswood/`:
 
-- `console` block in `values.yaml` mirroring `bankApp`:
-  enabled, replicas, port, image-pull policy, plus a
-  `keycloakPublicUrl` value the chart wires into the pod env.
-- `keycloak.consoleClientId` so the bank-api auth interceptor
+- `console` block in `values.yaml`: enabled, replicas, port,
+  image-pull policy, plus a `keycloakPublicUrl` value the
+  chart wires into the pod env.
+- `keycloak.consoleClientId` so the api auth interceptor
   knows which `azp` discriminates user JWTs.
 - `templates/console.yaml` — Deployment + Service.
 - `templates/httproute.yaml` — second HTTPRoute on
@@ -361,7 +361,7 @@ The end-to-end flow:
 5. **/v1/me after refresh.** A page refresh hits
    `/v1/me`, gets 200 with the same user and the single
    membership, and renders the dashboard directly.
-6. **FDB state.** A quick exec into bank-api against the
+6. **FDB state.** A quick exec into api against the
    record store confirms one `User` row and one `Membership`
    row keyed by the same user identifier.
 7. **Idempotency.** Sign out, sign back in. `/v1/me` still
@@ -384,13 +384,13 @@ The end-to-end flow:
   supplying via Helm `--set` at install time. Until then the
   sign-in button is dead.
 - **Audience handling.** The console client mints tokens
-  whose `aud` is the client itself. The bank-api verifier's
+  whose `aud` is the client itself. The api verifier's
   `expected-audiences` list now includes `queenswood-console`
   alongside the per-status banking audiences; missing this
   entry would 401 every user JWT.
 - **Realm JSON drift.** Two copies of the realm JSON exist
   (chart sibling under `infra/helm/queenswood/files/` and
-  resources sibling under `components/bank-resources/
+  resources sibling under `components/resources/
   resources/bank/`). Both have to move together or imports
   in different deployment paths diverge.
 - **Multi-write race in onboarding.** The four record writes
@@ -410,8 +410,8 @@ The end-to-end flow:
   in the data model. Adding invitations means relaxing the
   409 check and adding the invitation record + acceptance
   flow.
-- **bank-app continues to work.** The operator SPA signs in
-  via Keycloak against the `queenswood-ops` realm and
-  remains in place for platform-admin workflows. The two
-  consoles live side-by-side — `bank-app` for operators,
-  `console` for org users.
+- **Operator SPA.** The operator SPA was removed and will be
+  rebuilt later as a focused `bank-operator`. Its
+  `queenswood-ops` Keycloak realm stays in place for that
+  future SPA; the new `console` serves org users, and the two
+  will live side by side once the operator SPA returns.

@@ -247,7 +247,7 @@ arriving over the bus (a command, a settlement event, a webhook-derived
 event) is at-least-once: Pulsar redelivers on failure, and a crash
 between commit and ack reprocesses. The consumer absorbs that by making
 the effect idempotent on a key, in the same transaction: check or write
-the idempotency key — a unique index, or a `bank-idempotency` record —
+the idempotency key — a unique index, or an `idempotency` record —
 alongside the state change, so a second delivery either no-ops or is
 refused by the index rather than doubling the effect. This is not an
 outbox: the outbox is for producing, not consuming.
@@ -383,7 +383,7 @@ Headers are populated by `telemetry/inject-traceparent` at
 envelope assembly.
 
 **Avro on the wire.** Both command and event envelopes are
-Avro-encoded for transport. Schemas live in `bank-schema`
+Avro-encoded for transport. Schemas live in `schema`
 alongside the proto record schemas. See ADR-0004 for the
 rationale and the brick organisation.
 

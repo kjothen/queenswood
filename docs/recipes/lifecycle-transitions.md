@@ -36,7 +36,7 @@ function guards its source state before doing anything else.
    two-phase (a command moves the entity to an intermediate status;
    a changelog watcher completes it). Carries the same source-state
    guard, as an idempotency gate (see below).
-8. **`bank-api`** — the HTTP route, its OpenAPI request/response
+8. **`api`** — the HTTP route, its OpenAPI request/response
    components, and the rejection→status mapping for any new
    rejection kind the transition can produce.
 9. **Service YAML** — the watcher's expected-source guard set stays
@@ -107,7 +107,7 @@ from `:cash-account-status-closing`.
 ### Rejection mapping
 
 `:<entity>/invalid-status` maps to HTTP 409 (a state conflict, not a
-validation failure) in `bank-api`'s `rejection-status-overrides`
+validation failure) in `api`'s `rejection-status-overrides`
 table — it doesn't fit the default 422 or the `not-found`/`exists`
 heuristics `rejection-kind->status` otherwise applies.
 
@@ -123,13 +123,13 @@ heuristics `rejection-kind->status` otherwise applies.
 - Gate a watcher's transition leg on the loaded record's current
   status matching the expected source, and skip silently (not
   reject) when it doesn't.
-- Map `:<entity>/invalid-status` to HTTP 409 in `bank-api`'s
+- Map `:<entity>/invalid-status` to HTTP 409 in `api`'s
   rejection→status table.
 - Work through the ten-point checklist for every new lifecycle
   state or transition: proto enum, Avro schema (both YAMLs),
   `domain.clj` guard, `core.clj` orchestration, `commands.clj`
   dispatch, `interface.clj` fn, `watcher.clj` leg (if two-phase),
-  `bank-api` route/OpenAPI/rejection mapping, service-YAML watcher
+  `api` route/OpenAPI/rejection mapping, service-YAML watcher
   guard set, and tests.
 
 **MUST NOT:**
@@ -172,8 +172,8 @@ idempotent.
   `let-nom>`
 - [common-helpers](common-helpers.md) — the convergence rule for
   promoting inline patterns to shared helpers
-- `components/bank-cash-account/.../domain.clj`,
-  `components/bank-cash-account/.../watcher.clj` — the worked
+- `components/cash-account/.../domain.clj`,
+  `components/cash-account/.../watcher.clj` — the worked
   example
-- `components/bank-party/.../watcher.clj` — the watcher-gate
+- `components/party/.../watcher.clj` — the watcher-gate
   exemplar

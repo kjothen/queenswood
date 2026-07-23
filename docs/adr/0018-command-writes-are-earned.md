@@ -27,13 +27,13 @@ Consistency of mechanism is not the goal; consistency of the
 create-bank commandification, one command costs roughly 25 touched
 files — Avro schemas registered in two registries, a commands/system
 pair on the brick, a processor base, a service project with Pulsar
-config, workspace/Tilt/Helm entries, monolith and bank-api wiring,
+config, workspace/Tilt/Helm entries, monolith and api wiring,
 and the test system in three files — plus a bus round-trip of
 latency on every call and a reply-timeout failure mode the
 synchronous path does not have.
 
-The label "financial pathway" turned out to be a proxy. bank-idv
-and bank-payee-check are commandified and move no money; they
+The label "financial pathway" turned out to be a proxy. idv
+and payee-check are commandified and move no money; they
 graduated because of how they write, not what they are about.
 
 ## Decision
@@ -111,6 +111,6 @@ Harder:
   possible: a synchronous path can quietly acquire reaction or
   idempotency stakes without anyone re-classifying it. Reviews of
   new writes should ask which side of the rule they fall on.
-- Mixed mechanisms mean two write idioms coexist in bank-api
+- Mixed mechanisms mean two write idioms coexist in api
   (dispatch a command vs call an interface), and readers of a
   handler must know which they are looking at.

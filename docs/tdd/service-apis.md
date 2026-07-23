@@ -3,7 +3,7 @@
 ## Objective
 
 Queenswood serves more than one HTTP API. The headline is
-`bank-api` — one unified API for the whole bank, see
+`api` — one unified API for the whole bank, see
 [ADR-0013](../adr/0013-single-unified-api.md), with full
 OpenAPI 3.x compliance as the contract per
 [ADR-0014](../adr/0014-openapi-3x-compliance.md). The
@@ -15,13 +15,13 @@ This TDD documents the canonical patterns we use to build any
 HTTP API in this codebase — the `server` brick, the interceptor
 chain, RFC 9457 error mapping, Reitit/Malli coercion, OpenAPI
 assembly, and how handlers cross into the command pipeline.
-`bank-api` is the worked example throughout; the simulator and
+`api` is the worked example throughout; the simulator and
 adapter inherit the same patterns where applicable and are
 called out where they diverge.
 
 In scope: the `server` brick, the canonical interceptor chain,
 auth and error-mapping patterns, OpenAPI assembly, the
-domain-folder layout for routing, with `bank-api` as the
+domain-folder layout for routing, with `api` as the
 worked example.
 
 Out of scope: domain-specific request/response shapes —
@@ -69,17 +69,17 @@ API base depends on it.
 
 The HTTP API bases in the codebase today:
 
-- **`bank-api`** — the unified banking API. Domain-folder
+- **`api`** — the unified banking API. Domain-folder
   layout, two-tier auth (admin / org), full OpenAPI 3.x
   compliance, idempotency on writes, command-pipeline
   integration. The worked example for the rest of this TDD.
-- **`bank-clearbank-simulator`** — mocks the ClearBank FPS
+- **`clearbank-simulator`** — mocks the ClearBank FPS
   HTTP API for development and tests. Inherits the `server`
   brick's chain, RFC 9457 error mapping, and Muuntaja
   serialization. Auth follows ClearBank's own scheme rather
-  than the bank-api admin/org pattern, and OpenAPI compliance
+  than the api admin/org pattern, and OpenAPI compliance
   is shaped by mirroring ClearBank's published spec.
-- **`bank-clearbank-adapter`** — receives ClearBank webhooks
+- **`clearbank-adapter`** — receives ClearBank webhooks
   and exposes a small HTTP surface. Inherits the same chain;
   its endpoints are narrow and webhook-shaped, with auth
   following ClearBank webhook signing rather than bearer
@@ -101,7 +101,7 @@ graph LR
     HANDLER -->|command/send| PIPE
 ```
 
-The diagram shows `bank-api`'s shape. The simulator and adapter
+The diagram shows `api`'s shape. The simulator and adapter
 follow the same client → interceptor-chain → handler pattern,
 but their handlers don't cross into the command pipeline — they
 respond directly (simulator) or relay through Pulsar to the
@@ -109,7 +109,7 @@ event processor (adapter).
 
 ### Domain folder layout
 
-Per-domain organisation inside `bank-api/src/.../bank_api/`:
+Per-domain organisation inside `api/src/.../api/`:
 
 ```
 <domain>/
@@ -153,7 +153,7 @@ account is `POST /v1/cash-accounts/{id}/close` — not `DELETE
 record stays in FDB with a `closed` lifecycle state, so the
 verb makes the semantics explicit.
 
-Common verb endpoints in the bank-api:
+Common verb endpoints in the api:
 
 - `POST /v1/cash-accounts/{id}/close`
 - `POST /v1/cash-accounts/{id}/suspend`
@@ -229,7 +229,7 @@ Two layers compose into the chain a request flows through.
 8. `coerce-response` — Malli response coercion.
 9. `coerce-request` — Malli request coercion.
 
-**API-level (added by `bank-api/api.clj` on the `/v1` group):**
+**API-level (added by `api/api.clj` on the `/v1` group):**
 
 10. `telemetry/trace-span` — opens an OTEL span per request.
 11. **Component-injecting interceptors** from system context
@@ -255,7 +255,7 @@ header carries one of:
   flips its `:organization-id` to the internal-org-id and
   grants `:admin`.
 - A Keycloak-issued user JWT minted by the `console` SPA
-  (`queenswood` realm) or the `bank-app` SPA (`queenswood-ops`
+  (`queenswood` realm) or the operator SPA (`queenswood-ops`
   realm).
 - A per-organisation API key (cached lookup of the hashed
   token, with a 60-second TTL cache layered over an FDB read).
@@ -318,7 +318,7 @@ Every error response is shaped as RFC 9457 Problem Details:
  :detail "Human-readable message"}
 ```
 
-`bank-api/errors.clj` provides the mapping. Anomaly kind →
+`api/errors.clj` provides the mapping. Anomaly kind →
 HTTP status:
 
 - `:unauthorized/anomaly` → 401.
@@ -378,11 +378,11 @@ Read operations skip the pipeline and query FDB directly.
 
 ### Testing
 
-HTTP-surface tests live in **`bank-test-api-scenarios`**, the
-sibling of `bank-test-scenarios` covered in
+HTTP-surface tests live in **`test-api-scenarios`**, the
+sibling of `test-scenarios` covered in
 [scenario-testing.md](scenario-testing.md). It boots the full
 test system (FDB, Pulsar, ClearBank simulator, Onfido simulator)
-plus a live `bank-api` and drives real HTTP requests via
+plus a live `api` and drives real HTTP requests via
 data-driven EDN scenarios.
 
 Each scenario is a map with `:given` / `:when` / `:then` step
@@ -396,8 +396,8 @@ under
 `test-resources/bank-test-api-scenarios/scenarios/<domain>/`.
 
 This brick replaced the per-base and per-component
-`*_test.clj` API tests under `bases/bank-api/test/`,
-`components/bank-api-key/test/`, and similar paths. New API
+`*_test.clj` API tests under `bases/api/test/`,
+`components/api-key/test/`, and similar paths. New API
 contract tests — status codes, error bodies, hypermedia links,
 auth boundaries — go here, not into a brick's `interface_test.clj`.
 
@@ -472,7 +472,7 @@ auth boundaries — go here, not into a brick's `interface_test.clj`.
   conventions.
 - **Idempotency is a per-route opt-in interceptor pair**
   (`server/require-idempotency-key` then
-  `bank-idempotency/cache-response`). Forgetting to add both
+  `idempotency/cache-response`). Forgetting to add both
   to a write endpoint means the endpoint accepts retries
   blindly. See [idempotency.md](idempotency.md).
 
@@ -493,7 +493,7 @@ auth boundaries — go here, not into a brick's `interface_test.clj`.
 - [error-handling.md](../recipes/error-handling.md)
 - [code-style.md](../recipes/code-style.md) — sieppari
   `terminate` rule
-- `bank-api` base
+- `api` base
 - `server` brick interface
 - [RFC 9457](https://www.rfc-editor.org/rfc/rfc9457.html) —
   Problem Details for HTTP APIs
