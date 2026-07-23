@@ -1,7 +1,9 @@
 (ns com.repldriven.queenswood.test-api-scenarios.scenario
   (:require
     [com.repldriven.mono.error.interface :as error]
-    [com.repldriven.mono.spec.interface :as spec]
+
+    [malli.core :as m]
+    [malli.error :as me]
 
     [clojure.edn :as edn]
     [clojure.java.io :as io]))
@@ -37,10 +39,10 @@
      parsed (error/try-nom :bank-test-api-scenarios/scenario
                            "Failed to parse scenario EDN"
                            (edn/read-string (slurp src)))
-     _ (when-not (spec/validate schema parsed)
+     _ (when-not (m/validate schema parsed)
          (error/fail :bank-test-api-scenarios/scenario
                      {:message "Scenario failed schema validation"
                       :resource resource-path
-                      :explain (spec/humanize
-                                (spec/explain schema parsed))}))]
+                      :explain (me/humanize
+                                (m/explain schema parsed))}))]
     parsed))

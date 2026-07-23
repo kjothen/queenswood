@@ -5,13 +5,13 @@
 
     [com.repldriven.mono.fdb.interface]
     [com.repldriven.mono.http-client.interface :as http]
+    [com.repldriven.mono.json.interface :as json]
     [com.repldriven.mono.server.interface :as server]
     [com.repldriven.mono.system.interface :as system]
     [com.repldriven.mono.testcontainers.interface]
     [com.repldriven.mono.test-system.interface :refer
      [with-test-system nom-test>]]
 
-    [clojure.data.json :as json]
     [clojure.test :refer [deftest is testing]]))
 
 (def ^:dynamic *base-url* "http://localhost:{PORT}")

@@ -18,18 +18,12 @@
   {:local/root "../../components/balance-domain"}
   component/balance-query
   {:local/root "../../components/balance-query"}
-  component/cash-account {:local/root "../../components/cash-account"}
   component/cash-account-query
   {:local/root "../../components/cash-account-query"}
-  component/cash-account-product
-  {:local/root "../../components/cash-account-product"}
-  component/cash-account-product-query
-  {:local/root "../../components/cash-account-product-query"}
   component/clearbank-webhook
   {:local/root "../../components/clearbank-webhook"}
   component/clearbank-relay
   {:local/root "../../components/clearbank-relay"}
-  component/party {:local/root "../../components/party"}
   component/party-query
   {:local/root "../../components/party-query"}
   component/person-identification

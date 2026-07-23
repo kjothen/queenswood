@@ -208,7 +208,7 @@
              (do
                (when-let [sched (:scheduler config)]
                  (if enabled
-                   (scheduler/schedule!
+                   (scheduler/schedule
                     sched
                     (trigger-id updated)
                     cron
@@ -216,7 +216,7 @@
                               bank-id
                               updated
                               :scheduler-trigger-source-scheduled))
-                   (scheduler/unschedule! sched (trigger-id updated))))
+                   (scheduler/unschedule sched (trigger-id updated))))
                updated))))))))
 
 ;; --- seeding + trigger registration --------------------------------------
@@ -251,7 +251,7 @@
       jobs
       (do
         (doseq [job (filter :enabled jobs)]
-          (scheduler/schedule!
+          (scheduler/schedule
            sched
            (trigger-id job)
            (job-cron job)

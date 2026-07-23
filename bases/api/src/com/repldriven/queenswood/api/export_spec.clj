@@ -2,8 +2,9 @@
   (:require
     [com.repldriven.queenswood.api.api :as api]
 
+    [com.repldriven.mono.json.interface :as json]
+
     [clj-yaml.core :as yaml]
-    [clojure.data.json :as json]
     [clojure.java.io :as io]))
 
 (defn -main

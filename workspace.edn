@@ -41,7 +41,13 @@
                :necessary []},
             "uk-companies-house-simulator-service"
               {:alias "ucs",
-               :necessary []}},
+               :necessary []},
+            "monolith-service"
+              {:alias "mon",
+               :necessary ["resources" "test-resources"]},
+            "scheduler-processor-service"
+              {:alias "scp",
+               :necessary ["resources" "test-resources"]}},
  :tag-patterns {:release "v[0-9]*", :stable "stable-*"},
  :test {:create-test-runner
           com.repldriven.queenswood.external-test-runner.core/create},

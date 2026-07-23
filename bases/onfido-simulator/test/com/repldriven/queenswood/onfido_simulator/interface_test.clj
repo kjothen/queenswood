@@ -7,12 +7,12 @@
     [com.repldriven.queenswood.onfido-simulator.api :as api]
 
     [com.repldriven.mono.http-client.interface :as http]
+    [com.repldriven.mono.json.interface :as json]
     [com.repldriven.mono.server.interface :as server]
     [com.repldriven.mono.system.interface :as system]
     [com.repldriven.mono.test-system.interface :refer
      [with-test-system nom-test>]]
 
-    [clojure.data.json :as json]
     [clojure.test :refer [deftest is testing]]))
 
 (def ^:dynamic *base-url* "http://localhost:{PORT}")
