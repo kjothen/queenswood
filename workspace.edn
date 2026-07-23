@@ -1,5 +1,4 @@
 {:compact-views #{},
- :default-profile-name "bank",
  :interface-ns "interface",
  :projects {"development" {:alias "dev"},
             ;; schema and test-resources provide centralised Avro schemas

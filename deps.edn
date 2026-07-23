@@ -9,15 +9,8 @@
     com.google.protobuf/protobuf-java {:mvn/version "3.25.8"}
     org.clojure/clojure {:mvn/version "1.12.4"}
     org.clojure/core.async {:mvn/version "1.9.865"}
-    djblue/portal {:mvn/version "0.63.0"}}
-   :extra-paths ["development/src" "development/resources"]
-   :jvm-opts
-   ["-Dclojure.tools.logging.factory=clojure.tools.logging.impl/slf4j-factory"]}
-  :test {:extra-deps {ext/mono {:local/root "deps/mono-test"}}
-         :extra-paths ["bases/external-test-runner/test"]}
-  :+bank
-  {:extra-deps
-   {components/bank-balance {:local/root "components/bank-balance"}
+    djblue/portal {:mvn/version "0.63.0"}
+    components/bank-balance {:local/root "components/bank-balance"}
     components/bank-balance-domain
     {:local/root "components/bank-balance-domain"}
     components/bank-balance-query
@@ -79,53 +72,58 @@
     {:local/root "bases/bank-uk-companies-house-simulator"}
     bases/bank-scheduler-processor {:local/root "bases/bank-scheduler-processor"}
     bases/bank-monolith {:local/root "bases/bank-monolith"}}
-   :extra-paths ["components/bank-balance/test"
-                 "components/bank-balance/test-resources"
-                 "components/bank-balance-domain/test"
-                 "components/bank-bank/test"
-                 "components/bank-bank/test-resources"
-                 "components/bank-cash-account-product/test"
-                 "components/bank-cash-account-product/test-resources"
-                 "components/bank-cash-account-product-query/test"
-                 "components/bank-cash-account/test"
-                 "components/bank-company-registry/test"
-                 "components/bank-company-registry/test-resources"
-                 "components/bank-idv/test"
-                 "components/bank-idv/test-resources"
-                 "components/bank-interest/test"
-                 "components/bank-interest/test-resources"
-                 "components/bank-ledger-account/test"
-                 "components/bank-ledger-account/test-resources"
-                 "components/bank-party/test"
-                 "components/bank-policy/test"
-                 "components/bank-policy/test-resources"
-                 "components/bank-scheduler/test"
-                 "components/bank-test-api-scenarios/test"
-                 "components/bank-test-api-scenarios/test-resources"
-                 "components/bank-test-scenarios/test"
-                 "components/bank-test-scenarios/test-resources"
-                 "components/bank-test-model/test"
-                 "components/bank-test-projections/test"
-                 "components/bank-test-resources/test-resources"
-                 "components/bank-payment/test"
-                 "components/bank-payment/test-resources"
-                 "components/bank-transaction/test"
-                 "components/bank-transaction/test-resources"
-                 "components/bank-clearbank-relay/test"
-                 "components/bank-clearbank-relay/test-resources"
-                 "components/bank-onfido-relay/test"
-                 "components/bank-onfido-relay/test-resources"
-                 "bases/bank-clearbank-simulator/test"
-                 "bases/bank-clearbank-simulator/test-resources"
-                 "bases/bank-clearbank-adapter/test"
-                 "bases/bank-clearbank-adapter/test-resources"
-                 "bases/bank-onfido-simulator/test"
-                 "bases/bank-onfido-simulator/test-resources"
-                 "bases/bank-onfido-adapter/test"
-                 "bases/bank-onfido-adapter/test-resources"
-                 "bases/bank-uk-companies-house-simulator/test"
-                 "bases/bank-uk-companies-house-simulator/test-resources"
-                 "bases/bank-monolith/test-resources"]}
+   :extra-paths ["development/src" "development/resources"]
+   :jvm-opts
+   ["-Dclojure.tools.logging.factory=clojure.tools.logging.impl/slf4j-factory"]}
+  :test {:extra-deps {ext/mono {:local/root "deps/mono-test"}}
+         :extra-paths ["components/bank-balance/test"
+                       "components/bank-balance/test-resources"
+                       "components/bank-balance-domain/test"
+                       "components/bank-bank/test"
+                       "components/bank-bank/test-resources"
+                       "components/bank-cash-account-product/test"
+                       "components/bank-cash-account-product/test-resources"
+                       "components/bank-cash-account-product-query/test"
+                       "components/bank-cash-account/test"
+                       "components/bank-company-registry/test"
+                       "components/bank-company-registry/test-resources"
+                       "components/bank-idv/test"
+                       "components/bank-idv/test-resources"
+                       "components/bank-interest/test"
+                       "components/bank-interest/test-resources"
+                       "components/bank-ledger-account/test"
+                       "components/bank-ledger-account/test-resources"
+                       "components/bank-party/test"
+                       "components/bank-policy/test"
+                       "components/bank-policy/test-resources"
+                       "components/bank-scheduler/test"
+                       "components/bank-test-api-scenarios/test"
+                       "components/bank-test-api-scenarios/test-resources"
+                       "components/bank-test-scenarios/test"
+                       "components/bank-test-scenarios/test-resources"
+                       "components/bank-test-model/test"
+                       "components/bank-test-projections/test"
+                       "components/bank-test-resources/test-resources"
+                       "components/bank-payment/test"
+                       "components/bank-payment/test-resources"
+                       "components/bank-transaction/test"
+                       "components/bank-transaction/test-resources"
+                       "components/bank-clearbank-relay/test"
+                       "components/bank-clearbank-relay/test-resources"
+                       "components/bank-onfido-relay/test"
+                       "components/bank-onfido-relay/test-resources"
+                       "bases/bank-clearbank-simulator/test"
+                       "bases/bank-clearbank-simulator/test-resources"
+                       "bases/bank-clearbank-adapter/test"
+                       "bases/bank-clearbank-adapter/test-resources"
+                       "bases/bank-onfido-simulator/test"
+                       "bases/bank-onfido-simulator/test-resources"
+                       "bases/bank-onfido-adapter/test"
+                       "bases/bank-onfido-adapter/test-resources"
+                       "bases/bank-uk-companies-house-simulator/test"
+                       "bases/bank-uk-companies-house-simulator/test-resources"
+                       "bases/bank-monolith/test-resources"
+                       "bases/external-test-runner/test"]}
   :format/zprint {:extra-deps {zprint/zprint {:mvn/version "1.3.0"}}
                   :main-opts ["-m" "zprint.main"]}
   :lint/clj-kondo {:extra-deps {clj-kondo/clj-kondo {:mvn/version "2026.01.19"}}

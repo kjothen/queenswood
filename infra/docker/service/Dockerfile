@@ -61,12 +61,12 @@ COPY . .
 # seconds. Cache contents are *not* baked into the image layer, which
 # keeps the runtime stage clean.
 # Code-gen step (Lancaster Avro schemas, protobuf classes) must run
-# from the workspace root — the `:+bank` alias is defined in the
-# top-level deps.edn, not in any project deps.edn. Mirrors the
-# local `just force-prep` recipe.
+# from the workspace root — the `:dev` alias with every brick is
+# defined in the top-level deps.edn, not in any project deps.edn.
+# Mirrors the local `just force-prep` recipe.
 RUN --mount=type=cache,target=/root/.m2,sharing=locked \
     --mount=type=cache,target=/root/.gitlibs,sharing=locked \
-    clojure -X:deps prep :aliases '[:+bank :dev]' :force true
+    clojure -X:deps prep :aliases '[:dev]' :force true
 WORKDIR /workspace/projects/${PROJECT_NAME}
 RUN --mount=type=cache,target=/root/.m2,sharing=locked \
     --mount=type=cache,target=/root/.gitlibs,sharing=locked \

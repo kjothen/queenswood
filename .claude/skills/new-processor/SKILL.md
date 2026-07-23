@@ -116,7 +116,7 @@ For a brand-new processor `bank-Y` with a paired
 5. **Add Avro schemas** for the new commands and events under
    the schema brick, per
    [recipes/code-generation.md](../../../docs/recipes/code-generation.md).
-   Run `clj -X:deps prep :aliases '[:+bank :dev]' :force true`
+   Run `clj -X:deps prep :aliases '[:dev]' :force true`
    to regenerate.
 
 6. **Verify the invariants** below before considering the brick
@@ -197,7 +197,7 @@ that already exists:
    `[config data]` and passes `config` as the `txn` arg —
    that's the top-of-stack `txn-or-config` shape.
 6. **Avro schema.** Add the command's request/response
-   schemas, then `clj -X:deps prep :aliases '[:+bank :dev]'
+   schemas, then `clj -X:deps prep :aliases '[:dev]'
    :force true`.
 7. **Invariants.** Re-check the list above.
 

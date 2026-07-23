@@ -177,11 +177,8 @@ clojure -M:poly test project:dev :all
 clojure -M:poly test brick:<brick-name> project:dev
 clojure -M:poly test brick:<brick1>:<brick2> project:dev
 
-# Code generation prep
+# Code generation prep (add :force true after a schema change)
 clj -X:deps prep :aliases '[:dev]'
-
-# Bank-specific generation, forced after a schema change
-clj -X:deps prep :aliases '[:+bank :dev]' :force true
 
 # Pre-commit hook install (once per clone)
 cp scripts/hooks/pre-commit .git/hooks/pre-commit

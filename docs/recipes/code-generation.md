@@ -101,14 +101,9 @@ Default — prep all libraries that need preparation:
 clj -X:deps prep :aliases '[:dev]'
 ```
 
-For Queenswood's bank-specific generation (the proto bricks
-under `bank-schema`), use `:+bank :dev` because the
-bank-specific source files are gated behind the `:+bank`
-alias:
-
-```bash
-clj -X:deps prep :aliases '[:+bank :dev]'
-```
+Every brick, including the proto bricks under `bank-schema`, is
+on the `:dev` alias in the top-level `deps.edn`, so `:dev` covers
+all generation.
 
 ### When to force
 
@@ -120,7 +115,7 @@ schema but Clojure thinks prep is done. Use `:force true` to
 re-run regardless:
 
 ```bash
-clj -X:deps prep :aliases '[:+bank :dev]' :force true
+clj -X:deps prep :aliases '[:dev]' :force true
 ```
 
 This is the most common foot-gun. If a freshly regenerated

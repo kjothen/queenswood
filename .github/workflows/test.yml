@@ -107,7 +107,7 @@ jobs:
           COVERAGE: "true"
           COVERAGE_THRESHOLD: ${{ matrix.project == 'dev' && '90' || '0' }}
         run: |
-          clojure -X:deps prep :aliases '[:dev :+bank]'
+          clojure -X:deps prep :aliases '[:dev]'
           if [[ "${{ matrix.project }}" == "dev" ]]; then
             clojure -M:poly test project:dev \
               brick:bank-test-scenarios:bank-test-model:bank-test-projections:bank-test-api-scenarios \

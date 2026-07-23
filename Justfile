@@ -1,6 +1,6 @@
 set shell := ["zsh", "-cu"]
 
-DOMAIN_ALIASES := ":+bank"
+DOMAIN_ALIASES := ""
 DOCKER_REGISTRY := "ghcr.io/repldriven"
 
 XP_CLUSTER := "xp-mp"
