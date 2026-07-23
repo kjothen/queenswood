@@ -103,7 +103,7 @@ nvd project="":
     fi
     clojure -J-Dclojure.main.report=stderr -J-Danalyzer.ossindex.enabled=false -M:nvd "nvd-clojure.edn" "$classpath"
 
-# Run schemathesis API fuzzer against the running bank-api
+# Run schemathesis API fuzzer against the running api
 schemathesis base_url="http://127.0.0.1:8080":
     #!/usr/bin/env zsh
     # Requires $ADMIN_TOKEN — a Keycloak-issued service JWT carrying the

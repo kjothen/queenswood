@@ -64,7 +64,7 @@ kind-up tag="dev":
 # Build/push/install only the modular-monolith on kind (channel bus, no Pulsar)
 kind-up-monolith tag="dev":
     #!/usr/bin/env zsh
-    # One bank-monolith pod over the core.async channel bus. Only the
+    # One monolith pod over the core.async channel bus. Only the
     # four images the profile needs are built/pushed; values-monolith.yaml
     # disables every other service and the Pulsar subchart, layered over
     # values-dev.yaml so the bundled dev Keycloak stays enabled.
@@ -112,8 +112,8 @@ kind-down:
 keycloak-up:
     # Listens on host :8090 to match VITE_KEYCLOAK_URL in
     # bases/console/.env.example. 8090 (not 8081) keeps the
-    # port out of the way of bank-monolith, which binds 8081 for
-    # the bank-clearbank-simulator dev component. Admin console
+    # port out of the way of monolith, which binds 8081 for
+    # the clearbank-simulator dev component. Admin console
     # at http://localhost:8090/admin (admin / admin). Realm JSON
     # imports the queenswood-admin + queenswood-console clients
     # plus the Google IdP (placeholder creds — sign-in via Google

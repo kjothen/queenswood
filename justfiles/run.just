@@ -2,8 +2,8 @@
 console-start:
     #!/usr/bin/env zsh
     # Sign in as `dev` / `dev` (seeded in the queenswood realm).
-    # Pair with `just bank-monolith-start` (or `just keycloak-up`)
-    # so the SPA can reach Keycloak on localhost:8090 and bank-api
+    # Pair with `just monolith-start` (or `just keycloak-up`)
+    # so the SPA can reach Keycloak on localhost:8090 and api
     # on localhost:8080.
     set -e
     cd {{ justfile_directory() }}
@@ -25,6 +25,6 @@ ui-showcase:
     corepack yarn install
     corepack yarn workspace @queenswood/ui showcase
 
-# Run the bank-monolith against its test application.yml, teeing stdout/stderr to server.log
-bank-monolith-start:
+# Run the monolith against its test application.yml, teeing stdout/stderr to server.log
+monolith-start:
     clj -M{{ DOMAIN_ALIASES }}:dev:test -e "(require 'com.repldriven.mono.testcontainers.interface)" -m com.repldriven.queenswood.monolith.main -c "classpath:bank-monolith/application-test.yml" -p "dev" 2>&1 | tee server.log

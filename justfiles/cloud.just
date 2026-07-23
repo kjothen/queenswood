@@ -430,7 +430,7 @@ gcp-k8s-redeploy-svc +components:
     # version bump -- Crossplane Helm Release sees no spec diff and
     # imagePullPolicy: Always only re-pulls on pod create. Components
     # are brick names without the release prefix: `just gcp-k8s-redeploy-svc
-    # bank-app api-service`.
+    # console api-service`.
     PROJECT_ID=$(just _gcp-project-id)
     KCTX=$(just _gke-ctx)
     for c in {{ components }}; do
