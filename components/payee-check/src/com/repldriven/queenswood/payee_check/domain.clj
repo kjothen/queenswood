@@ -1,0 +1,27 @@
+(ns com.repldriven.queenswood.payee-check.domain
+  (:require
+    [com.repldriven.mono.utility.interface :as utility]))
+
+(def ^:private ttl-hours 24)
+
+(defn- expires-rfc3339
+  [created-at]
+  (str (.plus (java.time.Instant/parse created-at)
+              (java.time.Duration/ofHours ttl-hours))))
+
+(defn- sanitize-result
+  [result]
+  {:match-result (:match-result result)
+   :actual-name (or (:actual-name result) "")
+   :reason-code (or (:reason-code result) "")
+   :reason (or (:reason result) "")})
+
+(defn new-check
+  [bank-id request result]
+  (let [created (utility/now-rfc3339)]
+    {:check-id (utility/generate-id "chk")
+     :bank-id bank-id
+     :request request
+     :result (sanitize-result result)
+     :created-at created
+     :expires-at (expires-rfc3339 created)}))

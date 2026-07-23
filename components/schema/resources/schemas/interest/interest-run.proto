@@ -1,0 +1,23 @@
+syntax = "proto2";
+
+package com.repldriven.queenswood.schemas.interest;
+
+import "record_metadata_options.proto";
+
+option java_outer_classname = "InterestRunProto";
+
+message InterestRun {
+  option (com.apple.foundationdb.record.record).usage = RECORD;
+
+  required string bank_id = 1;
+  required int64 business_day = 2;
+  required InterestRunStatus status = 3;
+  required int64 created_at = 4;
+  optional int64 deleted_at = 5;
+
+  enum InterestRunStatus {
+    INTEREST_RUN_STATUS_UNKNOWN = 0;
+    INTEREST_ACCRUE_DONE = 1;
+    INTEREST_CAPITALIZE_DONE = 2;
+  }
+}

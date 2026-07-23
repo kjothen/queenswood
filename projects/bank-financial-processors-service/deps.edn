@@ -1,48 +1,48 @@
 {:aliases
  {:build {:deps {bases/build {:local/root "../../bases/build"}}
-          :exec-args {:lib 'com.repldriven.mono/bank-financial-processors-service
-                      :main com.repldriven.mono.bank-financial-processors.main
+          :exec-args {:lib 'com.repldriven.queenswood/bank-financial-processors-service
+                      :main com.repldriven.queenswood.financial-processors.main
                       :major-minor-version "0.0"}
-          :ns-default com.repldriven.mono.build.build}
+          :ns-default com.repldriven.queenswood.build.build}
   :test
   {:extra-deps
    {ext/mono {:local/root "../../deps/mono-test"}
     bases/external-test-runner {:local/root "../../bases/external-test-runner"}
-    component/bank-test-resources {:local/root
-                                   "../../components/bank-test-resources"}
+    component/test-resources {:local/root
+                                   "../../components/test-resources"}
 }}}
  :deps
  {ext/mono {:local/root "../../deps/mono"}
-  component/bank-balance {:local/root "../../components/bank-balance"}
-  component/bank-balance-domain
-  {:local/root "../../components/bank-balance-domain"}
-  component/bank-balance-query
-  {:local/root "../../components/bank-balance-query"}
-  component/bank-bank-query
-  {:local/root "../../components/bank-bank-query"}
-  component/bank-cash-account-query
-  {:local/root "../../components/bank-cash-account-query"}
-  component/bank-cash-account-product-query
-  {:local/root "../../components/bank-cash-account-product-query"}
-  component/bank-interest {:local/root "../../components/bank-interest"}
-  component/bank-ledger-account
-  {:local/root "../../components/bank-ledger-account"}
-  component/bank-party-query
-  {:local/root "../../components/bank-party-query"}
-  component/bank-payee-check {:local/root "../../components/bank-payee-check"}
-  component/bank-payment {:local/root "../../components/bank-payment"}
-  component/bank-payment-query
-  {:local/root "../../components/bank-payment-query"}
-  component/bank-person-identification
-  {:local/root "../../components/bank-person-identification"}
-  component/bank-policy {:local/root "../../components/bank-policy"}
-  component/bank-resources {:local/root "../../components/bank-resources"}
-  component/bank-schema {:local/root "../../components/bank-schema"}
-  component/bank-transaction {:local/root "../../components/bank-transaction"}
+  component/balance {:local/root "../../components/balance"}
+  component/balance-domain
+  {:local/root "../../components/balance-domain"}
+  component/balance-query
+  {:local/root "../../components/balance-query"}
+  component/bank-query
+  {:local/root "../../components/bank-query"}
+  component/cash-account-query
+  {:local/root "../../components/cash-account-query"}
+  component/cash-account-product-query
+  {:local/root "../../components/cash-account-product-query"}
+  component/interest {:local/root "../../components/interest"}
+  component/ledger-account
+  {:local/root "../../components/ledger-account"}
+  component/party-query
+  {:local/root "../../components/party-query"}
+  component/payee-check {:local/root "../../components/payee-check"}
+  component/payment {:local/root "../../components/payment"}
+  component/payment-query
+  {:local/root "../../components/payment-query"}
+  component/person-identification
+  {:local/root "../../components/person-identification"}
+  component/policy {:local/root "../../components/policy"}
+  component/resources {:local/root "../../components/resources"}
+  component/schema {:local/root "../../components/schema"}
+  component/transaction {:local/root "../../components/transaction"}
 
 
-  base/bank-financial-processors
-  {:local/root "../../bases/bank-financial-processors"}
+  base/financial-processors
+  {:local/root "../../bases/financial-processors"}
   ;; protojure brings protobuf-java 4.x which breaks FDB Record Layer
   ;; at runtime — pin to 3.x for binary compatibility
   com.google.protobuf/protobuf-java {:mvn/version "3.25.8"}

@@ -1,0 +1,41 @@
+syntax = "proto2";
+
+package com.repldriven.queenswood.schemas.banks;
+
+import "record_metadata_options.proto";
+
+option java_outer_classname = "BankProto";
+
+enum BankStatus {
+  BANK_STATUS_UNKNOWN = 0;
+  BANK_STATUS_TEST = 1;
+  BANK_STATUS_LIVE = 2;
+}
+
+// A snapshot of the legal entity a bank is bound to, taken from the
+// company registry at onboarding. Immutable — the bank records exactly
+// what was confirmed. Optional throughout for banks created without a
+// binding (e.g. the admin provisioning path).
+message BankCompanyBinding {
+  optional string registry = 1; // e.g. "uk-companies-house"
+  optional string company_number = 2;
+  optional string company_name = 3;
+  optional string company_status = 4;
+  optional string type = 5;
+  optional string jurisdiction = 6;
+  optional string date_of_creation = 7;
+  optional string registered_office_address = 8; // joined address lines
+}
+
+message Bank {
+  option (com.apple.foundationdb.record.record).usage = RECORD;
+
+  required string bank_id = 1 [(com.apple.foundationdb.record.field).primary_key = true];
+  required BankStatus status = 3;
+  required string name = 5;
+  required int64 created_at = 6;
+  required int64 updated_at = 7;
+  required string sort_code = 8;
+  optional BankCompanyBinding company_binding = 9;
+  optional string tier = 10;
+}

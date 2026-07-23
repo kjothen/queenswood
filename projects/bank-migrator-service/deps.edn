@@ -1,9 +1,9 @@
 {:aliases
  {:build {:deps {bases/build {:local/root "../../bases/build"}}
-          :exec-args {:lib 'com.repldriven.mono/bank-migrator-service
-                      :main com.repldriven.mono.bank-migrator.main
+          :exec-args {:lib 'com.repldriven.queenswood/bank-migrator-service
+                      :main com.repldriven.queenswood.migrator.main
                       :major-minor-version "0.0"}
-          :ns-default com.repldriven.mono.build.build}
+          :ns-default com.repldriven.queenswood.build.build}
   :test
   {:extra-deps
    {ext/mono {:local/root "../../deps/mono-test"}
@@ -11,11 +11,11 @@
 }}}
  :deps
  {ext/mono {:local/root "../../deps/mono"}
-  component/bank-resources {:local/root "../../components/bank-resources"}
-  component/bank-schema {:local/root "../../components/bank-schema"}
+  component/resources {:local/root "../../components/resources"}
+  component/schema {:local/root "../../components/schema"}
 
 
-  base/bank-migrator {:local/root "../../bases/bank-migrator"}
+  base/migrator {:local/root "../../bases/migrator"}
   ;; protojure brings protobuf-java 4.x which breaks FDB Record Layer
   ;; at runtime — pin to 3.x for binary compatibility
   com.google.protobuf/protobuf-java {:mvn/version "3.25.8"}
