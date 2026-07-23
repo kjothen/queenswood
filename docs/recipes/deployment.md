@@ -37,7 +37,7 @@ A deployable service is a triple:
 Naming: HTTP services keep their bare name
 (`api-service`,
 `clearbank-{adapter,simulator}-service`,
-`onfido-{adapter,simulator}-service`). Pulsar
+`onfido-{adapter,simulator}-service`). Message-bus
 processors are grouped along the financial boundary into
 `financial-processors-service` and
 `operational-processors-service`, with the Quartz
@@ -56,8 +56,9 @@ platform:
 - A `FoundationDBCluster` CR (handled by the vendored
   `fdb-operator` subchart at
   `infra/helm/queenswood/charts/fdb-operator`).
-- A Pulsar subchart (dev-grade single-replica config; not
-  production-ready as shipped).
+- A single-broker Kafka Deployment (KRaft, dev-grade; not
+  production-ready as shipped — set `kafka.enabled=false`
+  and point at an external broker for production).
 - Two one-shot Jobs that gate the rest of the system:
   `migrator` and `bootstrap`.
 
@@ -86,13 +87,11 @@ metadata vs data, and platform-wide vs tenant-specific:
 
 - **`migrator-service`** — opens FDB and applies
   record metadata via the FDB YAML in `resources`;
-  declares the Pulsar tenant, namespace, topics, and
-  schemas via the Pulsar YAML in the same component.
-  Idempotent: skips
-  already-created Pulsar topology, treats FDB
+  creates the Kafka topics via the kafka-bootstrap YAML
+  in the same component. Idempotent: skips
+  already-existing topics, treats FDB
   "meta-data version must increase" as a no-op. Exits
-  non-zero with `:pulsar/topics-audit` if any declared
-  topic is missing after creation.
+  non-zero if topic creation fails.
 - **`bootstrap-service`** — runs after the migrator
   completes; idempotently seeds the singleton internal
   Queenswood organisation and the platform/micro Policy
@@ -169,7 +168,7 @@ kind node's containerd, then `helm-install`s the chart.
   environment-agnostic. See the no-env-in-resource-names
   memory.
 - Skip the migrator or bootstrap Jobs in any deployment
-  flow. The internal organisation, the Pulsar topology,
+  flow. The internal organisation, the Kafka topics,
   and the FDB metadata are all preconditions to any
   service's startup.
 - Build a service from anything other than the shared
@@ -195,7 +194,7 @@ Processors were originally one project each; at current
 volume that meant ten under-utilised JVMs, so they are
 packaged into boundary groups instead, per
 [ADR-0019](../adr/0019-processor-packaging.md). Each
-processor still owns its Pulsar subscription and changelog
+processor still owns its Kafka consumer group and changelog
 cursors — the group a processor runs in is deployment-time
 YAML composition, so a domain that develops its own scaling
 profile can be promoted back to a dedicated deployment
@@ -213,7 +212,7 @@ The migrator/bootstrap split is about ownership and
 re-runnability:
 
 - The migrator handles **platform metadata** — FDB record
-  types, Pulsar topics, Avro schemas. These are
+  types, Kafka topics, Avro schemas. These are
   schema-shaped and rarely change. Re-running the migrator
   is treated as authoritative.
 - The bootstrap handles **tenant data** — the singleton
@@ -222,7 +221,7 @@ re-runnability:
   and don't change often.
 
 Conflating them would mean a bootstrap that has to know
-about Pulsar schemas, or a migrator that knows what a
+about Kafka topics, or a migrator that knows what a
 Policy is. The split keeps each Job's concern narrow.
 
 The `wait-for-fdb-cluster` initContainer rolls its own

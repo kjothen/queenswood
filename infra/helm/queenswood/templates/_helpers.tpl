@@ -25,40 +25,15 @@ helm.sh/chart: {{ printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" }}
 {{- end -}}
 
 {{/*
-Pulsar broker URLs assembled from the subchart's release name.
-The Apache Pulsar chart prefixes its services with both the
-release name and the chart name (`pulsar`), so the broker
-Service is `<release>-pulsar-broker`, exposing:
-  - :6650 (binary)
-  - :8080 (admin)
+Kafka bootstrap servers. When the in-chart broker is enabled its
+Service is `<release>-kafka` on :9092; otherwise services point at
+an external broker via kafka.bootstrapServers.
 */}}
-{{- define "queenswood.pulsarServiceUrl" -}}
-{{- if .Values.pulsar.enabled -}}
-pulsar://{{ .Release.Name }}-pulsar-broker:6650
+{{- define "queenswood.kafkaBootstrapServers" -}}
+{{- if .Values.kafka.enabled -}}
+{{ .Release.Name }}-kafka:9092
 {{- else -}}
-{{- required "pulsar.serviceUrl required when pulsar.enabled=false" .Values.pulsar.serviceUrl -}}
-{{- end -}}
-{{- end -}}
-
-{{- define "queenswood.pulsarAdminUrl" -}}
-{{- if .Values.pulsar.enabled -}}
-http://{{ .Release.Name }}-pulsar-broker:8080
-{{- else -}}
-{{- required "pulsar.adminUrl required when pulsar.enabled=false" .Values.pulsar.adminUrl -}}
-{{- end -}}
-{{- end -}}
-
-{{/*
-Pulsar cluster name. The Apache Pulsar chart names its cluster
-`<release>-pulsar`; tenants must be created with this exact
-name in their allowedClusters list or the broker rejects the
-tenant on creation.
-*/}}
-{{- define "queenswood.pulsarCluster" -}}
-{{- if .Values.pulsar.enabled -}}
-{{ .Release.Name }}-pulsar
-{{- else -}}
-{{- required "pulsar.cluster required when pulsar.enabled=false" .Values.pulsar.cluster -}}
+{{- required "kafka.bootstrapServers required when kafka.enabled=false" .Values.kafka.bootstrapServers -}}
 {{- end -}}
 {{- end -}}
 

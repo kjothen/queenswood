@@ -4,8 +4,8 @@
 # organization (with API key, internal Party, internal
 # CashAccountProduct, one CashAccount per currency) and writes the
 # platform + micro Policy records. Runs after migrator-service
-# has applied FDB record metadata + Pulsar topology; reads the
-# persisted FDB schema (no Pulsar interaction).
+# has applied FDB record metadata + Kafka topics; reads the
+# persisted FDB schema (no Kafka interaction).
 #
 # Job name embeds both .Values.image.tag and .Chart.Version so every
 # helm upgrade -- whether the bump is the image (new app code) or the
@@ -63,7 +63,7 @@ spec:
               mountPath: /etc/fdb
         {{- if .Values.migrator.enabled }}
         # Block until the migrator Job has applied FDB metadata +
-        # Pulsar topology — bootstrap reads the persisted FDB schema
+        # Kafka topics — bootstrap reads the persisted FDB schema
         # via fdb/meta-store, so the migration must land first.
         - name: wait-for-migrator
           image: alpine/k8s:1.30.14

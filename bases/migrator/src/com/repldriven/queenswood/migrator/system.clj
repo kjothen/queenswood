@@ -8,5 +8,5 @@
     com.repldriven.mono.avro.interface
     com.repldriven.queenswood.schema.interface
     com.repldriven.mono.fdb.interface
-    com.repldriven.mono.pulsar.interface
+    com.repldriven.mono.kafka.interface
     com.repldriven.mono.telemetry.interface))

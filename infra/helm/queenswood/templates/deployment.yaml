@@ -63,7 +63,7 @@ spec:
               mountPath: /etc/fdb
         {{- if $.Values.bootstrap.enabled }}
         # Block until the bootstrap Job has applied FDB metadata,
-        # Pulsar topology, and the internal-organization seed.
+        # Kafka topics, and the internal-organization seed.
         # Services discover the seeded org from FDB at startup.
         - name: wait-for-bootstrap
           image: alpine/k8s:1.30.14
@@ -109,7 +109,7 @@ spec:
               containerPort: {{ $svc.port }}
               protocol: TCP
           # Spring Boot Actuator-style endpoints. Generous startup
-          # window for FDB/Pulsar wiring + initial webhook
+          # window for FDB/Kafka wiring + initial webhook
           # registration on adapters (~2 min worst case); liveness
           # only restarts a hung process; readiness drives Service
           # routing — adapters stay DOWN until registration
@@ -136,10 +136,8 @@ spec:
           env:
             - name: SERVICE_NAME
               value: {{ $svcName | quote }}
-            - name: PULSAR_SERVICE_URL
-              value: {{ include "queenswood.pulsarServiceUrl" $ | quote }}
-            - name: PULSAR_ADMIN_URL
-              value: {{ include "queenswood.pulsarAdminUrl" $ | quote }}
+            - name: KAFKA_BOOTSTRAP_SERVERS
+              value: {{ include "queenswood.kafkaBootstrapServers" $ | quote }}
             - name: FDB_CLUSTER_FILE
               value: "/etc/fdb/fdb.cluster"
             - name: OTEL_ENDPOINT

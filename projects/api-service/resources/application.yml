@@ -1,164 +1,129 @@
 system:
-  pulsar:
-    client: !system/component
-      system/component-kind: pulsar/client
-      service-url: !env PULSAR_SERVICE_URL
-    admin: !system/component
-      system/component-kind: pulsar/admin
-      service-http-url: !env PULSAR_ADMIN_URL
+  kafka:
     schemas: !system/component
-      system/component-kind: pulsar/schemas
-      command:
-        schema: schemas/command/command-envelope.avsc.json
-        type: AVRO
-      command-response:
-        schema: schemas/command/command-response.avsc.json
-        type: AVRO
-      event:
-        schema: schemas/event/event-envelope.avsc.json
-        type: AVRO
+      system/component-kind: avro/serde
+      schemas:
+        command: schemas/command/command-envelope.avsc.json
+        command-response: schemas/command/command-response.avsc.json
+        event: schemas/event/event-envelope.avsc.json
     producers: !system/component
-      system/component-kind: pulsar/producers
+      system/component-kind: kafka/producers
       banks-command:
-        client: !system/local-ref client
-        conf:
-          accessMode: !pulsar/access-mode Shared
-          schema: !keyword command
-          topicName: "persistent://tenant-1/namespace-1/topic-banks-command"
         schemas: !system/local-ref schemas
+        schema: !keyword command
+        conf:
+          bootstrap.servers: !env KAFKA_BOOTSTRAP_SERVERS
+          topic: topic-banks-command
+          acks: all
       cash-accounts-command:
-        client: !system/local-ref client
-        conf:
-          accessMode: !pulsar/access-mode Shared
-          schema: !keyword command
-          topicName: "persistent://tenant-1/namespace-1/topic-cash-accounts-command"
         schemas: !system/local-ref schemas
+        schema: !keyword command
+        conf:
+          bootstrap.servers: !env KAFKA_BOOTSTRAP_SERVERS
+          topic: topic-cash-accounts-command
+          acks: all
       cash-account-products-command:
-        client: !system/local-ref client
-        conf:
-          accessMode: !pulsar/access-mode Shared
-          schema: !keyword command
-          topicName: "persistent://tenant-1/namespace-1/topic-cash-account-products-command"
         schemas: !system/local-ref schemas
+        schema: !keyword command
+        conf:
+          bootstrap.servers: !env KAFKA_BOOTSTRAP_SERVERS
+          topic: topic-cash-account-products-command
+          acks: all
       parties-command:
-        client: !system/local-ref client
-        conf:
-          accessMode: !pulsar/access-mode Shared
-          schema: !keyword command
-          topicName: "persistent://tenant-1/namespace-1/topic-parties-command"
         schemas: !system/local-ref schemas
+        schema: !keyword command
+        conf:
+          bootstrap.servers: !env KAFKA_BOOTSTRAP_SERVERS
+          topic: topic-parties-command
+          acks: all
       payments-command:
-        client: !system/local-ref client
-        conf:
-          accessMode: !pulsar/access-mode Shared
-          schema: !keyword command
-          topicName: "persistent://tenant-1/namespace-1/topic-payments-command"
         schemas: !system/local-ref schemas
+        schema: !keyword command
+        conf:
+          bootstrap.servers: !env KAFKA_BOOTSTRAP_SERVERS
+          topic: topic-payments-command
+          acks: all
       transactions-command:
-        client: !system/local-ref client
-        conf:
-          accessMode: !pulsar/access-mode Shared
-          schema: !keyword command
-          topicName: "persistent://tenant-1/namespace-1/topic-transactions-command"
         schemas: !system/local-ref schemas
+        schema: !keyword command
+        conf:
+          bootstrap.servers: !env KAFKA_BOOTSTRAP_SERVERS
+          topic: topic-transactions-command
+          acks: all
       interest-command:
-        client: !system/local-ref client
-        conf:
-          accessMode: !pulsar/access-mode Shared
-          schema: !keyword command
-          topicName: "persistent://tenant-1/namespace-1/topic-interest-command"
         schemas: !system/local-ref schemas
+        schema: !keyword command
+        conf:
+          bootstrap.servers: !env KAFKA_BOOTSTRAP_SERVERS
+          topic: topic-interest-command
+          acks: all
       payee-checks-command:
-        client: !system/local-ref client
-        conf:
-          accessMode: !pulsar/access-mode Shared
-          schema: !keyword command
-          topicName: "persistent://tenant-1/namespace-1/topic-payee-checks-command"
         schemas: !system/local-ref schemas
+        schema: !keyword command
+        conf:
+          bootstrap.servers: !env KAFKA_BOOTSTRAP_SERVERS
+          topic: topic-payee-checks-command
+          acks: all
     consumers: !system/component
-      system/component-kind: pulsar/consumers
+      system/component-kind: kafka/consumers
       banks-command-response:
-        client: !system/local-ref client
-        conf:
-          cryptoFailureAction: !pulsar/crypto-failure-action CONSUME
-          schema: !pulsar/schema AUTO_CONSUME
-          subscriptionName: api-service-banks-command-response
-          subscriptionType: !pulsar/subscription-type Shared
-          topicNames:
-            ["persistent://tenant-1/namespace-1/topic-banks-command-response"]
         schemas: !system/local-ref schemas
+        schema: !keyword command-response
+        topics: [topic-banks-command-response]
+        conf:
+          bootstrap.servers: !env KAFKA_BOOTSTRAP_SERVERS
+          group.id: api-service-banks-command-response
       cash-accounts-command-response:
-        client: !system/local-ref client
-        conf:
-          cryptoFailureAction: !pulsar/crypto-failure-action CONSUME
-          schema: !pulsar/schema AUTO_CONSUME
-          subscriptionName: api-service-cash-accounts-command-response
-          subscriptionType: !pulsar/subscription-type Shared
-          topicNames:
-            ["persistent://tenant-1/namespace-1/topic-cash-accounts-command-response"]
         schemas: !system/local-ref schemas
+        schema: !keyword command-response
+        topics: [topic-cash-accounts-command-response]
+        conf:
+          bootstrap.servers: !env KAFKA_BOOTSTRAP_SERVERS
+          group.id: api-service-cash-accounts-command-response
       cash-account-products-command-response:
-        client: !system/local-ref client
-        conf:
-          cryptoFailureAction: !pulsar/crypto-failure-action CONSUME
-          schema: !pulsar/schema AUTO_CONSUME
-          subscriptionName: api-service-cash-account-products-command-response
-          subscriptionType: !pulsar/subscription-type Shared
-          topicNames:
-            ["persistent://tenant-1/namespace-1/topic-cash-account-products-command-response"]
         schemas: !system/local-ref schemas
+        schema: !keyword command-response
+        topics: [topic-cash-account-products-command-response]
+        conf:
+          bootstrap.servers: !env KAFKA_BOOTSTRAP_SERVERS
+          group.id: api-service-cash-account-products-command-response
       parties-command-response:
-        client: !system/local-ref client
-        conf:
-          cryptoFailureAction: !pulsar/crypto-failure-action CONSUME
-          schema: !pulsar/schema AUTO_CONSUME
-          subscriptionName: api-service-parties-command-response
-          subscriptionType: !pulsar/subscription-type Shared
-          topicNames:
-            ["persistent://tenant-1/namespace-1/topic-parties-command-response"]
         schemas: !system/local-ref schemas
+        schema: !keyword command-response
+        topics: [topic-parties-command-response]
+        conf:
+          bootstrap.servers: !env KAFKA_BOOTSTRAP_SERVERS
+          group.id: api-service-parties-command-response
       payments-command-response:
-        client: !system/local-ref client
-        conf:
-          cryptoFailureAction: !pulsar/crypto-failure-action CONSUME
-          schema: !pulsar/schema AUTO_CONSUME
-          subscriptionName: api-service-payments-command-response
-          subscriptionType: !pulsar/subscription-type Shared
-          topicNames:
-            ["persistent://tenant-1/namespace-1/topic-payments-command-response"]
         schemas: !system/local-ref schemas
+        schema: !keyword command-response
+        topics: [topic-payments-command-response]
+        conf:
+          bootstrap.servers: !env KAFKA_BOOTSTRAP_SERVERS
+          group.id: api-service-payments-command-response
       transactions-command-response:
-        client: !system/local-ref client
-        conf:
-          cryptoFailureAction: !pulsar/crypto-failure-action CONSUME
-          schema: !pulsar/schema AUTO_CONSUME
-          subscriptionName: api-service-transactions-command-response
-          subscriptionType: !pulsar/subscription-type Shared
-          topicNames:
-            ["persistent://tenant-1/namespace-1/topic-transactions-command-response"]
         schemas: !system/local-ref schemas
+        schema: !keyword command-response
+        topics: [topic-transactions-command-response]
+        conf:
+          bootstrap.servers: !env KAFKA_BOOTSTRAP_SERVERS
+          group.id: api-service-transactions-command-response
       interest-command-response:
-        client: !system/local-ref client
-        conf:
-          cryptoFailureAction: !pulsar/crypto-failure-action CONSUME
-          schema: !pulsar/schema AUTO_CONSUME
-          subscriptionName: api-service-interest-command-response
-          subscriptionType: !pulsar/subscription-type Shared
-          topicNames:
-            ["persistent://tenant-1/namespace-1/topic-interest-command-response"]
         schemas: !system/local-ref schemas
+        schema: !keyword command-response
+        topics: [topic-interest-command-response]
+        conf:
+          bootstrap.servers: !env KAFKA_BOOTSTRAP_SERVERS
+          group.id: api-service-interest-command-response
       payee-checks-command-response:
-        client: !system/local-ref client
-        conf:
-          cryptoFailureAction: !pulsar/crypto-failure-action CONSUME
-          schema: !pulsar/schema AUTO_CONSUME
-          subscriptionName: api-service-payee-checks-command-response
-          subscriptionType: !pulsar/subscription-type Shared
-          topicNames:
-            ["persistent://tenant-1/namespace-1/topic-payee-checks-command-response"]
         schemas: !system/local-ref schemas
+        schema: !keyword command-response
+        topics: [topic-payee-checks-command-response]
+        conf:
+          bootstrap.servers: !env KAFKA_BOOTSTRAP_SERVERS
+          group.id: api-service-payee-checks-command-response
     message-bus-producers: !system/component
-      system/component-kind: pulsar/message-bus-producers
+      system/component-kind: kafka/message-bus-producers
       banks-command:
         producer: !system/local-ref producers.banks-command
       cash-accounts-command:
@@ -176,23 +141,31 @@ system:
       payee-checks-command:
         producer: !system/local-ref producers.payee-checks-command
     message-bus-consumers: !system/component
-      system/component-kind: pulsar/message-bus-consumers
+      system/component-kind: kafka/message-bus-consumers
       banks-command-response:
         consumer: !system/local-ref consumers.banks-command-response
+        timeout: 500
       cash-accounts-command-response:
         consumer: !system/local-ref consumers.cash-accounts-command-response
+        timeout: 500
       cash-account-products-command-response:
         consumer: !system/local-ref consumers.cash-account-products-command-response
+        timeout: 500
       parties-command-response:
         consumer: !system/local-ref consumers.parties-command-response
+        timeout: 500
       payments-command-response:
         consumer: !system/local-ref consumers.payments-command-response
+        timeout: 500
       transactions-command-response:
         consumer: !system/local-ref consumers.transactions-command-response
+        timeout: 500
       interest-command-response:
         consumer: !system/local-ref consumers.interest-command-response
+        timeout: 500
       payee-checks-command-response:
         consumer: !system/local-ref consumers.payee-checks-command-response
+        timeout: 500
   message-bus: !include bank/message-bus.yml
   fdb: !include bank/fdb.yml
   avro: !include bank/avro.yml
