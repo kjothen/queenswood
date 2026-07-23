@@ -2,5 +2,4 @@
    {:exclude-files
       ["target/" ".clj-kondo/imports/"
        "components/bank-schema/gen/com/repldriven/mono/schemas/*.*\\.cljc"
-       "components/test-schema/gen/com/repldriven/mono/test_schemas/*.*\\.cljc"
        "components/.*/build\\.clj"]}}
