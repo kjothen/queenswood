@@ -34,7 +34,7 @@ flowchart LR
     qwgcp["XPlatform XR<br/>(every project-scoped MR composed)"]
   end
   subgraph gke["queenswood-gke (GKE)"]
-    qw[queenswood chart<br/>bank-api, processors,<br/>frontend, Pulsar, FDB]
+    qw[queenswood chart<br/>api, processors,<br/>frontend, Pulsar, FDB]
     kc[queenswood-keycloak<br/>Keycloak CR + proxy]
     kco[keycloak-operator chart]
   end
@@ -136,7 +136,7 @@ over:
 |    4 | DNS zone                                                    |
 |    5 | Cert (XQueenswoodCertificate)                               |
 |    6 | Apex (XQueenswoodApex), `queenswood-keycloak` Release       |
-|    7 | `queenswood` Release (bank-api, processors, etc.)           |
+|    7 | `queenswood` Release (api, processors, etc.)                |
 
 The waves let Crossplane start expensive long-running work
 (CloudSQL provisioning takes 5–10 min, cert validation can take
@@ -275,11 +275,11 @@ Two URLs come into play:
   DNS record.
 - **In-cluster Service URL** —
   `http://queenswood-keycloak-keycloak-service:8080` — what
-  bank-api uses as `base-url` for the admin REST API and token
+  api uses as `base-url` for the admin REST API and token
   exchange. No LB round-trip; no `hostname-strict` constraint
   to worry about.
 
-The mismatch (tokens have `iss=public`, bank-api calls
+The mismatch (tokens have `iss=public`, api calls
 `base-url=internal`) is bridged by the keycloak component's
 `:expected-issuer` config, which overrides the default
 base-url-derived iss the verifier expects. See
@@ -434,11 +434,11 @@ commit messages.
 
 ## Out of scope
 
-- The local-kind / Tilt dev loop —
+- The local-kind dev loop —
   [recipes/deployment.md](../recipes/deployment.md).
 - Per-service image build pipeline — `infra/docker/service/`
   shared Dockerfile, `release-images.yml` workflow.
 - Realm content (clients, scopes, audience mappers) —
-  `components/bank-resources/resources/bank/keycloak-realm.json`
+  `components/resources/resources/bank/keycloak-realm.json`
   and its testcontainer-fixture sibling under
-  `components/bank-test-resources/`.
+  `components/test-resources/`.

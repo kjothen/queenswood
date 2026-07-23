@@ -6,15 +6,15 @@
 
 Every domain that owns an FDB-backed write — cash accounts,
 parties, payments, transactions, interest, IDV — is implemented
-as a *domain component* (`components/bank-X/`) hosted by its
-group's *processors base* (`bases/bank-financial-processors/` or
-`bases/bank-operational-processors/`) inside a combined processor
+as a *domain component* (`components/X/`) hosted by its
+group's *processors base* (`bases/financial-processors/` or
+`bases/operational-processors/`) inside a combined processor
 service — see
 [ADR-0019](../adr/0019-processor-packaging.md). This TDD
 describes the file layout inside the component, how FDB
 transactions thread through it, and where rejections originate.
 
-In scope: the internal architecture of a `bank-X` component
+In scope: the internal architecture of a `X` component
 (commands, core, domain, store, watcher); the `txn-or-config`
 parameter convention; the FDB-isolation rule; the rejection
 origin rule.
@@ -50,7 +50,7 @@ shape its internals:
   HTTP families — see
   [tdd/transaction-processing.md](transaction-processing.md).
 
-The conventions below are how every `bank-X` component answers
+The conventions below are how every `X` component answers
 those three forces.
 
 ## Solution
@@ -58,8 +58,8 @@ those three forces.
 ### File layout
 
 ```
-components/bank-X/
-  src/com/repldriven/mono/bank_X/
+components/X/
+  src/com/repldriven/queenswood/X/
     interface.clj      # public surface, docstrings
     commands.clj       # Processor protocol impl, command dispatch
     core.clj           # orchestration: store + domain + cross-brick
@@ -69,8 +69,8 @@ components/bank-X/
     validation.clj     # (optional) predicate-style validators
     system.clj         # defcomponents :processor + :watcher-handler
 
-bases/bank-<group>-processors/    # one per processor group
-  src/com/repldriven/mono/bank_<group>_processors/
+bases/<group>-processors/    # one per processor group
+  src/com/repldriven/queenswood/<group>_processors/
     main.clj           # entry point
     system.clj         # bare-require bundle for the group
 ```
@@ -142,9 +142,9 @@ transaction into two.
 wraps its body in `fdb/transact`:
 
 ```clojure
-(ns com.repldriven.mono.bank-cash-account.store
+(ns com.repldriven.queenswood.cash-account.store
   (:require
-    [com.repldriven.mono.bank-schema.interface :as schema]
+    [com.repldriven.queenswood.schema.interface :as schema]
     [com.repldriven.mono.error.interface :as error :refer [let-nom>]]
     [com.repldriven.mono.fdb.interface :as fdb]))
 

@@ -279,7 +279,7 @@ lints as `clojure.core/->`, and so on.
   primitive. Go through `util/now` everywhere else.
 - Repeat the brick name in function names within that brick
   (`process-command` in `command`, `send-account` in
-  `bank-cash-account`, and so on).
+  `cash-account`, and so on).
 
 **SHOULD:**
 

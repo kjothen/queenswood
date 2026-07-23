@@ -10,7 +10,7 @@ records financial events (Transactions and Legs) and
 maintains the running totals (Balances) those events
 produce.
 
-In scope: the `bank-transaction` and `bank-balance` bricks;
+In scope: the `transaction` and `balance` bricks;
 Transaction, Leg, and Balance shapes; the record + apply
 atomicity contract; posted vs available balance derivation;
 policy integration at the leg level; the credit-carry
@@ -63,18 +63,18 @@ per account isn't enough.
 
 Two bricks:
 
-- **`bank-transaction`** — owns the immutable record
+- **`transaction`** — owns the immutable record
   (Transaction + Legs). `record-transaction` is the only
   write surface.
-- **`bank-balance`** — owns the running Balance buckets and
+- **`balance`** — owns the running Balance buckets and
   the derived posted/available views. `apply-legs` updates
   buckets; `get-balances` reads the derivation.
 
 ```mermaid
 graph LR
     CMD[Domain command]
-    TX["bank-transaction<br/>record-transaction"]
-    BAL["bank-balance<br/>apply-legs"]
+    TX["transaction<br/>record-transaction"]
+    BAL["balance<br/>apply-legs"]
     FDB[("FDB<br/>one transaction")]
 
     CMD -->|legs| TX
@@ -151,7 +151,7 @@ interest math (see interest TDD).
 
 ### Recording an event
 
-`bank-transaction/record-transaction`:
+`transaction/record-transaction`:
 
 - Builds the Transaction map, generates a `:transaction-id`,
   sets the initial `:status` based on `:transaction-type`
@@ -167,13 +167,13 @@ concern that happens against potentially many buckets.
 
 ### Applying legs to balances
 
-`bank-balance/apply-legs`:
+`balance/apply-legs`:
 
 - For each leg, locates its target Balance by the composite
   key.
 - Increments the bucket's `:credit` or `:debit` (per the
   leg's `:side`) by `:amount`.
-- Calls `bank-policy/check-capability` per leg with kind
+- Calls `policy/check-capability` per leg with kind
   `:balance` — the policy can deny postings to specific
   balance buckets, and (via the threaded `transaction-type`)
   scope policy filters to the kind of transaction.
@@ -186,8 +186,8 @@ The processor wraps both in one FDB transaction:
 (fdb/transact record-db
   (fn [tx]
     (error/let-nom>
-      [txn (bank-transaction/record-transaction tx data)
-       _   (bank-balance/apply-legs tx
+      [txn (transaction/record-transaction tx data)
+       _   (balance/apply-legs tx
                                     (:legs data)
                                     (:transaction-type data))]
       txn)))
@@ -246,7 +246,7 @@ credit the posted bucket of the same account.
 
 ### Policy integration
 
-`apply-legs` consults `bank-policy/check-capability` per leg
+`apply-legs` consults `policy/check-capability` per leg
 with kind `:balance`. The request includes the action,
 balance-type, balance-status, and the threaded
 transaction-type. Policies can therefore:
@@ -403,7 +403,7 @@ A caller of `record-transaction` + `apply-legs` must:
   Audit of carry changes relies on balance record-versioning,
   not on legs.
 - **`available-balance` is hardcoded per product-type.** The
-  mapping lives in `bank-balance/domain.clj`. Adding a new
+  mapping lives in `balance/domain.clj`. Adding a new
   product-type requires editing the brick. A
   policy-configurable mapping would belong here if the
   variation grew, but today the set is small and stable.
@@ -431,5 +431,5 @@ A caller of `record-transaction` + `apply-legs` must:
   Transaction processing (envelope, command flow)
 - [policy-evaluation.md](policy-evaluation.md) — Policy
   evaluation engine (the per-leg `:balance` capability check)
-- `bank-transaction` brick interface
-- `bank-balance` brick interface
+- `transaction` brick interface
+- `balance` brick interface

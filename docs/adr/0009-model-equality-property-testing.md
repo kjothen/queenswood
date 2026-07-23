@@ -49,7 +49,7 @@ The shortlist:
   generators when they're too broad. May add later for very
   specific cases.
 - **Per-component projection functions** (putting `projection.clj`
-  inside `bank-balance`, `bank-cash-account`, and so on). Rejected
+  inside `balance`, `cash-account`, and so on). Rejected
   — leaks test concerns into production paths, and cross-component
   property tests would have no natural home.
 
@@ -64,7 +64,7 @@ The shape:
   the **model** — runs in parallel with the real system. The model
   is small (a few hundred lines for the whole bank) and imports
   nothing from production: no FDB, no Pulsar, no protobuf, no Malli,
-  no nom, no real IDs, not even `bank-policy` (the model carries its
+  no nom, no real IDs, not even `policy` (the model carries its
   own re-implementation of the policy rules it needs).
 - Fugato generates command sequences from a model spec
   (`{:run? :args :next-state :valid? :freq}`).
@@ -80,15 +80,15 @@ The shape:
 Three test-only components (carried by `project:dev` for the
 test runner; *not* part of any deployable project):
 
-- `bank-test-model` — the pure model.
-- `bank-test-projections` — projection fns built on production
+- `test-model` — the pure model.
+- `test-projections` — projection fns built on production
   component *interfaces only*.
-- `bank-test-scenarios` — command dispatch, ID side-table,
+- `test-scenarios` — command dispatch, ID side-table,
   quiescence wait, divergence debugging.
 
 The dependency arrow points test → production, never the reverse.
 Polylith enforces this: if a production component starts importing
-from `bank-test-*`, the build complains.
+from `test-*`, the build complains.
 
 The architecture is documented in detail at
 [docs/tdd/scenario-testing.md](../tdd/scenario-testing.md);

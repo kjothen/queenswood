@@ -1,10 +1,12 @@
 # CLAUDE.md
 
 Queenswood is a Clojure core-banking system, organised as a Polylith
-workspace and built as a domain fork of
-[`mono`](https://github.com/repldriven/mono). Bricks prefixed `bank-*`
-are Queenswood-specific; everything else is shared infrastructure
-inherited from upstream.
+workspace that consumes shared infrastructure from
+[`mono`](https://github.com/repldriven/mono) as a pinned git-dependency
+(the `ext/mono` shims under `deps/`). The workspace holds only
+Queenswood's own domain bricks — `com.repldriven.queenswood.*`; the
+shared infra lives in the dependency as `com.repldriven.mono.*`. See
+[ADR-0001](docs/adr/0001-reuse-mono-as-upstream.md).
 
 ## Topic router
 

@@ -1,9 +1,11 @@
-# 1. Reuse `mono` as upstream for shared infrastructure
+# 1. Consume `mono` as a pinned dependency for shared infrastructure
 <!-- tessl-plugin: design -->
 
 ## Status
 
-Accepted.
+Accepted. Queenswood was originally a *domain fork* of `mono`; it now
+consumes mono as a versioned git-dependency. This document describes the
+current arrangement, not the fork it replaced.
 
 ## Context
 
@@ -13,75 +15,76 @@ server, environment loading, error handling, logging, telemetry,
 testcontainers, system lifecycle, code generation, JSON, encryption,
 vault integration. None of it is bank-specific.
 
-That infrastructure already exists as a separate, domain-independent
-Polylith workspace with tests: [`mono`](https://github.com/repldriven/mono).
-Mono is new — it does not have years of production behind it — but it is
-the only place this code lives, and the bricks were built from the start
-to be reusable substrate rather than carved out of an existing
-application. The question is *whether and how* to reuse it. Everything
-else about Queenswood's organisation — workspace structure, dependency
-management, deployment shape — flows from the answer.
+That infrastructure lives in a separate, domain-independent Polylith
+workspace with its own tests:
+[`mono`](https://github.com/repldriven/mono). The question is how to
+reuse it. Everything else about Queenswood's organisation — workspace
+structure, dependency management, deployment shape — flows from the
+answer.
 
 The options:
 
 - **Re-implement infrastructure inside Queenswood.** Duplication of code
   that already exists; ongoing divergence as mono evolves; no upside.
-- **Mono as a published Maven artifact.** Adds a release cadence between
-  us and infra changes, and turns "fix a bug in `bank-payment` that
-  exposes a `pulsar` issue" into a two-PR-two-repos dance.
-- **Mono as a git submodule.** Friction-heavy and most tooling doesn't
-  expect it.
-- **Domain fork.** Pull mono's bricks directly into Queenswood's
-  workspace via the standard git upstream-remote pattern; add `bank-*`
-  components on top.
+- **Domain fork.** Pull mono's bricks directly into the workspace and add
+  domain bricks on top, tracking upstream with `git merge`. This was the
+  original arrangement. It made every infra brick locally editable, but
+  there was no reproducible *version* of mono — the code present was
+  whatever was last merged — local edits to a mono brick conflicted with
+  upstream merges, and the workspace carried the full weight of mono's
+  bricks and tests.
+- **Consume mono as a pinned git-dependency.** Depend on mono at a
+  specific tag/sha via `tools.deps`; keep only Queenswood's own domain
+  bricks in the workspace; take shared infra from the dependency's
+  classpath.
 
 ## Decision
 
-We will reuse mono via a **domain fork**. Queenswood's workspace is a
-*superset* of mono's: mono's bricks live at identical paths and
-namespaces. Mono updates are pulled with `git merge upstream/main`.
-Improvements that are not bank-specific are made in mono and pulled
-down; bank-specific bricks are prefixed `bank-*` and live only in
-Queenswood.
+We consume mono as a **pinned git-dependency**, not a fork.
 
-This decision implies Polylith as the workspace structure, since mono
-is a Polylith workspace. Polylith brings clear interface boundaries,
-brick-level test scoping, and projects-as-deployment-targets — all of
-which serve a system at Queenswood's scale well, but they are
-downstream of the mono-reuse decision rather than independently chosen.
-We do not re-argue Polylith here; see
+The workspace holds only Queenswood's domain bricks. Shared infrastructure
+comes from `com.repldriven/mono`, pinned to a specific tag and sha. Two
+shim directories under `deps/` carry that coordinate: `deps/mono` (runtime,
+rooted at mono's `projects/mono-lib`) and `deps/mono-test` (the test
+superset, rooted at `projects/mono-test-lib`, which adds `test-system` and
+`testcontainers`). Every project references them under one symbol,
+`ext/mono`; a project's `:test` alias re-points `ext/mono` at the test
+superset, so the root is swapped by symbol. Upgrading mono is a one-line
+tag/sha bump in those two shims.
+
+Because domain bricks no longer share a workspace with mono's infra, they
+carry no distinguishing prefix — a component is just a component. External
+infra namespaces stay `com.repldriven.mono.*`; Queenswood's own bricks are
+`com.repldriven.queenswood.*`.
+
+This decision implies Polylith as the workspace structure, since mono is a
+Polylith workspace and `mono-lib` is a Polylith aggregate. Polylith brings
+clear interface boundaries, brick-level test scoping, and
+projects-as-deployment-targets. We do not re-argue Polylith here; see
 [the Polylith documentation](https://polylith.gitbook.io/polylith).
 
 ## Consequences
 
 Easier:
 
-- All of mono's infrastructure available immediately, with full source
-  visibility and its existing tests. Every brick is editable,
-  debuggable, and testable as if it were native to Queenswood —
-  because, in the workspace, it is.
-- "Fix the bug at the right level" becomes natural. A flaw exposed in
-  `bank-payment` that traces to `pulsar` is fixed in `pulsar` upstream
-  and pulled down. No two-PR-two-repos dance.
-- Polylith's brick-level test scoping (`clojure -M:poly test
-  brick:<x>`) and explicit dep graph fall out for free.
-- The line between "domain" and "infrastructure" is enforced by the
-  `bank-*` prefix. Touching an unprefixed brick is a signal the change
-  should probably go upstream.
+- **Reproducible.** The mono version is pinned by tag and sha, not
+  "whatever was last merged". Upgrades are deliberate and reviewable — one
+  commit bumping the two shims.
+- **No merge cost.** There is no upstream branch to reconcile; a mono
+  release is just a new pinned version.
+- **Smaller workspace.** Only domain bricks live here, with their own
+  tests; mono's bricks and tests are the dependency's concern.
+- **Clean separation.** `com.repldriven.mono.*` on the classpath is
+  external infra; `com.repldriven.queenswood.*` is ours. The boundary is
+  the namespace root, enforced by where the code physically lives.
 
 Harder:
 
-- Merge cost. Local changes to a mono-origin brick conflict with
-  upstream merges. The discipline is: avoid forking mono bricks
-  in-place — change them upstream and pull the change down — unless a
-  bank-specific divergence is genuinely justified. So far this has
-  held.
-- No reproducible "version" of mono. The mono code present in
-  Queenswood is whatever was last merged. Acceptable for a
-  single-developer research project; would need revisiting for
-  multi-team production with separate release trains.
-- New contributors must understand the dual-repo model. CLAUDE.md and
-  this ADR set should make that navigable; the README links to mono.
-- The workspace is larger than typical Polylith examples. Brick
-  discoverability (`workspace.edn`, `bank-*` naming) matters more than
-  in a from-scratch Polylith repo.
+- **Changing infra is a round-trip.** A flaw in Queenswood that traces to
+  a mono brick is fixed upstream in mono, released as a new tag, then
+  pulled down via a shim bump — where the fork let you edit the brick in
+  place. This is the deliberate trade for reusability: reusing mono's
+  infrastructure rather than reimplementing or owning a copy of it.
+- **Two repos to navigate.** Infra source lives in the mono checkout under
+  `~/.gitlibs`, not the workspace. CLAUDE.md and this ADR set should keep
+  that navigable.

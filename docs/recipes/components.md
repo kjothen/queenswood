@@ -16,7 +16,7 @@ private to the component.
 
 ```
 components/<brick>/
-  src/com/repldriven/mono/<brick>/
+  src/com/repldriven/queenswood/<brick>/
     interface.clj    ; public API, delegates to other namespaces
     core.clj         ; primary implementation
     domain.clj       ; (often) data shapes, validation
@@ -28,8 +28,8 @@ components/<brick>/
 `interface.clj` re-exports public functions:
 
 ```clojure
-(ns com.repldriven.mono.<brick>.interface
-  (:require [com.repldriven.mono.<brick>.core :as core]))
+(ns com.repldriven.queenswood.<brick>.interface
+  (:require [com.repldriven.queenswood.<brick>.core :as core]))
 
 (defn do-the-thing [x] (core/do-the-thing x))
 ```

@@ -124,8 +124,8 @@ doc that goes deep:
   transactional outbox.** Multi-record ACID by default; the
   outbox pattern falls out of the storage engine.
   See [ADR-0002](docs/adr/0002-foundationdb-record-layer.md).
-- **Domain fork of `mono`** — infrastructure bricks present in
-  the workspace, not pulled in as a library.
+- **Consumes `mono`** — shared infrastructure pulled in as a
+  pinned git-dependency, not forked into the workspace.
   See [ADR-0001](docs/adr/0001-reuse-mono-as-upstream.md).
 
 ## Documentation
@@ -249,13 +249,15 @@ each
 
 ## Built on mono
 
-Queenswood is a **domain fork** of
-[mono](https://github.com/repldriven/mono), a Clojure component
+Queenswood **consumes**
+[mono](https://github.com/repldriven/mono) — a Clojure component
 library for production-ready distributed systems built on
-[Polylith](https://polylith.gitbook.io/polylith). Bricks prefixed
-`bank-*` are Queenswood-specific; everything else is shared
-infrastructure inherited from upstream and pulled down via
-`git merge upstream/main`.
+[Polylith](https://polylith.gitbook.io/polylith) — as a pinned
+git-dependency. The workspace holds only Queenswood's own domain
+bricks (`com.repldriven.queenswood.*`); the shared infrastructure
+comes from the dependency (`com.repldriven.mono.*`), pinned to a
+tag/sha via the `ext/mono` shims under `deps/` and upgraded with a
+one-line bump.
 See [ADR-0001](docs/adr/0001-reuse-mono-as-upstream.md) for the
 reasoning. The shared component library (lifecycle,
 persistence, messaging, security, etc.) is documented in the

@@ -33,7 +33,7 @@ lives inside.
 
 **Platform admin / Queenswood operator.** Sees users as the
 human counterpart of the existing service-account credentials.
-Operators sign in to the `bank-app` SPA against the
+Operators sign in to the operator SPA against the
 `queenswood-ops` realm; users are how non-operator humans get
 in to the org-facing `console`.
 
@@ -94,7 +94,7 @@ in to the org-facing `console`.
   parties.
 - **Static admin bearer.** There is no env-var admin API key.
   Operator-grade access flows through Keycloak: an operator
-  signs in to the `bank-app` SPA against the `queenswood-ops`
+  signs in to the operator SPA against the `queenswood-ops`
   realm, or a back-office service mints a service JWT via the
   `queenswood-admin` `client_credentials` client. Either path
   carries the `admin` realm role, which the API maps to the
@@ -222,7 +222,7 @@ session, the user lands directly on the dashboard.
 sequenceDiagram
     participant U as User
     participant C as Console (SPA)
-    participant Q as Queenswood (bank-api)
+    participant Q as Queenswood (api)
 
     U->>C: take an action in the console
     C->>Q: banking-API call (bearer = session token)

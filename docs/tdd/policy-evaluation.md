@@ -16,7 +16,7 @@ checked; the matching engine the two share; the curative-
 permit pattern; and the contract between the engine and the
 domains that consume it.
 
-In scope: the `bank-policy` brick, capability evaluation,
+In scope: the `policy` brick, capability evaluation,
 limit evaluation, the matching engine, bindings, the anomaly
 contract.
 
@@ -73,11 +73,11 @@ allow modes.
 
 ### Architecture
 
-The `bank-policy` brick owns the engine, with a deliberate
+The `policy` brick owns the engine, with a deliberate
 file split:
 
 ```
-components/bank-policy/src/com/repldriven/mono/bank_policy/
+components/policy/src/com/repldriven/queenswood/policy/
   domain.clj       ; record shapes, validation
   store.clj        ; FDB record store + indices
   match.clj        ; common matching engine
@@ -239,13 +239,13 @@ through its `error/let-nom>` chain:
 
 ```clojure
 (error/let-nom>
- [policies (bank-policy/get-effective-policies
+ [policies (policy/get-effective-policies
             tx
             {:bank-id bank-id})
-  _ (bank-policy/check-capability policies
+  _ (policy/check-capability policies
                                   :cash-account/open
                                   {:account-type :savings})
-  _ (bank-policy/check-limit policies
+  _ (policy/check-limit policies
                              :cash-account/open
                              {:aggregate :count
                               :window :instant
@@ -319,7 +319,7 @@ turns `:unauthorized/policy-*` into 403.
 - **Binding resolution is bank-scoped and unindexed.**
   `get-effective-policies` resolves platform-tier policies
   plus policies bound to the selector's `:bank-id` via
-  `PolicyBinding` records (`bank-policy/.../core.clj`).
+  `PolicyBinding` records (`policy/.../core.clj`).
   Finer selectors (account-type, product) aren't honoured
   yet, and `get-bindings-for-bank` does a full scan filtered
   in memory (`store.clj`) — a `BankTarget` index is the
@@ -341,7 +341,7 @@ turns `:unauthorized/policy-*` into 403.
   all legs" helper.
 - **No request-level simulation helper.**
   `get-effective-policy` now returns the resolved decision
-  set with provenance (`bank-policy/.../interface.clj`), but
+  set with provenance (`policy/.../interface.clj`), but
   there's still no `simulate` fn answering "would *this*
   request pass?" without executing — callers must assemble
   the policy set and request shape manually.
@@ -377,4 +377,4 @@ turns `:unauthorized/policy-*` into 403.
 - [service-apis.md](service-apis.md) — Service APIs (anomaly
   → HTTP status)
 - [error-handling.md](../recipes/error-handling.md)
-- `bank-policy` brick interface
+- `policy` brick interface

@@ -25,23 +25,23 @@ cases that must keep working.
 Scenario testing lives in two bricks that share shape but target
 different layers.
 
-- **`bank-test-scenarios`** is the **domain-layer** brick. Verbs
+- **`test-scenarios`** is the **domain-layer** brick. Verbs
   call component interfaces directly (`payment/submit-outbound`,
   `balance/get-balance`, …). It owns the model-equality property
   test described in the rest of this document — fugato generates
   command sequences, the model and projections live in
-  `bank-test-model` and `bank-test-projections`, and equality
+  `test-model` and `test-projections`, and equality
   after each sequence is the property.
-- **`bank-test-api-scenarios`** is the **HTTP-surface** brick.
-  Verbs are HTTP requests against a live `bank-api` (booted in
+- **`test-api-scenarios`** is the **HTTP-surface** brick.
+  Verbs are HTTP requests against a live `api` (booted in
   the test system). Scenarios use EDN with the same `:given` /
   `:when` / `:then` shape, refs (`[:ref alias k1 …]`) for
   capturing values across steps, and
   `nubank/matcher-combinators` markers (`[:m/regex …]`,
   `[:m/embeds …]`, …) for assertion shapes. This brick replaced
   the scattered per-base / per-component `*_test.clj` API tests
-  that used to live in `bases/bank-api/test/`,
-  `components/bank-api-key/test/`, and similar paths.
+  that used to live in `bases/api/test/`,
+  `components/api-key/test/`, and similar paths.
 
 The two bricks coexist deliberately. The domain-layer brick
 finds bugs in rules and choreography; the HTTP-layer brick locks
@@ -81,14 +81,14 @@ Three test-only components, picked up by the existing test
 pipeline (the `external-test-runner` base and each brick's `test/`
 paths under `project:dev`). They are **not** Polylith projects —
 there's no deployable artifact here. If the scenario runner ever
-needs a CLI entrypoint, it'll be a `bases/bank-test-scenarios`
-base. Namespaces follow the repo's `com.repldriven.mono.*`
+needs a CLI entrypoint, it'll be a `bases/test-scenarios`
+base. Namespaces follow the repo's `com.repldriven.queenswood.*`
 convention:
 
 ```
 components/
-  bank-test-model/
-    src/com/repldriven/mono/bank_test_model/
+  test-model/
+    src/com/repldriven/queenswood/test_model/
       interface.clj            ; re-exports model map and helpers
       state.clj                ; init-state, helpers
       policy.clj               ; pure re-implementation of policy rules
@@ -97,14 +97,14 @@ components/
       fees.clj                 ; fee commands
       [later: interest.clj, accrual.clj, ...]
 
-  bank-test-projections/
-    src/com/repldriven/mono/bank_test_projections/
+  test-projections/
+    src/com/repldriven/queenswood/test_projections/
       interface.clj            ; re-exports project-* fns
       balances.clj             ; project-balances
       [later: accounts.clj, limits.clj, ...]
 
-  bank-test-scenarios/
-    src/com/repldriven/mono/bank_test_scenarios/
+  test-scenarios/
+    src/com/repldriven/queenswood/test_scenarios/
       interface.clj            ; run-commands, run-scenario
       runner.clj               ; the step dispatcher
       verbs.clj                ; verb -> action mapping
@@ -115,27 +115,27 @@ components/
 
 ### Dependency arrows
 
-- `bank-test-projections` depends on production component
-  **interfaces only** (`bank-balance/interface`,
-  `bank-cash-account/interface`, etc.). Never on internals.
-- `bank-test-model` depends on **nothing** in production. It is
+- `test-projections` depends on production component
+  **interfaces only** (`balance/interface`,
+  `cash-account/interface`, etc.). Never on internals.
+- `test-model` depends on **nothing** in production. It is
   pure functions over a map. It does not import proto schemas,
   Malli contracts, nom anomalies, or anything from production
-  components — including `bank-policy`. The model carries its own
+  components — including `policy`. The model carries its own
   hand-written re-implementation of the policy rules it needs
   (see `policy.clj`); when the production policy semantics change,
   the model's `policy.clj` is updated to match.
-- `bank-test-scenarios` depends on `bank-test-model`,
-  `bank-test-projections`, and the production components it needs
+- `test-scenarios` depends on `test-model`,
+  `test-projections`, and the production components it needs
   to drive (command-submission interfaces, primarily).
 - The arrow only ever points test → production. If a production
-  component starts importing from `bank-test-*`, Polylith will
+  component starts importing from `test-*`, Polylith will
   yell. Listen to it.
 
 ### Why this layout
 
 Per-component projections were considered and rejected. If
-`bank-balances` owned a `projection.clj`, that file would depend
+`balances` owned a `projection.clj`, that file would depend
 on the model's data shapes — a test concern leaking into a
 production component. Worse, property tests that assert across
 multiple components would have no natural home. A dedicated
@@ -266,7 +266,7 @@ Projections have three required properties:
    field the model didn't bother modelling.
 
 2. **Boundary-aware.** Read through the same query path the API
-   uses. If `available` balance is computed by `bank-balances`
+   uses. If `available` balance is computed by `balances`
    aggregating postings, the projection calls _that_, not
    `fdb/get`. Otherwise the projection is testing storage, not
    the system.
@@ -281,10 +281,10 @@ Projections have three required properties:
   "Reads available balance for every account known to the bank.
    Returns {model-acct-id -> int-pence}, mirroring :accounts."
   [bank id-mapping]
-  (->> (bank-cash-account/list-accounts bank)
+  (->> (cash-account/list-accounts bank)
        (map (fn [{:keys [account-id]}]
               [(get id-mapping account-id)
-               (bank-balance/available bank account-id)]))
+               (balance/available bank account-id)]))
        (into {})))
 
 (defn project-model-balances
@@ -320,7 +320,7 @@ The property:
 
 ## The runner
 
-`bank-test-scenarios` is a **component** (library code), not a
+`test-scenarios` is a **component** (library code), not a
 base. Tests that exercise the runner — Phase 3 hand-built
 sequences, Phase 4 EDN scenarios, Phase 5 fugato property tests —
 live in the runner brick's own `test/`, mirroring how every other
@@ -331,10 +331,10 @@ would be wrong.
 If a CLI entrypoint to run a single scenario outside the polylith
 test machinery turns out to be useful (hand-debugging, replaying a
 shrunk fugato sequence one step at a time), add a thin
-`bases/bank-test-scenarios` later that wraps the component with a
+`bases/test-scenarios` later that wraps the component with a
 `-main`. That's orthogonal to where the tests live.
 
-`bank-test-scenarios` owns command dispatch, ID mapping,
+`test-scenarios` owns command dispatch, ID mapping,
 quiescence, and comparison.
 
 ### Command dispatch
@@ -399,7 +399,7 @@ comparison. The only difference is the source.
 
 EDN scenarios live under the runner brick's test-resources, at
 `bank-test-scenarios/scenarios/*.edn` on the test classpath
-(see `components/bank-test-scenarios/test-resources/`). Each is
+(see `components/test-scenarios/test-resources/`). Each is
 a map with `:given`, `:when`, `:then` sections, all of which are
 sequences of the same step shape —
 `{:command <kw> :args [...]}` — as fugato emits, plus assertion
@@ -493,10 +493,10 @@ before writing the first defspec.
 ## Considered alternatives, rejected
 
 **Per-component projections.** Putting projection functions
-inside `bank-balances`, `bank-accounts`, etc. Rejected because it
+inside `balances`, `accounts`, etc. Rejected because it
 leaks test concerns into production paths and makes
 cross-component property tests homeless. Centralised in
-`bank-test-projections`.
+`test-projections`.
 
 **Property assertions instead of model equality.** Writing
 invariants like "available balance never below floor for in-scope

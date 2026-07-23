@@ -20,7 +20,7 @@ edge, how the two principal types (a bank's backend service vs a
 human user) are distinguished, what identity is attached to the
 request, and how route authorization gates on roles.
 
-In scope: the `bank-api` auth interceptors, the
+In scope: the `api` auth interceptors, the
 `identity-provider` brick and its `keycloak` implementation, the
 service-account lifecycle, the realm and client layout, and the
 `:auth` shape the rest of the system reads.
@@ -71,10 +71,10 @@ Two interceptors run at the edge, in order:
 ```mermaid
 graph LR
     CALLER["Caller<br/>Authorization: Bearer JWT"]
-    AUTHN["bank-api authenticate<br/>(per request)"]
+    AUTHN["api authenticate<br/>(per request)"]
     IDP["identity-provider<br/>verify-token"]
     JWKS["keycloak JWKS<br/>(10-min cache)"]
-    AUTHZ["bank-api authorize<br/>(role intersection)"]
+    AUTHZ["api authorize<br/>(role intersection)"]
     HANDLER["route handler<br/>(reads :bank-id)"]
 
     CALLER --> AUTHN
@@ -135,7 +135,7 @@ directly to that bank. The shared `queenswood-admin` operator
 client carries the `admin` realm role and therefore no
 `:bank-id` (admin routes are platform-wide).
 
-**User principal.** The user path **upserts a `bank-user` row**
+**User principal.** The user path **upserts a `user` row**
 keyed on `(iss, sub)` on every request (idempotent; refreshes
 email / name / avatar from the OIDC profile claims), looks up the
 user's memberships, and builds:
@@ -231,7 +231,7 @@ The API stamps a status-derived audience on a bank's tokens:
 - **A self-managed user store.** Own the password / MFA / profile
   lifecycle in-house. Rejected — Keycloak owns identity; the API
   is a relying party and only *projects* verified claims into a
-  `bank-user` row keyed on `(iss, sub)`.
+  `user` row keyed on `(iss, sub)`.
 - **mTLS client certificates for service traffic.** Stronger
   machine identity, cryptographic revocation. Heavier
   operationally (cert management, CA infra) and the fintech
@@ -280,7 +280,7 @@ The API stamps a status-derived audience on a bank's tokens:
   interceptor chain the auth interceptors sit in)
 - [banks.md](banks.md) — Banks (bank creation
   provisions the service-account client)
-- `bank-api` auth interceptors (`auth.clj`)
+- `api` auth interceptors (`auth.clj`)
 - `identity-provider` brick interface (`verify-token`,
   `create-service-account`, `exchange-client-credentials`,
   `rotate-secret`, `revoke-service-account`, `get-jwks`,

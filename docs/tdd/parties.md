@@ -17,8 +17,8 @@ flow that traverses FDB changelogs and the message bus to
 the IDV adapter, and the honest gaps in today's IDV
 machinery.
 
-In scope: the `bank-party` and `bank-idv` bricks; the
-`bank-onfido-adapter` and `bank-onfido-simulator` bases;
+In scope: the `party` and `idv` bricks; the
+`onfido-adapter` and `onfido-simulator` bases;
 party types and lifecycle; the watcher + bus + event flow
 that drives person-party activation; name-matching; party
 identifiers and person identifications.
@@ -67,7 +67,7 @@ adapter calls the provider and republishes the eventual
 webhook as an `idv-completed` event, the IDV event
 processor flips the IDV record, and the IDV flip triggers
 party activation. The flow is decoupled end-to-end — no
-direct call from `bank-party` to `bank-idv` to the
+direct call from `party` to `idv` to the
 adapter; each hop crosses a durable channel.
 
 ## Proposed Solution
@@ -76,28 +76,28 @@ adapter; each hop crosses a durable channel.
 
 Two bricks plus an adapter/simulator base pair:
 
-- **`bank-party`** — owns Party records, party CRUD, name
+- **`party`** — owns Party records, party CRUD, name
   matching, party identifiers (passport, NI), person
   identifications (given/family/middle names), and the
   watcher that activates parties on IDV acceptance.
-- **`bank-idv`** — owns IDV records, the watcher that
+- **`idv`** — owns IDV records, the watcher that
   creates IDVs from pending parties, the `initiate` core
   fn that publishes `submit-idv-check`, and the
   `IdvEventProcessor` that consumes `idv-completed` events
   and flips the IDV record.
-- **`bank-onfido-adapter`** (base) — talks to the
+- **`onfido-adapter`** (base) — talks to the
   IDV provider over HTTP. Subscribes to `submit-idv-check`
   on the bus, calls Onfido's `POST /v3.6/applicants` and
   `POST /v3.6/checks`, receives `check.completed`
   webhooks, and republishes them as `idv-completed`
   events on the bus.
-- **`bank-onfido-simulator`** (base) — Onfido-shaped HTTP
+- **`onfido-simulator`** (base) — Onfido-shaped HTTP
   service used for development and tests. Mocks the
   applicant + check + webhook lifecycle deterministically.
 
-`bank-party` and `bank-idv` communicate via FDB changelog
+`party` and `idv` communicate via FDB changelog
 per [ADR-0008](../adr/0008-changelog-watchers.md).
-`bank-idv` and `bank-onfido-adapter` communicate via the
+`idv` and `onfido-adapter` communicate via the
 message bus per
 [ADR-0003](../adr/0003-message-bus-abstraction.md) — a
 command channel for `submit-idv-check` and an event
@@ -106,16 +106,16 @@ channel for `idv-completed`.
 ```mermaid
 graph TD
     HTTP[HTTP create-person-party]
-    PARTY["bank-party<br/>(party-status-pending)"]
+    PARTY["party<br/>(party-status-pending)"]
     PCH[("Party changelog")]
-    IDV1["bank-idv watcher<br/>creates IDV (pending)<br/>+ publishes submit-idv-check"]
+    IDV1["idv watcher<br/>creates IDV (pending)<br/>+ publishes submit-idv-check"]
     IDV[("IDV record")]
     BUS[("message-bus")]
-    ADAPTER["bank-onfido-adapter"]
+    ADAPTER["onfido-adapter"]
     ONFIDO["Onfido<br/>(or simulator)"]
-    EP["bank-idv<br/>IdvEventProcessor"]
+    EP["idv<br/>IdvEventProcessor"]
     ICH[("IDV changelog")]
-    PARTY3["bank-party watcher<br/>activates party"]
+    PARTY3["party watcher<br/>activates party"]
     PARTY4["Party (active)"]
 
     HTTP -->|new-party| PARTY
@@ -247,14 +247,14 @@ round-trip to the IDV provider, and one bus event.
 ```mermaid
 sequenceDiagram
     participant H as HTTP handler
-    participant P as bank-party
-    participant W1 as bank-idv watcher
-    participant I as bank-idv
+    participant P as party
+    participant W1 as idv watcher
+    participant I as idv
     participant B as message-bus
-    participant A as bank-onfido-adapter
+    participant A as onfido-adapter
     participant O as Onfido<br/>(or simulator)
-    participant E as bank-idv<br/>IdvEventProcessor
-    participant W2 as bank-party watcher
+    participant E as idv<br/>IdvEventProcessor
+    participant W2 as party watcher
 
     H->>P: new-party (type=person)
     P->>P: write Party (status=pending)
@@ -292,7 +292,7 @@ create a second IDV.
 
 ### Onfido adapter
 
-`bank-onfido-adapter` is its own base. It owns:
+`onfido-adapter` is its own base. It owns:
 
 - **Command consumer** — Pulsar consumer for
   `submit-idv-check` commands. For each, calls Onfido's
@@ -303,7 +303,7 @@ create a second IDV.
   `external_id` field as a correlation channel.
 - **Webhook receiver** — HTTP endpoint
   `POST /webhooks/onfido/check-completed` under its own
-  server (separate from `bank-api`). Verifies the
+  server (separate from `api`). Verifies the
   signature, parses the Onfido payload, parses the
   composite `external_id` back into org-id /
   verification-id, and republishes as an `idv-completed`
@@ -320,7 +320,7 @@ Onfido. The rest of the system sees only bus messages.
 
 ### Onfido simulator
 
-`bank-onfido-simulator` is its own base, deployed in
+`onfido-simulator` is its own base, deployed in
 development and tests. It exposes the subset of Onfido's
 HTTP API that the adapter uses:
 
@@ -383,9 +383,9 @@ Choosing the watcher + bus pattern is deliberate — see
 
 Reasons:
 
-- **Decoupling.** `bank-party` doesn't import `bank-idv`
-  and vice versa; `bank-idv` doesn't import the adapter;
-  the adapter doesn't import `bank-idv`. Each brick or
+- **Decoupling.** `party` doesn't import `idv`
+  and vice versa; `idv` doesn't import the adapter;
+  the adapter doesn't import `idv`. Each brick or
   base evolves independently.
 - **Observability.** Each transition is its own durable
   event — a changelog entry or a bus message — visible to
@@ -431,13 +431,13 @@ already know the model. Both costs are accepted.
   experience. Bus + webhook with a status-poll/read model
   is the right shape.
 - **Auto-flipping IDV in the watcher.** The previous
-  iteration of `bank-idv` had its watcher unconditionally
+  iteration of `idv` had its watcher unconditionally
   flip pending IDVs to accepted, with no provider involved.
   Replaced — left no place for a real provider to plug in,
   and the flip-without-evidence pattern was never going to
   survive contact with a compliance review.
-- **Direct adapter dependency in `bank-idv`.** Have
-  `bank-idv` call Onfido's HTTP API directly. Rejected —
+- **Direct adapter dependency in `idv`.** Have
+  `idv` call Onfido's HTTP API directly. Rejected —
   couples the IDV brick to a vendor's API. The adapter
   base is the only place that knows about Onfido's wire
   shape; the rest of the system sees bus messages.
@@ -453,15 +453,15 @@ already know the model. Both costs are accepted.
 ## Known Limitations
 
 - **Production Onfido integration isn't deployed.**
-  `bank-onfido-adapter` speaks Onfido's HTTP API and is
-  wired against `bank-onfido-simulator` for development
+  `onfido-adapter` speaks Onfido's HTTP API and is
+  wired against `onfido-simulator` for development
   and tests. Pointing it at production Onfido needs real
   credentials, the production webhook URL, signature
   verification keys, and operator playbooks — none of
   which are deployed today. The architecture is
   pluggable; the production deployment isn't yet there.
 - **Simulator outcomes are deterministic, not realistic.**
-  `bank-onfido-simulator` routes outcomes off the
+  `onfido-simulator` routes outcomes off the
   applicant's `first_name` (`Reject` → `consider`,
   default → `clear`). It doesn't model partial outcomes,
   manual-review queues, document-quality failures, or
@@ -471,7 +471,7 @@ already know the model. Both costs are accepted.
   on.** The `IdvStatus` enum already admits `IN_REVIEW` and
   `FAILED` (`idv.proto`), but the party watcher only maps
   `ACCEPTED` / `REJECTED` to a status transition
-  (`bank-party/.../watcher.clj`); manual-review and
+  (`party/.../watcher.clj`); manual-review and
   technical-failure outcomes leave the party pending with no
   follow-up.
 - **No re-verification flow.** Once a person party is
@@ -486,8 +486,8 @@ already know the model. Both costs are accepted.
   status enum admits more values; the lifecycle code
   doesn't drive them.
 - **Party and User are not linked.** A platform `User`
-  (`bank-user`, an OIDC identity) and `Membership`
-  (`bank-membership`, User→Bank) now exist and are
+  (`user`, an OIDC identity) and `Membership`
+  (`membership`, User→Bank) now exist and are
   deliberately separate from `Party` (the banking-domain
   customer). But there is still no relation tying a `User`
   to a `Party` — no *acts on behalf of* or *is a* link for
@@ -527,9 +527,9 @@ already know the model. Both costs are accepted.
 - [payments.md](payments.md) — Payments (CoP consumes
   `match-name`; the same adapter/simulator pattern lives
   there for ClearBank)
-- `bank-party` brick interface
-- `bank-idv` brick interface
-- `bank-onfido-adapter` base
-- `bank-onfido-simulator` base
-- `bank-onfido-webhook` component (Malli schemas for the
+- `party` brick interface
+- `idv` brick interface
+- `onfido-adapter` base
+- `onfido-simulator` base
+- `onfido-webhook` component (Malli schemas for the
   webhook envelope)

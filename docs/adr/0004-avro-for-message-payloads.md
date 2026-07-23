@@ -39,7 +39,7 @@ The shortlist for messaging:
 ## Decision
 
 We will use Avro for all command and event payloads on the message
-bus, via Lancaster on the Clojure side. Schemas live in `bank-schema`
+bus, via Lancaster on the Clojure side. Schemas live in `schema`
 alongside the protobuf record definitions. Producers and consumers
 bind to a schema at registration; mismatch is caught at startup, not
 in production.
@@ -56,7 +56,7 @@ Easier:
   aliases, changing defaults — all explicit and tooling-checked.
   Reader/writer schema reconciliation lives in the library, not in
   our code.
-- Producer/consumer contract is centralised in `bank-schema`. Drift
+- Producer/consumer contract is centralised in `schema`. Drift
   surfaces at registration, not when a downstream consumer chokes on
   an unexpected payload at 3am.
 - Lancaster speaks Clojure data with keyword keys natively. This
@@ -81,7 +81,7 @@ Harder:
 - No browser-native Avro support. The Svelte front-end speaks JSON to
   the HTTP API; Avro stops at the message bus. This is by design —
   Avro was never meant for that — but it's a boundary to remember.
-- Schemas in `bank-schema` must be kept in step with the Clojure data
+- Schemas in `schema` must be kept in step with the Clojure data
   structures producers and consumers actually emit and accept.
   Lancaster makes this less painful than raw Avro Java tooling, but
   it's still surface area to maintain.

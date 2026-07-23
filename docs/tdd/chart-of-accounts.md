@@ -11,7 +11,7 @@ movement, every fee, every interest accrual, every
 settlement-clearing event posts as double-entry journals.
 
 Queenswood models the bank's books as a first-class **chart of
-accounts** — a per-bank artefact. The `bank-ledger-account`
+accounts** — a per-bank artefact. The `ledger-account`
 brick owns the GL account entity (its own FDB record type) and
 the canonical seeded template; the **sub-ledger / GL split**
 keeps customer cash-accounts as they are while routing their
@@ -22,7 +22,7 @@ on every run. Fees and interest get their symmetric
 counter-legs, closing the gap transactions-and-balances calls
 out (*"a fee today is one debit leg with no matching credit"*).
 
-In scope: the `bank-ledger-account` brick; the GL account data
+In scope: the `ledger-account` brick; the GL account data
 model; A/L/E/I/E grouping; per-product-type control accounts
 that aggregate the cash-accounts of each product type (customer
 deposits and the bank's own funds); the rule that GL leg-sets
@@ -73,7 +73,7 @@ Queenswood realises this split:
   suspense.
 - Every customer-side `default` leg generates the paired GL
   control leg that keeps the bank's books balanced — the
-  paired-movement discipline `bank-interest`'s capitalisation
+  paired-movement discipline `interest`'s capitalisation
   already showed, now applied everywhere through server-side
   paired-leg construction. Fees and interest add their own GL
   counter-legs so the bank's P&L is modelled symmetrically.
@@ -83,7 +83,7 @@ Queenswood realises this split:
 ### Architecture
 
 GL accounts are their **own record type**, `LedgerAccount`,
-owned by the `bank-ledger-account` brick. A `LedgerAccount` is
+owned by the `ledger-account` brick. A `LedgerAccount` is
 a flat, bank-owned record — 1:1 with a chart row, created
 directly at bank-provisioning time, with no product, no
 versioning, and no command/watcher lifecycle. It is distinct
@@ -101,7 +101,7 @@ ordinary `CashAccount` records under a `CashAccount(Product)`:
   "The bank's own funds" below).
 
 Each cash-account rolls up to a GL **control account** via its
-`:product-type`. `bank-ledger-account` owns:
+`:product-type`. `ledger-account` owns:
 
 - the `new-account` call that creates one `LedgerAccount` plus
   its opening balance (callers loop it over a supplied chart);
@@ -112,18 +112,18 @@ Each cash-account rolls up to a GL **control account** via its
   following each sub-ledger `default` leg with a
   control-account leg, keyed off the leg's `:product-type`.
 
-The canonical chart **template lives in a `bank-bank`
-resource**, and `bank-bank` provisions it: `new-bank` seeds one
+The canonical chart **template lives in a `bank`
+resource**, and `bank` provisions it: `new-bank` seeds one
 `LedgerAccount` per template row per currency and opens the
 own-funds cash account.
 
 ```mermaid
 graph LR
-    L["LedgerAccount<br/>(GL: controls + detail)<br/>bank-ledger-account"]
-    A["CashAccount<br/>(customer + own-funds)<br/>bank-cash-account"]
-    BANK["new-bank: seed chart<br/>+ own-funds account<br/>bank-bank"]
-    EL["add-control-legs<br/>(product-type → control)<br/>bank-ledger-account"]
-    TX["Legs + Balances<br/>bank-transaction<br/>bank-balance"]
+    L["LedgerAccount<br/>(GL: controls + detail)<br/>ledger-account"]
+    A["CashAccount<br/>(customer + own-funds)<br/>cash-account"]
+    BANK["new-bank: seed chart<br/>+ own-funds account<br/>bank"]
+    EL["add-control-legs<br/>(product-type → control)<br/>ledger-account"]
+    TX["Legs + Balances<br/>transaction<br/>balance"]
     FDB[("FDB<br/>one transaction")]
 
     BANK -->|seeds| L
@@ -133,7 +133,7 @@ graph LR
     TX -->|postings| FDB
 ```
 
-`bank-transaction` and `bank-balance` treat cash-accounts and
+`transaction` and `balance` treat cash-accounts and
 GL accounts uniformly: the account-id space is **shared** — a
 `led.` ledger-account-id is just another `account-id`, exactly
 like a customer's `acc.` id. The balance-bucket model
@@ -344,7 +344,7 @@ a control `:gl-account-code` by `control-code-for-product-type`:
 | own-funds              | 3100         | the bank's funds  |
 
 The mapping is a property of the bank's CoA (held by
-`bank-ledger-account`'s `control-code-for-product-type`), not
+`ledger-account`'s `control-code-for-product-type`), not
 a constant. The fan-out reads the leg's `:product-type` at
 posting time and resolves the control account by code — there
 is no per-account stored pointer, so re-coding the chart needs
@@ -412,7 +412,7 @@ separate `interest-payable` typed bucket on another account.
 
 Two invariants must hold after every commit. Both are
 asserted as `nom-test>` assertions inside
-`bank-test-scenarios` and run on every scenario, end-to-end.
+`test-scenarios` and run on every scenario, end-to-end.
 
 **Invariant 1 — Double-entry.** For every transaction whose
 leg-set touches a GL account, per currency:
@@ -474,7 +474,7 @@ mechanism the invariant uses.
 A **GL posting** is a set of legs against accounts (one or
 more) such that, for each currency, debits sum to credits.
 
-`bank-transaction-processor`'s `record-transaction` command
+`transaction-processor`'s `record-transaction` command
 is extended with one new check:
 
 - If every leg in the posting targets a customer cash-account
@@ -538,7 +538,7 @@ DEBIT  1100 Cash at correspondent         default / posted  100  GBP
 The control account is found by mapping the leg's
 `:product-type` to its control `:gl-account-code`
 (`control-code-for-product-type`) and resolving that
-`LedgerAccount` by code — `bank-ledger-account/add-control-legs`.
+`LedgerAccount` by code — `ledger-account/add-control-legs`.
 Pairing is automatic and server-side; the leg-recording API
 accepts the sub-ledger legs (each tagged with its account's
 `:product-type`) and the pipeline appends the matching control
@@ -701,38 +701,38 @@ table extends naturally.
 
 ### Bricks involved
 
-- **`bank-ledger-account`** owns the `LedgerAccount` record
+- **`ledger-account`** owns the `LedgerAccount` record
   type and the GL surface: `new-account` (create one GL account
   plus its opening balance), `find-by-code`, `get-account`,
   `list-accounts`, `control-code-for-product-type`, and
   `add-control-legs` (paired-leg fan-out, keyed on a leg's
   `:product-type`).
-- **`bank-bank`** holds the canonical chart template in a
+- **`bank`** holds the canonical chart template in a
   resource; `new-bank` seeds one `LedgerAccount` per row per
   currency and opens the own-funds cash account on the bank's
   org party.
-- **`bank-cash-account` / `bank-cash-account-product`** carry
+- **`cash-account` / `cash-account-product`** carry
   the customer and own-funds cash-accounts. The own-funds
   product (`:product-type-sub-ledger-own-funds`) maps to
   control 3100; customer products map to 2100 / 2200 / 2300.
-- **`bank-payment` / `bank-interest`** resolve GL accounts via
-  `bank-ledger-account/find-by-code`, tag their customer legs
+- **`payment` / `interest`** resolve GL accounts via
+  `ledger-account/find-by-code`, tag their customer legs
   with `:product-type`, and fan out via `add-control-legs`.
-- **`bank-transaction` / `bank-balance`** record legs and
+- **`transaction` / `balance`** record legs and
   maintain bucket balances uniformly across cash (`acc.`) and
   ledger (`led.`) account-ids; the combined leg-set is
   balance-checked when any GL leg is present.
-- **`bank-schema`** defines the `LedgerAccount` message and the
+- **`schema`** defines the `LedgerAccount` message and the
   `GlAccountType` / `GlAccountClass` / `Required` /
   `SubLedgerKind` / `GlAccountCode` enums, the `LedgerAccount`
   entry in `RecordTypeUnion`, and the
   `LedgerAccount_by_bank_gl_account_code` index. `ProductType` carries the sub-ledger values
   `-current` / `-savings` / `-term-deposit` / `-own-funds`
   plus `-general-ledger`.
-- **`bank-api`** exposes a read-only `/ledger-accounts` surface
+- **`api`** exposes a read-only `/ledger-accounts` surface
   (list / get / balances); transaction-leg responses accept a
   cash-account *or* a ledger-account id (the shared id space).
-- **`bank-test-scenarios`** runs the two invariants —
+- **`test-scenarios`** runs the two invariants —
   double-entry and sub-ledger ↔ control — as `nom-test>`
   assertions on every scenario.
 
@@ -758,7 +758,7 @@ A caller that posts a customer-side transaction:
 
 1. Builds customer legs, each tagged with its account's
    `:product-type`.
-2. Calls `bank-transaction/record-transaction` with those
+2. Calls `transaction/record-transaction` with those
    legs.
 3. The pipeline appends the paired control legs server-side
    (mapping each leg's `:product-type` to its control account).
@@ -770,7 +770,7 @@ recognition, end-of-day fee-income capture, opening journal):
 
 1. Builds GL legs spanning accounts whose
    `Σ debits = Σ credits` per currency.
-2. Calls `bank-transaction/record-transaction`.
+2. Calls `transaction/record-transaction`.
 3. The pipeline does not append paired legs (no customer leg
    to pair); the balance check fires directly.
 
@@ -778,7 +778,7 @@ A caller that posts a mixed transaction (an interest accrual
 that touches a customer accrued bucket and two GL accounts):
 
 1. Builds both the customer leg(s) and the GL-only legs.
-2. Calls `bank-transaction/record-transaction`.
+2. Calls `transaction/record-transaction`.
 3. The pipeline appends paired control legs for the customer
    side, combines with the GL-only legs, balances per
    currency, commits.
@@ -855,7 +855,7 @@ that touches a customer accrued bucket and two GL accounts):
   `CashAccount` under a product meant carrying two disjoint
   optional field sets and guard-reading `gl_code` presence at
   every site. GL accounts are now their **own `LedgerAccount`
-  record type** in `bank-ledger-account`: the schema is honest,
+  record type** in `ledger-account`: the schema is honest,
   the GL surface is small and read-only, and the shared
   *account-id space* keeps the single-lookup benefit at the leg
   layer without forcing GL accounts to masquerade as cash
@@ -1016,15 +1016,15 @@ that touches a customer accrued bucket and two GL accounts):
   (`CACC`, `SVGS`, `LLSV`, `TRAN`, `SACC`, `CPAC`, etc.),
   maintained by the ISO 20022 Registration Authority and
   republished periodically
-- `bank-ledger-account` brick interface (the `LedgerAccount`
+- `ledger-account` brick interface (the `LedgerAccount`
   record type, `find-by-code`, `add-control-legs`,
   `control-code-for-product-type`)
-- `bank-transaction` / `bank-balance` brick interfaces (the
+- `transaction` / `balance` brick interfaces (the
   leg + bucket substrate, shared across cash and ledger ids)
-- `bank-bank` brick interface (chart seeding and own-funds
+- `bank` brick interface (chart seeding and own-funds
   account at provisioning)
-- `bank-cash-account` / `bank-cash-account-product` brick
+- `cash-account` / `cash-account-product` brick
   interfaces (the sub-ledger; the `own-funds` product)
-- `bank-schema` brick (the `LedgerAccount` proto message and
+- `schema` brick (the `LedgerAccount` proto message and
   GL enums)
-- `bank-test-scenarios` brick (invariant assertions)
+- `test-scenarios` brick (invariant assertions)

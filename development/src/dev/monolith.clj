@@ -1,14 +1,14 @@
-(ns dev.bank-monolith
+(ns dev.monolith
   (:require
     com.repldriven.mono.testcontainers.interface
-    [com.repldriven.mono.bank-monolith.main :as main]))
+    [com.repldriven.queenswood.monolith.main :as main]))
 
 ;; before starting the system:
 ;; * on Mac OS X, start docker (just start-docker),
 ;; * start repl (just repl),
 ;; * connect the repl to your IDE and evaluate file
 ;; after starting the system:
-;; * once Jetty is listening, run the bank-app (just start-bank-app),
+;; * once Jetty is listening, run the console (just console-start),
 ;;   and browse to the advertised port, e.g. http://localhost:5173.
 ;;   the openapi3 documentation can be viewed at http://localhost:8080
 ;; NOTE: on a fresh install, it may take several minutes to download

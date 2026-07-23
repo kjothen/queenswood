@@ -14,7 +14,7 @@ carry; the two- and six-leg posting structures; the per-account
 FDB transactions that compose into bounded-batch runs; and the
 idempotency keys that make a re-run safe.
 
-In scope: the `bank-interest` brick, the daily-interest
+In scope: the `interest` brick, the daily-interest
 formula and carry mechanism, accrual and capitalisation
 postings, the run pattern that processes an organisation's
 customer accounts.
@@ -64,7 +64,7 @@ posting.
 
 ### Architecture
 
-`bank-interest` is the brick. Two top-level operations:
+`interest` is the brick. Two top-level operations:
 
 - **`accrue-daily`** — runs daily; iterates an organisation's
   customer accounts and accrues per-account interest based
@@ -128,7 +128,7 @@ Implementation is integer-only at micro-scale (one minor unit
 = one million micro-minor-units). The algorithm:
 
 ```clojure
-;; conceptual; see bank-interest/domain.clj for the actual code
+;; conceptual; see interest/domain.clj for the actual code
 (let [net          (- credit debit)               ; minor units
       bps-factor   100                            ; 1 bps in micro per minor
       annual-micro (* net interest-rate-bps bps-factor)
@@ -317,7 +317,7 @@ Every organisation has a `:product-type-settlement` account
 that holds the bank's `interest-payable` and pays out
 `default` at capitalisation. If no settlement account exists,
 the run rejects with `:interest/no-settlement` (mapped to a
-404 by `bank-api/errors.clj`).
+404 by `api/errors.clj`).
 
 This is one of the few places where the bank's own
 bookkeeping (settlement account) is exposed in the policy
@@ -437,6 +437,6 @@ side too because money has to come from somewhere.
 - [idempotency.md](idempotency.md) — Idempotency (the
   proposed universal design that interest's per-(account,
   date) key fits into)
-- `bank-interest` brick interface
-- `bank-cash-account-product` brick (rate via product
+- `interest` brick interface
+- `cash-account-product` brick (rate via product
   version)

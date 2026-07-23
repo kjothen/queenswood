@@ -57,13 +57,13 @@ When a brick has one cluster of component definitions, put them
 all in `system.clj`. The `defcomponents` call at the bottom
 groups them under a keyword group name.
 
-Adapted from `components/bank-cash-account/.../system.clj`:
+Adapted from `components/cash-account/.../system.clj`:
 
 ```clojure
-(ns com.repldriven.mono.bank-cash-account.system
+(ns com.repldriven.queenswood.cash-account.system
   (:require
-    [com.repldriven.mono.bank-cash-account.commands :as commands]
-    [com.repldriven.mono.bank-cash-account.watcher :as watcher]
+    [com.repldriven.queenswood.cash-account.commands :as commands]
+    [com.repldriven.queenswood.cash-account.watcher :as watcher]
     [com.repldriven.mono.system.interface :as system]))
 
 (def ^:private processor
@@ -84,10 +84,10 @@ Adapted from `components/bank-cash-account/.../system.clj`:
 The brick's `interface.clj` bare-requires the system namespace:
 
 ```clojure
-(ns com.repldriven.mono.bank-cash-account.interface
+(ns com.repldriven.queenswood.cash-account.interface
   (:require
-    [com.repldriven.mono.bank-cash-account.system]
-    [com.repldriven.mono.bank-cash-account.core :as core]))
+    [com.repldriven.queenswood.cash-account.system]
+    [com.repldriven.queenswood.cash-account.core :as core]))
 ```
 
 ### Structured pattern: `system/` folder
@@ -121,7 +121,7 @@ Layout:
 
 ```
 components/<brick>/
-  src/com/repldriven/mono/<brick>/
+  src/com/repldriven/queenswood/<brick>/
     system/
       core.clj         ; aggregates and calls defcomponents
       components.clj   ; the component definition maps
@@ -131,10 +131,10 @@ components/<brick>/
 The brick's `interface.clj` bare-requires `system.core`:
 
 ```clojure
-(ns com.repldriven.mono.<brick>.interface
+(ns com.repldriven.queenswood.<brick>.interface
   (:require
-    [com.repldriven.mono.<brick>.system.core]
-    [com.repldriven.mono.<brick>.core :as core]))
+    [com.repldriven.queenswood.<brick>.system.core]
+    [com.repldriven.queenswood.<brick>.core :as core]))
 ```
 
 ### Choosing between the patterns
@@ -151,8 +151,8 @@ Don't bake an environment name (`prod`, `dev`, `staging`,
 `demo`) into a shared resource component or its config. Name
 the component by the concern it represents:
 
-- OK: `bank-resources`, `bank-infra-resources`.
-- Not OK: `bank-prod-resources`, `bank-staging-resources`.
+- OK: `resources`, `infra-resources`.
+- Not OK: `prod-resources`, `staging-resources`.
 
 The same artefact gets deployed to multiple environments. An
 env-in-the-name component reads as "this is only valid in
@@ -169,22 +169,22 @@ extended consolidates the bare requires into a single
 `system.clj` in its test source tree. Test namespaces require
 *that* file rather than listing every bare require themselves.
 
-Example, from `bases/bank-monolith`:
+Example, from `bases/monolith`:
 
 ```
-bases/bank-monolith/
-  test/com/repldriven/mono/bank_monolith/
+bases/monolith/
+  test/com/repldriven/queenswood/monolith/
     system.clj            ; consolidates all bare requires
-    payee_check_test.clj  ; (:require [...bank-monolith.system])
+    payee_check_test.clj  ; (:require [...monolith.system])
 ```
 
 The test `system.clj` namespace:
 
 ```clojure
-(ns com.repldriven.mono.bank-monolith.system
+(ns com.repldriven.queenswood.monolith.system
   (:require
-    [com.repldriven.mono.bank-cash-account.interface]
-    [com.repldriven.mono.bank-payment.interface]
+    [com.repldriven.queenswood.cash-account.interface]
+    [com.repldriven.queenswood.payment.interface]
     [com.repldriven.mono.fdb.interface]
     [com.repldriven.mono.message-bus.interface]
     [com.repldriven.mono.pulsar.interface]
@@ -198,10 +198,10 @@ Test files require it as a single bare require, alongside any
 aliased requires they need for actual use:
 
 ```clojure
-(ns com.repldriven.mono.bank-monolith.payee-check-test
+(ns com.repldriven.queenswood.monolith.payee-check-test
   (:require
-    [com.repldriven.mono.bank-monolith.system]
-    [com.repldriven.mono.bank-cash-account.interface :as cash]
+    [com.repldriven.queenswood.monolith.system]
+    [com.repldriven.queenswood.cash-account.interface :as cash]
     [clojure.test :refer [deftest is testing]]))
 ```
 
@@ -219,7 +219,7 @@ functions on it.
   `system/` folder with `system/core.clj` aggregating (multiple
   namespaces).
 - Bare requires use the bracketed unaliased form
-  (`[com.repldriven.mono.x.system]`).
+  (`[com.repldriven.queenswood.x.system]`).
 - A brick's `interface.clj` bare-requires the system namespace
   so multimethods are extended on load.
 - Tests in a base or project consolidate system-component bare
@@ -234,7 +234,7 @@ functions on it.
 - Use the unbracketed bare-require form (deprecated convention).
 - Bake an environment name (`prod`, `dev`, `staging`) into a
   shared resource component or config. Name by concern
-  (e.g. `bank-resources`).
+  (e.g. `resources`).
 
 **SHOULD:**
 
@@ -250,9 +250,9 @@ cluster of definitions (simple), but some have several. The
 that into one file gets unwieldy. Forcing a folder when there's
 one entry is overkill.
 
-Bracketed unaliased requires (`[com.repldriven.mono.x.system]`)
+Bracketed unaliased requires (`[com.repldriven.queenswood.x.system]`)
 are the current convention. An earlier version used the
-unbracketed form (`com.repldriven.mono.x.system`) as a visual
+unbracketed form (`com.repldriven.queenswood.x.system`) as a visual
 marker for "this is a bare require"; we walked that back —
 brackets-without-alias are clearer, survive automated namespace
 sorters, and don't make the require list look ragged.

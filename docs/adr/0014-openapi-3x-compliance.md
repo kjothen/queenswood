@@ -77,7 +77,7 @@ Concretely:
   validated against the OpenAPI 3.x schema in CI, not just
   trusted to be valid because Reitit produced it.
 
-The implementation lives in `bank-api`, using Reitit-with-Malli
+The implementation lives in `api`, using Reitit-with-Malli
 plus our own component-registration helpers. The spec is served
 at the API root path in development and published as a static
 artefact for consumers.
@@ -127,4 +127,4 @@ Harder:
   Single unified API for the whole bank
 - [docs/tdd/transaction-processing.md](../tdd/transaction-processing.md)
 - [OpenAPI 3.x specification](https://spec.openapis.org/oas/latest.html)
-- `bank-api` base
+- `api` base
