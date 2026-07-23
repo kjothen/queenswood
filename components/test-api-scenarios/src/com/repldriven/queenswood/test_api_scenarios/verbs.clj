@@ -3,11 +3,11 @@
     [com.repldriven.queenswood.test-api-scenarios.refs :as refs]
 
     [com.repldriven.mono.http-client.interface :as http]
+    [com.repldriven.mono.json.interface :as json]
 
     [matcher-combinators.matchers :as m]
     [matcher-combinators.standalone :as standalone]
 
-    [clojure.data.json :as json]
     [clojure.string :as str]
     [clojure.test :refer [is]]
     [clojure.walk :as walk]))

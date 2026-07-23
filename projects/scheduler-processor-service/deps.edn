@@ -22,21 +22,13 @@
   {:local/root "../../components/balance-domain"}
   component/balance-query
   {:local/root "../../components/balance-query"}
-  component/cash-account {:local/root "../../components/cash-account"}
   component/cash-account-query
   {:local/root "../../components/cash-account-query"}
-  component/cash-account-product
-  {:local/root "../../components/cash-account-product"}
   component/cash-account-product-query
   {:local/root "../../components/cash-account-product-query"}
   component/ledger-account
   {:local/root "../../components/ledger-account"}
   component/interest {:local/root "../../components/interest"}
-  component/party {:local/root "../../components/party"}
-  component/party-query
-  {:local/root "../../components/party-query"}
-  component/person-identification
-  {:local/root "../../components/person-identification"}
   component/policy {:local/root "../../components/policy"}
   component/resources {:local/root "../../components/resources"}
   component/schema {:local/root "../../components/schema"}
