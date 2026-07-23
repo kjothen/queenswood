@@ -10,10 +10,10 @@
 #   kind create cluster --name queenswood --config infra/kind/queenswood-config.yaml
 #
 # Unrelated to `infra/kind/with-registry.sh`, which sets up a
-# host-side registry mirror for the Tilt / local-image-build dev
+# host-side registry mirror for the local-image-build dev
 # loop. Pick one based on what you're doing:
 #   - `helm install oci://...`  -> this file
-#   - `just tilt-up` / pushing locally-built images -> with-registry.sh
+#   - pushing locally-built images -> with-registry.sh
 kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
 containerdConfigPatches:
