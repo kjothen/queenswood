@@ -1,5 +1,5 @@
 system:
-  pulsar: !include bank-test-scenarios/pulsar-test.yml
+  kafka: !include bank-test-scenarios/kafka-test.yml
   message-bus: !include bank-test-scenarios/message-bus-test.yml
   fdb: !include bank/fdb-test.yml
   avro: !include avro/avro-test.yml

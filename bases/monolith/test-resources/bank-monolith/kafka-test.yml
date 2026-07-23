@@ -1,0 +1,646 @@
+# Kafka testcontainer wiring: broker, admin, topics, avro schemas,
+# producers, consumers and the message-bus records built from them.
+# Values are Avro-serialised by the `avro` brick, so `schemas` is the
+# same serde every transport uses -- there is no schema registry.
+
+container: !system/component
+  system/component-kind: kafka/container
+  exposed-ports: [9092]
+
+bootstrap-servers: !system/component
+  system/component-kind: kafka/bootstrap-servers
+  container: !system/local-ref container
+
+admin: !system/component
+  system/component-kind: kafka/admin
+  bootstrap-servers: !system/local-ref bootstrap-servers
+
+schemas: !system/component
+  system/component-kind: avro/serde
+  schemas:
+    command: schemas/command/command-envelope.avsc.json
+    command-response: schemas/command/command-response.avsc.json
+    event: schemas/event/event-envelope.avsc.json
+
+topics: !system/component
+  system/component-kind: kafka/topics
+  admin: !system/local-ref admin
+  topics:
+    - topic: topic-cash-accounts-command
+      partitions: 1
+    - topic: topic-cash-accounts-command-response
+      partitions: 1
+    - topic: topic-cash-account-products-command
+      partitions: 1
+    - topic: topic-cash-account-products-command-response
+      partitions: 1
+    - topic: topic-parties-command
+      partitions: 1
+    - topic: topic-parties-command-response
+      partitions: 1
+    - topic: topic-transactions-command
+      partitions: 1
+    - topic: topic-transactions-command-response
+      partitions: 1
+    - topic: topic-payments-command
+      partitions: 1
+    - topic: topic-payments-command-response
+      partitions: 1
+    - topic: topic-interest-command
+      partitions: 1
+    - topic: topic-interest-command-response
+      partitions: 1
+    - topic: topic-schemes-payments-event
+      partitions: 1
+    - topic: topic-schemes-payment-command
+      partitions: 1
+    - topic: topic-schemes-payment-command-response
+      partitions: 1
+    - topic: topic-idv-command
+      partitions: 1
+    - topic: topic-idv-command-response
+      partitions: 1
+    - topic: topic-idv-event
+      partitions: 1
+    - topic: topic-payee-checks-command
+      partitions: 1
+    - topic: topic-payee-checks-command-response
+      partitions: 1
+    - topic: topic-banks-command
+      partitions: 1
+    - topic: topic-banks-command-response
+      partitions: 1
+    - topic: topic-cash-accounts-command-dlq
+      partitions: 1
+    - topic: topic-cash-account-products-command-dlq
+      partitions: 1
+    - topic: topic-parties-command-dlq
+      partitions: 1
+    - topic: topic-transactions-command-dlq
+      partitions: 1
+    - topic: topic-payments-command-dlq
+      partitions: 1
+    - topic: topic-interest-command-dlq
+      partitions: 1
+    - topic: topic-schemes-payment-command-dlq
+      partitions: 1
+    - topic: topic-idv-command-dlq
+      partitions: 1
+    - topic: topic-payee-checks-command-dlq
+      partitions: 1
+    - topic: topic-banks-command-dlq
+      partitions: 1
+
+producers: !system/component
+  system/component-kind: kafka/producers
+  cash-accounts-command:
+    _: !system/local-ref topics
+    schemas: !system/local-ref schemas
+    schema: !keyword command
+    conf:
+      bootstrap.servers: !system/local-ref bootstrap-servers
+      topic: topic-cash-accounts-command
+      acks: all
+  cash-accounts-command-response:
+    _: !system/local-ref topics
+    schemas: !system/local-ref schemas
+    schema: !keyword command-response
+    conf:
+      bootstrap.servers: !system/local-ref bootstrap-servers
+      topic: topic-cash-accounts-command-response
+      acks: all
+  cash-account-products-command:
+    _: !system/local-ref topics
+    schemas: !system/local-ref schemas
+    schema: !keyword command
+    conf:
+      bootstrap.servers: !system/local-ref bootstrap-servers
+      topic: topic-cash-account-products-command
+      acks: all
+  cash-account-products-command-response:
+    _: !system/local-ref topics
+    schemas: !system/local-ref schemas
+    schema: !keyword command-response
+    conf:
+      bootstrap.servers: !system/local-ref bootstrap-servers
+      topic: topic-cash-account-products-command-response
+      acks: all
+  parties-command:
+    _: !system/local-ref topics
+    schemas: !system/local-ref schemas
+    schema: !keyword command
+    conf:
+      bootstrap.servers: !system/local-ref bootstrap-servers
+      topic: topic-parties-command
+      acks: all
+  parties-command-response:
+    _: !system/local-ref topics
+    schemas: !system/local-ref schemas
+    schema: !keyword command-response
+    conf:
+      bootstrap.servers: !system/local-ref bootstrap-servers
+      topic: topic-parties-command-response
+      acks: all
+  transactions-command:
+    _: !system/local-ref topics
+    schemas: !system/local-ref schemas
+    schema: !keyword command
+    conf:
+      bootstrap.servers: !system/local-ref bootstrap-servers
+      topic: topic-transactions-command
+      acks: all
+  transactions-command-response:
+    _: !system/local-ref topics
+    schemas: !system/local-ref schemas
+    schema: !keyword command-response
+    conf:
+      bootstrap.servers: !system/local-ref bootstrap-servers
+      topic: topic-transactions-command-response
+      acks: all
+  payments-command:
+    _: !system/local-ref topics
+    schemas: !system/local-ref schemas
+    schema: !keyword command
+    conf:
+      bootstrap.servers: !system/local-ref bootstrap-servers
+      topic: topic-payments-command
+      acks: all
+  payments-command-response:
+    _: !system/local-ref topics
+    schemas: !system/local-ref schemas
+    schema: !keyword command-response
+    conf:
+      bootstrap.servers: !system/local-ref bootstrap-servers
+      topic: topic-payments-command-response
+      acks: all
+  interest-command:
+    _: !system/local-ref topics
+    schemas: !system/local-ref schemas
+    schema: !keyword command
+    conf:
+      bootstrap.servers: !system/local-ref bootstrap-servers
+      topic: topic-interest-command
+      acks: all
+  interest-command-response:
+    _: !system/local-ref topics
+    schemas: !system/local-ref schemas
+    schema: !keyword command-response
+    conf:
+      bootstrap.servers: !system/local-ref bootstrap-servers
+      topic: topic-interest-command-response
+      acks: all
+  schemes-payments-event:
+    _: !system/local-ref topics
+    schemas: !system/local-ref schemas
+    schema: !keyword event
+    conf:
+      bootstrap.servers: !system/local-ref bootstrap-servers
+      topic: topic-schemes-payments-event
+      acks: all
+  schemes-payment-command:
+    _: !system/local-ref topics
+    schemas: !system/local-ref schemas
+    schema: !keyword command
+    conf:
+      bootstrap.servers: !system/local-ref bootstrap-servers
+      topic: topic-schemes-payment-command
+      acks: all
+  schemes-payment-command-response:
+    _: !system/local-ref topics
+    schemas: !system/local-ref schemas
+    schema: !keyword command-response
+    conf:
+      bootstrap.servers: !system/local-ref bootstrap-servers
+      topic: topic-schemes-payment-command-response
+      acks: all
+  idv-command:
+    _: !system/local-ref topics
+    schemas: !system/local-ref schemas
+    schema: !keyword command
+    conf:
+      bootstrap.servers: !system/local-ref bootstrap-servers
+      topic: topic-idv-command
+      acks: all
+  idv-command-response:
+    _: !system/local-ref topics
+    schemas: !system/local-ref schemas
+    schema: !keyword command-response
+    conf:
+      bootstrap.servers: !system/local-ref bootstrap-servers
+      topic: topic-idv-command-response
+      acks: all
+  idv-event:
+    _: !system/local-ref topics
+    schemas: !system/local-ref schemas
+    schema: !keyword event
+    conf:
+      bootstrap.servers: !system/local-ref bootstrap-servers
+      topic: topic-idv-event
+      acks: all
+  payee-checks-command:
+    _: !system/local-ref topics
+    schemas: !system/local-ref schemas
+    schema: !keyword command
+    conf:
+      bootstrap.servers: !system/local-ref bootstrap-servers
+      topic: topic-payee-checks-command
+      acks: all
+  payee-checks-command-response:
+    _: !system/local-ref topics
+    schemas: !system/local-ref schemas
+    schema: !keyword command-response
+    conf:
+      bootstrap.servers: !system/local-ref bootstrap-servers
+      topic: topic-payee-checks-command-response
+      acks: all
+  banks-command:
+    _: !system/local-ref topics
+    schemas: !system/local-ref schemas
+    schema: !keyword command
+    conf:
+      bootstrap.servers: !system/local-ref bootstrap-servers
+      topic: topic-banks-command
+      acks: all
+  banks-command-response:
+    _: !system/local-ref topics
+    schemas: !system/local-ref schemas
+    schema: !keyword command-response
+    conf:
+      bootstrap.servers: !system/local-ref bootstrap-servers
+      topic: topic-banks-command-response
+      acks: all
+  cash-accounts-command-dlq:
+    _: !system/local-ref topics
+    conf:
+      bootstrap.servers: !system/local-ref bootstrap-servers
+      topic: topic-cash-accounts-command-dlq
+      acks: all
+  cash-account-products-command-dlq:
+    _: !system/local-ref topics
+    conf:
+      bootstrap.servers: !system/local-ref bootstrap-servers
+      topic: topic-cash-account-products-command-dlq
+      acks: all
+  parties-command-dlq:
+    _: !system/local-ref topics
+    conf:
+      bootstrap.servers: !system/local-ref bootstrap-servers
+      topic: topic-parties-command-dlq
+      acks: all
+  transactions-command-dlq:
+    _: !system/local-ref topics
+    conf:
+      bootstrap.servers: !system/local-ref bootstrap-servers
+      topic: topic-transactions-command-dlq
+      acks: all
+  payments-command-dlq:
+    _: !system/local-ref topics
+    conf:
+      bootstrap.servers: !system/local-ref bootstrap-servers
+      topic: topic-payments-command-dlq
+      acks: all
+  interest-command-dlq:
+    _: !system/local-ref topics
+    conf:
+      bootstrap.servers: !system/local-ref bootstrap-servers
+      topic: topic-interest-command-dlq
+      acks: all
+  schemes-payment-command-dlq:
+    _: !system/local-ref topics
+    conf:
+      bootstrap.servers: !system/local-ref bootstrap-servers
+      topic: topic-schemes-payment-command-dlq
+      acks: all
+  idv-command-dlq:
+    _: !system/local-ref topics
+    conf:
+      bootstrap.servers: !system/local-ref bootstrap-servers
+      topic: topic-idv-command-dlq
+      acks: all
+  payee-checks-command-dlq:
+    _: !system/local-ref topics
+    conf:
+      bootstrap.servers: !system/local-ref bootstrap-servers
+      topic: topic-payee-checks-command-dlq
+      acks: all
+  banks-command-dlq:
+    _: !system/local-ref topics
+    conf:
+      bootstrap.servers: !system/local-ref bootstrap-servers
+      topic: topic-banks-command-dlq
+      acks: all
+
+consumers: !system/component
+  system/component-kind: kafka/consumers
+  cash-accounts-command:
+    _: !system/local-ref topics
+    schemas: !system/local-ref schemas
+    schema: !keyword command
+    topics: [topic-cash-accounts-command]
+    dead-letter-producer: !system/local-ref producers.cash-accounts-command-dlq
+    max-redeliveries: 5
+    conf:
+      bootstrap.servers: !system/local-ref bootstrap-servers
+      group.id: bank-monolith-cash-accounts-command
+  cash-accounts-command-response:
+    _: !system/local-ref topics
+    schemas: !system/local-ref schemas
+    schema: !keyword command-response
+    topics: [topic-cash-accounts-command-response]
+    conf:
+      bootstrap.servers: !system/local-ref bootstrap-servers
+      group.id: bank-monolith-cash-accounts-command-response
+  cash-account-products-command:
+    _: !system/local-ref topics
+    schemas: !system/local-ref schemas
+    schema: !keyword command
+    topics: [topic-cash-account-products-command]
+    dead-letter-producer: !system/local-ref producers.cash-account-products-command-dlq
+    max-redeliveries: 5
+    conf:
+      bootstrap.servers: !system/local-ref bootstrap-servers
+      group.id: bank-monolith-cash-account-products-command
+  cash-account-products-command-response:
+    _: !system/local-ref topics
+    schemas: !system/local-ref schemas
+    schema: !keyword command-response
+    topics: [topic-cash-account-products-command-response]
+    conf:
+      bootstrap.servers: !system/local-ref bootstrap-servers
+      group.id: bank-monolith-cash-account-products-command-response
+  parties-command:
+    _: !system/local-ref topics
+    schemas: !system/local-ref schemas
+    schema: !keyword command
+    topics: [topic-parties-command]
+    dead-letter-producer: !system/local-ref producers.parties-command-dlq
+    max-redeliveries: 5
+    conf:
+      bootstrap.servers: !system/local-ref bootstrap-servers
+      group.id: bank-monolith-parties-command
+  parties-command-response:
+    _: !system/local-ref topics
+    schemas: !system/local-ref schemas
+    schema: !keyword command-response
+    topics: [topic-parties-command-response]
+    conf:
+      bootstrap.servers: !system/local-ref bootstrap-servers
+      group.id: bank-monolith-parties-command-response
+  transactions-command:
+    _: !system/local-ref topics
+    schemas: !system/local-ref schemas
+    schema: !keyword command
+    topics: [topic-transactions-command]
+    dead-letter-producer: !system/local-ref producers.transactions-command-dlq
+    max-redeliveries: 5
+    conf:
+      bootstrap.servers: !system/local-ref bootstrap-servers
+      group.id: bank-monolith-transactions-command
+  transactions-command-response:
+    _: !system/local-ref topics
+    schemas: !system/local-ref schemas
+    schema: !keyword command-response
+    topics: [topic-transactions-command-response]
+    conf:
+      bootstrap.servers: !system/local-ref bootstrap-servers
+      group.id: bank-monolith-transactions-command-response
+  payments-command:
+    _: !system/local-ref topics
+    schemas: !system/local-ref schemas
+    schema: !keyword command
+    topics: [topic-payments-command]
+    dead-letter-producer: !system/local-ref producers.payments-command-dlq
+    max-redeliveries: 5
+    conf:
+      bootstrap.servers: !system/local-ref bootstrap-servers
+      group.id: bank-monolith-payments-command
+  payments-command-response:
+    _: !system/local-ref topics
+    schemas: !system/local-ref schemas
+    schema: !keyword command-response
+    topics: [topic-payments-command-response]
+    conf:
+      bootstrap.servers: !system/local-ref bootstrap-servers
+      group.id: bank-monolith-payments-command-response
+  interest-command:
+    _: !system/local-ref topics
+    schemas: !system/local-ref schemas
+    schema: !keyword command
+    topics: [topic-interest-command]
+    dead-letter-producer: !system/local-ref producers.interest-command-dlq
+    max-redeliveries: 5
+    conf:
+      bootstrap.servers: !system/local-ref bootstrap-servers
+      group.id: bank-monolith-interest-command
+  interest-command-response:
+    _: !system/local-ref topics
+    schemas: !system/local-ref schemas
+    schema: !keyword command-response
+    topics: [topic-interest-command-response]
+    conf:
+      bootstrap.servers: !system/local-ref bootstrap-servers
+      group.id: bank-monolith-interest-command-response
+  schemes-payments-event:
+    _: !system/local-ref topics
+    schemas: !system/local-ref schemas
+    schema: !keyword event
+    topics: [topic-schemes-payments-event]
+    conf:
+      bootstrap.servers: !system/local-ref bootstrap-servers
+      group.id: bank-monolith-schemes-payments-event
+  schemes-payment-command:
+    _: !system/local-ref topics
+    schemas: !system/local-ref schemas
+    schema: !keyword command
+    topics: [topic-schemes-payment-command]
+    dead-letter-producer: !system/local-ref producers.schemes-payment-command-dlq
+    max-redeliveries: 5
+    conf:
+      bootstrap.servers: !system/local-ref bootstrap-servers
+      group.id: bank-monolith-schemes-payment-command
+  schemes-payment-command-response:
+    _: !system/local-ref topics
+    schemas: !system/local-ref schemas
+    schema: !keyword command-response
+    topics: [topic-schemes-payment-command-response]
+    conf:
+      bootstrap.servers: !system/local-ref bootstrap-servers
+      group.id: bank-monolith-schemes-payment-command-response
+  idv-command:
+    _: !system/local-ref topics
+    schemas: !system/local-ref schemas
+    schema: !keyword command
+    topics: [topic-idv-command]
+    dead-letter-producer: !system/local-ref producers.idv-command-dlq
+    max-redeliveries: 5
+    conf:
+      bootstrap.servers: !system/local-ref bootstrap-servers
+      group.id: bank-monolith-idv-command
+  idv-command-response:
+    _: !system/local-ref topics
+    schemas: !system/local-ref schemas
+    schema: !keyword command-response
+    topics: [topic-idv-command-response]
+    conf:
+      bootstrap.servers: !system/local-ref bootstrap-servers
+      group.id: bank-monolith-idv-command-response
+  idv-event:
+    _: !system/local-ref topics
+    schemas: !system/local-ref schemas
+    schema: !keyword event
+    topics: [topic-idv-event]
+    conf:
+      bootstrap.servers: !system/local-ref bootstrap-servers
+      group.id: bank-monolith-idv-event
+  payee-checks-command:
+    _: !system/local-ref topics
+    schemas: !system/local-ref schemas
+    schema: !keyword command
+    topics: [topic-payee-checks-command]
+    dead-letter-producer: !system/local-ref producers.payee-checks-command-dlq
+    max-redeliveries: 5
+    conf:
+      bootstrap.servers: !system/local-ref bootstrap-servers
+      group.id: bank-monolith-payee-checks-command
+  payee-checks-command-response:
+    _: !system/local-ref topics
+    schemas: !system/local-ref schemas
+    schema: !keyword command-response
+    topics: [topic-payee-checks-command-response]
+    conf:
+      bootstrap.servers: !system/local-ref bootstrap-servers
+      group.id: bank-monolith-payee-checks-command-response
+  banks-command:
+    _: !system/local-ref topics
+    schemas: !system/local-ref schemas
+    schema: !keyword command
+    topics: [topic-banks-command]
+    dead-letter-producer: !system/local-ref producers.banks-command-dlq
+    max-redeliveries: 5
+    conf:
+      bootstrap.servers: !system/local-ref bootstrap-servers
+      group.id: bank-monolith-banks-command
+  banks-command-response:
+    _: !system/local-ref topics
+    schemas: !system/local-ref schemas
+    schema: !keyword command-response
+    topics: [topic-banks-command-response]
+    conf:
+      bootstrap.servers: !system/local-ref bootstrap-servers
+      group.id: bank-monolith-banks-command-response
+
+message-bus-producers: !system/component
+  system/component-kind: kafka/message-bus-producers
+  cash-accounts-command:
+    producer: !system/local-ref producers.cash-accounts-command
+  cash-accounts-command-response:
+    producer: !system/local-ref producers.cash-accounts-command-response
+  cash-account-products-command:
+    producer: !system/local-ref producers.cash-account-products-command
+  cash-account-products-command-response:
+    producer: !system/local-ref producers.cash-account-products-command-response
+  parties-command:
+    producer: !system/local-ref producers.parties-command
+  parties-command-response:
+    producer: !system/local-ref producers.parties-command-response
+  transactions-command:
+    producer: !system/local-ref producers.transactions-command
+  transactions-command-response:
+    producer: !system/local-ref producers.transactions-command-response
+  payments-command:
+    producer: !system/local-ref producers.payments-command
+  payments-command-response:
+    producer: !system/local-ref producers.payments-command-response
+  interest-command:
+    producer: !system/local-ref producers.interest-command
+  interest-command-response:
+    producer: !system/local-ref producers.interest-command-response
+  schemes-payments-event:
+    producer: !system/local-ref producers.schemes-payments-event
+  schemes-payment-command:
+    producer: !system/local-ref producers.schemes-payment-command
+  schemes-payment-command-response:
+    producer: !system/local-ref producers.schemes-payment-command-response
+  idv-command:
+    producer: !system/local-ref producers.idv-command
+  idv-command-response:
+    producer: !system/local-ref producers.idv-command-response
+  idv-event:
+    producer: !system/local-ref producers.idv-event
+  payee-checks-command:
+    producer: !system/local-ref producers.payee-checks-command
+  payee-checks-command-response:
+    producer: !system/local-ref producers.payee-checks-command-response
+  banks-command:
+    producer: !system/local-ref producers.banks-command
+  banks-command-response:
+    producer: !system/local-ref producers.banks-command-response
+
+message-bus-consumers: !system/component
+  system/component-kind: kafka/message-bus-consumers
+  cash-accounts-command:
+    consumer: !system/local-ref consumers.cash-accounts-command
+    timeout: 500
+  cash-accounts-command-response:
+    consumer: !system/local-ref consumers.cash-accounts-command-response
+    timeout: 500
+  cash-account-products-command:
+    consumer: !system/local-ref consumers.cash-account-products-command
+    timeout: 500
+  cash-account-products-command-response:
+    consumer: !system/local-ref consumers.cash-account-products-command-response
+    timeout: 500
+  parties-command:
+    consumer: !system/local-ref consumers.parties-command
+    timeout: 500
+  parties-command-response:
+    consumer: !system/local-ref consumers.parties-command-response
+    timeout: 500
+  transactions-command:
+    consumer: !system/local-ref consumers.transactions-command
+    timeout: 500
+  transactions-command-response:
+    consumer: !system/local-ref consumers.transactions-command-response
+    timeout: 500
+  payments-command:
+    consumer: !system/local-ref consumers.payments-command
+    timeout: 500
+  payments-command-response:
+    consumer: !system/local-ref consumers.payments-command-response
+    timeout: 500
+  interest-command:
+    consumer: !system/local-ref consumers.interest-command
+    timeout: 500
+  interest-command-response:
+    consumer: !system/local-ref consumers.interest-command-response
+    timeout: 500
+  schemes-payments-event:
+    consumer: !system/local-ref consumers.schemes-payments-event
+    timeout: 500
+  schemes-payment-command:
+    consumer: !system/local-ref consumers.schemes-payment-command
+    timeout: 500
+  schemes-payment-command-response:
+    consumer: !system/local-ref consumers.schemes-payment-command-response
+    timeout: 500
+  idv-command:
+    consumer: !system/local-ref consumers.idv-command
+    timeout: 500
+  idv-command-response:
+    consumer: !system/local-ref consumers.idv-command-response
+    timeout: 500
+  idv-event:
+    consumer: !system/local-ref consumers.idv-event
+    timeout: 500
+  payee-checks-command:
+    consumer: !system/local-ref consumers.payee-checks-command
+    timeout: 500
+  payee-checks-command-response:
+    consumer: !system/local-ref consumers.payee-checks-command-response
+    timeout: 500
+  banks-command:
+    consumer: !system/local-ref consumers.banks-command
+    timeout: 500
+  banks-command-response:
+    consumer: !system/local-ref consumers.banks-command-response
+    timeout: 500

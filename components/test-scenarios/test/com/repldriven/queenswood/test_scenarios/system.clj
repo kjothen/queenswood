@@ -26,7 +26,7 @@
     com.repldriven.mono.command-processor.interface
     com.repldriven.mono.event-processor.interface
     com.repldriven.mono.fdb.interface
+    com.repldriven.mono.kafka.interface
     com.repldriven.mono.message-bus.interface
-    com.repldriven.mono.pulsar.interface
     com.repldriven.mono.server.interface
     com.repldriven.mono.testcontainers.interface))
