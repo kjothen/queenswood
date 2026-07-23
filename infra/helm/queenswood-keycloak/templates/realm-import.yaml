@@ -3,7 +3,7 @@
 # the CR as Done. Re-imports happen if the realm spec changes.
 #
 # Both payloads come from `files/*.json` symlinks pointing at the
-# canonical realm definitions in `components/bank-resources/resources/
+# canonical realm definitions in `components/resources/resources/
 # bank/`. The same files back the testcontainer-fixture realm (in
 # `bank-test-resources/`), so the helm-deployed realm, the operator-
 # managed realm, and the testcontainer realm all trace to one source.
