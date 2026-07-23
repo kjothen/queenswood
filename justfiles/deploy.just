@@ -21,8 +21,8 @@ helm-install tag="dev" registry="ghcr.io/repldriven" values_file="" pull_policy=
     # of values.yaml -- kind-up passes values-dev.yaml to enable the
     # bundled dev Keycloak. `pull_policy` overrides image.pullPolicy --
     # kind-up sets IfNotPresent so containerd pulls the freshly pushed
-    # images from the local registry (values-dev.yaml's Never is for the
-    # Tilt flow, which loads images straight into the kind node).
+    # images from the local registry (values-dev.yaml's Never default is
+    # for image-load flows that inject images straight into the node).
     set -e
     # `values_file` is a space-separated list layered left-to-right
     # (later files win), e.g. "values-dev.yaml values-monolith.yaml".
@@ -197,39 +197,6 @@ kind-xp-install-root:
     export PROJECT_ID=$(just _gcp-project-id)
     envsubst < infra/bootstrap/root-app.yml.tmpl \
       | kubectl --context {{ KIND_XP_CLUSTER }} apply -f -
-
-# Start Tilt dev loop (creates kind cluster if missing)
-tilt-up:
-    #!/usr/bin/env zsh
-    # Refreshes subchart deps once before handing off so Tilt's helm() watcher
-    # doesn't see Chart.lock / charts/*.tgz appear mid-session and loop.
-    set -e
-    kind get clusters | grep -q queenswood || kind create cluster --name queenswood
-    helm dependency update infra/helm/queenswood
-    tilt up
-
-# Tear down Tilt-managed resources (leaves kind cluster intact)
-tilt-down:
-    tilt down
-
-# Prune orphaned Tilt images from Docker daemon and kind node containerd
-tilt-prune:
-    #!/usr/bin/env zsh
-    # Tilt rewrites every rebuild's manifest to a fresh `:tilt-<hex>` tag; per-edit
-    # rebuilds accumulate orphan images on the host and inside kind. Safe vs `:dev`
-    # and version tags — the glob only matches `*:tilt-*`.
-    set -e
-    images=$(docker images --filter 'reference=ghcr.io/repldriven/*:tilt-*' -q | sort -u)
-    if [[ -n "$images" ]]; then
-      echo "$images" | xargs docker rmi -f
-    else
-      echo "No host-side Tilt images to prune."
-    fi
-    if docker ps --format '{{ "{{" }}.Names{{ "}}" }}' | grep -q '^queenswood-control-plane$'; then
-      docker exec queenswood-control-plane crictl rmi --prune || true
-    else
-      echo "kind node 'queenswood-control-plane' not running — skipping containerd prune."
-    fi
 
 # Print Keycloak admin credentials + console URL for the active env
 keycloak-admin-login:

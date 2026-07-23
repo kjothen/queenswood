@@ -5,7 +5,7 @@
 
 You want to deploy a Queenswood service to Kubernetes —
 build the image, render the chart, install, and (during
-development) iterate quickly under Tilt on a local kind
+development) iterate quickly on a local kind
 cluster.
 
 ## Solution
@@ -138,33 +138,6 @@ just kind-down        # tear it all down
 missing, builds every service image, loads each into the
 kind node's containerd, then `helm-install`s the chart.
 
-### Tilt dev loop
-
-```bash
-just tilt-up          # creates kind cluster if needed,
-                      # then `tilt up`
-just tilt-down        # tears down Tilt's resources;
-                      # leaves the kind cluster running
-just tilt-prune       # nukes accumulated tilt-built images
-```
-
-The `Tiltfile` builds every service from the same shared
-Dockerfile, renders the chart with `helm()`, applies it,
-and groups resources into `bootstrap` / `http` /
-`processors` for the Tilt UI. HTTP-fronted services
-port-forward to their declared ports
-(8080–8084).
-
-Tilt rewrites every rebuild's manifest to point at a fresh
-`:tilt-<hex>` tag. These accumulate on the host Docker
-daemon and inside the kind node's containerd — `tilt-prune`
-nukes both. Safe vs your `:dev` and version tags; the glob
-only matches `*:tilt-*`.
-
-A `bootstrap-reset` button in the Tilt UI deletes the
-existing bootstrap Job so Tilt can re-apply a fresh one
-after a code change.
-
 ## Rules
 
 **MUST:**
@@ -179,7 +152,7 @@ after a code change.
 - Service Deployments wait on the bootstrap Job via the
   `wait-for-bootstrap` initContainer before starting their
   main container.
-- Tilt and Justfile flows use the same Helm release name
+- Deploy flows use the same Helm release name
   (`bank`) so resource names don't diverge between the two
   flows.
 - Cross-pod startup dependencies (e.g. an adapter waiting
@@ -265,9 +238,7 @@ The `bootstrap-reset` button is the ergonomic cost of K8s
 Job spec immutability. We chose Jobs (not Deployments) for
 the bootstrap because we want the
 "runs-once-and-completes" semantics, but that means
-in-place updates on edit-the-code aren't possible. The
-manual-trigger Tilt resource papers over the rough edge.
-
+in-place updates on edit-the-code aren't possible. 
 ## References
 
 - [bases.md](bases.md) — base owns `main.clj`; the
@@ -286,8 +257,7 @@ manual-trigger Tilt resource papers over the rough edge.
   scaling caveat on changelog watchers.
 - `infra/helm/queenswood/README.md` — chart user guide:
   `helm install`, `kind create`, port-forward, verifying.
-- `Tiltfile` — the Tilt dev-loop entry point.
 - `infra/docker/service/Dockerfile` — the shared service
   image.
-- `Justfile` — the `docker-build*`, `helm-*`, `kind-*`,
-  and `tilt-*` recipes.
+- `Justfile` — the `docker-build*`, `helm-*`, and
+  `kind-*` recipes.

@@ -50,7 +50,7 @@ helm install queenswood infra/helm/queenswood \
 For full kind-loop workflows (build images, load into
 kind, install, port-forward, tear down), see
 [`docs/recipes/deployment.md`](../../../docs/recipes/deployment.md)
-and the `kind-*` / `tilt-*` recipes in `Justfile`.
+and the `kind-*` recipes in `Justfile`.
 
 ## Bootstrap
 

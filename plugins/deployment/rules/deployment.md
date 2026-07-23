@@ -1,6 +1,6 @@
 # Queenswood deployment
 
-How Queenswood ships and runs — the Helm chart, the Tilt dev loop, and
+How Queenswood ships and runs — the Helm chart, the kind dev loop, and
 the Crossplane-managed cloud infrastructure underneath it.
 
 ## Deploy each service as project + base + shared Dockerfile
@@ -14,7 +14,7 @@ starting; neither the migrator nor the bootstrap Job may be skipped
 in any deployment flow. A cross-pod startup dependency (an adapter
 waiting for its simulator) is expressed via the deployment's
 `waitFor` list, which adds a `wait-for-<dep>` initContainer polling
-the target's `/actuator/health/liveness`. Tilt and Justfile flows
+the target's `/actuator/health/liveness`. Deploy flows
 share the same Helm release name (`bank`) so resource names don't
 diverge between them. Never bake an environment name into a resource
 name — discriminate via `values.yaml` overrides and env vars. A

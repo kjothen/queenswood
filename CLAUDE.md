@@ -123,7 +123,7 @@ those in full before non-trivial work on their topic.
   for Avro, prep alias for the bank profile.
   See [recipes/code-generation.md](docs/recipes/code-generation.md)
   and [ADR-0010](docs/adr/0010-code-generation-via-prep-lib.md).
-- **Deployment** — Helm chart, Tilt + kind dev loop, per-service
+- **Deployment** — Helm chart, kind dev loop, per-service
   Docker images. See
   [recipes/deployment.md](docs/recipes/deployment.md).
 - **Infrastructure** — GCP via Crossplane on a kind management
