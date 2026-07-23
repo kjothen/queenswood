@@ -1,7 +1,7 @@
 set shell := ["zsh", "-cu"]
 
 DOMAIN_ALIASES := ""
-DOCKER_REGISTRY := "ghcr.io/repldriven"
+DOCKER_REGISTRY := "ghcr.io/repldriven/queenswood"
 
 XP_CLUSTER := "xp-mp"
 KIND_XP_CLUSTER := "kind-xp-mp"

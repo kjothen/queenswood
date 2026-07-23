@@ -14,7 +14,7 @@ helm-validate tag="dev":
       | kubeconform -strict -ignore-missing-schemas -summary
 
 # Install or upgrade the chart
-helm-install tag="dev" registry="ghcr.io/repldriven" values_file="" pull_policy="":
+helm-install tag="dev" registry="ghcr.io/repldriven/queenswood" values_file="" pull_policy="":
     #!/usr/bin/env zsh
     # `registry` lets `kind-up` point at the local registry so containerd
     # pulls from there. `values_file` layers an extra values file on top
@@ -94,7 +94,7 @@ kind-up-monolith tag="dev":
     # re-pull is cheap.
     just helm-install {{ tag }} localhost:5001 "values-dev.yaml values-monolith.yaml" Always
 
-# Create kind cluster and install the chart from ghcr.io/repldriven (no local build).
+# Create kind cluster and install the chart from ghcr.io/repldriven/queenswood (no local build).
 kind-up-remote tag="latest":
     #!/usr/bin/env zsh
     # For the iterative build-test loop, use `kind-up` instead. This
@@ -102,7 +102,7 @@ kind-up-remote tag="latest":
     # pulls images directly from ghcr on first pod schedule.
     set -e
     kind get clusters | grep -q '^queenswood$' || kind create cluster --name queenswood
-    just helm-install {{ tag }} ghcr.io/repldriven
+    just helm-install {{ tag }} ghcr.io/repldriven/queenswood
 
 # Tear down the kind cluster
 kind-down:
