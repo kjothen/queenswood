@@ -1,9 +1,9 @@
 {:aliases
  {:build {:deps {bases/build {:local/root "../../bases/build"}}
-          :exec-args {:lib 'com.repldriven.mono/bank-clearbank-simulator-service
-                      :main com.repldriven.mono.bank-clearbank-simulator.main
+          :exec-args {:lib 'com.repldriven.queenswood/bank-clearbank-simulator-service
+                      :main com.repldriven.queenswood.clearbank-simulator.main
                       :major-minor-version "0.0"}
-          :ns-default com.repldriven.mono.build.build}
+          :ns-default com.repldriven.queenswood.build.build}
   :test
   {:extra-deps
    {ext/mono {:local/root "../../deps/mono-test"}
@@ -11,12 +11,12 @@
 }}}
  :deps
  {ext/mono {:local/root "../../deps/mono"}
-  component/bank-clearbank-webhook
-  {:local/root "../../components/bank-clearbank-webhook"}
+  component/clearbank-webhook
+  {:local/root "../../components/clearbank-webhook"}
 
 
-  base/bank-clearbank-simulator
-  {:local/root "../../bases/bank-clearbank-simulator"}
+  base/clearbank-simulator
+  {:local/root "../../bases/clearbank-simulator"}
   com.google.protobuf/protobuf-java {:mvn/version "3.25.8"}
   org.clojure/clojure {:mvn/version "1.12.4"}
   org.clojure/core.async {:mvn/version "1.9.865"}}

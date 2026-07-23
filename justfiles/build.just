@@ -8,7 +8,7 @@ build snapshot="true":
 
 # Export the OpenAPI spec to the given path
 export-openapi path="docs/openapi.yaml":
-    clojure -Sdeps '{:aliases {:dev {:main-opts []}}}' -M{{ DOMAIN_ALIASES }}:dev -m com.repldriven.mono.bank-api.export-spec {{ path }}
+    clojure -Sdeps '{:aliases {:dev {:main-opts []}}}' -M{{ DOMAIN_ALIASES }}:dev -m com.repldriven.queenswood.api.export-spec {{ path }}
 
 # Force re-run code generation for the bank profile
 force-prep:

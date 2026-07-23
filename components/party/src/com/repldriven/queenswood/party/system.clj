@@ -1,0 +1,24 @@
+(ns com.repldriven.queenswood.party.system
+  (:require
+    [com.repldriven.queenswood.party.commands :as commands]
+    [com.repldriven.queenswood.party.watcher :as watcher]
+
+    [com.repldriven.mono.system.interface :as system]))
+
+(def ^:private processor
+  {:system/start (fn [{:system/keys [config instance]}]
+                   (or instance (commands/->PartyProcessor config)))
+   :system/config {:record-db system/required-component
+                   :record-store system/required-component
+                   :schemas system/required-component}
+   :system/instance-schema some?})
+
+(def ^:private watcher-handler
+  {:system/start (fn [{:system/keys [config instance]}]
+                   (or instance
+                       (watcher/idv-changelog-handler (:record-store config))))
+   :system/config {:record-store system/required-component}
+   :system/instance-schema fn?})
+
+(system/defcomponents :party
+                      {:processor processor :watcher-handler watcher-handler})

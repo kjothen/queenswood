@@ -7,35 +7,35 @@
             ;; only, so :necessary suppresses false-positive warnings.
             "bank-operational-processors-service"
               {:alias "ops",
-               :necessary ["bank-resources"
-                           "bank-schema" "bank-test-resources"]},
+               :necessary ["resources"
+                           "schema" "test-resources"]},
             "bank-financial-processors-service"
               {:alias "fin",
-               :necessary ["bank-resources"
-                           "bank-schema" "bank-test-resources"]},
+               :necessary ["resources"
+                           "schema" "test-resources"]},
             "bank-api-service"
               {:alias "api",
-               :necessary ["bank-resources"
-                           "bank-schema" "bank-test-resources"]},
+               :necessary ["resources"
+                           "schema" "test-resources"]},
             "bank-bootstrap-service"
               {:alias "bbs",
-               :necessary ["bank-resources" "bank-schema"
-                           "bank-test-resources"]},
+               :necessary ["resources" "schema"
+                           "test-resources"]},
             "bank-migrator-service"
               {:alias "mig",
-               :necessary ["bank-resources"
-                           "bank-schema"]},
+               :necessary ["resources"
+                           "schema"]},
             "bank-clearbank-adapter-service"
               {:alias "cba",
-               :necessary ["bank-resources"
-                           "bank-schema" "bank-test-resources"]},
+               :necessary ["resources"
+                           "schema" "test-resources"]},
             "bank-clearbank-simulator-service"
               {:alias "cbs",
                :necessary []},
             "bank-onfido-adapter-service"
               {:alias "ioa",
-               :necessary ["bank-resources"
-                           "bank-schema" "bank-test-resources"]},
+               :necessary ["resources"
+                           "schema" "test-resources"]},
             "bank-onfido-simulator-service"
               {:alias "ios",
                :necessary []},
@@ -44,6 +44,6 @@
                :necessary []}},
  :tag-patterns {:release "v[0-9]*", :stable "stable-*"},
  :test {:create-test-runner
-          com.repldriven.mono.external-test-runner.core/create},
- :top-namespace "com.repldriven.mono",
+          com.repldriven.queenswood.external-test-runner.core/create},
+ :top-namespace "com.repldriven.queenswood",
  :vcs {:auto-add true, :name "git"}}

@@ -1,0 +1,45 @@
+(ns com.repldriven.queenswood.api.payment.queries
+  (:require
+    [com.repldriven.queenswood.api.errors :as errors]
+    [com.repldriven.queenswood.payment-query.interface :as payments]
+    [com.repldriven.mono.error.interface :as error]))
+
+(defn get-internal-payment
+  [request]
+  (let [{:keys [parameters]} request
+        {:keys [path]} parameters
+        {:keys [payment-id]} path
+        result (payments/get-internal-payment request payment-id)]
+    (cond
+     (error/anomaly? result)
+     (errors/anomaly->response result)
+
+     (nil? result)
+     {:status 404
+      :body (errors/error-response
+             404 "REJECTED"
+             "payment/not-found"
+             "Payment not found")}
+
+     :else
+     {:status 200 :body result})))
+
+(defn get-outbound-payment
+  [request]
+  (let [{:keys [parameters]} request
+        {:keys [path]} parameters
+        {:keys [payment-id]} path
+        result (payments/get-outbound-payment request payment-id)]
+    (cond
+     (error/anomaly? result)
+     (errors/anomaly->response result)
+
+     (nil? result)
+     {:status 404
+      :body (errors/error-response
+             404 "REJECTED"
+             "payment/not-found"
+             "Payment not found")}
+
+     :else
+     {:status 200 :body result})))
