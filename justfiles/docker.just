@@ -11,7 +11,7 @@ docker-start:
 docker-stop:
     colima stop
 
-# Build a single service Docker image: `just docker-build bank-api-service dev`
+# Build a single service Docker image: `just docker-build api-service dev`
 docker-build project tag="dev":
     docker buildx build \
       --build-arg PROJECT_NAME={{ project }} \

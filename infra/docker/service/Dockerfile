@@ -1,11 +1,11 @@
 # syntax=docker/dockerfile:1.7
 
 # Multi-stage build for any Queenswood service uberjar.
-# Pass PROJECT_NAME (e.g. bank-api-service, bank-cash-account-service)
+# Pass PROJECT_NAME (e.g. api-service, cash-account-service)
 # at build time:
 #   docker buildx build \
-#     --build-arg PROJECT_NAME=bank-api-service \
-#     -t ghcr.io/repldriven/bank-api-service:0.0.0 \
+#     --build-arg PROJECT_NAME=api-service \
+#     -t ghcr.io/repldriven/api-service:0.0.0 \
 #     -f infra/docker/service/Dockerfile \
 #     --platform linux/amd64,linux/arm64 \
 #     .

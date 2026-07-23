@@ -1,0 +1,20 @@
+{:aliases
+ {:build {:deps {bases/build {:local/root "../../bases/build"}}
+          :exec-args {:lib 'com.repldriven.queenswood/uk-companies-house-simulator-service
+                      :main com.repldriven.queenswood.uk-companies-house-simulator.main
+                      :major-minor-version "0.0"}
+          :ns-default com.repldriven.queenswood.build.build}
+  :test
+  {:extra-deps
+   {ext/mono {:local/root "../../deps/mono-test"}
+    bases/external-test-runner {:local/root "../../bases/external-test-runner"}
+}}}
+ :deps
+ {ext/mono {:local/root "../../deps/mono"}
+
+  base/uk-companies-house-simulator
+  {:local/root "../../bases/uk-companies-house-simulator"}
+  com.google.protobuf/protobuf-java {:mvn/version "3.25.8"}
+  org.clojure/clojure {:mvn/version "1.12.4"}
+  org.clojure/core.async {:mvn/version "1.9.865"}}
+ :paths ["resources"]}

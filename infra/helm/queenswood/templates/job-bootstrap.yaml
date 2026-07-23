@@ -3,7 +3,7 @@
 # One-shot Job: idempotently seeds the singleton internal Queenswood
 # organization (with API key, internal Party, internal
 # CashAccountProduct, one CashAccount per currency) and writes the
-# platform + micro Policy records. Runs after bank-migrator-service
+# platform + micro Policy records. Runs after migrator-service
 # has applied FDB record metadata + Pulsar topology; reads the
 # persisted FDB schema (no Pulsar interaction).
 #
@@ -15,10 +15,10 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: {{ .Release.Name }}-bank-bootstrap-{{ .Values.image.tag }}-{{ .Chart.Version }}
+  name: {{ .Release.Name }}-bootstrap-{{ .Values.image.tag }}-{{ .Chart.Version }}
   labels:
     {{- include "queenswood.labels" . | nindent 4 }}
-    app.kubernetes.io/component: bank-bootstrap
+    app.kubernetes.io/component: bootstrap
 spec:
   backoffLimit: 6
   ttlSecondsAfterFinished: 86400
@@ -26,7 +26,7 @@ spec:
     metadata:
       labels:
         {{- include "queenswood.labels" . | nindent 8 }}
-        app.kubernetes.io/component: bank-bootstrap
+        app.kubernetes.io/component: bootstrap
     spec:
       {{- with .Values.image.pullSecrets }}
       imagePullSecrets:
@@ -72,15 +72,15 @@ spec:
             - -c
             - |
               kubectl wait --for=condition=complete --timeout=10m \
-                job/{{ .Release.Name }}-bank-migrator-{{ .Values.image.tag }}-{{ .Chart.Version }}
+                job/{{ .Release.Name }}-migrator-{{ .Values.image.tag }}-{{ .Chart.Version }}
         {{- end }}
       containers:
-        - name: bank-bootstrap
-          image: "{{ .Values.image.registry }}/bank-bootstrap-service:{{ .Values.image.tag }}"
+        - name: bootstrap
+          image: "{{ .Values.image.registry }}/bootstrap-service:{{ .Values.image.tag }}"
           imagePullPolicy: {{ include "queenswood.imagePullPolicy" $ }}
           env:
             - name: SERVICE_NAME
-              value: "bank-bootstrap-service"
+              value: "bootstrap-service"
             - name: FDB_CLUSTER_FILE
               value: "/etc/fdb/fdb.cluster"
             - name: OTEL_ENDPOINT

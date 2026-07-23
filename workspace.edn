@@ -5,41 +5,41 @@
             ;; and shared classpath resources (Testcontainers configs,
             ;; application-test.yml files). Polylith tracks source imports
             ;; only, so :necessary suppresses false-positive warnings.
-            "bank-operational-processors-service"
+            "operational-processors-service"
               {:alias "ops",
                :necessary ["resources"
                            "schema" "test-resources"]},
-            "bank-financial-processors-service"
+            "financial-processors-service"
               {:alias "fin",
                :necessary ["resources"
                            "schema" "test-resources"]},
-            "bank-api-service"
+            "api-service"
               {:alias "api",
                :necessary ["resources"
                            "schema" "test-resources"]},
-            "bank-bootstrap-service"
+            "bootstrap-service"
               {:alias "bbs",
                :necessary ["resources" "schema"
                            "test-resources"]},
-            "bank-migrator-service"
+            "migrator-service"
               {:alias "mig",
                :necessary ["resources"
                            "schema"]},
-            "bank-clearbank-adapter-service"
+            "clearbank-adapter-service"
               {:alias "cba",
                :necessary ["resources"
                            "schema" "test-resources"]},
-            "bank-clearbank-simulator-service"
+            "clearbank-simulator-service"
               {:alias "cbs",
                :necessary []},
-            "bank-onfido-adapter-service"
+            "onfido-adapter-service"
               {:alias "ioa",
                :necessary ["resources"
                            "schema" "test-resources"]},
-            "bank-onfido-simulator-service"
+            "onfido-simulator-service"
               {:alias "ios",
                :necessary []},
-            "bank-uk-companies-house-simulator-service"
+            "uk-companies-house-simulator-service"
               {:alias "ucs",
                :necessary []}},
  :tag-patterns {:release "v[0-9]*", :stable "stable-*"},

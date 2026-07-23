@@ -40,7 +40,7 @@ their realm's Keycloak at `/keycloak/*`, so a single port-forward
 to each SPA is all you need for sign-in (no separate Keycloak
 port-forward).
 
-  kubectl -n {{ .Release.Namespace }} port-forward svc/{{ .Release.Name }}-bank-api-service 8080:8080
+  kubectl -n {{ .Release.Namespace }} port-forward svc/{{ .Release.Name }}-api-service 8080:8080
 {{- if .Values.bankConsole.enabled }}
   kubectl -n {{ .Release.Namespace }} port-forward svc/{{ .Release.Name }}-bank-console 8081:{{ .Values.bankConsole.port }}
 {{- end }}

@@ -3,7 +3,7 @@
 # One-shot Job: applies FDB record metadata (via fdb/meta-store with
 # `migrate: true` enabled by FDB_MIGRATE=true) and declares the
 # Pulsar topology (tenants/namespaces/topics/schemas). Runs first;
-# bank-bootstrap-service Job runs after this one and handles the
+# bootstrap-service Job runs after this one and handles the
 # internal-organization seed + policy records.
 #
 # Job name embeds both .Values.image.tag and .Chart.Version so every
@@ -14,10 +14,10 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: {{ .Release.Name }}-bank-migrator-{{ .Values.image.tag }}-{{ .Chart.Version }}
+  name: {{ .Release.Name }}-migrator-{{ .Values.image.tag }}-{{ .Chart.Version }}
   labels:
     {{- include "queenswood.labels" . | nindent 4 }}
-    app.kubernetes.io/component: bank-migrator
+    app.kubernetes.io/component: migrator
 spec:
   backoffLimit: 6
   ttlSecondsAfterFinished: 86400
@@ -25,7 +25,7 @@ spec:
     metadata:
       labels:
         {{- include "queenswood.labels" . | nindent 8 }}
-        app.kubernetes.io/component: bank-migrator
+        app.kubernetes.io/component: migrator
     spec:
       {{- with .Values.image.pullSecrets }}
       imagePullSecrets:
@@ -61,8 +61,8 @@ spec:
             - name: fdb-cluster-file
               mountPath: /etc/fdb
       containers:
-        - name: bank-migrator
-          image: "{{ .Values.image.registry }}/bank-migrator-service:{{ .Values.image.tag }}"
+        - name: migrator
+          image: "{{ .Values.image.registry }}/migrator-service:{{ .Values.image.tag }}"
           imagePullPolicy: {{ include "queenswood.imagePullPolicy" $ }}
           # Override the baked config file so the channel-bus monolith
           # can point the migrator at a Pulsar-free config (FDB metadata
@@ -77,7 +77,7 @@ spec:
             - default
           env:
             - name: SERVICE_NAME
-              value: "bank-migrator-service"
+              value: "migrator-service"
             - name: PULSAR_SERVICE_URL
               value: {{ include "queenswood.pulsarServiceUrl" . | quote }}
             - name: PULSAR_ADMIN_URL

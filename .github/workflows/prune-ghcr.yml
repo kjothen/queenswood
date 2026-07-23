@@ -36,15 +36,15 @@ jobs:
       fail-fast: false
       matrix:
         package:
-          - bank-migrator-service
-          - bank-bootstrap-service
-          - bank-api-service
-          - bank-financial-processors-service
-          - bank-operational-processors-service
-          - bank-clearbank-adapter-service
-          - bank-clearbank-simulator-service
-          - bank-onfido-adapter-service
-          - bank-onfido-simulator-service
+          - migrator-service
+          - bootstrap-service
+          - api-service
+          - financial-processors-service
+          - operational-processors-service
+          - clearbank-adapter-service
+          - clearbank-simulator-service
+          - onfido-adapter-service
+          - onfido-simulator-service
           - bank-app
           - bank-console
     steps:

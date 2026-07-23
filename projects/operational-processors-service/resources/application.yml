@@ -1,0 +1,168 @@
+system:
+  pulsar:
+    client: !system/component
+      system/component-kind: pulsar/client
+      service-url: !env PULSAR_SERVICE_URL
+    admin: !system/component
+      system/component-kind: pulsar/admin
+      service-http-url: !env PULSAR_ADMIN_URL
+    schemas: !system/component
+      system/component-kind: pulsar/schemas
+      command:
+        schema: schemas/command/command-envelope.avsc.json
+        type: AVRO
+      command-response:
+        schema: schemas/command/command-response.avsc.json
+        type: AVRO
+      event:
+        schema: schemas/event/event-envelope.avsc.json
+        type: AVRO
+    producers: !system/component
+      system/component-kind: pulsar/producers
+      banks-command-response:
+        client: !system/local-ref client
+        conf:
+          accessMode: !pulsar/access-mode Shared
+          schema: !keyword command-response
+          topicName: "persistent://tenant-1/namespace-1/topic-banks-command-response"
+        schemas: !system/local-ref schemas
+      parties-command-response:
+        client: !system/local-ref client
+        conf:
+          accessMode: !pulsar/access-mode Shared
+          schema: !keyword command-response
+          topicName: "persistent://tenant-1/namespace-1/topic-parties-command-response"
+        schemas: !system/local-ref schemas
+      cash-accounts-command-response:
+        client: !system/local-ref client
+        conf:
+          accessMode: !pulsar/access-mode Shared
+          schema: !keyword command-response
+          topicName: "persistent://tenant-1/namespace-1/topic-cash-accounts-command-response"
+        schemas: !system/local-ref schemas
+      cash-account-products-command-response:
+        client: !system/local-ref client
+        conf:
+          accessMode: !pulsar/access-mode Shared
+          schema: !keyword command-response
+          topicName: "persistent://tenant-1/namespace-1/topic-cash-account-products-command-response"
+        schemas: !system/local-ref schemas
+      idv-command:
+        client: !system/local-ref client
+        conf:
+          accessMode: !pulsar/access-mode Shared
+          schema: !keyword command
+          topicName: "persistent://tenant-1/namespace-1/topic-idv-command"
+        schemas: !system/local-ref schemas
+    consumers: !system/component
+      system/component-kind: pulsar/consumers
+      # Subscription names are carried over verbatim from the absorbed
+      # per-processor services so the combined pod resumes their
+      # cursors (see docs/adr/0019-processor-packaging.md).
+      banks-command:
+        client: !system/local-ref client
+        conf:
+          cryptoFailureAction: !pulsar/crypto-failure-action CONSUME
+          schema: !pulsar/schema AUTO_CONSUME
+          subscriptionName: bank-service-banks-command
+          subscriptionType: !pulsar/subscription-type Shared
+          deadLetterPolicy:
+            maxRedeliverCount: 5
+            deadLetterTopic: "persistent://tenant-1/namespace-1/topic-banks-command-dlq"
+          topicNames:
+            ["persistent://tenant-1/namespace-1/topic-banks-command"]
+        schemas: !system/local-ref schemas
+      parties-command:
+        client: !system/local-ref client
+        conf:
+          cryptoFailureAction: !pulsar/crypto-failure-action CONSUME
+          schema: !pulsar/schema AUTO_CONSUME
+          subscriptionName: party-service-parties-command
+          subscriptionType: !pulsar/subscription-type Shared
+          deadLetterPolicy:
+            maxRedeliverCount: 5
+            deadLetterTopic: "persistent://tenant-1/namespace-1/topic-parties-command-dlq"
+          topicNames:
+            ["persistent://tenant-1/namespace-1/topic-parties-command"]
+        schemas: !system/local-ref schemas
+      cash-accounts-command:
+        client: !system/local-ref client
+        conf:
+          cryptoFailureAction: !pulsar/crypto-failure-action CONSUME
+          schema: !pulsar/schema AUTO_CONSUME
+          subscriptionName: cash-account-service-cash-accounts-command
+          subscriptionType: !pulsar/subscription-type Shared
+          deadLetterPolicy:
+            maxRedeliverCount: 5
+            deadLetterTopic: "persistent://tenant-1/namespace-1/topic-cash-accounts-command-dlq"
+          topicNames:
+            ["persistent://tenant-1/namespace-1/topic-cash-accounts-command"]
+        schemas: !system/local-ref schemas
+      cash-account-products-command:
+        client: !system/local-ref client
+        conf:
+          cryptoFailureAction: !pulsar/crypto-failure-action CONSUME
+          schema: !pulsar/schema AUTO_CONSUME
+          subscriptionName: cash-account-product-service-cash-account-products-command
+          subscriptionType: !pulsar/subscription-type Shared
+          deadLetterPolicy:
+            maxRedeliverCount: 5
+            deadLetterTopic: "persistent://tenant-1/namespace-1/topic-cash-account-products-command-dlq"
+          topicNames:
+            ["persistent://tenant-1/namespace-1/topic-cash-account-products-command"]
+        schemas: !system/local-ref schemas
+      idv-event:
+        client: !system/local-ref client
+        conf:
+          cryptoFailureAction: !pulsar/crypto-failure-action CONSUME
+          schema: !pulsar/schema AUTO_CONSUME
+          subscriptionName: idv-service-idv-event
+          subscriptionType: !pulsar/subscription-type Shared
+          topicNames:
+            ["persistent://tenant-1/namespace-1/topic-idv-event"]
+        schemas: !system/local-ref schemas
+    message-bus-producers: !system/component
+      system/component-kind: pulsar/message-bus-producers
+      banks-command-response:
+        producer: !system/local-ref producers.banks-command-response
+      parties-command-response:
+        producer: !system/local-ref producers.parties-command-response
+      cash-accounts-command-response:
+        producer: !system/local-ref producers.cash-accounts-command-response
+      cash-account-products-command-response:
+        producer: !system/local-ref producers.cash-account-products-command-response
+      idv-command:
+        producer: !system/local-ref producers.idv-command
+    message-bus-consumers: !system/component
+      system/component-kind: pulsar/message-bus-consumers
+      banks-command:
+        consumer: !system/local-ref consumers.banks-command
+      parties-command:
+        consumer: !system/local-ref consumers.parties-command
+      cash-accounts-command:
+        consumer: !system/local-ref consumers.cash-accounts-command
+      cash-account-products-command:
+        consumer: !system/local-ref consumers.cash-account-products-command
+      idv-event:
+        consumer: !system/local-ref consumers.idv-event
+  message-bus: !include bank/message-bus.yml
+  fdb: !include bank/fdb.yml
+  avro: !include bank/avro.yml
+  keycloak:
+    identity-provider: !system/component
+      system/component-kind: keycloak/identity-provider
+      base-url: !env KEYCLOAK_BASE_URL
+      realm: !env KEYCLOAK_REALM
+      admin-client-id: !env KEYCLOAK_ADMIN_CLIENT_ID
+      admin-client-secret: !env KEYCLOAK_ADMIN_CLIENT_SECRET
+      expected-issuer: !env KEYCLOAK_EXPECTED_ISSUER
+  banks: !include bank/bank.yml
+  parties: !include bank/party.yml
+  cash-accounts: !include bank/cash-account.yml
+  cash-account-products: !include bank/cash-account-product.yml
+  idv: !include bank/idv.yml
+  telemetry:
+    otel-sdk: !system/component
+      system/component-kind: telemetry/otel-sdk
+      service-name: !env SERVICE_NAME
+      endpoint: !env OTEL_ENDPOINT

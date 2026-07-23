@@ -228,7 +228,7 @@ helm install queenswood \
 **Reach the API and the console** (separate terminals):
 
 ```bash
-kubectl -n queenswood port-forward svc/queenswood-bank-api-service 8080:8080
+kubectl -n queenswood port-forward svc/queenswood-api-service 8080:8080
 kubectl -n queenswood port-forward svc/queenswood-bank-console     8081:8080
 ```
 
