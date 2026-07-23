@@ -55,6 +55,24 @@ topics: !system/component
     - topic: "persistent://tenant-1/namespace-1/topic-cash-accounts-command-response"
       partitions: 1
       schema: !keyword command-response
+    - topic: "persistent://tenant-1/namespace-1/topic-cash-account-products-command"
+      partitions: 1
+      schema: !keyword command
+    - topic: "persistent://tenant-1/namespace-1/topic-cash-account-products-command-dlq"
+      partitions: 1
+      schema: !keyword command
+    - topic: "persistent://tenant-1/namespace-1/topic-cash-account-products-command-response"
+      partitions: 1
+      schema: !keyword command-response
+    - topic: "persistent://tenant-1/namespace-1/topic-banks-command"
+      partitions: 1
+      schema: !keyword command
+    - topic: "persistent://tenant-1/namespace-1/topic-banks-command-dlq"
+      partitions: 1
+      schema: !keyword command
+    - topic: "persistent://tenant-1/namespace-1/topic-banks-command-response"
+      partitions: 1
+      schema: !keyword command-response
     - topic: "persistent://tenant-1/namespace-1/topic-parties-command"
       partitions: 1
       schema: !keyword command
