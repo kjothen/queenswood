@@ -6,15 +6,15 @@
           :ns-default com.repldriven.mono.build.build}
   :test
   {:extra-deps
-   {bases/external-test-runner {:local/root "../../bases/external-test-runner"}
+   {ext/mono {:local/root "../../deps/mono-test"}
+    bases/external-test-runner {:local/root "../../bases/external-test-runner"}
     component/bank-test-resources {:local/root
                                    "../../components/bank-test-resources"}
     component/test-resources {:local/root "../../components/test-resources"}
-    component/test-schema {:local/root "../../components/test-schema"}
-    component/test-system {:local/root "../../components/test-system"}
-    component/testcontainers {:local/root "../../components/testcontainers"}}}}
+    component/test-schema {:local/root "../../components/test-schema"}}}}
  :deps
- {component/bank-balance {:local/root "../../components/bank-balance"}
+ {ext/mono {:local/root "../../deps/mono"}
+  component/bank-balance {:local/root "../../components/bank-balance"}
   component/bank-balance-domain
   {:local/root "../../components/bank-balance-domain"}
   component/bank-balance-query
@@ -44,33 +44,6 @@
   component/bank-scheduler {:local/root "../../components/bank-scheduler"}
   component/bank-schema {:local/root "../../components/bank-schema"}
   component/bank-transaction {:local/root "../../components/bank-transaction"}
-
-  component/avro {:local/root "../../components/avro"}
-  component/cache {:local/root "../../components/cache"}
-  component/cli {:local/root "../../components/cli"}
-  component/command {:local/root "../../components/command"}
-  component/command-processor {:local/root "../../components/command-processor"}
-  component/command-schema {:local/root "../../components/command-schema"}
-  component/encryption {:local/root "../../components/encryption"}
-  component/env {:local/root "../../components/env"}
-  component/error {:local/root "../../components/error"}
-  component/event {:local/root "../../components/event"}
-  component/event-processor {:local/root "../../components/event-processor"}
-  component/event-schema {:local/root "../../components/event-schema"}
-  component/fdb {:local/root "../../components/fdb"}
-  component/http-client {:local/root "../../components/http-client"}
-  component/identity-provider
-  {:local/root "../../components/identity-provider"}
-  component/json {:local/root "../../components/json"}
-  component/keycloak {:local/root "../../components/keycloak"}
-  component/log {:local/root "../../components/log"}
-  component/message-bus {:local/root "../../components/message-bus"}
-  component/processor {:local/root "../../components/processor"}
-  component/pulsar {:local/root "../../components/pulsar"}
-  component/scheduler {:local/root "../../components/scheduler"}
-  component/system {:local/root "../../components/system"}
-  component/telemetry {:local/root "../../components/telemetry"}
-  component/utility {:local/root "../../components/utility"}
 
   base/bank-operational-processors
   {:local/root "../../bases/bank-operational-processors"}
