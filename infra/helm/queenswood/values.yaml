@@ -1,8 +1,8 @@
 # -- Container image registry + tag shared by every Queenswood service.
 # The image NAME is taken from the service entry's key in `services` below
-# (e.g. {{ image.registry }}/bank-api-service:{{ image.tag }}).
+# (e.g. {{ image.registry }}/api-service:{{ image.tag }}).
 image:
-  registry: ghcr.io/repldriven
+  registry: ghcr.io/repldriven/queenswood
   tag: "0.0.0"
   pullPolicy: IfNotPresent
   pullSecrets: []
@@ -114,11 +114,11 @@ bootstrap:
 gateway:
   enabled: false
   className: ""
-  host: bank-api.local
+  host: api.local
   # Second hostname the public Gateway terminates on, routed to the
   # bank-console SPA. Kept distinct from `host` so the SPA can keep
   # its keycloak-js redirectUris + post-logout origins clean.
-  consoleHost: console.bank-api.local
+  consoleHost: console.api.local
   gcp:
     enabled: false
     # Regional Address provisioned in infra/gcp/networking.yml.
@@ -135,7 +135,7 @@ bankConsole:
   enabled: true
   port: 8080
   replicas: 1
-  apiUpstream: "http://{{ .Release.Name }}-bank-api-service:8080"
+  apiUpstream: "http://{{ .Release.Name }}-api-service:8080"
   # In-cluster Service the nginx `/keycloak/*` reverse-proxies to so
   # the SPA stays same-origin. Defaults to the bundled dev Keycloak
   # Service; GKE overrides to the operator-published Service URL.
@@ -161,7 +161,7 @@ bankConsole:
 # Image name is the same as the key.
 # ---------------------------------------------------------------------
 services:
-  bank-api-service:
+  api-service:
     enabled: true
     http: true
     port: 8080
@@ -170,24 +170,24 @@ services:
       limits: { cpu: "1000m", memory: "1500Mi" }
       requests: { cpu: "200m", memory: "768Mi" }
     extraEnv:
-      COMPANIES_HOUSE_URL: "http://{{ .Release.Name }}-bank-uk-companies-house-simulator-service:8084"
+      COMPANIES_HOUSE_URL: "http://{{ .Release.Name }}-uk-companies-house-simulator-service:8084"
 
   # Money path: payment, transaction, interest, payee-check processors
   # in one JVM. Payee-check invokes the ClearBank adapter for
   # Confirmation of Payee, hence CLEARBANK_ADAPTER_URL.
-  bank-financial-processors-service:
+  financial-processors-service:
     enabled: true
     replicas: 1
     resources:
       limits: { cpu: "1500m", memory: "2Gi" }
       requests: { cpu: "300m", memory: "1Gi" }
     extraEnv:
-      CLEARBANK_ADAPTER_URL: "http://{{ .Release.Name }}-bank-clearbank-adapter-service:8082"
+      CLEARBANK_ADAPTER_URL: "http://{{ .Release.Name }}-clearbank-adapter-service:8082"
 
   # Provisioning + identity: bank, party, cash-account, product, idv
   # processors in one JVM. Bank provisioning issues service-account
   # clients, hence the Keycloak env (from the shared env block).
-  bank-operational-processors-service:
+  operational-processors-service:
     enabled: true
     replicas: 1
     resources:
@@ -197,48 +197,48 @@ services:
   # Cron-driven processor (no Pulsar): registers a Quartz trigger per
   # enabled scheduled job at startup and runs interest accrue/capitalize
   # tasks straight against FDB.
-  bank-scheduler-processor-service:
+  scheduler-processor-service:
     enabled: true
     replicas: 1
 
-  bank-clearbank-adapter-service:
+  clearbank-adapter-service:
     enabled: true
     http: true
     port: 8082
     replicas: 1
     waitFor:
-      - service: bank-clearbank-simulator-service
+      - service: clearbank-simulator-service
         port: 8081
     extraEnv:
-      CLEARBANK_SIMULATOR_URL: "http://{{ .Release.Name }}-bank-clearbank-simulator-service:8081"
-      CLEARBANK_ADAPTER_PUBLIC_URL: "http://{{ .Release.Name }}-bank-clearbank-adapter-service:8082"
+      CLEARBANK_SIMULATOR_URL: "http://{{ .Release.Name }}-clearbank-simulator-service:8081"
+      CLEARBANK_ADAPTER_PUBLIC_URL: "http://{{ .Release.Name }}-clearbank-adapter-service:8082"
 
-  bank-clearbank-simulator-service:
+  clearbank-simulator-service:
     # Disabled in production values; enable for dev/non-prod.
     enabled: true
     http: true
     port: 8081
     replicas: 1
 
-  bank-onfido-adapter-service:
+  onfido-adapter-service:
     enabled: true
     http: true
     port: 8084
     replicas: 1
     waitFor:
-      - service: bank-onfido-simulator-service
+      - service: onfido-simulator-service
         port: 8083
     extraEnv:
-      ONFIDO_URL: "http://{{ .Release.Name }}-bank-onfido-simulator-service:8083"
-      IDV_ONFIDO_ADAPTER_PUBLIC_URL: "http://{{ .Release.Name }}-bank-onfido-adapter-service:8084"
+      ONFIDO_URL: "http://{{ .Release.Name }}-onfido-simulator-service:8083"
+      IDV_ONFIDO_ADAPTER_PUBLIC_URL: "http://{{ .Release.Name }}-onfido-adapter-service:8084"
 
-  bank-onfido-simulator-service:
+  onfido-simulator-service:
     enabled: true
     http: true
     port: 8083
     replicas: 1
 
-  bank-uk-companies-house-simulator-service:
+  uk-companies-house-simulator-service:
     # Disabled in production values; enable for dev/non-prod.
     enabled: true
     http: true

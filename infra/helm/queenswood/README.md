@@ -8,13 +8,13 @@ Kubernetes:
 - **FoundationDB** cluster managed by the FDB Kubernetes
   operator (subchart provides the operator + CRDs; this
   chart provides the `FoundationDBCluster` CR)
-- **bank-api-service** (HTTP REST API + dispatchers)
+- **api-service** (HTTP REST API + dispatchers)
 - **bank-clearbank-{adapter,simulator}-service**,
   **bank-onfido-{adapter,simulator}-service**, and
-  **bank-uk-companies-house-simulator-service** (HTTP)
+  **uk-companies-house-simulator-service** (HTTP)
 - **bank-{cash-account,party,payment,interest,transaction,idv}-processor-service**
   (Pulsar processors) and
-  **bank-scheduler-processor-service** (cron-driven, no
+  **scheduler-processor-service** (cron-driven, no
   Pulsar)
 - **bank-console** (Svelte SPA served via nginx)
 - **Keycloak** with embedded H2 for standalone installs
@@ -54,8 +54,8 @@ and the `kind-*` / `tilt-*` recipes in `Justfile`.
 
 ## Bootstrap
 
-`bank-bootstrap-service` runs as a one-shot Job (named
-`<release>-bank-bootstrap-<image.tag>`) before any service
+`bootstrap-service` runs as a one-shot Job (named
+`<release>-bootstrap-<image.tag>`) before any service
 starts. It opens FDB (applying record metadata declared in
 `bank-resources`), declares the Pulsar
 tenant/namespace/topics/schemas from the same component,
@@ -74,8 +74,8 @@ immutable Job spec; old Jobs age out via
 
 ```bash
 kubectl -n queenswood get foundationdbclusters
-kubectl -n queenswood get jobs   # bank-bootstrap-<tag> should complete
-kubectl -n queenswood port-forward svc/queenswood-bank-api-service 8080:8080
+kubectl -n queenswood get jobs   # bootstrap-<tag> should complete
+kubectl -n queenswood port-forward svc/queenswood-api-service 8080:8080
 curl http://localhost:8080/openapi.json
 ```
 

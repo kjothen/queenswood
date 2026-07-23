@@ -71,13 +71,13 @@ kind-up-monolith tag="dev":
     set -e
     bash {{ justfile_directory() }}/infra/kind/with-registry.sh queenswood
     # The three JVM services share the parameterised service Dockerfile.
-    for svc in bank-monolith-service bank-migrator-service bank-bootstrap-service; do
+    for svc in monolith-service migrator-service bootstrap-service; do
       just docker-build $svc {{ tag }}
     done
     # bank-console has its own Dockerfile; build it via its bake target.
     REGISTRY={{ DOCKER_REGISTRY }} TAG={{ tag }} \
       docker buildx bake -f infra/docker/bake.hcl bank-console
-    for svc in bank-monolith-service bank-migrator-service bank-bootstrap-service bank-console; do
+    for svc in monolith-service migrator-service bootstrap-service bank-console; do
       docker tag {{ DOCKER_REGISTRY }}/$svc:{{ tag }} localhost:5001/$svc:{{ tag }}
       docker push localhost:5001/$svc:{{ tag }}
     done
@@ -86,7 +86,7 @@ kind-up-monolith tag="dev":
     # a plain upgrade skips them and they never re-run. --ignore-not-found
     # + `|| true` keeps the first run (no namespace yet) from tripping set -e.
     kubectl delete job -n queenswood \
-      -l 'app.kubernetes.io/component in (bank-migrator,bank-bootstrap)' \
+      -l 'app.kubernetes.io/component in (migrator,bootstrap)' \
       --ignore-not-found 2>/dev/null || true
     # Always pull so a re-pushed `:{{ tag }}` actually lands on the node —
     # IfNotPresent keeps the stale cached image and silently ignores the

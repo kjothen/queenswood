@@ -22,12 +22,12 @@ migrator:
 
 # SPA proxies /v1/* to the monolith pod, not the (disabled) bank-api.
 bankConsole:
-  apiUpstream: "http://{{ .Release.Name }}-bank-monolith-service:8080"
+  apiUpstream: "http://{{ .Release.Name }}-monolith-service:8080"
 
 services:
   # The single all-in-one service. Adapters + simulators reach each
   # other in-process via bound http-urls, so no adapter env URLs.
-  bank-monolith-service:
+  monolith-service:
     enabled: true
     http: true
     port: 8080
@@ -37,12 +37,12 @@ services:
       requests: { cpu: "500m", memory: "1536Mi" }
 
   # Everything the monolith subsumes is turned off.
-  bank-api-service: { enabled: false }
-  bank-financial-processors-service: { enabled: false }
-  bank-operational-processors-service: { enabled: false }
-  bank-scheduler-processor-service: { enabled: false }
-  bank-clearbank-adapter-service: { enabled: false }
-  bank-clearbank-simulator-service: { enabled: false }
-  bank-onfido-adapter-service: { enabled: false }
-  bank-onfido-simulator-service: { enabled: false }
-  bank-uk-companies-house-simulator-service: { enabled: false }
+  api-service: { enabled: false }
+  financial-processors-service: { enabled: false }
+  operational-processors-service: { enabled: false }
+  scheduler-processor-service: { enabled: false }
+  clearbank-adapter-service: { enabled: false }
+  clearbank-simulator-service: { enabled: false }
+  onfido-adapter-service: { enabled: false }
+  onfido-simulator-service: { enabled: false }
+  uk-companies-house-simulator-service: { enabled: false }

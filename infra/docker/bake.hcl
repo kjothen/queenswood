@@ -4,22 +4,22 @@
 //
 //   TAG=dev docker buildx bake -f infra/docker/bake.hcl
 
-variable "REGISTRY" { default = "ghcr.io/repldriven" }
+variable "REGISTRY" { default = "ghcr.io/repldriven/queenswood" }
 variable "TAG"      { default = "dev" }
 
 services = [
-  "bank-migrator-service",
-  "bank-bootstrap-service",
-  "bank-api-service",
-  "bank-monolith-service",
-  "bank-financial-processors-service",
-  "bank-operational-processors-service",
-  "bank-scheduler-processor-service",
-  "bank-clearbank-adapter-service",
-  "bank-clearbank-simulator-service",
-  "bank-onfido-adapter-service",
-  "bank-onfido-simulator-service",
-  "bank-uk-companies-house-simulator-service",
+  "migrator-service",
+  "bootstrap-service",
+  "api-service",
+  "monolith-service",
+  "financial-processors-service",
+  "operational-processors-service",
+  "scheduler-processor-service",
+  "clearbank-adapter-service",
+  "clearbank-simulator-service",
+  "onfido-adapter-service",
+  "onfido-simulator-service",
+  "uk-companies-house-simulator-service",
 ]
 
 group "default" {

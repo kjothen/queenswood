@@ -4,14 +4,14 @@
 # starts colima); a kind cluster (`kind create cluster --name queenswood`).
 #
 # Builds every bank-*-service image (including the one-shot
-# bank-bootstrap-service) from the shared parameterised Dockerfile
+# bootstrap-service) from the shared parameterised Dockerfile
 # (`infra/docker/service/Dockerfile`, PROJECT_NAME build-arg),
 # renders the Helm chart at `infra/helm/queenswood` under release
 # name `queenswood` (matching the Justfile + README so resource
 # names don't diverge between the two flows), and applies it to
 # the current kind context.
 #
-# Ordering: bank-bootstrap-service runs first as a Job (applies
+# Ordering: bootstrap-service runs first as a Job (applies
 # FDB metadata + Pulsar tenant/namespace/topics/schemas + seeds
 # the internal organization + platform/micro policies). All HTTP
 # and processor services gate on its completion via Tilt
@@ -19,7 +19,7 @@
 # initContainer in the deployment template.
 #
 # Re-running bootstrap on source change: k8s Job specs are
-# immutable, so editing bank-bootstrap-service code and rebuilding
+# immutable, so editing bootstrap-service code and rebuilding
 # the image cannot in-place replace the running Job. Trigger the
 # `bootstrap-reset` resource manually (button in Tilt UI), which
 # deletes the Job; Tilt then re-applies a fresh one with the new
@@ -42,17 +42,17 @@ allow_k8s_contexts(['kind-kind', 'kind-queenswood'])
 RELEASE = 'queenswood'
 
 SERVICES = [
-    'bank-migrator-service',
-    'bank-bootstrap-service',
-    'bank-api-service',
-    'bank-financial-processors-service',
-    'bank-operational-processors-service',
-    'bank-scheduler-processor-service',
-    'bank-clearbank-adapter-service',
-    'bank-clearbank-simulator-service',
-    'bank-onfido-adapter-service',
-    'bank-onfido-simulator-service',
-    'bank-uk-companies-house-simulator-service',
+    'migrator-service',
+    'bootstrap-service',
+    'api-service',
+    'financial-processors-service',
+    'operational-processors-service',
+    'scheduler-processor-service',
+    'clearbank-adapter-service',
+    'clearbank-simulator-service',
+    'onfido-adapter-service',
+    'onfido-simulator-service',
+    'uk-companies-house-simulator-service',
 ]
 
 # Build each service image. The chart renders image refs as
@@ -80,7 +80,7 @@ k8s_yaml(helm(
 ))
 
 # Migrator Job (FDB schema + Pulsar topology). Runs first.
-MIGRATOR_JOB = '%s-bank-migrator-dev' % RELEASE
+MIGRATOR_JOB = '%s-migrator-dev' % RELEASE
 k8s_resource(
     workload=MIGRATOR_JOB,
     labels=['bootstrap'],
@@ -94,7 +94,7 @@ local_resource(
 )
 
 # Bootstrap Job (org seed + policies). Depends on migrator.
-BOOTSTRAP_JOB = '%s-bank-bootstrap-dev' % RELEASE
+BOOTSTRAP_JOB = '%s-bootstrap-dev' % RELEASE
 k8s_resource(
     workload=BOOTSTRAP_JOB,
     labels=['bootstrap'],
@@ -102,7 +102,7 @@ k8s_resource(
 )
 
 # Manual trigger: delete the existing bootstrap Job. Use after
-# editing bank-bootstrap-service code so Tilt can re-apply with
+# editing bootstrap-service code so Tilt can re-apply with
 # the freshly built image — k8s won't overwrite an immutable Job
 # spec, so the old Job has to go first.
 local_resource(
@@ -116,11 +116,11 @@ local_resource(
 # HTTP-fronted services: forward each port + group as `http` +
 # gate startup on the bootstrap Job.
 HTTP_PORTS = {
-    'bank-api-service':                 8080,
-    'bank-clearbank-simulator-service': 8081,
-    'bank-clearbank-adapter-service':   8082,
-    'bank-onfido-simulator-service':    8083,
-    'bank-onfido-adapter-service':      8084,
+    'api-service':                 8080,
+    'clearbank-simulator-service': 8081,
+    'clearbank-adapter-service':   8082,
+    'onfido-simulator-service':    8083,
+    'onfido-adapter-service':      8084,
 }
 for svc, port in HTTP_PORTS.items():
     k8s_resource(
@@ -134,7 +134,7 @@ for svc, port in HTTP_PORTS.items():
 # port onfido-adapter forwards on the host), so forward it to host
 # 8085 to avoid the collision.
 k8s_resource(
-    workload='%s-bank-uk-companies-house-simulator-service' % RELEASE,
+    workload='%s-uk-companies-house-simulator-service' % RELEASE,
     port_forwards='8085:8084',
     labels=['http'],
     resource_deps=[BOOTSTRAP_JOB],
@@ -142,9 +142,9 @@ k8s_resource(
 
 # Pulsar processors: group + gate on bootstrap.
 PROCESSORS = [
-    'bank-financial-processors-service',
-    'bank-operational-processors-service',
-    'bank-scheduler-processor-service',
+    'financial-processors-service',
+    'operational-processors-service',
+    'scheduler-processor-service',
 ]
 for svc in PROCESSORS:
     k8s_resource(
