@@ -125,9 +125,9 @@ hidden invariant, a workaround for an upstream bug, a behaviour
 that would surprise a reader who's only seen the surrounding code.
 
 ```clojure
-;; Pulsar's createMissedPartitions has been observed to silently
-;; no-op on a single-process dev broker; audit afterwards.
-(.createMissedPartitions topics topic-name)
+;; listTopics and createTopics race: another replica may create the
+;; topic in between, so treat TopicExistsException as success.
+(catch TopicExistsException _ topic-name)
 ```
 
 Not acceptable: comments restating the code, comments narrating the
@@ -166,7 +166,7 @@ Harder:
 - Naming has to carry more weight. A function that *needs* a
   comment to be understood is a hint that the name is wrong; the
   rule turns "add a comment" into "rename the fn".
-- Genuinely surprising upstream behaviour (Pulsar quirks, FDB
+- Genuinely surprising upstream behaviour (broker quirks, FDB
   Record Layer edge cases) does need to be captured somewhere.
   Inline comments are the right place when they're terse;
   longer-lived rationale moves to ADRs or recipes.

@@ -62,7 +62,7 @@ the production components. This is the cost.
 
 The defence is that the two implementations live at very different
 levels. The model is pure functions over a flat map: no FDB
-transactions, no Pulsar envelopes, no protobuf, no choreography,
+transactions, no message-bus envelopes, no protobuf, no choreography,
 no outbox, no auth. It will likely run to a few hundred lines for
 the whole bank. The real implementation is the production system
 with all its concerns. When they disagree, one of two things has
@@ -189,7 +189,7 @@ transitions, not as proto enums (see below).
 ### What does not go in the model
 
 - No FDB. State is a Clojure map.
-- No Pulsar. Commands are plain data; `:next-state` updates state
+- No message bus. Commands are plain data; `:next-state` updates state
   directly.
 - No protobuf. The model uses Clojure keywords and maps;
   `:transaction-type-inbound-transfer` not
@@ -260,7 +260,7 @@ Projections have three required properties:
 
 1. **Total over partial.** Take whatever the real system has,
    return the model-shaped subset. Ignore everything irrelevant:
-   Pulsar envelopes, FDB versionstamps, OpenTelemetry spans,
+   message-bus envelopes, FDB versionstamps, OpenTelemetry spans,
    audit metadata, addressing schemes. Equality should fail only
    when domain rules disagree, not when the real system has a
    field the model didn't bother modelling.
@@ -366,7 +366,7 @@ in their output, making equality with model state direct.
 ### Quiescence wait
 
 This is the bit that bites. The production system is CQRS —
-commands go through Pulsar, postings hit the outbox, projections
+commands go through the message bus, postings hit the outbox, projections
 eventually catch up. After submitting commands, the runner must
 wait until the read side has caught up before projecting.
 Otherwise tests are flaky in ways that look like real bugs.

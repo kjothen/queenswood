@@ -389,7 +389,7 @@ Its egress is a transactional outbox on both edges — it owns:
   payload into an internal event, and writes it to an outbox in
   one transaction, returning 200 only on commit — a failed write
   is retried by ClearBank rather than silently lost.
-- **Scheme command consumer** — Pulsar consumer for
+- **Scheme command consumer** — message-bus consumer for
   `submit-payment` commands. Each is persisted as a pending
   outbound intent and acked; the consumer makes no HTTP call.
 - **Outbound relay** — a daemon that drains pending intents and
@@ -474,7 +474,7 @@ ordering follows).
   `:payment/already-submitted` — both are correct, neither
   produces a duplicate balance move.
 
-### Three roles for Pulsar in this flow
+### Three roles for the message bus in this flow
 
 - **HTTP-facing command channel** — submit-internal-payment
   / submit-outbound-payment commands from the API.
@@ -517,7 +517,7 @@ channel separation is configuration, not infrastructure.
   customer money as "spent" when ClearBank later rejects;
   reconciliation is operationally painful. The
   pending-outgoing bucket is the right answer.
-- **One Pulsar topic for everything.** Submit, scheme
+- **One message-bus topic for everything.** Submit, scheme
   command, and settlement events all on one channel.
   Rejected — confuses tracing, mixes traffic with very
   different reliability needs (settlement events are
@@ -581,13 +581,13 @@ channel separation is configuration, not infrastructure.
   submission becomes a persisted intent, and settlement flows
   back through the outbox. But the publish from `payment`
   to the adapter channel is still fire-and-forget after its FDB
-  commit: if Pulsar is unavailable at that moment the command
+  commit: if the broker is unavailable at that moment the command
   is lost, so the OutboundPayment exists while the adapter never
   sees it. Closing this needs the same outbox on the payment
   side — a producer-edge follow-up, deferred with the other
   producer edges in
   [transaction-processing.md](transaction-processing.md). Today
-  it leans on Pulsar.
+  it leans on the broker.
 - **No FX.** Inbound and outbound payments are
   single-currency end-to-end. Cross-currency would need
   explicit FX legs (transactions-and-balances TDD) plus

@@ -26,7 +26,7 @@ Consistency of mechanism is not the goal; consistency of the
 *decision rule* is. A command path is not free: measured on the
 create-bank commandification, one command costs roughly 25 touched
 files — Avro schemas registered in two registries, a commands/system
-pair on the brick, a processor base, a service project with Pulsar
+pair on the brick, a processor base, a service project with message-bus
 config, workspace/Tilt/Helm entries, monolith and api wiring,
 and the test system in three files — plus a bus round-trip of
 latency on every call and a reply-timeout failure mode the

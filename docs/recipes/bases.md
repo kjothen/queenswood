@@ -117,7 +117,7 @@ component.
 Bases are the runnable parts of the system. The split between
 "base provides `-main` and bootstrap" and "project picks the
 components" lets the same code run in different deployments
-— a thin processor base for one-Pulsar-consumer-per-domain
+— a thin processor base for one-message-bus-consumer-per-domain
 deployables, the `api` base for the HTTP service, and
 the `monolith` base (test-only) composing several other
 bases into one in-process system for end-to-end tests

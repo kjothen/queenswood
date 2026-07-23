@@ -39,7 +39,7 @@ Adapted from
 
 ```yaml
 system:
-  pulsar: !include bank-monolith/pulsar-test.yml
+  kafka: !include bank-monolith/kafka-test.yml
   fdb: !include bank/fdb-test.yml
   cash-accounts: !include bank/cash-account-test.yml
   ## ...

@@ -25,7 +25,7 @@ We need a single way to express:
 
 The shortlist:
 
-- **Hand-rolled lifecycle** — `(do (start-fdb) (start-pulsar) ...)`.
+- **Hand-rolled lifecycle** — `(do (start-fdb) (start-broker) ...)`.
   Fine for tiny apps. Doesn't scale: dependency order maintained
   manually, no test composition story, profile differences become
   source branches.
@@ -80,7 +80,7 @@ injects the value via `assoc-in` before starting the system.
 Testcontainers-backed infrastructure (FDB, the message bus, Vault,
 and so on) is declared in the same system file as everything else,
 gated behind a profile. Tests boot through the same code path as production —
-just with a different profile and a different `fdb` / `pulsar` group.
+just with a different profile and a different `fdb` / message-bus group.
 
 ## Consequences
 

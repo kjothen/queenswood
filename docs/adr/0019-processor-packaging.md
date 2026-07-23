@@ -9,9 +9,9 @@ Accepted.
 
 Every command processor originally shipped as its own microservice:
 a `X-processor` base (boilerplate `main.clj` plus a require
-bundle) and a `X-processor-service` project (Pulsar wiring plus
+bundle) and a `X-processor-service` project (message-bus wiring plus
 the domain's system YAML). Ten processor deployments existed, each
-under-utilised — ten JVMs paying the FDB Record Layer and Pulsar
+under-utilised — ten JVMs paying the FDB Record Layer and message-bus
 client footprint to consume a trickle of commands, ten CI project
 runs, ten Helm entries.
 
@@ -56,7 +56,7 @@ sit in the same failure domain as money movement.
 
 Two invariants when regrouping:
 
-- **Cursor continuity.** Pulsar `subscriptionName`s and FDB watcher
+- **Cursor continuity.** message-bus consumer groups and FDB watcher
   `consumer-id`s move with the processor, verbatim. The subscription
   and changelog cursor identify the *consumer role*, not the pod
   that happens to host it; renaming one abandons a cursor and
@@ -75,10 +75,10 @@ Easier:
   matrix and the Helm/Tilt/bake/release inventories shrink to match.
 - Regrouping is configuration and plumbing, never brick code.
   Promoting a hot domain to its own deployment (or moving one
-  between groups) relocates its YAML, pulsar wiring, bundle require,
+  between groups) relocates its YAML, message-bus wiring, bundle require,
   and deps — the `X` brick itself is untouched.
 - A new processor no longer scaffolds a base and a service: it adds
-  its brick, its `bank/X.yml`, and pulsar wiring to the group its
+  its brick, its `bank/X.yml`, and message-bus wiring to the group its
   boundary dictates.
 
 Harder:
@@ -89,6 +89,6 @@ Harder:
   one side of the financial line.
 - Per-domain resource attribution needs metrics, not `kubectl top`.
 - Moving a processor between groups touches three places instead of
-  one: the domain YAML and pulsar wiring move between projects, the
+  one: the domain YAML and message-bus wiring move between projects, the
   brick moves between the two bases' require bundles, and the deps
   move between the two projects' `deps.edn`s.

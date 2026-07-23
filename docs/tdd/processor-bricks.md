@@ -83,7 +83,7 @@ given service actually runs is decided by its project's
 `application.yml`: a new processor adds its brick to the group
 its boundary dictates — financial or operational, per
 [ADR-0019](../adr/0019-processor-packaging.md) — wiring its
-`bank/X.yml` system config, pulsar entries, bundle require, and
+`bank/X.yml` system config, message-bus entries, bundle require, and
 deps into that group's project and base instead of scaffolding a
 base and service of its own.
 
