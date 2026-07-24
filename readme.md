@@ -1,13 +1,21 @@
+<!-- markdownlint-configure-file { "MD033": false, "MD041": false } -->
+
 <p align="center">
   <img src="docs/assets/logo.svg" alt="Queenswood" width="200" />
 </p>
 
 # Queenswood
 
-**A bank in a box.** Provision a fully-formed tenant bank —
-double-entry ledgers, UK Faster Payments, interest accrual, and
-identity-checked onboarding — from a single API call. Core banking,
-rebuilt as a clean Clojure/Polylith workspace you can actually read.
+**Core banking, boxed.** You want a modern banking platform — without
+building it all yourself, or renting one you can't see inside.
+Queenswood is the operational core — accounts, payments, a
+double-entry ledger, interest, onboarding, and policies — the
+machinery of a bank. You use your banking licence. You
+contract with identity and payment-rails providers, plug them in
+where supported, or extend the platform where not.
+
+The world runs on banking it never sees. Queenswood makes the core a
+commodity — out in the open, yours to read and run.
 
 ## Demos
 
@@ -24,24 +32,19 @@ rebuilt as a clean Clojure/Polylith workspace you can actually read.
 
 ## What it does
 
-Everything a tenant bank needs, from the same API:
+Everything a bank needs, from the same API:
 
-- **Payments** — internal transfers and outbound UK Faster Payments;
-  funds reserved on submit, settled or released on the scheme's word.
-- **Ledger** — double-entry postings on every movement, penny-exact,
-  always balancing.
-- **Interest** — daily accrual, monthly capitalisation, fractional
-  carry below the minor unit so nothing rounds away.
-- **Accounts & products** — publish versioned account products, then
-  open accounts against them with real UK sort-code / account-number
-  addresses.
-- **Onboarding & identity** — register customers, run identity
-  verification through a pluggable adapter, activate on the result.
-- **Policies** — capabilities and limits as editable records, not
-  hardcoded rules; deny-wins, with a curative-permit escape so a
-  customer can act their way back into compliance.
-- **Multi-tenancy** — one `POST /v1/banks` provisions a bank and hands
-  back an OAuth2 service credential, shown once.
+- **Accounts** — open, close, suspend/resume with sort code addresses and balances
+- **Account products** — current and savings account product versioning
+- **Interest** — accrual, capitalisation and fractional carry
+- **Ledger** — double-entry postings on every money movement
+- **Onboarding & identity** — know-your-customer checks and onboarding
+- **Parties** — customer records, with retrieval and merge
+- **Payee checks** — verify a payee before an outbound payment
+- **Payments** — internal transfers, inbound and outbound payments
+- **Policies** — restrictions and limits as configurable policy
+- **Scheduling** — recurring jobs on an operator cadence
+- **Unlimited banks** — spin-up multiple banks, in test or live
 
 API reference:
 [repldriven.github.io/queenswood](https://repldriven.github.io/queenswood/),
@@ -50,8 +53,9 @@ running.
 
 ## Architecture
 
-CQRS on two substrates: Apache Pulsar carries commands and events,
-FoundationDB's Record Layer holds state and its own changelog.
+The Message Bus (Kafka or Pulsar) carries commands and events
+between Queenswood's processors and external providers; a distributed
+database (FoundationDB) manages the data.
 
 <picture>
   <source media="(prefers-color-scheme: dark)"  srcset="docs/diagrams/system-diagram-dark.svg">
@@ -59,35 +63,29 @@ FoundationDB's Record Layer holds state and its own changelog.
   <img alt="Queenswood system diagram" src="docs/diagrams/system-diagram-light.svg">
 </picture>
 
-**Writes are commands.** The API turns a request into an
-Avro-serialised command on the bus; a processor consumes it, does the
-whole operation in one FDB transaction, and replies — `ACCEPTED` (2xx),
-`REJECTED` (4xx), or `FAILED` (5xx). Processors are packaged into two
-services along the financial boundary (payment / transaction / interest
-/ payee-check, versus bank / party / account / product / idv); the
-grouping is YAML composition, not code. A handful of low-stakes
-config writes — API keys, policies, seeded jobs — still go straight to
-FDB. See [transaction-processing](docs/tdd/transaction-processing.md).
+**Writes are idempotent commands.** The API write-side turns a request into a
+command on the bus; a processor consumes it, and does the **entire**
+operation in one database transaction. Processors can be deployed
+individually or, for maximum efficiency, bundled according to lines
+of responsibility, such as financial and operational processor bundles.
 
-**Reads are queries.** The read side loads records directly by primary
-key, off a separate query surface — no command round-trip. Write bricks
-and their query siblings are distinct components, so the API can only
-call read paths.
+**Reads are queries.** The API read-side loads records directly using a
+separate query surface — no command round-trip and no overlap with
+the write-path, top-to-bottom.
 
-**The changelog is the engine room.** Every committed write lands on
-FoundationDB's changelog in order, atomically with the write — so it
-doubles as a transactional outbox. In-process watchers drain it to
-drive reactive transitions (an account opening, an IDV result
-activating a party) and to relay events onto the bus. See
-[changelog watchers](docs/adr/0008-changelog-watchers.md).
+**Choreography through a changelog.** Every committed write lands on
+FoundationDB's changelog in order, atomically with the write — the
+system's transactional outbox. The rule is commit first, relay
+after: nothing is sent from inside a transaction. A processor
+writes what to emit alongside its state change, and a relay drains
+the changelog to publish it to the bus, so processors react to one
+another, event-sourced.
 
-**Egress crosses a boundary carefully.** Outbound Faster Payments and
-identity checks never call out from inside a transaction: the write
-records an intent, and a relay makes the external call and folds the
-provider's webhook back in as an event. Adapter/simulator pairs front
-the real providers (ClearBank FPS, Onfido) — the simulators stand in
-during development and tests. See
-[deployment](docs/recipes/deployment.md).
+**Egress through intent.** An external call is the same
+commit-then-relay pattern, one boundary further out. An HTTP
+round-trip can't run inside a database transaction, so the write records an
+intent; a relay makes the call afterwards and folds the provider's
+webhook back in as an event.
 
 ## What's interesting
 
@@ -95,34 +93,31 @@ The decisions that make this codebase worth reading — each with a
 doc that goes deep:
 
 - **One unified API for the whole bank, with full OpenAPI 3.x
-  compliance.** Bank-shaped, not implementation-shaped; the spec
-  is the contract. See
+  compliance.** See
   [ADR-0013](docs/adr/0013-single-unified-api.md) and
   [ADR-0014](docs/adr/0014-openapi-3x-compliance.md).
-- **Policies and bindings are first-class data, not hardcoded
-  rules.** Capabilities and limits as records; a curative-permit
-  pattern that lets a customer self-correct out of breach.
+- **Policies and bindings as first-class data, not hardcoded
+  rules.** Combining allow/deny capabilities with
+  sophisticated time and volume-based limits, affords
+  fine-grained policies where you need it most.
   See [policy-evaluation](docs/tdd/policy-evaluation.md).
-- **Daily interest accrual that conserves pennies.** Integer
+- **Daily interest accrual, capitalisation and carry.** Integer
   micro-unit arithmetic with sub-minor-unit carry; six-leg
-  postings at capitalisation; cadence (daily, monthly, anything)
-  is the operator's choice. See [interest](docs/tdd/interest.md).
-- **A pure-functional model runs alongside the real system; tests
-  pass only when they agree.** Property-based testing via fugato +
-  hand-authored EDN scenarios share one runner.
+  postings at capitalisation; with cadence (daily, monthly, anything)
+  being your choice. See [interest](docs/tdd/interest.md).
+- **System-level and model-equality property testing**.
+  Two parallel state machines, the real system and an independent model,
+  fed the same commands, with end states compared.
   See [scenario-testing](docs/tdd/scenario-testing.md).
 - **Anomalies, not exceptions, at every component interface.**
-  Three semantic kinds (error / rejection / unauthorized) mapping
-  directly to HTTP status families.
+  Failure is a first-class return value. Every caller engages with
+  it; nothing slips by silently.
   See [ADR-0005](docs/adr/0005-error-handling-with-anomalies.md).
-- **System-as-data via donut.system + YAML.** Components are
-  records, profiles are values, testcontainers and production
-  share one bootstrap path.
+- **System-as-data** Test and production share one bootstrap path.
   See [ADR-0007](docs/adr/0007-system-as-data.md) and the
   [slides](docs/slides/systems-as-data/slides.md).
-- **FoundationDB Record Layer with the changelog as the
-  transactional outbox.** Multi-record ACID by default; the
-  outbox pattern falls out of the storage engine.
+- **FoundationDB Record Layer.** Multi-record ACID by default; the
+  transactional outbox pattern falls out of the storage engine.
   See [ADR-0002](docs/adr/0002-foundationdb-record-layer.md).
 - **Consumes `mono`** — shared infrastructure pulled in as a
   pinned git-dependency, not forked into the workspace.
@@ -179,8 +174,8 @@ and Testcontainers:
 (main/stop sys)
 ```
 
-This boots the full system — FDB, Pulsar, HTTP server — inside
-Testcontainers. Then start the Svelte front-end:
+This boots the full system — FoundationDB, Message Bus (Kafka or Pulsar),
+HTTP server — inside Testcontainers. Then start the Svelte front-end:
 
 ```bash
 just console-start
@@ -189,10 +184,10 @@ just console-start
 ### Kubernetes
 
 The released Helm chart deploys the entire platform (API,
-processors, adapters/simulators, the Svelte front-end, Pulsar,
-FoundationDB) onto any Kubernetes cluster.
+processors, adapters/simulators, the Svelte front-end,
+Kafka or Pulsar, FoundationDB) onto any Kubernetes cluster.
 
-**Get a local Kubernetes runtime on macOS** — pick one:
+**Get a local Kubernetes runtime on macOS**, pick any:
 
 - **OrbStack** — single-app, fastest setup:
 
@@ -200,6 +195,9 @@ FoundationDB) onto any Kubernetes cluster.
   brew install orbstack
   # Open OrbStack, enable Kubernetes in Settings → Kubernetes
   ```
+
+  Enabling Kubernetes here _is_ the cluster — there's no separate
+  `kind create cluster` step. Skip straight to **Install** below.
 
 - **kind on Colima** — closer to upstream, more configurable:
 
@@ -210,13 +208,8 @@ FoundationDB) onto any Kubernetes cluster.
     --config <(curl -fsSL https://raw.githubusercontent.com/repldriven/queenswood/main/infra/kind/queenswood-config.yaml)
   ```
 
-  The kind config bumps containerd's `max_concurrent_downloads`
-  from 3 to 6 so the ~20 first-install image pulls don't queue
-  behind the biggest layer. From a checkout, the equivalent is
-  `kind create cluster --name queenswood --config
-  infra/kind/queenswood-config.yaml`.
-
-**Install:**
+**Install** — both paths now have a running cluster, so from here the
+steps are identical:
 
 ```bash
 helm install queenswood \
@@ -225,24 +218,13 @@ helm install queenswood \
   --wait --timeout 10m
 ```
 
-**Reach the API and the console** (separate terminals):
+**Reach the API and console**:
 
 ```bash
 kubectl -n queenswood port-forward svc/queenswood-api-service 8080:8080
 kubectl -n queenswood port-forward svc/queenswood-console     8081:8080
 ```
 
-The console's nginx reverse-proxies its realm's Keycloak at
-`/keycloak/*`, so no separate Keycloak port-forward is
-needed for sign-in. Then open:
-
-- <http://localhost:8081> — the console (`console`).
-  Sign in with `dev` / `dev` against the `queenswood` realm.
-
-If you need the Keycloak admin UI (to inspect or edit the
-realm directly), it rides the same proxy:
-<http://localhost:8081/keycloak/admin> with `admin` /
-`admin`. OpenAPI docs at <http://localhost:8080/scalar>.
 The full quickstart — including tear-down — ships with
 each
 [release](https://github.com/repldriven/queenswood/releases/latest).
