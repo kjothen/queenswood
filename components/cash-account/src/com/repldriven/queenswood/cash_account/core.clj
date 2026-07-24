@@ -5,7 +5,8 @@
 
     [com.repldriven.queenswood.balance.interface :as balances]
     [com.repldriven.queenswood.balance-query.interface :as balances-q]
-    [com.repldriven.queenswood.cash-account-product-query.interface :as products]
+    [com.repldriven.queenswood.cash-account-product-query.interface :as
+     products]
     [com.repldriven.queenswood.cash-account-query.interface :as q]
     [com.repldriven.queenswood.party-query.interface :as parties]
     [com.repldriven.queenswood.policy.interface :as policy]
@@ -22,12 +23,6 @@
        (policy/get-effective-policies txn
                                       {:bank-id bank-id
                                        :account-id account-id}))))
-
-(defn- party->account-type
-  [party]
-  (if (= :party-type-person (:type party))
-    :account-type-personal
-    :account-type-business))
 
 (defn- counts
   [txn bank-id product-type account-type currency]
@@ -83,7 +78,7 @@
                          (counts txn
                                  bank-id
                                  (product-type-of product-version)
-                                 (party->account-type party)
+                                 (domain/party->account-type party)
                                  currency))
             account (domain/open-account
                      data
@@ -141,9 +136,9 @@
                                   :status-after (:account-status updated)})]
           updated))))))
 
-(defn reopen-account
+(defn resume-account
   ([txn data]
-   (reopen-account txn data {}))
+   (resume-account txn data {}))
   ([txn data opts]
    (store/transact
     txn
@@ -152,7 +147,7 @@
         (let-nom>
           [policies (get-policies txn bank-id account-id opts)
            account (q/get-account txn bank-id account-id)
-           updated (domain/reopen-account account policies)
+           updated (domain/resume-account account policies)
            _ (store/save-account txn
                                  updated
                                  {:account-id account-id

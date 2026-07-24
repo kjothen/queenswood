@@ -57,7 +57,7 @@
                    {:bank-id bank-id
                     :account-id account-id})))
 
-(defn reopen-cash-account
+(defn resume-cash-account
   [request]
   (let [{:keys [auth parameters]} request
         {:keys [bank-id]} auth
@@ -65,7 +65,7 @@
         {:keys [account-id]} path]
     (commands/send (dispatcher request)
                    request
-                   "reopen-cash-account"
+                   "resume-cash-account"
                    "cash-account"
                    {:bank-id bank-id
                     :account-id account-id})))

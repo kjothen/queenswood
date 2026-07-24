@@ -14,10 +14,10 @@
     cash-account:
       action: !keyword cash-account-action-suspend
 - effect: !keyword effect-allow
-  reason: "Allow reopening cash accounts"
+  reason: "Allow resuming cash accounts"
   kind:
     cash-account:
-      action: !keyword cash-account-action-reopen
+      action: !keyword cash-account-action-resume
 - effect: !keyword effect-allow
   reason: "Allow rotating cash account payment addresses"
   kind:

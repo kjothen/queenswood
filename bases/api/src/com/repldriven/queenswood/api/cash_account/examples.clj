@@ -84,6 +84,6 @@
 
 (def SuspendCashAccountResponse CashAccount)
 
-(def ReopenCashAccountResponse CashAccount)
+(def ResumeCashAccountResponse CashAccount)
 
 (def RotateCashAccountAddressResponse CashAccount)

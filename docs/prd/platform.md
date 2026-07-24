@@ -54,10 +54,10 @@ What Queenswood delivers.
   payment-address schemes, balance-bucket layout) and publish
   versioned releases. Existing accounts stay on the version
   they were opened under.
-- **Cash account lifecycle.** Open and close today; suspend
-  and reopen are vocabulary-ready but not yet wired. UK SCAN
-  payment addresses (sort code + account number) assigned at
-  open.
+- **Cash account lifecycle.** Open, close, suspend, and
+  resume today. Reopening a closed account (un-close) and
+  dormancy remain out of scope. UK SCAN payment addresses
+  (sort code + account number) assigned at open.
 - **Internal transfers** between two accounts of the same
   tenant. Settle immediately.
 - **UK Faster Payments.** Inbound and outbound, via a
@@ -283,10 +283,10 @@ Things deliberately left unresolved or future work.
   created with a tier label that binds tier-specific
   policies; today there's no flow to move a tenant between
   tiers post-creation, nor between live and test status.
-- **Suspension, reopening, dormancy.** Cash account
-  lifecycle today is open → close. Suspend, reopen, and
-  dormant flows aren't wired, despite the policy vocabulary
-  hinting at them. Real banking needs the full lifecycle.
+- **Dormancy and un-closing.** Cash account lifecycle now
+  covers open, close, suspend, and resume. Dormant flows and
+  reopening a closed account (closing is terminal) aren't
+  wired. Real banking needs the full lifecycle.
 - **Production deployment story.** Queenswood as a research
   platform doesn't address whether it would be offered as
   SaaS, on-prem appliance, self-hosted-by-tenant, or

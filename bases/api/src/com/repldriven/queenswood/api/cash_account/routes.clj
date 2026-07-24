@@ -94,19 +94,19 @@
                           404 (ErrorResponse [#'CashAccountNotFound])
                           409 (ErrorResponse [#'CashAccountInvalidStatus])}
               :handler commands/suspend-cash-account}}]
-     ["/reopen"
-      {:post {:summary "Reopen a suspended cash account"
-              :openapi {:operationId "ReopenCashAccount"
+     ["/resume"
+      {:post {:summary "Resume a suspended cash account"
+              :openapi {:operationId "ResumeCashAccount"
                         :parameters ^:replace
                                     [shared.parameters/ref-account-id
                                      shared.parameters/ref-idempotency-key]}
               :interceptors [server/require-idempotency-key
                              bank-idempotency/cache-response]
-              :responses {200 {:body [:ref "ReopenCashAccountResponse"]
+              :responses {200 {:body [:ref "ResumeCashAccountResponse"]
                                :openapi {:links links/from-account}}
                           404 (ErrorResponse [#'CashAccountNotFound])
                           409 (ErrorResponse [#'CashAccountInvalidStatus])}
-              :handler commands/reopen-cash-account}}]
+              :handler commands/resume-cash-account}}]
      ["/rotate-address"
       {:post {:summary "Rotate a cash account's payment address"
               :openapi {:operationId "RotateCashAccountAddress"

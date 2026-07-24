@@ -1,6 +1,6 @@
 {
   "type": "record",
-  "name": "ReopenCashAccount",
+  "name": "ResumeCashAccount",
   "namespace": "com.repldriven.mono.cash_accounts.cash_account_lifecycle",
   "fields": [
     {"name": "bank_id", "type": "string"},

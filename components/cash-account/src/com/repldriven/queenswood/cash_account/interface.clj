@@ -1,11 +1,11 @@
 (ns com.repldriven.queenswood.cash-account.interface
-  "Cash account write side: open, close, suspend, reopen, and
+  "Cash account write side: open, close, suspend, resume, and
   rotate-address for banks. Open allocates payment addresses,
   derives account-type from the party, validates the chosen product
   version, and seeds the product's balance buckets. Open and close
   transitions are driven via the changelog watcher; `seed-opened-account`
   and `seed-closed-account` are admin/test shortcuts that bypass it.
-  Suspend, reopen, and rotate-address are direct, single-phase flips
+  Suspend, resume, and rotate-address are direct, single-phase flips
   — no watcher leg. Rotate-address stays on
   `:cash-account-status-opened`, replacing the account's payment
   addresses with a freshly allocated set and retiring the old ones
@@ -74,8 +74,8 @@
   ([txn data opts]
    (core/suspend-account txn data opts)))
 
-(defn reopen-account
-  "Reopen a suspended account. Direct single-phase flip, no watcher
+(defn resume-account
+  "Resume a suspended account. Direct single-phase flip, no watcher
   leg. Returns the updated account (`:cash-account-status-opened`)
   or an anomaly.
 
@@ -84,9 +84,9 @@
   - data: map with `:bank-id` and `:account-id`.
   - opts (optional): map; `:policies` overrides policy resolution."
   ([txn data]
-   (core/reopen-account txn data))
+   (core/resume-account txn data))
   ([txn data opts]
-   (core/reopen-account txn data opts)))
+   (core/resume-account txn data opts)))
 
 (defn rotate-address
   "Rotate an opened account onto a freshly allocated set of payment
