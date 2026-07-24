@@ -9,7 +9,7 @@
     [com.repldriven.mono.error.interface :as error :refer [let-nom>]]
     [com.repldriven.mono.utility.interface :as utility :refer [assoc-some]]))
 
-(defn- party->account-type
+(defn party->account-type
   [party]
   (if (= :party-type-person (:type party))
     :account-type-personal
@@ -204,16 +204,16 @@
            :account-status :cash-account-status-suspended
            :updated-at (utility/now))))
 
-(defn reopen-account
+(defn resume-account
   [account policies]
   (let-nom>
     [_ (when-not (= :cash-account-status-suspended (:account-status account))
          (error/reject :cash-account/invalid-status
-                       {:message "Account is not in a reopenable state"
+                       {:message "Account is not in a resumable state"
                         :account-id (:account-id account)
                         :status (:account-status account)
                         :allowed #{:cash-account-status-suspended}}))
-     _ (check-capability :cash-account-action-reopen
+     _ (check-capability :cash-account-action-resume
                          (:account-type account)
                          policies)]
     (assoc account

@@ -73,7 +73,7 @@
 
 (def SuspendCashAccountResponse [:ref "CashAccount"])
 
-(def ReopenCashAccountResponse [:ref "CashAccount"])
+(def ResumeCashAccountResponse [:ref "CashAccount"])
 
 (def RotateCashAccountAddressResponse [:ref "CashAccount"])
 
@@ -82,5 +82,5 @@
                         #'CashAccountStatus #'AccountType #'CashAccount
                         #'CreateCashAccountRequest #'CreateCashAccountResponse
                         #'CashAccountList #'CloseCashAccountResponse
-                        #'SuspendCashAccountResponse #'ReopenCashAccountResponse
+                        #'SuspendCashAccountResponse #'ResumeCashAccountResponse
                         #'RotateCashAccountAddressResponse]))

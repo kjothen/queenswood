@@ -131,7 +131,7 @@ router data, and wires the OpenAPI document.
 The API style is **resource-based**, not CRUD-shaped. Resources
 (cash accounts, parties, products, payments) are first-class
 and have their own lifecycle states; some operations on a
-resource fit a verb model (close, suspend, activate, reopen)
+resource fit a verb model (close, suspend, activate, resume)
 that doesn't translate cleanly to Create/Read/Update/Delete.
 "CRUD" mixes the verb model with the resource model and ages
 poorly when state transitions multiply. The docs and the API
@@ -157,7 +157,7 @@ Common verb endpoints in the api:
 
 - `POST /v1/cash-accounts/{id}/close`
 - `POST /v1/cash-accounts/{id}/suspend`
-- `POST /v1/cash-accounts/{id}/reopen`
+- `POST /v1/cash-accounts/{id}/resume`
 - `POST /v1/parties/{id}/activate`
 
 The rule: if the operation is a state transition rather than a

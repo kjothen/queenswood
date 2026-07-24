@@ -1,5 +1,5 @@
 (ns com.repldriven.queenswood.cash-account.domain-test
-  "Pure-function tests for the close/suspend/reopen/rotate-address
+  "Pure-function tests for the close/suspend/resume/rotate-address
   source-state guards. No FDB, no processor — this pins the
   lifecycle-transition convention (docs/recipes/lifecycle-transitions.md):
   reject before any capability/limit check when the account isn't in
@@ -82,15 +82,15 @@
         (is (= :cash-account/invalid-status (error/kind result)))
         (is (= status (:status (error/payload result))))))))
 
-(deftest reopen-account-source-state-guard-test
+(deftest resume-account-source-state-guard-test
   (testing
-    "reopening an account not in :cash-account-status-suspended is
+    "resuming an account not in :cash-account-status-suspended is
            rejected, regardless of policy"
     (doseq [status [:cash-account-status-opening
                     :cash-account-status-opened
                     :cash-account-status-closing
                     :cash-account-status-closed]]
-      (let [result (SUT/reopen-account (account status) [])]
+      (let [result (SUT/resume-account (account status) [])]
         (is (error/rejection? result))
         (is (= :cash-account/invalid-status (error/kind result)))
         (is (= status (:status (error/payload result))))))))
