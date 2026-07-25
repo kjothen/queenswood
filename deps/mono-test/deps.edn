@@ -4,6 +4,6 @@
 ;; Bump the tag/sha to match ../mono.
 {:deps {com.repldriven/mono
         {:git/url "https://github.com/repldriven/mono.git"
-         :git/tag "v0.0.10"
-         :git/sha "76afe3fc66be8fd2e31b186a0a384bfae6573542"
+         :git/tag "v0.0.11"
+         :git/sha "016ce665a0bf708622bda4b66663cd407ca9d5a7"
          :deps/root "projects/mono-test-lib"}}}
