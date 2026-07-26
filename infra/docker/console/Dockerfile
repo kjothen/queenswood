@@ -36,7 +36,7 @@ COPY components/ui/ components/ui/
 COPY docs/ docs/
 RUN corepack yarn workspace console build
 
-FROM nginxinc/nginx-unprivileged:1.27-alpine AS runtime
+FROM nginxinc/nginx-unprivileged:1.31-alpine AS runtime
 COPY infra/docker/console/nginx.conf.template /etc/nginx/templates/default.conf.template
 COPY --from=build /repo/bases/console/dist/ /usr/share/nginx/html/
 
