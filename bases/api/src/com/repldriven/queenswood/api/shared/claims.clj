@@ -2,7 +2,9 @@
   "OIDC-claims projection helpers shared between the auth interceptor
   (which auto-upserts a User on every authenticated user JWT) and the
   onboarding handler (which uses the same projection if it ends up
-  doing its own upsert as a defensive layer).")
+  doing its own upsert as a defensive layer)."
+  (:require
+    [com.repldriven.mono.utility.interface :as util]))
 
 (defn claims->identity-provider
   "Map an OIDC `identity_provider` claim (set by Keycloak when the
@@ -24,21 +26,30 @@
   "Project OIDC JWT claims into the shape `bank-user/upsert-by-sub`
   expects. Pulls `name` from the `name` claim, falling back to a
   `given_name + family_name` concatenation when only the parts are
-  present (some IdPs populate only one or the other)."
+  present (some IdPs populate only one or the other).
+
+  `:avatar-url` is assoc'd only when the `picture` claim is present.
+  It maps to `optional string avatar_url` on the User proto, and
+  protojure rejects an explicit `nil` for that field (`Invalid
+  input`) where an absent key encodes fine — so a username/password
+  sign-in, which carries no `picture`, would otherwise fail the
+  upsert."
   [claims]
-  {:issuer (:iss claims)
-   :sub (:sub claims)
-   :email (:email claims)
-   :name (or (:name claims)
-             (let [g (:given_name claims)
-                   f (:family_name claims)]
-               (cond (and g f)
-                     (str g " " f)
-                     g
-                     g
-                     f
-                     f
-                     :else
-                     (:preferred_username claims))))
-   :avatar-url (:picture claims)
-   :identity-provider (claims->identity-provider claims)})
+  (util/assoc-some
+   {:issuer (:iss claims)
+    :sub (:sub claims)
+    :email (:email claims)
+    :name (or (:name claims)
+              (let [g (:given_name claims)
+                    f (:family_name claims)]
+                (cond (and g f)
+                      (str g " " f)
+                      g
+                      g
+                      f
+                      f
+                      :else
+                      (:preferred_username claims))))
+    :identity-provider (claims->identity-provider claims)}
+   :avatar-url
+   (:picture claims)))

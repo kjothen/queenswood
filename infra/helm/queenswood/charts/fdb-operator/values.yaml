@@ -4,15 +4,19 @@ image:
   tag: v2.33.0
   pullPolicy: IfNotPresent
 initContainers:
+  # Each key is an FDB minor version and the init container copies
+  # libfdb_c_<key>.so out of the image, so the tag MUST stay on that
+  # same minor. Renovate cannot see that constraint -- the monitor
+  # image is disabled in renovate.json for this reason.
   7.1:
     image:
       repository: foundationdb/fdb-kubernetes-monitor
-      tag: 7.4.6
+      tag: 7.1.67
       pullPolicy: IfNotPresent
   7.3:
     image:
       repository: foundationdb/fdb-kubernetes-monitor
-      tag: 7.4.6
+      tag: 7.3.75
       pullPolicy: IfNotPresent
   7.4:
     image:

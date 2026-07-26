@@ -67,6 +67,13 @@
       ]
     },
     {
+      "description": "The monitor image is keyed by FDB minor version in the operator initContainers map -- each entry copies libfdb_c_<key>.so, so the tag must stay on that minor. Renovate sees three occurrences of one repository and bumps them all to latest, which breaks the init container. Bump these by hand alongside fdb.version.",
+      "enabled": false,
+      "matchPackageNames": [
+        "foundationdb/fdb-kubernetes-monitor"
+      ]
+    },
+    {
       "groupName": "github-actions",
       "matchManagers": [
         "github-actions"
