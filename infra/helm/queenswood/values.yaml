@@ -295,7 +295,7 @@ fdbOperator:
     "7.3":
       image:
         repository: foundationdb/fdb-kubernetes-monitor
-        tag: 7.4.6
+        tag: 7.3.75
         pullPolicy: IfNotPresent
     "7.4": null
 
