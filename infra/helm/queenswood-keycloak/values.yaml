@@ -50,7 +50,7 @@ keycloak:
 postgresql:
   mode: local
   local:
-    image: postgres:16
+    image: postgres:18
     storage: 1Gi
     # Dev-only default. Production deployments must use `mode:
     # external` and reference a real Secret.
