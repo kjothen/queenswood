@@ -11,7 +11,7 @@
     "@excalidraw/excalidraw": "0.18.1",
     "esbuild": "0.24.2",
     "playwright": "1.55.0",
-    "react": "18.2.0",
-    "react-dom": "18.2.0"
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
   }
 }
