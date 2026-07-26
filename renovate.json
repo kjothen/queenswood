@@ -9,6 +9,9 @@
   "schedule": [
     "before 9am on monday"
   ],
+  "ignorePaths": [
+    "plugins/**/evals/**"
+  ],
   "prConcurrentLimit": 10,
   "commitMessagePrefix": "deps",
   "dependencyDashboardApproval": false,
@@ -33,25 +36,13 @@
       ]
     },
     {
-      "groupName": "logging",
+      "groupName": "build-tools",
       "matchManagers": [
         "deps-edn"
       ],
       "matchPackageNames": [
-        "/^org\\.slf4j:/",
-        "/^ch\\.qos\\.logback:/",
-        "/^net\\.logstash\\.logback:/",
-        "/^org\\.apache\\.logging\\.log4j:/"
-      ]
-    },
-    {
-      "groupName": "testcontainers",
-      "matchManagers": [
-        "deps-edn"
-      ],
-      "matchPackageNames": [
-        "earth.adi/testcontainers-foundationdb",
-        "/^org\\.testcontainers:/"
+        "io.github.clojure/tools.build",
+        "io.github.seancorfield/build-clj"
       ]
     },
     {
@@ -65,26 +56,6 @@
       ]
     },
     {
-      "matchManagers": [
-        "deps-edn"
-      ],
-      "enabled": false,
-      "matchPackageNames": [
-        "io.opentelemetry:opentelemetry-sdk-testing",
-        "io.opentelemetry:opentelemetry-exporter-otlp"
-      ]
-    },
-    {
-      "groupName": "opentelemetry",
-      "matchManagers": [
-        "deps-edn"
-      ],
-      "matchPackageNames": [
-        "/^io\\.opentelemetry:/",
-        "/^com\\.github\\.steffan-westcott/clj-otel-/"
-      ]
-    },
-    {
       "groupName": "protobuf",
       "matchManagers": [
         "deps-edn"
@@ -93,72 +64,6 @@
       "matchPackageNames": [
         "/^com\\.google\\.protobuf:/",
         "/^io\\.github\\.protojure:/"
-      ]
-    },
-    {
-      "groupName": "metosin",
-      "matchManagers": [
-        "deps-edn"
-      ],
-      "matchPackageNames": [
-        "/^metosin//"
-      ]
-    },
-    {
-      "groupName": "http",
-      "matchManagers": [
-        "deps-edn"
-      ],
-      "matchPackageNames": [
-        "metosin/reitit",
-        "info.sunng/ring-jetty9-adapter",
-        "/^http-kit//",
-        "/^http-kit\\.fake//",
-        "/^ring//",
-        "/^ring-logger-timbre//",
-        "/^compojure//"
-      ]
-    },
-    {
-      "groupName": "database",
-      "matchManagers": [
-        "deps-edn"
-      ],
-      "matchPackageNames": [
-        "com.github.seancorfield/next.jdbc",
-        "com.github.seancorfield/honeysql",
-        "/^org\\.postgresql:/",
-        "/^org\\.liquibase:/"
-      ]
-    },
-    {
-      "groupName": "apache-pulsar",
-      "matchManagers": [
-        "deps-edn"
-      ],
-      "matchPackageNames": [
-        "/^org\\.apache\\.pulsar:/"
-      ]
-    },
-    {
-      "groupName": "testing",
-      "matchManagers": [
-        "deps-edn"
-      ],
-      "matchPackageNames": [
-        "com.gfredericks/test.chuck",
-        "org.clojure/test.check",
-        "/^eftest//"
-      ]
-    },
-    {
-      "groupName": "build-tools",
-      "matchManagers": [
-        "deps-edn"
-      ],
-      "matchPackageNames": [
-        "io.github.clojure/tools.build",
-        "io.github.seancorfield/build-clj"
       ]
     },
     {
