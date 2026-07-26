@@ -304,7 +304,7 @@ fdbOperator:
 # sets enabled=false and points services at an external broker.
 kafka:
   enabled: true
-  image: apache/kafka:3.9.1
+  image: apache/kafka:4.3.1
   # Read only when enabled=false: external broker address (host:port).
   bootstrapServers: ""
   resources:
