@@ -780,11 +780,11 @@ __metadata:
   linkType: hard
 
 "marked@npm:^18.0.4":
-  version: 18.0.4
-  resolution: "marked@npm:18.0.4"
+  version: 18.0.7
+  resolution: "marked@npm:18.0.7"
   bin:
     marked: bin/marked.js
-  checksum: 10c0/f54dcbb39d3acdcd0356f7629b42811eec56db5f6daef7404e582cdf800f5b598b681f9f8a187e7f51262e37c607f5e0cd9880e56b5c8160a49c3f7828e9e459
+  checksum: 10c0/84fc25d8583ff5c7b200dc6719e238472bb50e93b656b724ddfac4469c71ab1ef36bc8b4c1b2b26efabe713fd9a3437e3fd8af8555379c988dd902299842a730
   languageName: node
   linkType: hard
 
@@ -1003,13 +1003,13 @@ __metadata:
   linkType: hard
 
 "svelte-spa-router@npm:^5.1.0":
-  version: 5.1.0
-  resolution: "svelte-spa-router@npm:5.1.0"
+  version: 5.1.1
+  resolution: "svelte-spa-router@npm:5.1.1"
   dependencies:
     regexparam: "npm:2.0.2"
   peerDependencies:
     svelte: ^5.0.0
-  checksum: 10c0/7ea535e12230fd0b396b7687c5572a73d3be4a5d767ffe77e600a68f61ab912d567678f91c8187577637f8f93ec40644deeba6a8931dc90433b5342491f6bd8d
+  checksum: 10c0/17de28e2d2a6bb05eac6e56245b56a6fb607f490aee223511952e109f6de14e47b83944e18553651219eece0afbdc830a86c8c8367d56d3e9977b4da608cf953
   languageName: node
   linkType: hard
 
@@ -1068,8 +1068,8 @@ __metadata:
   linkType: hard
 
 "vite@npm:^6.2.2":
-  version: 6.4.2
-  resolution: "vite@npm:6.4.2"
+  version: 6.4.3
+  resolution: "vite@npm:6.4.3"
   dependencies:
     esbuild: "npm:^0.25.0"
     fdir: "npm:^6.4.4"
@@ -1118,7 +1118,7 @@ __metadata:
       optional: true
   bin:
     vite: bin/vite.js
-  checksum: 10c0/9a62bb4259b4b11b9084c8dc5c25a21c9340d87d83de163d3643f15629d8ac3c2a3a4cda565f1a61e98afc9d78e9cb78eb25d1ae3c302e95d42d13ab61537267
+  checksum: 10c0/23ce22e50d5c7a87321f04b155c5bc3cf915e34e6c40918975741ed5e8b0c257039a643f1bc1cd829ee814ad92a138704e82084b7ebe40b399a62d8effea630c
   languageName: node
   linkType: hard
 
