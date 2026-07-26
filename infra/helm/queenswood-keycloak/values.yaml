@@ -33,7 +33,7 @@ argocd:
 
 # Keycloak instance config consumed by the operator's `Keycloak` CR.
 keycloak:
-  image: quay.io/keycloak/keycloak:26.6.1
+  image: quay.io/keycloak/keycloak:26.7.0
   instances: 1
   # The realm import lives in `files/queenswood-realm.json` — a
   # symlink to `components/resources/resources/bank/keycloak-
