@@ -23,6 +23,6 @@
 
   base/onfido-adapter {:local/root "../../bases/onfido-adapter"}
   com.google.protobuf/protobuf-java {:mvn/version "3.25.8"}
-  org.clojure/clojure {:mvn/version "1.12.4"}
+  org.clojure/clojure {:mvn/version "1.12.5"}
   org.clojure/core.async {:mvn/version "1.9.865"}}
  :paths ["resources"]}
