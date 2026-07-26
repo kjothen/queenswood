@@ -73,7 +73,7 @@ RUN --mount=type=cache,target=/root/.m2,sharing=locked \
     clojure -X:build uber :snapshot true \
  && mv target/*.jar target/app.jar
 
-FROM eclipse-temurin:21-jre-noble AS runtime
+FROM eclipse-temurin:25-jre-noble AS runtime
 ARG PROJECT_NAME
 ARG TARGETARCH
 ARG FDB_VERSION=7.3.75
