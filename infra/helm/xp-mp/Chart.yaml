@@ -14,7 +14,7 @@ kubeVersion: ">=1.27.0-0"
 
 dependencies:
   - name: crossplane
-    version: "2.2.1"
+    version: "2.3.4"
     repository: "https://charts.crossplane.io/stable"
     condition: crossplane.enabled
   - name: argo-cd
