@@ -142,7 +142,7 @@
                       bases/external-test-runner {:local/root
                                                   "bases/external-test-runner"}}
          :main-opts ["-m" "polylith.clj.core.poly-cli.core"]}
-  :rebel {:extra-deps {com.bhauman/rebel-readline {:mvn/version "0.1.7"}}
+  :rebel {:extra-deps {com.bhauman/rebel-readline {:mvn/version "0.1.11"}}
           :main-opts ["-m" "rebel-readline.main"]}
   :jol {:extra-deps {org.openjdk.jol/jol-core {:mvn/version "0.17"}}
         :jvm-opts   ["-Djdk.attach.allowAttachSelf"]}}
