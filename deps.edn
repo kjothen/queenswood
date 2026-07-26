@@ -7,9 +7,9 @@
     ;; protojure brings protobuf-java 4.x which breaks FDB Record Layer
     ;; at runtime — pin to 3.x for binary compatibility
     com.google.protobuf/protobuf-java {:mvn/version "3.25.8"}
-    org.clojure/clojure {:mvn/version "1.12.4"}
+    org.clojure/clojure {:mvn/version "1.12.5"}
     org.clojure/core.async {:mvn/version "1.9.865"}
-    djblue/portal {:mvn/version "0.63.0"}
+    djblue/portal {:mvn/version "0.67.1"}
     components/balance {:local/root "components/balance"}
     components/balance-domain
     {:local/root "components/balance-domain"}
@@ -126,7 +126,7 @@
                        "bases/external-test-runner/test"]}
   :format/zprint {:extra-deps {zprint/zprint {:mvn/version "1.3.0"}}
                   :main-opts ["-m" "zprint.main"]}
-  :lint/clj-kondo {:extra-deps {clj-kondo/clj-kondo {:mvn/version "2026.01.19"}}
+  :lint/clj-kondo {:extra-deps {clj-kondo/clj-kondo {:mvn/version "2026.07.24"}}
                    :main-opts ["-m" "clj-kondo.main"]}
   :metrics {:extra-deps {io.github.repldriven/clojure-metrics
                          {:git/url "https://github.com/repldriven/clojure-metrics"
@@ -134,15 +134,15 @@
             :main-opts ["-m" "clojure-metrics.core"]}
   :nvd {:extra-deps {nvd-clojure/nvd-clojure {:mvn/version "5.3.0"}}
         :main-opts ["-m" "nvd.task.check"]}
-  :nrepl {:extra-deps {nrepl/nrepl {:mvn/version "1.6.0"}
-                       cider/cider-nrepl {:mvn/version "0.58.0"}}
+  :nrepl {:extra-deps {nrepl/nrepl {:mvn/version "1.7.0"}
+                       cider/cider-nrepl {:mvn/version "0.62.2"}}
           :main-opts ["-m" "nrepl.cmdline"
                       "--middleware" "[cider.nrepl/cider-middleware]"]}
   :poly {:extra-deps {polylith/clj-poly {:mvn/version "0.3.32"}
                       bases/external-test-runner {:local/root
                                                   "bases/external-test-runner"}}
          :main-opts ["-m" "polylith.clj.core.poly-cli.core"]}
-  :rebel {:extra-deps {com.bhauman/rebel-readline {:mvn/version "0.1.7"}}
+  :rebel {:extra-deps {com.bhauman/rebel-readline {:mvn/version "0.1.11"}}
           :main-opts ["-m" "rebel-readline.main"]}
   :jol {:extra-deps {org.openjdk.jol/jol-core {:mvn/version "0.17"}}
         :jvm-opts   ["-Djdk.attach.allowAttachSelf"]}}

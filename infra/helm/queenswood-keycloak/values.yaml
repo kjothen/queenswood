@@ -33,7 +33,7 @@ argocd:
 
 # Keycloak instance config consumed by the operator's `Keycloak` CR.
 keycloak:
-  image: quay.io/keycloak/keycloak:26.6.1
+  image: quay.io/keycloak/keycloak:26.7.0
   instances: 1
   # The realm import lives in `files/queenswood-realm.json` — a
   # symlink to `components/resources/resources/bank/keycloak-
@@ -50,7 +50,7 @@ keycloak:
 postgresql:
   mode: local
   local:
-    image: postgres:16
+    image: postgres:18
     storage: 1Gi
     # Dev-only default. Production deployments must use `mode:
     # external` and reference a real Secret.
@@ -67,7 +67,7 @@ postgresql:
     secretName: queenswood-keycloak-conn
     # Cloud SQL Auth Proxy config — needed for `mode: external`.
     proxy:
-      image: gcr.io/cloud-sql-connectors/cloud-sql-proxy:2.14.3
+      image: gcr.io/cloud-sql-connectors/cloud-sql-proxy:2.24.1
       # `<project>:<region>:<instance>` — surfaced on the
       # CloudSQL DatabaseInstance MR's
       # `status.atProvider.connectionName`. Pinned into
