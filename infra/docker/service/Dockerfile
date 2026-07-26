@@ -1,4 +1,4 @@
-# syntax=docker/dockerfile:1.7
+# syntax=docker/dockerfile:1.25
 
 # Multi-stage build for any Queenswood service uberjar.
 # Pass PROJECT_NAME (e.g. api-service, cash-account-service)
@@ -73,7 +73,7 @@ RUN --mount=type=cache,target=/root/.m2,sharing=locked \
     clojure -X:build uber :snapshot true \
  && mv target/*.jar target/app.jar
 
-FROM eclipse-temurin:21-jre-noble AS runtime
+FROM eclipse-temurin:25-jre-noble AS runtime
 ARG PROJECT_NAME
 ARG TARGETARCH
 ARG FDB_VERSION=7.3.75
