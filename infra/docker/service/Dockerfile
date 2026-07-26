@@ -1,4 +1,4 @@
-# syntax=docker/dockerfile:1.7
+# syntax=docker/dockerfile:1.25
 
 # Multi-stage build for any Queenswood service uberjar.
 # Pass PROJECT_NAME (e.g. api-service, cash-account-service)

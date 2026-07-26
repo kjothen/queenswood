@@ -1,4 +1,4 @@
-# syntax=docker/dockerfile:1.7
+# syntax=docker/dockerfile:1.25
 
 # console: Svelte/Vite frontend for the human sign-in flow.
 #  Stage 1 — build the static bundle with Node from the yarn 4
@@ -15,7 +15,7 @@
 # regardless of the requested target. Static output is arch-
 # independent and we avoid running npm under QEMU for non-native
 # arches.
-FROM --platform=$BUILDPLATFORM node:22-alpine AS build
+FROM --platform=$BUILDPLATFORM node:24-alpine AS build
 WORKDIR /repo
 
 # Workspace manifests first for Docker layer caching: yarn install
