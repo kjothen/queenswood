@@ -1003,13 +1003,13 @@ __metadata:
   linkType: hard
 
 "svelte-spa-router@npm:^5.1.0":
-  version: 5.1.0
-  resolution: "svelte-spa-router@npm:5.1.0"
+  version: 5.1.1
+  resolution: "svelte-spa-router@npm:5.1.1"
   dependencies:
     regexparam: "npm:2.0.2"
   peerDependencies:
     svelte: ^5.0.0
-  checksum: 10c0/7ea535e12230fd0b396b7687c5572a73d3be4a5d767ffe77e600a68f61ab912d567678f91c8187577637f8f93ec40644deeba6a8931dc90433b5342491f6bd8d
+  checksum: 10c0/17de28e2d2a6bb05eac6e56245b56a6fb607f490aee223511952e109f6de14e47b83944e18553651219eece0afbdc830a86c8c8367d56d3e9977b4da608cf953
   languageName: node
   linkType: hard
 
