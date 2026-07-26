@@ -9,7 +9,7 @@
     com.google.protobuf/protobuf-java {:mvn/version "3.25.8"}
     org.clojure/clojure {:mvn/version "1.12.4"}
     org.clojure/core.async {:mvn/version "1.9.865"}
-    djblue/portal {:mvn/version "0.63.0"}
+    djblue/portal {:mvn/version "0.67.1"}
     components/balance {:local/root "components/balance"}
     components/balance-domain
     {:local/root "components/balance-domain"}
