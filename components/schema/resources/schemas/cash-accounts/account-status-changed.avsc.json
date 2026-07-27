@@ -1,0 +1,11 @@
+{
+  "type": "record",
+  "name": "CashAccountStatusChanged",
+  "namespace": "com.repldriven.mono.cash_accounts",
+  "fields": [
+    {"name": "bank_id",       "type": "string"},
+    {"name": "account_id",    "type": "string"},
+    {"name": "status_before", "type": ["null", "string"], "default": null},
+    {"name": "status_after",  "type": "string"}
+  ]
+}

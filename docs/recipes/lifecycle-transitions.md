@@ -99,7 +99,8 @@ rejecting it is not.
     (store/save-party txn updated-party ...)))
 ```
 
-`bank-cash-account/watcher.clj` carries the same gate: the
+`bank-cash-account/core.clj`'s `complete-status-transition` carries
+the same gate, now driven by an event rather than a watcher: the
 `opening -> opened` leg only fires when the loaded account is still
 `:cash-account-status-opening`, and `closing -> closed` only fires
 from `:cash-account-status-closing`.
@@ -173,7 +174,7 @@ idempotent.
 - [common-helpers](common-helpers.md) — the convergence rule for
   promoting inline patterns to shared helpers
 - `components/cash-account/.../domain.clj`,
-  `components/cash-account/.../watcher.clj` — the worked
-  example
+  `components/cash-account/.../core.clj` (`complete-status-transition`)
+  and `.../events.clj` — the worked example
 - `components/party/.../watcher.clj` — the watcher-gate
   exemplar

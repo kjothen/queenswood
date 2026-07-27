@@ -1,9 +1,12 @@
 (ns ^:eftest/synchronized
     com.repldriven.queenswood.changelog-relay.interface-test
   (:require
+    [com.repldriven.queenswood.changelog-relay.consumer :as consumer]
     [com.repldriven.queenswood.changelog-relay.interface :as SUT]
 
+    [com.repldriven.mono.error.interface :as error]
     [com.repldriven.mono.fdb.interface :as fdb]
+    [com.repldriven.mono.processor.interface :as processor]
     [com.repldriven.mono.system.interface :as system]
     [com.repldriven.mono.testcontainers.interface]
     [com.repldriven.mono.test-system.interface :refer [with-test-system]]
@@ -80,3 +83,24 @@
                           (Thread/sleep 300)
                           (is (= after-stop @calls)
                               "the daemon thread must not run after stop"))))))
+
+(defrecord StubProcessor [result]
+  processor/Processor
+    (process [_ _message] result))
+
+(deftest failed-event-asks-for-redelivery-test
+  (let [handler (consumer/->handler
+                 {:event-channel :relay-test-event
+                  :processor (->StubProcessor (error/fail :test/boom
+                                                          "handler failed"))})]
+    (testing
+      "an anomaly from the processor throws, so the consumer loop
+              negative-acks and the broker redelivers — returning it
+              would ack and lose the event"
+      (is (thrown? clojure.lang.ExceptionInfo (handler {:event "x"}))))))
+
+(deftest successful-event-is-acked-test
+  (let [handler (consumer/->handler {:event-channel :relay-test-event
+                                     :processor (->StubProcessor :ok)})]
+    (testing "a clean result returns normally so the offset commits"
+      (is (= :ok (handler {:event "x"}))))))

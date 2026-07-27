@@ -17,14 +17,30 @@ dispatcher: !system/component
   command-channel: !keyword cash-accounts-command
   command-response-channel: !keyword cash-accounts-command-response
 
-cash-account-watcher-handler: !system/component
-  system/component-kind: cash-account/watcher-handler
+event-processor-impl: !system/component
+  system/component-kind: cash-account/event-processor
+  record-db: !system/ref fdb.record-db
   record-store: !system/ref fdb.meta-store
+  schemas: !system/ref avro.serde
 
-watchers: !system/component
-  system/component-kind: fdb/watchers
-  cash-account:
+event-consumer: !system/component
+  system/component-kind: changelog-relay/event-consumer
+  bus: !system/ref message-bus.bus
+  processor: !system/local-ref event-processor-impl
+  event-channel: !keyword cash-accounts-event
+
+relay-handler: !system/component
+  system/component-kind: changelog-relay/envelope-handler
+  bus: !system/ref message-bus.bus
+  event-channel: !keyword cash-accounts-event
+  store-name: cash-accounts
+
+# One JVM, so the monolith owns the cursor itself rather than
+# deferring to relay-service.
+relay-runners: !system/component
+  system/component-kind: changelog-relay/runners
+  cash-accounts:
     record-db: !system/ref fdb.record-db
     consumer-id: cash-account-watcher
     store-name: cash-accounts
-    handler: !system/local-ref cash-account-watcher-handler
+    handler: !system/local-ref relay-handler
