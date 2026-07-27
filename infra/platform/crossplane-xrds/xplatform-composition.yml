@@ -539,7 +539,7 @@ spec:
                   kind: ClusterProviderConfig
                   name: default
                 forProvider:
-                  databaseVersion: POSTGRES_16
+                  databaseVersion: POSTGRES_18
                   deletionProtection: false
                   settings:
                     edition: ENTERPRISE

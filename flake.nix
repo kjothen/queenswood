@@ -20,17 +20,31 @@
           config.allowUnsupportedSystem = true;
         };
 
-        # Fetch pre-built FDB binary directly from GitHub releases
+        # Native toolchain versions come from versions.json, which is the
+        # single source of truth shared with CI and `just doctor`. Bump a
+        # version there, not here.
+        versions = builtins.fromJSON (builtins.readFile ./versions.json);
+
+        # Fetch pre-built FDB binary directly from GitHub releases.
+        #
+        # Must match the fdb-java client mono pins and the FDB server its
+        # testcontainers image builds -- client and cluster share a protocol
+        # version. Bump this with the mono coordinate in deps/mono*.
+        #
+        # On 7.4.x because 7.3.75 is the last 7.3 release shipping macOS .pkg
+        # assets; 7.3.76+ are Linux-only, leaving this derivation nothing to
+        # unpack. Same internal layout, so the unpack below is unchanged.
+        fdbVersion = versions.foundationdb.version;
         fdbArch = if pkgs.stdenv.isAarch64 then "arm64" else "x86_64";
         fdbBinary = pkgs.stdenv.mkDerivation {
-          name = "foundationdb-7.3.75";
+          name = "foundationdb-${fdbVersion}";
           src = pkgs.fetchurl {
-            url = "https://github.com/apple/foundationdb/releases/download/7.3.75/FoundationDB-7.3.75_${fdbArch}.pkg";
+            url = "https://github.com/apple/foundationdb/releases/download/${fdbVersion}/FoundationDB-${fdbVersion}_${fdbArch}.pkg";
             sha256 =
               if pkgs.stdenv.isAarch64 then
-                "sha256-axYrC+vv1Jhzzi59fbe7ABUVyAzjqQVFWFhZwmNiSI8="
+                versions.foundationdb.sha256.aarch64
               else
-                "sha256-YqGe3fCkbfe4NdVTCcJwQIU1MEYAh4BLBzkP76kl0Ks=";
+                versions.foundationdb.sha256.x86_64;
           };
           buildInputs = [
             pkgs.xar
@@ -47,11 +61,12 @@
           '';
         };
 
+        protocGenClojureVersion = versions."protoc-gen-clojure".version;
         protocGenClojure = pkgs.stdenv.mkDerivation {
-          name = "protoc-gen-clojure-2.1.2";
+          name = "protoc-gen-clojure-${protocGenClojureVersion}";
           src = pkgs.fetchurl {
-            url = "https://github.com/protojure/protoc-plugin/releases/download/v2.1.2/protoc-gen-clojure";
-            sha256 = "0vzz78fd4awbsc5iykych9yqd86yab18f8fbbgydrw556lmhv8hh";
+            url = "https://github.com/protojure/protoc-plugin/releases/download/v${protocGenClojureVersion}/protoc-gen-clojure";
+            sha256 = versions."protoc-gen-clojure".sha256;
           };
           dontUnpack = true;
           installPhase = ''
@@ -61,16 +76,20 @@
           '';
         };
 
+        # protoc must stay on the 25.x line: protobuf-java is pinned to 3.25.8
+        # for the FDB Record Layer, and a newer protoc emits code targeting the
+        # protobuf 4 runtime.
+        protocVersion = versions.protoc.version;
         protocArch = if pkgs.stdenv.isAarch64 then "aarch_64" else "x86_64";
         protocBinary = pkgs.stdenv.mkDerivation {
-          name = "protoc-25.8";
+          name = "protoc-${protocVersion}";
           src = pkgs.fetchurl {
-            url = "https://github.com/protocolbuffers/protobuf/releases/download/v25.8/protoc-25.8-osx-${protocArch}.zip";
+            url = "https://github.com/protocolbuffers/protobuf/releases/download/v${protocVersion}/protoc-${protocVersion}-osx-${protocArch}.zip";
             sha256 =
               if pkgs.stdenv.isAarch64 then
-                "sha256-UIIE7oJiT01MQUF81XNyHzqZWkzqTzCD+wYp7Gk2ZxI="
+                versions.protoc.sha256.aarch64
               else
-                "sha256-J2NjPhXHFDEra/dW+H1YGaXypsbc6291RPDht9bblm0=";
+                versions.protoc.sha256.x86_64;
           };
           sourceRoot = ".";
           nativeBuildInputs = [ pkgs.unzip ];
@@ -136,6 +155,7 @@
             fdbBinary
             gcloud
             pkgs.jdk21
+            pkgs.jq
             pkgs.just
             pkgs.k6
             pkgs.kind
@@ -157,7 +177,7 @@
           ];
 
           shellHook = ''
-            # Ensure pinned protoc (v25.8) takes precedence over any protoc
+            # Ensure the pinned protoc takes precedence over any protoc
             # inherited from parent direnv environments (e.g. buf's protoc)
             export PATH="${protocBinary}/bin:$PATH"
 

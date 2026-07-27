@@ -160,6 +160,25 @@ Two options: a REPL-driven dev loop with everything inside
 Testcontainers, or a one-liner Helm install onto a local
 Kubernetes cluster.
 
+The dev environment comes from the nix devshell. Check that the
+native toolchain on `PATH` is the one this workspace pins:
+
+```bash
+just doctor
+```
+
+Those versions live in `versions.json`, the single source that
+`flake.nix` and CI both build from. Two of them are exact rather
+than minimums: the FoundationDB client must share a protocol
+version with the server the Testcontainers image builds, and
+`protoc` must stay on the line that emits code for the pinned
+`protobuf-java`. Both fail at runtime rather than at build time,
+which is what `just doctor` exists to catch.
+
+The pins that cannot read `versions.json` — the Dockerfile
+`ARG` defaults and the Helm values — are asserted against it by
+`just check-versions`, which also gates the test workflow.
+
 ### REPL (Testcontainers)
 
 Start a REPL with `just repl` and connect your editor. The
