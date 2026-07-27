@@ -2,8 +2,13 @@
  {:dev
   {:extra-deps
    {ext/mono {:local/root "deps/mono-test"}
-    bases/build {:local/root "bases/build"}
-    bases/external-test-runner {:local/root "bases/external-test-runner"}
+    ;; Both drag in slf4j-nop, which sorts ahead of logback-classic and
+    ;; binds SLF4J to NOPServiceProvider — every log line is discarded and
+    ;; development/resources/logback-test.xml is never read.
+    bases/build {:local/root "bases/build"
+                 :exclusions [org.slf4j/slf4j-nop]}
+    bases/external-test-runner {:local/root "bases/external-test-runner"
+                                :exclusions [org.slf4j/slf4j-nop]}
     ;; protojure brings protobuf-java 4.x which breaks FDB Record Layer
     ;; at runtime — pin to 3.x for binary compatibility
     com.google.protobuf/protobuf-java {:mvn/version "3.25.8"}
@@ -22,6 +27,8 @@
     components/cash-account {:local/root "components/cash-account"}
     components/cash-account-query
     {:local/root "components/cash-account-query"}
+    components/changelog-relay {:local/root
+                                     "components/changelog-relay"}
     components/clearbank-webhook {:local/root
                                        "components/clearbank-webhook"}
     components/clearbank-relay {:local/root
@@ -71,6 +78,7 @@
     bases/uk-companies-house-simulator
     {:local/root "bases/uk-companies-house-simulator"}
     bases/scheduler-processor {:local/root "bases/scheduler-processor"}
+    bases/relay {:local/root "bases/relay"}
     bases/monolith {:local/root "bases/monolith"}}
    :extra-paths ["development/src" "development/resources"]
    :jvm-opts
@@ -108,6 +116,8 @@
                        "components/payment/test-resources"
                        "components/transaction/test"
                        "components/transaction/test-resources"
+                       "components/changelog-relay/test"
+                       "components/changelog-relay/test-resources"
                        "components/clearbank-relay/test"
                        "components/clearbank-relay/test-resources"
                        "components/onfido-relay/test"

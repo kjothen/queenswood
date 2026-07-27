@@ -41,6 +41,7 @@ jobs:
           - api-service
           - financial-processors-service
           - operational-processors-service
+          - relay-service
           - clearbank-adapter-service
           - clearbank-simulator-service
           - onfido-adapter-service

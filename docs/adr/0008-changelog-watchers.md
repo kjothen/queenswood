@@ -3,8 +3,10 @@
 
 ## Status
 
-Accepted, with a known scale-out limitation. The relay path in
-"Future" is now built for external-adapter egress — see below.
+Superseded in part. The relay path described in "Future" is now the
+direction of travel: it is generic, it runs in its own single-writer
+service, and internal reactive flows are migrating onto it. Watchers
+remain in place for the flows not yet moved — see "Future" below.
 
 ## Context
 
@@ -144,18 +146,34 @@ itself — exactly the property ADR-0002 highlighted. Implementing
 leader election for the relay watcher is then the only piece of new
 infrastructure required.
 
-**Update: the relay path is now built for external egress.** The
-ClearBank and Onfido adapters realize exactly this shape. The adapter's
-own record store is the outbox: a relay watcher reads its changelog and
-publishes each recorded webhook event to the bus, and an
-out-of-transaction runner drains persisted intents to make outbound HTTP
-calls. Internal reactive flows (party activation, cash-account close)
-still use in-JVM watchers as described above; the relay is used where an
-effect crosses a process or service boundary. The single-writer
-constraint applies to the relay too — one relay per store, with leader
-election still the open piece for an active-active topology. See
+**Update: the relay is now a generic tier in its own service.** The
+`changelog-relay` component is a config-driven runner — it tails one
+store's cursor and republishes each entry, holding no domain logic — and
+`relay-service` hosts every runner. The ClearBank and Onfido relays moved
+there first; internal reactive flows (party activation, cash-account
+close) still use in-JVM watchers and are migrating store by store. See
 [transaction-processing.md](../tdd/transaction-processing.md) and
 [payments.md](../tdd/payments.md).
+
+Three corrections to the reasoning above, all verified against the code:
+
+- **The relay does not dedupe.** `changelog/process` defaults to
+  latest-entry-per-record-id, and the record-id is the entity id. A relay
+  carries transitions, so collapsing two transitions committed inside one
+  poll window would silently drop an event. The runner passes
+  `{:deduplicate? false}`.
+- **Leader election buys failover, not throughput.** A cursor has exactly
+  one owner, but the relay's work is decode-and-publish — O(1) per entry,
+  no business logic. `replicas: 1` plus a durable cursor already survives
+  a crash; leader election would only shorten the gap before someone
+  resumes. The relay tier scales by sharding stores across deployments,
+  not by adding replicas.
+- **Extracting the relay does not by itself deliver scale-out.** It
+  removes the hard blocker — a cursor owner cannot be replicated at all —
+  but every topic is currently single-partition and `message-bus/send`
+  passes no partition key, so extra consumer replicas are idle standbys.
+  Raising partition counts without first adding a key would lose
+  per-entity ordering. Real horizontal throughput is gated on that key.
 
 The watcher primitives are inherited from `mono` (ADR-0001); the
 choice to use them rather than message-bus events is a Queenswood

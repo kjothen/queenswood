@@ -1,0 +1,63 @@
+system:
+  kafka:
+    schemas: !system/component
+      system/component-kind: avro/serde
+      schemas:
+        event: schemas/event/event-envelope.avsc.json
+    producers: !system/component
+      system/component-kind: kafka/producers
+      schemes-payments-event:
+        schemas: !system/local-ref schemas
+        schema: !keyword event
+        conf:
+          bootstrap.servers: !env KAFKA_BOOTSTRAP_SERVERS
+          topic: topic-schemes-payments-event
+          acks: all
+      idv-event:
+        schemas: !system/local-ref schemas
+        schema: !keyword event
+        conf:
+          bootstrap.servers: !env KAFKA_BOOTSTRAP_SERVERS
+          topic: topic-idv-event
+          acks: all
+    message-bus-producers: !system/component
+      system/component-kind: kafka/message-bus-producers
+      schemes-payments-event:
+        producer: !system/local-ref producers.schemes-payments-event
+      idv-event:
+        producer: !system/local-ref producers.idv-event
+    # The relay only produces. `message-bus/bus` requires a consumers
+    # map, so this is declared empty rather than omitted.
+    message-bus-consumers: !system/component
+      system/component-kind: kafka/message-bus-consumers
+  message-bus: !include bank/message-bus.yml
+  fdb: !include bank/fdb.yml
+  telemetry:
+    otel-sdk: !system/component
+      system/component-kind: telemetry/otel-sdk
+      service-name: !env SERVICE_NAME
+      endpoint: !env OTEL_ENDPOINT
+  relay:
+    clearbank-handler: !system/component
+      system/component-kind: clearbank-relay/relay-handler
+      bus: !system/ref message-bus.bus
+      event-channel: !keyword schemes-payments-event
+    onfido-handler: !system/component
+      system/component-kind: onfido-relay/relay-handler
+      bus: !system/ref message-bus.bus
+      event-channel: !keyword idv-event
+    # consumer-ids are carried over verbatim from the watchers these
+    # replaced — a fresh id would restart from no checkpoint and rescan
+    # the whole changelog in one transaction (ADR-0019 cursor continuity).
+    runners: !system/component
+      system/component-kind: changelog-relay/runners
+      clearbank-outbox:
+        record-db: !system/ref fdb.record-db
+        consumer-id: clearbank-relay
+        store-name: clearbank-outbox
+        handler: !system/local-ref clearbank-handler
+      onfido-outbox:
+        record-db: !system/ref fdb.record-db
+        consumer-id: onfido-relay
+        store-name: onfido-outbox
+        handler: !system/local-ref onfido-handler

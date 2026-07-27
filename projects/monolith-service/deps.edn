@@ -30,6 +30,8 @@
   {:local/root "../../components/cash-account-product-query"}
   component/clearbank-webhook
   {:local/root "../../components/clearbank-webhook"}
+  component/changelog-relay
+  {:local/root "../../components/changelog-relay"}
   component/clearbank-relay
   {:local/root "../../components/clearbank-relay"}
   component/company-registry

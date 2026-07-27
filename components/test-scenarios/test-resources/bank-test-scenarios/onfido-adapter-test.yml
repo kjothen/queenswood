@@ -25,8 +25,8 @@ relay-handler: !system/component
   bus: !system/ref message-bus.bus
   event-channel: !keyword idv-event
 
-watchers: !system/component
-  system/component-kind: fdb/watchers
+relay-runners: !system/component
+  system/component-kind: changelog-relay/runners
   onfido-outbox:
     record-db: !system/ref fdb.record-db
     consumer-id: onfido-relay

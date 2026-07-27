@@ -200,6 +200,17 @@ services:
     enabled: true
     replicas: 1
 
+  # Owns every store's changelog cursor and republishes each committed
+  # entry to the bus. A cursor has exactly one owner, so this stays at
+  # replicas: 1 — scale the tier by sharding stores across deployments,
+  # not by adding replicas here.
+  relay-service:
+    enabled: true
+    replicas: 1
+    resources:
+      limits: { cpu: "500m", memory: "768Mi" }
+      requests: { cpu: "100m", memory: "384Mi" }
+
   clearbank-adapter-service:
     enabled: true
     http: true

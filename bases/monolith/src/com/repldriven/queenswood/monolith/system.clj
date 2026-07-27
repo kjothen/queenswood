@@ -2,6 +2,7 @@
   (:require
     com.repldriven.queenswood.bank.interface
     com.repldriven.queenswood.cash-account.interface
+    com.repldriven.queenswood.changelog-relay.interface
     com.repldriven.queenswood.clearbank-adapter.system
     com.repldriven.queenswood.clearbank-simulator.system
     com.repldriven.queenswood.clearbank-webhook.interface

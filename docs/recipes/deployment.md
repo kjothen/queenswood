@@ -182,11 +182,15 @@ kind node's containerd, then `helm-install`s the chart.
   service-specific `application.yml` in `resources/` (the
   Dockerfile loads it via `-c classpath:application.yml -p
   default`).
-- A service set `replicas > 1` in `values.yaml` —
-  HTTP-fronted services and processors that don't depend
-  on changelog watchers scale freely. Watchers and
-  websocket-style consumers don't horizontally scale today
-  without leader election (per ADR-0008).
+- A service set `replicas > 1` in `values.yaml`.
+  `relay-service` must stay at 1 — it owns every changelog
+  cursor, and a cursor has exactly one owner. Scale that
+  tier by sharding stores across deployments, not by
+  adding replicas. Other services are free of the cursor
+  constraint, but raising their replicas buys standbys
+  rather than throughput until `message-bus/send` carries
+  a partition key and topics have more than one partition
+  (per ADR-0008).
 
 ## Discussion
 

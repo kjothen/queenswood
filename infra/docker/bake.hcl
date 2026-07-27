@@ -15,6 +15,7 @@ services = [
   "financial-processors-service",
   "operational-processors-service",
   "scheduler-processor-service",
+  "relay-service",
   "clearbank-adapter-service",
   "clearbank-simulator-service",
   "onfido-adapter-service",

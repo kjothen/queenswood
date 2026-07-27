@@ -1,0 +1,33 @@
+{:aliases
+ {:build {:deps {bases/build {:local/root "../../bases/build"}}
+          :exec-args {:lib 'com.repldriven.queenswood/relay-service
+                      :main com.repldriven.queenswood.relay.main
+                      :major-minor-version "0.0"}
+          :ns-default com.repldriven.queenswood.build.build}
+  ;; The external test runner (cloverage + eftest) plus the test-helper
+  ;; components the included bricks' tests require. CI runs every
+  ;; project through this runner for coverage; matches the sibling
+  ;; processor projects.
+  :test
+  {:extra-deps
+   {ext/mono {:local/root "../../deps/mono-test"}
+    bases/external-test-runner {:local/root "../../bases/external-test-runner"}
+    component/test-resources {:local/root
+                                   "../../components/test-resources"}
+}}}
+ :deps
+ {ext/mono {:local/root "../../deps/mono"}
+  component/changelog-relay {:local/root "../../components/changelog-relay"}
+  component/clearbank-relay {:local/root "../../components/clearbank-relay"}
+  component/onfido-relay {:local/root "../../components/onfido-relay"}
+  component/resources {:local/root "../../components/resources"}
+  component/schema {:local/root "../../components/schema"}
+
+
+  base/relay {:local/root "../../bases/relay"}
+  ;; protojure brings protobuf-java 4.x which breaks FDB Record Layer
+  ;; at runtime — pin to 3.x for binary compatibility
+  com.google.protobuf/protobuf-java {:mvn/version "3.25.8"}
+  org.clojure/clojure {:mvn/version "1.12.5"}
+  org.clojure/core.async {:mvn/version "1.9.865"}}
+ :paths ["resources"]}

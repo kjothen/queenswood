@@ -38,8 +38,8 @@ relay-handler: !system/component
   bus: !system/ref message-bus.bus
   event-channel: !keyword schemes-payments-event
 
-watchers: !system/component
-  system/component-kind: fdb/watchers
+relay-runners: !system/component
+  system/component-kind: changelog-relay/runners
   clearbank-outbox:
     record-db: !system/ref fdb.record-db
     consumer-id: clearbank-relay
