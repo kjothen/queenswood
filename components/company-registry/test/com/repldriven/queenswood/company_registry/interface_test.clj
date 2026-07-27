@@ -1,5 +1,5 @@
 (ns ^:eftest/synchronized
-  com.repldriven.queenswood.company-registry.interface-test
+    com.repldriven.queenswood.company-registry.interface-test
   (:require
     [com.repldriven.queenswood.company-registry.interface :as company-registry]
 
@@ -8,10 +8,10 @@
     [com.repldriven.queenswood.uk-companies-house-simulator.api :as api]
 
     [com.repldriven.mono.error.interface :as error]
-    [com.repldriven.mono.fdb.interface]
+    [com.repldriven.queenswood.fdb.interface]
     [com.repldriven.mono.server.interface :as server]
     [com.repldriven.mono.system.interface :as system]
-    [com.repldriven.mono.testcontainers.interface]
+    [com.repldriven.queenswood.testcontainers.interface]
     [com.repldriven.mono.test-system.interface :refer
      [with-test-system nom-test>]]
 
@@ -40,8 +40,8 @@
      #(assoc-in % [:system/defs :server :handler] api/app)]]
    (let [config (lookup-config sys)]
      (testing "fetches a known company and persists it under company_number"
-       (nom-test> [company (company-registry/lookup-company
-                            config registry "SC998137")
+       (nom-test> [company
+                   (company-registry/lookup-company config registry "SC998137")
                    _ (is (= "SC998137" (:company-number company)))
                    _ (is (= "SIRIUS CYBERNETICS CORPORATION LTD"
                             (:company-name company)))
@@ -49,17 +49,18 @@
                    _ (is (= "United Kingdom"
                             (get-in company
                                     [:registered-office-address :country])))
-                   stored (company-registry/get-company
-                           config registry "SC998137")
+                   stored
+                   (company-registry/get-company config registry "SC998137")
                    _ (is (= company (->plain stored)))]))
      (testing "company-not-found anomaly for unknown numbers"
-       (let [result (company-registry/lookup-company
-                     config registry "99999999")]
+       (let [result
+             (company-registry/lookup-company config registry "99999999")]
          (is (error/anomaly? result))
          (is (= :company-registry/company-not-found (error/kind result)))
          (is (nil? (company-registry/get-company config registry "99999999")))))
      (testing "rejects an unsupported registry id"
-       (let [result (company-registry/lookup-company
-                     config "fr-infogreffe" "SC998137")]
+       (let [result (company-registry/lookup-company config
+                                                     "fr-infogreffe"
+                                                     "SC998137")]
          (is (error/anomaly? result))
          (is (= :company-registry/registry-not-found (error/kind result))))))))

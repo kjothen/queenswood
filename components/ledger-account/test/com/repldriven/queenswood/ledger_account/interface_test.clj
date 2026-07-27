@@ -1,13 +1,14 @@
-(ns ^:eftest/synchronized com.repldriven.queenswood.ledger-account.interface-test
+(ns ^:eftest/synchronized
+    com.repldriven.queenswood.ledger-account.interface-test
   (:require
     [com.repldriven.queenswood.ledger-account.interface :as SUT]
 
     [com.repldriven.queenswood.balance.interface :as balance-writes]
     [com.repldriven.queenswood.balance-query.interface :as balances]
     [com.repldriven.mono.error.interface :as error]
-    [com.repldriven.mono.fdb.interface]
+    [com.repldriven.queenswood.fdb.interface]
     [com.repldriven.mono.system.interface :as system]
-    [com.repldriven.mono.testcontainers.interface]
+    [com.repldriven.queenswood.testcontainers.interface]
     [com.repldriven.mono.test-system.interface :refer
      [with-test-system nom-test>]]
 

@@ -17,10 +17,10 @@
     "which runs in CI and as 'just check-versions'."
   ],
   "foundationdb": {
-    "version": "7.4.6",
+    "version": "7.3.75",
     "sha256": {
-      "aarch64": "sha256-ZyjANtLdvhurQR20xpZsfWZ3A25foE4IV2Sj9macqZ4=",
-      "x86_64": "sha256-9YFxonwO0jBBo9UyRRkfSFHVITeWkPOE3k2zJctP43s="
+      "aarch64": "sha256-axYrC+vv1Jhzzi59fbe7ABUVyAzjqQVFWFhZwmNiSI8=",
+      "x86_64": "sha256-YqGe3fCkbfe4NdVTCcJwQIU1MEYAh4BLBzkP76kl0Ks="
     }
   },
   "protoc": {

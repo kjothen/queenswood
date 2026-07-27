@@ -7,7 +7,7 @@
     [com.repldriven.queenswood.schema.interface :as schema]
 
     [com.repldriven.mono.error.interface :refer [let-nom>]]
-    [com.repldriven.mono.fdb.interface :as fdb]))
+    [com.repldriven.queenswood.fdb.interface :as fdb]))
 
 (def ^:private idv-status->party-transition
   {:idv-status-accepted domain/activate-party

@@ -10,9 +10,12 @@
     bases/external-test-runner {:local/root "../../bases/external-test-runner"}
     component/test-resources {:local/root
                                    "../../components/test-resources"}
+    component/testcontainers {:local/root
+                                   "../../components/testcontainers"}
 }}}
  :deps
  {ext/mono {:local/root "../../deps/mono"}
+  component/fdb {:local/root "../../components/fdb"}
   component/onfido-webhook
   {:local/root "../../components/onfido-webhook"}
   component/onfido-relay

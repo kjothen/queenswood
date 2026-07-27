@@ -5,10 +5,10 @@
     [com.repldriven.queenswood.changelog-relay.interface :as SUT]
 
     [com.repldriven.mono.error.interface :as error]
-    [com.repldriven.mono.fdb.interface :as fdb]
+    [com.repldriven.queenswood.fdb.interface :as fdb]
     [com.repldriven.mono.processor.interface :as processor]
     [com.repldriven.mono.system.interface :as system]
-    [com.repldriven.mono.testcontainers.interface]
+    [com.repldriven.queenswood.testcontainers.interface]
     [com.repldriven.mono.test-system.interface :refer [with-test-system]]
 
     [clojure.test :refer [deftest is testing]]))

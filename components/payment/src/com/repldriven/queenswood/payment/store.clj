@@ -2,7 +2,7 @@
   (:require
     [com.repldriven.queenswood.schema.interface :as schema]
 
-    [com.repldriven.mono.fdb.interface :as fdb]))
+    [com.repldriven.queenswood.fdb.interface :as fdb]))
 
 ;; must match bank-payment-query.store store-names — same FDB stores
 (def ^:private internal-payments-store-name "internal-payments")

@@ -41,12 +41,12 @@ RUN apt-get update \
                      arm64|aarch64) echo aarch_64 ;; \
                      *) echo "unknown arch: ${BUILDARCH}" >&2; exit 1 ;; \
                    esac)" \
- && curl -fsSL \
+ && curl -fsSL --retry 5 --retry-delay 2 --retry-all-errors \
       "https://github.com/protocolbuffers/protobuf/releases/download/v25.8/protoc-25.8-linux-${PROTOC_ARCH}.zip" \
       -o /tmp/protoc.zip \
  && unzip -q /tmp/protoc.zip -d /usr/local \
  && rm /tmp/protoc.zip \
- && curl -fsSL \
+ && curl -fsSL --retry 5 --retry-delay 2 --retry-all-errors \
       "https://github.com/protojure/protoc-plugin/releases/download/v2.1.2/protoc-gen-clojure" \
       -o /usr/local/bin/protoc-gen-clojure \
  && chmod +x /usr/local/bin/protoc-gen-clojure
@@ -76,7 +76,7 @@ RUN --mount=type=cache,target=/root/.m2,sharing=locked \
 FROM eclipse-temurin:25-jre-noble AS runtime
 ARG PROJECT_NAME
 ARG TARGETARCH
-ARG FDB_VERSION=7.4.6
+ARG FDB_VERSION=7.3.75
 
 # hadolint ignore=DL3008
 RUN apt-get update \
@@ -90,7 +90,7 @@ RUN ARCH="$(case "${TARGETARCH:-amd64}" in \
               arm64|aarch64) echo aarch64 ;; \
               *) echo "unknown arch: ${TARGETARCH}" >&2; exit 1 ;; \
             esac)" \
- && curl -fsSL \
+ && curl -fsSL --retry 5 --retry-delay 2 --retry-all-errors \
       "https://github.com/apple/foundationdb/releases/download/${FDB_VERSION}/libfdb_c.${ARCH}.so" \
       -o /usr/lib/libfdb_c.so \
  && ln -sf /usr/lib/libfdb_c.so "/usr/lib/libfdb_c_${FDB_VERSION}.so"

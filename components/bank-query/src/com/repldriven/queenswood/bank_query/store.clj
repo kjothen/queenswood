@@ -3,7 +3,7 @@
     [com.repldriven.queenswood.schema.interface :as schema]
 
     [com.repldriven.mono.error.interface :as error]
-    [com.repldriven.mono.fdb.interface :as fdb]
+    [com.repldriven.queenswood.fdb.interface :as fdb]
     [com.repldriven.mono.utility.interface :as utility]))
 
 ;; must match bank-bank.store/store-name — same FDB store

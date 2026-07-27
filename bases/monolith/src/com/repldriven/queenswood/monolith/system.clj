@@ -25,7 +25,7 @@
     com.repldriven.mono.command.interface
     com.repldriven.mono.command-processor.interface
     com.repldriven.mono.event-processor.interface
-    com.repldriven.mono.fdb.interface
+    com.repldriven.queenswood.fdb.interface
     com.repldriven.mono.kafka.interface
     com.repldriven.mono.message-bus.interface
     com.repldriven.mono.scheduler.interface

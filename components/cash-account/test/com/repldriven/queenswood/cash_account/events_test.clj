@@ -7,7 +7,7 @@
     [com.repldriven.queenswood.cash-account-query.interface :as q]
     [com.repldriven.queenswood.schema.interface :as schema]
     [com.repldriven.mono.system.interface :as system]
-    [com.repldriven.mono.testcontainers.interface]
+    [com.repldriven.queenswood.testcontainers.interface]
     [com.repldriven.mono.test-system.interface :refer
      [with-test-system nom-test>]]
     [com.repldriven.mono.utility.interface :as utility]

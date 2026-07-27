@@ -1,6 +1,6 @@
 FROM debian:13-slim
 
-ARG FDB_VERSION=7.4.6
+ARG FDB_VERSION=7.3.75
 # hadolint ignore=DL3008
 RUN ARCH=$(uname -m) && \
   TINI_ARCH=$([ "$ARCH" = "aarch64" ] && echo "arm64" || echo "amd64") && \
@@ -8,14 +8,14 @@ RUN ARCH=$(uname -m) && \
   apt-get update && \
   apt-get install -y --no-install-recommends curl ca-certificates && \
   rm -rf /var/lib/apt/lists/* && \
-  curl -Ls "https://github.com/krallin/tini/releases/download/v0.19.0/tini-${TINI_ARCH}" \
+  curl -fsSL --retry 5 --retry-delay 2 --retry-all-errors "https://github.com/krallin/tini/releases/download/v0.19.0/tini-${TINI_ARCH}" \
     -o /usr/bin/tini && \
   chmod +x /usr/bin/tini && \
-  curl -Ls "https://github.com/apple/foundationdb/releases/download/${FDB_VERSION}/fdbserver.${FDB_ARCH}" \
+  curl -fsSL --retry 5 --retry-delay 2 --retry-all-errors "https://github.com/apple/foundationdb/releases/download/${FDB_VERSION}/fdbserver.${FDB_ARCH}" \
     -o /usr/bin/fdbserver && \
-  curl -Ls "https://github.com/apple/foundationdb/releases/download/${FDB_VERSION}/fdbcli.${FDB_ARCH}" \
+  curl -fsSL --retry 5 --retry-delay 2 --retry-all-errors "https://github.com/apple/foundationdb/releases/download/${FDB_VERSION}/fdbcli.${FDB_ARCH}" \
     -o /usr/bin/fdbcli && \
-  curl -Ls "https://github.com/apple/foundationdb/releases/download/${FDB_VERSION}/libfdb_c.${FDB_ARCH}.so" \
+  curl -fsSL --retry 5 --retry-delay 2 --retry-all-errors "https://github.com/apple/foundationdb/releases/download/${FDB_VERSION}/libfdb_c.${FDB_ARCH}.so" \
     -o /usr/lib/libfdb_c.so && \
   chmod +x /usr/bin/fdbserver /usr/bin/fdbcli && \
   mkdir -p /var/fdb/data /var/fdb/logs /usr/local/etc/foundationdb
