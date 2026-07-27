@@ -47,7 +47,11 @@
                :necessary ["resources" "test-resources"]},
             "scheduler-processor-service"
               {:alias "scp",
-               :necessary ["resources" "test-resources"]}},
+               :necessary ["resources" "test-resources"]},
+            "relay-service"
+              {:alias "rly",
+               :necessary ["resources" "schema"
+                           "test-resources"]}},
  :tag-patterns {:release "v[0-9]*", :stable "stable-*"},
  :test {:create-test-runner
           com.repldriven.queenswood.external-test-runner.core/create},

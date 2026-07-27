@@ -38,6 +38,8 @@ services:
   financial-processors-service: { enabled: false }
   operational-processors-service: { enabled: false }
   scheduler-processor-service: { enabled: false }
+  # The monolith hosts the changelog relay runners in-process.
+  relay-service: { enabled: false }
   clearbank-adapter-service: { enabled: false }
   clearbank-simulator-service: { enabled: false }
   onfido-adapter-service: { enabled: false }

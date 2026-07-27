@@ -49,6 +49,11 @@ Grouping is by boundary, not throughput:
 - **External adapters and simulators** — unchanged, never grouped
   with domain processors. They own outbox/intent stores and webhook
   servers with their own lifecycles.
+- **`relay-service`** — the relay tier. Grouped by an ownership
+  constraint rather than a domain boundary: it hosts every store's
+  changelog runner, and a cursor has exactly one owner. Never grouped
+  with domain processors, because co-locating a cursor pins whatever
+  JVM hosts it. It carries no domain code — the runner is generic.
 
 Financial and operational processors never share a JVM: a poison
 message, memory spike, or deploy of a provisioning domain must not
@@ -61,11 +66,14 @@ Two invariants when regrouping:
   and changelog cursor identify the *consumer role*, not the pod
   that happens to host it; renaming one abandons a cursor and
   re-consumes or skips.
-- **Replicas stay 1 per group** until watchers get leader election —
-  changelog watchers are single-cursor consumers (the ADR-0008
-  scale-out limitation). Command consumption via Shared
-  subscriptions would scale horizontally; the watchers riding in the
-  same JVM are what pin it.
+- **Cursors live in `relay-service`, nowhere else.** A single-cursor
+  consumer pins its whole JVM to one replica, so hosting one inside a
+  processor group would pin that group. `relay-service` is pinned by
+  design; groups that host none are free of the constraint. Note that
+  freedom is necessary but not sufficient — every topic is currently
+  single-partition and `message-bus/send` passes no partition key, so
+  raising replicas buys standbys rather than throughput until that key
+  exists (ADR-0008).
 
 ## Consequences
 
