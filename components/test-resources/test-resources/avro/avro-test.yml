@@ -8,6 +8,7 @@ serde: !system/component
     resume-cash-account: schemas/cash-accounts/resume-account.avsc.json
     rotate-cash-account-address: schemas/cash-accounts/rotate-address.avsc.json
     get-cash-account: schemas/cash-accounts/get-account.avsc.json
+    cash-account-status-changed: schemas/cash-accounts/account-status-changed.avsc.json
 
     cash-account-product: schemas/cash-account-products/product.avsc.json
     create-cash-account-product: schemas/cash-account-products/create-product.avsc.json

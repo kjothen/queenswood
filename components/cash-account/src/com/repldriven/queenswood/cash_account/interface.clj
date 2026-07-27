@@ -3,10 +3,10 @@
   rotate-address for banks. Open allocates payment addresses,
   derives account-type from the party, validates the chosen product
   version, and seeds the product's balance buckets. Open and close
-  transitions are driven via the changelog watcher; `seed-opened-account`
-  and `seed-closed-account` are admin/test shortcuts that bypass it.
-  Suspend, resume, and rotate-address are direct, single-phase flips
-  — no watcher leg. Rotate-address stays on
+  transitions are driven by the changelog relay and this brick's
+  event-processor; `seed-opened-account` and `seed-closed-account` are
+  admin/test shortcuts that bypass that leg. Suspend, resume, and
+  rotate-address are direct, single-phase flips — no second leg. Rotate-address stays on
   `:cash-account-status-opened`, replacing the account's payment
   addresses with a freshly allocated set and retiring the old ones
   on-record.
@@ -61,7 +61,7 @@
    (core/close-account txn data opts)))
 
 (defn suspend-account
-  "Suspend an opened account. Direct single-phase flip, no watcher
+  "Suspend an opened account. Direct single-phase flip, no second
   leg. Returns the updated account (`:cash-account-status-suspended`)
   or an anomaly.
 
@@ -75,7 +75,7 @@
    (core/suspend-account txn data opts)))
 
 (defn resume-account
-  "Resume a suspended account. Direct single-phase flip, no watcher
+  "Resume a suspended account. Direct single-phase flip, no second
   leg. Returns the updated account (`:cash-account-status-opened`)
   or an anomaly.
 
@@ -91,7 +91,7 @@
 (defn rotate-address
   "Rotate an opened account onto a freshly allocated set of payment
   addresses, permanently retiring the old ones on-record. Direct
-  single-phase flip, no watcher leg. Returns the updated account
+  single-phase flip, no second leg. Returns the updated account
   (`:cash-account-status-opened`) or an anomaly.
 
   Args:
@@ -107,9 +107,8 @@
   "Test/admin shortcut: flip an account from
   `:cash-account-status-opening` to `:cash-account-status-opened`
   by writing the transition straight to the store, bypassing the
-  changelog watcher that runs the transition in production. Same
-  spirit as `bank-party/seed-active-party`. Delete when a
-  watcher-driven test harness lands. Returns the opened account or
+  relay and event-processor that run the transition in production.
+  Same spirit as `bank-party/seed-active-party`. Returns the opened account or
   an anomaly.
 
   Args:
@@ -130,7 +129,7 @@
 (defn seed-closed-account
   "Test/admin shortcut: flip an account from
   `:cash-account-status-closing` to `:cash-account-status-closed`,
-  bypassing the changelog watcher. Counterpart to
+  bypassing the relay and event-processor. Counterpart to
   `seed-opened-account`. Returns the closed account or an anomaly.
 
   Args:

@@ -93,6 +93,7 @@
                        "components/cash-account-product/test-resources"
                        "components/cash-account-product-query/test"
                        "components/cash-account/test"
+                       "components/cash-account/test-resources"
                        "components/company-registry/test"
                        "components/company-registry/test-resources"
                        "components/idv/test"

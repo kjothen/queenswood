@@ -37,17 +37,25 @@ spec:
           # tells kubelet to chgrp the volume to 4059 on mount.
           securityContext:
             fsGroup: 4059
-          {{- with .Values.fdb.resources }}
           # Per-process resource caps. The FDB operator's default
           # request is ~8Gi per pod which doesn't fit a kind node;
           # override per environment via `fdb.resources` in values.
+          # `containers` is deliberately outside the resources guard:
+          # anything added under it (volumeMounts, env, securityContext)
+          # must not silently vanish for an environment that sets no
+          # caps.
           containers:
             - name: foundationdb
+              {{- with .Values.fdb.resources }}
               resources:
                 {{- toYaml . | nindent 16 }}
+              {{- end }}
+            {{- with .Values.fdb.resources }}
             - name: foundationdb-kubernetes-sidecar
               resources:
                 {{- toYaml . | nindent 16 }}
+            {{- end }}
+          {{- with .Values.fdb.resources }}
           initContainers:
             - name: foundationdb-kubernetes-init
               resources:

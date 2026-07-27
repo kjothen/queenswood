@@ -9,6 +9,7 @@
     [com.repldriven.queenswood.schemas.balances :as balances]
     [com.repldriven.queenswood.schemas.cash_account_products :as
      cash-account-products]
+    [com.repldriven.queenswood.schemas.changelog :as changelog]
     [com.repldriven.queenswood.schemas.cash_accounts :as cash-accounts]
     [com.repldriven.queenswood.schemas.company :as company]
     [com.repldriven.queenswood.schemas.idempotency :as idempotency]
@@ -42,7 +43,7 @@
     (com.repldriven.queenswood.schemas.company CompanyProto$Company)
     (com.repldriven.queenswood.schemas.idempotency IdempotencyProto$Idempotency)
     (com.repldriven.queenswood.schemas.idv IdvProto$Idv
-                                     IdvChangelogProto$IdvChangelog)
+                                           IdvChangelogProto$IdvChangelog)
     (com.repldriven.queenswood.schemas.interest
      InterestRunProto$InterestRun)
     (com.repldriven.queenswood.schemas.ledger_accounts
@@ -725,6 +726,24 @@
   - m: PayeeCheck map matching the generated schema."
   [m]
   (PayeeCheckProto$PayeeCheck/parseFrom (PayeeCheck->pb m)))
+
+(def
+  ^{:doc
+    "Parse ChangelogEvent protobuf bytes into a Clojure map.
+  This is the shared changelog envelope every relayed store writes, so
+  the relay decodes one message type regardless of the domain."}
+  pb->ChangelogEvent
+  changelog/pb->ChangelogEvent)
+
+(defn ChangelogEvent->pb
+  "Serialise a ChangelogEvent map to protobuf bytes.
+
+  Args:
+  - m: a map with `:event-id`, `:dedup-key`, `:event-name`,
+    `:payload` (Avro-serialised bytes), `:correlation-id`,
+    `:causation-id`, `:created-at`."
+  [m]
+  (proto/->pb (changelog/new-ChangelogEvent m)))
 
 (def ^{:doc "Parse ClearbankOutboxEvent protobuf bytes into a Clojure map."}
      pb->ClearbankOutboxEvent

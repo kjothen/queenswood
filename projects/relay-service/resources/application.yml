@@ -20,12 +20,21 @@ system:
           bootstrap.servers: !env KAFKA_BOOTSTRAP_SERVERS
           topic: topic-idv-event
           acks: all
+      cash-accounts-event:
+        schemas: !system/local-ref schemas
+        schema: !keyword event
+        conf:
+          bootstrap.servers: !env KAFKA_BOOTSTRAP_SERVERS
+          topic: topic-cash-accounts-event
+          acks: all
     message-bus-producers: !system/component
       system/component-kind: kafka/message-bus-producers
       schemes-payments-event:
         producer: !system/local-ref producers.schemes-payments-event
       idv-event:
         producer: !system/local-ref producers.idv-event
+      cash-accounts-event:
+        producer: !system/local-ref producers.cash-accounts-event
     # The relay only produces. `message-bus/bus` requires a consumers
     # map, so this is declared empty rather than omitted.
     message-bus-consumers: !system/component
@@ -46,6 +55,13 @@ system:
       system/component-kind: onfido-relay/relay-handler
       bus: !system/ref message-bus.bus
       event-channel: !keyword idv-event
+    # Stores that write the shared envelope need no bespoke handler —
+    # the generic one decodes it and republishes the payload verbatim.
+    cash-accounts-handler: !system/component
+      system/component-kind: changelog-relay/envelope-handler
+      bus: !system/ref message-bus.bus
+      event-channel: !keyword cash-accounts-event
+      store-name: cash-accounts
     # consumer-ids are carried over verbatim from the watchers these
     # replaced — a fresh id would restart from no checkpoint and rescan
     # the whole changelog in one transaction (ADR-0019 cursor continuity).
@@ -61,3 +77,8 @@ system:
         consumer-id: onfido-relay
         store-name: onfido-outbox
         handler: !system/local-ref onfido-handler
+      cash-accounts:
+        record-db: !system/ref fdb.record-db
+        consumer-id: cash-account-watcher
+        store-name: cash-accounts
+        handler: !system/local-ref cash-accounts-handler

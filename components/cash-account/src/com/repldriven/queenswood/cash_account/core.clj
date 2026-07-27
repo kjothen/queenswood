@@ -117,6 +117,37 @@
                                   :status-after (:account-status updated)})]
           updated))))))
 
+(defn complete-status-transition
+  "Second leg of the two-step open and close: `opening` becomes
+  `opened`, `closing` becomes `closed`.
+
+  Gated on the loaded account still sitting at the expected source
+  status, and skips silently when it doesn't. Event redelivery and
+  replay must be a no-op here, not a rejection — the transition having
+  already happened is the normal case, not an error."
+  [txn bank-id account-id status-after]
+  (when (#{:cash-account-status-opening :cash-account-status-closing}
+         status-after)
+    (store/transact
+     txn
+     (fn [txn]
+       (let-nom>
+         [account (q/find-account txn bank-id account-id)]
+         (when (and account (= status-after (:account-status account)))
+           (let [transitioned
+                 (case status-after
+                   :cash-account-status-opening
+                   (domain/opened-account account)
+
+                   :cash-account-status-closing
+                   (domain/closed-account account))]
+             (store/save-account txn
+                                 transitioned
+                                 {:account-id account-id
+                                  :status-before status-after
+                                  :status-after (:account-status
+                                                 transitioned)}))))))))
+
 (defn suspend-account
   ([txn data]
    (suspend-account txn data {}))

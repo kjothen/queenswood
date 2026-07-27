@@ -66,6 +66,8 @@ topics: !system/component
       partitions: 1
     - topic: topic-idv-event
       partitions: 1
+    - topic: topic-cash-accounts-event
+      partitions: 1
     - topic: topic-payee-checks-command
       partitions: 1
     - topic: topic-payee-checks-command-response
@@ -252,6 +254,14 @@ producers: !system/component
     conf:
       bootstrap.servers: !system/local-ref bootstrap-servers
       topic: topic-idv-event
+      acks: all
+  cash-accounts-event:
+    _: !system/local-ref topics
+    schemas: !system/local-ref schemas
+    schema: !keyword event
+    conf:
+      bootstrap.servers: !system/local-ref bootstrap-servers
+      topic: topic-cash-accounts-event
       acks: all
   payee-checks-command:
     _: !system/local-ref topics
@@ -510,6 +520,14 @@ consumers: !system/component
     conf:
       bootstrap.servers: !system/local-ref bootstrap-servers
       group.id: bank-test-api-scenarios-idv-event
+  cash-accounts-event:
+    _: !system/local-ref topics
+    schemas: !system/local-ref schemas
+    schema: !keyword event
+    topics: [topic-cash-accounts-event]
+    conf:
+      bootstrap.servers: !system/local-ref bootstrap-servers
+      group.id: bank-test-api-scenarios-cash-accounts-event
   payee-checks-command:
     _: !system/local-ref topics
     schemas: !system/local-ref schemas
@@ -571,6 +589,8 @@ message-bus-producers: !system/component
     producer: !system/local-ref producers.idv-command-response
   idv-event:
     producer: !system/local-ref producers.idv-event
+  cash-accounts-event:
+    producer: !system/local-ref producers.cash-accounts-event
   payee-checks-command:
     producer: !system/local-ref producers.payee-checks-command
   payee-checks-command-response:
@@ -637,6 +657,9 @@ message-bus-consumers: !system/component
     timeout: 500
   idv-event:
     consumer: !system/local-ref consumers.idv-event
+    timeout: 500
+  cash-accounts-event:
+    consumer: !system/local-ref consumers.cash-accounts-event
     timeout: 500
   payee-checks-command:
     consumer: !system/local-ref consumers.payee-checks-command

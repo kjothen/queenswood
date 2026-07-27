@@ -21,6 +21,8 @@
   component/bank-query
   {:local/root "../../components/bank-query"}
   component/cash-account {:local/root "../../components/cash-account"}
+  component/changelog-relay
+  {:local/root "../../components/changelog-relay"}
   component/cash-account-query
   {:local/root "../../components/cash-account-query"}
   component/cash-account-product

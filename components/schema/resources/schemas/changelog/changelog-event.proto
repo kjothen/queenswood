@@ -1,0 +1,31 @@
+syntax = "proto2";
+
+package com.repldriven.queenswood.schemas.changelog;
+
+option java_outer_classname = "ChangelogProto";
+
+// The shared changelog envelope. A store writes this as its
+// `write-changelog` payload, so the relay can republish any store's
+// changelog without knowing the domain — it decodes this one message,
+// wraps it in an event envelope, and publishes `payload` verbatim.
+//
+// This is not an FDB record: it is the changelog value, and the
+// changelog itself is the outbox (ADR-0002). No RecordTypeUnion entry.
+//
+// Field numbers and wire types match ClearbankOutboxEvent /
+// OnfidoOutboxEvent (only `outbox_id` becomes `event_id`), so an
+// adapter outbox entry already on the cursor decodes as a
+// ChangelogEvent — the adapters can adopt this without a cutover.
+//
+// Every field is optional: protojure omits zero/empty values on the
+// wire, and a proto2 `required` scalar holding its default then fails
+// to parse.
+message ChangelogEvent {
+  optional string event_id       = 1;  // uuidv7, the consumer's dedup key
+  optional string dedup_key      = 2;  // logical identity of the change
+  optional string event_name     = 3;  // bus event name to publish
+  optional bytes  payload        = 4;  // Avro-serialised event payload
+  optional string correlation_id = 5;
+  optional string causation_id   = 6;
+  optional int64  created_at     = 7;
+}

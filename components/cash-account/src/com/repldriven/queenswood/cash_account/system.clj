@@ -1,7 +1,7 @@
 (ns com.repldriven.queenswood.cash-account.system
   (:require
     [com.repldriven.queenswood.cash-account.commands :as commands]
-    [com.repldriven.queenswood.cash-account.watcher :as watcher]
+    [com.repldriven.queenswood.cash-account.events :as events]
 
     [com.repldriven.mono.system.interface :as system]))
 
@@ -13,13 +13,13 @@
                    :schemas system/required-component}
    :system/instance-schema some?})
 
-(def ^:private watcher-handler
+(def ^:private event-processor
   {:system/start (fn [{:system/keys [config instance]}]
-                   (or instance
-                       (watcher/cash-account-changelog-handler (:record-store
-                                                                config))))
-   :system/config {:record-store system/required-component}
-   :system/instance-schema fn?})
+                   (or instance (events/->CashAccountEventProcessor config)))
+   :system/config {:record-db system/required-component
+                   :record-store system/required-component
+                   :schemas system/required-component}
+   :system/instance-schema some?})
 
 (system/defcomponents :cash-account
-                      {:processor processor :watcher-handler watcher-handler})
+                      {:processor processor :event-processor event-processor})

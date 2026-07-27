@@ -1,5 +1,7 @@
 (ns com.repldriven.queenswood.cash-account.store
   (:require
+    [com.repldriven.queenswood.cash-account.changelog :as changelog]
+
     [com.repldriven.queenswood.schema.interface :as schema]
 
     [com.repldriven.mono.error.interface :refer [let-nom>]]
@@ -20,14 +22,13 @@
      (let [store (fdb/open txn store-name)]
        (let-nom>
          [_ (fdb/save-record store (schema/CashAccount->java account))
-          _ (fdb/write-changelog
-             store
-             store-name
-             (:account-id account)
-             (schema/CashAccountChangelog->pb
-              (assoc changelog
-                     :bank-id
-                     (:bank-id account))))]
+          _ (fdb/write-changelog store
+                                 store-name
+                                 (:account-id account)
+                                 (changelog/status-changed
+                                  (assoc changelog
+                                         :bank-id
+                                         (:bank-id account))))]
          nil)))
    :cash-account/save
    "Failed to save account"))
