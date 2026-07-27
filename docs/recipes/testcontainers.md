@@ -42,7 +42,7 @@ Adapted from `bases/monolith/test-resources/bank/fdb-test.yml`:
 fdb:
   container: !system/component
     system/component-kind: fdb/container
-    image-name: mono/foundationdb:7.3.75
+    image-name: mono/foundationdb:7.4.6
 
   cluster-file-path: !system/component
     system/component-kind: fdb/cluster-file-path

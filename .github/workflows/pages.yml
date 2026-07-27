@@ -26,6 +26,18 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v7
 
+      # versions.json is the single source for the native toolchain. The
+      # steps below read it rather than repeating the numbers, so CI cannot
+      # drift from the nix devshell.
+      - name: Read pinned toolchain versions
+        id: versions
+        run: |
+          {
+            echo "fdb=$(jq -r '.foundationdb.version' versions.json)"
+            echo "protoc=$(jq -r '.protoc.version' versions.json)"
+            echo "protoc_gen_clojure=$(jq -r '."protoc-gen-clojure".version' versions.json)"
+          } >> "$GITHUB_OUTPUT"
+
       - name: Setup Java
         uses: actions/setup-java@v5
         with:
@@ -40,18 +52,22 @@ jobs:
       - name: Setup Protoc
         uses: arduino/setup-protoc@v3
         with:
-          version: '25.8'
+          version: ${{ steps.versions.outputs.protoc }}
           repo-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Install protoc-gen-clojure
+        env:
+          VERSION: ${{ steps.versions.outputs.protoc_gen_clojure }}
         run: |
-          sudo curl -L https://github.com/protojure/protoc-plugin/releases/latest/download/protoc-gen-clojure -o /usr/local/bin/protoc-gen-clojure
+          sudo curl -L "https://github.com/protojure/protoc-plugin/releases/download/v${VERSION}/protoc-gen-clojure" -o /usr/local/bin/protoc-gen-clojure
           sudo chmod +x /usr/local/bin/protoc-gen-clojure
 
       - name: Install FoundationDB client library
+        env:
+          VERSION: ${{ steps.versions.outputs.fdb }}
         run: |
-          curl -LO https://github.com/apple/foundationdb/releases/download/7.3.75/foundationdb-clients_7.3.75-1_amd64.deb
-          sudo dpkg -i foundationdb-clients_7.3.75-1_amd64.deb
+          curl -LO "https://github.com/apple/foundationdb/releases/download/${VERSION}/foundationdb-clients_${VERSION}-1_amd64.deb"
+          sudo dpkg -i "foundationdb-clients_${VERSION}-1_amd64.deb"
 
       - name: Cache dependencies
         uses: actions/cache@v6

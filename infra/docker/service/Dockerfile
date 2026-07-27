@@ -76,7 +76,7 @@ RUN --mount=type=cache,target=/root/.m2,sharing=locked \
 FROM eclipse-temurin:25-jre-noble AS runtime
 ARG PROJECT_NAME
 ARG TARGETARCH
-ARG FDB_VERSION=7.3.75
+ARG FDB_VERSION=7.4.6
 
 # hadolint ignore=DL3008
 RUN apt-get update \

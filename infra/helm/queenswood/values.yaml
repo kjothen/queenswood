@@ -246,13 +246,13 @@ services:
 
 # ---------------------------------------------------------------------
 # FDB cluster managed by the FDB Kubernetes operator. The version MUST
-# match the FDB client (libfdb_c) baked into the service image (7.3.75).
+# match the FDB client (libfdb_c) baked into the service image (7.4.6).
 # Defaults are sized for a single-node dev cluster (kind/k3s); raise
 # processCounts and resources for production.
 # ---------------------------------------------------------------------
 fdb:
   enabled: true
-  version: "7.3.75"
+  version: "7.4.6"
   storageEngine: "ssd-redwood-1"
   processCounts:
     cluster_controller: 1
@@ -279,25 +279,25 @@ fdb:
 # RFC-1123 validation on apply.
 #
 # Replace the default initContainers map (which ships entries for
-# FDB 7.1, 7.3, and 7.4) with the single 7.3 entry we actually use.
+# FDB 7.1, 7.3, and 7.4) with the single 7.4 entry we actually use.
 # Otherwise each FDB pod pulls all three monitor images (~600MB
-# total) on first install when only 7.3 is referenced by
-# `fdb.version` above -- the unused 7.1 and 7.4 pulls just slow
+# total) on first install when only 7.4 is referenced by
+# `fdb.version` above -- the unused 7.1 and 7.3 pulls just slow
 # `helm install` down without anyone ever running them.
 fdbOperator:
   enabled: true
   nameOverride: fdb-operator
   # Helm merges submap entries rather than replacing the map, so
-  # we have to explicitly null the unused 7.1 and 7.4 keys to keep
-  # only the 7.3 monitor binaries the chart actually uses.
+  # we have to explicitly null the unused 7.1 and 7.3 keys to keep
+  # only the 7.4 monitor binaries the chart actually uses.
   initContainers:
     "7.1": null
-    "7.3":
+    "7.3": null
+    "7.4":
       image:
         repository: foundationdb/fdb-kubernetes-monitor
-        tag: 7.3.75
+        tag: 7.4.6
         pullPolicy: IfNotPresent
-    "7.4": null
 
 # ---------------------------------------------------------------------
 # Single-broker Kafka (KRaft, no ZooKeeper) for the kind dev loop. Production

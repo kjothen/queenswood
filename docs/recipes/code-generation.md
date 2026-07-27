@@ -50,7 +50,7 @@ The brick's `deps.edn` declares `:deps/prep-lib` and a
         com.google.protobuf/protobuf-java
         {:mvn/version "3.25.8"}
         org.foundationdb/fdb-record-layer-core
-        {:mvn/version "4.10.4.0"}}
+        {:mvn/version "4.12.14.0"}}
  :deps/prep-lib {:alias :build
                  :fn build/gen-proto
                  :ensure "classes"}
@@ -59,7 +59,7 @@ The brick's `deps.edn` declares `:deps/prep-lib` and a
   {:deps {io.github.clojure/tools.build
           {:mvn/version "0.10.12"}
           org.foundationdb/fdb-record-layer-core
-          {:mvn/version "4.10.4.0"}}
+          {:mvn/version "4.12.14.0"}}
    :extra-deps {com.repldriven.queenswood/build
                 {:local/root "../../bases/build"}}
    :paths ["."]}}}
