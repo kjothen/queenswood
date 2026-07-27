@@ -1,6 +1,6 @@
 FROM debian:13-slim
 
-ARG FDB_VERSION=7.4.6
+ARG FDB_VERSION=7.3.75
 # hadolint ignore=DL3008
 RUN ARCH=$(uname -m) && \
   TINI_ARCH=$([ "$ARCH" = "aarch64" ] && echo "arm64" || echo "amd64") && \

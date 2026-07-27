@@ -3,7 +3,7 @@
     [com.repldriven.queenswood.schema.interface :as schema]
 
     [com.repldriven.mono.error.interface :as error]
-    [com.repldriven.mono.fdb.interface :as fdb]))
+    [com.repldriven.queenswood.fdb.interface :as fdb]))
 
 ;; must match bank-cash-account-product.store store-names — same FDB stores
 (def ^:private store-name "cash-account-products")

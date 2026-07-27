@@ -9,9 +9,12 @@
    {ext/mono {:local/root "../../deps/mono-test"}
     bases/external-test-runner {:local/root "../../bases/external-test-runner"}
     component/test-resources {:local/root
-                                   "../../components/test-resources"}}}}
+                                   "../../components/test-resources"}
+    component/testcontainers {:local/root
+                                   "../../components/testcontainers"}}}}
  :deps
  {ext/mono {:local/root "../../deps/mono"}
+  component/fdb {:local/root "../../components/fdb"}
   component/balance {:local/root "../../components/balance"}
   component/balance-domain
   {:local/root "../../components/balance-domain"}

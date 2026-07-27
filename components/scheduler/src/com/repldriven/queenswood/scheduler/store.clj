@@ -2,7 +2,7 @@
   (:require
     [com.repldriven.queenswood.schema.interface :as schema]
 
-    [com.repldriven.mono.fdb.interface :as fdb]))
+    [com.repldriven.queenswood.fdb.interface :as fdb]))
 
 (def ^:private jobs-store "scheduler-jobs")
 (def ^:private runs-store "scheduler-runs")

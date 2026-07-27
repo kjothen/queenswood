@@ -29,6 +29,9 @@
     {:local/root "components/cash-account-query"}
     components/changelog-relay {:local/root
                                      "components/changelog-relay"}
+    components/fdb {:local/root "components/fdb"}
+    components/testcontainers
+    {:local/root "components/testcontainers"}
     components/clearbank-webhook {:local/root
                                        "components/clearbank-webhook"}
     components/clearbank-relay {:local/root
@@ -117,6 +120,9 @@
                        "components/payment/test-resources"
                        "components/transaction/test"
                        "components/transaction/test-resources"
+                       "components/testcontainers/test"
+                       "components/fdb/test"
+                       "components/fdb/test-resources"
                        "components/changelog-relay/test"
                        "components/changelog-relay/test-resources"
                        "components/clearbank-relay/test"

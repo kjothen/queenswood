@@ -11,6 +11,7 @@
 }}}
  :deps
  {ext/mono {:local/root "../../deps/mono"}
+  component/fdb {:local/root "../../components/fdb"}
   component/resources {:local/root "../../components/resources"}
   component/schema {:local/root "../../components/schema"}
 

@@ -6,10 +6,10 @@
     [com.repldriven.queenswood.clearbank-relay.outbound :as outbound]
     [com.repldriven.queenswood.clearbank-relay.relay :as relay]
 
-    [com.repldriven.mono.fdb.interface :as fdb]
+    [com.repldriven.queenswood.fdb.interface :as fdb]
     [com.repldriven.mono.message-bus.interface :as message-bus]
     [com.repldriven.mono.system.interface :as system]
-    [com.repldriven.mono.testcontainers.interface]
+    [com.repldriven.queenswood.testcontainers.interface]
     [com.repldriven.mono.test-system.interface :refer
      [with-test-system nom-test>]]
     [com.repldriven.mono.utility.interface :as utility]

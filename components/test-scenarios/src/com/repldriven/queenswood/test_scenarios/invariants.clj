@@ -17,7 +17,7 @@
     [com.repldriven.queenswood.ledger-account.interface :as ledger-accounts]
 
     [com.repldriven.mono.error.interface :as error]
-    [com.repldriven.mono.fdb.interface :as fdb]
+    [com.repldriven.queenswood.fdb.interface :as fdb]
 
     [clojure.test :refer [is]]))
 

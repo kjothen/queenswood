@@ -2,7 +2,7 @@
   (:require
     [com.repldriven.queenswood.idempotency.store :as store]
 
-    [com.repldriven.mono.fdb.interface :as fdb]
+    [com.repldriven.queenswood.fdb.interface :as fdb]
     [com.repldriven.mono.utility.interface :as utility]
 
     [clojure.edn :as edn]))

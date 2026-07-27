@@ -5,10 +5,10 @@
 
     [com.repldriven.mono.avro.interface :as avro]
     [com.repldriven.mono.error.interface :as error]
-    [com.repldriven.mono.fdb.interface]
+    [com.repldriven.queenswood.fdb.interface]
     [com.repldriven.mono.processor.interface :as processor]
     [com.repldriven.mono.system.interface :as system]
-    [com.repldriven.mono.testcontainers.interface]
+    [com.repldriven.queenswood.testcontainers.interface]
     [com.repldriven.mono.test-system.interface :refer
      [with-test-system nom-test>]]
 

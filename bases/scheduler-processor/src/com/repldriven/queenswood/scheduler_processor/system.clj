@@ -6,6 +6,6 @@
     com.repldriven.queenswood.interest.interface
     com.repldriven.queenswood.scheduler.interface
     com.repldriven.queenswood.schema.interface
-    com.repldriven.mono.fdb.interface
+    com.repldriven.queenswood.fdb.interface
     com.repldriven.mono.scheduler.interface
     com.repldriven.mono.telemetry.interface))

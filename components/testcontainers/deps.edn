@@ -1,0 +1,10 @@
+;; Test-only. Kept out of `components/fdb` so org.testcontainers stays off
+;; every service's runtime classpath — only projects' :test aliases pull
+;; this in. Mirrors mono's testcontainers layout so further containers can
+;; move across as `system/components/<thing>.clj`.
+;;
+;; resources carries the FDB image build context (fdb/Dockerfile, fdb/fdb.bash),
+;; read from the classpath rather than a path relative to the workspace root.
+{:paths ["src" "resources"]
+ :deps {org.testcontainers/testcontainers {:mvn/version "2.0.5"}}
+ :aliases {:test {:extra-deps {} :extra-paths ["test"]}}}
