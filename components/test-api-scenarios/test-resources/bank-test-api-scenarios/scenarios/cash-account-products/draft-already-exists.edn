@@ -1,5 +1,5 @@
 {:name "Opening a draft while one already exists is rejected"
- :tags #{:cash-account-products :api :unhappy :lifecycle}
+ :tags #{:api :cash-account-products :lifecycle :unhappy}
  :given
  [{:command :api/request
    :request {:method :post
@@ -27,16 +27,16 @@
                     :effective-from "2026-01-01"}}
    :as :v1
    :assert {:status 201 :body {:status "draft"}}}]
- :when
- [{:command :api/request
-   :request {:method :post
-             :path "/v1/cash-account-products/{product-id}/versions"
-             :path-params {:product-id [:ref :v1 :product-id]}
-             :auth :org-0-token
-             :body {:name "Second Draft"
-                    :template-id "tpl.00000000000000000000000001"
-                    :currency "GBP"
-                    :interest-rate-bps 0
-                    :effective-from "2026-02-01"}}
-   :assert {:status 409
-            :problem {:type ":cash-account-product/draft-already-exists"}}}]}
+ :when [{:command :api/request
+         :request {:method :post
+                   :path "/v1/cash-account-products/{product-id}/versions"
+                   :path-params {:product-id [:ref :v1 :product-id]}
+                   :auth :org-0-token
+                   :body {:name "Second Draft"
+                          :template-id "tpl.00000000000000000000000001"
+                          :currency "GBP"
+                          :interest-rate-bps 0
+                          :effective-from "2026-02-01"}}
+         :assert {:status 409
+                  :problem {:type
+                            ":cash-account-product/draft-already-exists"}}}]}

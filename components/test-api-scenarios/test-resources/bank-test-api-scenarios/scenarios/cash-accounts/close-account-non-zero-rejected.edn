@@ -1,5 +1,5 @@
 {:name "Closing a cash account with a non-zero balance is rejected"
- :tags #{:cash-accounts :api :unhappy :lifecycle}
+ :tags #{:api :cash-accounts :lifecycle :unhappy}
  :given
  [{:command :api/request
    :request {:method :post
@@ -16,7 +16,6 @@
          :client-secret [:ref :org-0 :client-secret]
          :status :live}
    :as :org-0-token}
-
   ;; Active party
   {:command :api/request
    :request {:method :post
@@ -45,7 +44,6 @@
              :path-params {:party-id [:ref :party-0 :party-id]}
              :auth :org-0-token}
    :until {:status 200 :body {:status "active"}}}
-
   ;; Published product
   {:command :api/request
    :request {:method :post
@@ -59,13 +57,13 @@
    :as :draft
    :assert {:status 201 :body {:status "draft"}}}
   {:command :api/request
-   :request {:method :post
-             :path "/v1/cash-account-products/{product-id}/versions/{version-id}/publish"
-             :path-params {:product-id [:ref :draft :product-id]
-                           :version-id [:ref :draft :version-id]}
-             :auth :org-0-token}
+   :request
+   {:method :post
+    :path "/v1/cash-account-products/{product-id}/versions/{version-id}/publish"
+    :path-params {:product-id [:ref :draft :product-id]
+                  :version-id [:ref :draft :version-id]}
+    :auth :org-0-token}
    :assert {:status 200 :body {:status "published"}}}
-
   ;; Open the cash-account and wait for opened
   {:command :api/request
    :request {:method :post
@@ -84,7 +82,6 @@
              :path-params {:account-id [:ref :account-0 :account-id]}
              :auth :org-0-token}
    :until {:status 200 :body {:account-status "opened"}}}
-
   ;; Fund the account so it holds a non-zero posted balance.
   {:command :api/request
    :request {:method :post
@@ -103,13 +100,11 @@
              :auth :org-0-token}
    :until {:status 200
            :body {:available-balance {:value 5000 :currency "GBP"}}}}]
-
- :when
- [{:command :api/request
-   :request {:method :post
-             :path "/v1/cash-accounts/{account-id}/close"
-             :path-params {:account-id [:ref :account-0 :account-id]}
-             :auth :org-0-token
-             :headers {:idempotency-key "ik-close-non-zero-close"}}
-   :assert {:status 409
-            :body {:type ":cash-account/non-zero-on-close"}}}]}
+ :when [{:command :api/request
+         :request {:method :post
+                   :path "/v1/cash-accounts/{account-id}/close"
+                   :path-params {:account-id [:ref :account-0 :account-id]}
+                   :auth :org-0-token
+                   :headers {:idempotency-key "ik-close-non-zero-close"}}
+         :assert {:status 409
+                  :body {:type ":cash-account/non-zero-on-close"}}}]}

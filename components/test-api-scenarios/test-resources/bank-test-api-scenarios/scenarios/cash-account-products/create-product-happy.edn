@@ -1,5 +1,5 @@
 {:name "Tenant creates a cash-account product"
- :tags #{:cash-account-products :api :happy}
+ :tags #{:api :cash-account-products :happy}
  :given
  [{:command :api/request
    :request {:method :post

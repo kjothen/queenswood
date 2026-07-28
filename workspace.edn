@@ -1,59 +1,43 @@
-{:compact-views #{},
- :interface-ns "interface",
- :projects {"development" {:alias "dev"},
-            ;; schema and test-resources provide centralised Avro schemas
-            ;; and shared classpath resources (Testcontainers configs,
-            ;; application-test.yml files). Polylith tracks source imports
-            ;; only, so :necessary suppresses false-positive warnings.
-            "operational-processors-service"
-              {:alias "ops",
-               :necessary ["resources"
-                           "schema" "test-resources"]},
-            "financial-processors-service"
-              {:alias "fin",
-               :necessary ["resources"
-                           "schema" "test-resources"]},
-            "api-service"
-              {:alias "api",
-               :necessary ["resources"
-                           "schema" "test-resources"]},
-            "bootstrap-service"
-              {:alias "bbs",
-               :necessary ["resources" "schema"
-                           "test-resources"]},
-            "migrator-service"
-              {:alias "mig",
-               :necessary ["resources"
-                           "schema"]},
-            "clearbank-adapter-service"
-              {:alias "cba",
-               :necessary ["resources"
-                           "schema" "test-resources"]},
-            "clearbank-simulator-service"
-              {:alias "cbs",
-               :necessary []},
-            "onfido-adapter-service"
-              {:alias "ioa",
-               :necessary ["resources"
-                           "schema" "test-resources"]},
-            "onfido-simulator-service"
-              {:alias "ios",
-               :necessary []},
-            "uk-companies-house-simulator-service"
-              {:alias "ucs",
-               :necessary []},
-            "monolith-service"
-              {:alias "mon",
-               :necessary ["resources" "test-resources"]},
-            "scheduler-processor-service"
-              {:alias "scp",
-               :necessary ["resources" "test-resources"]},
-            "relay-service"
-              {:alias "rly",
-               :necessary ["resources" "schema"
-                           "test-resources"]}},
- :tag-patterns {:release "v[0-9]*", :stable "stable-*"},
+{:compact-views #{}
+ :interface-ns "interface"
+ :projects
+ {"development" {:alias "dev"}
+  ;; schema and test-resources provide centralised Avro schemas
+  ;; and shared classpath resources (Testcontainers configs,
+  ;; application-test.yml files). Polylith tracks source imports
+  ;; only, so :necessary suppresses false-positive warnings.
+  "operational-processors-service" {:alias "ops"
+                                    :necessary ["resources"
+                                                "schema" "test-resources"]}
+  "financial-processors-service" {:alias "fin"
+                                  :necessary ["resources"
+                                              "schema" "test-resources"]}
+  "api-service" {:alias "api"
+                 :necessary ["resources"
+                             "schema" "test-resources"]}
+  "bootstrap-service" {:alias "bbs"
+                       :necessary ["resources" "schema"
+                                   "test-resources"]}
+  "migrator-service" {:alias "mig"
+                      :necessary ["resources"
+                                  "schema"]}
+  "clearbank-adapter-service" {:alias "cba"
+                               :necessary ["resources"
+                                           "schema" "test-resources"]}
+  "clearbank-simulator-service" {:alias "cbs" :necessary []}
+  "onfido-adapter-service" {:alias "ioa"
+                            :necessary ["resources"
+                                        "schema" "test-resources"]}
+  "onfido-simulator-service" {:alias "ios" :necessary []}
+  "uk-companies-house-simulator-service" {:alias "ucs" :necessary []}
+  "monolith-service" {:alias "mon" :necessary ["resources" "test-resources"]}
+  "scheduler-processor-service" {:alias "scp"
+                                 :necessary ["resources" "test-resources"]}
+  "relay-service" {:alias "rly"
+                   :necessary ["resources" "schema"
+                               "test-resources"]}}
+ :tag-patterns {:release "v[0-9]*" :stable "stable-*"}
  :test {:create-test-runner
-          com.repldriven.queenswood.external-test-runner.core/create},
- :top-namespace "com.repldriven.queenswood",
- :vcs {:auto-add true, :name "git"}}
+        com.repldriven.queenswood.external-test-runner.core/create}
+ :top-namespace "com.repldriven.queenswood"
+ :vcs {:auto-add true :name "git"}}

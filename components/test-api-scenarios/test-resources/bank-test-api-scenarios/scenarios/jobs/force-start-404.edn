@@ -1,5 +1,5 @@
 {:name "Force-starting an unknown job returns 404"
- :tags #{:jobs :api :unhappy}
+ :tags #{:api :jobs :unhappy}
  :given
  [{:command :api/request
    :request {:method :post
@@ -16,11 +16,9 @@
          :client-secret [:ref :org-0 :client-secret]
          :status :live}
    :as :org-0-token}]
- :when
- [{:command :api/request
-   :request {:method :post
-             :path "/v1/jobs/{job-id}/runs"
-             :path-params {:job-id "no-such-job"}
-             :auth :org-0-token}
-   :assert {:status 404
-            :problem {:type ":scheduler/job-not-found"}}}]}
+ :when [{:command :api/request
+         :request {:method :post
+                   :path "/v1/jobs/{job-id}/runs"
+                   :path-params {:job-id "no-such-job"}
+                   :auth :org-0-token}
+         :assert {:status 404 :problem {:type ":scheduler/job-not-found"}}}]}

@@ -1,5 +1,5 @@
 {:name "Force-starting a job records a forced run"
- :tags #{:jobs :api :happy}
+ :tags #{:api :happy :jobs}
  :given
  [{:command :api/request
    :request {:method :post

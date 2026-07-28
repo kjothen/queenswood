@@ -1,5 +1,5 @@
 {:name "Changing a bank to an unknown tier is rejected"
- :tags #{:banks :api :unhappy}
+ :tags #{:api :banks :unhappy}
  :given
  [{:command :api/request
    :request {:method :post
@@ -11,12 +11,10 @@
                     :currencies ["GBP"]}}
    :as :bank-0
    :assert {:status 201}}]
- :when
- [{:command :api/request
-   :request {:method :post
-             :path "/v1/banks/{bank-id}/change-tier"
-             :path-params {:bank-id [:ref :bank-0 :bank-id]}
-             :auth :admin
-             :body {:tier "no-such-tier"}}
-   :assert {:status 422
-            :body {:type ":bank/unknown-tier"}}}]}
+ :when [{:command :api/request
+         :request {:method :post
+                   :path "/v1/banks/{bank-id}/change-tier"
+                   :path-params {:bank-id [:ref :bank-0 :bank-id]}
+                   :auth :admin
+                   :body {:tier "no-such-tier"}}
+         :assert {:status 422 :body {:type ":bank/unknown-tier"}}}]}

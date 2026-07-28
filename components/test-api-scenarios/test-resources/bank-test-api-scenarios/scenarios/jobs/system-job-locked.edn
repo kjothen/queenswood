@@ -1,5 +1,5 @@
 {:name "A system job's cadence is locked; only its time is editable"
- :tags #{:jobs :api :happy :unhappy}
+ :tags #{:api :happy :jobs :unhappy}
  :given
  [{:command :api/request
    :request {:method :post
@@ -26,9 +26,7 @@
              :auth :org-0-token
              :body {:run-time-minutes 300}}
    :assert {:status 200
-            :body {:kind "system"
-                   :periodicity "daily"
-                   :run-time-minutes 300}}}
+            :body {:kind "system" :periodicity "daily" :run-time-minutes 300}}}
   ;; Changing its cadence is rejected — the platform fixes it.
   {:command :api/request
    :request {:method :put
@@ -36,8 +34,7 @@
              :path-params {:job-id "account-migration"}
              :auth :org-0-token
              :body {:periodicity "monthly"}}
-   :assert {:status 422
-            :problem {:type ":scheduler/system-job-locked"}}}
+   :assert {:status 422 :problem {:type ":scheduler/system-job-locked"}}}
   ;; A system job cannot be paused either.
   {:command :api/request
    :request {:method :put
@@ -45,5 +42,4 @@
              :path-params {:job-id "account-migration"}
              :auth :org-0-token
              :body {:enabled false}}
-   :assert {:status 422
-            :problem {:type ":scheduler/system-job-locked"}}}]}
+   :assert {:status 422 :problem {:type ":scheduler/system-job-locked"}}}]}

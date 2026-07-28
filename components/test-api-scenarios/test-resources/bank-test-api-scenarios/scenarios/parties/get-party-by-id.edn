@@ -1,5 +1,5 @@
 {:name "Tenant retrieves a party by id"
- :tags #{:parties :api :happy}
+ :tags #{:api :happy :parties}
  :given
  [{:command :api/request
    :request {:method :post

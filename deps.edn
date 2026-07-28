@@ -5,8 +5,7 @@
     ;; Both drag in slf4j-nop, which sorts ahead of logback-classic and
     ;; binds SLF4J to NOPServiceProvider — every log line is discarded and
     ;; development/resources/logback-test.xml is never read.
-    bases/build {:local/root "bases/build"
-                 :exclusions [org.slf4j/slf4j-nop]}
+    bases/build {:local/root "bases/build" :exclusions [org.slf4j/slf4j-nop]}
     bases/external-test-runner {:local/root "bases/external-test-runner"
                                 :exclusions [org.slf4j/slf4j-nop]}
     ;; protojure brings protobuf-java 4.x which breaks FDB Record Layer
@@ -16,71 +15,54 @@
     org.clojure/core.async {:mvn/version "1.9.865"}
     djblue/portal {:mvn/version "0.67.1"}
     components/balance {:local/root "components/balance"}
-    components/balance-domain
-    {:local/root "components/balance-domain"}
-    components/balance-query
-    {:local/root "components/balance-query"}
-    components/cash-account-product
-    {:local/root "components/cash-account-product"}
+    components/balance-domain {:local/root "components/balance-domain"}
+    components/balance-query {:local/root "components/balance-query"}
+    components/cash-account-product {:local/root
+                                     "components/cash-account-product"}
     components/cash-account-product-query
     {:local/root "components/cash-account-product-query"}
     components/cash-account {:local/root "components/cash-account"}
-    components/cash-account-query
-    {:local/root "components/cash-account-query"}
-    components/changelog-relay {:local/root
-                                     "components/changelog-relay"}
+    components/cash-account-query {:local/root "components/cash-account-query"}
+    components/changelog-relay {:local/root "components/changelog-relay"}
     components/fdb {:local/root "components/fdb"}
-    components/testcontainers
-    {:local/root "components/testcontainers"}
+    components/testcontainers {:local/root "components/testcontainers"}
     components/test-schema {:local/root "components/test-schema"}
-    components/clearbank-webhook {:local/root
-                                       "components/clearbank-webhook"}
-    components/clearbank-relay {:local/root
-                                     "components/clearbank-relay"}
-    components/company-registry {:local/root
-                                      "components/company-registry"}
+    components/clearbank-webhook {:local/root "components/clearbank-webhook"}
+    components/clearbank-relay {:local/root "components/clearbank-relay"}
+    components/company-registry {:local/root "components/company-registry"}
     components/idempotency {:local/root "components/idempotency"}
     components/idv {:local/root "components/idv"}
-    components/onfido-webhook {:local/root
-                                    "components/onfido-webhook"}
-    components/onfido-relay {:local/root
-                                  "components/onfido-relay"}
+    components/onfido-webhook {:local/root "components/onfido-webhook"}
+    components/onfido-relay {:local/root "components/onfido-relay"}
     components/interest {:local/root "components/interest"}
-    components/ledger-account {:local/root
-                                    "components/ledger-account"}
+    components/ledger-account {:local/root "components/ledger-account"}
     components/membership {:local/root "components/membership"}
     components/bank {:local/root "components/bank"}
     components/bank-query {:local/root "components/bank-query"}
     components/party {:local/root "components/party"}
-    components/party-query
-    {:local/root "components/party-query"}
+    components/party-query {:local/root "components/party-query"}
     components/person-identification {:local/root
-                                           "components/person-identification"}
+                                      "components/person-identification"}
     components/policy {:local/root "components/policy"}
     components/resources {:local/root "components/resources"}
     components/scheduler {:local/root "components/scheduler"}
     components/schema {:local/root "components/schema"}
-    components/test-api-scenarios {:local/root
-                                        "components/test-api-scenarios"}
-    components/test-scenarios {:local/root
-                                    "components/test-scenarios"}
+    components/test-api-scenarios {:local/root "components/test-api-scenarios"}
+    components/test-scenarios {:local/root "components/test-scenarios"}
     components/test-model {:local/root "components/test-model"}
-    components/test-projections {:local/root
-                                      "components/test-projections"}
+    components/test-projections {:local/root "components/test-projections"}
     components/payee-check {:local/root "components/payee-check"}
     components/payment {:local/root "components/payment"}
-    components/payment-query
-    {:local/root "components/payment-query"}
+    components/payment-query {:local/root "components/payment-query"}
     components/transaction {:local/root "components/transaction"}
     components/user {:local/root "components/user"}
     bases/api {:local/root "bases/api"}
-    bases/clearbank-simulator {:local/root
-                                    "bases/clearbank-simulator"}
+    bases/clearbank-simulator {:local/root "bases/clearbank-simulator"}
     bases/clearbank-adapter {:local/root "bases/clearbank-adapter"}
     bases/onfido-simulator {:local/root "bases/onfido-simulator"}
     bases/onfido-adapter {:local/root "bases/onfido-adapter"}
-    bases/uk-companies-house-simulator
-    {:local/root "bases/uk-companies-house-simulator"}
+    bases/uk-companies-house-simulator {:local/root
+                                        "bases/uk-companies-house-simulator"}
     bases/scheduler-processor {:local/root "bases/scheduler-processor"}
     bases/relay {:local/root "bases/relay"}
     bases/monolith {:local/root "bases/monolith"}}
@@ -147,7 +129,8 @@
   :lint/clj-kondo {:extra-deps {clj-kondo/clj-kondo {:mvn/version "2026.07.24"}}
                    :main-opts ["-m" "clj-kondo.main"]}
   :metrics {:extra-deps {io.github.repldriven/clojure-metrics
-                         {:git/url "https://github.com/repldriven/clojure-metrics"
+                         {:git/url
+                          "https://github.com/repldriven/clojure-metrics"
                           :git/sha "7f88f92695f055e3afd93ecb28ded8a1f4902e8d"}}
             :main-opts ["-m" "clojure-metrics.core"]}
   :nvd {:extra-deps {nvd-clojure/nvd-clojure {:mvn/version "5.3.0"}}
@@ -163,5 +146,5 @@
   :rebel {:extra-deps {com.bhauman/rebel-readline {:mvn/version "0.1.11"}}
           :main-opts ["-m" "rebel-readline.main"]}
   :jol {:extra-deps {org.openjdk.jol/jol-core {:mvn/version "0.17"}}
-        :jvm-opts   ["-Djdk.attach.allowAttachSelf"]}}
+        :jvm-opts ["-Djdk.attach.allowAttachSelf"]}}
  :mvn/repos {"maven" {:url "https://packages.confluent.io/maven"}}}

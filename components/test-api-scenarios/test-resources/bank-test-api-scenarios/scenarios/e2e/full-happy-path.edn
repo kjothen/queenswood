@@ -1,8 +1,8 @@
-{:name "Full happy path: two parties, two products, transfers, payment, interest"
+{:name
+ "Full happy path: two parties, two products, transfers, payment, interest"
  :tags #{:e2e :happy-path}
-
- ;; Mirrors bank-test-scenarios/full-happy-path.edn end-to-end via
- ;; the API:
+ ;; Mirrors bank-test-scenarios/full-happy-path.edn end-to-end via the
+ ;; API:
  ;;
  ;;   - Customer bank (own-funds house account auto-created)
  ;;   - Two products: current (rate 0) and savings (rate 3650 bps)
@@ -15,14 +15,12 @@
  ;;   - Arthur moves £750 current → savings
  ;;   - Ford moves £350 current → savings
  ;;   - Ford pays £25 outbound through the scheme path
- ;;   - Daily interest accrues on the savings products and is
- ;;     capitalised
+ ;;   - Daily interest accrues on the savings products and is capitalised
  ;;
  ;; All amounts in pence. Balances asserted via the `:default`
  ;; / `:interest-payable` entries on GET /v1/cash-accounts/{id}/
  ;; balances; the `:m/embeds` matcher pins specific entries
  ;; without constraining what else is present.
-
  :given
  ;; --- Bank + party setup -------------------------------------------
  [{:command :api/request
@@ -40,7 +38,6 @@
          :client-secret [:ref :bank-0 :client-secret]
          :status :live}
    :as :bank-0-token}
-
   ;; Two products: current (0 bps) and savings (3650 bps)
   {:command :api/request
    :request {:method :post
@@ -54,13 +51,13 @@
    :as :current-draft
    :assert {:status 201 :body {:status "draft"}}}
   {:command :api/request
-   :request {:method :post
-             :path "/v1/cash-account-products/{product-id}/versions/{version-id}/publish"
-             :path-params {:product-id [:ref :current-draft :product-id]
-                           :version-id [:ref :current-draft :version-id]}
-             :auth :bank-0-token}
+   :request
+   {:method :post
+    :path "/v1/cash-account-products/{product-id}/versions/{version-id}/publish"
+    :path-params {:product-id [:ref :current-draft :product-id]
+                  :version-id [:ref :current-draft :version-id]}
+    :auth :bank-0-token}
    :assert {:status 200 :body {:status "published"}}}
-
   {:command :api/request
    :request {:method :post
              :path "/v1/cash-account-products"
@@ -73,13 +70,13 @@
    :as :savings-draft
    :assert {:status 201 :body {:status "draft"}}}
   {:command :api/request
-   :request {:method :post
-             :path "/v1/cash-account-products/{product-id}/versions/{version-id}/publish"
-             :path-params {:product-id [:ref :savings-draft :product-id]
-                           :version-id [:ref :savings-draft :version-id]}
-             :auth :bank-0-token}
+   :request
+   {:method :post
+    :path "/v1/cash-account-products/{product-id}/versions/{version-id}/publish"
+    :path-params {:product-id [:ref :savings-draft :product-id]
+                  :version-id [:ref :savings-draft :version-id]}
+    :auth :bank-0-token}
    :assert {:status 200 :body {:status "published"}}}
-
   ;; Arthur Dent → :arthur (auto-activates via IDV chain)
   {:command :api/request
    :request {:method :post
@@ -108,7 +105,6 @@
              :path-params {:party-id [:ref :arthur :party-id]}
              :auth :bank-0-token}
    :until {:status 200 :body {:status "active"}}}
-
   ;; Ford Prefect → :ford
   {:command :api/request
    :request {:method :post
@@ -137,9 +133,8 @@
              :path-params {:party-id [:ref :ford :party-id]}
              :auth :bank-0-token}
    :until {:status 200 :body {:status "active"}}}
-
-  ;; Customer accounts: arthur-current, arthur-savings,
-  ;; ford-current, ford-savings — open and wait for "opened".
+  ;; Customer accounts: arthur-current, arthur-savings, ford-current,
+  ;; ford-savings — open and wait for "opened".
   {:command :api/request
    :request {:method :post
              :path "/v1/cash-accounts"
@@ -161,7 +156,6 @@
              :auth :bank-0-token}
    :until {:status 200 :body {:account-status "opened"}}
    :as :arthur-current}
-
   {:command :api/request
    :request {:method :post
              :path "/v1/cash-accounts"
@@ -179,7 +173,6 @@
              :path-params {:account-id [:ref :arthur-savings :account-id]}
              :auth :bank-0-token}
    :until {:status 200 :body {:account-status "opened"}}}
-
   {:command :api/request
    :request {:method :post
              :path "/v1/cash-accounts"
@@ -197,7 +190,6 @@
              :path-params {:account-id [:ref :ford-current :account-id]}
              :auth :bank-0-token}
    :until {:status 200 :body {:account-status "opened"}}}
-
   {:command :api/request
    :request {:method :post
              :path "/v1/cash-accounts"
@@ -215,7 +207,6 @@
              :path-params {:account-id [:ref :ford-savings :account-id]}
              :auth :bank-0-token}
    :until {:status 200 :body {:account-status "opened"}}}
-
   ;; --- Money in ---------------------------------------------------
   ;; £50,000 from outside into the bank's own-funds house account
   ;; (DEBIT 1100 cash-at-correspondent / CREDIT the house account,
@@ -230,7 +221,6 @@
                     :amount 5000000
                     :currency "GBP"}}
    :assert {:status 200}}
-
   ;; £1,000 reward to each party's current account
   {:command :api/request
    :request {:method :post
@@ -254,7 +244,6 @@
                     :amount 100000
                     :reference "Reward Ford"}}
    :assert {:status 200}}]
-
  :when
  ;; --- Customer activity ------------------------------------------
  ;; Arthur: £750 current → savings
@@ -297,7 +286,6 @@
                     :scheme "fps"
                     :reference "Beer and nuts"}}
    :assert {:status 200}}]
-
  :then
  ;; Outbound is async (scheme command → ClearBank → settled event).
  ;; Give the chain ~2s to settle before checking balances.
@@ -346,11 +334,13 @@
              :path "/v1/cash-accounts/{account-id}/transactions"
              :path-params {:account-id [:ref :ford-current :account-id]}
              :auth :bank-0-token}
-   :assert {:status 200
-            :body {:transactions [:m/embeds [{:reference "Beer and nuts"
-                                              :transaction-type "outbound-transfer"
-                                              :side "debit"
-                                              :balance-status "posted"}]]}}}
+   :assert
+   {:status 200
+    :body {:transactions [:m/embeds
+                          [{:reference "Beer and nuts"
+                            :transaction-type "outbound-transfer"
+                            :side "debit"
+                            :balance-status "posted"}]]}}}
   {:command :api/request
    :request {:method :get
              :path "/v1/cash-accounts/{account-id}/balances"
@@ -358,7 +348,6 @@
              :auth :bank-0-token}
    :assert {:status 200
             :body {:available-balance {:value 35000 :currency "GBP"}}}}
-
   ;; --- Interest run -----------------------------------------------
   ;; Daily interest on savings at 3650 bps:
   ;;   Arthur sav  75_000 → 75p accrued
@@ -374,7 +363,6 @@
              :headers {:idempotency-key "ik-fhp-accrue-interest"}
              :body {:as-of-date "2026-05-01"}}
    :assert {:status 200}}
-
   ;; The own-funds house account is unaffected by interest (the
   ;; offset is the 2400 interest-payable ledger control), so it
   ;; still reads 4_800_000.
@@ -385,7 +373,6 @@
              :auth :bank-0-token}
    :assert {:status 200
             :body {:available-balance {:value 4800000 :currency "GBP"}}}}
-
   ;; Capitalisation moves each saver's accrued interest into their
   ;; spendable default-posted balance, offset by the 2400 ledger:
   ;;   Arthur savings.default  += 75      →    75_075
@@ -399,7 +386,6 @@
              :headers {:idempotency-key "ik-fhp-capitalize"}
              :body {:as-of-date "2026-05-01"}}
    :assert {:status 200}}
-
   {:command :api/request
    :request {:method :get
              :path "/v1/cash-accounts/{account-id}/balances"

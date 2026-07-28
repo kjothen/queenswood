@@ -1,5 +1,5 @@
 {:name "Tenant exchanges client_credentials for a JWT and uses it"
- :tags #{:oauth :api :happy}
+ :tags #{:api :happy :oauth}
  :given
  [{:command :api/request
    :request {:method :post
@@ -27,10 +27,9 @@
             :body {:access_token [:m/regex ".+"]
                    :token_type "Bearer"
                    :expires_in 3600}}}]
- :then
- [;; Bearer the freshly-minted JWT against an org-scoped endpoint
-  {:command :api/request
-   :request {:method :get
-             :path "/v1/parties"
-             :auth [:ref :token-response :access_token]}
-   :assert {:status 200}}]}
+ :then [;; Bearer the freshly-minted JWT against an org-scoped endpoint
+        {:command :api/request
+         :request {:method :get
+                   :path "/v1/parties"
+                   :auth [:ref :token-response :access_token]}
+         :assert {:status 200}}]}

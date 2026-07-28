@@ -1,5 +1,5 @@
 {:name "Tenant lists their cash accounts across pages"
- :tags #{:cash-accounts :api :happy}
+ :tags #{:api :cash-accounts :happy}
  :given
  [{:command :api/request
    :request {:method :post
@@ -16,7 +16,6 @@
          :client-secret [:ref :org-0 :client-secret]
          :status :live}
    :as :org-0-token}
-
   ;; Active party (the holder of both accounts)
   {:command :api/request
    :request {:method :post
@@ -45,7 +44,6 @@
              :path-params {:party-id [:ref :party-0 :party-id]}
              :auth :org-0-token}
    :until {:status 200 :body {:status "active"}}}
-
   ;; Product 1: Current — create + publish
   {:command :api/request
    :request {:method :post
@@ -59,13 +57,13 @@
    :as :current-draft
    :assert {:status 201 :body {:status "draft"}}}
   {:command :api/request
-   :request {:method :post
-             :path "/v1/cash-account-products/{product-id}/versions/{version-id}/publish"
-             :path-params {:product-id [:ref :current-draft :product-id]
-                           :version-id [:ref :current-draft :version-id]}
-             :auth :org-0-token}
+   :request
+   {:method :post
+    :path "/v1/cash-account-products/{product-id}/versions/{version-id}/publish"
+    :path-params {:product-id [:ref :current-draft :product-id]
+                  :version-id [:ref :current-draft :version-id]}
+    :auth :org-0-token}
    :assert {:status 200 :body {:status "published"}}}
-
   ;; Product 2: Savings — create + publish
   {:command :api/request
    :request {:method :post
@@ -79,13 +77,13 @@
    :as :savings-draft
    :assert {:status 201 :body {:status "draft"}}}
   {:command :api/request
-   :request {:method :post
-             :path "/v1/cash-account-products/{product-id}/versions/{version-id}/publish"
-             :path-params {:product-id [:ref :savings-draft :product-id]
-                           :version-id [:ref :savings-draft :version-id]}
-             :auth :org-0-token}
+   :request
+   {:method :post
+    :path "/v1/cash-account-products/{product-id}/versions/{version-id}/publish"
+    :path-params {:product-id [:ref :savings-draft :product-id]
+                  :version-id [:ref :savings-draft :version-id]}
+    :auth :org-0-token}
    :assert {:status 200 :body {:status "published"}}}
-
   ;; Open current-account, wait for opened
   {:command :api/request
    :request {:method :post
@@ -104,7 +102,6 @@
              :path-params {:account-id [:ref :account-1 :account-id]}
              :auth :org-0-token}
    :until {:status 200 :body {:account-status "opened"}}}
-
   ;; Open savings-account, wait for opened
   {:command :api/request
    :request {:method :post
@@ -123,7 +120,6 @@
              :path-params {:account-id [:ref :account-2 :account-id]}
              :auth :org-0-token}
    :until {:status 200 :body {:account-status "opened"}}}]
-
  :when
  ;; 3 cash-accounts exist: the bank's own-funds house account (created
  ;; at provisioning) plus the 2 we opened. Walk the size=1 pagination
@@ -134,39 +130,35 @@
              :auth :org-0-token
              :query-params {"page[size]" 1}}
    :as :page-1
-   :assert {:status 200
-            :body {:cash-accounts
-                   [{:account-id
-                     [:m/any-of
-                      [:m/equals [:ref :org-0 :accounts 0 :account-id]]
-                      [:m/equals [:ref :account-1 :account-id]]
-                      [:m/equals [:ref :account-2 :account-id]]]}]
-                   :links {:next [:m/regex ".+"]
-                           :prev [:m/absent]}}}}
+   :assert
+   {:status 200
+    :body
+    {:cash-accounts
+     [{:account-id [:m/any-of
+                    [:m/equals [:ref :org-0 :accounts 0 :account-id]]
+                    [:m/equals [:ref :account-1 :account-id]]
+                    [:m/equals [:ref :account-2 :account-id]]]}]
+     :links {:next [:m/regex ".+"] :prev [:m/absent]}}}}
   {:command :api/request
-   :request {:method :get
-             :url [:ref :page-1 :links :next]
-             :auth :org-0-token}
+   :request {:method :get :url [:ref :page-1 :links :next] :auth :org-0-token}
    :as :page-2
-   :assert {:status 200
-            :body {:cash-accounts
-                   [{:account-id
-                     [:m/any-of
-                      [:m/equals [:ref :org-0 :accounts 0 :account-id]]
-                      [:m/equals [:ref :account-1 :account-id]]
-                      [:m/equals [:ref :account-2 :account-id]]]}]
-                   :links {:next [:m/regex ".+"]
-                           :prev [:m/regex ".+"]}}}}
+   :assert
+   {:status 200
+    :body
+    {:cash-accounts
+     [{:account-id [:m/any-of
+                    [:m/equals [:ref :org-0 :accounts 0 :account-id]]
+                    [:m/equals [:ref :account-1 :account-id]]
+                    [:m/equals [:ref :account-2 :account-id]]]}]
+     :links {:next [:m/regex ".+"] :prev [:m/regex ".+"]}}}}
   {:command :api/request
-   :request {:method :get
-             :url [:ref :page-2 :links :next]
-             :auth :org-0-token}
-   :assert {:status 200
-            :body {:cash-accounts
-                   [{:account-id
-                     [:m/any-of
-                      [:m/equals [:ref :org-0 :accounts 0 :account-id]]
-                      [:m/equals [:ref :account-1 :account-id]]
-                      [:m/equals [:ref :account-2 :account-id]]]}]
-                   :links {:next [:m/absent]
-                           :prev [:m/regex ".+"]}}}}]}
+   :request {:method :get :url [:ref :page-2 :links :next] :auth :org-0-token}
+   :assert
+   {:status 200
+    :body
+    {:cash-accounts
+     [{:account-id [:m/any-of
+                    [:m/equals [:ref :org-0 :accounts 0 :account-id]]
+                    [:m/equals [:ref :account-1 :account-id]]
+                    [:m/equals [:ref :account-2 :account-id]]]}]
+     :links {:next [:m/absent] :prev [:m/regex ".+"]}}}}]}

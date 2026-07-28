@@ -1,5 +1,5 @@
 {:name "Editing a job's schedule persists time then pauses it"
- :tags #{:jobs :api :happy}
+ :tags #{:api :happy :jobs}
  :given
  [{:command :api/request
    :request {:method :post
@@ -38,8 +38,7 @@
              :auth :org-0-token
              :body {:enabled false}}
    :assert {:status 200
-            :body {:run-time-minutes 360
-                   :enabled false}}}
+            :body {:run-time-minutes 360 :enabled false}}}
   ;; Reload to prove the paused state round-trips through FDB — an unset
   ;; optional bool must decode back to false, not vanish.
   {:command :api/request
@@ -48,5 +47,4 @@
              :path-params {:job-id "daily-interest"}
              :auth :org-0-token}
    :assert {:status 200
-            :body {:run-time-minutes 360
-                   :enabled false}}}]}
+            :body {:run-time-minutes 360 :enabled false}}}]}

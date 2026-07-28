@@ -1,29 +1,23 @@
-{:aliases
- {:build {:deps {bases/build {:local/root "../../bases/build"}}
-          :exec-args {:lib 'com.repldriven.queenswood/migrator-service
-                      :main com.repldriven.queenswood.migrator.main
-                      :major-minor-version "0.0"}
-          :ns-default com.repldriven.queenswood.build.build}
-  :test
-  {:extra-deps
-   {ext/mono {:local/root "../../deps/mono-test"}
-    bases/external-test-runner {:local/root "../../bases/external-test-runner"}
-    component/testcontainers {:local/root
-                                   "../../components/testcontainers"}
-    component/test-schema {:local/root
-                                "../../components/test-schema"}
-}}}
- :deps
- {ext/mono {:local/root "../../deps/mono"}
-  component/fdb {:local/root "../../components/fdb"}
-  component/resources {:local/root "../../components/resources"}
-  component/schema {:local/root "../../components/schema"}
-
-
-  base/migrator {:local/root "../../bases/migrator"}
-  ;; protojure brings protobuf-java 4.x which breaks FDB Record Layer
-  ;; at runtime — pin to 3.x for binary compatibility
-  com.google.protobuf/protobuf-java {:mvn/version "3.25.8"}
-  org.clojure/clojure {:mvn/version "1.12.5"}
-  org.clojure/core.async {:mvn/version "1.9.865"}}
+{:aliases {:build {:deps {bases/build {:local/root "../../bases/build"}}
+                   :exec-args {:lib 'com.repldriven.queenswood/migrator-service
+                               :main com.repldriven.queenswood.migrator.main
+                               :major-minor-version "0.0"}
+                   :ns-default com.repldriven.queenswood.build.build}
+           :test {:extra-deps {ext/mono {:local/root "../../deps/mono-test"}
+                               bases/external-test-runner
+                               {:local/root "../../bases/external-test-runner"}
+                               component/testcontainers
+                               {:local/root "../../components/testcontainers"}
+                               component/test-schema
+                               {:local/root "../../components/test-schema"}}}}
+ :deps {ext/mono {:local/root "../../deps/mono"}
+        component/fdb {:local/root "../../components/fdb"}
+        component/resources {:local/root "../../components/resources"}
+        component/schema {:local/root "../../components/schema"}
+        base/migrator {:local/root "../../bases/migrator"}
+        ;; protojure brings protobuf-java 4.x which breaks FDB Record Layer
+        ;; at runtime — pin to 3.x for binary compatibility
+        com.google.protobuf/protobuf-java {:mvn/version "3.25.8"}
+        org.clojure/clojure {:mvn/version "1.12.5"}
+        org.clojure/core.async {:mvn/version "1.9.865"}}
  :paths ["resources"]}

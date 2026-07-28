@@ -21,4 +21,5 @@
  :search-config? true
  :width 80
  :style :community
- :vector {:option-fn-first #(if (or (string? %2) (vector? %2) (keyword? %2)) {:vector {:respect-nl? true}})}}
+ :vector {:option-fn-first #(if (or (string? %2) (vector? %2) (keyword? %2))
+                              {:vector {:respect-nl? true}})}}

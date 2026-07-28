@@ -12,13 +12,9 @@
   {:extra-deps
    {ext/mono {:local/root "../../deps/mono-test"}
     bases/external-test-runner {:local/root "../../bases/external-test-runner"}
-    component/test-resources {:local/root
-                                   "../../components/test-resources"}
-    component/testcontainers {:local/root
-                                   "../../components/testcontainers"}
-    component/test-schema {:local/root
-                                "../../components/test-schema"}
-}}}
+    component/test-resources {:local/root "../../components/test-resources"}
+    component/testcontainers {:local/root "../../components/testcontainers"}
+    component/test-schema {:local/root "../../components/test-schema"}}}}
  :deps
  {ext/mono {:local/root "../../deps/mono"}
   component/fdb {:local/root "../../components/fdb"}
@@ -27,8 +23,6 @@
   component/onfido-relay {:local/root "../../components/onfido-relay"}
   component/resources {:local/root "../../components/resources"}
   component/schema {:local/root "../../components/schema"}
-
-
   base/relay {:local/root "../../bases/relay"}
   ;; protojure brings protobuf-java 4.x which breaks FDB Record Layer
   ;; at runtime — pin to 3.x for binary compatibility

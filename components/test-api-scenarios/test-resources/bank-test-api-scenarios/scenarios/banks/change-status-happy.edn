@@ -1,5 +1,5 @@
 {:name "Admin changes a bank's status from test to live"
- :tags #{:banks :api :happy}
+ :tags #{:api :banks :happy}
  :given
  [{:command :api/request
    :request {:method :post
@@ -11,13 +11,11 @@
                     :currencies ["GBP"]}}
    :as :bank-0
    :assert {:status 201 :body {:status "test"}}}]
- :when
- [{:command :api/request
-   :request {:method :post
-             :path "/v1/banks/{bank-id}/change-status"
-             :path-params {:bank-id [:ref :bank-0 :bank-id]}
-             :auth :admin
-             :body {:status "live"}}
-   :assert {:status 200
-            :body {:bank-id [:ref :bank-0 :bank-id]
-                   :status "live"}}}]}
+ :when [{:command :api/request
+         :request {:method :post
+                   :path "/v1/banks/{bank-id}/change-status"
+                   :path-params {:bank-id [:ref :bank-0 :bank-id]}
+                   :auth :admin
+                   :body {:status "live"}}
+         :assert {:status 200
+                  :body {:bank-id [:ref :bank-0 :bank-id] :status "live"}}}]}

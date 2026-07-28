@@ -1,5 +1,5 @@
 {:name "Tenant retrieves a product with its version inline"
- :tags #{:cash-account-products :api :happy}
+ :tags #{:api :cash-account-products :happy}
  :given
  [{:command :api/request
    :request {:method :post
@@ -33,8 +33,9 @@
              :path "/v1/cash-account-products/{product-id}"
              :path-params {:product-id [:ref :product-0 :product-id]}
              :auth :org-0-token}
-   :assert {:status 200
-            :body {:product-id [:ref :product-0 :product-id]
-                   :versions [{:version-id [:ref :product-0 :version-id]
-                               :status "draft"
-                               :name "Savings Account"}]}}}]}
+   :assert
+   {:status 200
+    :body {:product-id [:ref :product-0 :product-id]
+           :versions [{:version-id [:ref :product-0 :version-id]
+                       :status "draft"
+                       :name "Savings Account"}]}}}]}

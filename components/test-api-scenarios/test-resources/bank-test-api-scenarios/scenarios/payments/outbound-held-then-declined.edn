@@ -1,6 +1,5 @@
 {:name "Outbound held by the scheme, then declined — funds reversed"
- :tags #{:payments :outbound :unhappy :api}
-
+ :tags #{:api :outbound :payments :unhappy}
  ;; ClearBank's documented sandbox trigger: an outbound Faster Payment
  ;; whose creditor Name is 6a41a29eafcf455493 is held for screening
  ;; (OutboundHeldTransaction), then declined — funds returned and a
@@ -11,7 +10,6 @@
  ;; The submission debits the debtor's posted balance into 1200 at once,
  ;; so the £25 leaves available immediately and returns on the reversal.
  ;; All amounts in pence.
-
  :given
  [{:command :api/request
    :request {:method :post
@@ -28,7 +26,6 @@
          :client-secret [:ref :bank-0 :client-secret]
          :status :live}
    :as :bank-0-token}
-
   ;; Current product (0 bps), published.
   {:command :api/request
    :request {:method :post
@@ -42,13 +39,13 @@
    :as :current-draft
    :assert {:status 201 :body {:status "draft"}}}
   {:command :api/request
-   :request {:method :post
-             :path "/v1/cash-account-products/{product-id}/versions/{version-id}/publish"
-             :path-params {:product-id [:ref :current-draft :product-id]
-                           :version-id [:ref :current-draft :version-id]}
-             :auth :bank-0-token}
+   :request
+   {:method :post
+    :path "/v1/cash-account-products/{product-id}/versions/{version-id}/publish"
+    :path-params {:product-id [:ref :current-draft :product-id]
+                  :version-id [:ref :current-draft :version-id]}
+    :auth :bank-0-token}
    :assert {:status 200 :body {:status "published"}}}
-
   ;; Party → active (Onfido sim auto-passes non-"Reject" names).
   {:command :api/request
    :request {:method :post
@@ -77,7 +74,6 @@
              :path-params {:party-id [:ref :zaphod :party-id]}
              :auth :bank-0-token}
    :until {:status 200 :body {:status "active"}}}
-
   ;; Debtor account → opened.
   {:command :api/request
    :request {:method :post
@@ -97,7 +93,6 @@
              :auth :bank-0-token}
    :until {:status 200 :body {:account-status "opened"}}
    :as :debtor}
-
   ;; Fund the debtor with £1,000 from outside.
   {:command :api/request
    :request {:method :post
@@ -116,7 +111,6 @@
              :auth :bank-0-token}
    :until {:status 200
            :body {:available-balance {:value 100000 :currency "GBP"}}}}]
-
  :when
  ;; Outbound £25 to a creditor whose name triggers the held→decline path.
  [{:command :api/request
@@ -133,7 +127,6 @@
                     :reference "Held then declined"}}
    :as :payment
    :assert {:status 200}}]
-
  :then
  ;; The payment is held for screening and then declined: it lands on
  ;; "failed" with the HOPRJ cancellation code, and the £25 returns to
@@ -144,8 +137,7 @@
              :path-params {:payment-id [:ref :payment :payment-id]}
              :auth :bank-0-token}
    :until {:status 200
-           :body {:payment-status "failed"
-                  :cancellation-code "HOPRJ"}}
+           :body {:payment-status "failed" :cancellation-code "HOPRJ"}}
    :timeout-ms 10000}
   {:command :api/poll
    :request {:method :get

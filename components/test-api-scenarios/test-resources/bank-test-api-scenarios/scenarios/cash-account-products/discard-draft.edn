@@ -1,5 +1,5 @@
 {:name "Tenant discards a draft version"
- :tags #{:cash-account-products :api :happy :lifecycle}
+ :tags #{:api :cash-account-products :happy :lifecycle}
  :given
  [{:command :api/request
    :request {:method :post
@@ -26,19 +26,20 @@
                     :interest-rate-bps 0
                     :effective-from "2026-01-01"}}
    :as :draft
-   :assert {:status 201
-            :body {:status "draft"}}}]
+   :assert {:status 201 :body {:status "draft"}}}]
  :when
  [{:command :api/request
    :request {:method :delete
-             :path "/v1/cash-account-products/{product-id}/versions/{version-id}"
+             :path
+             "/v1/cash-account-products/{product-id}/versions/{version-id}"
              :path-params {:product-id [:ref :draft :product-id]
                            :version-id [:ref :draft :version-id]}
              :auth :org-0-token}
    :assert {:status 204}}
   {:command :api/request
    :request {:method :get
-             :path "/v1/cash-account-products/{product-id}/versions/{version-id}"
+             :path
+             "/v1/cash-account-products/{product-id}/versions/{version-id}"
              :path-params {:product-id [:ref :draft :product-id]
                            :version-id [:ref :draft :version-id]}
              :auth :org-0-token}
