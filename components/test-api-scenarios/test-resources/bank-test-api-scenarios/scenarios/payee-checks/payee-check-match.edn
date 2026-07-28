@@ -1,5 +1,5 @@
 {:name "Tenant runs a payee check and the name is a match"
- :tags #{:payee-checks :api :happy}
+ :tags #{:api :happy :payee-checks}
  :given
  [{:command :api/request
    :request {:method :post
@@ -16,15 +16,13 @@
          :client-secret [:ref :org-0 :client-secret]
          :status :live}
    :as :org-0-token}]
-
  :when
  [{:command :api/request
    :request {:method :post
              :path "/v1/payee-checks"
              :auth :org-0-token
              :body {:creditor-name "Arthur Dent"
-                    :account {:sort-code "040062"
-                              :account-number "12345678"}
+                    :account {:sort-code "040062" :account-number "12345678"}
                     :account-type "personal"}}
    :assert {:status 201
             :body {:check-id [:m/regex "^chk\\."]

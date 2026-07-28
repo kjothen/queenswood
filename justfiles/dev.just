@@ -135,7 +135,7 @@ format:
     #!/usr/bin/env bash
     set -e
     echo "Formatting Clojure source files..."
-    files=$(git ls-files '*.clj' '*.cljc' '*.cljs' | while read f; do [ -f "$f" ] && echo "$f"; done)
+    files=$(git ls-files '*.clj' '*.cljc' '*.cljs' '*.edn' | while read f; do [ -f "$f" ] && echo "$f"; done)
     if [ -n "$files" ]; then
         echo "$files" | xargs clojure -M:format/zprint '{:search-config? true}' -w
         echo "✓ Formatting complete"

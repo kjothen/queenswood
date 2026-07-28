@@ -1,12 +1,11 @@
 {:name "Wrong bearer token is rejected"
- :tags #{:banks :api :auth :unhappy}
+ :tags #{:api :auth :banks :unhappy}
  :when
  [{:command :api/request
-   :request {:method :post
-             :path "/v1/banks"
-             :auth "wrong-key"
-             :body {:name "Bad Key Bank"
-                    :status "live"
-                    :tier "micro"
-                    :currencies ["GBP"]}}
+   :request
+   {:method :post
+    :path "/v1/banks"
+    :auth "wrong-key"
+    :body
+    {:name "Bad Key Bank" :status "live" :tier "micro" :currencies ["GBP"]}}
    :assert {:status 401}}]}

@@ -1,6 +1,7 @@
 (ns com.repldriven.queenswood.test-projections.banks
   (:require
-    [com.repldriven.queenswood.cash-account-product-query.interface :as products]
+    [com.repldriven.queenswood.cash-account-product-query.interface :as
+     products]
     [com.repldriven.queenswood.cash-account-query.interface :as cash-accounts]
     [com.repldriven.queenswood.party-query.interface :as party]))
 

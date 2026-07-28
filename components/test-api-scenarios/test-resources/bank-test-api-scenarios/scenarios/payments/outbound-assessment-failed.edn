@@ -1,6 +1,5 @@
 {:name "Outbound rejected at message assessment — funds reversed"
- :tags #{:payments :outbound :unhappy :api}
-
+ :tags #{:api :outbound :payments :unhappy}
  ;; ClearBank assesses a submitted outbound payment against scheme rules
  ;; before settlement; on failure it fires PaymentMessageAssessmentFailed
  ;; (no settle/held). Here the creditor BBAN's sort code is 000000 — an
@@ -9,7 +8,6 @@
  ;; payment brick reverses the in-flight legs (DEBIT 1200 / CREDIT debtor)
  ;; and flips the payment to "failed" with code CB_AssessmentFailed.
  ;; All amounts in pence.
-
  :given
  [{:command :api/request
    :request {:method :post
@@ -26,7 +24,6 @@
          :client-secret [:ref :bank-0 :client-secret]
          :status :live}
    :as :bank-0-token}
-
   ;; Current product (0 bps), published.
   {:command :api/request
    :request {:method :post
@@ -40,13 +37,13 @@
    :as :current-draft
    :assert {:status 201 :body {:status "draft"}}}
   {:command :api/request
-   :request {:method :post
-             :path "/v1/cash-account-products/{product-id}/versions/{version-id}/publish"
-             :path-params {:product-id [:ref :current-draft :product-id]
-                           :version-id [:ref :current-draft :version-id]}
-             :auth :bank-0-token}
+   :request
+   {:method :post
+    :path "/v1/cash-account-products/{product-id}/versions/{version-id}/publish"
+    :path-params {:product-id [:ref :current-draft :product-id]
+                  :version-id [:ref :current-draft :version-id]}
+    :auth :bank-0-token}
    :assert {:status 200 :body {:status "published"}}}
-
   ;; Party → active.
   {:command :api/request
    :request {:method :post
@@ -75,7 +72,6 @@
              :path-params {:party-id [:ref :trillian :party-id]}
              :auth :bank-0-token}
    :until {:status 200 :body {:status "active"}}}
-
   ;; Debtor account → opened.
   {:command :api/request
    :request {:method :post
@@ -95,7 +91,6 @@
              :auth :bank-0-token}
    :until {:status 200 :body {:account-status "opened"}}
    :as :debtor}
-
   ;; Fund the debtor with £1,000 from outside.
   {:command :api/request
    :request {:method :post
@@ -114,7 +109,6 @@
              :auth :bank-0-token}
    :until {:status 200
            :body {:available-balance {:value 100000 :currency "GBP"}}}}]
-
  :when
  ;; Outbound £25 to a creditor whose sort code (000000) fails assessment.
  [{:command :api/request
@@ -131,7 +125,6 @@
                     :reference "Assessment failure"}}
    :as :payment
    :assert {:status 200}}]
-
  :then
  ;; ClearBank rejects at assessment: the payment lands on "failed" with
  ;; the CB_AssessmentFailed code, and the £25 returns to the debtor.

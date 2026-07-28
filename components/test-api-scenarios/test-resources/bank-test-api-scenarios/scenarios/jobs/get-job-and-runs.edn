@@ -1,5 +1,5 @@
 {:name "Tenant retrieves a job and its (empty) run history"
- :tags #{:jobs :api :happy}
+ :tags #{:api :happy :jobs}
  :given
  [{:command :api/request
    :request {:method :post
@@ -16,21 +16,18 @@
          :client-secret [:ref :org-0 :client-secret]
          :status :live}
    :as :org-0-token}]
- :when
- [{:command :api/request
-   :request {:method :get
-             :path "/v1/jobs/{job-id}"
-             :path-params {:job-id "daily-interest"}
-             :auth :org-0-token}
-   :assert {:status 200
-            :body {:job-id "daily-interest"
-                   :periodicity "daily"
-                   :enabled true}}}
-  ;; A job that has never fired carries no runs.
-  {:command :api/request
-   :request {:method :get
-             :path "/v1/jobs/{job-id}/runs"
-             :path-params {:job-id "daily-interest"}
-             :auth :org-0-token}
-   :assert {:status 200
-            :body {:runs []}}}]}
+ :when [{:command :api/request
+         :request {:method :get
+                   :path "/v1/jobs/{job-id}"
+                   :path-params {:job-id "daily-interest"}
+                   :auth :org-0-token}
+         :assert
+         {:status 200
+          :body {:job-id "daily-interest" :periodicity "daily" :enabled true}}}
+        ;; A job that has never fired carries no runs.
+        {:command :api/request
+         :request {:method :get
+                   :path "/v1/jobs/{job-id}/runs"
+                   :path-params {:job-id "daily-interest"}
+                   :auth :org-0-token}
+         :assert {:status 200 :body {:runs []}}}]}

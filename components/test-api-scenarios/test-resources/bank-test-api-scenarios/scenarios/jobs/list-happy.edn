@@ -1,14 +1,13 @@
 {:name "Tenant lists its scheduled jobs"
- :tags #{:jobs :api :happy}
+ :tags #{:api :happy :jobs}
  :given
  [{:command :api/request
-   :request {:method :post
-             :path "/v1/banks"
-             :auth :admin
-             :body {:name "Jobs Test Bank"
-                    :status "live"
-                    :tier "micro"
-                    :currencies ["GBP"]}}
+   :request
+   {:method :post
+    :path "/v1/banks"
+    :auth :admin
+    :body
+    {:name "Jobs Test Bank" :status "live" :tier "micro" :currencies ["GBP"]}}
    :as :org-0
    :assert {:status 201}}
   {:command :auth/mint-token
@@ -23,22 +22,21 @@
  ;; account-migration (daily at 00:00; cadence fixed, though its task
  ;; allows any cadence).
  [{:command :api/request
-   :request {:method :get
-             :path "/v1/jobs"
-             :auth :org-0-token}
-   :assert {:status 200
-            :body {:jobs [:m/embeds
-                          [{:job-id "daily-interest"
-                            :name "Daily interest"
-                            :kind "user"
-                            :task-kinds ["accrue" "capitalize"]
-                            :periodicity "daily"
-                            :allowed-periodicities ["daily"]
-                            :run-time-minutes 1020
-                            :enabled true}
-                           {:job-id "account-migration"
-                            :kind "system"
-                            :periodicity "daily"
-                            :run-time-minutes 0
-                            :allowed-periodicities
-                            ["daily" "monthly" "yearly"]}]]}}}]}
+   :request {:method :get :path "/v1/jobs" :auth :org-0-token}
+   :assert
+   {:status 200
+    :body
+    {:jobs [:m/embeds
+            [{:job-id "daily-interest"
+              :name "Daily interest"
+              :kind "user"
+              :task-kinds ["accrue" "capitalize"]
+              :periodicity "daily"
+              :allowed-periodicities ["daily"]
+              :run-time-minutes 1020
+              :enabled true}
+             {:job-id "account-migration"
+              :kind "system"
+              :periodicity "daily"
+              :run-time-minutes 0
+              :allowed-periodicities ["daily" "monthly" "yearly"]}]]}}}]}

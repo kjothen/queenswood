@@ -1,6 +1,5 @@
 {:name "Interest accrual is limited to one run per org per business-day"
- :tags #{:interest :limit :rejection :edn-only}
-
+ :tags #{:edn-only :interest :limit :rejection}
  ;; Bind a `max 1 accrual run per day` policy to org-0, then run
  ;; accrue twice for the same as-of-date. The first run records an
  ;; InterestRun (status INTEREST_ACCRUE_DONE); the second must be
@@ -18,21 +17,16 @@
  :given
  [{:command :create-bank :args []}
   {:command :bind-policy
-   :args [:bank-0
-          {:name "Test: max 1 accrual run per day"
-           :category :policy-category-restricted
-           :limits [{:kind {:interest {:filters [{:action :interest-action-accrue}]}}
-                     :bound {:kind {:max
-                                    {:aggregate
-                                     {:kind
-                                      {:count
-                                       {:value 1
-                                        :window :time-window-daily}}}}}}
-                     :reason "Test-bound daily accrual cap"}]}]}
+   :args
+   [:bank-0
+    {:name "Test: max 1 accrual run per day"
+     :category :policy-category-restricted
+     :limits
+     [{:kind {:interest {:filters [{:action :interest-action-accrue}]}}
+       :bound
+       {:kind {:max {:aggregate
+                     {:kind {:count {:value 1 :window :time-window-daily}}}}}}
+       :reason "Test-bound daily accrual cap"}]}]}
   {:command :accrue-interest :args [:bank-0 20260501]}]
-
- :when
- [{:command :accrue-interest :args [:bank-0 20260501]}]
-
- :then
- [{:command :assert-rejection-kind :args [:policy/limit-exceeded]}]}
+ :when [{:command :accrue-interest :args [:bank-0 20260501]}]
+ :then [{:command :assert-rejection-kind :args [:policy/limit-exceeded]}]}

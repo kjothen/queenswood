@@ -1,5 +1,5 @@
 {:name "IDV reject outcome transitions the party to :status \"rejected\""
- :tags #{:parties :idv :api :unhappy}
+ :tags #{:api :idv :parties :unhappy}
  :given
  [{:command :api/request
    :request {:method :post
@@ -16,13 +16,12 @@
          :client-secret [:ref :org-0 :client-secret]
          :status :live}
    :as :org-0-token}]
-
  :when
  ;; The Onfido simulator routes by first-name: `Reject*` → "consider"
  ;; outcome → IDV "rejected". The bank-party watcher branches on the
- ;; IDV status-after and rejects the party in lockstep, so the GET
- ;; below lands on :status "rejected" once the
- ;; webhook → event-processor → watcher chain has settled.
+ ;; IDV status-after and rejects the party in lockstep, so the GET below
+ ;; lands on :status "rejected" once the webhook → event-processor →
+ ;; watcher chain has settled.
  [{:command :api/request
    :request {:method :post
              :path "/v1/parties"
@@ -44,7 +43,6 @@
                                           :issuing-country "GB"}}}
    :as :party-0
    :assert {:status 200 :body {:status "pending"}}}
-
   ;; Poll the party until it reaches "rejected" rather than timing
   ;; out at a fixed wait — the cascade is fast but the headroom
   ;; tolerates a slow event-processor or watcher hop.
@@ -54,5 +52,4 @@
              :path-params {:party-id [:ref :party-0 :party-id]}
              :auth :org-0-token}
    :until {:status 200
-           :body {:party-id [:ref :party-0 :party-id]
-                  :status "rejected"}}}]}
+           :body {:party-id [:ref :party-0 :party-id] :status "rejected"}}}]}

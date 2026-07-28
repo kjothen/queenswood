@@ -1,14 +1,13 @@
 {:name "Micro tier caps cash-account-products at one per product type"
- :tags #{:cash-account-products :api :unhappy :policy}
+ :tags #{:api :cash-account-products :policy :unhappy}
  :given
  [{:command :api/request
-   :request {:method :post
-             :path "/v1/banks"
-             :auth :admin
-             :body {:name "Per-Type Cap Org"
-                    :status "live"
-                    :tier "micro"
-                    :currencies ["GBP"]}}
+   :request
+   {:method :post
+    :path "/v1/banks"
+    :auth :admin
+    :body
+    {:name "Per-Type Cap Org" :status "live" :tier "micro" :currencies ["GBP"]}}
    :as :org-0
    :assert {:status 201}}
   {:command :auth/mint-token
@@ -38,5 +37,4 @@
                     :template-id "tpl.00000000000000000000000001"
                     :currency "GBP"
                     :effective-from "2026-01-01"}}
-   :assert {:status 429
-            :problem {:type ":policy/limit-exceeded"}}}]}
+   :assert {:status 429 :problem {:type ":policy/limit-exceeded"}}}]}

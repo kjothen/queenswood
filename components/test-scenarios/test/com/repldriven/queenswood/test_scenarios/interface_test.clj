@@ -1,4 +1,5 @@
-(ns ^:eftest/synchronized com.repldriven.queenswood.test-scenarios.interface-test
+(ns ^:eftest/synchronized
+    com.repldriven.queenswood.test-scenarios.interface-test
   (:require
     com.repldriven.queenswood.test-scenarios.system
 

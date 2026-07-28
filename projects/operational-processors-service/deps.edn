@@ -1,57 +1,47 @@
 {:aliases
  {:build {:deps {bases/build {:local/root "../../bases/build"}}
-          :exec-args {:lib 'com.repldriven.queenswood/operational-processors-service
-                      :main com.repldriven.queenswood.operational-processors.main
-                      :major-minor-version "0.0"}
+          :exec-args
+          {:lib 'com.repldriven.queenswood/operational-processors-service
+           :main com.repldriven.queenswood.operational-processors.main
+           :major-minor-version "0.0"}
           :ns-default com.repldriven.queenswood.build.build}
   :test
   {:extra-deps
    {ext/mono {:local/root "../../deps/mono-test"}
     bases/external-test-runner {:local/root "../../bases/external-test-runner"}
-    component/test-resources {:local/root
-                                   "../../components/test-resources"}
-    component/testcontainers {:local/root
-                                   "../../components/testcontainers"}
-    component/test-schema {:local/root
-                                "../../components/test-schema"}}}}
+    component/test-resources {:local/root "../../components/test-resources"}
+    component/testcontainers {:local/root "../../components/testcontainers"}
+    component/test-schema {:local/root "../../components/test-schema"}}}}
  :deps
  {ext/mono {:local/root "../../deps/mono"}
   component/fdb {:local/root "../../components/fdb"}
   component/balance {:local/root "../../components/balance"}
-  component/balance-domain
-  {:local/root "../../components/balance-domain"}
-  component/balance-query
-  {:local/root "../../components/balance-query"}
+  component/balance-domain {:local/root "../../components/balance-domain"}
+  component/balance-query {:local/root "../../components/balance-query"}
   component/bank {:local/root "../../components/bank"}
-  component/bank-query
-  {:local/root "../../components/bank-query"}
+  component/bank-query {:local/root "../../components/bank-query"}
   component/cash-account {:local/root "../../components/cash-account"}
-  component/changelog-relay
-  {:local/root "../../components/changelog-relay"}
-  component/cash-account-query
-  {:local/root "../../components/cash-account-query"}
-  component/cash-account-product
-  {:local/root "../../components/cash-account-product"}
+  component/changelog-relay {:local/root "../../components/changelog-relay"}
+  component/cash-account-query {:local/root
+                                "../../components/cash-account-query"}
+  component/cash-account-product {:local/root
+                                  "../../components/cash-account-product"}
   component/cash-account-product-query
   {:local/root "../../components/cash-account-product-query"}
   component/idv {:local/root "../../components/idv"}
   component/interest {:local/root "../../components/interest"}
-  component/ledger-account
-  {:local/root "../../components/ledger-account"}
+  component/ledger-account {:local/root "../../components/ledger-account"}
   component/membership {:local/root "../../components/membership"}
   component/party {:local/root "../../components/party"}
-  component/party-query
-  {:local/root "../../components/party-query"}
-  component/person-identification
-  {:local/root "../../components/person-identification"}
+  component/party-query {:local/root "../../components/party-query"}
+  component/person-identification {:local/root
+                                   "../../components/person-identification"}
   component/policy {:local/root "../../components/policy"}
   component/resources {:local/root "../../components/resources"}
   component/scheduler {:local/root "../../components/scheduler"}
   component/schema {:local/root "../../components/schema"}
   component/transaction {:local/root "../../components/transaction"}
-
-  base/operational-processors
-  {:local/root "../../bases/operational-processors"}
+  base/operational-processors {:local/root "../../bases/operational-processors"}
   ;; protojure brings protobuf-java 4.x which breaks FDB Record Layer
   ;; at runtime — pin to 3.x for binary compatibility
   com.google.protobuf/protobuf-java {:mvn/version "3.25.8"}

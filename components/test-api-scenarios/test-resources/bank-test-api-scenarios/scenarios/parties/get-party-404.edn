@@ -1,5 +1,5 @@
 {:name "Unknown party id returns 404"
- :tags #{:parties :api :unhappy}
+ :tags #{:api :parties :unhappy}
  :given
  [{:command :api/request
    :request {:method :post
@@ -16,10 +16,9 @@
          :client-secret [:ref :org-0 :client-secret]
          :status :live}
    :as :org-0-token}]
- :when
- [{:command :api/request
-   :request {:method :get
-             :path "/v1/parties/{party-id}"
-             :path-params {:party-id "pty.00000000000000000000000000"}
-             :auth :org-0-token}
-   :assert {:status 404}}]}
+ :when [{:command :api/request
+         :request {:method :get
+                   :path "/v1/parties/{party-id}"
+                   :path-params {:party-id "pty.00000000000000000000000000"}
+                   :auth :org-0-token}
+         :assert {:status 404}}]}

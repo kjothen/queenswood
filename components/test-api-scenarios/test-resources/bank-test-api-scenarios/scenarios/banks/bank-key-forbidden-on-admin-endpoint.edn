@@ -1,14 +1,13 @@
-{:name "Service-account JWT is rejected by the admin-only bank creation endpoint"
- :tags #{:banks :api :auth :unhappy}
+{:name
+ "Service-account JWT is rejected by the admin-only bank creation endpoint"
+ :tags #{:api :auth :banks :unhappy}
  :given
  [{:command :api/request
-   :request {:method :post
-             :path "/v1/banks"
-             :auth :admin
-             :body {:name "First Bank"
-                    :status "live"
-                    :tier "micro"
-                    :currencies ["GBP"]}}
+   :request
+   {:method :post
+    :path "/v1/banks"
+    :auth :admin
+    :body {:name "First Bank" :status "live" :tier "micro" :currencies ["GBP"]}}
    :as :bank-0
    :assert {:status 201}}
   {:command :auth/mint-token
@@ -18,11 +17,10 @@
    :as :bank-0-token}]
  :when
  [{:command :api/request
-   :request {:method :post
-             :path "/v1/banks"
-             :auth :bank-0-token
-             :body {:name "Second Bank"
-                    :status "live"
-                    :tier "micro"
-                    :currencies ["GBP"]}}
+   :request
+   {:method :post
+    :path "/v1/banks"
+    :auth :bank-0-token
+    :body
+    {:name "Second Bank" :status "live" :tier "micro" :currencies ["GBP"]}}
    :assert {:status 403}}]}

@@ -1,5 +1,5 @@
 {:name "Merging an active (not suspended) party is rejected"
- :tags #{:parties :api :unhappy}
+ :tags #{:api :parties :unhappy}
  :given
  [{:command :api/request
    :request {:method :post
@@ -16,7 +16,6 @@
          :client-secret [:ref :org-0 :client-secret]
          :status :live}
    :as :org-0-token}
-
   {:command :api/request
    :request {:method :post
              :path "/v1/parties"
@@ -44,7 +43,6 @@
              :path-params {:party-id [:ref :party-0 :party-id]}
              :auth :org-0-token}
    :until {:status 200 :body {:status "active"}}}
-
   {:command :api/request
    :request {:method :post
              :path "/v1/parties"
@@ -72,14 +70,11 @@
              :path-params {:party-id [:ref :party-1 :party-id]}
              :auth :org-0-token}
    :until {:status 200 :body {:status "active"}}}]
-
- :when
- [{:command :api/request
-   :request {:method :post
-             :path "/v1/parties/{party-id}/merge"
-             :path-params {:party-id [:ref :party-1 :party-id]}
-             :auth :org-0-token
-             :headers {:idempotency-key "ik-merge-active-party-merge"}
-             :body {:into-party-id [:ref :party-0 :party-id]}}
-   :assert {:status 409
-            :body {:type ":party/invalid-status"}}}]}
+ :when [{:command :api/request
+         :request {:method :post
+                   :path "/v1/parties/{party-id}/merge"
+                   :path-params {:party-id [:ref :party-1 :party-id]}
+                   :auth :org-0-token
+                   :headers {:idempotency-key "ik-merge-active-party-merge"}
+                   :body {:into-party-id [:ref :party-0 :party-id]}}
+         :assert {:status 409 :body {:type ":party/invalid-status"}}}]}

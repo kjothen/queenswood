@@ -1,9 +1,8 @@
 {:name "Tenant runs a payee check and the simulator returns a close match"
- :tags #{:payee-checks :api :happy}
+ :tags #{:api :happy :payee-checks}
  ;; The ClearBank simulator's CoP route recognises the magic string
- ;; `COP_CLOSEMATCH` in the creditor name and replies with a
- ;; close-match result. See
- ;; bases/clearbank-simulator/src/.../cop/handlers.clj.
+ ;; `COP_CLOSEMATCH` in the creditor name and replies with a close-match
+ ;; result. See bases/clearbank-simulator/src/.../cop/handlers.clj.
  :given
  [{:command :api/request
    :request {:method :post
@@ -20,15 +19,13 @@
          :client-secret [:ref :org-0 :client-secret]
          :status :live}
    :as :org-0-token}]
-
  :when
  [{:command :api/request
    :request {:method :post
              :path "/v1/payee-checks"
              :auth :org-0-token
              :body {:creditor-name "COP_CLOSEMATCH Jane"
-                    :account {:sort-code "040062"
-                              :account-number "12345678"}
+                    :account {:sort-code "040062" :account-number "12345678"}
                     :account-type "personal"}}
    :assert {:status 201
             :body {:check-id [:m/regex "^chk\\."]

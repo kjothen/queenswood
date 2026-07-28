@@ -8,26 +8,17 @@
   {:extra-deps
    {ext/mono {:local/root "../../deps/mono-test"}
     bases/external-test-runner {:local/root "../../bases/external-test-runner"}
-    component/test-resources {:local/root
-                                   "../../components/test-resources"}
-    component/testcontainers {:local/root
-                                   "../../components/testcontainers"}
-    component/test-schema {:local/root
-                                "../../components/test-schema"}
-}}}
- :deps
- {ext/mono {:local/root "../../deps/mono"}
-  component/fdb {:local/root "../../components/fdb"}
-  component/onfido-webhook
-  {:local/root "../../components/onfido-webhook"}
-  component/onfido-relay
-  {:local/root "../../components/onfido-relay"}
-  component/resources {:local/root "../../components/resources"}
-  component/schema {:local/root "../../components/schema"}
-
-
-  base/onfido-adapter {:local/root "../../bases/onfido-adapter"}
-  com.google.protobuf/protobuf-java {:mvn/version "3.25.8"}
-  org.clojure/clojure {:mvn/version "1.12.5"}
-  org.clojure/core.async {:mvn/version "1.9.865"}}
+    component/test-resources {:local/root "../../components/test-resources"}
+    component/testcontainers {:local/root "../../components/testcontainers"}
+    component/test-schema {:local/root "../../components/test-schema"}}}}
+ :deps {ext/mono {:local/root "../../deps/mono"}
+        component/fdb {:local/root "../../components/fdb"}
+        component/onfido-webhook {:local/root "../../components/onfido-webhook"}
+        component/onfido-relay {:local/root "../../components/onfido-relay"}
+        component/resources {:local/root "../../components/resources"}
+        component/schema {:local/root "../../components/schema"}
+        base/onfido-adapter {:local/root "../../bases/onfido-adapter"}
+        com.google.protobuf/protobuf-java {:mvn/version "3.25.8"}
+        org.clojure/clojure {:mvn/version "1.12.5"}
+        org.clojure/core.async {:mvn/version "1.9.865"}}
  :paths ["resources"]}

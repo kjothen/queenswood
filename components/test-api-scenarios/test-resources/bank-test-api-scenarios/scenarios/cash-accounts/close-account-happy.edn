@@ -1,5 +1,5 @@
 {:name "Tenant closes an open cash account"
- :tags #{:cash-accounts :api :happy :lifecycle}
+ :tags #{:api :cash-accounts :happy :lifecycle}
  :given
  [{:command :api/request
    :request {:method :post
@@ -16,7 +16,6 @@
          :client-secret [:ref :org-0 :client-secret]
          :status :live}
    :as :org-0-token}
-
   ;; Active party
   {:command :api/request
    :request {:method :post
@@ -45,7 +44,6 @@
              :path-params {:party-id [:ref :party-0 :party-id]}
              :auth :org-0-token}
    :until {:status 200 :body {:status "active"}}}
-
   ;; Published product
   {:command :api/request
    :request {:method :post
@@ -59,13 +57,13 @@
    :as :draft
    :assert {:status 201 :body {:status "draft"}}}
   {:command :api/request
-   :request {:method :post
-             :path "/v1/cash-account-products/{product-id}/versions/{version-id}/publish"
-             :path-params {:product-id [:ref :draft :product-id]
-                           :version-id [:ref :draft :version-id]}
-             :auth :org-0-token}
+   :request
+   {:method :post
+    :path "/v1/cash-account-products/{product-id}/versions/{version-id}/publish"
+    :path-params {:product-id [:ref :draft :product-id]
+                  :version-id [:ref :draft :version-id]}
+    :auth :org-0-token}
    :assert {:status 200 :body {:status "published"}}}
-
   ;; Open the cash-account and wait for opened
   {:command :api/request
    :request {:method :post
@@ -84,7 +82,6 @@
              :path-params {:account-id [:ref :account-0 :account-id]}
              :auth :org-0-token}
    :until {:status 200 :body {:account-status "opened"}}}]
-
  :when
  [{:command :api/request
    :request {:method :post
@@ -95,7 +92,6 @@
    :assert {:status 200
             :body {:account-id [:ref :account-0 :account-id]
                    :account-status "closing"}}}
-
   ;; Watcher transitions closing -> closed
   {:command :api/poll
    :request {:method :get

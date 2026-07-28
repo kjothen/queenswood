@@ -11,5 +11,4 @@
     (store/save-account txn record-db account)
     (store/save-ledger-entry txn record-db entry))"
   [[txn-sym record-db] & body]
-  `(let [~txn-sym (open-txn ~record-db)]
-     ~@body))
+  `(let [~txn-sym (open-txn ~record-db)] ~@body))

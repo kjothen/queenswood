@@ -10,11 +10,9 @@
            :handler handlers/get-account
            :security [{:api-key []}]
            :responses {200 {:body ::schemas/account
-                             :description "The account"
-                             :examples
-                             {"default"
-                              {:value {:account-id "acc.123"
-                                       :balance 1000}}}}}}}]
+                            :description "The account"
+                            :examples {"default" {:value {:account-id "acc.123"
+                                                          :balance 1000}}}}}}}]
 
    ;; TODO: GET /widgets/:id, following the accounts route's shape
-   ])
+  ])

@@ -1,5 +1,5 @@
 {:name "Unknown product id returns 404"
- :tags #{:cash-account-products :api :unhappy}
+ :tags #{:api :cash-account-products :unhappy}
  :given
  [{:command :api/request
    :request {:method :post
@@ -16,11 +16,10 @@
          :client-secret [:ref :org-0 :client-secret]
          :status :live}
    :as :org-0-token}]
- :when
- [{:command :api/request
-   :request {:method :get
-             :path "/v1/cash-account-products/{product-id}"
-             :path-params {:product-id "prd.00000000000000000000000000"}
-             :auth :org-0-token}
-   :assert {:status 404
-            :problem {:type ":cash-account-product/product-not-found"}}}]}
+ :when [{:command :api/request
+         :request {:method :get
+                   :path "/v1/cash-account-products/{product-id}"
+                   :path-params {:product-id "prd.00000000000000000000000000"}
+                   :auth :org-0-token}
+         :assert {:status 404
+                  :problem {:type ":cash-account-product/product-not-found"}}}]}

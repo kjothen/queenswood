@@ -1,11 +1,10 @@
 {:name "Unauthenticated request rejected"
- :tags #{:banks :api :unhappy :auth}
+ :tags #{:api :auth :banks :unhappy}
  :when
  [{:command :api/request
-   :request {:method :post
-             :path "/v1/banks"
-             :body {:name "No Auth Bank"
-                    :status "live"
-                    :tier "micro"
-                    :currencies ["GBP"]}}
+   :request
+   {:method :post
+    :path "/v1/banks"
+    :body
+    {:name "No Auth Bank" :status "live" :tier "micro" :currencies ["GBP"]}}
    :assert {:status 401}}]}
