@@ -17,6 +17,8 @@
                                    "../../components/test-resources"}
     component/testcontainers {:local/root
                                    "../../components/testcontainers"}
+    component/test-schema {:local/root
+                                "../../components/test-schema"}
 }}}
  :deps
  {ext/mono {:local/root "../../deps/mono"}

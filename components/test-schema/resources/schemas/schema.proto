@@ -1,0 +1,11 @@
+syntax = "proto2";
+
+package com.repldriven.queenswood.test_schemas.schemas;
+
+import "schemas/pets/pet.proto";
+
+option java_outer_classname = "TestSchemaProto";
+
+message RecordTypeUnion {
+  optional com.repldriven.queenswood.test_schemas.pets.Pet _Pet = 1;
+}
