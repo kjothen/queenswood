@@ -5,6 +5,9 @@ processor: !system/component
   schemas: !system/ref avro.serde
   bus: !system/ref message-bus.bus
   scheme-payment-command-channel: !keyword schemes-payment-command
+  business-day-cutoff:
+    zone: Europe/London
+    hour-of-day: 17
 command-processor: !system/component
   system/component-kind: command-processor/command-processor
   bus: !system/ref message-bus.bus
@@ -21,6 +24,9 @@ event-processor-impl: !system/component
   record-db: !system/ref fdb.record-db
   record-store: !system/ref fdb.meta-store
   schemas: !system/ref avro.serde
+  business-day-cutoff:
+    zone: Europe/London
+    hour-of-day: 17
 event-processor: !system/component
   system/component-kind: event-processor/event-processor
   bus: !system/ref message-bus.bus
