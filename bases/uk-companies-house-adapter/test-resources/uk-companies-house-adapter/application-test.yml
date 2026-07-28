@@ -1,7 +1,6 @@
 system:
   avro: !include system/avro-test.yml
-  companies-house-server:
-    !include uk-companies-house-adapter/companies-house-simulator-test.yml
+  companies-house-server: !include system/companies-house-simulator-test.yml
   company-registries: !include system/company-registries-test.yml
   fdb: !include system/fdb-test.yml
   message-bus: !include uk-companies-house-adapter/message-bus-test.yml
