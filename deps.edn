@@ -32,6 +32,7 @@
     components/fdb {:local/root "components/fdb"}
     components/testcontainers
     {:local/root "components/testcontainers"}
+    components/test-schema {:local/root "components/test-schema"}
     components/clearbank-webhook {:local/root
                                        "components/clearbank-webhook"}
     components/clearbank-relay {:local/root
