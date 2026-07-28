@@ -79,6 +79,11 @@ stack has no write verb in scope top to bottom.
   brick and so cannot rely on project exclusion. The
   `system.clj` registration bundle is exempt: it bare-requires
   interfaces to register component-kinds, not to call them.
+  The check asserts its own base path and namespace prefix before
+  running, and fails if either matches nothing. It is two greps over
+  names a rename empties, and an empty candidate set is
+  indistinguishable from a clean one — the `bank-api` → `api` and
+  `mono` → `queenswood` renames left it inert and passing.
 - **`poly check`** — once a service project no longer lists the write
   brick, `poly check` hard-fails any reference to it from that
   project. This is gated on removing the remaining synchronous writers
