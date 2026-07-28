@@ -1,4 +1,4 @@
 system:
-  avro: !include system/avro-test.yml
+  avro: !include system/avro.yml
   fdb: !include system/fdb-test.yml
   idv: !include idv/idv-test.yml

@@ -1,4 +1,4 @@
 system:
-  avro: !include system/avro-test.yml
+  avro: !include system/avro.yml
   fdb: !include system/fdb-test.yml
   payee-checks: !include payee-check/payee-checks-test.yml

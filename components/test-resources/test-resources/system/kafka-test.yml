@@ -25,77 +25,7 @@ schemas: !system/component
 topics: !system/component
   system/component-kind: kafka/topics
   admin: !system/local-ref admin
-  topics:
-    - topic: topic-banks-command
-      partitions: 1
-    - topic: topic-banks-command-dlq
-      partitions: 1
-    - topic: topic-banks-command-response
-      partitions: 1
-    - topic: topic-cash-account-products-command
-      partitions: 1
-    - topic: topic-cash-account-products-command-dlq
-      partitions: 1
-    - topic: topic-cash-account-products-command-response
-      partitions: 1
-    - topic: topic-cash-accounts-command
-      partitions: 1
-    - topic: topic-cash-accounts-command-dlq
-      partitions: 1
-    - topic: topic-cash-accounts-command-response
-      partitions: 1
-    - topic: topic-cash-accounts-event
-      partitions: 1
-    - topic: topic-company-registries-command
-      partitions: 1
-    - topic: topic-company-registries-command-response
-      partitions: 1
-    - topic: topic-idv-command
-      partitions: 1
-    - topic: topic-idv-command-dlq
-      partitions: 1
-    - topic: topic-idv-command-response
-      partitions: 1
-    - topic: topic-idv-event
-      partitions: 1
-    - topic: topic-interest-command
-      partitions: 1
-    - topic: topic-interest-command-dlq
-      partitions: 1
-    - topic: topic-interest-command-response
-      partitions: 1
-    - topic: topic-parties-command
-      partitions: 1
-    - topic: topic-parties-command-dlq
-      partitions: 1
-    - topic: topic-parties-command-response
-      partitions: 1
-    - topic: topic-payee-checks-command
-      partitions: 1
-    - topic: topic-payee-checks-command-dlq
-      partitions: 1
-    - topic: topic-payee-checks-command-response
-      partitions: 1
-    - topic: topic-payments-command
-      partitions: 1
-    - topic: topic-payments-command-dlq
-      partitions: 1
-    - topic: topic-payments-command-response
-      partitions: 1
-    - topic: topic-schemes-payment-command
-      partitions: 1
-    - topic: topic-schemes-payment-command-dlq
-      partitions: 1
-    - topic: topic-schemes-payment-command-response
-      partitions: 1
-    - topic: topic-schemes-payments-event
-      partitions: 1
-    - topic: topic-transactions-command
-      partitions: 1
-    - topic: topic-transactions-command-dlq
-      partitions: 1
-    - topic: topic-transactions-command-response
-      partitions: 1
+  topics: !include kafka-topics.yml
 
 producers: !system/component
   system/component-kind: kafka/producers

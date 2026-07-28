@@ -2,14 +2,14 @@ platform: !system/component
   system/component-kind: policies/policy
   record-db: !system/ref fdb.record-db
   record-store: !system/ref fdb.meta-store
-  policy: !include bank/policies/platform/restricted/policy.yml
+  policy: !include policies/platform/restricted/policy.yml
 micro: !system/component
   system/component-kind: policies/policy
   record-db: !system/ref fdb.record-db
   record-store: !system/ref fdb.meta-store
-  policy: !include bank/policies/micro/restricted/policy.yml
+  policy: !include policies/micro/restricted/policy.yml
 test-scenario: !system/component
   system/component-kind: policies/policy
   record-db: !system/ref fdb.record-db
   record-store: !system/ref fdb.meta-store
-  policy: !include policies/test-scenario/restricted/policy.yml
+  policy: !include test-policies/test-scenario/restricted/policy.yml

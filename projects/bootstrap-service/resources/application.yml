@@ -1,37 +1,37 @@
 system:
-  fdb: !include bank/fdb.yml
+  fdb: !include system/fdb.yml
   policies:
     platform: !system/component
       system/component-kind: policies/policy
       record-db: !system/ref fdb.record-db
       record-store: !system/ref fdb.meta-store
-      policy: !include bank/policies/platform/restricted/policy.yml
+      policy: !include policies/platform/restricted/policy.yml
     micro: !system/component
       system/component-kind: policies/policy
       record-db: !system/ref fdb.record-db
       record-store: !system/ref fdb.meta-store
-      policy: !include bank/policies/micro/restricted/policy.yml
+      policy: !include policies/micro/restricted/policy.yml
   templates:
     current: !system/component
       system/component-kind: cash-account-product-templates/template
       record-db: !system/ref fdb.record-db
       record-store: !system/ref fdb.meta-store
-      template: !include bank/templates/current.yml
+      template: !include templates/current.yml
     savings: !system/component
       system/component-kind: cash-account-product-templates/template
       record-db: !system/ref fdb.record-db
       record-store: !system/ref fdb.meta-store
-      template: !include bank/templates/savings.yml
+      template: !include templates/savings.yml
     term-deposit: !system/component
       system/component-kind: cash-account-product-templates/template
       record-db: !system/ref fdb.record-db
       record-store: !system/ref fdb.meta-store
-      template: !include bank/templates/term-deposit.yml
+      template: !include templates/term-deposit.yml
     own-funds: !system/component
       system/component-kind: cash-account-product-templates/template
       record-db: !system/ref fdb.record-db
       record-store: !system/ref fdb.meta-store
-      template: !include bank/templates/own-funds.yml
+      template: !include templates/own-funds.yml
   telemetry:
     otel-sdk: !system/component
       system/component-kind: telemetry/otel-sdk

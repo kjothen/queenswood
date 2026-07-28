@@ -185,9 +185,9 @@ system:
       payee-checks-command-response:
         consumer: !system/local-ref consumers.payee-checks-command-response
         timeout: 500
-  message-bus: !include bank/message-bus.yml
-  fdb: !include bank/fdb.yml
-  avro: !include bank/avro.yml
+  message-bus: !include system/message-bus.yml
+  fdb: !include system/fdb.yml
+  avro: !include system/avro.yml
   keycloak:
     identity-provider: !system/component
       system/component-kind: keycloak/identity-provider

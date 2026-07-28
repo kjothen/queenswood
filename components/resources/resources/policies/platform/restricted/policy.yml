@@ -1,0 +1,36 @@
+# Stable ID -- bootstrap-service seeds this policy on every install
+# and re-bootstrap. Without a fixed id the domain layer generates a
+# fresh ULID per run, which piles up duplicate rows in FDB. The
+# format conforms to the PolicyId regex enforced by the API
+# (`pol\.[0-9a-hjkmnp-tv-z]{26}`).
+policy-id: pol.00000000000000000000000001
+name: Platform policy
+description: Platform policy - all capabilities and safety limits
+enabled: true
+labels: !strs
+  tier: platform
+category: !keyword policy-category-restricted
+capabilities: !concat
+  - !include policies/platform/restricted/capabilities/balances.yml
+  - !include policies/platform/restricted/capabilities/cash-account-products.yml
+  - !include policies/platform/restricted/capabilities/cash-accounts.yml
+  - !include policies/platform/restricted/capabilities/idvs.yml
+  - !include policies/platform/restricted/capabilities/interest.yml
+  - !include policies/platform/restricted/capabilities/banks.yml
+  - !include policies/platform/restricted/capabilities/ledger-accounts.yml
+  - !include policies/platform/restricted/capabilities/parties.yml
+  - !include policies/platform/restricted/capabilities/payee-checks.yml
+  - !include policies/platform/restricted/capabilities/payments.yml
+  - !include policies/platform/restricted/capabilities/policies.yml
+  - !include policies/platform/restricted/capabilities/transactions.yml
+limits: !concat
+  - !include policies/platform/restricted/limits/balances.yml
+  - !include policies/platform/restricted/limits/cash-account-products.yml
+  - !include policies/platform/restricted/limits/cash-accounts.yml
+  - !include policies/platform/restricted/limits/idvs.yml
+  - !include policies/platform/restricted/limits/interest.yml
+  - !include policies/platform/restricted/limits/parties.yml
+  - !include policies/platform/restricted/limits/payee-checks.yml
+  - !include policies/platform/restricted/limits/payments.yml
+  - !include policies/platform/restricted/limits/policies.yml
+  - !include policies/platform/restricted/limits/transactions.yml

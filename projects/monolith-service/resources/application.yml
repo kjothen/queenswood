@@ -32,8 +32,8 @@ system:
         - idv-event
         - payee-checks-command
         - payee-checks-command-response
-  fdb: !include bank/fdb.yml
-  avro: !include bank/avro.yml
+  fdb: !include system/fdb.yml
+  avro: !include system/avro.yml
   keycloak:
     identity-provider: !system/component
       system/component-kind: keycloak/identity-provider
@@ -49,17 +49,17 @@ system:
       admin-client-id: !env KEYCLOAK_ADMIN_CLIENT_ID
       admin-client-secret: !env KEYCLOAK_ADMIN_CLIENT_SECRET
       expected-issuer: !env KEYCLOAK_OPS_EXPECTED_ISSUER
-  banks: !include bank/bank.yml
-  cash-accounts: !include bank/cash-account.yml
-  cash-account-products: !include bank/cash-account-product.yml
-  parties: !include bank/party.yml
-  payments: !include bank/payment.yml
-  interest: !include bank/interest.yml
-  transactions: !include bank/transaction.yml
-  idv: !include bank/idv.yml
-  payee-checks: !include bank/payee-check.yml
-  policies: !include bank/policy.yml
-  templates: !include bank/templates.yml
+  banks: !include system/bank.yml
+  cash-accounts: !include system/cash-account.yml
+  cash-account-products: !include system/cash-account-product.yml
+  parties: !include system/party.yml
+  payments: !include system/payment.yml
+  interest: !include system/interest.yml
+  transactions: !include system/transaction.yml
+  idv: !include system/idv.yml
+  payee-checks: !include system/payee-check.yml
+  policies: !include system/policy.yml
+  templates: !include system/templates.yml
   scheduler:
     scheduler: !system/component
       system/component-kind: scheduler/scheduler

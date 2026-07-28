@@ -1,0 +1,19 @@
+# Stable ID -- see platform/restricted/policy.yml for rationale.
+policy-id: pol.00000000000000000000000002
+name: Micro tier policy
+description: Micro tier policy - capabilities and limits
+enabled: true
+labels: !strs
+  tier: micro
+category: !keyword policy-category-restricted
+capabilities: !concat
+  - !include policies/micro/restricted/capabilities/banks.yml
+  - !include policies/micro/restricted/capabilities/ledger-accounts.yml
+limits: !concat
+  - !include policies/micro/restricted/limits/transactions.yml
+  - !include policies/micro/restricted/limits/cash-accounts.yml
+  - !include policies/micro/restricted/limits/cash-account-products.yml
+  - !include policies/micro/restricted/limits/payments.yml
+  - !include policies/micro/restricted/limits/payee-checks.yml
+  - !include policies/micro/restricted/limits/parties.yml
+  - !include policies/micro/restricted/limits/idvs.yml

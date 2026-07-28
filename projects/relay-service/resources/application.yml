@@ -39,8 +39,8 @@ system:
     # map, so this is declared empty rather than omitted.
     message-bus-consumers: !system/component
       system/component-kind: kafka/message-bus-consumers
-  message-bus: !include bank/message-bus.yml
-  fdb: !include bank/fdb.yml
+  message-bus: !include system/message-bus.yml
+  fdb: !include system/fdb.yml
   telemetry:
     otel-sdk: !system/component
       system/component-kind: telemetry/otel-sdk

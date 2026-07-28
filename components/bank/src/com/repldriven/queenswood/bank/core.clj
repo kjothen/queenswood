@@ -22,7 +22,7 @@
 (def ^:private default-ledger-accounts
   "The default chart of bank-owned ledger accounts every customer bank
   is seeded with, loaded once from the bank-resources classpath."
-  (let [path "bank/ledgers/general-ledger.edn"
+  (let [path "ledgers/general-ledger.edn"
         url (io/resource path)]
     (when (nil? url)
       ;; nosemgrep: no-raw-throw

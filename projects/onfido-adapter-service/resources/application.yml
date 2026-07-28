@@ -42,9 +42,9 @@ system:
       idv-command:
         consumer: !system/local-ref consumers.idv-command
         timeout: 500
-  message-bus: !include bank/message-bus.yml
-  fdb: !include bank/fdb.yml
-  avro: !include bank/avro.yml
+  message-bus: !include system/message-bus.yml
+  fdb: !include system/fdb.yml
+  avro: !include system/avro.yml
   telemetry:
     otel-sdk: !system/component
       system/component-kind: telemetry/otel-sdk
