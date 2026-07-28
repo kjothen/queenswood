@@ -168,8 +168,6 @@ services:
     resources:
       limits: { cpu: "1000m", memory: "1500Mi" }
       requests: { cpu: "200m", memory: "768Mi" }
-    extraEnv:
-      COMPANIES_HOUSE_URL: "http://{{ .Release.Name }}-uk-companies-house-simulator-service:8084"
 
   # Money path: payment, transaction, interest, payee-check processors
   # in one JVM. Payee-check invokes the ClearBank adapter for
@@ -247,6 +245,18 @@ services:
     http: true
     port: 8083
     replicas: 1
+
+  # Companies House egress. No http: the lookup arrives as a command on
+  # the bus and the reply goes back on the response channel, so there is
+  # no inbound route and no webhook to receive.
+  uk-companies-house-adapter-service:
+    enabled: true
+    replicas: 1
+    waitFor:
+      - service: uk-companies-house-simulator-service
+        port: 8084
+    extraEnv:
+      COMPANIES_HOUSE_URL: "http://{{ .Release.Name }}-uk-companies-house-simulator-service:8084"
 
   uk-companies-house-simulator-service:
     # Disabled in production values; enable for dev/non-prod.

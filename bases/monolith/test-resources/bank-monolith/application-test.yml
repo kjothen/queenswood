@@ -58,10 +58,10 @@ system:
         interest: !system/ref interest.dispatcher
         transactions: !system/ref transactions.dispatcher
         payee-checks: !system/ref payee-checks.dispatcher
+        company-registries: !system/ref company-registries.dispatcher
       avro: !system/ref avro.serde
       record-db: !system/ref fdb.record-db
       record-store: !system/ref fdb.meta-store
-      companies-house-url: !system/ref companies-house-simulator-server.http-url
     jetty-adapter: !system/component
       system/component-kind: server/jetty-adapter
       handler: !system/ref server.handler
@@ -78,3 +78,4 @@ system:
   onfido-adapter-server: !include bank-monolith/onfido-adapter-server-test.yml
   onfido-adapter: !include bank-monolith/onfido-adapter-test.yml
   companies-house-simulator-server: !include bank-monolith/companies-house-simulator-test.yml
+  company-registries: !include bank-monolith/uk-companies-house-adapter-test.yml

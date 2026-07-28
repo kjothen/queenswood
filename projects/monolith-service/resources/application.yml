@@ -27,6 +27,8 @@ system:
         - schemes-payment-command-response
         - idv-command
         - idv-command-response
+        - company-registries-command
+        - company-registries-command-response
         - idv-event
         - payee-checks-command
         - payee-checks-command-response
@@ -101,14 +103,10 @@ system:
         interest: !system/ref interest.dispatcher
         transactions: !system/ref transactions.dispatcher
         payee-checks: !system/ref payee-checks.dispatcher
+        company-registries: !system/ref company-registries.dispatcher
       avro: !system/ref avro.serde
       record-db: !system/ref fdb.record-db
       record-store: !system/ref fdb.meta-store
-      # Companies House runs in-process; reach it via the bound http-url
-      # of its embedded jetty server, not an env URL. (The ClearBank
-      # adapter is reached the same way, but now from the payee-check
-      # processor's config rather than the API server.)
-      companies-house-url: !system/ref companies-house-simulator-server.http-url
     jetty-adapter: !system/component
       system/component-kind: server/jetty-adapter
       handler: !system/ref server.handler
@@ -122,3 +120,4 @@ system:
   onfido-adapter-server: !include bank-monolith/onfido-adapter-server.yml
   onfido-adapter: !include bank-monolith/onfido-adapter.yml
   companies-house-simulator-server: !include bank-monolith/companies-house-simulator.yml
+  company-registries: !include bank-monolith/uk-companies-house-adapter.yml

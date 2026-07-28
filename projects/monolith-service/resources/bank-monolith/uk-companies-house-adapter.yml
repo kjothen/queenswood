@@ -1,0 +1,21 @@
+# Companies House runs in-process here, so the adapter reaches it via
+# the simulator's bound http-url rather than an env URL.
+command-processor-impl: !system/component
+  system/component-kind: uk-companies-house-adapter/command-processor
+  schemas: !system/ref avro.serde
+  record-db: !system/ref fdb.record-db
+  record-store: !system/ref fdb.meta-store
+  companies-house-url: !system/ref companies-house-simulator-server.http-url
+
+command-processor: !system/component
+  system/component-kind: command-processor/command-processor
+  bus: !system/ref message-bus.bus
+  processor: !system/local-ref command-processor-impl
+  command-channel: !keyword company-registries-command
+  command-response-channel: !keyword company-registries-command-response
+
+dispatcher: !system/component
+  system/component-kind: command/dispatcher
+  bus: !system/ref message-bus.bus
+  command-channel: !keyword company-registries-command
+  command-response-channel: !keyword company-registries-command-response

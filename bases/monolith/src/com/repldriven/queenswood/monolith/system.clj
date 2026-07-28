@@ -13,6 +13,7 @@
     com.repldriven.queenswood.onfido-adapter.system
     com.repldriven.queenswood.onfido-simulator.system
     com.repldriven.queenswood.onfido-webhook.interface
+    com.repldriven.queenswood.uk-companies-house-adapter.system
     com.repldriven.queenswood.uk-companies-house-simulator.system
     com.repldriven.queenswood.interest.interface
     com.repldriven.queenswood.party.interface

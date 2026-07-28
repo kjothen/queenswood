@@ -58,6 +58,10 @@ topics: !system/component
       partitions: 1
     - topic: topic-idv-command
       partitions: 1
+    - topic: topic-company-registries-command
+      partitions: 1
+    - topic: topic-company-registries-command-response
+      partitions: 1
     - topic: topic-idv-command-response
       partitions: 1
     - topic: topic-idv-event
@@ -222,6 +226,22 @@ producers: !system/component
     conf:
       bootstrap.servers: !system/local-ref bootstrap-servers
       topic: topic-idv-command
+      acks: all
+  company-registries-command:
+    _: !system/local-ref topics
+    schemas: !system/local-ref schemas
+    schema: !keyword command
+    conf:
+      bootstrap.servers: !system/local-ref bootstrap-servers
+      topic: topic-company-registries-command
+      acks: all
+  company-registries-command-response:
+    _: !system/local-ref topics
+    schemas: !system/local-ref schemas
+    schema: !keyword command-response
+    conf:
+      bootstrap.servers: !system/local-ref bootstrap-servers
+      topic: topic-company-registries-command-response
       acks: all
   idv-command-response:
     _: !system/local-ref topics
@@ -494,6 +514,22 @@ consumers: !system/component
     conf:
       bootstrap.servers: !system/local-ref bootstrap-servers
       group.id: bank-monolith-idv-command-response
+  company-registries-command:
+    _: !system/local-ref topics
+    schemas: !system/local-ref schemas
+    schema: !keyword command
+    topics: [topic-company-registries-command]
+    conf:
+      bootstrap.servers: !system/local-ref bootstrap-servers
+      group.id: bank-monolith-company-registries-command
+  company-registries-command-response:
+    _: !system/local-ref topics
+    schemas: !system/local-ref schemas
+    schema: !keyword command-response
+    topics: [topic-company-registries-command-response]
+    conf:
+      bootstrap.servers: !system/local-ref bootstrap-servers
+      group.id: bank-monolith-company-registries-command-response
   idv-event:
     _: !system/local-ref topics
     schemas: !system/local-ref schemas
@@ -581,6 +617,10 @@ message-bus-producers: !system/component
     producer: !system/local-ref producers.schemes-payment-command-response
   idv-command:
     producer: !system/local-ref producers.idv-command
+  company-registries-command:
+    producer: !system/local-ref producers.company-registries-command
+  company-registries-command-response:
+    producer: !system/local-ref producers.company-registries-command-response
   idv-command-response:
     producer: !system/local-ref producers.idv-command-response
   idv-event:
@@ -645,6 +685,12 @@ message-bus-consumers: !system/component
     timeout: 500
   idv-command:
     consumer: !system/local-ref consumers.idv-command
+  company-registries-command:
+    consumer: !system/local-ref consumers.company-registries-command
+    timeout: 500
+  company-registries-command-response:
+    consumer: !system/local-ref consumers.company-registries-command-response
+    timeout: 500
     timeout: 500
   idv-command-response:
     consumer: !system/local-ref consumers.idv-command-response

@@ -55,6 +55,8 @@
   base/clearbank-simulator {:local/root "../../bases/clearbank-simulator"}
   base/onfido-adapter {:local/root "../../bases/onfido-adapter"}
   base/onfido-simulator {:local/root "../../bases/onfido-simulator"}
+  base/uk-companies-house-adapter {:local/root
+                                   "../../bases/uk-companies-house-adapter"}
   base/uk-companies-house-simulator {:local/root
                                      "../../bases/uk-companies-house-simulator"}
   base/monolith {:local/root "../../bases/monolith"}

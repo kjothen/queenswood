@@ -15,6 +15,13 @@ system:
           bootstrap.servers: !env KAFKA_BOOTSTRAP_SERVERS
           topic: topic-banks-command
           acks: all
+      company-registries-command:
+        schemas: !system/local-ref schemas
+        schema: !keyword command
+        conf:
+          bootstrap.servers: !env KAFKA_BOOTSTRAP_SERVERS
+          topic: topic-company-registries-command
+          acks: all
       cash-accounts-command:
         schemas: !system/local-ref schemas
         schema: !keyword command
@@ -73,6 +80,13 @@ system:
         conf:
           bootstrap.servers: !env KAFKA_BOOTSTRAP_SERVERS
           group.id: api-service-banks-command-response
+      company-registries-command-response:
+        schemas: !system/local-ref schemas
+        schema: !keyword command-response
+        topics: [topic-company-registries-command-response]
+        conf:
+          bootstrap.servers: !env KAFKA_BOOTSTRAP_SERVERS
+          group.id: api-service-company-registries-command-response
       cash-accounts-command-response:
         schemas: !system/local-ref schemas
         schema: !keyword command-response
@@ -126,6 +140,8 @@ system:
       system/component-kind: kafka/message-bus-producers
       banks-command:
         producer: !system/local-ref producers.banks-command
+      company-registries-command:
+        producer: !system/local-ref producers.company-registries-command
       cash-accounts-command:
         producer: !system/local-ref producers.cash-accounts-command
       cash-account-products-command:
@@ -144,6 +160,9 @@ system:
       system/component-kind: kafka/message-bus-consumers
       banks-command-response:
         consumer: !system/local-ref consumers.banks-command-response
+        timeout: 500
+      company-registries-command-response:
+        consumer: !system/local-ref consumers.company-registries-command-response
         timeout: 500
       cash-accounts-command-response:
         consumer: !system/local-ref consumers.cash-accounts-command-response
@@ -196,6 +215,12 @@ system:
       bus: !system/ref message-bus.bus
       command-channel: !keyword banks-command
       command-response-channel: !keyword banks-command-response
+  company-registries:
+    dispatcher: !system/component
+      system/component-kind: command/dispatcher
+      bus: !system/ref message-bus.bus
+      command-channel: !keyword company-registries-command
+      command-response-channel: !keyword company-registries-command-response
   cash-accounts:
     dispatcher: !system/component
       system/component-kind: command/dispatcher
@@ -284,7 +309,6 @@ system:
       avro: !system/ref avro.serde
       record-db: !system/ref fdb.record-db
       record-store: !system/ref fdb.meta-store
-      companies-house-url: !env COMPANIES_HOUSE_URL
     jetty-adapter: !system/component
       system/component-kind: server/jetty-adapter
       handler: !system/ref server.handler
