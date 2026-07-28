@@ -3,6 +3,7 @@ platform: !system/component
   record-db: !system/ref fdb.record-db
   record-store: !system/ref fdb.meta-store
   policy: !include policies/platform/restricted/policy.yml
+
 micro: !system/component
   system/component-kind: policies/policy
   record-db: !system/ref fdb.record-db

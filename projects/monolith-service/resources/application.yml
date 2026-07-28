@@ -60,6 +60,15 @@ system:
   payee-checks: !include system/payee-check.yml
   policies: !include system/policy.yml
   templates: !include system/templates.yml
+  banks-dispatcher: !include system/bank-dispatcher.yml
+  cash-account-products-dispatcher: !include system/cash-account-product-dispatcher.yml
+  cash-accounts-dispatcher: !include system/cash-account-dispatcher.yml
+  cash-accounts-relay: !include system/cash-account-relay.yml
+  interest-dispatcher: !include system/interest-dispatcher.yml
+  parties-dispatcher: !include system/party-dispatcher.yml
+  payee-checks-dispatcher: !include system/payee-check-dispatcher.yml
+  payments-dispatcher: !include system/payment-dispatcher.yml
+  transactions-dispatcher: !include system/transaction-dispatcher.yml
   scheduler:
     scheduler: !system/component
       system/component-kind: scheduler/scheduler
@@ -95,14 +104,14 @@ system:
         bank-status-test: queenswood-api-test
         bank-status-live: queenswood-api-live
       dispatchers:
-        banks: !system/ref banks.dispatcher
-        cash-accounts: !system/ref cash-accounts.dispatcher
-        cash-account-products: !system/ref cash-account-products.dispatcher
-        parties: !system/ref parties.dispatcher
-        payments: !system/ref payments.dispatcher
-        interest: !system/ref interest.dispatcher
-        transactions: !system/ref transactions.dispatcher
-        payee-checks: !system/ref payee-checks.dispatcher
+        banks: !system/ref banks-dispatcher.dispatcher
+        cash-accounts: !system/ref cash-accounts-dispatcher.dispatcher
+        cash-account-products: !system/ref cash-account-products-dispatcher.dispatcher
+        parties: !system/ref parties-dispatcher.dispatcher
+        payments: !system/ref payments-dispatcher.dispatcher
+        interest: !system/ref interest-dispatcher.dispatcher
+        transactions: !system/ref transactions-dispatcher.dispatcher
+        payee-checks: !system/ref payee-checks-dispatcher.dispatcher
         company-registries: !system/ref company-registries.dispatcher
       avro: !system/ref avro.serde
       record-db: !system/ref fdb.record-db

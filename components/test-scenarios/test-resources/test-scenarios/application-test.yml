@@ -4,7 +4,7 @@ system:
   clearbank-adapter-server: !include system/clearbank-adapter-server-test.yml
   clearbank-simulator-server: !include system/clearbank-simulator-test.yml
   fdb: !include system/fdb-test.yml
-  idv: !include system/idv-test.yml
+  idv: !include system/idv.yml
   kafka: !include system/kafka-test.yml
   message-bus: !include system/message-bus-test.yml
   onfido-adapter: !include system/onfido-adapter-test.yml
@@ -13,4 +13,4 @@ system:
   parties: !include test-scenarios/party-test.yml
   payments: !include test-scenarios/payment-test.yml
   policies: !include system/policy-test.yml
-  templates: !include system/templates-test.yml
+  templates: !include system/templates.yml

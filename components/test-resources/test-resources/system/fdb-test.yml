@@ -1,4 +1,4 @@
-_record-types: &record-types !include fdb-record-types.yml
+_record-types: &record-types !include system/fdb-record-types.yml
 
 container: !system/component
   system/component-kind: fdb/container

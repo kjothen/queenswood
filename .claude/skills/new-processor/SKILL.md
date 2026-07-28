@@ -109,7 +109,7 @@ For a brand-new processor `bank-Y` with a paired
    - `resources/application.yml` — pulsar producers/consumers
      for the new topics (subscription named
      `bank-Y-service-<topic>`), message-bus entries, and the
-     `!include bank/Y.yml` line.
+     `!include system/Y.yml` line.
    - `deps.edn` — add the brick (and any new transitive
      bricks); `poly check` confirms.
 

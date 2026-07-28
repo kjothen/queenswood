@@ -17,8 +17,6 @@ event-processor-impl: !system/component
   record-store: !system/ref fdb.meta-store
   schemas: !system/ref avro.serde
 
-# The cursor that feeds this channel lives in relay-service; this
-# service only consumes.
 event-consumer: !system/component
   system/component-kind: changelog-relay/event-consumer
   bus: !system/ref message-bus.bus

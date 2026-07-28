@@ -1,27 +1,35 @@
 system:
   avro: !include system/avro.yml
-  banks: !include system/bank-test.yml
-  cash-account-products: !include system/cash-account-product-test.yml
-  cash-accounts: !include system/cash-account-test.yml
+  banks: !include system/bank.yml
+  banks-dispatcher: !include system/bank-dispatcher.yml
+  cash-account-products: !include system/cash-account-product.yml
+  cash-account-products-dispatcher: !include system/cash-account-product-dispatcher.yml
+  cash-accounts: !include system/cash-account.yml
+  cash-accounts-dispatcher: !include system/cash-account-dispatcher.yml
+  cash-accounts-relay: !include system/cash-account-relay.yml
   clearbank-adapter: !include system/clearbank-adapter-test.yml
   clearbank-adapter-server: !include system/clearbank-adapter-server-test.yml
   clearbank-simulator-server: !include system/clearbank-simulator-test.yml
   companies-house-server: !include system/companies-house-simulator-test.yml
   company-registries: !include system/company-registries-test.yml
   fdb: !include system/fdb-test.yml
-  idv: !include system/idv-test.yml
-  interest: !include system/interest-test.yml
+  idv: !include system/idv.yml
+  interest: !include system/interest.yml
+  interest-dispatcher: !include system/interest-dispatcher.yml
   kafka: !include system/kafka-test.yml
   keycloak: !include system/keycloak-test.yml
   message-bus: !include system/message-bus-test.yml
   onfido-adapter: !include system/onfido-adapter-test.yml
   onfido-adapter-server: !include system/onfido-adapter-server-test.yml
   onfido-simulator-server: !include system/onfido-simulator-test.yml
-  parties: !include system/party-test.yml
+  parties: !include system/party.yml
+  parties-dispatcher: !include system/party-dispatcher.yml
   payee-checks: !include system/payee-check-test.yml
-  payments: !include system/payment-test.yml
+  payments: !include system/payment.yml
+  payments-dispatcher: !include system/payment-dispatcher.yml
   policies: !include system/policy-test.yml
   server: !include monolith/server-test.yml
   telemetry: !include monolith/telemetry-test.yml
-  templates: !include system/templates-test.yml
-  transactions: !include system/transaction-test.yml
+  templates: !include system/templates.yml
+  transactions: !include system/transaction.yml
+  transactions-dispatcher: !include system/transaction-dispatcher.yml

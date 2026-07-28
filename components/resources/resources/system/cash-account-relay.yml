@@ -1,0 +1,16 @@
+relay-handler: !system/component
+  system/component-kind: changelog-relay/envelope-handler
+  bus: !system/ref message-bus.bus
+  event-channel: !keyword cash-accounts-event
+  store-name: cash-accounts
+
+# One JVM, so the monolith owns the cursor itself rather than
+# deferring to relay-service.
+
+relay-runners: !system/component
+  system/component-kind: changelog-relay/runners
+  cash-accounts:
+    record-db: !system/ref fdb.record-db
+    consumer-id: cash-account-watcher
+    store-name: cash-accounts
+    handler: !system/local-ref relay-handler

@@ -10,4 +10,4 @@ admin: !system/component
 topics: !system/component
   system/component-kind: kafka/topics
   admin: !system/local-ref admin
-  topics: !include kafka-topics.yml
+  topics: !include system/kafka-topics.yml
