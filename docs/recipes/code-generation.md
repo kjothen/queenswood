@@ -43,14 +43,8 @@ The brick's `deps.edn` declares `:deps/prep-lib` and a
 
 ```clojure
 {:paths ["src" "gen" "resources" "classes"]
- :deps {io.github.protojure/core
-        {:mvn/version "2.11.0"}
-        ;; Compatibility pin so the :build alias's javac
-        ;; compiles against 3.x for FDB Record Layer
-        com.google.protobuf/protobuf-java
-        {:mvn/version "3.25.8"}
-        org.foundationdb/fdb-record-layer-core
-        {:mvn/version "4.12.14.0"}}
+ :deps {pin/protojure {:local/root "../../deps/protojure"}
+        pin/fdb {:local/root "../../deps/fdb"}}
  :deps/prep-lib {:alias :build
                  :fn build/gen-proto
                  :ensure "classes"}
@@ -58,12 +52,21 @@ The brick's `deps.edn` declares `:deps/prep-lib` and a
  {:build
   {:deps {io.github.clojure/tools.build
           {:mvn/version "0.10.12"}
-          org.foundationdb/fdb-record-layer-core
-          {:mvn/version "4.12.14.0"}}
+          pin/fdb {:local/root "../../deps/fdb"}}
    :extra-deps {com.repldriven.queenswood/build
                 {:local/root "../../bases/build"}}
    :paths ["."]}}}
 ```
+
+The protobuf and record-layer coordinates come from the `deps/`
+shims rather than being written here — see
+[projects.md](projects.md#library-pinning) for why the versions
+live in one place and which of them need an `:exclusions` entry
+to hold. `pin/fdb` appears twice because an alias's `:deps` key
+replaces the project's rather than extending it: `b/javac` builds
+its basis from the brick's `deps.edn` with no aliases, while
+`gen-proto` resolves the record-layer JAR off the `:build`
+alias's classpath to extract its `.proto` files.
 
 Key fields:
 

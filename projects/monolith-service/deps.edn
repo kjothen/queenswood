@@ -58,7 +58,6 @@
   base/uk-companies-house-simulator {:local/root
                                      "../../bases/uk-companies-house-simulator"}
   base/monolith {:local/root "../../bases/monolith"}
-  com.google.protobuf/protobuf-java {:mvn/version "3.25.8"}
   org.clojure/clojure {:mvn/version "1.12.5"}
-  org.clojure/core.async {:mvn/version "1.9.865"}}
+  pin/clojure {:local/root "../../deps/clojure"}}
  :paths ["resources"]}

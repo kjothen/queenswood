@@ -8,11 +8,8 @@
     bases/build {:local/root "bases/build" :exclusions [org.slf4j/slf4j-nop]}
     bases/external-test-runner {:local/root "bases/external-test-runner"
                                 :exclusions [org.slf4j/slf4j-nop]}
-    ;; protojure brings protobuf-java 4.x which breaks FDB Record Layer
-    ;; at runtime — pin to 3.x for binary compatibility
-    com.google.protobuf/protobuf-java {:mvn/version "3.25.8"}
     org.clojure/clojure {:mvn/version "1.12.5"}
-    org.clojure/core.async {:mvn/version "1.9.865"}
+    pin/clojure {:local/root "deps/clojure"}
     djblue/portal {:mvn/version "0.67.1"}
     components/balance {:local/root "components/balance"}
     components/balance-domain {:local/root "components/balance-domain"}

@@ -38,6 +38,14 @@ for f in infra/docker/service/Dockerfile infra/docker/fdb/Dockerfile; do
     "$(sed -n 's/^ARG FDB_VERSION=\([0-9][0-9.]*\).*/\1/p' "$f" | head -1)"
 done
 
+# The JVM client coordinate. deps/fdb is the workspace's single source for it
+# -- every brick reaches fdb-java through that shim -- but EDN cannot read
+# JSON, so the one remaining copy is asserted here. The `:exclusions` entry
+# names fdb-java without a version and so cannot match this pattern.
+check "deps/fdb/deps.edn (fdb-java)" "$fdb" \
+  "$(sed -n 's/.*org\.foundationdb\/fdb-java {:mvn\/version "\([^"]*\)".*/\1/p' \
+       deps/fdb/deps.edn | head -1)"
+
 values=infra/helm/queenswood/values.yaml
 
 # Read with awk rather than a YAML parser so this needs only jq, which both
@@ -69,10 +77,29 @@ check "$values (initContainer $fdb_minor tag)" "$fdb" \
           f && /^    "/ {f = 0}
           f && /^        tag:/ {print $2; exit}' "$values")"
 
+# Clojure itself cannot be single-sourced through deps/clojure the way
+# core.async is: the CLI merges its own root deps.edn into every project's
+# :deps, so Clojure is always a direct dependency and a coordinate one level
+# down never competes. Drop a project's pin and it does not inherit the
+# workspace version, it silently takes whatever Clojure the caller's CLI
+# ships. So every project repeats the pin, and the copies are asserted
+# against the root deps.edn here rather than left to drift.
+clj=$(sed -n 's/.*org\.clojure\/clojure {:mvn\/version "\([^"]*\)".*/\1/p' \
+        deps.edn | head -1)
+
+echo
+echo "Pinned copies of Clojure $clj, against deps.edn:"
+
+for f in projects/*/deps.edn; do
+  check "$f (org.clojure/clojure)" "$clj" \
+    "$(sed -n 's/.*org\.clojure\/clojure {:mvn\/version "\([^"]*\)".*/\1/p' \
+         "$f" | head -1)"
+done
+
 if [ "$fail" -ne 0 ]; then
   cat <<EOF
 
-Update the files above to match $versions, or change $versions if the
+Update the files above to match their source, or change the source if the
 intent was to move the pin. The FoundationDB client, the client baked into
 the service image, and the deployed cluster all share a protocol version and
 must move together.

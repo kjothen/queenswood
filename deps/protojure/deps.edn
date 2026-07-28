@@ -1,0 +1,13 @@
+;; Single source of the protojure and protobuf-java coordinates. Consumers
+;; reference this by :local/root as pin/protojure; bump the versions here on
+;; upgrade.
+;;
+;; protojure ships protobuf-java 4.x, which the FDB Record Layer cannot load
+;; -- it needs the 3.x line, and protoc is held on 25.x for the same reason
+;; (see versions.json). Excluding protojure's copy keeps 4.x out of every
+;; dependency graph, rather than re-pinning 3.x in each consumer and relying
+;; on top-level-wins to arbitrate a conflict that then has to be repeated
+;; everywhere it can arise.
+{:deps {io.github.protojure/core
+        {:mvn/version "2.11.0" :exclusions [com.google.protobuf/protobuf-java]}
+        com.google.protobuf/protobuf-java {:mvn/version "3.25.8"}}}

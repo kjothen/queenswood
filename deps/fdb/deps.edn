@@ -1,0 +1,17 @@
+;; Single source of the FoundationDB JVM coordinates. Consumers reference
+;; this by :local/root as pin/fdb; bump the versions here on upgrade.
+;;
+;; fdb-java must match the FoundationDB server and the libfdb_c baked into
+;; the service image -- client and cluster share a protocol version. That
+;; version lives in versions.json, which drives flake.nix, the CI workflows
+;; and the Docker/Helm copies; this file is its Maven-coordinate twin and
+;; scripts/check-versions.sh asserts the two agree.
+;;
+;; fdb-record-layer-core ships its own fdb-java, older than the client we
+;; want. Excluding it keeps the stale coordinate out of the graph entirely
+;; rather than leaving the resolver to arbitrate on newest-wins, which
+;; happens to favour us today but would silently invert the moment we need
+;; a client older than the record layer's.
+{:deps {org.foundationdb/fdb-record-layer-core
+        {:mvn/version "4.10.4.0" :exclusions [org.foundationdb/fdb-java]}
+        org.foundationdb/fdb-java {:mvn/version "7.3.75"}}}

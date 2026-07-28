@@ -24,9 +24,6 @@
   component/resources {:local/root "../../components/resources"}
   component/schema {:local/root "../../components/schema"}
   base/relay {:local/root "../../bases/relay"}
-  ;; protojure brings protobuf-java 4.x which breaks FDB Record Layer
-  ;; at runtime — pin to 3.x for binary compatibility
-  com.google.protobuf/protobuf-java {:mvn/version "3.25.8"}
   org.clojure/clojure {:mvn/version "1.12.5"}
-  org.clojure/core.async {:mvn/version "1.9.865"}}
+  pin/clojure {:local/root "../../deps/clojure"}}
  :paths ["resources"]}

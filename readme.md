@@ -176,8 +176,18 @@ version with the server the Testcontainers image builds, and
 which is what `just doctor` exists to catch.
 
 The pins that cannot read `versions.json` — the Dockerfile
-`ARG` defaults and the Helm values — are asserted against it by
-`just check-versions`, which also gates the test workflow.
+`ARG` defaults, the Helm values, and the `fdb-java` coordinate in
+`deps/fdb` — are asserted against it by `just check-versions`,
+which also gates the test workflow. The same command checks the
+per-project `org.clojure/clojure` pins against the root
+`deps.edn`; Clojure is the one library that cannot be pinned from
+a single place, because the CLI merges its own version into every
+project as a direct dependency.
+
+JVM library versions otherwise live in shims under `deps/`, pulled
+in by `:local/root` under a `pin/` prefix, so a coordinate shared
+across bricks is written once. See
+[recipes/projects.md](docs/recipes/projects.md#library-pinning).
 
 ### REPL (Testcontainers)
 
