@@ -10,7 +10,6 @@
  :deps {ext/mono {:local/root "../../deps/mono"}
         component/onfido-webhook {:local/root "../../components/onfido-webhook"}
         base/onfido-simulator {:local/root "../../bases/onfido-simulator"}
-        com.google.protobuf/protobuf-java {:mvn/version "3.25.8"}
         org.clojure/clojure {:mvn/version "1.12.5"}
-        org.clojure/core.async {:mvn/version "1.9.865"}}
+        pin/clojure {:local/root "../../deps/clojure"}}
  :paths ["resources"]}

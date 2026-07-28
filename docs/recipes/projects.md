@@ -67,8 +67,8 @@ Adapted from `projects/api-service/deps.edn`:
         ;; ... (every base the project ships)
 
         ;; Project-level pins
-        org.clojure/clojure {:mvn/version "1.12.4"}
-        com.google.protobuf/protobuf-java {:mvn/version "3.25.8"}}
+        org.clojure/clojure {:mvn/version "1.12.5"}
+        pin/clojure {:local/root "../../deps/clojure"}}
 
  :aliases
  {:build {:deps {bases/build {:local/root "../../bases/build"}}
@@ -91,14 +91,38 @@ Adapted from `projects/api-service/deps.edn`:
  :paths ["resources"]}
 ```
 
-### Project-level library pinning
+### Library pinning
 
-Some libraries need to be pinned at the project level rather
-than inside a component, typically for binary compatibility.
-Service projects pin `com.google.protobuf/protobuf-java` to 3.x
-because protojure transitively brings 4.x, which breaks the FDB
-Record Layer at runtime. This kind of pin lives in the project's
-`:deps`, not in any single component.
+Libraries that several bricks share, or that need holding at a
+particular version for binary compatibility, are pinned once in a
+shim under `deps/` and pulled in by `:local/root` — the same
+pattern `deps/mono` uses for the upstream coordinate. Consumers
+reference them under a `pin/` prefix:
+
+- `pin/protojure` — protojure plus `protobuf-java` 3.x. protojure
+  ships 4.x, which the FDB Record Layer cannot load, so the shim
+  excludes protojure's copy outright.
+- `pin/fdb` — `fdb-java` plus `fdb-record-layer-core`. The record
+  layer ships an older `fdb-java`, which the shim excludes.
+- `pin/clojure` — `core.async`.
+
+A shim only controls a version if the coordinate reaches the
+resolver at the depth it needs. Pinning *up* (holding a library
+above what something else asks for) works unaided, because the
+resolver's tie-break at equal depth takes the newer version.
+Pinning *down* does not: the shim's copy sits one level below a
+direct dependency and loses, so the competing copy has to be
+excluded at the point it enters — which is what `pin/protojure`
+and `pin/fdb` do.
+
+`org.clojure/clojure` is the exception that cannot be shimmed at
+all. The CLI merges its own root `deps.edn` into every project's
+`:deps`, so Clojure is always a direct dependency and a coordinate
+one level down never competes. A project that drops the pin does
+not inherit the workspace version — it silently takes whatever
+Clojure the caller's CLI ships. Every project therefore repeats
+`org.clojure/clojure`, and `just check-versions` asserts the
+copies against the root `deps.edn`.
 
 ## Rules
 

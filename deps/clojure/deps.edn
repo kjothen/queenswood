@@ -1,0 +1,22 @@
+;; Single source of the Clojure-family coordinates that can be pinned from
+;; one place. Consumers reference this by :local/root as pin/clojure.
+;;
+;; org.clojure/clojure is deliberately NOT here, and cannot be: the CLI
+;; merges its own root deps.edn into every project's :deps, so Clojure is
+;; always present as a direct dependency and a coordinate one level down
+;; never gets to compete. An empty {:deps {}} project resolves the CLI's
+;; own Clojure -- 1.12.4 on the 1.12.4.1629 CLI this workspace ships --
+;; which means dropping the per-project pin does not fall back to the
+;; version named here, it falls back to whatever CLI the caller ran. Each
+;; project therefore declares org.clojure/clojure itself; keep those in
+;; step with the Clojure release core.async is tracking below.
+;;
+;; No :exclusions here, unlike pin/protojure and pin/fdb. Those pin *down*
+;; -- they hold a library below what something else asks for, which a shim
+;; cannot do alone, because a coordinate one level down loses the
+;; newest-wins tie-break and needs the competing copy excluded outright.
+;; core.async pins *up*: protojure and friends bring 1.6.681, 1.7.701 and
+;; 1.8.741, all older, so the tie-break already selects this one. Should
+;; that invert -- a dependency shipping a newer core.async than we want --
+;; this file stops being sufficient and the competing copy needs excluding.
+{:deps {org.clojure/core.async {:mvn/version "1.9.865"}}}

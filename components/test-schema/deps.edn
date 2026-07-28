@@ -2,21 +2,17 @@
 ;; save/load, scan, query, changelog — without dragging the banking schema
 ;; into `components/fdb`. Ported from mono, which dropped it in v0.0.17.
 ;;
-;; The record-layer version must match `components/fdb`; javac compiles the
-;; generated classes against its record annotations.
+;; The record layer comes from the same pin as `components/fdb`, so the two
+;; cannot drift; javac compiles the generated classes against its record
+;; annotations. See `components/schema/deps.edn` for why the pin sits in
+;; top-level deps and is repeated under :build.
 {:paths ["src" "gen" "resources" "classes"]
- :deps {io.github.protojure/core {:mvn/version "2.11.0"}
-        com.google.protobuf/protobuf-java {:mvn/version "3.25.8"}
-        ;; fdb-record-layer-core sits in top-level deps even though only
-        ;; the prep step's javac uses it: tools.deps prep runs the brick's
-        ;; top-level deps as the javac classpath rather than merging the
-        ;; :build alias's own :deps.
-        org.foundationdb/fdb-record-layer-core {:mvn/version "4.10.4.0"}}
+ :deps {pin/protojure {:local/root "../../deps/protojure"}
+        pin/fdb {:local/root "../../deps/fdb"}}
  :deps/prep-lib {:alias :build :fn build/gen-proto :ensure "classes"}
  :aliases {:test {:extra-paths []}
            :build {:deps {io.github.clojure/tools.build {:mvn/version "0.10.12"}
-                          org.foundationdb/fdb-record-layer-core {:mvn/version
-                                                                  "4.10.4.0"}}
+                          pin/fdb {:local/root "../../deps/fdb"}}
                    :extra-deps {com.repldriven.queenswood/build
                                 {:local/root "../../bases/build"}}
                    :paths ["."]}}}
