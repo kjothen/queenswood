@@ -51,7 +51,7 @@
 
 (defn- scenario-files
   []
-  (->> (io/file (.getFile (io/resource "bank-test-scenarios/scenarios")))
+  (->> (io/file (.getFile (io/resource "test-scenarios/scenarios")))
        (.listFiles)
        (filter (fn [f] (.endsWith (.getName f) ".edn")))
        (sort-by (fn [f] (.getName f)))))
@@ -161,9 +161,9 @@
     (is (seq files) "expected scenarios on the classpath")
     (log/info "scenarios starting" {:count (count files)})
     (with-test-system
-     [sys ["classpath:bank-test-scenarios/application-test.yml" patch-handlers]]
+     [sys ["classpath:test-scenarios/application-test.yml" patch-handlers]]
      (doseq [f files]
-       (let [resource-path (str "bank-test-scenarios/scenarios/" (.getName f))]
+       (let [resource-path (str "test-scenarios/scenarios/" (.getName f))]
          (nom-test> [loaded (SUT/from-resource resource-path)
                      steps (SUT/steps loaded)
                      _ (log/info "scenario running"

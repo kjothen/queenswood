@@ -36,7 +36,7 @@
 (deftest lookup-company-test
   (with-test-system
    [sys
-    ["classpath:bank-company-registry/application-test.yml"
+    ["classpath:company-registry/application-test.yml"
      #(assoc-in % [:system/defs :server :handler] api/app)]]
    (let [config (lookup-config sys)]
      (testing "fetches a known company and persists it under company_number"

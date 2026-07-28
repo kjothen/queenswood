@@ -88,7 +88,7 @@
 
 (deftest seed!-test
   (with-test-system
-   [sys "classpath:bank-ledger-account/application-test.yml"]
+   [sys "classpath:ledger-account/application-test.yml"]
    (let [config (fdb-config sys)
          bank-id "bnk.test-seed"]
      (testing "seeds seven ledger accounts per currency, each with a led. id"
@@ -110,7 +110,7 @@
 
 (deftest find-by-code-and-get-account-test
   (with-test-system
-   [sys "classpath:bank-ledger-account/application-test.yml"]
+   [sys "classpath:ledger-account/application-test.yml"]
    (let [config (fdb-config sys)
          bank-id "bnk.test-lookup"]
      (nom-test> [_ (seed! config bank-id)
@@ -133,7 +133,7 @@
 
 (deftest add-control-legs-test
   (with-test-system
-   [sys "classpath:bank-ledger-account/application-test.yml"]
+   [sys "classpath:ledger-account/application-test.yml"]
    (let [config (fdb-config sys)
          bank-id "bnk.test-expand"]
      (nom-test> [_ (seed! config bank-id)
@@ -173,7 +173,7 @@
 
 (deftest close-account-zero-balance-test
   (with-test-system
-   [sys "classpath:bank-ledger-account/application-test.yml"]
+   [sys "classpath:ledger-account/application-test.yml"]
    (let [config (fdb-config sys)
          bank-id "bnk.test-close-zero"]
      (nom-test> [_ (seed! config bank-id)
@@ -188,7 +188,7 @@
 
 (deftest close-account-non-zero-balance-test
   (with-test-system
-   [sys "classpath:bank-ledger-account/application-test.yml"]
+   [sys "classpath:ledger-account/application-test.yml"]
    (let [config (fdb-config sys)
          bank-id "bnk.test-close-nonzero"
          seeded (seed! config bank-id)
@@ -212,7 +212,7 @@
 
 (deftest close-account-already-closed-test
   (with-test-system
-   [sys "classpath:bank-ledger-account/application-test.yml"]
+   [sys "classpath:ledger-account/application-test.yml"]
    (let [config (fdb-config sys)
          bank-id "bnk.test-close-double"
          seeded (seed! config bank-id)
@@ -227,7 +227,7 @@
 
 (deftest closed-control-rejects-fan-out-test
   (with-test-system
-   [sys "classpath:bank-ledger-account/application-test.yml"]
+   [sys "classpath:ledger-account/application-test.yml"]
    (let [config (fdb-config sys)
          bank-id "bnk.test-close-control"
          seeded (seed! config bank-id)
@@ -249,7 +249,7 @@
 
 (deftest close-account-policy-denied-test
   (with-test-system
-   [sys "classpath:bank-ledger-account/application-test.yml"]
+   [sys "classpath:ledger-account/application-test.yml"]
    (let [config (fdb-config sys)
          bank-id "bnk.test-close-denied"
          deny-policy {:enabled true

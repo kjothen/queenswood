@@ -34,7 +34,7 @@
 
 (deftest openapi-test
   (with-test-system [sys
-                     ["classpath:bank-onfido-simulator/application-test.yml"
+                     ["classpath:onfido-simulator/application-test.yml"
                       #(assoc-in % [:system/defs :server :handler] api/app)]]
                     (let [jetty (system/instance sys [:server :jetty-adapter])]
                       (binding [*base-url* (server/http-local-url jetty)]
@@ -48,7 +48,7 @@
 (deftest applicants-and-checks-test
   (with-test-system
    [sys
-    ["classpath:bank-onfido-simulator/application-test.yml"
+    ["classpath:onfido-simulator/application-test.yml"
      #(assoc-in % [:system/defs :server :handler] api/app)]]
    (let [jetty (system/instance sys [:server :jetty-adapter])]
      (binding [*base-url* (server/http-local-url jetty)]
@@ -84,7 +84,7 @@
 (deftest webhook-crud-test
   (with-test-system
    [sys
-    ["classpath:bank-onfido-simulator/application-test.yml"
+    ["classpath:onfido-simulator/application-test.yml"
      #(assoc-in % [:system/defs :server :handler] api/app)]]
    (let [jetty (system/instance sys [:server :jetty-adapter])]
      (binding [*base-url* (server/http-local-url jetty)]

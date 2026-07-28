@@ -131,7 +131,7 @@
 
 (deftest clearbank-adapter-test
   (with-test-system [sys
-                     ["classpath:bank-clearbank-adapter/application-test.yml"
+                     ["classpath:clearbank-adapter/application-test.yml"
                       #(assoc-in % [:system/defs :server :handler] api/app)]]
                     (let [jetty (system/instance sys [:server :jetty-adapter])]
                       (binding [*base-url* (server/http-local-url jetty)]

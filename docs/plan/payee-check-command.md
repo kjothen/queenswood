@@ -97,12 +97,12 @@ unavailable result, still persists, still replies ACCEPTED.
 
 ### 4. Monolith and scenario system wiring
 
-- New `components/test-resources/test-resources/bank/payee-check-test.yml`
+- New `components/test-resources/test-resources/system/payee-check-test.yml`
   mirroring `cash-account-test.yml`: `processor` (kind `payee-check/processor`,
   with `clearbank-adapter-url: !system/ref clearbank-adapter-server.http-url`),
   `command-processor` (channels `payee-checks-command` /
   `payee-checks-command-response`), `dispatcher`.
-- Add `payee-checks: !include bank/payee-check-test.yml` to the two
+- Add `payee-checks: !include system/payee-check-test.yml` to the two
   `application-test.yml` files that have a server + dispatchers: bank-monolith
   and bank-test-api-scenarios. (test-scenarios is domain-layer — it only
   reads via `get-check`, so it needs no processor wiring.)

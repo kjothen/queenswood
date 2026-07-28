@@ -1,0 +1,49 @@
+handler: !system/required-component
+interceptors: !system/component
+  system/component-kind: server/interceptors
+  identity-provider: !system/ref keycloak.identity-provider
+  # All identity-provider instances the auth interceptor may use
+  # to verify an incoming JWT. The interceptor extracts the
+  # unverified `iss` claim, picks the matching provider, then
+  # verifies. queenswood = console; queenswood-ops = operator SPA.
+  identity-providers:
+    - !system/ref keycloak.identity-provider
+    - !system/ref keycloak.identity-provider-ops
+  expected-audiences:
+    - queenswood-api-test
+    - queenswood-api-live
+    # SPA user JWTs carry the public client id as aud (audience
+    # mapper points the client at itself).
+    - queenswood-console
+    - queenswood-app
+  # The Keycloak public client ids whose JWTs the auth interceptor
+  # treats as user JWTs (azp == one of these); anything else is
+  # treated as a service JWT.
+  user-client-ids:
+    - queenswood-console
+    - queenswood-app
+  audiences-by-status:
+    bank-status-test: queenswood-api-test
+    bank-status-live: queenswood-api-live
+  dispatchers:
+    banks: !system/ref banks.dispatcher
+    cash-accounts: !system/ref cash-accounts.dispatcher
+    cash-account-products: !system/ref cash-account-products.dispatcher
+    parties: !system/ref parties.dispatcher
+    payments: !system/ref payments.dispatcher
+    interest: !system/ref interest.dispatcher
+    transactions: !system/ref transactions.dispatcher
+    payee-checks: !system/ref payee-checks.dispatcher
+    company-registries: !system/ref company-registries.dispatcher
+  avro: !system/ref avro.serde
+  record-db: !system/ref fdb.record-db
+  record-store: !system/ref fdb.meta-store
+jetty-adapter: !system/component
+  system/component-kind: server/jetty-adapter
+  handler: !system/ref server.handler
+  interceptors: !system/ref server.interceptors
+  options: !profile
+    dev:
+      port: 8080
+    default:
+      port: 0

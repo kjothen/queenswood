@@ -15,7 +15,7 @@
 ;; required images for FDB, Pulsar, etc
 
 (comment
-  (def sys (main/start "classpath:bank-monolith/application-test.yml" :dev))
+  (def sys (main/start "classpath:monolith/application-test.yml" :dev))
   (tap> sys)
   (main/stop sys)
 

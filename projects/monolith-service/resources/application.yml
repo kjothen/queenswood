@@ -113,11 +113,11 @@ system:
       interceptors: !system/ref server.interceptors
       options:
         port: 8080
-  clearbank-simulator-server: !include bank-monolith/clearbank-simulator.yml
-  clearbank-adapter-server: !include bank-monolith/clearbank-adapter-server.yml
-  clearbank-adapter: !include bank-monolith/clearbank-adapter.yml
-  onfido-simulator-server: !include bank-monolith/onfido-simulator.yml
-  onfido-adapter-server: !include bank-monolith/onfido-adapter-server.yml
-  onfido-adapter: !include bank-monolith/onfido-adapter.yml
-  companies-house-simulator-server: !include bank-monolith/companies-house-simulator.yml
-  company-registries: !include bank-monolith/uk-companies-house-adapter.yml
+  clearbank-simulator-server: !include monolith/clearbank-simulator.yml
+  clearbank-adapter-server: !include monolith/clearbank-adapter-server.yml
+  clearbank-adapter: !include monolith/clearbank-adapter.yml
+  onfido-simulator-server: !include monolith/onfido-simulator.yml
+  onfido-adapter-server: !include monolith/onfido-adapter-server.yml
+  onfido-adapter: !include monolith/onfido-adapter.yml
+  companies-house-server: !include monolith/companies-house-simulator.yml
+  company-registries: !include monolith/uk-companies-house-adapter.yml

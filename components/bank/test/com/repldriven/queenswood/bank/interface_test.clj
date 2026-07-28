@@ -40,7 +40,7 @@
 
 (deftest new-bank-with-membership-test
   (with-test-system
-   [sys "classpath:bank-bank/application-test.yml"]
+   [sys "classpath:bank/application-test.yml"]
    (let [config (fdb-config sys)
          idp (identity-provider/local-provider {})
          user-id "usr.test-onboard"]
@@ -76,7 +76,7 @@
 
 (deftest change-tier-test
   (with-test-system
-   [sys "classpath:bank-bank/application-test.yml"]
+   [sys "classpath:bank/application-test.yml"]
    (let [config (fdb-config sys)
          idp (identity-provider/local-provider {})]
      (nom-test> [{:keys [bank]} (SUT/new-bank config
@@ -117,7 +117,7 @@
 
 (deftest change-status-test
   (with-test-system
-   [sys "classpath:bank-bank/application-test.yml"]
+   [sys "classpath:bank/application-test.yml"]
    (let [config (fdb-config sys)
          idp (identity-provider/local-provider {})]
      (nom-test> [{:keys [bank]} (SUT/new-bank config

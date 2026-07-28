@@ -1,0 +1,2 @@
+system:
+  server: !include onfido-simulator/server-test.yml

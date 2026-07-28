@@ -1,0 +1,12 @@
+system:
+  avro: !include system/avro-test.yml
+  cash-account: !include interest/cash-account-test.yml
+  fdb: !include system/fdb-test.yml
+  interest: !include interest/interest-test.yml
+  message-bus: !include interest/message-bus-test.yml
+  policies: !include system/policy-test.yml
+  templates: !include system/templates-test.yml
+  # The account open/close second leg now goes over the bus, so this rig
+  # needs one. The in-process channel backend keeps it to FDB as the only
+  # container; it is at-most-once, which is fine here — the scenario
+  # bricks run real Kafka and cover delivery semantics.

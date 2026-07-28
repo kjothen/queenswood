@@ -36,7 +36,8 @@ YAML, wired by `!system/local-ref`:
    the same way production would consume them from a YAML
    literal or `!env`.
 
-Adapted from `bases/monolith/test-resources/bank/fdb-test.yml`:
+Adapted from
+`components/test-resources/test-resources/system/fdb-test.yml`:
 
 ```yaml
 fdb:

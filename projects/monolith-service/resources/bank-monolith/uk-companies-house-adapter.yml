@@ -5,7 +5,7 @@ command-processor-impl: !system/component
   schemas: !system/ref avro.serde
   record-db: !system/ref fdb.record-db
   record-store: !system/ref fdb.meta-store
-  companies-house-url: !system/ref companies-house-simulator-server.http-url
+  companies-house-url: !system/ref companies-house-server.http-url
 
 command-processor: !system/component
   system/component-kind: command-processor/command-processor

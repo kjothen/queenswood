@@ -61,7 +61,7 @@
                                :creditor-name)))]))))
 
 (deftest process-check-payee-test
-  (with-test-system [sys "classpath:bank-payee-check/application-test.yml"]
+  (with-test-system [sys "classpath:payee-check/application-test.yml"]
                     (let [proc (system/instance sys [:payee-checks :processor])
                           schemas (system/instance sys [:avro :serde])]
                       (test-check-payee-unavailable proc schemas))))

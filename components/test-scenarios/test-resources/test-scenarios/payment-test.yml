@@ -1,0 +1,20 @@
+# Slim payment wiring for the scenario rig: verbs call
+# `payment/submit-outbound` and `payment/settle-inbound` via the
+# library interface, so the dispatcher / command-processor /
+# processor entries from `system/payment-test.yml` (which require
+# payments-command channels on the bus) are omitted. Only the
+# event-processor that consumes schemes-payments-event is needed
+# — that's what posts the inbound credit when ClearBank settles
+# an outbound whose creditor BBAN matches an internal account.
+
+event-processor-impl: !system/component
+  system/component-kind: payment/event-processor
+  record-db: !system/ref fdb.record-db
+  record-store: !system/ref fdb.meta-store
+  schemas: !system/ref avro.serde
+
+event-processor: !system/component
+  system/component-kind: event-processor/event-processor
+  bus: !system/ref message-bus.bus
+  processor: !system/local-ref event-processor-impl
+  event-channel: !keyword schemes-payments-event

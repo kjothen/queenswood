@@ -1,4 +1,0 @@
-bus: !system/component
-  system/component-kind: message-bus/bus
-  producers: !system/ref kafka.message-bus-producers
-  consumers: !system/ref kafka.message-bus-consumers
