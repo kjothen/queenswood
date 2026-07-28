@@ -8,7 +8,7 @@
   {:extra-deps
    {ext/mono {:local/root "../../deps/mono-test"}
     bases/external-test-runner {:local/root "../../bases/external-test-runner"}
-    ;; bank-company-registry's interface_test drives the Companies House
+    ;; company-registry's interface_test drives the Companies House
     ;; simulator base for its test system, so the base must be on the test
     ;; classpath even though the service uses the real adapter at runtime.
     bases/uk-companies-house-simulator
@@ -21,27 +21,20 @@
         component/balance {:local/root "../../components/balance"}
         component/balance-domain {:local/root "../../components/balance-domain"}
         component/balance-query {:local/root "../../components/balance-query"}
-        component/cash-account {:local/root "../../components/cash-account"}
         component/cash-account-query {:local/root
                                       "../../components/cash-account-query"}
-        component/cash-account-product {:local/root
-                                        "../../components/cash-account-product"}
         component/cash-account-product-query
         {:local/root "../../components/cash-account-product-query"}
         component/idempotency {:local/root "../../components/idempotency"}
-        component/idv {:local/root "../../components/idv"}
         component/ledger-account {:local/root "../../components/ledger-account"}
         component/membership {:local/root "../../components/membership"}
-        component/bank {:local/root "../../components/bank"}
         component/bank-query {:local/root "../../components/bank-query"}
         component/company-registry {:local/root
                                     "../../components/company-registry"}
         component/interest {:local/root "../../components/interest"}
         component/scheduler {:local/root "../../components/scheduler"}
-        component/party {:local/root "../../components/party"}
         component/party-query {:local/root "../../components/party-query"}
         component/payee-check {:local/root "../../components/payee-check"}
-        component/payment {:local/root "../../components/payment"}
         component/payment-query {:local/root "../../components/payment-query"}
         component/person-identification
         {:local/root "../../components/person-identification"}
