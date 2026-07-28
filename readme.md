@@ -199,7 +199,7 @@ and Testcontainers:
 ```clojure
 ;; development/src/dev/bank_monolith.clj — evaluate the comment block
 (def sys
-  (main/start "classpath:bank-monolith/application-test.yml" :dev))
+  (main/start "classpath:monolith/application-test.yml" :dev))
 (main/stop sys)
 ```
 

@@ -162,7 +162,7 @@
   ;; accounts across trials but the projection is keyed by the trial's
   ;; id-mapping so prior trials' accounts are invisible.
   (with-test-system
-   [sys ["classpath:bank-test-scenarios/application-test.yml" patch-handlers]]
+   [sys ["classpath:test-scenarios/application-test.yml" patch-handlers]]
    (let [bank (fdb-config sys)
          stats (atom {:trials 0 :total-commands 0 :by-command {} :lengths []})
          _ (log/info "model-eq-reality starting"

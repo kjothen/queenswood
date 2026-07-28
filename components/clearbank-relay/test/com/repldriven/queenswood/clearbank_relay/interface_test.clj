@@ -28,7 +28,7 @@
 
 (deftest outbox-dedup-and-relay-test
   (with-test-system
-   [sys "classpath:bank-clearbank-relay/application-test.yml"]
+   [sys "classpath:clearbank-relay/application-test.yml"]
    (let [config {:record-db (system/instance sys [:fdb :record-db])
                  :record-store (system/instance sys [:fdb :store])}
          bus (system/instance sys [:message-bus :bus])]
@@ -66,7 +66,7 @@
 
 (deftest outbound-intent-queue-test
   (with-test-system
-   [sys "classpath:bank-clearbank-relay/application-test.yml"]
+   [sys "classpath:clearbank-relay/application-test.yml"]
    (let [config {:record-db (system/instance sys [:fdb :record-db])
                  :record-store (system/instance sys [:fdb :store])}]
      (testing "a duplicate dedup-key (redelivered submit) is rejected"

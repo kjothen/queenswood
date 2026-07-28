@@ -449,7 +449,7 @@
 
 (deftest labels-roundtrip-test
   (with-test-system
-   [sys "classpath:bank-policy/application-test.yml"]
+   [sys "classpath:policy/application-test.yml"]
    (let [config (fdb-config sys)]
      (testing "labels roundtrip via new-policy + get-policy"
        (nom-test> [{:keys [policy-id]} (SUT/new-policy
@@ -465,7 +465,7 @@
 
 (deftest get-effective-policies-test
   (with-test-system
-   [sys "classpath:bank-policy/application-test.yml"]
+   [sys "classpath:policy/application-test.yml"]
    (let [config (fdb-config sys)]
      (testing "scan returns the platform policy with labels populated"
        (nom-test> [{:keys [items]} (SUT/get-policies config)
@@ -516,7 +516,7 @@
 
 (deftest archive-policy-test
   (with-test-system
-   [sys "classpath:bank-policy/application-test.yml"]
+   [sys "classpath:policy/application-test.yml"]
    (let [config (fdb-config sys)]
      (testing "new-policy defaults to active status"
        (nom-test> [created (new-policy! config)
@@ -552,7 +552,7 @@
 
 (deftest remove-binding-test
   (with-test-system
-   [sys "classpath:bank-policy/application-test.yml"]
+   [sys "classpath:policy/application-test.yml"]
    (let [config (fdb-config sys)]
      (testing "removing an existing binding returns it and it is gone"
        (nom-test> [created (new-policy! config)

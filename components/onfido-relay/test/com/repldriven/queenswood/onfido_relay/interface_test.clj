@@ -45,7 +45,7 @@
 
 (deftest outbox-and-intent-test
   (with-test-system
-   [sys "classpath:bank-onfido-relay/application-test.yml"]
+   [sys "classpath:onfido-relay/application-test.yml"]
    (let [config {:record-db (system/instance sys [:fdb :record-db])
                  :record-store (system/instance sys [:fdb :store])}
          bus (system/instance sys [:message-bus :bus])]

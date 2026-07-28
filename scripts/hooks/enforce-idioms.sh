@@ -261,29 +261,41 @@ if [ ${#SRC_CLJ[@]} -gt 0 ]; then
 fi
 report 'comment-block-bloat' "$out" advisory
 
-# 6. bank-api reads are query-only.
+# 6. api reads are query-only (ADR-0017).
 # A CQRS/design invariant riding along here until the `design` plugin owns
 # its enforcement. A domain brick with a `components/<brick>-query` sibling
 # is split into a read side (`-query`) and a write side (the plain name).
-# `bank-api` request code may require the `-query` interface but must not
+# `api` request code may require the `-query` interface but must not
 # require the write brick's interface — writes go over the bus as commands.
 # The `system.clj` registration bundle is exempt: it bare-requires
 # interfaces to register component-kinds (not to call them), and stays
 # until the write brick leaves the API project (`poly check` Tier-2).
-section 'bank-api reads are query-only'
+# The base path and namespace prefix are asserted below: this check is a
+# pair of greps over names that a rename silently empties, and an empty
+# candidate set reports PASS rather than failing.
+section 'api reads are query-only'
 out=""
+API_BASE=bases/api/src
+API_NS=com.repldriven.queenswood
+if [ ! -d "$API_BASE" ]; then
+  echo "  enforce-idioms: $API_BASE not found — check 6 cannot run" >&2
+  FAILED=1
+elif ! grep -rq "$API_NS\." "$API_BASE" 2>/dev/null; then
+  echo "  enforce-idioms: no $API_NS.* under $API_BASE — check 6 cannot run" >&2
+  FAILED=1
+fi
 API_SRC=( $(printf '%s\n' "${SRC_CLJ[@]}" \
-             | grep -E '^bases/bank-api/src/' | grep -v '/system\.clj$') )
+             | grep -E "^$API_BASE/" | grep -v '/system\.clj$') )
 if [ ${#API_SRC[@]} -gt 0 ]; then
   for qdir in components/*-query; do
     [ -d "$qdir" ] || continue
     write_brick=$(basename "${qdir%-query}")
-    hits=$(grep -nE "com\.repldriven\.mono\.${write_brick}\.interface\b" \
+    hits=$(grep -nE "$API_NS\.${write_brick}\.interface\b" \
              "${API_SRC[@]}" 2>/dev/null)
     [ -n "$hits" ] && out="${out}${hits}"$'\n'
   done
   out=$(printf '%s' "$out" | grep -v '^$' || true)
 fi
-report 'bank-api-reads-are-query-only' "$out"
+report 'api-reads-are-query-only' "$out"
 
 exit "$FAILED"

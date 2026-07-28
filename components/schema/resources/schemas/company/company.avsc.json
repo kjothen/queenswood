@@ -1,0 +1,24 @@
+{
+  "type": "record",
+  "name": "Company",
+  "namespace": "com.repldriven.mono.company",
+  "fields": [
+    {"name": "company_number",   "type": "string"},
+    {"name": "registry_id",      "type": ["null", "string"], "default": null},
+    {"name": "company_name",     "type": ["null", "string"], "default": null},
+    {"name": "company_status",   "type": ["null", "string"], "default": null},
+    {"name": "type",             "type": ["null", "string"], "default": null},
+    {"name": "jurisdiction",     "type": ["null", "string"], "default": null},
+    {"name": "date_of_creation", "type": ["null", "string"], "default": null},
+    {"name": "registered_office_address", "type": ["null", {
+      "type": "record",
+      "name": "RegisteredOfficeAddress",
+      "fields": [
+        {"name": "address_line_1", "type": ["null", "string"], "default": null},
+        {"name": "locality",       "type": ["null", "string"], "default": null},
+        {"name": "postal_code",    "type": ["null", "string"], "default": null},
+        {"name": "country",        "type": ["null", "string"], "default": null}
+      ]
+    }], "default": null}
+  ]
+}

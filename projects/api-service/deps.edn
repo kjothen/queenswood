@@ -8,11 +8,6 @@
   {:extra-deps
    {ext/mono {:local/root "../../deps/mono-test"}
     bases/external-test-runner {:local/root "../../bases/external-test-runner"}
-    ;; company-registry's interface_test drives the Companies House
-    ;; simulator base for its test system, so the base must be on the test
-    ;; classpath even though the service uses the real adapter at runtime.
-    bases/uk-companies-house-simulator
-    {:local/root "../../bases/uk-companies-house-simulator"}
     component/test-resources {:local/root "../../components/test-resources"}
     component/testcontainers {:local/root "../../components/testcontainers"}
     component/test-schema {:local/root "../../components/test-schema"}}}}
@@ -29,8 +24,6 @@
         component/ledger-account {:local/root "../../components/ledger-account"}
         component/membership {:local/root "../../components/membership"}
         component/bank-query {:local/root "../../components/bank-query"}
-        component/company-registry {:local/root
-                                    "../../components/company-registry"}
         component/interest {:local/root "../../components/interest"}
         component/scheduler {:local/root "../../components/scheduler"}
         component/party-query {:local/root "../../components/party-query"}

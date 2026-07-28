@@ -1,0 +1,2 @@
+system:
+  server: !include clearbank-simulator/server-test.yml

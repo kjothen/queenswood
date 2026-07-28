@@ -1,0 +1,3 @@
+system:
+  fdb: !include system/fdb-test.yml
+  server: !include company-registry/server-test.yml

@@ -1,0 +1,6 @@
+system:
+  avro: !include system/avro-test.yml
+  event: !include system/event-test.yml
+  fdb: !include system/fdb-test.yml
+  message-bus: !include system/local-bus-test.yml
+  server: !include onfido-adapter/server-test.yml

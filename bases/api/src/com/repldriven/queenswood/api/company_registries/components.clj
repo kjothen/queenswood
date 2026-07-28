@@ -15,6 +15,7 @@
   registry lookup."
   [:map {:json-schema/example examples/Company}
    [:company-number string?]
+   [:registry-id {:optional true} string?]
    [:company-name {:optional true} string?]
    [:company-status {:optional true} string?]
    [:type {:optional true} string?]

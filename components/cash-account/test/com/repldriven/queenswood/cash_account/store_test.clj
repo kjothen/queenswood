@@ -35,7 +35,7 @@
 
 (deftest idempotency-key-unique-index-and-read-back-test
   (with-test-system
-   [sys "classpath:bank-cash-account/application-test.yml"]
+   [sys "classpath:cash-account/application-test.yml"]
    (let [config {:record-db (system/instance sys [:fdb :record-db])
                  :record-store (system/instance sys [:fdb :store])}
          key "idem-key-0000000000000001"]
@@ -80,7 +80,7 @@
 
 (deftest closed-account-number-is-never-reissued-test
   (with-test-system
-   [sys "classpath:bank-cash-account/application-test.yml"]
+   [sys "classpath:cash-account/application-test.yml"]
    (let [config {:record-db (system/instance sys [:fdb :record-db])
                  :record-store (system/instance sys [:fdb :store])}]
      (nom-test>

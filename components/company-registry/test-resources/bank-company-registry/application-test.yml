@@ -1,3 +1,0 @@
-system:
-  fdb: !include bank/fdb-test.yml
-  server: !include bank-uk-companies-house-simulator/server-test.yml

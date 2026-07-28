@@ -44,7 +44,7 @@
 
 (deftest internal-payment-idempotency-read-back-test
   (with-test-system
-   [sys "classpath:bank-payment/application-test.yml"]
+   [sys "classpath:payment/application-test.yml"]
    (let [config {:record-db (system/instance sys [:fdb :record-db])
                  :record-store (system/instance sys [:fdb :store])}
          key "idem-internal-000000000001"]
@@ -63,7 +63,7 @@
 
 (deftest outbound-payment-idempotency-read-back-test
   (with-test-system
-   [sys "classpath:bank-payment/application-test.yml"]
+   [sys "classpath:payment/application-test.yml"]
    (let [config {:record-db (system/instance sys [:fdb :record-db])
                  :record-store (system/instance sys [:fdb :store])}
          key "idem-outbound-000000000001"]

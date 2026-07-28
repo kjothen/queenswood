@@ -41,7 +41,7 @@
 
 (deftest relays-every-entry-test
   (with-test-system
-   [sys "classpath:bank-changelog-relay/application-test.yml"]
+   [sys "classpath:changelog-relay/application-test.yml"]
    (let [config {:record-db (system/instance sys [:fdb :record-db])
                  :record-store (system/instance sys [:fdb :store])}
          seen (atom [])
@@ -69,7 +69,7 @@
               (finally (stop))))))))
 
 (deftest stops-cleanly-test
-  (with-test-system [sys "classpath:bank-changelog-relay/application-test.yml"]
+  (with-test-system [sys "classpath:changelog-relay/application-test.yml"]
                     (let [record-db (system/instance sys [:fdb :record-db])
                           calls (atom 0)
                           {:keys [stop]}

@@ -25,7 +25,7 @@ components/<brick>/test-resources/<brick>/application-test.yml
 ```
 
 Loaded by classpath URL — e.g.
-`classpath:bank-monolith/application-test.yml`.
+`classpath:monolith/application-test.yml`.
 
 ### Top-level shape
 
@@ -40,8 +40,8 @@ Adapted from
 ```yaml
 system:
   kafka: !include bank-monolith/kafka-test.yml
-  fdb: !include bank/fdb-test.yml
-  cash-accounts: !include bank/cash-account-test.yml
+  fdb: !include system/fdb-test.yml
+  cash-accounts: !include system/cash-account-test.yml
   ## ...
   server:
     handler: !system/required-component
@@ -97,7 +97,7 @@ server:
 The base's bootstrap injects the value before starting:
 
 ```clojure
-(nom-> (env/config "classpath:bank-monolith/application-test.yml"
+(nom-> (env/config "classpath:monolith/application-test.yml"
                    :dev)
        system/defs
        (assoc-in [:system/defs :server :handler] api/app)
@@ -158,7 +158,7 @@ base's `main/start`:
 
 ```clojure
 (comment
-  (def sys (main/start "classpath:bank-monolith/application-test.yml"
+  (def sys (main/start "classpath:monolith/application-test.yml"
                        :dev))
   (tap> sys)
   (main/stop sys))

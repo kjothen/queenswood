@@ -1,0 +1,55 @@
+system:
+  kafka:
+    schemas: !system/component
+      system/component-kind: avro/serde
+      schemas:
+        command: schemas/command/command-envelope.avsc.json
+        command-response: schemas/command/command-response.avsc.json
+    producers: !system/component
+      system/component-kind: kafka/producers
+      company-registries-command-response:
+        schemas: !system/local-ref schemas
+        schema: !keyword command-response
+        conf:
+          bootstrap.servers: !env KAFKA_BOOTSTRAP_SERVERS
+          topic: topic-company-registries-command-response
+          acks: all
+    consumers: !system/component
+      system/component-kind: kafka/consumers
+      company-registries-command:
+        schemas: !system/local-ref schemas
+        schema: !keyword command
+        topics: [topic-company-registries-command]
+        conf:
+          bootstrap.servers: !env KAFKA_BOOTSTRAP_SERVERS
+          group.id: uk-companies-house-adapter-service-company-registries-command
+    message-bus-producers: !system/component
+      system/component-kind: kafka/message-bus-producers
+      company-registries-command-response:
+        producer: !system/local-ref producers.company-registries-command-response
+    message-bus-consumers: !system/component
+      system/component-kind: kafka/message-bus-consumers
+      company-registries-command:
+        consumer: !system/local-ref consumers.company-registries-command
+        timeout: 500
+  message-bus: !include bank/message-bus.yml
+  fdb: !include bank/fdb.yml
+  avro: !include bank/avro.yml
+  telemetry:
+    otel-sdk: !system/component
+      system/component-kind: telemetry/otel-sdk
+      service-name: !env SERVICE_NAME
+      endpoint: !env OTEL_ENDPOINT
+  uk-companies-house-adapter:
+    command-processor-impl: !system/component
+      system/component-kind: uk-companies-house-adapter/command-processor
+      schemas: !system/ref avro.serde
+      record-db: !system/ref fdb.record-db
+      record-store: !system/ref fdb.meta-store
+      companies-house-url: !env COMPANIES_HOUSE_URL
+    command-processor: !system/component
+      system/component-kind: command-processor/command-processor
+      bus: !system/ref message-bus.bus
+      processor: !system/local-ref command-processor-impl
+      command-channel: !keyword company-registries-command
+      command-response-channel: !keyword company-registries-command-response

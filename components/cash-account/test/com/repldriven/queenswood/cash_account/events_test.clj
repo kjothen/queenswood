@@ -31,7 +31,7 @@
 
 (deftest redelivered-event-is-a-noop-test
   (with-test-system
-   [sys "classpath:bank-cash-account/application-test.yml"]
+   [sys "classpath:cash-account/application-test.yml"]
    (let [config {:record-db (system/instance sys [:fdb :record-db])
                  :record-store (system/instance sys [:fdb :store])}
          account-id "acc.events.1"]

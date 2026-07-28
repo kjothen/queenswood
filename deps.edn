@@ -58,6 +58,8 @@
     bases/clearbank-adapter {:local/root "bases/clearbank-adapter"}
     bases/onfido-simulator {:local/root "bases/onfido-simulator"}
     bases/onfido-adapter {:local/root "bases/onfido-adapter"}
+    bases/uk-companies-house-adapter {:local/root
+                                      "bases/uk-companies-house-adapter"}
     bases/uk-companies-house-simulator {:local/root
                                         "bases/uk-companies-house-simulator"}
     bases/scheduler-processor {:local/root "bases/scheduler-processor"}
@@ -117,6 +119,8 @@
                        "bases/onfido-simulator/test-resources"
                        "bases/onfido-adapter/test"
                        "bases/onfido-adapter/test-resources"
+                       "bases/uk-companies-house-adapter/test"
+                       "bases/uk-companies-house-adapter/test-resources"
                        "bases/uk-companies-house-simulator/test"
                        "bases/uk-companies-house-simulator/test-resources"
                        "bases/monolith/test-resources"

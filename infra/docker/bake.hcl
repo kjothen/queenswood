@@ -20,6 +20,7 @@ services = [
   "clearbank-simulator-service",
   "onfido-adapter-service",
   "onfido-simulator-service",
+  "uk-companies-house-adapter-service",
   "uk-companies-house-simulator-service",
 ]
 

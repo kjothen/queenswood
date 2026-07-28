@@ -1,0 +1,66 @@
+container: !system/component
+  system/component-kind: keycloak/container
+  # Imported at container boot. Each realm carries audience scopes
+  # + a `queenswood-admin` service-account client for the keycloak
+  # adapter's admin path. queenswood is the organization-user realm
+  # (console SPA); queenswood-ops is the operator realm
+  # (operator SPA).
+  realm-import-files:
+    - queenswood-realm.json
+    - queenswood-ops-realm.json
+  # Brand login theme — keycloak.v2 extended with the SPA's paper /
+  # Geist / gold-deep palette. Both realms reference loginTheme=
+  # queenswood; the component copies the files into the container at
+  # /opt/keycloak/themes/queenswood/login/.
+  theme-resource: keycloak-theme
+  # Pin to a stable host port under `dev` so the host-side SPAs
+  # (console) can reach the testcontainer Keycloak
+  # at `http://localhost:8090`. Random port for tests so parallel
+  # runs don't fight over a single binding.
+  host-port: !profile
+    dev: 8090
+    default: 0
+  # Google IdP client secret for one-click Google sign-in from the
+  # host SPAs. `dev` only: the secret is read from `pass` at container
+  # boot and written into Keycloak's files-plaintext vault, so it never
+  # reaches the host environment or git. The realm references it as
+  # ${vault.google-client-secret}. Tests (default profile) leave the
+  # vault off, so the expression stays an inert literal as before.
+  # Optional: if the secret is absent from `pass`, startup skips it with
+  # a warning and only Google sign-in is unavailable — local Keycloak
+  # principals still work. Add `queenswood/google-client-secret` to
+  # `pass` to enable it.
+  vault-dir: !profile
+    dev: /opt/keycloak/data/vault
+    default: ~
+  vault-secrets: !profile
+    dev:
+      "queenswood_google-client-secret": ["pass", "show", "queenswood/google-client-secret"]
+    default: {}
+
+container-http-port: !system/component
+  system/component-kind: keycloak/container-http-port
+  container: !system/local-ref container
+  exposed-port: 8080
+
+container-auth-server-url: !system/component
+  system/component-kind: keycloak/container-auth-server-url
+  port: !system/local-ref container-http-port
+
+identity-provider: !system/component
+  system/component-kind: keycloak/identity-provider
+  base-url: !system/local-ref container-auth-server-url
+  realm: queenswood
+  admin-client-id: queenswood-admin
+  admin-client-secret: queenswood-admin-test-secret
+
+# Second realm `queenswood-ops` hosts the Queenswood operator users
+# (operator SPA). Only used for JWT verification by the bank-api auth
+# interceptor; we don't issue admin REST calls against this realm so
+# the admin-client-* values are unused but kept symmetric.
+identity-provider-ops: !system/component
+  system/component-kind: keycloak/identity-provider
+  base-url: !system/local-ref container-auth-server-url
+  realm: queenswood-ops
+  admin-client-id: queenswood-admin
+  admin-client-secret: queenswood-admin-test-secret

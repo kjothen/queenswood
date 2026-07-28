@@ -61,7 +61,7 @@
 ;; integration test `idv_test.clj`.
 
 (deftest process-idv-test
-  (with-test-system [sys "classpath:bank-idv/application-test.yml"]
+  (with-test-system [sys "classpath:idv/application-test.yml"]
                     (let [proc (system/instance sys [:idv :processor])
                           schemas (system/instance sys [:avro :serde])]
                       (test-initiate-idv proc schemas))))
@@ -93,7 +93,7 @@
 
 (deftest idv-completed-in-review-and-failed-test
   (with-test-system
-   [sys "classpath:bank-idv/application-test.yml"]
+   [sys "classpath:idv/application-test.yml"]
    (let [proc (system/instance sys [:idv :processor])
          event-proc (system/instance sys [:idv :event-processor])
          schemas (system/instance sys [:avro :serde])]

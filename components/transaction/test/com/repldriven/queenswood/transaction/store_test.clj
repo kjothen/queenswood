@@ -23,7 +23,7 @@
 
 (deftest transaction-idempotency-read-back-test
   (with-test-system
-   [sys "classpath:bank-transaction/application-test.yml"]
+   [sys "classpath:transaction/application-test.yml"]
    (let [config {:record-db (system/instance sys [:fdb :record-db])
                  :record-store (system/instance sys [:fdb :store])}
          key "idem-txn-0000000000000001"]

@@ -69,7 +69,7 @@
                 onfido-simulator/app)
       (assoc-in [:system/defs :onfido-adapter-server :handler]
                 onfido-adapter/app)
-      (assoc-in [:system/defs :companies-house-simulator-server :handler]
+      (assoc-in [:system/defs :companies-house-server :handler]
                 ch-simulator/app)))
 
 (defn- scenario-files
@@ -78,7 +78,7 @@
   relative path so domain-grouped runs stay deterministic."
   []
   (let [root (io/file (.getFile (io/resource
-                                 "bank-test-api-scenarios/scenarios")))
+                                 "test-api-scenarios/scenarios")))
         prefix-len (inc (count (.getPath root)))]
     (->> (file-seq root)
          (filter (fn [f]
@@ -98,14 +98,13 @@
     (log/info "api scenarios starting" {:count (count files)})
     (with-test-system
      [sys
-      ["classpath:bank-test-api-scenarios/application-test.yml"
+      ["classpath:test-api-scenarios/application-test.yml"
        patch-handlers]]
      (let [jetty (system/instance sys [:server :jetty-adapter])
            base-url (server/http-local-url jetty)
            admin-token (mint-admin-token base-url)]
        (doseq [{:keys [relative]} files]
-         (let [resource-path (str "bank-test-api-scenarios/scenarios/"
-                                  relative)]
+         (let [resource-path (str "test-api-scenarios/scenarios/" relative)]
            (testing relative
              (nom-test> [loaded (SUT/from-resource resource-path)
                          _ (log/info "api scenario running"

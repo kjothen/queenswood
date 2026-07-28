@@ -1,8 +1,8 @@
 (ns com.repldriven.queenswood.api.onboarding.handlers
   (:require
     [com.repldriven.queenswood.api.bank.commands :as bank-commands]
+    [com.repldriven.queenswood.api.company-registries.queries :as companies]
     [com.repldriven.queenswood.api.errors :as errors]
-    [com.repldriven.queenswood.company-registry.interface :as company-registry]
 
     [com.repldriven.mono.error.interface :as error]
     [com.repldriven.mono.utility.interface :as util]
@@ -47,30 +47,26 @@
   (let [{:keys [auth parameters audiences-by-status]} request
         {:keys [user memberships]} auth
         {:keys [body]} parameters
-        {:keys [registry company-number bank-name]} body
-        registry (or registry company-registry/default-registry)
-        lookup-config (select-keys request
-                                   [:companies-house-url :record-db
-                                    :record-store])]
+        {:keys [registry company-number bank-name]} body]
     (if (seq memberships)
       (errors/anomaly->response
        (error/reject :membership/already-exists
                      {:message "User already belongs to a bank"
                       :user-id (:user-id user)
                       :bank-id (:bank-id (first memberships))}))
-      (let [company (company-registry/lookup-company lookup-config
-                                                     registry
-                                                     company-number)]
-        (if (error/anomaly? company)
-          (errors/anomaly->response company)
-          (let [result (bank-commands/send-create-bank
+      (let [lookup (companies/lookup request registry company-number)]
+        (if (not= 200 (:status lookup))
+          lookup
+          (let [company (:body lookup)
+                result (bank-commands/send-create-bank
                         request
                         {:name bank-name
                          :status default-status
                          :tier default-tier
                          :currencies default-currencies
                          :audience (get audiences-by-status default-status)
-                         :company-binding (->binding registry company)
+                         :company-binding (->binding (:registry-id company)
+                                                     company)
                          :membership {:user-id (:user-id user)
                                       :role :role-owner}})]
             (if (not= 200 (:status result))
