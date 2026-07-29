@@ -35,19 +35,18 @@ export function get_me() {
   return request("/v1/me");
 }
 
-// Look up a company in a registry (used during onboarding, before the
-// user has a bank). Returns the Companies House profile or a 404.
-export function lookup_company(registry, number) {
-  return request(`/v1/company-registries/${registry}/companies/${number}`);
+// Look up a company on the register of record (used during onboarding,
+// before the user has a bank). Returns the profile or a 404.
+export function lookup_company(number) {
+  return request(`/v1/companies/${number}`);
 }
 
 // First-sign-in onboarding: binds a new bank to the confirmed legal
-// entity. `{ registry, companyNumber, bankName }`.
-export function onboard({ registry, companyNumber, bankName }) {
+// entity. `{ companyNumber, bankName }`.
+export function onboard({ companyNumber, bankName }) {
   return mutate("/v1/onboarding/me", {
     method: "POST",
     body: JSON.stringify({
-      registry,
       "company-number": companyNumber,
       "bank-name": bankName,
     }),

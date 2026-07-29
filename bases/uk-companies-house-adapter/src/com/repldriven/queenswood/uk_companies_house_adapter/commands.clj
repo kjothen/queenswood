@@ -1,9 +1,18 @@
 (ns com.repldriven.queenswood.uk-companies-house-adapter.commands
   (:require
-    [com.repldriven.queenswood.company-registry.interface :as company-registry]
+    [com.repldriven.queenswood.uk-companies-house-adapter.companies-house
+     :as companies-house]
+
+    [com.repldriven.queenswood.company.interface :as company]
     [com.repldriven.mono.avro.interface :as avro]
     [com.repldriven.mono.error.interface :as error :refer [let-nom>]]
     [com.repldriven.mono.processor.interface :as processor]))
+
+(def ^:private registry
+  "This adapter's own identity, stamped onto every reply. Provenance for
+  the caller — the bank records which registry it was bound against —
+  never a value anything dispatches on."
+  "uk-companies-house")
 
 (defn- ->response
   [config result]
@@ -14,26 +23,21 @@
        :payload (avro/serialize (schemas "company") result)})))
 
 (defn- lookup-company
-  "Fetch the company profile from the registry of record and cache it
-  in FDB. Unlike the Onfido and ClearBank adapters this replies with
-  the record rather than persisting an intent: the caller is a live
-  request waiting on the command response, so there is nothing to
-  drain later. The resolved registry rides back on the reply so the
-  caller need not know which one a blank id defaults to."
+  "Fetch the company profile from Companies House and cache it in FDB.
+  Unlike the Onfido and ClearBank adapters this replies with the record
+  rather than persisting an intent: the caller is a live request waiting
+  on the command response, so there is nothing to drain later."
   [config data]
-  (let [{:keys [companies-house-url record-db record-store]} config
-        {:keys [registry-id company-number]} data
-        registry-id (or registry-id company-registry/default-registry)
-        result (company-registry/lookup-company
-                {:companies-house-url companies-house-url
-                 :record-db record-db
-                 :record-store record-store}
-                registry-id
-                company-number)]
-    (->response config
-                (if (error/anomaly? result)
-                  result
-                  (assoc result :registry-id registry-id)))))
+  (let [{:keys [record-db record-store]} config
+        {:keys [company-number]} data
+        result (let-nom>
+                 [body (companies-house/fetch-company config company-number)
+                  company (companies-house/body->company body)
+                  _ (company/save-company
+                     {:record-db record-db :record-store record-store}
+                     company)]
+                 (assoc company :registry-id registry))]
+    (->response config result)))
 
 (def ^:private command-handlers {"lookup-company" lookup-company})
 

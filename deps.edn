@@ -26,7 +26,7 @@
     components/test-schema {:local/root "components/test-schema"}
     components/clearbank-webhook {:local/root "components/clearbank-webhook"}
     components/clearbank-relay {:local/root "components/clearbank-relay"}
-    components/company-registry {:local/root "components/company-registry"}
+    components/company {:local/root "components/company"}
     components/idempotency {:local/root "components/idempotency"}
     components/idv {:local/root "components/idv"}
     components/onfido-webhook {:local/root "components/onfido-webhook"}
@@ -79,8 +79,8 @@
                        "components/cash-account-product-query/test"
                        "components/cash-account/test"
                        "components/cash-account/test-resources"
-                       "components/company-registry/test"
-                       "components/company-registry/test-resources"
+                       "components/company/test"
+                       "components/company/test-resources"
                        "components/idv/test"
                        "components/idv/test-resources"
                        "components/interest/test"

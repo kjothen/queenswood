@@ -13,5 +13,5 @@ command-processor: !system/component
   system/component-kind: command-processor/command-processor
   bus: !system/ref message-bus.bus
   processor: !system/local-ref command-processor-impl
-  command-channel: !keyword company-registries-command
-  command-response-channel: !keyword company-registries-command-response
+  command-channel: !keyword companies-command
+  command-response-channel: !keyword companies-command-response

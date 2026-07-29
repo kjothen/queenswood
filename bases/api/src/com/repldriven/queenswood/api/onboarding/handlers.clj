@@ -1,7 +1,7 @@
 (ns com.repldriven.queenswood.api.onboarding.handlers
   (:require
     [com.repldriven.queenswood.api.bank.commands :as bank-commands]
-    [com.repldriven.queenswood.api.company-registries.queries :as companies]
+    [com.repldriven.queenswood.api.companies.queries :as companies]
     [com.repldriven.queenswood.api.errors :as errors]
 
     [com.repldriven.mono.error.interface :as error]
@@ -47,14 +47,14 @@
   (let [{:keys [auth parameters audiences-by-status]} request
         {:keys [user memberships]} auth
         {:keys [body]} parameters
-        {:keys [registry company-number bank-name]} body]
+        {:keys [company-number bank-name]} body]
     (if (seq memberships)
       (errors/anomaly->response
        (error/reject :membership/already-exists
                      {:message "User already belongs to a bank"
                       :user-id (:user-id user)
                       :bank-id (:bank-id (first memberships))}))
-      (let [lookup (companies/lookup request registry company-number)]
+      (let [lookup (companies/lookup request company-number)]
         (if (not= 200 (:status lookup))
           lookup
           (let [company (:body lookup)

@@ -1,5 +1,5 @@
 // Presentation mappings for a Companies House company profile (the
-// shape returned by /v1/company-registries/.../companies/{number}).
+// shape returned by /v1/companies/{number}).
 
 const TYPE_LABELS = {
   ltd: "Private limited company",

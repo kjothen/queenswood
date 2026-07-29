@@ -1,15 +1,13 @@
 <script>
   /* Onboarding — bind a new bank to a real UK legal entity.
 
-     Four steps in a single centred column: pick a registry + enter a
-     company number, look it up, confirm the matched entity, then name
-     the bank (pre-filled with the registered name). A success step
-     confirms the bank is provisioned and bound.
+     Four steps in a single centred column: enter a company number,
+     look it up, confirm the matched entity, then name the bank
+     (pre-filled with the registered name). A success step confirms
+     the bank is provisioned and bound.
 
-     The registry list is data-driven (only UK Companies House today)
-     so more can be added later. All lookups go through the backend
-     (/v1/company-registries/...); onboarding re-confirms and snapshots
-     the entity onto the bank. */
+     All lookups go through the backend (/v1/companies/...);
+     onboarding re-confirms and snapshots the entity onto the bank. */
 
   import { AppNav } from "@queenswood/ui";
   import { lookup_company, onboard } from "./api.mjs";
@@ -26,18 +24,9 @@
 
   let { onComplete, onSignOut } = $props();
 
-  const REGISTRIES = [
-    {
-      id: "uk-companies-house",
-      name: "UK Companies House",
-      country: "United Kingdom",
-      idLabel: "Companies House number",
-    },
-  ];
+  const ID_LABEL = "Companies House number";
 
   let step = $state(1);
-  let registryId = $state("uk-companies-house");
-  let registryOpen = $state(false);
   let number = $state("");
   let match = $state(null);
   let bankName = $state("");
@@ -48,9 +37,6 @@
   let creating = $state(false);
   let createError = $state(null);
 
-  const registry = $derived(
-    REGISTRIES.find((r) => r.id === registryId) ?? REGISTRIES[0],
-  );
   const numberValid = $derived(number.length === COMPANY_NUMBER_LENGTH);
 
   const LEDES = {
@@ -72,17 +58,12 @@
     lookupError = null;
   }
 
-  function pickRegistry(id) {
-    registryId = id;
-    registryOpen = false;
-  }
-
   async function lookup() {
     if (!numberValid || looking) return;
     looking = true;
     lookupError = null;
     try {
-      const res = await lookup_company(registryId, number);
+      const res = await lookup_company(number);
       if (res.status === 200) {
         match = res.body;
         step = 2;
@@ -110,7 +91,6 @@
     createError = null;
     try {
       const res = await onboard({
-        registry: registryId,
         companyNumber: number,
         bankName: bankName.trim(),
       });
@@ -157,43 +137,7 @@
     <section class="card">
       {#if step === 1}
         <div class="field">
-          <span class="flabel">Organisation registry</span>
-          <div class="picker">
-            <button
-              type="button"
-              class="picker-trigger"
-              class:open={registryOpen}
-              onclick={() => (registryOpen = !registryOpen)}
-            >
-              <span class="flag" aria-hidden="true">🇬🇧</span>
-              <span class="picker-text">
-                <span class="picker-name">{registry.name}</span>
-                <span class="picker-country">{registry.country}</span>
-              </span>
-              <svg class="chev" viewBox="0 0 16 16" aria-hidden="true">
-                <path d="M4 6 L8 10 L12 6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
-              </svg>
-            </button>
-            {#if registryOpen}
-              <div class="picker-menu" role="listbox">
-                {#each REGISTRIES as r (r.id)}
-                  <button type="button" class="picker-option" role="option" aria-selected={r.id === registryId} onclick={() => pickRegistry(r.id)}>
-                    <span class="flag" aria-hidden="true">🇬🇧</span>
-                    <span class="picker-text">
-                      <span class="picker-name">{r.name}</span>
-                      <span class="picker-country">{r.country}</span>
-                    </span>
-                    {#if r.id === registryId}<span class="tick">✓</span>{/if}
-                  </button>
-                {/each}
-                <div class="picker-foot">ⓘ More registries coming soon.</div>
-              </div>
-            {/if}
-          </div>
-        </div>
-
-        <div class="field">
-          <span class="flabel">{registry.idLabel}</span>
+          <span class="flabel">{ID_LABEL}</span>
           <input
             class="num-input"
             class:err={lookupError}
@@ -203,7 +147,7 @@
             placeholder="········"
             autocomplete="off"
             spellcheck="false"
-            aria-label={registry.idLabel}
+            aria-label={ID_LABEL}
           />
           <span class="hint">
             Eight characters, e.g. <code>TY046601</code> or <code>WY002122</code>.
@@ -323,30 +267,6 @@
   .hint { font-size: 12.5px; color: var(--fg-muted); line-height: 1.5; }
   .hint code { font-family: var(--mono); font-size: 11px; background: var(--surface-sunk); padding: 1px 5px; border-radius: 3px; }
   .link { background: none; border: none; padding: 0; color: var(--gold-deep); font: inherit; cursor: pointer; text-decoration: underline; }
-
-  /* Registry picker */
-  .picker { position: relative; }
-  .picker-trigger, .picker-option {
-    display: flex; align-items: center; gap: 12px; width: 100%;
-    background: var(--surface); border: 1px solid var(--rule);
-    border-radius: 9px; padding: 0 14px; height: 60px; cursor: pointer;
-    color: var(--fg); font: inherit; text-align: left;
-  }
-  .picker-trigger.open { border-color: var(--gold); box-shadow: 0 0 0 3px color-mix(in oklch, var(--gold) 26%, transparent); }
-  .flag { font-size: 18px; line-height: 1; flex: 0 0 auto; }
-  .picker-text { display: flex; flex-direction: column; gap: 1px; flex: 1; min-width: 0; }
-  .picker-name { font-size: 15px; font-weight: 500; }
-  .picker-country { font-size: 12px; color: var(--fg-muted); }
-  .chev { width: 16px; height: 16px; color: var(--fg-muted); }
-  .picker-menu {
-    position: absolute; top: calc(100% + 6px); left: 0; right: 0; z-index: 10;
-    background: var(--surface-raised); border: 1px solid var(--rule);
-    border-radius: 11px; padding: 6px; box-shadow: 0 14px 36px -12px rgba(20, 15, 10, 0.28);
-  }
-  .picker-option { height: 52px; border: none; border-radius: 7px; background: transparent; }
-  .picker-option:hover { background: var(--hover-overlay); }
-  .tick { color: var(--gold-deep); }
-  .picker-foot { padding: 8px 10px 4px; font-size: 12px; color: var(--fg-muted); border-top: 1px solid var(--rule-2); margin-top: 4px; }
 
   .num-input {
     font-family: var(--mono); height: 52px; font-size: 22px; letter-spacing: 0.28em;

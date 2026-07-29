@@ -68,12 +68,13 @@ for f in "${RAW[@]}"; do
   esac
 done
 
+# A config-only commit still has to face check 7 — the include check is
+# whole-tree and is exactly what a YAML rename breaks.
 if [ ${#ALL_FILES[@]} -eq 0 ]; then
-  printf 'No Clojure files in scope (%s).\n' "$scope"
-  exit 0
+  printf 'Scope: %s — no Clojure files; running config checks only.\n' "$scope"
+else
+  printf 'Scope: %s — %d file(s)\n' "$scope" "${#ALL_FILES[@]}"
 fi
-
-printf 'Scope: %s — %d file(s)\n' "$scope" "${#ALL_FILES[@]}"
 
 # Category subsets.
 TEST_FILES=(      $(printf '%s\n' "${ALL_FILES[@]}" | grep '_test\.clj$') )
@@ -297,5 +298,52 @@ if [ ${#API_SRC[@]} -gt 0 ]; then
   out=$(printf '%s' "$out" | grep -v '^$' || true)
 fi
 report 'api-reads-are-query-only' "$out"
+
+# 7. Config include targets resolve.
+# `!include` and `-c classpath:` name a path on the classpath, which is every
+# `resources` and `test-resources` directory merged. Renaming a file leaves
+# the references pointing at nothing, and nothing catches it: no test loads a
+# project's production application.yml or the dev-loop entry point, so the
+# first symptom is a service that will not start. Three such breakages shipped
+# in #275 and #276 alone.
+#
+# Whole-tree regardless of scope: the breakage is caused by the rename, so the
+# file that now dangles is usually not the one being committed.
+section 'Config !include and classpath: targets resolve'
+out=""
+ROOTS=( $(find components bases projects -type d \
+            \( -name target -o -name node_modules -o -name .cpcache \) -prune -o \
+            -type d \( -name resources -o -name test-resources \) -print 2>/dev/null) )
+
+resolves() {  # $1 = referenced path, $2 = directory of the referencing file
+  [ -e "$2/$1" ] && return 0
+  local r
+  for r in "${ROOTS[@]}"; do [ -e "$r/$1" ] && return 0; done
+  return 1
+}
+
+while IFS= read -r hit; do
+  [ -z "$hit" ] && continue
+  f=${hit%%:*}
+  p=$(printf '%s\n' "${hit#*:}" \
+        | sed -n 's/.*!include[[:space:]]\{1,\}\([A-Za-z0-9._/-]\{1,\}\).*/\1/p')
+  [ -z "$p" ] && continue
+  resolves "$p" "$(dirname "$f")" || out="${out}${f}: !include ${p}"$'\n'
+done < <(grep -rn --include='*.yml' --include='*.yaml' \
+           --exclude-dir=target --exclude-dir=node_modules --exclude-dir=.cpcache \
+           '!include' components bases projects 2>/dev/null || true)
+
+# The same path shape appears as a `-c classpath:` argument to a -main.
+while IFS= read -r hit; do
+  [ -z "$hit" ] && continue
+  f=${hit%%:*}
+  p=$(printf '%s\n' "${hit#*:}" \
+        | sed -n 's/.*classpath:\([A-Za-z0-9._/-]\{1,\}\).*/\1/p')
+  [ -z "$p" ] && continue
+  resolves "$p" "." || out="${out}${f}: classpath:${p}"$'\n'
+done < <(grep -rn 'classpath:' justfiles .envrc scripts 2>/dev/null || true)
+
+out=$(printf '%s' "$out" | grep -v '^$' || true)
+report 'config-includes-resolve' "$out"
 
 exit "$FAILED"

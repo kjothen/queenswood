@@ -29,7 +29,7 @@
   component/clearbank-webhook {:local/root "../../components/clearbank-webhook"}
   component/changelog-relay {:local/root "../../components/changelog-relay"}
   component/clearbank-relay {:local/root "../../components/clearbank-relay"}
-  component/company-registry {:local/root "../../components/company-registry"}
+  component/company {:local/root "../../components/company"}
   component/idempotency {:local/root "../../components/idempotency"}
   component/idv {:local/root "../../components/idv"}
   component/interest {:local/root "../../components/interest"}

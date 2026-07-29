@@ -1,4 +1,4 @@
-(ns com.repldriven.queenswood.company-registry.store
+(ns com.repldriven.queenswood.company.store
   (:require
     [com.repldriven.queenswood.schema.interface :as schema]
     [com.repldriven.queenswood.fdb.interface :as fdb]))
@@ -13,7 +13,7 @@
      (let [store (fdb/open txn store-name)]
        (fdb/save-record store (schema/Company->java company))
        company))
-   :company-registry/save
+   :company/save
    "Failed to save company"))
 
 (defn get-company
@@ -23,5 +23,5 @@
    (fn [txn]
      (some-> (fdb/load-record (fdb/open txn store-name) company-number)
              schema/pb->Company))
-   :company-registry/get
+   :company/get
    "Failed to load company"))

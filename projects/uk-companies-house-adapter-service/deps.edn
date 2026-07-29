@@ -15,8 +15,7 @@
     component/testcontainers {:local/root "../../components/testcontainers"}
     component/test-schema {:local/root "../../components/test-schema"}}}}
  :deps {ext/mono {:local/root "../../deps/mono"}
-        component/company-registry {:local/root
-                                    "../../components/company-registry"}
+        component/company {:local/root "../../components/company"}
         component/fdb {:local/root "../../components/fdb"}
         component/resources {:local/root "../../components/resources"}
         component/schema {:local/root "../../components/schema"}

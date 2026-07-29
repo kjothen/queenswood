@@ -5,12 +5,11 @@
      :refer [components-registry]]))
 
 (def OnboardingRequest
-  "Binds the new bank to a confirmed legal entity. `registry` defaults
-  to `uk-companies-house` (the only one today); `company-number` is
-  looked up against it and must be active; `bank-name` is the
-  public-facing name (the console pre-fills the registered name)."
+  "Binds the new bank to a confirmed legal entity. `company-number` is
+  looked up against the registry of record and must be active;
+  `bank-name` is the public-facing name (the console pre-fills the
+  registered name)."
   [:map {:closed true :json-schema/example examples/OnboardingRequest}
-   [:registry {:optional true} string?]
    [:company-number string?]
    [:bank-name [:ref "Name"]]])
 
