@@ -2,6 +2,7 @@ system:
   avro: !include system/avro.yml
   banks: !include system/bank.yml
   banks-dispatcher: !include system/bank-dispatcher.yml
+  cash-account-product-templates: !include system/cash-account-product-templates.yml
   cash-account-products: !include system/cash-account-product.yml
   cash-account-products-dispatcher: !include system/cash-account-product-dispatcher.yml
   cash-accounts: !include system/cash-account.yml
@@ -32,7 +33,6 @@ system:
   policies: !include system/policy-test.yml
   server: !include monolith/server-test.yml
   telemetry: !include monolith/telemetry-test.yml
-  templates: !include system/templates.yml
   transactions: !include system/transaction.yml
   transactions-dispatcher: !include system/transaction-dispatcher.yml
   uk-companies-house-adapter: !include system/uk-companies-house-adapter.yml

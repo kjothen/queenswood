@@ -1,5 +1,6 @@
 system:
   avro: !include system/avro.yml
+  cash-account-product-templates: !include system/cash-account-product-templates.yml
   clearbank-adapter: !include system/clearbank-adapter.yml
   clearbank-adapter-relay: !include system/clearbank-adapter-relay.yml
   clearbank-adapter-server: !include system/clearbank-adapter-server.yml
@@ -15,4 +16,3 @@ system:
   parties: !include test-scenarios/party-test.yml
   payments: !include test-scenarios/payment-test.yml
   policies: !include system/policy-test.yml
-  templates: !include system/templates.yml

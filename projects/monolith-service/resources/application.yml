@@ -45,7 +45,7 @@ system:
   idv: !include system/idv.yml
   payee-checks: !include system/payee-check.yml
   policies: !include system/policy.yml
-  templates: !include system/templates.yml
+  cash-account-product-templates: !include system/cash-account-product-templates.yml
   banks-dispatcher: !include system/bank-dispatcher.yml
   cash-account-products-dispatcher: !include system/cash-account-product-dispatcher.yml
   cash-accounts-dispatcher: !include system/cash-account-dispatcher.yml
