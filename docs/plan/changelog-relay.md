@@ -8,10 +8,10 @@ watcher the narrow job of relaying to the message bus, and move consumers
 to the broker. That path is now built. This plan tracks what remains.
 
 The starting premise was that FDB watches are unreliable. They are not
-used — nothing calls `.watch()` in queenswood or in mono. Every "watcher"
-is a polling changelog consumer: mono's `fdb/watcher.clj` spawns a daemon
-thread calling `changelog/process` every 100 ms. A sentinel key is bumped
-on every commit and documented as "suitable for FDB watches", but nothing
+used — nothing calls `.watch()` anywhere. Every "watcher" is a polling
+changelog consumer: `components/fdb/watcher.clj` spawns a daemon thread
+calling `changelog/process` every 100 ms. A sentinel key is bumped on
+every commit and documented as "suitable for FDB watches", but nothing
 reads it. The real problems are different:
 
 - **Domain work runs inside the changelog checkpoint transaction.**
@@ -19,9 +19,9 @@ reads it. The real problems are different:
   `record-db.run`. `idv/watcher.clj` does a Kafka `message-bus/send` *and*
   opens its own nested FDB transactions from in there. FDB caps a
   transaction at 5 s and re-runs it on retry.
-- **Errors are swallowed.** mono's loop is `(catch Exception _)` with no
-  logging. A permanently failing handler spins at 10 Hz forever, with no
-  DLQ.
+- **Errors are swallowed.** `fdb/watcher.clj`'s loop is
+  `(catch Exception _)` with no logging. A permanently failing handler
+  spins at 10 Hz forever, with no DLQ.
 - **Dedup drops transitions.** `changelog/process` defaults to
   latest-entry-per-record-id, and the record-id is the entity id, so two
   transitions inside one poll window collapse and the earlier is lost.
@@ -161,7 +161,7 @@ vacuously — worse than failing. Best written once, after Phase 4.
 
 ## Upstream, in mono
 
-Two of these gate real scale-out, in this order:
+Both gate real scale-out, in this order:
 
 1. **`message-bus/send` needs a partition key**, and topic partition counts
    need raising — in that order. Every topic is `partitions: 1` today and
@@ -196,18 +196,29 @@ Two of these gate real scale-out, in this order:
    event is lost, where the watcher it replaces redrove forever. That is why
    `changelog-relay/event-consumer` subscribes directly and rethrows;
    fixing it upstream retires that component.
-3. `changelog/process` needs a `:limit` batch cap. The handler runs inside
+
+Both of those live in mono's `kafka` / `event` components. **FDB does not.**
+PR #270 moved it into this workspace, so everything below is a local
+change in `components/fdb` — check `git log -- components/<name>` before
+assuming any component is upstream.
+
+## Local, in components/fdb
+
+1. `changelog/process` needs a `:limit` batch cap. The handler runs inside
    the checkpoint transaction, so with `{:deduplicate? false}` a burst
    issues N publishes inside one FDB transaction.
-4. `read-checkpoint` should read through the processing transaction. It
+2. `read-checkpoint` should read through the processing transaction. It
    opens its own, so the checkpoint key never enters the outer
    transaction's read-conflict set and two relays would not conflict — FDB's
    own optimistic concurrency would otherwise make multi-replica relays safe
    without a lease.
-5. Upstream `components/changelog-relay` itself, retiring `fdb/watcher` and
-   `fdb/watchers`.
-Nothing here is upstream any more for FDB: ADR-#270 moved that component
-into this workspace, so `components/fdb` is ours to change.
+3. `fdb/watcher.clj`'s loop swallows every exception with no logging (see
+   Context). `changelog-relay/runner` already logs and redrives; the
+   watcher it replaces does not, and still runs the `idvs` cursor until
+   Phase 4 lands.
+4. Retire `fdb/watcher` and `fdb/watchers` once Phase 4 removes the last
+   watcher. Upstreaming `components/changelog-relay` to mono is a separate
+   question, and only sensible after that.
 
 ## Deliberately not built
 
