@@ -1,18 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
 
-    <!-- The workspace's only production logging config. Reached by every
-         service through components/resources; logback-test.xml in
-         components/test-resources takes precedence on test classpaths. -->
-
     <statusListener class="ch.qos.logback.core.status.NopStatusListener"/>
 
     <contextListener class="ch.qos.logback.classic.jul.LevelChangePropagator">
         <resetJUL>true</resetJUL>
     </contextListener>
 
-    <!-- Override per deployment with -DLOG_LEVEL=debug or LOG_LEVEL=debug
-         rather than by adding a second copy of this file. -->
     <property name="LOG_LEVEL" value="${LOG_LEVEL:-info}"/>
 
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
