@@ -70,7 +70,7 @@
                 onfido-simulator/app)
       (assoc-in [:system/defs :onfido-adapter-server :handler]
                 onfido-adapter/app)
-      (assoc-in [:system/defs :companies-house-server :handler]
+      (assoc-in [:system/defs :uk-companies-house-simulator-server :handler]
                 ch-simulator/app)))
 
 (defn- scenario-files

@@ -48,7 +48,7 @@
    [sys
     ["classpath:uk-companies-house-adapter/application-test.yml"
      #(assoc-in %
-       [:system/defs :companies-house-server :handler]
+       [:system/defs :uk-companies-house-simulator-server :handler]
        simulator-api/app)]]
    (testing "a known company round-trips and carries the adapter's registry"
      (let [result (lookup sys {:company-number known-company})]

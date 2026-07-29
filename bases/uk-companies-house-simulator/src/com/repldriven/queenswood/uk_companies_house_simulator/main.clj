@@ -18,7 +18,7 @@
   [config-file profile]
   (nom-> (env/config config-file profile)
          system/defs
-         (assoc-in [:system/defs :companies-house-server :handler]
+         (assoc-in [:system/defs :uk-companies-house-simulator-server :handler]
           api/app)
          system/start))
 

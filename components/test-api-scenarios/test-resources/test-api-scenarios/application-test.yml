@@ -11,9 +11,7 @@ system:
   clearbank-adapter-relay: !include system/clearbank-adapter-relay.yml
   clearbank-adapter-server: !include system/clearbank-adapter-server.yml
   clearbank-simulator-server: !include system/clearbank-simulator-server.yml
-  companies-house-server: !include system/companies-house-server.yml
-  companies: !include system/companies.yml
-  companies-dispatcher: !include system/companies-dispatcher.yml
+  companies-dispatcher: !include system/company-dispatcher.yml
   fdb: !include system/fdb-test.yml
   idv: !include system/idv.yml
   interest: !include system/interest.yml
@@ -35,3 +33,5 @@ system:
   templates: !include system/templates.yml
   transactions: !include system/transaction.yml
   transactions-dispatcher: !include system/transaction-dispatcher.yml
+  uk-companies-house-adapter: !include system/uk-companies-house-adapter.yml
+  uk-companies-house-simulator-server: !include system/uk-companies-house-simulator-server.yml

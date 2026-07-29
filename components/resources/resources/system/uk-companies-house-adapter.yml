@@ -4,8 +4,8 @@ command-processor-impl: !system/component
   record-db: !system/ref fdb.record-db
   record-store: !system/ref fdb.meta-store
   companies-house-url: !profile
-    dev: !system/ref companies-house-server.http-url
-    test: !system/ref companies-house-server.http-url
+    dev: !system/ref uk-companies-house-simulator-server.http-url
+    test: !system/ref uk-companies-house-simulator-server.http-url
     default: !env COMPANIES_HOUSE_URL
 
 
