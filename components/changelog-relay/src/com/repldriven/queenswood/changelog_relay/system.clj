@@ -16,7 +16,8 @@
                    :consumer-id system/required-component
                    :store-name system/required-component
                    :handler system/required-component
-                   :poll-ms nil}
+                   :poll-ms nil
+                   :keyspace-prefix nil}
    :system/instance-schema map?})
 
 (def ^:private runners-component

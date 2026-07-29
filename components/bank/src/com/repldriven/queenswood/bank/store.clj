@@ -18,7 +18,8 @@
   (fdb/transact txn
                 (fn [txn]
                   (format "%06d"
-                          (fdb/allocate-counter (fdb/open txn store-name)
+                          (fdb/allocate-counter txn
+                                                store-name
                                                 "bank"
                                                 "sort-codes")))
                 :bank/allocate-sort-code
@@ -41,7 +42,7 @@
      (let [store (fdb/open txn store-name)]
        (let-nom>
          [_ (fdb/save-record store (schema/Bank->java bank))
-          _ (fdb/write-changelog store
+          _ (fdb/write-changelog txn
                                  store-name
                                  (:bank-id bank)
                                  (schema/BankChangelog->pb changelog))]

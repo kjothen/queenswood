@@ -20,10 +20,18 @@ record-db: !system/component
   system/component-kind: fdb/record-db
   cluster-file-path: !system/local-ref cluster-file-path
 
+# A fresh prefix per boot. Rigs share one reused FDB testcontainer, so
+# without this they share stores, changelog and cursors — one rig's
+# relay then drains entries another rig wrote.
+keyspace-prefix: !system/component
+  system/component-kind: fdb/keyspace-prefix
+  generate: true
+
 store: !system/component
   system/component-kind: fdb/store
   descriptor: com.repldriven.queenswood.schemas.schemas.SchemaProto
   record-types: *record-types
+  keyspace-prefix: !system/local-ref keyspace-prefix
 
 meta-store: !system/component
   system/component-kind: fdb/meta-store
@@ -31,6 +39,7 @@ meta-store: !system/component
   path: meta
   descriptor: com.repldriven.queenswood.schemas.schemas.SchemaProto
   record-types: *record-types
+  keyspace-prefix: !system/local-ref keyspace-prefix
   # Persist the test schema into the testcontainer FDB at start so
   # the monolith's downstream record-store consumers can read it
   # (no separate migrator process in monolith mode).

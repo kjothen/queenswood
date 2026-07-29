@@ -19,6 +19,7 @@ watchers: !system/component
   system/component-kind: fdb/watchers
   idvs:
     record-db: !system/ref fdb.record-db
+    keyspace-prefix: !system/ref fdb.keyspace-prefix
     consumer-id: parties-watcher
     store-name: idvs
     handler: !system/local-ref watcher-handler

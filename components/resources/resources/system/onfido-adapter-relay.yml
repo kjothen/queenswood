@@ -9,6 +9,7 @@ relay-runners: !system/component
   system/component-kind: changelog-relay/runners
   onfido-outbox:
     record-db: !system/ref fdb.record-db
+    keyspace-prefix: !system/ref fdb.keyspace-prefix
     consumer-id: onfido-relay
     store-name: onfido-outbox
     handler: !system/local-ref relay-handler

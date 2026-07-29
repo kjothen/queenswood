@@ -242,7 +242,11 @@
                    (.join))]
     (if (nil? result) 0 (.getLong result 0))))
 
-(defrecord Txn [open])
+;; `prefix` rides on the Txn because there is nowhere else for it to
+;; live: FDBDatabaseFactory caches one FDBDatabase per cluster file, so
+;; two systems sharing a cluster share that object and it cannot
+;; identify either of them.
+(defrecord Txn [open prefix])
 
 (defn open
   "Opens a named store within the transaction. Memoised for
@@ -257,7 +261,9 @@
   - Given an existing Txn, reuses it (composition).
   - Given a config map with :record-db and :record-store,
     opens a fresh FDB transaction and wraps ctx in a new Txn
-    whose store-opening is memoised for this transaction.
+    whose store-opening is memoised for this transaction. An
+    optional :keyspace-prefix on that map scopes every key the
+    transaction writes.
 
   If f returns an anomaly, the FDB transaction is aborted
   (rolled back) and the anomaly is returned to the caller."
@@ -266,7 +272,12 @@
   ([txn-or-config f category message]
    (if (instance? Txn txn-or-config)
      (try-nom category message (f txn-or-config))
-     (let [{:keys [record-db record-store]} txn-or-config]
+     (let [{:keys [record-db record-store]} txn-or-config
+           ;; From the record-store's metadata, so no brick's component
+           ;; config has to name it. An explicit key still wins, which
+           ;; is what a test that builds a config map by hand needs.
+           keyspace-prefix (or (:keyspace-prefix txn-or-config)
+                               (:keyspace-prefix (meta record-store)))]
        (try
          (.run ^FDBDatabase record-db
                ^Function
@@ -281,7 +292,7 @@
                                        s)))
                        result (try-nom category
                                        message
-                                       (f (->Txn open-fn)))]
+                                       (f (->Txn open-fn keyspace-prefix)))]
                    (if (error/anomaly? result)
                      ;; nosemgrep: no-raw-throw
                      (throw (ex-info "Transaction rolled back"

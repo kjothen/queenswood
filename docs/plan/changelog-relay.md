@@ -82,6 +82,17 @@ the shapes ever drift apart.
 
 Revisiting replicas is still open.
 
+### Kafka test isolation
+
+FDB is scoped per rig now, via `fdb/keyspace-prefix` — the test rigs
+generate one per boot, so they no longer share stores, changelog or
+cursors. Kafka is not: rigs share a broker, the topic names, and fixed
+`group.id`s, so one rig consumes another's events. The same lever
+applies — a per-rig topic prefix — but it reaches every entry in
+`kafka-topics.yml` and `kafka-all-test.yml`, and the kafka component is
+still mono's. Until then, assertions over span or message counts must
+name the event they mean rather than aggregate.
+
 ### Docs and lint
 
 Deferred wholesale and now the largest debt: 94 "watcher" mentions across
@@ -114,6 +125,14 @@ vacuously — worse than failing. Best written once, after Phase 4.
 - **Envelope proto fields stay `optional`.** protojure omits zero and empty
   values on the wire, and a proto2 `required` scalar holding its default
   then fails to parse.
+- **`meta-store`'s `path:` is not an isolation lever.** It scopes the
+  `FDBMetaDataStore` only. Records hang off `store-name`, and changelog /
+  sentinel / checkpoint off the `"mono"` root — which is what
+  `fdb/keyspace-prefix` now qualifies.
+- **A relay must be handed the same prefix its writer used.** The writer
+  recovers it from the record-store; a runner only gets a `record-db`, so
+  it cannot discover one. A mismatch reads an empty changelog rather than
+  erroring.
 - Run `clj -X:deps prep :aliases '[:dev]' :force true` after any proto
   change.
 

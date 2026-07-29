@@ -9,6 +9,7 @@ relay-runners: !system/component
   system/component-kind: changelog-relay/runners
   clearbank-outbox:
     record-db: !system/ref fdb.record-db
+    keyspace-prefix: !system/ref fdb.keyspace-prefix
     consumer-id: clearbank-relay
     store-name: clearbank-outbox
     handler: !system/local-ref relay-handler

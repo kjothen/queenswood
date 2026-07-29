@@ -71,16 +71,19 @@ system:
       system/component-kind: changelog-relay/runners
       cash-accounts:
         record-db: !system/ref fdb.record-db
+        keyspace-prefix: !system/ref fdb.keyspace-prefix
         consumer-id: cash-account-watcher
         store-name: cash-accounts
         handler: !system/local-ref cash-accounts-handler
       clearbank-outbox:
         record-db: !system/ref fdb.record-db
+        keyspace-prefix: !system/ref fdb.keyspace-prefix
         consumer-id: clearbank-relay
         store-name: clearbank-outbox
         handler: !system/local-ref schemes-payments-handler
       onfido-outbox:
         record-db: !system/ref fdb.record-db
+        keyspace-prefix: !system/ref fdb.keyspace-prefix
         consumer-id: onfido-relay
         store-name: onfido-outbox
         handler: !system/local-ref idv-handler

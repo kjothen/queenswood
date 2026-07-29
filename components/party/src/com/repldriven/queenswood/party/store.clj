@@ -22,7 +22,7 @@
      (let [store (fdb/open txn store-name)]
        (let-nom>
          [_ (fdb/save-record store (schema/Party->java party))
-          _ (fdb/write-changelog store
+          _ (fdb/write-changelog txn
                                  store-name
                                  (:party-id party)
                                  (schema/PartyChangelog->pb changelog))]

@@ -21,11 +21,10 @@
   [config record-id payload]
   (fdb/transact config
                 (fn [txn]
-                  (let [store (fdb/open txn store-name)]
-                    (fdb/write-changelog store
-                                         store-name
-                                         record-id
-                                         (.getBytes ^String payload))))))
+                  (fdb/write-changelog txn
+                                       store-name
+                                       record-id
+                                       (.getBytes ^String payload)))))
 
 (defn- wait-for
   [pred deadline-ms]
@@ -46,6 +45,10 @@
    [sys "classpath:changelog-relay/application-test.yml"]
    (let [config {:record-db (system/instance sys [:fdb :record-db])
                  :record-store (system/instance sys [:fdb :store])}
+         ;; The runner has to be given the same prefix the writer used —
+         ;; it only gets a record-db, so it cannot discover one. A
+         ;; mismatch reads an empty changelog rather than erroring.
+         prefix (system/instance sys [:fdb :keyspace-prefix])
          seen (atom [])
          handler (fn [_ctx changelog-bytes]
                    (swap! seen conj (String. ^bytes changelog-bytes)))]
@@ -63,7 +66,8 @@
              {:keys [stop]} (SUT/start {:record-db (:record-db config)
                                         :consumer-id "changelog-relay-test"
                                         :store-name store-name
-                                        :handler handler})]
+                                        :handler handler
+                                        :keyspace-prefix prefix})]
          (try (is (wait-for #(= 2 (count (mine))) 5000)
                   "both changelog entries must be relayed")
               (is (= ["relay-test:opening" "relay-test:opened"] (mine))

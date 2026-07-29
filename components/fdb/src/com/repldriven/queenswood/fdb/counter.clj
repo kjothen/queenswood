@@ -24,11 +24,13 @@
 (defn allocate
   "Atomically increments counter at key-parts by 1,
   returns the post-increment value. For use inside a
-  transaction (pass store to extract raw tr)."
-  [store & key-parts]
+  transaction (pass store to extract raw tr). Counter keys sit at
+  the FDB root, so prefix scopes them the same way it scopes
+  records and the changelog."
+  [store prefix & key-parts]
   (let [ctx (.getContext store)
         tr (.ensureActive ctx)
-        key (pack key-parts)]
+        key (pack (if (seq prefix) (cons prefix key-parts) key-parts))]
     (.mutate tr MutationType/ADD key (long->little-endian 1))
     (->
       (.asyncToSync ctx FDBStoreTimer$Waits/WAIT_LOAD_SYSTEM_KEY (.get tr key))
