@@ -27,8 +27,8 @@ system:
         - schemes-payment-command-response
         - idv-command
         - idv-command-response
-        - company-registries-command
-        - company-registries-command-response
+        - companies-command
+        - companies-command-response
         - idv-event
         - payee-checks-command
         - payee-checks-command-response
@@ -98,7 +98,7 @@ system:
         interest: !system/ref interest-dispatcher.dispatcher
         transactions: !system/ref transactions-dispatcher.dispatcher
         payee-checks: !system/ref payee-checks-dispatcher.dispatcher
-        company-registries: !system/ref company-registries-dispatcher.dispatcher
+        companies: !system/ref companies-dispatcher.dispatcher
       avro: !system/ref avro.serde
       record-db: !system/ref fdb.record-db
       record-store: !system/ref fdb.meta-store
@@ -117,5 +117,5 @@ system:
   onfido-adapter: !include system/onfido-adapter.yml
   onfido-adapter-relay: !include system/onfido-adapter-relay.yml
   companies-house-server: !include system/companies-house-server.yml
-  company-registries: !include system/company-registries.yml
-  company-registries-dispatcher: !include system/company-registries-dispatcher.yml
+  companies: !include system/companies.yml
+  companies-dispatcher: !include system/companies-dispatcher.yml

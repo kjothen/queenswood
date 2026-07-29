@@ -12,8 +12,8 @@ system:
   clearbank-adapter-server: !include system/clearbank-adapter-server.yml
   clearbank-simulator-server: !include system/clearbank-simulator-server.yml
   companies-house-server: !include system/companies-house-server.yml
-  company-registries: !include system/company-registries.yml
-  company-registries-dispatcher: !include system/company-registries-dispatcher.yml
+  companies: !include system/companies.yml
+  companies-dispatcher: !include system/companies-dispatcher.yml
   fdb: !include system/fdb-test.yml
   idv: !include system/idv.yml
   interest: !include system/interest.yml

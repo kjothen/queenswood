@@ -103,21 +103,21 @@ producers: !system/component
       bootstrap.servers: !system/local-ref bootstrap-servers
       topic: topic-cash-accounts-event
       acks: all
-  company-registries-command:
+  companies-command:
     _: !system/local-ref topics
     schemas: !system/local-ref schemas
     schema: !keyword command
     conf:
       bootstrap.servers: !system/local-ref bootstrap-servers
-      topic: topic-company-registries-command
+      topic: topic-companies-command
       acks: all
-  company-registries-command-response:
+  companies-command-response:
     _: !system/local-ref topics
     schemas: !system/local-ref schemas
     schema: !keyword command-response
     conf:
       bootstrap.servers: !system/local-ref bootstrap-servers
-      topic: topic-company-registries-command-response
+      topic: topic-companies-command-response
       acks: all
   idv-command:
     _: !system/local-ref topics
@@ -354,22 +354,22 @@ consumers: !system/component
     conf:
       bootstrap.servers: !system/local-ref bootstrap-servers
       group.id: test-cash-accounts-event
-  company-registries-command:
+  companies-command:
     _: !system/local-ref topics
     schemas: !system/local-ref schemas
     schema: !keyword command
-    topics: [topic-company-registries-command]
+    topics: [topic-companies-command]
     conf:
       bootstrap.servers: !system/local-ref bootstrap-servers
-      group.id: test-company-registries-command
-  company-registries-command-response:
+      group.id: test-companies-command
+  companies-command-response:
     _: !system/local-ref topics
     schemas: !system/local-ref schemas
     schema: !keyword command-response
-    topics: [topic-company-registries-command-response]
+    topics: [topic-companies-command-response]
     conf:
       bootstrap.servers: !system/local-ref bootstrap-servers
-      group.id: test-company-registries-command-response
+      group.id: test-companies-command-response
   idv-command:
     _: !system/local-ref topics
     schemas: !system/local-ref schemas
@@ -529,10 +529,10 @@ message-bus-producers: !system/component
     producer: !system/local-ref producers.cash-accounts-command-response
   cash-accounts-event:
     producer: !system/local-ref producers.cash-accounts-event
-  company-registries-command:
-    producer: !system/local-ref producers.company-registries-command
-  company-registries-command-response:
-    producer: !system/local-ref producers.company-registries-command-response
+  companies-command:
+    producer: !system/local-ref producers.companies-command
+  companies-command-response:
+    producer: !system/local-ref producers.companies-command-response
   idv-command:
     producer: !system/local-ref producers.idv-command
   idv-command-response:
@@ -589,11 +589,11 @@ message-bus-consumers: !system/component
   cash-accounts-event:
     consumer: !system/local-ref consumers.cash-accounts-event
     timeout: 500
-  company-registries-command:
-    consumer: !system/local-ref consumers.company-registries-command
+  companies-command:
+    consumer: !system/local-ref consumers.companies-command
     timeout: 500
-  company-registries-command-response:
-    consumer: !system/local-ref consumers.company-registries-command-response
+  companies-command-response:
+    consumer: !system/local-ref consumers.companies-command-response
     timeout: 500
   idv-command:
     consumer: !system/local-ref consumers.idv-command

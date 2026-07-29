@@ -37,12 +37,12 @@
     [com.repldriven.queenswood.api.onboarding.examples :as
      onboarding.examples]
     [com.repldriven.queenswood.api.onboarding.routes :as onboarding]
-    [com.repldriven.queenswood.api.company-registries.components :as
-     company-registries.components]
-    [com.repldriven.queenswood.api.company-registries.examples :as
-     company-registries.examples]
-    [com.repldriven.queenswood.api.company-registries.routes :as
-     company-registries]
+    [com.repldriven.queenswood.api.companies.components :as
+     companies.components]
+    [com.repldriven.queenswood.api.companies.examples :as
+     companies.examples]
+    [com.repldriven.queenswood.api.companies.routes :as
+     companies]
     [com.repldriven.queenswood.api.bank.components :as
      bank.components]
     [com.repldriven.queenswood.api.bank.examples :as
@@ -128,7 +128,7 @@
                                me.components/registry
                                oauth.components/registry
                                onboarding.components/registry
-                               company-registries.components/registry
+                               companies.components/registry
                                bank.components/registry
                                party.components/registry
                                payee-check.components/registry
@@ -169,7 +169,7 @@
                     me.examples/registry
                     oauth.examples/registry
                     onboarding.examples/registry
-                    company-registries.examples/registry
+                    companies.examples/registry
                     bank.examples/registry
                     party.examples/registry
                     payee-check.examples/registry
@@ -200,7 +200,7 @@
                   jobs/routes
                   me/routes
                   onboarding/routes
-                  company-registries/routes
+                  companies/routes
                   bank/routes
                   party/routes
                   payee-check/routes

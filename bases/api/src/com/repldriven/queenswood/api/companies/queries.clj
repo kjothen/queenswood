@@ -1,12 +1,12 @@
-(ns com.repldriven.queenswood.api.company-registries.queries
+(ns com.repldriven.queenswood.api.companies.queries
   (:require
     [com.repldriven.queenswood.api.commands :as commands]))
 
 (defn- dispatcher
   [request]
   (let [{:keys [dispatchers]} request
-        {:keys [company-registries]} dispatchers]
-    company-registries))
+        {:keys [companies]} dispatchers]
+    companies))
 
 (defn lookup
   "Resolve `company-number` against the registry of record. Returns the

@@ -20,9 +20,9 @@
     partitions: 1
   - topic: topic-cash-accounts-event-dlq
     partitions: 1
-  - topic: topic-company-registries-command
+  - topic: topic-companies-command
     partitions: 1
-  - topic: topic-company-registries-command-response
+  - topic: topic-companies-command-response
     partitions: 1
   - topic: topic-idv-command
     partitions: 1

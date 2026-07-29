@@ -1,4 +1,4 @@
-(ns com.repldriven.queenswood.api.company-registries.examples
+(ns com.repldriven.queenswood.api.companies.examples
   (:require
     [com.repldriven.queenswood.api.schema :refer [examples-registry]]))
 

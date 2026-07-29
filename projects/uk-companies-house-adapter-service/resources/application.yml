@@ -7,30 +7,30 @@ system:
         command-response: schemas/command/command-response.avsc.json
     producers: !system/component
       system/component-kind: kafka/producers
-      company-registries-command-response:
+      companies-command-response:
         schemas: !system/local-ref schemas
         schema: !keyword command-response
         conf:
           bootstrap.servers: !env KAFKA_BOOTSTRAP_SERVERS
-          topic: topic-company-registries-command-response
+          topic: topic-companies-command-response
           acks: all
     consumers: !system/component
       system/component-kind: kafka/consumers
-      company-registries-command:
+      companies-command:
         schemas: !system/local-ref schemas
         schema: !keyword command
-        topics: [topic-company-registries-command]
+        topics: [topic-companies-command]
         conf:
           bootstrap.servers: !env KAFKA_BOOTSTRAP_SERVERS
-          group.id: uk-companies-house-adapter-service-company-registries-command
+          group.id: uk-companies-house-adapter-service-companies-command
     message-bus-producers: !system/component
       system/component-kind: kafka/message-bus-producers
-      company-registries-command-response:
-        producer: !system/local-ref producers.company-registries-command-response
+      companies-command-response:
+        producer: !system/local-ref producers.companies-command-response
     message-bus-consumers: !system/component
       system/component-kind: kafka/message-bus-consumers
-      company-registries-command:
-        consumer: !system/local-ref consumers.company-registries-command
+      companies-command:
+        consumer: !system/local-ref consumers.companies-command
         timeout: 500
   message-bus: !include system/message-bus.yml
   fdb: !include system/fdb.yml
@@ -51,5 +51,5 @@ system:
       system/component-kind: command-processor/command-processor
       bus: !system/ref message-bus.bus
       processor: !system/local-ref command-processor-impl
-      command-channel: !keyword company-registries-command
-      command-response-channel: !keyword company-registries-command-response
+      command-channel: !keyword companies-command
+      command-response-channel: !keyword companies-command-response

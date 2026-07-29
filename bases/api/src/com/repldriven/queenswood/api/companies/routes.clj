@@ -1,7 +1,7 @@
-(ns com.repldriven.queenswood.api.company-registries.routes
+(ns com.repldriven.queenswood.api.companies.routes
   (:require
-    [com.repldriven.queenswood.api.company-registries.queries :as queries]
-    [com.repldriven.queenswood.api.company-registries.examples :refer
+    [com.repldriven.queenswood.api.companies.queries :as queries]
+    [com.repldriven.queenswood.api.companies.examples :refer
      [CompanyNotFound]]
     [com.repldriven.queenswood.api.schema :refer [ErrorResponse]]))
 

@@ -1,7 +1,7 @@
 (ns com.repldriven.queenswood.api.onboarding.handlers
   (:require
     [com.repldriven.queenswood.api.bank.commands :as bank-commands]
-    [com.repldriven.queenswood.api.company-registries.queries :as companies]
+    [com.repldriven.queenswood.api.companies.queries :as companies]
     [com.repldriven.queenswood.api.errors :as errors]
 
     [com.repldriven.mono.error.interface :as error]
