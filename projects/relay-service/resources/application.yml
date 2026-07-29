@@ -41,11 +41,7 @@ system:
       system/component-kind: kafka/message-bus-consumers
   message-bus: !include system/message-bus.yml
   fdb: !include system/fdb.yml
-  telemetry:
-    otel-sdk: !system/component
-      system/component-kind: telemetry/otel-sdk
-      service-name: !env SERVICE_NAME
-      endpoint: !env OTEL_ENDPOINT
+  telemetry: !include system/telemetry.yml
   relay:
     clearbank-handler: !system/component
       system/component-kind: clearbank-relay/relay-handler

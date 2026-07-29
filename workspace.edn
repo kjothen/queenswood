@@ -19,17 +19,20 @@
                        :necessary ["resources" "schema"
                                    "test-resources"]}
   "migrator-service" {:alias "mig"
-                      :necessary ["resources"
-                                  "schema"]}
+                      :necessary ["resources" "schema"
+                                  "test-resources"]}
   "clearbank-adapter-service" {:alias "cba"
                                :necessary ["resources"
                                            "schema" "test-resources"]}
-  "clearbank-simulator-service" {:alias "cbs" :necessary []}
+  "clearbank-simulator-service" {:alias "cbs"
+                                 :necessary ["resources" "test-resources"]}
   "onfido-adapter-service" {:alias "ioa"
                             :necessary ["resources"
                                         "schema" "test-resources"]}
-  "onfido-simulator-service" {:alias "ios" :necessary []}
-  "uk-companies-house-simulator-service" {:alias "ucs" :necessary []}
+  "onfido-simulator-service" {:alias "ios"
+                              :necessary ["resources" "test-resources"]}
+  "uk-companies-house-simulator-service"
+  {:alias "ucs" :necessary ["resources" "test-resources"]}
   "uk-companies-house-adapter-service" {:alias "uca"
                                         :necessary ["resources"
                                                     "schema"

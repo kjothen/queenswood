@@ -52,10 +52,6 @@ system:
   message-bus: !include system/message-bus.yml
   fdb: !include system/fdb.yml
   avro: !include system/avro.yml
-  telemetry:
-    otel-sdk: !system/component
-      system/component-kind: telemetry/otel-sdk
-      service-name: !env SERVICE_NAME
-      endpoint: !env OTEL_ENDPOINT
+  telemetry: !include system/telemetry.yml
   clearbank-adapter: !include system/clearbank-adapter.yml
   clearbank-adapter-server: !include system/clearbank-adapter-server.yml

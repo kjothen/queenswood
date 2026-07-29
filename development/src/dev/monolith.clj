@@ -26,6 +26,4 @@
   ;; size just your data — measurable, and tiny next to its print size
   (i/mem-size (get-in sys [:donut.system/instances :avro :serde]))
   (println (i/mem-footprint (get-in sys
-                                    [:donut.system/instances :avro :serde])))
-  ;
-)
+                                    [:donut.system/instances :avro :serde]))))
