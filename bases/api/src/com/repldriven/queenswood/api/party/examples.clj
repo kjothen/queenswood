@@ -69,11 +69,5 @@
    :national-identifier
    {:type :national-insurance :value "TN000001A" :issuing-country "GB"}})
 
-(def CreatePartyResponse Party)
-
 (def MergePartyRequest {:into-party-id "pty.01kprbmgcj35ptc8npmybhh4sb"})
 
-(def MergePartyResponse
-  (assoc Party
-         :status :merged
-         :merged-into-party-id (:into-party-id MergePartyRequest)))

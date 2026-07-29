@@ -78,12 +78,3 @@
 (def CreateCashAccountRequest
   (select-keys CashAccount [:party-id :name :currency :product-id]))
 
-(def CreateCashAccountResponse CashAccount)
-
-(def CloseCashAccountResponse CashAccount)
-
-(def SuspendCashAccountResponse CashAccount)
-
-(def ResumeCashAccountResponse CashAccount)
-
-(def RotateCashAccountAddressResponse CashAccount)

@@ -179,14 +179,6 @@
 (def ref-account-id {:$ref "#/components/parameters/AccountId"})
 (def ref-bank-id {:$ref "#/components/parameters/BankId"})
 (def ref-party-id {:$ref "#/components/parameters/PartyId"})
-(def ref-product-id {:$ref "#/components/parameters/ProductId"})
-(def ref-version-id {:$ref "#/components/parameters/VersionId"})
-(def ref-check-id {:$ref "#/components/parameters/CheckId"})
-(def ref-payment-id {:$ref "#/components/parameters/PaymentId"})
-(def ref-policy-id {:$ref "#/components/parameters/PolicyId"})
-(def ref-balance-type {:$ref "#/components/parameters/BalanceType"})
-(def ref-currency {:$ref "#/components/parameters/Currency"})
-(def ref-balance-status {:$ref "#/components/parameters/BalanceStatus"})
 
 (def registry
   "Map of OpenAPI parameter component name → parameter object. Merged

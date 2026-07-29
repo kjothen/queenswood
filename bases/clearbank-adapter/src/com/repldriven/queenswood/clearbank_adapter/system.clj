@@ -103,20 +103,27 @@
   [simulator-url webhook-url webhooks poll-ms]
   (doto (Thread.
          (fn []
-           (while true
-             (try
-               (Thread/sleep poll-ms)
-               (when-not (registered? simulator-url webhook-url webhooks)
-                 (log/warn
-                  "One or more ClearBank webhooks missing; re-registering all"
-                  {:simulator simulator-url})
-                 (re-register-missing simulator-url webhook-url webhooks))
-               ;; nosemgrep: no-raw-throw
-               (catch InterruptedException _ (throw (InterruptedException.)))
-               (catch Throwable t
-                 (log/error
-                  t
-                  "ClearBank webhook poll iteration threw; continuing"))))))
+           ;; The interrupt is the stop signal, so it ends the loop by
+           ;; value rather than by throwing. Letting it propagate out of
+           ;; `run` would have the default handler print a stack trace on
+           ;; every clean shutdown.
+           (loop []
+             (when
+               (try
+                 (Thread/sleep poll-ms)
+                 (when-not (registered? simulator-url webhook-url webhooks)
+                   (log/warn
+                    "One or more ClearBank webhooks missing; re-registering all"
+                    {:simulator simulator-url})
+                   (re-register-missing simulator-url webhook-url webhooks))
+                 true
+                 (catch InterruptedException _ false)
+                 (catch Throwable t
+                   (log/error
+                    t
+                    "ClearBank webhook poll iteration threw; continuing")
+                   true))
+               (recur)))))
     (.setDaemon true)
     (.setName "clearbank-webhook-re-register")
     (.start)))

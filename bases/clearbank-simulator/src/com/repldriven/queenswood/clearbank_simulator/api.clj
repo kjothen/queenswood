@@ -1,7 +1,5 @@
 (ns com.repldriven.queenswood.clearbank-simulator.api
   (:require
-    [com.repldriven.queenswood.clearbank-simulator.schema :as schema]
-
     [com.repldriven.queenswood.clearbank-simulator.cop.components :as
      cop.components]
     [com.repldriven.queenswood.clearbank-simulator.cop.examples :as
@@ -52,7 +50,6 @@
                    :string {:default (->provider (mt/string-transformer))}
                    :response {:default (->provider nil)}}
     :options {:registry (merge (m/default-schemas)
-                               {"ErrorResponse" schema/ErrorResponseSchema}
                                cop.components/registry
                                fps.components/registry
                                simulate.components/registry

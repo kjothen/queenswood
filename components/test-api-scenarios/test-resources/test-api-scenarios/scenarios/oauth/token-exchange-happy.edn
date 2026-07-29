@@ -23,10 +23,14 @@
                     :client_secret [:ref :org-0 :client-secret]
                     :scope "queenswood-api-live"}}
    :as :token-response
+   ;; `expires_in` is the lifetime *remaining*, counted from when
+   ;; Keycloak issued the token rather than when it serialised the
+   ;; response, so an exact 3600 loses a second whenever those fall
+   ;; either side of a tick. The tolerance still fails a wrong lifetime.
    :assert {:status 200
             :body {:access_token [:m/regex ".+"]
                    :token_type "Bearer"
-                   :expires_in 3600}}}]
+                   :expires_in [:m/within-delta 5 3600]}}}]
  :then [;; Bearer the freshly-minted JWT against an org-scoped endpoint
         {:command :api/request
          :request {:method :get

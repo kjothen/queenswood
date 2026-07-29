@@ -12,8 +12,11 @@ jetty-adapter: !system/component
   handler: !system/ref uk-companies-house-simulator-server.handler
   interceptors: !system/ref uk-companies-house-simulator-server.interceptors
   options: !profile
+    # 8085 rather than 8084: dev runs every server in the monolith's one
+    # JVM, where onfido-adapter-server already holds 8084. Deployed they
+    # are separate pods, so `default` keeps the port helm expects.
     dev:
-      port: 8084
+      port: 8085
     test:
       port: 0
     default:

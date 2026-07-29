@@ -22,8 +22,6 @@
           api/app)
          system/start))
 
-(defn stop [system] (system/stop system))
-
 (defn -main
   [& args]
   (log/info args)

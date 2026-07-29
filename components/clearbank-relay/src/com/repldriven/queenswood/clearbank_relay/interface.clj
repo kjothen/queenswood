@@ -1,10 +1,10 @@
 (ns com.repldriven.queenswood.clearbank-relay.interface
   "Transactional-outbox egress for the ClearBank adapter. Webhook
   handlers persist an event with `save-event` — co-committed to the
-  outbox store's changelog — and a changelog relay watcher (the
-  `clearbank-relay/relay-handler` component-kind) publishes it to the
-  message bus at-least-once. This decouples 'webhook received' from
-  'downstream told' so they cannot diverge."
+  outbox store's changelog — and the shared
+  `changelog-relay/envelope-handler` publishes it to the message bus
+  at-least-once. This decouples 'webhook received' from 'downstream
+  told' so they cannot diverge."
   (:require
     [com.repldriven.queenswood.clearbank-relay.system]
 

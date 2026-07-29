@@ -1,6 +1,7 @@
 relay-handler: !system/component
-  system/component-kind: clearbank-relay/relay-handler
+  system/component-kind: changelog-relay/envelope-handler
   bus: !system/ref message-bus.bus
+  store-name: clearbank-outbox
   event-channel: !keyword schemes-payments-event
 
 

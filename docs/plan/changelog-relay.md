@@ -66,14 +66,21 @@ map and its `(= :party-status-pending (:status party))` gate move to
 `idvs-event` channel. `consumer-id: parties-watcher`. Delete
 `party/watcher.clj`.
 
-### Phase 5 — converge the adapters, then revisit replicas
+### Phase 5 — converge the adapters — done
 
-`clearbank-relay` and `onfido-relay` still write their own outbox protos
-and carry bespoke `relay-handler`s. The shared envelope reuses
-`ClearbankOutboxEvent`'s field numbers and wire types deliberately, so an
-entry already on a cursor decodes as a `ChangelogEvent` — the switch needs
-no cutover. Both bespoke handlers then retire in favour of
-`changelog-relay/envelope-handler`.
+Both bespoke `relay-handler`s are retired; `clearbank-adapter-relay` and
+`onfido-adapter-relay` name `changelog-relay/envelope-handler`. No
+cutover was needed, as predicted: the outbox protos reuse
+`ChangelogEvent`'s field numbers and wire types, so an entry already on
+a cursor decodes unchanged. Neither handler read `outbox_id`, which is
+the only field that differs in name.
+
+That alignment used to be a comment in the proto. It is now a test —
+both relay interface tests take the shared handler from their rig and
+relay a stored outbox entry to the bus, so the claim fails loudly if
+the shapes ever drift apart.
+
+Revisiting replicas is still open.
 
 ### Docs and lint
 
