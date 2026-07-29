@@ -106,18 +106,21 @@ bumping the `deps/mono` and `deps/mono-test` shims in lockstep.
 reads config afresh and lands in its own keyspace, so systems cannot see
 each other regardless of which container they are on.
 
-Two things to settle here:
+Production keeps `meta`; every other profile generates. That includes
+`dev`, which matters because `just monolith-start` runs the *test* rig
+under the `dev` profile — so the dev loop starts empty every time. That
+is wanted, and it is also what happens today: the dev loop currently
+gets a fresh container per start, so a generated keyspace preserves the
+behaviour rather than changing it.
 
-- **`dev` is not `test`.** `just monolith-start` runs the *test* rig
-  under the `dev` profile, so "every profile except production" would
-  give the dev loop a new keyspace on every restart. Once the container
-  is reused that means losing your data every time you restart the
-  monolith, which is worse than today. `dev` probably wants a stable
-  path and only `test` a generated one.
-- **A fresh keyspace per system is ~68 directory-layer writes per run**,
-  and that is the operation the production comment says serialises. It
-  buys the strongest isolation available and is the right default, but
-  it is the thing to watch first if stage 3 turns out slow.
+It does make cleanup matter more, not less. The dev loop is the most
+frequently restarted system in the workspace, and once its container
+survives, each restart leaves another abandoned keyspace behind.
+
+One thing to watch: **a fresh keyspace per system is ~68 directory-layer
+writes per run**, and that is the operation the production comment says
+serialises. It buys the strongest isolation available and is the right
+default, but it is the first thing to measure if stage 3 disappoints.
 
 At this point tests are isolated by keyspace and the container could be
 shared, but nothing has changed operationally yet. Run the suite and
@@ -143,8 +146,9 @@ runs, so a developer's FDB grows without bound.
 Either drop the keyspace on system stop — the natural place, and it
 keeps the container's contents proportional to what is running — or
 prune everything under the parent directory at start. Stop-time deletion
-is tidier but is skipped when a test crashes, so a start-time sweep is
-the backstop.
+is tidier but is skipped when a test crashes or `just monolith-start` is
+killed with Ctrl-C, which is the common case for the dev loop. A
+start-time sweep is the backstop that actually catches those.
 
 ## Verification
 
