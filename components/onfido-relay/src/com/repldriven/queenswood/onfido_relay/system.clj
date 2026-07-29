@@ -1,16 +1,8 @@
 (ns com.repldriven.queenswood.onfido-relay.system
   (:require
     [com.repldriven.queenswood.onfido-relay.outbound :as outbound]
-    [com.repldriven.queenswood.onfido-relay.relay :as relay]
 
     [com.repldriven.mono.system.interface :as system]))
-
-(def ^:private relay-handler
-  {:system/start (fn [{:system/keys [config instance]}]
-                   (or instance (relay/->handler config)))
-   :system/config {:bus system/required-component
-                   :event-channel system/required-component}
-   :system/instance-schema fn?})
 
 (def ^:private outbound-runner
   {:system/start (fn [{:system/keys [config instance]}]
@@ -24,6 +16,4 @@
                    :poll-ms nil}
    :system/instance-schema map?})
 
-(system/defcomponents :onfido-relay
-                      {:relay-handler relay-handler
-                       :outbound-runner outbound-runner})
+(system/defcomponents :onfido-relay {:outbound-runner outbound-runner})

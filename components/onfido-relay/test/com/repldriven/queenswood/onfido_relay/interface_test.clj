@@ -5,7 +5,7 @@
     [com.repldriven.queenswood.onfido-relay.intent :as intent]
     [com.repldriven.queenswood.onfido-relay.interface :as SUT]
     [com.repldriven.queenswood.onfido-relay.outbound :as outbound]
-    [com.repldriven.queenswood.onfido-relay.relay :as relay]
+    [com.repldriven.queenswood.changelog-relay.interface]
 
     [com.repldriven.queenswood.fdb.interface :as fdb]
 
@@ -57,7 +57,7 @@
             (SUT/save-event config (event "obx.2" "iv-1:completed")))))
      (testing "the relay publishes a stored event to the idv-event channel"
        (let [received (promise)
-             handler (relay/->handler {:bus bus :event-channel :idv-event})]
+             handler (system/instance sys [:relay-handler :handler])]
          (message-bus/subscribe bus :idv-event (fn [e] (deliver received e)))
          (nom-test> [_ (SUT/save-event config (event "obx.3" "iv-2:completed"))])
          (fdb/process-changelog (:record-db config)

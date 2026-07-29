@@ -6,7 +6,7 @@
     [com.repldriven.queenswood.clearbank-relay.intent :as intent]
     [com.repldriven.queenswood.clearbank-relay.interface :as SUT]
     [com.repldriven.queenswood.clearbank-relay.outbound :as outbound]
-    [com.repldriven.queenswood.clearbank-relay.relay :as relay]
+    [com.repldriven.queenswood.changelog-relay.interface]
 
     [com.repldriven.queenswood.fdb.interface :as fdb]
 
@@ -41,8 +41,7 @@
              "a second save reusing the dedup-key must violate")))
      (testing "the relay publishes a stored event to the bus"
        (let [received (promise)
-             handler (relay/->handler {:bus bus
-                                       :event-channel :schemes-payments-event})]
+             handler (system/instance sys [:relay-handler :handler])]
          (message-bus/subscribe bus
                                 :schemes-payments-event
                                 (fn [e] (deliver received e)))
