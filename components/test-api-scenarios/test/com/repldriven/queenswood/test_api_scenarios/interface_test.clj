@@ -34,6 +34,7 @@
     [clojure.java.io :as io]
     [clojure.test :refer [deftest is testing]])
   (:import
+    (io.opentelemetry.api.common AttributeKey)
     (io.opentelemetry.sdk.trace.data SpanData)))
 
 (defn- mint-admin-token
@@ -153,10 +154,28 @@
                                          (named n))))]
              (is (pos? (joined "process-command")))
              ;; Events too, since the outbox and changelog carry the
-             ;; writer's traceparent. Most rather than all: an event
-             ;; whose causing command was itself watcher-dispatched
-             ;; inherits that command's separate trace.
+             ;; writer's traceparent.
              (is (pos? (joined "process-event")))
-             (is (> (joined "process-event")
-                    (- (count (named "process-event"))
-                       (joined "process-event")))))))))))
+             ;; Scoped to one event name rather than every
+             ;; `process-event` span. Rigs share a Kafka
+             ;; testcontainer — same broker, same topics, same group
+             ;; ids — so this exporter also collects events another
+             ;; rig published. Those carry no traceparent and can
+             ;; never join, which swamps a ratio taken over the whole
+             ;; set once a second rig publishes the same event.
+             ;;
+             ;; cash-account-status-changed is this rig's alone (no
+             ;; other rig wires cash-accounts) and every one is caused
+             ;; by an API request, so the property is exact: all of
+             ;; them join, not most.
+             (let [event-attr (fn [^SpanData s]
+                                (.get (.getAttributes s)
+                                      (AttributeKey/stringKey "event")))
+                   of-event (fn [n]
+                              (filter #(= n (event-attr %))
+                                      (named "process-event")))
+                   account-events (of-event "cash-account-status-changed")]
+               (is (pos? (count account-events)))
+               (is (= (count account-events)
+                      (count (filter #(contains? traces (trace-id %))
+                                     account-events))))))))))))

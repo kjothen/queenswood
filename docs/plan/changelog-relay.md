@@ -36,35 +36,39 @@ reads it. The real problems are different:
 - **#269** — the shared `ChangelogEvent` envelope, `cash-accounts`
   migrated to relay + event-processor, and `changelog-relay/event-consumer`
   (see "Upstream" below for why it exists).
+- **Phase 3** — store `parties`, consumer `idv`. The flow that carried
+  the real defect: `idv/watcher.clj` did a Kafka `message-bus/send` *and*
+  opened nested FDB transactions from inside the changelog checkpoint
+  transaction. Both are gone. `party/changelog.clj` writes the envelope
+  carrying a new `party-status-changed` Avro event on a `parties-event`
+  channel; `idv/core.clj`'s `initiate-for-party` holds the watcher's
+  `get-idv-by-party` guard verbatim, and runs outside any changelog
+  transaction. The parties cursor keeps `consumer-id: idv-party-watcher`.
+
+  No cutover was needed here either, but for the opposite reason to
+  Phase 5: `PartyChangelog` put enum fields at 2 and 3 where
+  `ChangelogEvent` has length-delimited strings, so an old entry cannot
+  masquerade as an envelope. The handler skips-and-logs rather than
+  throwing, so such an entry cannot wedge the cursor behind it.
 
 ## Remaining
 
 The migration unit is one **store**, not one brick: a store's changelog
 format change must land atomically with whichever brick consumes it.
 
-### Phase 3 — store `parties`, consumer `idv`
-
-The flow carrying the real defect. `idv/watcher.clj` does a Kafka send and
-opens nested FDB transactions from inside the changelog transaction; moving
-it onto an event-processor removes both.
-
-- `party/changelog.clj` writes the shared envelope carrying a new
-  `party-status-changed` Avro event
-- `idv/core.clj` gains `initiate-for-party`, holding the watcher's
-  `store/get-idv-by-party` guard, then `person-identification` lookup and
-  `core/initiate` — now outside any changelog transaction
-- `idv/events.clj` gains a second `Processor` for `party-status-changed`,
-  guarded on `status-after = party-status-pending`
-- delete `idv/watcher.clj`; retire `idv/party-watcher-handler`
-- relay-service runner for store `parties`, `consumer-id: idv-party-watcher`
-
 ### Phase 4 — store `idvs`, consumer `party`
 
-The mechanical twin. `party/watcher.clj`'s `idv-status->party-transition`
-map and its `(= :party-status-pending (:status party))` gate move to
+The mechanical twin, and the last watcher. `party/watcher.clj`'s
+`idv-status->party-transition` map and its
+`(= :party-status-pending (:status party))` gate move to
 `party/core.clj`, driven by a `party/events.clj` Processor on an
 `idvs-event` channel. `consumer-id: parties-watcher`. Delete
 `party/watcher.clj`.
+
+Once it lands, the retired changelog protos —
+`CashAccountChangelog`, `PartyChangelog`, `IdvChangelog`, and their
+`schema/interface.clj` exports — have no writer or reader left and
+should go in one sweep.
 
 ### Phase 5 — converge the adapters — done
 
@@ -125,6 +129,25 @@ vacuously — worse than failing. Best written once, after Phase 4.
 - **Envelope proto fields stay `optional`.** protojure omits zero and empty
   values on the wire, and a proto2 `required` scalar holding its default
   then fails to parse.
+- **The changelog is versionstamped; the sentinel is not what orders it.**
+  `changelog/write` uses `SET_VERSIONSTAMPED_KEY`, keying every entry by
+  `(commit-version, user-version)` — `.claimLocalVersion` keeps two writes
+  in one transaction distinct. Global commit order is therefore already in
+  every key, which is *why* `scan` is a range-read from the checkpoint. The
+  sentinel is a separate conflict-free `ADD` counter whose only unique
+  property is "learn something changed without scanning" — the wakeup an
+  FDB watch would use. Nothing reads it. Ordering survives FDB and is then
+  discarded at the relay, by the unkeyed `message-bus/send` in item 1
+  below.
+- **Test rigs share state at two layers, and FDB is the lesser one.**
+  FDB is now scoped by `fdb/keyspace-prefix`, which the test rigs generate
+  per boot. Kafka is not: rigs share a broker, the topic names in
+  `kafka-topics.yml`, and fixed `group.id`s, so one rig's published events
+  reach another rig's consumers. Measured on the parties relay — the
+  api-scenarios rig sees 75 joined / 21 unjoined `party-status-changed`
+  spans alone, and 78 / 193 when the scenarios rig runs too.
+  A ratio assertion over all `process-event` spans therefore measures
+  another rig's traffic; scope it to an event only one rig publishes.
 - **`meta-store`'s `path:` is not an isolation lever.** It scopes the
   `FDBMetaDataStore` only. Records hang off `store-name`, and changelog /
   sentinel / checkpoint off the `"mono"` root — which is what
@@ -159,6 +182,8 @@ Two of these gate real scale-out, in this order:
    without a lease.
 5. Upstream `components/changelog-relay` itself, retiring `fdb/watcher` and
    `fdb/watchers`.
+Nothing here is upstream any more for FDB: ADR-#270 moved that component
+into this workspace, so `components/fdb` is ours to change.
 
 ## Deliberately not built
 

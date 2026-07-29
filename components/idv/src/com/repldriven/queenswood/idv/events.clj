@@ -70,3 +70,28 @@
 (defrecord IdvEventProcessor [config]
   processor/Processor
     (process [_ message] (dispatch config message)))
+
+(defn- handle-party-status-changed
+  [config data]
+  (let [{:keys [bank-id party-id status-after]} data]
+    (when (= "party-status-pending" status-after)
+      ;; `config` rather than a bank map: initiating publishes a
+      ;; `submit-idv-check` command, so the bus and command channel have
+      ;; to come along.
+      (core/initiate-for-party config bank-id party-id))))
+
+(defn- dispatch-party
+  [config message]
+  (let [{:keys [event payload]} message
+        {:keys [schemas]} config
+        schema (get schemas event)]
+    (if-not schema
+      (do (log/warnf "Unknown parties event: %s" event) nil)
+      (let-nom> [data (avro/deserialize-same schema payload)]
+        (case event
+          "party-status-changed" (handle-party-status-changed config data)
+          (do (log/warnf "Unknown parties event: %s" event) nil))))))
+
+(defrecord IdvPartyEventProcessor [config]
+  processor/Processor
+    (process [_ message] (dispatch-party config message)))
