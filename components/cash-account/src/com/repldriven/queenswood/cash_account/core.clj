@@ -3,8 +3,8 @@
     [com.repldriven.queenswood.cash-account.domain :as domain]
     [com.repldriven.queenswood.cash-account.store :as store]
 
-    [com.repldriven.queenswood.balance.interface :as balances]
     [com.repldriven.queenswood.balance-query.interface :as balances-q]
+    [com.repldriven.queenswood.balance.interface :as balances]
     [com.repldriven.queenswood.cash-account-product-query.interface :as
      products]
     [com.repldriven.queenswood.cash-account-query.interface :as q]

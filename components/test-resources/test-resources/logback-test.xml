@@ -1,11 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
 
-    <!-- The workspace's only test logging config. Logback looks for
-         logback-test.xml before logback.xml, and components/test-resources
-         is only ever on a test classpath, so this wins in tests without
-         depending on classpath ordering. A full config, not a delta —
-         logback replaces rather than merges. -->
+    <!-- A full config, not a delta: logback replaces rather than merges. -->
 
     <statusListener class="ch.qos.logback.core.status.NopStatusListener"/>
 

@@ -1,9 +1,9 @@
 (ns com.repldriven.queenswood.clearbank-simulator.fps.components
   (:require
-    [com.repldriven.queenswood.clearbank-simulator.fps.examples
-     :as examples]
-    [com.repldriven.queenswood.clearbank-simulator.schema
-     :refer [components-registry]]))
+    [com.repldriven.queenswood.clearbank-simulator.fps.examples :as examples]
+
+    [com.repldriven.queenswood.clearbank-simulator.schema :refer
+     [components-registry]]))
 
 (def AccountIdentification
   [:map

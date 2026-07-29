@@ -6,9 +6,10 @@
   message bus at-least-once. This decouples 'webhook received' from
   'downstream told' so they cannot diverge."
   (:require
+    [com.repldriven.queenswood.clearbank-relay.system]
+
     [com.repldriven.queenswood.clearbank-relay.intent :as intent]
-    [com.repldriven.queenswood.clearbank-relay.store :as store]
-    com.repldriven.queenswood.clearbank-relay.system))
+    [com.repldriven.queenswood.clearbank-relay.store :as store]))
 
 (defn save-event
   "Persist an outbox event and append it to the changelog in one FDB

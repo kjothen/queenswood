@@ -48,17 +48,30 @@ Run all of these in sequence without pausing between them.
    message must reflect the full diff, not just what we
    did together this session — read the changed files if
    needed to understand parallel work. End with the
-   Co-Authored-By trailer your environment / CLAUDE.md
-   specifies (currently
-   `Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>`).
-   Match the prevailing style in `git log` above.
+   `Claude-Session:` trailer your environment specifies.
+   Its URL is per-session, so take it from the environment
+   rather than copying one from an earlier commit. No
+   `Co-Authored-By` trailer. Match the prevailing style in
+   `git log` above.
 4. **Stage, commit, push — no pause.** Stage everything
    with `git add -A` (the step-2 check already cleared
    secrets/noise). Commit with `git commit -m` via
-   heredoc. Push with `git push -u origin HEAD` when there
-   is no upstream, otherwise plain `git push`. If a
-   pre-commit hook fails, fix the cause, re-stage, and
-   commit again (a NEW commit — never `--amend`).
+   heredoc. Push with `git push -u origin HEAD` —
+   **always**, never plain `git push`. If a pre-commit hook
+   fails, fix the cause, re-stage, and commit again (a NEW
+   commit — never `--amend`).
+
+   Work belongs on a remote branch of the same name as the
+   local one, which is what `-u origin HEAD` guarantees.
+   Don't reach for plain `git push` on the grounds that an
+   upstream already exists: `fresh-branch` cuts branches
+   with `git checkout -b <name> origin/main`, which sets
+   the upstream to **`origin/main`**, not to a branch of
+   the same name. So a tracking branch is configured, it is
+   the wrong one, and a bare `git push` aims the work at
+   `main`. `-u origin HEAD` creates or updates the
+   same-named remote branch and repoints the upstream at
+   it.
 5. **Draft the PR body and open it — no pause.** Title
    from the commit title (or an umbrella description for
    multi-commit PRs). Open immediately with `gh pr create`
@@ -84,6 +97,12 @@ Run all of these in sequence without pausing between them.
 - If the current branch IS `main` / `master`, refuse and
   ask which branch to push to. (Worktree-based work is
   rarely on `main`, so this seldom fires.)
+- Push to a same-named remote branch, always via
+  `git push -u origin HEAD`. A configured upstream is not
+  evidence it points at the right branch — see step 4.
+- Before opening the PR, confirm `gh pr view` reports the
+  head as the local branch and the base as `main`. A PR
+  whose head is `main` means the push went astray.
 - Don't skip hooks (`--no-verify`) unless explicitly
   asked.
 

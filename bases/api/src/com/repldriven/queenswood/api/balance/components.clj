@@ -2,6 +2,7 @@
   (:require
     [com.repldriven.queenswood.api.balance.coercion :as coercion]
     [com.repldriven.queenswood.api.balance.examples :as examples]
+
     [com.repldriven.queenswood.api.schema :refer [components-registry]]))
 
 (def BalanceType

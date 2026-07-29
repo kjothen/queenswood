@@ -14,10 +14,10 @@
   into their control accounts via the fan-out before they count."
   (:require
     [com.repldriven.queenswood.balance-query.interface :as balances]
+    [com.repldriven.queenswood.fdb.interface :as fdb]
     [com.repldriven.queenswood.ledger-account.interface :as ledger-accounts]
 
     [com.repldriven.mono.error.interface :as error]
-    [com.repldriven.queenswood.fdb.interface :as fdb]
 
     [clojure.test :refer [is]]))
 

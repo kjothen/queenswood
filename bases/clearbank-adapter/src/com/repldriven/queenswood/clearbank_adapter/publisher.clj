@@ -7,8 +7,9 @@
   descriptors (one, except assessment-failed which fans out per
   instruction)."
   (:require
-    [clojure.string :as str]
-    [com.repldriven.mono.utility.interface :as utility])
+    [com.repldriven.mono.utility.interface :as utility]
+
+    [clojure.string :as str])
   (:import
     (java.time Instant)))
 

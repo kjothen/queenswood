@@ -1,16 +1,18 @@
 (ns com.repldriven.queenswood.onfido-adapter.main
   (:require
-    com.repldriven.mono.avro.interface
-    com.repldriven.queenswood.onfido-adapter.system
-    com.repldriven.queenswood.onfido-relay.interface
-    com.repldriven.queenswood.onfido-webhook.interface
-    com.repldriven.queenswood.schema.interface
-    com.repldriven.mono.command-processor.interface
-    com.repldriven.queenswood.fdb.interface
-    com.repldriven.mono.kafka.interface
-    com.repldriven.mono.message-bus.interface
-    com.repldriven.mono.server.interface
-    com.repldriven.mono.telemetry.interface
+    [com.repldriven.queenswood.onfido-adapter.system]
+
+    [com.repldriven.queenswood.fdb.interface]
+    [com.repldriven.queenswood.onfido-relay.interface]
+    [com.repldriven.queenswood.onfido-webhook.interface]
+    [com.repldriven.queenswood.schema.interface]
+
+    [com.repldriven.mono.avro.interface]
+    [com.repldriven.mono.command-processor.interface]
+    [com.repldriven.mono.kafka.interface]
+    [com.repldriven.mono.message-bus.interface]
+    [com.repldriven.mono.server.interface]
+    [com.repldriven.mono.telemetry.interface]
 
     [com.repldriven.queenswood.onfido-adapter.api :as api]
 

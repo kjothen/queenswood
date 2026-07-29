@@ -1,8 +1,9 @@
 (ns com.repldriven.queenswood.uk-companies-house-simulator.main
   (:require
-    com.repldriven.queenswood.uk-companies-house-simulator.system
-    com.repldriven.mono.server.interface
-    com.repldriven.mono.telemetry.interface
+    [com.repldriven.queenswood.uk-companies-house-simulator.system]
+
+    [com.repldriven.mono.server.interface]
+    [com.repldriven.mono.telemetry.interface]
 
     [com.repldriven.queenswood.uk-companies-house-simulator.api :as api]
 

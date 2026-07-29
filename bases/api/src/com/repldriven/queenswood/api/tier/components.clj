@@ -1,6 +1,7 @@
 (ns com.repldriven.queenswood.api.tier.components
   (:require
     [com.repldriven.queenswood.api.tier.examples :as examples]
+
     [com.repldriven.queenswood.api.schema :refer [components-registry]]))
 
 (def Tier

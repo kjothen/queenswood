@@ -1,8 +1,9 @@
 (ns com.repldriven.queenswood.api.transaction.components
   (:require
     [com.repldriven.queenswood.api.transaction.coercion :as coercion]
-    [com.repldriven.queenswood.api.schema :as schema
-     :refer [components-registry]]))
+
+    [com.repldriven.queenswood.api.schema :as schema :refer
+     [components-registry]]))
 
 (def TransactionId
   (schema/id-schema "TransactionId" "txn" "txn.01kprbmgcj35ptc8npmybhh4sb"))

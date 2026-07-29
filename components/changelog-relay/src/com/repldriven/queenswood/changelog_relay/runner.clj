@@ -1,6 +1,7 @@
 (ns com.repldriven.queenswood.changelog-relay.runner
   (:require
     [com.repldriven.queenswood.fdb.interface :as fdb]
+
     [com.repldriven.mono.log.interface :as log]))
 
 (def ^:private default-poll-ms 100)

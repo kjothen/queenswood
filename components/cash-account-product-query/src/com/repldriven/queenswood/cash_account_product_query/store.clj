@@ -1,9 +1,9 @@
 (ns com.repldriven.queenswood.cash-account-product-query.store
   (:require
+    [com.repldriven.queenswood.fdb.interface :as fdb]
     [com.repldriven.queenswood.schema.interface :as schema]
 
-    [com.repldriven.mono.error.interface :as error]
-    [com.repldriven.queenswood.fdb.interface :as fdb]))
+    [com.repldriven.mono.error.interface :as error]))
 
 ;; must match bank-cash-account-product.store store-names — same FDB stores
 (def ^:private store-name "cash-account-products")

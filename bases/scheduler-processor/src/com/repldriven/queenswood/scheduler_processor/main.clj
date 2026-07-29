@@ -1,6 +1,7 @@
 (ns com.repldriven.queenswood.scheduler-processor.main
   (:require
-    com.repldriven.queenswood.scheduler-processor.system
+    [com.repldriven.queenswood.scheduler-processor.system]
+
     [com.repldriven.mono.cli.interface :as cli]
     [com.repldriven.mono.env.interface :as env]
     [com.repldriven.mono.error.interface :as error :refer [nom->]]

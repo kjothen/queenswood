@@ -6,9 +6,10 @@
   migrator Job runs first and applies FDB record metadata + Pulsar
   topology; bootstrap consumes the persisted metadata read-only."
   (:require
-    com.repldriven.mono.avro.interface
-    com.repldriven.queenswood.bank.interface
-    com.repldriven.queenswood.policy.interface
-    com.repldriven.queenswood.schema.interface
-    com.repldriven.queenswood.fdb.interface
-    com.repldriven.mono.telemetry.interface))
+    [com.repldriven.queenswood.bank.interface]
+    [com.repldriven.queenswood.fdb.interface]
+    [com.repldriven.queenswood.policy.interface]
+    [com.repldriven.queenswood.schema.interface]
+
+    [com.repldriven.mono.avro.interface]
+    [com.repldriven.mono.telemetry.interface]))

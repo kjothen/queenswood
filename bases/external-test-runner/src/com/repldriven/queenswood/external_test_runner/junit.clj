@@ -5,8 +5,9 @@
   - time attribute on <testsuite> elements (fixes NaN in CI reports)
   - strips com.repldriven.mono. prefix from suite/classname attributes"
   (:require
-    [clojure.stacktrace :as stack]
     [eftest.report :refer [*context*]]
+
+    [clojure.stacktrace :as stack]
     [clojure.test :as test]))
 
 (set! *warn-on-reflection* true)

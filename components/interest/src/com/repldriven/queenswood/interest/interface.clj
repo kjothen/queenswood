@@ -4,7 +4,7 @@
   and posts the resulting accrual or capitalisation transactions.
   Returns a per-call summary map or an anomaly."
   (:require
-    com.repldriven.queenswood.interest.system
+    [com.repldriven.queenswood.interest.system]
 
     [com.repldriven.queenswood.interest.core :as core]))
 

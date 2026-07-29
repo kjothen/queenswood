@@ -1,8 +1,8 @@
 (ns com.repldriven.queenswood.onfido-simulator.webhooks.components
   (:require
-    [com.repldriven.queenswood.onfido-simulator.schema :as schema]
-    [com.repldriven.queenswood.onfido-simulator.webhooks.examples
-     :as examples]))
+    [com.repldriven.queenswood.onfido-simulator.webhooks.examples :as examples]
+
+    [com.repldriven.queenswood.onfido-simulator.schema :as schema]))
 
 (def RegisterWebhookRequest
   [:map

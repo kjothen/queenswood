@@ -2,6 +2,7 @@
   (:refer-clojure :exclude [send])
   (:require
     [com.repldriven.queenswood.api.errors :as errors]
+
     [com.repldriven.mono.avro.interface :as avro]
     [com.repldriven.mono.command.interface :as command]
     [com.repldriven.mono.error.interface :as error :refer [let-nom>]]

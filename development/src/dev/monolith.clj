@@ -1,6 +1,7 @@
 (ns dev.monolith
   (:require
-    com.repldriven.queenswood.testcontainers.interface
+    [com.repldriven.queenswood.testcontainers.interface]
+
     [com.repldriven.queenswood.monolith.main :as main]))
 
 ;; before starting the system:

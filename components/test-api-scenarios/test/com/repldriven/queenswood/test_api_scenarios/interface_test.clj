@@ -8,7 +8,9 @@
   scenarios cannot leak state into one another; the booted system
   is shared to amortise startup cost."
   (:require
-    com.repldriven.queenswood.test-api-scenarios.system
+    [com.repldriven.queenswood.test-api-scenarios.system]
+
+    [com.repldriven.queenswood.uk-companies-house-simulator.system]
 
     [com.repldriven.queenswood.test-api-scenarios.interface :as SUT]
 
@@ -17,7 +19,6 @@
     [com.repldriven.queenswood.clearbank-simulator.api :as cb-simulator]
     [com.repldriven.queenswood.onfido-adapter.api :as onfido-adapter]
     [com.repldriven.queenswood.onfido-simulator.api :as onfido-simulator]
-    com.repldriven.queenswood.uk-companies-house-simulator.system
     [com.repldriven.queenswood.uk-companies-house-simulator.api :as
      ch-simulator]
 

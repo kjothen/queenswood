@@ -2,6 +2,7 @@
   (:require
     [com.repldriven.queenswood.uk-companies-house-simulator.companies.examples
      :as examples]
+
     [com.repldriven.queenswood.uk-companies-house-simulator.schema :as schema]))
 
 (def RegisteredOfficeAddress

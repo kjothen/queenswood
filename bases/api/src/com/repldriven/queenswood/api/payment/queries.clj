@@ -1,7 +1,9 @@
 (ns com.repldriven.queenswood.api.payment.queries
   (:require
     [com.repldriven.queenswood.api.errors :as errors]
+
     [com.repldriven.queenswood.payment-query.interface :as payments]
+
     [com.repldriven.mono.error.interface :as error]))
 
 (defn get-internal-payment

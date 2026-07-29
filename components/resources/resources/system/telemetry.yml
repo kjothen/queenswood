@@ -1,5 +1,4 @@
-# Both values come from the deployment, so one definition serves every
-# service. A blank OTEL_ENDPOINT disables the SDK rather than failing.
+# A blank OTEL_ENDPOINT disables the SDK rather than failing.
 otel-sdk: !system/component
   system/component-kind: telemetry/otel-sdk
   service-name: !env SERVICE_NAME

@@ -3,10 +3,10 @@
     [com.repldriven.queenswood.bank-query.store :as store]
 
     [com.repldriven.queenswood.balance-query.interface :as balances]
-    [com.repldriven.queenswood.cash-account-query.interface :as
-     cash-accounts-query]
     [com.repldriven.queenswood.cash-account-product-query.interface :as
      products-query]
+    [com.repldriven.queenswood.cash-account-query.interface :as
+     cash-accounts-query]
     [com.repldriven.queenswood.party-query.interface :as party-query]
 
     [com.repldriven.mono.error.interface :as error :refer [let-nom>]]))

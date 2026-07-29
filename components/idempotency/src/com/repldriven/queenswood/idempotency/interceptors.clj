@@ -2,8 +2,9 @@
   (:require
     [com.repldriven.queenswood.idempotency.core :as core]
 
-    [clojure.string :as str]
-    [sieppari.context :as sc]))
+    [sieppari.context :as sc]
+
+    [clojure.string :as str]))
 
 (defn- principal-id
   "Compose a principal id from the auth context. Service-account

@@ -1,6 +1,7 @@
 (ns com.repldriven.queenswood.api.me.handlers
   (:require
     [com.repldriven.queenswood.api.errors :as errors]
+
     [com.repldriven.queenswood.bank-query.interface :as banks]
 
     [com.repldriven.mono.error.interface :as error]))

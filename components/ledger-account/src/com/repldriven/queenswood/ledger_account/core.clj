@@ -3,8 +3,8 @@
     [com.repldriven.queenswood.ledger-account.domain :as domain]
     [com.repldriven.queenswood.ledger-account.store :as store]
 
-    [com.repldriven.queenswood.balance.interface :as balances]
     [com.repldriven.queenswood.balance-query.interface :as balance-query]
+    [com.repldriven.queenswood.balance.interface :as balances]
     [com.repldriven.queenswood.policy.interface :as policy]
 
     [com.repldriven.mono.error.interface :as error :refer [let-nom>]]))

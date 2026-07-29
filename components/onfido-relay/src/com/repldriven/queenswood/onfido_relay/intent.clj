@@ -1,8 +1,8 @@
 (ns com.repldriven.queenswood.onfido-relay.intent
   (:require
+    [com.repldriven.queenswood.fdb.interface :as fdb]
     [com.repldriven.queenswood.schema.interface :as schema]
 
-    [com.repldriven.queenswood.fdb.interface :as fdb]
     [com.repldriven.mono.utility.interface :as utility]))
 
 (def ^:private store-name "onfido-outbound-intents")

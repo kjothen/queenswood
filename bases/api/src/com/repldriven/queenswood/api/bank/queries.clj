@@ -1,8 +1,10 @@
 (ns com.repldriven.queenswood.api.bank.queries
   (:require
     [com.repldriven.queenswood.api.errors :as errors]
-    [com.repldriven.mono.error.interface :as error]
-    [com.repldriven.queenswood.bank-query.interface :as banks]))
+
+    [com.repldriven.queenswood.bank-query.interface :as banks]
+
+    [com.repldriven.mono.error.interface :as error]))
 
 (defn list-banks
   [request]

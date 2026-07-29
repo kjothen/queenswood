@@ -1,8 +1,7 @@
 (ns com.repldriven.queenswood.ledger-account.store
   (:require
-    [com.repldriven.queenswood.schema.interface :as schema]
-
-    [com.repldriven.queenswood.fdb.interface :as fdb]))
+    [com.repldriven.queenswood.fdb.interface :as fdb]
+    [com.repldriven.queenswood.schema.interface :as schema]))
 
 (def ^:private store-name "ledger-accounts")
 

@@ -1,8 +1,7 @@
 (ns com.repldriven.queenswood.balance.store
   (:require
-    [com.repldriven.queenswood.schema.interface :as schema]
-
-    [com.repldriven.queenswood.fdb.interface :as fdb]))
+    [com.repldriven.queenswood.fdb.interface :as fdb]
+    [com.repldriven.queenswood.schema.interface :as schema]))
 
 ;; must match bank-balance-query.store/store-name — same FDB store
 (def ^:private store-name "balances")

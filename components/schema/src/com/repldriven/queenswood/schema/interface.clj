@@ -7,29 +7,30 @@
   FDB index queries."
   (:require
     [com.repldriven.queenswood.schemas.balances :as balances]
+    [com.repldriven.queenswood.schemas.banks :as banks]
     [com.repldriven.queenswood.schemas.cash_account_products :as
      cash-account-products]
-    [com.repldriven.queenswood.schemas.changelog :as changelog]
     [com.repldriven.queenswood.schemas.cash_accounts :as cash-accounts]
+    [com.repldriven.queenswood.schemas.changelog :as changelog]
+    [com.repldriven.queenswood.schemas.clearbank :as clearbank]
     [com.repldriven.queenswood.schemas.company :as company]
     [com.repldriven.queenswood.schemas.idempotency :as idempotency]
     [com.repldriven.queenswood.schemas.idv :as idv]
     [com.repldriven.queenswood.schemas.interest :as interest]
     [com.repldriven.queenswood.schemas.ledger_accounts :as ledger-accounts]
-    [com.repldriven.queenswood.schemas.scheduler :as scheduler]
     [com.repldriven.queenswood.schemas.memberships :as memberships]
-    [com.repldriven.queenswood.schemas.banks :as banks]
+    [com.repldriven.queenswood.schemas.onfido :as onfido]
     [com.repldriven.queenswood.schemas.party :as party]
+    [com.repldriven.queenswood.schemas.payee_check :as payee-check]
     [com.repldriven.queenswood.schemas.payments :as payments]
     [com.repldriven.queenswood.schemas.person_identification :as
      person-identification]
-    [com.repldriven.queenswood.schemas.payee_check :as payee-check]
-    [com.repldriven.queenswood.schemas.clearbank :as clearbank]
-    [com.repldriven.queenswood.schemas.onfido :as onfido]
     [com.repldriven.queenswood.schemas.policies :as policies]
+    [com.repldriven.queenswood.schemas.scheduler :as scheduler]
     [com.repldriven.queenswood.schemas.transactions :as transactions]
     [com.repldriven.queenswood.schemas.types :as types]
     [com.repldriven.queenswood.schemas.users :as users]
+
     [protojure.protobuf :as proto])
   (:import
     (com.repldriven.queenswood.schemas.balances BalanceProto$Balance)

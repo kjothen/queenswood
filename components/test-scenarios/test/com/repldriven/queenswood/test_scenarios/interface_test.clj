@@ -1,7 +1,7 @@
 (ns ^:eftest/synchronized
     com.repldriven.queenswood.test-scenarios.interface-test
   (:require
-    com.repldriven.queenswood.test-scenarios.system
+    [com.repldriven.queenswood.test-scenarios.system]
 
     [com.repldriven.queenswood.test-scenarios.interface :as SUT]
 
@@ -9,7 +9,6 @@
     [com.repldriven.queenswood.clearbank-simulator.api :as cb-simulator]
     [com.repldriven.queenswood.onfido-adapter.api :as onfido-adapter]
     [com.repldriven.queenswood.onfido-simulator.api :as onfido-simulator]
-
     [com.repldriven.queenswood.test-model.interface :as model]
     [com.repldriven.queenswood.test-projections.interface :as projections]
 
@@ -18,9 +17,10 @@
     [com.repldriven.mono.test-system.interface :refer
      [with-test-system nom-test>]]
 
+    [fugato.core :as fugato]
+
     [clojure.java.io :as io]
-    [clojure.test :refer [deftest is testing]]
-    [fugato.core :as fugato]))
+    [clojure.test :refer [deftest is testing]]))
 
 (defn- patch-handlers
   [defs]

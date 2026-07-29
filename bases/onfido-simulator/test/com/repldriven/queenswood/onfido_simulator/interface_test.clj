@@ -2,7 +2,7 @@
     com.repldriven.queenswood.onfido-simulator.interface-test
   (:refer-clojure :exclude [get])
   (:require
-    com.repldriven.queenswood.onfido-simulator.system
+    [com.repldriven.queenswood.onfido-simulator.system]
 
     [com.repldriven.queenswood.onfido-simulator.api :as api]
 

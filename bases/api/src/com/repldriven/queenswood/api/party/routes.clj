@@ -1,15 +1,17 @@
 (ns com.repldriven.queenswood.api.party.routes
   (:require
     [com.repldriven.queenswood.api.party.commands :as commands]
-    [com.repldriven.queenswood.api.party.queries :as queries]
     [com.repldriven.queenswood.api.party.examples :refer
-     [IdentificationRejected PartyNotFound PartyInvalidStatus
-      PartyOpenAccounts PartyMergeIntoSelf]]
-    [com.repldriven.queenswood.api.schema :refer [ErrorResponse]]
+     [IdentificationRejected PartyNotFound PartyInvalidStatus PartyOpenAccounts
+      PartyMergeIntoSelf]]
     [com.repldriven.queenswood.api.party.links :as links]
+    [com.repldriven.queenswood.api.party.queries :as queries]
+
+    [com.repldriven.queenswood.api.schema :refer [ErrorResponse]]
     [com.repldriven.queenswood.api.shared.parameters :as shared.parameters]
 
     [com.repldriven.queenswood.idempotency.interface :as bank-idempotency]
+
     [com.repldriven.mono.server.interface :as server]))
 
 (def ^:private list-parties-query-schema

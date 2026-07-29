@@ -1,10 +1,11 @@
 (ns ^:eftest/synchronized com.repldriven.queenswood.transaction.store-test
   (:require
+    [com.repldriven.queenswood.fdb.interface]
+    [com.repldriven.queenswood.testcontainers.interface]
+
     [com.repldriven.queenswood.transaction.store :as store]
 
-    [com.repldriven.queenswood.fdb.interface]
     [com.repldriven.mono.system.interface :as system]
-    [com.repldriven.queenswood.testcontainers.interface]
     [com.repldriven.mono.test-system.interface :refer
      [with-test-system nom-test>]]
     [com.repldriven.mono.utility.interface :as utility]

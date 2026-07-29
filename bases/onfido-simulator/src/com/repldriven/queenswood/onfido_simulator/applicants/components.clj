@@ -1,7 +1,8 @@
 (ns com.repldriven.queenswood.onfido-simulator.applicants.components
   (:require
-    [com.repldriven.queenswood.onfido-simulator.applicants.examples
-     :as examples]
+    [com.repldriven.queenswood.onfido-simulator.applicants.examples :as
+     examples]
+
     [com.repldriven.queenswood.onfido-simulator.schema :as schema]))
 
 (def Address

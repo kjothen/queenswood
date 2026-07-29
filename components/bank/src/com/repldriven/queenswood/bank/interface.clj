@@ -8,7 +8,7 @@
   brick, not this one — bank creation reaches the processor as a
   command over the bus."
   (:require
-    com.repldriven.queenswood.bank.system
+    [com.repldriven.queenswood.bank.system]
 
     [com.repldriven.queenswood.bank.core :as core]))
 

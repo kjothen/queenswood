@@ -11,7 +11,7 @@
   this one — lifecycle changes reach the processor as commands over the
   bus."
   (:require
-    com.repldriven.queenswood.cash-account-product.system
+    [com.repldriven.queenswood.cash-account-product.system]
 
     [com.repldriven.queenswood.cash-account-product.core :as core]))
 

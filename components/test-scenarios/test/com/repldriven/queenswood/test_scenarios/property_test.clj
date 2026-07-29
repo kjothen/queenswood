@@ -4,7 +4,7 @@
   each trial, the model end-state and the projected real-system end-
   state must agree."
   (:require
-    com.repldriven.queenswood.test-scenarios.system
+    [com.repldriven.queenswood.test-scenarios.system]
 
     [com.repldriven.queenswood.test-scenarios.interface :as SUT]
 
@@ -12,7 +12,6 @@
     [com.repldriven.queenswood.clearbank-simulator.api :as cb-simulator]
     [com.repldriven.queenswood.onfido-adapter.api :as onfido-adapter]
     [com.repldriven.queenswood.onfido-simulator.api :as onfido-simulator]
-
     [com.repldriven.queenswood.test-model.interface :as model]
     [com.repldriven.queenswood.test-projections.interface :as projections]
 
@@ -20,11 +19,12 @@
     [com.repldriven.mono.system.interface :as system]
     [com.repldriven.mono.test-system.interface :refer [with-test-system]]
 
+    [fugato.core :as fugato]
+
     [clojure.test :refer [deftest is testing]]
     [clojure.test.check :as tc]
     [clojure.test.check.generators :as gen]
-    [clojure.test.check.properties :as prop]
-    [fugato.core :as fugato]))
+    [clojure.test.check.properties :as prop]))
 
 (defn- patch-handlers
   [defs]

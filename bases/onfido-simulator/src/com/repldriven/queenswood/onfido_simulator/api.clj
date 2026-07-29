@@ -1,26 +1,25 @@
 (ns com.repldriven.queenswood.onfido-simulator.api
   (:require
-    [com.repldriven.queenswood.onfido-simulator.applicants.components
-     :as applicants.components]
-    [com.repldriven.queenswood.onfido-simulator.applicants.examples
-     :as applicants.examples]
-    [com.repldriven.queenswood.onfido-simulator.applicants.routes
-     :as applicants]
-    [com.repldriven.queenswood.onfido-simulator.checks.components
-     :as checks.components]
-    [com.repldriven.queenswood.onfido-simulator.checks.examples
-     :as checks.examples]
-    [com.repldriven.queenswood.onfido-simulator.checks.routes :as checks]
     [com.repldriven.queenswood.onfido-simulator.schema :as schema]
-    [com.repldriven.queenswood.onfido-simulator.webhooks.components
-     :as webhooks.components]
-    [com.repldriven.queenswood.onfido-simulator.webhooks.examples
-     :as webhooks.examples]
-    [com.repldriven.queenswood.onfido-simulator.webhooks.routes
-     :as webhooks]
 
-    [com.repldriven.queenswood.onfido-webhook.interface
-     :as onfido-webhook]
+    [com.repldriven.queenswood.onfido-simulator.applicants.components :as
+     applicants.components]
+    [com.repldriven.queenswood.onfido-simulator.applicants.examples :as
+     applicants.examples]
+    [com.repldriven.queenswood.onfido-simulator.applicants.routes :as
+     applicants]
+    [com.repldriven.queenswood.onfido-simulator.checks.components :as
+     checks.components]
+    [com.repldriven.queenswood.onfido-simulator.checks.examples :as
+     checks.examples]
+    [com.repldriven.queenswood.onfido-simulator.checks.routes :as checks]
+    [com.repldriven.queenswood.onfido-simulator.webhooks.components :as
+     webhooks.components]
+    [com.repldriven.queenswood.onfido-simulator.webhooks.examples :as
+     webhooks.examples]
+    [com.repldriven.queenswood.onfido-simulator.webhooks.routes :as webhooks]
+
+    [com.repldriven.queenswood.onfido-webhook.interface :as onfido-webhook]
 
     [com.repldriven.mono.server.interface :as server]
 

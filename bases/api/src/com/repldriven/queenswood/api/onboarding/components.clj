@@ -1,8 +1,9 @@
 (ns com.repldriven.queenswood.api.onboarding.components
   (:require
     [com.repldriven.queenswood.api.onboarding.examples :as examples]
-    [com.repldriven.queenswood.api.schema :as schema
-     :refer [components-registry]]))
+
+    [com.repldriven.queenswood.api.schema :as schema :refer
+     [components-registry]]))
 
 (def OnboardingRequest
   "Binds the new bank to a confirmed legal entity. `company-number` is

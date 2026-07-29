@@ -1,6 +1,7 @@
 (ns com.repldriven.queenswood.api.companies.components
   (:require
     [com.repldriven.queenswood.api.companies.examples :as examples]
+
     [com.repldriven.queenswood.api.schema :refer [components-registry]]))
 
 (def RegisteredOfficeAddress

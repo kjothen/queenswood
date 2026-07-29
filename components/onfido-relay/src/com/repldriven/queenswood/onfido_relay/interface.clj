@@ -6,10 +6,11 @@
   (the out-of-transaction runner makes the Onfido create-applicant +
   create-check calls)."
   (:require
+    [com.repldriven.queenswood.onfido-relay.system]
+
     [com.repldriven.queenswood.onfido-relay.intent :as intent]
     [com.repldriven.queenswood.onfido-relay.outbound :as outbound]
-    [com.repldriven.queenswood.onfido-relay.store :as store]
-    com.repldriven.queenswood.onfido-relay.system))
+    [com.repldriven.queenswood.onfido-relay.store :as store]))
 
 (defn save-event
   "Persist an `idv-completed` outbox event and append it to the changelog

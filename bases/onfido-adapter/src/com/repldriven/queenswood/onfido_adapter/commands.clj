@@ -1,7 +1,8 @@
 (ns com.repldriven.queenswood.onfido-adapter.commands
   (:require
-    [com.repldriven.mono.avro.interface :as avro]
     [com.repldriven.queenswood.onfido-relay.interface :as relay]
+
+    [com.repldriven.mono.avro.interface :as avro]
     [com.repldriven.mono.error.interface :as error :refer [let-nom>]]
     [com.repldriven.mono.log.interface :as log]
     [com.repldriven.mono.processor.interface :as processor]

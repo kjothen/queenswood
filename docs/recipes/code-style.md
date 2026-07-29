@@ -34,41 +34,113 @@ zprint formats all Clojure source. Configuration is in
 
 ### Namespace requires
 
-Order `:require` entries innermost to outermost, separated by
-blank lines:
+A **bare** require is one with no `:as` and no `:refer` —
+loaded purely for its side effect of extending multimethods
+(system-component registrations). Bare requires take the
+bracketed form, `[com.example.ns]`, never the unbracketed
+`com.example.ns`. The earlier convention used unbracketed
+namespaces; we walked that back, and the bracket is what makes
+a deliberate side-effecting require visually distinct from a
+line someone forgot to alias.
 
-1. **Extension namespaces** — bare requires whose only purpose
-  is to extend multimethods (system-component registrations).
-  These come first because loading them establishes the
-  dispatch surface for everything below.
-2. **Internal namespaces** — other files in the same brick.
-3. **Other component interfaces** — `interface.clj` files of
-  other bricks. Interfaces only.
-4. **External libraries.**
-5. **Standard libraries.**
+Order `:require` entries innermost to outermost, blank line
+between groups, alphabetical within each group. A group with
+no entries simply doesn't appear.
 
-Bare requires use the bracketed unaliased form. The earlier
-convention used unbracketed namespaces; we walked that back.
+1. **Own `system` namespace** — this brick registering its own
+   component kinds. Alone, because it is the only require that
+   is about the file's own brick rather than a dependency.
+2. **Extension namespaces, Queenswood** — bare requires
+   registering *other* bricks' component kinds.
+3. **Extension namespaces, `mono`** — the same, from upstream.
+4. **This file's own package** — the files sitting beside it.
+   In a test namespace this is where the SUT goes.
+5. **Rest of the brick** — other packages under the same
+   brick. Only bases nest deeply enough for this to appear; in
+   a flat component the brick *is* the package, so groups 4
+   and 5 collapse into one.
+6. **Other Queenswood interfaces** — `interface.clj` of other
+   bricks in this workspace. Interfaces only.
+7. **`mono` interfaces** — the upstream dependency, so further
+   out than our own bricks.
+8. **External libraries.**
+9. **Standard libraries** (`clojure.*`).
+
+Groups 1–3 are the bare requires, 4–9 the rest. Both halves
+run the same way outwards: this file, then the brick, then
+Queenswood, then everything beyond it.
+
 See [system-components.md](system-components.md) for the test
 bundling pattern.
 
+A production namespace — `onfido-adapter`'s entry point, whose
+require list is mostly the extension bundle that registers the
+component kinds its `application.yml` names:
+
+```clojure
+(ns com.repldriven.queenswood.onfido-adapter.main
+  (:require
+    [com.repldriven.queenswood.onfido-adapter.system]
+
+    [com.repldriven.queenswood.fdb.interface]
+    [com.repldriven.queenswood.onfido-relay.interface]
+    [com.repldriven.queenswood.onfido-webhook.interface]
+    [com.repldriven.queenswood.schema.interface]
+
+    [com.repldriven.mono.avro.interface]
+    [com.repldriven.mono.command-processor.interface]
+    [com.repldriven.mono.kafka.interface]
+    [com.repldriven.mono.message-bus.interface]
+    [com.repldriven.mono.server.interface]
+    [com.repldriven.mono.telemetry.interface]
+
+    [com.repldriven.queenswood.onfido-adapter.api :as api]
+
+    [com.repldriven.mono.cli.interface :as cli]
+    [com.repldriven.mono.env.interface :as env]
+    [com.repldriven.mono.error.interface :as error :refer [nom->]]
+    [com.repldriven.mono.log.interface :as log]
+    [com.repldriven.mono.system.interface :as system])
+  (:gen-class))
+```
+
+A test namespace — same spine, with the SUT occupying the
+internal slot and `clojure.test` last:
+
 ```clojure
 (ns ^:eftest/synchronized
-  com.repldriven.mono.processor.interface-test
+    com.repldriven.queenswood.ledger-account.interface-test
   (:require
-    [com.repldriven.mono.testcontainers.interface]   ; bare
+    [com.repldriven.queenswood.fdb.interface]
+    [com.repldriven.queenswood.testcontainers.interface]
 
-    [com.repldriven.mono.processor.interface :as SUT]
+    [com.repldriven.queenswood.ledger-account.interface :as SUT]
+
+    [com.repldriven.queenswood.balance.interface :as balance-writes]
+    [com.repldriven.queenswood.balance-query.interface :as balances]
 
     [com.repldriven.mono.error.interface :as error]
     [com.repldriven.mono.system.interface :as system]
-    [com.repldriven.mono.test-system.interface
-     :refer [with-test-system nom-test>]]
-    [com.repldriven.mono.db.interface :as sql]
-    [com.repldriven.mono.env.interface :as env]
-    [com.repldriven.mono.json.interface :as json]
+    [com.repldriven.mono.test-system.interface :refer
+     [with-test-system nom-test>]]
 
     [clojure.test :refer [deftest is testing]]))
+```
+
+A namespace inside a base that nests, where groups 4 and 5 are
+both populated — `bank`'s own files, then the rest of `api`:
+
+```clojure
+(ns com.repldriven.queenswood.api.bank.routes
+  (:require
+    [com.repldriven.queenswood.api.bank.commands :as bank-commands]
+    [com.repldriven.queenswood.api.bank.examples :refer
+     [BankLimitExceeded BankNotFound BankInvalidStatus BankUnknownTier]]
+    [com.repldriven.queenswood.api.bank.queries :as queries]
+
+    [com.repldriven.queenswood.api.schema :refer [ErrorResponse]]
+    [com.repldriven.queenswood.api.shared.parameters :as
+     shared.parameters]))
 ```
 
 In **component interface tests**, alias the SUT (system under
@@ -87,11 +159,11 @@ Side-effecting functions don't take a `!` suffix. Names
 describe what a function returns or what effect it has, not
 whether it causes one.
 
-Reference: Zachary Tellman's *Elements of Clojure* on naming —
-*"if a function crosses data scope boundaries, there should be
+Reference: Zachary Tellman's _Elements of Clojure_ on naming —
+_"if a function crosses data scope boundaries, there should be
 a verb in the name. If it pulls data from another scope, it
 should describe the datatype it returns. If it pushes data
-into another scope, it should describe the effect it has."*
+into another scope, it should describe the effect it has."_
 
 ### Anonymous functions
 
@@ -168,7 +240,7 @@ manually if a binding clearly exceeds 80 chars.
   ...)
 ```
 
-This applies to *any* form inside `[]` — `let` bindings,
+This applies to _any_ form inside `[]` — `let` bindings,
 argument vectors, destructuring, literal vectors. zprint
 treats manual formatting inside `[]` as deliberate and won't
 reflow it, so premature wrapping permanently defeats the
@@ -250,11 +322,16 @@ lints as `clojure.core/->`, and so on.
 
 - All Clojure source is formatted with zprint (80-column).
 - Docstrings are manually wrapped at 80.
-- `:require` entries are ordered innermost-to-outermost
-  (extension namespaces, internal, other component
-  interfaces, external libraries, standard libraries) with
-  blank lines between groups.
-- Bare requires use the bracketed unaliased form.
+- `:require` entries are ordered innermost-to-outermost (own
+  `system`, Queenswood extensions, `mono` extensions, own
+  package, rest of the brick, other Queenswood interfaces,
+  `mono` interfaces, external libraries, standard libraries)
+  with blank lines between groups, alphabetical within each
+  group. The bare requires and the rest both run outwards the
+  same way: this file, then the brick, then Queenswood, then
+  beyond.
+- Bare requires — no `:as`, no `:refer` — use the bracketed
+  form `[com.example.ns]`.
 - Component interface tests alias the SUT as `SUT` and
   require no other namespaces from the same component.
 - Use `util/uuidv7` for new IDs.
@@ -331,4 +408,4 @@ wrapper, one place to swap.
 - [ADR-0012](../adr/0012-pre-commit-hooks.md) — Pre-commit hooks
 - [error-handling.md](error-handling.md)
 - [system-components.md](system-components.md)
-- *Elements of Clojure* by Zachary Tellman
+- _Elements of Clojure_ by Zachary Tellman

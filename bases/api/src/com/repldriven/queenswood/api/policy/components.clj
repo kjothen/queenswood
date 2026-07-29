@@ -2,8 +2,9 @@
   (:require
     [com.repldriven.queenswood.api.policy.coercion :as coercion]
     [com.repldriven.queenswood.api.policy.examples :as examples]
-    [com.repldriven.queenswood.api.schema :as schema
-     :refer [components-registry]]))
+
+    [com.repldriven.queenswood.api.schema :as schema :refer
+     [components-registry]]))
 
 (def PolicyId (schema/id-schema "PolicyId" "pol" examples/PolicyId))
 

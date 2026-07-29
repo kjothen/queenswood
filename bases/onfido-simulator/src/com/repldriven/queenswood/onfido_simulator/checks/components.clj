@@ -1,7 +1,7 @@
 (ns com.repldriven.queenswood.onfido-simulator.checks.components
   (:require
-    [com.repldriven.queenswood.onfido-simulator.checks.examples
-     :as examples]
+    [com.repldriven.queenswood.onfido-simulator.checks.examples :as examples]
+
     [com.repldriven.queenswood.onfido-simulator.schema :as schema]))
 
 (def CreateCheckRequest

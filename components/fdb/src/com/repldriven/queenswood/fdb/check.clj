@@ -1,6 +1,6 @@
 (ns com.repldriven.queenswood.fdb.check
   (:require
-    com.repldriven.queenswood.fdb.record
+    [com.repldriven.queenswood.fdb.record]
 
     [com.repldriven.mono.error.interface :as error])
   (:import

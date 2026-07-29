@@ -2,6 +2,7 @@
   (:require
     [com.repldriven.queenswood.api.jobs.coercion :as coercion]
     [com.repldriven.queenswood.api.jobs.examples :as examples]
+
     [com.repldriven.queenswood.api.schema :refer [components-registry]]))
 
 (def JobId
