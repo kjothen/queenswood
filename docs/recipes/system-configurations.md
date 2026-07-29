@@ -166,6 +166,30 @@ base's `main/start`:
 
 `tap>` ships the started system to Portal for inspection.
 
+### Include the shared file, don't inline a copy of it
+
+A component group that exists in `components/resources/resources/system/`
+is included, never pasted. An inlined copy is invisible to the two things
+that would otherwise catch it drifting:
+
+- **`config-includes-resolve`** only follows `!include` and
+  `-c classpath:` paths. An inlined block has no path to resolve, so a
+  component-kind that no longer exists reads as ordinary data.
+- **Tests**, because nothing loads a project's production
+  `application.yml`. Every brick test can pass against a service that
+  cannot start.
+
+Three have been found this way. `relay-service` inlined its relay
+handlers and kept naming two component-kinds after they were deleted —
+the service could not have started, and `poly check` was green.
+`bootstrap-service` inlined all four cash-account-product template
+components. `api-service` still inlines its ten dispatchers rather than
+including `system/<domain>-dispatcher.yml`.
+
+Inline only what is genuinely per-service: a handler slot the base
+injects, a port, a profile branch. If two services would write the same
+block, it belongs under `system/`.
+
 ## Rules
 
 **MUST:**
@@ -179,6 +203,12 @@ base's `main/start`:
 
 **MUST NOT:**
 
+- Inline a copy of a component group that exists under
+  `components/resources/resources/system/` — include it.
+  Neither `config-includes-resolve` nor any test can see an
+  inlined block drift, because it has no `!include` to
+  resolve and nothing loads a project's production
+  `application.yml`.
 - Reference an unregistered component kind — the system will
   fail to start with a "no method" error.
 - Reference another component by bare string where a
