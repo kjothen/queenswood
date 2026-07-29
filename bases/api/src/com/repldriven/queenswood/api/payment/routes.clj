@@ -1,12 +1,13 @@
 (ns com.repldriven.queenswood.api.payment.routes
   (:require
-    [com.repldriven.queenswood.api.cash-account.examples :refer
-     [CashAccountNotFound]]
     [com.repldriven.queenswood.api.payment.commands :as commands]
     [com.repldriven.queenswood.api.payment.examples :refer
      [AlreadySubmitted BalanceNotFound InvalidAmount PaymentNotFound]]
     [com.repldriven.queenswood.api.payment.links :as links]
     [com.repldriven.queenswood.api.payment.queries :as queries]
+
+    [com.repldriven.queenswood.api.cash-account.examples :refer
+     [CashAccountNotFound]]
     [com.repldriven.queenswood.api.schema :refer [ErrorResponse]]
     [com.repldriven.queenswood.api.shared.parameters :as shared.parameters]
 

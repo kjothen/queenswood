@@ -2,8 +2,9 @@
   (:require
     [com.repldriven.queenswood.api.me.coercion :as coercion]
     [com.repldriven.queenswood.api.me.examples :as examples]
-    [com.repldriven.queenswood.api.schema :as schema
-     :refer [components-registry]]))
+
+    [com.repldriven.queenswood.api.schema :as schema :refer
+     [components-registry]]))
 
 (def UserId (schema/id-schema "UserId" "usr" examples/UserId))
 

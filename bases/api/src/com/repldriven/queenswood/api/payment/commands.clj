@@ -1,7 +1,8 @@
 (ns com.repldriven.queenswood.api.payment.commands
   (:require
-    [com.repldriven.queenswood.api.commands :as commands]
-    [com.repldriven.queenswood.api.payment.coercion :as coercion]))
+    [com.repldriven.queenswood.api.payment.coercion :as coercion]
+
+    [com.repldriven.queenswood.api.commands :as commands]))
 
 (defn- dispatcher
   [request]

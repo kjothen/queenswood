@@ -1,7 +1,8 @@
 (ns com.repldriven.queenswood.api.jobs.queries
   (:require
-    [com.repldriven.queenswood.api.errors :as errors]
     [com.repldriven.queenswood.api.jobs.view :as view]
+
+    [com.repldriven.queenswood.api.errors :as errors]
 
     [com.repldriven.queenswood.scheduler.interface :as scheduler]
 

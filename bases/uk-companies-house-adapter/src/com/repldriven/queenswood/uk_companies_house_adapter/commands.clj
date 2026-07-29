@@ -1,9 +1,10 @@
 (ns com.repldriven.queenswood.uk-companies-house-adapter.commands
   (:require
-    [com.repldriven.queenswood.uk-companies-house-adapter.companies-house
-     :as companies-house]
+    [com.repldriven.queenswood.uk-companies-house-adapter.companies-house :as
+     companies-house]
 
     [com.repldriven.queenswood.company.interface :as company]
+
     [com.repldriven.mono.avro.interface :as avro]
     [com.repldriven.mono.error.interface :as error :refer [let-nom>]]
     [com.repldriven.mono.processor.interface :as processor]))

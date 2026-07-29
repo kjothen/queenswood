@@ -3,9 +3,9 @@
     [com.repldriven.queenswood.cash-account.core :as core]
 
     [com.repldriven.queenswood.cash-account-query.interface :as q]
+
     [com.repldriven.mono.avro.interface :as avro]
-    [com.repldriven.mono.error.interface :as error
-     :refer [let-nom>]]
+    [com.repldriven.mono.error.interface :as error :refer [let-nom>]]
     [com.repldriven.mono.processor.interface :as processor]))
 
 (defn- ->response

@@ -1,7 +1,9 @@
 (ns com.repldriven.queenswood.build.build-test
   (:require
     [com.repldriven.queenswood.build.build :as SUT]
+
     [org.corfield.build :as bb]
+
     [clojure.test :as test :refer [deftest is testing]]
     [clojure.tools.build.api :as b]))
 

@@ -1,6 +1,7 @@
 (ns com.repldriven.queenswood.api.oauth.components
   (:require
     [com.repldriven.queenswood.api.oauth.examples :as examples]
+
     [com.repldriven.queenswood.api.schema :refer [components-registry]]))
 
 ;; OAuth2 / OIDC payloads are snake_case at the wire boundary

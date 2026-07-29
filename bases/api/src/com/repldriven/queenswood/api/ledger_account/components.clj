@@ -2,8 +2,9 @@
   (:require
     [com.repldriven.queenswood.api.ledger-account.coercion :as coercion]
     [com.repldriven.queenswood.api.ledger-account.examples :as examples]
-    [com.repldriven.queenswood.api.schema :as schema
-     :refer [components-registry]]))
+
+    [com.repldriven.queenswood.api.schema :as schema :refer
+     [components-registry]]))
 
 (def LedgerAccountId
   (schema/id-schema "LedgerAccountId" "led" examples/LedgerAccountId))

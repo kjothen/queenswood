@@ -1,9 +1,10 @@
 (ns com.repldriven.queenswood.clearbank-simulator.simulate.components
   (:require
-    [com.repldriven.queenswood.clearbank-simulator.schema :refer
-     [components-registry]]
     [com.repldriven.queenswood.clearbank-simulator.simulate.examples :as
-     examples]))
+     examples]
+
+    [com.repldriven.queenswood.clearbank-simulator.schema :refer
+     [components-registry]]))
 
 (def InboundPaymentRequest
   [:map

@@ -1,6 +1,9 @@
 (ns com.repldriven.queenswood.api.api
   (:require
     [com.repldriven.queenswood.api.auth :as auth]
+    [com.repldriven.queenswood.api.examples :as examples]
+    [com.repldriven.queenswood.api.schema :as schema]
+
     [com.repldriven.queenswood.api.balance.components :as balance.components]
     [com.repldriven.queenswood.api.balance.examples :as balance.examples]
     [com.repldriven.queenswood.api.balance.routes :as balance]
@@ -22,7 +25,6 @@
      companies.components]
     [com.repldriven.queenswood.api.companies.examples :as companies.examples]
     [com.repldriven.queenswood.api.companies.routes :as companies]
-    [com.repldriven.queenswood.api.examples :as examples]
     [com.repldriven.queenswood.api.jobs.components :as jobs.components]
     [com.repldriven.queenswood.api.jobs.examples :as jobs.examples]
     [com.repldriven.queenswood.api.jobs.routes :as jobs]
@@ -55,7 +57,6 @@
     [com.repldriven.queenswood.api.policy.components :as policy.components]
     [com.repldriven.queenswood.api.policy.examples :as policy.examples]
     [com.repldriven.queenswood.api.policy.routes :as policy]
-    [com.repldriven.queenswood.api.schema :as schema]
     [com.repldriven.queenswood.api.shared.components :as shared.components]
     [com.repldriven.queenswood.api.shared.interceptors :as shared.interceptors]
     [com.repldriven.queenswood.api.shared.parameters :as shared.parameters]

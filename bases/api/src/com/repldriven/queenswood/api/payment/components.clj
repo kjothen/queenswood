@@ -2,8 +2,9 @@
   (:require
     [com.repldriven.queenswood.api.payment.coercion :as coercion]
     [com.repldriven.queenswood.api.payment.examples :as examples]
-    [com.repldriven.queenswood.api.schema :as schema
-     :refer [components-registry]]))
+
+    [com.repldriven.queenswood.api.schema :as schema :refer
+     [components-registry]]))
 
 (def PaymentId (schema/id-schema "PaymentId" "pmt" examples/PaymentId))
 

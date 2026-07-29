@@ -1,7 +1,7 @@
 (ns com.repldriven.queenswood.clearbank-webhook.components
   (:require
-    [com.repldriven.queenswood.clearbank-webhook.examples
-     :as examples]
+    [com.repldriven.queenswood.clearbank-webhook.examples :as examples]
+
     [com.repldriven.mono.utility.interface :refer [vname]]))
 
 (defn- components-registry

@@ -2,8 +2,9 @@
   (:require
     [com.repldriven.queenswood.api.bank.coercion :as coercion]
     [com.repldriven.queenswood.api.bank.examples :as examples]
-    [com.repldriven.queenswood.api.schema :as schema
-     :refer [components-registry]]))
+
+    [com.repldriven.queenswood.api.schema :as schema :refer
+     [components-registry]]))
 
 (def BankId (schema/id-schema "BankId" "bnk" examples/BankId))
 

@@ -1,12 +1,13 @@
 (ns com.repldriven.queenswood.uk-companies-house-simulator.api
   (:require
+    [com.repldriven.queenswood.uk-companies-house-simulator.schema :as schema]
+
     [com.repldriven.queenswood.uk-companies-house-simulator.companies.components
      :as companies.components]
     [com.repldriven.queenswood.uk-companies-house-simulator.companies.examples
      :as companies.examples]
-    [com.repldriven.queenswood.uk-companies-house-simulator.companies.routes
-     :as companies]
-    [com.repldriven.queenswood.uk-companies-house-simulator.schema :as schema]
+    [com.repldriven.queenswood.uk-companies-house-simulator.companies.routes :as
+     companies]
 
     [com.repldriven.mono.server.interface :as server]
 

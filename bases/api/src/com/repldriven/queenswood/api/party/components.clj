@@ -2,8 +2,9 @@
   (:require
     [com.repldriven.queenswood.api.party.coercion :as coercion]
     [com.repldriven.queenswood.api.party.examples :as examples]
-    [com.repldriven.queenswood.api.schema :as schema
-     :refer [components-registry]]))
+
+    [com.repldriven.queenswood.api.schema :as schema :refer
+     [components-registry]]))
 
 (def PartyId (schema/id-schema "PartyId" "pty" examples/PartyId))
 

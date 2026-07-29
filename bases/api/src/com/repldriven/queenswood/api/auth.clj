@@ -15,11 +15,12 @@
   every authenticated human has a stable platform-identity record."
   (:require
     [com.repldriven.queenswood.api.shared.claims :as claims]
+
     [com.repldriven.queenswood.membership.interface :as memberships]
     [com.repldriven.queenswood.user.interface :as users]
+
     [com.repldriven.mono.error.interface :as error]
-    [com.repldriven.mono.identity-provider.interface
-     :as identity-provider]
+    [com.repldriven.mono.identity-provider.interface :as identity-provider]
     [com.repldriven.mono.json.interface :as json]
     [com.repldriven.mono.log.interface :as log]
     [com.repldriven.mono.utility.interface :as util]

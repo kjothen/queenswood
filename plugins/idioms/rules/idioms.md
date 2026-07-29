@@ -41,14 +41,16 @@ See [ADR-0015](../../../docs/adr/0015-comments-and-docstrings.md).
 
 ## Requires run innermost to outermost
 
-Order `:require` in eight groups, blank line between each,
-alphabetical within: this brick's own `system` namespace; Queenswood
-extension namespaces; `mono` extension namespaces; internal
-namespaces; other Queenswood interfaces; `mono` interfaces; external
-libraries; `clojure.*`. A bare require — no `:as`, no `:refer` — takes
-the bracketed form `[com.example.ns]`, never unbracketed. In a
-component interface test the SUT takes the internal slot, aliased
-`SUT`, and nothing else from that component is required.
+Order `:require` in nine groups, blank line between each, alphabetical
+within: this brick's own `system` namespace; Queenswood extension
+namespaces; `mono` extension namespaces; this file's own package; the
+rest of the brick; other Queenswood interfaces; `mono` interfaces;
+external libraries; `clojure.*`. In a flat component the brick is the
+package, so the two internal groups collapse into one. A bare require
+— no `:as`, no `:refer` — takes the bracketed form
+`[com.example.ns]`, never unbracketed. In a component interface test
+the SUT takes the own-package slot, aliased `SUT`, and nothing else
+from that component is required.
 See [code-style](../../../docs/recipes/code-style.md).
 
 ## Everyday shape

@@ -53,18 +53,22 @@ no entries simply doesn't appear.
 2. **Extension namespaces, Queenswood** — bare requires
    registering *other* bricks' component kinds.
 3. **Extension namespaces, `mono`** — the same, from upstream.
-4. **Internal namespaces** — other files in the same brick. In
-   a test namespace this is where the SUT goes.
-5. **Other Queenswood interfaces** — `interface.clj` of other
+4. **This file's own package** — the files sitting beside it.
+   In a test namespace this is where the SUT goes.
+5. **Rest of the brick** — other packages under the same
+   brick. Only bases nest deeply enough for this to appear; in
+   a flat component the brick *is* the package, so groups 4
+   and 5 collapse into one.
+6. **Other Queenswood interfaces** — `interface.clj` of other
    bricks in this workspace. Interfaces only.
-6. **`mono` interfaces** — the upstream dependency, so further
+7. **`mono` interfaces** — the upstream dependency, so further
    out than our own bricks.
-7. **External libraries.**
-8. **Standard libraries** (`clojure.*`).
+8. **External libraries.**
+9. **Standard libraries** (`clojure.*`).
 
-Groups 1–3 are the bare requires, 4–8 the rest. Both halves
-run the same way outwards: this brick, then Queenswood, then
-everything beyond it.
+Groups 1–3 are the bare requires, 4–9 the rest. Both halves
+run the same way outwards: this file, then the brick, then
+Queenswood, then everything beyond it.
 
 See [system-components.md](system-components.md) for the test
 bundling pattern.
@@ -121,6 +125,22 @@ internal slot and `clojure.test` last:
      [with-test-system nom-test>]]
 
     [clojure.test :refer [deftest is testing]]))
+```
+
+A namespace inside a base that nests, where groups 4 and 5 are
+both populated — `bank`'s own files, then the rest of `api`:
+
+```clojure
+(ns com.repldriven.queenswood.api.bank.routes
+  (:require
+    [com.repldriven.queenswood.api.bank.commands :as bank-commands]
+    [com.repldriven.queenswood.api.bank.examples :refer
+     [BankLimitExceeded BankNotFound BankInvalidStatus BankUnknownTier]]
+    [com.repldriven.queenswood.api.bank.queries :as queries]
+
+    [com.repldriven.queenswood.api.schema :refer [ErrorResponse]]
+    [com.repldriven.queenswood.api.shared.parameters :as
+     shared.parameters]))
 ```
 
 In **component interface tests**, alias the SUT (system under
@@ -303,12 +323,13 @@ lints as `clojure.core/->`, and so on.
 - All Clojure source is formatted with zprint (80-column).
 - Docstrings are manually wrapped at 80.
 - `:require` entries are ordered innermost-to-outermost (own
-  `system`, Queenswood extensions, `mono` extensions,
-  internal, other Queenswood interfaces, `mono` interfaces,
-  external libraries, standard libraries) with blank lines
-  between groups, alphabetical within each group. The bare
-  requires and the rest both run outwards the same way: this
-  brick, then Queenswood, then beyond.
+  `system`, Queenswood extensions, `mono` extensions, own
+  package, rest of the brick, other Queenswood interfaces,
+  `mono` interfaces, external libraries, standard libraries)
+  with blank lines between groups, alphabetical within each
+  group. The bare requires and the rest both run outwards the
+  same way: this file, then the brick, then Queenswood, then
+  beyond.
 - Bare requires — no `:as`, no `:refer` — use the bracketed
   form `[com.example.ns]`.
 - Component interface tests alias the SUT as `SUT` and

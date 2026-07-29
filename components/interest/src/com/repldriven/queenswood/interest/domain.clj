@@ -1,6 +1,7 @@
 (ns com.repldriven.queenswood.interest.domain
   (:require
     [com.repldriven.queenswood.policy.interface :as policy]
+
     [com.repldriven.mono.utility.interface :as utility]))
 
 (def ^:private micro-scale 1000000)
