@@ -167,6 +167,30 @@ Two of these gate real scale-out, in this order:
    need raising — in that order. Every topic is `partitions: 1` today and
    `KafkaProducer.send` passes no key, so extra replicas are idle standbys;
    raising partitions without a key silently breaks per-entity ordering.
+
+   Keying does not restore commit order across the topic; it makes global
+   order unnecessary. Kafka orders within a partition only, so hashing an
+   entity's id to a partition keeps that entity's own transitions in
+   sequence, and nothing depends on one entity's order relative to
+   another's. The envelope already carries the value: `causation_id` is the
+   `party-id` / `account-id` for the events written so far.
+
+   Unkeyed reordering is invisible rather than loud. A `closing` event
+   overtaking its `opening` lands on `complete-status-transition`, whose
+   source-status guard skips silently — by design, so redelivery is a
+   no-op. The guard that makes replay safe is the guard that hides
+   reordering.
+
+   Per-partition order also depends on producer idempotence, which is on
+   today but only by default. Verified against the pinned kafka-clients
+   4.3.1: with `acks: all` (all 75 producer declarations) the effective
+   config is `enable.idempotence=true`, `retries=2147483647`,
+   `max.in.flight=5`. Set `acks: 1` on any producer and idempotence
+   silently becomes `false` — the client disables it rather than raising
+   when a conflicting config appears and idempotence was not explicitly
+   asked for — leaving retries and in-flight at the values that reorder
+   within a partition. Setting `enable.idempotence: true` explicitly on
+   the event producers converts that into a boot-time `ConfigException`.
 2. **`event/process` should rethrow on anomaly.** It wraps the handler in
    `error/try-nom`, logs, and returns — so the Kafka consumer acks and the
    event is lost, where the watcher it replaces redrove forever. That is why
