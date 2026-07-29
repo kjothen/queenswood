@@ -26,12 +26,15 @@
     [com.repldriven.mono.log.interface :as log]
     [com.repldriven.mono.server.interface :as server]
     [com.repldriven.mono.system.interface :as system]
+    [com.repldriven.mono.test-telemetry.interface :as test-telemetry]
     [com.repldriven.mono.test-system.interface :refer
      [with-test-system nom-test>]]
     [com.repldriven.mono.utility.interface :as util]
 
     [clojure.java.io :as io]
-    [clojure.test :refer [deftest is testing]]))
+    [clojure.test :refer [deftest is testing]])
+  (:import
+    (io.opentelemetry.sdk.trace.data SpanData)))
 
 (defn- mint-admin-token
   "Exchange the seeded queenswood-admin client_credentials for an
@@ -117,4 +120,43 @@
                                                :admin-token admin-token
                                                :run-id (str (util/uuidv7))})
                                              resource-path)
-                         _ (log/info "api scenario complete" {:file relative})]))))))))
+                         _ (log/info "api scenario complete" {:file relative})]))))
+       (testing "the run is traced end to end"
+         (let [spans (test-telemetry/finished-spans
+                      (system/instance sys [:telemetry :otel-sdk]))
+               names (frequencies (map #(.getName ^SpanData %) spans))]
+           ;; Every scenario drives at least one request, so this floor
+           ;; holds however many scenarios there are.
+           (is (>= (count spans) (count files)))
+           ;; Server spans: the API is instrumented on the request path.
+           (is (pos? (get names "GET" 0)))
+           (is (pos? (get names "POST" 0)))
+           (is (pos? (get names "process-command" 0)))
+           ;; The trace carries from the HTTP thread across the bus into
+           ;; the processor, which is the point of propagating
+           ;; traceparent and the thing nothing else here would notice
+           ;; breaking.
+           ;;
+           ;; Some, not all: a command a watcher dispatches in reaction
+           ;; to a changelog entry (`submit-idv-check`, `submit-payment`)
+           ;; opens its own trace, because the record change is what
+           ;; caused it rather than any request thread (ADR-0008). Those
+           ;; carry a `causation_id` naming the entity; the ones the API
+           ;; dispatches carry `correlation_id` equal to their own id.
+           (let [trace-id (fn [^SpanData s] (.getTraceId (.getSpanContext s)))
+                 server? #(#{"GET" "POST" "PUT" "DELETE"}
+                            (.getName ^SpanData %))
+                 traces (set (map trace-id (filter server? spans)))
+                 named (fn [n] (filter #(= n (.getName ^SpanData %)) spans))
+                 joined (fn [n]
+                          (count (filter #(contains? traces (trace-id %))
+                                         (named n))))]
+             (is (pos? (joined "process-command")))
+             ;; Events too, since the outbox and changelog carry the
+             ;; writer's traceparent. Most rather than all: an event
+             ;; whose causing command was itself watcher-dispatched
+             ;; inherits that command's separate trace.
+             (is (pos? (joined "process-event")))
+             (is (> (joined "process-event")
+                    (- (count (named "process-event"))
+                       (joined "process-event")))))))))))

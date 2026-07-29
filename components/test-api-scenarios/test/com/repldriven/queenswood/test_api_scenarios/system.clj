@@ -35,4 +35,5 @@
     [com.repldriven.mono.kafka.interface]
     [com.repldriven.mono.keycloak.interface]
     [com.repldriven.mono.message-bus.interface]
-    [com.repldriven.mono.server.interface]))
+    [com.repldriven.mono.server.interface]
+    [com.repldriven.mono.test-telemetry.interface]))

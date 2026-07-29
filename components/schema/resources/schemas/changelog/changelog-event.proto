@@ -28,4 +28,7 @@ message ChangelogEvent {
   optional string correlation_id = 5;
   optional string causation_id   = 6;
   optional int64  created_at     = 7;
+  // W3C traceparent of the span that wrote the entry, so the relay can
+  // publish under it and the consumer's span joins the same trace.
+  optional string traceparent    = 8;
 }

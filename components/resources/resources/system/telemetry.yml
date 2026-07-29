@@ -1,5 +1,20 @@
-# A blank OTEL_ENDPOINT disables the SDK rather than failing.
-otel-sdk: !system/component
-  system/component-kind: telemetry/otel-sdk
-  service-name: !env SERVICE_NAME
-  endpoint: !env OTEL_ENDPOINT
+# One definition for all three shapes. `!profile` resolves at read time
+# and discards the branches it does not pick, so naming the test-only
+# `test-telemetry/otel-sdk` kind here is inert on a production classpath.
+otel-sdk: !profile
+  # A blank OTEL_ENDPOINT disables the SDK rather than failing.
+  default: !system/component
+    system/component-kind: telemetry/otel-sdk
+    service-name: !env SERVICE_NAME
+    endpoint: !env OTEL_ENDPOINT
+  # The dev loop ships to a collector listening on the standard OTLP
+  # HTTP port, so traces can be explored in its UI.
+  dev: !system/component
+    system/component-kind: telemetry/otel-sdk
+    service-name: monolith
+    endpoint: http://localhost:4318/v1/traces
+  # Spans collect in memory, read back with
+  # `test-telemetry/finished-spans`. Ships in mono-test-lib only.
+  test: !system/component
+    system/component-kind: test-telemetry/otel-sdk
+    service-name: test

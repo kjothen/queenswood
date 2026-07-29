@@ -1,5 +1,0 @@
-otel-sdk: !profile
-  dev: !system/component
-    system/component-kind: telemetry/otel-sdk
-    service-name: bank-monolith
-    endpoint: http://localhost:4318/v1/traces
