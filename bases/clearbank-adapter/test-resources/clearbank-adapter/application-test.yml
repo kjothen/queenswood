@@ -1,5 +1,5 @@
 system:
   avro: !include system/avro.yml
   fdb: !include system/fdb-test.yml
-  message-bus: !include system/local-bus-test.yml
+  message-bus: !include clearbank-adapter/message-bus-test.yml
   server: !include clearbank-adapter/server-test.yml
