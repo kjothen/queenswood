@@ -4,7 +4,8 @@
    {ext/mono {:local/root "deps/mono-test"}
     ;; Both drag in slf4j-nop, which sorts ahead of logback-classic and
     ;; binds SLF4J to NOPServiceProvider — every log line is discarded and
-    ;; development/resources/logback-test.xml is never read.
+    ;; components/test-resources/test-resources/logback-test.xml is never
+    ;; read.
     bases/build {:local/root "bases/build" :exclusions [org.slf4j/slf4j-nop]}
     bases/external-test-runner {:local/root "bases/external-test-runner"
                                 :exclusions [org.slf4j/slf4j-nop]}

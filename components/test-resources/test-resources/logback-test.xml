@@ -1,11 +1,19 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
 
+    <!-- The workspace's only test logging config. Logback looks for
+         logback-test.xml before logback.xml, and components/test-resources
+         is only ever on a test classpath, so this wins in tests without
+         depending on classpath ordering. A full config, not a delta —
+         logback replaces rather than merges. -->
+
     <statusListener class="ch.qos.logback.core.status.NopStatusListener"/>
 
     <contextListener class="ch.qos.logback.classic.jul.LevelChangePropagator">
         <resetJUL>true</resetJUL>
     </contextListener>
+
+    <property name="LOG_LEVEL" value="${LOG_LEVEL:-info}"/>
 
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
         <encoder class="net.logstash.logback.encoder.LogstashEncoder">
@@ -22,14 +30,18 @@
         </encoder>
     </appender>
 
-    <logger name="com.repldriven.mono" level="info" additivity="false">
+    <logger name="com.repldriven.queenswood" level="${LOG_LEVEL}" additivity="false">
         <appender-ref ref="CONSOLE"/>
     </logger>
-  
+
+    <logger name="com.repldriven.mono" level="${LOG_LEVEL}" additivity="false">
+        <appender-ref ref="CONSOLE"/>
+    </logger>
+
     <logger name="com.apple.foundationdb" level="error" additivity="false">
         <appender-ref ref="CONSOLE"/>
     </logger>
-  
+
     <logger name="org.apache.pulsar" level="warn" additivity="false">
         <appender-ref ref="CONSOLE"/>
     </logger>
@@ -42,11 +54,12 @@
         <appender-ref ref="CONSOLE"/>
     </logger>
 
-   <logger name="org.testcontainers.utility.RyukResourceReaper" level="error" additivity="false">
+    <!-- Testcontainers only runs under test; the reaper is noisy on teardown. -->
+    <logger name="org.testcontainers.utility.RyukResourceReaper" level="error" additivity="false">
         <appender-ref ref="CONSOLE"/>
-   </logger>
+    </logger>
 
-   <root level="warn">
+    <root level="warn">
         <appender-ref ref="CONSOLE"/>
     </root>
 

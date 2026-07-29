@@ -7,8 +7,11 @@
           :ns-default com.repldriven.queenswood.build.build}
   :test {:extra-deps {ext/mono {:local/root "../../deps/mono-test"}
                       bases/external-test-runner
-                      {:local/root "../../bases/external-test-runner"}}}}
+                      {:local/root "../../bases/external-test-runner"}
+                      component/test-resources
+                      {:local/root "../../components/test-resources"}}}}
  :deps {ext/mono {:local/root "../../deps/mono"}
+        component/resources {:local/root "../../components/resources"}
         base/uk-companies-house-simulator
         {:local/root "../../bases/uk-companies-house-simulator"}
         org.clojure/clojure {:mvn/version "1.12.5"}

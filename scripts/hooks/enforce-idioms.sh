@@ -346,4 +346,33 @@ done < <(grep -rn 'classpath:' justfiles .envrc scripts 2>/dev/null || true)
 out=$(printf '%s' "$out" | grep -v '^$' || true)
 report 'config-includes-resolve' "$out"
 
+# 8. Exactly one logback.xml and one logback-test.xml in the workspace.
+# Both are looked up by bare name on a merged classpath, so N copies means
+# which one wins is classpath-order dependent. Identical copies hide that;
+# the moment one drifts you get a config heisenbug with no error to grep for.
+# The workspace ran 14 logback.xml and 14 logback-test.xml that had already
+# split into three variants, one of them a stale namespace prefix that
+# silenced Queenswood's own logging in every deployed service.
+#
+# logback's own "Resource [logback.xml] occurs multiple times" warning cannot
+# be relied on here — the configs install a NopStatusListener, which suppresses
+# exactly that message.
+#
+# Whole-tree regardless of scope: a second copy added anywhere breaks the
+# single-source guarantee for every project, not just the one being committed.
+section 'One logback.xml and one logback-test.xml'
+out=""
+for name in logback.xml logback-test.xml; do
+  found=$(find components bases projects development \
+            \( -name target -o -name node_modules -o -name .cpcache \) -prune -o \
+            -type f -name "$name" -print 2>/dev/null | sort)
+  count=$(printf '%s' "$found" | grep -c . || true)
+  if [ "$count" -ne 1 ]; then
+    out="${out}${name}: expected 1, found ${count}"$'\n'
+    [ "$count" -gt 0 ] && out="${out}$(printf '%s\n' "$found" | sed 's/^/  /')"$'\n'
+  fi
+done
+out=$(printf '%s' "$out" | grep -v '^$' || true)
+report 'single-logback-config' "$out"
+
 exit "$FAILED"

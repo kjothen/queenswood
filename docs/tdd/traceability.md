@@ -261,8 +261,8 @@ property under test.
   command throughput, latency histograms, etc. are unobserved.
   Worth a separate piece of work.
 - **Structured logging lacks domain fields.** Logs are
-  already JSON via `LogstashEncoder` (all
-  `projects/*/resources/logback.xml`), but only
+  already JSON via `LogstashEncoder`
+  (`components/resources/resources/logback.xml`), but only
   message / level / timestamp are populated. To query by
   `:correlation-id`, `:causation-id`, or command name, those
   values must be pushed into MDC and included as encoder
