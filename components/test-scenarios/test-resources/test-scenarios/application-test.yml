@@ -7,7 +7,7 @@ system:
   clearbank-simulator-server: !include system/clearbank-simulator-server.yml
   fdb: !include system/fdb-test.yml
   idv: !include system/idv.yml
-  kafka: !include system/kafka-test.yml
+  kafka: !include system/kafka-all-test.yml
   message-bus: !include system/message-bus-test.yml
   onfido-adapter: !include system/onfido-adapter.yml
   onfido-adapter-relay: !include system/onfido-adapter-relay.yml

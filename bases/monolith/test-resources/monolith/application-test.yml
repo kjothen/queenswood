@@ -17,7 +17,7 @@ system:
   idv: !include system/idv.yml
   interest: !include system/interest.yml
   interest-dispatcher: !include system/interest-dispatcher.yml
-  kafka: !include system/kafka-test.yml
+  kafka: !include system/kafka-all-test.yml
   keycloak: !include system/keycloak.yml
   keycloak-container: !include system/keycloak-container-test.yml
   message-bus: !include system/message-bus-test.yml
