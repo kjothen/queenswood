@@ -27,7 +27,7 @@
 
 (def CompanyNotFound
   {:value {:title "REJECTED"
-           :type ":company-registry/company-not-found"
+           :type ":company/not-found"
            :status 404
            :detail "No active company found for that number"}})
 

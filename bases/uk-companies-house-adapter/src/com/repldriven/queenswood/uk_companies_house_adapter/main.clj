@@ -2,7 +2,7 @@
   (:require
     com.repldriven.queenswood.uk-companies-house-adapter.system
 
-    com.repldriven.queenswood.company-registry.interface
+    com.repldriven.queenswood.company.interface
     com.repldriven.queenswood.fdb.interface
     com.repldriven.queenswood.schema.interface
     com.repldriven.mono.avro.interface

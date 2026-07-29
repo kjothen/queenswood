@@ -56,4 +56,8 @@
        (let [company (reply->company sys result)]
          (is (= known-company (:company-number company)))
          (is (= "uk-companies-house" (:registry-id company)))
-         (is (some? (:company-name company))))))))
+         (is (some? (:company-name company))))))
+   (testing "an unknown number is rejected under a vendor-neutral kind"
+     (let [result (lookup sys {:company-number "99999999"})]
+       (is (= "REJECTED" (:status result)))
+       (is (= ":company/not-found" (:reason result)))))))

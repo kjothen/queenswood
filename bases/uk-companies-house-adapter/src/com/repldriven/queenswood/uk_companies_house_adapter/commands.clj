@@ -1,6 +1,9 @@
 (ns com.repldriven.queenswood.uk-companies-house-adapter.commands
   (:require
-    [com.repldriven.queenswood.company-registry.interface :as company-registry]
+    [com.repldriven.queenswood.uk-companies-house-adapter.companies-house
+     :as companies-house]
+
+    [com.repldriven.queenswood.company.interface :as company]
     [com.repldriven.mono.avro.interface :as avro]
     [com.repldriven.mono.error.interface :as error :refer [let-nom>]]
     [com.repldriven.mono.processor.interface :as processor]))
@@ -25,17 +28,16 @@
   rather than persisting an intent: the caller is a live request waiting
   on the command response, so there is nothing to drain later."
   [config data]
-  (let [{:keys [companies-house-url record-db record-store]} config
+  (let [{:keys [record-db record-store]} config
         {:keys [company-number]} data
-        result (company-registry/lookup-company
-                {:companies-house-url companies-house-url
-                 :record-db record-db
-                 :record-store record-store}
-                company-number)]
-    (->response config
-                (if (error/anomaly? result)
-                  result
-                  (assoc result :registry-id registry)))))
+        result (let-nom>
+                 [body (companies-house/fetch-company config company-number)
+                  company (companies-house/body->company body)
+                  _ (company/save-company
+                     {:record-db record-db :record-store record-store}
+                     company)]
+                 (assoc company :registry-id registry))]
+    (->response config result)))
 
 (def ^:private command-handlers {"lookup-company" lookup-company})
 
