@@ -43,16 +43,20 @@ system:
   fdb: !include system/fdb.yml
   telemetry: !include system/telemetry.yml
   relay:
+    # Every store writes the shared envelope, so one handler kind
+    # decodes them all and republishes the payload verbatim. The outbox
+    # protos reuse ChangelogEvent's field numbers, so their entries
+    # decode as one too.
     clearbank-handler: !system/component
-      system/component-kind: clearbank-relay/relay-handler
+      system/component-kind: changelog-relay/envelope-handler
       bus: !system/ref message-bus.bus
       event-channel: !keyword schemes-payments-event
+      store-name: clearbank-outbox
     onfido-handler: !system/component
-      system/component-kind: onfido-relay/relay-handler
+      system/component-kind: changelog-relay/envelope-handler
       bus: !system/ref message-bus.bus
       event-channel: !keyword idv-event
-    # Stores that write the shared envelope need no bespoke handler —
-    # the generic one decodes it and republishes the payload verbatim.
+      store-name: onfido-outbox
     cash-accounts-handler: !system/component
       system/component-kind: changelog-relay/envelope-handler
       bus: !system/ref message-bus.bus

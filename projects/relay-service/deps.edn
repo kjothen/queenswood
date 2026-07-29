@@ -19,8 +19,6 @@
  {ext/mono {:local/root "../../deps/mono"}
   component/fdb {:local/root "../../components/fdb"}
   component/changelog-relay {:local/root "../../components/changelog-relay"}
-  component/clearbank-relay {:local/root "../../components/clearbank-relay"}
-  component/onfido-relay {:local/root "../../components/onfido-relay"}
   component/resources {:local/root "../../components/resources"}
   component/schema {:local/root "../../components/schema"}
   base/relay {:local/root "../../bases/relay"}
