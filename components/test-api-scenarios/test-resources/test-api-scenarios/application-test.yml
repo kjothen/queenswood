@@ -2,6 +2,7 @@ system:
   avro: !include system/avro.yml
   banks: !include system/bank.yml
   banks-dispatcher: !include system/bank-dispatcher.yml
+  cash-account-product-templates: !include system/cash-account-product-templates.yml
   cash-account-products: !include system/cash-account-product.yml
   cash-account-products-dispatcher: !include system/cash-account-product-dispatcher.yml
   cash-accounts: !include system/cash-account.yml
@@ -11,14 +12,12 @@ system:
   clearbank-adapter-relay: !include system/clearbank-adapter-relay.yml
   clearbank-adapter-server: !include system/clearbank-adapter-server.yml
   clearbank-simulator-server: !include system/clearbank-simulator-server.yml
-  companies-house-server: !include system/companies-house-server.yml
-  companies: !include system/companies.yml
-  companies-dispatcher: !include system/companies-dispatcher.yml
+  companies-dispatcher: !include system/company-dispatcher.yml
   fdb: !include system/fdb-test.yml
   idv: !include system/idv.yml
   interest: !include system/interest.yml
   interest-dispatcher: !include system/interest-dispatcher.yml
-  kafka: !include system/kafka-test.yml
+  kafka: !include system/kafka-all-test.yml
   keycloak: !include system/keycloak.yml
   keycloak-container: !include system/keycloak-container-test.yml
   message-bus: !include system/message-bus-test.yml
@@ -32,6 +31,7 @@ system:
   payments-dispatcher: !include system/payment-dispatcher.yml
   policies: !include system/policy-test.yml
   server: !include test-api-scenarios/server-test.yml
-  templates: !include system/templates.yml
   transactions: !include system/transaction.yml
   transactions-dispatcher: !include system/transaction-dispatcher.yml
+  uk-companies-house-adapter: !include system/uk-companies-house-adapter.yml
+  uk-companies-house-simulator-server: !include system/uk-companies-house-simulator-server.yml

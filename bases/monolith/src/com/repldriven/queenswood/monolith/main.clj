@@ -34,7 +34,7 @@
          (assoc-in [:system/defs :onfido-adapter-server
                     :handler]
           onfido-adapter-api/app)
-         (assoc-in [:system/defs :companies-house-server
+         (assoc-in [:system/defs :uk-companies-house-simulator-server
                     :handler]
           ch-simulator-api/app)
          system/start))

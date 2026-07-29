@@ -35,13 +35,13 @@ groups, each matching the keyword group passed to `defcomponents`
 entries name components within it.
 
 Adapted from
-`bases/monolith/test-resources/bank-monolith/application-test.yml`:
+`bases/monolith/test-resources/monolith/application-test.yml`:
 
 ```yaml
 system:
-  kafka: !include bank-monolith/kafka-test.yml
+  cash-accounts: !include system/cash-account.yml
   fdb: !include system/fdb-test.yml
-  cash-accounts: !include system/cash-account-test.yml
+  kafka: !include system/kafka-all-test.yml
   ## ...
   server:
     handler: !system/required-component

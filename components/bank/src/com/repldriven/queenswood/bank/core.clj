@@ -53,7 +53,8 @@
 
 (def ^:private own-funds-template-id
   "The internal own-funds template seeded at bootstrap (see
-  bank/templates/own-funds.yml); the house product is created from it."
+  cash-account-product-templates/own-funds.yml); the house product is
+  created from it."
   "tpl.00000000000000000000000004")
 
 (defn- new-house-account

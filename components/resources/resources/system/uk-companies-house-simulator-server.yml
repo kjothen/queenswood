@@ -9,8 +9,8 @@ interceptors: !system/component
 
 jetty-adapter: !system/component
   system/component-kind: server/jetty-adapter
-  handler: !system/ref companies-house-server.handler
-  interceptors: !system/ref companies-house-server.interceptors
+  handler: !system/ref uk-companies-house-simulator-server.handler
+  interceptors: !system/ref uk-companies-house-simulator-server.interceptors
   options: !profile
     dev:
       port: 8084

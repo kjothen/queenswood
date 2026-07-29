@@ -45,11 +45,12 @@ system:
   idv: !include system/idv.yml
   payee-checks: !include system/payee-check.yml
   policies: !include system/policy.yml
-  templates: !include system/templates.yml
+  cash-account-product-templates: !include system/cash-account-product-templates.yml
   banks-dispatcher: !include system/bank-dispatcher.yml
   cash-account-products-dispatcher: !include system/cash-account-product-dispatcher.yml
   cash-accounts-dispatcher: !include system/cash-account-dispatcher.yml
   cash-accounts-relay: !include system/cash-account-relay.yml
+  companies-dispatcher: !include system/company-dispatcher.yml
   interest-dispatcher: !include system/interest-dispatcher.yml
   parties-dispatcher: !include system/party-dispatcher.yml
   payee-checks-dispatcher: !include system/payee-check-dispatcher.yml
@@ -112,6 +113,5 @@ system:
   onfido-adapter-server: !include system/onfido-adapter-server.yml
   onfido-adapter: !include system/onfido-adapter.yml
   onfido-adapter-relay: !include system/onfido-adapter-relay.yml
-  companies-house-server: !include system/companies-house-server.yml
-  companies: !include system/companies.yml
-  companies-dispatcher: !include system/companies-dispatcher.yml
+  uk-companies-house-simulator-server: !include system/uk-companies-house-simulator-server.yml
+  uk-companies-house-adapter: !include system/uk-companies-house-adapter.yml
