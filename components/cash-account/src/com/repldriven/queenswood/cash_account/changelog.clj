@@ -3,6 +3,7 @@
     [com.repldriven.queenswood.schema.interface :as schema]
 
     [com.repldriven.mono.avro.interface :as avro]
+    [com.repldriven.mono.telemetry.interface :as telemetry]
     [com.repldriven.mono.utility.interface :as utility]
 
     [clojure.java.io :as io]))
@@ -23,14 +24,20 @@
   `:status-before` and `:status-after`."
   [{:keys [bank-id account-id status-before status-after]}]
   (schema/ChangelogEvent->pb
-   {:event-id (str (utility/uuidv7))
-    :dedup-key (str account-id ":" (name status-after))
-    :event-name event-name
-    :payload (avro/serialize @schema
-                             {:bank-id bank-id
-                              :account-id account-id
-                              :status-before (some-> status-before
-                                                     name)
-                              :status-after (name status-after)})
-    :causation-id account-id
-    :created-at (utility/now)}))
+   (utility/assoc-some
+    {:event-id (str (utility/uuidv7))
+     :dedup-key (str account-id ":" (name status-after))
+     :event-name event-name
+     :payload (avro/serialize @schema
+                              {:bank-id bank-id
+                               :account-id account-id
+                               :status-before (some-> status-before
+                                                      name)
+                               :status-after (name status-after)})
+     :causation-id account-id
+     :created-at (utility/now)}
+    ;; Written inside the command's transaction, so this is the
+    ;; `process-command` span — which is itself under the request. The
+    ;; relay republishes it and the consumer's span joins that trace.
+    :traceparent
+    (telemetry/inject-traceparent))))

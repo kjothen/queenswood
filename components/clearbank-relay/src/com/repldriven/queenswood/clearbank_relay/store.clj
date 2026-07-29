@@ -3,7 +3,9 @@
     [com.repldriven.queenswood.fdb.interface :as fdb]
     [com.repldriven.queenswood.schema.interface :as schema]
 
-    [com.repldriven.mono.error.interface :refer [let-nom>]]))
+    [com.repldriven.mono.error.interface :refer [let-nom>]]
+    [com.repldriven.mono.telemetry.interface :as telemetry]
+    [com.repldriven.mono.utility.interface :refer [assoc-some]]))
 
 (def ^:private store-name "clearbank-outbox")
 
@@ -19,7 +21,12 @@
   (fdb/transact
    txn
    (fn [txn]
-     (let [store (fdb/open txn store-name)]
+     (let [store (fdb/open txn store-name)
+           ;; Captured here rather than by the caller because this runs on
+           ;; the thread that holds the span, and every writer goes through
+           ;; it. Absent when nothing is being traced — an optional proto
+           ;; scalar wants the key gone, not nil.
+           event (assoc-some event :traceparent (telemetry/inject-traceparent))]
        (let-nom>
          [_ (fdb/save-record store (schema/ClearbankOutboxEvent->java event))
           _ (fdb/write-changelog store

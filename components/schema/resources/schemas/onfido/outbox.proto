@@ -19,6 +19,7 @@ message OnfidoOutboxEvent {
   optional string correlation_id = 5;
   optional string causation_id = 6;
   optional int64  created_at = 7;
+  optional string traceparent = 8;   // W3C, see ChangelogEvent
 }
 
 // A pending outbound Onfido check submission. Written in the FDB

@@ -4,7 +4,8 @@
 
     [com.repldriven.mono.error.interface :as error]
     [com.repldriven.mono.event.interface :as event]
-    [com.repldriven.mono.log.interface :as log]))
+    [com.repldriven.mono.log.interface :as log]
+    [com.repldriven.mono.utility.interface :refer [assoc-some]]))
 
 (defn ->handler
   "Build the changelog relay handler. Publishes each stored outbox event
@@ -13,12 +14,14 @@
   the entry is redriven — at-least-once; downstream dedupes."
   [{:keys [bus event-channel]}]
   (fn [_ctx changelog-bytes]
-    (let [{:keys [event-name payload correlation-id causation-id]}
+    (let [{:keys [event-name payload correlation-id causation-id traceparent]}
           (schema/pb->OnfidoOutboxEvent changelog-bytes)
-          envelope (assoc
-                    (event/envelope event-name causation-id correlation-id)
-                    :payload
-                    payload)
+          envelope (-> (event/envelope event-name causation-id correlation-id)
+                       (assoc :payload payload)
+                       ;; The span that wrote the outbox entry, so the
+                       ;; consumer joins that trace rather than opening
+                       ;; its own.
+                       (assoc-some :traceparent traceparent))
           res (event/publish bus envelope {:event-channel event-channel})]
       (when (error/anomaly? res)
         (log/error "Onfido relay publish failed; will redrive" res)

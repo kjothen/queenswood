@@ -147,7 +147,16 @@
                  server? #(#{"GET" "POST" "PUT" "DELETE"}
                             (.getName ^SpanData %))
                  traces (set (map trace-id (filter server? spans)))
-                 commands (filter #(= "process-command" (.getName ^SpanData %))
-                                  spans)]
-             (is (pos? (count (filter #(contains? traces (trace-id %))
-                                      commands)))))))))))
+                 named (fn [n] (filter #(= n (.getName ^SpanData %)) spans))
+                 joined (fn [n]
+                          (count (filter #(contains? traces (trace-id %))
+                                         (named n))))]
+             (is (pos? (joined "process-command")))
+             ;; Events too, since the outbox and changelog carry the
+             ;; writer's traceparent. Most rather than all: an event
+             ;; whose causing command was itself watcher-dispatched
+             ;; inherits that command's separate trace.
+             (is (pos? (joined "process-event")))
+             (is (> (joined "process-event")
+                    (- (count (named "process-event"))
+                       (joined "process-event")))))))))))

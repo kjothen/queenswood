@@ -4,7 +4,8 @@
 
     [com.repldriven.mono.error.interface :as error]
     [com.repldriven.mono.event.interface :as event]
-    [com.repldriven.mono.log.interface :as log]))
+    [com.repldriven.mono.log.interface :as log]
+    [com.repldriven.mono.utility.interface :refer [assoc-some]]))
 
 (defn ->handler
   [{:keys [bus event-channel store-name]}]
@@ -18,12 +19,19 @@
         ;; forever and block every later entry behind it.
         (log/error "Skipping undecodable changelog entry"
                    {:store-name store-name :anomaly decoded})
-        (let [{:keys [event-name payload correlation-id causation-id]} decoded
-              envelope (assoc (event/envelope event-name
-                                              causation-id
-                                              correlation-id)
-                              :payload
-                              payload)
+        (let [{:keys [event-name payload correlation-id causation-id
+                      traceparent]}
+              decoded
+              envelope (-> (event/envelope event-name
+                                           causation-id
+                                           correlation-id)
+                           (assoc :payload payload)
+                           ;; The writer's span, so the consumer's
+                           ;; `process-event` joins that trace rather than
+                           ;; opening its own. Absent for entries written
+                           ;; before the field existed, or with nothing
+                           ;; being traced.
+                           (assoc-some :traceparent traceparent))
               res (event/publish bus envelope {:event-channel event-channel})]
           (when (error/anomaly? res)
             (log/error "Changelog relay publish failed; will redrive" res)
