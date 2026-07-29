@@ -144,8 +144,7 @@
                         (when (and (every? ok-response? results)
                                    (not @stopped?))
                           (reset! readiness true)
-                          (log/info
-                           "ClearBank webhook registration complete; pod ready")
+                          (log/info "ClearBank webhook registration complete")
                           (reset! loop-thread (start-re-register-loop
                                                simulator-url
                                                webhook-url

@@ -134,8 +134,7 @@
                                                              adapter-url)]
                         (when (and (ok-response? res) (not @stopped?))
                           (reset! readiness true)
-                          (log/info
-                           "Onfido webhook registration complete; pod ready")
+                          (log/info "Onfido webhook registration complete")
                           (reset! loop-thread (start-re-register-loop
                                                onfido-url
                                                adapter-url
