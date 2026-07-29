@@ -1,3 +1,7 @@
+# The channels the adapter rigs' server interceptors are configured with.
+# local-bus builds a producer per declared channel and `bus/send` looks
+# one up by name, so a channel missing here is a nil producer, not a
+# no-op.
 bus: !system/component
   system/component-kind: message-bus/local-bus
-  channels: [event]
+  channels: [idv-event, schemes-payments-event]
