@@ -26,12 +26,15 @@
     [com.repldriven.mono.log.interface :as log]
     [com.repldriven.mono.server.interface :as server]
     [com.repldriven.mono.system.interface :as system]
+    [com.repldriven.mono.test-telemetry.interface :as test-telemetry]
     [com.repldriven.mono.test-system.interface :refer
      [with-test-system nom-test>]]
     [com.repldriven.mono.utility.interface :as util]
 
     [clojure.java.io :as io]
-    [clojure.test :refer [deftest is testing]]))
+    [clojure.test :refer [deftest is testing]])
+  (:import
+    (io.opentelemetry.sdk.trace.data SpanData)))
 
 (defn- mint-admin-token
   "Exchange the seeded queenswood-admin client_credentials for an
@@ -117,4 +120,19 @@
                                                :admin-token admin-token
                                                :run-id (str (util/uuidv7))})
                                              resource-path)
-                         _ (log/info "api scenario complete" {:file relative})]))))))))
+                         _ (log/info "api scenario complete" {:file relative})]))))
+       (testing "the run is traced end to end"
+         (let [spans (test-telemetry/finished-spans
+                      (system/instance sys [:telemetry :otel-sdk]))
+               names (frequencies (map #(.getName ^SpanData %) spans))]
+           ;; Every scenario drives at least one request, so this floor
+           ;; holds however many scenarios there are.
+           (is (>= (count spans) (count files)))
+           ;; Server spans: the API is instrumented on the request path.
+           (is (pos? (get names "GET" 0)))
+           (is (pos? (get names "POST" 0)))
+           ;; A command span means the trace carried from the HTTP thread
+           ;; across the bus into a processor. That continuity is the
+           ;; point of propagating traceparent, and nothing else here
+           ;; would notice if it stopped working.
+           (is (pos? (get names "process-command" 0)))))))))
