@@ -93,25 +93,32 @@
   [onfido-url adapter-url poll-ms]
   (doto (Thread.
          (fn []
-           (while true
-             (try (Thread/sleep poll-ms)
-                  (when-not (registered? onfido-url adapter-url)
-                    (log/warn
-                     "Onfido webhook missing from simulator; re-registering"
-                     {:onfido onfido-url :adapter adapter-url})
-                    (let [res (register-webhook onfido-url adapter-url)]
-                      (if (ok-response? res)
-                        (log/info "Re-registered Onfido webhook"
-                                  {:adapter adapter-url
-                                   :status (:status res)})
-                        (log/error "Onfido webhook re-registration failed"
-                                   {:adapter adapter-url :res res}))))
-                  ;; nosemgrep: no-raw-throw
-                  (catch InterruptedException _ (throw (InterruptedException.)))
-                  (catch Throwable t
-                    (log/error
-                     t
-                     "Onfido webhook poll iteration threw; continuing"))))))
+           ;; The interrupt is the stop signal, so it ends the loop by
+           ;; value rather than by throwing. Letting it propagate out of
+           ;; `run` would have the default handler print a stack trace on
+           ;; every clean shutdown.
+           (loop []
+             (when (try
+                     (Thread/sleep poll-ms)
+                     (when-not (registered? onfido-url adapter-url)
+                       (log/warn
+                        "Onfido webhook missing from simulator; re-registering"
+                        {:onfido onfido-url :adapter adapter-url})
+                       (let [res (register-webhook onfido-url adapter-url)]
+                         (if (ok-response? res)
+                           (log/info "Re-registered Onfido webhook"
+                                     {:adapter adapter-url
+                                      :status (:status res)})
+                           (log/error "Onfido webhook re-registration failed"
+                                      {:adapter adapter-url :res res}))))
+                     true
+                     (catch InterruptedException _ false)
+                     (catch Throwable t
+                       (log/error
+                        t
+                        "Onfido webhook poll iteration threw; continuing")
+                       true))
+               (recur)))))
     (.setDaemon true)
     (.setName "onfido-webhook-re-register")
     (.start)))
