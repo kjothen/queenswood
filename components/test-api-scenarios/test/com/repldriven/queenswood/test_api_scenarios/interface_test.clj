@@ -131,8 +131,23 @@
            ;; Server spans: the API is instrumented on the request path.
            (is (pos? (get names "GET" 0)))
            (is (pos? (get names "POST" 0)))
-           ;; A command span means the trace carried from the HTTP thread
-           ;; across the bus into a processor. That continuity is the
-           ;; point of propagating traceparent, and nothing else here
-           ;; would notice if it stopped working.
-           (is (pos? (get names "process-command" 0)))))))))
+           (is (pos? (get names "process-command" 0)))
+           ;; The trace carries from the HTTP thread across the bus into
+           ;; the processor, which is the point of propagating
+           ;; traceparent and the thing nothing else here would notice
+           ;; breaking.
+           ;;
+           ;; Some, not all: a command a watcher dispatches in reaction
+           ;; to a changelog entry (`submit-idv-check`, `submit-payment`)
+           ;; opens its own trace, because the record change is what
+           ;; caused it rather than any request thread (ADR-0008). Those
+           ;; carry a `causation_id` naming the entity; the ones the API
+           ;; dispatches carry `correlation_id` equal to their own id.
+           (let [trace-id (fn [^SpanData s] (.getTraceId (.getSpanContext s)))
+                 server? #(#{"GET" "POST" "PUT" "DELETE"}
+                            (.getName ^SpanData %))
+                 traces (set (map trace-id (filter server? spans)))
+                 commands (filter #(= "process-command" (.getName ^SpanData %))
+                                  spans)]
+             (is (pos? (count (filter #(contains? traces (trace-id %))
+                                      commands)))))))))))
