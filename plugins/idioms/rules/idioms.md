@@ -39,6 +39,18 @@ stay bare. An inline `;;` comment is exceptional — only a load-bearing
 code already says. Promote real context to a docstring; drop the rest.
 See [ADR-0015](../../../docs/adr/0015-comments-and-docstrings.md).
 
+## Requires run innermost to outermost
+
+Order `:require` in eight groups, blank line between each,
+alphabetical within: this brick's own `system` namespace; Queenswood
+extension namespaces; `mono` extension namespaces; internal
+namespaces; other Queenswood interfaces; `mono` interfaces; external
+libraries; `clojure.*`. A bare require — no `:as`, no `:refer` — takes
+the bracketed form `[com.example.ns]`, never unbracketed. In a
+component interface test the SUT takes the internal slot, aliased
+`SUT`, and nothing else from that component is required.
+See [code-style](../../../docs/recipes/code-style.md).
+
 ## Everyday shape
 
 kebab-case keyword keys throughout (string ISO-4217 currency the one
