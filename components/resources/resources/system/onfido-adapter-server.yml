@@ -1,0 +1,26 @@
+handler: !system/required-component
+
+interceptors: !system/component
+  system/component-kind: server/interceptors
+  bus: !system/ref message-bus.bus
+  avro: !system/ref avro.serde
+  event-channel: !keyword idv-event
+  record-db: !system/ref fdb.record-db
+  record-store: !system/ref fdb.meta-store
+
+jetty-adapter: !system/component
+  system/component-kind: server/jetty-adapter
+  handler: !system/ref onfido-adapter-server.handler
+  interceptors: !system/ref onfido-adapter-server.interceptors
+  ready-fn: !system/ref onfido-adapter.readiness
+  options: !profile
+    dev:
+      port: 8084
+    test:
+      port: 0
+    default:
+      port: 8084
+
+http-url: !system/component
+  system/component-kind: server/http-url
+  jetty-adapter: !system/local-ref jetty-adapter

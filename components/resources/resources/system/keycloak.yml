@@ -1,0 +1,45 @@
+identity-provider: !system/component
+  system/component-kind: keycloak/identity-provider
+  base-url: !profile
+    dev: !system/ref keycloak-container.container-auth-server-url
+    test: !system/ref keycloak-container.container-auth-server-url
+    default: !env KEYCLOAK_BASE_URL
+  realm: !profile
+    dev: queenswood
+    test: queenswood
+    default: !env KEYCLOAK_REALM
+  admin-client-id: !profile
+    dev: queenswood-admin
+    test: queenswood-admin
+    default: !env KEYCLOAK_ADMIN_CLIENT_ID
+  admin-client-secret: !profile
+    dev: queenswood-admin-test-secret
+    test: queenswood-admin-test-secret
+    default: !env KEYCLOAK_ADMIN_CLIENT_SECRET
+  expected-issuer: !profile
+    dev: ~
+    test: ~
+    default: !env KEYCLOAK_EXPECTED_ISSUER
+
+identity-provider-ops: !system/component
+  system/component-kind: keycloak/identity-provider
+  base-url: !profile
+    dev: !system/ref keycloak-container.container-auth-server-url
+    test: !system/ref keycloak-container.container-auth-server-url
+    default: !env KEYCLOAK_BASE_URL
+  realm: !profile
+    dev: queenswood-ops
+    test: queenswood-ops
+    default: !env KEYCLOAK_OPS_REALM
+  admin-client-id: !profile
+    dev: queenswood-admin
+    test: queenswood-admin
+    default: !env KEYCLOAK_ADMIN_CLIENT_ID
+  admin-client-secret: !profile
+    dev: queenswood-admin-test-secret
+    test: queenswood-admin-test-secret
+    default: !env KEYCLOAK_ADMIN_CLIENT_SECRET
+  expected-issuer: !profile
+    dev: ~
+    test: ~
+    default: !env KEYCLOAK_OPS_EXPECTED_ISSUER

@@ -51,7 +51,7 @@
   "Default scheduled jobs seeded into every bank at provisioning,
   loaded once from the bank-resources classpath. Templates carry no
   bank id / timestamps — those are stamped at seed time."
-  (let [path "bank/scheduler/jobs.edn"
+  (let [path "scheduler/jobs.edn"
         url (io/resource path)]
     (when (nil? url)
       ;; nosemgrep: no-raw-throw

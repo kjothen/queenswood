@@ -100,7 +100,7 @@
 
 (def ^:private product-type->template-id
   "Maps the internal product-type kind to the stable id of the platform
-  template seeded at bootstrap (see bank/templates/*.yml). Products are
+  template seeded at bootstrap (see templates/*.yml). Products are
   now created from a template-id; the product-type is snapshotted from
   the template."
   {:product-type-sub-ledger-current "tpl.00000000000000000000000001"

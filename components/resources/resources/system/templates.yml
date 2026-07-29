@@ -1,0 +1,23 @@
+current: !system/component
+  system/component-kind: cash-account-product-templates/template
+  record-db: !system/ref fdb.record-db
+  record-store: !system/ref fdb.meta-store
+  template: !include templates/current.yml
+
+savings: !system/component
+  system/component-kind: cash-account-product-templates/template
+  record-db: !system/ref fdb.record-db
+  record-store: !system/ref fdb.meta-store
+  template: !include templates/savings.yml
+
+term-deposit: !system/component
+  system/component-kind: cash-account-product-templates/template
+  record-db: !system/ref fdb.record-db
+  record-store: !system/ref fdb.meta-store
+  template: !include templates/term-deposit.yml
+
+own-funds: !system/component
+  system/component-kind: cash-account-product-templates/template
+  record-db: !system/ref fdb.record-db
+  record-store: !system/ref fdb.meta-store
+  template: !include templates/own-funds.yml

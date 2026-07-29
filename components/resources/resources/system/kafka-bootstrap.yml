@@ -1,0 +1,13 @@
+# Kafka topic bootstrap. The migrator creates every topic once so
+# services (with broker auto-creation disabled) can produce and
+# consume immediately. No schemas here: topics carry no schema, values
+# are Avro-serialised per producer/consumer.
+
+admin: !system/component
+  system/component-kind: kafka/admin
+  bootstrap-servers: !env KAFKA_BOOTSTRAP_SERVERS
+
+topics: !system/component
+  system/component-kind: kafka/topics
+  admin: !system/local-ref admin
+  topics: !include system/kafka-topics.yml

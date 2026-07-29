@@ -1,0 +1,30 @@
+handler: !system/required-component
+
+interceptors: !system/component
+  system/component-kind: server/interceptors
+  bus: !system/ref message-bus.bus
+  avro: !system/ref avro.serde
+  event-channel: !keyword schemes-payments-event
+  record-db: !system/ref fdb.record-db
+  record-store: !system/ref fdb.meta-store
+  clearbank-url: !profile
+    dev: !system/ref clearbank-simulator-server.http-url
+    test: !system/ref clearbank-simulator-server.http-url
+    default: !env CLEARBANK_SIMULATOR_URL
+
+jetty-adapter: !system/component
+  system/component-kind: server/jetty-adapter
+  handler: !system/ref clearbank-adapter-server.handler
+  interceptors: !system/ref clearbank-adapter-server.interceptors
+  ready-fn: !system/ref clearbank-adapter.readiness
+  options: !profile
+    dev:
+      port: 8082
+    test:
+      port: 0
+    default:
+      port: 8082
+
+http-url: !system/component
+  system/component-kind: server/http-url
+  jetty-adapter: !system/local-ref jetty-adapter

@@ -32,34 +32,29 @@ system:
         - idv-event
         - payee-checks-command
         - payee-checks-command-response
-  fdb: !include bank/fdb.yml
-  avro: !include bank/avro.yml
-  keycloak:
-    identity-provider: !system/component
-      system/component-kind: keycloak/identity-provider
-      base-url: !env KEYCLOAK_BASE_URL
-      realm: !env KEYCLOAK_REALM
-      admin-client-id: !env KEYCLOAK_ADMIN_CLIENT_ID
-      admin-client-secret: !env KEYCLOAK_ADMIN_CLIENT_SECRET
-      expected-issuer: !env KEYCLOAK_EXPECTED_ISSUER
-    identity-provider-ops: !system/component
-      system/component-kind: keycloak/identity-provider
-      base-url: !env KEYCLOAK_BASE_URL
-      realm: !env KEYCLOAK_OPS_REALM
-      admin-client-id: !env KEYCLOAK_ADMIN_CLIENT_ID
-      admin-client-secret: !env KEYCLOAK_ADMIN_CLIENT_SECRET
-      expected-issuer: !env KEYCLOAK_OPS_EXPECTED_ISSUER
-  banks: !include bank/bank.yml
-  cash-accounts: !include bank/cash-account.yml
-  cash-account-products: !include bank/cash-account-product.yml
-  parties: !include bank/party.yml
-  payments: !include bank/payment.yml
-  interest: !include bank/interest.yml
-  transactions: !include bank/transaction.yml
-  idv: !include bank/idv.yml
-  payee-checks: !include bank/payee-check.yml
-  policies: !include bank/policy.yml
-  templates: !include bank/templates.yml
+  fdb: !include system/fdb.yml
+  avro: !include system/avro.yml
+  keycloak: !include system/keycloak.yml
+  banks: !include system/bank.yml
+  cash-accounts: !include system/cash-account.yml
+  cash-account-products: !include system/cash-account-product.yml
+  parties: !include system/party.yml
+  payments: !include system/payment.yml
+  interest: !include system/interest.yml
+  transactions: !include system/transaction.yml
+  idv: !include system/idv.yml
+  payee-checks: !include system/payee-check.yml
+  policies: !include system/policy.yml
+  templates: !include system/templates.yml
+  banks-dispatcher: !include system/bank-dispatcher.yml
+  cash-account-products-dispatcher: !include system/cash-account-product-dispatcher.yml
+  cash-accounts-dispatcher: !include system/cash-account-dispatcher.yml
+  cash-accounts-relay: !include system/cash-account-relay.yml
+  interest-dispatcher: !include system/interest-dispatcher.yml
+  parties-dispatcher: !include system/party-dispatcher.yml
+  payee-checks-dispatcher: !include system/payee-check-dispatcher.yml
+  payments-dispatcher: !include system/payment-dispatcher.yml
+  transactions-dispatcher: !include system/transaction-dispatcher.yml
   scheduler:
     scheduler: !system/component
       system/component-kind: scheduler/scheduler
@@ -95,15 +90,15 @@ system:
         bank-status-test: queenswood-api-test
         bank-status-live: queenswood-api-live
       dispatchers:
-        banks: !system/ref banks.dispatcher
-        cash-accounts: !system/ref cash-accounts.dispatcher
-        cash-account-products: !system/ref cash-account-products.dispatcher
-        parties: !system/ref parties.dispatcher
-        payments: !system/ref payments.dispatcher
-        interest: !system/ref interest.dispatcher
-        transactions: !system/ref transactions.dispatcher
-        payee-checks: !system/ref payee-checks.dispatcher
-        company-registries: !system/ref company-registries.dispatcher
+        banks: !system/ref banks-dispatcher.dispatcher
+        cash-accounts: !system/ref cash-accounts-dispatcher.dispatcher
+        cash-account-products: !system/ref cash-account-products-dispatcher.dispatcher
+        parties: !system/ref parties-dispatcher.dispatcher
+        payments: !system/ref payments-dispatcher.dispatcher
+        interest: !system/ref interest-dispatcher.dispatcher
+        transactions: !system/ref transactions-dispatcher.dispatcher
+        payee-checks: !system/ref payee-checks-dispatcher.dispatcher
+        company-registries: !system/ref company-registries-dispatcher.dispatcher
       avro: !system/ref avro.serde
       record-db: !system/ref fdb.record-db
       record-store: !system/ref fdb.meta-store
@@ -113,11 +108,14 @@ system:
       interceptors: !system/ref server.interceptors
       options:
         port: 8080
-  clearbank-simulator-server: !include monolith/clearbank-simulator.yml
-  clearbank-adapter-server: !include monolith/clearbank-adapter-server.yml
-  clearbank-adapter: !include monolith/clearbank-adapter.yml
-  onfido-simulator-server: !include monolith/onfido-simulator.yml
-  onfido-adapter-server: !include monolith/onfido-adapter-server.yml
-  onfido-adapter: !include monolith/onfido-adapter.yml
-  companies-house-server: !include monolith/companies-house-simulator.yml
-  company-registries: !include monolith/uk-companies-house-adapter.yml
+  clearbank-simulator-server: !include system/clearbank-simulator-server.yml
+  clearbank-adapter-server: !include system/clearbank-adapter-server.yml
+  clearbank-adapter: !include system/clearbank-adapter.yml
+  clearbank-adapter-relay: !include system/clearbank-adapter-relay.yml
+  onfido-simulator-server: !include system/onfido-simulator-server.yml
+  onfido-adapter-server: !include system/onfido-adapter-server.yml
+  onfido-adapter: !include system/onfido-adapter.yml
+  onfido-adapter-relay: !include system/onfido-adapter-relay.yml
+  companies-house-server: !include system/companies-house-server.yml
+  company-registries: !include system/company-registries.yml
+  company-registries-dispatcher: !include system/company-registries-dispatcher.yml

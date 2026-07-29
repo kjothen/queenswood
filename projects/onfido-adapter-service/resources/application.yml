@@ -42,57 +42,13 @@ system:
       idv-command:
         consumer: !system/local-ref consumers.idv-command
         timeout: 500
-  message-bus: !include bank/message-bus.yml
-  fdb: !include bank/fdb.yml
-  avro: !include bank/avro.yml
+  message-bus: !include system/message-bus.yml
+  fdb: !include system/fdb.yml
+  avro: !include system/avro.yml
   telemetry:
     otel-sdk: !system/component
       system/component-kind: telemetry/otel-sdk
       service-name: !env SERVICE_NAME
       endpoint: !env OTEL_ENDPOINT
-  onfido-adapter:
-    readiness: !system/component
-      system/component-kind: onfido-adapter/readiness
-    registrar: !system/component
-      system/component-kind: onfido-adapter/registrar
-      onfido-url: !env ONFIDO_URL
-      adapter-url: !env IDV_ONFIDO_ADAPTER_PUBLIC_URL
-      readiness: !system/ref onfido-adapter.readiness
-    command-processor-impl: !system/component
-      system/component-kind: onfido-adapter/command-processor
-      schemas: !system/ref avro.serde
-      record-db: !system/ref fdb.record-db
-      record-store: !system/ref fdb.meta-store
-    command-processor: !system/component
-      system/component-kind: command-processor/command-processor
-      bus: !system/ref message-bus.bus
-      processor: !system/local-ref command-processor-impl
-      command-channel: !keyword idv-command
-      command-response-channel: !keyword idv-command-response
-    # The changelog relay for onfido-outbox lives in relay-service —
-    # a cursor has exactly one owner, and pinning it here would pin this
-    # whole service to replicas: 1.
-    outbound-runner: !system/component
-      system/component-kind: onfido-relay/outbound-runner
-      record-db: !system/ref fdb.record-db
-      record-store: !system/ref fdb.meta-store
-      onfido-url: !env ONFIDO_URL
-  onfido-adapter-server:
-    handler: !system/required-component
-    interceptors: !system/component
-      system/component-kind: server/interceptors
-      bus: !system/ref message-bus.bus
-      avro: !system/ref avro.serde
-      event-channel: !keyword idv-event
-      record-db: !system/ref fdb.record-db
-      record-store: !system/ref fdb.meta-store
-    jetty-adapter: !system/component
-      system/component-kind: server/jetty-adapter
-      handler: !system/ref onfido-adapter-server.handler
-      interceptors: !system/ref onfido-adapter-server.interceptors
-      ready-fn: !system/ref onfido-adapter.readiness
-      options:
-        port: 8084
-    http-url: !system/component
-      system/component-kind: server/http-url
-      jetty-adapter: !system/local-ref jetty-adapter
+  onfido-adapter: !include system/onfido-adapter.yml
+  onfido-adapter-server: !include system/onfido-adapter-server.yml

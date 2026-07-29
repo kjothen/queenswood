@@ -1,0 +1,3 @@
+serde: !system/component
+  system/component-kind: avro/serde
+  schemas: !include system/avro-schemas.yml

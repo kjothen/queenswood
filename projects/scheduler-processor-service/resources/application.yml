@@ -1,6 +1,6 @@
 system:
-  fdb: !include bank/fdb.yml
-  avro: !include bank/avro.yml
+  fdb: !include system/fdb.yml
+  avro: !include system/avro.yml
   scheduler:
     scheduler: !system/component
       system/component-kind: scheduler/scheduler

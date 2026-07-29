@@ -1,0 +1,17 @@
+command-processor-impl: !system/component
+  system/component-kind: uk-companies-house-adapter/command-processor
+  schemas: !system/ref avro.serde
+  record-db: !system/ref fdb.record-db
+  record-store: !system/ref fdb.meta-store
+  companies-house-url: !profile
+    dev: !system/ref companies-house-server.http-url
+    test: !system/ref companies-house-server.http-url
+    default: !env COMPANIES_HOUSE_URL
+
+
+command-processor: !system/component
+  system/component-kind: command-processor/command-processor
+  bus: !system/ref message-bus.bus
+  processor: !system/local-ref command-processor-impl
+  command-channel: !keyword company-registries-command
+  command-response-channel: !keyword company-registries-command-response
