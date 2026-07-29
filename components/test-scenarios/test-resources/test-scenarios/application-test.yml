@@ -16,3 +16,4 @@ system:
   parties: !include test-scenarios/party-test.yml
   payments: !include test-scenarios/payment-test.yml
   policies: !include system/policy-test.yml
+  telemetry: !include system/telemetry.yml
