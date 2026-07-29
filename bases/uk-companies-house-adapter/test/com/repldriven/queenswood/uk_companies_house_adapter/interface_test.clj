@@ -49,23 +49,11 @@
      #(assoc-in %
        [:system/defs :companies-house-server :handler]
        simulator-api/app)]]
-   (testing "a known company round-trips and carries the resolved registry"
-     (let [result (lookup sys
-                          {:registry-id "uk-companies-house"
-                           :company-number known-company})]
+   (testing "a known company round-trips and carries the adapter's registry"
+     (let [result (lookup sys {:company-number known-company})]
        (is (not (error/anomaly? result)))
        (is (= "ACCEPTED" (:status result)))
        (let [company (reply->company sys result)]
          (is (= known-company (:company-number company)))
          (is (= "uk-companies-house" (:registry-id company)))
-         (is (some? (:company-name company))))))
-   (testing "a blank registry id defaults rather than rejecting"
-     (let [result (lookup sys {:registry-id nil :company-number known-company})]
-       (is (= "ACCEPTED" (:status result)))
-       (is (= "uk-companies-house"
-              (:registry-id (reply->company sys result))))))
-   (testing "an unsupported registry is rejected, not fetched"
-     (let [result (lookup sys
-                          {:registry-id "not-a-registry"
-                           :company-number known-company})]
-       (is (not= "ACCEPTED" (:status result)))))))
+         (is (some? (:company-name company))))))))

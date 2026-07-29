@@ -2,18 +2,17 @@
   (:require
     [com.repldriven.queenswood.api.company-registries.queries :as queries]
     [com.repldriven.queenswood.api.company-registries.examples :refer
-     [CompanyNotFound RegistryNotFound]]
+     [CompanyNotFound]]
     [com.repldriven.queenswood.api.schema :refer [ErrorResponse]]))
 
 (def routes
-  [["/company-registries"
+  [["/companies"
     {:openapi {:tags ["Onboarding"] :security [{"bearerAuth" ["user"]}]}}
-    ["/{registry-id}/companies/{company-number}"
-     {:parameters {:path {:registry-id string? :company-number string?}}}
+    ["/{company-number}"
+     {:parameters {:path {:company-number string?}}}
      [""
-      {:get {:summary "Look up a company in a registry"
+      {:get {:summary "Look up a company in the registry of record"
              :openapi {:operationId "LookupCompany"}
              :responses {200 {:body [:ref "Company"]}
-                         404 (ErrorResponse [#'CompanyNotFound
-                                             #'RegistryNotFound])}
+                         404 (ErrorResponse [#'CompanyNotFound])}
              :handler queries/lookup-company}}]]]])

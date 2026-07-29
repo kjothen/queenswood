@@ -4,17 +4,11 @@
 
 (def CompanyNotFound
   {:value {:title "REJECTED"
-           :type "company-registry/company-not-found"
+           :type ":company-registry/company-not-found"
            :status 404
            :detail "No active company found for that number"}})
 
-(def RegistryNotFound
-  {:value {:title "REJECTED"
-           :type "company-registry/registry-not-found"
-           :status 404
-           :detail "Company registry not supported"}})
-
-(def registry (examples-registry [#'CompanyNotFound #'RegistryNotFound]))
+(def registry (examples-registry [#'CompanyNotFound]))
 
 (def Company
   {:company-number "SC998137"

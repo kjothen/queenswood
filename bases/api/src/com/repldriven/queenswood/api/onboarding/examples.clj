@@ -4,10 +4,7 @@
     [com.repldriven.queenswood.api.me.examples :as me-examples]
     [com.repldriven.queenswood.api.schema :refer [examples-registry]]))
 
-(def OnboardingRequest
-  {:registry "uk-companies-house"
-   :company-number "SC998137"
-   :bank-name "Galactic Bank"})
+(def OnboardingRequest {:company-number "SC998137" :bank-name "Galactic Bank"})
 
 (def OnboardingResponse
   {:user me-examples/User

@@ -3,20 +3,8 @@
     [com.repldriven.queenswood.company-registry.store :as store]
     [com.repldriven.queenswood.company-registry.uk-companies-house
      :as uk-companies-house]
-    [com.repldriven.mono.error.interface :as error :refer [let-nom>]]
+    [com.repldriven.mono.error.interface :refer [let-nom>]]
     [com.repldriven.mono.utility.interface :refer [assoc-some]]))
-
-(def default-registry "uk-companies-house")
-
-(def available-registries
-  [{:registry-id default-registry :name "UK Companies House"}])
-
-(defn- validate-registry
-  [registry-id]
-  (when (not= default-registry registry-id)
-    (error/reject :company-registry/registry-not-found
-                  {:message "Company registry not supported"
-                   :registry registry-id})))
 
 (defn- address->record
   [{:keys [address_line_1 locality postal_code country]}]
@@ -40,16 +28,13 @@
                 (address->record registered_office_address))))
 
 (defn lookup-company
-  [config registry-id company-number]
+  [config company-number]
   (let-nom>
-    [_ (validate-registry registry-id)
-     body (uk-companies-house/fetch-company config company-number)
+    [body (uk-companies-house/fetch-company config company-number)
      company (api->company body)
      _ (store/save-company config company)]
     company))
 
 (defn get-company
-  [txn-or-config registry-id company-number]
-  (let-nom>
-    [_ (validate-registry registry-id)]
-    (store/get-company txn-or-config company-number)))
+  [txn-or-config company-number]
+  (store/get-company txn-or-config company-number))
