@@ -9,25 +9,3 @@
 (defn examples-registry
   [examples]
   (reduce (fn [m v] (assoc m (vname v) @v)) {} examples))
-
-(def ErrorResponseSchema
-  [:map
-   [:title string?]
-   [:type string?]
-   [:status int?]
-   [:detail {:optional true} string?]])
-
-(defn ErrorResponse
-  [examples]
-  {:content {"application/json"
-             {:schema [:ref "ErrorResponse"]
-              :examples (reduce
-                         (fn [m v]
-                           (let [v' (vname v)]
-                             (assoc m
-                                    v'
-                                    {"$ref"
-                                     (str "#/components/examples/"
-                                          v')})))
-                         {}
-                         examples)}}})
