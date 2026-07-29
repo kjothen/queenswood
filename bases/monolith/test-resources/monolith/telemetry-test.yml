@@ -1,5 +1,8 @@
+# Spans collect in memory and are read back with
+# `test-telemetry/finished-spans`, so the dev loop needs no collector
+# listening. The kind ships in mono-test-lib only, and `monolith-start`
+# requires the namespace before `-main` so the registration has fired.
 otel-sdk: !profile
   dev: !system/component
-    system/component-kind: telemetry/otel-sdk
-    service-name: bank-monolith
-    endpoint: http://localhost:4318/v1/traces
+    system/component-kind: test-telemetry/otel-sdk
+    service-name: monolith

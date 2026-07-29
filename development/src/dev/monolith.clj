@@ -2,6 +2,8 @@
   (:require
     [com.repldriven.queenswood.testcontainers.interface]
 
+    [com.repldriven.mono.test-telemetry.interface :as test-telemetry]
+
     [com.repldriven.queenswood.monolith.main :as main]))
 
 ;; before starting the system:
@@ -19,6 +21,14 @@
   (def sys (main/start "classpath:monolith/application-test.yml" :dev))
   (tap> sys)
   (main/stop sys)
+
+  ;; spans collect in memory — no collector needed
+  (test-telemetry/finished-spans (get-in sys
+                                         [:donut.system/instances :telemetry
+                                          :otel-sdk]))
+  (test-telemetry/clear-spans! (get-in sys
+                                       [:donut.system/instances :telemetry
+                                        :otel-sdk]))
 
   (require '[dev.inspect :as i])
   ;; rank component instances by retained heap (infra components that
