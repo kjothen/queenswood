@@ -35,7 +35,7 @@ put the result: no changelog or outbox record has a field for it.
 The protos split into two families, and the two orphan cases sit on
 opposite sides of that split.
 
-### Half one — events (181 of the 206 orphans)
+### Half one — events (181 of the 206 orphans) — done in `17ee3096`
 
 `ChangelogEvent`, `ClearbankOutboxEvent` and `OnfidoOutboxEvent` share
 one shape by design: fields 1–7 identical and wire-compatible, so an
@@ -53,7 +53,17 @@ adapter outbox entry decodes as a `ChangelogEvent`. That is the shape
 
 Bounded: three protos, two `save-event` call sites, one relay file.
 
-### Half two — watcher-dispatched commands (25)
+**Corrected on contact.** There are *three* relay handlers, not one —
+the outbox relays decode their own protos rather than going through
+`changelog-relay/envelope.clj`. And `cash_account/changelog.clj` builds
+a `ChangelogEvent` directly, so `save-event` was not the only producer.
+Patching the shared relay alone left the orphan count unmoved, which is
+how both were found. Measure between edits, not at the end.
+
+Outcome: orphaned `process-event` spans 182 to 29. The remainder are
+downstream of half two.
+
+### Half two — watcher-dispatched commands (25) — not started
 
 Watchers read a *per-domain* changelog — `BankChangelog`,
 `CashAccountChangelog`, `IdvChangelog`, `PartyChangelog` — which share
@@ -65,12 +75,18 @@ need the parent threaded from the entry it is reacting to into the
 envelope it builds (`idv/core.clj`, `payment/core.clj`). Wider, fiddlier
 and worth a quarter of the benefit.
 
-Worth asking first whether these *should* join the request's trace.
-Under ADR-0008 a watcher fires because a record changed, not because
-someone called an endpoint; a span tree that shows one request fanning
-into every downstream reaction it eventually caused may be the honest
-picture, or may be a tree nobody can read. Half one does not depend on
-answering that.
+The readme settles whether these *should* join the request's trace:
+
+> **Choreography through a changelog.** [...] A processor writes what
+> to emit alongside its state change, and a relay drains the changelog
+> to publish it to the bus, so processors react to one another,
+> event-sourced.
+
+The changelog is the causal link, and a trace that follows causality
+should follow it — the same argument half one acts on, one hop further
+out. It stays separate because it costs a field on four unaligned
+protos and parent-threading through each watcher, not because it is in
+doubt.
 
 ## Steps
 
