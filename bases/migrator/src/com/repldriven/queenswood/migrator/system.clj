@@ -5,8 +5,9 @@
   No domain seeding — the bank-bootstrap-service Job runs after this
   one and handles the internal-organization seed + policy records."
   (:require
-    com.repldriven.mono.avro.interface
-    com.repldriven.queenswood.schema.interface
-    com.repldriven.queenswood.fdb.interface
-    com.repldriven.mono.kafka.interface
-    com.repldriven.mono.telemetry.interface))
+    [com.repldriven.queenswood.fdb.interface]
+    [com.repldriven.queenswood.schema.interface]
+
+    [com.repldriven.mono.avro.interface]
+    [com.repldriven.mono.kafka.interface]
+    [com.repldriven.mono.telemetry.interface]))

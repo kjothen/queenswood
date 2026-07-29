@@ -1,18 +1,15 @@
 (ns com.repldriven.queenswood.monolith.main
   (:require
-    com.repldriven.queenswood.monolith.system
+    [com.repldriven.queenswood.monolith.system]
 
     [com.repldriven.queenswood.api.api :as api]
-    [com.repldriven.queenswood.clearbank-simulator.api
-     :as simulator-api]
-    [com.repldriven.queenswood.clearbank-adapter.api
-     :as adapter-api]
-    [com.repldriven.queenswood.onfido-simulator.api
-     :as onfido-simulator-api]
-    [com.repldriven.queenswood.onfido-adapter.api
-     :as onfido-adapter-api]
-    [com.repldriven.queenswood.uk-companies-house-simulator.api
-     :as ch-simulator-api]
+    [com.repldriven.queenswood.clearbank-adapter.api :as adapter-api]
+    [com.repldriven.queenswood.clearbank-simulator.api :as simulator-api]
+    [com.repldriven.queenswood.onfido-adapter.api :as onfido-adapter-api]
+    [com.repldriven.queenswood.onfido-simulator.api :as onfido-simulator-api]
+    [com.repldriven.queenswood.uk-companies-house-simulator.api :as
+     ch-simulator-api]
+
     [com.repldriven.mono.cli.interface :as cli]
     [com.repldriven.mono.env.interface :as env]
     [com.repldriven.mono.error.interface :as error :refer [nom->]]

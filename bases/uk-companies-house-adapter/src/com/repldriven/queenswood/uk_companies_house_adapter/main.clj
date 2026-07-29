@@ -1,15 +1,16 @@
 (ns com.repldriven.queenswood.uk-companies-house-adapter.main
   (:require
-    com.repldriven.queenswood.uk-companies-house-adapter.system
+    [com.repldriven.queenswood.uk-companies-house-adapter.system]
 
-    com.repldriven.queenswood.company.interface
-    com.repldriven.queenswood.fdb.interface
-    com.repldriven.queenswood.schema.interface
-    com.repldriven.mono.avro.interface
-    com.repldriven.mono.command-processor.interface
-    com.repldriven.mono.kafka.interface
-    com.repldriven.mono.message-bus.interface
-    com.repldriven.mono.telemetry.interface
+    [com.repldriven.queenswood.company.interface]
+    [com.repldriven.queenswood.fdb.interface]
+    [com.repldriven.queenswood.schema.interface]
+
+    [com.repldriven.mono.avro.interface]
+    [com.repldriven.mono.command-processor.interface]
+    [com.repldriven.mono.kafka.interface]
+    [com.repldriven.mono.message-bus.interface]
+    [com.repldriven.mono.telemetry.interface]
 
     [com.repldriven.mono.cli.interface :as cli]
     [com.repldriven.mono.env.interface :as env]

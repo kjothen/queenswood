@@ -6,19 +6,20 @@
   here. The service's composition is the project's application.yml
   (ADR-0019)."
   (:require
-    com.repldriven.mono.avro.interface
-    com.repldriven.queenswood.bank.interface
-    com.repldriven.queenswood.cash-account.interface
-    com.repldriven.queenswood.cash-account-product.interface
-    com.repldriven.queenswood.changelog-relay.interface
-    com.repldriven.queenswood.idv.interface
-    com.repldriven.queenswood.party.interface
-    com.repldriven.queenswood.schema.interface
-    com.repldriven.mono.command-processor.interface
-    com.repldriven.mono.event-processor.interface
-    com.repldriven.queenswood.fdb.interface
-    com.repldriven.mono.identity-provider.interface
-    com.repldriven.mono.keycloak.interface
-    com.repldriven.mono.kafka.interface
-    com.repldriven.mono.message-bus.interface
-    com.repldriven.mono.telemetry.interface))
+    [com.repldriven.queenswood.bank.interface]
+    [com.repldriven.queenswood.cash-account-product.interface]
+    [com.repldriven.queenswood.cash-account.interface]
+    [com.repldriven.queenswood.changelog-relay.interface]
+    [com.repldriven.queenswood.fdb.interface]
+    [com.repldriven.queenswood.idv.interface]
+    [com.repldriven.queenswood.party.interface]
+    [com.repldriven.queenswood.schema.interface]
+
+    [com.repldriven.mono.avro.interface]
+    [com.repldriven.mono.command-processor.interface]
+    [com.repldriven.mono.event-processor.interface]
+    [com.repldriven.mono.identity-provider.interface]
+    [com.repldriven.mono.kafka.interface]
+    [com.repldriven.mono.keycloak.interface]
+    [com.repldriven.mono.message-bus.interface]
+    [com.repldriven.mono.telemetry.interface]))

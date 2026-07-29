@@ -1,8 +1,9 @@
 (ns com.repldriven.queenswood.api.main
   (:require
-    com.repldriven.queenswood.api.system
+    [com.repldriven.queenswood.api.system]
 
     [com.repldriven.queenswood.api.api :as api]
+
     [com.repldriven.mono.cli.interface :as cli]
     [com.repldriven.mono.env.interface :as env]
     [com.repldriven.mono.error.interface :as error :refer [nom->]]

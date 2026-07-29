@@ -1,13 +1,17 @@
 (ns ^:eftest/synchronized com.repldriven.queenswood.fdb.interface-test
   (:require
-    com.repldriven.queenswood.testcontainers.interface
+    [com.repldriven.queenswood.testcontainers.interface]
+
     [com.repldriven.queenswood.fdb.interface :as SUT]
+
+    [com.repldriven.queenswood.test-schema.interface :as test-schema]
+
     [com.repldriven.mono.error.interface :refer [nom->]]
     [com.repldriven.mono.system.interface :as system]
-    [com.repldriven.queenswood.test-schema.interface :as test-schema]
     [com.repldriven.mono.test-system.interface :refer
      [with-test-system nom-test>]]
     [com.repldriven.mono.utility.interface :as utility]
+
     [clojure.test :refer [deftest is testing]]))
 
 (defn- test-str-kv

@@ -13,12 +13,13 @@
   Loaded by main.clj before `system/start`; nothing else lives here.
   The service's composition is the project's application.yml."
   (:require
-    com.repldriven.queenswood.changelog-relay.interface
-    com.repldriven.queenswood.clearbank-relay.interface
-    com.repldriven.queenswood.onfido-relay.interface
-    com.repldriven.queenswood.schema.interface
-    com.repldriven.mono.avro.interface
-    com.repldriven.queenswood.fdb.interface
-    com.repldriven.mono.kafka.interface
-    com.repldriven.mono.message-bus.interface
-    com.repldriven.mono.telemetry.interface))
+    [com.repldriven.queenswood.changelog-relay.interface]
+    [com.repldriven.queenswood.clearbank-relay.interface]
+    [com.repldriven.queenswood.fdb.interface]
+    [com.repldriven.queenswood.onfido-relay.interface]
+    [com.repldriven.queenswood.schema.interface]
+
+    [com.repldriven.mono.avro.interface]
+    [com.repldriven.mono.kafka.interface]
+    [com.repldriven.mono.message-bus.interface]
+    [com.repldriven.mono.telemetry.interface]))

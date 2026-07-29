@@ -1,8 +1,9 @@
 (ns com.repldriven.queenswood.clearbank-simulator.main
   (:require
-    com.repldriven.queenswood.clearbank-simulator.system
-    com.repldriven.mono.server.interface
-    com.repldriven.mono.telemetry.interface
+    [com.repldriven.queenswood.clearbank-simulator.system]
+
+    [com.repldriven.mono.server.interface]
+    [com.repldriven.mono.telemetry.interface]
 
     [com.repldriven.queenswood.clearbank-simulator.api :as api]
 

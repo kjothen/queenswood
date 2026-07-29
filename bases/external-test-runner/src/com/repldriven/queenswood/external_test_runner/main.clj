@@ -1,15 +1,17 @@
 (ns com.repldriven.queenswood.external-test-runner.main
   (:require
+    [com.repldriven.queenswood.external-test-runner.junit :as junit]
+
     [cloverage.coverage :as cov]
     [cloverage.instrument :as inst]
     [cloverage.report :as rep]
     [eftest.report :refer [report-to-file]]
     [eftest.report.pretty :as report]
-    [com.repldriven.queenswood.external-test-runner.junit :as junit]
     [eftest.runner :as eftest]
+
     [clojure.java.io :as io]
     [clojure.string :as str]
-    clojure.test)
+    [clojure.test])
   (:gen-class))
 
 (set! *warn-on-reflection* true)

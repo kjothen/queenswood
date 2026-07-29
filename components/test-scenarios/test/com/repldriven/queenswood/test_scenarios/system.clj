@@ -6,28 +6,28 @@
   on the test classpath. Bundling them here means individual test
   namespaces only need a single bare require of this ns."
   (:require
-    com.repldriven.queenswood.cash-account.interface
-    com.repldriven.queenswood.changelog-relay.interface
-    com.repldriven.queenswood.clearbank-adapter.system
-    com.repldriven.queenswood.clearbank-simulator.system
-    com.repldriven.queenswood.clearbank-webhook.interface
-    com.repldriven.queenswood.idv.interface
-    com.repldriven.queenswood.idv.system
-    com.repldriven.queenswood.onfido-adapter.system
-    com.repldriven.queenswood.onfido-simulator.system
-    com.repldriven.queenswood.onfido-webhook.interface
-    com.repldriven.queenswood.bank.interface
-    com.repldriven.queenswood.party.interface
-    com.repldriven.queenswood.party.system
-    com.repldriven.queenswood.payment.interface
-    com.repldriven.queenswood.policy.interface
-    com.repldriven.queenswood.schema.interface
+    [com.repldriven.queenswood.bank.interface]
+    [com.repldriven.queenswood.cash-account.interface]
+    [com.repldriven.queenswood.changelog-relay.interface]
+    [com.repldriven.queenswood.clearbank-adapter.system]
+    [com.repldriven.queenswood.clearbank-simulator.system]
+    [com.repldriven.queenswood.clearbank-webhook.interface]
+    [com.repldriven.queenswood.fdb.interface]
+    [com.repldriven.queenswood.idv.interface]
+    [com.repldriven.queenswood.idv.system]
+    [com.repldriven.queenswood.onfido-adapter.system]
+    [com.repldriven.queenswood.onfido-simulator.system]
+    [com.repldriven.queenswood.onfido-webhook.interface]
+    [com.repldriven.queenswood.party.interface]
+    [com.repldriven.queenswood.party.system]
+    [com.repldriven.queenswood.payment.interface]
+    [com.repldriven.queenswood.policy.interface]
+    [com.repldriven.queenswood.schema.interface]
+    [com.repldriven.queenswood.testcontainers.interface]
 
-    com.repldriven.mono.command.interface
-    com.repldriven.mono.command-processor.interface
-    com.repldriven.mono.event-processor.interface
-    com.repldriven.queenswood.fdb.interface
-    com.repldriven.mono.kafka.interface
-    com.repldriven.mono.message-bus.interface
-    com.repldriven.mono.server.interface
-    com.repldriven.queenswood.testcontainers.interface))
+    [com.repldriven.mono.command-processor.interface]
+    [com.repldriven.mono.command.interface]
+    [com.repldriven.mono.event-processor.interface]
+    [com.repldriven.mono.kafka.interface]
+    [com.repldriven.mono.message-bus.interface]
+    [com.repldriven.mono.server.interface]))

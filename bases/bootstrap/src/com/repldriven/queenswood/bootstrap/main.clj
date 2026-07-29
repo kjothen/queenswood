@@ -1,6 +1,7 @@
 (ns com.repldriven.queenswood.bootstrap.main
   (:require
-    com.repldriven.queenswood.bootstrap.system
+    [com.repldriven.queenswood.bootstrap.system]
+
     [com.repldriven.mono.cli.interface :as cli]
     [com.repldriven.mono.env.interface :as env]
     [com.repldriven.mono.error.interface :as error :refer [nom->]]

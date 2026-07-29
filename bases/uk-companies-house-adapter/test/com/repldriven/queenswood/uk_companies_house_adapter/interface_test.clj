@@ -5,21 +5,22 @@
   simulator and caches to FDB, and the reply comes back on the response
   channel deserialised against the `company` schema."
   (:require
-    com.repldriven.queenswood.uk-companies-house-adapter.system
+    [com.repldriven.queenswood.uk-companies-house-adapter.system]
 
-    com.repldriven.queenswood.uk-companies-house-simulator.system
+    [com.repldriven.queenswood.fdb.interface]
+    [com.repldriven.queenswood.schema.interface]
+    [com.repldriven.queenswood.testcontainers.interface]
+    [com.repldriven.queenswood.uk-companies-house-simulator.system]
+
+    [com.repldriven.mono.command-processor.interface]
 
     [com.repldriven.queenswood.uk-companies-house-simulator.api :as
      simulator-api]
 
-    com.repldriven.queenswood.fdb.interface
-    com.repldriven.queenswood.schema.interface
     [com.repldriven.mono.avro.interface :as avro]
     [com.repldriven.mono.command.interface :as command]
-    com.repldriven.mono.command-processor.interface
     [com.repldriven.mono.error.interface :as error]
     [com.repldriven.mono.system.interface :as system]
-    com.repldriven.queenswood.testcontainers.interface
     [com.repldriven.mono.test-system.interface :refer [with-test-system]]
 
     [clojure.test :refer [deftest is testing]]))

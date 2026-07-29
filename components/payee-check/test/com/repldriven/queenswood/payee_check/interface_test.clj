@@ -1,14 +1,15 @@
 (ns ^:eftest/synchronized com.repldriven.queenswood.payee-check.interface-test
   (:require
+    [com.repldriven.queenswood.fdb.interface]
+    [com.repldriven.queenswood.testcontainers.interface]
+
     [com.repldriven.queenswood.payee-check.commands :as commands]
     [com.repldriven.queenswood.payee-check.interface]
 
     [com.repldriven.mono.avro.interface :as avro]
     [com.repldriven.mono.error.interface :as error]
-    [com.repldriven.queenswood.fdb.interface]
     [com.repldriven.mono.processor.interface :as processor]
     [com.repldriven.mono.system.interface :as system]
-    [com.repldriven.queenswood.testcontainers.interface]
     [com.repldriven.mono.test-system.interface :refer
      [with-test-system nom-test>]]
 

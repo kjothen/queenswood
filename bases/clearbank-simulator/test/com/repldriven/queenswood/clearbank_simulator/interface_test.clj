@@ -2,7 +2,7 @@
     com.repldriven.queenswood.clearbank-simulator.interface-test
   (:refer-clojure :exclude [get])
   (:require
-    com.repldriven.queenswood.clearbank-simulator.system
+    [com.repldriven.queenswood.clearbank-simulator.system]
 
     [com.repldriven.queenswood.clearbank-simulator.api :as api]
 

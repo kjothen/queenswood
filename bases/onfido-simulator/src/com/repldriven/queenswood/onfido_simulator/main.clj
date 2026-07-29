@@ -1,8 +1,9 @@
 (ns com.repldriven.queenswood.onfido-simulator.main
   (:require
-    com.repldriven.queenswood.onfido-simulator.system
-    com.repldriven.mono.server.interface
-    com.repldriven.mono.telemetry.interface
+    [com.repldriven.queenswood.onfido-simulator.system]
+
+    [com.repldriven.mono.server.interface]
+    [com.repldriven.mono.telemetry.interface]
 
     [com.repldriven.queenswood.onfido-simulator.api :as api]
 

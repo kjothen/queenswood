@@ -2,7 +2,7 @@
     com.repldriven.queenswood.uk-companies-house-simulator.interface-test
   (:refer-clojure :exclude [get])
   (:require
-    com.repldriven.queenswood.uk-companies-house-simulator.system
+    [com.repldriven.queenswood.uk-companies-house-simulator.system]
 
     [com.repldriven.queenswood.uk-companies-house-simulator.api :as api]
 
