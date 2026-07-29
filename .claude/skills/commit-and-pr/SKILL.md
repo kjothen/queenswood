@@ -48,10 +48,11 @@ Run all of these in sequence without pausing between them.
    message must reflect the full diff, not just what we
    did together this session — read the changed files if
    needed to understand parallel work. End with the
-   Co-Authored-By trailer your environment / CLAUDE.md
-   specifies (currently
-   `Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>`).
-   Match the prevailing style in `git log` above.
+   `Claude-Session:` trailer your environment specifies.
+   Its URL is per-session, so take it from the environment
+   rather than copying one from an earlier commit. No
+   `Co-Authored-By` trailer. Match the prevailing style in
+   `git log` above.
 4. **Stage, commit, push — no pause.** Stage everything
    with `git add -A` (the step-2 check already cleared
    secrets/noise). Commit with `git commit -m` via
