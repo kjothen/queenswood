@@ -1,10 +1,17 @@
 readiness: !system/component
   system/component-kind: clearbank-adapter/readiness
 
+
 registrar: !system/component
   system/component-kind: clearbank-adapter/registrar
-  simulator-url: !system/ref clearbank-simulator-server.http-url
-  webhook-url: !system/ref clearbank-adapter-server.http-url
+  simulator-url: !profile
+    dev: !system/ref clearbank-simulator-server.http-url
+    test: !system/ref clearbank-simulator-server.http-url
+    default: !env CLEARBANK_SIMULATOR_URL
+  webhook-url: !profile
+    dev: !system/ref clearbank-adapter-server.http-url
+    test: !system/ref clearbank-adapter-server.http-url
+    default: !env CLEARBANK_ADAPTER_PUBLIC_URL
   readiness: !system/ref clearbank-adapter.readiness
   webhooks:
     - type: TransactionSettled
@@ -20,11 +27,13 @@ registrar: !system/component
     - type: InboundCopRequestReceived
       path: /webhooks/inbound-cop-request-received
 
+
 command-processor-impl: !system/component
   system/component-kind: clearbank-adapter/command-processor
   schemas: !system/ref avro.serde
   record-db: !system/ref fdb.record-db
   record-store: !system/ref fdb.meta-store
+
 
 command-processor: !system/component
   system/component-kind: command-processor/command-processor
@@ -33,21 +42,12 @@ command-processor: !system/component
   command-channel: !keyword schemes-payment-command
   command-response-channel: !keyword schemes-payment-command-response
 
-relay-handler: !system/component
-  system/component-kind: clearbank-relay/relay-handler
-  bus: !system/ref message-bus.bus
-  event-channel: !keyword schemes-payments-event
-
-relay-runners: !system/component
-  system/component-kind: changelog-relay/runners
-  clearbank-outbox:
-    record-db: !system/ref fdb.record-db
-    consumer-id: clearbank-relay
-    store-name: clearbank-outbox
-    handler: !system/local-ref relay-handler
 
 outbound-runner: !system/component
   system/component-kind: clearbank-relay/outbound-runner
   record-db: !system/ref fdb.record-db
   record-store: !system/ref fdb.meta-store
-  clearbank-url: !system/ref clearbank-simulator-server.http-url
+  clearbank-url: !profile
+    dev: !system/ref clearbank-simulator-server.http-url
+    test: !system/ref clearbank-simulator-server.http-url
+    default: !env CLEARBANK_SIMULATOR_URL

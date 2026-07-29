@@ -28,7 +28,8 @@
 
 (defn- lookup
   [sys data]
-  (let [dispatcher (system/instance sys [:company-registries :dispatcher])
+  (let [dispatcher
+        (system/instance sys [:company-registries-dispatcher :dispatcher])
         schemas (system/instance sys [:avro :serde])
         payload (avro/serialize (schemas "lookup-company") data)]
     (command/send dispatcher

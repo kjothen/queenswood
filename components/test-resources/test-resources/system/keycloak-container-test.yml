@@ -46,21 +46,3 @@ container-http-port: !system/component
 container-auth-server-url: !system/component
   system/component-kind: keycloak/container-auth-server-url
   port: !system/local-ref container-http-port
-
-identity-provider: !system/component
-  system/component-kind: keycloak/identity-provider
-  base-url: !system/local-ref container-auth-server-url
-  realm: queenswood
-  admin-client-id: queenswood-admin
-  admin-client-secret: queenswood-admin-test-secret
-
-# Second realm `queenswood-ops` hosts the Queenswood operator users
-# (operator SPA). Only used for JWT verification by the bank-api auth
-# interceptor; we don't issue admin REST calls against this realm so
-# the admin-client-* values are unused but kept symmetric.
-identity-provider-ops: !system/component
-  system/component-kind: keycloak/identity-provider
-  base-url: !system/local-ref container-auth-server-url
-  realm: queenswood-ops
-  admin-client-id: queenswood-admin
-  admin-client-secret: queenswood-admin-test-secret

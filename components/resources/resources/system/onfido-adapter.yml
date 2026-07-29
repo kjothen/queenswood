@@ -1,17 +1,26 @@
 readiness: !system/component
   system/component-kind: onfido-adapter/readiness
 
+
 registrar: !system/component
   system/component-kind: onfido-adapter/registrar
-  onfido-url: !system/ref onfido-simulator-server.http-url
-  adapter-url: !system/ref onfido-adapter-server.http-url
+  onfido-url: !profile
+    dev: !system/ref onfido-simulator-server.http-url
+    test: !system/ref onfido-simulator-server.http-url
+    default: !env ONFIDO_URL
+  adapter-url: !profile
+    dev: !system/ref onfido-adapter-server.http-url
+    test: !system/ref onfido-adapter-server.http-url
+    default: !env IDV_ONFIDO_ADAPTER_PUBLIC_URL
   readiness: !system/ref onfido-adapter.readiness
+
 
 command-processor-impl: !system/component
   system/component-kind: onfido-adapter/command-processor
   schemas: !system/ref avro.serde
   record-db: !system/ref fdb.record-db
   record-store: !system/ref fdb.meta-store
+
 
 command-processor: !system/component
   system/component-kind: command-processor/command-processor
@@ -20,21 +29,12 @@ command-processor: !system/component
   command-channel: !keyword idv-command
   command-response-channel: !keyword idv-command-response
 
-relay-handler: !system/component
-  system/component-kind: onfido-relay/relay-handler
-  bus: !system/ref message-bus.bus
-  event-channel: !keyword idv-event
-
-relay-runners: !system/component
-  system/component-kind: changelog-relay/runners
-  onfido-outbox:
-    record-db: !system/ref fdb.record-db
-    consumer-id: onfido-relay
-    store-name: onfido-outbox
-    handler: !system/local-ref relay-handler
 
 outbound-runner: !system/component
   system/component-kind: onfido-relay/outbound-runner
   record-db: !system/ref fdb.record-db
   record-store: !system/ref fdb.meta-store
-  onfido-url: !system/ref onfido-simulator-server.http-url
+  onfido-url: !profile
+    dev: !system/ref onfido-simulator-server.http-url
+    test: !system/ref onfido-simulator-server.http-url
+    default: !env ONFIDO_URL

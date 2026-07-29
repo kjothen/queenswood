@@ -13,8 +13,13 @@ jetty-adapter: !system/component
   handler: !system/ref onfido-adapter-server.handler
   interceptors: !system/ref onfido-adapter-server.interceptors
   ready-fn: !system/ref onfido-adapter.readiness
-  options:
-    port: 0
+  options: !profile
+    dev:
+      port: 8084
+    test:
+      port: 0
+    default:
+      port: 8084
 
 http-url: !system/component
   system/component-kind: server/http-url

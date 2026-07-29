@@ -157,14 +157,7 @@ system:
   message-bus: !include system/message-bus.yml
   fdb: !include system/fdb.yml
   avro: !include system/avro.yml
-  keycloak:
-    identity-provider: !system/component
-      system/component-kind: keycloak/identity-provider
-      base-url: !env KEYCLOAK_BASE_URL
-      realm: !env KEYCLOAK_REALM
-      admin-client-id: !env KEYCLOAK_ADMIN_CLIENT_ID
-      admin-client-secret: !env KEYCLOAK_ADMIN_CLIENT_SECRET
-      expected-issuer: !env KEYCLOAK_EXPECTED_ISSUER
+  keycloak: !include system/keycloak.yml
   banks: !include system/bank.yml
   parties: !include system/party.yml
   cash-accounts: !include system/cash-account.yml

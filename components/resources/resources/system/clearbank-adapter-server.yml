@@ -7,15 +7,23 @@ interceptors: !system/component
   event-channel: !keyword schemes-payments-event
   record-db: !system/ref fdb.record-db
   record-store: !system/ref fdb.meta-store
-  clearbank-url: !system/ref clearbank-simulator-server.http-url
+  clearbank-url: !profile
+    dev: !system/ref clearbank-simulator-server.http-url
+    test: !system/ref clearbank-simulator-server.http-url
+    default: !env CLEARBANK_SIMULATOR_URL
 
 jetty-adapter: !system/component
   system/component-kind: server/jetty-adapter
   handler: !system/ref clearbank-adapter-server.handler
   interceptors: !system/ref clearbank-adapter-server.interceptors
   ready-fn: !system/ref clearbank-adapter.readiness
-  options:
-    port: 0
+  options: !profile
+    dev:
+      port: 8082
+    test:
+      port: 0
+    default:
+      port: 8082
 
 http-url: !system/component
   system/component-kind: server/http-url

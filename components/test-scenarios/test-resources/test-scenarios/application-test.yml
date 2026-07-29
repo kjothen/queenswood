@@ -1,15 +1,17 @@
 system:
   avro: !include system/avro.yml
-  clearbank-adapter: !include system/clearbank-adapter-test.yml
-  clearbank-adapter-server: !include system/clearbank-adapter-server-test.yml
-  clearbank-simulator-server: !include system/clearbank-simulator-test.yml
+  clearbank-adapter: !include system/clearbank-adapter.yml
+  clearbank-adapter-relay: !include system/clearbank-adapter-relay.yml
+  clearbank-adapter-server: !include system/clearbank-adapter-server.yml
+  clearbank-simulator-server: !include system/clearbank-simulator-server.yml
   fdb: !include system/fdb-test.yml
   idv: !include system/idv.yml
   kafka: !include system/kafka-test.yml
   message-bus: !include system/message-bus-test.yml
-  onfido-adapter: !include system/onfido-adapter-test.yml
-  onfido-adapter-server: !include system/onfido-adapter-server-test.yml
-  onfido-simulator-server: !include system/onfido-simulator-test.yml
+  onfido-adapter: !include system/onfido-adapter.yml
+  onfido-adapter-relay: !include system/onfido-adapter-relay.yml
+  onfido-adapter-server: !include system/onfido-adapter-server.yml
+  onfido-simulator-server: !include system/onfido-simulator-server.yml
   parties: !include test-scenarios/party-test.yml
   payments: !include test-scenarios/payment-test.yml
   policies: !include system/policy-test.yml

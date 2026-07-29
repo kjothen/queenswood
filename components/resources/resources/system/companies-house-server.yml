@@ -1,22 +1,23 @@
 handler: !system/required-component
 
 state: !system/component
-  system/component-kind: onfido-simulator/state
+  system/component-kind: uk-companies-house-simulator/state
 
 interceptors: !system/component
   system/component-kind: server/interceptors
   state: !system/local-ref state
-  webhook-delay-ms: 10
 
 jetty-adapter: !system/component
   system/component-kind: server/jetty-adapter
-  handler: !system/ref onfido-simulator-server.handler
-  interceptors: !system/ref onfido-simulator-server.interceptors
+  handler: !system/ref companies-house-server.handler
+  interceptors: !system/ref companies-house-server.interceptors
   options: !profile
     dev:
-      port: 8083
-    default:
+      port: 8084
+    test:
       port: 0
+    default:
+      port: 8084
 
 http-url: !system/component
   system/component-kind: server/http-url

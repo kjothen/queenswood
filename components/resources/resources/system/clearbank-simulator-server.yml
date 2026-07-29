@@ -1,19 +1,25 @@
 handler: !system/required-component
 
 state: !system/component
-  system/component-kind: onfido-simulator/state
+  system/component-kind: clearbank-simulator/state
 
 interceptors: !system/component
   system/component-kind: server/interceptors
-  state: !system/local-ref state
+  webhooks: !system/local-ref state
+  sort-code: "040004"
   webhook-delay-ms: 10
 
 jetty-adapter: !system/component
   system/component-kind: server/jetty-adapter
-  handler: !system/ref onfido-simulator-server.handler
-  interceptors: !system/ref onfido-simulator-server.interceptors
-  options:
-    port: 0
+  handler: !system/ref clearbank-simulator-server.handler
+  interceptors: !system/ref clearbank-simulator-server.interceptors
+  options: !profile
+    dev:
+      port: 8081
+    test:
+      port: 0
+    default:
+      port: 8081
 
 http-url: !system/component
   system/component-kind: server/http-url

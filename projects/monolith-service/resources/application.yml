@@ -34,21 +34,7 @@ system:
         - payee-checks-command-response
   fdb: !include system/fdb.yml
   avro: !include system/avro.yml
-  keycloak:
-    identity-provider: !system/component
-      system/component-kind: keycloak/identity-provider
-      base-url: !env KEYCLOAK_BASE_URL
-      realm: !env KEYCLOAK_REALM
-      admin-client-id: !env KEYCLOAK_ADMIN_CLIENT_ID
-      admin-client-secret: !env KEYCLOAK_ADMIN_CLIENT_SECRET
-      expected-issuer: !env KEYCLOAK_EXPECTED_ISSUER
-    identity-provider-ops: !system/component
-      system/component-kind: keycloak/identity-provider
-      base-url: !env KEYCLOAK_BASE_URL
-      realm: !env KEYCLOAK_OPS_REALM
-      admin-client-id: !env KEYCLOAK_ADMIN_CLIENT_ID
-      admin-client-secret: !env KEYCLOAK_ADMIN_CLIENT_SECRET
-      expected-issuer: !env KEYCLOAK_OPS_EXPECTED_ISSUER
+  keycloak: !include system/keycloak.yml
   banks: !include system/bank.yml
   cash-accounts: !include system/cash-account.yml
   cash-account-products: !include system/cash-account-product.yml
@@ -112,7 +98,7 @@ system:
         interest: !system/ref interest-dispatcher.dispatcher
         transactions: !system/ref transactions-dispatcher.dispatcher
         payee-checks: !system/ref payee-checks-dispatcher.dispatcher
-        company-registries: !system/ref company-registries.dispatcher
+        company-registries: !system/ref company-registries-dispatcher.dispatcher
       avro: !system/ref avro.serde
       record-db: !system/ref fdb.record-db
       record-store: !system/ref fdb.meta-store
@@ -122,11 +108,14 @@ system:
       interceptors: !system/ref server.interceptors
       options:
         port: 8080
-  clearbank-simulator-server: !include monolith/clearbank-simulator.yml
-  clearbank-adapter-server: !include monolith/clearbank-adapter-server.yml
-  clearbank-adapter: !include monolith/clearbank-adapter.yml
-  onfido-simulator-server: !include monolith/onfido-simulator.yml
-  onfido-adapter-server: !include monolith/onfido-adapter-server.yml
-  onfido-adapter: !include monolith/onfido-adapter.yml
-  companies-house-server: !include monolith/companies-house-simulator.yml
-  company-registries: !include monolith/uk-companies-house-adapter.yml
+  clearbank-simulator-server: !include system/clearbank-simulator-server.yml
+  clearbank-adapter-server: !include system/clearbank-adapter-server.yml
+  clearbank-adapter: !include system/clearbank-adapter.yml
+  clearbank-adapter-relay: !include system/clearbank-adapter-relay.yml
+  onfido-simulator-server: !include system/onfido-simulator-server.yml
+  onfido-adapter-server: !include system/onfido-adapter-server.yml
+  onfido-adapter: !include system/onfido-adapter.yml
+  onfido-adapter-relay: !include system/onfido-adapter-relay.yml
+  companies-house-server: !include system/companies-house-server.yml
+  company-registries: !include system/company-registries.yml
+  company-registries-dispatcher: !include system/company-registries-dispatcher.yml

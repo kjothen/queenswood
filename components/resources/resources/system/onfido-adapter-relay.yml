@@ -1,0 +1,13 @@
+relay-handler: !system/component
+  system/component-kind: onfido-relay/relay-handler
+  bus: !system/ref message-bus.bus
+  event-channel: !keyword idv-event
+
+
+relay-runners: !system/component
+  system/component-kind: changelog-relay/runners
+  onfido-outbox:
+    record-db: !system/ref fdb.record-db
+    consumer-id: onfido-relay
+    store-name: onfido-outbox
+    handler: !system/local-ref relay-handler
