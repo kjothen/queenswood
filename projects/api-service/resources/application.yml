@@ -243,11 +243,7 @@ system:
       bus: !system/ref message-bus.bus
       command-channel: !keyword payee-checks-command
       command-response-channel: !keyword payee-checks-command-response
-  telemetry:
-    otel-sdk: !system/component
-      system/component-kind: telemetry/otel-sdk
-      service-name: !env SERVICE_NAME
-      endpoint: !env OTEL_ENDPOINT
+  telemetry: !include system/telemetry.yml
   server:
     handler: !system/required-component
     interceptors: !system/component

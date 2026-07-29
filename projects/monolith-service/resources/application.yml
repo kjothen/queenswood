@@ -65,11 +65,7 @@ system:
       record-store: !system/ref fdb.meta-store
       schemas: !system/ref avro.serde
       scheduler: !system/ref scheduler.scheduler
-  telemetry:
-    otel-sdk: !system/component
-      system/component-kind: telemetry/otel-sdk
-      service-name: !env SERVICE_NAME
-      endpoint: !env OTEL_ENDPOINT
+  telemetry: !include system/telemetry.yml
   server:
     handler: !system/required-component
     interceptors: !system/component

@@ -144,8 +144,4 @@ system:
   transactions: !include system/transaction.yml
   interest: !include system/interest.yml
   payee-checks: !include system/payee-check.yml
-  telemetry:
-    otel-sdk: !system/component
-      system/component-kind: telemetry/otel-sdk
-      service-name: !env SERVICE_NAME
-      endpoint: !env OTEL_ENDPOINT
+  telemetry: !include system/telemetry.yml

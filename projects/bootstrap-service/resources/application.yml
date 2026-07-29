@@ -32,8 +32,4 @@ system:
       record-db: !system/ref fdb.record-db
       record-store: !system/ref fdb.meta-store
       template: !include templates/own-funds.yml
-  telemetry:
-    otel-sdk: !system/component
-      system/component-kind: telemetry/otel-sdk
-      service-name: !env SERVICE_NAME
-      endpoint: !env OTEL_ENDPOINT
+  telemetry: !include system/telemetry.yml
