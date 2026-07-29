@@ -72,35 +72,56 @@ concurrently at boot "routinely tipped past 5s and crashed pods".
 
 That is the same failure mode, from the same cause, already observed
 once. Two consequences for this plan: carry the raised timeout into the
-test rig, and treat per-run keyspace prefixes as a cost — each new
-prefix is a directory-layer *write*, which is precisely the operation
-that serialises. Prefer few, coarse prefixes over one per system.
+test rig, and keep an eye on the keyspace count. A UUIDv7 per system
+start means ~68 directory-layer *writes* per run, and directory-layer
+resolution is precisely what serialises. That is the price of the
+strongest isolation, and it is the first thing to measure if stage 3
+disappoints.
 
 ## Stages
 
 Each stage is independently valuable and independently revertable.
 
-### 1. Namespace the keyspace
+### 1. A read-time unique-value tag in `mono`
 
-`keyspace/path` takes a store name and builds
-`DirectoryLayerDirectory(name) → .path name name`. Add an optional root
-prefix so a path becomes `<prefix>/<store-name>`, defaulting to no
-prefix so production is untouched.
+The `meta-store` path is a plain `path: meta` in both `fdb.yml` and
+`fdb-test.yml`. It becomes `!profile`-driven: production keeps `meta`,
+and other profiles get `meta` plus a UUIDv7, generated fresh each time
+the config is read.
 
-Thread it from config, not from call sites: the `store` and `meta-store`
-components already build the open-fn that `fdb/open` calls, so the
-prefix belongs in their config and the 104 `fdb/open` call sites do not
-change.
+That needs a new reader tag in `mono`'s env brick — `yml-reader` in
+`components/env/src/.../reader/yml.clj`, alongside `!profile`, `!env`,
+`!keyword` and the rest. There is an exact precedent for a tag that
+*generates* rather than looks up: `!port`, which resolves `0` by binding
+a socket at read time. A `!uuidv7` tag is the same shape in the same
+place. It composes with the existing `!concat`, or produces the full
+suffixed string itself.
 
-### 2. Give each test rig a prefix
+A `mono` change under ADR-0001, so: made there, released, pulled down by
+bumping the `deps/mono` and `deps/mono-test` shims in lockstep.
 
-Set the prefix in `fdb-test.yml` from something stable per rig rather
-than per system — the brick name is the natural choice, and it keeps the
-directory-layer write count at ~22 for the suite instead of ~68.
+### 2. Point the test rig at it
+
+`fdb-test.yml` sets the path per profile. Every `with-test-system` then
+reads config afresh and lands in its own keyspace, so systems cannot see
+each other regardless of which container they are on.
+
+Two things to settle here:
+
+- **`dev` is not `test`.** `just monolith-start` runs the *test* rig
+  under the `dev` profile, so "every profile except production" would
+  give the dev loop a new keyspace on every restart. Once the container
+  is reused that means losing your data every time you restart the
+  monolith, which is worse than today. `dev` probably wants a stable
+  path and only `test` a generated one.
+- **A fresh keyspace per system is ~68 directory-layer writes per run**,
+  and that is the operation the production comment says serialises. It
+  buys the strongest isolation available and is the right default, but
+  it is the thing to watch first if stage 3 turns out slow.
 
 At this point tests are isolated by keyspace and the container could be
 shared, but nothing has changed operationally yet. Run the suite and
-confirm it is still green with the prefix in place.
+confirm it is still green.
 
 ### 3. Pin the port and reuse
 
@@ -113,12 +134,17 @@ confirm it is still green with the prefix in place.
 The port race disappears here, because nothing ever binds a second
 container.
 
-### 4. Decide about cleanup
+### 4. Clean up keyspaces
 
-A reused container accumulates keyspaces across runs. Either clear the
-prefix at system start, or accept the growth and let developers prune by
-hand. Clearing at start is safer and costs one directory-layer delete
-per rig.
+Not optional once the path carries a UUIDv7. Every system start mints a
+keyspace that is never revisited, and the container now survives between
+runs, so a developer's FDB grows without bound.
+
+Either drop the keyspace on system stop — the natural place, and it
+keeps the container's contents proportional to what is running — or
+prune everything under the parent directory at start. Stop-time deletion
+is tidier but is skipped when a test crashes, so a start-time sweep is
+the backstop.
 
 ## Verification
 
