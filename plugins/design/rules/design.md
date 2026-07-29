@@ -109,6 +109,24 @@ group; external adapters and simulators are never grouped with
 domain processors.
 See [ADR-0019](../../../docs/adr/0019-processor-packaging.md).
 
+## External providers are deployment facts
+
+Which external provider answers is settled by which adapter service
+runs and how it is configured — never by a request parameter validated
+against a list. Pluggability comes from the command channel: a second
+provider is a second adapter base consuming the same channel, routed by
+configuration and consumer groups, not by a conditional inside a brick.
+A domain component (`company`, `idv`, `payment`) never names a provider
+and never takes a provider parameter; the vendor's HTTP contract — the
+outbound call and the translation of its wire shape — lives in that
+vendor's adapter, the only thing named after it. Anomaly kinds stay
+provider-neutral even when raised inside a vendor's adapter, because
+they surface as the API's RFC 9457 `type`. Recording a provider is
+still fine: if a value selects behaviour it is dispatch and belongs in
+deployment, but if it only records what happened it is provenance and
+may travel on the reply.
+See [ADR-0020](../../../docs/adr/0020-providers-are-deployment-facts.md).
+
 ## One API, fully OpenAPI-compliant
 
 Expose one HTTP API for the whole bank — one base (`api`), one

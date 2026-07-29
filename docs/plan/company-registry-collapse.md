@@ -74,8 +74,11 @@ data, the proto, or `prep`.
 - `onboarding/handlers.clj` — `onboard` stops destructuring `registry` and
   calls `companies/lookup` with the number alone. `->binding` is unchanged.
 - `onboarding/examples.clj` — drop `:registry` from the request example.
-  While here, fix `":company-registry/company-not-found"` on line 33: the
-  leading colon is wrong, `company_registries/examples.clj` has it right.
+  While here, reconcile the two `company-not-found` examples: `errors.clj`
+  stringifies the anomaly kind and `commands.clj/reason->kind` parses a
+  leading colon, so the colon-prefixed form is correct and
+  `company_registries/examples.clj` is the one to fix. The ~24 other
+  examples across the API missing it are pre-existing and out of scope.
 
 `bases/console`
 
@@ -102,8 +105,12 @@ Move with `git add`, not `git rm`.
   companies_house.clj`, alongside the command handler that uses it. The
   `api->company` mapping in `core.clj` goes with it — it translates the
   vendor's snake_case JSON, which is vendor knowledge.
-- What is left of `core.clj` is a pass-through to `store.clj`. Collapse it:
-  `interface.clj` calls the store directly.
+- With the translation gone, `core.clj` is a pass-through to `store.clj`.
+  Collapse it: `interface.clj` calls the store directly and exposes
+  `save-company` / `get-company`. `lookup-company` stops being a component
+  concern at all — the adapter orchestrates fetch, translate, save.
+- The company brick's rig then needs only FDB, not the simulator server.
+  Move the not-found coverage it carried up to the adapter test.
 - Rename `components/company-registry` → `components/company`, namespaces
   `com.repldriven.queenswood.company-registry.*` →
   `com.repldriven.queenswood.company.*`, and the test-resources folder to
