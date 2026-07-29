@@ -1,4 +1,5 @@
 system:
+  fdb: !include system/fdb.yml
   kafka:
     schemas: !system/component
       system/component-kind: avro/serde
@@ -6,12 +7,12 @@ system:
         event: schemas/event/event-envelope.avsc.json
     producers: !system/component
       system/component-kind: kafka/producers
-      schemes-payments-event:
+      cash-accounts-event:
         schemas: !system/local-ref schemas
         schema: !keyword event
         conf:
           bootstrap.servers: !env KAFKA_BOOTSTRAP_SERVERS
-          topic: topic-schemes-payments-event
+          topic: topic-cash-accounts-event
           acks: all
       idv-event:
         schemas: !system/local-ref schemas
@@ -20,65 +21,67 @@ system:
           bootstrap.servers: !env KAFKA_BOOTSTRAP_SERVERS
           topic: topic-idv-event
           acks: all
-      cash-accounts-event:
+      schemes-payments-event:
         schemas: !system/local-ref schemas
         schema: !keyword event
         conf:
           bootstrap.servers: !env KAFKA_BOOTSTRAP_SERVERS
-          topic: topic-cash-accounts-event
+          topic: topic-schemes-payments-event
           acks: all
     message-bus-producers: !system/component
       system/component-kind: kafka/message-bus-producers
-      schemes-payments-event:
-        producer: !system/local-ref producers.schemes-payments-event
-      idv-event:
-        producer: !system/local-ref producers.idv-event
       cash-accounts-event:
         producer: !system/local-ref producers.cash-accounts-event
+      idv-event:
+        producer: !system/local-ref producers.idv-event
+      schemes-payments-event:
+        producer: !system/local-ref producers.schemes-payments-event
     # The relay only produces. `message-bus/bus` requires a consumers
     # map, so this is declared empty rather than omitted.
     message-bus-consumers: !system/component
       system/component-kind: kafka/message-bus-consumers
   message-bus: !include system/message-bus.yml
-  fdb: !include system/fdb.yml
-  telemetry: !include system/telemetry.yml
   relay:
     # Every store writes the shared envelope, so one handler kind
     # decodes them all and republishes the payload verbatim. The outbox
     # protos reuse ChangelogEvent's field numbers, so their entries
-    # decode as one too.
-    clearbank-handler: !system/component
-      system/component-kind: changelog-relay/envelope-handler
-      bus: !system/ref message-bus.bus
-      event-channel: !keyword schemes-payments-event
-      store-name: clearbank-outbox
-    onfido-handler: !system/component
-      system/component-kind: changelog-relay/envelope-handler
-      bus: !system/ref message-bus.bus
-      event-channel: !keyword idv-event
-      store-name: onfido-outbox
+    # decode as one too. Handlers are named for the domain they carry;
+    # nothing about them is vendor-specific any more.
     cash-accounts-handler: !system/component
       system/component-kind: changelog-relay/envelope-handler
       bus: !system/ref message-bus.bus
       event-channel: !keyword cash-accounts-event
       store-name: cash-accounts
-    # consumer-ids are carried over verbatim from the watchers these
-    # replaced — a fresh id would restart from no checkpoint and rescan
-    # the whole changelog in one transaction (ADR-0019 cursor continuity).
+    idv-handler: !system/component
+      system/component-kind: changelog-relay/envelope-handler
+      bus: !system/ref message-bus.bus
+      event-channel: !keyword idv-event
+      store-name: onfido-outbox
+    schemes-payments-handler: !system/component
+      system/component-kind: changelog-relay/envelope-handler
+      bus: !system/ref message-bus.bus
+      event-channel: !keyword schemes-payments-event
+      store-name: clearbank-outbox
+    # Keyed by store, because a cursor belongs to a store. `store-name`
+    # and `consumer-id` are physical: the ids are carried over verbatim
+    # from the watchers these replaced, and a fresh one would restart
+    # from no checkpoint and rescan the whole changelog in a single
+    # transaction (ADR-0019 cursor continuity).
     runners: !system/component
       system/component-kind: changelog-relay/runners
-      clearbank-outbox:
-        record-db: !system/ref fdb.record-db
-        consumer-id: clearbank-relay
-        store-name: clearbank-outbox
-        handler: !system/local-ref clearbank-handler
-      onfido-outbox:
-        record-db: !system/ref fdb.record-db
-        consumer-id: onfido-relay
-        store-name: onfido-outbox
-        handler: !system/local-ref onfido-handler
       cash-accounts:
         record-db: !system/ref fdb.record-db
         consumer-id: cash-account-watcher
         store-name: cash-accounts
         handler: !system/local-ref cash-accounts-handler
+      clearbank-outbox:
+        record-db: !system/ref fdb.record-db
+        consumer-id: clearbank-relay
+        store-name: clearbank-outbox
+        handler: !system/local-ref schemes-payments-handler
+      onfido-outbox:
+        record-db: !system/ref fdb.record-db
+        consumer-id: onfido-relay
+        store-name: onfido-outbox
+        handler: !system/local-ref idv-handler
+  telemetry: !include system/telemetry.yml
