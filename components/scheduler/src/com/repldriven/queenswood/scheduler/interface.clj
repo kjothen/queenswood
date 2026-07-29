@@ -9,7 +9,7 @@
   `config` throughout is the FDB+interfaces map (`:record-db`,
   `:record-store`, `:schemas`, and — for trigger edits — `:scheduler`)."
   (:require
-    com.repldriven.queenswood.scheduler.system
+    [com.repldriven.queenswood.scheduler.system]
 
     [com.repldriven.queenswood.scheduler.core :as core]
     [com.repldriven.queenswood.scheduler.domain :as domain]))

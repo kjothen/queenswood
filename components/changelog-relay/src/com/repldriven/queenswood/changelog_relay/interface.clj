@@ -23,8 +23,9 @@
   `replicas: 1`; scale the relay tier by sharding stores across
   deployments, not by adding replicas to one."
   (:require
-    [com.repldriven.queenswood.changelog-relay.runner :as runner]
-    com.repldriven.queenswood.changelog-relay.system))
+    [com.repldriven.queenswood.changelog-relay.system]
+
+    [com.repldriven.queenswood.changelog-relay.runner :as runner]))
 
 (defn start
   "Start the daemon poll loop for one store's changelog. Returns

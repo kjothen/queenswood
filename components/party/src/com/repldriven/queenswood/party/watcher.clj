@@ -3,11 +3,11 @@
     [com.repldriven.queenswood.party.domain :as domain]
     [com.repldriven.queenswood.party.store :as store]
 
+    [com.repldriven.queenswood.fdb.interface :as fdb]
     [com.repldriven.queenswood.party-query.interface :as q]
     [com.repldriven.queenswood.schema.interface :as schema]
 
-    [com.repldriven.mono.error.interface :refer [let-nom>]]
-    [com.repldriven.queenswood.fdb.interface :as fdb]))
+    [com.repldriven.mono.error.interface :refer [let-nom>]]))
 
 (def ^:private idv-status->party-transition
   {:idv-status-accepted domain/activate-party

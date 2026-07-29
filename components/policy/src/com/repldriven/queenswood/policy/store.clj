@@ -1,9 +1,9 @@
 (ns com.repldriven.queenswood.policy.store
   (:require
+    [com.repldriven.queenswood.fdb.interface :as fdb]
     [com.repldriven.queenswood.schema.interface :as schema]
 
     [com.repldriven.mono.error.interface :as error]
-    [com.repldriven.queenswood.fdb.interface :as fdb]
     [com.repldriven.mono.utility.interface :as util]))
 
 (def ^:private store-name "policies")

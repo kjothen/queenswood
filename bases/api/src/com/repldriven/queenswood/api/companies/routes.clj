@@ -1,8 +1,7 @@
 (ns com.repldriven.queenswood.api.companies.routes
   (:require
+    [com.repldriven.queenswood.api.companies.examples :refer [CompanyNotFound]]
     [com.repldriven.queenswood.api.companies.queries :as queries]
-    [com.repldriven.queenswood.api.companies.examples :refer
-     [CompanyNotFound]]
     [com.repldriven.queenswood.api.schema :refer [ErrorResponse]]))
 
 (def routes

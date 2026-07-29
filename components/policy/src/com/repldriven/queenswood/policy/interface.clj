@@ -4,7 +4,7 @@
   capability and limit matchers used to authorise requests.
   Returns either domain maps or anomalies; never throws."
   (:require
-    com.repldriven.queenswood.policy.system
+    [com.repldriven.queenswood.policy.system]
 
     [com.repldriven.queenswood.policy.capability :as capability]
     [com.repldriven.queenswood.policy.core :as core]

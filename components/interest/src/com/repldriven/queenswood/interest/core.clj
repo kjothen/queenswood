@@ -3,21 +3,17 @@
     [com.repldriven.queenswood.interest.domain :as domain]
     [com.repldriven.queenswood.interest.store :as store]
 
-    [com.repldriven.queenswood.balance.interface :as balances]
     [com.repldriven.queenswood.balance-query.interface :as balances-query]
-    [com.repldriven.queenswood.cash-account-query.interface :as
-     cash-accounts]
+    [com.repldriven.queenswood.balance.interface :as balances]
     [com.repldriven.queenswood.cash-account-product-query.interface :as
      products]
-    [com.repldriven.queenswood.ledger-account.interface :as
-     ledger-accounts]
+    [com.repldriven.queenswood.cash-account-query.interface :as cash-accounts]
+    [com.repldriven.queenswood.ledger-account.interface :as ledger-accounts]
     [com.repldriven.queenswood.policy.interface :as policy]
-    [com.repldriven.queenswood.transaction.interface :as
-     transactions]
+    [com.repldriven.queenswood.transaction.interface :as transactions]
 
     [com.repldriven.mono.cache.interface :as cache]
-    [com.repldriven.mono.error.interface :as error
-     :refer [let-nom>]]))
+    [com.repldriven.mono.error.interface :as error :refer [let-nom>]]))
 
 (def ^:private customer-product-types
   "Product types whose cash-accounts should earn interest. GL accounts

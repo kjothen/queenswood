@@ -11,7 +11,7 @@
   Registers IDV component kinds (processor, event-processor,
   party-watcher-handler) through this brick's `system` namespace."
   (:require
-    com.repldriven.queenswood.idv.system
+    [com.repldriven.queenswood.idv.system]
 
     [com.repldriven.queenswood.idv.core :as core]))
 

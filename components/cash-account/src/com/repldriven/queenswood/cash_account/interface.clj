@@ -21,7 +21,7 @@
   its own transactions. `bank-api` requires the query brick, not this
   one — state changes reach the processor as commands over the bus."
   (:require
-    com.repldriven.queenswood.cash-account.system
+    [com.repldriven.queenswood.cash-account.system]
 
     [com.repldriven.queenswood.cash-account.core :as core]
     [com.repldriven.queenswood.cash-account.domain :as domain]

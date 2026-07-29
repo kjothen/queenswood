@@ -1,15 +1,15 @@
 (ns com.repldriven.queenswood.api.simulate.routes
   (:require
-    [com.repldriven.queenswood.api.bank.examples :refer
-     [BankNotFound]]
+    [com.repldriven.queenswood.api.bank.examples :refer [BankNotFound]]
+    [com.repldriven.queenswood.api.schema :refer [ErrorResponse]]
+    [com.repldriven.queenswood.api.shared.parameters :as shared.parameters]
     [com.repldriven.queenswood.api.simulate.examples :refer
      [BalanceNotFound InvalidAmount SettlementAccountNotFound
       TransactionAlreadyRecorded]]
     [com.repldriven.queenswood.api.simulate.handlers :as handlers]
-    [com.repldriven.queenswood.api.schema :refer [ErrorResponse]]
-    [com.repldriven.queenswood.api.shared.parameters :as shared.parameters]
 
     [com.repldriven.queenswood.idempotency.interface :as bank-idempotency]
+
     [com.repldriven.mono.server.interface :as server]))
 
 (def routes

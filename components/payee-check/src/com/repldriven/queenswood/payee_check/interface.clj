@@ -3,8 +3,9 @@
   each payee check (request + match result) under a 24-hour TTL and
   exposes single-record reads plus paginated listing per bank."
   (:require
-    [com.repldriven.queenswood.payee-check.core :as core]
-    com.repldriven.queenswood.payee-check.system))
+    [com.repldriven.queenswood.payee-check.system]
+
+    [com.repldriven.queenswood.payee-check.core :as core]))
 
 (defn get-check
   "Load a payee check by composite primary key. Returns the check

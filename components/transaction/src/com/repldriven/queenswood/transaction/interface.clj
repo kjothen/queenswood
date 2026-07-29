@@ -4,7 +4,7 @@
   legs to balances. Returns the transaction map (with `:legs`) or
   an anomaly."
   (:require
-    com.repldriven.queenswood.transaction.system
+    [com.repldriven.queenswood.transaction.system]
 
     [com.repldriven.queenswood.transaction.core :as core]
     [com.repldriven.queenswood.transaction.store :as store]))

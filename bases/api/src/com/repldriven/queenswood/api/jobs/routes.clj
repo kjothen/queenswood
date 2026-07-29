@@ -1,9 +1,9 @@
 (ns com.repldriven.queenswood.api.jobs.routes
   (:require
-    [com.repldriven.queenswood.api.jobs.handlers :as handlers]
-    [com.repldriven.queenswood.api.jobs.queries :as queries]
     [com.repldriven.queenswood.api.jobs.examples :refer
      [JobNotFound RunNotFound PeriodicityNotAllowed SystemJobLocked]]
+    [com.repldriven.queenswood.api.jobs.handlers :as handlers]
+    [com.repldriven.queenswood.api.jobs.queries :as queries]
     [com.repldriven.queenswood.api.schema :refer [ErrorResponse]]))
 
 (def ^:private run-location-header

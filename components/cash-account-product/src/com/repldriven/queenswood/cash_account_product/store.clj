@@ -1,8 +1,7 @@
 (ns com.repldriven.queenswood.cash-account-product.store
   (:require
-    [com.repldriven.queenswood.schema.interface :as schema]
-
-    [com.repldriven.queenswood.fdb.interface :as fdb]))
+    [com.repldriven.queenswood.fdb.interface :as fdb]
+    [com.repldriven.queenswood.schema.interface :as schema]))
 
 ;; must match bank-cash-account-product-query.store store-names — same FDB
 ;; stores

@@ -1,9 +1,9 @@
 (ns com.repldriven.queenswood.payee-check.store
   (:require
+    [com.repldriven.queenswood.fdb.interface :as fdb]
     [com.repldriven.queenswood.schema.interface :as schema]
 
-    [com.repldriven.mono.error.interface :as error]
-    [com.repldriven.queenswood.fdb.interface :as fdb]))
+    [com.repldriven.mono.error.interface :as error]))
 
 (def ^:private store-name "payee-checks")
 

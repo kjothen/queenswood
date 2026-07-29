@@ -9,16 +9,16 @@
   own transactions. `bank-api` requires the query brick, not this one —
   party creation reaches the processor as a command over the bus."
   (:require
-    com.repldriven.queenswood.party.system
+    [com.repldriven.queenswood.party.system]
 
     [com.repldriven.queenswood.party.core :as core]
     [com.repldriven.queenswood.party.domain :as domain]
     [com.repldriven.queenswood.party.store :as store]
 
     [com.repldriven.queenswood.party-query.interface :as q]
+    [com.repldriven.queenswood.schema.interface :as schema]
 
-    [com.repldriven.mono.error.interface :refer [let-nom>]]
-    [com.repldriven.queenswood.schema.interface :as schema]))
+    [com.repldriven.mono.error.interface :refer [let-nom>]]))
 
 (defn new-party
   "Create a party. Person parties also persist a person-

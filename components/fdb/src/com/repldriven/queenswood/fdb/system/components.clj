@@ -1,12 +1,14 @@
 (ns com.repldriven.queenswood.fdb.system.components
   (:refer-clojure :exclude [name])
   (:require
-    [clojure.string :as str]
     [com.repldriven.queenswood.fdb.keyspace :as keyspace]
     [com.repldriven.queenswood.fdb.watcher :as watcher]
+
     [com.repldriven.mono.error.interface :refer [try-nom]]
     [com.repldriven.mono.log.interface :as log]
-    [com.repldriven.mono.system.interface :as system])
+    [com.repldriven.mono.system.interface :as system]
+
+    [clojure.string :as str])
   (:import
     (com.apple.foundationdb FDB)
     (com.apple.foundationdb.record RecordMetaData)

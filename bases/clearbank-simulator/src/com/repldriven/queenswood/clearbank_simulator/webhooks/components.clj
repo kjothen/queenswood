@@ -1,9 +1,9 @@
 (ns com.repldriven.queenswood.clearbank-simulator.webhooks.components
   (:require
-    [com.repldriven.queenswood.clearbank-simulator.webhooks.examples
-     :as examples]
-    [com.repldriven.queenswood.clearbank-simulator.schema
-     :refer [components-registry]]))
+    [com.repldriven.queenswood.clearbank-simulator.schema :refer
+     [components-registry]]
+    [com.repldriven.queenswood.clearbank-simulator.webhooks.examples :as
+     examples]))
 
 (def Webhook
   [:map

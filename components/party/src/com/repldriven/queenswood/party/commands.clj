@@ -4,9 +4,9 @@
 
     [com.repldriven.queenswood.schema.interface :as schema]
 
-    [com.repldriven.mono.processor.interface :as processor]
     [com.repldriven.mono.avro.interface :as avro]
-    [com.repldriven.mono.error.interface :as error :refer [let-nom>]]))
+    [com.repldriven.mono.error.interface :as error :refer [let-nom>]]
+    [com.repldriven.mono.processor.interface :as processor]))
 
 (defn- ->response
   [config result]

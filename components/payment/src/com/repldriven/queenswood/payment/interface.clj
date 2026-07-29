@@ -11,7 +11,7 @@
   own transactions. `bank-api` requires the query brick, not this one —
   submissions reach the processor as commands, settlements as events."
   (:require
-    com.repldriven.queenswood.payment.system
+    [com.repldriven.queenswood.payment.system]
 
     [com.repldriven.queenswood.payment.core :as core]
     [com.repldriven.queenswood.payment.events :as events]))

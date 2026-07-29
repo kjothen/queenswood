@@ -5,8 +5,8 @@
   and let the substrate decide whether the request hits a real
   Keycloak realm or the in-memory local impl."
   (:require
-    [com.repldriven.mono.identity-provider.interface :as identity-provider]
-    [com.repldriven.mono.error.interface :as error]))
+    [com.repldriven.mono.error.interface :as error]
+    [com.repldriven.mono.identity-provider.interface :as identity-provider]))
 
 (defn- external-base-url
   "Derive the public URL the caller used to reach the API. Honours

@@ -2,8 +2,9 @@
   (:require
     [com.repldriven.queenswood.onfido-adapter.publisher :as publisher]
 
-    [com.repldriven.mono.avro.interface :as avro]
     [com.repldriven.queenswood.onfido-relay.interface :as relay]
+
+    [com.repldriven.mono.avro.interface :as avro]
     [com.repldriven.mono.error.interface :as error :refer [let-nom>]]
     [com.repldriven.mono.log.interface :as log]
     [com.repldriven.mono.utility.interface :as utility]))

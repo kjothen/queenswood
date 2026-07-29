@@ -1,6 +1,7 @@
 (ns com.repldriven.queenswood.fdb.interface
   (:require
-    com.repldriven.queenswood.fdb.system.core
+    [com.repldriven.queenswood.fdb.system.core]
+
     [com.repldriven.queenswood.fdb.changelog :as changelog]
     [com.repldriven.queenswood.fdb.check :as check]
     [com.repldriven.queenswood.fdb.counter :as counter]

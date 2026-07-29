@@ -1,11 +1,11 @@
 (ns com.repldriven.queenswood.api.cash-account-product.routes
   (:require
     [com.repldriven.queenswood.api.cash-account-product.commands :as commands]
-    [com.repldriven.queenswood.api.cash-account-product.links :as links]
-    [com.repldriven.queenswood.api.cash-account-product.queries :as queries]
     [com.repldriven.queenswood.api.cash-account-product.examples :refer
      [ProductNotFound VersionNotFound DraftAlreadyExists VersionImmutable
       CurrencyNotAllowed]]
+    [com.repldriven.queenswood.api.cash-account-product.links :as links]
+    [com.repldriven.queenswood.api.cash-account-product.queries :as queries]
     [com.repldriven.queenswood.api.schema :refer [ErrorResponse]]
     [com.repldriven.queenswood.api.shared.parameters :as shared.parameters]))
 

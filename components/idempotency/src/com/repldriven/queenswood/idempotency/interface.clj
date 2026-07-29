@@ -5,7 +5,7 @@
   `\"admin\"` for the admin bearer). Replays cached 2xx/4xx for
   matching keys; skips 5xx so transient failures can be retried."
   (:require
-    com.repldriven.queenswood.idempotency.system
+    [com.repldriven.queenswood.idempotency.system]
 
     [com.repldriven.queenswood.idempotency.interceptors :as interceptors]))
 

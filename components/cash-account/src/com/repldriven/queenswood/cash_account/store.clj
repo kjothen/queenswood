@@ -2,10 +2,10 @@
   (:require
     [com.repldriven.queenswood.cash-account.changelog :as changelog]
 
+    [com.repldriven.queenswood.fdb.interface :as fdb]
     [com.repldriven.queenswood.schema.interface :as schema]
 
-    [com.repldriven.mono.error.interface :refer [let-nom>]]
-    [com.repldriven.queenswood.fdb.interface :as fdb]))
+    [com.repldriven.mono.error.interface :refer [let-nom>]]))
 
 ;; must match bank-cash-account-query.store/store-name — same FDB store
 (def ^:private store-name "cash-accounts")

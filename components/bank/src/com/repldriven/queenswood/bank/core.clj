@@ -4,8 +4,8 @@
     [com.repldriven.queenswood.bank.store :as store]
 
     [com.repldriven.queenswood.bank-query.interface :as bank-query]
-    [com.repldriven.queenswood.cash-account.interface :as cash-accounts]
     [com.repldriven.queenswood.cash-account-product.interface :as products]
+    [com.repldriven.queenswood.cash-account.interface :as cash-accounts]
     [com.repldriven.queenswood.ledger-account.interface :as ledger-accounts]
     [com.repldriven.queenswood.membership.interface :as memberships]
     [com.repldriven.queenswood.party.interface :as party]

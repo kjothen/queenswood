@@ -1,7 +1,8 @@
 (ns com.repldriven.queenswood.scheduler.domain
   (:require
-    [clojure.set :as set]
-    [com.repldriven.mono.error.interface :as error]))
+    [com.repldriven.mono.error.interface :as error]
+
+    [clojure.set :as set]))
 
 (def all-periods
   #{:scheduler-periodicity-daily :scheduler-periodicity-monthly

@@ -1,8 +1,8 @@
 (ns com.repldriven.queenswood.api.bank.routes
   (:require
+    [com.repldriven.queenswood.api.bank.commands :as bank-commands]
     [com.repldriven.queenswood.api.bank.examples :refer
      [BankLimitExceeded BankNotFound BankInvalidStatus BankUnknownTier]]
-    [com.repldriven.queenswood.api.bank.commands :as bank-commands]
     [com.repldriven.queenswood.api.bank.queries :as queries]
     [com.repldriven.queenswood.api.schema :refer [ErrorResponse]]
     [com.repldriven.queenswood.api.shared.parameters :as shared.parameters]))
