@@ -19,7 +19,7 @@ machinery.
 
 In scope: the `party` and `idv` bricks; the
 `onfido-adapter` and `onfido-simulator` bases;
-party types and lifecycle; the watcher + bus + event flow
+party types and lifecycle; the relay + bus + event flow
 that drives person-party activation; name-matching; party
 identifiers and person identifications.
 
@@ -57,11 +57,13 @@ authenticated human triggering a request. They serve
 different concerns, and there is no link between them yet.
 
 For person parties, KYC sits between creation and activation.
-The system implements this with FDB changelog watchers per
-[ADR-0008](../adr/0008-changelog-watchers.md) at the
+The system implements this with the changelog relay per
+[ADR-0021](../adr/0021-changelog-relay.md) at the
 boundaries and the message bus per
-[ADR-0003](../adr/0003-message-bus-abstraction.md) in the
-middle: a party write triggers an IDV write, the IDV write
+[ADR-0003](../adr/0003-message-bus-abstraction.md)
+throughout: a party write is relayed as a
+`party-status-changed` event that triggers an IDV write, the
+IDV write
 publishes a `submit-idv-check` command, the IDV-provider
 adapter calls the provider and republishes the eventual
 webhook as an `idv-completed` event, the IDV event
@@ -79,9 +81,11 @@ Two bricks plus an adapter/simulator base pair:
 - **`party`** — owns Party records, party CRUD, name
   matching, party identifiers (passport, NI), person
   identifications (given/family/middle names), and the
-  watcher that activates parties on IDV acceptance.
-- **`idv`** — owns IDV records, the watcher that
-  creates IDVs from pending parties, the `initiate` core
+  `idv-status-changed` handler that activates parties on
+  IDV acceptance.
+- **`idv`** — owns IDV records, the
+  `party-status-changed` handler that creates IDVs from
+  pending parties, the `initiate` core
   fn that publishes `submit-idv-check`, and the
   `IdvEventProcessor` that consumes `idv-completed` events
   and flips the IDV record.
@@ -95,8 +99,9 @@ Two bricks plus an adapter/simulator base pair:
   service used for development and tests. Mocks the
   applicant + check + webhook lifecycle deterministically.
 
-`party` and `idv` communicate via FDB changelog
-per [ADR-0008](../adr/0008-changelog-watchers.md).
+`party` and `idv` communicate over the bus, via events
+relayed off each other's changelogs per
+[ADR-0021](../adr/0021-changelog-relay.md).
 `idv` and `onfido-adapter` communicate via the
 message bus per
 [ADR-0003](../adr/0003-message-bus-abstraction.md) — a
@@ -107,20 +112,24 @@ channel for `idv-completed`.
 graph TD
     HTTP[HTTP create-person-party]
     PARTY["party<br/>(party-status-pending)"]
-    PCH[("Party changelog")]
-    IDV1["idv watcher<br/>creates IDV (pending)<br/>+ publishes submit-idv-check"]
-    IDV[("IDV record")]
+    PCH[("parties changelog")]
+    RELAY1["changelog relay"]
     BUS[("message-bus")]
+    IDV1["idv<br/>IdvPartyEventProcessor<br/>creates IDV (pending)<br/>+ publishes submit-idv-check"]
+    IDV[("IDV record")]
     ADAPTER["onfido-adapter"]
     ONFIDO["Onfido<br/>(or simulator)"]
     EP["idv<br/>IdvEventProcessor"]
-    ICH[("IDV changelog")]
-    PARTY3["party watcher<br/>activates party"]
+    ICH[("idvs changelog")]
+    RELAY2["changelog relay"]
+    PARTY3["party<br/>PartyIdvEventProcessor<br/>activates party"]
     PARTY4["Party (active)"]
 
     HTTP -->|new-party| PARTY
     PARTY --> PCH
-    PCH --> IDV1
+    PCH --> RELAY1
+    RELAY1 -->|party-status-changed| BUS
+    BUS -->|consume| IDV1
     IDV1 --> IDV
     IDV1 -->|submit-idv-check| BUS
     BUS -->|consume| ADAPTER
@@ -130,15 +139,18 @@ graph TD
     BUS -->|consume| EP
     EP --> IDV
     IDV --> ICH
-    ICH --> PARTY3
+    ICH --> RELAY2
+    RELAY2 -->|idv-status-changed| BUS
+    BUS -->|consume| PARTY3
     PARTY3 --> PARTY4
 ```
 
 Each hop is independently observable and testable: the
-party → IDV write via the changelog handler, the
+`party-status-changed` event off the parties changelog, the
 `submit-idv-check` command on the bus, the adapter's HTTP
 call, the webhook receipt, the `idv-completed` event, the
-event processor's flip, and the party activation watcher.
+event processor's flip, and the `idv-status-changed` event
+off the idvs changelog that activates the party.
 
 ### Data model
 
@@ -241,27 +253,30 @@ appear in transactions.
 ### The activation flow
 
 The pending → active transition for a person party
-crosses two changelog handlers, one bus command, one HTTP
-round-trip to the IDV provider, and one bus event.
+crosses two relayed changelog events, one bus command, one
+HTTP round-trip to the IDV provider, and one bus event.
 
 ```mermaid
 sequenceDiagram
     participant H as HTTP handler
     participant P as party
-    participant W1 as idv watcher
-    participant I as idv
+    participant R as changelog relay
     participant B as message-bus
+    participant W1 as idv<br/>IdvPartyEventProcessor
+    participant I as idv
     participant A as onfido-adapter
     participant O as Onfido<br/>(or simulator)
     participant E as idv<br/>IdvEventProcessor
-    participant W2 as party watcher
+    participant W2 as party<br/>PartyIdvEventProcessor
 
     H->>P: new-party (type=person)
-    P->>P: write Party (status=pending)
-    Note over P: party changelog fires
+    P->>P: write Party + changelog entry (one Tx)
+    Note over P: parties changelog fires
 
-    P->>W1: party-changelog-handler<br/>(status-after=pending)
-    W1->>I: core/initiate
+    R->>P: tail parties cursor
+    R->>B: publish party-status-changed
+    B->>W1: consume (status-after=pending)
+    W1->>I: core/initiate-for-party
     I->>I: write IDV (status=pending)
     I->>B: publish submit-idv-check
 
@@ -275,17 +290,20 @@ sequenceDiagram
     A->>B: publish idv-completed
 
     B->>E: consume idv-completed
-    E->>I: update IDV (status=accepted or rejected)
-    Note over I: IDV changelog fires
+    E->>I: update IDV + changelog entry (one Tx)
+    Note over I: idvs changelog fires
 
-    I->>W2: idv-changelog-handler<br/>(status-after=accepted)
+    R->>I: tail idvs cursor
+    R->>B: publish idv-status-changed
+    B->>W2: consume (status-after=accepted)
     W2->>P: get-party
     W2->>P: update Party (status=active)
 ```
 
 Each handler is idempotent on the matching status — running
-twice doesn't double-initiate or double-activate. The IDV
-watcher additionally consults the
+twice doesn't double-initiate or double-activate, which is
+what makes at-least-once delivery off the relay safe. The IDV
+handler additionally consults the
 unique `Idv_by_party` index before initiating, so a
 changelog replay or a duplicate party-pending event won't
 create a second IDV.
@@ -371,15 +389,15 @@ tokenise pass — it covers the bulk of real cases without a
 fuzzy-matching dependency. See Known Limitations for the
 edge cases it doesn't cover.
 
-### Why changelog watchers + bus (and not direct calls)
+### Why the changelog relay + bus (and not direct calls)
 
 The party → IDV → provider → party-active flow could
 equally be written as direct procedural calls inside the
 create-party handler: write the party, write the IDV, call
 the provider over HTTP in-band, wait, flip the party.
-Choosing the watcher + bus pattern is deliberate — see
+Choosing the relay + bus pattern is deliberate — see
 [ADR-0003](../adr/0003-message-bus-abstraction.md) and
-[ADR-0008](../adr/0008-changelog-watchers.md).
+[ADR-0021](../adr/0021-changelog-relay.md).
 
 Reasons:
 
@@ -398,19 +416,20 @@ Reasons:
   immediately with a pending party; the adapter's
   command-consume / HTTP / webhook / event-publish loop
   finishes whenever the provider does.
-- **Testability.** Each handler is a function of (ctx,
-  bytes) returning a value or anomaly. Unit-testable
-  without booting the full system.
+- **Testability.** Each handler takes a config and a
+  deserialised event, and returns a value or anomaly.
+  Unit-testable without booting the full system.
 - **Idempotency by status and unique index.** The IDV
-  watcher consults `Idv_by_party` before initiating; each
+  handler consults `Idv_by_party` before initiating; each
   handler short-circuits unless the status is the one it
-  cares about; re-emitting an event doesn't cause
-  re-execution of the actual transition.
+  cares about; redelivering an event doesn't re-execute the
+  transition.
 
-The trade-offs are the ones ADR-0008 names: the watcher
-processors don't scale horizontally without leader
-election, and the chain is harder to follow if you don't
-already know the model. Both costs are accepted.
+The trade-off is that the chain is harder to follow if you
+don't already know the model, and that ordering between
+hops holds only because every topic is single-partition
+today — see [ADR-0021](../adr/0021-changelog-relay.md).
+Both costs are accepted.
 
 ## Alternatives Considered
 
@@ -418,7 +437,7 @@ already know the model. Both costs are accepted.
   calls IDV-create directly; IDV-create calls the adapter
   directly. Rejected — couples bricks; the
   observability story disappears; testability
-  weakens. Watchers + bus preserve the brick boundaries.
+  weakens. Relay + bus preserve the brick boundaries.
 - **Single brick covering parties and IDV.** Coarser; loses
   the testability split; conflates KYC with party identity.
   Rejected — the two are conceptually separate even if
@@ -430,9 +449,9 @@ already know the model. Both costs are accepted.
   hours/days); blocking the HTTP handler is a poor caller
   experience. Bus + webhook with a status-poll/read model
   is the right shape.
-- **Auto-flipping IDV in the watcher.** The previous
-  iteration of `idv` had its watcher unconditionally
-  flip pending IDVs to accepted, with no provider involved.
+- **Auto-flipping IDV on receipt.** The previous
+  iteration of `idv` unconditionally flipped pending IDVs
+  to accepted, with no provider involved.
   Replaced — left no place for a real provider to plug in,
   and the flip-without-evidence pattern was never going to
   survive contact with a compliance review.
@@ -443,7 +462,8 @@ already know the model. Both costs are accepted.
   shape; the rest of the system sees bus messages.
 - **Saga / orchestrator.** A central orchestrator
   coordinates the steps. Rejected — overkill for a chain
-  that watchers and bus subscribers handle naturally.
+  that relayed events and bus subscribers handle
+  naturally.
 - **Person-only party model.** Just persons; orgs and
   internal modelled differently. Rejected — bookkeeping
   needs a unified party concept (settlement *parties*, fee
@@ -469,9 +489,9 @@ already know the model. Both costs are accepted.
   in for production behaviour.
 - **IDV outcomes beyond accept and reject aren't acted
   on.** The `IdvStatus` enum already admits `IN_REVIEW` and
-  `FAILED` (`idv.proto`), but the party watcher only maps
-  `ACCEPTED` / `REJECTED` to a status transition
-  (`party/.../watcher.clj`); manual-review and
+  `FAILED` (`idv.proto`), but `party/core.clj`'s
+  `apply-idv-status` only maps accepted and rejected to a
+  status transition; manual-review and
   technical-failure outcomes leave the party pending with no
   follow-up.
 - **No re-verification flow.** Once a person party is
@@ -520,8 +540,8 @@ already know the model. Both costs are accepted.
 - [ADR-0003](../adr/0003-message-bus-abstraction.md) —
   Message-bus abstraction (the IDV-provider channel and
   IDV event channel)
-- [ADR-0008](../adr/0008-changelog-watchers.md) — Changelog
-  watchers (the activation chain endpoints)
+- [ADR-0021](../adr/0021-changelog-relay.md) — the
+  changelog relay (the activation chain endpoints)
 - [authentication.md](authentication.md) — Authentication (the `User`
   identity, distinct from parties)
 - [payments.md](payments.md) — Payments (CoP consumes

@@ -10,7 +10,7 @@ touches, and how to stop it firing from the wrong source state.
 
 ## Solution
 
-Every lifecycle transition — synchronous or watcher-driven — goes
+Every lifecycle transition — synchronous or event-driven — goes
 through the same ten-point definition-of-done, and every transition
 function guards its source state before doing anything else.
 
@@ -32,16 +32,18 @@ function guards its source state before doing anything else.
    `core.clj` entry point.
 6. **`interface.clj`** — a public fn exposing the transition to
    callers outside the brick.
-7. **`watcher.clj`** — the async second leg, if the transition is
+7. **`events.clj`** — the async second leg, if the transition is
    two-phase (a command moves the entity to an intermediate status;
-   a changelog watcher completes it). Carries the same source-state
-   guard, as an idempotency gate (see below).
+   an event relayed off the changelog completes it). Carries the
+   same source-state guard, as an idempotency gate (see below).
 8. **`api`** — the HTTP route, its OpenAPI request/response
    components, and the rejection→status mapping for any new
    rejection kind the transition can produce.
-9. **Service YAML** — the watcher's expected-source guard set stays
-   in sync with which statuses the service configuration actually
-   wires the watcher to observe.
+9. **Service YAML** — the event channel, its topic, and the
+   consumer that subscribes it are declared in every system that
+   needs the reaction, including the monolith and the test rigs.
+   Use `changelog-relay/event-consumer`, not mono's
+   `event-processor`, which acks on anomaly.
 10. **Tests** — a model-command test (or update to an existing one)
     and an API-scenario test covering the new transition.
 
@@ -82,28 +84,27 @@ means an upstream PR. Revisit once three or more bricks have landed
 literally identical guard shapes (the [common-helpers](common-helpers.md)
 convergence rule).
 
-### Watcher guards are an idempotency gate, not a rejection
+### Event-handler guards are an idempotency gate, not a rejection
 
-A watcher's second leg checks the *loaded* record's current status
+The async second leg checks the *loaded* record's current status
 against the expected source before transitioning, and silently
-skips — no rejection, no error — when it doesn't match. A watcher
-must tolerate changelog redelivery and replay; skipping a
-transition whose source state has already moved on is correct,
-rejecting it is not.
+skips — no rejection, no error — when it doesn't match. Delivery
+off the relay is at-least-once, so a handler must tolerate
+redelivery and replay; skipping a transition whose source state has
+already moved on is correct, rejecting it is not.
 
-`bank-party/watcher.clj` is the canonical exemplar:
+`party/core.clj`'s `apply-idv-status` is the canonical exemplar:
 
 ```clojure
 (when (= :party-status-pending (:status party))
-  (let [updated-party (transition party)]
-    (store/save-party txn updated-party ...)))
+  (let [updated (transition party)]
+    (store/save-party txn updated ...)))
 ```
 
-`bank-cash-account/core.clj`'s `complete-status-transition` carries
-the same gate, now driven by an event rather than a watcher: the
-`opening -> opened` leg only fires when the loaded account is still
-`:cash-account-status-opening`, and `closing -> closed` only fires
-from `:cash-account-status-closing`.
+`cash-account/core.clj`'s `complete-status-transition` carries the
+same gate: the `opening -> opened` leg only fires when the loaded
+account is still `:cash-account-status-opening`, and
+`closing -> closed` only from `:cash-account-status-closing`.
 
 ### Rejection mapping
 
@@ -121,24 +122,24 @@ heuristics `rejection-kind->status` otherwise applies.
 - Name the rejection kind `:<entity>/invalid-status`, one per
   brick, with payload `{:message … :<id-key> … :status … :allowed
   #{…}}`.
-- Gate a watcher's transition leg on the loaded record's current
-  status matching the expected source, and skip silently (not
-  reject) when it doesn't.
+- Gate an event handler's transition leg on the loaded record's
+  current status matching the expected source, and skip silently
+  (not reject) when it doesn't.
 - Map `:<entity>/invalid-status` to HTTP 409 in `api`'s
   rejection→status table.
 - Work through the ten-point checklist for every new lifecycle
   state or transition: proto enum, Avro schema (both YAMLs),
   `domain.clj` guard, `core.clj` orchestration, `commands.clj`
-  dispatch, `interface.clj` fn, `watcher.clj` leg (if two-phase),
-  `api` route/OpenAPI/rejection mapping, service-YAML watcher
-  guard set, and tests.
+  dispatch, `interface.clj` fn, `events.clj` leg (if two-phase),
+  `api` route/OpenAPI/rejection mapping, the event channel and
+  consumer wiring, and tests.
 
 **MUST NOT:**
 
 - Reach for a shared `utility` guard helper before three or more
   bricks have landed identical guard shapes.
-- Let a watcher reject on an unexpected source state — replay and
-  redelivery must be a no-op, not a failure.
+- Let an event handler reject on an unexpected source state —
+  replay and redelivery must be a no-op, not a failure.
 
 ## Discussion
 
@@ -150,25 +151,27 @@ capability and limit checks, means a request against the wrong
 entity state fails fast and cheaply, before any policy evaluation
 runs.
 
-The synchronous-guard and watcher-guard shapes look similar but
+The synchronous-guard and event-guard shapes look similar but
 answer different questions. A synchronous transition is a request:
 the caller asked for something that isn't valid right now, and the
-system says no — a 409. A watcher transition is a reaction to a
-changelog entry the write side already committed: by the time the
-watcher runs, the request has already succeeded, and the watcher's
+system says no — a 409. An event-driven transition is a reaction to
+a changelog entry the write side already committed: by the time the
+handler runs, the request has already succeeded, and the handler's
 job is just to catch the record up. If the record has already moved
-past the expected source — because the watcher already processed
-this entry once, or because a later change overtook it — there is
-nothing to reject; the desired end state is already true or
-superseded. See
-[ADR-0008](../adr/0008-changelog-watchers.md) for why watchers are
-in-process rather than event-based, and why they must be
-idempotent.
+past the expected source — because this event was redelivered, or
+because a later change overtook it — there is nothing to reject;
+the desired end state is already true or superseded.
+
+That guard is also what hides reordering, which is worth knowing
+when it stops being harmless. Every topic is single-partition today
+and `message-bus/send` passes no partition key, so a `closing`
+event overtaking its `opening` would land on the guard and skip
+silently. See [ADR-0021](../adr/0021-changelog-relay.md).
 
 ## References
 
-- [ADR-0008](../adr/0008-changelog-watchers.md) — Changelog
-  watchers for reactive state transitions
+- [ADR-0021](../adr/0021-changelog-relay.md) — the changelog
+  relay for reactive state transitions
 - [error-handling](error-handling.md) — anomaly kinds and
   `let-nom>`
 - [common-helpers](common-helpers.md) — the convergence rule for
@@ -176,5 +179,5 @@ idempotent.
 - `components/cash-account/.../domain.clj`,
   `components/cash-account/.../core.clj` (`complete-status-transition`)
   and `.../events.clj` — the worked example
-- `components/party/.../watcher.clj` — the watcher-gate
-  exemplar
+- `components/party/.../core.clj` (`apply-idv-status`) and
+  `.../events.clj` — the event-gate exemplar

@@ -54,12 +54,18 @@ See [ADR-0007](../../../docs/adr/0007-system-as-data.md),
 
 ## React to a changelog, don't orchestrate across bricks
 
-Reactive state transitions run through in-process changelog watchers,
-not message-bus events, for now. A watcher is a system component
-declared alongside the rest of the system definition; it reads a
-specific record store's cursor and dispatches to handler functions
-defined in the component that owns the source record.
-See [ADR-0008](../../../docs/adr/0008-changelog-watchers.md).
+Reactive state transitions run through the changelog relay, not an
+HTTP-layer orchestrator. A store's write co-commits a `ChangelogEvent`
+envelope to its changelog; a `changelog-relay` runner tails that cursor
+and republishes the payload to the message bus; the reacting brick
+handles the event in its own `events.clj`, against its own records. The
+relay holds no domain logic, and no handler runs inside the changelog
+checkpoint transaction. Never mint a fresh `consumer-id` for an
+existing cursor — it starts at no checkpoint and rescans the store's
+whole history in one transaction. A lifecycle transition consumes via
+`changelog-relay/event-consumer`, not mono's `event-processor`, which
+acks on anomaly and would lose it.
+See [ADR-0021](../../../docs/adr/0021-changelog-relay.md).
 
 ## The message bus stays behind an abstraction
 
@@ -91,7 +97,7 @@ A write with none of these stays synchronous. Once a domain earns
 commands, it splits into two bricks: `X-query` (reads only —
 `get-*` / `find-*` / `count-*` — the only cash-account-style brick
 `api` may require) and `X` (commands, writes, domain,
-watcher), which depends on `X-query` and calls its reads inside
+events), which depends on `X-query` and calls its reads inside
 its own FDB transaction, passing the live `txn`.
 See [ADR-0017](../../../docs/adr/0017-query-write-brick-split.md),
 [ADR-0018](../../../docs/adr/0018-command-writes-are-earned.md).
@@ -102,7 +108,7 @@ Processors are packaged by deployment-time composition, not one
 microservice per domain: one thin base per service group (a
 boilerplate main plus a require bundle registering that group's
 component-kinds) and one project per group, whose `application.yml`
-alone decides which processors, watchers, and event consumers that
+alone decides which processors and event consumers that
 JVM hosts. Bases are group-scoped, not one shared superset, so each
 project's deps carry only the bricks its group runs. Group by
 boundary, not throughput — financial processors (payment,
@@ -154,18 +160,18 @@ A transition function in `domain.clj` asserts its source state as
 the first `let-nom>` binding, before any capability or limit check,
 rejecting with a per-brick `:<entity>/invalid-status` kind and a
 payload carrying `:message`, the entity's id key, `:status`, and
-`:allowed`. A watcher's second leg gates on the loaded record's
-current status matching the expected source and skips silently
-rather than rejecting — redelivery and replay must be a no-op, not
-a failure. `:<entity>/invalid-status` maps to HTTP 409 in
+`:allowed`. An event handler's second leg gates on the loaded
+record's current status matching the expected source and skips
+silently rather than rejecting — redelivery and replay must be a
+no-op, not a failure. `:<entity>/invalid-status` maps to HTTP 409 in
 `api`'s rejection→status table. Adding a new lifecycle state or
 transition works through a ten-point checklist: proto enum, Avro
 schema registered in both YAMLs, the `domain.clj` guard, `core.clj`
 orchestration, `commands.clj` dispatch, `interface.clj` fn, the
-watcher leg if two-phase, the `api` route/OpenAPI/rejection
-mapping, the service-YAML watcher guard set, and tests.
+`events.clj` leg if two-phase, the `api` route/OpenAPI/rejection
+mapping, the event channel and consumer wiring, and tests.
 See [lifecycle-transitions](../../../docs/recipes/lifecycle-transitions.md),
-[ADR-0008](../../../docs/adr/0008-changelog-watchers.md).
+[ADR-0021](../../../docs/adr/0021-changelog-relay.md).
 
 ## System-level tests prove model equality
 

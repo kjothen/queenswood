@@ -1,12 +1,19 @@
 # 8. Changelog watchers for reactive state transitions
-<!-- tessl-plugin: design -->
 
 ## Status
 
-Superseded in part. The relay path described in "Future" is now the
-direction of travel: it is generic, it runs in its own single-writer
-service, and internal reactive flows are migrating onto it. Watchers
-remain in place for the flows not yet moved — see "Future" below.
+Superseded by [ADR-0021](0021-changelog-relay.md). No watchers remain:
+the relay path this ADR sketched under "Future" is now how every
+reactive flow works, and the watcher primitives themselves have been
+deleted.
+
+What survives is the brick-boundary rule in "Decision" below — react,
+don't orchestrate. ADR-0021 changed the transport between "X committed"
+and "Y reacts", not that contract.
+
+The rest of this document is the decision as it was made, kept for the
+reasoning it records. Where that reasoning turned out to be wrong,
+ADR-0021's Context says so.
 
 ## Context
 
@@ -146,35 +153,7 @@ itself — exactly the property ADR-0002 highlighted. Implementing
 leader election for the relay watcher is then the only piece of new
 infrastructure required.
 
-**Update: the relay is now a generic tier in its own service.** The
-`changelog-relay` component is a config-driven runner — it tails one
-store's cursor and republishes each entry, holding no domain logic — and
-`relay-service` hosts every runner. The ClearBank and Onfido relays moved
-there first; internal reactive flows (party activation, cash-account
-close) still use in-JVM watchers and are migrating store by store. See
-[transaction-processing.md](../tdd/transaction-processing.md) and
-[payments.md](../tdd/payments.md).
-
-Three corrections to the reasoning above, all verified against the code:
-
-- **The relay does not dedupe.** `changelog/process` defaults to
-  latest-entry-per-record-id, and the record-id is the entity id. A relay
-  carries transitions, so collapsing two transitions committed inside one
-  poll window would silently drop an event. The runner passes
-  `{:deduplicate? false}`.
-- **Leader election buys failover, not throughput.** A cursor has exactly
-  one owner, but the relay's work is decode-and-publish — O(1) per entry,
-  no business logic. `replicas: 1` plus a durable cursor already survives
-  a crash; leader election would only shorten the gap before someone
-  resumes. The relay tier scales by sharding stores across deployments,
-  not by adding replicas.
-- **Extracting the relay does not by itself deliver scale-out.** It
-  removes the hard blocker — a cursor owner cannot be replicated at all —
-  but every topic is currently single-partition and `message-bus/send`
-  passes no partition key, so extra consumer replicas are idle standbys.
-  Raising partition counts without first adding a key would lose
-  per-entity ordering. Real horizontal throughput is gated on that key.
-
-The watcher primitives are inherited from `mono` (ADR-0001); the
-choice to use them rather than message-bus events is a Queenswood
-application-level decision, made per flow at system-definition time.
+This is the path that was taken, though not for the reason predicted —
+see [ADR-0021](0021-changelog-relay.md), which records what actually
+forced it, where the reasoning above was wrong, and what the relay tier
+looks like.

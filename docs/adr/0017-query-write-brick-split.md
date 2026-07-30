@@ -50,7 +50,7 @@ Each domain component splits into two first-class Polylith bricks:
 - `X-query` — reads only (`get-*`, `find-*`, `count-*`), plus the
   read primitives the write side needs inside a transaction. This is
   the only cash-account-style brick `api` may require.
-- `X` — commands, core writes, domain, write-side store, watcher.
+- `X` — commands, core writes, domain, write-side store, events.
   It depends on `X-query` and calls its read fns inside its own
   FDB transactions, passing the live `txn` — the same cross-brick
   read-with-live-txn idiom already used across the codebase (a read fn

@@ -86,7 +86,7 @@ GL accounts are their **own record type**, `LedgerAccount`,
 owned by the `ledger-account` brick. A `LedgerAccount` is
 a flat, bank-owned record — 1:1 with a chart row, created
 directly at bank-provisioning time, with no product, no
-versioning, and no command/watcher lifecycle. It is distinct
+versioning, and no command/event lifecycle. It is distinct
 from a customer `CashAccount`: the GL is the bank's own books,
 not something the bank sells.
 
@@ -617,7 +617,7 @@ be matched to an account.
 
 ### Lifecycle
 
-A `LedgerAccount` has no command/watcher lifecycle. It is
+A `LedgerAccount` has no command/event lifecycle. It is
 created directly at bank-provisioning time (`seed!` via
 `new-account`) and is effectively immutable thereafter — there
 is no draft / published distinction, no open / close
@@ -902,7 +902,7 @@ that touches a customer accrued bucket and two GL accounts):
 - **No external GL feed.** A bank running a parallel
   accounting system (Sage, Xero, NetSuite) and wanting the
   platform's GL to mirror to it has no built-in export. A
-  changelog watcher publishing GL postings to an export topic
+  changelog relay publishing GL postings to an export topic
   would be the shape; out of scope for v1.
 - **No regulatory taxonomy mapping.** The five top-level
   classes follow FRS 102's element definitions (asset /
@@ -983,8 +983,8 @@ that touches a customer accrued bucket and two GL accounts):
 - [ADR-0005](../adr/0005-error-handling-with-anomalies.md) —
   Error handling with anomalies (`:gl/imbalanced`,
   `:gl/non-zero-on-close`, `:gl/missing-currency-account`)
-- [ADR-0008](../adr/0008-changelog-watchers.md) — Changelog
-  watchers (the pattern that GL-export feeds would consume,
+- [ADR-0021](../adr/0021-changelog-relay.md) — the changelog
+  relay (the pattern that GL-export feeds would consume,
   if added)
 - [transactions-and-balances.md](transactions-and-balances.md)
   — Transactions and balances (the leg substrate this TDD

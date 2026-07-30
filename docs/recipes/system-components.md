@@ -63,7 +63,7 @@ Adapted from `components/cash-account/.../system.clj`:
 (ns com.repldriven.queenswood.cash-account.system
   (:require
     [com.repldriven.queenswood.cash-account.commands :as commands]
-    [com.repldriven.queenswood.cash-account.watcher :as watcher]
+    [com.repldriven.queenswood.cash-account.events :as events]
     [com.repldriven.mono.system.interface :as system]))
 
 (def ^:private processor
@@ -71,14 +71,14 @@ Adapted from `components/cash-account/.../system.clj`:
    :system/config {...}
    :system/instance-schema some?})
 
-(def ^:private watcher-handler
+(def ^:private event-processor
   {:system/start ...
    :system/config {...}
-   :system/instance-schema fn?})
+   :system/instance-schema some?})
 
 (system/defcomponents :cash-account
                       {:processor processor
-                       :watcher-handler watcher-handler})
+                       :event-processor event-processor})
 ```
 
 The brick's `interface.clj` bare-requires the system namespace:
@@ -95,16 +95,16 @@ The brick's `interface.clj` bare-requires the system namespace:
 When a brick has two or more clusters of component definitions,
 split them across files in a `system/` folder. The actual
 definitions live in one or more files (typically
-`components.clj`, `watchers.clj`); a `system/core.clj` imports
+`components.clj`, `stores.clj`); a `system/core.clj` imports
 them and makes a single `defcomponents` call aggregating
 everything.
 
 Adapted from `components/fdb/.../system/core.clj`:
 
 ```clojure
-(ns com.repldriven.mono.fdb.system.core
+(ns com.repldriven.queenswood.fdb.system.core
   (:require
-    [com.repldriven.mono.fdb.system.components :as components]
+    [com.repldriven.queenswood.fdb.system.components :as components]
     [com.repldriven.mono.system.interface :as system]))
 
 (system/defcomponents :fdb
@@ -113,8 +113,7 @@ Adapted from `components/fdb/.../system/core.clj`:
                        :record-db         components/record-db
                        :store             components/store
                        :meta-store        components/meta-store
-                       :watcher           components/watcher-component
-                       :watchers          components/watchers-component})
+                       :keyspace-prefix   components/keyspace-prefix})
 ```
 
 Layout:
@@ -246,7 +245,7 @@ functions on it.
 
 The two-pattern split exists because most bricks have one tight
 cluster of definitions (simple), but some have several. The
-`fdb` brick has clusters, stores, and watchers; forcing all
+`fdb` brick has clusters, stores, and keyspaces; forcing all
 that into one file gets unwieldy. Forcing a folder when there's
 one entry is overkill.
 

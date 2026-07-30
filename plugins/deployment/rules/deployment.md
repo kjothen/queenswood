@@ -20,8 +20,11 @@ diverge between them. Never bake an environment name into a resource
 name — discriminate via `values.yaml` overrides and env vars. A
 project MAY carry a service-specific `application.yml`; a service MAY
 set `replicas > 1` if it's HTTP-fronted or a processor that doesn't
-depend on changelog watchers — watchers and websocket-style consumers
-don't horizontally scale without leader election.
+own a changelog cursor. `relay-service` stays at 1 — it owns every
+cursor, and a cursor has exactly one owner; scale that tier by
+sharding stores across deployments. Raising replicas elsewhere buys
+standbys rather than throughput until `message-bus/send` carries a
+partition key and topics have more than one partition.
 See [deployment](../../../docs/recipes/deployment.md).
 
 ## Cloud infrastructure is Crossplane, not Terraform

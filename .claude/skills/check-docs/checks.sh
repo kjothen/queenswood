@@ -15,9 +15,13 @@ cd "$(git rev-parse --show-toplevel 2>/dev/null || pwd)" || exit 1
 #   docs/slides/  — slidev presentations, not prose
 #   docs/plan/    — in-flight implementation plans with
 #                   quoted REPL output / debug transcripts
+#   node_modules/ — vendored dependency docs we don't author;
+#                   without this every check drowns in third-party
+#                   readmes and reports FAIL unconditionally
 DOCS_MD=( $(find docs -type f -name '*.md' \
               -not -path 'docs/slides/*' \
-              -not -path 'docs/plan/*' 2>/dev/null) )
+              -not -path 'docs/plan/*' \
+              -not -path '*/node_modules/*' 2>/dev/null) )
 TOP_MD=( readme.md CLAUDE.md )
 PRD_MD=( $(ls docs/prd/*.md 2>/dev/null) )
 ALL_MD=( "${DOCS_MD[@]}" "${TOP_MD[@]}" )

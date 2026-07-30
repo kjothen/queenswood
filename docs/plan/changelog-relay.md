@@ -105,21 +105,26 @@ applies — a per-rig topic prefix — but it reaches every entry in
 still mono's. Until then, assertions over span or message counts must
 name the event they mean rather than aggregate.
 
-### Docs and lint
+### Docs and lint — done
 
-Deferred wholesale and now the largest debt: 94 "watcher" mentions across
-`docs/tdd/{parties,cash-accounts}.md`,
-`docs/tdd/processor-bricks.md`, `docs/recipes/lifecycle-transitions.md`,
-`docs/recipes/system-components.md`, `docs/recipes/deployment.md` and
-ADR-0019. `parties.md` is worst at 25, including two mermaid diagrams.
-ADR-0008 and ADR-0019 are already updated; only references to deleted files
-were fixed elsewhere.
+ADR-0021 records the relay decision and supersedes ADR-0008, which
+keeps its Context, Decision and Consequences as the record of the
+reasoning. The sweep covered the docs that describe current behaviour:
+ten TDDs (worst were `parties.md` at 25 mentions including two mermaid
+diagrams, `cash-accounts.md` at 20, `processor-bricks.md` at 15), four
+recipes, ADR-0015/0017/0018/0019, CLAUDE.md, and the four
+always-loaded plugin rules. `docs/plan/*` (this file aside) and
+ADR-0008's body are left as historical records.
 
-`.claude/skills/check-processors/checks.sh` and
-`.claude/skills/check-docs/checks.sh` still encode `watcher.clj`. No
-`watcher.clj` remains, so `check-processors`' `watcher-fdb-scope` check
-now passes vacuously — worse than failing. This is the next thing to
-do, and it can be written once, in full.
+Both check scripts turned out to be broken in the same way, and neither
+by the watcher rename. `check-processors` globbed `components/bank-*`
+and looked under `com/repldriven/mono/`, so it found zero bricks and
+exited 0 on every run since the rename; `check-docs` scanned
+`docs/diagrams/tooling/node_modules`, so four of its ten checks failed
+unconditionally on vendored readmes. A check that always passes and a
+check that always fails are the same bug. Both fixed, and
+`check-processors` now asserts that no `watcher.clj` exists rather than
+scoping the `fdb` requires inside one.
 
 ## Rules that cost real time to learn
 
@@ -227,12 +232,10 @@ assuming any component is upstream.
    transaction's read-conflict set and two relays would not conflict — FDB's
    own optimistic concurrency would otherwise make multi-replica relays safe
    without a lease.
-3. Retire `fdb/watcher` and `fdb/watchers`. Phase 4 removed the last
-   `fdb/watchers` declaration, so both are now dead code — and dead code
-   whose loop swallows every exception with no logging (see Context),
-   which is the trap if anything ever wires it again. Upstreaming
-   `components/changelog-relay` to mono is a separate question, and only
-   sensible after that.
+3. Retire `fdb/watcher` and `fdb/watchers` — **done** in #284, along
+   with `party/watcher.clj`, the last declaration that used them.
+   Upstreaming `components/changelog-relay` to mono is a separate
+   question, and now unblocked.
 
 ## Deliberately not built
 

@@ -360,8 +360,8 @@ side too because money has to come from somewhere.
   product-version property; storing it per account loses
   the connection to product changes. The product-version
   cache (60s TTL) handles repeated lookups efficiently.
-- **Interest accrual via the changelog watcher pattern
-  (ADR-0008).** Watchers react to writes; accrual is
+- **Interest accrual via the changelog relay pattern
+  (ADR-0021).** Relayed events react to writes; accrual is
   time-driven, not write-driven. Rejected — wrong tool.
   Accrual is a scheduled batch driven externally (a cron or
   similar) calling the command interface.

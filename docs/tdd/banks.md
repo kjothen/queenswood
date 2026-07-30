@@ -66,7 +66,7 @@ several bricks. Atomic. All-or-nothing.
 ### Architecture
 
 `bank` is the brick. Synchronous interface — no command
-processing, no watchers. The create flow composes other bricks'
+processing, no event consumers. The create flow composes other bricks'
 interfaces inside one FDB transaction; ADR-0002 makes this atomic
 across record stores. The service-account client is created
 *before* the FDB write so an identity-provider failure aborts the
@@ -130,8 +130,10 @@ distinguishes one bank from another is its `status` (test vs
 live, persisted) and its `tier` — and `tier` isn't even stored on
 the record: it is used only at create time to select which
 policies get bound. A `BankChangelog` record (`bank-id`,
-`status-before`, `status-after`) carries status transitions for
-the watcher path.
+`status-before`, `status-after`) carries status transitions on
+the changelog. It is the one store still writing a bespoke
+changelog shape rather than the shared `ChangelogEvent`
+envelope, and nothing relays or consumes it yet.
 
 ### The atomic create flow
 

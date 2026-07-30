@@ -29,12 +29,12 @@ standard instead when a reference is useful. Don't pin a doc to a
 specific count of repo artefacts (ADRs, recipes, bricks) or to a
 relative-time framing ("recently", "as of…") — both age worse than
 the prose around them. In a PRD, use non-technical product language
-— never engineering vocabulary (sync/async, reactive, watcher,
+— never engineering vocabulary (sync/async, reactive, relay,
 handler, primitive) — and never name a specific operation
 (`create-organization`); describe what a user does via "the banking
 API," not the call it makes. Frame a code-quality rule as a
 principle and discipline rather than a mechanical CI gate, and
 acknowledge drift in a recipe's Harder consequences; reserve the
-project's own vocabulary (`changelog watcher`, `brick`,
+project's own vocabulary (`changelog relay`, `brick`,
 `interceptor`) for TDDs and recipes.
 See [writing-docs](../../../docs/recipes/writing-docs.md).

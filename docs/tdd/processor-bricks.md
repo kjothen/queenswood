@@ -15,15 +15,15 @@ describes the file layout inside the component, how FDB
 transactions thread through it, and where rejections originate.
 
 In scope: the internal architecture of a `X` component
-(commands, core, domain, store, watcher); the `txn-or-config`
+(commands, core, domain, store, events); the `txn-or-config`
 parameter convention; the FDB-isolation rule; the rejection
 origin rule.
 
 Out of scope: the command / reply / event envelope flow on the
 message bus — see
 [tdd/transaction-processing.md](transaction-processing.md). The
-changelog mechanics itself — see
-[ADR-0008](../adr/0008-changelog-watchers.md). The
+changelog and relay mechanics themselves — see
+[ADR-0021](../adr/0021-changelog-relay.md). The
 component-interface conventions in general — see
 [recipes/components.md](../recipes/components.md).
 
@@ -65,9 +65,9 @@ components/X/
     core.clj           # orchestration: store + domain + cross-brick
     domain.clj         # pure logic, the rejection origin
     store.clj          # sole FDB layer, all fdb/* requires
-    watcher.clj        # changelog handler (one carve-out for fdb)
+    events.clj         # Processor impl, event dispatch
     validation.clj     # (optional) predicate-style validators
-    system.clj         # defcomponents :processor + :watcher-handler
+    system.clj         # defcomponents :processor + :event-processor
 
 bases/<group>-processors/    # one per processor group
   src/com/repldriven/queenswood/<group>_processors/
@@ -245,7 +245,7 @@ Where rejections must **not** appear:
   returns `nil`; the caller decides whether that's a rejection.
   An idempotency check ("already-exists") belongs in
   `core.clj` after the read, not in the read itself.
-- **`interface.clj`**, **`watcher.clj`**, **`system.clj`** —
+- **`interface.clj`**, **`events.clj`**, **`system.clj`** —
   these have no business deciding rejections at all.
 
 Where the domain needs *fresh, allocation-style* effects (a
@@ -307,37 +307,62 @@ Three things to note:
   needs (here, the payment-address counter) are passed in as
   thunks.
 
-### `watcher.clj` — the changelog escape hatch
+### `events.clj` — reacting to another brick's transition
 
-There is one sanctioned exception to "fdb is required only in
-store.clj": `watcher.clj` requires `fdb` to call `fdb/ctx->txn`.
-
-The changelog harness invokes the watcher's handler with a raw
-FDB `ctx`, not a Txn. `fdb/ctx->txn` adapts that ctx into a Txn
-so the handler can call `store/*` fns normally:
+A brick reacts to another brick's state change by consuming an
+event, not by reading its records. The source store co-commits a
+`ChangelogEvent` envelope to its changelog, the relay tier
+republishes it to the bus, and `events.clj` implements
+`processor/Processor` to handle it — the same protocol
+`commands.clj` implements, on an event channel instead of a
+command channel.
 
 ```clojure
-(defn cash-account-changelog-handler
-  [record-store]
-  (fn [ctx changelog-bytes]
-    (let [changelog (schema/pb->CashAccountChangelog changelog-bytes)
-          {:keys [organization-id account-id status-after]} changelog]
-      (when (#{:cash-account-status-opening :cash-account-status-closing}
-             status-after)
-        (let [txn (fdb/ctx->txn ctx record-store)
-              account (store/find-account txn organization-id account-id)]
-          (when account
-            (let [transitioned (case status-after
-                                 :cash-account-status-opening
-                                 (domain/opened-account account)
-                                 :cash-account-status-closing
-                                 (domain/closed-account account))]
-              (store/save-account txn transitioned {...}))))))))
+(defn- handle-status-changed
+  [config data]
+  (let [{:keys [record-db record-store]} config
+        bank {:record-db record-db :record-store record-store}
+        {:keys [bank-id account-id status-after]} data]
+    (core/complete-status-transition bank
+                                     bank-id
+                                     account-id
+                                     (keyword status-after))))
+
+(defn- dispatch
+  [config message]
+  (let [{:keys [event payload]} message
+        {:keys [schemas]} config
+        schema (get schemas event)]
+    (if-not schema
+      (do (log/warnf "Unknown cash-account event: %s" event) nil)
+      (let-nom> [data (avro/deserialize-same schema payload)]
+        (case event
+          "cash-account-status-changed" (handle-status-changed config data)
+          (do (log/warnf "Unknown cash-account event: %s" event) nil))))))
+
+(defrecord CashAccountEventProcessor [config]
+  processor/Processor
+    (process [_ message] (dispatch config message)))
 ```
 
-`fdb/ctx->txn` is the only `fdb/` symbol that should appear
-outside `store.clj`. The watcher then uses `store/*` and
-`domain/*` exactly as core would.
+Three properties matter here, and all three are why this replaced
+the in-process changelog watcher it grew out of:
+
+- **No `fdb` require.** `events.clj` receives a config map and
+  hands it to `core/*`, which threads it on as `txn-or-config`.
+  FDB stays in `store.clj` with no carve-out.
+- **No shared transaction.** The handler runs on a bus consumer,
+  not inside the transaction that advances a changelog cursor, so
+  it is free to open its own transactions and take as long as it
+  needs.
+- **Silent on redelivery.** Delivery is at-least-once, so the
+  source-status guard in `domain.clj` is the idempotency gate: an
+  event for a transition already applied finds the entity past
+  that state and skips, rather than rejecting.
+
+Wire it with `changelog-relay/event-consumer` rather than mono's
+`event-processor/event-processor` — the latter acks on anomaly, so
+a failed lifecycle transition would be lost instead of redriven.
 
 ### `commands.clj` — message entry point
 
@@ -377,7 +402,7 @@ follows.
 - `:processor` — produces the `CashAccountProcessor` record from
   `commands.clj`, with `:record-db`, `:record-store`, and
   `:schemas` injected as `system/required-component`.
-- `:watcher-handler` — produces the handler from `watcher.clj`,
+- `:event-processor` — produces the Processor from `events.clj`,
   with `:record-store` injected.
 
 The processor base's own `system.clj` is a bare-require bundle
@@ -390,10 +415,11 @@ for the `defcomponents` mechanics.
 
 The three rules that make the architecture hang together:
 
-- **FDB is required only in `store.clj` and `watcher.clj`.** No
+- **FDB is required only in `store.clj`.** No
   other file in the brick may require
-  `com.repldriven.mono.fdb.interface`. The `watcher.clj`
-  carve-out is for `fdb/ctx->txn` exclusively.
+  `com.repldriven.queenswood.fdb.interface`. There is no
+  carve-out: the `watcher.clj` exception this rule used to
+  carry went with the watchers themselves.
 - **Rejections originate in `domain.clj`** (or
   `validation.clj` called from it), with `commands.clj` as a
   sanctioned site for protocol-level rejections (unknown
@@ -401,7 +427,7 @@ The three rules that make the architecture hang together:
   read-derived checks (idempotency, post-read pre-conditions)
   are tolerated on a watch list but should migrate to
   `domain.clj` where the input data alone is enough.
-  `store.clj`, `interface.clj`, `watcher.clj`, and `system.clj`
+  `store.clj`, `interface.clj`, `events.clj`, and `system.clj`
   must not produce rejections. `:error/anomaly` from
   infrastructure faults originates in `store.clj`. Neither is
   raised; both flow up via `let-nom>`.
@@ -417,8 +443,8 @@ The three rules that make the architecture hang together:
   command / reply / event envelope flow on the bus.
 - [ADR-0005](../adr/0005-error-handling-with-anomalies.md) —
   rejection vs error vs failure anomaly categories.
-- [ADR-0008](../adr/0008-changelog-watchers.md) — changelog
-  watcher mechanics that `watcher.clj` plugs into.
+- [ADR-0021](../adr/0021-changelog-relay.md) — the relay
+  mechanics that `events.clj` consumes from.
 - [recipes/components.md](../recipes/components.md) — general
   brick conventions (interface as the doc surface, etc.).
 - [recipes/error-handling.md](../recipes/error-handling.md) —

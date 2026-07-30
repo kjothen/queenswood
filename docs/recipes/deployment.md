@@ -190,7 +190,7 @@ kind node's containerd, then `helm-install`s the chart.
   constraint, but raising their replicas buys standbys
   rather than throughput until `message-bus/send` carries
   a partition key and topics have more than one partition
-  (per ADR-0008).
+  (per ADR-0021).
 
 ## Discussion
 
@@ -256,7 +256,7 @@ in-place updates on edit-the-code aren't possible.
 - [ADR-0007](../adr/0007-system-as-data.md) — system-as-data
   via donut.system + YAML; the same bootstrap path runs
   under Testcontainers, kind, and production.
-- [ADR-0008](../adr/0008-changelog-watchers.md) — the
+- [ADR-0021](../adr/0021-changelog-relay.md) — the
   scaling caveat on changelog cursors.
 - `infra/helm/queenswood/README.md` — chart user guide:
   `helm install`, `kind create`, port-forward, verifying.
