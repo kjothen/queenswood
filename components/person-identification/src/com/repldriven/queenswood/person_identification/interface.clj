@@ -2,8 +2,8 @@
   "Person-identification records — identity-document data
   (given/family/middle names, date of birth, nationality) keyed by
   party-id. Created by bank-party when a person party is registered;
-  consumed by bank-idv's party-watcher to initiate identity
-  verification. The brick exists to break a would-be cycle between
+  read by bank-idv, on a `party-status-changed` event, to seed an
+  identity verification. The brick exists to break a would-be cycle between
   bank-party and bank-idv: both bricks need this data, and it lives
   here so neither has to require the other."
   (:require

@@ -2,7 +2,6 @@
   (:refer-clojure :exclude [name])
   (:require
     [com.repldriven.queenswood.fdb.keyspace :as keyspace]
-    [com.repldriven.queenswood.fdb.watcher :as watcher]
 
     [com.repldriven.mono.error.interface :refer [try-nom]]
     [com.repldriven.mono.log.interface :as log]
@@ -409,37 +408,3 @@
                           [:value {:optional true} [:maybe string?]]
                           [:generate {:optional true} [:maybe boolean?]]]
    :system/instance-schema [:maybe string?]})
-
-;; ---
-;; watcher
-;; ---
-
-(def watcher-component
-  {:system/start (fn [{:system/keys [config instance]}]
-                   (or instance (watcher/start config)))
-   :system/stop
-   (fn [{:system/keys [instance]}] (when instance ((:stop instance))) nil)
-   :system/config {:record-db system/required-component
-                   :consumer-id system/required-component
-                   :store-name system/required-component
-                   :handler system/required-component
-                   :keyspace-prefix nil}
-   :system/instance-schema some?})
-
-;; ---
-;; watchers
-;; ---
-
-(def watchers-component
-  {:system/start
-   (fn [{:system/keys [config instance]}]
-     (or instance (into {} (map (fn [[k v]] [k (watcher/start v)]) config))))
-   :system/stop (fn [{:system/keys [instance]}]
-                  (when (some? instance)
-                    (dorun (map (fn [[k v]]
-                                  (log/info "Stopping watcher:"
-                                            (clojure.core/name k))
-                                  ((:stop v)))
-                                instance))))
-   :system/config system/required-component
-   :system/instance-schema map?})

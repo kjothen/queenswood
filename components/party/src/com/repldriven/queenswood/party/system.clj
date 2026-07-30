@@ -1,7 +1,7 @@
 (ns com.repldriven.queenswood.party.system
   (:require
     [com.repldriven.queenswood.party.commands :as commands]
-    [com.repldriven.queenswood.party.watcher :as watcher]
+    [com.repldriven.queenswood.party.events :as events]
 
     [com.repldriven.mono.system.interface :as system]))
 
@@ -13,12 +13,14 @@
                    :schemas system/required-component}
    :system/instance-schema some?})
 
-(def ^:private watcher-handler
+(def ^:private idv-event-processor
   {:system/start (fn [{:system/keys [config instance]}]
-                   (or instance
-                       (watcher/idv-changelog-handler (:record-store config))))
-   :system/config {:record-store system/required-component}
-   :system/instance-schema fn?})
+                   (or instance (events/->PartyIdvEventProcessor config)))
+   :system/config {:record-db system/required-component
+                   :record-store system/required-component
+                   :schemas system/required-component}
+   :system/instance-schema some?})
 
 (system/defcomponents :party
-                      {:processor processor :watcher-handler watcher-handler})
+                      {:processor processor
+                       :idv-event-processor idv-event-processor})

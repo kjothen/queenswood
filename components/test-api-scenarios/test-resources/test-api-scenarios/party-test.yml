@@ -11,18 +11,17 @@ command-processor: !system/component
   command-channel: !keyword parties-command
   command-response-channel: !keyword parties-command-response
 
-watcher-handler: !system/component
-  system/component-kind: party/watcher-handler
+idv-event-processor-impl: !system/component
+  system/component-kind: party/idv-event-processor
+  record-db: !system/ref fdb.record-db
   record-store: !system/ref fdb.meta-store
+  schemas: !system/ref avro.serde
 
-watchers: !system/component
-  system/component-kind: fdb/watchers
-  idvs:
-    record-db: !system/ref fdb.record-db
-    keyspace-prefix: !system/ref fdb.keyspace-prefix
-    consumer-id: parties-watcher
-    store-name: idvs
-    handler: !system/local-ref watcher-handler
+idv-event-consumer: !system/component
+  system/component-kind: changelog-relay/event-consumer
+  bus: !system/ref message-bus.bus
+  processor: !system/local-ref idv-event-processor-impl
+  event-channel: !keyword idvs-event
 
 dispatcher: !system/component
   system/component-kind: command/dispatcher

@@ -1,5 +1,7 @@
 (ns com.repldriven.queenswood.idv.store
   (:require
+    [com.repldriven.queenswood.idv.changelog :as changelog]
+
     [com.repldriven.queenswood.fdb.interface :as fdb]
     [com.repldriven.queenswood.schema.interface :as schema]
 
@@ -22,7 +24,7 @@
              txn
              store-name
              (:verification-id idv)
-             (schema/IdvChangelog->pb
+             (changelog/status-changed
               (assoc changelog
                      :bank-id (:bank-id idv)
                      :party-id (:party-id idv))))]

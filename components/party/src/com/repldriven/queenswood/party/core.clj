@@ -71,6 +71,30 @@
                        "Identification rejected for this party")
          result)))))
 
+(def ^:private idv-status->transition
+  {:idv-status-accepted domain/activate-party
+   :idv-status-rejected domain/reject-party})
+
+(defn apply-idv-status
+  "Advance a pending party to match the outcome of its identity
+  verification. Statuses that are not terminal for the party, and
+  parties that have already left pending, are no-ops — event
+  redelivery and replay must not reject here."
+  [txn bank-id party-id idv-status]
+  (when-let [transition (idv-status->transition idv-status)]
+    (store/transact
+     txn
+     (fn [txn]
+       (let-nom> [party (q/get-party txn bank-id party-id)]
+         (when (= :party-status-pending (:status party))
+           (let [updated (transition party)]
+             (store/save-party txn
+                               updated
+                               {:bank-id bank-id
+                                :party-id party-id
+                                :status-before (:status party)
+                                :status-after (:status updated)}))))))))
+
 (defn- has-open-accounts?
   [txn bank-id party-id]
   (let-nom> [accounts

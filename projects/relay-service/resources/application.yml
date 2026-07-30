@@ -21,6 +21,13 @@ system:
           bootstrap.servers: !env KAFKA_BOOTSTRAP_SERVERS
           topic: topic-idv-event
           acks: all
+      idvs-event:
+        schemas: !system/local-ref schemas
+        schema: !keyword event
+        conf:
+          bootstrap.servers: !env KAFKA_BOOTSTRAP_SERVERS
+          topic: topic-idvs-event
+          acks: all
       parties-event:
         schemas: !system/local-ref schemas
         schema: !keyword event
@@ -41,6 +48,8 @@ system:
         producer: !system/local-ref producers.cash-accounts-event
       idv-event:
         producer: !system/local-ref producers.idv-event
+      idvs-event:
+        producer: !system/local-ref producers.idvs-event
       parties-event:
         producer: !system/local-ref producers.parties-event
       schemes-payments-event:
@@ -66,6 +75,11 @@ system:
       bus: !system/ref message-bus.bus
       event-channel: !keyword idv-event
       store-name: onfido-outbox
+    idvs-handler: !system/component
+      system/component-kind: changelog-relay/envelope-handler
+      bus: !system/ref message-bus.bus
+      event-channel: !keyword idvs-event
+      store-name: idvs
     parties-handler: !system/component
       system/component-kind: changelog-relay/envelope-handler
       bus: !system/ref message-bus.bus
@@ -95,6 +109,12 @@ system:
         consumer-id: clearbank-relay
         store-name: clearbank-outbox
         handler: !system/local-ref schemes-payments-handler
+      idvs:
+        record-db: !system/ref fdb.record-db
+        keyspace-prefix: !system/ref fdb.keyspace-prefix
+        consumer-id: parties-watcher
+        store-name: idvs
+        handler: !system/local-ref idvs-handler
       onfido-outbox:
         record-db: !system/ref fdb.record-db
         keyspace-prefix: !system/ref fdb.keyspace-prefix

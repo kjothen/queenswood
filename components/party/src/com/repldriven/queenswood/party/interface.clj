@@ -2,8 +2,9 @@
   "Party write side: create parties (people, organisations, internal
   entities) and their linked data (person identification, national
   identifier). Person parties start pending and transition to active
-  when an IDV result lands on the changelog watcher; `seed-active-party`
-  is an admin/test shortcut that bypasses it.
+  when an IDV result reaches this brick as an `idv-status-changed`
+  event; `seed-active-party` is an admin/test shortcut that bypasses
+  it.
 
   Reads live in `bank-party-query`; this brick reuses them inside its
   own transactions. `bank-api` requires the query brick, not this one —
@@ -41,7 +42,7 @@
 
 (defn merge-party
   "Merge a suspended party into an active survivor. Direct,
-  single-phase flip, no watcher leg — the merged-away party's
+  single-phase flip, no reactive leg — the merged-away party's
   status flips to `:party-status-merged` and records
   `:merged-into-party-id`. IDV/KYC and other party-linked records
   stay on the original party-id; cross-domain re-pointing (e.g.
@@ -62,7 +63,7 @@
 
 (defn seed-active-party
   "Activate a pending party by writing the status transition
-  directly, bypassing the IDV → changelog-watcher path that
+  directly, bypassing the IDV → changelog → event path that
   activates parties in production. Test/admin shim retained while
   harnesses can't drive a real IDV flow.
 

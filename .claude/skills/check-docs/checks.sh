@@ -92,7 +92,7 @@ report 'competitor-names' "$out"
 # 8. PRD-only: engineering vocabulary.
 section 'PRD-specific: engineering vocabulary'
 if [ ${#PRD_MD[@]} -gt 0 ]; then
-  out=$(grep -nwE 'synchronous|asynchronous|reactive|primitive|watcher|handler|idempotent|deterministic|choreography|saga|orchestrator|changelog|brick' "${PRD_MD[@]}" 2>/dev/null)
+  out=$(grep -nwE 'synchronous|asynchronous|reactive|primitive|watcher|relay|handler|idempotent|deterministic|choreography|saga|orchestrator|changelog|brick' "${PRD_MD[@]}" 2>/dev/null)
   report 'prd-engineering-vocab' "$out"
 else
   echo 'PASS — prd-engineering-vocab (no PRDs found)'

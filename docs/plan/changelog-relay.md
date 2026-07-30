@@ -51,24 +51,32 @@ reads it. The real problems are different:
   masquerade as an envelope. The handler skips-and-logs rather than
   throwing, so such an entry cannot wedge the cursor behind it.
 
+- **Phase 4** — store `idvs`, consumer `party`. The mechanical twin,
+  and the last watcher. `party/watcher.clj` is gone: its
+  `idv-status->party-transition` map and its
+  `(= :party-status-pending (:status party))` gate are now
+  `party/core.clj`'s `apply-idv-status`, driven by a
+  `party/events.clj` Processor on an `idvs-event` channel.
+  `idv/changelog.clj` writes the envelope carrying a new
+  `idv-status-changed` Avro event; its `causation-id` is the
+  *party* id, not the verification id, because the party is what the
+  consumer advances and so what the future partition key has to keep
+  in sequence. The idvs cursor keeps `consumer-id: parties-watcher`.
+
+  Same cutover story as Phase 3, and for the same reason:
+  `IdvChangelog` put enum fields at 2 and 3 where `ChangelogEvent`
+  has length-delimited strings, so an old entry cannot masquerade as
+  an envelope.
+
+  The retired changelog protos went with it — `CashAccountChangelog`,
+  `PartyChangelog`, `IdvChangelog` and their `schema/interface.clj`
+  exports all had no writer or reader left. `BankChangelog` stays:
+  `bank/store.clj` still writes it, and no relay reads it yet.
+
 ## Remaining
 
 The migration unit is one **store**, not one brick: a store's changelog
 format change must land atomically with whichever brick consumes it.
-
-### Phase 4 — store `idvs`, consumer `party`
-
-The mechanical twin, and the last watcher. `party/watcher.clj`'s
-`idv-status->party-transition` map and its
-`(= :party-status-pending (:status party))` gate move to
-`party/core.clj`, driven by a `party/events.clj` Processor on an
-`idvs-event` channel. `consumer-id: parties-watcher`. Delete
-`party/watcher.clj`.
-
-Once it lands, the retired changelog protos —
-`CashAccountChangelog`, `PartyChangelog`, `IdvChangelog`, and their
-`schema/interface.clj` exports — have no writer or reader left and
-should go in one sweep.
 
 ### Phase 5 — converge the adapters — done
 
@@ -108,9 +116,10 @@ ADR-0008 and ADR-0019 are already updated; only references to deleted files
 were fixed elsewhere.
 
 `.claude/skills/check-processors/checks.sh` and
-`.claude/skills/check-docs/checks.sh` still encode `watcher.clj`. Once the
-last watcher goes, `check-processors`' `watcher-fdb-scope` check passes
-vacuously — worse than failing. Best written once, after Phase 4.
+`.claude/skills/check-docs/checks.sh` still encode `watcher.clj`. No
+`watcher.clj` remains, so `check-processors`' `watcher-fdb-scope` check
+now passes vacuously — worse than failing. This is the next thing to
+do, and it can be written once, in full.
 
 ## Rules that cost real time to learn
 
@@ -212,13 +221,12 @@ assuming any component is upstream.
    transaction's read-conflict set and two relays would not conflict — FDB's
    own optimistic concurrency would otherwise make multi-replica relays safe
    without a lease.
-3. `fdb/watcher.clj`'s loop swallows every exception with no logging (see
-   Context). `changelog-relay/runner` already logs and redrives; the
-   watcher it replaces does not, and still runs the `idvs` cursor until
-   Phase 4 lands.
-4. Retire `fdb/watcher` and `fdb/watchers` once Phase 4 removes the last
-   watcher. Upstreaming `components/changelog-relay` to mono is a separate
-   question, and only sensible after that.
+3. Retire `fdb/watcher` and `fdb/watchers`. Phase 4 removed the last
+   `fdb/watchers` declaration, so both are now dead code — and dead code
+   whose loop swallows every exception with no logging (see Context),
+   which is the trap if anything ever wires it again. Upstreaming
+   `components/changelog-relay` to mono is a separate question, and only
+   sensible after that.
 
 ## Deliberately not built
 

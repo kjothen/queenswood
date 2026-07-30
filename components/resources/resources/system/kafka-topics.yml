@@ -32,6 +32,10 @@
     partitions: 1
   - topic: topic-idv-event
     partitions: 1
+  - topic: topic-idvs-event
+    partitions: 1
+  - topic: topic-idvs-event-dlq
+    partitions: 1
   - topic: topic-interest-command
     partitions: 1
   - topic: topic-interest-command-dlq
