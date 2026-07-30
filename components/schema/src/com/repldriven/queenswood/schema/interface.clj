@@ -39,12 +39,10 @@
      CashAccountProductProto$CashAccountProductTemplate
      CashAccountProductProto$IsoCashAccountType)
     (com.repldriven.queenswood.schemas.cash_accounts
-     CashAccountProto$CashAccount
-     CashAccountChangelogProto$CashAccountChangelog)
+     CashAccountProto$CashAccount)
     (com.repldriven.queenswood.schemas.company CompanyProto$Company)
     (com.repldriven.queenswood.schemas.idempotency IdempotencyProto$Idempotency)
-    (com.repldriven.queenswood.schemas.idv IdvProto$Idv
-                                           IdvChangelogProto$IdvChangelog)
+    (com.repldriven.queenswood.schemas.idv IdvProto$Idv)
     (com.repldriven.queenswood.schemas.interest
      InterestRunProto$InterestRun)
     (com.repldriven.queenswood.schemas.ledger_accounts
@@ -58,7 +56,6 @@
      BankChangelogProto$BankChangelog)
     (com.repldriven.queenswood.schemas.party
      PartyProto$Party
-     PartyChangelogProto$PartyChangelog
      PartyNationalIdentifierProto$PartyNationalIdentifier)
     (com.repldriven.queenswood.schemas.person_identification
      PersonIdentificationProto$PersonIdentification)
@@ -509,72 +506,6 @@
   - m: LedgerAccount map matching the generated schema."
   [m]
   (LedgerAccountProto$LedgerAccount/parseFrom (LedgerAccount->pb m)))
-
-(def ^{:doc "Parse CashAccountChangelog protobuf bytes into a
-  Clojure map."}
-     pb->CashAccountChangelog
-  cash-accounts/pb->CashAccountChangelog)
-
-(defn CashAccountChangelog->pb
-  "Serialise a CashAccountChangelog map to protobuf bytes.
-
-  Args:
-  - m: CashAccountChangelog map matching the generated schema."
-  [m]
-  (proto/->pb (cash-accounts/new-CashAccountChangelog m)))
-
-(defn CashAccountChangelog->java
-  "Parse a CashAccountChangelog map into the generated Java
-  protobuf class.
-
-  Args:
-  - m: CashAccountChangelog map matching the generated schema."
-  [m]
-  (CashAccountChangelogProto$CashAccountChangelog/parseFrom
-   (CashAccountChangelog->pb m)))
-
-(def ^{:doc "Parse PartyChangelog protobuf bytes into a Clojure
-  map."}
-     pb->PartyChangelog
-  party/pb->PartyChangelog)
-
-(defn PartyChangelog->pb
-  "Serialise a PartyChangelog map to protobuf bytes.
-
-  Args:
-  - m: PartyChangelog map matching the generated schema."
-  [m]
-  (proto/->pb (party/new-PartyChangelog m)))
-
-(defn PartyChangelog->java
-  "Parse a PartyChangelog map into the generated Java protobuf
-  class.
-
-  Args:
-  - m: PartyChangelog map matching the generated schema."
-  [m]
-  (PartyChangelogProto$PartyChangelog/parseFrom (PartyChangelog->pb m)))
-
-(def ^{:doc "Parse IdvChangelog protobuf bytes into a Clojure map."}
-     pb->IdvChangelog
-  idv/pb->IdvChangelog)
-
-(defn IdvChangelog->pb
-  "Serialise an IdvChangelog map to protobuf bytes.
-
-  Args:
-  - m: IdvChangelog map matching the generated schema."
-  [m]
-  (proto/->pb (idv/new-IdvChangelog m)))
-
-(defn IdvChangelog->java
-  "Parse an IdvChangelog map into the generated Java protobuf
-  class.
-
-  Args:
-  - m: IdvChangelog map matching the generated schema."
-  [m]
-  (IdvChangelogProto$IdvChangelog/parseFrom (IdvChangelog->pb m)))
 
 (def ^{:doc "Parse InboundPayment protobuf bytes into a Clojure
   map."}

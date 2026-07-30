@@ -68,6 +68,11 @@ system:
           bootstrap.servers: !env KAFKA_BOOTSTRAP_SERVERS
           topic: topic-cash-accounts-event-dlq
           acks: all
+      idvs-event-dlq:
+        conf:
+          bootstrap.servers: !env KAFKA_BOOTSTRAP_SERVERS
+          topic: topic-idvs-event-dlq
+          acks: all
       parties-event-dlq:
         conf:
           bootstrap.servers: !env KAFKA_BOOTSTRAP_SERVERS
@@ -136,6 +141,15 @@ system:
         conf:
           bootstrap.servers: !env KAFKA_BOOTSTRAP_SERVERS
           group.id: idv-service-parties-event
+      idvs-event:
+        schemas: !system/local-ref schemas
+        schema: !keyword event
+        topics: [topic-idvs-event]
+        dead-letter-producer: !system/local-ref producers.idvs-event-dlq
+        max-redeliveries: 5
+        conf:
+          bootstrap.servers: !env KAFKA_BOOTSTRAP_SERVERS
+          group.id: party-service-idvs-event
     message-bus-producers: !system/component
       system/component-kind: kafka/message-bus-producers
       banks-command-response:
@@ -170,6 +184,9 @@ system:
         timeout: 500
       parties-event:
         consumer: !system/local-ref consumers.parties-event
+        timeout: 500
+      idvs-event:
+        consumer: !system/local-ref consumers.idvs-event
         timeout: 500
   message-bus: !include system/message-bus.yml
   fdb: !include system/fdb.yml

@@ -1,8 +1,8 @@
 # Slim wiring for the scenario rig. Verbs call `party/new-party`
 # directly via the brick interface, so the dispatcher/command-processor
 # pair from `system/party-test.yml` (which would need parties-command
-# channels on the bus) is omitted. Only the IDV-driven activation
-# watcher is needed.
+# channels on the bus) is omitted. Only the IDV-driven activation leg
+# is needed.
 
 processor: !system/component
   system/component-kind: party/processor
@@ -10,15 +10,14 @@ processor: !system/component
   record-store: !system/ref fdb.meta-store
   schemas: !system/ref avro.serde
 
-watcher-handler: !system/component
-  system/component-kind: party/watcher-handler
+idv-event-processor-impl: !system/component
+  system/component-kind: party/idv-event-processor
+  record-db: !system/ref fdb.record-db
   record-store: !system/ref fdb.meta-store
+  schemas: !system/ref avro.serde
 
-watchers: !system/component
-  system/component-kind: fdb/watchers
-  idvs:
-    record-db: !system/ref fdb.record-db
-    keyspace-prefix: !system/ref fdb.keyspace-prefix
-    consumer-id: parties-watcher
-    store-name: idvs
-    handler: !system/local-ref watcher-handler
+idv-event-consumer: !system/component
+  system/component-kind: changelog-relay/event-consumer
+  bus: !system/ref message-bus.bus
+  processor: !system/local-ref idv-event-processor-impl
+  event-channel: !keyword idvs-event

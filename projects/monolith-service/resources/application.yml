@@ -31,6 +31,7 @@ system:
         - companies-command
         - companies-command-response
         - idv-event
+        - idvs-event
         - payee-checks-command
         - payee-checks-command-response
   fdb: !include system/fdb.yml
@@ -52,6 +53,7 @@ system:
   cash-accounts-dispatcher: !include system/cash-account-dispatcher.yml
   cash-accounts-relay: !include system/cash-account-relay.yml
   companies-dispatcher: !include system/company-dispatcher.yml
+  idvs-relay: !include system/idv-relay.yml
   interest-dispatcher: !include system/interest-dispatcher.yml
   parties-dispatcher: !include system/party-dispatcher.yml
   parties-relay: !include system/party-relay.yml

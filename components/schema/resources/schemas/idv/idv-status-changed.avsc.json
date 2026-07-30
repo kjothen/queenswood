@@ -1,0 +1,12 @@
+{
+  "type": "record",
+  "name": "IdvStatusChanged",
+  "namespace": "com.repldriven.mono.idv",
+  "fields": [
+    {"name": "bank_id",         "type": "string"},
+    {"name": "verification_id", "type": "string"},
+    {"name": "party_id",        "type": "string"},
+    {"name": "status_before",   "type": ["null", "string"], "default": null},
+    {"name": "status_after",    "type": "string"}
+  ]
+}

@@ -141,7 +141,7 @@ decisions in between:
   parties, products, accounts, payments, interest).
 - **[docs/adr/](docs/adr/)** — architecture decision records
   (mono fork, FoundationDB, message-bus abstraction, Avro,
-  anomalies, kebab-case keys, system-as-data, changelog watchers,
+  anomalies, kebab-case keys, system-as-data, changelog relay,
   model-equality testing, code generation via prep-lib,
   one-component-per-library, pre-commit hooks, single unified
   API, OpenAPI 3.x compliance, comments and docstrings).

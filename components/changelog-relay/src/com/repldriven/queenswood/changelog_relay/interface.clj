@@ -13,11 +13,10 @@
   and the entry is redriven on the next poll; downstream consumers
   de-duplicate.
 
-  Unlike mono's `fdb/watchers`, the runner passes
-  `{:deduplicate? false}`, so every changelog entry is relayed rather
-  than only the latest per record-id. A relay carries transitions, and
-  collapsing two transitions inside one poll window would drop an
-  event.
+  The runner passes `{:deduplicate? false}`, so every changelog entry
+  is relayed rather than only the latest per record-id. A relay carries
+  transitions, and collapsing two transitions inside one poll window
+  would drop an event.
 
   A cursor has exactly one owner. Run the hosting service at
   `replicas: 1`; scale the relay tier by sharding stores across
@@ -40,7 +39,7 @@
     `:handler` (a 2-arity fn of `[ctx changelog-bytes]`), and an
     optional `:poll-ms` (default 100).
 
-  Reuse an existing `:consumer-id` when replacing a watcher — a fresh
+  Reuse an existing `:consumer-id` when taking over a cursor — a fresh
   one starts from no checkpoint and would scan the store's entire
   changelog history in a single FDB transaction."
   [config]

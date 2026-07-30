@@ -3,13 +3,13 @@
 # Sources the invariants in docs/tdd/processor-bricks.md.
 # Prints PASS/FAIL per check; FAIL includes file:line refs.
 #
-# A "processor brick" is any components/bank-X with both
-# commands.clj and store.clj.
+# A "processor brick" is any components/X with both commands.clj
+# and store.clj.
 #
-#   bash checks.sh                       # branch scope (default)
-#   bash checks.sh --staged              # bricks with staged changes
-#   bash checks.sh --all                 # every processor brick
-#   bash checks.sh bank-cash-account ... # explicit brick names
+#   bash checks.sh                  # branch scope (default)
+#   bash checks.sh --staged         # bricks with staged changes
+#   bash checks.sh --all            # every processor brick
+#   bash checks.sh cash-account ... # explicit brick names
 
 cd "$(git rev-parse --show-toplevel 2>/dev/null || pwd)" || exit 1
 
@@ -36,12 +36,12 @@ is_processor() {
   local b="$1"
   local bu
   bu=$(printf '%s' "$b" | tr - _)
-  [ -f "components/$b/src/com/repldriven/mono/$bu/commands.clj" ] \
-    && [ -f "components/$b/src/com/repldriven/mono/$bu/store.clj" ]
+  [ -f "components/$b/src/com/repldriven/queenswood/$bu/commands.clj" ] \
+    && [ -f "components/$b/src/com/repldriven/queenswood/$bu/store.clj" ]
 }
 
 all_processors() {
-  for d in components/bank-*; do
+  for d in components/*; do
     [ -d "$d" ] || continue
     local b
     b=$(basename "$d")
@@ -82,7 +82,7 @@ case "$scope" in
     TOUCHED=()
     for f in "${CHANGED[@]}"; do
       case "$f" in
-        components/bank-*/*)
+        components/*/*)
           b=$(printf '%s' "$f" | awk -F/ '{print $2}')
           TOUCHED+=("$b")
           ;;
@@ -110,14 +110,14 @@ printf 'Scope: %s — %d brick(s): %s\n' \
 ALL_BRICK_FILES=()
 DOMAIN_FILES=()
 STORE_FILES=()
-WATCHER_FILES=()
-NON_STORE_OR_WATCHER=()
-REJECTION_FORBIDDEN=()  # store / interface / watcher / system
+WATCHER_FILES=()        # must stay empty — the relay replaced watchers
+NON_STORE=()
+REJECTION_FORBIDDEN=()  # store / interface / events / system
 REJECTION_ADVISORY=()   # core
 
 for b in "${PROCESSORS[@]}"; do
   bu=$(printf '%s' "$b" | tr - _)
-  src="components/$b/src/com/repldriven/mono/$bu"
+  src="components/$b/src/com/repldriven/queenswood/$bu"
   [ -d "$src" ] || continue
   for f in "$src"/*.clj; do
     [ -f "$f" ] || continue
@@ -128,11 +128,11 @@ for b in "${PROCESSORS[@]}"; do
       */watcher.clj) WATCHER_FILES+=("$f") ;;
     esac
     case "$f" in
-      */store.clj|*/watcher.clj) ;;
-      *) NON_STORE_OR_WATCHER+=("$f") ;;
+      */store.clj) ;;
+      *) NON_STORE+=("$f") ;;
     esac
     case "$f" in
-      */store.clj|*/interface.clj|*/watcher.clj|*/system.clj)
+      */store.clj|*/interface.clj|*/events.clj|*/system.clj)
         REJECTION_FORBIDDEN+=("$f") ;;
       */core.clj)
         REJECTION_ADVISORY+=("$f") ;;
@@ -157,38 +157,38 @@ report() {
 
 # --- Checks --------------------------------------------------------------
 
-# 1. fdb required outside store.clj / watcher.clj.
-section 'fdb required outside store.clj and watcher.clj'
+# 1. fdb required outside store.clj.
+section 'fdb required outside store.clj'
 out=""
-if [ ${#NON_STORE_OR_WATCHER[@]} -gt 0 ]; then
-  out=$(grep -nE 'com\.repldriven\.mono\.fdb\.interface' \
-          "${NON_STORE_OR_WATCHER[@]}" 2>/dev/null)
+if [ ${#NON_STORE[@]} -gt 0 ]; then
+  out=$(grep -nE 'com\.repldriven\.queenswood\.fdb\.interface' \
+          "${NON_STORE[@]}" 2>/dev/null)
 fi
 report 'fdb-leak' "$out"
 
-# 2. watcher.clj using fdb beyond fdb/ctx->txn.
-section 'watcher.clj fdb scope (only fdb/ctx->txn allowed)'
+# 2. watcher.clj at all. Reactive work reaches a brick as an event
+# off the changelog relay, handled in events.clj — a watcher would run
+# domain work inside the changelog checkpoint transaction again.
+section 'watcher.clj in a processor brick'
 out=""
 if [ ${#WATCHER_FILES[@]} -gt 0 ]; then
-  out=$(grep -onE '\bfdb/[a-zA-Z][a-zA-Z0-9_!?*<>=+/.-]*' \
-          "${WATCHER_FILES[@]}" 2>/dev/null \
-          | grep -vE ':fdb/ctx->txn$')
+  out=$(printf '%s\n' "${WATCHER_FILES[@]}")
 fi
-report 'watcher-fdb-scope' "$out"
+report 'watcher-present' "$out"
 
-# 3. domain.clj requiring fdb / bank-schema / its brick's own store.
-section 'domain.clj requiring fdb / bank-schema / store'
+# 3. domain.clj requiring fdb / schema / its brick's own store.
+section 'domain.clj requiring fdb / schema / store'
 out=""
 if [ ${#DOMAIN_FILES[@]} -gt 0 ]; then
   out=$(grep -nE \
-          'com\.repldriven\.mono\.(fdb\.interface|bank-schema\.interface|bank-[a-z0-9-]+\.store)' \
+          'com\.repldriven\.queenswood\.([a-z0-9-]+\.store|(fdb|schema)\.interface)' \
           "${DOMAIN_FILES[@]}" 2>/dev/null)
 fi
 report 'domain-impurity' "$out"
 
-# 4. error/reject in store / interface / watcher / system — hard fail.
+# 4. error/reject in store / interface / events / system — hard fail.
 # commands.clj, domain.clj, validation.clj are sanctioned and not scanned.
-section 'error/reject in store / interface / watcher / system'
+section 'error/reject in store / interface / events / system'
 out=""
 if [ ${#REJECTION_FORBIDDEN[@]} -gt 0 ]; then
   out=$(grep -nE '\berror/reject\b' \

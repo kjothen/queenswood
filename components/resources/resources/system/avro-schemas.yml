@@ -29,6 +29,7 @@ initiate-idv: schemas/idv/initiate-idv.avsc.json
 get-idv: schemas/idv/get-idv.avsc.json
 submit-idv-check: schemas/idv/submit-idv-check.avsc.json
 idv-completed: schemas/idv/idv-completed.avsc.json
+idv-status-changed: schemas/idv/idv-status-changed.avsc.json
 
 payee-check: schemas/payee-check/payee-check.avsc.json
 check-payee: schemas/payee-check/check-payee.avsc.json

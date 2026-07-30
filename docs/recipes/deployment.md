@@ -257,7 +257,7 @@ in-place updates on edit-the-code aren't possible.
   via donut.system + YAML; the same bootstrap path runs
   under Testcontainers, kind, and production.
 - [ADR-0008](../adr/0008-changelog-watchers.md) — the
-  scaling caveat on changelog watchers.
+  scaling caveat on changelog cursors.
 - `infra/helm/queenswood/README.md` — chart user guide:
   `helm install`, `kind create`, port-forward, verifying.
 - `infra/docker/service/Dockerfile` — the shared service

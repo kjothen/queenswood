@@ -149,6 +149,14 @@ producers: !system/component
       bootstrap.servers: !system/local-ref bootstrap-servers
       topic: topic-idv-event
       acks: all
+  idvs-event:
+    _: !system/local-ref topics
+    schemas: !system/local-ref schemas
+    schema: !keyword event
+    conf:
+      bootstrap.servers: !system/local-ref bootstrap-servers
+      topic: topic-idvs-event
+      acks: all
   interest-command:
     _: !system/local-ref topics
     schemas: !system/local-ref schemas
@@ -404,6 +412,14 @@ consumers: !system/component
     conf:
       bootstrap.servers: !system/local-ref bootstrap-servers
       group.id: test-idv-event
+  idvs-event:
+    _: !system/local-ref topics
+    schemas: !system/local-ref schemas
+    schema: !keyword event
+    topics: [topic-idvs-event]
+    conf:
+      bootstrap.servers: !system/local-ref bootstrap-servers
+      group.id: test-idvs-event
   interest-command:
     _: !system/local-ref topics
     schemas: !system/local-ref schemas
@@ -555,6 +571,8 @@ message-bus-producers: !system/component
     producer: !system/local-ref producers.idv-command-response
   idv-event:
     producer: !system/local-ref producers.idv-event
+  idvs-event:
+    producer: !system/local-ref producers.idvs-event
   interest-command:
     producer: !system/local-ref producers.interest-command
   interest-command-response:
@@ -621,6 +639,9 @@ message-bus-consumers: !system/component
     timeout: 500
   idv-event:
     consumer: !system/local-ref consumers.idv-event
+    timeout: 500
+  idvs-event:
+    consumer: !system/local-ref consumers.idvs-event
     timeout: 500
   interest-command:
     consumer: !system/local-ref consumers.interest-command

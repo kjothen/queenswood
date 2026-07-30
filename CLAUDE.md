@@ -49,9 +49,9 @@ those in full before non-trivial work on their topic.
   resource components without baking environment names in.
   See [recipes/system-components.md](docs/recipes/system-components.md)
   and [ADR-0007](docs/adr/0007-system-as-data.md).
-- **Brick boundaries** — bricks react via changelog watchers
-  rather than orchestrating across each other; `bank-api` stays
-  ignorant of cross-brick effects.
+- **Brick boundaries** — bricks react to events relayed off
+  each other's changelogs rather than orchestrating across each
+  other; `bank-api` stays ignorant of cross-brick effects.
   See [ADR-0008](docs/adr/0008-changelog-watchers.md) and
   [recipes/components.md](docs/recipes/components.md).
 - **Transactional guarantees** — the line between work inside FDB
@@ -65,7 +65,7 @@ those in full before non-trivial work on their topic.
   [ADR-0008](docs/adr/0008-changelog-watchers.md).
 - **Processor bricks** — paired `bank-X-processor` base and
   `bank-X` component (commands / core / domain / store /
-  watcher), the `txn-or-config` threading convention, FDB
+  events), the `txn-or-config` threading convention, FDB
   confined to `store.clj`, rejections originating in
   `domain.clj`.
   See [tdd/processor-bricks.md](docs/tdd/processor-bricks.md).
@@ -84,8 +84,8 @@ those in full before non-trivial work on their topic.
   [ADR-0014](docs/adr/0014-openapi-3x-compliance.md).
 - **Lifecycle transitions** — the ten-point definition-of-done for
   a new entity state or transition, source-state guards in
-  `domain.clj` (`:<entity>/invalid-status`, HTTP 409), and watcher
-  guards as an idempotency gate rather than a rejection.
+  `domain.clj` (`:<entity>/invalid-status`, HTTP 409), and event-
+  handler guards as an idempotency gate rather than a rejection.
   See [recipes/lifecycle-transitions.md](docs/recipes/lifecycle-transitions.md)
   and [ADR-0008](docs/adr/0008-changelog-watchers.md).
 
