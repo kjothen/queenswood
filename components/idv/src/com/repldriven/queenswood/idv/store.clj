@@ -19,7 +19,7 @@
        (let-nom>
          [_ (fdb/save-record store (schema/Idv->java idv))
           _ (fdb/write-changelog
-             store
+             txn
              store-name
              (:verification-id idv)
              (schema/IdvChangelog->pb

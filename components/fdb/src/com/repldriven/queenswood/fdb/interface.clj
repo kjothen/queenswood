@@ -99,8 +99,16 @@
 (defn scan-records [store opts] (scan/scan store opts))
 
 (defn write-changelog
-  [store store-name record-id changelog-bytes]
-  (changelog/write store store-name record-id changelog-bytes))
+  "Writes a changelog entry for record-id in store-name. Takes the Txn
+  rather than an opened store so the keyspace prefix travels with it;
+  the store open is memoised for the transaction, so naming it here
+  costs nothing."
+  [txn store-name record-id changelog-bytes]
+  (changelog/write (record/open txn store-name)
+                   (:prefix txn)
+                   store-name
+                   record-id
+                   changelog-bytes))
 
 (defn process-changelog
   ([record-db consumer-id store-name handler]
@@ -109,8 +117,13 @@
    (changelog/process record-db consumer-id store-name handler opts)))
 
 (defn allocate-counter
-  [store & key-parts]
-  (apply counter/allocate store key-parts))
+  "Allocates the next value of the counter at key-parts within
+  store-name. Takes the Txn for the same reason as write-changelog."
+  [txn store-name & key-parts]
+  (apply counter/allocate
+         (record/open txn store-name)
+         (:prefix txn)
+         key-parts))
 
 (defn transact
   "Runs f within a transaction. f receives a Txn. Given an
@@ -132,14 +145,17 @@
   called from within a handler that owns its own ctx
   (e.g. a changelog watcher). open-store-fn takes
   [ctx store-name] and returns an opened FDBRecordStore;
-  opens are memoised for the life of the Txn."
+  opens are memoised for the life of the Txn. The keyspace prefix
+  comes off open-store-fn's metadata, so a handler that owns its own
+  ctx still writes into its system's keyspace."
   [ctx open-store-fn]
   (let [cache (atom {})]
     (record/->Txn (fn [store-name]
                     (or (get @cache store-name)
                         (let [s (open-store-fn ctx store-name)]
                           (swap! cache assoc store-name s)
-                          s))))))
+                          s)))
+                  (:keyspace-prefix (meta open-store-fn)))))
 
 (def txn? check/txn?)
 

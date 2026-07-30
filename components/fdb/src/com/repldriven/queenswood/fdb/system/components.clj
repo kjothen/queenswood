@@ -7,6 +7,7 @@
     [com.repldriven.mono.error.interface :refer [try-nom]]
     [com.repldriven.mono.log.interface :as log]
     [com.repldriven.mono.system.interface :as system]
+    [com.repldriven.mono.utility.interface :as utility]
 
     [clojure.string :as str])
   (:import
@@ -245,26 +246,40 @@
     (.build builder)))
 
 (def store
-  {:system/start (fn [{:system/keys [config instance]}]
-                   (or instance
-                       (let [{:keys [descriptor record-types]} config
-                             meta (build-meta-data descriptor record-types)
-                             store-names (set (keys record-types))]
-                         (fn [ctx store-name]
-                           (when-not (store-names store-name)
-                             ;; nosemgrep: no-raw-throw
-                             (throw (ex-info "Unknown record store"
-                                             {:store store-name})))
-                           (-> (FDBRecordStore/newBuilder)
-                               (.setMetaDataProvider meta)
-                               (.setContext ctx)
-                               (.setKeySpacePath (keyspace/path store-name))
-                               .createOrOpen)))))
+  {:system/start
+   (fn [{:system/keys [config instance]}]
+     (or instance
+         (let [{:keys [descriptor record-types keyspace-prefix]} config
+               meta (build-meta-data descriptor record-types)
+               store-names (set (keys record-types))]
+           ;; The prefix rides as metadata on the open-fn so
+           ;; `transact` and `ctx->txn` can recover it from
+           ;; the record-store they already receive. Putting
+           ;; it on every brick's component config instead
+           ;; would mean ~20 YAML edits, any one of which
+           ;; could be missed — and a missed one writes to
+           ;; the wrong keyspace silently.
+           (with-meta (fn [ctx store-name]
+                        (when-not (store-names store-name)
+                          ;; nosemgrep: no-raw-throw
+                          (throw (ex-info "Unknown record store"
+                                          {:store store-name})))
+                        (-> (FDBRecordStore/newBuilder)
+                            (.setMetaDataProvider meta)
+                            (.setContext ctx)
+                            (.setKeySpacePath (keyspace/path (keyspace/scoped
+                                                              keyspace-prefix
+                                                              store-name)))
+                            .createOrOpen))
+                      {:keyspace-prefix keyspace-prefix}))))
    :system/config {:descriptor system/required-component
-                   :record-types system/required-component}
+                   :record-types system/required-component
+                   :keyspace-prefix nil}
    :system/config-schema [:map
                           [:descriptor string?]
-                          [:record-types map?]]
+                          [:record-types map?]
+                          [:keyspace-prefix {:optional true}
+                           [:maybe string?]]]
    :system/instance-schema fn?})
 
 ;; ---
@@ -315,8 +330,10 @@
    (fn [{:system/keys [config instance]}]
      (or
       instance
-      (let [{:keys [record-db path descriptor record-types migrate]} config
-            ks-path (keyspace/path path)
+      (let [{:keys [record-db path descriptor record-types migrate
+                    keyspace-prefix]}
+            config
+            ks-path (keyspace/path (keyspace/scoped keyspace-prefix path))
             file-desc (resolve-descriptor descriptor)]
         (when (truthy-flag? migrate)
           (log/info "FDB meta-store migrating metadata to:" path)
@@ -340,19 +357,58 @@
                    "FDB meta-data already persisted at >= current version; skipping save")
                   ;; nosemgrep: no-raw-throw
                   (throw e))))))
-        (fn [ctx store-name]
-          (open-meta-store ctx ks-path file-desc store-name)))))
+        (with-meta (fn [ctx store-name]
+                     (open-meta-store ctx
+                                      ks-path
+                                      file-desc
+                                      (keyspace/scoped keyspace-prefix
+                                                       store-name)))
+                   {:keyspace-prefix keyspace-prefix}))))
    :system/config {:record-db system/required-component
                    :path system/required-component
-                   :descriptor system/required-component}
+                   :descriptor system/required-component
+                   :keyspace-prefix nil}
    :system/config-schema [:map
                           [:record-db some?]
                           [:path string?]
                           [:descriptor string?]
                           [:record-types {:optional true} [:maybe map?]]
+                          [:keyspace-prefix {:optional true}
+                           [:maybe string?]]
                           [:migrate {:optional true}
                            [:maybe [:or boolean? string?]]]]
    :system/instance-schema fn?})
+
+;; ---
+;; keyspace-prefix
+;; ---
+
+;; Qualifies every FDB key this system writes — records, changelog,
+;; sentinel, checkpoint and counters. One component so every consumer
+;; refs the same value: a prefix that disagrees between the writer and
+;; its relay reads an empty changelog.
+;;
+;; Unset (the production default) leaves keys byte-identical to an
+;; unprefixed deployment. `generate: true` mints one per boot, which is
+;; what test rigs want — several systems share a testcontainer FDB, and
+;; without it they share stores and cursors too.
+(def keyspace-prefix
+  {:system/start (fn [{:system/keys [config instance]}]
+                   (or instance
+                       (let [{:keys [value generate]} config]
+                         (cond (seq value)
+                               value
+
+                               (true? generate)
+                               (str (utility/uuidv7))
+
+                               :else
+                               nil))))
+   :system/config {:value nil :generate nil}
+   :system/config-schema [:map
+                          [:value {:optional true} [:maybe string?]]
+                          [:generate {:optional true} [:maybe boolean?]]]
+   :system/instance-schema [:maybe string?]})
 
 ;; ---
 ;; watcher
@@ -366,7 +422,8 @@
    :system/config {:record-db system/required-component
                    :consumer-id system/required-component
                    :store-name system/required-component
-                   :handler system/required-component}
+                   :handler system/required-component
+                   :keyspace-prefix nil}
    :system/instance-schema some?})
 
 ;; ---

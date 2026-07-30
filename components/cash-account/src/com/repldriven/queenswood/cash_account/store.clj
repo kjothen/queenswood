@@ -22,7 +22,7 @@
      (let [store (fdb/open txn store-name)]
        (let-nom>
          [_ (fdb/save-record store (schema/CashAccount->java account))
-          _ (fdb/write-changelog store
+          _ (fdb/write-changelog txn
                                  store-name
                                  (:account-id account)
                                  (changelog/status-changed
@@ -44,7 +44,8 @@
   (fdb/transact txn
                 (fn [txn]
                   (format "%08d"
-                          (fdb/allocate-counter (fdb/open txn store-name)
+                          (fdb/allocate-counter txn
+                                                store-name
                                                 "bank"
                                                 "counters"
                                                 counter)))

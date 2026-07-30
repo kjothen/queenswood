@@ -41,9 +41,13 @@ resolved before `system/start`. Reference another component with
 `!system/ref` / `!system/local-ref` — a bare string is never promoted
 to a ref, and an unregistered kind fails to start. Don't bake an
 environment name into a shared resource component or its config.
-Tests consolidate system-component bare requires for a base or
-project into one `test/.../system.clj` namespace rather than
-repeating them per file.
+A group that exists under `components/resources/resources/system/` is
+included, never inlined as a copy: an inlined block has no `!include`
+for `config-includes-resolve` to follow, and nothing loads a project's
+production `application.yml`, so it can name a deleted component-kind
+and still pass every check. Tests consolidate system-component bare
+requires for a base or project into one `test/.../system.clj` namespace
+rather than repeating them per file.
 See [ADR-0007](../../../docs/adr/0007-system-as-data.md),
 [system-components](../../../docs/recipes/system-components.md),
 [system-configurations](../../../docs/recipes/system-configurations.md).

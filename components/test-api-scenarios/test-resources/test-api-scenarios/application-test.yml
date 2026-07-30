@@ -26,6 +26,7 @@ system:
   onfido-adapter-server: !include system/onfido-adapter-server.yml
   onfido-simulator-server: !include system/onfido-simulator-server.yml
   parties: !include test-api-scenarios/party-test.yml
+  parties-relay: !include system/party-relay.yml
   payee-checks: !include system/payee-check-test.yml
   payments: !include system/payment.yml
   payments-dispatcher: !include system/payment-dispatcher.yml

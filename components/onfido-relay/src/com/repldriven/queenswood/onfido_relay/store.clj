@@ -26,7 +26,7 @@
            event (assoc-some event :traceparent (telemetry/inject-traceparent))]
        (let-nom>
          [_ (fdb/save-record store (schema/OnfidoOutboxEvent->java event))
-          _ (fdb/write-changelog store
+          _ (fdb/write-changelog txn
                                  store-name
                                  (:outbox-id event)
                                  (schema/OnfidoOutboxEvent->pb event))]

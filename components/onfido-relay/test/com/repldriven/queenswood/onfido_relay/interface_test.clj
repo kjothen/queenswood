@@ -63,7 +63,9 @@
          (fdb/process-changelog (:record-db config)
                                 "test-relay"
                                 "onfido-outbox"
-                                handler)
+                                handler
+                                {:keyspace-prefix
+                                 (system/instance sys [:fdb :keyspace-prefix])})
          (let [e (deref received 5000 ::timeout)]
            (is (not= ::timeout e))
            (when (not= ::timeout e) (is (= "idv-completed" (:event e)))))))

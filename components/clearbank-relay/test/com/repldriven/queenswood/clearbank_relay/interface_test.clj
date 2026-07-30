@@ -49,7 +49,9 @@
          (fdb/process-changelog (:record-db config)
                                 "test-relay"
                                 "clearbank-outbox"
-                                handler)
+                                handler
+                                {:keyspace-prefix
+                                 (system/instance sys [:fdb :keyspace-prefix])})
          (let [e (deref received 5000 ::timeout)]
            (is (not= ::timeout e) "relay must publish the stored event")
            (when (not= ::timeout e)

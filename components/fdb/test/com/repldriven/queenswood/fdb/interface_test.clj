@@ -77,12 +77,12 @@
                          (let [store (SUT/open txn "pets")]
                            (SUT/save-record store
                                             (test-schema/Pet->java whiskers))
-                           (SUT/write-changelog store
+                           (SUT/write-changelog txn
                                                 "pets"
                                                 (:pet-id whiskers)
                                                 (.getBytes "whiskers-data"))
                            (SUT/save-record store (test-schema/Pet->java rex))
-                           (SUT/write-changelog store
+                           (SUT/write-changelog txn
                                                 "pets"
                                                 (:pet-id rex)
                                                 (.getBytes "rex-data")))))

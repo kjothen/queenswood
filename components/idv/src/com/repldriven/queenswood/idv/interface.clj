@@ -9,7 +9,7 @@
   after a technical failure. The owning party stays pending
   throughout; the IDV record is the source of truth for why.
   Registers IDV component kinds (processor, event-processor,
-  party-watcher-handler) through this brick's `system` namespace."
+  party-event-processor) through this brick's `system` namespace."
   (:require
     [com.repldriven.queenswood.idv.system]
 

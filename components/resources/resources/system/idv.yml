@@ -18,18 +18,20 @@ event-processor: !system/component
   processor: !system/local-ref event-processor-impl
   event-channel: !keyword idv-event
 
-party-watcher-handler: !system/component
-  system/component-kind: idv/party-watcher-handler
+party-event-processor-impl: !system/component
+  system/component-kind: idv/party-event-processor
   record-db: !system/ref fdb.record-db
   record-store: !system/ref fdb.meta-store
   schemas: !system/ref avro.serde
   bus: !system/ref message-bus.bus
   idv-command-channel: !keyword idv-command
 
-watchers: !system/component
-  system/component-kind: fdb/watchers
-  party:
-    record-db: !system/ref fdb.record-db
-    consumer-id: idv-party-watcher
-    store-name: parties
-    handler: !system/local-ref party-watcher-handler
+# `changelog-relay/event-consumer` rather than
+# `event-processor/event-processor`: initiating an IDV is a lifecycle
+# transition, and mono's `event/process` acks on anomaly, so a failure
+# would lose it.
+party-event-consumer: !system/component
+  system/component-kind: changelog-relay/event-consumer
+  bus: !system/ref message-bus.bus
+  processor: !system/local-ref party-event-processor-impl
+  event-channel: !keyword parties-event

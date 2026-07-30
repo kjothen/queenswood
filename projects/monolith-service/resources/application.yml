@@ -15,6 +15,7 @@ system:
         - cash-account-products-command-response
         - parties-command
         - parties-command-response
+        - parties-event
         - transactions-command
         - transactions-command-response
         - payments-command
@@ -53,6 +54,7 @@ system:
   companies-dispatcher: !include system/company-dispatcher.yml
   interest-dispatcher: !include system/interest-dispatcher.yml
   parties-dispatcher: !include system/party-dispatcher.yml
+  parties-relay: !include system/party-relay.yml
   payee-checks-dispatcher: !include system/payee-check-dispatcher.yml
   payments-dispatcher: !include system/payment-dispatcher.yml
   transactions-dispatcher: !include system/transaction-dispatcher.yml

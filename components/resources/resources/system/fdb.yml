@@ -17,10 +17,19 @@ record-db: !system/component
   # 30s leaves headroom without masking a genuinely sick cluster.
   async-to-sync-timeout-ms: 30000
 
+# Qualifies every FDB key this deployment writes. Unset is the norm
+# and leaves keys byte-identical to a deployment that never had one —
+# setting it on a cluster with data strands the existing records,
+# changelog and cursors.
+keyspace-prefix: !system/component
+  system/component-kind: fdb/keyspace-prefix
+  value: !env FDB_KEYSPACE_PREFIX
+
 store: !system/component
   system/component-kind: fdb/store
   descriptor: com.repldriven.queenswood.schemas.schemas.SchemaProto
   record-types: !include system/fdb-record-types.yml
+  keyspace-prefix: !system/local-ref keyspace-prefix
 
 # Single component-kind for both modes. `migrate: true` (set by
 # the bank-migrator-service Job's deployment via FDB_MIGRATE) saves
@@ -33,4 +42,5 @@ meta-store: !system/component
   path: meta
   descriptor: com.repldriven.queenswood.schemas.schemas.SchemaProto
   record-types: !include system/fdb-record-types.yml
+  keyspace-prefix: !system/local-ref keyspace-prefix
   migrate: !env FDB_MIGRATE

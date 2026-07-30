@@ -12,5 +12,6 @@
                        :record-db components/record-db
                        :store components/store
                        :meta-store components/meta-store
+                       :keyspace-prefix components/keyspace-prefix
                        :watcher components/watcher-component
                        :watchers components/watchers-component})

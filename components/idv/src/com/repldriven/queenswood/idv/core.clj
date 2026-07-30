@@ -4,6 +4,9 @@
     [com.repldriven.queenswood.idv.domain :as domain]
     [com.repldriven.queenswood.idv.store :as store]
 
+    [com.repldriven.queenswood.person-identification.interface :as
+     person-identification]
+
     [com.repldriven.mono.avro.interface :as avro]
     [com.repldriven.mono.error.interface :as error :refer [let-nom>]]
     [com.repldriven.mono.log.interface :as log]
@@ -69,6 +72,35 @@
                       :status-after (:status idv)})]
     (publish-submit-idv-check config saved data)
     saved))
+
+(defn initiate-for-party
+  "Open an IDV for a party that has just entered pending, reading the
+  party's identification to seed the check.
+
+  Gated on no IDV already existing for the party, and skips silently
+  when one does. Event redelivery and replay must be a no-op here, not
+  a rejection — a party arriving pending twice is the normal case."
+  [config bank-id party-id]
+  (let-nom>
+    [existing (store/get-idv-by-party config party-id)]
+    (if existing
+      (log/info "IDV already exists for party — skipping"
+                {:party-id party-id
+                 :verification-id (:verification-id existing)
+                 :status (:status existing)})
+      (let-nom>
+        [identification (person-identification/get-person-identification
+                         config
+                         party-id)
+         result (initiate config
+                          {:bank-id bank-id
+                           :party-id party-id
+                           :given-name (:given-name identification)
+                           :middle-names (:middle-names identification)
+                           :family-name (:family-name identification)
+                           :date-of-birth (:date-of-birth identification)
+                           :address (:address identification)})]
+        result))))
 
 (defn get
   [txn data]

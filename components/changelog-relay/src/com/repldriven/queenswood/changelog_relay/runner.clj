@@ -8,7 +8,9 @@
 
 (defn start
   [config]
-  (let [{:keys [record-db consumer-id store-name handler poll-ms]} config
+  (let [{:keys [record-db consumer-id store-name handler poll-ms
+                keyspace-prefix]}
+        config
         interval (or poll-ms default-poll-ms)
         running (atom true)
         t (doto
@@ -19,7 +21,9 @@
                                              consumer-id
                                              store-name
                                              handler
-                                             {:deduplicate? false})
+                                             {:deduplicate? false
+                                              :keyspace-prefix
+                                              keyspace-prefix})
                       (catch Exception e
                         (log/error e
                                    "Changelog relay pass failed; will redrive"

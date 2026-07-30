@@ -21,6 +21,13 @@ system:
           bootstrap.servers: !env KAFKA_BOOTSTRAP_SERVERS
           topic: topic-idv-event
           acks: all
+      parties-event:
+        schemas: !system/local-ref schemas
+        schema: !keyword event
+        conf:
+          bootstrap.servers: !env KAFKA_BOOTSTRAP_SERVERS
+          topic: topic-parties-event
+          acks: all
       schemes-payments-event:
         schemas: !system/local-ref schemas
         schema: !keyword event
@@ -34,6 +41,8 @@ system:
         producer: !system/local-ref producers.cash-accounts-event
       idv-event:
         producer: !system/local-ref producers.idv-event
+      parties-event:
+        producer: !system/local-ref producers.parties-event
       schemes-payments-event:
         producer: !system/local-ref producers.schemes-payments-event
     # The relay only produces. `message-bus/bus` requires a consumers
@@ -57,6 +66,11 @@ system:
       bus: !system/ref message-bus.bus
       event-channel: !keyword idv-event
       store-name: onfido-outbox
+    parties-handler: !system/component
+      system/component-kind: changelog-relay/envelope-handler
+      bus: !system/ref message-bus.bus
+      event-channel: !keyword parties-event
+      store-name: parties
     schemes-payments-handler: !system/component
       system/component-kind: changelog-relay/envelope-handler
       bus: !system/ref message-bus.bus
@@ -71,17 +85,26 @@ system:
       system/component-kind: changelog-relay/runners
       cash-accounts:
         record-db: !system/ref fdb.record-db
+        keyspace-prefix: !system/ref fdb.keyspace-prefix
         consumer-id: cash-account-watcher
         store-name: cash-accounts
         handler: !system/local-ref cash-accounts-handler
       clearbank-outbox:
         record-db: !system/ref fdb.record-db
+        keyspace-prefix: !system/ref fdb.keyspace-prefix
         consumer-id: clearbank-relay
         store-name: clearbank-outbox
         handler: !system/local-ref schemes-payments-handler
       onfido-outbox:
         record-db: !system/ref fdb.record-db
+        keyspace-prefix: !system/ref fdb.keyspace-prefix
         consumer-id: onfido-relay
         store-name: onfido-outbox
         handler: !system/local-ref idv-handler
+      parties:
+        record-db: !system/ref fdb.record-db
+        keyspace-prefix: !system/ref fdb.keyspace-prefix
+        consumer-id: idv-party-watcher
+        store-name: parties
+        handler: !system/local-ref parties-handler
   telemetry: !include system/telemetry.yml

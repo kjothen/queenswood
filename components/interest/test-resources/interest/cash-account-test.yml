@@ -22,6 +22,7 @@ relay-runners: !system/component
   system/component-kind: changelog-relay/runners
   cash-accounts:
     record-db: !system/ref fdb.record-db
+    keyspace-prefix: !system/ref fdb.keyspace-prefix
     consumer-id: cash-account-watcher
     store-name: cash-accounts
     handler: !system/local-ref relay-handler

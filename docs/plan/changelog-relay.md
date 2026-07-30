@@ -8,10 +8,10 @@ watcher the narrow job of relaying to the message bus, and move consumers
 to the broker. That path is now built. This plan tracks what remains.
 
 The starting premise was that FDB watches are unreliable. They are not
-used — nothing calls `.watch()` in queenswood or in mono. Every "watcher"
-is a polling changelog consumer: mono's `fdb/watcher.clj` spawns a daemon
-thread calling `changelog/process` every 100 ms. A sentinel key is bumped
-on every commit and documented as "suitable for FDB watches", but nothing
+used — nothing calls `.watch()` anywhere. Every "watcher" is a polling
+changelog consumer: `components/fdb/watcher.clj` spawns a daemon thread
+calling `changelog/process` every 100 ms. A sentinel key is bumped on
+every commit and documented as "suitable for FDB watches", but nothing
 reads it. The real problems are different:
 
 - **Domain work runs inside the changelog checkpoint transaction.**
@@ -19,9 +19,9 @@ reads it. The real problems are different:
   `record-db.run`. `idv/watcher.clj` does a Kafka `message-bus/send` *and*
   opens its own nested FDB transactions from in there. FDB caps a
   transaction at 5 s and re-runs it on retry.
-- **Errors are swallowed.** mono's loop is `(catch Exception _)` with no
-  logging. A permanently failing handler spins at 10 Hz forever, with no
-  DLQ.
+- **Errors are swallowed.** `fdb/watcher.clj`'s loop is
+  `(catch Exception _)` with no logging. A permanently failing handler
+  spins at 10 Hz forever, with no DLQ.
 - **Dedup drops transitions.** `changelog/process` defaults to
   latest-entry-per-record-id, and the record-id is the entity id, so two
   transitions inside one poll window collapse and the earlier is lost.
@@ -36,35 +36,39 @@ reads it. The real problems are different:
 - **#269** — the shared `ChangelogEvent` envelope, `cash-accounts`
   migrated to relay + event-processor, and `changelog-relay/event-consumer`
   (see "Upstream" below for why it exists).
+- **Phase 3** — store `parties`, consumer `idv`. The flow that carried
+  the real defect: `idv/watcher.clj` did a Kafka `message-bus/send` *and*
+  opened nested FDB transactions from inside the changelog checkpoint
+  transaction. Both are gone. `party/changelog.clj` writes the envelope
+  carrying a new `party-status-changed` Avro event on a `parties-event`
+  channel; `idv/core.clj`'s `initiate-for-party` holds the watcher's
+  `get-idv-by-party` guard verbatim, and runs outside any changelog
+  transaction. The parties cursor keeps `consumer-id: idv-party-watcher`.
+
+  No cutover was needed here either, but for the opposite reason to
+  Phase 5: `PartyChangelog` put enum fields at 2 and 3 where
+  `ChangelogEvent` has length-delimited strings, so an old entry cannot
+  masquerade as an envelope. The handler skips-and-logs rather than
+  throwing, so such an entry cannot wedge the cursor behind it.
 
 ## Remaining
 
 The migration unit is one **store**, not one brick: a store's changelog
 format change must land atomically with whichever brick consumes it.
 
-### Phase 3 — store `parties`, consumer `idv`
-
-The flow carrying the real defect. `idv/watcher.clj` does a Kafka send and
-opens nested FDB transactions from inside the changelog transaction; moving
-it onto an event-processor removes both.
-
-- `party/changelog.clj` writes the shared envelope carrying a new
-  `party-status-changed` Avro event
-- `idv/core.clj` gains `initiate-for-party`, holding the watcher's
-  `store/get-idv-by-party` guard, then `person-identification` lookup and
-  `core/initiate` — now outside any changelog transaction
-- `idv/events.clj` gains a second `Processor` for `party-status-changed`,
-  guarded on `status-after = party-status-pending`
-- delete `idv/watcher.clj`; retire `idv/party-watcher-handler`
-- relay-service runner for store `parties`, `consumer-id: idv-party-watcher`
-
 ### Phase 4 — store `idvs`, consumer `party`
 
-The mechanical twin. `party/watcher.clj`'s `idv-status->party-transition`
-map and its `(= :party-status-pending (:status party))` gate move to
+The mechanical twin, and the last watcher. `party/watcher.clj`'s
+`idv-status->party-transition` map and its
+`(= :party-status-pending (:status party))` gate move to
 `party/core.clj`, driven by a `party/events.clj` Processor on an
 `idvs-event` channel. `consumer-id: parties-watcher`. Delete
 `party/watcher.clj`.
+
+Once it lands, the retired changelog protos —
+`CashAccountChangelog`, `PartyChangelog`, `IdvChangelog`, and their
+`schema/interface.clj` exports — have no writer or reader left and
+should go in one sweep.
 
 ### Phase 5 — converge the adapters — done
 
@@ -81,6 +85,17 @@ relay a stored outbox entry to the bus, so the claim fails loudly if
 the shapes ever drift apart.
 
 Revisiting replicas is still open.
+
+### Kafka test isolation
+
+FDB is scoped per rig now, via `fdb/keyspace-prefix` — the test rigs
+generate one per boot, so they no longer share stores, changelog or
+cursors. Kafka is not: rigs share a broker, the topic names, and fixed
+`group.id`s, so one rig consumes another's events. The same lever
+applies — a per-rig topic prefix — but it reaches every entry in
+`kafka-topics.yml` and `kafka-all-test.yml`, and the kafka component is
+still mono's. Until then, assertions over span or message counts must
+name the event they mean rather than aggregate.
 
 ### Docs and lint
 
@@ -114,32 +129,96 @@ vacuously — worse than failing. Best written once, after Phase 4.
 - **Envelope proto fields stay `optional`.** protojure omits zero and empty
   values on the wire, and a proto2 `required` scalar holding its default
   then fails to parse.
+- **The changelog is versionstamped; the sentinel is not what orders it.**
+  `changelog/write` uses `SET_VERSIONSTAMPED_KEY`, keying every entry by
+  `(commit-version, user-version)` — `.claimLocalVersion` keeps two writes
+  in one transaction distinct. Global commit order is therefore already in
+  every key, which is *why* `scan` is a range-read from the checkpoint. The
+  sentinel is a separate conflict-free `ADD` counter whose only unique
+  property is "learn something changed without scanning" — the wakeup an
+  FDB watch would use. Nothing reads it. Ordering survives FDB and is then
+  discarded at the relay, by the unkeyed `message-bus/send` in item 1
+  below.
+- **Test rigs share state at two layers, and FDB is the lesser one.**
+  FDB is now scoped by `fdb/keyspace-prefix`, which the test rigs generate
+  per boot. Kafka is not: rigs share a broker, the topic names in
+  `kafka-topics.yml`, and fixed `group.id`s, so one rig's published events
+  reach another rig's consumers. Measured on the parties relay — the
+  api-scenarios rig sees 75 joined / 21 unjoined `party-status-changed`
+  spans alone, and 78 / 193 when the scenarios rig runs too.
+  A ratio assertion over all `process-event` spans therefore measures
+  another rig's traffic; scope it to an event only one rig publishes.
+- **`meta-store`'s `path:` is not an isolation lever.** It scopes the
+  `FDBMetaDataStore` only. Records hang off `store-name`, and changelog /
+  sentinel / checkpoint off the `"mono"` root — which is what
+  `fdb/keyspace-prefix` now qualifies.
+- **A relay must be handed the same prefix its writer used.** The writer
+  recovers it from the record-store; a runner only gets a `record-db`, so
+  it cannot discover one. A mismatch reads an empty changelog rather than
+  erroring.
 - Run `clj -X:deps prep :aliases '[:dev]' :force true` after any proto
   change.
 
 ## Upstream, in mono
 
-Two of these gate real scale-out, in this order:
+Both gate real scale-out, in this order:
 
 1. **`message-bus/send` needs a partition key**, and topic partition counts
    need raising — in that order. Every topic is `partitions: 1` today and
    `KafkaProducer.send` passes no key, so extra replicas are idle standbys;
    raising partitions without a key silently breaks per-entity ordering.
+
+   Keying does not restore commit order across the topic; it makes global
+   order unnecessary. Kafka orders within a partition only, so hashing an
+   entity's id to a partition keeps that entity's own transitions in
+   sequence, and nothing depends on one entity's order relative to
+   another's. The envelope already carries the value: `causation_id` is the
+   `party-id` / `account-id` for the events written so far.
+
+   Unkeyed reordering is invisible rather than loud. A `closing` event
+   overtaking its `opening` lands on `complete-status-transition`, whose
+   source-status guard skips silently — by design, so redelivery is a
+   no-op. The guard that makes replay safe is the guard that hides
+   reordering.
+
+   Per-partition order also depends on producer idempotence, which is on
+   today but only by default. Verified against the pinned kafka-clients
+   4.3.1: with `acks: all` (all 75 producer declarations) the effective
+   config is `enable.idempotence=true`, `retries=2147483647`,
+   `max.in.flight=5`. Set `acks: 1` on any producer and idempotence
+   silently becomes `false` — the client disables it rather than raising
+   when a conflicting config appears and idempotence was not explicitly
+   asked for — leaving retries and in-flight at the values that reorder
+   within a partition. Setting `enable.idempotence: true` explicitly on
+   the event producers converts that into a boot-time `ConfigException`.
 2. **`event/process` should rethrow on anomaly.** It wraps the handler in
    `error/try-nom`, logs, and returns — so the Kafka consumer acks and the
    event is lost, where the watcher it replaces redrove forever. That is why
    `changelog-relay/event-consumer` subscribes directly and rethrows;
    fixing it upstream retires that component.
-3. `changelog/process` needs a `:limit` batch cap. The handler runs inside
+
+Both of those live in mono's `kafka` / `event` components. **FDB does not.**
+PR #270 moved it into this workspace, so everything below is a local
+change in `components/fdb` — check `git log -- components/<name>` before
+assuming any component is upstream.
+
+## Local, in components/fdb
+
+1. `changelog/process` needs a `:limit` batch cap. The handler runs inside
    the checkpoint transaction, so with `{:deduplicate? false}` a burst
    issues N publishes inside one FDB transaction.
-4. `read-checkpoint` should read through the processing transaction. It
+2. `read-checkpoint` should read through the processing transaction. It
    opens its own, so the checkpoint key never enters the outer
    transaction's read-conflict set and two relays would not conflict — FDB's
    own optimistic concurrency would otherwise make multi-replica relays safe
    without a lease.
-5. Upstream `components/changelog-relay` itself, retiring `fdb/watcher` and
-   `fdb/watchers`.
+3. `fdb/watcher.clj`'s loop swallows every exception with no logging (see
+   Context). `changelog-relay/runner` already logs and redrives; the
+   watcher it replaces does not, and still runs the `idvs` cursor until
+   Phase 4 lands.
+4. Retire `fdb/watcher` and `fdb/watchers` once Phase 4 removes the last
+   watcher. Upstreaming `components/changelog-relay` to mono is a separate
+   question, and only sensible after that.
 
 ## Deliberately not built
 
