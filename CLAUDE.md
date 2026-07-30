@@ -52,7 +52,7 @@ those in full before non-trivial work on their topic.
 - **Brick boundaries** — bricks react to events relayed off
   each other's changelogs rather than orchestrating across each
   other; `bank-api` stays ignorant of cross-brick effects.
-  See [ADR-0008](docs/adr/0008-changelog-watchers.md) and
+  See [ADR-0021](docs/adr/0021-changelog-relay.md) and
   [recipes/components.md](docs/recipes/components.md).
 - **Transactional guarantees** — the line between work inside FDB
   (one transaction, commit-then-ack) and work that crosses a
@@ -62,7 +62,7 @@ those in full before non-trivial work on their topic.
   worked example.
   See [tdd/transaction-processing.md](docs/tdd/transaction-processing.md),
   [tdd/payments.md](docs/tdd/payments.md), and
-  [ADR-0008](docs/adr/0008-changelog-watchers.md).
+  [ADR-0021](docs/adr/0021-changelog-relay.md).
 - **Processor bricks** — paired `bank-X-processor` base and
   `bank-X` component (commands / core / domain / store /
   events), the `txn-or-config` threading convention, FDB
@@ -87,7 +87,7 @@ those in full before non-trivial work on their topic.
   `domain.clj` (`:<entity>/invalid-status`, HTTP 409), and event-
   handler guards as an idempotency gate rather than a rejection.
   See [recipes/lifecycle-transitions.md](docs/recipes/lifecycle-transitions.md)
-  and [ADR-0008](docs/adr/0008-changelog-watchers.md).
+  and [ADR-0021](docs/adr/0021-changelog-relay.md).
 
 ### Tests
 
