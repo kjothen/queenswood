@@ -206,6 +206,12 @@ Both gate real scale-out, in this order:
    `changelog-relay/event-consumer` subscribes directly and rethrows;
    fixing it upstream retires that component.
 
+   Every event consumer now uses `event-consumer`, so nothing instantiates
+   `event-processor/event-processor` any more. The last two on it were
+   `payment` (`schemes-payments-event`) and `idv` (`idv-event`) — which
+   were exactly the two carrying webhook-derived facts, the ones that
+   cannot be re-derived if dropped.
+
 Both of those live in mono's `kafka` / `event` components. **FDB does not.**
 PR #270 moved it into this workspace, so everything below is a local
 change in `components/fdb` — check `git log -- components/<name>` before

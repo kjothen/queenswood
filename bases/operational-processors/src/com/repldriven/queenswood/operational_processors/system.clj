@@ -17,7 +17,6 @@
 
     [com.repldriven.mono.avro.interface]
     [com.repldriven.mono.command-processor.interface]
-    [com.repldriven.mono.event-processor.interface]
     [com.repldriven.mono.identity-provider.interface]
     [com.repldriven.mono.kafka.interface]
     [com.repldriven.mono.keycloak.interface]

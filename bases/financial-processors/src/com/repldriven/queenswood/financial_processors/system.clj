@@ -6,6 +6,7 @@
   service's composition is the project's application.yml
   (ADR-0019)."
   (:require
+    [com.repldriven.queenswood.changelog-relay.interface]
     [com.repldriven.queenswood.fdb.interface]
     [com.repldriven.queenswood.interest.interface]
     [com.repldriven.queenswood.payee-check.interface]
@@ -15,7 +16,6 @@
 
     [com.repldriven.mono.avro.interface]
     [com.repldriven.mono.command-processor.interface]
-    [com.repldriven.mono.event-processor.interface]
     [com.repldriven.mono.kafka.interface]
     [com.repldriven.mono.message-bus.interface]
     [com.repldriven.mono.telemetry.interface]))

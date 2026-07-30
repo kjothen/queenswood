@@ -56,7 +56,11 @@
 
 (defn get-check
   [txn bank-id check-id]
-  (store/get-check txn bank-id check-id))
+  (let-nom> [check (store/get-check txn bank-id check-id)]
+    (or check
+        (error/reject :payee-check/not-found
+                      {:message "Payee check not found"
+                       :check-id check-id}))))
 
 (defn get-checks
   ([txn bank-id]
