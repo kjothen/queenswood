@@ -84,7 +84,7 @@ draft on a published product starts the next version.
   resolution.
 - `interface.clj` — the public API.
 
-The brick has no watchers and no commands — every operation
+The brick has no event consumers and no commands — every operation
 is a synchronous interface call from a request handler. The
 lifecycle is short enough not to need eventual consistency.
 

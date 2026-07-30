@@ -27,8 +27,8 @@ uniformity, not necessity.
 Processors are packaged by deployment-time composition: one thin
 base per *service group* (boilerplate main plus a require bundle
 registering that group's component-kinds), and one project per
-group, whose `application.yml` alone decides which processors,
-watchers, and event consumers that JVM hosts. The bases are
+group, whose `application.yml` alone decides which processors
+and event consumers that JVM hosts. The bases are
 group-scoped rather than one shared superset so each project's
 deps carry only the bricks its group runs — `poly check`'s
 unnecessary-component warning stays meaningful for these projects
@@ -61,7 +61,7 @@ sit in the same failure domain as money movement.
 
 Two invariants when regrouping:
 
-- **Cursor continuity.** message-bus consumer groups and FDB watcher
+- **Cursor continuity.** message-bus consumer groups and changelog
   `consumer-id`s move with the processor, verbatim. The subscription
   and changelog cursor identify the *consumer role*, not the pod
   that happens to host it; renaming one abandons a cursor and

@@ -99,7 +99,7 @@ A write with none of these stays synchronous. Once a domain earns
 commands, it splits into two bricks: `X-query` (reads only —
 `get-*` / `find-*` / `count-*` — the only cash-account-style brick
 `api` may require) and `X` (commands, writes, domain,
-watcher), which depends on `X-query` and calls its reads inside
+events), which depends on `X-query` and calls its reads inside
 its own FDB transaction, passing the live `txn`.
 See [ADR-0017](../../../docs/adr/0017-query-write-brick-split.md),
 [ADR-0018](../../../docs/adr/0018-command-writes-are-earned.md).
@@ -110,7 +110,7 @@ Processors are packaged by deployment-time composition, not one
 microservice per domain: one thin base per service group (a
 boilerplate main plus a require bundle registering that group's
 component-kinds) and one project per group, whose `application.yml`
-alone decides which processors, watchers, and event consumers that
+alone decides which processors and event consumers that
 JVM hosts. Bases are group-scoped, not one shared superset, so each
 project's deps carry only the bricks its group runs. Group by
 boundary, not throughput — financial processors (payment,

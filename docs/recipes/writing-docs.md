@@ -223,9 +223,10 @@ follow.
 doesn't belong in a PRD even when it's accurate.
 
 - Avoid: synchronous, asynchronous, reactive, primitive,
-  watcher, handler, idempotent, deterministic, transaction
-  (in the engineering sense), event, dispatch, subscribe,
-  poll (as a verb of art), choreography, saga, orchestrator.
+  watcher, relay, handler, idempotent, deterministic,
+  transaction (in the engineering sense), event, dispatch,
+  subscribe, poll (as a verb of art), choreography, saga,
+  orchestrator.
 - Prefer: "in the background", "automatically", "without the
   tenant having to do anything", "once X completes", "the
   platform offers a way to", "a means of comparing".
@@ -240,8 +241,8 @@ doesn't belong in a PRD even when it's accurate.
 ```
 ;; Not OK — engineering register
 The IDV flow is asynchronous and reactive. A name-matching
-primitive lets callers compare names. A watcher fires when
-the changelog updates.
+primitive lets callers compare names. A relay publishes an
+event when the changelog updates.
 
 ;; OK — product register
 Identity verification runs in the background; the tenant
@@ -291,7 +292,7 @@ without naming the operation.
   "battle-tested", "production-proven", or similar maturity
   claims.
 - Name specific competitor banks or fintechs in any doc.
-- Use engineering vocabulary (sync/async, reactive, watcher,
+- Use engineering vocabulary (sync/async, reactive, relay,
   handler, primitive) in PRDs.
 - Name specific operations (`create-organization`,
   `submit-payment`, etc.) in PRDs.
@@ -309,7 +310,7 @@ without naming the operation.
 - Cite public specs / RFCs / standards rather than vendors
   when an industry reference is useful.
 - Use the project's vocabulary in TDDs and recipes
-  (`changelog watcher`, `brick`, `interceptor`); reserve
+  (`changelog relay`, `brick`, `interceptor`); reserve
   product-shaped phrasing for PRDs.
 
 ## Discussion

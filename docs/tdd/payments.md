@@ -396,7 +396,7 @@ Its egress is a transactional outbox on both edges — it owns:
   POSTs to ClearBank's `/v3/payments/fps` outside any FDB
   transaction, with retry. ClearBank de-duplicates on the
   end-to-end id, so a retried POST is safe.
-- **Changelog relay** — a watcher that reads the outbox changelog
+- **Changelog relay** — a runner that reads the outbox changelog
   and publishes each recorded webhook event to the bus, so
   "webhook received" and "downstream told" cannot diverge.
 - **Confirmation of Payee (CoP)** — separate code path under

@@ -22,8 +22,8 @@ Out of scope: the message-bus abstraction per
 [ADR-0003](../adr/0003-message-bus-abstraction.md), Avro
 encoding per
 [ADR-0004](../adr/0004-avro-for-message-payloads.md), and
-FDB changelog mechanics per
-[ADR-0008](../adr/0008-changelog-watchers.md).
+FDB changelog and relay mechanics per
+[ADR-0021](../adr/0021-changelog-relay.md).
 
 ## Background
 
@@ -280,7 +280,7 @@ separately. Two shapes, by what is emitted:
 
 - A bus event becomes an outbox entry. Write the event to FDB atomically
   with the state change. FDB's changelog is the outbox, per
-  [ADR-0008](../adr/0008-changelog-watchers.md) — a relay watcher reads
+  [ADR-0021](../adr/0021-changelog-relay.md) — a relay runner reads
   the cursor, publishes to the bus, and advances the cursor,
   at-least-once, because the cursor only advances after a successful
   publish. A failed publish leaves the cursor unmoved and the entry is
@@ -521,8 +521,8 @@ throw-safe (a handler exception is logged, not fatal).
   Avro for message payloads
 - [ADR-0005](../adr/0005-error-handling-with-anomalies.md) —
   Error handling with anomalies
-- [ADR-0008](../adr/0008-changelog-watchers.md) —
-  Changelog watchers for reactive state transitions
+- [ADR-0021](../adr/0021-changelog-relay.md) —
+  the changelog relay for reactive state transitions
 - [ADR-0009](../adr/0009-model-equality-property-testing.md) —
   Model-equality property testing
 - [error-handling.md](../recipes/error-handling.md)

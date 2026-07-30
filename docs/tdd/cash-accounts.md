@@ -8,7 +8,7 @@ per [cash-account-products.md](cash-account-products.md),
 set in a specific currency, owned by an active party per
 [parties.md](parties.md), and addressable via one or more
 payment-address schemes (today: SCAN — UK Sort Code +
-Account Number). Opening and closing are watcher-driven
+Account Number). Opening and closing are event-driven
 lifecycle transitions; balances and transactions live in
 their own bricks but everything points back to the account.
 
@@ -19,7 +19,7 @@ distinction between *product-type* (from the product) and
 *account-type* (from the party) that policies can filter on.
 
 In scope: the `cash-account` brick; account data model;
-opening and closing flow; watcher-driven status transitions;
+opening and closing flow; event-driven status transitions;
 SCAN address generation; lookups (by id, by BBAN, by type);
 balance-bucket creation at open time.
 
@@ -60,12 +60,13 @@ most N personal current accounts in GBP" filters on
 product-type, account-type, and currency.
 
 The lifecycle is two-step at both ends. Opening writes the
-account in `:opening` status; a changelog watcher then
-transitions it to `:opened`. Closing writes `:closing`; the
-same watcher transitions to `:closed`. The pattern is the
-same reactive choreography parties use for IDV — see
+account in `:opening` status; a `cash-account-status-changed`
+event relayed off the changelog then transitions it to
+`:opened`. Closing writes `:closing`; the same handler
+transitions to `:closed`. The pattern is the same reactive
+choreography parties use for IDV — see
 [parties.md](parties.md) — and exactly the use case
-ADR-0008 describes.
+ADR-0021 describes.
 
 ## Proposed Solution
 
@@ -82,11 +83,11 @@ ADR-0008 describes.
 - `commands.clj` — command-pipeline handlers; the brick is
   command-processed, see
   [transaction-processing.md](transaction-processing.md).
-- `watcher.clj` — the changelog handler that flips
+- `events.clj` — the event handler that flips
   opening → opened and closing → closed.
 - `validation.clj` — Malli schemas for incoming data.
 - `system.clj` — `defcomponents` for the processor and
-  watcher.
+  event-processor.
 
 ### Data model
 
@@ -126,17 +127,19 @@ index on the store.
 ```mermaid
 stateDiagram-v2
     [*] --> Opening : new-account
-    Opening --> Opened : watcher transition
+    Opening --> Opened : event transition
     Opened --> Closing : close-account
-    Closing --> Closed : watcher transition
+    Closing --> Closed : event transition
     Closed --> [*]
 ```
 
-The two-step open and close are the changelog-watcher
-pattern. The processor commits the account in the
-intermediate state (`:opening` or `:closing`), the changelog
-fires, the watcher reads the account back and applies the
-terminal transition.
+The two-step open and close are the changelog-relay pattern.
+The processor commits the account and its changelog entry in
+one transaction, in the intermediate state (`:opening` or
+`:closing`); the relay republishes that entry as a
+`cash-account-status-changed` event; the brick's own event
+handler reads the account back and applies the terminal
+transition.
 
 ### Opening flow
 
@@ -168,21 +171,23 @@ terminal transition.
    that legs land into (transactions-and-balances TDD).
 10. Persist the account and the balances. Commit.
 
-The status is `:opening`. The changelog fires on commit; the
-watcher consumes it.
+The status is `:opening`. The changelog entry commits with
+the account; the relay publishes it and the brick's event
+handler consumes it.
 
-### Watcher transitions
+### Event transitions
 
-`cash-account-changelog-handler` watches the account
-changelog and acts on `:status-after`:
+`events.clj` handles `cash-account-status-changed` and acts
+on `:status-after`, via `core/complete-status-transition`:
 
 - `:cash-account-status-opening` → flip to `:opened`.
 - `:cash-account-status-closing` → flip to `:closed`.
 
-The handler is a single function; the two terminal
-transitions share the same pattern. Each transition is one
-FDB transaction (the watcher reads the account, applies the
-domain transition, saves).
+The two terminal transitions share the same pattern. Each is
+one FDB transaction — read the account, apply the domain
+transition, save — and each is gated on the account still
+being in the expected source status, so redelivery is a
+silent no-op.
 
 ### Closing flow
 
@@ -197,7 +202,7 @@ domain transition, saves).
    `:cash-account-status-closing`.
 5. Persist. Commit.
 
-The watcher fires on the changelog; closes to
+The changelog entry is relayed; the event handler closes to
 `:cash-account-status-closed`.
 
 The current implementation does not ship a balance-must-be-
@@ -228,8 +233,8 @@ to a pool. Recycling would risk a payment intended for the
 old account holder landing on whoever gets the number next;
 the closed account's record also keeps its `:bban` under the
 unique `CashAccount_by_bban` index, so an accidental re-issue
-would fail at insert regardless. The close watcher doesn't
-need to inform the fountain — there's nothing to release.
+would fail at insert regardless. The close leg doesn't need
+to inform the fountain — there's nothing to release.
 
 **Rotation.** `rotate-address` draws a fresh set of payment
 addresses from the same fountain against the account's bound
@@ -240,7 +245,7 @@ keeps a permanent history. There's no redirect window: a
 payment landing on a retired BBAN is a lookup miss for
 `get-account-by-bban` and falls into the existing suspense
 path, same as any other unmatched inbound. Single-phase, no
-watcher leg — the transition stays on
+event leg — the transition stays on
 `:cash-account-status-opened` throughout.
 
 ### Lookups
@@ -297,11 +302,11 @@ the legs need to find the right buckets.
 
 ## Alternatives Considered
 
-- **Synchronous open (no watcher).** Open account in one
+- **Synchronous open (single-phase).** Open account in one
   step; everything happens in the create handler.
   Rejected — couples open-time side effects to the
   request handler, weakens the changelog-as-source-of-
-  truth story (ADR-0008), and loses the testable
+  truth story (ADR-0021), and loses the testable
   separation between persistence and post-creation work.
 - **Combine product-type and account-type into a single
   enum.** Replace the two-dimensional split with one flat
@@ -384,8 +389,8 @@ the legs need to find the right buckets.
 - [ADR-0002](../adr/0002-foundationdb-record-layer.md) —
   FoundationDB Record Layer (account storage, secondary
   indices on BBAN and product)
-- [ADR-0008](../adr/0008-changelog-watchers.md) —
-  Changelog watchers (the lifecycle transitions)
+- [ADR-0021](../adr/0021-changelog-relay.md) —
+  the changelog relay (the lifecycle transitions)
 - [parties.md](parties.md) — Parties (account-type
   derivation; active-only opens)
 - [cash-account-products.md](cash-account-products.md) —

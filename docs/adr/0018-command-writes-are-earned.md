@@ -52,7 +52,7 @@ intrinsic properties:
    idempotency check.
 3. **Reaction.** Other bricks must respond asynchronously to the
    write via the changelog, per
-   [ADR-0008](0008-changelog-watchers.md) — payment to
+   [ADR-0021](0021-changelog-relay.md) — payment to
    transaction to balance; an IDV result activating a party.
 4. **Unreliable ingress.** The write originates from a webhook or
    external event and needs consume-then-ack semantics.

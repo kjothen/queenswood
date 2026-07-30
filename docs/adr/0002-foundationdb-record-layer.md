@@ -64,7 +64,7 @@ Easier:
   the event" — they are the same write. In other databases the
   transactional outbox pattern needs deliberate per-service plumbing;
   here it falls out of the storage engine. How we *consume* this — in-
-  process watchers vs message-bus publishing — is a separate decision
+  process consumers vs message-bus publishing — is a separate decision
   (covered in a later ADR).
 - **Versionstamps replace wall-clock time as the ordering primitive.**
   Every committed write receives a monotonically-increasing,

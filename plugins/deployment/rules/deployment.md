@@ -20,7 +20,7 @@ diverge between them. Never bake an environment name into a resource
 name — discriminate via `values.yaml` overrides and env vars. A
 project MAY carry a service-specific `application.yml`; a service MAY
 set `replicas > 1` if it's HTTP-fronted or a processor that doesn't
-depend on changelog watchers — watchers and websocket-style consumers
+own a changelog cursor — the relay tier and websocket-style consumers
 don't horizontally scale without leader election.
 See [deployment](../../../docs/recipes/deployment.md).
 

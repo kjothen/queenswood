@@ -65,7 +65,7 @@ fns (the file already lists them).
   open/save/load/scan plus a `transact` macro that runs a body
   inside a single FDB transaction. Component-kinds for
   cluster-file-path, db, record-db, store, meta-store, and
-  changelog watchers are registered via this brick's `system`
+  keyspace-prefix are registered via this brick's `system`
   namespace.")
 ```
 
