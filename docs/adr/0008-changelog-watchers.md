@@ -1,5 +1,4 @@
 # 8. Changelog watchers for reactive state transitions
-<!-- tessl-plugin: design -->
 
 ## Status
 

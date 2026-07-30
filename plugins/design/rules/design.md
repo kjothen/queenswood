@@ -65,9 +65,7 @@ existing cursor — it starts at no checkpoint and rescans the store's
 whole history in one transaction. A lifecycle transition consumes via
 `changelog-relay/event-consumer`, not mono's `event-processor`, which
 acks on anomaly and would lose it.
-See [ADR-0021](../../../docs/adr/0021-changelog-relay.md),
-[ADR-0008](../../../docs/adr/0008-changelog-watchers.md) for the
-superseded watcher decision.
+See [ADR-0021](../../../docs/adr/0021-changelog-relay.md).
 
 ## The message bus stays behind an abstraction
 

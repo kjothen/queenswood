@@ -1,5 +1,4 @@
 # 21. Changelog relay for reactive state transitions
-
 <!-- tessl-plugin: design -->
 
 ## Status
@@ -48,49 +47,57 @@ the cursor was also the component that owned the business logic.
 
 ## Decision
 
-We separate the two jobs.
+We separate the two jobs: the tier that owns a cursor holds no domain
+logic, and the brick that holds domain logic owns no cursor.
 
-**The relay tier owns cursors and nothing else.** `changelog-relay` is
-a config-driven runner that tails one store's changelog and republishes
-each entry to the message bus. It holds no domain logic. It passes
-`{:deduplicate? false}`, because a relay carries transitions and
-collapsing two of them would drop an event. `relay-service` hosts every
-runner and runs at `replicas: 1`; the tier scales by sharding stores
-across deployments, not by adding replicas.
+The rules that follow from that split:
 
-**Every store writes one envelope.** A store's `write-changelog`
-payload is a `ChangelogEvent`: `event_id` (uuidv7, the consumer's dedup
-key), `dedup_key`, `event_name`, `payload` (Avro), `correlation_id`,
-`causation_id`, `created_at`, `traceparent`. One handler kind decodes
-every store's changelog without knowing the domain, and republishes
-`payload` verbatim — the relay never deserialises it. Because the
-adapter outbox protos reuse `ChangelogEvent`'s field numbers and wire
-types, their entries decode as one too.
+1. **The relay tier owns cursors and nothing else.** `changelog-relay`
+   is a config-driven runner that tails one store's changelog and
+   republishes each entry to the message bus. It holds no domain logic.
+   It passes `{:deduplicate? false}`, because a relay carries
+   transitions and collapsing two of them would drop an event.
+   `relay-service` hosts every runner and runs at `replicas: 1`; the
+   tier scales by sharding stores across deployments, not by adding
+   replicas.
+2. **Every store writes one envelope.** A store's `write-changelog`
+   payload is a `ChangelogEvent`: `event_id` (uuidv7, the consumer's
+   dedup key), `dedup_key`, `event_name`, `payload` (Avro),
+   `correlation_id`, `causation_id`, `created_at`, `traceparent`. One
+   handler kind decodes every store's changelog without knowing the
+   domain, and republishes `payload` verbatim — the relay never
+   deserialises it. Because the adapter outbox protos reuse
+   `ChangelogEvent`'s field numbers and wire types, their entries
+   decode as one too.
+3. **Consumers are event processors in the reacting brick.** A brick
+   that reacts to another's transition subscribes to an event channel
+   and handles the event in its own `events.clj`, outside any changelog
+   transaction, against its own records. A lifecycle transition
+   subscribes through `changelog-relay/event-consumer`, not mono's
+   `event-processor`, which acks on anomaly and would lose it.
+4. **Cursor ids are physical and are never minted fresh.**
+   `changelog/scan` range-reads everything after the checkpoint and
+   calls `.asList` with no limit, inside one transaction. A new
+   `consumer-id` starts at `nil` and would try to read a store's entire
+   changelog history in a single transaction, and republish every
+   historical transition. When a consumer moves, it carries its old id
+   verbatim — which is why the `idvs` cursor is still called
+   `parties-watcher`.
+5. **Lifecycle guards are the idempotency gate.** Delivery is
+   at-least-once: the cursor advances only when the whole pass commits,
+   so a handler that throws leaves the checkpoint in place and the
+   entry is redriven. The source-status guard in `domain.clj` is what
+   makes that safe — a transition arriving twice finds the entity
+   already past that state and skips silently, rather than rejecting.
+6. **The HTTP layer stays ignorant of downstream effects.** When a
+   flow needs N bricks to react to one request, the shape is N
+   consumers — each in the reacting brick — not an HTTP-layer
+   orchestrator chaining commands across bricks. A brick publishes its
+   own changes and acts only on its own records; it never reaches into
+   another's.
 
-**Consumers are event processors in the reacting brick.** A brick that
-reacts to another's transition subscribes to an event channel and
-handles the event in its own `events.clj`, outside any changelog
-transaction, against its own records.
-
-**Cursor ids are physical and are never minted fresh.** `changelog/scan`
-range-reads everything after the checkpoint and calls `.asList` with no
-limit, inside one transaction. A new `consumer-id` starts at `nil` and
-would try to read a store's entire changelog history in a single
-transaction, and republish every historical transition. When a
-consumer moves, it carries its old id verbatim — which is why the
-`idvs` cursor is still called `parties-watcher`.
-
-**Lifecycle guards are the idempotency gate.** Delivery is
-at-least-once: the cursor advances only when the whole pass commits, so
-a handler that throws leaves the checkpoint in place and the entry is
-redriven. The source-status guard in `domain.clj` is what makes that
-safe — a transition arriving twice finds the entity already past that
-state and skips silently, rather than rejecting.
-
-ADR-0008's brick-boundary rule survives intact, and is the reason this
-is a change of transport rather than of architecture. The HTTP layer
-still stays ignorant of downstream effects; cross-brick reactions still
-go through the changelog; a brick still acts only on its own records.
+Rule 6 is ADR-0008's brick-boundary rule, carried over intact, and is
+the reason this is a change of transport rather than of architecture.
 What changed is that the hop between "X committed" and "Y reacts" is
 now a broker rather than a function call in the same JVM.
 

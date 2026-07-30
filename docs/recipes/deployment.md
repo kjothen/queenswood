@@ -190,7 +190,7 @@ kind node's containerd, then `helm-install`s the chart.
   constraint, but raising their replicas buys standbys
   rather than throughput until `message-bus/send` carries
   a partition key and topics have more than one partition
-  (per ADR-0008).
+  (per ADR-0021).
 
 ## Discussion
 
