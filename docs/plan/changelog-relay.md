@@ -226,12 +226,10 @@ assuming any component is upstream.
    transaction's read-conflict set and two relays would not conflict — FDB's
    own optimistic concurrency would otherwise make multi-replica relays safe
    without a lease.
-3. Retire `fdb/watcher` and `fdb/watchers`. Phase 4 removed the last
-   `fdb/watchers` declaration, so both are now dead code — and dead code
-   whose loop swallows every exception with no logging (see Context),
-   which is the trap if anything ever wires it again. Upstreaming
-   `components/changelog-relay` to mono is a separate question, and only
-   sensible after that.
+3. Retire `fdb/watcher` and `fdb/watchers` — **done** in #284, along
+   with `party/watcher.clj`, the last declaration that used them.
+   Upstreaming `components/changelog-relay` to mono is a separate
+   question, and now unblocked.
 
 ## Deliberately not built
 
