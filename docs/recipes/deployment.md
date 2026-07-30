@@ -108,6 +108,9 @@ around for log inspection.
 ### Building images
 
 ```bash
+# Once per builder, and again after a `docker buildx prune`:
+just docker-warm-cache
+
 # One service:
 just docker-build api-service dev
 
@@ -118,6 +121,19 @@ just docker-build-all dev
 ```
 
 `bake` targets are declared in `infra/docker/bake.hcl`.
+
+`docker-warm-cache` copies the host `~/.m2` into the
+BuildKit cache mount the build reads. The two are unrelated:
+a `type=cache` mount is a volume inside the builder VM, with
+no bind to the host repo, so a fresh or pruned builder
+re-resolves every artifact from Maven Central and Clojars
+however many times the same coordinates have been resolved
+locally. Skipping the seed doesn't fail the build — it makes
+it slow, and it makes it fail on any transient DNS blip,
+because a cold cache has nothing to fall back on. BuildKit
+also discards a failed step's cache-mount writes, so one
+blip mid-download throws away everything fetched so far and
+the next attempt starts cold again.
 
 ### Deploying to a remote cluster
 
@@ -211,6 +227,26 @@ With `PROJECT_NAME` as a build-arg and the Clojure base
 layer shared across `buildx bake` targets, the marginal
 cost of adding a service is the project, the base, and the
 chart entry — not a fresh image-build pipeline.
+
+More of that Dockerfile is shared than the base image, but
+only because the stages are split to make it so. The `deps`
+stage — base image, code-gen tooling, `COPY`, prep, dependency
+resolution — must never reference `PROJECT_NAME`. A build arg
+declared in a stage joins the cache key of everything after
+it, so naming it there gives all fifteen targets a distinct
+key for byte-identical work, and they each run it rather than
+sharing one result. The arg first appears in a thin `build`
+stage layered on top, whose only job is the uberjar. That
+split is what the two cache-mount sharing modes track. The shared
+step is the only writer and holds `sharing=locked`, which
+costs nothing because one build holds it rather than
+fifteen. The per-service step takes `sharing=shared`, so the
+uberjars actually run in parallel — locking there would
+serialise them behind one mutex and give back most of what
+`bake` buys. Prefetching each project's `:build` deps with
+`clojure -P` inside the locked step is what makes that safe:
+it leaves the parallel steps with reads only, and Maven
+Resolver's concurrency problem needs a writer to bite.
 
 The migrator/bootstrap split is about ownership and
 re-runnability:

@@ -18,8 +18,13 @@ ARG PROJECT_NAME
 # rebuilding. Avoids ~3× QEMU-emulation slowdown for the cross-arch
 # build under multi-platform bake. The runtime stage stays on
 # `$TARGETPLATFORM` because the JRE and libfdb_c.so are arch-specific.
-FROM --platform=$BUILDPLATFORM clojure:temurin-21-tools-deps-bookworm AS build
-ARG PROJECT_NAME
+# This stage must never reference PROJECT_NAME. A build arg declared in
+# a stage becomes part of the cache key for everything after it, so
+# naming it here would give all fifteen bake targets a distinct key for
+# work that is byte-identical — and they would each run it, serialised
+# by the lock below. Keeping the arg out until the next stage is what
+# makes this run exactly once.
+FROM --platform=$BUILDPLATFORM clojure:temurin-21-tools-deps-bookworm AS deps
 ARG BUILDARCH
 WORKDIR /workspace
 
@@ -53,23 +58,46 @@ RUN apt-get update \
 
 COPY . .
 # Cache mounts for the Maven local repo and tools.deps git-libs cache.
-# `sharing=locked` serialises mount access across concurrent bake
-# targets — required because Maven Resolver isn't safe for parallel
-# downloads to the same local repo (concurrent writers race on the
-# `*.part` files mid-download). With locked, the first build downloads
-# everything; subsequent builds hit the populated cache and finish in
-# seconds. Cache contents are *not* baked into the image layer, which
-# keeps the runtime stage clean.
-# Code-gen step (Lancaster Avro schemas, protobuf classes) must run
-# from the workspace root — the `:dev` alias with every brick is
-# defined in the top-level deps.edn, not in any project deps.edn.
-# Mirrors the local `just force-prep` recipe.
-RUN --mount=type=cache,target=/root/.m2,sharing=locked \
-    --mount=type=cache,target=/root/.gitlibs,sharing=locked \
-    clojure -X:deps prep :aliases '[:dev]' :force true
+# Contents are *not* baked into the image layer, which keeps the
+# runtime stage clean. Seed them once from a host `~/.m2` with
+# `just docker-warm-cache` — they are BuildKit volumes, unrelated to
+# the host repo, so a fresh builder is otherwise cold.
+#
+# This step is the only writer, and every target shares one execution
+# of it, so `sharing=locked` costs a single lock holder rather than
+# fifteen queueing.
+#
+# Two jobs, in one layer so they share that lock:
+#  - Code-gen (Lancaster Avro schemas, protobuf classes) must run from
+#    the workspace root; the `:dev` alias with every brick is defined
+#    in the top-level deps.edn, not in any project deps.edn. Mirrors
+#    the local `just force-prep` recipe.
+#  - Resolve every project's dependencies, so the parallel uberjar
+#    steps below have reads only and their shared mount has no writer
+#    to race. Both invocations are needed and neither substitutes for
+#    the other: `clojure -P` resolves the project's own `:deps`, which
+#    is what `uber` ends up compiling, while `-P -X:build` resolves
+#    only the tools.build alias that runs it. Prefetching just the
+#    alias leaves `create-basis` to fetch the real dependency tree at
+#    uberjar time — which is a concurrent write, on a shared mount,
+#    and it corrupts artifacts mid-download.
+RUN --mount=type=cache,id=queenswood-m2,target=/root/.m2,sharing=locked \
+    --mount=type=cache,id=queenswood-gitlibs,target=/root/.gitlibs,sharing=locked \
+    clojure -X:deps prep :aliases '[:dev]' :force true \
+ && for p in projects/*/; do \
+      (cd "$p" && clojure -P && clojure -P -X:build) || exit 1; \
+    done
+
+FROM deps AS build
+ARG PROJECT_NAME
 WORKDIR /workspace/projects/${PROJECT_NAME}
-RUN --mount=type=cache,target=/root/.m2,sharing=locked \
-    --mount=type=cache,target=/root/.gitlibs,sharing=locked \
+# `sharing=shared`, not locked: this is the per-project step, so all
+# fifteen bake targets reach it at once. The prefetch above leaves them
+# with reads only, and Maven Resolver's parallel-write race needs a
+# writer to bite. Locking here would serialise the fifteen uberjar
+# builds behind one mutex — most of what bake's parallelism buys.
+RUN --mount=type=cache,id=queenswood-m2,target=/root/.m2,sharing=shared \
+    --mount=type=cache,id=queenswood-gitlibs,target=/root/.gitlibs,sharing=shared \
     clojure -X:build uber :snapshot true \
  && mv target/*.jar target/app.jar
 
