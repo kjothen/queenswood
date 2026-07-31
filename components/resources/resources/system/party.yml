@@ -17,12 +17,8 @@ idv-event-processor-impl: !system/component
   record-store: !system/ref fdb.meta-store
   schemas: !system/ref avro.serde
 
-# `changelog-relay/event-consumer` rather than
-# `event-processor/event-processor`: activating a party is a lifecycle
-# transition, and mono's `event/process` acks on anomaly, so a failure
-# would lose it.
 idv-event-consumer: !system/component
-  system/component-kind: changelog-relay/event-consumer
+  system/component-kind: event-processor/event-processor
   bus: !system/ref message-bus.bus
   processor: !system/local-ref idv-event-processor-impl
   event-channel: !keyword idvs-event

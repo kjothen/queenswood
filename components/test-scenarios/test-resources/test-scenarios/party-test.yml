@@ -17,7 +17,7 @@ idv-event-processor-impl: !system/component
   schemas: !system/ref avro.serde
 
 idv-event-consumer: !system/component
-  system/component-kind: changelog-relay/event-consumer
+  system/component-kind: event-processor/event-processor
   bus: !system/ref message-bus.bus
   processor: !system/local-ref idv-event-processor-impl
   event-channel: !keyword idvs-event
