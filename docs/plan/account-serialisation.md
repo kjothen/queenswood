@@ -43,10 +43,12 @@ partitioning changes that while the read stays serialisable.
 Serialise account activity by routing, and soften the bank-level check
 to match what it is for.
 
-1. **Key payment commands on `debtor-account-id`.** All commands for
-   one account land on one partition and are processed in order, so
-   there is no concurrency on that account's balances at all. The
-   available-balance limit stays exact and stops costing retries. This
+1. **Key payment commands on `debtor-account-id`.** Payment commands
+   for one account land on one partition and are processed in order, so
+   payments stop contending on that account's balances. The
+   available-balance limit stays exact and stops costing retries
+   between payments — other balance writers still reach it
+   concurrently, and FDB still resolves that (see Scope and caveats). This
    is also the right sharding axis: one account is one serial stream,
    N accounts go N ways parallel.
 2. **Read the bank-level aggregate at SNAPSHOT.** It does not join the
@@ -100,6 +102,22 @@ deriving the key inside `event/publish`.
 
 ## Scope and caveats
 
+- **Payments are not the only writer, so serialisation is partial.**
+  `transaction/record-transaction` and `interest`'s accrual and
+  capitalisation commands also post legs to account balances. Keying
+  payment commands removes contention *between payments* on one
+  account; a payment concurrent with a `record-transaction` on the same
+  account still lands on an unrelated partition and relies on FDB
+  conflict detection, exactly as today. That is safe — the conflict is
+  the backstop and `check-available` cannot be breached — but the
+  guarantee is "payments on an account are serialised", not "account
+  activity is serialised".
+
+  `interest` is structurally unkeyable: accrual is a batch across many
+  accounts, so there is no single account to key it on. Any future
+  attempt to make account serialisation total has to solve that first,
+  and the answer is probably to split the batch per account rather than
+  to key it.
 - **Debtor-side only.** Keying on `debtor-account-id` serialises
   debits. An internal payment `A→B` and another `C→B` land on different
   partitions and both write B's balances, so credits still rely on FDB
@@ -116,6 +134,10 @@ deriving the key inside `event/publish`.
   amount limit today is bank-scoped. Adding per-account daily count and
   amount becomes cheap *after* this change, because they would read
   uncontended — but they are not a prerequisite for it.
+- **An unsupplied key is a null key.** Nothing is invented. A command
+  dispatched without one is sticky-batched by Kafka or round-robined by
+  Pulsar. So a topic can carry keyed and unkeyed commands at once, and
+  per-account ordering holds only for the keyed ones.
 - **Command topics stay at `partitions: 1` until this lands.** Unkeyed
   plus multi-partition is the combination that reorders. The event-side
   partition work will make raising counts feel safe; it is safe for
