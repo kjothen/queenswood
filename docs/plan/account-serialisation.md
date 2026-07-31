@@ -83,7 +83,7 @@ point.
 This corrects the guidance in the original mono handoff, which proposed
 deriving the key inside `event/publish`.
 
-## The key travels in the envelope, not in `causation-id`
+## The ordering key travels in the envelope, not in `causation-id`
 
 A command keyed on an account must produce events keyed on the same
 account, or ordering is preserved on the way in and discarded on the way
@@ -102,10 +102,24 @@ Where they don't coincide it fails outright: the ClearBank outbox sets
 `:causation-id (str (utility/uuidv7))`. Keying on that is worse than
 not keying, because it looks keyed and scatters perfectly.
 
-So `ChangelogEvent` gains an explicit optional key field. The writer
-declares it, the relay reads it and passes `{:key …}` to the bus, and a
-writer that sets nothing gets an unkeyed publish — the same
+So `ChangelogEvent` gains an explicit optional `ordering_key`. The
+writer declares it, the relay reads it and passes `{:key …}` to the
+bus, and a writer that sets nothing gets an unkeyed publish — the same
 declared-never-inferred rule the commands follow.
+
+Named for the guarantee, not the mechanism. "Partition key" is Kafka
+and Pulsar vocabulary, and partitions are an implementation detail of
+one transport — the local core.async bus has none, and a future
+transport may partition differently or not at all. `ordering_key`
+states what the field is *for*: the identity whose events must stay in
+sequence relative to each other. A reader who has never seen a
+partition still knows what to put in it, and the field survives a
+change of backend.
+
+The values themselves are already right — `account-id` for
+cash-accounts, `party-id` for parties and IDVs, `bank-id` for banks.
+They just need setting deliberately in their own field rather than
+being read out of `causation-id` by coincidence.
 
 Note that nothing downstream of a payment needs this yet: no
 `write-changelog` exists in `payment`, `transaction` or `balance`, so a
