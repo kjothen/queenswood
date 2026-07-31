@@ -39,6 +39,7 @@
        ;; this is the id whose transitions have to stay in sequence once
        ;; it becomes the partition key.
        :causation-id party-id
+       :ordering-key party-id
        :created-at (utility/now)}
       ;; Written inside the command's transaction, so this is the
       ;; `process-command` span — which is itself under the request. The

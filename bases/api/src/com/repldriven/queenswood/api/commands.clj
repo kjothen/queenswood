@@ -43,33 +43,44 @@
     {}))
 
 (defn send
-  [dispatcher request command-name response-schema data]
-  (let [{:keys [avro]} request
-        envelope (command/req->command-request request command-name)
-        ;; Routes without `require-idempotency-key` carry no client key, so
-        ;; the envelope's id/correlation-id are nil. Assign a server id so
-        ;; the command and its trace are addressable. Reply matching is on
-        ;; the dispatcher's per-send command-id, not correlation-id.
-        id (or (:id envelope) (str (utility/uuidv7)))
-        envelope (assoc envelope
-                        :id id
-                        :correlation-id (or (:correlation-id envelope) id))
-        result (let-nom>
-                 [schema (get-schema avro command-name)
-                  payload (avro/serialize schema data)]
-                 (command/send dispatcher (assoc envelope :payload payload)))]
-    (cond
-     (error/anomaly? result)
-     (errors/anomaly->response result)
+  "Dispatch a command and translate the reply into a ring response.
 
-     (= "REJECTED" (:status result))
-     (rejected-response result)
+  `opts` takes `:ordering-key` — the identity whose commands must be
+  processed in order relative to each other. Declared per route, never
+  inferred: a command without one is unkeyed, which is correct while a
+  topic has one partition and silently reorders once it does not."
+  ([dispatcher request command-name response-schema data]
+   (send dispatcher request command-name response-schema data {}))
+  ([dispatcher request command-name response-schema data {:keys [ordering-key]}]
+   (let [{:keys [avro]} request
+         envelope (command/req->command-request request command-name)
+         ;; Routes without `require-idempotency-key` carry no client key,
+         ;; so the envelope's id/correlation-id are nil. Assign a server
+         ;; id so the command and its trace are addressable. Reply
+         ;; matching is on the dispatcher's per-send command-id, not
+         ;; correlation-id.
+         id (or (:id envelope) (str (utility/uuidv7)))
+         envelope (assoc envelope
+                         :id id
+                         :correlation-id (or (:correlation-id envelope) id))
+         result (let-nom>
+                  [schema (get-schema avro command-name)
+                   payload (avro/serialize schema data)]
+                  (command/send dispatcher
+                                (assoc envelope :payload payload)
+                                (utility/assoc-some {} :key ordering-key)))]
+     (cond
+      (error/anomaly? result)
+      (errors/anomaly->response result)
 
-     (= "FAILED" (:status result))
-     {:status 500 :body (errors/error-response 500 "FAILED" result)}
+      (= "REJECTED" (:status result))
+      (rejected-response result)
 
-     :else
-     (let [body (decode-payload avro response-schema result)]
-       (if (error/anomaly? body)
-         (errors/anomaly->response body)
-         {:status 200 :body body})))))
+      (= "FAILED" (:status result))
+      {:status 500 :body (errors/error-response 500 "FAILED" result)}
+
+      :else
+      (let [body (decode-payload avro response-schema result)]
+        (if (error/anomaly? body)
+          (errors/anomaly->response body)
+          {:status 200 :body body}))))))

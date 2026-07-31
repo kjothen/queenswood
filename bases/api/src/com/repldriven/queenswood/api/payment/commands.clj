@@ -19,7 +19,11 @@
                    request
                    "submit-internal-payment"
                    "internal-payment"
-                   (assoc body :bank-id bank-id))))
+                   (assoc body :bank-id bank-id)
+                   ;; Serialise a debtor account's payments: they contend
+                   ;; on its available balance, and that is the limit
+                   ;; that can actually reject.
+                   {:ordering-key (:debtor-account-id body)})))
 
 (defn submit-outbound-payment
   [request]
@@ -32,4 +36,5 @@
                    "outbound-payment"
                    (-> body
                        (update :scheme coercion/encode-payment-scheme)
-                       (assoc :bank-id bank-id)))))
+                       (assoc :bank-id bank-id))
+                   {:ordering-key (:debtor-account-id body)})))

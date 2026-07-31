@@ -198,25 +198,39 @@
   "Counts records using a COUNT index. index-name is the
   name of the count index. key is the Tuple key to count
   (e.g. a single value or vector of values for compound
-  keys). Uses evaluateAggregateFunction for O(1) lookup."
-  [store index-name key]
-  (let [key-tuple (if (vector? key)
-                    (Tuple/from (into-array Object key))
-                    (Tuple/from (into-array Object [key])))
-        index (.getIndex (.getRecordMetaData store)
-                         index-name)
-        agg-fn (IndexAggregateFunction.
-                IndexTypes/COUNT
-                (.getRootExpression index)
-                index-name)]
-    (-> (.evaluateAggregateFunction
-         store
-         (java.util.Collections/emptyList)
-         agg-fn
-         (TupleRange/allOf key-tuple)
-         com.apple.foundationdb.record.IsolationLevel/SERIALIZABLE)
-        (.join)
-        (.getLong 0))))
+  keys). Uses evaluateAggregateFunction for O(1) lookup.
+
+  `opts` takes `:isolation`, `:serializable` (the default) or
+  `:snapshot`. A serialisable read puts the aggregate key in the
+  transaction's read-conflict set, and the index is maintained by
+  atomic mutations as records commit — so every writer under the same
+  group conflicts with every concurrent reader of the count. That is
+  right for a value a decision must be exact about, and wrong for a
+  safety net, where it serialises the whole group on the counter.
+  Snapshot reads the same maintained aggregate without joining the
+  conflict set, at the cost of a count that may be stale by the number
+  of in-flight writers."
+  ([store index-name key] (count-records store index-name key {}))
+  ([store index-name key {:keys [isolation] :or {isolation :serializable}}]
+   (let [key-tuple (if (vector? key)
+                     (Tuple/from (into-array Object key))
+                     (Tuple/from (into-array Object [key])))
+         index (.getIndex (.getRecordMetaData store)
+                          index-name)
+         agg-fn (IndexAggregateFunction.
+                 IndexTypes/COUNT
+                 (.getRootExpression index)
+                 index-name)]
+     (-> (.evaluateAggregateFunction
+          store
+          (java.util.Collections/emptyList)
+          agg-fn
+          (TupleRange/allOf key-tuple)
+          (if (= :snapshot isolation)
+            com.apple.foundationdb.record.IsolationLevel/SNAPSHOT
+            com.apple.foundationdb.record.IsolationLevel/SERIALIZABLE))
+         (.join)
+         (.getLong 0)))))
 
 (defn sum-records
   "Sums the trailing value column of a SUM index over the group whose

@@ -25,12 +25,8 @@ event-processor-impl: !system/component
     zone: Europe/London
     hour-of-day: 17
 
-# `changelog-relay/event-consumer` rather than
-# `event-processor/event-processor`: this event carries a fact that
-# originated outside the bank and cannot be re-derived, and mono's
-# `event/process` acks on anomaly, so a failure would lose it.
 event-processor: !system/component
-  system/component-kind: changelog-relay/event-consumer
+  system/component-kind: event-processor/event-processor
   bus: !system/ref message-bus.bus
   processor: !system/local-ref event-processor-impl
   event-channel: !keyword schemes-payments-event

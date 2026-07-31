@@ -12,12 +12,8 @@ event-processor-impl: !system/component
   record-store: !system/ref fdb.meta-store
   schemas: !system/ref avro.serde
 
-# `changelog-relay/event-consumer` rather than
-# `event-processor/event-processor`: this event carries a fact that
-# originated outside the bank and cannot be re-derived, and mono's
-# `event/process` acks on anomaly, so a failure would lose it.
 event-processor: !system/component
-  system/component-kind: changelog-relay/event-consumer
+  system/component-kind: event-processor/event-processor
   bus: !system/ref message-bus.bus
   processor: !system/local-ref event-processor-impl
   event-channel: !keyword idv-event
@@ -30,12 +26,8 @@ party-event-processor-impl: !system/component
   bus: !system/ref message-bus.bus
   idv-command-channel: !keyword idv-command
 
-# `changelog-relay/event-consumer` rather than
-# `event-processor/event-processor`: initiating an IDV is a lifecycle
-# transition, and mono's `event/process` acks on anomaly, so a failure
-# would lose it.
 party-event-consumer: !system/component
-  system/component-kind: changelog-relay/event-consumer
+  system/component-kind: event-processor/event-processor
   bus: !system/ref message-bus.bus
   processor: !system/local-ref party-event-processor-impl
   event-channel: !keyword parties-event

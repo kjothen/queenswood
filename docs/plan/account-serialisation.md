@@ -51,7 +51,14 @@ to match what it is for.
    concurrently, and FDB still resolves that (see Scope and caveats). This
    is also the right sharding axis: one account is one serial stream,
    N accounts go N ways parallel.
-2. **Read the bank-level aggregate at SNAPSHOT.** It does not join the
+2. **Read interest's per-account balance at SNAPSHOT.** `accrue-account`
+   reads the posted balance serialisably, so a payment on that account
+   forces the accrual to retry. Daily interest accrues on the balance
+   *as of* a date — a payment landing mid-run should not invalidate the
+   computation, so a snapshot read is the semantically correct one, not
+   merely the cheaper one. It is safe because the accrual writes a
+   credit, and `check-available` cannot reject a credit.
+3. **Read the bank-level aggregate at SNAPSHOT.** It does not join the
    read-conflict set, so payments across different accounts stop
    colliding on it. The count can be stale by the number of in-flight
    concurrent payments, which means the daily limit can be exceeded by
@@ -164,11 +171,21 @@ a status-changed event of their own.
   guarantee is "payments on an account are serialised", not "account
   activity is serialised".
 
-  `interest` is structurally unkeyable: accrual is a batch across many
-  accounts, so there is no single account to key it on. Any future
-  attempt to make account serialisation total has to solve that first,
-  and the answer is probably to split the batch per account rather than
-  to key it.
+  `interest` is bank-scoped at dispatch but already per-account in
+  execution. `accrue-daily-interest` carries `{bank-id, as-of-date}`
+  and no account, so the command itself cannot be keyed — but
+  `run-interest` fans out through `process-customer-accounts` and each
+  account's accrual is its own short FDB transaction, deliberately so.
+
+  That makes it more tractable than it first looks. The per-account
+  transaction boundary that keying would need already exists; what is
+  bank-scoped is only the dispatch. Making interest participate in
+  account ordering means the bank-wide command fanning out into
+  per-account commands, each keyed on its account, rather than
+  iterating accounts inside one command. It also means the contention
+  window against a concurrent payment is already one short transaction,
+  not a long batch — so the cost of leaving it as-is is lower than the
+  multi-account framing suggests.
 - **Debtor-side only.** Keying on `debtor-account-id` serialises
   debits. An internal payment `A→B` and another `C→B` land on different
   partitions and both write B's balances, so credits still rely on FDB

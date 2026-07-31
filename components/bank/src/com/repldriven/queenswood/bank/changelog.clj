@@ -34,6 +34,7 @@
        :event-name event-name
        :payload payload
        :causation-id bank-id
+       :ordering-key bank-id
        :created-at (utility/now)}
       ;; Written inside the command's transaction, so this is the
       ;; `process-command` span — which is itself under the request. A

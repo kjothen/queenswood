@@ -81,6 +81,14 @@
   [store index-name key]
   (record/count-records store index-name key))
 
+(defn count-records-snapshot
+  "`count-records`, read at SNAPSHOT so the aggregate key does not join
+  the transaction's read-conflict set. For a safety-net limit, where a
+  count stale by the in-flight writers is acceptable and serialising
+  the whole group on the counter is not."
+  [store index-name key]
+  (record/count-records store index-name key {:isolation :snapshot}))
+
 (defn sum-records
   "Sums the trailing value column of a SUM index over the group
   whose grouping key is `key`. O(1) via the aggregate index; an

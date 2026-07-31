@@ -102,9 +102,9 @@
   (fdb/transact
    txn
    (fn [txn]
-     (fdb/count-records (fdb/open txn internal-payments-store-name)
-                        "InternalPayment_count_by_bank_business_day"
-                        [bank-id business-day]))
+     (fdb/count-records-snapshot (fdb/open txn internal-payments-store-name)
+                                 "InternalPayment_count_by_bank_business_day"
+                                 [bank-id business-day]))
    :payment/count-internal-by-org-business-day
    {:message "Failed to count internal payments by org/day"
     :bank-id bank-id
@@ -115,9 +115,9 @@
   (fdb/transact
    txn
    (fn [txn]
-     (fdb/count-records (fdb/open txn outbound-payments-store-name)
-                        "OutboundPayment_count_by_bank_business_day"
-                        [bank-id business-day]))
+     (fdb/count-records-snapshot (fdb/open txn outbound-payments-store-name)
+                                 "OutboundPayment_count_by_bank_business_day"
+                                 [bank-id business-day]))
    :payment/count-outbound-by-org-business-day
    {:message "Failed to count outbound payments by org/day"
     :bank-id bank-id
@@ -141,9 +141,9 @@
   (fdb/transact
    txn
    (fn [txn]
-     (fdb/count-records (fdb/open txn inbound-payments-store-name)
-                        "InboundPayment_count_by_bank_business_day"
-                        [bank-id business-day]))
+     (fdb/count-records-snapshot (fdb/open txn inbound-payments-store-name)
+                                 "InboundPayment_count_by_bank_business_day"
+                                 [bank-id business-day]))
    :payment/count-inbound-by-org-business-day
    {:message "Failed to count inbound payments by org/day"
     :bank-id bank-id

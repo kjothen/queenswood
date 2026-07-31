@@ -20,7 +20,7 @@
         (log/error "Skipping undecodable changelog entry"
                    {:store-name store-name :anomaly decoded})
         (let [{:keys [event-name payload correlation-id causation-id
-                      traceparent]}
+                      traceparent ordering-key]}
               decoded
               envelope (-> (event/envelope event-name
                                            causation-id
@@ -32,7 +32,16 @@
                            ;; before the field existed, or with nothing
                            ;; being traced.
                            (assoc-some :traceparent traceparent))
-              res (event/publish bus envelope {:event-channel event-channel})]
+              ;; The writer declares the ordering key; the relay only
+              ;; carries it across. Absent means an unkeyed publish —
+              ;; correct while a topic has one partition, and the thing
+              ;; that reorders once it does not.
+              res (event/publish bus
+                                 envelope
+                                 (assoc-some
+                                  {:event-channel event-channel}
+                                  :key
+                                  ordering-key))]
           (when (error/anomaly? res)
             (log/error "Changelog relay publish failed; will redrive" res)
             ;; nosemgrep: no-raw-throw
