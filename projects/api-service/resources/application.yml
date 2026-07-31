@@ -282,6 +282,7 @@ system:
         interest: !system/ref interest.dispatcher
         transactions: !system/ref transactions.dispatcher
         payee-checks: !system/ref payee-checks.dispatcher
+        companies: !system/ref companies.dispatcher
       avro: !system/ref avro.serde
       record-db: !system/ref fdb.record-db
       record-store: !system/ref fdb.meta-store
