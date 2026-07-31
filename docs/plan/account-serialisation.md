@@ -121,6 +121,13 @@ cash-accounts, `party-id` for parties and IDVs, `bank-id` for banks.
 They just need setting deliberately in their own field rather than
 being read out of `causation-id` by coincidence.
 
+The rename stops at our schema. mono's send opts stay `{:key …}`,
+because at the transport seam "key" is the accurate word — it is what
+Kafka and Pulsar both call it, and that layer *is* the transport.
+`ordering_key` is the domain name for domain data that outlives any
+backend; `:key` is the transport name at the point we hand it over. The
+relay is where one becomes the other.
+
 Note that nothing downstream of a payment needs this yet: no
 `write-changelog` exists in `payment`, `transaction` or `balance`, so a
 keyed payment command currently produces no events to carry the key
