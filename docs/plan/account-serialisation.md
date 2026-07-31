@@ -83,6 +83,36 @@ point.
 This corrects the guidance in the original mono handoff, which proposed
 deriving the key inside `event/publish`.
 
+## The key travels in the envelope, not in `causation-id`
+
+A command keyed on an account must produce events keyed on the same
+account, or ordering is preserved on the way in and discarded on the way
+out. The relay is generic and must stay that way, so the key has to
+travel *in* the envelope rather than be inferred by the relay.
+
+It must not be `causation-id`. That is the same conflation rejected
+above, and this codebase already demonstrates why. Three writers set
+`causation-id` to their own entity, but `idv/changelog.clj` sets it to
+the *party* id rather than the verification id — chosen because the
+consumer advances the party, which is a routing decision wearing a
+lineage field's clothes. It works only because entity and ordering unit
+happen to coincide.
+
+Where they don't coincide it fails outright: the ClearBank outbox sets
+`:causation-id (str (utility/uuidv7))`. Keying on that is worse than
+not keying, because it looks keyed and scatters perfectly.
+
+So `ChangelogEvent` gains an explicit optional key field. The writer
+declares it, the relay reads it and passes `{:key …}` to the bus, and a
+writer that sets nothing gets an unkeyed publish — the same
+declared-never-inferred rule the commands follow.
+
+Note that nothing downstream of a payment needs this yet: no
+`write-changelog` exists in `payment`, `transaction` or `balance`, so a
+keyed payment command currently produces no events to carry the key
+onward. This matters when it does — and it will, if payments ever grow
+a status-changed event of their own.
+
 ## What this needs
 
 **In Queenswood:**
