@@ -230,8 +230,8 @@
         _ (store/save txn
                       updated
                       {:bank-id bank-id
-                       :status-before (name (:status bank))
-                       :status-after (name (:status updated))})]
+                       :status-before (:status bank)
+                       :status-after (:status updated)})]
        updated))
    :bank/change-tier
    "Failed to change bank tier"))
@@ -256,8 +256,8 @@
           _ (store/save txn
                         updated
                         {:bank-id bank-id
-                         :status-before (name (:status bank))
-                         :status-after (name (:status updated))})]
+                         :status-before (:status bank)
+                         :status-after (:status updated)})]
          updated)))
    :bank/change-status
    "Failed to change bank status"))

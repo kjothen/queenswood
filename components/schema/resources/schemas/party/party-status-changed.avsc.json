@@ -3,9 +3,19 @@
   "name": "PartyStatusChanged",
   "namespace": "com.repldriven.mono.party",
   "fields": [
-    {"name": "bank_id",       "type": "string"},
-    {"name": "party_id",      "type": "string"},
-    {"name": "status_before", "type": ["null", "string"], "default": null},
-    {"name": "status_after",  "type": "string"}
+    {"name": "bank_id",  "type": "string"},
+    {"name": "party_id", "type": "string"},
+    {"name": "status_before",
+     "type": ["null", {"type": "enum",
+                       "name": "PartyStatus",
+                       "symbols": ["PARTY_STATUS_UNKNOWN",
+                                    "PARTY_STATUS_PENDING",
+                                    "PARTY_STATUS_ACTIVE",
+                                    "PARTY_STATUS_SUSPENDED",
+                                    "PARTY_STATUS_CLOSED",
+                                    "PARTY_STATUS_REJECTED",
+                                    "PARTY_STATUS_MERGED"]}],
+     "default": null},
+    {"name": "status_after", "type": "com.repldriven.mono.party.PartyStatus"}
   ]
 }

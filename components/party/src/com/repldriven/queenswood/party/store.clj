@@ -24,13 +24,14 @@
      (let [store (fdb/open txn store-name)]
        (let-nom>
          [_ (fdb/save-record store (schema/Party->java party))
+          entry (changelog/status-changed
+                 (assoc changelog
+                        :bank-id
+                        (:bank-id party)))
           _ (fdb/write-changelog txn
                                  store-name
                                  (:party-id party)
-                                 (changelog/status-changed
-                                  (assoc changelog
-                                         :bank-id
-                                         (:bank-id party))))]
+                                 entry)]
          (schema/Party->pb party))))
    :party/save
    "Failed to save party"))

@@ -3,6 +3,7 @@
     [com.repldriven.queenswood.schema.interface :as schema]
 
     [com.repldriven.mono.avro.interface :as avro]
+    [com.repldriven.mono.error.interface :refer [let-nom>]]
     [com.repldriven.mono.telemetry.interface :as telemetry]
     [com.repldriven.mono.utility.interface :as utility]
 
@@ -22,21 +23,21 @@
   transition. `changelog` carries `:bank-id`, `:status-before` and
   `:status-after`."
   [{:keys [bank-id status-before status-after]}]
-  (schema/ChangelogEvent->pb
-   (utility/assoc-some
-    {:event-id (str (utility/uuidv7))
-     :dedup-key (str bank-id ":" (name status-after))
-     :event-name event-name
-     :payload (avro/serialize @schema
-                              {:bank-id bank-id
-                               :status-before (some-> status-before
-                                                      name)
-                               :status-after (name status-after)})
-     :causation-id bank-id
-     :created-at (utility/now)}
-    ;; Written inside the command's transaction, so this is the
-    ;; `process-command` span — which is itself under the request. A
-    ;; relay would republish it and the consumer's span would join that
-    ;; trace.
-    :traceparent
-    (telemetry/inject-traceparent))))
+  (let-nom> [payload (avro/serialize @schema
+                                     {:bank-id bank-id
+                                      :status-before status-before
+                                      :status-after status-after})]
+    (schema/ChangelogEvent->pb
+     (utility/assoc-some
+      {:event-id (str (utility/uuidv7))
+       :dedup-key (str bank-id ":" (name status-after))
+       :event-name event-name
+       :payload payload
+       :causation-id bank-id
+       :created-at (utility/now)}
+      ;; Written inside the command's transaction, so this is the
+      ;; `process-command` span — which is itself under the request. A
+      ;; relay would republish it and the consumer's span would join that
+      ;; trace.
+      :traceparent
+      (telemetry/inject-traceparent)))))

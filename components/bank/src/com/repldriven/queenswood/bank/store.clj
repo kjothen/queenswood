@@ -44,10 +44,11 @@
      (let [store (fdb/open txn store-name)]
        (let-nom>
          [_ (fdb/save-record store (schema/Bank->java bank))
+          entry (changelog/status-changed changelog)
           _ (fdb/write-changelog txn
                                  store-name
                                  (:bank-id bank)
-                                 (changelog/status-changed changelog))]
+                                 entry)]
          bank)))
    :bank/save
    "Failed to save bank"))
