@@ -15,7 +15,7 @@
     (core/complete-status-transition bank
                                      bank-id
                                      account-id
-                                     (keyword status-after))))
+                                     status-after)))
 
 (defn- dispatch
   [config message]

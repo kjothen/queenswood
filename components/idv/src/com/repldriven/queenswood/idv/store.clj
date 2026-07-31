@@ -20,14 +20,15 @@
      (let [store (fdb/open txn store-name)]
        (let-nom>
          [_ (fdb/save-record store (schema/Idv->java idv))
+          entry (changelog/status-changed
+                 (assoc changelog
+                        :bank-id (:bank-id idv)
+                        :party-id (:party-id idv)))
           _ (fdb/write-changelog
              txn
              store-name
              (:verification-id idv)
-             (changelog/status-changed
-              (assoc changelog
-                     :bank-id (:bank-id idv)
-                     :party-id (:party-id idv))))]
+             entry)]
          idv)))
    :idv/save
    "Failed to save IDV"))

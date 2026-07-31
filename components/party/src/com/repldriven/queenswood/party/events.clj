@@ -10,7 +10,7 @@
 (defn- handle-idv-status-changed
   [config data]
   (let [{:keys [bank-id party-id status-after]} data]
-    (core/apply-idv-status config bank-id party-id (keyword status-after))))
+    (core/apply-idv-status config bank-id party-id status-after)))
 
 (defn- dispatch
   [config message]

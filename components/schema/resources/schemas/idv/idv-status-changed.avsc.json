@@ -6,7 +6,16 @@
     {"name": "bank_id",         "type": "string"},
     {"name": "verification_id", "type": "string"},
     {"name": "party_id",        "type": "string"},
-    {"name": "status_before",   "type": ["null", "string"], "default": null},
-    {"name": "status_after",    "type": "string"}
+    {"name": "status_before",
+     "type": ["null", {"type": "enum",
+                       "name": "IdvStatus",
+                       "symbols": ["IDV_STATUS_UNKNOWN",
+                                    "IDV_STATUS_PENDING",
+                                    "IDV_STATUS_IN_REVIEW",
+                                    "IDV_STATUS_ACCEPTED",
+                                    "IDV_STATUS_REJECTED",
+                                    "IDV_STATUS_FAILED"]}],
+     "default": null},
+    {"name": "status_after", "type": "com.repldriven.mono.idv.IdvStatus"}
   ]
 }

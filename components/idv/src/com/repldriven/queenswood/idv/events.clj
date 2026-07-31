@@ -74,7 +74,7 @@
 (defn- handle-party-status-changed
   [config data]
   (let [{:keys [bank-id party-id status-after]} data]
-    (when (= "party-status-pending" status-after)
+    (when (= :party-status-pending status-after)
       ;; `config` rather than a bank map: initiating publishes a
       ;; `submit-idv-check` command, so the bus and command channel have
       ;; to come along.

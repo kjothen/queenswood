@@ -3,6 +3,7 @@
     [com.repldriven.queenswood.schema.interface :as schema]
 
     [com.repldriven.mono.avro.interface :as avro]
+    [com.repldriven.mono.error.interface :refer [let-nom>]]
     [com.repldriven.mono.telemetry.interface :as telemetry]
     [com.repldriven.mono.utility.interface :as utility]
 
@@ -23,21 +24,21 @@
   transition. `changelog` carries `:bank-id`, `:party-id`,
   `:status-before` and `:status-after`."
   [{:keys [bank-id party-id status-before status-after]}]
-  (schema/ChangelogEvent->pb
-   (utility/assoc-some
-    {:event-id (str (utility/uuidv7))
-     :dedup-key (str party-id ":" (name status-after))
-     :event-name event-name
-     :payload (avro/serialize @schema
-                              {:bank-id bank-id
-                               :party-id party-id
-                               :status-before (some-> status-before
-                                                      name)
-                               :status-after (name status-after)})
-     :causation-id party-id
-     :created-at (utility/now)}
-    ;; Written inside the command's transaction, so this is the
-    ;; `process-command` span — which is itself under the request. The
-    ;; relay republishes it and the consumer's span joins that trace.
-    :traceparent
-    (telemetry/inject-traceparent))))
+  (let-nom> [payload (avro/serialize @schema
+                                     {:bank-id bank-id
+                                      :party-id party-id
+                                      :status-before status-before
+                                      :status-after status-after})]
+    (schema/ChangelogEvent->pb
+     (utility/assoc-some
+      {:event-id (str (utility/uuidv7))
+       :dedup-key (str party-id ":" (name status-after))
+       :event-name event-name
+       :payload payload
+       :causation-id party-id
+       :created-at (utility/now)}
+      ;; Written inside the command's transaction, so this is the
+      ;; `process-command` span — which is itself under the request. The
+      ;; relay republishes it and the consumer's span joins that trace.
+      :traceparent
+      (telemetry/inject-traceparent)))))

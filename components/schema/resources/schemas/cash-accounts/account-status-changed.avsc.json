@@ -3,9 +3,19 @@
   "name": "CashAccountStatusChanged",
   "namespace": "com.repldriven.mono.cash_accounts",
   "fields": [
-    {"name": "bank_id",       "type": "string"},
-    {"name": "account_id",    "type": "string"},
-    {"name": "status_before", "type": ["null", "string"], "default": null},
-    {"name": "status_after",  "type": "string"}
+    {"name": "bank_id",    "type": "string"},
+    {"name": "account_id", "type": "string"},
+    {"name": "status_before",
+     "type": ["null", {"type": "enum",
+                       "name": "CashAccountStatus",
+                       "symbols": ["CASH_ACCOUNT_STATUS_UNKNOWN",
+                                    "CASH_ACCOUNT_STATUS_OPENING",
+                                    "CASH_ACCOUNT_STATUS_OPENED",
+                                    "CASH_ACCOUNT_STATUS_CLOSING",
+                                    "CASH_ACCOUNT_STATUS_CLOSED",
+                                    "CASH_ACCOUNT_STATUS_SUSPENDED"]}],
+     "default": null},
+    {"name": "status_after",
+     "type": "com.repldriven.mono.cash_accounts.CashAccountStatus"}
   ]
 }

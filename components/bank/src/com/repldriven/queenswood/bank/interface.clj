@@ -72,7 +72,7 @@
   "Flip a bank between `:bank-status-test` and `:bank-status-live` in
   one transaction: swaps the service-account client's audience via
   the identity-provider (before persisting, so an IDP failure aborts
-  cleanly) and persists the new `:status` with a `BankChangelog`
+  cleanly) and persists the new `:status` with a changelog
   entry. Returns the updated bank map or an anomaly.
 
   Rejects `:bank/invalid-status` unless the bank is currently test or

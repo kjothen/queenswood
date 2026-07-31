@@ -1,4 +1,4 @@
-(ns com.repldriven.queenswood.idv.changelog
+(ns com.repldriven.queenswood.bank.changelog
   (:require
     [com.repldriven.queenswood.schema.interface :as schema]
 
@@ -9,39 +9,35 @@
 
     [clojure.java.io :as io]))
 
-(def ^:private event-name "idv-status-changed")
+(def ^:private event-name "bank-status-changed")
 
 ;; Loaded from the classpath rather than the injected `avro/serde`: the
 ;; payload schema is a property of this brick, and `store.clj` only ever
 ;; receives a Txn, never the system config the serde arrives in.
 (def ^:private schema
   (delay (avro/json->schema
-          (slurp (io/resource "schemas/idv/idv-status-changed.avsc.json")))))
+          (slurp (io/resource "schemas/banks/bank-status-changed.avsc.json")))))
 
 (defn status-changed
-  "Build the shared-envelope changelog bytes for an IDV status
-  transition. `changelog` carries `:bank-id`, `:verification-id`,
-  `:party-id`, `:status-before` and `:status-after`."
-  [{:keys [bank-id verification-id party-id status-before status-after]}]
+  "Build the shared-envelope changelog bytes for a bank status or tier
+  transition. `changelog` carries `:bank-id`, `:status-before` and
+  `:status-after`."
+  [{:keys [bank-id status-before status-after]}]
   (let-nom> [payload (avro/serialize @schema
                                      {:bank-id bank-id
-                                      :verification-id verification-id
-                                      :party-id party-id
                                       :status-before status-before
                                       :status-after status-after})]
     (schema/ChangelogEvent->pb
      (utility/assoc-some
       {:event-id (str (utility/uuidv7))
-       :dedup-key (str verification-id ":" (name status-after))
+       :dedup-key (str bank-id ":" (name status-after))
        :event-name event-name
        :payload payload
-       ;; The party, not the IDV: the consumer advances the party, so
-       ;; this is the id whose transitions have to stay in sequence once
-       ;; it becomes the partition key.
-       :causation-id party-id
+       :causation-id bank-id
        :created-at (utility/now)}
       ;; Written inside the command's transaction, so this is the
-      ;; `process-command` span — which is itself under the request. The
-      ;; relay republishes it and the consumer's span joins that trace.
+      ;; `process-command` span — which is itself under the request. A
+      ;; relay would republish it and the consumer's span would join that
+      ;; trace.
       :traceparent
       (telemetry/inject-traceparent)))))
