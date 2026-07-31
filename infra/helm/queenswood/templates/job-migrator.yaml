@@ -88,7 +88,7 @@ spec:
             - name: FDB_MIGRATE
               value: "true"
             - name: OTEL_ENDPOINT
-              value: {{ default "" .Values.otel.endpoint | quote }}
+              value: {{ include "queenswood.otelEndpoint" . | quote }}
           volumeMounts:
             - name: fdb-cluster-file
               mountPath: /etc/fdb

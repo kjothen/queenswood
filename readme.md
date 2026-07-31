@@ -247,12 +247,18 @@ helm install queenswood \
   --wait --timeout 10m
 ```
 
-**Reach the API and console**:
+**Reach the API, console and tracing web apps**:
 
 ```bash
 kubectl -n queenswood port-forward svc/queenswood-api-service 8080:8080
 kubectl -n queenswood port-forward svc/queenswood-console     8081:8080
+kubectl -n queenswood port-forward svc/queenswood-jaeger      16686:16686
 ```
+
+In the console, **Sandbox > Scenarios** runs the platform for real
+against your cluster — open Jaeger alongside it at
+[localhost:16686](http://localhost:16686) to watch the spans each
+scenario produces.
 
 The full quickstart — including tear-down — ships with
 each

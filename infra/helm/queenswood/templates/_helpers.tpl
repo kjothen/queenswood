@@ -25,6 +25,19 @@ helm.sh/chart: {{ printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" }}
 {{- end -}}
 
 {{/*
+OTLP traces endpoint. An explicit otel.endpoint wins; otherwise the
+in-chart Jaeger's Service is used when enabled. Empty disables the SDK
+rather than failing, so no fallback is required.
+*/}}
+{{- define "queenswood.otelEndpoint" -}}
+{{- if .Values.otel.endpoint -}}
+{{ .Values.otel.endpoint }}
+{{- else if .Values.jaeger.enabled -}}
+http://{{ .Release.Name }}-jaeger:4318/v1/traces
+{{- end -}}
+{{- end -}}
+
+{{/*
 Kafka bootstrap servers. When the in-chart broker is enabled its
 Service is `<release>-kafka` on :9092; otherwise services point at
 an external broker via kafka.bootstrapServers.

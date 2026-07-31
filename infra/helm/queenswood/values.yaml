@@ -78,9 +78,25 @@ keycloak:
     realmAdminClientSecret: "queenswood-admin-secret-change-me"
 
 # -- OpenTelemetry collector endpoint (gets passed as OTEL_ENDPOINT env
-# to every service). Leave empty to disable.
+# to every service). Empty falls back to the in-chart Jaeger when
+# jaeger.enabled=true, and disables the SDK otherwise. Set explicitly to
+# ship elsewhere.
 otel:
   endpoint: ""
+
+# ---------------------------------------------------------------------
+# All-in-one Jaeger for the kind dev loop. Receives OTLP/HTTP on 4318 and
+# serves its UI on 16686. Storage is in-memory. Production sets
+# enabled=false and points otel.endpoint at a real collector.
+jaeger:
+  enabled: true
+  image: jaegertracing/jaeger:2.20.0
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 1Gi
 
 # -- One-shot migrator Job. Applies FDB record metadata (via
 # fdb/meta-store-write) and creates the Kafka topics. Runs first;
