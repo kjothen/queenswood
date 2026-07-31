@@ -70,8 +70,15 @@ reads it. The real problems are different:
 
   The retired changelog protos went with it — `CashAccountChangelog`,
   `PartyChangelog`, `IdvChangelog` and their `schema/interface.clj`
-  exports all had no writer or reader left. `BankChangelog` stays:
-  `bank/store.clj` still writes it, and no relay reads it yet.
+  exports all had no writer or reader left.
+
+- **`banks`** — the last store writing a bespoke changelog shape.
+  `bank/changelog.clj` now writes the shared envelope with a
+  `bank-status-changed` Avro event, and `BankChangelog` is gone. No
+  relay tails the store and nothing consumes the event yet, so this
+  changes the format rather than adding a flow — but it makes "every
+  store writes one envelope" literally true, which is what lets a
+  single `envelope-handler` drain any cursor we later point at it.
 
 ## Remaining
 

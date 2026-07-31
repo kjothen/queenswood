@@ -51,9 +51,7 @@
     (com.repldriven.queenswood.schemas.scheduler
      SchedulerJobProto$SchedulerJob
      SchedulerRunProto$SchedulerRun)
-    (com.repldriven.queenswood.schemas.banks
-     BankProto$Bank
-     BankChangelogProto$BankChangelog)
+    (com.repldriven.queenswood.schemas.banks BankProto$Bank)
     (com.repldriven.queenswood.schemas.party
      PartyProto$Party
      PartyNationalIdentifierProto$PartyNationalIdentifier)
@@ -617,27 +615,6 @@
   - m: TransactionLeg map matching the generated schema."
   [m]
   (TransactionProto$TransactionLeg/parseFrom (TransactionLeg->pb m)))
-
-(def ^{:doc "Parse BankChangelog protobuf bytes into a Clojure map."}
-     pb->BankChangelog
-  banks/pb->BankChangelog)
-
-(defn BankChangelog->pb
-  "Serialise a BankChangelog map to protobuf bytes.
-
-  Args:
-  - m: BankChangelog map matching the generated schema."
-  [m]
-  (proto/->pb (banks/new-BankChangelog m)))
-
-(defn BankChangelog->java
-  "Parse a BankChangelog map into the generated Java protobuf class.
-
-  Args:
-  - m: BankChangelog map matching the generated schema."
-  [m]
-  (BankChangelogProto$BankChangelog/parseFrom
-   (BankChangelog->pb m)))
 
 (def ^{:doc "Parse PayeeCheck protobuf bytes into a Clojure map."}
      pb->PayeeCheck
