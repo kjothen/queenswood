@@ -19,10 +19,18 @@ helm-install tag="dev" registry="ghcr.io/repldriven/queenswood" values_file="" p
     # `registry` lets `kind-up` point at the local registry so containerd
     # pulls from there. `values_file` layers an extra values file on top
     # of values.yaml -- kind-up passes values-dev.yaml to enable the
-    # bundled dev Keycloak. `pull_policy` overrides image.pullPolicy --
-    # kind-up sets IfNotPresent so containerd pulls the freshly pushed
-    # images from the local registry (values-dev.yaml's Never default is
-    # for image-load flows that inject images straight into the node).
+    # bundled dev Keycloak. `pull_policy` overrides image.pullPolicy.
+    #
+    # kind-up sets `Always`, not `IfNotPresent`, so the dev loop works:
+    # rebuild an image while the cluster runs, push it to the local
+    # registry under the same `dev` tag, bounce the pod, and the new
+    # build is what starts. With `IfNotPresent` containerd keeps the
+    # copy it already has and a bounce silently reruns the old image --
+    # which reads as "my fix didn't work" rather than "the image never
+    # moved". Re-pulling from a registry on the same host is cheap, and
+    # unchanged layers are deduplicated. (values-dev.yaml's `Never`
+    # default is for image-load flows that inject images straight into
+    # the node, bypassing a registry entirely.)
     set -e
     # `values_file` is a space-separated list layered left-to-right
     # (later files win), e.g. "values-dev.yaml values-monolith.yaml".
@@ -59,7 +67,7 @@ kind-up tag="dev":
       docker tag {{ DOCKER_REGISTRY }}/$svc:{{ tag }} localhost:5001/$svc:{{ tag }}
       docker push localhost:5001/$svc:{{ tag }}
     done
-    just helm-install {{ tag }} localhost:5001 values-dev.yaml IfNotPresent
+    just helm-install {{ tag }} localhost:5001 values-dev.yaml Always
 
 # Build/push/install only the modular-monolith on kind (channel bus, no Pulsar)
 kind-up-monolith tag="dev":
