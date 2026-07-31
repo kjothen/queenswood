@@ -375,4 +375,33 @@ done
 out=$(printf '%s' "$out" | grep -v '^$' || true)
 report 'single-logback-config' "$out"
 
+# 9. Every declared command/dispatcher is referenced in a dispatchers map.
+# A dispatcher declared but never wired starts cleanly and is unreachable:
+# the handler looks up [:dispatchers :X], gets nil, and `swap!` on a nil
+# atom throws an NPE — on a live request, not at boot. api-service declared
+# a `companies` dispatcher for four releases without wiring it, so every
+# GET /v1/companies/:number 500'd while the service reported healthy.
+#
+# Whole-tree regardless of scope: the declaration and the reference live in
+# the same file, but a commit touching either one can break the pair.
+section 'Declared command/dispatchers are wired into a dispatchers map'
+out=""
+for f in $(find projects bases components -type f \
+             \( -name 'application.yml' -o -name 'application-test.yml' \) \
+             2>/dev/null | sort); do
+  declared=$(awk '
+    /^  [a-z0-9-]+:/ { grp = $1; sub(/:$/, "", grp) }
+    /component-kind: command\/dispatcher/ { if (grp != "") print grp }
+  ' "$f" | sort -u)
+  [ -z "$declared" ] && continue
+  wired=$(grep -oE '!system/ref +[a-z0-9-]+(-dispatcher)?\.dispatcher' "$f" \
+            | awk '{print $2}' | sed 's/\.dispatcher$//; s/-dispatcher$//' | sort -u)
+  for d in $declared; do
+    printf '%s\n' "$wired" | grep -qx "$d" \
+      || out="${out}${f}: '${d}' dispatcher declared but not in any dispatchers map"$'\n'
+  done
+done
+out=$(printf '%s' "$out" | grep -v '^$' || true)
+report 'dispatcher-declared-not-wired' "$out"
+
 exit "$FAILED"
