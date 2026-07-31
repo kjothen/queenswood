@@ -211,6 +211,39 @@ a status-changed event of their own.
   partition work will make raising counts feel safe; it is safe for
   event topics only.
 
+## Interest should fan out into per-account commands
+
+Accrual and capitalisation dispatch one bank-wide command and iterate
+accounts inside it. Each account's work is already its own short FDB
+transaction, so the per-account boundary exists — what does not is a
+per-account *command*.
+
+Making the fan-out explicit is worth more than the ordering it would
+buy:
+
+- **Crash recovery becomes free.** A run that dies halfway through a
+  million accounts currently leaves no record of which accounts were
+  done; the run record is written at the end, keyed
+  `[bank_id, business_day, status]`. Per-account commands are
+  individually idempotent and individually redelivered, so a crash
+  resumes rather than restarts, and re-running is safe by construction
+  rather than by remembering it is.
+- **It stops being one long-running command.** Iterating every customer
+  account inside a single command works for a few accounts and does not
+  survive millions — the command occupies its consumer for the whole
+  run, and there is no progress, no backpressure, and no way to
+  parallelise it.
+- **It joins account ordering.** Once each accrual is a command keyed
+  on its account, interest stops being the exception to per-account
+  serialisation.
+
+The shape is the bank-wide command becoming a dispatcher: it resolves
+the account set and emits one keyed command per account, then records
+the run. That is a larger change than anything else in this plan and
+wants its own design — the account set is itself a scan that would need
+paging at scale, and "the run is complete" stops being a single
+transaction's business.
+
 ## Rules that cost real time to learn
 
 - **The aggregate index is not the problem; the isolation level is.**
