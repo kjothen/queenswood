@@ -14,8 +14,19 @@ colour scheme via a `<picture>` block.
 </picture>
 
 Colour split: grey external actors, blue ingress and message bus, violet
-write side (processors), green read side (queriers), amber record store,
-orange egress adapters.
+write side (processors), green read side (query bricks), amber record
+store, orange egress adapters.
+
+The cross-hatched amber band above the store is the domain data access
+layer. Fill carries the distinction: solid boxes are things that run,
+cross-hatch is a zone rather than a participant. Every store-bound arrow
+crosses it, because nothing reaches FDB except through a tx-aware brick.
+
+A dashed outline marks a box whose contents are substituted per
+environment: the external APIs are the real ClearBank, Onfido, and
+Companies House in production, and the simulator services in dev and
+test. The adapter cannot tell the two apart, so it stays one box rather
+than two.
 
 ## Regenerating the SVGs
 

@@ -44,11 +44,22 @@ port-forward).
 {{- if .Values.console.enabled }}
   kubectl -n {{ .Release.Namespace }} port-forward svc/{{ .Release.Name }}-console 8081:{{ .Values.console.port }}
 {{- end }}
+{{- if .Values.jaeger.enabled }}
+  kubectl -n {{ .Release.Namespace }} port-forward svc/{{ .Release.Name }}-jaeger 16686:16686
+{{- end }}
 
 Then open:
   http://localhost:8080/scalar       (bank-api OpenAPI)
 {{- if .Values.console.enabled }}
   http://localhost:8081              (console -- organisation sign-in, sign in as `dev` / `dev`)
+{{- end }}
+{{- if .Values.jaeger.enabled }}
+  http://localhost:16686             (Jaeger -- pick a service, Find Traces to see spans)
+{{- end }}
+{{- if and .Values.console.enabled .Values.jaeger.enabled }}
+
+To watch the platform run for real, use the console's
+Sandbox > Scenarios page and read the spans it produces back in Jaeger.
 {{- end }}
 {{- if .Values.keycloak.dev.enabled }}
 

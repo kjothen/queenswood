@@ -33,9 +33,10 @@ helm install queenswood \
   --wait --timeout 10m
 ```
 
-`helm install`'s `NOTES.txt` prints the four
-`kubectl port-forward` commands you need to reach the API,
-both SPAs, and the bundled Keycloak from your host.
+`helm install`'s `NOTES.txt` prints the `kubectl port-forward`
+commands you need to reach the API, the console SPA, and the
+Jaeger UI from your host. The bundled Keycloak needs none — the
+SPA reverse-proxies it at `/keycloak/*`.
 
 To install from a checkout instead (useful while iterating
 locally):
@@ -77,6 +78,27 @@ kubectl -n queenswood get jobs   # bootstrap-<tag> should complete
 kubectl -n queenswood port-forward svc/queenswood-api-service 8080:8080
 curl http://localhost:8080/openapi.json
 ```
+
+## Tracing
+
+Every service ships OTLP spans to the in-chart Jaeger
+(`jaeger.enabled`, on by default). Reach its UI with `just
+telemetry-ui`, or port-forward directly:
+
+```bash
+kubectl -n queenswood port-forward svc/queenswood-jaeger 16686:16686
+```
+
+Pick a service in the UI and **Find Traces**. The usual way to
+generate some is the console's **Sandbox > Scenarios** page, which
+drives the platform for real against the cluster — run one there,
+then read back the spans it produced.
+
+Storage is in-memory, so spans are lost when the pod restarts. To
+ship elsewhere, set `otel.endpoint` (it wins over the in-chart
+Jaeger); to turn tracing off entirely, set `jaeger.enabled=false`
+and leave `otel.endpoint` empty, which disables the SDK rather than
+failing.
 
 ## v1 limitations
 
