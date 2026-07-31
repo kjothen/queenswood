@@ -1,0 +1,48 @@
+# syntax=docker/dockerfile:1.25
+
+# Seeds BuildKit's Maven cache mount from a host `~/.m2`, passed as the
+# `m2` named build context.
+#
+#   just docker-warm-cache
+#
+# The service build mounts `type=cache,id=queenswood-m2` for its Maven
+# local repo. That is a BuildKit-managed volume inside the builder VM —
+# it is not the host's `~/.m2`, and no bind exists between them, so a
+# fresh or pruned builder starts empty and re-resolves every artifact
+# from Maven Central and Clojars. That is slow, and it makes an
+# otherwise-working build fail on any transient DNS or network blip
+# (`UnknownHostException: repo1.maven.org`), because a cold cache has
+# nothing to fall back on.
+#
+# Worse, BuildKit discards a failed step's cache-mount writes, so one
+# blip mid-download throws away everything fetched so far and the next
+# build starts cold again.
+#
+# Copying the host repo in once breaks that loop. Re-run after
+# `docker buildx prune`, or whenever the host repo gains artifacts the
+# builder has never seen.
+
+# The same base the service build uses, so this pulls nothing extra —
+# and, unlike busybox, it has GNU coreutils. BusyBox `cp -rn` accepts
+# the flag, exits 0, and copies nothing, which is silent enough to look
+# like a warm cache while leaving it empty.
+FROM clojure:temurin-21-tools-deps-bookworm AS seed
+
+# `-n` (no-clobber) so an artifact already in the cache wins: the
+# builder's copy was resolved against the same coordinates, and
+# overwriting it mid-flight would race any concurrent build.
+#
+# No error suppression. A seed that fails quietly is worse than one
+# that fails, because the next build pays the full download and blames
+# the network.
+RUN --mount=type=bind,from=m2,target=/host-m2,ro \
+    --mount=type=cache,id=queenswood-m2,target=/root/.m2,sharing=locked \
+    mkdir -p /root/.m2/repository \
+ && cp -rn /host-m2/repository/. /root/.m2/repository/ \
+ && files="$(find /root/.m2 -type f | wc -l | tr -d ' ')" \
+ && if [ "$files" -lt 100 ]; then \
+      echo "seed copied $files files — expected thousands; aborting" >&2; \
+      exit 1; \
+    fi \
+ && printf 'maven cache: %s across %s files\n' \
+      "$(du -sh /root/.m2 | cut -f1)" "$files"

@@ -20,9 +20,24 @@ docker-build project tag="dev":
       --load \
       .
 
+# Seed BuildKit's Maven cache from the host ~/.m2 (run once, and after a prune)
+docker-warm-cache m2=(env_var('HOME') / ".m2"):
+    # BuildKit cache mounts live in the builder, not on the host, so a
+    # fresh builder re-downloads every artifact even though ~/.m2 already
+    # has them — slow, and fatal on any transient DNS blip. Copies the
+    # host repo in once so builds resolve offline.
+    docker buildx build \
+      --build-context m2={{ m2 }} \
+      --progress plain \
+      -f infra/docker/warm-cache/Dockerfile \
+      --no-cache \
+      -o type=cacheonly \
+      .
+
 # Build all service images in parallel via docker buildx bake
 docker-build-all tag="dev":
     # Targets are declared in infra/docker/bake.hcl; the Clojure base layer is shared
     # so this is dramatically faster than building images one at a time.
+    # Run `just docker-warm-cache` first on a fresh or pruned builder.
     REGISTRY={{ DOCKER_REGISTRY }} TAG={{ tag }} \
       docker buildx bake -f infra/docker/bake.hcl
