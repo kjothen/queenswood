@@ -52,12 +52,19 @@
  ;; reaching done records that an account was considered, whether or
  ;; not it earned anything, which is the only trace a zero-rate account
  ;; leaves. Closed means nothing was left pending.
+ ;;
+ ;; The amount is the run's total off a SUM index, and 100 exercises
+ ;; the case worth proving: acct-1 earns 100 on £1,000 at 36.5% AER
+ ;; while acct-0 earns nothing, and protojure drops a zero from the
+ ;; wire, so the zero row carries no amount field at all. A sum of 100
+ ;; means an absent value contributes nothing rather than breaking the
+ ;; aggregate. Capitalisation then sweeps the same 100.
  :then [{:command :assert-no-anomaly :args []}
         {:command :assert-interest-run
          :args [:bank-0 20260501 :accrue
-                {:scope 2 :done 2 :failed 0 :pending 0
+                {:scope 2 :done 2 :failed 0 :pending 0 :amount 100
                  :run-state :interest-run-state-closed}]}
         {:command :assert-interest-run
          :args [:bank-0 20260501 :capitalize
-                {:scope 2 :done 2 :failed 0 :pending 0
+                {:scope 2 :done 2 :failed 0 :pending 0 :amount 100
                  :run-state :interest-run-state-closed}]}]}

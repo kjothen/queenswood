@@ -90,7 +90,12 @@
            (balances/set-carry txn
                                account-id
                                :balance-type-default currency
-                               :balance-status-posted carry))])))
+                               :balance-status-posted carry))]
+      ;; What the row records. The balance alone would not reproduce
+      ;; the amount — the carry feeds the same calculation.
+      {:amount (or whole-units 0)
+       :input-balance (domain/net-balance balance)
+       :input-carry (:credit-carry balance)})))
 
 (defn- capitalize-account
   [_config txn _interest-expense-id account as-of-date]
@@ -118,7 +123,11 @@
                                 (assoc transaction :legs expanded-legs))
               _ (balances/apply-legs txn
                                      (:legs transaction+legs)
-                                     (:transaction-type transaction+legs))]))])))
+                                     (:transaction-type transaction+legs))]))]
+      ;; Capitalisation sweeps whatever accrued, so the amount and the
+      ;; input are the same figure.
+      (let [accrued (domain/net-balance balance)]
+        {:amount accrued :input-balance accrued}))))
 
 (defn- get-interest-expense-account
   [config bank-id]
@@ -145,7 +154,8 @@
                                          account-id)]
          (if (and row (not (domain/pending? row)))
            :skipped
-           (let-nom> [_ (f config txn interest-expense-id account business-day)
+           (let-nom> [result
+                      (f config txn interest-expense-id account business-day)
                       _
                       (store/save-account-run txn
                                               (domain/account-run-done
@@ -154,7 +164,8 @@
                                                     bank-id
                                                     business-day
                                                     account-kind
-                                                    account-id))))]
+                                                    account-id))
+                                               result))]
              :done)))))))
 
 (defn- mark-account-failed
@@ -241,9 +252,9 @@
   The InterestRun record is written only once enumeration has finished,
   so a crash part-way leaves no run record and the daily limit does not
   block the retry. The PENDING rows already written are what make that
-  retry a resumption rather than a restart. It is saved CLOSED when no
-  row is left pending and DISPATCHED when some failed, so a run with a
-  residue is distinguishable from a clean one.
+  retry a resumption rather than a restart. A run that finished with
+  failures still closes; its residue is the count of FAILED rows, which
+  `run-progress` reports.
 
   Each account is its own short FDB transaction — no long transaction
   is held across the run."
@@ -269,19 +280,16 @@
                                     ctx
                                     (:ledger-account-id interest-expense)
                                     account-fn)
-         state
-         (if (pos? (:failed tally))
-           :interest-run-state-dispatched
-           :interest-run-state-closed)
+         run
+         (domain/close-interest-run
+          (domain/new-interest-run bank-id as-of-date run-kind))
          _
-         (store/save-run
-          config
-          (domain/new-interest-run bank-id as-of-date run-kind state))]
+         (store/save-run config run)]
         {:bank-id bank-id
          :as-of-date as-of-date
          :accounts-processed (+ (:done tally) (:skipped tally))
          :accounts-failed (:failed tally)
-         :run-state state})
+         :run-state (:state run)})
       (error/reject :interest/no-interest-expense-account
                     {:message (str "Bank has no 5100 interest-expense account"
                                    " in its chart of accounts")
@@ -324,11 +332,16 @@
                as-of-date
                account-kind
                :interest-account-run-state-failed)
+       amount (store/sum-account-run-amounts config
+                                             bank-id
+                                             as-of-date
+                                             account-kind)
        run (store/load-run config bank-id as-of-date run-kind)]
       {:scope scope
        :done done
        :failed failed
        :pending (- scope done failed)
+       :amount amount
        :run-state (:state run)})
     (error/reject :interest/unknown-run-kind
                   {:message "Run kind must be :accrue or :capitalize"

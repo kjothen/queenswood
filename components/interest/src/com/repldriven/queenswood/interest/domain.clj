@@ -22,11 +22,14 @@
     :value (inc (get-in aggregates [kind #{:bank-id :business-day}]))}))
 
 (defn new-interest-run
-  [bank-id business-day kind state]
+  "A run starts RUNNING. There is no state for a run that finished with
+  failures — it closes like any other, and the residue is the count of
+  FAILED rows."
+  [bank-id business-day kind]
   {:bank-id bank-id
    :business-day business-day
    :kind kind
-   :state state
+   :state :interest-run-state-running
    :created-at (utility/now)})
 
 (defn close-interest-run
@@ -45,10 +48,17 @@
    :created-at (utility/now)})
 
 (defn account-run-done
-  [account-run]
-  (assoc account-run
-         :state :interest-account-run-state-done
-         :updated-at (utility/now)))
+  "Marks the row done and records what the account earned and what it
+  was computed from. `result` carries `:amount`, `:input-balance` and
+  `:input-carry`; each is omitted when absent rather than written as
+  nil, since an optional proto scalar wants the key gone."
+  [account-run result]
+  (-> account-run
+      (assoc :state :interest-account-run-state-done
+             :updated-at (utility/now))
+      (utility/assoc-some :amount (:amount result))
+      (utility/assoc-some :input-balance (:input-balance result))
+      (utility/assoc-some :input-carry (:input-carry result))))
 
 (defn account-run-failed
   "Marks the row failed so enumeration can move past it. `reason` is the
@@ -63,7 +73,9 @@
   [account-run]
   (= :interest-account-run-state-pending (:state account-run)))
 
-(defn- net-balance
+(defn net-balance
+  "Credit-positive total of a balance bucket. Public because the run
+  records the figure it computed from, not just the result."
   [balance]
   (- (:credit balance 0) (:debit balance 0)))
 

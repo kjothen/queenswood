@@ -87,6 +87,10 @@ interest-account-runs:
     - name: InterestAccountRun_count_by_bank_day_kind_state
       fields: [bank_id, business_day, kind, state]
       type: count
+    # The run's total, for the one ledger entry posted at close.
+    - name: InterestAccountRun_sum_amount_by_bank_day_kind
+      fields: [bank_id, business_day, kind, amount]
+      type: sum
 memberships:
   record-type: Membership
   indexes:

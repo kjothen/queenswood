@@ -51,7 +51,9 @@
   - as-of-date: business day (YYYYMMDD int).
   - kind: `:accrue` or `:capitalize`.
 
-  Returns `{:scope :done :failed :pending :run-state}` or an anomaly.
+  Returns `{:scope :done :failed :pending :amount :run-state}` or an
+  anomaly. `:amount` is the run's total across every account, read off
+  a SUM index, and is what the run's single ledger entry posts.
   `:run-state` is nil until the run record is written, which happens
   once enumeration finishes."
   [config bank-id as-of-date kind]

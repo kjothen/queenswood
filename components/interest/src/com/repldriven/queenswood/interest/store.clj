@@ -84,6 +84,24 @@
     :bank-id bank-id
     :business-day business-day}))
 
+(defn sum-account-run-amounts
+  "What the run accrued across every account, for the single ledger
+  entry posted at close. SNAPSHOT for the same reason as the counts —
+  a SERIALIZABLE aggregate read joins the conflict set and would
+  re-serialise the pass it is measuring."
+  [txn bank-id business-day kind]
+  (fdb/transact
+   txn
+   (fn [txn]
+     (fdb/sum-records
+      (fdb/open txn interest-account-runs-store-name)
+      "InterestAccountRun_sum_amount_by_bank_day_kind"
+      [bank-id business-day (schema/interest-account-run-kind->int kind)]))
+   :interest/sum-account-run-amounts
+   {:message "Failed to sum interest account run amounts"
+    :bank-id bank-id
+    :business-day business-day}))
+
 (defn count-account-runs-by-state
   "Rows in one state for a run — progress when `state` is DONE, residue
   when FAILED, outstanding work when PENDING. SNAPSHOT for the same

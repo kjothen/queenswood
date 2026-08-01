@@ -282,7 +282,8 @@ anything.
 
 - `Balance` gains `bank_id`, and its primary key becomes `[bank_id,
   account_id, balance_type, currency, balance_status]`. A primary-key
-  change is a rebuild, not a migration in place.
+  change is a rebuild, not a migration in place — and it comes last,
+  for the reason set out in the order below.
 - `fdb/scan.clj` cursors on the whole remaining primary key rather than
   one element of it, keeping a single-element tail as a scalar so
   existing page tokens are unaffected, and exposes the key alongside
@@ -304,6 +305,40 @@ anything.
   and a single aggregate posting at the end.
 - Capitalisation drops its control legs and aggregates its ledger side
   the same way, keeping its per-account transaction.
+
+## The order, and why the rebuild is last
+
+The rebuild does not gate the pass, which is worth stating because the
+opposite looks true. `Balance` is keyed from `account_id`, account ids
+are globally unique, and `CashAccount` scanned under `[bank_id]` is
+ordered by `account_id` too — so both streams are already in the same
+order and the merge works against today's key. Other banks' balances
+arrive as right-only groups, which interest skips. That is wasteful on
+a multi-bank deployment and exactly right on a single-bank one, and it
+means the pass can be built and proved before anyone rebuilds the
+record every other brick reads.
+
+1. **The records.** `InterestAccountRun` gains the amount and the
+   inputs it was computed from, and the SUM index. `InterestRun`'s
+   states become RUNNING and CLOSED. No change to what the ledger
+   does.
+2. **Silent accrual.** Drop the per-account transaction and its
+   control legs; write the balance and carry, and record the amount on
+   the row. The behaviour change, and where the test churn lands.
+3. **The aggregate ledger entry.** One posting per run off the SUM
+   index. Between 2 and 3 the books do not balance, so they want
+   landing together even if written apart.
+4. **The pass.** Swap the paged account scan and per-account balance
+   reads for `fdb/merge-scan`, chunked writes, and a preloaded rate
+   map so the inner loop does no reads.
+5. **Capitalisation.** The same treatment for its ledger side, keeping
+   its per-account transaction.
+6. **The `Balance` primary key.** Now only about not scanning other
+   banks' rows.
+
+Outside the order and blocking none of it: whether a reporting cut
+that has to foot is separately required. That is the one question that
+would bring back a snapshot artefact.
 
 ## What this supersedes
 

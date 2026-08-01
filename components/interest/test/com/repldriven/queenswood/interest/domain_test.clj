@@ -163,15 +163,20 @@
                                                     5}})))))
 
 (deftest new-interest-run-test
-  (testing "builds a run record carrying org, business-day, kind and state"
-    (let [run (SUT/new-interest-run "org.1" 20260501
-                                    :interest-run-kind-accrue
-                                    :interest-run-state-closed)]
+  (testing "a new run carries org, business-day and kind, and starts running"
+    (let [run (SUT/new-interest-run "org.1" 20260501 :interest-run-kind-accrue)]
       (is (= "org.1" (:bank-id run)))
       (is (= 20260501 (:business-day run)))
       (is (= :interest-run-kind-accrue (:kind run)))
+      (is (= :interest-run-state-running (:state run)))
+      (is (number? (:created-at run)))
+      (is (nil? (:closed-at run)))))
+  (testing "closing stamps the state and the time"
+    (let [run
+          (SUT/close-interest-run
+           (SUT/new-interest-run "org.1" 20260501 :interest-run-kind-accrue))]
       (is (= :interest-run-state-closed (:state run)))
-      (is (number? (:created-at run))))))
+      (is (number? (:closed-at run))))))
 
 (deftest account-run-lifecycle-test
   (testing "a new account row starts pending"
@@ -183,10 +188,28 @@
   (testing "done and failed both leave pending, and failed keeps a reason"
     (let [row (SUT/new-account-run "org.1" 20260501
                                    :interest-account-run-kind-accrue "acc.1")
-          done (SUT/account-run-done row)
+          done (SUT/account-run-done row {:amount 7 :input-balance 100000})
           failed (SUT/account-run-failed row :interest/boom)]
       (is (not (SUT/pending? done)))
       (is (= :interest-account-run-state-done (:state done)))
       (is (not (SUT/pending? failed)))
       (is (= :interest-account-run-state-failed (:state failed)))
-      (is (= ":interest/boom" (:failure-reason failed))))))
+      (is (= ":interest/boom" (:failure-reason failed)))))
+  (testing "a done row carries what was earned and what it came from"
+    (let [row (SUT/new-account-run "org.1" 20260501
+                                   :interest-account-run-kind-accrue "acc.1")
+          done (SUT/account-run-done
+                row
+                {:amount 7 :input-balance 100000 :input-carry 12345})]
+      (is (= 7 (:amount done)))
+      (is (= 100000 (:input-balance done)))
+      (is (= 12345 (:input-carry done)))))
+  (testing
+    "absent inputs stay absent, since an optional proto scalar
+            wants the key gone rather than nil"
+    (let [row (SUT/new-account-run "org.1" 20260501
+                                   :interest-account-run-kind-accrue "acc.1")
+          done (SUT/account-run-done row {:amount 0})]
+      (is (= 0 (:amount done)))
+      (is (not (contains? done :input-balance)))
+      (is (not (contains? done :input-carry))))))
