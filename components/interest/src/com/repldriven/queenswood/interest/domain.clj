@@ -22,11 +22,46 @@
     :value (inc (get-in aggregates [kind #{:bank-id :business-day}]))}))
 
 (defn new-interest-run
-  [bank-id business-day status]
+  [bank-id business-day kind state]
   {:bank-id bank-id
    :business-day business-day
-   :status status
+   :kind kind
+   :state state
    :created-at (utility/now)})
+
+(defn close-interest-run
+  [run]
+  (assoc run
+         :state :interest-run-state-closed
+         :closed-at (utility/now)))
+
+(defn new-account-run
+  [bank-id business-day kind account-id]
+  {:bank-id bank-id
+   :business-day business-day
+   :kind kind
+   :account-id account-id
+   :state :interest-account-run-state-pending
+   :created-at (utility/now)})
+
+(defn account-run-done
+  [account-run]
+  (assoc account-run
+         :state :interest-account-run-state-done
+         :updated-at (utility/now)))
+
+(defn account-run-failed
+  "Marks the row failed so enumeration can move past it. `reason` is the
+  anomaly's category, kept short — the anomaly itself is logged."
+  [account-run reason]
+  (assoc account-run
+         :state :interest-account-run-state-failed
+         :failure-reason (str reason)
+         :updated-at (utility/now)))
+
+(defn pending?
+  [account-run]
+  (= :interest-account-run-state-pending (:state account-run)))
 
 (defn- net-balance
   [balance]

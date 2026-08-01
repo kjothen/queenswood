@@ -112,6 +112,49 @@ kind-up-remote tag="latest":
     kind get clusters | grep -q '^queenswood$' || kind create cluster --name queenswood
     just helm-install {{ tag }} ghcr.io/repldriven/queenswood
 
+# Push rebuilt images to the kind registry and roll the Deployments.
+kind-redeploy tag="dev" *services:
+    #!/usr/bin/env zsh
+    # The fast loop after `just docker-build-all`: no cluster teardown,
+    # no helm upgrade. bake writes `output=type=docker`, so a rebuild
+    # only lands in the local Docker store -- the cluster pulls from
+    # localhost:5001 and sees nothing until the image is pushed there.
+    # kind-up installs with pullPolicy Always precisely so a same-tag
+    # push plus a restart runs the new build.
+    #
+    # No services named = every service project plus the console.
+    #
+    # Deployments only. The migrator and bootstrap Jobs are named for
+    # the image tag, so an unchanged tag leaves them alone -- applying
+    # new FDB record metadata means deleting those Jobs and reinstalling
+    # the chart, not bouncing a pod.
+    set -e
+    svcs=({{ services }})
+    if [[ ${#svcs} -eq 0 ]]; then
+      svcs=(projects/*-service/(:t) console)
+    fi
+    for svc in $svcs; do
+      docker tag {{ DOCKER_REGISTRY }}/$svc:{{ tag }} localhost:5001/$svc:{{ tag }}
+      docker push localhost:5001/$svc:{{ tag }}
+    done
+    # Everything gets pushed -- the Jobs need images too -- but only
+    # Deployments can be rolled. migrator/bootstrap are Jobs, and
+    # monolith-service is disabled outside values-monolith.yaml, so say
+    # what was skipped rather than failing on the first one.
+    rolled=()
+    for svc in $svcs; do
+      if kubectl -n queenswood get deploy/queenswood-$svc >/dev/null 2>&1; then
+        kubectl -n queenswood rollout restart deploy/queenswood-$svc
+        rolled+=($svc)
+      else
+        echo "skip $svc (no Deployment -- a Job, or disabled in this profile)"
+      fi
+    done
+    # Restart all before waiting on any, so the rollouts overlap.
+    for svc in $rolled; do
+      kubectl -n queenswood rollout status deploy/queenswood-$svc --timeout=5m
+    done
+
 # Tear down the kind cluster
 kind-down:
     kind delete cluster --name queenswood

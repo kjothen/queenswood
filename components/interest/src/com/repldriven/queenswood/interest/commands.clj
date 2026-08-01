@@ -17,11 +17,11 @@
         {:status "ACCEPTED" :payload payload}))))
 
 (def ^:private command-handlers
-  {"accrue-daily-interest"
-   (fn [config data] (->response config (core/accrue-daily config data)))
-   "capitalize-monthly-interest"
+  {"accrue-day-interest" (fn [config data]
+                           (->response config (core/accrue-day config data)))
+   "capitalize-accrued-interest"
    (fn [config data]
-     (->response config (core/capitalize-monthly config data)))})
+     (->response config (core/capitalize-accrued config data)))})
 
 (defn- dispatch
   [config message]

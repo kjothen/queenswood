@@ -1,6 +1,6 @@
 {
   "type": "record",
-  "name": "CapitalizeMonthlyInterest",
+  "name": "AccrueDayInterest",
   "namespace": "com.repldriven.mono.interest",
   "fields": [
     {"name": "bank_id",   "type": "string"},

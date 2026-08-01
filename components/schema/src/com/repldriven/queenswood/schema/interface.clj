@@ -44,7 +44,8 @@
     (com.repldriven.queenswood.schemas.idempotency IdempotencyProto$Idempotency)
     (com.repldriven.queenswood.schemas.idv IdvProto$Idv)
     (com.repldriven.queenswood.schemas.interest
-     InterestRunProto$InterestRun)
+     InterestRunProto$InterestRun
+     InterestRunProto$InterestAccountRun)
     (com.repldriven.queenswood.schemas.ledger_accounts
      LedgerAccountProto$LedgerAccount
      LedgerAccountProto$GlAccountCode)
@@ -375,13 +376,25 @@
   [m]
   (IdvProto$Idv/parseFrom (Idv->pb m)))
 
-(def ^{:doc "Map of InterestRunStatus label to protobuf int value."}
-     interest-run-status->int
-  interest/InterestRun-InterestRunStatus-label2val)
+(def ^{:doc "Map of InterestRunKind label to protobuf int value."}
+     interest-run-kind->int
+  interest/InterestRun-InterestRunKind-label2val)
 
-(def ^{:doc "Map of InterestRunStatus protobuf int value to label."}
-     int->interest-run-status
-  interest/InterestRun-InterestRunStatus-val2label)
+(def ^{:doc "Map of InterestRunKind protobuf int value to label."}
+     int->interest-run-kind
+  interest/InterestRun-InterestRunKind-val2label)
+
+(def ^{:doc "Map of InterestRunState label to protobuf int value."}
+     interest-run-state->int
+  interest/InterestRun-InterestRunState-label2val)
+
+(def ^{:doc "Map of InterestAccountRunKind label to protobuf int value."}
+     interest-account-run-kind->int
+  interest/InterestAccountRun-InterestAccountRunKind-label2val)
+
+(def ^{:doc "Map of InterestAccountRunState label to protobuf int value."}
+     interest-account-run-state->int
+  interest/InterestAccountRun-InterestAccountRunState-label2val)
 
 (def ^{:doc "Parse InterestRun protobuf bytes into a Clojure map."}
      pb->InterestRun
@@ -402,6 +415,28 @@
   - m: InterestRun map matching the generated schema."
   [m]
   (InterestRunProto$InterestRun/parseFrom (InterestRun->pb m)))
+
+(def ^{:doc "Parse InterestAccountRun protobuf bytes into a Clojure map."}
+     pb->InterestAccountRun
+  interest/pb->InterestAccountRun)
+
+(defn InterestAccountRun->pb
+  "Serialise an InterestAccountRun map to protobuf bytes.
+
+  Args:
+  - m: InterestAccountRun map matching the generated schema."
+  [m]
+  (proto/->pb (interest/new-InterestAccountRun m)))
+
+(defn InterestAccountRun->java
+  "Parse an InterestAccountRun map into the generated Java protobuf
+  class.
+
+  Args:
+  - m: InterestAccountRun map matching the generated schema."
+  [m]
+  (InterestRunProto$InterestAccountRun/parseFrom
+   (InterestAccountRun->pb m)))
 
 (def ^{:doc "Parse SchedulerJob protobuf bytes into a Clojure map."}
      pb->SchedulerJob

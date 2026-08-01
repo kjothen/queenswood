@@ -19,11 +19,11 @@
   {:scheduler-task-kind-accrue
    {:label "accrue"
     :run (fn [config bank-id as-of-date]
-           (interest/accrue-daily config
-                                  {:bank-id bank-id :as-of-date as-of-date}))}
+           (interest/accrue-day config
+                                {:bank-id bank-id :as-of-date as-of-date}))}
    :scheduler-task-kind-capitalize {:label "capitalize"
                                     :run (fn [config bank-id as-of-date]
-                                           (interest/capitalize-monthly
+                                           (interest/capitalize-accrued
                                             config
                                             {:bank-id bank-id
                                              :as-of-date as-of-date}))}

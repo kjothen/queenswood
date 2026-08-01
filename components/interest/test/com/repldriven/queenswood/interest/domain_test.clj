@@ -163,9 +163,30 @@
                                                     5}})))))
 
 (deftest new-interest-run-test
-  (testing "builds a run marker carrying org, business-day and status"
-    (let [run (SUT/new-interest-run "org.1" 20260501 :interest-accrue-done)]
+  (testing "builds a run record carrying org, business-day, kind and state"
+    (let [run (SUT/new-interest-run "org.1" 20260501
+                                    :interest-run-kind-accrue
+                                    :interest-run-state-closed)]
       (is (= "org.1" (:bank-id run)))
       (is (= 20260501 (:business-day run)))
-      (is (= :interest-accrue-done (:status run)))
+      (is (= :interest-run-kind-accrue (:kind run)))
+      (is (= :interest-run-state-closed (:state run)))
       (is (number? (:created-at run))))))
+
+(deftest account-run-lifecycle-test
+  (testing "a new account row starts pending"
+    (let [row (SUT/new-account-run "org.1" 20260501
+                                   :interest-account-run-kind-accrue "acc.1")]
+      (is (SUT/pending? row))
+      (is (= "acc.1" (:account-id row)))
+      (is (number? (:created-at row)))))
+  (testing "done and failed both leave pending, and failed keeps a reason"
+    (let [row (SUT/new-account-run "org.1" 20260501
+                                   :interest-account-run-kind-accrue "acc.1")
+          done (SUT/account-run-done row)
+          failed (SUT/account-run-failed row :interest/boom)]
+      (is (not (SUT/pending? done)))
+      (is (= :interest-account-run-state-done (:state done)))
+      (is (not (SUT/pending? failed)))
+      (is (= :interest-account-run-state-failed (:state failed)))
+      (is (= ":interest/boom" (:failure-reason failed))))))

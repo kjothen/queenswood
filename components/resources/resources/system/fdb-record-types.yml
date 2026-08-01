@@ -70,10 +70,22 @@ idvs:
       unique: true
 interest-runs:
   record-type: InterestRun
-  primary-key: [bank_id, business_day, status]
+  primary-key: [bank_id, business_day, kind]
   indexes:
-    - name: InterestRun_count_by_bank_status_business_day
-      fields: [bank_id, status, business_day]
+    - name: InterestRun_count_by_bank_kind_business_day
+      fields: [bank_id, kind, business_day]
+      type: count
+interest-account-runs:
+  record-type: InterestAccountRun
+  primary-key: [bank_id, business_day, kind, account_id]
+  indexes:
+    # Scope size for a run.
+    - name: InterestAccountRun_count_by_bank_day_kind
+      fields: [bank_id, business_day, kind]
+      type: count
+    # Progress and residue: count pending/done/failed within a run.
+    - name: InterestAccountRun_count_by_bank_day_kind_state
+      fields: [bank_id, business_day, kind, state]
       type: count
 memberships:
   record-type: Membership
