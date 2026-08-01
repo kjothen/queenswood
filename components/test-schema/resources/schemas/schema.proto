@@ -8,4 +8,6 @@ option java_outer_classname = "TestSchemaProto";
 
 message RecordTypeUnion {
   optional com.repldriven.queenswood.test_schemas.pets.Pet _Pet = 1;
+  optional com.repldriven.queenswood.test_schemas.pets.Owner _Owner = 2;
+  optional com.repldriven.queenswood.test_schemas.pets.Toy _Toy = 3;
 }
