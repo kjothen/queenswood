@@ -100,7 +100,7 @@
         (commands/send
          (interest-dispatcher request)
          request
-         "accrue-daily-interest"
+         "accrue-day-interest"
          "interest-result"
          {:bank-id bank-id
           :as-of-date as-of-date}))))
@@ -115,7 +115,7 @@
         (commands/send
          (interest-dispatcher request)
          request
-         "capitalize-monthly-interest"
+         "capitalize-accrued-interest"
          "interest-result"
          {:bank-id bank-id
           :as-of-date as-of-date}))))

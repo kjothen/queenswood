@@ -873,9 +873,9 @@
 (defmethod dispatch :accrue-interest
   [{:keys [bank banks] :as ctx} {[model-bank as-of-date] :args}]
   (let [{bank-real-id :real-id} (get banks model-bank)
-        result (interest/accrue-daily bank
-                                      {:bank-id bank-real-id
-                                       :as-of-date as-of-date})]
+        result (interest/accrue-day bank
+                                    {:bank-id bank-real-id
+                                     :as-of-date as-of-date})]
     (-> ctx
         (update :counter inc)
         (track result))))
@@ -883,7 +883,7 @@
 (defmethod dispatch :capitalize-interest
   [{:keys [bank banks] :as ctx} {[model-bank as-of-date] :args}]
   (let [{bank-real-id :real-id} (get banks model-bank)
-        result (interest/capitalize-monthly bank
+        result (interest/capitalize-accrued bank
                                             {:bank-id bank-real-id
                                              :as-of-date as-of-date})]
     (-> ctx
@@ -1014,6 +1014,15 @@
                                                   (:real->model id-mapping))
                     model-id)]
     (is (= expected actual) (str "balance for " model-id))
+    ctx))
+
+(defmethod dispatch :assert-interest-run
+  [{:keys [bank banks] :as ctx} {[model-bank as-of-date kind expected] :args}]
+  (let [{bank-real-id :real-id} (get banks model-bank)
+        progress (interest/run-progress bank bank-real-id as-of-date kind)
+        actual (select-keys progress (keys expected))]
+    (is (= expected actual)
+        (str "interest " (name kind) " run for " model-bank " on " as-of-date))
     ctx))
 
 (defmethod dispatch :assert-outcome

@@ -73,4 +73,5 @@ message RecordTypeUnion {
   optional com.repldriven.queenswood.schemas.clearbank.ClearbankOutboundIntent _ClearbankOutboundIntent = 32;
   optional com.repldriven.queenswood.schemas.onfido.OnfidoOutboxEvent _OnfidoOutboxEvent = 33;
   optional com.repldriven.queenswood.schemas.onfido.OnfidoOutboundIntent _OnfidoOutboundIntent = 34;
+  optional com.repldriven.queenswood.schemas.interest.InterestAccountRun _InterestAccountRun = 35;
 }

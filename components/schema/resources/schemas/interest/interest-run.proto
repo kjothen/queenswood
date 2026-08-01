@@ -11,13 +11,59 @@ message InterestRun {
 
   required string bank_id = 1;
   required int64 business_day = 2;
-  required InterestRunStatus status = 3;
+  required InterestRunKind kind = 3;
   required int64 created_at = 4;
   optional int64 deleted_at = 5;
+  required InterestRunState state = 6;
+  optional int64 closed_at = 7;
 
-  enum InterestRunStatus {
-    INTEREST_RUN_STATUS_UNKNOWN = 0;
-    INTEREST_ACCRUE_DONE = 1;
-    INTEREST_CAPITALIZE_DONE = 2;
+  // What ran. Formerly `status`, whose two values conflated the kind
+  // with having finished; `state` now carries the lifecycle.
+  enum InterestRunKind {
+    INTEREST_RUN_KIND_UNKNOWN = 0;
+    INTEREST_RUN_KIND_ACCRUE = 1;
+    INTEREST_RUN_KIND_CAPITALIZE = 2;
+  }
+
+  // DISPATCHED means every account row has been written, not that the
+  // work finished. CLOSED means no row is still pending.
+  enum InterestRunState {
+    INTEREST_RUN_STATE_UNKNOWN = 0;
+    INTEREST_RUN_STATE_DISPATCHING = 1;
+    INTEREST_RUN_STATE_DISPATCHED = 2;
+    INTEREST_RUN_STATE_CLOSED = 3;
+  }
+}
+
+// One row per account per run. Written PENDING as the account set is
+// enumerated, flipped to DONE in the same transaction as the posting.
+// The pending rows are simultaneously the scope snapshot, the
+// idempotency marker, the progress source, and the gap index.
+message InterestAccountRun {
+  option (com.apple.foundationdb.record.record).usage = RECORD;
+
+  required string bank_id = 1;
+  required int64 business_day = 2;
+  required InterestAccountRunKind kind = 3;
+  required string account_id = 4;
+  required InterestAccountRunState state = 5;
+  required int64 created_at = 6;
+  optional int64 updated_at = 7;
+  optional string failure_reason = 8;
+
+  // Mirrors InterestRun.InterestRunKind. Duplicated rather than
+  // referenced so each message owns the enum protojure generates
+  // converters for.
+  enum InterestAccountRunKind {
+    INTEREST_ACCOUNT_RUN_KIND_UNKNOWN = 0;
+    INTEREST_ACCOUNT_RUN_KIND_ACCRUE = 1;
+    INTEREST_ACCOUNT_RUN_KIND_CAPITALIZE = 2;
+  }
+
+  enum InterestAccountRunState {
+    INTEREST_ACCOUNT_RUN_STATE_UNKNOWN = 0;
+    INTEREST_ACCOUNT_RUN_STATE_PENDING = 1;
+    INTEREST_ACCOUNT_RUN_STATE_DONE = 2;
+    INTEREST_ACCOUNT_RUN_STATE_FAILED = 3;
   }
 }
