@@ -14,3 +14,26 @@ message Pet {
   optional string species = 3;
   optional int64 age_months = 4;
 }
+
+// Owner and Toy exist to exercise scanning and merging over keys that
+// share a leading element. Their primary keys are declared in the test
+// system's record-types map rather than annotated here, because the
+// point is the shape of the key: Owner is one row per owner, Toy is
+// several, so a scan of toys under a household has a key tail of more
+// than one element.
+message Owner {
+  option (com.apple.foundationdb.record.record).usage = RECORD;
+
+  required string household_id = 1;
+  required string owner_id = 2;
+  optional string name = 3;
+}
+
+message Toy {
+  option (com.apple.foundationdb.record.record).usage = RECORD;
+
+  required string household_id = 1;
+  required string owner_id = 2;
+  required string toy_id = 3;
+  optional int64 value = 4;
+}

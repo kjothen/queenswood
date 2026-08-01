@@ -6,6 +6,7 @@
     [com.repldriven.queenswood.fdb.check :as check]
     [com.repldriven.queenswood.fdb.counter :as counter]
     [com.repldriven.queenswood.fdb.kv :as kv]
+    [com.repldriven.queenswood.fdb.merge :as merge]
     [com.repldriven.queenswood.fdb.record :as record]
     [com.repldriven.queenswood.fdb.scan :as scan]))
 
@@ -105,6 +106,31 @@
 
 
 (defn scan-records [store opts] (scan/scan store opts))
+
+(defn scan-record-entries
+  "As `scan-records`, but each record comes back as
+  `{:key cursor :record bytes}` so a caller can pair records from two
+  stores without deserialising them."
+  [store opts]
+  (scan/scan-entries store opts))
+
+(defn merge-scan
+  "Pairs two stores on the first key element past their prefixes and
+  reduces over the pairs in key order. Takes the config rather than
+  opened stores, because each page refill needs its own transaction.
+
+  An outer join: a key in one store but not the other still reaches
+  `f`, with the absent side empty. Not a consistent snapshot — the
+  sides refill in separate transactions.
+
+  Args:
+  - config: map with :record-db and :record-store.
+  - opts: `{:left {:store :prefix :limit} :right {...}}`.
+  - f: reducing fn of `[acc {:keys [key left right]}]`, where the
+    records are bytes. May return `reduced`; an anomaly propagates.
+  - init: initial accumulator."
+  [config opts f init]
+  (merge/merge-scan config opts f init))
 
 (defn write-changelog
   "Writes a changelog entry for record-id in store-name. Takes the Txn

@@ -10,8 +10,18 @@
 
     [protojure.protobuf :as proto])
   (:import
-    (com.repldriven.queenswood.test_schemas.pets PetProto$Pet)))
+    (com.repldriven.queenswood.test_schemas.pets PetProto$Owner
+                                                 PetProto$Pet
+                                                 PetProto$Toy)))
 
 (def pb->Pet pets/pb->Pet)
 (defn Pet->pb [m] (proto/->pb (pets/new-Pet m)))
 (defn Pet->java [m] (PetProto$Pet/parseFrom (Pet->pb m)))
+
+(def pb->Owner pets/pb->Owner)
+(defn Owner->pb [m] (proto/->pb (pets/new-Owner m)))
+(defn Owner->java [m] (PetProto$Owner/parseFrom (Owner->pb m)))
+
+(def pb->Toy pets/pb->Toy)
+(defn Toy->pb [m] (proto/->pb (pets/new-Toy m)))
+(defn Toy->java [m] (PetProto$Toy/parseFrom (Toy->pb m)))

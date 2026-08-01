@@ -4,6 +4,17 @@ _record-types: &record-types !strs
     indexes:
       - name: species_idx
         field: species
+  # Keys sharing a leading element, for scan and merge coverage. One
+  # owner per key, several toys, so a toys scan under a household has a
+  # key tail longer than one element.
+  owners:
+    record-type: Owner
+    primary-key: [household_id, owner_id]
+    indexes: []
+  toys:
+    record-type: Toy
+    primary-key: [household_id, owner_id, toy_id]
+    indexes: []
 
 container: !system/component
   system/component-kind: fdb/container

@@ -20,22 +20,43 @@
   (TupleRange/allOf prefix-tuple))
 
 (defn- cursor-tuple
-  "Builds a cursor Tuple from prefix parts and a cursor
-  value."
+  "Builds a cursor Tuple from prefix parts and a cursor value. The
+  cursor is the whole primary key past the prefix, so a scalar and a
+  vector both have to widen the prefix correctly."
   [prefix cursor]
-  (let [parts (into (vec prefix) [cursor])]
+  (let [parts (into (vec prefix)
+                    (if (sequential? cursor) cursor [cursor]))]
     (Tuple/from (into-array Object parts))))
 
 (defn- cursor
-  "Extracts the cursor element from a record's primary
-  key at the given position."
-  [r position]
-  (.get (.getPrimaryKey r) (int position)))
+  "The record's primary key past the prefix.
 
-(defn scan
-  "Scans records by primary key order. Returns
-  `{:records [bytes ...] :before cursor|nil :after cursor|nil}`,
-  where `:records` is in the requested display order.
+  It has to be the WHOLE tail, not the single element at `position`.
+  An exclusive endpoint runs through `ByteArrayUtil.strinc`, which
+  advances past every key sharing those bytes as a prefix — so
+  resuming after one element of a longer key skips every remaining
+  record under it. A store with several rows per that element would
+  lose all but the first at each page boundary, silently.
+
+  A one-element tail is returned as the element itself, so stores
+  whose key is unique at that position keep the scalar cursor their
+  callers already surface as an API page token."
+  [r position]
+  (let [pk (.getPrimaryKey r)
+        tail (mapv #(.get pk (int %)) (range position (.size pk)))]
+    (if (= 1 (count tail)) (first tail) tail)))
+
+(defn scan-entries
+  "Scans records by primary key order, returning each one with its
+  key. Same options and cursor semantics as `scan`; the difference is
+  the shape:
+
+  `{:entries [{:key cursor :record bytes} ...] :before ... :after ...}`
+
+  `:key` is the record's primary key past the prefix — the same value
+  the cursor uses. It exists so callers that pair two stores can join
+  on the key without deserialising the records, which keeps this
+  namespace free of any knowledge of what is stored.
 
   `:before` is the cursor of the first record in the page (what the
   client should send back as `:before` to page *previous*). `:after`
@@ -55,8 +76,8 @@
              returns the highest-keyed records first
 
   When `:prefix` is given, the scan is constrained to records whose
-  PK starts with those values. Cursors are the PK element at the
-  position after the prefix."
+  PK starts with those values. A cursor is the whole PK past the
+  prefix, or that element alone when only one remains."
   [store {:keys [prefix after before limit order]}]
   (let [descending? (= :desc order)
         ;; Translate client-oriented cursors into native range bounds.
@@ -100,7 +121,7 @@
 
                low-cursor
                (TupleRange.
-                (Tuple/from (into-array Object [low-cursor]))
+                (cursor-tuple nil low-cursor)
                 nil
                 EndpointType/RANGE_EXCLUSIVE
                 EndpointType/TREE_END)
@@ -108,7 +129,7 @@
                high-cursor
                (TupleRange.
                 nil
-                (Tuple/from (into-array Object [high-cursor]))
+                (cursor-tuple nil high-cursor)
                 EndpointType/TREE_START
                 EndpointType/RANGE_EXCLUSIVE)
 
@@ -135,8 +156,20 @@
         page (if (= reverse-scan? descending?)
                trimmed
                (vec (rseq trimmed)))]
-    {:records (mapv record->bytes page)
+    {:entries (mapv (fn [r]
+                      {:key (cursor r prefix-size)
+                       :record (record->bytes r)})
+                    page)
      :before (when (seq page)
                (cursor (first page) prefix-size))
      :after (when more?
               (cursor (peek page) prefix-size))}))
+
+(defn scan
+  "Scans records by primary key order. Options and cursor semantics
+  are `scan-entries`'; this returns
+  `{:records [bytes ...] :before cursor|nil :after cursor|nil}`, with
+  `:records` in the requested display order."
+  [store opts]
+  (let [{:keys [entries before after]} (scan-entries store opts)]
+    {:records (mapv :record entries) :before before :after after}))
