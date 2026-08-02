@@ -89,14 +89,17 @@
   entry posted at close. SNAPSHOT for the same reason as the counts —
   a SERIALIZABLE aggregate read joins the conflict set and would
   re-serialise the pass it is measuring."
-  [txn bank-id business-day kind]
+  [txn bank-id business-day kind currency]
   (fdb/transact
    txn
    (fn [txn]
      (fdb/sum-records
       (fdb/open txn interest-account-runs-store-name)
-      "InterestAccountRun_sum_amount_by_bank_day_kind"
-      [bank-id business-day (schema/interest-account-run-kind->int kind)]))
+      "InterestAccountRun_sum_amount_by_bank_day_kind_currency"
+      [bank-id
+       business-day
+       (schema/interest-account-run-kind->int kind)
+       currency]))
    :interest/sum-account-run-amounts
    {:message "Failed to sum interest account run amounts"
     :bank-id bank-id

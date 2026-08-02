@@ -69,6 +69,14 @@ message InterestAccountRun {
   optional int64 input_balance = 10;
   optional int64 input_carry = 11;
 
+  // The account's currency, and part of the amount index's grouping
+  // key. Without it a bank holding more than one currency would sum
+  // pounds and euros into a single figure and post one ledger entry
+  // for the nonsense total. Required, and safely so — a currency is
+  // an ISO 4217 code and never the empty string that would be dropped
+  // from the wire.
+  required string currency = 12;
+
   // Mirrors InterestRun.InterestRunKind. Duplicated rather than
   // referenced so each message owns the enum protojure generates
   // converters for.

@@ -53,18 +53,28 @@
  ;; not it earned anything, which is the only trace a zero-rate account
  ;; leaves. Closed means nothing was left pending.
  ;;
- ;; The amount is the run's total off a SUM index, and 100 exercises
- ;; the case worth proving: acct-1 earns 100 on £1,000 at 36.5% AER
- ;; while acct-0 earns nothing, and protojure drops a zero from the
- ;; wire, so the zero row carries no amount field at all. A sum of 100
- ;; means an absent value contributes nothing rather than breaking the
- ;; aggregate. Capitalisation then sweeps the same 100.
+ ;; Accrual writes no per-account transaction — only the customer's
+ ;; accrued bucket and the carry. The bank's side is one ledger entry
+ ;; for the run, DR 5100 / CR 2400, for what every account earned
+ ;; between them. The GL assertions are what prove the books still
+ ;; balance, and 100 exercises the case worth proving: acct-1 earns
+ ;; 100 on £1,000 at 36.5% AER while acct-0 earns nothing, and
+ ;; protojure drops a zero from the wire, so the zero row carries no
+ ;; amount at all. A run total of 100 means an absent value
+ ;; contributes nothing rather than breaking the aggregate index.
+ ;;
+ ;; Capitalisation then sweeps the same 100 out of the accrued bucket,
+ ;; clearing 2400 back to zero while 5100 keeps the expense.
  :then [{:command :assert-no-anomaly :args []}
         {:command :assert-interest-run
          :args [:bank-0 20260501 :accrue
-                {:scope 2 :done 2 :failed 0 :pending 0 :amount 100
+                {:scope 2 :done 2 :failed 0 :pending 0
                  :run-state :interest-run-state-closed}]}
         {:command :assert-interest-run
          :args [:bank-0 20260501 :capitalize
-                {:scope 2 :done 2 :failed 0 :pending 0 :amount 100
-                 :run-state :interest-run-state-closed}]}]}
+                {:scope 2 :done 2 :failed 0 :pending 0
+                 :run-state :interest-run-state-closed}]}
+        {:command :assert-gl-balance
+         :args [:bank-0 :gl-account-code-interest-expense "GBP" -100]}
+        {:command :assert-gl-balance
+         :args [:bank-0 :gl-account-code-interest-payable "GBP" 0]}]}

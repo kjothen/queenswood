@@ -1016,6 +1016,21 @@
     (is (= expected actual) (str "balance for " model-id))
     ctx))
 
+(defmethod dispatch :assert-gl-balance
+  [{:keys [bank banks] :as ctx}
+   {[model-bank gl-account-code currency expected] :args}]
+  (let [{bank-real-id :real-id} (get banks model-bank)
+        gl (gl-account-for bank bank-real-id gl-account-code)
+        balance (balances-query/get-balance bank
+                                            (:ledger-account-id gl)
+                                            :balance-type-default
+                                            currency
+                                            :balance-status-posted)
+        actual (- (:credit balance 0) (:debit balance 0))]
+    (is (= expected actual)
+        (str "GL " (name gl-account-code) " balance for " model-bank))
+    ctx))
+
 (defmethod dispatch :assert-interest-run
   [{:keys [bank banks] :as ctx} {[model-bank as-of-date kind expected] :args}]
   (let [{bank-real-id :real-id} (get banks model-bank)
