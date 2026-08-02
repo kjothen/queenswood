@@ -6,11 +6,11 @@ The first half of this plan landed. An interest run now writes an
 `InterestRun` lifecycle record and one `InterestAccountRun` row per
 account, so a run that dies part-way leaves a trace of what it reached.
 
-Silent accrual, the aggregate ledger entry, and the merged scan have
-landed since. The accrual path no longer posts a transaction or a
-control leg per account, and each account now arrives from the scan
-with its balances attached — though the write path still re-reads
-them, which is what the frozen write below settles.
+Silent accrual, the aggregate ledger entry, the merged scan, the
+frozen write and capitalisation's ledger side have landed since.
+Neither pass posts a control leg per account any more, both aggregate
+the bank's side at close, and accrual computes and writes entirely
+from what the scan froze. What remains is the `Balance` primary key.
 
 The second half proposed replacing the enumeration loop with one keyed
 command per account. It should not be built, and this document replaces
@@ -413,7 +413,13 @@ anything.
   directly from the scan's frozen inputs rather than through
   `apply-legs`.
 - Capitalisation drops its control legs and aggregates its ledger side
-  the same way, keeping its per-account transaction.
+  the same way, keeping its per-account transaction. Its aggregate is
+  not shaped like accrual's: both of accrual's GL legs are fixed, so a
+  total per currency suffices, while capitalisation credits whichever
+  deposit control the product type rolls into. So
+  `InterestAccountRun` gains `product_type` and a second SUM index
+  grouped by it, and the run posts one entry per (currency, product
+  type) — each balancing on its own — rather than one per currency.
 
 ## The order, and why the rebuild is last
 
@@ -447,7 +453,8 @@ record every other brick reads.
    nothing while the write path re-reads what the scan already
    delivered.
 6. **Capitalisation.** The same treatment for its ledger side, keeping
-   its per-account transaction.
+   its per-account transaction — and one entry per (currency, product
+   type), because its credit side varies where accrual's does not.
 7. **The `Balance` primary key.** Now only about not scanning other
    banks' rows.
 

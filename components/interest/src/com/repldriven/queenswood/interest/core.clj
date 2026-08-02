@@ -49,18 +49,6 @@
           (swap! versions assoc k version))
         version))))
 
-(defn- tag-customer-legs
-  "Stamp the customer `account-id` legs with `product-type` so they fan
-  out to the right control: a default bucket into the deposit control
-  (2100/2200/2300), an interest-accrued bucket into 2400. The GL expense
-  leg carries a different account-id and posts directly."
-  [legs account-id product-type]
-  (mapv (fn [leg]
-          (if (= (:account-id leg) account-id)
-            (assoc leg :product-type product-type)
-            leg))
-        legs))
-
 (defn- accrue-account
   "One account's share of the day's interest, posted silently: the
   customer's interest-accrued bucket is credited and the sub-unit
@@ -114,8 +102,21 @@
        :input-carry carry})))
 
 (defn- capitalize-account
+  "One account's accrued interest swept into its spendable balance.
+
+  Keeps its per-account transaction, because that transaction is the
+  customer's statement line — the one thing about interest they
+  actually see. What it drops is the control legs: fanning out per
+  account made every capitalisation in the bank read and write the
+  2400 payable and the deposit control, the same two-row contention
+  accrual was taken off. The bank's side is posted once per currency
+  and product type at close.
+
+  Unlike accrual this cannot be an unread write. It credits the default
+  bucket, which payments move, so `apply-legs` reads inside the posting
+  transaction and the read-modify-write there is load-bearing."
   [_config ctx txn account balances]
-  (let [{:keys [bank-id account-id currency product-type]} account]
+  (let [{:keys [account-id currency]} account]
     (let-nom>
       [balance (domain/bucket balances
                               :balance-type-interest-accrued
@@ -127,31 +128,63 @@
                                                       (:business-day ctx))
        _ (when transaction
            (let-nom>
-             [expanded-legs (ledger-accounts/add-control-legs
-                             txn
-                             bank-id
-                             (tag-customer-legs (:legs transaction)
-                                                account-id
-                                                product-type))
-              transaction+legs (transactions/record-transaction
-                                txn
-                                (assoc transaction :legs expanded-legs))
+             [recorded (transactions/record-transaction txn transaction)
               _ (balances/apply-legs txn
-                                     (:legs transaction+legs)
-                                     (:transaction-type transaction+legs))]))]
+                                     (:legs recorded)
+                                     (:transaction-type recorded))]))]
       ;; Capitalisation sweeps whatever accrued, so the amount and the
       ;; input are the same figure.
       (let [accrued (domain/net-balance balance)]
         {:amount accrued :input-balance accrued}))))
 
-(defn- get-interest-expense-account
-  [config bank-id]
-  (let [result (ledger-accounts/find-by-code config
-                                             bank-id
-                                             :gl-account-code-interest-expense)]
-    (when-not (error/anomaly? result) result)))
+(defn- find-gl-account
+  "A bank's ledger account for a chart role, as an id. Rejects with the
+  interest brick's own kind rather than the ledger brick's, because a
+  bank missing a control account the run has to post to is a chart of
+  accounts problem the run cannot work around."
+  [txn bank-id gl-account-code]
+  (let [result (ledger-accounts/find-by-code txn bank-id gl-account-code)]
+    (if (error/anomaly? result)
+      (error/reject :interest/missing-gl-account
+                    {:message "Bank has no such account in its chart"
+                     :bank-id bank-id
+                     :gl-account-code gl-account-code})
+      (:ledger-account-id result))))
 
-(defn- post-run-entry
+(defn- accrual-gl-accounts
+  "Resolved before the pass runs, not at close. The accrual credits
+  customer balances as it goes, and its ledger side is the other half
+  of that entry — so a bank whose chart cannot take the posting should
+  fail before the books go out rather than after."
+  [config bank-id]
+  (let-nom>
+    [expense (find-gl-account config bank-id :gl-account-code-interest-expense)
+     payable (find-gl-account config bank-id :gl-account-code-interest-payable)]
+    {:expense expense :payable payable}))
+
+(defn- capitalization-gl-accounts
+  "Interest payable plus every deposit control a customer product could
+  roll into. All four are resolved up front for the same reason accrual
+  resolves two: the per-account transactions have already moved money
+  by the time close is reached."
+  [config bank-id]
+  (let-nom>
+    [payable (find-gl-account config bank-id :gl-account-code-interest-payable)
+     current (find-gl-account config
+                              bank-id
+                              :gl-account-code-customer-deposits-current)
+     savings (find-gl-account config
+                              bank-id
+                              :gl-account-code-customer-deposits-savings)
+     term (find-gl-account config
+                           bank-id
+                           :gl-account-code-customer-deposits-term)]
+    {:payable payable
+     :controls {:product-type-sub-ledger-current current
+                :product-type-sub-ledger-savings savings
+                :product-type-sub-ledger-term-deposit term}}))
+
+(defn- post-accrual-entry
   "The bank's ledger entry for one currency of an accrual run, posted
   once at close. The total comes off the SUM index rather than a tally
   the pass kept, because a resumed run only posts what it processed
@@ -159,7 +192,7 @@
 
   `record-and-post` reads back on a duplicate idempotency key, so
   reaching close twice posts once."
-  [config ctx interest-expense-id currency]
+  [config ctx gl currency]
   (let [{:keys [bank-id business-day account-kind]} ctx]
     (store/transact
      config
@@ -170,30 +203,54 @@
                                                business-day
                                                account-kind
                                                currency)
-          payable (ledger-accounts/find-by-code
-                   txn
-                   bank-id
-                   :gl-account-code-interest-payable)
-          transaction (domain/accrual-run-transaction
-                       interest-expense-id
-                       (:ledger-account-id payable)
+          transaction (domain/accrual-run-transaction (:expense gl)
+                                                      (:payable gl)
+                                                      bank-id
+                                                      currency
+                                                      total
+                                                      business-day)
+          _ (when transaction
+              (transactions/record-and-post txn transaction))])))))
+
+(defn- post-capitalization-entry
+  "The bank's ledger entry for one currency and product type of a
+  capitalisation run. Split by product type because the credit side is
+  whichever deposit control that product rolls into, so one entry per
+  currency could not name them all and still balance."
+  [config ctx gl [currency product-type]]
+  (let [{:keys [bank-id business-day account-kind]} ctx]
+    (store/transact
+     config
+     (fn [txn]
+       (let-nom>
+         [total (store/sum-account-run-amounts-by-product
+                 txn
+                 bank-id
+                 business-day
+                 account-kind
+                 currency
+                 product-type)
+          transaction (domain/capitalization-run-transaction
+                       (:payable gl)
+                       (get-in gl [:controls product-type])
                        bank-id
                        currency
+                       product-type
                        total
                        business-day)
           _ (when transaction
               (transactions/record-and-post txn transaction))])))))
 
 (defn- post-run-entries
-  [config ctx interest-expense-id currencies]
-  (reduce (fn [_ currency]
-            (let [result (post-run-entry config
-                                         ctx
-                                         interest-expense-id
-                                         currency)]
+  "Posts the bank's side once the accounts are done, one entry per group
+  the pass saw. Short-circuits on the first anomaly — the remaining
+  groups would post into the same broken chart."
+  [entry-fn config ctx gl groups]
+  (reduce (fn [_ group]
+            (let [result (entry-fn config ctx gl group)]
               (if (error/anomaly? result) (reduced result) nil)))
           nil
-          currencies))
+          groups))
 
 (def ^:private chunk-size
   "Accounts posted per transaction. FDB caps a transaction at 10MB and
@@ -208,7 +265,7 @@
   :skipped, or an anomaly."
   [config ctx txn account balances]
   (let [{:keys [bank-id business-day account-kind account-fn]} ctx
-        {:keys [account-id currency]} account
+        {:keys [account-id currency product-type]} account
         row (store/load-account-run txn
                                     bank-id
                                     business-day
@@ -225,7 +282,8 @@
                                                  business-day
                                                  account-kind
                                                  account-id
-                                                 currency))
+                                                 currency
+                                                 product-type))
                                             result))]
         :done))))
 
@@ -263,7 +321,7 @@
      (fn [txn]
        (reduce
         (fn [_ [account _balances]]
-          (let [{:keys [account-id currency]} account
+          (let [{:keys [account-id currency product-type]} account
                 row (or (store/load-account-run txn
                                                 bank-id
                                                 business-day
@@ -273,7 +331,8 @@
                                                 business-day
                                                 account-kind
                                                 account-id
-                                                currency))
+                                                currency
+                                                product-type))
                 result (store/save-account-run txn
                                                (domain/account-run-failed
                                                 row
@@ -321,20 +380,23 @@
                 (let [state
                       (-> state
                           (update :chunk conj [account balances])
-                          ;; Every currency in scope, gathered as the
-                          ;; pass runs. Complete even on a re-run,
-                          ;; because the pass visits every account each
-                          ;; time and only the posting is skipped — so
-                          ;; the ledger entries at close cover
-                          ;; currencies an earlier attempt accrued.
-                          (update-in [:tally :currencies]
+                          ;; Every group in scope, gathered as the pass
+                          ;; runs. Complete even on a re-run, because
+                          ;; the pass visits every account each time and
+                          ;; only the posting is skipped — so the ledger
+                          ;; entries at close cover groups an earlier
+                          ;; attempt posted. Accrual reads the currency
+                          ;; alone off these; capitalisation needs the
+                          ;; pair.
+                          (update-in [:tally :groups]
                                      conj
-                                     (:currency account)))]
+                                     [(:currency account)
+                                      (:product-type account)]))]
                   (if (< (count (:chunk state)) chunk-size)
                     state
                     (flush-chunk config ctx state)))))
             {:chunk []
-             :tally {:done 0 :skipped 0 :failed 0 :currencies #{}}})]
+             :tally {:done 0 :skipped 0 :failed 0 :groups #{}}})]
     (:tally (flush-chunk config ctx state))))
 
 (defn- run-interest
@@ -352,11 +414,16 @@
   reports.
 
   A chunk is a short FDB transaction — no long transaction is held
-  across the run. An accrual run then posts the bank's side once per
-  currency, which is the other half of a double entry the per-account
-  postings deliberately leave open."
+  across the run. Both kinds then post the bank's side at close, which
+  is the other half of a double entry the per-account postings
+  deliberately leave open: accrual once per currency, capitalisation
+  once per currency and product type.
+
+  The chart of accounts is resolved before any account is touched. Both
+  kinds move customer money as they go, so a bank that cannot take the
+  ledger side should fail before the books go out rather than after."
   [config data spec]
-  (let [{:keys [policy-kind run-kind run-entry?]} spec
+  (let [{:keys [policy-kind run-kind gl-fn entry-fn group-fn]} spec
         {:keys [bank-id as-of-date]} data
         ctx (assoc spec
                    :bank-id bank-id
@@ -364,50 +431,52 @@
                    ;; Run-scoped, so every account in the pass is
                    ;; accrued against the same view of the rates.
                    :versions (atom {}))]
-    (if-let [interest-expense (get-interest-expense-account config bank-id)]
-      (let-nom>
-        [policies (policy/get-effective-policies config {:bank-id bank-id})
-         today-count (store/count-by-org-business-day-per-kind config
-                                                               bank-id
-                                                               run-kind
-                                                               as-of-date)
-         aggregates {policy-kind {#{:bank-id :business-day} today-count}}
-         _ (domain/check-daily-count policies policy-kind aggregates)
-         tally (process-customer-accounts config ctx)
-         _ (when run-entry?
-             (post-run-entries config
-                               ctx
-                               (:ledger-account-id interest-expense)
-                               (:currencies tally)))
-         run (domain/close-interest-run (domain/new-interest-run bank-id
-                                                                 as-of-date
-                                                                 run-kind))
-         _ (store/save-run config run)]
-        {:bank-id bank-id
-         :as-of-date as-of-date
-         :accounts-processed (+ (:done tally) (:skipped tally))
-         :accounts-failed (:failed tally)
-         :run-state (:state run)})
-      (error/reject :interest/no-interest-expense-account
-                    {:message (str "Bank has no 5100 interest-expense account"
-                                   " in its chart of accounts")
-                     :bank-id bank-id}))))
+    (let-nom>
+      [gl (gl-fn config bank-id)
+       policies (policy/get-effective-policies config {:bank-id bank-id})
+       today-count (store/count-by-org-business-day-per-kind config
+                                                             bank-id
+                                                             run-kind
+                                                             as-of-date)
+       aggregates {policy-kind {#{:bank-id :business-day} today-count}}
+       _ (domain/check-daily-count policies policy-kind aggregates)
+       tally (process-customer-accounts config ctx)
+       _ (post-run-entries entry-fn
+                           config
+                           ctx
+                           gl
+                           (group-fn (:groups tally)))
+       run (domain/close-interest-run (domain/new-interest-run bank-id
+                                                               as-of-date
+                                                               run-kind))
+       _ (store/save-run config run)]
+      {:bank-id bank-id
+       :as-of-date as-of-date
+       :accounts-processed (+ (:done tally) (:skipped tally))
+       :accounts-failed (:failed tally)
+       :run-state (:state run)})))
 
 (def ^:private accrual
   {:policy-kind :accrual
    :run-kind :interest-run-kind-accrue
    :account-kind :interest-account-run-kind-accrue
    :account-fn accrue-account
-   ;; Only accrual leaves its ledger side to the run. Capitalisation
-   ;; still posts a transaction per account, because that one is the
-   ;; customer's statement line.
-   :run-entry? true})
+   :gl-fn accrual-gl-accounts
+   :entry-fn post-accrual-entry
+   ;; Both of accrual's aggregate legs are fixed GL accounts, so the
+   ;; product type the pass collected is not a distinction it needs.
+   :group-fn (fn [groups] (into #{} (map first) groups))})
 
 (def ^:private capitalization
   {:policy-kind :capitalize
    :run-kind :interest-run-kind-capitalize
    :account-kind :interest-account-run-kind-capitalize
-   :account-fn capitalize-account})
+   :account-fn capitalize-account
+   :gl-fn capitalization-gl-accounts
+   :entry-fn post-capitalization-entry
+   ;; The credit side is a different deposit control per product type,
+   ;; so capitalisation posts against the pair the pass collected.
+   :group-fn identity})
 
 (defn accrue-day [config data] (run-interest config data accrual))
 

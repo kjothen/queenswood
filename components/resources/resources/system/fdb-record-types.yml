@@ -93,6 +93,15 @@ interest-account-runs:
     - name: InterestAccountRun_sum_amount_by_bank_day_kind_currency
       fields: [bank_id, business_day, kind, currency, amount]
       type: sum
+    # The same total split by product type, which capitalisation needs
+    # and accrual does not. Accrual's aggregate legs are two fixed GL
+    # accounts, so a currency total is enough. Capitalisation credits
+    # whichever deposit control the product type maps to, so it posts
+    # one entry per (currency, product type) and needs the total for
+    # each.
+    - name: InterestAccountRun_sum_amount_by_bank_day_kind_currency_product
+      fields: [bank_id, business_day, kind, currency, product_type, amount]
+      type: sum
 memberships:
   record-type: Membership
   indexes:

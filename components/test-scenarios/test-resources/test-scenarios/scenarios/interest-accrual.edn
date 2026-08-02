@@ -64,7 +64,15 @@
  ;; contributes nothing rather than breaking the aggregate index.
  ;;
  ;; Capitalisation then sweeps the same 100 out of the accrued bucket,
- ;; clearing 2400 back to zero while 5100 keeps the expense.
+ ;; clearing 2400 back to zero while 5100 keeps the expense. It keeps
+ ;; its per-account transaction — that one is the customer's statement
+ ;; line — but drops its control legs, so its ledger side is also one
+ ;; entry per group: DR 2400 / CR the deposit control the product type
+ ;; rolls into. acct-1 is savings, so the 100 lands in 2200 on top of
+ ;; the £1,000 already there, and 2100 keeps only acct-0's nil balance.
+ ;; Asserting both controls is what proves the aggregate credits the
+ ;; right one — a single per-currency entry could not, which is why the
+ ;; group is (currency, product type).
  :then [{:command :assert-no-anomaly :args []}
         {:command :assert-interest-run
          :args [:bank-0 20260501 :accrue
@@ -77,4 +85,9 @@
         {:command :assert-gl-balance
          :args [:bank-0 :gl-account-code-interest-expense "GBP" -100]}
         {:command :assert-gl-balance
-         :args [:bank-0 :gl-account-code-interest-payable "GBP" 0]}]}
+         :args [:bank-0 :gl-account-code-interest-payable "GBP" 0]}
+        {:command :assert-gl-balance
+         :args [:bank-0 :gl-account-code-customer-deposits-savings
+                "GBP" 100100]}
+        {:command :assert-gl-balance
+         :args [:bank-0 :gl-account-code-customer-deposits-current "GBP" 0]}]}
