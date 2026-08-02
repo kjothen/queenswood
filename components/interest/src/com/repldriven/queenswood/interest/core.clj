@@ -130,6 +130,7 @@
            (let-nom>
              [recorded (transactions/record-transaction txn transaction)
               _ (balances/apply-legs txn
+                                     (:bank-id account)
                                      (:legs recorded)
                                      (:transaction-type recorded))]))]
       ;; Capitalisation sweeps whatever accrued, so the amount and the
@@ -210,7 +211,7 @@
                                                       total
                                                       business-day)
           _ (when transaction
-              (transactions/record-and-post txn transaction))])))))
+              (transactions/record-and-post txn bank-id transaction))])))))
 
 (defn- post-capitalization-entry
   "The bank's ledger entry for one currency and product type of a
@@ -239,7 +240,7 @@
                        total
                        business-day)
           _ (when transaction
-              (transactions/record-and-post txn transaction))])))))
+              (transactions/record-and-post txn bank-id transaction))])))))
 
 (defn- post-run-entries
   "Posts the bank's side once the accounts are done, one entry per group

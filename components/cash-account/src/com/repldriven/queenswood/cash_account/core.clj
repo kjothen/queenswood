@@ -90,6 +90,7 @@
                      policies)
             _ (balances/new-balances
                txn
+               bank-id
                (domain/opening-balances account currency product-version))
             _ (store/save-account txn
                                   account
@@ -108,7 +109,7 @@
         (let-nom>
           [policies (get-policies txn bank-id account-id opts)
            account (q/get-account txn bank-id account-id)
-           balances (balances-q/list-balances txn account-id)
+           balances (balances-q/list-balances txn bank-id account-id)
            updated (domain/close-account account balances policies)
            _ (store/save-account txn
                                  updated

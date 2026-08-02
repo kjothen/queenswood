@@ -3,6 +3,8 @@
   "name": "RecordTransaction",
   "namespace": "com.repldriven.mono.transactions",
   "fields": [
+    {"name": "bank_id",           "type": "string",
+     "doc": "owning bank; heads the primary key of every balance the legs reach"},
     {"name": "transaction_type",  "type": {"type": "enum",
                                             "name": "TransactionType",
                                             "symbols": ["TRANSACTION_TYPE_INTERNAL_TRANSFER",

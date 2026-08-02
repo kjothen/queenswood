@@ -74,7 +74,7 @@
                          txn
                          (assoc transaction :legs expanded-legs))
        {:keys [transaction-id transaction-type legs]} transaction+legs
-       _ (balances/apply-legs txn legs transaction-type)
+       _ (balances/apply-legs txn bank-id legs transaction-type)
        payment (domain/new-inbound-payment data
                                            account-id
                                            bank-id
@@ -128,7 +128,7 @@
                     (:ledger-account-id suspense))
        recorded (transactions/record-transaction txn transaction)
        {:keys [transaction-id transaction-type legs]} recorded
-       _ (balances/apply-legs txn legs transaction-type)
+       _ (balances/apply-legs txn bank-id legs transaction-type)
        payment (domain/suspended-inbound-payment data
                                                  bank-id
                                                  business-day
@@ -166,7 +166,7 @@
                  txn
                  (assoc transaction :legs expanded-legs))
        {:keys [transaction-id transaction-type legs]} recorded
-       _ (balances/apply-legs txn legs transaction-type)
+       _ (balances/apply-legs txn bank-id legs transaction-type)
        released (domain/settled-from-held held
                                           scheme-transaction-id
                                           transaction-id)
@@ -255,7 +255,7 @@
                  txn
                  (assoc tx :legs expanded-legs))
        {:keys [transaction-type legs]} recorded
-       _ (balances/apply-legs txn legs transaction-type)]
+       _ (balances/apply-legs txn bank-id legs transaction-type)]
       recorded)))
 
 (defn settle-outbound
@@ -415,7 +415,7 @@
                  txn
                  (assoc tx :legs expanded-legs))
        {:keys [transaction-type legs]} recorded
-       _ (balances/apply-legs txn legs transaction-type)]
+       _ (balances/apply-legs txn bank-id legs transaction-type)]
       recorded)))
 
 (defn reject-outbound

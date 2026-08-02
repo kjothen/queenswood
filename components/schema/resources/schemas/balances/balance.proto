@@ -28,6 +28,16 @@ enum BalanceStatus {
 message Balance {
   option (com.apple.foundationdb.record.record).usage = RECORD;
 
+  // Heads the primary key so a bank's balances scan contiguously, the
+  // same way its cash accounts already do. Without it the interest
+  // pass has to scan every bank's balances and discard the ones it
+  // does not own, because a bank-scoped scan is not expressible.
+  //
+  // Required, and safely so — a bank id is never the empty string that
+  // protojure would drop from the wire and the Java parse would then
+  // reject.
+  required string bank_id = 11;
+
   required string account_id = 1;
   // Every balance declares its account kind: a customer sub-ledger type,
   // or PRODUCT_TYPE_GENERAL_LEDGER for the bank's own books (CoA rows).

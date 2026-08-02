@@ -41,7 +41,7 @@
     result))
 
 (defn record-and-post
-  [txn data]
+  [txn bank-id data]
   (or-already-recorded
    txn
    data
@@ -51,6 +51,7 @@
       (let-nom>
         [result (record txn data)
          _ (balances/apply-legs txn
+                                bank-id
                                 (:legs result)
                                 (:transaction-type result))]
         result)))))

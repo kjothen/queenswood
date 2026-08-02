@@ -29,10 +29,11 @@
   batched server-side so the list carries the headline figure and the
   trial balance can be summed here rather than in the client. Returns the
   enriched accounts, or the first balance anomaly."
-  [config accounts]
+  [config bank-id accounts]
   (reduce (fn [acc account]
             (let [balances (balances/get-balances
                             config
+                            bank-id
                             (:ledger-account-id account))]
               (if (error/anomaly? balances)
                 (reduced balances)
@@ -59,7 +60,7 @@
         config {:record-db record-db :record-store record-store}
         result (let-nom>
                  [accounts (ledger-accounts/list-accounts config bank-id)
-                  enriched (with-posted-balances config accounts)]
+                  enriched (with-posted-balances config bank-id accounts)]
                  {:ledger-accounts (mapv ->api enriched)
                   :trial-balance (balances/trial-balance
                                   (map trial-balance-entry enriched))})]
@@ -102,7 +103,7 @@
                       (error/reject :ledger-account/not-found
                                     {:message "Ledger account not found"
                                      :account-id account-id}))
-                  balances (balances/get-balances config account-id)]
+                  balances (balances/get-balances config bank-id account-id)]
                  balances)]
     (if (error/anomaly? result)
       (errors/anomaly->response result)

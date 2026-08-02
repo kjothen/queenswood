@@ -85,7 +85,8 @@
             request
             "record-transaction"
             "transaction"
-            {:transaction-type :transaction-type-inbound-transfer
+            {:bank-id bank-id
+             :transaction-type :transaction-type-inbound-transfer
              :currency currency
              :reference "Simulated inbound transfer"
              :legs expanded-legs})))))))

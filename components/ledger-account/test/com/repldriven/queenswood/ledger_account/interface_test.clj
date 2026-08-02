@@ -105,6 +105,7 @@
                             bank-id
                             :gl-account-code-customer-deposits-current)
                    bals (balances/get-balances config
+                                               bank-id
                                                (:ledger-account-id control))
                    _ (is (= 1 (count (:balances bals))))
                    _ (is (= :balance-type-default
@@ -197,6 +198,7 @@
          account (suspense-account config bank-id)
          posted (balance-writes/apply-legs
                  config
+                 bank-id
                  [{:account-id (:ledger-account-id account)
                    :balance-type :balance-type-default
                    :balance-status :balance-status-posted

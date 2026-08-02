@@ -22,7 +22,9 @@
      [policies (get-policies txn bank-id opts)
       account (domain/new-ledger-account bank-id currency row policies)
       _ (store/save-account txn account)
-      _ (balances/new-balances txn [(domain/opening-balance account)])]
+      _ (balances/new-balances txn
+                               bank-id
+                               [(domain/opening-balance account)])]
      account)))
 
 (defn get-account
@@ -37,6 +39,7 @@
      [policies (get-policies txn bank-id opts)
       account (get-account txn bank-id ledger-account-id)
       balance (balance-query/get-balance txn
+                                         bank-id
                                          ledger-account-id
                                          :balance-type-default
                                          (:currency account)

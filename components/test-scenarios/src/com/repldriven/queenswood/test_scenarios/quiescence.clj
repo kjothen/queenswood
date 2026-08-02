@@ -60,8 +60,9 @@
           (do (Thread/sleep poll-interval-ms) (recur))))))))
 
 (defn- net-balance
-  [bank account-id currency]
+  [bank bank-real-id account-id currency]
   (let [b (balance/get-balance bank
+                               bank-real-id
                                account-id
                                :balance-type-default
                                currency
@@ -77,12 +78,17 @@
   Credit (settle-inbound, credits the creditor) events as two
   separate transaction-settled webhooks, so
   `wait-for-outbound-completed` only catches the first hop."
-  ([bank account-id currency target]
-   (wait-for-credit bank account-id currency target default-deadline-ms))
-  ([bank account-id currency target deadline-ms]
+  ([bank bank-real-id account-id currency target]
+   (wait-for-credit bank
+                    bank-real-id
+                    account-id
+                    currency
+                    target
+                    default-deadline-ms))
+  ([bank bank-real-id account-id currency target deadline-ms]
    (let [deadline (+ (System/currentTimeMillis) deadline-ms)]
      (loop []
-       (let [net (net-balance bank account-id currency)]
+       (let [net (net-balance bank bank-real-id account-id currency)]
          (cond
           (and net (>= net target))
           :quiescent

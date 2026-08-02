@@ -32,12 +32,14 @@
 
   Args:
   - txn: FDB handle or open transaction.
+  - bank-id: owning bank id, which heads the key of every balance the
+    legs reach.
   - data: transaction data (idempotency-key, transaction-type,
     currency, reference, legs).
 
   Returns the transaction map with `:legs` or an anomaly."
-  [txn data]
-  (core/record-and-post txn data))
+  [txn bank-id data]
+  (core/record-and-post txn bank-id data))
 
 (defn get-transactions
   "List transaction legs for an account, enriched with the parent

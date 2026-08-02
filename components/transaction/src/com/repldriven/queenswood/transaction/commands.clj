@@ -16,7 +16,8 @@
 
 (def ^:private command-handlers
   {"record-transaction"
-   (fn [config data] (->response config (core/record-and-post config data)))})
+   (fn [config data]
+     (->response config (core/record-and-post config (:bank-id data) data)))})
 
 (defn- dispatch
   [config message]
