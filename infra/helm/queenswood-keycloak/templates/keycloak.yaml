@@ -15,7 +15,7 @@ metadata:
 spec:
   instances: {{ .Values.keycloak.instances }}
   image: {{ .Values.keycloak.image | quote }}
-  # The upstream `quay.io/keycloak/keycloak:26.6.1` image ships
+  # The upstream `quay.io/keycloak/keycloak` image ships
   # *unbuilt* -- production images are expected to bake the
   # `kc.sh build` step into their Dockerfile. The operator
   # defaults to `start --optimized`, which crashes on first run

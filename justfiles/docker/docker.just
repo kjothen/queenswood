@@ -11,6 +11,22 @@ docker-start:
 docker-stop:
     colima stop
 
+# Reclaim Colima disk space: `just docker-free-space` or `... all`
+docker-free-space scope="safe":
+    # FoundationDB's ratekeeper drops to zero TPS once the disk backing
+    # its storage pod passes ~95% full, so every transaction times out at
+    # 5s and surfaces as an unrelated-looking 500. kind nodes share this
+    # filesystem with the image store and BuildKit cache.
+    #
+    # `all` additionally drops every image not backing a running
+    # container — including locally built tags, which then need a rebuild.
+    @colima ssh -- df -h /var/lib/docker | awk 'NR==2 {print "before: " $4 " free (" $5 " used)"}'
+    docker container prune -f
+    docker buildx prune -f
+    if [ "{{ scope }}" = "all" ]; then docker image prune -a -f; else docker image prune -f; fi
+    @colima ssh -- df -h /var/lib/docker | awk 'NR==2 {print "after:  " $4 " free (" $5 " used)"}'
+    @echo "BuildKit's Maven cache was pruned too — run 'just docker-warm-cache' before the next build."
+
 # Build a single service Docker image: `just docker-build api-service dev`
 docker-build project tag="dev":
     docker buildx build \
