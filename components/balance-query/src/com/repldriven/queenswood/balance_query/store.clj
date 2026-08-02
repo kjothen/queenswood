@@ -5,8 +5,11 @@
 
     [com.repldriven.mono.error.interface :as error :refer [let-nom>]]))
 
-;; must match bank-balance.store/store-name — same FDB store
-(def ^:private store-name "balances")
+;; must match bank-balance.store/store-name — same FDB store. Public
+;; because a caller pairing accounts with balances in one scan has to
+;; name this store to `fdb/merge-scan`, and a third hardcoded copy of
+;; the string is worse than saying where the one copy lives.
+(def store-name "balances")
 
 (def transact fdb/transact)
 

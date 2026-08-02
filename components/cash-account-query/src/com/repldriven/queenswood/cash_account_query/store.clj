@@ -1,5 +1,6 @@
 (ns com.repldriven.queenswood.cash-account-query.store
   (:require
+    [com.repldriven.queenswood.balance-query.interface :as balances]
     [com.repldriven.queenswood.fdb.interface :as fdb]
     [com.repldriven.queenswood.schema.interface :as schema]
 
@@ -7,6 +8,35 @@
 
 ;; must match bank-cash-account.store/store-name — same FDB store
 (def ^:private store-name "cash-accounts")
+
+(defn reduce-accounts-with-balances
+  "Streams a bank's accounts paired with their balances, in account-id
+  order, reducing over `[acc {:account :balances}]`.
+
+  One merged scan of two stores rather than a page of accounts and a
+  balance lookup per account. Both are keyed from `account_id` — the
+  accounts store under `[bank_id]` and the balances store globally —
+  so the two cursors advance in step and the pairing costs no random
+  reads.
+
+  Balances of accounts belonging to other banks arrive with no account
+  and are dropped here: the balances store carries no bank_id, so a
+  bank-scoped scan of it is not expressible until its key gains one.
+  An account with no balances yet is delivered with an empty vector,
+  because having none is a fact the caller may need rather than a
+  reason to skip it."
+  [config bank-id f init]
+  (fdb/merge-scan
+   config
+   {:left {:store store-name :prefix [bank-id] :limit 1000}
+    :right {:store balances/store-name :prefix [] :limit 5000}}
+   (fn [acc {:keys [left right]}]
+     (if-let [record (first left)]
+       (f acc
+          {:account (schema/pb->CashAccount record)
+           :balances (mapv schema/pb->Balance right)})
+       acc))
+   init))
 
 (def transact fdb/transact)
 

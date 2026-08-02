@@ -64,6 +64,14 @@
   [txn account-id balance-type currency balance-status]
   (store/find-balance txn account-id balance-type currency balance-status))
 
+(def
+  ^{:doc
+    "Name of the FDB store balances live in. Exposed for callers that
+  pair balances with another store in a single `fdb/merge-scan` and so
+  have to name it, rather than reaching them one account at a time."}
+  store-name
+  store/store-name)
+
 (defn trial-balance
   "Aggregate account-level posted balances into a per-currency trial
   balance — `[{:currency :debit :credit :accounts}]`, one block per
