@@ -1,178 +1,112 @@
-# Plan: reuse one FDB container across the test suite
+# Plan: reuse one FDB container across the test suite — not taken
 
-Move test isolation from the container to the FDB keyspace, so the suite
-starts one FoundationDB container instead of 68.
+This proposed moving test isolation from the container to the FDB
+keyspace, so the suite started one FoundationDB container instead of 68.
 
-## The cost today
+**It is not being done.** A container per test system is the model, and
+it stays. The analysis is kept because the cost it measured is real and
+knowingly paid, and because the reasoning is what stops the idea coming
+back on the strength of that cost alone.
+
+## Why not
+
+**The problem it was going to fix has been fixed at its cause.** The
+plan was written when the port race and the reuse blocker were the same
+problem, so fixing either meant fixing both — reuse was the way to
+remove a race, not merely a speed-up. That is no longer true. The
+container now takes a Docker-assigned host port and advertises it
+separately from the one it binds, so nothing pre-binds a port, nothing
+collides, and containers run side by side safely. Reuse would now buy
+startup time and nothing else.
+
+**Independent containers are easier to reason about.** The container
+*is* the isolation boundary, and that is a boundary with no bookkeeping:
+no shared keyspace, nothing to clean up, no way for one test's residue
+to reach another, and no shared-state question to ask when something
+fails. Reuse replaces it with isolation that has to be constructed and
+then maintained — a generated keyspace per system, and a sweep to stop a
+developer's FDB growing without bound. That is a permanent tax on
+debugging in exchange for minutes.
+
+**It needs a `mono` change to even start.** Keyspace isolation wanted a
+read-time generating tag (`!uuidv7`, in the shape of the existing
+`!port`) in `mono`'s env brick — so made there, released, and pulled
+down by bumping the `deps/mono` and `deps/mono-test` shims in lockstep,
+before any of the local work could begin.
+
+**And it concentrates a failure mode already seen once.** `poly test
+:all` runs ~14 JVMs, which under reuse would share one container.
+`fdb.yml` in production carries `async-to-sync-timeout-ms: 30000` with
+the note that a single-process FDB serialises the directory-layer
+resolution `FDBMetaDataStore.<init>` performs, and 12+ services hitting
+it concurrently at boot "routinely tipped past 5s and crashed pods".
+Generating a keyspace per system adds ~68 directory-layer *writes* per
+run — precisely the operation that serialises. The plan's own abandon
+criteria named this as the thing most likely to stop it.
+
+## What it cost to decline
+
+Worth writing down, because it is the number that will tempt someone to
+reopen this.
 
 `with-test-system` starts and stops a system per invocation, with no
 caching. There are 68 call sites across 23 namespaces, and 22 of the 25
-test rigs include `fdb-test.yml`. So a full `project:dev :all` run
+test rigs include `fdb-test.yml`, so a full `project:dev :all` run
 creates and destroys roughly 68 containers.
 
 It shows in the timings: almost every FDB-touching test sits at a floor
 of 3.5–4s regardless of what it asserts, against 25s / 43s / 47s for the
-three genuinely heavy scenario tests. Around 60 tests are paying ~4s of
+three genuinely heavy scenario tests. Around 60 tests pay ~4s of
 container startup each — roughly four minutes of a five-minute run.
 
-## Reuse is configured but not happening
-
 `TESTCONTAINERS_REUSE_ENABLE=TRUE` is exported from `flake.nix` and set
-in CI, but nothing is reused. Three reasons, compounding:
+in CI. It permits reuse; nothing opts in, and nothing should. The
+container is stopped on system stop, deliberately.
 
-- No `.withReuse(true)` on the container. The env var only *permits*
-  reuse; the container must opt in.
-- `:system/stop` calls `.stop`, which tears down a reused container.
-- The port is random. Testcontainers identifies a reusable container by
-  hashing its configuration, and `withFixedExposedPort(free-port,
-  free-port)` changes that hash on every start, so no existing container
-  could ever match.
+## What was done instead
 
-Measured: the same brick run twice takes 4.78s and 4.73s, and no
-container survives either run.
+The port is no longer pinned, and no longer pre-bound.
 
-## Why it is built this way
+`--public-address` and `--listen-address` are independent, which is the
+standard answer to NAT, and Docker bridge networking is a NAT. The
+container binds 4500 — the only port the image exposes — and advertises
+whatever host port Docker assigned, so one cluster file is valid on both
+sides without the two numbers matching. Nothing chooses a port and hopes
+it is still free when the container starts, which is what the old
+`free-port` did and what made concurrent starts collide.
 
-Two constraints, both real.
+It costs two things, both small and both contained:
 
-**The fixed host port is load-bearing.** The cluster file is generated
-inside the container and names the port FDB listens on. Under
-Testcontainers' normal dynamic mapping the host port differs from the
-container port, so a client outside reading that cluster file dials the
-wrong one. Binding host==container is what makes one cluster file valid
-on both sides.
+- **A two-phase start.** Docker only assigns the host port once the
+  container is running, so the entrypoint waits to be told it rather
+  than taking it from the environment.
+- **A loopback bridge inside the container.** Everything in there reads
+  the same cluster file and so re-dials the advertised port, including
+  the `fdbcli` that runs `configure new single memory`. That port is the
+  host's and nothing listens on it inside, so it is bridged back to the
+  bound one.
 
-**The container is the isolation boundary.** `fdb-test.yml` opens
-`path: meta` with no per-system namespacing, and `keyspace/path` builds
-a directory-layer path from the store name alone. Nothing distinguishes
-one test system's `banks` store from another's. A fresh container per
-system is what keeps 68 systems off each other.
+The bridge was tested rather than assumed, twice. Without it: 22
+failures. With it removed but the bootstrap `fdbcli` given its own
+cluster file naming the *bound* port: the same 22 failures — the client
+re-dials the advertised address whichever file it started from. Moving
+the bootstrap to the host was preferred and is not available: the
+`fdbcli` in the image is a Linux binary and the dev host is macOS, and
+driving `configure new` through the Java client's special key space does
+not work against a database that has not been created yet.
 
-The two are coupled: the random port both causes the race *and* prevents
-the reuse that would remove it.
+Verified by two consecutive clean `clojure -M:poly test :all` runs — 14
+projects, ~14 JVMs starting containers simultaneously — against a
+baseline that had been failing intermittently.
 
-## Will one FDB be overloaded?
+## What is still worth taking from this
 
-The honest answer is that within a single JVM it should see the same
-load it sees now, and the risk is concentrated somewhere else.
-
-The runner sets `:multithread? :namespaces`, so namespaces run in
-parallel — but **all 23 namespaces that touch FDB are marked
-`^:eftest/synchronized`**, which serialises them. One test system is
-live at a time today, and that does not change under reuse. What changes
-is that the container stops being destroyed and rebuilt between them.
-
-Where it could bite is parallel *projects* — `poly test :all` runs ~14
-JVMs, and they would share one container rather than having their own.
-There is direct precedent for that hurting: `fdb.yml` in production
-carries `async-to-sync-timeout-ms: 30000` with the note that a
-single-process FDB serialises the directory-layer resolution
-`FDBMetaDataStore.<init>` performs, and 12+ services hitting it
-concurrently at boot "routinely tipped past 5s and crashed pods".
-
-That is the same failure mode, from the same cause, already observed
-once. Two consequences for this plan: carry the raised timeout into the
-test rig, and keep an eye on the keyspace count. A UUIDv7 per system
-start means ~68 directory-layer *writes* per run, and directory-layer
-resolution is precisely what serialises. That is the price of the
-strongest isolation, and it is the first thing to measure if stage 3
-disappoints.
-
-## Stages
-
-Each stage is independently valuable and independently revertable.
-
-### 1. A read-time unique-value tag in `mono`
-
-The `meta-store` path is a plain `path: meta` in both `fdb.yml` and
-`fdb-test.yml`. It becomes `!profile`-driven: production keeps `meta`,
-and other profiles get `meta` plus a UUIDv7, generated fresh each time
-the config is read.
-
-That needs a new reader tag in `mono`'s env brick — `yml-reader` in
-`components/env/src/.../reader/yml.clj`, alongside `!profile`, `!env`,
-`!keyword` and the rest. There is an exact precedent for a tag that
-*generates* rather than looks up: `!port`, which resolves `0` by binding
-a socket at read time. A `!uuidv7` tag is the same shape in the same
-place. It composes with the existing `!concat`, or produces the full
-suffixed string itself.
-
-A `mono` change under ADR-0001, so: made there, released, pulled down by
-bumping the `deps/mono` and `deps/mono-test` shims in lockstep.
-
-### 2. Point the test rig at it
-
-`fdb-test.yml` sets the path per profile. Every `with-test-system` then
-reads config afresh and lands in its own keyspace, so systems cannot see
-each other regardless of which container they are on.
-
-Production keeps `meta`; every other profile generates. That includes
-`dev`, which matters because `just monolith-start` runs the *test* rig
-under the `dev` profile — so the dev loop starts empty every time. That
-is wanted, and it is also what happens today: the dev loop currently
-gets a fresh container per start, so a generated keyspace preserves the
-behaviour rather than changing it.
-
-It does make cleanup matter more, not less. The dev loop is the most
-frequently restarted system in the workspace, and once its container
-survives, each restart leaves another abandoned keyspace behind.
-
-One thing to watch: **a fresh keyspace per system is ~68 directory-layer
-writes per run**, and that is the operation the production comment says
-serialises. It buys the strongest isolation available and is the right
-default, but it is the first thing to measure if stage 3 disappoints.
-
-At this point tests are isolated by keyspace and the container could be
-shared, but nothing has changed operationally yet. Run the suite and
-confirm it is still green.
-
-### 3. Pin the port and reuse
-
-- Replace `free-port` with a fixed port, so the container's config hash
-  is stable.
-- Add `.withReuse(true)`.
-- Stop calling `.stop` on a reused container.
-- Carry `async-to-sync-timeout-ms: 30000` into `fdb-test.yml`.
-
-The port race disappears here, because nothing ever binds a second
-container.
-
-### 4. Clean up keyspaces
-
-Not optional once the path carries a UUIDv7. Every system start mints a
-keyspace that is never revisited, and the container now survives between
-runs, so a developer's FDB grows without bound.
-
-Either drop the keyspace on system stop — the natural place, and it
-keeps the container's contents proportional to what is running — or
-prune everything under the parent directory at start. Stop-time deletion
-is tidier but is skipped when a test crashes or `just monolith-start` is
-killed with Ctrl-C, which is the common case for the dev loop. A
-start-time sweep is the backstop that actually catches those.
-
-## Verification
-
-- `clojure -M:poly test project:dev :all` green, and materially faster —
-  the ~4s floor should collapse for the ~60 tests that only need FDB.
-- `docker ps` shows exactly one FDB container, surviving between runs.
-- Run two projects concurrently and confirm neither the port collision
-  nor a directory-layer timeout appears.
-- Run the suite twice in a row: the second run must be green against the
-  container the first left behind. This is the stage-4 question, and
-  failing it means keyspace cleanup is required rather than optional.
-
-## Abandon criteria
-
-If stage 3 produces directory-layer timeouts under parallel projects
-that the raised timeout does not absorb, stop. Stages 1 and 2 are still
-worth keeping — keyspace isolation is correct regardless — and the
-container-per-system model can stay.
-
-## Not in scope
-
-- The `free-port` TOCTOU race has a cheap independent fix: retry
-  `.start()` on "address already in use" with a fresh port. Worth doing
-  on its own if this plan is not taken, but stage 3 deletes the random
-  port entirely, so doing both means writing code to throw away.
+- **Keyspace isolation is correct regardless**, and would be worth
+  having if a reason other than container reuse ever calls for it. The
+  `!uuidv7` reader tag it needs is the only part that has to happen in
+  `mono`.
+- **The ~4s floor is the price of the model.** If it ever stops being
+  affordable, the honest options are fewer test systems or cheaper
+  startup, not a shared container.
 - `bases/monolith`'s rig is the dev loop, not a test — it has no
-  `*_test.clj`. It would pick up reuse for free but is not a target.
+  `*_test.clj` — and gets a fresh container per start, which is wanted.
