@@ -19,9 +19,21 @@
   account in `id-mapping` through `bank-balance/get-balances` and
   returns `{model-acct-id -> int-pence}`. Args:
   - bank: FDB config map.
+  - real->bank-id: `{real-account-id -> real-bank-id}`, since a balance
+    is keyed by bank. Build it with `real->bank`.
   - id-mapping: `{real-id -> model-id}` map of in-scope accounts."}
   project-balances
   balances/project-balances)
+
+(def
+  ^{:doc
+    "`{real-account-id -> real-bank-id}` from the runner's ctx maps,
+  for `project-balances`. Args:
+  - accounts: `{model-acct {:bank model-bank}}`.
+  - banks: `{model-bank {:real-id ...}}`.
+  - model->real: the id mapping's model->real direction."}
+  real->bank
+  balances/real->bank)
 
 (def
   ^{:doc

@@ -2,15 +2,13 @@
 
 ## Context
 
-The first half of this plan landed. An interest run now writes an
+Every step of this plan has landed. An interest run writes an
 `InterestRun` lifecycle record and one `InterestAccountRun` row per
-account, so a run that dies part-way leaves a trace of what it reached.
-
-Silent accrual, the aggregate ledger entry, the merged scan, the
-frozen write and capitalisation's ledger side have landed since.
-Neither pass posts a control leg per account any more, both aggregate
-the bank's side at close, and accrual computes and writes entirely
-from what the scan froze. What remains is the `Balance` primary key.
+account; neither pass posts a control leg per account; both aggregate
+the bank's side at close; accrual computes and writes entirely from
+what the scan froze; and `Balance` is keyed from `bank_id`, so the
+pass scans one bank rather than all of them. What follows is kept as
+the record of why it is shaped this way.
 
 The second half proposed replacing the enumeration loop with one keyed
 command per account. It should not be built, and this document replaces
@@ -128,8 +126,12 @@ interest-accrued posted bucket — current, savings, term deposit — are
 exactly the product types the pass admits, and own funds, which
 declares none, is exactly the type it filters out. The bucket is
 opened with the account. So a missing row is a misconfigured product
-or a corrupted account, and the account is rejected and marked FAILED
-rather than quietly accruing against a zero that was invented for it.
+or a corrupted account. The pass says so — it logs that the account
+has a rate but nowhere to accrue to — and records the account done at
+zero. It does not fail it: the account has done nothing wrong, and a
+bank left short by a template should not have its accounts marked
+failed over it. What it must not do is read the absence as a zero
+balance and accrue silently against a figure nobody wrote.
 
 A product at zero bps could in principle be opened without an accrued
 bucket, and then the invariant would need qualifying. It is not worth
@@ -398,12 +400,13 @@ anything.
 - `credit_carry` moves from the default posted row to the
   interest-accrued row, so the accrual pass reads and writes one row
   and never the one payments contend on.
-- A balance bucket the pass expects and does not find becomes an
-  anomaly again. Reading an absent row as zero was introduced when the
-  per-account balance read was dropped, on the mistaken premise that
-  an account which has never accrued has no accrued row. It has one
-  from the moment it opens, so the zero reading masks exactly the
-  corruption worth catching.
+- A balance bucket the pass expects and does not find is reported
+  rather than papered over. Reading an absent row as zero was
+  introduced when the per-account balance read was dropped, on the
+  mistaken premise that an account which has never accrued has no
+  accrued row. It has one from the moment it opens, so the zero
+  reading masks exactly the corruption worth catching — but the
+  account is logged and recorded done at zero, not failed.
 - `accrual-leg` stops carrying `product-type` for the case where the
   posting has to open the bucket. Nothing opens a bucket on that path
   any more.
@@ -459,8 +462,9 @@ record every other brick reads.
    banks' rows.
 
 Outside the order and blocking none of it: whether a reporting cut
-that has to foot is separately required. That is the one question that
-would bring back a snapshot artefact.
+that has to foot is separately required. That question is taken up in
+[statementing.md](statementing.md), which answers it from the
+transactions and so brings back no snapshot artefact.
 
 ## What this supersedes
 
@@ -483,11 +487,20 @@ would bring back a snapshot artefact.
   rather than daily, but on the day it runs it writes a transaction per
   account. Dropping its control legs removes the hot rows, not the
   cardinality.
-- **The rebuild of `Balance` is the risky step**, and it is a rebuild of
-  the record every other brick reads. It wants doing on its own, before
-  anything here depends on it.
-- **Provisioning a record store per bank would make that rebuild
-  unnecessary**, and is deferred rather than rejected. A per-bank store
+- **The rebuild of `Balance` was the risky step**, and it was a rebuild
+  of the record every other brick reads. It landed on its own. The cost
+  was not the key change but the reach: `bank_id` heads the key, and
+  neither `Transaction` nor `TransactionLeg` carries a bank, while
+  `CashAccount` is keyed `[bank_id, account_id]` so a bank cannot be
+  derived from an account id either. So every posting and read path had
+  to take a bank explicitly — `apply-legs`, `new-balances`,
+  `record-and-post`, and the four balance reads — rather than the key
+  simply gaining a column.
+- **Provisioning a record store per bank was the alternative**, and is
+  now closed off: `bank_id` on the record was chosen instead, and
+  taking the per-bank route later would mean rebuilding `Balance` a
+  second time. The reasoning is kept because it applies to any record
+  that follows. A per-bank store
   gives the pass a contiguous per-bank scan with today's key, drops
   `bank_id` from records, and turns tenant isolation from a predicate
   every caller must remember into a store they would have to open by
@@ -497,10 +510,13 @@ would bring back a snapshot artefact.
   global, so it means maintaining two store scopes, and index builds
   then fan out per bank on every schema change. If it is ever taken up,
   it should be decided on isolation and bank offboarding rather than on
-  anything here — and decided before `Balance` is rebuilt, or the
-  rebuild happens twice.
-- **The retention number is still unpicked.** Bounded now, but nobody
-  has chosen how many days of closed-run rows to keep.
+  scan shape.
+- **The retention number is still unpicked**, though no longer hard.
+  Nobody has chosen how many days of closed-run rows to keep, but
+  [statementing.md](statementing.md) settles that nothing outside a run
+  needs them — the movements a statement or a tax certificate reports
+  come off the transactions — so the window can be short and is not a
+  reporting decision.
 - **The carry is not recognised in the ledger, deliberately.** A
   remainder averages half a minor unit per account, so a million
   accounts hold roughly £5,000 the books do not show. The books still
@@ -546,7 +562,9 @@ would bring back a snapshot artefact.
   buckets an account opens with, and the three customer product types
   the pass admits all declare an interest-accrued posted bucket. Code
   that reads an absent bucket as zero, or opens one on the posting
-  path, is covering for a corruption rather than a real state.
+  path, is covering for a corruption rather than a real state. Saying
+  so and carrying on is the right response; failing the account is
+  not, since the account is not what is wrong.
 - **Which row a batch writes decides whether it can write unread.** A
   value frozen in an earlier transaction is safe to write back only
   where nothing else writes that row. The accrued bucket has two

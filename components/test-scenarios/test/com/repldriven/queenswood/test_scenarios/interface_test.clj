@@ -68,7 +68,12 @@
 (defn- project-real
   [bank ctx]
   (let [real->model (get-in ctx [:id-mapping :real->model])]
-    {:balances (projections/project-balances bank real->model)
+    {:balances (projections/project-balances
+                bank
+                (projections/real->bank (:accounts ctx)
+                                        (:banks ctx)
+                                        (get-in ctx [:id-mapping :model->real]))
+                real->model)
      :products (projections/project-products
                 bank
                 (enrich-with-bank-real-id (:products ctx) (:banks ctx)))

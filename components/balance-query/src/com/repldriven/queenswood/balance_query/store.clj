@@ -14,13 +14,14 @@
 (def transact fdb/transact)
 
 (defn find-balance
-  [txn account-id balance-type currency balance-status]
+  [txn bank-id account-id balance-type currency balance-status]
   (let-nom>
     [result (fdb/transact
              txn
              (fn [txn]
                (fdb/load-record
                 (fdb/open txn store-name)
+                bank-id
                 account-id
                 (schema/balance-type->int balance-type)
                 currency
@@ -30,9 +31,10 @@
     (when result (schema/pb->Balance result))))
 
 (defn get-balance
-  [txn account-id balance-type currency balance-status]
+  [txn bank-id account-id balance-type currency balance-status]
   (let-nom>
     [balance (find-balance txn
+                           bank-id
                            account-id
                            balance-type
                            currency
@@ -40,19 +42,20 @@
     (or balance
         (error/reject :balance/not-found
                       {:message "Balance not found"
+                       :bank-id bank-id
                        :account-id account-id
                        :balance-type balance-type
                        :currency currency
                        :balance-status balance-status}))))
 
 (defn get-balances
-  [txn account-id]
+  [txn bank-id account-id]
   (fdb/transact txn
                 (fn [txn]
                   (mapv schema/pb->Balance
                         (:records (fdb/scan-records
                                    (fdb/open txn store-name)
-                                   {:prefix [account-id]
+                                   {:prefix [bank-id account-id]
                                     :limit 100}))))
                 :balance/list
                 "Failed to list balances"))

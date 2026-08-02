@@ -14,9 +14,9 @@
       (policy/get-effective-policies txn {:account-id account-id})))
 
 (defn new-balance
-  ([txn data]
-   (new-balance txn data {}))
-  ([txn data opts]
+  ([txn bank-id data]
+   (new-balance txn bank-id data {}))
+  ([txn bank-id data opts]
    (store/transact
     txn
     (fn [txn]
@@ -24,25 +24,31 @@
         (let-nom>
           [policies (get-policies txn account-id opts)
            existing (q/find-balance txn
+                                    bank-id
                                     account-id
                                     balance-type
                                     currency
                                     balance-status)
-           balance (domain/new-balance data (some? existing) policies)
+           balance (domain/new-balance (assoc data :bank-id bank-id)
+                                       (some? existing)
+                                       policies)
            _ (store/save-balance txn balance)]
           balance))))))
 
 (defn new-balances
-  ([txn data]
-   (new-balances txn data {}))
-  ([txn data opts]
+  ([txn bank-id data]
+   (new-balances txn bank-id data {}))
+  ([txn bank-id data opts]
    (store/transact
     txn
     (fn [txn]
       (let-nom>
         [policies (get-policies txn (:account-id (first data)) opts)]
         (reduce (fn [acc item]
-                  (let [result (new-balance txn item {:policies policies})]
+                  (let [result (new-balance txn
+                                            bank-id
+                                            item
+                                            {:policies policies})]
                     (if (error/anomaly? result)
                       (reduced result)
                       (conj acc result))))
@@ -60,9 +66,9 @@
        updated))))
 
 (defn- load-account-balances
-  [txn legs]
+  [txn bank-id legs]
   (reduce (fn [acc account-id]
-            (let [result (q/list-balances txn account-id)]
+            (let [result (q/list-balances txn bank-id account-id)]
               (if (error/anomaly? result)
                 (reduced result)
                 (assoc acc account-id result))))
@@ -70,16 +76,17 @@
           (distinct (map :account-id legs))))
 
 (defn apply-legs
-  ([txn legs transaction-type]
-   (apply-legs txn legs transaction-type {}))
-  ([txn legs transaction-type opts]
+  ([txn bank-id legs transaction-type]
+   (apply-legs txn bank-id legs transaction-type {}))
+  ([txn bank-id legs transaction-type opts]
    (store/transact
     txn
     (fn [txn]
       (let-nom>
         [policies (get-policies txn (:account-id (first legs)) opts)
-         account-balances (load-account-balances txn legs)
-         changed (domain/apply-legs account-balances
+         account-balances (load-account-balances txn bank-id legs)
+         changed (domain/apply-legs bank-id
+                                    account-balances
                                     legs
                                     transaction-type
                                     policies)]

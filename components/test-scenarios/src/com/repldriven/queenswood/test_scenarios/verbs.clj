@@ -58,7 +58,10 @@
          (let [r (transactions/record-transaction
                   txn
                   (assoc tx-data :legs expanded))]
-           (balances/apply-legs txn (:legs r) (:transaction-type r))))))))
+           (balances/apply-legs txn
+                                bank-id
+                                (:legs r)
+                                (:transaction-type r))))))))
 
 (defn- seed-opened
   [bank bank-real-id real-acct-id]
@@ -190,8 +193,9 @@
         _ (when real-acct-id (seed-opened bank real-bank-id real-acct-id))]
     (-> ctx
         (cond-> real-acct-id
-                (assoc :id-mapping
-                       (id-mapping/add id-mapping model-acct real-acct-id)))
+                (-> (assoc :id-mapping
+                           (id-mapping/add id-mapping model-acct real-acct-id))
+                    (assoc-in [:accounts model-acct] {:bank model-bank})))
         (assoc-in [:banks model-bank]
                   {:real-id real-bank-id
                    :currency "GBP"
@@ -751,6 +755,7 @@
         creditor-pre-net
         (when creditor-real-id
           (let [b (balances-query/get-balance bank
+                                              bank-real-id
                                               creditor-real-id
                                               :balance-type-default
                                               "GBP"
@@ -783,6 +788,7 @@
             (quiescence/wait-for-outbound-completed bank real-pmt-id))
         _ (when (and real-pmt-id creditor-real-id creditor-pre-net)
             (quiescence/wait-for-credit bank
+                                        bank-real-id
                                         creditor-real-id
                                         "GBP"
                                         (+ creditor-pre-net amount)))]
@@ -983,12 +989,20 @@
         (track result))))
 
 (defmethod dispatch :get-balance
-  [{:keys [bank id-mapping] :as ctx}
+  [{:keys [bank banks accounts id-mapping] :as ctx}
    {[account-ref balance-type currency balance-status] :args}]
   (let [account-id (if (keyword? account-ref)
                      (get-in id-mapping [:model->real account-ref])
                      account-ref)
+        model-bank (get-in accounts [account-ref :bank])
+        bank-real-id (or (get-in banks [model-bank :real-id])
+                         ;; A scenario naming a raw account id, or an
+                         ;; account seeded by :create-bank, has no
+                         ;; entry to look through — every scenario runs
+                         ;; one bank, so that is the one it means.
+                         (:real-id (first (vals banks))))
         result (balances-query/get-balance bank
+                                           bank-real-id
                                            account-id
                                            balance-type
                                            currency
@@ -1009,10 +1023,13 @@
         (track result))))
 
 (defmethod dispatch :assert-balance
-  [{:keys [bank id-mapping] :as ctx} {[model-id expected] :args}]
-  (let [actual (get (projections/project-balances bank
-                                                  (:real->model id-mapping))
-                    model-id)]
+  [{:keys [bank banks accounts id-mapping] :as ctx} {[model-id expected] :args}]
+  (let [actual
+        (get (projections/project-balances
+              bank
+              (projections/real->bank accounts banks (:model->real id-mapping))
+              (:real->model id-mapping))
+             model-id)]
     (is (= expected actual) (str "balance for " model-id))
     ctx))
 
@@ -1022,6 +1039,7 @@
   (let [{bank-real-id :real-id} (get banks model-bank)
         gl (gl-account-for bank bank-real-id gl-account-code)
         balance (balances-query/get-balance bank
+                                            bank-real-id
                                             (:ledger-account-id gl)
                                             :balance-type-default
                                             currency

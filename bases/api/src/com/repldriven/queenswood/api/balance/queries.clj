@@ -18,7 +18,7 @@
                  [_ (cash-accounts/get-account config
                                                bank-id
                                                account-id)
-                  balances (balances/get-balances config account-id)]
+                  balances (balances/get-balances config bank-id account-id)]
                  balances)]
     (if (error/anomaly? result)
       (errors/anomaly->response result)
@@ -36,6 +36,7 @@
                                                bank-id
                                                account-id)
                   balance (balances/get-balance config
+                                                bank-id
                                                 account-id
                                                 balance-type
                                                 currency

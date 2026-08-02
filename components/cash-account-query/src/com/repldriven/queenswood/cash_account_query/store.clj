@@ -14,22 +14,18 @@
   order, reducing over `[acc {:account :balances}]`.
 
   One merged scan of two stores rather than a page of accounts and a
-  balance lookup per account. Both are keyed from `account_id` — the
-  accounts store under `[bank_id]` and the balances store globally —
-  so the two cursors advance in step and the pairing costs no random
-  reads.
+  balance lookup per account. Both are keyed `[bank_id, account_id,
+  ...]`, so scanning each under the same bank prefix advances the two
+  cursors in step and the pairing costs no random reads.
 
-  Balances of accounts belonging to other banks arrive with no account
-  and are dropped here: the balances store carries no bank_id, so a
-  bank-scoped scan of it is not expressible until its key gains one.
-  An account with no balances yet is delivered with an empty vector,
-  because having none is a fact the caller may need rather than a
-  reason to skip it."
+  Only this bank's rows are read. An account with no balances yet is
+  delivered with an empty vector, because having none is a fact the
+  caller may need rather than a reason to skip it."
   [config bank-id f init]
   (fdb/merge-scan
    config
    {:left {:store store-name :prefix [bank-id] :limit 1000}
-    :right {:store balances/store-name :prefix [] :limit 5000}}
+    :right {:store balances/store-name :prefix [bank-id] :limit 5000}}
    (fn [acc {:keys [left right]}]
      (if-let [record (first left)]
        (f acc

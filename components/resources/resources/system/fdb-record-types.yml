@@ -7,7 +7,10 @@ assertions:
       fields: [party_id, kind]
 balances:
   record-type: Balance
-  primary-key: [account_id, balance_type, currency, balance_status]
+  # bank_id heads the key so a bank's balances scan contiguously,
+  # matching cash-accounts and letting the interest pass scan one bank
+  # rather than every bank's rows.
+  primary-key: [bank_id, account_id, balance_type, currency, balance_status]
   indexes: []
 cash-account-products:
   record-type: CashAccountProduct

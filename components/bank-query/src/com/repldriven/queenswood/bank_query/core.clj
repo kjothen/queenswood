@@ -24,7 +24,9 @@
 (defn- enrich-accounts
   [txn bank-id accounts]
   (reduce (fn [acc account]
-            (let [bal (balances/get-balances txn (:account-id account))]
+            (let [bal (balances/get-balances txn
+                                             bank-id
+                                             (:account-id account))]
               (if (error/anomaly? bal)
                 (reduced bal)
                 (let [gl-code (account-gl-code txn bank-id account)

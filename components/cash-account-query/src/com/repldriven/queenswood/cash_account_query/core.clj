@@ -9,10 +9,10 @@
 
 (defn- enrich-account
   [txn opts account]
-  (let [{:keys [account-id]} account]
+  (let [{:keys [bank-id account-id]} account]
     (let-nom>
       [balances (when (:embed-balances opts)
-                  (balances/get-balances txn account-id))
+                  (balances/get-balances txn bank-id account-id))
        transactions (when (:embed-transactions opts)
                       (transactions/get-transactions txn account-id))]
       (cond-> account

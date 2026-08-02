@@ -24,21 +24,23 @@
 (defn- posted-value
   "The credit-positive posted net (credit − debit) of one ledger
   account, or 0 if its balances can't be read."
-  [config account-id]
-  (let [bs (balances/get-balances config account-id)]
+  [config bank-id account-id]
+  (let [bs (balances/get-balances config bank-id account-id)]
     (if (error/anomaly? bs)
       0
       (:value (:posted-balance bs)))))
 
 (defn- trial-balance-entries
-  [config accounts]
+  [config bank-id accounts]
   (mapv (fn [account]
           {:currency (:currency account)
            :normal-side (if (ledger-accounts/debit-normal?
                              (:gl-account-type account))
                           :debit
                           :credit)
-           :value (posted-value config (:ledger-account-id account))})
+           :value (posted-value config
+                                bank-id
+                                (:ledger-account-id account))})
         accounts))
 
 (defn assert-bank-ties
@@ -54,7 +56,7 @@
                  (fn [txn]
                    (let [accounts (ledger-accounts/list-accounts txn bank-id)]
                      (when-not (error/anomaly? accounts)
-                       (trial-balance-entries txn accounts))))
+                       (trial-balance-entries txn bank-id accounts))))
                  :scenario/trial-balance-snapshot
                  "Failed to read trial balance snapshot")]
     (when (and (some? entries) (not (error/anomaly? entries)))

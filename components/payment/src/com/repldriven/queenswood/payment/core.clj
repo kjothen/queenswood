@@ -79,7 +79,7 @@
                         txn
                         (assoc payment-transaction :legs expanded-legs))
            {:keys [transaction-id transaction-type legs]} transaction
-           _ (balances/apply-legs txn legs transaction-type)
+           _ (balances/apply-legs txn bank-id legs transaction-type)
            payment (domain/new-internal-payment data
                                                 business-day
                                                 transaction-id)
@@ -183,7 +183,7 @@
                                              expanded-legs))
                     {:keys [transaction-id transaction-type legs]}
                     transaction+legs
-                    _ (balances/apply-legs txn legs transaction-type)
+                    _ (balances/apply-legs txn bank-id legs transaction-type)
                     payment (domain/new-outbound-payment data
                                                          business-day
                                                          transaction-id)

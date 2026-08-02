@@ -72,10 +72,14 @@
   "A fresh zero balance for a leg whose bucket doesn't exist yet — posting
   to a (balance-type, balance-status) opens it (e.g. the first time funds
   are reserved into pending-outgoing). A leg without a product-type is a
-  ledger-account (GL) leg, matching how GL balances are seeded."
-  [leg]
+  ledger-account (GL) leg, matching how GL balances are seeded.
+
+  `bank-id` comes from the caller rather than the leg: it heads the
+  balance's primary key, and a leg carries no bank of its own."
+  [bank-id leg]
   (let [now (utility/now)]
-    {:account-id (:account-id leg)
+    {:bank-id bank-id
+     :account-id (:account-id leg)
      :product-type (or (:product-type leg) :product-type-general-ledger)
      :balance-type (:balance-type leg)
      :balance-status (:balance-status leg)
@@ -87,7 +91,7 @@
      :updated-at now}))
 
 (defn- apply-leg-to-balances
-  [balances leg policies]
+  [bank-id balances leg policies]
   (let [{:keys [balance-type balance-status]} leg]
     (if (find-balance-index balances balance-type balance-status)
       (update-balance balances
@@ -96,13 +100,15 @@
                       (fn [balance] (apply-leg balance leg policies)))
       ;; Open the bucket on demand: a posting to a not-yet-existing
       ;; (balance-type, balance-status) creates it, then applies the leg.
-      (let-nom> [opened (apply-leg (new-zero-balance leg) leg policies)]
+      (let-nom> [opened (apply-leg (new-zero-balance bank-id leg)
+                                   leg
+                                   policies)]
         (conj balances opened)))))
 
 (defn- apply-legs-to-balances
-  [balances legs policies]
+  [bank-id balances legs policies]
   (reduce (fn [bs leg]
-            (let [result (apply-leg-to-balances bs leg policies)]
+            (let [result (apply-leg-to-balances bank-id bs leg policies)]
               (if (error/anomaly? result) (reduced result) result)))
           balances
           legs))
@@ -136,12 +142,15 @@
              new)))
 
 (defn apply-legs
-  [account-balances legs transaction-type policies]
+  [bank-id account-balances legs transaction-type policies]
   (reduce
    (fn [acc [account-id account-legs]]
      (let [pre (get account-balances account-id)
            post (let-nom>
-                  [balances (apply-legs-to-balances pre account-legs policies)
+                  [balances (apply-legs-to-balances bank-id
+                                                    pre
+                                                    account-legs
+                                                    policies)
                    _ (check-available pre balances transaction-type policies)]
                   balances)]
        (if (error/anomaly? post)
@@ -159,10 +168,12 @@
                          policies)
      _ (ensure-product-type data)
      _ (ensure-new-balance data exists?)]
-    (let [{:keys [account-id product-type balance-type balance-status currency]}
+    (let [{:keys [bank-id account-id product-type balance-type balance-status
+                  currency]}
           data
           now (utility/now)]
-      {:account-id account-id
+      {:bank-id bank-id
+       :account-id account-id
        :product-type product-type
        :balance-type balance-type
        :balance-status balance-status

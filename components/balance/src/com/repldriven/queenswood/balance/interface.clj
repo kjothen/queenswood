@@ -18,13 +18,14 @@
 
   Args:
   - txn: FDB transaction or db handle.
+  - bank-id: owning bank id, which heads each balance's key.
   - data: collection of balance creation maps, each with `:account-id`,
     `:product-type`, `:balance-type`, `:balance-status`, `:currency`.
   - opts (optional): map; `:policies` overrides policy resolution."
-  ([txn data]
-   (core/new-balances txn data))
-  ([txn data opts]
-   (core/new-balances txn data opts)))
+  ([txn bank-id data]
+   (core/new-balances txn bank-id data))
+  ([txn bank-id data opts]
+   (core/new-balances txn bank-id data opts)))
 
 (defn apply-legs
   "Apply each leg to its target balance (with the
@@ -35,15 +36,18 @@
 
   Args:
   - txn: FDB transaction or db handle.
+  - bank-id: owning bank id. Supplied rather than read off a leg,
+    which carries no bank of its own, and needed both to key the
+    balances this reads and to open a bucket a leg reaches first.
   - legs: collection of leg maps; each carries `:account-id`,
     `:balance-type`, `:balance-status`, `:side`, `:amount`.
   - transaction-type: transaction-type keyword (e.g.
     `:transaction-type-internal-transfer`).
   - opts (optional): map; `:policies` overrides policy resolution."
-  ([txn legs transaction-type]
-   (core/apply-legs txn legs transaction-type))
-  ([txn legs transaction-type opts]
-   (core/apply-legs txn legs transaction-type opts)))
+  ([txn bank-id legs transaction-type]
+   (core/apply-legs txn bank-id legs transaction-type))
+  ([txn bank-id legs transaction-type opts]
+   (core/apply-legs txn bank-id legs transaction-type opts)))
 
 (defn accrue
   "Advance a bucket the caller already holds: raise its `:credit` by

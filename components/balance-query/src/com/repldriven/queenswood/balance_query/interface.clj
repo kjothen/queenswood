@@ -21,12 +21,18 @@
 
   Args:
   - txn: FDB transaction or db handle.
+  - bank-id: owning bank id, which heads the key.
   - account-id: owning account id.
   - balance-type: balance-type keyword.
   - currency: ISO 4217 currency string.
   - balance-status: balance-status keyword."
-  [txn account-id balance-type currency balance-status]
-  (store/get-balance txn account-id balance-type currency balance-status))
+  [txn bank-id account-id balance-type currency balance-status]
+  (store/get-balance txn
+                     bank-id
+                     account-id
+                     balance-type
+                     currency
+                     balance-status))
 
 (defn get-balances
   "List all balances for an account, enriched with derived
@@ -36,9 +42,10 @@
 
   Args:
   - txn: FDB transaction or db handle.
+  - bank-id: owning bank id, which heads the key.
   - account-id: owning account id."
-  [txn account-id]
-  (core/get-balances txn account-id))
+  [txn bank-id account-id]
+  (core/get-balances txn bank-id account-id))
 
 (defn list-balances
   "List an account's raw balance buckets (a vector, unenriched). A read
@@ -46,9 +53,10 @@
 
   Args:
   - txn: FDB transaction or db handle.
+  - bank-id: owning bank id, which heads the key.
   - account-id: owning account id."
-  [txn account-id]
-  (store/get-balances txn account-id))
+  [txn bank-id account-id]
+  (store/get-balances txn bank-id account-id))
 
 (defn find-balance
   "Load a single balance by composite key without rejecting when
@@ -57,12 +65,18 @@
 
   Args:
   - txn: FDB transaction or db handle.
+  - bank-id: owning bank id, which heads the key.
   - account-id: owning account id.
   - balance-type: balance-type keyword.
   - currency: ISO 4217 currency string.
   - balance-status: balance-status keyword."
-  [txn account-id balance-type currency balance-status]
-  (store/find-balance txn account-id balance-type currency balance-status))
+  [txn bank-id account-id balance-type currency balance-status]
+  (store/find-balance txn
+                      bank-id
+                      account-id
+                      balance-type
+                      currency
+                      balance-status))
 
 (def
   ^{:doc
