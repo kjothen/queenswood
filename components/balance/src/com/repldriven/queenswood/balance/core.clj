@@ -49,18 +49,13 @@
                 []
                 data))))))
 
-(defn set-carry
-  [txn account-id balance-type currency balance-status carry]
+(defn accrue
+  [txn balance whole-units carry]
   (store/transact
    txn
    (fn [txn]
      (let-nom>
-       [balance (q/get-balance txn
-                               account-id
-                               balance-type
-                               currency
-                               balance-status)
-        updated (assoc balance :credit-carry carry)
+       [updated (domain/accrue balance whole-units carry)
         _ (store/save-balance txn updated)]
        updated))))
 

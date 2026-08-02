@@ -1,8 +1,8 @@
 (ns com.repldriven.queenswood.balance.interface
   "Balance write side: create an account's balance buckets, apply
   transaction legs to them (with policy-gated capability and limit
-  checks), and maintain credit-carry for capitalisation. Buckets are
-  keyed by `(account-id, balance-type, currency, balance-status)`.
+  checks), and advance an accrued bucket from a frozen row. Buckets
+  are keyed by `(account-id, balance-type, currency, balance-status)`.
 
   Reads (lookup, listing with posted/available totals, trial-balance)
   live in `bank-balance-query`, which this brick reuses inside its own
@@ -45,22 +45,23 @@
   ([txn legs transaction-type opts]
    (core/apply-legs txn legs transaction-type opts)))
 
-(defn set-carry
-  "Update `:credit-carry` on the balance identified by the
-  composite primary key. Rejects if the balance is missing.
-  Returns the updated balance or an anomaly.
+(defn accrue
+  "Advance a bucket the caller already holds: raise its `:credit` by
+  `whole-units` and replace its `:credit-carry`, writing the row back
+  without reading it first. Returns the updated balance or an anomaly.
+
+  Unlike `apply-legs` this reads nothing and checks no policy, so it
+  is sound only where the caller froze the row in an earlier
+  transaction and no other writer can have touched it since. That
+  holds for an interest-accrued bucket, which only the interest pass
+  credits and capitalisation sweeps. It does not hold for anything
+  payments reach, where a read-modify-write inside the writing
+  transaction is what keeps concurrent postings from being lost.
 
   Args:
   - txn: FDB transaction or db handle.
-  - account-id: owning account id.
-  - balance-type: balance-type keyword.
-  - currency: ISO 4217 currency string.
-  - balance-status: balance-status keyword.
-  - carry: new credit-carry value."
-  [txn account-id balance-type currency balance-status carry]
-  (core/set-carry txn
-                  account-id
-                  balance-type
-                  currency
-                  balance-status
-                  carry))
+  - balance: the frozen balance row, carrying its full primary key.
+  - whole-units: units to add to `:credit`.
+  - carry: the new `:credit-carry`."
+  [txn balance whole-units carry]
+  (core/accrue txn balance whole-units carry))

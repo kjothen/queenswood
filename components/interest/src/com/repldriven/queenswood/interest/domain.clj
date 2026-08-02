@@ -1,5 +1,6 @@
 (ns com.repldriven.queenswood.interest.domain
   (:require
+    [com.repldriven.queenswood.balance-domain.interface :as balance-math]
     [com.repldriven.queenswood.policy.interface :as policy]
 
     [com.repldriven.mono.utility.interface :as utility]))
@@ -76,17 +77,21 @@
 
 (defn bucket
   "One balance bucket out of an account's set, by type, currency and
-  status. Returns a zeroed bucket rather than nil when the account has
-  none of that kind — an account that has never accrued has no
-  interest-accrued row, and a zero balance is the right reading of
-  that, not an error."
+  status, or nil when the account holds none of that kind.
+
+  Nil is not an ordinary reading. The product types the pass admits —
+  current, savings, term deposit — all declare the default and
+  interest-accrued posted buckets in `balance-products`, and that list
+  is copied from a seeded template rather than supplied by a caller,
+  so an account opens holding both. A nil here is a template that
+  omitted a bucket or an account that has lost one, and the caller
+  should say so rather than read the absence as a zero."
   [balances balance-type currency balance-status]
-  (or (first (filter (fn [b]
-                       (and (= balance-type (:balance-type b))
-                            (= currency (:currency b))
-                            (= balance-status (:balance-status b))))
-                     balances))
-      {:credit 0 :debit 0 :credit-carry 0 :currency currency}))
+  (first (filter (fn [b]
+                   (and (= balance-type (:balance-type b))
+                        (= currency (:currency b))
+                        (= balance-status (:balance-status b))))
+                 balances)))
 
 (defn net-balance
   "Credit-positive total of a balance bucket. Public because the run
@@ -94,40 +99,39 @@
   [balance]
   (- (:credit balance 0) (:debit balance 0)))
 
+(defn principal
+  "What a day's interest is earned on: the account's available balance,
+  not its posted one. Money reserved against a pending outgoing payment
+  is already committed, so it stops earning when it is reserved rather
+  than when it settles — and money still pending inbound has not
+  arrived, so it has not started earning.
+
+  Computed from the buckets the scan froze, through the same
+  `available-balance` the limit checks use. Interest does not get its
+  own definition of available."
+  [balances currency]
+  (:value (balance-math/available-balance balances currency)))
+
 (defn daily-interest
-  [balance interest-rate-bps]
-  (let [{:keys [credit-carry]} balance]
-    (when-not (zero? interest-rate-bps)
-      (let [net (net-balance balance)
-            total-micro (+ (* net
-                              interest-rate-bps
-                              (quot micro-scale 10000))
-                           (* credit-carry 365))
-            daily-micro (quot total-micro 365)
-            whole-units (quot daily-micro micro-scale)
-            new-carry (rem daily-micro micro-scale)]
-        {:whole-units whole-units :carry new-carry}))))
+  "A day's interest on `net` at `interest-rate-bps`, given `carry` — the
+  sub-unit remainder the previous day left behind. Returns the whole
+  units earned and the new remainder, or nil at a zero rate.
 
-(defn accrual-leg
-  "The customer's side of a day's accrual: a credit to the
-  interest-accrued bucket.
+  The two inputs come off different places: `net` is the available
+  balance across the account's spendable buckets, and `carry` comes
+  from its interest-accrued bucket, where the rest of the accrual
+  state already lives.
 
-  There is no matching debit and no control leg. The bank's side is
-  posted once for the whole run, because a per-account double entry
-  makes every accrual in the bank read and write the same two GL
-  balance rows — 5100 and the 2400 control — and they then contend with
-  each other whatever else is done to spread them out.
-
-  Carries `product-type` and `currency` for the case where the bucket
-  does not exist yet and the posting has to open it."
-  [account-id product-type currency whole-units]
-  {:account-id account-id
-   :product-type product-type
-   :balance-type :balance-type-interest-accrued
-   :balance-status :balance-status-posted
-   :side :leg-side-credit
-   :amount whole-units
-   :currency currency})
+  Multiplying before dividing is load-bearing. Dividing the rate by 365
+  first truncates it — at 100 bps that is 27 rather than 27.397, a 1.4%
+  error on every account."
+  [net carry interest-rate-bps]
+  (when-not (zero? interest-rate-bps)
+    (let [total-micro (+ (* net interest-rate-bps (quot micro-scale 10000))
+                         (* carry 365))
+          daily-micro (quot total-micro 365)]
+      {:whole-units (quot daily-micro micro-scale)
+       :carry (rem daily-micro micro-scale)})))
 
 (defn accrual-run-transaction
   "The bank's side of an accrual run, posted once per currency: DR
