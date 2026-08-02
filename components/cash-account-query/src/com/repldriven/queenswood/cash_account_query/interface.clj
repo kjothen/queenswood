@@ -45,6 +45,30 @@
   ([txn bank-id opts]
    (core/get-accounts txn bank-id opts)))
 
+(defn reduce-accounts-with-balances
+  "Stream every account in a bank paired with its balances, in
+  account-id order, reducing over `[acc {:account :balances}]`.
+
+  For a pass over a whole bank rather than a page of one: the accounts
+  and balances stores are scanned together and merged on account-id,
+  so pairing costs no lookup per account. Balances belonging to other
+  banks are dropped; an account with no balances arrives with an empty
+  vector.
+
+  Not a consistent snapshot — the two scans refill in separate
+  transactions, so an account opened mid-pass can appear without its
+  balances. Reads only; the caller owns any writing, in whatever
+  transactions it wants.
+
+  Args:
+  - config: map with :record-db and :record-store.
+  - bank-id: owning bank id.
+  - f: reducing fn of `[acc {:keys [account balances]}]`. May return
+    `reduced`; an anomaly ends the scan and propagates.
+  - init: initial accumulator."
+  [config bank-id f init]
+  (store/reduce-accounts-with-balances config bank-id f init))
+
 (defn find-account-by-product
   "Return the first CashAccount whose `(bank-id, product-id)` match,
   or nil.

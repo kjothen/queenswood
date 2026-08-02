@@ -74,6 +74,20 @@
   [account-run]
   (= :interest-account-run-state-pending (:state account-run)))
 
+(defn bucket
+  "One balance bucket out of an account's set, by type, currency and
+  status. Returns a zeroed bucket rather than nil when the account has
+  none of that kind — an account that has never accrued has no
+  interest-accrued row, and a zero balance is the right reading of
+  that, not an error."
+  [balances balance-type currency balance-status]
+  (or (first (filter (fn [b]
+                       (and (= balance-type (:balance-type b))
+                            (= currency (:currency b))
+                            (= balance-status (:balance-status b))))
+                     balances))
+      {:credit 0 :debit 0 :credit-carry 0 :currency currency}))
+
 (defn net-balance
   "Credit-positive total of a balance bucket. Public because the run
   records the figure it computed from, not just the result."
