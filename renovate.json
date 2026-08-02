@@ -6,6 +6,12 @@
   "nix": {
     "enabled": true
   },
+  "kubernetes": {
+    "description": "The kubernetes manager ships no default file pattern, so image tags hardcoded inside a chart's templates/ are invisible to Renovate while the same chart's values.yaml pins are bumped. Scoped to templates/ so the vendored upstream CRDs under crds/ -- whose JSON schemas contain `image:` property names, not image references -- stay out of scope.",
+    "managerFilePatterns": [
+      "/^infra/helm/[^/]+/templates/.*\\.yaml$/"
+    ]
+  },
   "schedule": [
     "before 9am on monday"
   ],
@@ -71,6 +77,13 @@
       "enabled": false,
       "matchPackageNames": [
         "foundationdb/fdb-kubernetes-monitor"
+      ]
+    },
+    {
+      "description": "The Keycloak Operator is expected to run the same version as the Keycloak it manages, and the two are pinned in different files -- the instance in queenswood-keycloak's values.yaml, the operator in the keycloak-operator chart's vendored templates/operator.yaml. Group them so they move in one PR. That PR only rewrites the operator's image tag: the chart is a vendored copy of upstream's kubernetes.yml, so its ClusterRoles and the CRDs under crds/ must be re-vendored from the matching release tag in the same change, and both Chart.yaml appVersions updated.",
+      "groupName": "keycloak",
+      "matchPackageNames": [
+        "/^quay\\.io/keycloak//"
       ]
     },
     {
