@@ -40,12 +40,16 @@
          :closed-at (utility/now)))
 
 (defn new-account-run
-  [bank-id business-day kind account-id currency]
+  "A row for one account in a run. `product-type` groups the amount
+  index that capitalisation posts from, so it travels on the row
+  rather than being looked up again at close."
+  [bank-id business-day kind account-id currency product-type]
   {:bank-id bank-id
    :business-day business-day
    :kind kind
    :account-id account-id
    :currency currency
+   :product-type product-type
    :state :interest-account-run-state-pending
    :created-at (utility/now)})
 
@@ -157,6 +161,44 @@
              :amount total
              :currency currency}
             {:account-id interest-payable-id
+             :balance-type :balance-type-default
+             :balance-status :balance-status-posted
+             :side :leg-side-credit
+             :amount total
+             :currency currency}]}))
+
+(defn capitalization-run-transaction
+  "The bank's side of one currency and product type of a capitalisation
+  run: DR the interest-payable control for what was swept out of the
+  accrued buckets, CR the deposit control the product type rolls up
+  into, so the capitalised interest lands where the customer's spendable
+  money is already counted.
+
+  One entry per (currency, product type) rather than one per currency,
+  because the credit side is a different control for each product type
+  and a single entry could not name them all while still balancing.
+  Both legs are GL accounts, so neither fans out to a control of its
+  own. The idempotency key is the group's identity, so a retry that
+  reaches close twice posts once."
+  [interest-payable-id deposit-control-id bank-id currency product-type
+   total as-of-date]
+  (when-not (zero? total)
+    {:idempotency-key (str "capitalize-run-" bank-id
+                           "-" as-of-date
+                           "-"
+                           currency
+                           "-" (name product-type))
+     :transaction-type :transaction-type-interest-capital
+     :currency currency
+     :reference (str "Monthly interest capitalization "
+                     (utility/epoch-day->iso-date as-of-date))
+     :legs [{:account-id interest-payable-id
+             :balance-type :balance-type-default
+             :balance-status :balance-status-posted
+             :side :leg-side-debit
+             :amount total
+             :currency currency}
+            {:account-id deposit-control-id
              :balance-type :balance-type-default
              :balance-status :balance-status-posted
              :side :leg-side-credit

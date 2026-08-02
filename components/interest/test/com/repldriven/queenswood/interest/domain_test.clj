@@ -185,6 +185,52 @@
                          legs)]
           (is (= debit-total credit-total)))))))
 
+(deftest capitalization-run-transaction-test
+  (testing "zero total posts nothing"
+    (is (nil? (SUT/capitalization-run-transaction
+               "led.payable"
+               "led.current" "org.1"
+               "GBP" :product-type-sub-ledger-current
+               0 20260501))))
+  (testing "DR interest payable, CR the product's deposit control"
+    (let [tx (SUT/capitalization-run-transaction
+              "led.payable"
+              "led.current" "org.1"
+              "GBP" :product-type-sub-ledger-current
+              5000 20260501)
+          [debit credit] (:legs tx)]
+      (is (= "led.payable" (:account-id debit)))
+      (is (= :leg-side-debit (:side debit)))
+      (is (= "led.current" (:account-id credit)))
+      (is (= :leg-side-credit (:side credit)))
+      (testing "both legs carry the group's total, so the entry balances"
+        (is (= 5000 (:amount debit)))
+        (is (= 5000 (:amount credit))))))
+  (testing "the key separates product types, so each group posts once"
+    ;; One entry per (currency, product type) — a shared key would let
+    ;; the first group posted swallow the rest as duplicates.
+    (let [key-for (fn [product-type]
+                    (:idempotency-key (SUT/capitalization-run-transaction
+                                       "led.payable"
+                                       "led.control" "org.1"
+                                       "GBP" product-type
+                                       5000 20260501)))]
+      (is (not= (key-for :product-type-sub-ledger-current)
+                (key-for :product-type-sub-ledger-savings)))
+      (is (= (key-for :product-type-sub-ledger-current)
+             (key-for :product-type-sub-ledger-current)))))
+  (testing "currency separates groups too, for a multi-currency bank"
+    (let [key-for (fn [currency]
+                    (:idempotency-key (SUT/capitalization-run-transaction
+                                       "led.payable"
+                                       "led.control"
+                                       "org.1"
+                                       currency
+                                       :product-type-sub-ledger-current
+                                       5000
+                                       20260501)))]
+      (is (not= (key-for "GBP") (key-for "EUR"))))))
+
 (def ^:private accrual-limit-policies
   "One platform policy: at most one accrual run per org per day."
   [{:enabled true
@@ -232,16 +278,16 @@
 
 (deftest account-run-lifecycle-test
   (testing "a new account row starts pending"
-    (let [row (SUT/new-account-run "org.1"
-                                   20260501 :interest-account-run-kind-accrue
-                                   "acc.1" "GBP")]
+    (let [row (SUT/new-account-run "org.1" 20260501
+                                   :interest-account-run-kind-accrue "acc.1"
+                                   "GBP" :product-type-sub-ledger-current)]
       (is (SUT/pending? row))
       (is (= "acc.1" (:account-id row)))
       (is (number? (:created-at row)))))
   (testing "done and failed both leave pending, and failed keeps a reason"
-    (let [row (SUT/new-account-run "org.1"
-                                   20260501 :interest-account-run-kind-accrue
-                                   "acc.1" "GBP")
+    (let [row (SUT/new-account-run "org.1" 20260501
+                                   :interest-account-run-kind-accrue "acc.1"
+                                   "GBP" :product-type-sub-ledger-current)
           done (SUT/account-run-done row {:amount 7 :input-balance 100000})
           failed (SUT/account-run-failed row :interest/boom)]
       (is (not (SUT/pending? done)))
@@ -250,9 +296,9 @@
       (is (= :interest-account-run-state-failed (:state failed)))
       (is (= ":interest/boom" (:failure-reason failed)))))
   (testing "a done row carries what was earned and what it came from"
-    (let [row (SUT/new-account-run "org.1"
-                                   20260501 :interest-account-run-kind-accrue
-                                   "acc.1" "GBP")
+    (let [row (SUT/new-account-run "org.1" 20260501
+                                   :interest-account-run-kind-accrue "acc.1"
+                                   "GBP" :product-type-sub-ledger-current)
           done (SUT/account-run-done
                 row
                 {:amount 7 :input-balance 100000 :input-carry 12345})]
@@ -262,9 +308,9 @@
   (testing
     "absent inputs stay absent, since an optional proto scalar
             wants the key gone rather than nil"
-    (let [row (SUT/new-account-run "org.1"
-                                   20260501 :interest-account-run-kind-accrue
-                                   "acc.1" "GBP")
+    (let [row (SUT/new-account-run "org.1" 20260501
+                                   :interest-account-run-kind-accrue "acc.1"
+                                   "GBP" :product-type-sub-ledger-current)
           done (SUT/account-run-done row {:amount 0})]
       (is (= 0 (:amount done)))
       (is (not (contains? done :input-balance)))
