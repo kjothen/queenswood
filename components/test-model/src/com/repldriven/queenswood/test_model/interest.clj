@@ -78,12 +78,13 @@
       (-> state
           (update-in [:accounts customer-acct :available] + accrued)
           (assoc-in [:accounts customer-acct :interest-accrued] 0)
-          ;; Capitalisation transaction touches the customer in 4
-          ;; legs (interest-paid credit/debit + interest-accrued
-          ;; debit + default credit).
+          ;; Capitalisation touches the customer in two legs: the
+          ;; accrued bucket debited and the default bucket credited.
+          ;; The bank's side is one entry per currency and product
+          ;; type at close, and lands on GL accounts rather than here.
           (update-in [:accounts customer-acct :transaction-legs]
                      (fnil + 0)
-                     4)))))
+                     2)))))
 
 (defn- capitalize-org
   [state bank-id]

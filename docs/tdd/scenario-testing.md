@@ -516,10 +516,12 @@ because the natural-language angle is mostly a tax in an
 engineering team — regex step definitions, English↔code
 translation. EDN keeps the structure without the parser.
 
-**Snapshot testing.** Considered for complex outputs (six-leg
-interest accrual). Not adopted upfront. Snapshots become noise
-generators when they're too broad. May add later for very
-specific cases that justify the lock-in.
+**Snapshot testing.** Considered for multi-leg outputs such as
+a capitalisation run, whose per-account transaction and
+aggregate ledger entry have to be checked together. Not
+adopted upfront. Snapshots become noise generators when
+they're too broad. May add later for very specific cases that
+justify the lock-in.
 
 ## Status and follow-ups
 
@@ -532,8 +534,9 @@ Future expansions, in rough priority order:
 
 - `:internal-transfer` (two-leg, exercises per-leg policy
   evaluation)
-- `:advance-time` and `:accrue-interest` (six-leg interest
-  accrual)
+- `:advance-time` and `:accrue-interest` (accrual writes a
+  balance rather than a transaction, so the assertions are on
+  the run's rows and its ledger entry)
 - `:reverse` (status transition; tests the curative path
   naturally)
 - Multi-account and multi-party scenarios

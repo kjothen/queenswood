@@ -65,8 +65,9 @@
   // balance-status (the immutable accounting fact), not a transaction
   // lifecycle: `posted` legs are settled; `pending-outgoing` /
   // `pending-incoming` are in-flight. We keep default-balance legs only
-  // (interest-accrual legs live on their own bucket) so the running
-  // balance reconciles to the posted balance.
+  // (capitalisation's other leg sits on the interest-accrued bucket, and
+  // accrual writes no leg at all) so the running balance reconciles to
+  // the posted balance.
   //
   // An in-flight outbound reserves in pending-outgoing at submit, then on
   // settlement clears that reservation (a pending-outgoing credit) and

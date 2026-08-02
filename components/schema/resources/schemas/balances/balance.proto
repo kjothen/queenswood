@@ -8,10 +8,18 @@ import "schemas/types/product-type.proto";
 option java_outer_classname = "BalanceProto";
 
 enum BalanceType {
+  // 3 was BALANCE_TYPE_INTEREST_PAID, a transit bucket the old
+  // six-leg capitalisation passed the accrued amount through. Nothing
+  // wrote it once capitalisation became two legs, and a cumulative
+  // balance cannot answer what interest was paid between two dates
+  // anyway — that comes off the transactions. See
+  // docs/plan/statementing.md.
+  reserved 3;
+  reserved "BALANCE_TYPE_INTEREST_PAID";
+
   BALANCE_TYPE_UNKNOWN = 0;
   BALANCE_TYPE_DEFAULT = 1;
   BALANCE_TYPE_INTEREST_ACCRUED = 2;
-  BALANCE_TYPE_INTEREST_PAID = 3;
   BALANCE_TYPE_PURCHASE = 4;
   BALANCE_TYPE_CASH = 5;
   BALANCE_TYPE_SUSPENSE = 6;

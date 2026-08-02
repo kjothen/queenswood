@@ -44,10 +44,11 @@ The shortlist:
   mostly tax in an engineering team — regex step definitions,
   English ↔ code translation. EDN keeps the structure without the
   parser.
-- **Snapshot testing.** Considered for complex outputs (six-leg
-  interest accrual). Not adopted upfront — snapshots become noise
-  generators when they're too broad. May add later for very
-  specific cases.
+- **Snapshot testing.** Considered for complex outputs (a
+  capitalisation run, whose per-account transactions and
+  aggregate ledger entry have to be checked together). Not
+  adopted upfront — snapshots become noise generators when
+  they're too broad. May add later for very specific cases.
 - **Per-component projection functions** (putting `projection.clj`
   inside `balance`, `cash-account`, and so on). Rejected
   — leaks test concerns into production paths, and cross-component
