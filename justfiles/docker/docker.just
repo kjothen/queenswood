@@ -29,7 +29,7 @@ docker-warm-cache m2=(env_var('HOME') / ".m2"):
     docker buildx build \
       --build-context m2={{ m2 }} \
       --progress plain \
-      -f infra/docker/warm-cache/Dockerfile \
+      -f justfiles/docker/Dockerfile.warm-cache \
       --no-cache \
       -o type=cacheonly \
       .

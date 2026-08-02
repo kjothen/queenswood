@@ -1,12 +1,3 @@
-# Sync upstream changes
-sync-upstream:
-  chmod +x {{ justfile_directory() }}/scripts/sync-upstream.sh
-  {{ justfile_directory() }}/scripts/sync-upstream.sh
-
-# Remove the exemplar and configure for a new domain
-fork domain:
-    bb scripts/fork-domain.bb {{ domain }}
-
 # Delete orphan container versions from GHCR (multi-arch safe)
 gh-prune-untagged:
     #!/usr/bin/env zsh
@@ -28,8 +19,11 @@ gh-prune-untagged:
         --jq '.[].name' | while read -r pkg; do
       # Per-platform manifests referenced by a tagged index are "untagged"
       # in GHCR; deleting them breaks the index. Build a keep set first.
+      # The registry path takes the name as-is; the REST API needs it
+      # percent-encoded, or a namespaced package 404s as "not found".
+      enc="${pkg//\//%2F}"
       regtoken=$(curl -sL "https://ghcr.io/token?service=ghcr.io&scope=repository:$OWNER/$pkg:pull" | jq -r .token)
-      keep=$(gh api "/users/$OWNER/packages/container/$pkg/versions" --paginate \
+      keep=$(gh api "/users/$OWNER/packages/container/$enc/versions" --paginate \
               --jq '.[] | select(.metadata.container.tags != []) | .name' \
               | while read -r digest; do
                   curl -sL -H "Authorization: Bearer $regtoken" \
@@ -37,7 +31,7 @@ gh-prune-untagged:
                     "https://ghcr.io/v2/$OWNER/$pkg/manifests/$digest" \
                     | jq -r '.manifests[]?.digest // empty'
                 done | sort -u)
-      to_delete=$(gh api "/users/$OWNER/packages/container/$pkg/versions" --paginate \
+      to_delete=$(gh api "/users/$OWNER/packages/container/$enc/versions" --paginate \
                     --jq '.[] | select(.metadata.container.tags == []) | "\(.id) \(.name)"' \
                   | while read -r id name; do
                       echo "$keep" | grep -qFx "$name" || echo "$id"
@@ -49,7 +43,7 @@ gh-prune-untagged:
       fi
       printf "  %-45s %s" "$pkg" "$n"
       for id in ${(f)to_delete}; do
-        gh api -X DELETE "$DELETE_BASE/$pkg/versions/$id" --silent || true
+        gh api -X DELETE "$DELETE_BASE/$enc/versions/$id" --silent || true
         printf "."
       done
       printf "\n"

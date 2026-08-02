@@ -74,6 +74,12 @@
       ]
     },
     {
+      "groupName": "npm",
+      "matchManagers": [
+        "npm"
+      ]
+    },
+    {
       "groupName": "github-actions",
       "matchManagers": [
         "github-actions"

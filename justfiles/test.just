@@ -101,7 +101,12 @@ nvd project="":
     else
       classpath=$(cd projects/{{ project }} && clojure -Spath)
     fi
-    clojure -J-Dclojure.main.report=stderr -J-Danalyzer.ossindex.enabled=false -M:nvd "nvd-clojure.edn" "$classpath"
+    # The NVD database defaults to a path under the dependency-check jar in
+    # ~/.m2, so it is re-downloaded whenever that dep is bumped; cache it
+    # machine-wide instead, without the schema-version subdir so dependency-
+    # check can rebuild in place
+    data_dir="${XDG_DATA_HOME:-$HOME/.local/share}/dependency-check"
+    clojure -J-Dclojure.main.report=stderr -J-Danalyzer.ossindex.enabled=false -J-Ddata.directory="$data_dir" -M:nvd "nvd-clojure.edn" "$classpath"
 
 # Run schemathesis API fuzzer against the running api
 schemathesis base_url="http://127.0.0.1:8080":

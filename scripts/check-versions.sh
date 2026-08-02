@@ -33,10 +33,13 @@ check() {
 
 echo "Pinned copies of FoundationDB $fdb, against $versions:"
 
-for f in infra/docker/service/Dockerfile infra/docker/fdb/Dockerfile; do
-  check "$f (ARG FDB_VERSION)" "$fdb" \
-    "$(sed -n 's/^ARG FDB_VERSION=\([0-9][0-9.]*\).*/\1/p' "$f" | head -1)"
-done
+# The testcontainers image takes its version as a build arg with no
+# default, and `fdb-version-matches-versions-json-test` asserts that
+# against this file -- so the only Dockerfile pinning a version is the
+# service one.
+f=infra/docker/service/Dockerfile
+check "$f (ARG FDB_VERSION)" "$fdb" \
+  "$(sed -n 's/^ARG FDB_VERSION=\([0-9][0-9.]*\).*/\1/p' "$f" | head -1)"
 
 # The JVM client coordinate. deps/fdb is the workspace's single source for it
 # -- every brick reaches fdb-java through that shim -- but EDN cannot read

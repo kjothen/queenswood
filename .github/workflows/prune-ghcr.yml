@@ -7,9 +7,18 @@ name: Prune GHCR Untagged
 # still occupy storage. Without periodic pruning they accumulate
 # indefinitely.
 #
-# Cleanup-only: this workflow never touches tagged versions, so a
-# botched run can't lose a release. Worst case it leaves untagged
-# residue for another week.
+# Two things this has to get right, and both have bitten:
+#
+# 1. Images are published under `ghcr.io/<owner>/queenswood/<name>`,
+#    so the GHCR package is `queenswood/<name>` and the REST path
+#    needs it percent-encoded. A bare `<name>` fails with "Package
+#    not found" -- which is silent enough to look like a clean run.
+#
+# 2. "Untagged" does not mean "unreferenced". A tagged multi-arch
+#    index points at per-platform manifests that GHCR itself reports
+#    with no tags, so deleting every untagged version destroys the
+#    image `:latest` resolves to. Every digest a tagged version
+#    references is collected first and kept.
 
 on:
   # Sunday 03:30 UTC. Off-peak for GHCR + no overlap with
@@ -35,32 +44,77 @@ jobs:
       # registry) cancel the rest.
       fail-fast: false
       matrix:
+        # Must track the target list in infra/docker/bake.hcl.
         package:
-          - migrator-service
-          - bootstrap-service
-          - api-service
-          - financial-processors-service
-          - operational-processors-service
-          - relay-service
-          - clearbank-adapter-service
-          - clearbank-simulator-service
-          - onfido-adapter-service
-          - onfido-simulator-service
-          - console
+          - queenswood/migrator-service
+          - queenswood/bootstrap-service
+          - queenswood/api-service
+          - queenswood/monolith-service
+          - queenswood/financial-processors-service
+          - queenswood/operational-processors-service
+          - queenswood/scheduler-processor-service
+          - queenswood/relay-service
+          - queenswood/clearbank-adapter-service
+          - queenswood/clearbank-simulator-service
+          - queenswood/onfido-adapter-service
+          - queenswood/onfido-simulator-service
+          - queenswood/uk-companies-house-adapter-service
+          - queenswood/uk-companies-house-simulator-service
+          - queenswood/console
     steps:
-      - name: Delete untagged versions of ${{ matrix.package }}
-        uses: actions/delete-package-versions@v5
-        with:
-          package-name: ${{ matrix.package }}
-          package-type: container
-          # `true` restricts the delete to manifests with no tags --
-          # the orphaned digests left behind by prior `:latest`,
-          # `:latest-amd64`, `:latest-arm64` pushes. Tagged versions
-          # (including `:latest` and the per-arch refs from the most
-          # recent run) are untouched.
-          delete-only-untagged-versions: 'true'
-          # Keep the most recent few untagged digests as a rollback
-          # safety net -- if a release-images.yml run pushes a bad
-          # image, those untagged digests are the only way to
-          # `imagetools create` a previous `:latest`.
-          min-versions-to-keep: 5
+      - name: Prune untagged versions of ${{ matrix.package }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OWNER: ${{ github.repository_owner }}
+          PKG: ${{ matrix.package }}
+          # Untagged digests are the only way to rebuild a previous
+          # `:latest` with `imagetools create`, so keep a few as a
+          # rollback path after a bad release.
+          KEEP: '5'
+        run: |
+          set -euo pipefail
+
+          encoded="${PKG//\//%2F}"
+          versions=$(gh api \
+            "/orgs/$OWNER/packages/container/$encoded/versions" --paginate)
+
+          total=$(jq 'length' <<<"$versions")
+          echo "$PKG: $total version(s)"
+
+          # Anonymous pull token is enough to read manifests.
+          regtoken=$(curl -fsSL \
+            "https://ghcr.io/token?service=ghcr.io&scope=repository:$OWNER/$PKG:pull" \
+            | jq -r .token)
+
+          keep=$(jq -r '.[] | select(.metadata.container.tags != []) | .name' \
+                   <<<"$versions" \
+                 | while read -r digest; do
+                     curl -fsSL -H "Authorization: Bearer $regtoken" \
+                       -H "Accept: application/vnd.oci.image.index.v1+json,application/vnd.docker.distribution.manifest.list.v2+json" \
+                       "https://ghcr.io/v2/$OWNER/$PKG/manifests/$digest" \
+                       | jq -r '.manifests[]?.digest // empty'
+                   done | sort -u)
+
+          echo "$PKG: $(grep -c . <<<"$keep" || true) digest(s) referenced by a tag"
+
+          ids=$(jq -r --arg keep "$keep" --argjson n "$KEEP" '
+                  ($keep | split("\n") | map(select(length > 0))) as $k
+                  | [ .[]
+                      | select(.metadata.container.tags == [])
+                      | select(.name as $d | ($k | index($d)) | not) ]
+                  | sort_by(.created_at) | reverse
+                  | .[$n:]
+                  | .[].id' <<<"$versions")
+
+          n=$(grep -c . <<<"$ids" || true)
+          if [ "$n" = "0" ]; then
+            echo "$PKG: nothing to prune"
+            exit 0
+          fi
+
+          echo "$PKG: deleting $n untagged version(s)"
+          for id in $ids; do
+            gh api -X DELETE \
+              "/orgs/$OWNER/packages/container/$encoded/versions/$id" --silent
+          done
+          echo "$PKG: done"
