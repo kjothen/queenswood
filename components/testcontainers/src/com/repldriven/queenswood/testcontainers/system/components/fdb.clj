@@ -2,9 +2,8 @@
   (:require
     [com.repldriven.mono.log.interface :as log])
   (:import
-    (java.net ServerSocket)
     (java.time Duration)
-    (org.testcontainers.containers FixedHostPortGenericContainer)
+    (org.testcontainers.containers GenericContainer)
     (org.testcontainers.containers.wait.strategy Wait)
     (org.testcontainers.images.builder ImageFromDockerfile)))
 
@@ -14,6 +13,14 @@
 ;; error naming neither. `version-test` asserts the two agree.
 (def fdb-version "7.3.75")
 (def default-image-name (str "queenswood/foundationdb:" fdb-version))
+
+;; The port fdbserver binds inside the container, and the only one the
+;; image exposes. Docker maps it to a host port of its own choosing.
+(def ^:private listen-port 4500)
+
+(def ^:private public-port-file "/var/fdb/public_port")
+
+(def ^:private cluster-file "/usr/local/etc/foundationdb/fdb.cluster")
 
 (defn- fdb-image
   "Build context for the FDB image, loaded from this component's own
@@ -30,25 +37,72 @@
       (.withFileFromClasspath "fdb.bash" "fdb/fdb.bash")
       (.withBuildArg "FDB_VERSION" fdb-version)))
 
-(defn- free-port
-  "Finds a free port by briefly opening and closing a server socket."
-  []
-  (with-open [ss (ServerSocket. 0)] (.getLocalPort ss)))
+(defn- exec
+  [container & command]
+  (.execInContainer container (into-array String command)))
+
+(defn- publish-port!
+  "Tells the container which host port it was mapped to.
+
+  fdbserver has to advertise that port rather than the one it binds: a
+  client reaching a coordinator is handed the cluster controller's public
+  address and re-dials it, so the number has to be valid on the host side
+  of the NAT. Docker only assigns it once the container is running, which
+  is what makes this a second phase rather than an environment variable."
+  [container port]
+  (log/info "FDB public port:" port)
+  (exec container "sh" "-c" (str "echo " port " > " public-port-file)))
+
+(defn- await-configured
+  "Blocks until the database answers, which is the first moment it is
+  usable. `configure new single memory` runs inside the container and
+  cannot start until the public port lands, so the container having
+  started is not on its own a readiness signal."
+  [container]
+  (loop [attempts-left 120]
+    (let [result (exec container
+                       "fdbcli"
+                       "-C"
+                       cluster-file
+                       "--exec"
+                       "status minimal")]
+      (cond
+       (zero? (.getExitCode result))
+       (log/info "FDB cluster configured")
+
+       (pos? attempts-left)
+       (do (Thread/sleep 500) (recur (dec attempts-left)))
+
+       :else
+       ;; nosemgrep: no-raw-throw
+       (throw (ex-info "FDB cluster never became configured"
+                       {:stdout (.getStdout result)
+                        :stderr (.getStderr result)}))))))
 
 (defn- start-container
+  "Starts FDB on a Docker-assigned host port, in two phases.
+
+  Docker owns the port from the moment the container starts, so there is
+  no window between choosing a port and binding it. Finding a free port
+  and asking Docker to bind that one has such a window, and containers
+  starting concurrently — as they do when test namespaces run in
+  parallel — collide in it."
   [config]
   (let [{:keys [image-name]} config
         _ (log/info "Building FDB image:" image-name)
         built-name (.get (fdb-image image-name))
-        port (free-port)
-        _ (log/info "Starting FDB container, image:" built-name "port:" port)]
-    (doto (FixedHostPortGenericContainer. ^String built-name)
-      (.withFixedExposedPort (int port) (int port))
-      (.addExposedPort (int port))
-      (.withEnv "FDB_PORT" (str port))
-      (.withStartupTimeout (Duration/ofSeconds 120))
-      (.waitingFor (Wait/forListeningPort))
-      (.start))))
+        _ (log/info "Starting FDB container, image:" built-name)
+        container (doto (GenericContainer. ^String built-name)
+                    (.addExposedPort (int listen-port))
+                    (.withStartupTimeout (Duration/ofSeconds 120))
+                    ;; The server is not up at this point — the script is
+                    ;; waiting to be told which port to advertise.
+                    (.waitingFor (Wait/forLogMessage ".*Awaiting public port.*"
+                                                     (int 1)))
+                    (.start))]
+    (publish-port! container (.getMappedPort container (int listen-port)))
+    (await-configured container)
+    container))
 
 (def container
   {:system/start (fn [{:system/keys [config instance]}]

@@ -7,7 +7,7 @@ RUN ARCH=$(uname -m) && \
   TINI_ARCH=$([ "$ARCH" = "aarch64" ] && echo "arm64" || echo "amd64") && \
   FDB_ARCH=$ARCH && \
   apt-get update && \
-  apt-get install -y --no-install-recommends curl ca-certificates && \
+  apt-get install -y --no-install-recommends curl ca-certificates socat && \
   rm -rf /var/lib/apt/lists/* && \
   curl -fsSL --retry 5 --retry-delay 2 --retry-all-errors https://github.com/krallin/tini/releases/download/v0.19.0/tini-${TINI_ARCH} \
   -o /usr/bin/tini && \
