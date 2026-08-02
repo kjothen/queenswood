@@ -1,8 +1,8 @@
 (ns com.repldriven.queenswood.interest.domain-test
-  "Pure-function tests for the daily-interest math and the accrual /
-  capitalisation transaction builders. No FDB, no processor — these
-  exercise the integer arithmetic at sub-minor-unit precision and
-  the leg shapes the brick relies on."
+  "Pure-function tests for the daily-interest math, the bucket
+  invariant, and the capitalisation transaction builder. No FDB, no
+  processor — these exercise the integer arithmetic at sub-minor-unit
+  precision and the shapes the brick relies on."
   (:require
     [com.repldriven.queenswood.interest.domain :as SUT]
 
@@ -12,13 +12,13 @@
 
 (deftest daily-interest-test
   (testing "zero rate returns nil — production posts nothing"
-    (is (nil? (SUT/daily-interest {:credit 1000 :debit 0 :credit-carry 0} 0))))
+    (is (nil? (SUT/daily-interest 1000 0 0))))
   (testing "small balance and rate accumulate sub-minor carry only"
     ;; £10.00 (1000 minor units) at 100 bps (1%) APR:
     ;; total-micro = 1000 * 100 * 100      + 0  = 10_000_000
     ;; daily-micro = 10_000_000 / 365            = 27_397
     ;; whole-units = 0; carry = 27_397
-    (let [r (SUT/daily-interest {:credit 1000 :debit 0 :credit-carry 0} 100)]
+    (let [r (SUT/daily-interest 1000 0 100)]
       (is (= 0 (:whole-units r)))
       (is (= 27397 (:carry r)))))
   (testing "carry from prior day rolls into today's calculation"
@@ -27,8 +27,7 @@
     ;;             = 10_000_000 + 9_999_905 = 19_999_905
     ;; daily-micro = 19_999_905 / 365 = 54_794
     ;; whole-units = 0; carry = 54_794
-    (let [r (SUT/daily-interest {:credit 1000 :debit 0 :credit-carry 27397}
-                                100)]
+    (let [r (SUT/daily-interest 1000 27397 100)]
       (is (= 0 (:whole-units r)))
       (is (= 54794 (:carry r)))))
   (testing "large balance and rate cross the whole-unit threshold"
@@ -36,17 +35,100 @@
     ;; total-micro = 10_000_000 * 365 * 100 + 0 = 365_000_000_000
     ;; daily-micro = 365_000_000_000 / 365      = 1_000_000_000
     ;; whole-units = 1000; carry = 0
-    (let [r (SUT/daily-interest {:credit 10000000 :debit 0 :credit-carry 0}
-                                365)]
+    (let [r (SUT/daily-interest 10000000 0 365)]
       (is (= 1000 (:whole-units r)))
-      (is (= 0 (:carry r)))))
-  (testing "net balance is credit minus debit"
-    ;; credit 2000, debit 1000, rate 365 bps → net 1000
-    ;; total-micro = 1000 * 365 * 100 = 36_500_000
-    ;; daily-micro = 100_000; whole-units 0; carry 100_000
-    (let [r (SUT/daily-interest {:credit 2000 :debit 1000 :credit-carry 0} 365)]
-      (is (= 0 (:whole-units r)))
-      (is (= 100000 (:carry r))))))
+      (is (= 0 (:carry r))))))
+
+(deftest net-balance-test
+  (testing "net is credit minus debit — the principal interest earns on"
+    (is (= 1000 (SUT/net-balance {:credit 2000 :debit 1000})))
+    (is (= 0 (SUT/net-balance {:credit 100 :debit 100}))))
+  (testing "a missing side reads as zero rather than blowing up"
+    (is (= 500 (SUT/net-balance {:credit 500})))))
+
+(def ^:private account-balances
+  [{:balance-type :balance-type-default
+    :balance-status :balance-status-posted
+    :currency "GBP"
+    :credit 2000
+    :debit 500
+    :credit-carry 0}
+   {:balance-type :balance-type-interest-accrued
+    :balance-status :balance-status-posted
+    :currency "GBP"
+    :credit 40
+    :debit 0
+    :credit-carry 27397}])
+
+(deftest principal-test
+  (testing "interest is earned on the available balance, not the posted one"
+    ;; 2000 posted less a 500 outgoing reservation.
+    (is (= 1500
+           (SUT/principal [{:product-type :product-type-sub-ledger-current
+                            :balance-type :balance-type-default
+                            :balance-status :balance-status-posted
+                            :currency "GBP"
+                            :credit 2000
+                            :debit 0}
+                           {:product-type :product-type-sub-ledger-current
+                            :balance-type :balance-type-default
+                            :balance-status :balance-status-pending-outgoing
+                            :currency "GBP"
+                            :credit 0
+                            :debit 500}]
+                          "GBP"))))
+  (testing "money still pending inbound has not arrived, so it does not earn"
+    (is (= 2000
+           (SUT/principal [{:product-type :product-type-sub-ledger-current
+                            :balance-type :balance-type-default
+                            :balance-status :balance-status-posted
+                            :currency "GBP"
+                            :credit 2000
+                            :debit 0}
+                           {:product-type :product-type-sub-ledger-current
+                            :balance-type :balance-type-default
+                            :balance-status :balance-status-pending-incoming
+                            :currency "GBP"
+                            :credit 900
+                            :debit 0}]
+                          "GBP"))))
+  (testing "the accrued bucket is not itself principal — interest is simple"
+    (is (= 2000
+           (SUT/principal [{:product-type :product-type-sub-ledger-current
+                            :balance-type :balance-type-default
+                            :balance-status :balance-status-posted
+                            :currency "GBP"
+                            :credit 2000
+                            :debit 0}
+                           {:product-type :product-type-sub-ledger-current
+                            :balance-type :balance-type-interest-accrued
+                            :balance-status :balance-status-posted
+                            :currency "GBP"
+                            :credit 40
+                            :debit 0}]
+                          "GBP")))))
+
+(deftest bucket-test
+  (testing "picks the bucket matching type, currency and status"
+    (let [b (SUT/bucket account-balances
+                        :balance-type-interest-accrued
+                        "GBP"
+                        :balance-status-posted)]
+      (is (= 40 (:credit b)))
+      (is (= 27397 (:credit-carry b)))))
+  (testing "a bucket the account does not hold is nil, not a zeroed stand-in"
+    ;; Nil is the caller's cue to say something. A zeroed bucket would
+    ;; read as a real balance of nothing and accrue silently against a
+    ;; figure nobody wrote.
+    (is (nil? (SUT/bucket account-balances
+                          :balance-type-interest-accrued
+                          "USD"
+                          :balance-status-posted))))
+  (testing "status is part of the match, not just type and currency"
+    (is (nil? (SUT/bucket account-balances
+                          :balance-type-default
+                          "GBP"
+                          :balance-status-pending-outgoing)))))
 
 (deftest idempotency-keys-test
   (testing "capitalisation key composes account-id + as-of-date"
@@ -54,23 +136,6 @@
            (SUT/capitalization-idempotency-key "acc-1" 20260501)))
     (is (= (SUT/capitalization-idempotency-key "acc-1" 20260501)
            (SUT/capitalization-idempotency-key "acc-1" 20260501)))))
-
-(deftest accrual-leg-test
-  (testing "one credit to the customer's accrued bucket, and nothing else"
-    (let [leg (SUT/accrual-leg "cust" :product-type-sub-ledger-savings
-                               "GBP" 75)]
-      (is (= "cust" (:account-id leg)))
-      (is (= :balance-type-interest-accrued (:balance-type leg)))
-      (is (= :balance-status-posted (:balance-status leg)))
-      (is (= :leg-side-credit (:side leg)))
-      (is (= 75 (:amount leg)))))
-  (testing "carries what opening the bucket would need"
-    ;; A bucket that doesn't exist yet is opened by the posting, and
-    ;; `new-zero-balance` reads product-type and currency off the leg.
-    (let [leg (SUT/accrual-leg "cust" :product-type-sub-ledger-savings
-                               "GBP" 75)]
-      (is (= :product-type-sub-ledger-savings (:product-type leg)))
-      (is (= "GBP" (:currency leg))))))
 
 (deftest capitalization-transaction-test
   (testing "zero accrued returns nil — no transaction posted"

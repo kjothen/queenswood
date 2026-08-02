@@ -9,8 +9,8 @@
     [com.repldriven.queenswood.ledger-account.interface :as ledger-accounts]
     [com.repldriven.queenswood.policy.interface :as policy]
     [com.repldriven.queenswood.transaction.interface :as transactions]
-    [com.repldriven.mono.cache.interface :as cache]
-    [com.repldriven.mono.error.interface :as error :refer [let-nom>]]))
+    [com.repldriven.mono.error.interface :as error :refer [let-nom>]]
+    [com.repldriven.mono.log.interface :as log]))
 
 (def ^:private customer-product-types
   "Product types whose cash-accounts should earn interest. GL accounts
@@ -24,16 +24,30 @@
   (and (contains? customer-product-types (:product-type account))
        (= :cash-account-status-opened (:account-status account))))
 
-(def ^:private product-cache (cache/create 60000))
-
 (defn- get-product-version
-  [config bank-id account]
-  (cache/lookup product-cache
-                [(:product-id account) (:version-id account)]
-                #(products/get-version config
-                                       bank-id
-                                       (:product-id account)
-                                       (:version-id account))))
+  "The account's pinned product version, memoised for the run.
+
+  The map is built from the accounts as they stream rather than from
+  the bank's current products: an account pins `product-id` and
+  `version-id` when it opens, and a pinned version may be one the bank
+  no longer offers, so enumerating what is on offer would miss
+  accounts. A bank has dozens of versions in use rather than millions,
+  so after the first few accounts this is a hash lookup.
+
+  Scoped to the run rather than a TTL cache, because a pass wants one
+  view of the rates it is applying — an entry expiring mid-pass would
+  accrue two halves of the same bank at two different rates."
+  [config versions bank-id account]
+  (let [k [(:product-id account) (:version-id account)]]
+    (if-some [hit (get @versions k)]
+      hit
+      (let [version (products/get-version config
+                                          bank-id
+                                          (:product-id account)
+                                          (:version-id account))]
+        (when-not (error/anomaly? version)
+          (swap! versions assoc k version))
+        version))))
 
 (defn- tag-customer-legs
   "Stamp the customer `account-id` legs with `product-type` so they fan
@@ -55,45 +69,52 @@
   Accrual is not a statement line — what a customer sees is
   capitalisation — so the per-account transaction bought nothing and
   cost the two GL rows every accrual in the bank had to read and write.
-  The bank's side is posted once for the run."
-  [config txn account balances _as-of-date]
-  (let [{:keys [bank-id account-id currency product-type]} account]
+  The bank's side is posted once for the run.
+
+  Everything it computes on was frozen by the scan, so the whole
+  account costs one unread write. That is sound because only this pass
+  and capitalisation ever write an interest-accrued bucket; the
+  principal it reads sits on the default bucket, which payments move
+  and which this never writes."
+  [config ctx txn account balances]
+  (let [{:keys [bank-id account-id currency]} account]
     (let-nom>
-      [version (get-product-version config bank-id account)
-       interest-rate-bps (:interest-rate-bps version)
-       ;; The balance comes off the enumeration, not a read inside this
-       ;; transaction. It is the figure the run computed on, and
-       ;; recording it beside the amount is what makes the accrual
+      [version (get-product-version config (:versions ctx) bank-id account)
+       ;; Everything below comes off the scan, not a read inside this
+       ;; transaction. These are the figures the run computed on, and
+       ;; recording them beside the amount is what makes the accrual
        ;; reproducible after the fact.
-       balance (domain/bucket balances
-                              :balance-type-default
+       accrued (domain/bucket balances
+                              :balance-type-interest-accrued
                               currency
                               :balance-status-posted)
-       {:keys [whole-units carry]} (domain/daily-interest balance
-                                                          interest-rate-bps)
-       ;; Guard on the VALUE, not on whole-units being present:
-       ;; daily-interest can return :whole-units 0 with a carry, and 0
-       ;; is truthy. A zero accrual still records its row.
-       _ (when (and whole-units (not (zero? whole-units)))
-           (balances/apply-legs txn
-                                [(domain/accrual-leg account-id
-                                                     product-type
-                                                     currency
-                                                     whole-units)]
-                                :transaction-type-interest-accrual))
-       _ (when carry
-           (balances/set-carry txn
-                               account-id
-                               :balance-type-default currency
-                               :balance-status-posted carry))]
-      ;; What the row records. The balance alone would not reproduce
-      ;; the amount — the carry feeds the same calculation.
-      {:amount (or whole-units 0)
-       :input-balance (domain/net-balance balance)
-       :input-carry (:credit-carry balance)})))
+       net (domain/principal balances currency)
+       carry (:credit-carry accrued 0)
+       day (domain/daily-interest net carry (:interest-rate-bps version))
+       _ (cond
+          ;; A zero rate. Nothing earned and nothing to write.
+          (nil? day)
+          nil
+
+          ;; One write, and only the accrued bucket. Written even at
+          ;; :whole-units 0, because the carry still moved.
+          accrued
+          (balances/accrue txn accrued (:whole-units day) (:carry day))
+
+          ;; Nowhere to put it. The account is still recorded as done
+          ;; at zero — the pass has no business failing an account
+          ;; over a bucket the product should have opened for it.
+          :else
+          (log/warnf (str "Account %s has a non-zero interest rate but no"
+                          " accrual balance - interest is not being accrued"
+                          " for this account.")
+                     account-id))]
+      {:amount (if (and day accrued) (:whole-units day) 0)
+       :input-balance net
+       :input-carry carry})))
 
 (defn- capitalize-account
-  [_config txn account balances as-of-date]
+  [_config ctx txn account balances]
   (let [{:keys [bank-id account-id currency product-type]} account]
     (let-nom>
       [balance (domain/bucket balances
@@ -103,7 +124,7 @@
        transaction (domain/capitalization-transaction account-id
                                                       currency
                                                       balance
-                                                      as-of-date)
+                                                      (:business-day ctx))
        _ (when transaction
            (let-nom>
              [expanded-legs (ledger-accounts/add-control-legs
@@ -174,139 +195,175 @@
           nil
           currencies))
 
-(defn- process-account
-  "Row lifecycle around one account's posting. Skips an account a prior
-  attempt already finished, otherwise posts and flips the row to DONE in
-  the same transaction, so the work and the record of the work commit
-  together. Returns :done, :skipped, or an anomaly."
-  [config ctx f account balances]
-  (let [{:keys [bank-id business-day account-kind]} ctx
-        account-id (:account-id account)]
+(def ^:private chunk-size
+  "Accounts posted per transaction. FDB caps a transaction at 10MB and
+  five seconds; an accrual writes two small records per account, so
+  this sits well inside both while spreading the per-transaction cost
+  over a hundred accounts instead of paying it for each."
+  100)
+
+(defn- post-account
+  "One account's posting and its row, inside the chunk's transaction.
+  Skips an account an earlier attempt already finished. Returns :done,
+  :skipped, or an anomaly."
+  [config ctx txn account balances]
+  (let [{:keys [bank-id business-day account-kind account-fn]} ctx
+        {:keys [account-id currency]} account
+        row (store/load-account-run txn
+                                    bank-id
+                                    business-day
+                                    account-kind
+                                    account-id)]
+    (if (and row (not (domain/pending? row)))
+      :skipped
+      (let-nom> [result (account-fn config ctx txn account balances)
+                 _ (store/save-account-run txn
+                                           (domain/account-run-done
+                                            (or row
+                                                (domain/new-account-run
+                                                 bank-id
+                                                 business-day
+                                                 account-kind
+                                                 account-id
+                                                 currency))
+                                            result))]
+        :done))))
+
+(defn- post-chunk
+  "Posts a chunk of accounts in one transaction, so every balance write
+  and every row flip in it commits together or none does. Returns the
+  per-state counts, or an anomaly if any account in the chunk failed —
+  in which case nothing in the chunk landed."
+  [config ctx chunk]
+  (store/transact
+   config
+   (fn [txn]
+     (reduce (fn [counts [account balances]]
+               (let [result (post-account config ctx txn account balances)]
+                 (if (error/anomaly? result)
+                   (reduced result)
+                   (update counts result inc))))
+             {:done 0 :skipped 0}
+             chunk))))
+
+(defn- mark-chunk-failed
+  "Records every account in a failed chunk as FAILED, in its own
+  transaction — the chunk's transaction has already rolled back, taking
+  any DONE flip with it.
+
+  The whole chunk is marked rather than the one account that raised.
+  Accrual reads nothing and writes a row only this pass writes, so a
+  failure here is a database that is unwell or a product whose accounts
+  all fail the same way; isolating the offender would draw a
+  distinction that does not exist in practice."
+  [config ctx chunk anomaly]
+  (let [{:keys [bank-id business-day account-kind]} ctx]
     (store/transact
      config
      (fn [txn]
-       (let [row (store/load-account-run txn
-                                         bank-id
-                                         business-day
-                                         account-kind
-                                         account-id)]
-         (if (and row (not (domain/pending? row)))
-           :skipped
-           (let-nom> [result (f config txn account balances business-day)
-                      _
-                      (store/save-account-run txn
-                                              (domain/account-run-done
-                                               (or row
-                                                   (domain/new-account-run
-                                                    bank-id
-                                                    business-day
-                                                    account-kind
-                                                    account-id
-                                                    (:currency account)))
-                                               result))]
-             :done)))))))
+       (reduce
+        (fn [_ [account _balances]]
+          (let [{:keys [account-id currency]} account
+                row (or (store/load-account-run txn
+                                                bank-id
+                                                business-day
+                                                account-kind
+                                                account-id)
+                        (domain/new-account-run bank-id
+                                                business-day
+                                                account-kind
+                                                account-id
+                                                currency))
+                result (store/save-account-run txn
+                                               (domain/account-run-failed
+                                                row
+                                                (error/kind anomaly)))]
+            (when (error/anomaly? result) (reduced result))))
+        nil
+        chunk)))))
 
-(defn- mark-account-failed
-  "Records a failed account in its own transaction — the posting's
-  transaction has already rolled back, taking any DONE flip with it."
-  [config ctx account anomaly]
-  (let [{:keys [bank-id business-day account-kind]} ctx
-        account-id (:account-id account)]
-    (store/transact config
-                    (fn [txn]
-                      (let [row (or (store/load-account-run txn
-                                                            bank-id
-                                                            business-day
-                                                            account-kind
-                                                            account-id)
-                                    (domain/new-account-run
-                                     bank-id
-                                     business-day
-                                     account-kind
-                                     account-id
-                                     (:currency account)))]
-                        (store/save-account-run txn
-                                                (domain/account-run-failed
-                                                 row
-                                                 (error/kind anomaly))))))))
-
-(defn- enumerate-account
-  "Writes the account's PENDING row if it has none. Reads before
-  writing: a resumed run must not knock a finished account back to
-  PENDING."
-  [config ctx account]
-  (let [{:keys [bank-id business-day account-kind]} ctx
-        {:keys [account-id currency]} account]
-    (store/transact
-     config
-     (fn [txn]
-       (when-not (store/load-account-run txn
-                                         bank-id
-                                         business-day
-                                         account-kind
-                                         account-id)
-         (store/save-account-run txn
-                                 (domain/new-account-run bank-id
-                                                         business-day
-                                                         account-kind
-                                                         account-id
-                                                         currency)))))))
+(defn- flush-chunk
+  "Posts whatever the pass has accumulated and clears it. A failing
+  chunk is marked FAILED and the pass carries on — aborting would leave
+  every later account untouched and the run would never close."
+  [config ctx state]
+  (let [{:keys [chunk tally]} state]
+    (if (empty? chunk)
+      state
+      (let [result (post-chunk config ctx chunk)]
+        (assoc state
+               :chunk []
+               :tally (if (error/anomaly? result)
+                        (do (mark-chunk-failed config ctx chunk result)
+                            (update tally :failed + (count chunk)))
+                        (-> tally
+                            (update :done + (:done result))
+                            (update :skipped + (:skipped result)))))))))
 
 (defn- process-customer-accounts
-  "Streams the bank's accounts with their balances, recording scope as
-  it goes and posting each customer account. A failing account is
-  marked FAILED and the pass continues — aborting would strand every
-  later account as PENDING and the run would never close.
+  "Streams the bank's accounts with their balances and posts each
+  customer account, a chunk of them per transaction.
 
-  One merged scan pairs each account with its balances, so the posting
-  transaction does no balance read of its own and computes on the
-  figure the pass streamed in."
-  [config ctx f]
-  (cash-accounts/reduce-accounts-with-balances
-   config
-   (:bank-id ctx)
-   (fn [tally {:keys [account balances]}]
-     (if-not (customer-account? account)
-       tally
-       (let [enumerated (enumerate-account config ctx account)]
-         (if (error/anomaly? enumerated)
-           enumerated
-           (let [result (process-account config ctx f account balances)
-                 ;; Every currency in scope, gathered as the pass runs.
-                 ;; Complete even on a resumed run, because the pass
-                 ;; visits every account each time and only the posting
-                 ;; is skipped — so the ledger entries at close cover
-                 ;; currencies an earlier attempt already accrued.
-                 tally (update tally :currencies conj (:currency account))]
-             (if (error/anomaly? result)
-               (do (mark-account-failed config ctx account result)
-                   (update tally :failed inc))
-               (update tally result inc)))))))
-   {:done 0 :skipped 0 :failed 0 :currencies #{}}))
+  One merged scan pairs each account with its balances, so a posting
+  reads nothing of its own and computes on the figures the pass
+  streamed in. No row is written ahead of the work: an account is
+  either done, in which case a re-run skips it, or it is not, in which
+  case a re-run redoes it — and a row saying the pass intended to reach
+  it distinguishes neither."
+  [config ctx]
+  (let-nom>
+    [state (cash-accounts/reduce-accounts-with-balances
+            config
+            (:bank-id ctx)
+            (fn [state {:keys [account balances]}]
+              (if-not (customer-account? account)
+                state
+                (let [state
+                      (-> state
+                          (update :chunk conj [account balances])
+                          ;; Every currency in scope, gathered as the
+                          ;; pass runs. Complete even on a re-run,
+                          ;; because the pass visits every account each
+                          ;; time and only the posting is skipped — so
+                          ;; the ledger entries at close cover
+                          ;; currencies an earlier attempt accrued.
+                          (update-in [:tally :currencies]
+                                     conj
+                                     (:currency account)))]
+                  (if (< (count (:chunk state)) chunk-size)
+                    state
+                    (flush-chunk config ctx state)))))
+            {:chunk []
+             :tally {:done 0 :skipped 0 :failed 0 :currencies #{}}})]
+    (:tally (flush-chunk config ctx state))))
 
 (defn- run-interest
   "Run an interest pass under the platform daily-count limit for
   `policy-kind`. Counts prior runs of this kind for the org on
-  `as-of-date` and rejects if the limit is reached, then enumerates the
-  account set into InterestAccountRun rows and posts each one.
+  `as-of-date` and rejects if the limit is reached, then streams the
+  bank's accounts and posts them a chunk at a time.
 
-  The InterestRun record is written only once enumeration has finished,
-  so a crash part-way leaves no run record and the daily limit does not
-  block the retry. The PENDING rows already written are what make that
-  retry a resumption rather than a restart. A run that finished with
-  failures still closes; its residue is the count of FAILED rows, which
-  `run-progress` reports.
+  The InterestRun record is written only once the pass has finished, so
+  a crash part-way leaves no run record and the daily limit does not
+  block the retry. What makes that retry safe is the DONE rows the
+  chunks committed: a re-run streams every account again and skips the
+  ones already posted. A run that finished with failures still closes;
+  its residue is the count of FAILED rows, which `run-progress`
+  reports.
 
-  Each account is its own short FDB transaction — no long transaction
-  is held across the run. An accrual run then posts the bank's side
-  once per currency, which is the other half of a double entry the
-  per-account postings deliberately leave open."
+  A chunk is a short FDB transaction — no long transaction is held
+  across the run. An accrual run then posts the bank's side once per
+  currency, which is the other half of a double entry the per-account
+  postings deliberately leave open."
   [config data spec]
-  (let [{:keys [policy-kind run-kind account-fn run-entry?]} spec
+  (let [{:keys [policy-kind run-kind run-entry?]} spec
         {:keys [bank-id as-of-date]} data
         ctx (assoc spec
                    :bank-id bank-id
-                   :business-day as-of-date)]
+                   :business-day as-of-date
+                   ;; Run-scoped, so every account in the pass is
+                   ;; accrued against the same view of the rates.
+                   :versions (atom {}))]
     (if-let [interest-expense (get-interest-expense-account config bank-id)]
       (let-nom>
         [policies (policy/get-effective-policies config {:bank-id bank-id})
@@ -316,7 +373,7 @@
                                                                as-of-date)
          aggregates {policy-kind {#{:bank-id :business-day} today-count}}
          _ (domain/check-daily-count policies policy-kind aggregates)
-         tally (process-customer-accounts config ctx account-fn)
+         tally (process-customer-accounts config ctx)
          _ (when run-entry?
              (post-run-entries config
                                ctx

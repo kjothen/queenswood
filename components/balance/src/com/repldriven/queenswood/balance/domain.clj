@@ -24,6 +24,12 @@
                                       [:account-id :balance-type
                                        :currency :balance-status])))))
 
+(defn accrue
+  [balance whole-units carry]
+  (-> balance
+      (update :credit + whole-units)
+      (assoc :credit-carry carry)))
+
 (defn- check-capability
   [action balance-type balance-status policies]
   (policy/check-capability policies

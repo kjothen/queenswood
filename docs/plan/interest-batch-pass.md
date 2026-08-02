@@ -6,6 +6,12 @@ The first half of this plan landed. An interest run now writes an
 `InterestRun` lifecycle record and one `InterestAccountRun` row per
 account, so a run that dies part-way leaves a trace of what it reached.
 
+Silent accrual, the aggregate ledger entry, and the merged scan have
+landed since. The accrual path no longer posts a transaction or a
+control leg per account, and each account now arrives from the scan
+with its balances attached — though the write path still re-reads
+them, which is what the frozen write below settles.
+
 The second half proposed replacing the enumeration loop with one keyed
 command per account. It should not be built, and this document replaces
 it. Two things came out of costing it.
@@ -88,6 +94,95 @@ they stream and memoise them for the run — the same lookup
 so the pass commits every N accounts rather than at the end. The
 balance update and its row go in the same chunk transaction, so a chunk
 either lands whole or not at all.
+
+## What the scan freezes, and the one row the pass writes
+
+Pairing the two scans is not the point on its own. The point is that
+the scan *freezes* every input an accrual needs, so the write that
+follows needs no read at all.
+
+Three values come off the scan, and none is read again:
+
+- the account's available balance, the principal interest accrues on,
+- the sub-unit remainder carried from the previous day,
+- the running total already in the interest-accrued bucket.
+
+**The principal is the available balance, not the posted one.** Money
+reserved against a pending outgoing payment is already committed, so
+it stops earning when the reservation is taken rather than when it
+settles; money still pending inbound has not arrived, so it has not
+started earning. That is a computation over several buckets rather
+than a figure on one, which is another thing the merged scan pays
+for — every bucket the sum needs is already in hand, so what would
+otherwise be a second read is arithmetic. It uses
+`balance-domain/available-balance`, the same definition the limit
+checks use, so there is one meaning of available in the system.
+
+From those the pass computes the day's whole units and the new
+remainder, and writes one balance row: the interest-accrued bucket,
+its credit advanced and its carry replaced.
+
+**The pass never creates that row.** An account it processes is
+guaranteed to have one, because the product templates that declare an
+interest-accrued posted bucket — current, savings, term deposit — are
+exactly the product types the pass admits, and own funds, which
+declares none, is exactly the type it filters out. The bucket is
+opened with the account. So a missing row is a misconfigured product
+or a corrupted account, and the account is rejected and marked FAILED
+rather than quietly accruing against a zero that was invented for it.
+
+A product at zero bps could in principle be opened without an accrued
+bucket, and then the invariant would need qualifying. It is not worth
+doing: the bucket costs one empty row, the rate is a property of the
+version rather than the account, and a rate that moves off zero would
+have to backfill every account already opened.
+
+**That write is safe unread because nothing else writes that row.**
+Two things in the workspace touch an interest-accrued bucket: this
+accrual, which credits it, and capitalisation, which sweeps it. The
+API reads it and no more. The pass is single-writer per bank and
+`check-daily-count` makes a second concurrent pass a rejection, so the
+frozen total cannot go stale underneath the write.
+
+The default balance is a different matter, and the distinction is the
+design. Payments move it continuously, so a read-modify-write against
+it from a value read in an earlier transaction would drop concurrent
+credits. The pass therefore never writes it. It reads it once, at the
+scan, and accrues on the balance as of that moment — a business choice
+already taken rather than a concession to the mechanism.
+
+### The carry has to move first
+
+Today the remainder lives on the default posted row: `daily-interest`
+takes `credit_carry` from the default bucket, and `set-carry` writes
+the new one back there. That is the only reason the accrual path
+touches the contended row at all, and it is what forces it through
+`apply-legs` — which then re-reads the account's policies and every
+balance it has, inside the posting transaction, to perform a
+read-modify-write the pass never needed.
+
+So `credit_carry` moves to the interest-accrued row, where the rest of
+the accrual state already sits. Every `Balance` carries the field
+already, so this is not a schema change — only a change of which row
+is read from and written to.
+
+Remainders currently held on default rows are discarded rather than
+migrated. They are sub-unit amounts and nothing is live, so the cost
+is a rounding error on a system with no customers.
+
+### Accrual leaves the leg-posting path
+
+Writing the row directly means accrual no longer goes through
+`balance/apply-legs`, and so is no longer policy-checked. That is
+intended rather than incidental: the accrued bucket is not spendable,
+and a limit on interest belongs at capitalisation, when the money
+becomes reachable. Capitalisation keeps its transaction and keeps
+going through `apply-legs`.
+
+What this removes from each account is the policy resolution, the scan
+of the account's balances, and the point read behind `set-carry` — and
+it collapses the two balance writes, one for the credit and one for
+the carry, into the single row write above.
 
 ## Why the rate is not denormalised onto the account
 
@@ -300,9 +395,23 @@ anything.
   index on `amount`.
 - `InterestRun`'s state enum loses `DISPATCHING` and `DISPATCHED` and
   gains `RUNNING`.
+- `credit_carry` moves from the default posted row to the
+  interest-accrued row, so the accrual pass reads and writes one row
+  and never the one payments contend on.
+- A balance bucket the pass expects and does not find becomes an
+  anomaly again. Reading an absent row as zero was introduced when the
+  per-account balance read was dropped, on the mistaken premise that
+  an account which has never accrued has no accrued row. It has one
+  from the moment it opens, so the zero reading masks exactly the
+  corruption worth catching.
+- `accrual-leg` stops carrying `product-type` for the case where the
+  posting has to open the bucket. Nothing opens a bucket on that path
+  any more.
 - `interest/core.clj` is rewritten around the pass: no
   `add-control-legs` and no `record-transaction` on the accrual path,
-  and a single aggregate posting at the end.
+  a single aggregate posting at the end, and the accrued row written
+  directly from the scan's frozen inputs rather than through
+  `apply-legs`.
 - Capitalisation drops its control legs and aggregates its ledger side
   the same way, keeping its per-account transaction.
 
@@ -328,12 +437,18 @@ record every other brick reads.
 3. **The aggregate ledger entry.** One posting per run off the SUM
    index. Between 2 and 3 the books do not balance, so they want
    landing together even if written apart.
-4. **The pass.** Swap the paged account scan and per-account balance
-   reads for `fdb/merge-scan`, chunked writes, and a preloaded rate
-   map so the inner loop does no reads.
-5. **Capitalisation.** The same treatment for its ledger side, keeping
+4. **The merged scan.** Swap the paged account scan and the
+   per-account balance read for `fdb/merge-scan`, so each account
+   arrives with its balances attached.
+5. **The frozen write.** Move `credit_carry` to the interest-accrued
+   row and write that row directly from the scan's frozen inputs
+   instead of through `apply-legs`, then chunk the writes and preload
+   the rate map. This is what step 4 was for: pairing the scans buys
+   nothing while the write path re-reads what the scan already
+   delivered.
+6. **Capitalisation.** The same treatment for its ledger side, keeping
    its per-account transaction.
-6. **The `Balance` primary key.** Now only about not scanning other
+7. **The `Balance` primary key.** Now only about not scanning other
    banks' rows.
 
 Outside the order and blocking none of it: whether a reporting cut
@@ -379,6 +494,18 @@ would bring back a snapshot artefact.
   rebuild happens twice.
 - **The retention number is still unpicked.** Bounded now, but nobody
   has chosen how many days of closed-run rows to keep.
+- **The carry is not recognised in the ledger, deliberately.** A
+  remainder averages half a minor unit per account, so a million
+  accounts hold roughly £5,000 the books do not show. The books still
+  balance — the customer accrued buckets and the 2400 control both
+  carry whole units only — so this is an unrecognised obligation
+  rather than a break, and at that size it is a rounding error. It is
+  also not a flow: a carry replaces its predecessor rather than
+  accumulating, so recognising it would mean a true-up on the change
+  in aggregate carry, netted against the accrual in the same run to
+  avoid counting a rolled-over unit twice. Not worth the netting bugs
+  unless a reporting cut that has to foot is required, in which case
+  it belongs with that.
 - **The pass is single-writer per bank.** Two concurrent passes for one
   bank would both read the same balances; `check-daily-count` makes
   that a rejection rather than a race, but it is a limit rather than a
@@ -402,6 +529,24 @@ would bring back a snapshot artefact.
   `daily-interest` can return `whole-units 0` with a carry, which is a
   real result and not an absence. The pass has to write the carry in
   that case and record the row, not skip the account.
+- **Interest accrues on available, and available is a computation.**
+  It spans the posted bucket and the pending-outgoing reservation
+  against it, and excludes pending-incoming — so it cannot be read off
+  a single row, and a pass holding only the posted bucket will quietly
+  pay interest on money the customer has already committed.
+- **A balance bucket the product declares is an invariant, not a case
+  to handle.** `balance-products` on the product version decides which
+  buckets an account opens with, and the three customer product types
+  the pass admits all declare an interest-accrued posted bucket. Code
+  that reads an absent bucket as zero, or opens one on the posting
+  path, is covering for a corruption rather than a real state.
+- **Which row a batch writes decides whether it can write unread.** A
+  value frozen in an earlier transaction is safe to write back only
+  where nothing else writes that row. The accrued bucket has two
+  writers, both in `interest`, so it qualifies; the default bucket has
+  every payment, so it does not. Read the writers before deciding, not
+  the readers — this is why the carry has to move rows before the
+  write path can be simplified.
 - **An exclusive scan endpoint skips a whole prefix, not one record.**
   `TupleRange.toRange` puts it through `ByteArrayUtil.strinc`. Any store
   paged on a cursor element that is not unique — balances under a bank,
