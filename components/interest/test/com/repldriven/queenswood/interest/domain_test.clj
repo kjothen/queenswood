@@ -49,41 +49,28 @@
       (is (= 100000 (:carry r))))))
 
 (deftest idempotency-keys-test
-  (testing "accrual key composes account-id + as-of-date deterministically"
-    (is (= "accrue-acc-1-20260501"
-           (SUT/accrual-idempotency-key "acc-1" 20260501)))
-    (is (= (SUT/accrual-idempotency-key "acc-1" 20260501)
-           (SUT/accrual-idempotency-key "acc-1" 20260501))))
-  (testing "capitalisation key composes the same way under a different prefix"
+  (testing "capitalisation key composes account-id + as-of-date"
     (is (= "capitalize-acc-1-20260501"
-           (SUT/capitalization-idempotency-key "acc-1" 20260501))))
-  (testing "accrual and capitalisation keys never collide for same args"
-    (is (not= (SUT/accrual-idempotency-key "acc-1" 20260501)
-              (SUT/capitalization-idempotency-key "acc-1" 20260501)))))
+           (SUT/capitalization-idempotency-key "acc-1" 20260501)))
+    (is (= (SUT/capitalization-idempotency-key "acc-1" 20260501)
+           (SUT/capitalization-idempotency-key "acc-1" 20260501)))))
 
-(deftest accrual-transaction-test
-  (testing "zero whole-units returns nil — no transaction posted"
-    (is (nil? (SUT/accrual-transaction "iface-5100" "cust" "GBP" 0 20260501))))
-  (testing "positive whole-units builds a 2-leg accrual"
-    (let [tx (SUT/accrual-transaction "iface-5100" "cust" "GBP" 75 20260501)]
-      (is (= "accrue-cust-20260501" (:idempotency-key tx)))
-      (is (= :transaction-type-interest-accrual (:transaction-type tx)))
-      (is (= "GBP" (:currency tx)))
-      (is (= 2 (count (:legs tx))))
-      (testing "interest-expense (GL 5100) debit on default / posted"
-        (let [debit (first (:legs tx))]
-          (is (= "iface-5100" (:account-id debit)))
-          (is (= :balance-type-default (:balance-type debit)))
-          (is (= :balance-status-posted (:balance-status debit)))
-          (is (= :leg-side-debit (:side debit)))
-          (is (= 75 (:amount debit)))))
-      (testing "customer credit on interest-accrued / posted (fans to 2400)"
-        (let [credit (second (:legs tx))]
-          (is (= "cust" (:account-id credit)))
-          (is (= :balance-type-interest-accrued (:balance-type credit)))
-          (is (= :balance-status-posted (:balance-status credit)))
-          (is (= :leg-side-credit (:side credit)))
-          (is (= 75 (:amount credit))))))))
+(deftest accrual-leg-test
+  (testing "one credit to the customer's accrued bucket, and nothing else"
+    (let [leg (SUT/accrual-leg "cust" :product-type-sub-ledger-savings
+                               "GBP" 75)]
+      (is (= "cust" (:account-id leg)))
+      (is (= :balance-type-interest-accrued (:balance-type leg)))
+      (is (= :balance-status-posted (:balance-status leg)))
+      (is (= :leg-side-credit (:side leg)))
+      (is (= 75 (:amount leg)))))
+  (testing "carries what opening the bucket would need"
+    ;; A bucket that doesn't exist yet is opened by the posting, and
+    ;; `new-zero-balance` reads product-type and currency off the leg.
+    (let [leg (SUT/accrual-leg "cust" :product-type-sub-ledger-savings
+                               "GBP" 75)]
+      (is (= :product-type-sub-ledger-savings (:product-type leg)))
+      (is (= "GBP" (:currency leg))))))
 
 (deftest capitalization-transaction-test
   (testing "zero accrued returns nil — no transaction posted"
@@ -163,30 +150,57 @@
                                                     5}})))))
 
 (deftest new-interest-run-test
-  (testing "builds a run record carrying org, business-day, kind and state"
-    (let [run (SUT/new-interest-run "org.1" 20260501
-                                    :interest-run-kind-accrue
-                                    :interest-run-state-closed)]
+  (testing "a new run carries org, business-day and kind, and starts running"
+    (let [run (SUT/new-interest-run "org.1" 20260501 :interest-run-kind-accrue)]
       (is (= "org.1" (:bank-id run)))
       (is (= 20260501 (:business-day run)))
       (is (= :interest-run-kind-accrue (:kind run)))
+      (is (= :interest-run-state-running (:state run)))
+      (is (number? (:created-at run)))
+      (is (nil? (:closed-at run)))))
+  (testing "closing stamps the state and the time"
+    (let [run
+          (SUT/close-interest-run
+           (SUT/new-interest-run "org.1" 20260501 :interest-run-kind-accrue))]
       (is (= :interest-run-state-closed (:state run)))
-      (is (number? (:created-at run))))))
+      (is (number? (:closed-at run))))))
 
 (deftest account-run-lifecycle-test
   (testing "a new account row starts pending"
-    (let [row (SUT/new-account-run "org.1" 20260501
-                                   :interest-account-run-kind-accrue "acc.1")]
+    (let [row (SUT/new-account-run "org.1"
+                                   20260501 :interest-account-run-kind-accrue
+                                   "acc.1" "GBP")]
       (is (SUT/pending? row))
       (is (= "acc.1" (:account-id row)))
       (is (number? (:created-at row)))))
   (testing "done and failed both leave pending, and failed keeps a reason"
-    (let [row (SUT/new-account-run "org.1" 20260501
-                                   :interest-account-run-kind-accrue "acc.1")
-          done (SUT/account-run-done row)
+    (let [row (SUT/new-account-run "org.1"
+                                   20260501 :interest-account-run-kind-accrue
+                                   "acc.1" "GBP")
+          done (SUT/account-run-done row {:amount 7 :input-balance 100000})
           failed (SUT/account-run-failed row :interest/boom)]
       (is (not (SUT/pending? done)))
       (is (= :interest-account-run-state-done (:state done)))
       (is (not (SUT/pending? failed)))
       (is (= :interest-account-run-state-failed (:state failed)))
-      (is (= ":interest/boom" (:failure-reason failed))))))
+      (is (= ":interest/boom" (:failure-reason failed)))))
+  (testing "a done row carries what was earned and what it came from"
+    (let [row (SUT/new-account-run "org.1"
+                                   20260501 :interest-account-run-kind-accrue
+                                   "acc.1" "GBP")
+          done (SUT/account-run-done
+                row
+                {:amount 7 :input-balance 100000 :input-carry 12345})]
+      (is (= 7 (:amount done)))
+      (is (= 100000 (:input-balance done)))
+      (is (= 12345 (:input-carry done)))))
+  (testing
+    "absent inputs stay absent, since an optional proto scalar
+            wants the key gone rather than nil"
+    (let [row (SUT/new-account-run "org.1"
+                                   20260501 :interest-account-run-kind-accrue
+                                   "acc.1" "GBP")
+          done (SUT/account-run-done row {:amount 0})]
+      (is (= 0 (:amount done)))
+      (is (not (contains? done :input-balance)))
+      (is (not (contains? done :input-carry))))))

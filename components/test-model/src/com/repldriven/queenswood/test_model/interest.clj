@@ -28,9 +28,11 @@
 
 (defn- accrue-account
   [state customer-acct]
-  ;; Post-CoA: the bank-side leg lands on GL 2400 Interest payable,
-  ;; not on the settlement-style tracked account. So the settlement
-  ;; available and leg count stay untouched here.
+  ;; Accrual is silent: it credits the customer's interest-accrued
+  ;; bucket and carries the remainder, and writes no transaction at
+  ;; all. The bank's side is one ledger entry for the whole run, which
+  ;; lands on GL accounts the rig doesn't track. So no leg count moves
+  ;; here, on the customer or on settlement.
   (let [account (get-in state [:accounts customer-acct])
         product-id (:product account)
         rate (get-in state [:products product-id :interest-rate-bps] 0)
@@ -48,9 +50,7 @@
            (update-in [:accounts customer-acct :interest-accrued]
                       (fnil + 0)
                       whole-units)
-           (assoc-in [:accounts customer-acct :credit-carry] carry)
-           (update-in [:accounts customer-acct :transaction-legs]
-                      (fnil inc 0)))))))
+           (assoc-in [:accounts customer-acct :credit-carry] carry))))))
 
 (defn- accrue-org
   [state bank-id]

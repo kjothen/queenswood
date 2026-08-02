@@ -50,7 +50,15 @@
         legs))
 
 (defn- accrue-account
-  [config txn interest-expense-id account as-of-date]
+  "One account's share of the day's interest, posted silently: the
+  customer's interest-accrued bucket is credited and the sub-unit
+  remainder carried, with no transaction record and no ledger leg.
+
+  Accrual is not a statement line — what a customer sees is
+  capitalisation — so the per-account transaction bought nothing and
+  cost the two GL rows every accrual in the bank had to read and write.
+  The bank's side is posted once for the run."
+  [config txn account _as-of-date]
   (let [{:keys [bank-id account-id currency product-type]} account]
     (let-nom>
       [version (get-product-version config bank-id account)
@@ -62,38 +70,29 @@
                                            :balance-status-posted)
        {:keys [whole-units carry]} (domain/daily-interest balance
                                                           interest-rate-bps)
-       ;; Guard the save on transaction VALUE, not on whole-units:
-       ;; daily-interest can return a map with :whole-units 0 (carry
-       ;; only), and 0 is truthy. accrual-transaction returns nil in
-       ;; that case. Mirror in capitalize-account.
-       transaction (when whole-units
-                     (domain/accrual-transaction interest-expense-id
-                                                 account-id
-                                                 currency
-                                                 whole-units
-                                                 as-of-date))
-       _ (when transaction
-           (let-nom>
-             [expanded-legs (ledger-accounts/add-control-legs
-                             txn
-                             bank-id
-                             (tag-customer-legs (:legs transaction)
-                                                account-id
-                                                product-type))
-              transaction+legs (transactions/record-transaction
-                                txn
-                                (assoc transaction :legs expanded-legs))
-              _ (balances/apply-legs txn
-                                     (:legs transaction+legs)
-                                     (:transaction-type transaction+legs))]))
+       ;; Guard on the VALUE, not on whole-units being present:
+       ;; daily-interest can return :whole-units 0 with a carry, and 0
+       ;; is truthy. A zero accrual still records its row.
+       _ (when (and whole-units (not (zero? whole-units)))
+           (balances/apply-legs txn
+                                [(domain/accrual-leg account-id
+                                                     product-type
+                                                     currency
+                                                     whole-units)]
+                                :transaction-type-interest-accrual))
        _ (when carry
            (balances/set-carry txn
                                account-id
                                :balance-type-default currency
-                               :balance-status-posted carry))])))
+                               :balance-status-posted carry))]
+      ;; What the row records. The balance alone would not reproduce
+      ;; the amount — the carry feeds the same calculation.
+      {:amount (or whole-units 0)
+       :input-balance (domain/net-balance balance)
+       :input-carry (:credit-carry balance)})))
 
 (defn- capitalize-account
-  [_config txn _interest-expense-id account as-of-date]
+  [_config txn account as-of-date]
   (let [{:keys [bank-id account-id currency product-type]} account]
     (let-nom>
       [balance (balances-query/get-balance txn
@@ -118,7 +117,11 @@
                                 (assoc transaction :legs expanded-legs))
               _ (balances/apply-legs txn
                                      (:legs transaction+legs)
-                                     (:transaction-type transaction+legs))]))])))
+                                     (:transaction-type transaction+legs))]))]
+      ;; Capitalisation sweeps whatever accrued, so the amount and the
+      ;; input are the same figure.
+      (let [accrued (domain/net-balance balance)]
+        {:amount accrued :input-balance accrued}))))
 
 (defn- get-interest-expense-account
   [config bank-id]
@@ -127,14 +130,58 @@
                                              :gl-account-code-interest-expense)]
     (when-not (error/anomaly? result) result)))
 
+(defn- post-run-entry
+  "The bank's ledger entry for one currency of an accrual run, posted
+  once at close. The total comes off the SUM index rather than a tally
+  the pass kept, because a resumed run only posts what it processed
+  itself while the index covers every row whichever attempt wrote it.
+
+  `record-and-post` reads back on a duplicate idempotency key, so
+  reaching close twice posts once."
+  [config ctx interest-expense-id currency]
+  (let [{:keys [bank-id business-day account-kind]} ctx]
+    (store/transact
+     config
+     (fn [txn]
+       (let-nom>
+         [total (store/sum-account-run-amounts txn
+                                               bank-id
+                                               business-day
+                                               account-kind
+                                               currency)
+          payable (ledger-accounts/find-by-code
+                   txn
+                   bank-id
+                   :gl-account-code-interest-payable)
+          transaction (domain/accrual-run-transaction
+                       interest-expense-id
+                       (:ledger-account-id payable)
+                       bank-id
+                       currency
+                       total
+                       business-day)
+          _ (when transaction
+              (transactions/record-and-post txn transaction))])))))
+
+(defn- post-run-entries
+  [config ctx interest-expense-id currencies]
+  (reduce (fn [_ currency]
+            (let [result (post-run-entry config
+                                         ctx
+                                         interest-expense-id
+                                         currency)]
+              (if (error/anomaly? result) (reduced result) nil)))
+          nil
+          currencies))
+
 (defn- process-account
   "Row lifecycle around one account's posting. Skips an account a prior
   attempt already finished, otherwise posts and flips the row to DONE in
   the same transaction, so the work and the record of the work commit
   together. Returns :done, :skipped, or an anomaly."
-  [config {:keys [bank-id business-day account-kind]} f interest-expense-id
-   account]
-  (let [account-id (:account-id account)]
+  [config ctx f account]
+  (let [{:keys [bank-id business-day account-kind]} ctx
+        account-id (:account-id account)]
     (store/transact
      config
      (fn [txn]
@@ -145,7 +192,7 @@
                                          account-id)]
          (if (and row (not (domain/pending? row)))
            :skipped
-           (let-nom> [_ (f config txn interest-expense-id account business-day)
+           (let-nom> [result (f config txn account business-day)
                       _
                       (store/save-account-run txn
                                               (domain/account-run-done
@@ -154,57 +201,70 @@
                                                     bank-id
                                                     business-day
                                                     account-kind
-                                                    account-id))))]
+                                                    account-id
+                                                    (:currency account)))
+                                               result))]
              :done)))))))
 
 (defn- mark-account-failed
   "Records a failed account in its own transaction — the posting's
   transaction has already rolled back, taking any DONE flip with it."
-  [config {:keys [bank-id business-day account-kind]} account-id anomaly]
-  (store/transact config
-                  (fn [txn]
-                    (let [row (or (store/load-account-run txn
-                                                          bank-id
-                                                          business-day
-                                                          account-kind
-                                                          account-id)
-                                  (domain/new-account-run bank-id
-                                                          business-day
-                                                          account-kind
-                                                          account-id))]
-                      (store/save-account-run txn
-                                              (domain/account-run-failed
-                                               row
-                                               (error/kind anomaly)))))))
+  [config ctx account anomaly]
+  (let [{:keys [bank-id business-day account-kind]} ctx
+        account-id (:account-id account)]
+    (store/transact config
+                    (fn [txn]
+                      (let [row (or (store/load-account-run txn
+                                                            bank-id
+                                                            business-day
+                                                            account-kind
+                                                            account-id)
+                                    (domain/new-account-run
+                                     bank-id
+                                     business-day
+                                     account-kind
+                                     account-id
+                                     (:currency account)))]
+                        (store/save-account-run txn
+                                                (domain/account-run-failed
+                                                 row
+                                                 (error/kind anomaly))))))))
 
 (defn- enumerate-page
   "Writes PENDING rows for a page of accounts in one transaction. Reads
   before writing: a resumed run must not knock a finished account back
   to PENDING."
-  [config {:keys [bank-id business-day account-kind]} accounts]
-  (store/transact config
-                  (fn [txn]
-                    (doseq [{:keys [account-id]} accounts]
-                      (when-not (store/load-account-run txn
-                                                        bank-id
-                                                        business-day
-                                                        account-kind
-                                                        account-id)
-                        (store/save-account-run txn
-                                                (domain/new-account-run
-                                                 bank-id
-                                                 business-day
-                                                 account-kind
-                                                 account-id)))))))
+  [config ctx accounts]
+  (let [{:keys [bank-id business-day account-kind]} ctx]
+    (store/transact
+     config
+     (fn [txn]
+       (doseq [{:keys [account-id currency]} accounts]
+         (when-not (store/load-account-run txn
+                                           bank-id
+                                           business-day
+                                           account-kind
+                                           account-id)
+           (store/save-account-run txn
+                                   (domain/new-account-run bank-id
+                                                           business-day
+                                                           account-kind
+                                                           account-id
+                                                           currency))))))))
 
 (defn- process-customer-accounts
   "Pages the bank's customer accounts, recording scope as it goes and
   posting each account. A failing account is marked FAILED and
   enumeration continues — aborting would strand every later account as
   PENDING and the run would never close."
-  [config ctx interest-expense-id f]
+  [config ctx f]
   (loop [cursor nil
-         tally {:done 0 :skipped 0 :failed 0}]
+         ;; `:currencies` is every currency in scope, gathered as the
+         ;; pass enumerates. It is complete even on a resumed run,
+         ;; because enumeration visits every account each time and only
+         ;; the posting is skipped — so the ledger entries at close
+         ;; cover currencies an earlier attempt already accrued.
+         tally {:done 0 :skipped 0 :failed 0 :currencies #{}}]
     (let [page (cash-accounts/get-accounts config
                                            (:bank-id ctx)
                                            (when cursor {:after cursor}))]
@@ -219,12 +279,15 @@
                             (let [result (process-account config
                                                           ctx
                                                           f
-                                                          interest-expense-id
-                                                          account)]
+                                                          account)
+                                  tally (update tally
+                                                :currencies
+                                                conj
+                                                (:currency account))]
                               (if (error/anomaly? result)
                                 (do (mark-account-failed config
                                                          ctx
-                                                         (:account-id account)
+                                                         account
                                                          result)
                                     (update tally :failed inc))
                                 (update tally result inc))))
@@ -241,47 +304,44 @@
   The InterestRun record is written only once enumeration has finished,
   so a crash part-way leaves no run record and the daily limit does not
   block the retry. The PENDING rows already written are what make that
-  retry a resumption rather than a restart. It is saved CLOSED when no
-  row is left pending and DISPATCHED when some failed, so a run with a
-  residue is distinguishable from a clean one.
+  retry a resumption rather than a restart. A run that finished with
+  failures still closes; its residue is the count of FAILED rows, which
+  `run-progress` reports.
 
   Each account is its own short FDB transaction — no long transaction
-  is held across the run."
-  [config data {:keys [policy-kind run-kind account-fn] :as ctx}]
-  (let [{:keys [bank-id as-of-date]} data
-        ctx (assoc ctx
+  is held across the run. An accrual run then posts the bank's side
+  once per currency, which is the other half of a double entry the
+  per-account postings deliberately leave open."
+  [config data spec]
+  (let [{:keys [policy-kind run-kind account-fn run-entry?]} spec
+        {:keys [bank-id as-of-date]} data
+        ctx (assoc spec
                    :bank-id bank-id
                    :business-day as-of-date)]
     (if-let [interest-expense (get-interest-expense-account config bank-id)]
       (let-nom>
         [policies (policy/get-effective-policies config {:bank-id bank-id})
-         today-count
-         (store/count-by-org-business-day-per-kind config
-                                                   bank-id
-                                                   run-kind
-                                                   as-of-date)
-         aggregates
-         {policy-kind {#{:bank-id :business-day} today-count}}
-         _
-         (domain/check-daily-count policies policy-kind aggregates)
-         tally
-         (process-customer-accounts config
-                                    ctx
-                                    (:ledger-account-id interest-expense)
-                                    account-fn)
-         state
-         (if (pos? (:failed tally))
-           :interest-run-state-dispatched
-           :interest-run-state-closed)
-         _
-         (store/save-run
-          config
-          (domain/new-interest-run bank-id as-of-date run-kind state))]
+         today-count (store/count-by-org-business-day-per-kind config
+                                                               bank-id
+                                                               run-kind
+                                                               as-of-date)
+         aggregates {policy-kind {#{:bank-id :business-day} today-count}}
+         _ (domain/check-daily-count policies policy-kind aggregates)
+         tally (process-customer-accounts config ctx account-fn)
+         _ (when run-entry?
+             (post-run-entries config
+                               ctx
+                               (:ledger-account-id interest-expense)
+                               (:currencies tally)))
+         run (domain/close-interest-run (domain/new-interest-run bank-id
+                                                                 as-of-date
+                                                                 run-kind))
+         _ (store/save-run config run)]
         {:bank-id bank-id
          :as-of-date as-of-date
          :accounts-processed (+ (:done tally) (:skipped tally))
          :accounts-failed (:failed tally)
-         :run-state state})
+         :run-state (:state run)})
       (error/reject :interest/no-interest-expense-account
                     {:message (str "Bank has no 5100 interest-expense account"
                                    " in its chart of accounts")
@@ -291,7 +351,11 @@
   {:policy-kind :accrual
    :run-kind :interest-run-kind-accrue
    :account-kind :interest-account-run-kind-accrue
-   :account-fn accrue-account})
+   :account-fn accrue-account
+   ;; Only accrual leaves its ledger side to the run. Capitalisation
+   ;; still posts a transaction per account, because that one is the
+   ;; customer's statement line.
+   :run-entry? true})
 
 (def ^:private capitalization
   {:policy-kind :capitalize

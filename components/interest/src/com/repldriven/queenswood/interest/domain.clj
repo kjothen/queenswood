@@ -22,11 +22,14 @@
     :value (inc (get-in aggregates [kind #{:bank-id :business-day}]))}))
 
 (defn new-interest-run
-  [bank-id business-day kind state]
+  "A run starts RUNNING. There is no state for a run that finished with
+  failures — it closes like any other, and the residue is the count of
+  FAILED rows."
+  [bank-id business-day kind]
   {:bank-id bank-id
    :business-day business-day
    :kind kind
-   :state state
+   :state :interest-run-state-running
    :created-at (utility/now)})
 
 (defn close-interest-run
@@ -36,19 +39,27 @@
          :closed-at (utility/now)))
 
 (defn new-account-run
-  [bank-id business-day kind account-id]
+  [bank-id business-day kind account-id currency]
   {:bank-id bank-id
    :business-day business-day
    :kind kind
    :account-id account-id
+   :currency currency
    :state :interest-account-run-state-pending
    :created-at (utility/now)})
 
 (defn account-run-done
-  [account-run]
-  (assoc account-run
-         :state :interest-account-run-state-done
-         :updated-at (utility/now)))
+  "Marks the row done and records what the account earned and what it
+  was computed from. `result` carries `:amount`, `:input-balance` and
+  `:input-carry`; each is omitted when absent rather than written as
+  nil, since an optional proto scalar wants the key gone."
+  [account-run result]
+  (-> account-run
+      (assoc :state :interest-account-run-state-done
+             :updated-at (utility/now))
+      (utility/assoc-some :amount (:amount result))
+      (utility/assoc-some :input-balance (:input-balance result))
+      (utility/assoc-some :input-carry (:input-carry result))))
 
 (defn account-run-failed
   "Marks the row failed so enumeration can move past it. `reason` is the
@@ -63,7 +74,9 @@
   [account-run]
   (= :interest-account-run-state-pending (:state account-run)))
 
-(defn- net-balance
+(defn net-balance
+  "Credit-positive total of a balance bucket. Public because the run
+  records the figure it computed from, not just the result."
   [balance]
   (- (:credit balance 0) (:debit balance 0)))
 
@@ -81,25 +94,40 @@
             new-carry (rem daily-micro micro-scale)]
         {:whole-units whole-units :carry new-carry}))))
 
-(defn accrual-idempotency-key
-  [account-id as-of-date]
-  (str "accrue-" account-id "-" as-of-date))
+(defn accrual-leg
+  "The customer's side of a day's accrual: a credit to the
+  interest-accrued bucket.
 
-(defn capitalization-idempotency-key
-  [account-id as-of-date]
-  (str "capitalize-" account-id "-" as-of-date))
+  There is no matching debit and no control leg. The bank's side is
+  posted once for the whole run, because a per-account double entry
+  makes every accrual in the bank read and write the same two GL
+  balance rows — 5100 and the 2400 control — and they then contend with
+  each other whatever else is done to spread them out.
 
-(defn accrual-transaction
-  "Daily accrual double-entry: DR 5100 Interest expense / CR the
-  customer's interest-accrued bucket. The expense leg posts directly
-  (5100 is a detail GL account); the customer leg fans out to the 2400
-  Interest payable control. Both legs carry the same `whole-units`."
-  [interest-expense-id account-id currency whole-units
+  Carries `product-type` and `currency` for the case where the bucket
+  does not exist yet and the posting has to open it."
+  [account-id product-type currency whole-units]
+  {:account-id account-id
+   :product-type product-type
+   :balance-type :balance-type-interest-accrued
+   :balance-status :balance-status-posted
+   :side :leg-side-credit
+   :amount whole-units
+   :currency currency})
+
+(defn accrual-run-transaction
+  "The bank's side of an accrual run, posted once per currency: DR
+  interest expense, CR the interest-payable control, for everything the
+  run accrued. This is what the per-account double entry used to do a
+  million times over the same two rows.
+
+  Both legs name GL accounts directly, so neither fans out to a
+  control. The idempotency key is the run's identity, so a retry that
+  reaches close twice posts once."
+  [interest-expense-id interest-payable-id bank-id currency total
    as-of-date]
-  (when-not (zero? whole-units)
-    {:idempotency-key (accrual-idempotency-key
-                       account-id
-                       as-of-date)
+  (when-not (zero? total)
+    {:idempotency-key (str "accrue-run-" bank-id "-" as-of-date "-" currency)
      :transaction-type :transaction-type-interest-accrual
      :currency currency
      :reference (str "Daily interest accrual "
@@ -108,12 +136,18 @@
              :balance-type :balance-type-default
              :balance-status :balance-status-posted
              :side :leg-side-debit
-             :amount whole-units}
-            {:account-id account-id
-             :balance-type :balance-type-interest-accrued
+             :amount total
+             :currency currency}
+            {:account-id interest-payable-id
+             :balance-type :balance-type-default
              :balance-status :balance-status-posted
              :side :leg-side-credit
-             :amount whole-units}]}))
+             :amount total
+             :currency currency}]}))
+
+(defn capitalization-idempotency-key
+  [account-id as-of-date]
+  (str "capitalize-" account-id "-" as-of-date))
 
 (defn capitalization-transaction
   "Capitalisation double-entry: DR the customer's interest-accrued

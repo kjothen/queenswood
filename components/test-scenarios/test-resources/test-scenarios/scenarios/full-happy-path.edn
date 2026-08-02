@@ -94,9 +94,10 @@
   ;; Daily interest on savings at 3650 bps:
   ;;   Arthur sav  75_000 → 75 pence accrued
   ;;   Ford   sav  35_000 → 35 pence accrued
-  ;; Both land in customer.interest-accrued. The bank-side leg
-  ;; lands on GL 2400 Interest payable (untracked by the rig);
-  ;; the tracked settlement account (acct-0) stays at 4_800_000.
+  ;; Both land in customer.interest-accrued, with no transaction
+  ;; written per account. The bank side is one entry for the whole
+  ;; run — DR 5100 / CR 2400, both untracked by the rig — so the
+  ;; tracked settlement account (acct-0) stays at 4_800_000.
   {:command :accrue-interest :args [:bank-0 20260501]}
   {:command :assert-balance :args [:acct-0 4800000]}
   ;; Capitalisation: 6 legs per customer (interest-paid debit +

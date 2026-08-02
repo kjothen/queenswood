@@ -87,6 +87,12 @@ interest-account-runs:
     - name: InterestAccountRun_count_by_bank_day_kind_state
       fields: [bank_id, business_day, kind, state]
       type: count
+    # The run's total per currency, for the ledger entries posted at
+    # close. Grouped by currency because one entry per currency is the
+    # only way the pair of legs can balance.
+    - name: InterestAccountRun_sum_amount_by_bank_day_kind_currency
+      fields: [bank_id, business_day, kind, currency, amount]
+      type: sum
 memberships:
   record-type: Membership
   indexes:

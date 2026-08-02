@@ -53,6 +53,9 @@
 
   Returns `{:scope :done :failed :pending :run-state}` or an anomaly.
   `:run-state` is nil until the run record is written, which happens
-  once enumeration finishes."
+  once enumeration finishes.
+
+  Counts only. What a run accrued is per currency, and the ledger
+  entries it posts at close are where that figure is auditable."
   [config bank-id as-of-date kind]
   (core/run-progress config bank-id as-of-date kind))

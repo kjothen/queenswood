@@ -23,6 +23,22 @@
   [txn data]
   (core/record txn data))
 
+(defn record-and-post
+  "Record a transaction with its legs and apply them to balances in one
+  FDB transaction. On a uniqueness violation — the same
+  `idempotency-key` recorded before — reads the existing transaction
+  back and returns it rather than rejecting, so a retried post is a
+  no-op instead of a failure.
+
+  Args:
+  - txn: FDB handle or open transaction.
+  - data: transaction data (idempotency-key, transaction-type,
+    currency, reference, legs).
+
+  Returns the transaction map with `:legs` or an anomaly."
+  [txn data]
+  (core/record-and-post txn data))
+
 (defn get-transactions
   "List transaction legs for an account, enriched with the parent
   transaction's type, status, and reference.

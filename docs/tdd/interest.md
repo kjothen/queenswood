@@ -80,12 +80,13 @@ discipline from
 
 ```mermaid
 graph LR
-    CMD["accrue-daily / capitalize-monthly<br/>(per organisation)"]
+    CMD["accrue-day / capitalize-accrued<br/>(per organisation)"]
     PROC[Per-account loop]
     READ["read balance + rate"]
     CALC["daily-interest math<br/>(or capitalise)"]
-    POST["record-transaction +<br/>apply-legs + set-carry"]
+    POST["apply-legs + set-carry<br/>+ flip the run row"]
     FDB[("FDB<br/>one transaction per account")]
+    ENTRY["one ledger entry per currency<br/>DR 5100 / CR 2400"]
 
     CMD --> PROC
     PROC --> READ
@@ -93,6 +94,8 @@ graph LR
     CALC --> POST
     POST --> FDB
     PROC -.->|"paginate next account"| READ
+    PROC -->|"at close"| ENTRY
+    ENTRY --> FDB
 ```
 
 A single `accrue-daily` run for one organisation might commit
@@ -161,25 +164,50 @@ not a math constraint** — see "Capitalisation cadence" below.
 
 ### Daily accrual posting
 
-When `whole-units > 0`, the day's accrual is a
-**two-leg transaction**:
+Accrual is silent. When `whole-units > 0` it credits the
+customer's interest-accrued bucket with a single leg and
+records nothing else — no transaction, no ledger leg:
 
 ```
-DEBIT  settlement-account  interest-payable / posted   amount
 CREDIT customer-account    interest-accrued / posted   amount
 ```
 
-The bank's settlement account records the liability owed to
-customers; the customer's interest-accrued bucket grows by
-the same amount.
-
 The customer's `:credit-carry` is then updated independently
 via `set-carry` — carry isn't a leg event, it's a bookkeeping
-field on the balance.
+field on the balance. When `whole-units = 0` the whole day's
+interest stays in carry and only that update happens.
 
-When `whole-units = 0` (the entire day's interest stays in
-carry), no transaction is recorded; only the carry update.
-This keeps the leg log free of zero-value postings.
+There is no per-account transaction because accrual is not a
+statement line: what a customer sees is capitalisation. The
+per-account double entry cost far more than it bought, since
+every accrual in the bank read and wrote the same two ledger
+rows — 5100 and the 2400 control — and so contended with every
+other accrual regardless of account.
+
+### The run's ledger entry
+
+The bank's side is posted once, at the end of the run, per
+currency:
+
+```
+DEBIT  5100 interest expense           run total
+CREDIT 2400 interest payable control   run total
+```
+
+The total comes off the `InterestAccountRun` SUM index rather
+than a tally the pass kept in memory, because a resumed run
+only processes the accounts still pending while the index
+covers every row whichever attempt wrote it. The entry is
+keyed on the run's identity, so reaching close twice posts
+once.
+
+One entry per currency, and necessarily so — a single entry
+for a bank holding pounds and euros could not balance. The
+index groups on currency for the same reason.
+
+Between the per-account credits and this entry the books do
+not balance. That window is one run, and it closes before the
+run record is written.
 
 ### Monthly capitalisation posting
 
@@ -283,15 +311,18 @@ and `:as-of-date`. They:
 4. Track count of accounts processed; short-circuit on the
    first anomaly.
 
-The `as-of-date` is part of the per-account idempotency key:
+Re-running a date is safe, by different means on each side.
 
-- Accrual: `accrue-<account-id>-<as-of-date>`
-- Capitalisation: `capitalize-<account-id>-<as-of-date>`
+Accrual has no transaction to key, so its guard is the
+`InterestAccountRun` row: a second pass finds the row already
+DONE and skips the posting. The row is written in the same FDB
+transaction as the balance update, so the work and the record
+of the work commit together and a crash cannot separate them.
 
-Re-running a date is safe — the second pass finds the
-existing accrual transactions via the idempotency key and
-skips or returns the prior outcome via the API-layer
-idempotency cache; see [idempotency.md](idempotency.md).
+Capitalisation still writes a transaction per account — that
+one is the customer's statement line — and keys it
+`capitalize-<account-id>-<as-of-date>`, so a repeat returns
+the prior outcome; see [idempotency.md](idempotency.md).
 
 ### Per-account atomicity, cross-account resumability
 
