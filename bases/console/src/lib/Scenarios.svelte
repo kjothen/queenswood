@@ -198,13 +198,13 @@
     {
       id: "s7", num: "08", title: "The bank runs itself overnight", view: "jobs",
       story:
-        "Force-start the seeded daily-interest job. The accrue → capitalise pipeline posts the six-leg interest entry per funded savings account — and it ties to the penny.",
+        "Force-start the seeded daily-interest job. The accrue → capitalise pipeline gives each funded savings account its statement line and posts the bank's own entry once for the run — and it ties to the penny.",
       backing: ["scheduler-force-start", "interest-accrual"],
       steps: [
         { name: "Force-start daily-interest job", tone: "exception", raw: [{ method: "POST", path: "/v1/jobs/{id}/runs", tag: "request" }] },
         { name: "Accrue interest", raw: [{ method: "GET", path: "/v1/jobs/{id}/runs/{run}", tag: "poll" }] },
         { name: "Capitalise interest", raw: [{ method: "GET", path: "/v1/jobs/{id}/runs/{run}", tag: "poll" }] },
-        { name: "Post six-leg entry per account", raw: [{ method: "GET", path: "/v1/ledger-accounts", tag: "request" }] },
+        { name: "Post the run's ledger entry", raw: [{ method: "GET", path: "/v1/ledger-accounts", tag: "request" }] },
         { name: "Interest ties to the penny", raw: [{ method: "GET", path: "/v1/ledger-accounts", tag: "request" }] },
       ],
     },
@@ -765,7 +765,7 @@
   {:else if s.id === "s7"}
     <div class="joblet">
       <TaskPipeline steps={[{ name: "accrue", status: "ok" }, { name: "capitalise", status: "ok" }]} />
-      <div class="jl-note">The daily-interest job posts a <span class="mono">six-leg</span> interest entry per funded savings account, accrued then capitalised in one run. See the run in <span class="mono">Jobs</span> and the postings in the <span class="mono">Ledger</span>.</div>
+      <div class="jl-note">The daily-interest job accrues silently, then capitalises — one statement line per funded savings account, and the bank's own entry posted once for the run rather than once per account. See the run in <span class="mono">Jobs</span> and the postings in the <span class="mono">Ledger</span>.</div>
     </div>
     <div class="tb-tie">{@render icoCheck()}<span>Interest posting ties to the penny.</span></div>
   {:else if s.id === "s8"}

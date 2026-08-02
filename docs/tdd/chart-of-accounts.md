@@ -356,13 +356,12 @@ The bucket model `(balance-type, balance-status, currency)`
 applies to every account; what differs by account class is
 *which* buckets are maintained.
 
-**Customer cash-accounts** carry the five-bucket layout:
+**Customer cash-accounts** carry a four-bucket layout:
 
 | Balance type        | Statuses                                         |
 |---------------------|--------------------------------------------------|
 | `default`           | `posted`, `pending-incoming`, `pending-outgoing` |
 | `interest-accrued`  | `posted`                                         |
-| `interest-paid`     | `posted`                                         |
 
 `available-balance` derives the customer-visible spendable
 amount by summing buckets per product type — see
@@ -379,13 +378,22 @@ sub-ledger's *default* movements only:
 |--------------|-----------------------------------------------------|
 | `default`    | `posted`, `pending-incoming`, `pending-outgoing`    |
 
-Only the `default` balance-type mirrors. Customer
-`interest-accrued` and `interest-paid` legs do *not*
-auto-pair to a control bucket — interest lives on dedicated
-GL accounts (2400) and the sub-ledger detail on the customer
+Only the `default` balance-type mirrors, and it no longer
+mirrors per leg. Customer `interest-accrued` legs do *not*
+auto-pair to a control bucket — interest lives on dedicated GL
+accounts (2400) and the sub-ledger detail on the customer
 side, with no third home on the control. This avoids
 double-counting interest as both `2100.interest-accrued` and
 `2400.default`.
+
+Interest's control movements are posted **in aggregate at the
+close of a run**, not fanned out per account. Accrual posts DR
+5100 / CR 2400 once per currency; capitalisation posts DR 2400
+/ CR the deposit control once per currency and product type.
+Per-account fan-out made every posting in the bank
+read-modify-write the same control rows, which is contention
+no account key can spread. See
+[interest.md](interest.md).
 
 **GL detail accounts** (1100, 1200, 2400, 2500) carry one
 bucket each:
@@ -549,19 +557,25 @@ transfer between two current-account customers) gets the full
 GL posting written transparently — the two paired control
 legs net against each other on 2100 and the GL balance check
 passes without any GL-only leg. A caller that *also* writes
-GL legs (an interest accrual posting, say) writes them in the
-same call; the pairing combines naturally — the customer
-leg's paired control leg is appended, the GL-only legs join
-it, and the full set is balance-checked.
+GL legs writes them in the same call; the pairing combines
+naturally — the customer leg's paired control leg is appended,
+the GL-only legs join it, and the full set is balance-checked.
+
+Interest is no longer such a caller. Neither of its passes
+asks for control legs: accrual writes a balance and no
+transaction at all, and capitalisation posts only its two
+customer legs. Both post the bank's side as a separate
+aggregate entry at the close of the run, against GL accounts
+that pair with nothing.
 
 The amount, currency, and balance-status on the control leg
 mirror the customer leg one-for-one — but only when the
 customer leg's `balance-type` is `default`. Status mirroring
 means a pending customer credit shows up as a pending
 control-account credit, never a posted one. Legs against
-`interest-accrued` or `interest-paid` on the customer side do
-*not* auto-pair to a control bucket — the bank's interest
-liability sits on GL 2400. See "Balance buckets per account
+`interest-accrued` on the customer side do *not* auto-pair to
+a control bucket — the bank's interest liability sits on GL
+2400. See "Balance buckets per account
 class" above for the per-class bucket map and the per-bucket
 invariant that falls out.
 

@@ -5,7 +5,6 @@
 (def ^:private balance-type-enum
   (coercion/enum-coercion {"default" :balance-type-default
                            "interest-accrued" :balance-type-interest-accrued
-                           "interest-paid" :balance-type-interest-paid
                            "purchase" :balance-type-purchase
                            "cash" :balance-type-cash
                            "suspense" :balance-type-suspense

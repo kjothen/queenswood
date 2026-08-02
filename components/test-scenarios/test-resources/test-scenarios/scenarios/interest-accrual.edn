@@ -5,13 +5,14 @@
  ;; account, funds it from settlement, then runs accrue and capitalise.
  ;; Both steps post real transactions:
  ;;
- ;;   accrual     debits  settlement.interest-payable
- ;;               credits customer.interest-accrued
+ ;;   accrual     credits customer.interest-accrued, and writes no
+ ;;               transaction at all. The bank's side is one entry
+ ;;               for the run: DR 5100 expense / CR 2400 payable.
  ;;
- ;;   capitalise  debits  settlement.default        \  pair: pays
- ;;               credits customer.interest-paid    /  the interest
- ;;               debits  customer.interest-accrued \  pair: clears
- ;;               credits settlement.interest-payable/  the accrual
+ ;;   capitalise  debits  customer.interest-accrued \  the statement
+ ;;               credits customer.default          /  line, 2 legs
+ ;;               and one entry per currency and product type at
+ ;;               close: DR 2400 payable / CR the deposit control.
  ;;
  ;; The customer's *available* balance — what `project-balances`
  ;; reads — covers `default` + `default-pending-*` only, so neither

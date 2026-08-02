@@ -267,16 +267,20 @@ sequenceDiagram
     Op->>Q: capitalise (tenant, date)
     loop for each customer account
         alt accrued > 0
-            Q->>L: drain accrued<br/>credit spendable balance<br/>clear bank's liability
+            Q->>L: drain accrued<br/>credit spendable balance
         end
     end
+    Q->>L: square the bank's own books<br/>once the accounts are done
     Q-->>Op: run summary
 ```
 
 At the chosen cadence, the operator triggers
 capitalisation. Accrued interest moves into the customer's
-spendable balance and the bank's matching liability
-clears.
+spendable balance, and each customer sees a statement line
+for what they were paid. The bank's own matching liability
+clears once at the end of the run rather than account by
+account, which is what keeps a run over millions of accounts
+from queueing behind itself.
 
 ### 3. End customer earns and is paid
 
@@ -364,9 +368,8 @@ version with a different rate.
 ## References
 
 - **Engineering view**: [tdd/interest](../tdd/interest.md)
-  for the integer-arithmetic carry mechanism, the two-leg
-  daily posting, the six-leg capitalisation posting, and
-  the per-account run pattern.
+  for the integer-arithmetic carry mechanism, how each side of
+  the bookkeeping is recorded, and the run pattern.
 - **Platform context**: [platform](platform.md);
   [onboarding](onboarding.md) — the tenant's settlement
   account is set up here;

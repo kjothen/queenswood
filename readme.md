@@ -102,9 +102,11 @@ doc that goes deep:
   fine-grained policies where you need it most.
   See [policy-evaluation](docs/tdd/policy-evaluation.md).
 - **Daily interest accrual, capitalisation and carry.** Integer
-  micro-unit arithmetic with sub-minor-unit carry; six-leg
-  postings at capitalisation; with cadence (daily, monthly, anything)
-  being your choice. See [interest](docs/tdd/interest.md).
+  micro-unit arithmetic with sub-minor-unit carry; a batch pass that
+  streams a bank's accounts with their balances and posts the ledger
+  once per run rather than once per account; with cadence (daily,
+  monthly, anything) being your choice.
+  See [interest](docs/tdd/interest.md).
 - **System-level and model-equality property testing**.
   Two parallel state machines, the real system and an independent model,
   fed the same commands, with end states compared.

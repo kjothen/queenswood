@@ -15,5 +15,3 @@ balance-products: !keywords
     balance-status: balance-status-pending-outgoing
   - balance-type: balance-type-interest-accrued
     balance-status: balance-status-posted
-  - balance-type: balance-type-interest-paid
-    balance-status: balance-status-posted

@@ -63,7 +63,7 @@
     { key: "tdd-interest", kicker: "TDD · interest",
       title: "Pennies are conserved by construction.",
       href: "https://github.com/repldriven/queenswood/blob/main/docs/tdd/interest.md",
-      body: "Integer micro-unit arithmetic with sub-minor-unit carry. Daily accrual, monthly capitalisation, six-leg postings — ties out exactly." },
+      body: "Integer micro-unit arithmetic with sub-minor-unit carry. Daily accrual, capitalisation at whatever cadence you choose, and one ledger entry per run rather than per account — ties out exactly." },
     { key: "tdd-scenario", kicker: "TDD · scenario-testing",
       title: "A pure model runs beside the real system.",
       href: "https://github.com/repldriven/queenswood/blob/main/docs/tdd/scenario-testing.md",
@@ -263,7 +263,7 @@
   // 06 · Jobs — the seeded daily-interest pipeline, run to completion.
   const DEMO_PIPELINE = [
     { name: "Accrue daily interest", status: "ok" },
-    { name: "Capitalise — six-leg entry", status: "ok" },
+    { name: "Capitalise — statement line per account", status: "ok" },
     { name: "Trial balance ties", status: "ok" },
   ];
 
@@ -690,12 +690,13 @@
         <h3>Runs itself <em>overnight.</em></h3>
         <p>
           A seeded daily job accrues interest with micro-unit precision, then
-          capitalises it as a six-leg entry per account — accrued, then paid,
-          and it ties to the penny. Operators set the cadence, or force a run.
+          capitalises it into the customer's spendable balance — one statement
+          line each, and it ties to the penny. Operators set the cadence, or
+          force a run.
         </p>
         <ul>
           <li>Micro-unit arithmetic · no floating point</li>
-          <li>Six-leg capitalisation that ties to the penny</li>
+          <li>The ledger posted once a run, not once an account</li>
           <li>Scheduled, or force-run on demand</li>
         </ul>
       </div>

@@ -14,11 +14,10 @@
  ;;   - Ford pays £25 outbound (scheme path)
  ;;   - Daily interest accrues on the savings products and is capitalised
  ;;
- ;; All amounts in pence (1 minor unit). Interest from capitalisation
- ;; lands in `:balance-type-interest-paid` on the customer side and
- ;; debits `:balance-type-default` on the settlement side, so the
- ;; only `available-balance` change after accrue + capitalise is on
- ;; the settlement account.
+ ;; All amounts in pence (1 minor unit). Accrual moves no money the
+ ;; customer can spend — it credits an internal accrued bucket, which
+ ;; `available-balance` does not count — so only capitalisation shows
+ ;; up in a projected balance.
  :given [;; --- Org setup
          ;; -------------------------------------------------- org-0,
          ;; prod-0 (settlement, published), party-0 (org-party,
@@ -100,10 +99,11 @@
   ;; tracked settlement account (acct-0) stays at 4_800_000.
   {:command :accrue-interest :args [:bank-0 20260501]}
   {:command :assert-balance :args [:acct-0 4800000]}
-  ;; Capitalisation: 6 legs per customer (interest-paid debit +
-  ;; credit, interest-accrued debit, default credit) plus 2 GL
-  ;; legs on 2400. The customer's default grows by the accrued
-  ;; amount; settlement (acct-0) stays untouched:
+  ;; Capitalisation: 2 legs per customer — the accrued bucket
+  ;; debited, the default bucket credited. The bank's side is one
+  ;; entry per currency and product type at close, on GL accounts.
+  ;; The customer's default grows by the accrued amount; settlement
+  ;; (acct-0) stays untouched:
   ;;   Arthur savings.default  += 75      →    75_075
   ;;   Ford   savings.default  += 35      →    35_035
   ;;   current accounts and acct-0 unchanged.
