@@ -7,6 +7,8 @@
     [com.repldriven.queenswood.balance.interface :as balances]
     [com.repldriven.queenswood.bank-query.interface :as banks-query]
     [com.repldriven.queenswood.bank.interface :as banks]
+    [com.repldriven.queenswood.cash-account-migration.interface :as
+     migrations]
     [com.repldriven.queenswood.cash-account-product-query.interface :as
      products-query]
     [com.repldriven.queenswood.cash-account-product.interface :as products]
@@ -27,6 +29,7 @@
     [com.repldriven.queenswood.transaction.interface :as transactions]
 
     [com.repldriven.mono.error.interface :as error]
+    [com.repldriven.mono.utility.interface :as utility]
 
     [clojure.test :refer [is]]))
 
@@ -1075,3 +1078,60 @@
   (is (every? (fn [o] (= :succeeded o)) outcomes)
       (str "expected no anomalies; outcomes were " outcomes))
   ctx)
+
+(defmethod dispatch :create-migration
+  [{:keys [bank banks products counter] :as ctx}
+   {[model-bank model-source model-target] :args}]
+  (let [{bank-real-id :real-id} (get banks model-bank)
+        source (get products model-source)
+        target (get products model-target)
+        {target-version-id :real-id} (latest-version target)
+        result (migrations/create-migration
+                bank
+                {:bank-id bank-real-id
+                 :name (str "Migration " counter)
+                 :source-product-id (:real-id source)
+                 :target-product-id (:real-id target)
+                 :target-version-id target-version-id})]
+    (-> ctx
+        (cond-> (not (error/anomaly? result))
+                (assoc-in [:migrations model-source]
+                 {:real-id (:migration-id result)
+                  :bank model-bank}))
+        (update :counter inc)
+        (track result))))
+
+(defmethod dispatch :preview-migration
+  [{:keys [bank banks migrations] :as ctx} {[model-bank model-source] :args}]
+  (let [{bank-real-id :real-id} (get banks model-bank)
+        {migration-real-id :real-id} (get migrations model-source)
+        result (migrations/preview-migration bank
+                                             bank-real-id
+                                             migration-real-id
+                                             (utility/today))]
+    (-> ctx
+        (cond-> (not (error/anomaly? result))
+                (assoc :last-preview result))
+        (track result))))
+
+(defmethod dispatch :assert-migration-preview
+  [{:keys [last-preview] :as ctx} {[expected] :args}]
+  (is (= expected (select-keys last-preview (keys expected)))
+      (str "migration preview — expected " expected))
+  ctx)
+
+;; Counts the preview's per-account verdicts by outcome, falling back to
+;; the ineligibility reason where there is one, so a scenario can assert
+;; why accounts were left rather than only how many.
+(defmethod dispatch :assert-migration-verdicts
+  [{:keys [bank banks last-preview] :as ctx} {[model-bank expected] :args}]
+  (let [{bank-real-id :real-id} (get banks model-bank)
+        rows
+        (migrations/list-run-accounts bank bank-real-id (:run-id last-preview))
+        ;; An ineligible verdict is counted by its reason, which is
+        ;; the useful grouping; anything else by its outcome.
+        actual (frequencies (map (fn [r] (or (:ineligibility r) (:outcome r)))
+                                 rows))]
+    (is (= expected (select-keys actual (keys expected)))
+        (str "migration verdicts for " model-bank " — expected " expected))
+    ctx))

@@ -6,6 +6,8 @@ import "record_metadata_options.proto";
 
 import "schemas/assertion/assertion.proto";
 import "schemas/balances/balance.proto";
+import "schemas/cash-account-migrations/cash-account-migration.proto";
+import "schemas/cash-account-migrations/cash-account-migration-run.proto";
 import "schemas/cash-account-products/account-product.proto";
 import "schemas/cash-accounts/account.proto";
 import "schemas/company/company.proto";
@@ -74,4 +76,7 @@ message RecordTypeUnion {
   optional com.repldriven.queenswood.schemas.onfido.OnfidoOutboxEvent _OnfidoOutboxEvent = 33;
   optional com.repldriven.queenswood.schemas.onfido.OnfidoOutboundIntent _OnfidoOutboundIntent = 34;
   optional com.repldriven.queenswood.schemas.interest.InterestAccountRun _InterestAccountRun = 35;
+  optional com.repldriven.queenswood.schemas.cash_account_migrations.CashAccountMigration _CashAccountMigration = 36;
+  optional com.repldriven.queenswood.schemas.cash_account_migrations.CashAccountMigrationRun _CashAccountMigrationRun = 37;
+  optional com.repldriven.queenswood.schemas.cash_account_migrations.CashAccountMigrationAccountRun _CashAccountMigrationAccountRun = 38;
 }

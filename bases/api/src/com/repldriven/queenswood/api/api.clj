@@ -10,17 +10,23 @@
     [com.repldriven.queenswood.api.bank.components :as bank.components]
     [com.repldriven.queenswood.api.bank.examples :as bank.examples]
     [com.repldriven.queenswood.api.bank.routes :as bank]
+    [com.repldriven.queenswood.api.cash-account.components :as
+     cash-account.components]
+    [com.repldriven.queenswood.api.cash-account.examples :as
+     cash-account.examples]
+    [com.repldriven.queenswood.api.cash-account.routes :as cash-account]
+    [com.repldriven.queenswood.api.cash-account-migration.components :as
+     cash-account-migration.components]
+    [com.repldriven.queenswood.api.cash-account-migration.examples :as
+     cash-account-migration.examples]
+    [com.repldriven.queenswood.api.cash-account-migration.routes :as
+     cash-account-migration]
     [com.repldriven.queenswood.api.cash-account-product.components :as
      cash-account-product.components]
     [com.repldriven.queenswood.api.cash-account-product.examples :as
      cash-account-product.examples]
     [com.repldriven.queenswood.api.cash-account-product.routes :as
      cash-account-product]
-    [com.repldriven.queenswood.api.cash-account.components :as
-     cash-account.components]
-    [com.repldriven.queenswood.api.cash-account.examples :as
-     cash-account.examples]
-    [com.repldriven.queenswood.api.cash-account.routes :as cash-account]
     [com.repldriven.queenswood.api.companies.components :as
      companies.components]
     [com.repldriven.queenswood.api.companies.examples :as companies.examples]
@@ -116,15 +122,16 @@
                                 shared.components/unique-vector-lax-schema
                                 "ErrorResponse" schema/ErrorResponseSchema}
                                balance.components/registry
-                               cash-account-product.components/registry
+                               bank.components/registry
                                cash-account.components/registry
-                               ledger-account.components/registry
+                               cash-account-migration.components/registry
+                               cash-account-product.components/registry
+                               companies.components/registry
                                jobs.components/registry
+                               ledger-account.components/registry
                                me.components/registry
                                oauth.components/registry
                                onboarding.components/registry
-                               companies.components/registry
-                               bank.components/registry
                                party.components/registry
                                payee-check.components/registry
                                payment.components/registry
@@ -157,15 +164,16 @@
          :examples (merge
                     examples/registry
                     balance.examples/registry
-                    cash-account-product.examples/registry
+                    bank.examples/registry
                     cash-account.examples/registry
-                    ledger-account.examples/registry
+                    cash-account-migration.examples/registry
+                    cash-account-product.examples/registry
                     jobs.examples/registry
+                    ledger-account.examples/registry
                     me.examples/registry
                     oauth.examples/registry
                     onboarding.examples/registry
                     companies.examples/registry
-                    bank.examples/registry
                     party.examples/registry
                     payee-check.examples/registry
                     payment.examples/registry
@@ -188,21 +196,23 @@
                         500 (schema/ErrorResponse
                              [#'examples/InternalServerError
                               #'examples/BadResponse])}}]
-          (concat balance/routes
-                  cash-account-product/routes
-                  cash-account/routes
-                  ledger-account/routes
-                  jobs/routes
-                  me/routes
-                  onboarding/routes
-                  companies/routes
-                  bank/routes
-                  party/routes
-                  payee-check/routes
-                  payment/routes
-                  policy/routes
-                  simulate/routes
-                  tier/routes))]))
+          (concat
+           balance/routes
+           bank/routes
+           cash-account/routes
+           cash-account-migration/routes
+           cash-account-product/routes
+           jobs/routes
+           ledger-account/routes
+           me/routes
+           onboarding/routes
+           companies/routes
+           party/routes
+           payee-check/routes
+           payment/routes
+           policy/routes
+           simulate/routes
+           tier/routes))]))
 
 (defn- add-interceptor-before-coerce
   "Splices `icept` into the router's global interceptor chain just
