@@ -50,6 +50,7 @@ export { default as GlType } from "./GlType.svelte";
 export { default as TrialBalance } from "./TrialBalance.svelte";
 export { default as TrialBalanceCard } from "./TrialBalanceCard.svelte";
 export { formatMoney, formatSigned, moneyTone, sumMinor, CCY_SYMBOLS } from "./money.js";
+export { activeVersion, productRows, today } from "./products.js";
 
 // Accounts screen — a reusable search input + the cash-account status
 // badge (opening / opened / closing / closed → Badge tones).
@@ -91,8 +92,9 @@ export {
   fmtAbs,
   fmtRel,
   lastOutcome,
-  runDurationSecs,
+  fmtElapsed,
   pipelineSteps,
+  runPipelineSteps,
   minutesFromHHMM,
   isLastDay,
 } from "./jobs.js";

@@ -10,10 +10,21 @@
      `exception`, dashed otherwise. The running node's spinner respects
      reduced-motion.
 
+     A step may carry `detail` — what the task actually did, e.g.
+     "12,480 processed · 3.4s" — which replaces the status word beneath
+     the name. A run that has recorded its tasks knows this; one being
+     projected forward from a schedule does not, and falls back to the
+     word. `alert` is a second line in the danger tone, for a figure
+     that needs reading even though the task itself succeeded — a pass
+     that finished with failed records is the case it exists for.
+
+     `dense` shrinks the node for use inside a list rather than as the
+     page's own pipeline.
+
      Pure visual — re-running is a whole-job action surfaced by the
      page (the API has no per-task re-run), so no buttons live here. */
 
-  let { steps = [] } = $props();
+  let { steps = [], dense = false } = $props();
 
   const label = {
     ok: "done",
@@ -25,7 +36,7 @@
   };
 </script>
 
-<div class="pipeline">
+<div class="pipeline" class:dense>
   {#each steps as step, i (step.name + i)}
     {#if i > 0}
       <div class="pipe-step">
@@ -69,7 +80,10 @@
         </span>
         <span class="pt-text">
           <span class="pt-name">{step.name}</span>
-          <span class="pt-dur">{label[step.status] ?? step.status}</span>
+          <span class="pt-dur">{step.detail ?? label[step.status] ?? step.status}</span>
+          {#if step.alert}
+            <span class="pt-alert">{step.alert}</span>
+          {/if}
         </span>
       </div>
     </div>
@@ -98,6 +112,20 @@
     letter-spacing: 0.01em;
   }
   .pipe-task .pt-dur { font-family: var(--mono); font-size: 10px; color: var(--fg-muted); }
+  .pipe-task .pt-alert {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--danger);
+  }
+
+  /* Dense — the same nodes inside a run history row, where they sit
+     under a line of run metadata rather than owning the section. */
+  .pipeline.dense .pipe-task { gap: 7px; padding: 6px 10px; border-radius: 8px; }
+  .pipeline.dense .pipe-task .pt-ico { width: 14px; height: 14px; }
+  .pipeline.dense .pipe-task .pt-name { font-size: 11px; }
+  .pipeline.dense .pipe-task .pt-dur,
+  .pipeline.dense .pipe-task .pt-alert { font-size: 9.5px; }
+  .pipeline.dense .pipe-conn { width: 18px; margin: 0 3px; }
   .pipe-task.ok { border-color: light-dark(oklch(0.80 0.05 145), oklch(0.40 0.05 145)); }
   .pipe-task.failed {
     border-color: var(--danger);

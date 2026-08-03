@@ -103,6 +103,21 @@ export function fmtDur(secs) {
   return s ? `${m}m ${pad(s)}s` : `${m}m`;
 }
 
+// "36ms" / "4.2s" / "2m 05s" — the span between a start and a finish.
+// Takes the two timestamps rather than a seconds count, and keeps
+// sub-second precision: a bank with a handful of accounts accrues in
+// milliseconds, and fmtDur's whole seconds render all of that as a
+// uniform "0s". Null when either end is missing.
+export function fmtElapsed(startedAt, finishedAt) {
+  const start = toMs(startedAt);
+  const finish = toMs(finishedAt);
+  if (start == null || finish == null) return null;
+  const ms = Math.max(0, finish - start);
+  if (ms < 1000) return `${ms}ms`;
+  if (ms < 60000) return `${(ms / 1000).toFixed(1)}s`;
+  return fmtDur(Math.round(ms / 1000));
+}
+
 // Coerce an API timestamp to epoch milliseconds, or null. bank-api
 // serialises timestamps as ISO-8601 strings (the Timestamp schema's
 // encode), not epoch-ms numbers, so anything doing arithmetic on them
@@ -155,15 +170,6 @@ export function lastOutcome(run) {
   return run.status;
 }
 
-// Wall-clock duration of a run in whole seconds, or null when it hasn't
-// finished (or never started).
-export function runDurationSecs(run) {
-  const started = toMs(run?.["started-at"]);
-  const finished = toMs(run?.["finished-at"]);
-  if (started == null || finished == null) return null;
-  return Math.max(0, Math.round((finished - started) / 1000));
-}
-
 // Per-task pipeline view for a run. The API run carries only ordered
 // progress (tasks-completed) and a status, not per-task records, so the
 // task labels come from the job's ordered task-kinds and each node's
@@ -184,6 +190,50 @@ export function pipelineSteps(taskKinds, run) {
       return { name, status: "ok" };
     }
     return { name, status: status === "failed" ? "skipped" : "pending" };
+  });
+}
+
+const TASK_STATUS = {
+  succeeded: "ok",
+  failed: "failed",
+  running: "running",
+  skipped: "skipped",
+};
+
+// What a task did, as the line beneath its name: "5 processed · 121ms".
+// A task the run never reached says so instead — it has no figures and
+// no timings, and "0 processed" would read as work that found nothing.
+function taskDetail(task) {
+  if (task.status === "skipped") return "never ran";
+  if (task.status === "running") return "running…";
+  const parts = [];
+  if (task["records-processed"] != null) {
+    parts.push(`${Number(task["records-processed"]).toLocaleString()} processed`);
+  }
+  const elapsed = fmtElapsed(task["started-at"], task["finished-at"]);
+  if (elapsed) parts.push(elapsed);
+  return parts.length ? parts.join(" · ") : null;
+}
+
+// Pipeline nodes from a run's own per-task records. Unlike
+// pipelineSteps, nothing here is inferred — the run states what each
+// task did, including which ones it never reached, so this is the shape
+// to use wherever a recorded run is in hand.
+//
+// Failed records ride on `alert` rather than into the detail line: a
+// task can succeed while failing accounts, and that figure is the one
+// an operator needs to see when everything else says the run was fine.
+export function runPipelineSteps(run) {
+  return (run?.tasks ?? []).map((task) => {
+    const failed = task["records-failed"] ?? 0;
+    const step = {
+      name: task.label,
+      status: TASK_STATUS[task.status] ?? "pending",
+      detail: taskDetail(task),
+    };
+    if (failed > 0) step.alert = `${Number(failed).toLocaleString()} failed`;
+    if (task.error) step.alert = task.error;
+    return step;
   });
 }
 

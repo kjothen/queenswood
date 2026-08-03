@@ -18,6 +18,20 @@
           (zero? (:next-run-at job 0))
           (dissoc :next-run-at)))
 
+(defn- clean-task
+  "One task as it comes back off the wire. `pb->` hands embedded
+  messages back as protojure records, which reitit cannot coerce, so
+  each becomes a plain map — and the proto2 defaults an unset field
+  decodes to are dropped rather than reported as a real zero."
+  [task]
+  (cond-> (into {} task)
+          (zero? (:started-at task 0))
+          (dissoc :started-at)
+          (zero? (:finished-at task 0))
+          (dissoc :finished-at)
+          (= "" (:error task ""))
+          (dissoc :error)))
+
 (defn- clean-run
   [run]
   (cond-> run
@@ -28,7 +42,9 @@
           (= "" (:current-task run ""))
           (dissoc :current-task)
           (= "" (:error run ""))
-          (dissoc :error)))
+          (dissoc :error)
+          :always
+          (update :tasks (fn [tasks] (mapv clean-task tasks)))))
 
 ;; --- jobs -----------------------------------------------------------------
 

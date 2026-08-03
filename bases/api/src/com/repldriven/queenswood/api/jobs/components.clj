@@ -31,6 +31,9 @@
 (def TriggerSource
   (coercion/trigger-source-enum-schema {:json-schema/example "scheduled"}))
 
+(def TaskStatus
+  (coercion/task-status-enum-schema {:json-schema/example "succeeded"}))
+
 (def MonthlyDay
   (coercion/monthly-day-enum-schema {:json-schema/example "last"}))
 
@@ -61,6 +64,20 @@
   [:map {:json-schema/example examples/JobList}
    [:jobs [:vector [:ref "Job"]]]])
 
+(def TaskRun
+  "What one task of a run did. `records-processed` / `records-failed`
+  are whatever that task's pass counts — accounts, for every task there
+  is today. A skipped task carries neither, and no timings: the run
+  never reached it."
+  [:map {:json-schema/example examples/TaskRun}
+   [:label string?]
+   [:status [:ref "TaskStatus"]]
+   [:started-at {:optional true} [:ref "Timestamp"]]
+   [:finished-at {:optional true} [:ref "Timestamp"]]
+   [:error {:optional true} string?]
+   [:records-processed {:optional true} nat-int?]
+   [:records-failed {:optional true} nat-int?]])
+
 (def Run
   [:map {:json-schema/example examples/Run}
    [:bank-id [:ref "BankId"]]
@@ -74,7 +91,8 @@
    [:tasks-completed nat-int?]
    [:current-task {:optional true} string?]
    [:expected-end-at {:optional true} [:ref "Timestamp"]]
-   [:error {:optional true} string?]])
+   [:error {:optional true} string?]
+   [:tasks [:vector [:ref "TaskRun"]]]])
 
 (def RunList
   [:map {:json-schema/example examples/RunList}
@@ -93,5 +111,6 @@
 
 (def registry
   (components-registry [#'JobId #'RunId #'Periodicity #'JobTaskKind #'RunStatus
-                        #'TriggerSource #'MonthlyDay #'JobKind #'Job #'JobList
-                        #'Run #'RunList #'JobScheduleUpdate]))
+                        #'TriggerSource #'TaskStatus #'MonthlyDay #'JobKind
+                        #'Job #'JobList #'TaskRun #'Run #'RunList
+                        #'JobScheduleUpdate]))

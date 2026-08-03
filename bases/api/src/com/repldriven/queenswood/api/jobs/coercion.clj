@@ -26,6 +26,13 @@
                            "forced" :scheduler-trigger-source-forced}
                           :scheduler-trigger-source-unknown))
 
+(def ^:private task-status-enum
+  (coercion/enum-coercion {"running" :scheduler-task-status-running
+                           "succeeded" :scheduler-task-status-succeeded
+                           "failed" :scheduler-task-status-failed
+                           "skipped" :scheduler-task-status-skipped}
+                          :scheduler-task-status-unknown))
+
 (def ^:private monthly-day-enum
   (coercion/enum-coercion {"first" :scheduler-monthly-day-first
                            "last" :scheduler-monthly-day-last}
@@ -40,5 +47,6 @@
 (def task-kind-enum-schema (:enum-schema task-kind-enum))
 (def run-status-enum-schema (:enum-schema run-status-enum))
 (def trigger-source-enum-schema (:enum-schema trigger-source-enum))
+(def task-status-enum-schema (:enum-schema task-status-enum))
 (def monthly-day-enum-schema (:enum-schema monthly-day-enum))
 (def kind-enum-schema (:enum-schema kind-enum))

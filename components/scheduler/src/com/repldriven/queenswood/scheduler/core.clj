@@ -115,11 +115,13 @@
                            :tasks-completed 0
                            :current-task (task-label (first task-kinds))))
     (loop [[task-kind & more] task-kinds
-           completed 0]
+           completed 0
+           tasks []]
       (if (nil? task-kind)
         (let [run (assoc base
                          :status :scheduler-run-status-succeeded
                          :tasks-completed completed
+                         :tasks tasks
                          :finished-at (utility/now))]
           (store/save-run config run)
           (store/save-job config
@@ -130,28 +132,39 @@
                                                started-at)
                                  :updated-at (utility/now)))
           run)
-        (let [run-fn (get-in task-registry [task-kind :run])
+        (let [label (task-label task-kind)
+              task (domain/started-task label (utility/now))
+              run-fn (get-in task-registry [task-kind :run])
               result (if run-fn
                        (run-fn config bank-id as-of-date)
                        (error/reject :scheduler/unknown-task
                                      {:message "No run registered for task"
-                                      :task-kind task-kind}))]
+                                      :task-kind task-kind}))
+              finished-at (utility/now)]
           (if (error/anomaly? result)
             (let [run (assoc base
                              :status :scheduler-run-status-failed
                              :tasks-completed completed
-                             :current-task (task-label task-kind)
+                             :current-task label
+                             :tasks (into (conj tasks
+                                                (domain/failed-task task
+                                                                    finished-at
+                                                                    result))
+                                          (domain/skipped-tasks
+                                           (map task-label more)))
                              :finished-at (utility/now)
                              :error (error/format-anomaly result))]
               (store/save-run config run)
               result)
-            (do
+            (let [tasks (conj tasks
+                              (domain/finished-task task finished-at result))]
               (store/save-run config
                               (assoc base
                                      :status :scheduler-run-status-running
                                      :tasks-completed (inc completed)
-                                     :current-task (task-label task-kind)))
-              (recur more (inc completed)))))))))
+                                     :current-task label
+                                     :tasks tasks))
+              (recur more (inc completed) tasks))))))))
 
 (defn force-start
   "Run `job-id` now with trigger source forced. Safe to repeat — the

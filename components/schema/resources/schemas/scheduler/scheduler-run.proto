@@ -19,6 +19,39 @@ enum SchedulerTriggerSource {
   SCHEDULER_TRIGGER_SOURCE_FORCED = 2;
 }
 
+enum SchedulerTaskStatus {
+  SCHEDULER_TASK_STATUS_UNKNOWN = 0;
+  SCHEDULER_TASK_STATUS_RUNNING = 1;
+  SCHEDULER_TASK_STATUS_SUCCEEDED = 2;
+  SCHEDULER_TASK_STATUS_FAILED = 3;
+  // A task the run never reached, because an earlier one failed. Not a
+  // failure of its own, and distinguishable from one — without it a
+  // reader can only infer "not completed" from tasks_completed.
+  SCHEDULER_TASK_STATUS_SKIPPED = 4;
+}
+
+// One task within a run. A run's tasks are ordered as the job lists
+// them, so position is the sequence and needs no index of its own.
+//
+// records_processed / records_failed are what the task's own pass
+// reports, in whatever it counts — accounts, for every task there is
+// today. Deliberately not named for accounts: the scheduler runs batch
+// passes and has no business knowing what a pass iterates. A task
+// needing more than two counts is the point to replace these with a
+// per-kind summary rather than to keep widening them.
+message SchedulerTaskRun {
+  required string label = 1;
+  required SchedulerTaskStatus status = 2;
+  optional int64 started_at = 3;
+  optional int64 finished_at = 4;
+  optional string error = 5;
+  // Optional for the same reason as tasks_completed below: a pass that
+  // processed nothing writes a zero, and protojure drops a zero from
+  // the wire.
+  optional int32 records_processed = 6;
+  optional int32 records_failed = 7;
+}
+
 // One execution of a SchedulerJob. run_id is a uuidv7 (time-ordered).
 // Progress is task-granular: tasks_completed / tasks_total, with the
 // current task's label; expected_end_at is started_at + the previous
@@ -43,4 +76,9 @@ message SchedulerRun {
   optional string current_task = 10;
   optional int64 expected_end_at = 11;
   optional string error = 12;
+
+  // What each task did, in job order. tasks_completed says how far the
+  // run got; this says what happened on the way — which task was slow,
+  // which failed, which never ran, and how much each one moved.
+  repeated SchedulerTaskRun tasks = 13;
 }
