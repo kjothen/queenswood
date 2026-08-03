@@ -136,6 +136,21 @@
   [txn bank-id]
   (store/count-by-org txn bank-id))
 
+(defn count-by-version
+  "Count the cash accounts pinned to one product version.
+
+  How large a migration's cohort is, answered off an index rather than
+  by scanning it — which is what lets a limit on how many accounts a
+  migration may move refuse before anything moves rather than discover
+  the breach part-way through.
+
+  Args:
+  - txn: FDB transaction or db handle.
+  - bank-id: owning bank id.
+  - version-id: the product version to count."
+  [txn bank-id version-id]
+  (store/count-by-version txn bank-id version-id))
+
 (defn count-by-org-product-account-type-currency
   "Count cash accounts for a bank grouped by product-type,
   account-type and currency. A read primitive for the write sibling's

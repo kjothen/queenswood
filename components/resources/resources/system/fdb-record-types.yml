@@ -76,6 +76,12 @@ cash-accounts:
     - name: CashAccount_count_by_bank_product_account_type_currency
       fields: [bank_id, product_type, account_type, currency]
       type: count
+    # How many accounts sit on one product version. A migration's
+    # cohort is measured against this before it runs, so a limit on
+    # how many accounts one may move refuses before anything moves.
+    - name: CashAccount_count_by_bank_version
+      fields: [bank_id, version_id]
+      type: count
     - name: CashAccount_by_bban
       field: bban
       unique: true

@@ -211,6 +211,62 @@
              :tally {:seen 0 :moved 0 :ineligible 0 :failed 0}})]
     (:tally (flush-chunk config ctx state))))
 
+(defn- cohort-size
+  "How many accounts the migration reaches, off the by-version index
+  rather than by scanning them.
+
+  This is the cohort, not the eligible set — some of these accounts
+  will turn out to be closed, or hold a currency the target forbids.
+  Bounding the cohort is the point: what a limit on a migration
+  constrains is how much of the bank it is pointed at, and that is
+  knowable before the pass rather than only after it."
+  [txn bank-id migration]
+  (let-nom>
+    ;; Absent narrowing means every version of the source product, the
+    ;; same reading `in-cohort?` gives it. Counting only the named ones
+    ;; would size an unnarrowed migration at zero and never bind.
+    [version-ids (if (seq (:source-version-ids migration))
+                   (:source-version-ids migration)
+                   (let-nom> [versions (products/get-versions
+                                        txn
+                                        bank-id
+                                        (:source-product-id migration))]
+                     (mapv :version-id versions)))]
+    (reduce (fn [total version-id]
+              (let [n (accounts/count-by-version txn bank-id version-id)]
+                (if (error/anomaly? n) (reduced n) (+ total n))))
+            0
+            version-ids)))
+
+(defn- check-commit-limit
+  "Refuses a migration pointed at more accounts than its tier allows,
+  before a single one moves. A limit discovered part-way through would
+  leave a half-migrated cohort, which is worse than not starting."
+  [txn bank-id migration policies]
+  (let-nom>
+    [size (cohort-size txn bank-id migration)
+     _ (policy/check-limit policies
+                           :cash-account-migration
+                           {:aggregate :count
+                            :window :time-window-instant
+                            :action :cash-account-migration-action-commit
+                            :value size})]
+    size))
+
+(defn- check-preview-limit
+  "Bounds how often a bank may dry-run a migration in a day. A preview
+  reads every account of a product, so it is the cheapest thing here to
+  ask for and the most expensive to serve."
+  [txn bank-id business-day policies]
+  (let-nom>
+    [today (store/count-previews-on txn bank-id business-day)]
+    (policy/check-limit policies
+                        :cash-account-migration
+                        {:aggregate :count
+                         :window :time-window-daily
+                         :action :cash-account-migration-action-preview
+                         :value (inc today)})))
+
 (defn- run-migration
   "One pass over a migration's cohort, previewing or committing. Opens a
   run, evaluates every account, and closes the run with what it decided.
@@ -230,6 +286,11 @@
      ;; account would let a policy change mid-cohort and move half a
      ;; bank under one set of rules and half under another.
      policies (policy/get-effective-policies txn {:bank-id bank-id})
+     ;; Both limits are checked before the run is opened, so a refused
+     ;; pass leaves no run behind saying it started.
+     _ (if dry-run?
+         (check-preview-limit txn bank-id business-day policies)
+         (check-commit-limit txn bank-id migration policies))
      run (domain/new-run migration business-day dry-run?)
      _ (store/save-run txn run)
      tally (evaluate-accounts txn

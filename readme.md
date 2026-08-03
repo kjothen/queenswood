@@ -36,6 +36,7 @@ Everything a bank needs, from the same API:
 
 - **Accounts** — open, close, suspend/resume with sort code addresses and balances
 - **Account products** — current and savings account product versioning
+- **Account migrations** — specify, preview and approve moves between versions
 - **Interest** — accrual, capitalisation and fractional carry
 - **Ledger** — double-entry postings on every money movement
 - **Onboarding & identity** — know-your-customer checks and onboarding

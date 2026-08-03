@@ -99,6 +99,18 @@
                 {:message "Failed to count accounts by org"
                  :bank-id bank-id}))
 
+(defn count-by-version
+  [txn bank-id version-id]
+  (fdb/transact txn
+                (fn [txn]
+                  (fdb/count-records (fdb/open txn store-name)
+                                     "CashAccount_count_by_bank_version"
+                                     [bank-id version-id]))
+                :cash-account/count-by-version
+                {:message "Failed to count accounts by version"
+                 :bank-id bank-id
+                 :version-id version-id}))
+
 (defn count-by-org-product-account-type-currency
   [txn bank-id product-type account-type currency]
   (fdb/transact

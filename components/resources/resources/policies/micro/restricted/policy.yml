@@ -13,6 +13,7 @@ limits: !concat
   - !include policies/micro/restricted/limits/transactions.yml
   - !include policies/micro/restricted/limits/cash-accounts.yml
   - !include policies/micro/restricted/limits/cash-account-products.yml
+  - !include policies/micro/restricted/limits/cash-account-migrations.yml
   - !include policies/micro/restricted/limits/payments.yml
   - !include policies/micro/restricted/limits/payee-checks.yml
   - !include policies/micro/restricted/limits/parties.yml

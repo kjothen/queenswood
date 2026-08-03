@@ -44,6 +44,7 @@ export const DOMAINS = {
   ledger_account:       { label: "Ledger Account",       group: "Core Banking" },
   cash_account:         { label: "Cash Account",         group: "Core Banking" },
   cash_account_product: { label: "Cash Account Product", group: "Core Banking" },
+  cash_account_migration: { label: "Cash Account Migration", group: "Core Banking" },
   outbound_payment:     { label: "Outbound Payment",     group: "Payments" },
   inbound_payment:      { label: "Inbound Payment",      group: "Payments" },
   internal_payment:     { label: "Internal Payment",     group: "Payments" },
