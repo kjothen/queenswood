@@ -54,3 +54,65 @@
                             {:aggregate :count
                              :window :time-window-daily
                              :value 9999999}))))))
+
+(defn- migration-policy
+  "The two migration limits a tier carries: a cohort cap on a commit,
+  and a daily cap on previews. One kind, told apart by action — the
+  same shape interest uses for accrue and capitalize."
+  [commit-cap preview-cap]
+  [{:enabled true
+    :limits
+    [{:kind {:cash-account-migration
+             {:filters [{:action :cash-account-migration-action-commit}]}}
+      :bound {:kind {:max {:aggregate {:kind {:count
+                                              {:value commit-cap
+                                               :window
+                                               :time-window-instant}}}}}}
+      :reason "cohort cap"}
+     {:kind {:cash-account-migration
+             {:filters [{:action :cash-account-migration-action-preview}]}}
+      :bound {:kind {:max {:aggregate {:kind {:count
+                                              {:value preview-cap
+                                               :window
+                                               :time-window-daily}}}}}}
+      :reason "preview cap"}]}])
+
+(defn- commit-request
+  [value]
+  {:aggregate :count
+   :window :time-window-instant
+   :action :cash-account-migration-action-commit
+   :value value})
+
+(defn- preview-request
+  [value]
+  {:aggregate :count
+   :window :time-window-daily
+   :action :cash-account-migration-action-preview
+   :value value})
+
+(deftest migration-limit-test
+  (let [policies (migration-policy 100 10)]
+    (testing "a cohort at the cap may move"
+      (is (true?
+           (SUT/check policies :cash-account-migration (commit-request 100)))))
+    (testing "a cohort over the cap is refused"
+      (let [result
+            (SUT/check policies :cash-account-migration (commit-request 101))]
+        (is (error/rejection? result))
+        (is (= :policy/limit-exceeded (error/kind result)))))
+    (testing "the day's tenth preview is allowed and the eleventh is not"
+      (is (true?
+           (SUT/check policies :cash-account-migration (preview-request 10))))
+      (is (error/rejection?
+           (SUT/check policies :cash-account-migration (preview-request 11)))))
+    (testing "the two caps do not bleed into each other"
+      ;; Both are counts on the same kind, so the action filter is the
+      ;; only thing keeping a cohort of 50 from being read against the
+      ;; preview cap of 10.
+      (is (true?
+           (SUT/check policies :cash-account-migration (commit-request 50))))
+      (is (error/rejection?
+           (SUT/check policies :cash-account-migration (preview-request 50)))))
+    (testing "an unrelated domain is untouched by either"
+      (is (true? (SUT/check policies :cash-account (commit-request 999)))))))

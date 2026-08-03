@@ -342,6 +342,24 @@ message CashAccountLimit {
   repeated CashAccountLimitFilter filters = 1;
 }
 
+// What a migration limit bounds. Two different things are counted
+// under one kind, the way interest counts accrual and capitalisation
+// runs separately: COMMIT bounds the accounts a single migration may
+// move, PREVIEW bounds how often a bank may dry-run one.
+enum CashAccountMigrationAction {
+  CASH_ACCOUNT_MIGRATION_ACTION_UNKNOWN = 0;
+  CASH_ACCOUNT_MIGRATION_ACTION_COMMIT = 1;
+  CASH_ACCOUNT_MIGRATION_ACTION_PREVIEW = 2;
+}
+
+message CashAccountMigrationLimitFilter {
+  optional CashAccountMigrationAction action = 1;
+}
+
+message CashAccountMigrationLimit {
+  repeated CashAccountMigrationLimitFilter filters = 1;
+}
+
 message CashAccountProductLimitFilter {
   optional com.repldriven.queenswood.schemas.types.ProductType product_type = 1;
 }
@@ -424,6 +442,7 @@ message Limit {
     PayeeCheckLimit payee_check = 12;
     PolicyLimit policy = 13;
     TransactionLimit transaction = 14;
+    CashAccountMigrationLimit cash_account_migration = 18;
   }
 
   required Bound bound = 15;
