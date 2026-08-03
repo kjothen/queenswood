@@ -82,6 +82,88 @@
   [txn bank-id migration-id business-day]
   (core/preview-migration txn bank-id migration-id business-day))
 
+(defn approve-migration
+  "Approve a draft, making it work the scheduler will pick up on its due
+  date. Requires a notice date and a due date — approving commits to
+  moving customers' accounts, and doing that without having told them is
+  what notice exists to prevent.
+
+  Approving moves nothing. Only the scheduler's migration task does.
+
+  Args:
+  - txn: FDB transaction or db handle.
+  - bank-id: owning bank id.
+  - migration-id: the migration to approve.
+
+  Returns the approved migration, a
+  `:cash-account-migration/invalid-status` rejection when it is not a
+  draft, or `:cash-account-migration/notice-required` when either date
+  is missing."
+  [txn bank-id migration-id]
+  (core/approve-migration txn bank-id migration-id))
+
+(defn cancel-migration
+  "Cancel a draft or an approved migration, taking it off the work list.
+
+  This is how a migration that can no longer run is retired: the system
+  cannot tell a target whose effective dates slipped from one nobody
+  intends to use, so it keeps waiting until an operator says otherwise.
+  A completed migration cannot be cancelled — its accounts have moved.
+
+  Args:
+  - txn: FDB transaction or db handle.
+  - bank-id: owning bank id.
+  - migration-id: the migration to cancel.
+
+  Returns the cancelled migration or a
+  `:cash-account-migration/invalid-status` rejection."
+  [txn bank-id migration-id]
+  (core/cancel-migration txn bank-id migration-id))
+
+(defn commit-migration
+  "Run an approved migration for real, moving every eligible account onto
+  the target version, then complete it. Returns the closed run.
+
+  The decisions are the preview's decisions — same streaming, same cohort
+  test, same eligibility order — so what a preview reported is what a
+  commit acts on, allowing for the population having moved underneath
+  both. An account that fails is recorded against its own row and the
+  pass carries on.
+
+  The migration completes only when the pass finished; a pass that could
+  not run leaves it approved for the next business day.
+
+  Args:
+  - txn: FDB transaction or db handle.
+  - bank-id: owning bank id.
+  - migration-id: the migration to run.
+  - business-day: epoch-day the run is recorded against."
+  [txn bank-id migration-id business-day]
+  (core/commit-migration txn bank-id migration-id business-day))
+
+(defn run-due-migrations
+  "Commit every migration of the bank that is due on `business-day` — the
+  scheduler's migration task.
+
+  Due is derived, not recorded: a migration is due when it is approved,
+  its due date has arrived, and its target version is in force. A
+  migration whose target window has not opened is not due today, which
+  is a different thing from being dead, so nothing latches.
+
+  One migration failing does not stop the others.
+
+  Args:
+  - txn: FDB transaction or db handle.
+  - bank-id: owning bank id.
+  - business-day: epoch-day to run for.
+
+  Returns a summary — `:migrations`, `:moved`, `:ineligible`,
+  `:failed-migrations`, plus the `:accounts-processed` and
+  `:accounts-failed` the scheduler records against the task — or an
+  anomaly."
+  [txn bank-id business-day]
+  (core/run-due-migrations txn bank-id business-day))
+
 (defn get-run
   "One run of a migration, preview or commit, or a
   `:cash-account-migration/run-not-found` rejection.

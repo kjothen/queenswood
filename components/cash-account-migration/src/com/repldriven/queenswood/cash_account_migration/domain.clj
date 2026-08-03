@@ -145,6 +145,108 @@
        :due-on due-on
        :idempotency-key idempotency-key))))
 
+(defn- ensure-status
+  "A transition asserts the state it moves out of before anything else,
+  so a second approval reads as a conflict rather than re-stamping a
+  migration the scheduler may already be working through."
+  [migration allowed action]
+  (when-not (contains? allowed (:status migration))
+    (error/reject :cash-account-migration/invalid-status
+                  {:message (str "Migration cannot be " action)
+                   :migration-id (:migration-id migration)
+                   :status (:status migration)
+                   :allowed allowed})))
+
+(defn approve-migration
+  "Approve a migration, making it work for the scheduler to pick up.
+
+  Approval is where the notice window stops being optional. A draft may
+  sit without dates for as long as an operator is still deciding, but
+  approving one commits to moving customers' accounts, and doing that
+  without having told them is the thing notice exists to prevent.
+
+  Approval attaches to the migration — its source, target and selection
+  — and not to any preview's numbers. Accounts open and close between
+  approval and the commit, so the figures move; what was agreed does
+  not."
+  [migration]
+  (let-nom>
+    [_ (ensure-status migration
+                      #{:cash-account-migration-status-draft}
+                      "approved")
+     _ (when-not (and (:notified-on migration) (:due-on migration))
+         (error/reject
+          :cash-account-migration/notice-required
+          {:message
+           "A migration needs a notice date and a due date before approval"
+           :migration-id (:migration-id migration)
+           :notified-on (:notified-on migration)
+           :due-on (:due-on migration)}))]
+    (let [now (utility/now)]
+      (assoc migration
+             :status :cash-account-migration-status-approved
+             :approved-at now
+             :updated-at now))))
+
+(defn cancel-migration
+  "Cancel a migration, whether it was still a draft or already approved.
+
+  Cancelling is how a migration that can no longer run leaves the work
+  list, because the system cannot tell a target whose dates slipped from
+  one nobody intends to use. A completed migration is not cancellable —
+  accounts have moved, and saying otherwise would misdescribe them."
+  [migration]
+  (let-nom>
+    [_ (ensure-status migration
+                      #{:cash-account-migration-status-draft
+                        :cash-account-migration-status-approved}
+                      "cancelled")]
+    (let [now (utility/now)]
+      (assoc migration
+             :status :cash-account-migration-status-cancelled
+             :cancelled-at now
+             :updated-at now))))
+
+(defn ensure-committable
+  "Asserts a migration may be run for real, before anything moves.
+  Separate from `complete-migration` so the guard fires ahead of the
+  pass while the completion is stamped after it, rather than dating a
+  migration completed before its accounts had moved."
+  [migration]
+  (ensure-status migration
+                 #{:cash-account-migration-status-approved}
+                 "committed"))
+
+(defn complete-migration
+  "Close an approved migration once a commit has run it. Separate from
+  the run's own completion: a run can finish having moved nothing, and
+  it is the migration that is done, not the pass."
+  [migration]
+  (let-nom>
+    [_ (ensure-status migration
+                      #{:cash-account-migration-status-approved}
+                      "completed")]
+    (let [now (utility/now)]
+      (assoc migration
+             :status :cash-account-migration-status-completed
+             :completed-at now
+             :updated-at now))))
+
+(defn due?
+  "Whether an approved migration is work for `business-day`.
+
+  Derived every time the job looks rather than latched, because the
+  dates it is measured against can move and the migration moves with
+  them. A target whose window has not opened is not due today, which is
+  a different thing from being dead."
+  [migration target-version business-day]
+  (let [{:keys [effective-from effective-to]} target-version]
+    (and (= :cash-account-migration-status-approved (:status migration))
+         (some? (:due-on migration))
+         (<= (:due-on migration) business-day)
+         (or (nil? effective-from) (<= effective-from business-day))
+         (or (nil? effective-to) (< business-day effective-to)))))
+
 (defn new-run
   "A run opens as running, and is closed by whatever finishes it. A
   preview and a commit are the same record: `dry-run?` decides only
@@ -158,12 +260,28 @@
    :business-day business-day
    :started-at (utility/now)})
 
+(defn moved-verdict
+  "What a commit records for an account it actually moved. Distinct from
+  the eligible verdict a preview writes: eligible is a forecast, migrated
+  is a fact, and the two sit in the same table."
+  [target-version]
+  {:outcome :cash-account-migration-outcome-migrated
+   :to-version-id (:version-id target-version)})
+
+(defn failed-verdict
+  "What a commit records for an account it could not move. One account's
+  failure is its own — the pass carries on, and the row says which one
+  and why."
+  [anomaly]
+  {:outcome :cash-account-migration-outcome-failed
+   :failure-reason (str (error/kind anomaly))})
+
 (defn account-verdict
   "One account's row, as the run saw it. `to-version-id` is set only
   where an account actually moved — a dry run's eligible verdict leaves
   it off, because nothing moved it."
   [run account decision]
-  (let [{:keys [outcome ineligibility]} decision]
+  (let [{:keys [outcome ineligibility to-version-id failure-reason]} decision]
     (utility/assoc-some
      {:bank-id (:bank-id run)
       :run-id (:run-id run)
@@ -172,7 +290,9 @@
       :outcome outcome
       :created-at (utility/now)}
      :from-version-id (:version-id account)
-     :ineligibility ineligibility)))
+     :to-version-id to-version-id
+     :ineligibility ineligibility
+     :failure-reason failure-reason)))
 
 (defn close-run
   "Closes a run with what it decided. Counts ride on the run because a

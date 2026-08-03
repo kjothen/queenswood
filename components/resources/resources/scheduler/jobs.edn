@@ -13,9 +13,9 @@
   :run-time-minutes 1020 ; 17:00 UTC
   :enabled true
   :kind :scheduler-job-kind-user}
- ;; System job: account migration runs every day at 00:00 UTC. The
- ;; migration task is a no-op placeholder until the domain op exists
- ;; (see the task registry), so it schedules and runs harmlessly.
+ ;; System job: account migration runs every day at 00:00 UTC. It
+ ;; commits every migration that is approved and due, and is the only
+ ;; thing in the system that moves an account between products.
  {:job-id "account-migration"
   :name "Account migration"
   :task-kinds [:scheduler-task-kind-account-migration]

@@ -137,9 +137,11 @@ export function publish_cash_account_product(product_id, version_id) {
 //
 // A preview is a POST because it appends a dry run to the migration's
 // run history; the GET on the same path lists every run, previews and
-// commits alike, which is what the Runs table shows. There is no edit,
-// approve or cancel route yet — the console renders those controls
-// disabled until there is.
+// commits alike, which is what the Runs table shows.
+//
+// Approving moves nothing — it puts the migration on the scheduler's
+// work list for its due date. There is still no edit route, so the
+// console renders Edit disabled.
 
 export function list_cash_account_migrations() {
   return request("/v1/cash-account-migrations");
@@ -153,6 +155,18 @@ export function create_cash_account_migration(data) {
   return mutate("/v1/cash-account-migrations", {
     method: "POST",
     body: JSON.stringify(data),
+  });
+}
+
+export function approve_cash_account_migration(migration_id) {
+  return mutate(`/v1/cash-account-migrations/${migration_id}/approve`, {
+    method: "POST",
+  });
+}
+
+export function cancel_cash_account_migration(migration_id) {
+  return mutate(`/v1/cash-account-migrations/${migration_id}/cancel`, {
+    method: "POST",
   });
 }
 

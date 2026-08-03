@@ -3,10 +3,14 @@
      hero (identity, actions, guards, source→target), notice timeline,
      preview, run history, and the per-account outcomes.
 
-     Edit / Approve / Cancel render disabled: bank-api exposes author,
-     preview and read only — there is no PATCH, approve or cancel route
-     yet — and a control that silently does nothing is worse than one
-     that says why it can't.
+     Approving moves nothing — it puts the migration on the scheduler's
+     work list for its due date, and the scheduler's migration task is
+     the only thing that moves accounts. Approve is blocked while any
+     guard is unresolved, so the button never produces a surprise 4xx.
+
+     Edit renders disabled with a title saying why: bank-api has no
+     route to edit a migration. A control that silently does nothing is
+     worse than one that says it can't.
 
      The outcomes table filters and pages in the browser because the run
      accounts endpoint is neither filtered nor cursor-paginated. At a
@@ -42,7 +46,15 @@
     list_cash_account_migration_run_accounts,
   } from "./api.mjs";
 
-  let { migration, productById, versionById, population, onpreview } = $props();
+  let {
+    migration,
+    productById,
+    versionById,
+    population,
+    onpreview,
+    onapprove,
+    oncancel,
+  } = $props();
 
   let runs = $state([]);
   let outcomes = $state([]);
@@ -345,7 +357,7 @@
     }));
   });
 
-  const NO_LIFECYCLE = "bank-api has no route for this yet";
+  const NO_EDIT = "bank-api has no route to edit a migration yet";
 </script>
 
 <!-- Hero -->
@@ -360,22 +372,28 @@
       <MigrationStatusBadge status={migration.status} />
       <div class="hero-actions">
         {#if migration.status === "draft"}
-          <Button size="sm" disabled title={NO_LIFECYCLE}>Edit</Button>
+          <Button size="sm" disabled title={NO_EDIT}>Edit</Button>
           <Button size="sm" onclick={preview} disabled={previewing}>
             {previewing ? "Running…" : "Run preview"}
           </Button>
-          <Button size="sm" variant="primary" disabled title={NO_LIFECYCLE}>
+          <Button
+            size="sm"
+            variant="primary"
+            disabled={guards.length > 0}
+            title={guards.length
+              ? "Resolve the items below before approving"
+              : undefined}
+            onclick={onapprove}
+          >
             Approve
           </Button>
-          <Button size="sm" variant="ghost" disabled title={NO_LIFECYCLE}>
-            Discard
-          </Button>
+          <Button size="sm" variant="ghost" onclick={oncancel}>Discard</Button>
         {:else if migration.status === "approved"}
-          <Button size="sm" disabled title={NO_LIFECYCLE}>Edit</Button>
+          <Button size="sm" disabled title={NO_EDIT}>Edit</Button>
           <Button size="sm" onclick={preview} disabled={previewing}>
             {previewing ? "Running…" : "Run preview"}
           </Button>
-          <Button size="sm" variant="ghost" disabled title={NO_LIFECYCLE}>
+          <Button size="sm" variant="ghost" onclick={oncancel}>
             Cancel migration
           </Button>
         {:else if migration.status === "completed"}

@@ -215,3 +215,50 @@
                                   :status-before (:account-status account)
                                   :status-after (:account-status updated)})]
           updated))))))
+
+(defn migrate-account
+  "Repin an account the caller already holds, writing into the caller's
+  transaction. Reads nothing: the account, the target version and the
+  policies all arrive resolved.
+
+  This is the shape a batch needs. A pass over a million accounts has
+  already streamed each one, has one target version for the whole
+  cohort, and resolves policy once for the run — so re-reading any of
+  that per account would be a million round-trips for three values that
+  never change. `migrate-product` is the single-account door onto the
+  same work.
+
+  A migration leaves the status alone, so the changelog metadata carries
+  the same status on both sides. It is still written: the account record
+  changed, and a reader tailing the changelog needs to see that as much
+  as it needs to see a status flip."
+  [txn account target-version policies]
+  (let-nom>
+    [updated (domain/migrate-product account target-version policies)
+     _ (store/save-account txn
+                           updated
+                           {:account-id (:account-id account)
+                            :status-before (:account-status account)
+                            :status-after (:account-status updated)})]
+    updated))
+
+(defn migrate-product
+  "Repin one account by id, resolving the target and the policies it is
+  checked against inside the transaction. The command path; a batch uses
+  `migrate-account` instead and resolves those once for the run."
+  ([txn data]
+   (migrate-product txn data {}))
+  ([txn data opts]
+   (store/transact
+    txn
+    (fn [txn]
+      (let [{:keys [bank-id account-id target-product-id target-version-id]}
+            data]
+        (let-nom>
+          [policies (get-policies txn bank-id account-id opts)
+           account (q/get-account txn bank-id account-id)
+           target-version (products/get-version txn
+                                                bank-id
+                                                target-product-id
+                                                target-version-id)]
+          (migrate-account txn account target-version policies)))))))

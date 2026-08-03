@@ -43,6 +43,7 @@
     publish_cash_account_product,
     discard_cash_account_product_draft,
   } from "./api.mjs";
+  import { loadPopulation } from "./population.mjs";
   import ProductDrawer from "./ProductDrawer.svelte";
 
   let { user, memberships } = $props();
@@ -50,6 +51,7 @@
   let loading = $state(true);
   let error = $state(null);
   let rows = $state([]);
+  let population = $state(null);
   // product-id → history expanded?
   let open = $state({});
   let templates = $state([]);
@@ -123,7 +125,28 @@
   $effect(() => {
     load();
     loadTemplates();
+    loadCounts();
   });
+
+  // Swept after first paint so the table isn't held up by it; the
+  // Accounts column reads "—" until it lands.
+  async function loadCounts() {
+    population = await loadPopulation();
+  }
+
+  const count = (n) =>
+    typeof n === "number" ? n.toLocaleString("en-GB") : null;
+
+  // Per version on every row, because every other cell on a row belongs
+  // to one version.
+  const versionCount = (v) => population?.byVersion?.[v?.["version-id"]] ?? 0;
+
+  // What the mainline row doesn't already account for. Disjoint from the
+  // figure above it on purpose — a product total would repeat the
+  // version's own count, which reads as the same number stated twice on
+  // a single-version product. Zero hides the line.
+  const othersCount = (row) =>
+    (population?.byProduct?.[row.productId] ?? 0) - versionCount(row.mainline);
 
   function openCreate() {
     drawerMode = "create";
@@ -220,6 +243,7 @@
         <Th>Status</Th>
         <Th align="right">Rate (bps)</Th>
         <Th>Currency</Th>
+        <Th align="right">Accounts</Th>
         <Th>Created</Th>
         <Th align="right">Actions</Th>
       </Tr>
@@ -253,6 +277,17 @@
           </Td>
           <Td align="right" mono tabular>{v["interest-rate-bps"] ?? 0}</Td>
           <Td>{currenciesLabel(v)}</Td>
+          <Td align="right" mono tabular>
+            {#if population}
+              {@const others = othersCount(row)}
+              {count(versionCount(v))}
+              {#if others > 0}
+                <span class="others">{count(others)} others</span>
+              {/if}
+            {:else}
+              <span class="pending">—</span>
+            {/if}
+          </Td>
           <Td muted>{formatRelative(v["created-at"])}</Td>
           <Td align="right">
             <span class="actions">
@@ -285,6 +320,13 @@
               </Td>
               <Td align="right" mono tabular>{h["interest-rate-bps"] ?? 0}</Td>
               <Td>{currenciesLabel(h)}</Td>
+              <Td align="right" mono tabular>
+                {#if population}
+                  {count(versionCount(h))}
+                {:else}
+                  <span class="pending">—</span>
+                {/if}
+              </Td>
               <Td muted>{formatRelative(h["created-at"])}</Td>
               <Td align="right">
                 <span class="actions">
@@ -360,6 +402,19 @@
   }
   .status .note {
     font-size: 11px;
+    color: var(--fg-muted);
+  }
+  /* Accounts on the product's other versions — the expandable rows
+     below account for them. */
+  .others {
+    display: block;
+    margin-top: 2px;
+    font-size: 10.5px;
+    font-weight: 400;
+    color: var(--fg-muted);
+    white-space: nowrap;
+  }
+  .pending {
     color: var(--fg-muted);
   }
 </style>

@@ -33,6 +33,28 @@
        :headers {"Location" (migration-uri result)}
        :body result})))
 
+(defn- transition
+  [request f]
+  (let [{:keys [auth parameters]} request
+        {:keys [bank-id]} auth
+        {:keys [migration-id]} (:path parameters)
+        result (f (config request) bank-id migration-id)]
+    (if (error/anomaly? result)
+      (errors/anomaly->response result)
+      {:status 200 :body result})))
+
+(defn approve-migration
+  "Approve a migration. Moves nothing — it makes the migration work the
+  scheduler picks up on its due date, which is the only thing that does."
+  [request]
+  (transition request migrations/approve-migration))
+
+(defn cancel-migration
+  "Cancel a migration, taking it off the scheduler's work list. A
+  completed migration cannot be cancelled — its accounts have moved."
+  [request]
+  (transition request migrations/cancel-migration))
+
 (defn preview-migration
   "Run a preview. This is the only evaluation the API can perform —
   committing a migration is the scheduler's, so that no request can move

@@ -23,3 +23,8 @@
   kind:
     cash-account:
       action: !keyword cash-account-action-rotate-address
+- effect: !keyword effect-allow
+  reason: "Allow migrating cash accounts onto another product version"
+  kind:
+    cash-account:
+      action: !keyword cash-account-action-migrate

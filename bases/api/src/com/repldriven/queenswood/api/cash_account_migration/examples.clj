@@ -50,10 +50,24 @@
            :status 404
            :detail "Source product has no versions"}})
 
+(def InvalidStatus
+  {:value {:title "REJECTED"
+           :type "cash-account-migration/invalid-status"
+           :status 409
+           :detail "Migration cannot be approved"}})
+
+(def NoticeRequired
+  {:value {:title "REJECTED"
+           :type "cash-account-migration/notice-required"
+           :status 422
+           :detail
+           "A migration needs a notice date and a due date before approval"}})
+
 (def registry
   (examples-registry [#'MigrationNotFound #'RunNotFound #'ProductTypeMismatch
                       #'TargetNotPublished #'TargetIsSource #'NoticeAfterDue
-                      #'NameRequired #'SourceProductNotFound]))
+                      #'NameRequired #'SourceProductNotFound #'InvalidStatus
+                      #'NoticeRequired]))
 
 (def MigrationId "mig.01kz3wyzcjhkab9ch91x9ngedr")
 
