@@ -28,11 +28,12 @@
   import {
     list_cash_account_migrations,
     list_cash_account_products,
-    list_cash_accounts,
-    list_parties,
     create_cash_account_migration,
     preview_cash_account_migration,
+    approve_cash_account_migration,
+    cancel_cash_account_migration,
   } from "./api.mjs";
+  import { loadPopulation } from "./population.mjs";
   import MigrationDetail from "./MigrationDetail.svelte";
   import MigrationDrawer from "./MigrationDrawer.svelte";
 
@@ -137,51 +138,14 @@
     }
   }
 
-  // One sweep of the account population, after first paint. It carries
-  // two things the migration API can't: the per-version and per-product
-  // counts the pickers and hero facts show, and the account number and
-  // owner an outcome row is identified by (a run records account-id
-  // alone). A failure leaves both unset rather than failing the screen.
-  async function loadPopulation() {
-    const byVersion = {};
-    const byProduct = {};
-    const accountById = {};
-    let after = null;
-    try {
-      const partyRes = await list_parties();
-      const partyName = {};
-      for (const p of partyRes.body?.parties ?? []) {
-        partyName[p["party-id"]] = p["display-name"];
-      }
-      do {
-        const res = await list_cash_accounts({ after });
-        if (res.status < 200 || res.status >= 300) return;
-        for (const a of res.body?.["cash-accounts"] ?? []) {
-          byVersion[a["version-id"]] = (byVersion[a["version-id"]] ?? 0) + 1;
-          byProduct[a["product-id"]] = (byProduct[a["product-id"]] ?? 0) + 1;
-          const scan = (a["payment-addresses"] ?? []).find(
-            (x) => shortEnum(x.scheme) === "scan",
-          )?.scan;
-          accountById[a["account-id"]] = {
-            number: scan?.["account-number"] ?? a["account-id"],
-            ccy: a.currency ?? "",
-            status: shortEnum(a["account-status"]),
-            owner: partyName[a["party-id"]] ?? a["party-id"],
-          };
-        }
-        const next = res.body?.links?.next;
-        after = next
-          ? new URL(next, location.origin).searchParams.get("page[after]")
-          : null;
-      } while (after);
-      population = { byVersion, byProduct, accountById };
-    } catch {
-      // The population is an enrichment; the screen stands without it.
-    }
-  }
-
+  // The counts the hero facts and pickers show, plus the account number
+  // and owner an outcome row is identified by — a run records
+  // account-id alone. Swept after first paint; the screen stands
+  // without it, showing "—" rather than a fabricated figure.
   $effect(() => {
-    load().then(loadPopulation);
+    load().then(async () => {
+      population = await loadPopulation({ owners: true });
+    });
   });
 
   function versionLabel(id) {
@@ -260,6 +224,34 @@
     drawerOpen = false;
     toast("Migration created", created.id);
     return true;
+  }
+
+  // Approve and cancel return the updated migration, so the rail and
+  // detail re-render off the response rather than a refetch.
+  function replace(updated) {
+    const next = normaliseMigration(updated, productById);
+    migrations = migrations.map((m) => (m.id === next.id ? next : m));
+    return next;
+  }
+
+  async function approve(migration) {
+    const res = await approve_cash_account_migration(migration.id);
+    if (res.status < 200 || res.status >= 300) {
+      toast("Could not approve", res.body?.type ?? `HTTP ${res.status}`);
+      return;
+    }
+    replace(res.body);
+    toast("Migration approved", migration.id);
+  }
+
+  async function cancel(migration) {
+    const res = await cancel_cash_account_migration(migration.id);
+    if (res.status < 200 || res.status >= 300) {
+      toast("Could not cancel", res.body?.type ?? `HTTP ${res.status}`);
+      return;
+    }
+    replace(res.body);
+    toast("Migration cancelled", "no accounts will move");
   }
 
   async function runPreview(migration) {
@@ -362,6 +354,8 @@
             {versionById}
             {population}
             onpreview={() => runPreview(selected)}
+            onapprove={() => approve(selected)}
+            oncancel={() => cancel(selected)}
           />
         {/key}
       {:else}

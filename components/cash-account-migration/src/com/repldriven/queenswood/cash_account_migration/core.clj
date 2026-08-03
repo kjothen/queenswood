@@ -5,6 +5,8 @@
     [com.repldriven.queenswood.cash-account-product-query.interface :as
      products]
     [com.repldriven.queenswood.cash-account-query.interface :as accounts]
+    [com.repldriven.queenswood.cash-account.interface :as cash-accounts]
+    [com.repldriven.queenswood.policy.interface :as policy]
     [com.repldriven.mono.error.interface :as error :refer [let-nom>]]))
 
 (defn- source-version
@@ -76,26 +78,15 @@
    (store/list-migrations txn bank-id opts)))
 
 (def ^:private chunk-size
-  "Accounts whose verdicts commit together. A verdict is one small
-  record, so this sits well inside FDB's transaction limits while
+  "Accounts whose moves and verdicts commit together. Both are small
+  records, so this sits well inside FDB's transaction limits while
   spreading the per-transaction cost over a hundred accounts rather than
-  paying it for each."
-  100)
+  paying it for each.
 
-(defn- flush-verdicts
-  "Writes a chunk of verdicts in one transaction and clears it."
-  [config state]
-  (let [{:keys [chunk]} state]
-    (if (empty? chunk)
-      state
-      (let-nom>
-        [_ (store/transact config
-                           (fn [txn]
-                             (reduce (fn [_ verdict]
-                                       (store/save-account-run txn verdict))
-                                     nil
-                                     chunk)))]
-        (assoc state :chunk [])))))
+  The two travel in one transaction deliberately: a verdict saying an
+  account moved, committed apart from the move, is a report of something
+  that did not happen."
+  100)
 
 (defn- tally-verdict
   [tally decision]
@@ -104,40 +95,154 @@
             (= :cash-account-migration-outcome-ineligible outcome)
             (update :ineligible inc)
 
-            (= :cash-account-migration-outcome-eligible outcome)
+            (= :cash-account-migration-outcome-failed outcome)
+            (update :failed inc)
+
+            (contains? #{:cash-account-migration-outcome-eligible
+                         :cash-account-migration-outcome-migrated}
+                       outcome)
             (update :moved inc))))
 
-(defn- evaluate-accounts
-  "Streams the bank's accounts, decides about every one the migration
-  reaches, and records the verdict. Returns the tally.
+(defn- apply-entry
+  "One account inside the chunk's transaction: moved if this is a commit
+  and it was found eligible, then its verdict written. Returns the
+  verdict actually recorded.
 
-  A dry run and a commit differ only in what happens after the verdict —
-  the streaming, the cohort test and the decision are the same code,
-  because a preview that ran different logic would be evidence of
-  nothing."
-  [config migration target-version run]
+  A move that comes back an anomaly becomes that account's failed
+  verdict rather than raising. The commonest cause is an account whose
+  status changed between the scan and the write, which is one account's
+  problem — the rest of the chunk still moves."
+  [txn ctx [account decision]]
+  (let [{:keys [run target policies dry-run?]} ctx
+        final (if (or dry-run?
+                      (not= :cash-account-migration-outcome-eligible
+                            (:outcome decision)))
+                decision
+                (let [moved (cash-accounts/migrate-account txn
+                                                           account
+                                                           target
+                                                           policies)]
+                  (if (error/anomaly? moved)
+                    (domain/failed-verdict moved)
+                    (domain/moved-verdict target))))
+        verdict (domain/account-verdict run account final)
+        saved (store/save-account-run txn verdict)]
+    (if (error/anomaly? saved) saved final)))
+
+(defn- fail-chunk
+  "Records every account of a rolled-back chunk as failed, in a fresh
+  transaction — the chunk's own has gone, taking any move in it along.
+
+  The whole chunk is marked rather than one account. A per-account
+  failure was already caught and recorded as such inside the
+  transaction, so reaching here means the transaction itself could not
+  commit, and that is not a property of any one account."
+  [config ctx chunk anomaly]
+  (let [{:keys [run]} ctx
+        verdict (domain/failed-verdict anomaly)]
+    (store/transact config
+                    (fn [txn]
+                      (reduce (fn [_ [account _decision]]
+                                (store/save-account-run
+                                 txn
+                                 (domain/account-verdict run account verdict)))
+                              nil
+                              chunk)))))
+
+(defn- flush-chunk
+  "Applies a chunk in one transaction — every eligible account moved, on
+  a commit, and every verdict written — then clears it and advances the
+  tally by what the chunk actually decided."
+  [config ctx state]
+  (let [{:keys [chunk]} state]
+    (if (empty? chunk)
+      state
+      ;; Short-circuits on the first anomaly so the chunk comes back as
+      ;; one rather than as a vector with an anomaly buried in it, which
+      ;; would tally as a decision that never happened.
+      (let [decided (store/transact
+                     config
+                     (fn [txn]
+                       (reduce (fn [acc entry]
+                                 (let [verdict (apply-entry txn ctx entry)]
+                                   (if (error/anomaly? verdict)
+                                     (reduced verdict)
+                                     (conj acc verdict))))
+                               []
+                               chunk)))]
+        (if (error/anomaly? decided)
+          (do (fail-chunk config ctx chunk decided)
+              (-> state
+                  (assoc :chunk [])
+                  (update-in [:tally :seen] + (count chunk))
+                  (update-in [:tally :failed] + (count chunk))))
+          (-> state
+              (assoc :chunk [])
+              (update :tally #(reduce tally-verdict % decided))))))))
+
+(defn- evaluate-accounts
+  "Streams the bank's accounts and decides about every one the migration
+  reaches, a chunk of them per transaction. Returns the tally.
+
+  Eligibility is decided as the scan streams; the move and the verdict
+  are applied together when the chunk flushes. Nothing is re-read per
+  account — the scan already holds it, the target version is one for the
+  whole cohort, and policy was resolved once for the run. That is what
+  makes the pass linear in transactions rather than in accounts.
+
+  A dry run and a commit differ only in whether an eligible verdict is
+  carried out. The streaming, the cohort test and the eligibility order
+  are the same code, because a preview that ran different logic would be
+  evidence of nothing."
+  [config ctx]
   (let-nom>
     [state (accounts/reduce-accounts-with-balances
             config
-            (:bank-id migration)
+            (:bank-id (:migration ctx))
             (fn [state {:keys [account]}]
-              (if-not (domain/in-cohort? migration account)
+              (if-not (domain/in-cohort? (:migration ctx) account)
                 state
-                (let [decision (domain/verdict target-version account)
-                      state (-> state
-                                (update :chunk
-                                        conj
-                                        (domain/account-verdict run
-                                                                account
-                                                                decision))
-                                (update :tally tally-verdict decision))]
+                (let [decision (domain/verdict (:target ctx) account)
+                      state (update state :chunk conj [account decision])]
                   (if (< (count (:chunk state)) chunk-size)
                     state
-                    (flush-verdicts config state)))))
+                    (flush-chunk config ctx state)))))
             {:chunk []
-             :tally {:seen 0 :moved 0 :ineligible 0 :failed 0}})
-     flushed (flush-verdicts config state)]
-    (:tally flushed)))
+             :tally {:seen 0 :moved 0 :ineligible 0 :failed 0}})]
+    (:tally (flush-chunk config ctx state))))
+
+(defn- run-migration
+  "One pass over a migration's cohort, previewing or committing. Opens a
+  run, evaluates every account, and closes the run with what it decided.
+
+  A run is closed as failed only when the pass itself could not finish.
+  A pass that decided about every account and moved none succeeded — it
+  is the accounts that were ineligible, not the run."
+  [txn bank-id migration-id business-day dry-run?]
+  (let-nom>
+    [migration (get-migration txn bank-id migration-id)
+     target (products/get-version txn
+                                  bank-id
+                                  (:target-product-id migration)
+                                  (:target-version-id migration))
+     ;; Resolved once for the run, as the interest pass does. A pass
+     ;; wants one view of the rules it is applying — re-resolving per
+     ;; account would let a policy change mid-cohort and move half a
+     ;; bank under one set of rules and half under another.
+     policies (policy/get-effective-policies txn {:bank-id bank-id})
+     run (domain/new-run migration business-day dry-run?)
+     _ (store/save-run txn run)
+     tally (evaluate-accounts txn
+                              {:migration migration
+                               :target target
+                               :policies policies
+                               :run run
+                               :dry-run? dry-run?})]
+    (if (error/anomaly? tally)
+      (let-nom> [_ (store/save-run txn (domain/fail-run run tally))] tally)
+      (let-nom> [closed (domain/close-run run tally)
+                 _ (store/save-run txn closed)]
+        closed))))
 
 (defn preview-migration
   "Evaluate a migration without moving anything. Writes a run and a
@@ -148,20 +253,110 @@
   of what a commit would do rather than a promise, and being able to
   look again is what makes that drift visible."
   [txn bank-id migration-id business-day]
+  (run-migration txn bank-id migration-id business-day true))
+
+(defn approve-migration
+  [txn bank-id migration-id]
+  (store/transact
+   txn
+   (fn [txn]
+     (let-nom>
+       [migration (get-migration txn bank-id migration-id)
+        approved (domain/approve-migration migration)
+        _ (store/save-migration txn approved)]
+       approved))))
+
+(defn cancel-migration
+  [txn bank-id migration-id]
+  (store/transact
+   txn
+   (fn [txn]
+     (let-nom>
+       [migration (get-migration txn bank-id migration-id)
+        cancelled (domain/cancel-migration migration)
+        _ (store/save-migration txn cancelled)]
+       cancelled))))
+
+(defn commit-migration
+  "Run a migration for real, then close it. Returns the run.
+
+  The migration completes only when the pass finished. A pass that could
+  not run leaves it approved, so the next business day picks it up again
+  rather than stranding a migration nobody moved."
+  [txn bank-id migration-id business-day]
   (let-nom>
     [migration (get-migration txn bank-id migration-id)
-     target (products/get-version txn
-                                  bank-id
-                                  (:target-product-id migration)
-                                  (:target-version-id migration))
-     run (domain/new-run migration business-day true)
-     _ (store/save-run txn run)
-     tally (evaluate-accounts txn migration target run)]
-    (if (error/anomaly? tally)
-      (let-nom> [_ (store/save-run txn (domain/fail-run run tally))] tally)
-      (let-nom> [closed (domain/close-run run tally)
-                 _ (store/save-run txn closed)]
-        closed))))
+     _ (domain/ensure-committable migration)
+     run (run-migration txn bank-id migration-id business-day false)
+     completed (domain/complete-migration migration)
+     _ (store/save-migration txn completed)]
+    run))
+
+(defn- target-of
+  [txn bank-id migration]
+  (products/get-version txn
+                        bank-id
+                        (:target-product-id migration)
+                        (:target-version-id migration)))
+
+(defn- due-migrations
+  "The bank's migrations that are work for `business-day`. Derived every
+  time rather than recorded, so a migration waiting on a date becomes due
+  when the date arrives without anything having touched it.
+
+  A target that cannot be read is skipped rather than raised: it makes
+  that one migration not-due today, which is exactly what a closed window
+  does, and the rest of the work list is unaffected."
+  [txn bank-id business-day]
+  (let-nom>
+    [migrations (store/list-migrations txn bank-id {})]
+    (into []
+          (filter (fn [migration]
+                    (let [target (target-of txn bank-id migration)]
+                      (and (not (error/anomaly? target))
+                           (domain/due? migration target business-day)))))
+          migrations)))
+
+(defn run-due-migrations
+  "Commit every migration the bank has that is due on `business-day`.
+
+  One migration failing does not stop the others — each is its own unit
+  of work, and the summary says which ones ran and what they moved.
+
+  `:accounts-processed` and `:accounts-failed` are the keys the
+  scheduler reads onto a task's record, and carry the same meaning they
+  do for the interest pass: processed is every account the pass decided
+  about, whether or not it moved, and failed is counted apart rather
+  than inside it. The migration-shaped figures ride alongside for a
+  reader who wants the split."
+  [txn bank-id business-day]
+  (let-nom>
+    [due (due-migrations txn bank-id business-day)]
+    (let [totals
+          (reduce
+           (fn [summary migration]
+             (let [run (commit-migration txn
+                                         bank-id
+                                         (:migration-id migration)
+                                         business-day)]
+               (if (error/anomaly? run)
+                 (-> summary
+                     (update :migrations inc)
+                     (update :failed-migrations conj (:migration-id migration)))
+                 (-> summary
+                     (update :migrations inc)
+                     (update :moved + (:accounts-moved run 0))
+                     (update :ineligible + (:accounts-ineligible run 0))
+                     (update :accounts-failed + (:accounts-failed run 0))))))
+           {:migrations 0
+            :moved 0
+            :ineligible 0
+            :accounts-failed 0
+            :failed-migrations []}
+           due)]
+      (assoc totals
+             :accounts-processed
+             (+ (:moved totals) (:ineligible totals))))))
 
 (defn get-run
   [txn bank-id run-id]

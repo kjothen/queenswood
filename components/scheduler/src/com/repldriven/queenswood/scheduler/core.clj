@@ -3,6 +3,7 @@
     [com.repldriven.queenswood.scheduler.domain :as domain]
     [com.repldriven.queenswood.scheduler.store :as store]
 
+    [com.repldriven.queenswood.cash-account-migration.interface :as migrations]
     [com.repldriven.queenswood.interest.interface :as interest]
 
     [com.repldriven.mono.error.interface :as error :refer [let-nom>]]
@@ -27,12 +28,13 @@
                                             config
                                             {:bank-id bank-id
                                              :as-of-date as-of-date}))}
-   ;; Placeholder: the account-migration domain op isn't built yet, so
-   ;; this runs as a no-op and reports nothing migrated. Replaced when
-   ;; the migration logic lands; lets the seeded system job schedule and
-   ;; run harmlessly in the meantime.
+   ;; The only thing that moves accounts between products. Authoring a
+   ;; migration and approving one both move nothing; this task is what
+   ;; carries an approved, due migration out.
    :scheduler-task-kind-account-migration
-   {:label "migrate" :run (fn [_config _bank-id _as-of-date] {:migrated 0})}})
+   {:label "migrate"
+    :run (fn [config bank-id as-of-date]
+           (migrations/run-due-migrations config bank-id as-of-date))}})
 
 (defn- task-label
   [task-kind]

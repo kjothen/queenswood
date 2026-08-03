@@ -256,3 +256,34 @@
                          :updated-at now)
                   :bban
                   bban))))
+
+(defn migrate-product
+  "Repin an opened account to another product version. Direct
+  single-phase flip, no second leg.
+
+  Only the pin moves. Balances, payment addresses and the account
+  number are untouched, because the account is the same account on
+  different terms — a customer whose savings rate changed did not get a
+  new account. The product may change too, so `:product-id` follows the
+  target rather than being asserted equal.
+
+  What the target is allowed to be — published, the same product type,
+  a currency this account may hold — belongs to whoever assembled the
+  cohort, not here. This guards the account's own state and nothing
+  else, so a single account can be moved on its own without
+  reconstructing a migration's reasoning."
+  [account target-version policies]
+  (let-nom>
+    [_ (when-not (= :cash-account-status-opened (:account-status account))
+         (error/reject :cash-account/invalid-status
+                       {:message "Account is not in a migratable state"
+                        :account-id (:account-id account)
+                        :status (:account-status account)
+                        :allowed #{:cash-account-status-opened}}))
+     _ (check-capability :cash-account-action-migrate
+                         (:account-type account)
+                         policies)]
+    (assoc account
+           :product-id (:product-id target-version)
+           :version-id (:version-id target-version)
+           :updated-at (utility/now))))

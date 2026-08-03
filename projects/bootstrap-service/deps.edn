@@ -17,6 +17,8 @@
         component/balance-domain {:local/root "../../components/balance-domain"}
         component/balance-query {:local/root "../../components/balance-query"}
         component/cash-account {:local/root "../../components/cash-account"}
+        component/cash-account-migration
+        {:local/root "../../components/cash-account-migration"}
         component/cash-account-query {:local/root
                                       "../../components/cash-account-query"}
         component/cash-account-product {:local/root

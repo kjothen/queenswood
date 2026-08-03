@@ -42,6 +42,7 @@
    :cash-account-product/draft-already-exists 409
    :cash-account-product/duplicate-items 422
    :cash-account-product/version-immutable 409
+   :cash-account-migration/invalid-status 409
    :interest/no-settlement 404
    :party/invalid-status 409
    :party/open-accounts 409

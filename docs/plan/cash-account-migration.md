@@ -154,11 +154,14 @@ and due, whose target version is in force. That is a query, not an
 inference — the resource is the work item, and there is nothing to
 derive from the state of the accounts themselves.
 
-Each migration is one task within the run, so it inherits what a
-scheduler run already records: per-task timings, status, and the
-processed and failed counts that surface in the job history. A
-migration that moves 12,000 accounts and fails 40 of them says so on
-the job page without anything further being built.
+The task inherits what a scheduler run already records: per-task
+timings, status, and the processed and failed counts that surface in
+the job history. What it reports is the run's total rather than a
+figure per migration, because the scheduler models one task per kind
+and not one per work item. Where several migrations fall due on the
+same day, the split between them is read from the migrations
+themselves, each of which holds its own run and its own per-account
+rows.
 
 ## Where it sits in the API
 
@@ -265,28 +268,23 @@ matched on the day. The two can be combined — resolve a query at
 creation and freeze the result — at the cost of a cohort that goes
 stale between approval and commit.
 
-**Whether the target is a product or a version of one.** Naming a
-version fixes exactly what accounts land on, and a published version's
-effective dates cannot be edited, so the window the migration is
-measured against is fixed too. Naming a product instead means the
-migration follows whichever version is active — accounts always land on
-current terms, and a later version published before the migration runs
-changes what they get without the migration being touched. That is
-either the useful behaviour or the dangerous one, depending on whether
-the thing being approved is "these accounts move to these terms" or
-"these accounts move onto whatever is current". It also decides how
-much the runnable window can shift underneath an approved migration.
+**Whether the target is a product or a version of one.** Settled: a
+migration names a version. Approval means these accounts move to these
+terms, and a floating target would let a version published afterwards
+change what was agreed. A published version's effective dates cannot be
+edited either, so the window the migration is measured against is fixed
+with it.
+
+**What notice requires.** Partly settled. Approval refuses a migration
+without both a notice date and a due date, and refuses one whose notice
+falls after the move. Whether the platform should also enforce a
+*minimum* gap between them, rather than recording whatever it was told,
+is still open.
 
 **Whether a migration is bank-scoped or platform-authored.** A bank
 moving its own customers between its own products is an ordinary
 bank-scoped resource. A platform-initiated migration is closer to
 policy, and would need a different authorisation story.
-
-**What notice actually requires.** This plan assumes a migration
-carries a notified date and a due date, and that the gap between them
-is the bank's concern rather than the platform's. Whether the platform
-should enforce a minimum, refuse to run a migration whose notice is too
-short, or merely record what it was told, is unsettled.
 
 **Whether the abandoned flag returns as a convenience.** A "bring
 existing accounts along" option when publishing a version could mint a

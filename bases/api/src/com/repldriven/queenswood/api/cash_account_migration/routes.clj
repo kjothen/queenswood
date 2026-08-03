@@ -2,7 +2,8 @@
   (:require
     [com.repldriven.queenswood.api.cash-account-migration.examples :refer
      [MigrationNotFound RunNotFound ProductTypeMismatch TargetNotPublished
-      TargetIsSource NoticeAfterDue NameRequired SourceProductNotFound]]
+      TargetIsSource NoticeAfterDue NameRequired SourceProductNotFound
+      InvalidStatus NoticeRequired]]
     [com.repldriven.queenswood.api.cash-account-migration.handlers :as handlers]
     [com.repldriven.queenswood.api.cash-account-migration.queries :as queries]
 
@@ -18,9 +19,11 @@
 ;; product: it names two of them, and neither owns it.
 ;;
 ;; Note what is absent. There is no POST on a migration's runs — the
-;; only thing that moves accounts is the scheduler's migration task, so
-;; the API can create previews and read outcomes and nothing else. That
-;; the surface cannot express a commit is the point, not an omission.
+;; only thing that moves accounts is the scheduler's migration task. The
+;; API authors a migration, previews it, approves or cancels it, and
+;; reads outcomes; approving decides that accounts will move, never that
+;; they move now. That the surface cannot express a commit is the point,
+;; not an omission.
 (def routes
   [["/cash-account-migrations"
     {:openapi {:tags ["Cash-account migrations"]
@@ -52,6 +55,21 @@
              :responses {200 {:body [:ref "Migration"]}
                          404 (ErrorResponse [#'MigrationNotFound])}
              :handler queries/get-migration}}]
+     ["/approve"
+      {:post {:summary "Approve a cash-account migration"
+              :openapi {:operationId "ApproveCashAccountMigration"}
+              :responses {200 {:body [:ref "Migration"]}
+                          404 (ErrorResponse [#'MigrationNotFound])
+                          409 (ErrorResponse [#'InvalidStatus])
+                          422 (ErrorResponse [#'NoticeRequired])}
+              :handler handlers/approve-migration}}]
+     ["/cancel"
+      {:post {:summary "Cancel a cash-account migration"
+              :openapi {:operationId "CancelCashAccountMigration"}
+              :responses {200 {:body [:ref "Migration"]}
+                          404 (ErrorResponse [#'MigrationNotFound])
+                          409 (ErrorResponse [#'InvalidStatus])}
+              :handler handlers/cancel-migration}}]
      ["/previews"
       [""
        {:get {:summary "Retrieve a migration's previews"

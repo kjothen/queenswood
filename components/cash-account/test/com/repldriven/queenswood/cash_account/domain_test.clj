@@ -141,3 +141,51 @@
              (mapv :address (:retired-payment-addresses result))))
       (is (every? int?
                   (map :retired-at (:retired-payment-addresses result)))))))
+
+(def ^:private migration-target {:product-id "prd.mega" :version-id "prv.4"})
+
+(deftest migrate-product-source-state-guard-test
+  (testing
+    "migrating an account not in :cash-account-status-opened is
+           rejected, regardless of policy"
+    (doseq [status [:cash-account-status-opening
+                    :cash-account-status-closing
+                    :cash-account-status-closed
+                    :cash-account-status-suspended]]
+      (let [result (SUT/migrate-product (account status)
+                                        migration-target
+                                        [(policy-allowing
+                                          :cash-account-action-migrate)])]
+        (is (error/rejection? result))
+        (is (= :cash-account/invalid-status (error/kind result)))
+        (is (= status (:status (error/payload result))))))))
+
+(deftest migrate-product-capability-test
+  (testing "migrating without an allowing policy is denied"
+    ;; Capability resolution is default-deny, so this also pins that
+    ;; the migrate action is its own capability rather than riding on
+    ;; another transition's.
+    (let [result (SUT/migrate-product (account :cash-account-status-opened)
+                                      migration-target
+                                      [])]
+      (is (error/anomaly? result)))))
+
+(deftest migrate-product-happy-test
+  (testing
+    "migrating repins the product and version and leaves everything
+           else alone"
+    ;; The same account on different terms — a customer whose savings
+    ;; rate changed did not get a new account, so the number, the
+    ;; addresses and the status all stay put.
+    (let [acct (opened-account-with-address)
+          result (SUT/migrate-product acct
+                                      migration-target
+                                      [(policy-allowing
+                                        :cash-account-action-migrate)])]
+      (is (= "prd.mega" (:product-id result)))
+      (is (= "prv.4" (:version-id result)))
+      (is (= :cash-account-status-opened (:account-status result)))
+      (is (= (:bban acct) (:bban result)))
+      (is (= (:payment-addresses acct) (:payment-addresses result)))
+      (is (= (:account-id acct) (:account-id result)))
+      (is (int? (:updated-at result))))))

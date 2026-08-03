@@ -242,6 +242,108 @@
         (is (= :cash-account-migration-ineligibility-currency-not-allowed
                (:ineligibility v)))))))
 
+(def ^:private approvable
+  {:bank-id "org.1"
+   :migration-id "mig.1"
+   :status :cash-account-migration-status-draft
+   :notified-on 20260601
+   :due-on 20260801})
+
+(deftest approve-test
+  (testing "a draft with a notice window is approved"
+    (let [approved (SUT/approve-migration approvable)]
+      (is (= :cash-account-migration-status-approved (:status approved)))
+      (is (number? (:approved-at approved)))))
+  (testing "approving without a notice window is refused"
+    ;; Approving commits to moving customers' accounts. A draft may sit
+    ;; without dates while an operator decides; approving one may not.
+    (doseq [missing [{:notified-on nil} {:due-on nil}
+                     {:notified-on nil :due-on nil}]]
+      (let [result (SUT/approve-migration (merge approvable missing))]
+        (is (error/rejection? result))
+        (is (= :cash-account-migration/notice-required (error/kind result))))))
+  (testing "only a draft may be approved"
+    (doseq [status [:cash-account-migration-status-approved
+                    :cash-account-migration-status-completed
+                    :cash-account-migration-status-cancelled]]
+      (let [result (SUT/approve-migration (assoc approvable :status status))]
+        (is (error/rejection? result))
+        (is (= :cash-account-migration/invalid-status (error/kind result)))))))
+
+(deftest cancel-test
+  (testing "a draft and an approved migration may both be cancelled"
+    (doseq [status [:cash-account-migration-status-draft
+                    :cash-account-migration-status-approved]]
+      (let [cancelled (SUT/cancel-migration (assoc approvable :status status))]
+        (is (= :cash-account-migration-status-cancelled (:status cancelled)))
+        (is (number? (:cancelled-at cancelled))))))
+  (testing "a completed migration cannot be cancelled"
+    ;; Its accounts have moved; saying otherwise would misdescribe them.
+    (let [result
+          (SUT/cancel-migration
+           (assoc approvable :status :cash-account-migration-status-completed))]
+      (is (error/rejection? result))
+      (is (= :cash-account-migration/invalid-status (error/kind result))))))
+
+(deftest commit-guard-test
+  (testing "only an approved migration may be committed"
+    (doseq [status [:cash-account-migration-status-draft
+                    :cash-account-migration-status-completed
+                    :cash-account-migration-status-cancelled]]
+      (let [result (SUT/ensure-committable (assoc approvable :status status))]
+        (is (error/rejection? result))
+        (is (= :cash-account-migration/invalid-status (error/kind result))))))
+  (testing "an approved migration passes the guard and completes"
+    (let [approved
+          (assoc approvable :status :cash-account-migration-status-approved)]
+      (is (nil? (SUT/ensure-committable approved)))
+      (let [completed (SUT/complete-migration approved)]
+        (is (= :cash-account-migration-status-completed (:status completed)))
+        (is (number? (:completed-at completed)))))))
+
+(deftest due?-test
+  (let [approved
+        (assoc approvable :status :cash-account-migration-status-approved)
+        in-force {:effective-from 20260701 :effective-to nil}]
+    (testing "approved, due, and the target in force"
+      (is (true? (boolean (SUT/due? approved in-force 20260801)))))
+    (testing "due later is not due today"
+      (is (false? (boolean (SUT/due? approved in-force 20260731)))))
+    (testing "a draft is never due, whatever its dates say"
+      (is (false? (boolean (SUT/due? approvable in-force 20260801)))))
+    (testing "a migration with no due date is not due"
+      (is (false? (boolean
+                   (SUT/due? (dissoc approved :due-on) in-force 20260801)))))
+    (testing "a target whose window has not opened is not due yet"
+      ;; Not-due is not dead: push the target's start out and the
+      ;; migration simply becomes due later, untouched.
+      (is (false? (boolean
+                   (SUT/due? approved {:effective-from 20260901} 20260801)))))
+    (testing "a target whose window has closed is not due"
+      (is (false? (boolean (SUT/due? approved
+                                     {:effective-from 20260101
+                                      :effective-to 20260701}
+                                     20260801)))))))
+
+(deftest commit-verdict-test
+  (let [run {:bank-id "org.1" :run-id "run.1" :migration-id "mig.1"}]
+    (testing "an account that moved records where it landed"
+      ;; migrated is a fact where eligible was a forecast, and the two
+      ;; sit in the same table.
+      (let [v (SUT/account-verdict run (account {}) (SUT/moved-verdict target))]
+        (is (= :cash-account-migration-outcome-migrated (:outcome v)))
+        (is (= "ver.2" (:to-version-id v)))
+        (is (= "ver.1" (:from-version-id v)))))
+    (testing "an account that could not be moved records why, and no target"
+      (let [v (SUT/account-verdict run
+                                   (account {})
+                                   (SUT/failed-verdict
+                                    (error/reject :cash-account/invalid-status
+                                                  {})))]
+        (is (= :cash-account-migration-outcome-failed (:outcome v)))
+        (is (string? (:failure-reason v)))
+        (is (not (contains? v :to-version-id)))))))
+
 (deftest name-test
   (testing "a migration carries the name an operator gave it"
     (is (= "Super-saver to mega-saver"

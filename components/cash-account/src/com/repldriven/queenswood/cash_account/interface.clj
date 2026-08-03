@@ -1,6 +1,6 @@
 (ns com.repldriven.queenswood.cash-account.interface
   "Cash account write side: open, close, suspend, resume, and
-  rotate-address for banks. Open allocates payment addresses,
+  rotate-address, and migrate-product for banks. Open allocates payment addresses,
   derives account-type from the party, validates the chosen product
   version, and seeds the product's balance buckets. Open and close
   transitions are driven by the changelog relay and this brick's
@@ -102,6 +102,47 @@
    (core/rotate-address txn data))
   ([txn data opts]
    (core/rotate-address txn data opts)))
+
+(defn migrate-product
+  "Repin an opened account to another product version, leaving its
+  balances, payment addresses and account number alone — the same
+  account on different terms. Direct single-phase flip, no second leg.
+  Returns the updated account or an anomaly.
+
+  Whether the target is a sensible destination for this account —
+  published, the same product type, a currency it may hold — is settled
+  by whoever assembled the cohort. `cash-account-migration` does that
+  per account and calls `migrate-account` for the ones that pass.
+
+  Args:
+  - txn: FDB transaction or db handle.
+  - data: map with `:bank-id`, `:account-id`, `:target-product-id`
+    and `:target-version-id`.
+  - opts (optional): map; `:policies` overrides policy resolution."
+  ([txn data]
+   (core/migrate-product txn data))
+  ([txn data opts]
+   (core/migrate-product txn data opts)))
+
+(defn migrate-account
+  "Repin an account the caller already holds, joining the caller's
+  transaction so a chunk of moves commits together. Returns the updated
+  account or an anomaly.
+
+  The batch door onto `migrate-product`'s work. A pass over a cohort has
+  already streamed each account, has one target version for all of them,
+  and resolves policy once for the run; passing those in is what keeps a
+  million-account migration from becoming a million round-trips.
+
+  Args:
+  - txn: an open FDB transaction — this joins it rather than opening
+    one, so a caller can commit the move and its own bookkeeping
+    together.
+  - account: the account map, as streamed.
+  - target-version: the product version to repin onto.
+  - policies: effective policies for the run."
+  [txn account target-version policies]
+  (core/migrate-account txn account target-version policies))
 
 (defn seed-opened-account
   "Test/admin shortcut: flip an account from
