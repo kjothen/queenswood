@@ -67,8 +67,8 @@ message InterestAccountRun {
   // or a zero-rate product. A required field holding its default fails
   // the Java parse.
   optional int64 amount = 9;
-  optional int64 input_balance = 10;
-  optional int64 input_carry = 11;
+  optional int64 principal = 10;
+  optional int64 opening_carry = 11;
 
   // The account's currency, and part of the amount index's grouping
   // key. Without it a bank holding more than one currency would sum
