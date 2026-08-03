@@ -14,6 +14,7 @@
     Sidenav,
     SidenavGroup,
     SidenavItem,
+    ToastHost,
   } from "@queenswood/ui";
   import { router } from "svelte-spa-router";
 
@@ -74,6 +75,15 @@
         {/snippet}
         Accounts
       </SidenavItem>
+      <SidenavItem href="#/migrations" title="Migrations" current={isCurrent("/migrations")}>
+        {#snippet icon()}
+          <svg viewBox="0 0 16 16" aria-hidden="true">
+            <path d="M2.5 5.5 H12 M9.5 3 L12 5.5 L9.5 8" />
+            <path d="M13.5 10.5 H4 M6.5 8 L4 10.5 L6.5 13" />
+          </svg>
+        {/snippet}
+        Migrations
+      </SidenavItem>
     </SidenavGroup>
     <SidenavGroup title="Operations">
       <SidenavItem href="#/jobs" title="Jobs" current={isCurrent("/jobs")}>
@@ -113,6 +123,8 @@
     {@render children?.()}
   </main>
 </div>
+
+<ToastHost />
 
 <style>
   .app-shell {

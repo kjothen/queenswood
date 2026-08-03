@@ -412,7 +412,7 @@
 
   // ── the scene programs ────────────────────────────────────────────
   const PROD_CURRENT = { name: "Current Account", "template-id": TPL_CURRENT, currency: "GBP", "interest-rate-bps": 0, "effective-from": TODAY };
-  const PROD_SAVINGS = { name: "Savings", "template-id": TPL_SAVINGS, currency: "GBP", "interest-rate-bps": 3650, "effective-from": TODAY };
+  const PROD_SAVINGS = { name: "Savings", "template-id": TPL_SAVINGS, currency: "GBP", "interest-rate-bps": 365, "effective-from": TODAY };
 
   const EXEC = {
     async s1({ step }) {

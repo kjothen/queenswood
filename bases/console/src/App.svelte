@@ -9,6 +9,7 @@
   import AppShell from "./lib/AppShell.svelte";
   import Products from "./lib/Products.svelte";
   import Accounts from "./lib/Accounts.svelte";
+  import Migrations from "./lib/Migrations.svelte";
   import Parties from "./lib/Parties.svelte";
   import LedgerAccounts from "./lib/LedgerAccounts.svelte";
   import Jobs from "./lib/Jobs.svelte";
@@ -47,6 +48,10 @@
       }),
       "/accounts": wrap({
         component: Accounts,
+        props: { user, memberships },
+      }),
+      "/migrations": wrap({
+        component: Migrations,
         props: { user, memberships },
       }),
       "/jobs": wrap({

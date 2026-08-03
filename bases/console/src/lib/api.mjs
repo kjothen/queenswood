@@ -129,6 +129,52 @@ export function publish_cash_account_product(product_id, version_id) {
   );
 }
 
+// ─── Cash-account migrations (org-scoped) ───
+//
+// A migration is a statement of intent: authoring one moves nothing,
+// and neither does approving it — only the scheduler's migration task
+// moves accounts. So the surface here is author, preview, and read.
+//
+// A preview is a POST because it appends a dry run to the migration's
+// run history; the GET on the same path lists every run, previews and
+// commits alike, which is what the Runs table shows. There is no edit,
+// approve or cancel route yet — the console renders those controls
+// disabled until there is.
+
+export function list_cash_account_migrations() {
+  return request("/v1/cash-account-migrations");
+}
+
+export function get_cash_account_migration(migration_id) {
+  return request(`/v1/cash-account-migrations/${migration_id}`);
+}
+
+export function create_cash_account_migration(data) {
+  return mutate("/v1/cash-account-migrations", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export function list_cash_account_migration_runs(migration_id) {
+  return request(`/v1/cash-account-migrations/${migration_id}/previews`);
+}
+
+export function preview_cash_account_migration(migration_id) {
+  return mutate(`/v1/cash-account-migrations/${migration_id}/previews`, {
+    method: "POST",
+  });
+}
+
+// The per-account verdicts one run recorded. Unpaginated and
+// unfiltered server-side today, so the outcomes panel filters and pages
+// in the browser; see the note on the Migrations screen.
+export function list_cash_account_migration_run_accounts(migration_id, run_id) {
+  return request(
+    `/v1/cash-account-migrations/${migration_id}/previews/${run_id}/accounts`,
+  );
+}
+
 // ─── Ledger accounts (org-scoped, read-only) ───
 //
 // The bank's chart of accounts (GL accounts). The list endpoint returns
