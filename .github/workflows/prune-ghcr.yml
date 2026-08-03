@@ -1,24 +1,33 @@
 name: Prune GHCR Untagged
 
-# Deletes untagged container manifests from GHCR for each Queenswood
-# image. Every `release-images.yml` run pushes new content to the
-# moving `:latest-<arch>` tags and rebuilds the `:latest` manifest
-# list; the digests behind the *previous* tags become untagged but
-# still occupy storage. Without periodic pruning they accumulate
-# indefinitely.
+# Deletes untagged manifests from GHCR for every Queenswood package --
+# the service images and the three Helm charts. Every
+# `release-images.yml` run pushes new content to the moving
+# `:latest-<arch>` tags and rebuilds the `:latest` manifest list; the
+# digests behind the *previous* tags become untagged but still occupy
+# storage. Re-publishing a chart version supersedes its digest the same
+# way. Without periodic pruning they accumulate indefinitely.
 #
-# Two things this has to get right, and both have bitten:
+# Three things this has to get right, and the first two have bitten:
 #
 # 1. Images are published under `ghcr.io/<owner>/queenswood/<name>`,
 #    so the GHCR package is `queenswood/<name>` and the REST path
 #    needs it percent-encoded. A bare `<name>` fails with "Package
 #    not found" -- which is silent enough to look like a clean run.
+#    Charts publish to `ghcr.io/<owner>/<name>` instead, so their
+#    package name carries no slash and the encoding is a no-op.
 #
 # 2. "Untagged" does not mean "unreferenced". A tagged multi-arch
 #    index points at per-platform manifests that GHCR itself reports
 #    with no tags, so deleting every untagged version destroys the
 #    image `:latest` resolves to. Every digest a tagged version
 #    references is collected first and kept.
+#
+# 3. A chart is a single manifest rather than an index, so the manifest
+#    media types have to be in the Accept header -- against index types
+#    alone GHCR answers 404 and the step dies under `set -e`. Listing
+#    both is safe: GHCR still returns the index for a multi-arch image
+#    whenever one is acceptable, so image pruning is unchanged.
 
 on:
   # Sunday 03:30 UTC. Off-peak for GHCR + no overlap with
@@ -44,7 +53,8 @@ jobs:
       # registry) cancel the rest.
       fail-fast: false
       matrix:
-        # Must track the target list in infra/docker/bake.hcl.
+        # Images must track the target list in infra/docker/bake.hcl,
+        # charts the loop in release-chart.yml.
         package:
           - queenswood/migrator-service
           - queenswood/bootstrap-service
@@ -61,6 +71,9 @@ jobs:
           - queenswood/uk-companies-house-adapter-service
           - queenswood/uk-companies-house-simulator-service
           - queenswood/console
+          - queenswood
+          - queenswood-keycloak
+          - keycloak-operator
     steps:
       - name: Prune untagged versions of ${{ matrix.package }}
         env:
@@ -90,7 +103,7 @@ jobs:
                    <<<"$versions" \
                  | while read -r digest; do
                      curl -fsSL -H "Authorization: Bearer $regtoken" \
-                       -H "Accept: application/vnd.oci.image.index.v1+json,application/vnd.docker.distribution.manifest.list.v2+json" \
+                       -H "Accept: application/vnd.oci.image.index.v1+json,application/vnd.docker.distribution.manifest.list.v2+json,application/vnd.oci.image.manifest.v1+json,application/vnd.docker.distribution.manifest.v2+json" \
                        "https://ghcr.io/v2/$OWNER/$PKG/manifests/$digest" \
                        | jq -r '.manifests[]?.digest // empty'
                    done | sort -u)
