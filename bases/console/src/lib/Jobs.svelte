@@ -39,9 +39,9 @@
     nextRuns,
     fmtAbs,
     fmtRel,
-    fmtDur,
     lastOutcome,
-    runDurationSecs,
+    fmtElapsed,
+    runPipelineSteps,
     pipelineSteps,
     hhmm,
     minutesFromHHMM,
@@ -389,20 +389,42 @@
                   {:else}
                     <div class="runs">
                       {#each job.runs as run (run["run-id"])}
-                        <div class="run-row" class:current={run.status === "running"}>
-                          <span class="r-when mono">{fmtAbs(run["started-at"])}</span>
-                          <span class="r-dur mono">
-                            {run.status === "running"
-                              ? fmtRel(run["started-at"], now)
-                              : fmtDur(runDurationSecs(run))}
-                          </span>
-                          <span class="r-status">
-                            <JobStatusBadge outcome={run.status} />
-                            {#if run.status === "failed" && run["current-task"]}
-                              <span class="ft mono">at {run["current-task"]}</span>
-                            {/if}
-                          </span>
-                          <span class="r-trigger mono">{run["trigger-source"]}</span>
+                        <!-- Hovering a run reveals what each of its tasks did
+                             — which was slow, which failed, which never ran.
+                             tabindex makes the same detail reachable by
+                             keyboard, via :focus-within. -->
+                        <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
+                        <!-- Focusable on purpose, and not interactive: the
+                             tabstop exists so the task detail below is
+                             reachable without a pointer. Without it the
+                             detail would be hover-only. -->
+                        <div
+                          class="run"
+                          class:current={run.status === "running"}
+                          role="group"
+                          aria-label="Run started {fmtAbs(run['started-at'])}"
+                          tabindex="0"
+                        >
+                          <div class="run-row">
+                            <span class="r-when mono">{fmtAbs(run["started-at"])}</span>
+                            <span class="r-dur mono">
+                              {run.status === "running"
+                                ? fmtRel(run["started-at"], now)
+                                : (fmtElapsed(run["started-at"], run["finished-at"]) ?? "—")}
+                            </span>
+                            <span class="r-status">
+                              <JobStatusBadge outcome={run.status} />
+                              {#if run.status === "failed" && run["current-task"]}
+                                <span class="ft mono">at {run["current-task"]}</span>
+                              {/if}
+                            </span>
+                            <span class="r-trigger mono">{run["trigger-source"]}</span>
+                          </div>
+                          {#if (run.tasks ?? []).length}
+                            <div class="run-tasks">
+                              <TaskPipeline steps={runPipelineSteps(run)} dense />
+                            </div>
+                          {/if}
                         </div>
                       {/each}
                     </div>
@@ -593,17 +615,26 @@
     overflow: hidden;
     background: var(--surface-raised);
   }
+  .run { border-bottom: 1px solid var(--rule-2); }
+  .run:last-child { border-bottom: none; }
+  .run:focus { outline: none; }
+  .run:focus-visible { outline: 2px solid var(--fg-muted); outline-offset: -2px; }
   .run-row {
     display: grid;
     grid-template-columns: 190px 96px 1fr auto;
     gap: 14px;
     align-items: center;
     padding: 10px 14px;
-    border-bottom: 1px solid var(--rule-2);
     font-size: 12.5px;
   }
-  .run-row:last-child { border-bottom: none; }
-  .run-row.current { background: light-dark(oklch(0.97 0.02 84), oklch(0.30 0.04 80)); }
+  .run.current { background: light-dark(oklch(0.97 0.02 84), oklch(0.30 0.04 80)); }
+
+  /* Per-task detail, revealed inline on hover. Hidden rather than
+     collapsed: the row is already inside an expanded job panel, and a
+     second nested expand is one level too many. */
+  .run-tasks { display: none; }
+  .run:hover .run-tasks,
+  .run:focus-within .run-tasks { display: block; padding: 0 14px 11px 14px; }
   .run-row .r-when { font-size: 12px; color: var(--fg-2); }
   .run-row .r-dur {
     font-size: 12px;

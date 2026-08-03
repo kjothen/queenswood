@@ -1,6 +1,7 @@
 (ns com.repldriven.queenswood.scheduler.domain
   (:require
     [com.repldriven.mono.error.interface :as error]
+    [com.repldriven.mono.utility.interface :as utility]
 
     [clojure.set :as set]))
 
@@ -105,3 +106,41 @@
   [started-at prev-run]
   (when-let [duration (run-duration prev-run)]
     (+ started-at duration)))
+
+(defn started-task
+  "A task the run has just reached."
+  [label started-at]
+  {:label label
+   :status :scheduler-task-status-running
+   :started-at started-at})
+
+(defn finished-task
+  "Closes a task with what its pass reported. `result` is the task's
+  own return — its counts are read where it offers them and left off
+  where it does not, so a task with nothing to count carries no zero it
+  never meant."
+  [task finished-at result]
+  (utility/assoc-some (assoc task
+                             :status :scheduler-task-status-succeeded
+                             :finished-at finished-at)
+                      :records-processed (:accounts-processed result)
+                      :records-failed (:accounts-failed result)))
+
+(defn failed-task
+  "Closes a task with the anomaly that stopped it. The message is the
+  same one the run carries, repeated here so a reader hovering one task
+  need not correlate it with the run's own error."
+  [task finished-at anomaly]
+  (assoc task
+         :status :scheduler-task-status-failed
+         :finished-at finished-at
+         :error (error/format-anomaly anomaly)))
+
+(defn skipped-tasks
+  "The tasks after a failure, which the run never reached. Recorded
+  rather than left absent so the sequence a job declared is legible
+  from the run alone."
+  [labels]
+  (mapv (fn [label]
+          {:label label :status :scheduler-task-status-skipped})
+        labels))

@@ -88,3 +88,58 @@
   (testing "nil when the prior run never finished"
     (is (nil? (SUT/expected-end-at 1000 {:started-at 100})))
     (is (nil? (SUT/expected-end-at 1000 nil)))))
+
+(deftest task-recording-test
+  (let [started (SUT/started-task "accrue" 1000)]
+    (testing "a task the run has reached is running, and stamped"
+      (is (= {:label "accrue"
+              :status :scheduler-task-status-running
+              :started-at 1000}
+             started)))
+    (testing "finishing carries the counts the pass reported"
+      ;; The pass counts accounts; the run records them as records,
+      ;; because the scheduler has no business knowing what a pass
+      ;; iterates over.
+      (is (= {:label "accrue"
+              :status :scheduler-task-status-succeeded
+              :started-at 1000
+              :finished-at 1600
+              :records-processed 12480
+              :records-failed 3}
+             (SUT/finished-task started
+                                1600
+                                {:accounts-processed 12480
+                                 :accounts-failed 3}))))
+    (testing "a zero is a real count and is kept"
+      (let [task (SUT/finished-task started
+                                    1600
+                                    {:accounts-processed 0 :accounts-failed 0})]
+        (is (= 0 (:records-processed task)))
+        (is (= 0 (:records-failed task)))))
+    (testing "a task with nothing to count carries no counts at all"
+      ;; The migration task reports its own shape and no account
+      ;; figures — better absent than a zero it never meant.
+      (let [task (SUT/finished-task started 1600 {:migrated 0})]
+        (is (= :scheduler-task-status-succeeded (:status task)))
+        (is (not (contains? task :records-processed)))
+        (is (not (contains? task :records-failed)))))
+    (testing "failing keeps the timings and the anomaly that stopped it"
+      (let [task (SUT/failed-task started
+                                  1600
+                                  (error/reject :interest/missing-gl-account
+                                                {:message "no such account"}))]
+        (is (= :scheduler-task-status-failed (:status task)))
+        (is (= 1600 (:finished-at task)))
+        (is (string? (:error task)))))))
+
+(deftest skipped-tasks-test
+  (testing "tasks after a failure are recorded as skipped, in order"
+    (is (= [{:label "capitalize" :status :scheduler-task-status-skipped}
+            {:label "migrate" :status :scheduler-task-status-skipped}]
+           (SUT/skipped-tasks ["capitalize" "migrate"]))))
+  (testing "a skipped task carries no timings — the run never reached it"
+    (let [[task] (SUT/skipped-tasks ["capitalize"])]
+      (is (not (contains? task :started-at)))
+      (is (not (contains? task :finished-at)))))
+  (testing "nothing left to skip is an empty vector, not nil"
+    (is (= [] (SUT/skipped-tasks [])))))

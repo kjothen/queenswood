@@ -56,6 +56,14 @@
    :run-time-minutes 1020
    :enabled true})
 
+(def TaskRun
+  {:label "accrue"
+   :status :scheduler-task-status-succeeded
+   :started-at 1735783200000
+   :finished-at 1735783230000
+   :records-processed 12480
+   :records-failed 0})
+
 (def Run
   {:bank-id "bnk.01kprbmgcj35ptc8npmybhh4s7"
    :run-id "01940000-0000-7000-8000-000000000000"
@@ -66,7 +74,11 @@
    :tasks-total 2
    :tasks-completed 1
    :current-task "capitalize"
-   :expected-end-at 1735783260000})
+   :expected-end-at 1735783260000
+   :tasks [TaskRun
+           {:label "capitalize"
+            :status :scheduler-task-status-running
+            :started-at 1735783230000}]})
 
 (def RunId (:run-id Run))
 

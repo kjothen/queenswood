@@ -1063,6 +1063,27 @@
           />
         {/snippet}
       </SceneCard>
+
+      <p class="lead">
+        <code>&lt;TaskPipeline dense&gt;</code> with per-step <code>detail</code>
+        and <code>alert</code> — the shape used inside a run history row,
+        where the run has recorded what each task actually did rather than
+        the schedule projecting what it will do. <code>alert</code> is the
+        figure that still needs reading when the task itself succeeded.
+      </p>
+      <TaskPipeline
+        dense
+        steps={[
+          { name: "accrue", status: "ok", detail: "12,480 processed · 3.4s" },
+          {
+            name: "capitalize",
+            status: "ok",
+            detail: "12,480 processed · 8.1s",
+            alert: "400 failed",
+          },
+          { name: "migrate", status: "skipped", detail: "never ran" },
+        ]}
+      />
     </section>
 
     <section id="rawcalls" class="section">

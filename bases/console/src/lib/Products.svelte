@@ -1,11 +1,24 @@
 <script>
   /* Products page — the first thing a signed-in console user lands on.
-     Lists the org's cash-account-products, one row per version, and
-     gates per-row actions on the version's status:
+     One row per product, showing the version in force today, with the
+     rest of that product's timeline in the expandable row beneath.
+
+     A product is a timeline rather than a record: several versions can
+     be published at once, each owning an effective-from/to window, so
+     listing every version flat showed one product as several rows all
+     reading "published" and left the reader to work out which one
+     actually applies. The mainline row answers that directly — it is
+     the version an account opened today would pin to.
+
+     Per-version actions are gated on status, and are the same wherever
+     the version is rendered:
 
        draft     → Publish (brand), Edit (ghost), Discard (danger)
        published → New version (ghost)   — opens a fresh draft
        discarded → no actions (the row is a tombstone)
+
+     A pending draft stays out of the mainline but is advertised on it,
+     because hiding it would hide its publish and discard actions.
 
      Create / new-version / edit all push the user into ProductDrawer
      with the appropriate mode. The drawer owns the form; we own the
@@ -21,6 +34,8 @@
     Td,
     Badge,
     Button,
+    Expander,
+    productRows,
   } from "@queenswood/ui";
   import {
     list_cash_account_products,
@@ -34,7 +49,9 @@
 
   let loading = $state(true);
   let error = $state(null);
-  let versions = $state([]);
+  let rows = $state([]);
+  // product-id → history expanded?
+  let open = $state({});
   let templates = $state([]);
 
   // Drawer state. `mode` decides the form's behaviour; `target`
@@ -60,6 +77,13 @@
     return TONE[status] ?? "neutral";
   }
 
+  // A mainline row toggles its history on click, so an action button
+  // inside it has to stop the event or every press also expands the row.
+  const stop = (fn) => (e) => {
+    e.stopPropagation();
+    fn();
+  };
+
   async function loadTemplates() {
     const res = await list_cash_account_product_templates();
     if (res.status >= 200 && res.status < 300) {
@@ -75,29 +99,22 @@
       const res = await list_cash_account_products();
       if (res.status >= 200 && res.status < 300) {
         // Response shape: {items: [{product-id, versions: [...]}]}.
-        // Flatten to one row per version. For products that have no
-        // open draft, mark the most recent published version as the
-        // "new version" target so the row can offer that action.
+        // One row per product; `productRows` picks the version in
+        // force today and keeps the rest as history. A product may be
+        // revised only when it has no open draft — a second draft would
+        // give the publish action two candidates.
         const items = res.body?.items ?? [];
-        versions = items.flatMap((item) => {
-          const vs = item.versions ?? [];
-          const hasDraft = vs.some((v) => v.status === "draft");
-          const reviseTarget = hasDraft
-            ? null
-            : vs.find((v) => v.status === "published");
-          const reviseId = reviseTarget?.["version-id"] ?? null;
-          return vs.map((v) => ({
-            ...v,
-            canRevise: v["version-id"] === reviseId,
-          }));
-        });
+        rows = productRows(items).map((row) => ({
+          ...row,
+          canRevise: row.draftCount === 0 && row.mainline?.status === "published",
+        }));
       } else {
         error = res.body?.detail ?? `HTTP ${res.status}`;
-        versions = [];
+        rows = [];
       }
     } catch (err) {
       error = err.message;
-      versions = [];
+      rows = [];
     } finally {
       loading = false;
     }
@@ -174,7 +191,7 @@
 
 </script>
 
-<PageHeader {kicker} title="Products" sub="Drafts are iterable; publishing commits a version and auto-archives the one it supersedes.">
+<PageHeader {kicker} title="Products" sub="Drafts are iterable; publishing commits a version from its effective date. Each row shows the version in force today — expand for the rest of its timeline.">
   {#snippet actions()}
     <Button variant="ghost" onclick={load}>Refresh</Button>
     <Button variant="primary" onclick={openCreate}>New product</Button>
@@ -187,7 +204,7 @@
 
 {#if loading}
   <div class="loading">Loading…</div>
-{:else if versions.length === 0}
+{:else if rows.length === 0}
   <div class="empty">
     <p>No products yet.</p>
     <p class="hint">Click <strong>New product</strong> to create your first one.</p>
@@ -196,6 +213,7 @@
   <Table>
     <Thead>
       <Tr>
+        <Th />
         <Th>ID</Th>
         <Th>Name</Th>
         <Th>Type</Th>
@@ -207,27 +225,79 @@
       </Tr>
     </Thead>
     <Tbody>
-      {#each versions as v (v["version-id"])}
-        <Tr>
-          <Td mono muted>{v["product-id"]}</Td>
+      {#each rows as row (row.productId)}
+        {@const v = row.mainline}
+        <Tr
+          expandable={row.history.length > 0}
+          expanded={!!open[row.productId]}
+          onclick={() => row.history.length && (open[row.productId] = !open[row.productId])}
+        >
+          <Td expander>{#if row.history.length}<Expander />{/if}</Td>
+          <Td mono muted>{row.productId}</Td>
           <Td emphasized>{v.name}</Td>
           <Td>{v["product-type"]}</Td>
-          <Td><Badge tone={toneFor(v.status)}>{v.status}</Badge></Td>
+          <Td>
+            <span class="status">
+              <Badge tone={toneFor(v.status)}>{v.status}</Badge>
+              <!-- A published version that isn't yet in force reads as
+                   published everywhere else, so say when it starts. -->
+              {#if v.status === "published" && !row.live}
+                <span class="note mono">from {v["effective-from"]}</span>
+              {/if}
+              <!-- Advertised, not shown: the draft lives in the history
+                   with its actions, and this is what points at it. -->
+              {#if row.draftCount > 0}
+                <Badge tone="draft">{row.draftCount} draft</Badge>
+              {/if}
+            </span>
+          </Td>
           <Td align="right" mono tabular>{v["interest-rate-bps"] ?? 0}</Td>
           <Td>{currenciesLabel(v)}</Td>
           <Td muted>{formatRelative(v["created-at"])}</Td>
           <Td align="right">
             <span class="actions">
               {#if v.status === "draft"}
-                <Button size="sm" variant="brand" onclick={() => publish(v)}>Publish</Button>
-                <Button size="sm" variant="ghost" onclick={() => openEdit(v)}>Edit</Button>
-                <Button size="sm" variant="danger" onclick={() => discard(v)}>Discard</Button>
-              {:else if v.canRevise}
-                <Button size="sm" variant="ghost" onclick={() => openNewVersion(v)}>New version</Button>
+                <Button size="sm" variant="brand" onclick={stop(() => publish(v))}>Publish</Button>
+                <Button size="sm" variant="ghost" onclick={stop(() => openEdit(v))}>Edit</Button>
+                <Button size="sm" variant="danger" onclick={stop(() => discard(v))}>Discard</Button>
+              {:else if row.canRevise}
+                <Button size="sm" variant="ghost" onclick={stop(() => openNewVersion(v))}>New version</Button>
               {/if}
             </span>
           </Td>
         </Tr>
+        {#if open[row.productId]}
+          {#each row.history as h, i (h["version-id"])}
+            <Tr balance last={i === row.history.length - 1}>
+              <Td />
+              <Td mono muted>v{h["version-number"]}</Td>
+              <Td>{h.name}</Td>
+              <Td>{h["product-type"]}</Td>
+              <Td>
+                <span class="status">
+                  <Badge tone={toneFor(h.status)}>{h.status}</Badge>
+                  {#if h["effective-from"]}
+                    <span class="note mono">
+                      {h["effective-from"]}{h["effective-to"] ? ` – ${h["effective-to"]}` : ""}
+                    </span>
+                  {/if}
+                </span>
+              </Td>
+              <Td align="right" mono tabular>{h["interest-rate-bps"] ?? 0}</Td>
+              <Td>{currenciesLabel(h)}</Td>
+              <Td muted>{formatRelative(h["created-at"])}</Td>
+              <Td align="right">
+                <span class="actions">
+                  {#if h.status === "draft"}
+                    <Button size="sm" variant="brand" onclick={() => publish(h)}>Publish</Button>
+                    <Button size="sm" variant="ghost" onclick={() => openEdit(h)}>Edit</Button>
+                    <Button size="sm" variant="danger" onclick={() => discard(h)}>Discard</Button>
+                  {/if}
+                </span>
+              </Td>
+            </Tr>
+          {/each}
+        {/if}
       {/each}
     </Tbody>
   </Table>
@@ -278,5 +348,18 @@
     gap: 6px;
     justify-content: flex-end;
     white-space: nowrap;
+  }
+  /* Status cell — the badge, plus whatever qualifies it: the date a
+     not-yet-effective version starts, or a count of the drafts waiting
+     in the history below. */
+  .status {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    white-space: nowrap;
+  }
+  .status .note {
+    font-size: 11px;
+    color: var(--fg-muted);
   }
 </style>
