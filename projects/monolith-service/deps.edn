@@ -24,6 +24,8 @@
                                 "../../components/cash-account-query"}
   component/cash-account-product {:local/root
                                   "../../components/cash-account-product"}
+  component/cash-account-migration
+  {:local/root "../../components/cash-account-migration"}
   component/cash-account-product-query
   {:local/root "../../components/cash-account-product-query"}
   component/clearbank-webhook {:local/root "../../components/clearbank-webhook"}

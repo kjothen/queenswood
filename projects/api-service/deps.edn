@@ -18,6 +18,8 @@
         component/balance-query {:local/root "../../components/balance-query"}
         component/cash-account-query {:local/root
                                       "../../components/cash-account-query"}
+        component/cash-account-migration
+        {:local/root "../../components/cash-account-migration"}
         component/cash-account-product-query
         {:local/root "../../components/cash-account-product-query"}
         component/idempotency {:local/root "../../components/idempotency"}

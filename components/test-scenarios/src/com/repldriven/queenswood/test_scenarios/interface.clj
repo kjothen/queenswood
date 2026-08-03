@@ -31,6 +31,7 @@
    :id-mapping id-mapping/init
    :banks {}
    :products {}
+   :migrations {}
    :parties {}
    :accounts {}
    :payments {}

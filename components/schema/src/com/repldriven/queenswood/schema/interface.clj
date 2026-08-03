@@ -8,6 +8,8 @@
   (:require
     [com.repldriven.queenswood.schemas.balances :as balances]
     [com.repldriven.queenswood.schemas.banks :as banks]
+    [com.repldriven.queenswood.schemas.cash_account_migrations :as
+     cash-account-migrations]
     [com.repldriven.queenswood.schemas.cash_account_products :as
      cash-account-products]
     [com.repldriven.queenswood.schemas.cash_accounts :as cash-accounts]
@@ -34,6 +36,10 @@
     [protojure.protobuf :as proto])
   (:import
     (com.repldriven.queenswood.schemas.balances BalanceProto$Balance)
+    (com.repldriven.queenswood.schemas.cash_account_migrations
+     CashAccountMigrationProto$CashAccountMigration
+     CashAccountMigrationRunProto$CashAccountMigrationRun
+     CashAccountMigrationRunProto$CashAccountMigrationAccountRun)
     (com.repldriven.queenswood.schemas.cash_account_products
      CashAccountProductProto$CashAccountProduct
      CashAccountProductProto$CashAccountProductTemplate
@@ -375,6 +381,84 @@
   - m: Idv map matching the generated schema."
   [m]
   (IdvProto$Idv/parseFrom (Idv->pb m)))
+
+(def ^{:doc "Parse CashAccountMigration protobuf bytes into a Clojure map."}
+     pb->CashAccountMigration
+  cash-account-migrations/pb->CashAccountMigration)
+
+(defn CashAccountMigration->pb
+  "Serialise a CashAccountMigration map to protobuf bytes.
+
+  Args:
+  - m: CashAccountMigration map matching the generated schema."
+  [m]
+  (proto/->pb (cash-account-migrations/new-CashAccountMigration m)))
+
+(defn CashAccountMigration->java
+  "Parse a CashAccountMigration map into the generated Java protobuf
+  class.
+
+  Args:
+  - m: CashAccountMigration map matching the generated schema."
+  [m]
+  (CashAccountMigrationProto$CashAccountMigration/parseFrom
+   (CashAccountMigration->pb m)))
+
+(def ^{:doc "Parse CashAccountMigrationRun protobuf bytes into a map."}
+     pb->CashAccountMigrationRun
+  cash-account-migrations/pb->CashAccountMigrationRun)
+
+(defn CashAccountMigrationRun->pb
+  "Serialise a CashAccountMigrationRun map to protobuf bytes.
+
+  Args:
+  - m: CashAccountMigrationRun map matching the generated schema."
+  [m]
+  (proto/->pb (cash-account-migrations/new-CashAccountMigrationRun m)))
+
+(defn CashAccountMigrationRun->java
+  "Parse a CashAccountMigrationRun map into the generated Java protobuf
+  class.
+
+  Args:
+  - m: CashAccountMigrationRun map matching the generated schema."
+  [m]
+  (CashAccountMigrationRunProto$CashAccountMigrationRun/parseFrom
+   (CashAccountMigrationRun->pb m)))
+
+(def ^{:doc "Parse CashAccountMigrationAccountRun protobuf bytes into a map."}
+     pb->CashAccountMigrationAccountRun
+  cash-account-migrations/pb->CashAccountMigrationAccountRun)
+
+(defn CashAccountMigrationAccountRun->pb
+  "Serialise a CashAccountMigrationAccountRun map to protobuf bytes.
+
+  Args:
+  - m: CashAccountMigrationAccountRun map matching the generated schema."
+  [m]
+  (proto/->pb (cash-account-migrations/new-CashAccountMigrationAccountRun m)))
+
+(defn CashAccountMigrationAccountRun->java
+  "Parse a CashAccountMigrationAccountRun map into the generated Java
+  protobuf class.
+
+  Args:
+  - m: CashAccountMigrationAccountRun map matching the generated schema."
+  [m]
+  (CashAccountMigrationRunProto$CashAccountMigrationAccountRun/parseFrom
+   (CashAccountMigrationAccountRun->pb m)))
+
+(def ^{:doc "Map of CashAccountMigrationStatus label to protobuf int value."}
+     cash-account-migration-status->int
+  cash-account-migrations/CashAccountMigrationStatus-label2val)
+
+(def ^{:doc "Map of CashAccountMigrationOutcome label to protobuf int value."}
+     cash-account-migration-outcome->int
+  cash-account-migrations/CashAccountMigrationOutcome-label2val)
+
+(def ^{:doc "Map of CashAccountMigrationStatus protobuf int value to label."}
+     int->cash-account-migration-status
+  cash-account-migrations/CashAccountMigrationStatus-val2label)
 
 (def ^{:doc "Map of InterestRunKind label to protobuf int value."}
      interest-run-kind->int

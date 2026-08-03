@@ -30,6 +30,42 @@ cash-account-products:
 cash-account-product-templates:
   record-type: CashAccountProductTemplate
   indexes: []
+cash-account-migrations:
+  record-type: CashAccountMigration
+  primary-key: [bank_id, migration_id]
+  indexes:
+    # The scheduler's work list: migrations a bank has approved, read by
+    # status rather than scanned and filtered.
+    - name: CashAccountMigration_by_bank_status
+      fields: [bank_id, status]
+    # What a product version answers when asked which migrations point
+    # at it, without owning any of them.
+    - name: CashAccountMigration_by_target_version
+      fields: [bank_id, target_product_id, target_version_id]
+    - name: CashAccountMigration_by_idempotency_key
+      fields: [bank_id, idempotency_key]
+      unique: true
+cash-account-migration-runs:
+  record-type: CashAccountMigrationRun
+  primary-key: [bank_id, run_id]
+  indexes:
+    # Runs of one migration, newest first.
+    - name: CashAccountMigrationRun_by_migration
+      fields: [bank_id, migration_id]
+    # How many previews a bank has done today, for the daily limit — a
+    # count rather than a scan, so enforcing the cap costs one read.
+    - name: CashAccountMigrationRun_count_by_bank_day_dry_run
+      fields: [bank_id, business_day, dry_run]
+      type: count
+cash-account-migration-account-runs:
+  record-type: CashAccountMigrationAccountRun
+  primary-key: [bank_id, run_id, account_id]
+  indexes:
+    # A run's verdicts grouped by outcome — what a preview is read for
+    # is the totals per outcome, not the rows.
+    - name: CashAccountMigrationAccountRun_count_by_run_outcome
+      fields: [bank_id, run_id, outcome]
+      type: count
 cash-accounts:
   record-type: CashAccount
   primary-key: [bank_id, account_id]
