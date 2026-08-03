@@ -21,6 +21,8 @@
     TrialBalance,
     PolicyMatrix, CATEGORY_TONE,
     Field, Input, Select,
+    Panel, PanelHead, Chip, ToastHost, toast,
+    ProductPicker, VersionList, MigrationStatusBadge,
     Card, CardHeader, CardBody, CardFooter, CodeCard,
     ProgressSpine, BankStateBand, SceneCard, RawCalls, TaskPipeline,
     themeState, resolvedTheme,
@@ -50,6 +52,31 @@
     { id: "bankstateband",  label: "Bank-state band" },
     { id: "scenecard",      label: "Scene card" },
     { id: "rawcalls",       label: "Raw calls" },
+    { id: "panels",         label: "Panels" },
+    { id: "chips",          label: "Chips" },
+    { id: "toast",          label: "Toast" },
+    { id: "migrations",     label: "Migration pickers" },
+  ];
+
+  // Migration primitive demos
+  let chipFilter = $state("all");
+  let pickerOpen = $state(false);
+  let pickedProduct = $state("prd.instant-access-savings");
+  let sourceVersions = $state(["prv.v2", "prv.v3"]);
+  let targetVersion = $state("prv.v4");
+
+  const DEMO_PRODUCTS = [
+    { id: "prd.instant-access-savings", name: "Instant Access Savings", type: "savings", publishedCount: 4, accountCount: 9588 },
+    { id: "prd.youth-saver", name: "Youth Saver", type: "savings", publishedCount: 2, accountCount: 1204 },
+    { id: "prd.fixed-term-12m", name: "12-Month Fixed Term", type: "deposit", publishedCount: 3, accountCount: 431 },
+  ];
+
+  const DEMO_VERSIONS = [
+    { id: "prv.v1", number: 1, published: true, meta: "2.10%", from: "from 1 Jan 2024", right: "312" },
+    { id: "prv.v2", number: 2, published: true, meta: "2.75%", from: "from 1 Jun 2025", right: "4,881" },
+    { id: "prv.v3", number: 3, published: true, meta: "3.10%", from: "from 1 Jan 2026", right: "4,307" },
+    { id: "prv.v4", number: 4, published: true, meta: "3.40%", from: "from 1 Sep 2026", right: "GBP" },
+    { id: "prv.v5", number: 5, published: false, meta: "3.55% · draft", from: null, right: "GBP" },
   ];
 
   // Scenario sandbox demos
@@ -1102,6 +1129,106 @@
       />
     </section>
 
+    <section id="panels" class="section">
+      <div class="section-head">
+        <h2>Panels</h2>
+        <p class="lead"><code>&lt;Panel&gt;</code> is the raised, hairline-bordered surface every detail screen stacks; <code>pad</code> is <code>none</code> (a full-bleed table owns its own edges), <code>sm</code>, <code>md</code> or <code>lg</code>. <code>&lt;PanelHead&gt;</code> gives it a title bar with a muted count or qualifier and a right-hand note or actions snippet.</p>
+      </div>
+      <div class="stack">
+        <Panel>
+          <PanelHead title="Runs" count={2} note="one run per business day" />
+          <Table>
+            <Thead>
+              <Tr><Th>Business day</Th><Th>Kind</Th><Th align="right">Seen</Th></Tr>
+            </Thead>
+            <Tbody>
+              <Tr><Td mono>30 Jul 2026</Td><Td>dry run</Td><Td mono tabular align="right">9,588</Td></Tr>
+              <Tr><Td mono>2 Jul 2026</Td><Td>dry run</Td><Td mono tabular align="right">9,588</Td></Tr>
+            </Tbody>
+          </Table>
+        </Panel>
+        <Panel pad="lg">
+          A <code>pad="lg"</code> panel — 22px by 24px, what a hero uses.
+        </Panel>
+      </div>
+    </section>
+
+    <section id="chips" class="section">
+      <div class="section-head">
+        <h2>Chips</h2>
+        <p class="lead"><code>&lt;Chip&gt;</code> is a pressable filter pill with an optional trailing count, publishing <code>aria-pressed</code> so the active facet is heard as well as seen. Distinct from <code>&lt;FilterChips&gt;</code>, which renders a policy's scope read-only and toggles nothing.</p>
+      </div>
+      <div class="row">
+        <Chip pressed={chipFilter === "all"} count={9588} onclick={() => chipFilter = "all"}>All</Chip>
+        <Chip pressed={chipFilter === "move"} count={9039} onclick={() => chipFilter = "move"}>Would move</Chip>
+        <Chip pressed={chipFilter === "held"} count={549} onclick={() => chipFilter = "held"}>Held back</Chip>
+        <Chip pressed={chipFilter === "failed"} count={0} onclick={() => chipFilter = "failed"}>Failed</Chip>
+        <Chip disabled count={0}>Disabled</Chip>
+      </div>
+    </section>
+
+    <section id="toast" class="section">
+      <div class="section-head">
+        <h2>Toast</h2>
+        <p class="lead">One slot, bottom-centre. <code>toast(message, detail)</code> from anywhere; a second toast replaces the first and restarts the timer rather than stacking, because these confirm an action just taken and only the newest is still worth reading. Mount <code>&lt;ToastHost /&gt;</code> once, in the app shell.</p>
+      </div>
+      <div class="row">
+        <Button onclick={() => toast("Migration approved", "mig.01kz3wyzcjhkab9h91x9ngedr")}>
+          Toast with detail
+        </Button>
+        <Button variant="ghost" onclick={() => toast("Saved — preview discarded because the scope changed")}>
+          Toast, no detail
+        </Button>
+      </div>
+    </section>
+
+    <section id="migrations" class="section">
+      <div class="section-head">
+        <h2>Migration pickers</h2>
+        <p class="lead"><code>&lt;ProductPicker&gt;</code> is a searchable product chooser — a native <code>&lt;select&gt;</code> can't carry the type, published-version count and live account count the choice actually turns on. <code>&lt;VersionList&gt;</code> picks one version (<code>mode="single"</code>) or several (<code>mode="multi"</code>); a non-published row dims but stays selectable, so choosing a draft target raises the real rejection rather than being silently impossible. <code>&lt;MigrationStatusBadge&gt;</code> maps a migration, run or per-account outcome onto the Badge tones.</p>
+      </div>
+      <div class="stack">
+        <div class="row">
+          <MigrationStatusBadge status="draft" />
+          <MigrationStatusBadge status="approved" />
+          <MigrationStatusBadge status="completed" />
+          <MigrationStatusBadge status="cancelled" />
+          <MigrationStatusBadge status="running" kind="run" />
+          <MigrationStatusBadge status="ineligible" kind="outcome" />
+        </div>
+        <div style="max-width: 460px">
+          <ProductPicker
+            products={DEMO_PRODUCTS}
+            value={pickedProduct}
+            open={pickerOpen}
+            ontoggle={() => pickerOpen = !pickerOpen}
+            onselect={(p) => { pickedProduct = p.id; pickerOpen = false; }}
+            hiddenNote="1 product hidden — a migration's target must be the same product type as its source (savings)."
+          />
+        </div>
+        <div style="max-width: 460px">
+          <VersionList
+            mode="multi"
+            title="Instant Access Savings · 5 versions"
+            action={{ label: "Select all published", onclick: () => sourceVersions = DEMO_VERSIONS.filter((v) => v.published).map((v) => v.id) }}
+            versions={DEMO_VERSIONS}
+            selected={sourceVersions}
+            onchange={(ids) => sourceVersions = ids}
+          />
+        </div>
+        <div style="max-width: 460px">
+          <VersionList
+            mode="single"
+            name="sc-target-version"
+            title="Instant Access Savings · target"
+            versions={DEMO_VERSIONS}
+            selected={targetVersion}
+            onchange={(id) => targetVersion = id}
+          />
+        </div>
+      </div>
+    </section>
+
     <footer class="foot">
       <span class="foot-mark"><Logo variant="C" size={36} idPrefix="sc-foot" /></span>
       <span class="foot-text">
@@ -1110,6 +1237,8 @@
     </footer>
   </main>
 </div>
+
+<ToastHost />
 
 <!-- Drawer lives outside the page grid because it's fixed-position. -->
 <Drawer
@@ -1572,6 +1701,19 @@
     background: var(--surface-raised);
     border: 1px solid var(--rule-2);
     border-radius: 6px;
+  }
+
+  /* ===== Generic demo layouts ===== */
+  .row {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .stack {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
   }
 
   /* ===== Fields demo ===== */

@@ -29,6 +29,11 @@ export { default as SidenavItem } from "./SidenavItem.svelte";
 
 export { default as PageHeader } from "./PageHeader.svelte";
 export { default as Drawer } from "./Drawer.svelte";
+export { default as Panel } from "./Panel.svelte";
+export { default as PanelHead } from "./PanelHead.svelte";
+export { default as Chip } from "./Chip.svelte";
+export { default as ToastHost } from "./ToastHost.svelte";
+export { toast, dismissToast, toastState } from "./toast.svelte.js";
 
 export { default as Table } from "./Table.svelte";
 export { default as Thead } from "./Thead.svelte";
@@ -105,6 +110,29 @@ export { default as ProgressSpine } from "./ProgressSpine.svelte";
 export { default as BankStateBand } from "./BankStateBand.svelte";
 export { default as SceneCard } from "./SceneCard.svelte";
 export { default as RawCalls } from "./RawCalls.svelte";
+
+// Cash-account migrations — the product/version choosers the edit
+// drawer is built from, the status badge, and the screen's view-model
+// helpers. The page itself lives in console.
+export { default as ProductPicker } from "./ProductPicker.svelte";
+export { default as VersionList } from "./VersionList.svelte";
+export { default as MigrationStatusBadge } from "./MigrationStatusBadge.svelte";
+export {
+  shortEnum,
+  MIGRATION_TONE,
+  RUN_TONE,
+  OUTCOME_TONE,
+  INELIGIBILITY_ORDER,
+  INELIGIBILITY_LABEL,
+  MIGRATION_GUARDS,
+  fmtDay,
+  fmtStamp,
+  todayIso,
+  daysBetween,
+  fmtRate,
+  fmtRateDelta,
+  fmtDuration,
+} from "./migrations.js";
 
 export { default as Field } from "./Field.svelte";
 export { default as Input } from "./Input.svelte";
