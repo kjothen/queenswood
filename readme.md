@@ -83,7 +83,8 @@ changelog relay, so processors react to one another through event sourcing.
 **External Adapters egress through intents.** An external adapter cannot
 reliably round-trip a HTTP call to an external service inside a
 database transaction. Instead, the intent of each command request is recorded,
-and a separate poller processes command intents in order.
+and a separate poller retries each pending intent until it succeeds or
+exhausts its attempts.
 Webhook events received from an external service are normalized
 by the adapter, written to a corresponding changelog in order,
 and relayed to the message bus through the system-wide changelog relay:
