@@ -9,7 +9,14 @@
     (com.apple.foundationdb.tuple Tuple Versionstamp)
     (java.util.function Function)))
 
-(def ^:private root "mono")
+(def
+  ^:private
+  ^{:doc
+    "Leading element of every changelog, sentinel and checkpoint key.
+  A storage constant, not a project name — renaming it strands every
+  existing record, changelog entry and consumer checkpoint."}
+  root
+  "mono")
 
 (defn- rooted
   "Builds a Subspace from parts under the shared root, qualified by
@@ -28,21 +35,23 @@
   globally ordered, append-only log. Scanning from a checkpoint
   forward is an efficient range read with no secondary index needed."
   [prefix store-name]
-  ;; ("mono", "changelog", "accounts", <versionstamp>)
+  ;; changelog-key = [prefix] , root , "changelog" , store-name ,
+  ;;                 versionstamp ;
   (rooted prefix ["changelog" store-name]))
 
 (defn- sentinel-key
   "Returns the raw FDB key bytes for the changelog sentinel — a single key
   atomically incremented on every write, suitable for FDB watches."
   [prefix store-name]
-  ;; ("mono", "sentinel", "accounts")
+  ;; sentinel-key = [prefix] , root , "sentinel" , store-name ;
   (.pack (rooted prefix ["sentinel" store-name])))
 
 (defn- checkpoint-key
   "Returns the raw FDB key bytes for a per-consumer checkpoint — each
   consumer tracks the last versionstamp it processed independently."
   [prefix consumer-id store-name]
-  ;; ("mono", "checkpoint", "my-consumer", "accounts")
+  ;; checkpoint-key = [prefix] , root , "checkpoint" , consumer-id ,
+  ;;                  store-name ;
   (.pack (rooted prefix ["checkpoint" consumer-id store-name])))
 
 (defn- read-checkpoint
@@ -64,12 +73,6 @@
   (.set tr checkpoint-key (.getBytes vs)))
 
 (defn write
-  "Writes a versionstamped changelog entry for record-id and bumps the
-  sentinel for store-name within an existing transaction. The value is
-  a Tuple of (record-id, changelog-bytes) so consumers get rich
-  transition data without re-loading the entity. Uses claimLocalVersion
-  to assign a unique user version per call within the same transaction.
-  For use inside transact."
   [store prefix store-name ^String record-id ^bytes changelog-bytes]
   (let [ctx (.getContext store)
         tr (.ensureActive ctx)
@@ -114,18 +117,6 @@
        (map last)))
 
 (defn process
-  "Reads unprocessed changelog entries for consumer-id in store-name,
-  calls (handler ctx changelog-bytes) for each, and advances the
-  checkpoint to the last versionstamp seen. All reads and the
-  checkpoint write occur in a single transaction.
-
-  Options:
-    :deduplicate? (default true) — when true, only the latest entry
-    per record-id is processed. Set to false for audit consumers that
-    need every write.
-    :keyspace-prefix — scopes the changelog and checkpoint keys. Must
-    match the prefix the writing system used, or this consumer reads an
-    empty log."
   ([^FDBDatabase record-db consumer-id store-name handler]
    (process record-db consumer-id store-name handler {}))
   ([^FDBDatabase record-db consumer-id store-name handler opts]

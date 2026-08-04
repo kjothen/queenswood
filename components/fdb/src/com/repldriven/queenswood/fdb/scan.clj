@@ -47,50 +47,14 @@
     (if (= 1 (count tail)) (first tail) tail)))
 
 (defn scan-entries
-  "Scans records by primary key order, returning each one with its
-  key. Same options and cursor semantics as `scan`; the difference is
-  the shape:
-
-  `{:entries [{:key cursor :record bytes} ...] :before ... :after ...}`
-
-  `:key` is the record's primary key past the prefix — the same value
-  the cursor uses. It exists so callers that pair two stores can join
-  on the key without deserialising the records, which keeps this
-  namespace free of any knowledge of what is stored.
-
-  `:before` is the cursor of the first record in the page (what the
-  client should send back as `:before` to page *previous*). `:after`
-  is the cursor of the last record — only set when more rows exist
-  beyond the page — for the client to send back as `:after` to page
-  *next*. Both are phrased in the client's display direction, so
-  `page[after]` / `page[before]` always mean next / prev regardless
-  of whether the natural order is ascending or descending.
-
-  opts:
-    :prefix  vector of leading PK parts to scope the scan
-    :after   cursor, client's \"next page\" boundary
-    :before  cursor, client's \"previous page\" boundary
-    :limit   int, page size
-    :order   `:asc` (default) or `:desc` — selects the display
-             direction; in `:desc` the first page (no cursor)
-             returns the highest-keyed records first
-
-  When `:prefix` is given, the scan is constrained to records whose
-  PK starts with those values. A cursor is the whole PK past the
-  prefix, or that element alone when only one remains."
   [store {:keys [prefix after before limit order]}]
   (let [descending? (= :desc order)
-        ;; Translate client-oriented cursors into native range bounds.
-        ;; In asc, `:after X` is a low exclusive bound (forward from X+ε);
-        ;; `:before X` is a high exclusive bound (reverse to X-ε). In
-        ;; desc, the roles swap — "next after X" now means "keys less
-        ;; than X", and "prev before X" means "keys greater than X".
+        ;; In `:desc` the client's cursors invert: "next after X" means
+        ;; keys below X, "prev before X" means keys above X.
         low-cursor (if descending? before after)
         high-cursor (if descending? after before)
-        ;; Scan backward when the natural traversal opposes key order:
-        ;; asc + `:before` (paginating back from a higher cursor), or
-        ;; desc without a low-cursor (default desc scan runs from the
-        ;; end down).
+        ;; Backward when traversal opposes key order: asc paginating back
+        ;; from a high cursor, or desc running from the end down.
         reverse-scan? (if descending?
                         (nil? low-cursor)
                         (some? high-cursor))
@@ -150,9 +114,7 @@
                  vec)
         more? (> (count raw) limit)
         trimmed (cond-> raw more? (subvec 0 limit))
-        ;; Native scan produces records low-to-high on forward and
-        ;; high-to-low on reverse. Flip only when the scan direction
-        ;; disagrees with the display direction.
+        ;; Native scan yields low-to-high forward, high-to-low reverse.
         page (if (= reverse-scan? descending?)
                trimmed
                (vec (rseq trimmed)))]
@@ -166,10 +128,6 @@
               (cursor (peek page) prefix-size))}))
 
 (defn scan
-  "Scans records by primary key order. Options and cursor semantics
-  are `scan-entries`'; this returns
-  `{:records [bytes ...] :before cursor|nil :after cursor|nil}`, with
-  `:records` in the requested display order."
   [store opts]
   (let [{:keys [entries before after]} (scan-entries store opts)]
     {:records (mapv :record entries) :before before :after after}))
