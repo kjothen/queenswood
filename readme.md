@@ -76,12 +76,12 @@ or bundled along lines of responsibility such as financial and
 operational, without any of the above changing.
 
 **Reads are queries.** The API read-side loads records directly through a
-separate query surface — no command, no bus, no round-trip. The bricks
-that read are the only ones the API is allowed to reach; the bricks that
-write are private to their processor, and the separation is enforced
-rather than merely intended. A read therefore cannot acquire a write path
-by accident, and a busy or unavailable bus does not make the bank
-unreadable.
+separate query surface — no command, no bus, no round-trip. Query bricks
+read and nothing else. Once a domain's writes have earned a command, its
+write brick becomes private to the processor and the API reaches only the
+query side, which the build enforces rather than leaves to habit. A read
+therefore never travels the write path, and a busy or unavailable bus
+does not make the bank unreadable.
 
 **Processors react, they never call one another.** Where a change has to
 be reacted to, it is recorded in a changelog in the same transaction as
