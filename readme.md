@@ -149,8 +149,15 @@ with a doc that goes deep:
   append-only log with no sequence generator and no secondary index, and
   counts and sums read maintained aggregate indexes rather than scanning.
   See [ADR-0002](docs/adr/0002-foundationdb-record-layer.md).
-- **Consumes `mono`.** Shared infrastructure pulled in as a pinned
-  git-dependency, not forked into the workspace.
+- **Consumes `mono`.** The generic half of the system lives upstream:
+  error handling, logging, the message bus with its Kafka or Pulsar
+  backends, Avro, the command and event envelopes, identity, secrets and
+  config. It arrives tested on its own terms, so the suite here proves
+  banking rather than plumbing. It is pinned to a tag and a sha, so the
+  ground under a bank moves only when someone decides it should. And
+  anything that turns out not to be domain-specific moves up rather than
+  accumulating here, which is what keeps this workspace readable as a
+  bank.
   See [ADR-0001](docs/adr/0001-reuse-mono-as-upstream.md).
 
 ## Documentation
