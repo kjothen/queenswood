@@ -33,6 +33,19 @@
            :status 500
            :detail "Internal server error"}})
 
+(def ServiceUnavailable
+  {:value {:title "FAILED"
+           :type ":fdb/contention"
+           :status 503
+           :detail "Failed to save user"}})
+
+(def GatewayTimeout
+  {:value {:title "FAILED"
+           :type ":fdb/timeout"
+           :status 504
+           :detail "Failed to save user"}})
+
 (def registry
   (examples-registry [#'BadRequest #'Unauthorized #'Forbidden #'BadResponse
-                      #'InternalServerError]))
+                      #'InternalServerError #'ServiceUnavailable
+                      #'GatewayTimeout]))

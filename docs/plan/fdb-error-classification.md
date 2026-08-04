@@ -147,6 +147,34 @@ storage layer did not answer in time. Treating both as 503 and letting
 - Tests: a unit test per classified exception shape, including one
   nested inside a wrapper, since `.run` wraps what it rethrows.
 
+## What implementation corrected
+
+Three of the predictions above were wrong, in ways worth keeping.
+
+**`category` reaches an anomaly by three paths, not one.** `try-nom`
+catches *any* Exception and converts it to an anomaly with `category` as
+the kind, so an exception raised inside `f` never reaches the outer
+`catch` this plan targeted — it becomes an anomaly, gets wrapped in
+`ex-info` to force the rollback, and is unwrapped again on the way out.
+The aggregate reads are called inside `f`, so the `asyncToSync`
+timeouts would have been missed entirely. Classification therefore
+happens in a `reclassify` applied where an anomaly leaves `transact`,
+which covers all three paths and leaves a domain rejection — no
+`:exception` in its payload — untouched.
+
+**Walking to the root cause is wrong.** The Record Layer's own types
+wrap the FDB error they describe, so `LoggableTimeoutException` and
+`FDBStoreTransactionConflictException` both sit *above* their cause. A
+root-cause walk steps past the very type being matched. The chain is
+scanned at every level instead, outermost first, as the most proximate
+description. `check.clj`'s `meta-data-already-current?` had the same
+latent defect and was corrected with it.
+
+**The OpenAPI work was two lines, not the bulk.** Every `/v1` route
+inherits one shared `:responses` map, so 503 and 504 reached all
+operations at once, with two example components alongside the existing
+ones.
+
 ## Decisions and risks
 
 **The require cycle constrains placement.** `fdb/check.clj` imports the

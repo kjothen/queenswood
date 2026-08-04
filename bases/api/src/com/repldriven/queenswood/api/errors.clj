@@ -48,6 +48,13 @@
    :party/open-accounts 409
    :policy/limit-exceeded 429})
 
+(def ^:private error-status-overrides
+  "Statuses for error anomalies the storage layer can name. Not
+  rejections — the request was well-formed and the caller can do
+  nothing differently, so these must not reach the rejection
+  heuristics."
+  {:fdb/contention 503 :fdb/timeout 504})
+
 (defn rejection-kind->status
   "Pick an HTTP status code for a rejection kind keyword.
 
@@ -75,30 +82,36 @@
   flow through `rejection-kind->status`. Unauthorized -> 403 (the
   caller is authenticated by the time bricks see the request;
   401 is reserved for auth.clj's missing/invalid-credential
-  shortfalls). Error anomalies -> 500."
+  shortfalls). A kind in `error-status-overrides` takes that status.
+  Error anomalies -> 500."
   [anomaly]
   (cond (error/unauthorized? anomaly)
         403
+        (contains? error-status-overrides (error/kind anomaly))
+        (get error-status-overrides (error/kind anomaly))
         (not (error/rejection? anomaly))
         500
         :else
         (rejection-kind->status (error/kind anomaly))))
 
-(defn- log-500-anomaly
+(defn- log-server-anomaly
   "Log the underlying exception carried in an error anomaly so we can
   diagnose what blew up without surfacing the stack trace to clients."
   [anomaly]
-  (let [{:keys [message exception]} (error/payload anomaly)]
+  (let [{:keys [message exception operation]} (error/payload anomaly)
+        label (str (error/kind anomaly)
+                   (when operation (str " (" operation ")"))
+                   ": "
+                   (or message "failed"))]
     (if exception
-      (log/error exception
-                 (str (error/kind anomaly) ": " (or message "failed")))
-      (log/error (str (error/kind anomaly) ": " (or message "failed"))))))
+      (log/error exception label)
+      (log/error label))))
 
 (defn anomaly->response
   "Map an anomaly to an RFC 9457 ring response via `anomaly->status`.
-  Logs the full exception for any anomaly that maps to 500 so the cause
+  Logs the full exception for any anomaly that maps to 5xx so the cause
   is diagnosable even when only a terse message reaches the client."
   [anomaly]
   (let [status (anomaly->status anomaly)]
-    (when (= 500 status) (log-500-anomaly anomaly))
+    (when (<= 500 status) (log-server-anomaly anomaly))
     {:status status :body (error-response status anomaly)}))
