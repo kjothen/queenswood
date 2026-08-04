@@ -52,8 +52,8 @@
           {:keys [creditor-name]} body
           _ (log/info "Outbound CoP check" {:creditor-name creditor-name})
           res (error/try-nom
-               :clearbank/cop
-               "CoP request failed"
+               :payee-check/unavailable
+               "Confirmation of Payee request failed"
                (http/request (->clearbank-request clearbank-url body)))]
       (if (and (map? res) (= 200 (:status res)))
         {:status 200 :body (->result (http/res->edn res))}

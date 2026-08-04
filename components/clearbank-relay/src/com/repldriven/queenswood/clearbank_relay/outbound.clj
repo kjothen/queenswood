@@ -10,14 +10,23 @@
 (def ^:private default-max-attempts 10)
 
 (defn- post-fps
+  "POST the outbound payment to the scheme adapter. An unreachable
+  adapter is `:payment/unavailable` — the kind names the domain, not the
+  vendor, because a second scheme provider consuming this channel must
+  not change what the failure is called (ADR-0020)."
   [clearbank-url request-body]
   (error/try-nom
-   :clearbank-outbound/http
-   "Failed to POST outbound payment to ClearBank"
-   (http/request {:method :post
-                  :url (str clearbank-url "/v3/payments/fps")
-                  :headers {"Content-Type" "application/json"}
-                  :body request-body})))
+   :payment/unavailable
+   "Failed to POST outbound payment to the scheme adapter"
+   (let [res (http/request {:method :post
+                            :url (str clearbank-url "/v3/payments/fps")
+                            :headers {"Content-Type" "application/json"}
+                            :body request-body})]
+     (if (error/anomaly? res)
+       (error/fail :payment/unavailable
+                   {:message "Scheme adapter unreachable"
+                    :cause res})
+       res))))
 
 (defn- relay-one
   "Make the outbound FPS call for one intent OUTSIDE any FDB transaction,

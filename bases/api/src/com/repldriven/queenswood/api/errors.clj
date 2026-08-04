@@ -49,16 +49,29 @@
    :policy/limit-exceeded 429})
 
 (def ^:private error-status-overrides
-  "Statuses for error anomalies the storage layer can name. Not
-  rejections — the request was well-formed, so these must not reach the
-  rejection heuristics.
+  "Statuses for error anomalies the storage layer and the external
+  providers can name. Not rejections — the request was well-formed, so
+  these must not reach the rejection heuristics.
 
-  Both are 503 because both mean the same thing to a caller: back off
-  and retry. They differ in what they say about the cluster, not in
-  what to do about it, and retries under load turn one into the other —
-  so the distinction rides `type` rather than being overstated as two
-  status codes."
-  {:fdb/contention 503 :fdb/timeout 503})
+  All are 503 because all mean the same thing to a caller: back off and
+  retry. They differ in what they say about the cluster or the upstream,
+  not in what to do about it, and retries under load turn one into the
+  other — so the distinction rides `type` rather than being overstated
+  as several status codes.
+
+  A rate-limited upstream is 503 and not 429 for the same reason, plus
+  one of its own: 429 already means `:policy/limit-exceeded` here — the
+  caller exceeded a limit of ours. Being throttled by a registry is the
+  opposite situation, and a client that read 429 would slow itself down
+  for a limit it never hit."
+  {:fdb/contention 503
+   :fdb/timeout 503
+   :company/unavailable 503
+   :company/rate-limited 503
+   :idv/unavailable 503
+   :idv/rate-limited 503
+   :payee-check/unavailable 503
+   :payment/unavailable 503})
 
 (defn rejection-kind->status
   "Pick an HTTP status code for a rejection kind keyword.
