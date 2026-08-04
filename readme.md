@@ -64,7 +64,7 @@ database (FoundationDB) manages the data.
   <img alt="Queenswood system diagram" src="docs/diagrams/system-diagram-light.svg">
 </picture>
 
-**Writes are commands, processed in parallel and in order.** Where a write
+**Writes as commands, processed in parallel and in order.** Where a write
 needs it, the API puts a command on the bus instead of doing the work itself.
 Processors consume those commands and scale independently of the web tier, so
 the work spreads across as many instances as it takes while a request costs
