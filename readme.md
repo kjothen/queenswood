@@ -89,11 +89,12 @@ does not make the bank unreadable.
 **Processors react, they never call one another.** Where a change has to
 be reacted to, it is recorded in a changelog in the same transaction as
 the write itself, so a change and the news of it cannot diverge. One
-system-wide relay tails those changelogs in order and publishes to the
-message bus, and the processors that care subscribe. This is
-choreography, not event sourcing: the records stay the source of truth,
-and the changelog exists to cross a boundary rather than to rebuild
-state from.
+system-wide relay tails those changelogs in order and publishes each
+entry to the message bus as an event, and the processors that care
+subscribe. An event reports what happened and asks nothing of whoever
+reads it, unlike a command. Nor is this event sourcing: the records
+stay the source of truth, and an event exists to cross a boundary
+rather than to rebuild state from.
 
 **External calls are recorded before they are made.** A database write and an
 outbound HTTP call cannot be made atomic: no transaction spans the two,
