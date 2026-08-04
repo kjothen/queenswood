@@ -152,9 +152,8 @@ with a doc that goes deep:
   records commit, so reading one costs the same whether a bank has ten
   accounts or ten million.
   See [ADR-0002](docs/adr/0002-foundationdb-record-layer.md).
-- **Built on `mono`.** The generic half lives upstream: error handling,
-  logging, the message bus with its Kafka or Pulsar backends, Avro, the
-  command and event envelopes, identity, secrets, etc. It arrives tested
+- **Built on `mono`.** The generic half lives upstream: messaging,
+  identity, observability, HTTP, and error handling. It arrives tested
   on its own terms and pinned to a tag and a sha, so the suite here
   proves banking rather than plumbing, and the ground under a bank moves
   only when someone decides it should.
@@ -299,18 +298,10 @@ REPL-driven development follows the standard Polylith pattern.
 
 ## Built on mono
 
-Queenswood **consumes**
-[mono](https://github.com/repldriven/mono) — a Clojure component
-library for production-ready distributed systems built on
-[Polylith](https://polylith.gitbook.io/polylith) — as a pinned
-git-dependency. The workspace holds only Queenswood's own domain
-bricks (`com.repldriven.queenswood.*`); the shared infrastructure
-comes from the dependency (`com.repldriven.mono.*`), pinned to a
-tag/sha via the `ext/mono` shims under `deps/` and upgraded with a
-one-line bump.
-See [ADR-0001](docs/adr/0001-reuse-mono-as-upstream.md) for the
-reasoning. The shared component library (lifecycle,
-persistence, messaging, security, etc.) is documented in the
+[mono](https://github.com/repldriven/mono) is a Clojure component
+library for distributed systems, built on
+[Polylith](https://polylith.gitbook.io/polylith). Its components are
+documented in the
 [mono README](https://github.com/repldriven/mono#mono-components).
 
 For the workspace layout, see `components/`, `bases/`, and
