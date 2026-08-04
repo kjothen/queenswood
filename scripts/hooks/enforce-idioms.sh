@@ -268,6 +268,14 @@ report 'comment-block-bloat' "$out" advisory
 # is split into a read side (`-query`) and a write side (the plain name).
 # `api` request code may require the `-query` interface but must not
 # require the write brick's interface — writes go over the bus as commands.
+#
+# A `-query` sibling means read/write separation, which is not the same
+# thing as commands: a split can outlive them. ADR-0018 decides which
+# writes earn a command, so a brick whose writes are synchronous is named
+# below and the API calls it directly. Keeping that an explicit list
+# rather than relaxing the check means a new direct call is a deliberate
+# edit here, not a silent one over there.
+#
 # The `system.clj` registration bundle is exempt: it bare-requires
 # interfaces to register component-kinds (not to call them), and stays
 # until the write brick leaves the API project (`poly check` Tier-2).
@@ -285,12 +293,20 @@ elif ! grep -rq "$API_NS\." "$API_BASE" 2>/dev/null; then
   echo "  enforce-idioms: no $API_NS.* under $API_BASE — check 6 cannot run" >&2
   FAILED=1
 fi
+# Write bricks whose writes earn no command (ADR-0018), so the API
+# calls their interface directly.
+API_SYNCHRONOUS_WRITE_BRICKS=( cash-account-product )
 API_SRC=( $(printf '%s\n' "${SRC_CLJ[@]}" \
              | grep -E "^$API_BASE/" | grep -v '/system\.clj$') )
 if [ ${#API_SRC[@]} -gt 0 ]; then
   for qdir in components/*-query; do
     [ -d "$qdir" ] || continue
     write_brick=$(basename "${qdir%-query}")
+    skip=""
+    for allowed in "${API_SYNCHRONOUS_WRITE_BRICKS[@]}"; do
+      [ "$write_brick" = "$allowed" ] && skip=1
+    done
+    [ -n "$skip" ] && continue
     hits=$(grep -nE "$API_NS\.${write_brick}\.interface\b" \
              "${API_SRC[@]}" 2>/dev/null)
     [ -n "$hits" ] && out="${out}${hits}"$'\n'

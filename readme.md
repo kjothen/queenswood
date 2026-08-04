@@ -36,7 +36,7 @@ Everything a bank needs, from the same API:
 
 - **Accounts** — open, close, suspend/resume with sort code addresses and balances
 - **Account products** — current and savings account product versioning
-- **Account migrations** — specify, preview and approve moves between versions
+- **Account migrations** — plan, preview and migrate accounts within a product line
 - **Interest** — accrual, capitalisation and fractional carry
 - **Ledger** — double-entry postings on every money movement
 - **Onboarding & identity** — know-your-customer checks and onboarding
@@ -65,28 +65,29 @@ database (FoundationDB) manages the data.
 </picture>
 
 **Writes are idempotent commands.** The API write-side turns a request into a
-command on the bus; a processor consumes it, and does the **entire**
-operation in one database transaction. Processors can be deployed
-individually or, for maximum efficiency, bundled according to lines
-of responsibility, such as financial and operational processor bundles.
+command on the bus where necessary. Processors consume commands, and
+ensure multi-record atomicity under contention through a single
+database transaction. Processors can be deployed individually or,
+for maximum efficiency, bundled according to lines of responsibility,
+such as financial and operational processor bundles.
 
 **Reads are queries.** The API read-side loads records directly using a
 separate query surface — no command round-trip and no overlap with
 the write-path, top-to-bottom.
 
-**Choreography through a changelog.** Every committed write lands on
-FoundationDB's changelog in order, atomically with the write — the
-system's transactional outbox. The rule is commit first, relay
-after: nothing is sent from inside a transaction. A processor
-writes what to emit alongside its state change, and a relay drains
-the changelog to publish it to the bus, so processors react to one
-another, event-sourced.
+**Processor choreography through a changelog relay.** State changes are recorded
+in a corresponding changelog in order, atomically with the write, where necessary.
+All changelog records are published to the message bus through a system-wide
+changelog relay, so processors react to one another through event sourcing.
 
-**Egress through intent.** An external call is the same
-commit-then-relay pattern, one boundary further out. An HTTP
-round-trip can't run inside a database transaction, so the write records an
-intent; a relay makes the call afterwards and folds the provider's
-webhook back in as an event.
+**External Adapters egress through intents.** An external adapter cannot
+reliably round-trip a HTTP call to an external service inside a
+database transaction. Instead, the intent of each command request is recorded,
+and a separate poller processes command intents in order.
+Webhook events received from an external service are normalized
+by the adapter, written to a corresponding changelog in order,
+and relayed to the message bus through the system-wide changelog relay:
+processors can and do react to external adapter events too.
 
 ## What's interesting
 
@@ -159,72 +160,17 @@ decisions in between:
 
 ## Running
 
-Two options: a REPL-driven dev loop with everything inside
-Testcontainers, or a one-liner Helm install onto a local
-Kubernetes cluster.
-
-The dev environment comes from the nix devshell. Check that the
-native toolchain on `PATH` is the one this workspace pins:
-
-```bash
-just doctor
-```
-
-Those versions live in `versions.json`, the single source that
-`flake.nix` and CI both build from. Two of them are exact rather
-than minimums: the FoundationDB client must share a protocol
-version with the server the Testcontainers image builds, and
-`protoc` must stay on the line that emits code for the pinned
-`protobuf-java`. Both fail at runtime rather than at build time,
-which is what `just doctor` exists to catch.
-
-The pins that cannot read `versions.json` — the Dockerfile
-`ARG` defaults, the Helm values, and the `fdb-java` coordinate in
-`deps/fdb` — are asserted against it by `just check-versions`,
-which also gates the test workflow. The same command checks the
-per-project `org.clojure/clojure` pins against the root
-`deps.edn`; Clojure is the one library that cannot be pinned from
-a single place, because the CLI merges its own version into every
-project as a direct dependency.
-
-JVM library versions otherwise live in shims under `deps/`, pulled
-in by `:local/root` under a `pin/` prefix, so a coordinate shared
-across bricks is written once. See
-[recipes/projects.md](docs/recipes/projects.md#library-pinning).
-
-### REPL (Testcontainers)
-
-Start a REPL with `just repl` and connect your editor. The
-development entry point follows the standard Polylith pattern —
-a namespace under `development/src/dev/` that requires the base
-and Testcontainers:
-
-```clojure
-;; development/src/dev/bank_monolith.clj — evaluate the comment block
-(def sys
-  (main/start "classpath:monolith/application-test.yml" :dev))
-(main/stop sys)
-```
-
-This boots the full system — FoundationDB, Message Bus (Kafka or Pulsar),
-HTTP server — inside Testcontainers. Then start the Svelte front-end:
-
-```bash
-just console-start
-```
-
-### Kubernetes
-
 The released Helm chart deploys the entire platform (API,
-processors, adapters/simulators, the Svelte front-end,
+processors, adapters/simulators, web console,
 Kafka or Pulsar, FoundationDB) onto any Kubernetes cluster.
 
-**Get a local Kubernetes runtime on macOS**, pick any:
+**Get a local Kubernetes runtime on macOS**, pick any
+or use what you've got installed:
 
 - **OrbStack** — single-app, fastest setup:
 
   ```bash
-  brew install orbstack
+  brew install orbstack helm kubectl
   # Open OrbStack, enable Kubernetes in Settings → Kubernetes
   ```
 
@@ -266,6 +212,59 @@ scenario produces.
 The full quickstart — including tear-down — ships with
 each
 [release](https://github.com/repldriven/queenswood/releases/latest).
+
+## Developing
+
+### Nix
+
+Nix is used to manage the many tools and binaries required to
+develop Queenswood. There are several ways to install Nix -
+these are not prescribed here.
+
+Nix flakes with `direnv` ensures everything required is
+on the path automatically whenever you `cd` to it.
+
+```bash
+❯ cd queenswood
+direnv: loading ~/Documents/github.nosync/repldriven/queenswood/.envrc
+direnv: using flake .
+FDB libs: /nix/store/i3abz3pz7p6mw9dzg9kr2praag0s6zqz-foundationdb-7.3.75/lib
+fdbcli: /nix/store/i3abz3pz7p6mw9dzg9kr2praag0s6zqz-foundationdb-7.3.75/bin/fdbcli
+protoc-gen-clojure: protoc-gen-clojure version: v2.1.2
+Clojure monorepo environment loaded
+Preparing repo...
+merge drivers configured
+Prepping libraries...
+direnv: export +AR +AS +CC +CLASSPATH ...
+```
+
+### REPL
+
+REPL-driven development follows the standard Polylith pattern.
+
+```clojure
+(ns dev.monolith
+  "Start the system as a modular monolith and testcontainers
+   for FoundationDB, Kafka or Pulsar, Keycloak, etc:
+   * start docker (just docker-start),
+   * start repl (just repl),
+   * load this namespace, and evaluates lines from the comment block
+
+   After the system has started:
+   * start web console (just console-start), login and explore
+
+   NOTE: on a fresh install, it may take several minutes to download
+         required images for FoundationDB, Kafka, Keycloak, etc"
+  (:require
+    [com.repldriven.queenswood.testcontainers.interface]
+    [com.repldriven.queenswood.monolith.main :as main]))
+
+(comment
+  (def sys (main/start "classpath:monolith/application-test.yml" :dev))
+  (tap> sys)
+  (main/stop sys)
+  :-)
+```
 
 ## Built on mono
 

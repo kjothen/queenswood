@@ -6,10 +6,14 @@
   newly-opened accounts. `new-template` seeds the platform templates
   products are created from.
 
-  Reads live in `bank-cash-account-product-query`; this brick reuses them
-  inside its own transactions. `bank-api` requires the query brick, not
-  this one — lifecycle changes reach the processor as commands over the
-  bus."
+  Reads live in `cash-account-product-query`; this brick reuses them
+  inside its own transactions. The split is kept for the read/write
+  separation it gives, not because these writes are commands — they are
+  not. Each writes one product record, nothing reacts to any of them,
+  and they arrive over the API, so none earns a command and `bank-api`
+  calls straight in. A retried write is read back off the
+  idempotency-key index rather than deduplicated by a bus.
+  See [ADR-0018](../../../../../../docs/adr/0018-command-writes-are-earned.md)."
   (:require
     [com.repldriven.queenswood.cash-account-product.system]
 

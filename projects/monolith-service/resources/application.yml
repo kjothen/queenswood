@@ -11,8 +11,6 @@ system:
         - banks-command-response
         - cash-accounts-command
         - cash-accounts-command-response
-        - cash-account-products-command
-        - cash-account-products-command-response
         - parties-command
         - parties-command-response
         - parties-event
@@ -39,7 +37,6 @@ system:
   keycloak: !include system/keycloak.yml
   banks: !include system/bank.yml
   cash-accounts: !include system/cash-account.yml
-  cash-account-products: !include system/cash-account-product.yml
   parties: !include system/party.yml
   payments: !include system/payment.yml
   interest: !include system/interest.yml
@@ -49,7 +46,6 @@ system:
   policies: !include system/policy.yml
   cash-account-product-templates: !include system/cash-account-product-templates.yml
   banks-dispatcher: !include system/bank-dispatcher.yml
-  cash-account-products-dispatcher: !include system/cash-account-product-dispatcher.yml
   cash-accounts-dispatcher: !include system/cash-account-dispatcher.yml
   cash-accounts-relay: !include system/cash-account-relay.yml
   companies-dispatcher: !include system/company-dispatcher.yml
@@ -93,7 +89,6 @@ system:
       dispatchers:
         banks: !system/ref banks-dispatcher.dispatcher
         cash-accounts: !system/ref cash-accounts-dispatcher.dispatcher
-        cash-account-products: !system/ref cash-account-products-dispatcher.dispatcher
         parties: !system/ref parties-dispatcher.dispatcher
         payments: !system/ref payments-dispatcher.dispatcher
         interest: !system/ref interest-dispatcher.dispatcher

@@ -3,8 +3,6 @@ system:
   banks: !include system/bank.yml
   banks-dispatcher: !include system/bank-dispatcher.yml
   cash-account-product-templates: !include system/cash-account-product-templates.yml
-  cash-account-products: !include system/cash-account-product.yml
-  cash-account-products-dispatcher: !include system/cash-account-product-dispatcher.yml
   cash-accounts: !include system/cash-account.yml
   cash-accounts-dispatcher: !include system/cash-account-dispatcher.yml
   cash-accounts-relay: !include system/cash-account-relay.yml

@@ -63,14 +63,18 @@ latency and ceremony.
 
 Applied to today's paths:
 
-- **Commands**: cash-account, party, payment, cash-account-product,
-  transaction, interest, idv, payee-check, bank.
-- **Synchronous**: scheduler/jobs (single-record config writes; an
-  admin UI wants read-your-writes), policy (no write API — writes
-  happen at bootstrap seeding and inside bank creation's
-  transaction), membership (never an independent write; it lives
-  inside the create-bank transaction), user upsert (auth-interceptor
-  hot path — must stay cheap and synchronous, permanently).
+- **Commands**: cash-account, party, payment, transaction, interest,
+  idv, payee-check, bank.
+- **Synchronous**: cash-account-product (each write touches one
+  product record, nothing reacts to any of them, and a retry is read
+  back off the idempotency-key index — commandified during the
+  rollout, and moved back once the rule was applied to it rather than
+  assumed), scheduler/jobs (single-record config writes; an admin UI
+  wants read-your-writes), policy (no write API — writes happen at
+  bootstrap seeding and inside bank creation's transaction),
+  membership (never an independent write; it lives inside the
+  create-bank transaction), user upsert (auth-interceptor hot path —
+  must stay cheap and synchronous, permanently).
 
 The classification is a consequence of the rule, not the rule.
 Graduation triggers are known in advance: a policy-authoring API

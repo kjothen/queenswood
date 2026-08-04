@@ -29,13 +29,6 @@ system:
           bootstrap.servers: !env KAFKA_BOOTSTRAP_SERVERS
           topic: topic-cash-accounts-command-response
           acks: all
-      cash-account-products-command-response:
-        schemas: !system/local-ref schemas
-        schema: !keyword command-response
-        conf:
-          bootstrap.servers: !env KAFKA_BOOTSTRAP_SERVERS
-          topic: topic-cash-account-products-command-response
-          acks: all
       idv-command:
         schemas: !system/local-ref schemas
         schema: !keyword command
@@ -57,11 +50,6 @@ system:
         conf:
           bootstrap.servers: !env KAFKA_BOOTSTRAP_SERVERS
           topic: topic-cash-accounts-command-dlq
-          acks: all
-      cash-account-products-command-dlq:
-        conf:
-          bootstrap.servers: !env KAFKA_BOOTSTRAP_SERVERS
-          topic: topic-cash-account-products-command-dlq
           acks: all
       cash-accounts-event-dlq:
         conf:
@@ -107,15 +95,6 @@ system:
         conf:
           bootstrap.servers: !env KAFKA_BOOTSTRAP_SERVERS
           group.id: cash-account-service-cash-accounts-command
-      cash-account-products-command:
-        schemas: !system/local-ref schemas
-        schema: !keyword command
-        topics: [topic-cash-account-products-command]
-        dead-letter-producer: !system/local-ref producers.cash-account-products-command-dlq
-        max-redeliveries: 5
-        conf:
-          bootstrap.servers: !env KAFKA_BOOTSTRAP_SERVERS
-          group.id: cash-account-product-service-cash-account-products-command
       idv-event:
         schemas: !system/local-ref schemas
         schema: !keyword event
@@ -158,8 +137,6 @@ system:
         producer: !system/local-ref producers.parties-command-response
       cash-accounts-command-response:
         producer: !system/local-ref producers.cash-accounts-command-response
-      cash-account-products-command-response:
-        producer: !system/local-ref producers.cash-account-products-command-response
       idv-command:
         producer: !system/local-ref producers.idv-command
     message-bus-consumers: !system/component
@@ -172,9 +149,6 @@ system:
         timeout: 500
       cash-accounts-command:
         consumer: !system/local-ref consumers.cash-accounts-command
-        timeout: 500
-      cash-account-products-command:
-        consumer: !system/local-ref consumers.cash-account-products-command
         timeout: 500
       idv-event:
         consumer: !system/local-ref consumers.idv-event
@@ -195,6 +169,5 @@ system:
   banks: !include system/bank.yml
   parties: !include system/party.yml
   cash-accounts: !include system/cash-account.yml
-  cash-account-products: !include system/cash-account-product.yml
   idv: !include system/idv.yml
   telemetry: !include system/telemetry.yml

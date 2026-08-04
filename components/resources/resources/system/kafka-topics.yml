@@ -4,12 +4,6 @@
     partitions: 1
   - topic: topic-banks-command-response
     partitions: 1
-  - topic: topic-cash-account-products-command
-    partitions: 1
-  - topic: topic-cash-account-products-command-dlq
-    partitions: 1
-  - topic: topic-cash-account-products-command-response
-    partitions: 1
   - topic: topic-cash-accounts-command
     partitions: 1
   - topic: topic-cash-accounts-command-dlq
