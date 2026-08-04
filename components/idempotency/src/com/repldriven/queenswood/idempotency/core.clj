@@ -2,8 +2,6 @@
   (:require
     [com.repldriven.queenswood.idempotency.store :as store]
 
-    [com.repldriven.queenswood.fdb.interface :as fdb]
-
     [com.repldriven.mono.utility.interface :as utility]
 
     [clojure.edn :as edn]))
@@ -45,7 +43,7 @@
   pending, one transaction will fail and FDB retries it; the retry
   sees the now-pending entry and returns `::in-flight`."
   [config principal-id operation idempotency-key]
-  (fdb/transact
+  (store/transact
    config
    (fn [txn]
      (let [existing (store/lookup txn principal-id operation idempotency-key)

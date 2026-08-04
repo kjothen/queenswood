@@ -1,6 +1,6 @@
 (ns com.repldriven.queenswood.clearbank-relay.outbound
   (:require
-    [com.repldriven.queenswood.clearbank-relay.intent :as intent]
+    [com.repldriven.queenswood.clearbank-relay.store :as store]
 
     [com.repldriven.mono.error.interface :as error]
     [com.repldriven.mono.http-client.interface :as http]
@@ -31,24 +31,24 @@
         next-attempts (inc (or attempts 0))]
     (cond
      (and (map? res) (number? (:status res)) (< (:status res) 400))
-     (intent/mark-sent config intent-id)
+     (store/mark-sent config intent-id)
 
      (>= next-attempts max-attempts)
      (do (log/error "Outbound intent giving up after max attempts"
                     {:intent-id intent-id :attempts next-attempts :last res})
-         (intent/mark-failed config intent-id next-attempts))
+         (store/mark-failed config intent-id next-attempts))
 
      :else
      (do (log/warn "Outbound intent POST failed; will retry"
                    {:intent-id intent-id :attempt next-attempts})
-         (intent/mark-attempt config intent-id next-attempts)))))
+         (store/mark-attempt config intent-id next-attempts)))))
 
 (defn drain-once
   "Relay every pending intent once. Reads are transactional; the HTTP
   call and status write per intent are separate, so no network I/O
   happens inside an FDB transaction."
   [config]
-  (let [pending (intent/pending-intents config)]
+  (let [pending (store/pending-intents config)]
     (when-not (error/anomaly? pending)
       (doseq [i pending] (relay-one config i)))))
 

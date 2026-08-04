@@ -40,6 +40,26 @@ is_processor() {
     && [ -f "components/$b/src/com/repldriven/queenswood/$bu/store.clj" ]
 }
 
+# The fdb-in-store.clj rule is not processor-specific: any brick that
+# owns a store.clj must keep its fdb requires there. Relays and query
+# bricks have no commands.clj, so is_processor skips them and the rule
+# went unenforced.
+has_store() {
+  local b="$1"
+  local bu
+  bu=$(printf '%s' "$b" | tr - _)
+  [ -f "components/$b/src/com/repldriven/queenswood/$bu/store.clj" ]
+}
+
+all_store_bricks() {
+  for d in components/*; do
+    [ -d "$d" ] || continue
+    local b
+    b=$(basename "$d")
+    if has_store "$b"; then echo "$b"; fi
+  done
+}
+
 all_processors() {
   for d in components/*; do
     [ -d "$d" ] || continue
@@ -52,10 +72,13 @@ all_processors() {
 case "$scope" in
   all)
     PROCESSORS=( $(all_processors) )
+    STORE_BRICKS=( $(all_store_bricks) )
     ;;
   explicit)
     PROCESSORS=()
+    STORE_BRICKS=()
     for b in "${EXPLICIT[@]}"; do
+      if has_store "$b"; then STORE_BRICKS+=("$b"); fi
       if is_processor "$b"; then
         PROCESSORS+=("$b")
       else
@@ -89,21 +112,25 @@ case "$scope" in
       esac
     done
     PROCESSORS=()
+    STORE_BRICKS=()
     if [ ${#TOUCHED[@]} -gt 0 ]; then
       for b in $(printf '%s\n' "${TOUCHED[@]}" | sort -u); do
         if is_processor "$b"; then PROCESSORS+=("$b"); fi
+        if has_store "$b"; then STORE_BRICKS+=("$b"); fi
       done
     fi
     ;;
 esac
 
-if [ ${#PROCESSORS[@]} -eq 0 ]; then
-  printf 'No processor bricks in scope (%s).\n' "$scope"
+if [ ${#PROCESSORS[@]} -eq 0 ] && [ ${#STORE_BRICKS[@]} -eq 0 ]; then
+  printf 'No processor or store-owning bricks in scope (%s).\n' "$scope"
   exit 0
 fi
 
-printf 'Scope: %s — %d brick(s): %s\n' \
+printf 'Scope: %s — %d processor brick(s): %s\n' \
   "$scope" "${#PROCESSORS[@]}" "${PROCESSORS[*]}"
+printf '         %d store-owning brick(s) for the fdb check: %s\n' \
+  "${#STORE_BRICKS[@]}" "${STORE_BRICKS[*]}"
 
 # --- Collect file lists per role ----------------------------------------
 
@@ -114,6 +141,20 @@ WATCHER_FILES=()        # must stay empty — the relay replaced watchers
 NON_STORE=()
 REJECTION_FORBIDDEN=()  # store / interface / events / system
 REJECTION_ADVISORY=()   # core
+STORE_BRICK_NON_STORE=()  # every store-owning brick, processor or not
+
+for b in "${STORE_BRICKS[@]}"; do
+  bu=$(printf '%s' "$b" | tr - _)
+  src="components/$b/src/com/repldriven/queenswood/$bu"
+  [ -d "$src" ] || continue
+  for f in "$src"/*.clj; do
+    [ -f "$f" ] || continue
+    case "$f" in
+      */store.clj) ;;
+      *) STORE_BRICK_NON_STORE+=("$f") ;;
+    esac
+  done
+done
 
 for b in "${PROCESSORS[@]}"; do
   bu=$(printf '%s' "$b" | tr - _)
@@ -160,9 +201,9 @@ report() {
 # 1. fdb required outside store.clj.
 section 'fdb required outside store.clj'
 out=""
-if [ ${#NON_STORE[@]} -gt 0 ]; then
+if [ ${#STORE_BRICK_NON_STORE[@]} -gt 0 ]; then
   out=$(grep -nE 'com\.repldriven\.queenswood\.fdb\.interface' \
-          "${NON_STORE[@]}" 2>/dev/null)
+          "${STORE_BRICK_NON_STORE[@]}" 2>/dev/null)
 fi
 report 'fdb-leak' "$out"
 

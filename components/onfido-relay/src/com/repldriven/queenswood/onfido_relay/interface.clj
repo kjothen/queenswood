@@ -8,7 +8,6 @@
   (:require
     [com.repldriven.queenswood.onfido-relay.system]
 
-    [com.repldriven.queenswood.onfido-relay.intent :as intent]
     [com.repldriven.queenswood.onfido-relay.outbound :as outbound]
     [com.repldriven.queenswood.onfido-relay.store :as store]))
 
@@ -38,7 +37,7 @@
     `:request` (EDN-encoded command data), `:status` (\"pending\"),
     `:attempts`, `:created-at`."
   [txn intent]
-  (intent/save-intent txn intent))
+  (store/save-intent txn intent))
 
 (defn uniqueness-violation?
   "True if a `save-event`/`save-intent` result is a duplicate-`dedup-key`

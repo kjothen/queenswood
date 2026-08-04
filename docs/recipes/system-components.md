@@ -184,7 +184,7 @@ The test `system.clj` namespace:
   (:require
     [com.repldriven.queenswood.cash-account.interface]
     [com.repldriven.queenswood.payment.interface]
-    [com.repldriven.mono.fdb.interface]
+    [com.repldriven.queenswood.fdb.interface]
     [com.repldriven.mono.message-bus.interface]
     [com.repldriven.mono.kafka.interface]
     [com.repldriven.mono.server.interface]
