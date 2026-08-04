@@ -33,10 +33,20 @@ See [testing](../../../docs/recipes/testing.md).
 
 ## Comment the why, not the what
 
-`interface.clj` docstrings are the documentation surface; impl files
-stay bare. An inline `;;` comment is exceptional — only a load-bearing
-*why* (invariant, workaround, upstream constraint), never the *what* the
-code already says. Promote real context to a docstring; drop the rest.
+`interface.clj` docstrings are the documentation surface: a
+one-paragraph ns docstring, and each public fn's contract on the
+re-export. Impl defs, private fns and non-interface files stay bare.
+Commentary attaches to the name it describes — `^{:doc ...}` metadata
+on a `def`, the docstring position on a `defn` — never a `;;` block
+floating above the form. Say what the thing does and what its
+conditionals do, not why it is shaped that way and not what category
+it belongs to. A comment explaining a literal means the literal wants
+a name: extract a documented constant instead. An inline `;;` survives
+only when it guards a specific edit a reader would otherwise get
+wrong; when trimming, delete restatement, control-flow narration and
+references to the current change, promoting a load-bearing why to the
+docstring. `;; ---` separators belong in `components.clj` and
+`interface.clj` only.
 See [ADR-0015](../../../docs/adr/0015-comments-and-docstrings.md).
 
 ## Requires run innermost to outermost

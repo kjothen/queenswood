@@ -51,6 +51,18 @@ The rules:
    narrate control flow, or reference the current change/PR/incident;
    keep only a load-bearing WHY, promoted to the docstring if it
    belongs there.
+6. Commentary belongs on the name it describes — a `def`'s in
+   `^{:doc ...}` metadata, a function's in its docstring — never in a
+   `;;` block floating above the form.
+7. A comment explaining a literal is a signal to name the literal.
+   Extract a documented constant instead of annotating the value in
+   place.
+8. A docstring says what the thing does, and what its conditionals do.
+   Not why it is shaped that way, and not what category it belongs to.
+9. An inline `;;` comment survives only if it guards a specific edit a
+   reader would otherwise get wrong.
+10. Section separators belong in `components.clj` and `interface.clj`
+    only.
 
 ### Component interface namespace
 
@@ -148,6 +160,85 @@ When trimming an existing file:
   context belongs in the commit message and ages out of the file.
 - Comments that just restate types or shapes already enforced by
   `:system/config-schema` / spec / malli → delete.
+
+### Commentary attaches to a name
+
+A `;;` block above a `def` is commentary that has come loose from the
+thing it describes. `(doc ...)`, editor hover and any doc tooling read
+metadata, not the lines above the form, so prose parked there is
+invisible to every reader who is not scrolling the file. Attach it:
+
+```clojure
+(def
+  ^{:doc
+    "The FDB API version `db` and `record-db` both default to.
+  `FDB/selectAPIVersion` is JVM-global and one-shot, so the two cannot
+  disagree within a process."}
+  default-api-version
+  710)
+```
+
+This generalises the `^{:doc ...}` form already required for
+`interface.clj` re-exports: it is how a `def` carries documentation
+anywhere, not a special case for re-exports. A `defn` uses its
+docstring position for the same reason.
+
+### Name the literal instead of commenting it
+
+When a comment exists to explain a literal, the literal wants a name.
+A documented constant reaches every call site and is visible to
+`(doc ...)`; a comment reaches only the one line it sits beside, and
+rots as soon as the value moves.
+
+```clojure
+;; before — the rationale is stranded beside one use
+;; The Record Layer's 5s getWithDeadline default is too tight ...
+timeout-ms (or async-to-sync-timeout-ms 30000)
+
+;; after — the rationale travels with the value
+timeout-ms (or async-to-sync-timeout-ms default-async-to-sync-timeout-ms)
+```
+
+### What a docstring says
+
+Say what the thing does, then what its conditionals do — those are the
+branches a caller has to choose between. Do not justify the design
+against alternatives that were not taken; that is commit-message or
+ADR material, and it ages badly because the alternatives keep changing
+while the behaviour does not. Do not restate the category the thing
+belongs to either: every public `def` in a `components.clj` is a
+component-kind, so saying so describes the file, not the component.
+
+### The bar for an inline comment
+
+Sharper than "a non-obvious WHY": an inline `;;` earns its place only
+when it guards a *specific edit* a reader would otherwise get wrong.
+A comment that explains why the code is shaped as it is defends a
+decision; a comment that stops a reader inverting a condition, lowering
+a timeout or renaming a persisted constant prevents a defect. Only the
+second kind is worth the maintenance.
+
+Applying this in practice deletes rationale that reads well. That is
+the intended outcome — well-written design defence is still design
+defence, and it belongs where decisions are recorded.
+
+### Section separators
+
+A `;; ---` separator block is navigation, not narration, and it is
+allowed in exactly two file kinds:
+
+```clojure
+;; ---
+;; keyspace-prefix
+;; ---
+```
+
+`components.clj` and `interface.clj` are flat lists of independent
+definitions with no call graph to read them by, so they are inherently
+long and separators are the only structure available. Every other file
+has a call graph; if it is long enough to want separators, the fix is
+to split it. Reaching for a banner elsewhere is the signal, not the
+solution.
 
 ## Consequences
 

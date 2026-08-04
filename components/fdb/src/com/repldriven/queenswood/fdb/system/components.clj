@@ -1,6 +1,7 @@
 (ns com.repldriven.queenswood.fdb.system.components
   (:refer-clojure :exclude [name])
   (:require
+    [com.repldriven.queenswood.fdb.check :as check]
     [com.repldriven.queenswood.fdb.keyspace :as keyspace]
 
     [com.repldriven.mono.error.interface :refer [try-nom]]
@@ -15,8 +16,7 @@
     (com.apple.foundationdb.record.metadata Index
                                             IndexOptions
                                             IndexTypes
-                                            Key$Expressions
-                                            MetaDataException)
+                                            Key$Expressions)
     (com.apple.foundationdb.record.metadata.expressions GroupingKeyExpression
                                                         KeyExpression$FanType)
     (com.apple.foundationdb.record.provider.foundationdb APIVersion
@@ -28,30 +28,34 @@
     (java.util.function Function)))
 
 ;; ---
-;; api-version
+;; defaults
 ;; ---
 
-;; The FDB API version, as a number.
-;;
-;; `FDB/selectAPIVersion` is JVM-global and one-shot: the first call wins, and
-;; a later call with a different number throws "FoundationDB API already
-;; started at different version". So `db` and `record-db` cannot disagree
-;; within a process. Both default to this and both take it as config, rather
-;; than one reading config while the other hardcodes a constant.
-;;
-;; 710 is also the ceiling the Record Layer can express. Its `APIVersion` enum
-;; stops at `API_VERSION_7_1`, and `fromVersionNumber` rejects 730 and 740
-;; even though a 7.4 client selects either happily. Raising this waits on the
-;; Record Layer gaining an enum constant, not on a newer client.
-(def default-api-version 710)
+(def
+  ^{:doc
+    "The FDB API version `db` and `record-db` both default to.
+  `FDB/selectAPIVersion` is JVM-global and one-shot, so the two cannot
+  disagree within a process — both take this as config rather than one
+  hardcoding it. 710 is also the Record Layer's ceiling: its `APIVersion`
+  enum stops at `API_VERSION_7_1` and rejects the 730/740 a 7.4 client
+  selects happily, so raising it waits on the Record Layer, not on a newer
+  client."}
+  default-api-version
+  710)
+
+(def
+  ^{:doc
+    "Deadline `record-db` sets for async->sync waits, in milliseconds.
+  The Record Layer's own `getWithDeadline` default is 5s, which is too tight
+  under concurrent first-access: each `FDBMetaDataStore.<init>` performs a
+  directory-layer resolution that serialises on the cluster."}
+  default-async-to-sync-timeout-ms
+  30000)
 
 ;; ---
 ;; cluster-file-path
 ;; ---
 
-;; Canonical: always a string. Production YAML supplies
-;; `path: !env FDB_CLUSTER_FILE`; tests ref the
-;; `fdb/container-cluster-file-path` adapter below into `:path`.
 (def cluster-file-path
   {:system/start (fn [{:system/keys [config instance]}]
                    (or instance
@@ -62,10 +66,6 @@
    :system/config-schema [:map [:path string?]]
    :system/instance-schema string?})
 
-;; Testcontainer adapter: derive the cluster file by writing
-;; `fdb:fdb@<host>:<port>` into a temp file the FDB Java client
-;; can open. Returns the absolute path so it can be wired into
-;; `cluster-file-path.path` from a test YAML.
 (def container-cluster-file-path
   {:system/start (fn [{:system/keys [config instance]}]
                    (or instance
@@ -84,7 +84,7 @@
    :system/instance-schema string?})
 
 ;; ---
-;; db
+;; databases
 ;; ---
 
 (def db
@@ -114,46 +114,32 @@
                           [:api-version {:optional true} [:maybe pos-int?]]]
    :system/instance-schema some?})
 
-;; ---
-;; record-db
-;; ---
-
 (def record-db
   {:system/start
    (fn [{:system/keys [config instance]}]
-     (or
-      instance
-      (try-nom
-       :fdb/create-record-db
-       {:message (str "Failed to create FDB Record Layer database. If the "
-                      "api-version was rejected, the Record Layer supports "
-                      "630, 700 and 710 only, regardless of client version")}
-       (let [{:keys [cluster-file-path async-to-sync-timeout-ms api-version]}
-             config
-             ;; Record Layer's default `getWithDeadline` is 5s,
-             ;; which is too tight for a single-process dev FDB
-             ;; under concurrent first-access from many services
-             ;; (each `FDBMetaDataStore.<init>` performs a
-             ;; directory-layer resolution that serialises on
-             ;; the cluster). Bump to 30s by default.
-             timeout-ms (or async-to-sync-timeout-ms 30000)
-             ;; Throws RecordCoreArgumentException for anything
-             ;; the Record Layer cannot express, which try-nom
-             ;; turns into an anomaly naming the value. That is
-             ;; a narrower set than the client accepts: see
-             ;; `default-api-version`.
-             api-version (APIVersion/fromVersionNumber (or api-version
-                                                           default-api-version))
-             db (.getDatabase (doto (FDBDatabaseFactory/instance)
-                                (.setAPIVersion api-version)
-                                (.setScheduledExecutor
-                                 (Executors/newSingleThreadScheduledExecutor)))
-                              cluster-file-path)]
-         (log/info
-          "Opening FDB Record Layer database with async->sync timeout (ms):"
-          timeout-ms)
-         (.setAsyncToSyncTimeout db timeout-ms TimeUnit/MILLISECONDS)
-         db))))
+     (or instance
+         (try-nom
+          :fdb/create-record-db
+          {:message (str "Failed to create FDB Record Layer database. If the "
+                         "api-version was rejected, the Record Layer supports "
+                         "630, 700 and 710 only, regardless of client version")}
+          (let [{:keys [cluster-file-path async-to-sync-timeout-ms api-version]}
+                config
+                timeout-ms (or async-to-sync-timeout-ms
+                               default-async-to-sync-timeout-ms)
+                api-version (APIVersion/fromVersionNumber
+                             (or api-version default-api-version))
+                db (.getDatabase
+                    (doto (FDBDatabaseFactory/instance)
+                      (.setAPIVersion api-version)
+                      (.setScheduledExecutor
+                       (Executors/newSingleThreadScheduledExecutor)))
+                    cluster-file-path)]
+            (log/info
+             "Opening FDB Record Layer database with async->sync timeout (ms):"
+             timeout-ms)
+            (.setAsyncToSyncTimeout db timeout-ms TimeUnit/MILLISECONDS)
+            db))))
    :system/stop (fn [{:system/keys [instance]}]
                   (when (some? instance)
                     (log/info "Closing FDB Record Layer database")
@@ -168,7 +154,7 @@
    :system/instance-schema some?})
 
 ;; ---
-;; store
+;; metadata
 ;; ---
 
 (defn- set-primary-key
@@ -244,6 +230,10 @@
       (add-indexes builder record-type indexes))
     (.build builder)))
 
+;; ---
+;; store
+;; ---
+
 (def store
   {:system/start
    (fn [{:system/keys [config instance]}]
@@ -251,13 +241,6 @@
          (let [{:keys [descriptor record-types keyspace-prefix]} config
                meta (build-meta-data descriptor record-types)
                store-names (set (keys record-types))]
-           ;; The prefix rides as metadata on the open-fn so
-           ;; `transact` and `ctx->txn` can recover it from
-           ;; the record-store they already receive. Putting
-           ;; it on every brick's component config instead
-           ;; would mean ~20 YAML edits, any one of which
-           ;; could be missed — and a missed one writes to
-           ;; the wrong keyspace silently.
            (with-meta (fn [ctx store-name]
                         (when-not (store-names store-name)
                           ;; nosemgrep: no-raw-throw
@@ -296,35 +279,28 @@
         .createOrOpen)))
 
 (defn- truthy-flag?
-  "Coerce a `migrate`-style flag to boolean. Accepts the literal
-  Clojure boolean (when set inline in test YAML) or the string
-  shape `!env FDB_MIGRATE` produces (\"true\" / \"1\" / \"yes\"
-  case-insensitive). Anything else — including nil from an unset
-  env var — is treated as false."
+  "Accepts a literal boolean (set inline in test YAML) or the string
+  shape `!env FDB_MIGRATE` produces, since an env var cannot carry a
+  boolean."
   [v]
   (cond (boolean? v)
         v
+
         (string? v)
-        (contains? #{"true" "1" "yes"}
-                   (some-> v
-                           str/lower-case))
+        (contains? #{"true" "1" "yes"} (str/lower-case v))
+
         :else
         false))
 
-;; Read-only by default. When `migrate: true` (or the env-resolved
-;; string equivalent), persists the record meta-data into FDB at
-;; start before returning the open-fn — exactly the previous
-;; `meta-store-write` behaviour, just gated on a single flag.
-;; Read-mode is lazy (no directory-cache warming at start) so the
-;; same component-kind can be declared in a system that also
-;; persists schema in the same JVM (monolith, tests) without
-;; ordering races: callers pay path-resolution cost on first
-;; store access. The schema-save is idempotent — FDB Record
-;; Layer's "meta-data version must increase" rejection is treated
-;; as a no-op so every helm upgrade Job can restart cleanly. Real
-;; schema upgrades must explicitly bump the meta-data version on
-;; the builder.
-(def meta-store
+(def
+  ^{:doc
+    "Opens record stores against meta-data persisted in FDB.
+  With `migrate` unset, opens for reads only. With `migrate` set, first
+  persists the record meta-data — a save made idempotent by treating the
+  Record Layer's \"meta-data version must increase\" rejection as a no-op,
+  so a genuine schema upgrade has to bump that version on the builder
+  explicitly."}
+  meta-store
   {:system/start
    (fn [{:system/keys [config instance]}]
      (or
@@ -345,17 +321,11 @@
                       (.saveRecordMetaData ms meta-data))
                     nil))
             (catch Exception e
-              (let [root (loop [t e]
-                           (if-let [c (.getCause t)]
-                             (recur c)
-                             t))]
-                (if (and (instance? MetaDataException root)
-                         (re-find #"meta-data version must increase"
-                                  (or (.getMessage ^Throwable root) "")))
-                  (log/info
-                   "FDB meta-data already persisted at >= current version; skipping save")
-                  ;; nosemgrep: no-raw-throw
-                  (throw e))))))
+              (if (check/meta-data-already-current? e)
+                (log/info
+                 "FDB meta-data already persisted at >= current version; skipping save")
+                ;; nosemgrep: no-raw-throw
+                (throw e)))))
         (with-meta (fn [ctx store-name]
                      (open-meta-store ctx
                                       ks-path
@@ -382,16 +352,13 @@
 ;; keyspace-prefix
 ;; ---
 
-;; Qualifies every FDB key this system writes — records, changelog,
-;; sentinel, checkpoint and counters. One component so every consumer
-;; refs the same value: a prefix that disagrees between the writer and
-;; its relay reads an empty changelog.
-;;
-;; Unset (the production default) leaves keys byte-identical to an
-;; unprefixed deployment. `generate: true` mints one per boot, which is
-;; what test rigs want — several systems share a testcontainer FDB, and
-;; without it they share stores and cursors too.
-(def keyspace-prefix
+(def
+  ^{:doc
+    "Prefix qualifying every FDB key this system writes.
+  Unset (the production default), keys stay byte-identical to an unprefixed
+  deployment. With `generate` set, mints one per boot so test systems
+  sharing a testcontainer FDB don't also share stores and cursors."}
+  keyspace-prefix
   {:system/start (fn [{:system/keys [config instance]}]
                    (or instance
                        (let [{:keys [value generate]} config]

@@ -22,11 +22,6 @@
       .getLong))
 
 (defn allocate
-  "Atomically increments counter at key-parts by 1,
-  returns the post-increment value. For use inside a
-  transaction (pass store to extract raw tr). Counter keys sit at
-  the FDB root, so prefix scopes them the same way it scopes
-  records and the changelog."
   [store prefix & key-parts]
   (let [ctx (.getContext store)
         tr (.ensureActive ctx)

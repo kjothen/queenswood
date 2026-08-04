@@ -129,6 +129,22 @@ shapes below are specific to those two).
    same way `new-processor` and `commit-and-pr` operate in this repo.
    Don't run `git commit` yourself; that's a separate, explicit step.
 
+7. **Reinstall the plugins from local files** so the edited rule
+   reaches the copy agents actually load:
+
+   ```bash
+   for d in ./plugins/*/; do tessl install "file:${d%/}"; done
+   ```
+
+   `plugins/<name>/rules/<name>.md` is the tracked source, but
+   `AGENTS.md` loads `.tessl/RULES.md`, which points at
+   `.tessl/plugins/queenswood/<name>/rules/<name>.md` — a gitignored,
+   per-machine copy. Editing the source alone leaves every agent
+   reading the pre-sync rule. The `file:` refs install from the
+   working tree rather than the registry, so this needs no network and
+   no login. It touches only gitignored paths, so it never shows up in
+   the diff from step 6.
+
 ## Output
 
 Start with the discovery findings, then the per-section sync report.
@@ -143,6 +159,9 @@ what changed (or "unchanged" if the compressed prose already matched,
 or "new section" for one authored from an `unlinked` finding), and any
 untraceable claims found. If a section's source doc had a structural
 `ERROR`, report that and leave the section as-is.
+
+**Reinstall**: confirm the plugins were reinstalled from local files,
+so the reader knows the edited rule is live rather than pending.
 
 Example:
 
