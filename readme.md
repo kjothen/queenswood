@@ -86,9 +86,10 @@ database transaction. Instead, the intent of each command request is recorded,
 and a separate poller retries each pending intent until it succeeds or
 exhausts its attempts.
 Webhook events received from an external service are normalized
-by the adapter, written to a corresponding changelog in order,
-and relayed to the message bus through the system-wide changelog relay:
-processors can and do react to external adapter events too.
+by the adapter and written to a deduplicating outbox, atomically with
+its changelog record, and relayed to the message bus in order through
+the system-wide changelog relay: processors can and do react to
+external adapter events too.
 
 ## What's interesting
 
