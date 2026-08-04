@@ -165,31 +165,20 @@ with a doc that goes deep:
 The bank is documented end to end — the why, the how, and the
 decisions in between:
 
-- **[docs/prd/](docs/prd/)** — product requirements documents:
-  a platform-wide umbrella plus one per capability (onboarding,
-  parties, cash-account-products, cash-accounts, payments,
-  interest, policies). The _what and why_ — intended scope,
-  users, and domain rules — companion to the TDDs' _how_.
-- **[docs/tdd/](docs/tdd/)** — technical design documents
-  covering the substrate (transaction processing, transactions
-  and balances, traceability, scenario testing, idempotency
-  proposal), the API surface and auth (service-apis,
-  authentication), the policy engine, and every domain (banks,
-  parties, products, accounts, payments, interest).
-- **[docs/adr/](docs/adr/)** — architecture decision records
-  (mono fork, FoundationDB, message-bus abstraction, Avro,
-  anomalies, kebab-case keys, system-as-data, changelog relay,
-  model-equality testing, code generation via prep-lib,
-  one-component-per-library, pre-commit hooks, single unified
-  API, OpenAPI 3.x compliance, comments and docstrings).
+- **[docs/prd/](docs/prd/)** — what each capability is for and who
+  uses it, in product language: intended scope, users, and the domain
+  rules that follow. Companion to the TDDs' _how_.
+- **[docs/tdd/](docs/tdd/)** — how it is built, one document per
+  capability and subsystem, from the transaction substrate up through
+  the API surface.
+- **[docs/adr/](docs/adr/)** — the decisions, each with the context
+  that forced it and the consequences accepted. Kept as a record, so
+  one that has been superseded says so rather than being rewritten.
+- **[docs/recipes/](docs/recipes/)** — task-oriented guides in a fixed
+  shape (Problem, Solution, Rules, Discussion, References) for the
+  things you do repeatedly in this codebase.
 - **[docs/slides/](docs/slides/)** — a slidev walk-through of how
   systems-as-data assembles a running system.
-- **[docs/recipes/](docs/recipes/)** — task-oriented recipes
-  (Problem / Solution / Rules / Discussion / References) for
-  components, bases, projects, system-components,
-  system-configurations, testcontainers, error-handling, testing,
-  code-style, code-generation, common-helpers, deployment,
-  git-workflow, writing-docs.
 
 ## Running
 
