@@ -138,15 +138,24 @@ transaction into two.
 ### `store.clj` — the sole FDB layer
 
 `store.clj` is the only file in a processor brick that requires
-`com.repldriven.mono.fdb.interface`. Every operation it exposes
-wraps its body in `fdb/transact`:
+`com.repldriven.queenswood.fdb.interface`. Every operation it exposes
+wraps its body in `fdb/transact`, and a brick whose callers need to
+span several store calls in one transaction re-exports it —
+`(def transact fdb/transact)` — rather than letting `core.clj` reach
+past the store to `fdb` itself.
+
+The rule is not processor-specific, even though it is written down
+here. Any brick that owns a `store.clj` keeps its `fdb` requires
+there: relays and query bricks have no `commands.clj`, so they are not
+processors, but the reason for the confinement — one place to change
+if the store ever changes — applies to them identically.
 
 ```clojure
 (ns com.repldriven.queenswood.cash-account.store
   (:require
     [com.repldriven.queenswood.schema.interface :as schema]
     [com.repldriven.mono.error.interface :as error :refer [let-nom>]]
-    [com.repldriven.mono.fdb.interface :as fdb]))
+    [com.repldriven.queenswood.fdb.interface :as fdb]))
 
 (def ^:private store-name "cash-accounts")
 

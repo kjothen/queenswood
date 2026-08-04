@@ -6,16 +6,16 @@
 
 # Queenswood
 
-**Core banking, boxed.** You want a modern banking platform — without
+**Core banking, boxed.** You want a modern banking platform without
 building it all yourself, or renting one you can't see inside.
-Queenswood is the operational core — accounts, payments, a
-double-entry ledger, interest, onboarding, and policies — the
-machinery of a bank. You use your banking licence. You
-contract with identity and payment-rails providers, plug them in
-where supported, or extend the platform where not.
+Queenswood is the operational core: accounts, payments, a double-entry
+ledger, interest, onboarding, policies, and scheduling. The machinery of a bank.
+You bring the banking licence. You contract with identity and
+payment-rails providers, plug them in where supported, or extend the
+platform where not.
 
-The world runs on banking it never sees. Queenswood makes the core a
-commodity — out in the open, yours to read and run.
+The world runs on banking it never sees. This is that machinery, in the
+open: yours to read, to run, and to change.
 
 ## Demos
 
@@ -64,67 +64,99 @@ database (FoundationDB) manages the data.
   <img alt="Queenswood system diagram" src="docs/diagrams/system-diagram-light.svg">
 </picture>
 
-**Writes are idempotent commands.** The API write-side turns a request into a
-command on the bus where necessary. Processors consume commands, and
-ensure multi-record atomicity under contention through a single
-database transaction. Processors can be deployed individually or,
-for maximum efficiency, bundled according to lines of responsibility,
-such as financial and operational processor bundles.
+**Writes as commands, processed in parallel and in order.** Where a write
+needs it, the API puts a command on the bus instead of doing the work itself.
+Processors consume those commands and scale independently of the web tier, so
+the work spreads across as many instances as it takes while a request costs
+the API only an open connection. Commands sharing an ordering key are consumed
+one at a time and in order, however many processors are running — something no
+number of web servers writing directly can give you. Delivery is at-least-once
+and the envelope absorbs a redelivery, so repeating a request replays the
+first outcome rather than doing the work twice. Today the API waits for the
+reply and answers on the same connection; the same split would let it
+acknowledge immediately and return the outcome out of band. A write that needs
+none of this stays a direct call. Processors deploy individually, or bundled
+along lines of responsibility such as financial and operational.
 
-**Reads are queries.** The API read-side loads records directly using a
-separate query surface — no command round-trip and no overlap with
-the write-path, top-to-bottom.
+**Reads are queries.** The API read-side loads records directly through a
+separate query surface — no command, no bus, no round-trip. Query bricks
+read and nothing else. Once a domain's writes have earned a command, its
+write brick becomes private to the processor and the API reaches only the
+query side, which the build enforces rather than leaves to habit. A read
+therefore never travels the write path, and a busy or unavailable bus
+does not make the bank unreadable.
 
-**Processor choreography through a changelog relay.** State changes are recorded
-in a corresponding changelog in order, atomically with the write, where necessary.
-All changelog records are published to the message bus through a system-wide
-changelog relay, so processors react to one another through event sourcing.
+**Processors react, they never call one another.** Where a change has to
+be reacted to, it is recorded in a changelog in the same transaction as
+the write itself, so a change and the news of it cannot diverge. One
+system-wide relay tails those changelogs in order and publishes each
+entry to the message bus as an event, and the processors that care
+subscribe. An event reports what happened and asks nothing of whoever
+reads it, unlike a command. Nor is this event sourcing: the records
+stay the source of truth, and an event exists to cross a boundary
+rather than to rebuild state from.
 
-**External Adapters egress through intents.** An external adapter cannot
-reliably round-trip a HTTP call to an external service inside a
-database transaction. Instead, the intent of each command request is recorded,
-and a separate poller processes command intents in order.
+**External calls are recorded before they are made.** A database write and an
+outbound HTTP call cannot be made atomic: no transaction spans the two,
+and there is no two-phase commit to reach for across someone else's API.
+Committing first risks a call that never happens; calling first risks a
+call that happened but was never recorded. So the adapter commits the
+_intent_ to call, and a separate poller makes the call afterwards,
+retrying each pending intent until it succeeds or exhausts its attempts.
 Webhook events received from an external service are normalized
-by the adapter, written to a corresponding changelog in order,
-and relayed to the message bus through the system-wide changelog relay:
-processors can and do react to external adapter events too.
+by the adapter and written to a deduplicating outbox, atomically with
+its changelog record, and relayed to the message bus in order through
+the system-wide changelog relay: processors can and do react to
+external adapter events too.
 
 ## What's interesting
 
-The decisions that make this codebase worth reading — each with a
-doc that goes deep:
+The engineering decisions that make this codebase worth reading, each
+with a doc that goes deep:
 
 - **One unified API for the whole bank, with full OpenAPI 3.x
-  compliance.** See
-  [ADR-0013](docs/adr/0013-single-unified-api.md) and
+  compliance.** One base URL and one document, not a service per
+  domain, and the document is generated from the routes themselves so
+  it cannot drift from what the API does.
+  See [ADR-0013](docs/adr/0013-single-unified-api.md) and
   [ADR-0014](docs/adr/0014-openapi-3x-compliance.md).
-- **Policies and bindings as first-class data, not hardcoded
-  rules.** Combining allow/deny capabilities with
-  sophisticated time and volume-based limits, affords
-  fine-grained policies where you need it most.
+- **Policy is data, not code.** Capabilities and limits are records
+  evaluated at runtime, not conditionals compiled into a release, so
+  changing what a bank permits is a write.
   See [policy-evaluation](docs/tdd/policy-evaluation.md).
-- **Daily interest accrual, capitalisation and carry.** Integer
-  micro-unit arithmetic with sub-minor-unit carry; a batch pass that
-  streams a bank's accounts with their balances and posts the ledger
-  once per run rather than once per account; with cadence (daily,
-  monthly, anything) being your choice.
+- **Money is integers, and the remainder is kept.** Amounts are
+  integers end to end, never floats, and interest carries the
+  sub-minor-unit remainder between days rather than rounding it away.
   See [interest](docs/tdd/interest.md).
-- **System-level and model-equality property testing**.
-  Two parallel state machines, the real system and an independent model,
-  fed the same commands, with end states compared.
+- **System-level and model-equality property testing.** Two state
+  machines fed the same commands: the real system, and a model that
+  imports nothing from it, no database, no protobuf, no shared code.
+  A divergence shrinks to the shortest sequence that causes it.
   See [scenario-testing](docs/tdd/scenario-testing.md).
-- **Anomalies, not exceptions, at every component interface.**
-  Failure is a first-class return value. Every caller engages with
-  it; nothing slips by silently.
+- **Anomalies, not exceptions, at every component interface.** An
+  interface returns a value or an anomaly and never raises. Three kinds
+  separate a fault from a refusal from a forbidden call, which is how
+  the API picks a status family without inspecting a payload.
   See [ADR-0005](docs/adr/0005-error-handling-with-anomalies.md).
-- **System-as-data** Test and production share one bootstrap path.
+- **System-as-data.** Test and production share one bootstrap path, and
+  what a given process runs is decided by its configuration rather than
+  its code: the same bricks start as a modular monolith in one JVM or as
+  separate services.
   See [ADR-0007](docs/adr/0007-system-as-data.md) and the
   [slides](docs/slides/systems-as-data/slides.md).
-- **FoundationDB Record Layer.** Multi-record ACID by default; the
-  transactional outbox pattern falls out of the storage engine.
+- **FoundationDB Record Layer.** Multi-record ACID across stores in one
+  transaction, so creating a bank writes its party, ledger chart, house
+  accounts and policy bindings, or none of them. Changelog entries are
+  keyed by versionstamp, so the log is ordered by commit and a relay
+  resumes exactly where it stopped. Counts and sums are kept current as
+  records commit, so reading one costs the same whether a bank has ten
+  accounts or ten million.
   See [ADR-0002](docs/adr/0002-foundationdb-record-layer.md).
-- **Consumes `mono`** — shared infrastructure pulled in as a
-  pinned git-dependency, not forked into the workspace.
+- **Built on `mono`.** The generic half lives upstream: messaging, identity,
+  observability, HTTP, error handling, and the system assembly the bullet
+  above describes. It arrives tested on its own terms and pinned to a tag
+  and a sha, so the suite here proves banking rather than plumbing, and the
+  ground under a bank moves only when someone decides it should.
   See [ADR-0001](docs/adr/0001-reuse-mono-as-upstream.md).
 
 ## Documentation
@@ -132,31 +164,29 @@ doc that goes deep:
 The bank is documented end to end — the why, the how, and the
 decisions in between:
 
-- **[docs/prd/](docs/prd/)** — product requirements documents:
-  a platform-wide umbrella plus one per capability (onboarding,
-  parties, cash-account-products, cash-accounts, payments,
-  interest, policies). The _what and why_ — intended scope,
-  users, and domain rules — companion to the TDDs' _how_.
-- **[docs/tdd/](docs/tdd/)** — technical design documents
-  covering the substrate (transaction processing, transactions
-  and balances, traceability, scenario testing, idempotency
-  proposal), the API surface and auth (service-apis,
-  authentication), the policy engine, and every domain (banks,
-  parties, products, accounts, payments, interest).
-- **[docs/adr/](docs/adr/)** — architecture decision records
-  (mono fork, FoundationDB, message-bus abstraction, Avro,
-  anomalies, kebab-case keys, system-as-data, changelog relay,
-  model-equality testing, code generation via prep-lib,
-  one-component-per-library, pre-commit hooks, single unified
-  API, OpenAPI 3.x compliance, comments and docstrings).
+- **[docs/prd/](docs/prd/)** — what each capability is for and who
+  uses it, in product language: intended scope, users, and the domain
+  rules that follow. Companion to the TDDs' _how_.
+- **[docs/tdd/](docs/tdd/)** — how it is built, one document per
+  capability and subsystem, from the transaction substrate up through
+  the API surface.
+- **[docs/adr/](docs/adr/)** — the decisions, each with the context
+  that forced it and the consequences accepted. Kept as a record, so
+  one that has been superseded says so rather than being rewritten.
+- **[docs/recipes/](docs/recipes/)** — task-oriented guides in a fixed
+  shape (Problem, Solution, Rules, Discussion, References) for the
+  things you do repeatedly in this codebase.
 - **[docs/slides/](docs/slides/)** — a slidev walk-through of how
   systems-as-data assembles a running system.
-- **[docs/recipes/](docs/recipes/)** — task-oriented recipes
-  (Problem / Solution / Rules / Discussion / References) for
-  components, bases, projects, system-components,
-  system-configurations, testcontainers, error-handling, testing,
-  code-style, code-generation, common-helpers, deployment,
-  git-workflow, writing-docs.
+
+These are not only for people. Nearly every ADR and recipe carries a
+label binding it to a rule plugin, and the rules an agent loads on every
+task in this repo are regenerated from those documents rather than
+written alongside them, so the guidance cannot quietly drift from the
+decision it came from. It is also why a recipe has a fixed shape: the
+`Rules` block is the part that gets extracted. What is load-bearing is
+then checked again at commit time, by formatting, linting, and a set of
+repo-specific guardrails.
 
 ## Running
 
@@ -268,18 +298,10 @@ REPL-driven development follows the standard Polylith pattern.
 
 ## Built on mono
 
-Queenswood **consumes**
-[mono](https://github.com/repldriven/mono) — a Clojure component
-library for production-ready distributed systems built on
-[Polylith](https://polylith.gitbook.io/polylith) — as a pinned
-git-dependency. The workspace holds only Queenswood's own domain
-bricks (`com.repldriven.queenswood.*`); the shared infrastructure
-comes from the dependency (`com.repldriven.mono.*`), pinned to a
-tag/sha via the `ext/mono` shims under `deps/` and upgraded with a
-one-line bump.
-See [ADR-0001](docs/adr/0001-reuse-mono-as-upstream.md) for the
-reasoning. The shared component library (lifecycle,
-persistence, messaging, security, etc.) is documented in the
+[mono](https://github.com/repldriven/mono) is a Clojure component
+library for distributed systems, built on
+[Polylith](https://polylith.gitbook.io/polylith). Its components are
+documented in the
 [mono README](https://github.com/repldriven/mono#mono-components).
 
 For the workspace layout, see `components/`, `bases/`, and

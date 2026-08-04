@@ -2,7 +2,7 @@
   (:require
     [com.repldriven.queenswood.testcontainers.interface]
 
-    [com.repldriven.queenswood.onfido-relay.intent :as intent]
+    [com.repldriven.queenswood.onfido-relay.store :as store]
     [com.repldriven.queenswood.onfido-relay.interface :as SUT]
     [com.repldriven.queenswood.onfido-relay.outbound :as outbound]
     [com.repldriven.queenswood.changelog-relay.interface]
@@ -78,6 +78,6 @@
        (outbound/drain-once
         (assoc config :onfido-url "http://localhost:1" :max-attempts 10))
        (let [i3 (first (filter #(= "int.3" (:intent-id %))
-                               (intent/pending-intents config)))]
+                               (store/pending-intents config)))]
          (is (some? i3) "still pending after an unreachable submit")
          (is (= 1 (:attempts i3)) "attempt count bumped"))))))

@@ -5,6 +5,8 @@
 
 (def ^:private store-name "idempotency")
 
+(def transact fdb/transact)
+
 (defn save
   "Persist an idempotency cache entry. `entry` is the map shape of
   the `Idempotency` proto: `:principal-id :operation :idempotency-key

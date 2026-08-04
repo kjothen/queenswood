@@ -8,7 +8,6 @@
   (:require
     [com.repldriven.queenswood.clearbank-relay.system]
 
-    [com.repldriven.queenswood.clearbank-relay.intent :as intent]
     [com.repldriven.queenswood.clearbank-relay.store :as store]))
 
 (defn save-event
@@ -45,4 +44,4 @@
     `:request` (FPS JSON body), `:status` (\"pending\"), `:attempts`,
     `:created-at`."
   [txn intent]
-  (intent/save-intent txn intent))
+  (store/save-intent txn intent))

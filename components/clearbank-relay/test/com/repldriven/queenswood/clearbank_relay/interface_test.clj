@@ -3,7 +3,7 @@
   (:require
     [com.repldriven.queenswood.testcontainers.interface]
 
-    [com.repldriven.queenswood.clearbank-relay.intent :as intent]
+    [com.repldriven.queenswood.clearbank-relay.store :as store]
     [com.repldriven.queenswood.clearbank-relay.interface :as SUT]
     [com.repldriven.queenswood.clearbank-relay.outbound :as outbound]
     [com.repldriven.queenswood.changelog-relay.interface]
@@ -78,15 +78,15 @@
             (SUT/save-intent config (intent-of "int.2" "e2e-A")))))
      (testing "a sent intent leaves the pending work-queue"
        (nom-test> [_ (SUT/save-intent config (intent-of "int.3" "e2e-B"))])
-       (is (some #(= "int.3" (:intent-id %)) (intent/pending-intents config)))
-       (nom-test> [_ (intent/mark-sent config "int.3")])
+       (is (some #(= "int.3" (:intent-id %)) (store/pending-intents config)))
+       (nom-test> [_ (store/mark-sent config "int.3")])
        (is (not (some #(= "int.3" (:intent-id %))
-                      (intent/pending-intents config)))))
+                      (store/pending-intents config)))))
      (testing "a failed POST keeps the intent pending and bumps its attempt"
        (nom-test> [_ (SUT/save-intent config (intent-of "int.4" "e2e-C"))])
        (outbound/drain-once
         (assoc config :clearbank-url "http://localhost:1" :max-attempts 10))
        (let [i4 (first (filter #(= "int.4" (:intent-id %))
-                               (intent/pending-intents config)))]
+                               (store/pending-intents config)))]
          (is (some? i4) "still pending after an unreachable POST")
          (is (= 1 (:attempts i4)) "attempt count bumped"))))))

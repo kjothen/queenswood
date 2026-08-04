@@ -72,7 +72,7 @@ Two or three sentences. No implementation detail; no list of public
 fns (the file already lists them).
 
 ```clojure
-(ns com.repldriven.mono.fdb.interface
+(ns com.repldriven.queenswood.fdb.interface
   "FoundationDB Record Layer wrapper. Exposes record-store
   open/save/load/scan plus a `transact` macro that runs a body
   inside a single FDB transaction. Component-kinds for
