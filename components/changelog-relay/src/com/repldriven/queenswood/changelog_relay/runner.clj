@@ -1,5 +1,6 @@
 (ns com.repldriven.queenswood.changelog-relay.runner
   (:require
+    ;; nosemgrep: fdb-outside-store — the relay owns no store, it tails one
     [com.repldriven.queenswood.fdb.interface :as fdb]
 
     [com.repldriven.mono.log.interface :as log]))

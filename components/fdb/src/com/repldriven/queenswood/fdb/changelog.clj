@@ -1,5 +1,4 @@
 (ns com.repldriven.queenswood.fdb.changelog
-  (:refer-clojure :exclude [read])
   (:import
     (com.apple.foundationdb KeySelector MutationType)
     (com.apple.foundationdb.record.provider.foundationdb

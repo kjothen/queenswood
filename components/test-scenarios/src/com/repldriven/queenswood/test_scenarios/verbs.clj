@@ -15,6 +15,7 @@
     [com.repldriven.queenswood.cash-account-query.interface :as
      cash-accounts-query]
     [com.repldriven.queenswood.cash-account.interface :as cash-accounts]
+    ;; nosemgrep: fdb-outside-store — seeds state below the interfaces
     [com.repldriven.queenswood.fdb.interface :as fdb]
     [com.repldriven.queenswood.idv.interface :as idv]
     [com.repldriven.queenswood.interest.interface :as interest]
@@ -601,7 +602,7 @@
                  :creditor-bban bban
                  :debtor-name "Scenario Funder"
                  :reference (str "scenario inbound " (name marker))
-                 :timestamp-settled (System/currentTimeMillis)})]
+                 :timestamp-settled (utility/now)})]
     (-> ctx
         (update :next-inbound-id inc)
         (update :counter inc)
@@ -646,7 +647,7 @@
                  :currency "GBP"
                  :creditor-bban bban
                  :debtor-name "Scenario Held Sender"
-                 :timestamp-settled (System/currentTimeMillis)})]
+                 :timestamp-settled (utility/now)})]
     (-> ctx
         (update :counter inc)
         (track result))))
@@ -654,13 +655,13 @@
 (defmethod dispatch :return-inbound
   [{:keys [bank held-inbounds] :as ctx} {[model-acct] :args}]
   (let [{:keys [e2e]} (get held-inbounds model-acct)
-        result (payment/return-inbound
-                bank
-                {:end-to-end-id e2e
-                 :scheme "FPS"
-                 :debit-credit-code :debit-credit-code-credit
-                 :cancellation-code "HELD_DECLINED"
-                 :timestamp-rejected (System/currentTimeMillis)})]
+        result (payment/return-inbound bank
+                                       {:end-to-end-id e2e
+                                        :scheme "FPS"
+                                        :debit-credit-code
+                                        :debit-credit-code-credit
+                                        :cancellation-code "HELD_DECLINED"
+                                        :timestamp-rejected (utility/now)})]
     (-> ctx
         (update :counter inc)
         (track result))))
@@ -821,7 +822,7 @@
                  :creditor-bban bban
                  :debtor-name "Scenario Funder"
                  :reference (str "scenario inbound " stx-id)
-                 :timestamp-settled (System/currentTimeMillis)})]
+                 :timestamp-settled (utility/now)})]
     (-> ctx
         (update :counter inc)
         (track result))))
@@ -840,7 +841,7 @@
                  :creditor-bban "040004000000001"
                  :debtor-name "Scenario Settler"
                  :reference (str "scenario settlement " counter)
-                 :timestamp-settled (System/currentTimeMillis)})]
+                 :timestamp-settled (utility/now)})]
     (-> ctx
         (update :counter inc)
         (track result))))

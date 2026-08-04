@@ -4,7 +4,8 @@
     [com.repldriven.queenswood.party-query.interface :as party]
     [com.repldriven.queenswood.payment-query.interface :as payment]
 
-    [com.repldriven.mono.error.interface :as error]))
+    [com.repldriven.mono.error.interface :as error]
+    [com.repldriven.mono.utility.interface :as utility]))
 
 (def ^:private default-deadline-ms 5000)
 (def ^:private poll-interval-ms 25)
@@ -13,7 +14,7 @@
   ([bank bank-id party-id]
    (wait-for-party-active bank bank-id party-id default-deadline-ms))
   ([bank bank-id party-id deadline-ms]
-   (let [deadline (+ (System/currentTimeMillis) deadline-ms)]
+   (let [deadline (+ (utility/now) deadline-ms)]
      (loop []
        (let [party (party/get-party bank bank-id party-id)
              status (when-not (error/anomaly? party) (:status party))]
@@ -21,7 +22,7 @@
           (= :party-status-active status)
           :quiescent
 
-          (>= (System/currentTimeMillis) deadline)
+          (>= (utility/now) deadline)
           (error/fail :scenario/quiescence-timeout
                       {:message "Party did not become active"
                        :bank-id bank-id
@@ -42,7 +43,7 @@
   ([bank payment-id]
    (wait-for-outbound-completed bank payment-id default-deadline-ms))
   ([bank payment-id deadline-ms]
-   (let [deadline (+ (System/currentTimeMillis) deadline-ms)]
+   (let [deadline (+ (utility/now) deadline-ms)]
      (loop []
        (let [pmt (payment/get-outbound-payment bank payment-id)
              status (when-not (error/anomaly? pmt) (:payment-status pmt))]
@@ -50,7 +51,7 @@
           (= :outbound-payment-status-completed status)
           :quiescent
 
-          (>= (System/currentTimeMillis) deadline)
+          (>= (utility/now) deadline)
           (error/fail :scenario/quiescence-timeout
                       {:message "Outbound payment did not complete"
                        :payment-id payment-id
@@ -86,14 +87,14 @@
                     target
                     default-deadline-ms))
   ([bank bank-real-id account-id currency target deadline-ms]
-   (let [deadline (+ (System/currentTimeMillis) deadline-ms)]
+   (let [deadline (+ (utility/now) deadline-ms)]
      (loop []
        (let [net (net-balance bank bank-real-id account-id currency)]
          (cond
           (and net (>= net target))
           :quiescent
 
-          (>= (System/currentTimeMillis) deadline)
+          (>= (utility/now) deadline)
           (error/fail :scenario/quiescence-timeout
                       {:message "Creditor balance did not reach target"
                        :account-id account-id

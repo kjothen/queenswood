@@ -6,6 +6,16 @@
 # A "processor brick" is any components/X with both commands.clj
 # and store.clj.
 #
+# Four of these now also gate every commit as semgrep rules, widened
+# from processor bricks to every brick, where the repo already had a
+# clean baseline: fdb-outside-store, no-changelog-watcher,
+# domain-requires-fdb-or-store, domain-schema-conversion (.semgrep.yml).
+# Running them here too costs nothing and keeps the audit readable as
+# one list. The rest can't move: rejection placement varies by brick
+# kind (a query brick's store legitimately rejects :X/not-found), and
+# domain-takes-txn needs the string-literal stripping below, which
+# semgrep's generic mode has no way to express.
+#
 #   bash checks.sh                  # branch scope (default)
 #   bash checks.sh --staged         # bricks with staged changes
 #   bash checks.sh --all            # every processor brick
