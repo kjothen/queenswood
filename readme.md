@@ -147,13 +147,14 @@ with a doc that goes deep:
 - **FoundationDB Record Layer.** Multi-record ACID across stores in one
   transaction, so creating a bank writes its party, ledger chart, house
   accounts and policy bindings, or none of them. Changelog entries are
-  keyed by versionstamp, which gives a totally ordered log without a
-  sequence generator, and counts and sums read maintained indexes rather
-  than scanning.
+  keyed by versionstamp, so the log is ordered by commit and a relay
+  resumes exactly where it stopped. Counts and sums are kept current as
+  records commit, so reading one costs the same whether a bank has ten
+  accounts or ten million.
   See [ADR-0002](docs/adr/0002-foundationdb-record-layer.md).
-- **Consumes `mono`.** The generic half lives upstream: error handling,
+- **Built on `mono`.** The generic half lives upstream: error handling,
   logging, the message bus with its Kafka or Pulsar backends, Avro, the
-  command and event envelopes, identity and secrets. It arrives tested
+  command and event envelopes, identity, secrets, etc. It arrives tested
   on its own terms and pinned to a tag and a sha, so the suite here
   proves banking rather than plumbing, and the ground under a bank moves
   only when someone decides it should.
