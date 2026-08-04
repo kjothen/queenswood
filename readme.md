@@ -66,14 +66,14 @@ database (FoundationDB) manages the data.
 
 **Writes are idempotent commands.** A write is only put on the bus when it
 earns it: when it has to commit across several records at once under
-contention, when a redelivery would do real damage, when other processors
-must react to it, or when it arrives from something unreliable like a
-webhook. Everything else stays a direct call. A processor consumes the
-command, performs the whole write in one database transaction, and replies.
-Repeating a request is safe — the same idempotency key replays the first
-outcome rather than doing the work twice. Processors deploy individually,
-or bundled along lines of responsibility such as financial and
-operational, without any of the above changing.
+contention, when a redelivery would do real damage, or when other
+processors must react to it. Everything else stays a direct call. A
+processor consumes the command, performs the whole write in one database
+transaction, and replies. Repeating a request is safe — the same
+idempotency key replays the first outcome rather than doing the work
+twice. Processors deploy individually, or bundled along lines of
+responsibility such as financial and operational, without any of the
+above changing.
 
 **Reads are queries.** The API read-side loads records directly through a
 separate query surface — no command, no bus, no round-trip. Query bricks
