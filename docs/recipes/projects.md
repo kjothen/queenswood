@@ -51,8 +51,9 @@ A project's `deps.edn` typically has three sections:
 - **`:aliases :build`** — pulls in the `build` base and sets
   exec-args for `tools.build` to assemble the deployable.
 - **`:aliases :test`** — extra components and bases that only
-  tests need (`test-resources`, `test-system`, `testcontainers`,
-  `external-test-runner`).
+  tests need (`test-resources`, `test-system`, `testcontainers`),
+  plus the test runner, which comes from `mono` via the
+  `deps/mono-test-runner` shim rather than a base of our own.
 
 Adapted from `projects/api-service/deps.edn`:
 
@@ -68,7 +69,7 @@ Adapted from `projects/api-service/deps.edn`:
 
         ;; Project-level pins
         org.clojure/clojure {:mvn/version "1.12.5"}
-        pin/clojure {:local/root "../../deps/clojure"}}
+        pin/clojure-core-async {:local/root "../../deps/clojure-core-async"}}
 
  :aliases
  {:build {:deps {bases/build {:local/root "../../bases/build"}}
@@ -79,8 +80,8 @@ Adapted from `projects/api-service/deps.edn`:
           :ns-default com.repldriven.queenswood.build.build}
 
   :test {:extra-deps
-         {bases/external-test-runner
-          {:local/root "../../bases/external-test-runner"}
+         {ext/mono-test-runner
+          {:local/root "../../deps/mono-test-runner"}
           component/test-resources
           {:local/root "../../components/test-resources"}
           component/test-system
@@ -104,7 +105,7 @@ reference them under a `pin/` prefix:
   excludes protojure's copy outright.
 - `pin/fdb` — `fdb-java` plus `fdb-record-layer-core`. The record
   layer ships an older `fdb-java`, which the shim excludes.
-- `pin/clojure` — `core.async`.
+- `pin/clojure-core-async` — `core.async`.
 
 A shim only controls a version if the coordinate reaches the
 resolver at the depth it needs. Pinning *up* (holding a library

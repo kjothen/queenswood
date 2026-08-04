@@ -127,6 +127,11 @@ jobs:
           TESTCONTAINERS_REUSE_ENABLE: "true"
           COVERAGE: "true"
           COVERAGE_THRESHOLD: ${{ matrix.project == 'dev' && '90' || '0' }}
+          # The JUnit reporter trims this from suite and classname
+          # attributes, so the published report reads `bank.core-test`
+          # rather than the full namespace. mono's runner cannot default
+          # it -- the prefix is the consuming workspace's own.
+          JUNIT_NS_PREFIX: com.repldriven.queenswood.
         run: |
           clojure -X:deps prep :aliases '[:dev]'
           if [[ "${{ matrix.project }}" == "dev" ]]; then

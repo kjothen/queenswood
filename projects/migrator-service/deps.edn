@@ -4,8 +4,8 @@
                                :major-minor-version "0.0"}
                    :ns-default com.repldriven.queenswood.build.build}
            :test {:extra-deps {ext/mono {:local/root "../../deps/mono-test"}
-                               bases/external-test-runner
-                               {:local/root "../../bases/external-test-runner"}
+                               ext/mono-test-runner
+                               {:local/root "../../deps/mono-test-runner"}
                                component/testcontainers
                                {:local/root "../../components/testcontainers"}
                                component/test-schema
@@ -19,5 +19,5 @@
         component/schema {:local/root "../../components/schema"}
         base/migrator {:local/root "../../bases/migrator"}
         org.clojure/clojure {:mvn/version "1.12.5"}
-        pin/clojure {:local/root "../../deps/clojure"}}
+        pin/clojure-core-async {:local/root "../../deps/clojure-core-async"}}
  :paths ["resources"]}

@@ -1,5 +1,5 @@
 (ns ^:eftest/synchronized
-    com.repldriven.queenswood.uk-companies-house-simulator.interface-test
+    com.repldriven.queenswood.uk-companies-house-simulator.api-test
   (:refer-clojure :exclude [get])
   (:require
     [com.repldriven.queenswood.uk-companies-house-simulator.system]

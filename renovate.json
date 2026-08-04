@@ -37,7 +37,6 @@
         "deps-edn"
       ],
       "matchPackageNames": [
-        "io.github.seancorfield/polylith-external-test-runner",
         "/^polylith//"
       ]
     },

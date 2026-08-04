@@ -45,6 +45,6 @@
                                "test-resources"]}}
  :tag-patterns {:release "v[0-9]*" :stable "stable-*"}
  :test {:create-test-runner
-        com.repldriven.queenswood.external-test-runner.core/create}
+        com.repldriven.mono.external-test-runner.core/create}
  :top-namespace "com.repldriven.queenswood"
  :vcs {:auto-add true :name "git"}}

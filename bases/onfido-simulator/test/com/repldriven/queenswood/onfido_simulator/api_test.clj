@@ -1,5 +1,5 @@
 (ns ^:eftest/synchronized
-    com.repldriven.queenswood.onfido-simulator.interface-test
+    com.repldriven.queenswood.onfido-simulator.api-test
   (:refer-clojure :exclude [get])
   (:require
     [com.repldriven.queenswood.onfido-simulator.system]
