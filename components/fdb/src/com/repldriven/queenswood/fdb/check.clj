@@ -12,18 +12,17 @@
   [x]
   (instance? Txn x))
 
-(defn- root-cause
+(defn- causes
   [^Throwable t]
-  (if-let [c (.getCause t)]
-    (recur c)
-    t))
+  (take-while some? (iterate #(.getCause ^Throwable %) t)))
 
 (defn meta-data-already-current?
   [^Throwable t]
-  (let [root (root-cause t)]
-    (and (instance? MetaDataException root)
-         (some? (re-find #"meta-data version must increase"
-                         (or (.getMessage root) ""))))))
+  (boolean (some (fn [^Throwable c]
+                   (and (instance? MetaDataException c)
+                        (some? (re-find #"meta-data version must increase"
+                                        (or (.getMessage c) "")))))
+                 (causes t))))
 
 (defn uniqueness-violation?
   [anomaly]

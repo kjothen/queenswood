@@ -195,7 +195,10 @@
                         403 (schema/ErrorResponse [#'examples/Forbidden])
                         500 (schema/ErrorResponse
                              [#'examples/InternalServerError
-                              #'examples/BadResponse])}}]
+                              #'examples/BadResponse])
+                        503 (schema/ErrorResponse
+                             [#'examples/Contention
+                              #'examples/Timeout])}}]
           (concat
            balance/routes
            bank/routes

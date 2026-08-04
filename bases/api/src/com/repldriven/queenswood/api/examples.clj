@@ -33,6 +33,18 @@
            :status 500
            :detail "Internal server error"}})
 
+(def Contention
+  {:value {:title "FAILED"
+           :type ":fdb/contention"
+           :status 503
+           :detail "Failed to save cash account"}})
+
+(def Timeout
+  {:value {:title "FAILED"
+           :type ":fdb/timeout"
+           :status 503
+           :detail "Failed to save cash account"}})
+
 (def registry
   (examples-registry [#'BadRequest #'Unauthorized #'Forbidden #'BadResponse
-                      #'InternalServerError]))
+                      #'InternalServerError #'Contention #'Timeout]))

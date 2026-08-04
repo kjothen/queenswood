@@ -2,8 +2,44 @@
   (:require
     [com.repldriven.mono.error.interface :as error :refer [try-nom]])
   (:import
-    (com.apple.foundationdb.record.provider.foundationdb FDBDatabase)
+    (com.apple.foundationdb.record LoggableTimeoutException
+                                   RecordCoreRetriableTransactionException)
+    (com.apple.foundationdb.record.provider.foundationdb
+     FDBDatabase
+     FDBExceptions$FDBStoreTransactionTimeoutException)
     (java.util.function Function)))
+
+;; Most specific first. `RecordCoreRetriableTransactionException` is the
+;; Record Layer's own grouping of conflict, too-old and lock-taken, so
+;; matching the parent keeps this from enumerating its subclasses.
+(def ^:private exception->kind
+  [[LoggableTimeoutException :fdb/timeout]
+   [FDBExceptions$FDBStoreTransactionTimeoutException :fdb/timeout]
+   [RecordCoreRetriableTransactionException :fdb/contention]])
+
+;; Every level, not just the root: the Record Layer's types wrap the FDB
+;; error they describe, so a root-cause walk steps past the very type
+;; being matched. Outermost wins as the most proximate description.
+(defn- classify
+  [^Throwable e]
+  (some (fn [^Throwable t]
+          (some (fn [[klass kind]]
+                  (when (instance? klass t) kind))
+                exception->kind))
+        (take-while some? (iterate #(.getCause ^Throwable %) e))))
+
+(defn- reclassify
+  [result]
+  (if-not (error/anomaly? result)
+    result
+    (let [payload (error/payload result)
+          operation (error/kind result)]
+      (if-let [kind (classify (:exception payload))]
+        (error/fail kind
+                    (cond-> payload
+                            (not= operation kind)
+                            (assoc :operation operation)))
+        result))))
 
 (defn- open-store
   [open-store-fn ctx store-name]
@@ -21,7 +57,7 @@
 
   ([txn-or-config f category message]
    (if (instance? Txn txn-or-config)
-     (try-nom category message (f txn-or-config))
+     (reclassify (try-nom category message (f txn-or-config)))
      (let [{:keys [record-db record-store]} txn-or-config
            keyspace-prefix (or (:keyspace-prefix txn-or-config)
                                (:keyspace-prefix (meta record-store)))]
@@ -46,13 +82,14 @@
                                      {::anomaly result}))
                      result))))
          (catch Exception e
-           (or (::anomaly (ex-data e))
-               (error/fail category
-                           {:message message
-                            :exception e
-                            :stack-trace
-                            (with-out-str
-                              (.printStackTrace
-                               e
-                               (java.io.PrintWriter. *out*
-                                                     true)))}))))))))
+           (reclassify
+            (or (::anomaly (ex-data e))
+                (error/fail category
+                            {:message message
+                             :exception e
+                             :stack-trace
+                             (with-out-str
+                               (.printStackTrace
+                                e
+                                (java.io.PrintWriter. *out*
+                                                      true)))})))))))))

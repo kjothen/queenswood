@@ -122,16 +122,17 @@ table beside the existing one in `api/errors.clj`:
 ```clojure
 (def ^:private error-status-overrides
   {:fdb/contention 503
-   :fdb/timeout 504})
+   :fdb/timeout 503})
 ```
 
 and branch on it in `anomaly->status` **before** the blanket
 `(not (error/rejection? anomaly)) -> 500`, or it will never be reached.
 
-503 for contention says retries were exhausted and a later attempt may
-succeed, which pairs with `Retry-After`. 504 for timeout says the
-storage layer did not answer in time. Treating both as 503 and letting
-`type` carry the distinction is a defensible alternative.
+Both are 503. Contention means the retry budget was exhausted, timeout
+means a wall clock ran out — but to a caller both say back off and
+retry, and under load retries turn one into the other, so a split
+status would imply a sharper distinction than exists. `type` carries
+it instead.
 
 ## What this needs
 
@@ -139,13 +140,40 @@ storage layer did not answer in time. Treating both as 503 and letting
   `error/fail` call.
 - `api/errors.clj`: `error-status-overrides` plus the branch in
   `anomaly->status`.
-- OpenAPI: 503 and 504 documented on every operation that writes or
+- OpenAPI: 503 documented on every operation that writes or
   reads through FDB, with examples. Per
   [ADR-0014](../adr/0014-openapi-3x-compliance.md) every response shape
   is a documented, referenced component, so this is the bulk of the
   work rather than the classification itself.
 - Tests: a unit test per classified exception shape, including one
   nested inside a wrapper, since `.run` wraps what it rethrows.
+
+## What implementation corrected
+
+Three of the predictions above were wrong, in ways worth keeping.
+
+**`category` reaches an anomaly by three paths, not one.** `try-nom`
+catches *any* Exception and converts it to an anomaly with `category` as
+the kind, so an exception raised inside `f` never reaches the outer
+`catch` this plan targeted — it becomes an anomaly, gets wrapped in
+`ex-info` to force the rollback, and is unwrapped again on the way out.
+The aggregate reads are called inside `f`, so the `asyncToSync`
+timeouts would have been missed entirely. Classification therefore
+happens in a `reclassify` applied where an anomaly leaves `transact`,
+which covers all three paths and leaves a domain rejection — no
+`:exception` in its payload — untouched.
+
+**Walking to the root cause is wrong.** The Record Layer's own types
+wrap the FDB error they describe, so `LoggableTimeoutException` and
+`FDBStoreTransactionConflictException` both sit *above* their cause. A
+root-cause walk steps past the very type being matched. The chain is
+scanned at every level instead, outermost first, as the most proximate
+description. `check.clj`'s `meta-data-already-current?` had the same
+latent defect and was corrected with it.
+
+**The OpenAPI work was two lines, not the bulk.** Every `/v1` route
+inherits one shared `:responses` map, so 503 reached all operations at
+once, with two example components alongside the existing ones.
 
 ## Decisions and risks
 
