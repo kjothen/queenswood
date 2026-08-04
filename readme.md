@@ -6,16 +6,16 @@
 
 # Queenswood
 
-**Core banking, boxed.** You want a modern banking platform — without
+**Core banking, boxed.** You want a modern banking platform without
 building it all yourself, or renting one you can't see inside.
-Queenswood is the operational core — accounts, payments, a
-double-entry ledger, interest, onboarding, and policies — the
-machinery of a bank. You use your banking licence. You
-contract with identity and payment-rails providers, plug them in
-where supported, or extend the platform where not.
+Queenswood is the operational core: accounts, payments, a double-entry
+ledger, interest, onboarding, and policies. The machinery of a bank.
+You bring the banking licence. You contract with identity and
+payment-rails providers, plug them in where supported, or extend the
+platform where not.
 
-The world runs on banking it never sees. Queenswood makes the core a
-commodity — out in the open, yours to read and run.
+The world runs on banking it never sees. This is that machinery, in the
+open: yours to read, to run, and to change.
 
 ## Demos
 
