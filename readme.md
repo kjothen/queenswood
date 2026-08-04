@@ -180,6 +180,15 @@ decisions in between:
 - **[docs/slides/](docs/slides/)** — a slidev walk-through of how
   systems-as-data assembles a running system.
 
+These are not only for people. Nearly every ADR and recipe carries a
+label binding it to a rule plugin, and the rules an agent loads on every
+task in this repo are regenerated from those documents rather than
+written alongside them, so the guidance cannot quietly drift from the
+decision it came from. It is also why a recipe has a fixed shape: the
+`Rules` block is the part that gets extracted. What is load-bearing is
+then checked again at commit time, by formatting, linting, and a set of
+repo-specific guardrails.
+
 ## Running
 
 The released Helm chart deploys the entire platform (API,
