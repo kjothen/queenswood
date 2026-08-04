@@ -1,5 +1,5 @@
 (ns ^:eftest/synchronized
-    com.repldriven.queenswood.clearbank-simulator.interface-test
+    com.repldriven.queenswood.clearbank-simulator.api-test
   (:refer-clojure :exclude [get])
   (:require
     [com.repldriven.queenswood.clearbank-simulator.system]
