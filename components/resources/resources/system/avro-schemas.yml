@@ -8,13 +8,6 @@ migrate-cash-account-product: schemas/cash-accounts/migrate-product.avsc.json
 get-cash-account: schemas/cash-accounts/get-account.avsc.json
 cash-account-status-changed: schemas/cash-accounts/account-status-changed.avsc.json
 
-cash-account-product: schemas/cash-account-products/product.avsc.json
-create-cash-account-product: schemas/cash-account-products/create-product.avsc.json
-open-cash-account-product-draft: schemas/cash-account-products/open-draft.avsc.json
-update-cash-account-product-draft: schemas/cash-account-products/update-draft.avsc.json
-discard-cash-account-product-draft: schemas/cash-account-products/discard-draft.avsc.json
-publish-cash-account-product: schemas/cash-account-products/publish-product.avsc.json
-
 party: schemas/party/party.avsc.json
 create-party: schemas/party/create-party.avsc.json
 merge-party: schemas/party/merge-party.avsc.json

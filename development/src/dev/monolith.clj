@@ -1,25 +1,25 @@
 (ns dev.monolith
+  "Start the system as a modular monolith and testcontainers:
+   * start docker (just docker-start),
+   * start repl (just repl),
+   * load this namespace, and evaluates lines from the comment block
+
+   After the system has started:
+   * start web console (just console-start), login and explore
+   
+   NOTE: on a fresh install, it may take several minutes to download
+         required images for FoundationDB, Kafka, Keycloak, etc"
   (:require
     [com.repldriven.queenswood.testcontainers.interface]
-
     [com.repldriven.queenswood.monolith.main :as main]))
-
-;; before starting the system:
-;; * on Mac OS X, start docker (just start-docker),
-;; * start repl (just repl),
-;; * connect the repl to your IDE and evaluate file
-;; after starting the system:
-;; * once Jetty is listening, run the console (just console-start),
-;;   and browse to the advertised port, e.g. http://localhost:5173.
-;;   the openapi3 documentation can be viewed at http://localhost:8080
-;; NOTE: on a fresh install, it may take several minutes to download
-;; required images for FDB, Pulsar, etc
 
 (comment
   (def sys (main/start "classpath:monolith/application-test.yml" :dev))
   (tap> sys)
   (main/stop sys)
+  :-)
 
+(comment
   (require '[dev.inspect :as i])
   ;; rank component instances by retained heap (infra components that
   ;; hold FDB/Jetty/Pulsar lambdas come back :unmeasurable)

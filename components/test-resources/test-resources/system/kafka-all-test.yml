@@ -51,28 +51,6 @@ producers: !system/component
       bootstrap.servers: !system/local-ref bootstrap-servers
       topic: topic-banks-command-response
       acks: all
-  cash-account-products-command:
-    _: !system/local-ref topics
-    schemas: !system/local-ref schemas
-    schema: !keyword command
-    conf:
-      bootstrap.servers: !system/local-ref bootstrap-servers
-      topic: topic-cash-account-products-command
-      acks: all
-  cash-account-products-command-dlq:
-    _: !system/local-ref topics
-    conf:
-      bootstrap.servers: !system/local-ref bootstrap-servers
-      topic: topic-cash-account-products-command-dlq
-      acks: all
-  cash-account-products-command-response:
-    _: !system/local-ref topics
-    schemas: !system/local-ref schemas
-    schema: !keyword command-response
-    conf:
-      bootstrap.servers: !system/local-ref bootstrap-servers
-      topic: topic-cash-account-products-command-response
-      acks: all
   cash-accounts-command:
     _: !system/local-ref topics
     schemas: !system/local-ref schemas
@@ -326,24 +304,6 @@ consumers: !system/component
     conf:
       bootstrap.servers: !system/local-ref bootstrap-servers
       group.id: test-banks-command-response
-  cash-account-products-command:
-    _: !system/local-ref topics
-    schemas: !system/local-ref schemas
-    schema: !keyword command
-    topics: [topic-cash-account-products-command]
-    dead-letter-producer: !system/local-ref producers.cash-account-products-command-dlq
-    max-redeliveries: 5
-    conf:
-      bootstrap.servers: !system/local-ref bootstrap-servers
-      group.id: test-cash-account-products-command
-  cash-account-products-command-response:
-    _: !system/local-ref topics
-    schemas: !system/local-ref schemas
-    schema: !keyword command-response
-    topics: [topic-cash-account-products-command-response]
-    conf:
-      bootstrap.servers: !system/local-ref bootstrap-servers
-      group.id: test-cash-account-products-command-response
   cash-accounts-command:
     _: !system/local-ref topics
     schemas: !system/local-ref schemas
@@ -551,10 +511,6 @@ message-bus-producers: !system/component
     producer: !system/local-ref producers.banks-command
   banks-command-response:
     producer: !system/local-ref producers.banks-command-response
-  cash-account-products-command:
-    producer: !system/local-ref producers.cash-account-products-command
-  cash-account-products-command-response:
-    producer: !system/local-ref producers.cash-account-products-command-response
   cash-accounts-command:
     producer: !system/local-ref producers.cash-accounts-command
   cash-accounts-command-response:
@@ -609,12 +565,6 @@ message-bus-consumers: !system/component
     timeout: 500
   banks-command-response:
     consumer: !system/local-ref consumers.banks-command-response
-    timeout: 500
-  cash-account-products-command:
-    consumer: !system/local-ref consumers.cash-account-products-command
-    timeout: 500
-  cash-account-products-command-response:
-    consumer: !system/local-ref consumers.cash-account-products-command-response
     timeout: 500
   cash-accounts-command:
     consumer: !system/local-ref consumers.cash-accounts-command

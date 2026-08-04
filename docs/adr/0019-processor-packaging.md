@@ -40,9 +40,12 @@ Grouping is by boundary, not throughput:
   interest, payee-check. Operations that post, settle, accrue, or
   gate a payment.
 - **`operational-processors-service`** — bank, party,
-  cash-account, cash-account-product, idv. Operations that provision
-  or verify the records money moves through; nothing posts to the
-  ledger.
+  cash-account, idv. Operations that provision or verify the records
+  money moves through; nothing posts to the ledger. Product writes
+  were here until the rule in
+  [ADR-0018](0018-command-writes-are-earned.md) was applied to them
+  and they went back to being synchronous — a group holds whatever
+  earns a processor, so it shrinks as well as grows.
 - **`scheduler-processor-service`** — unchanged. The Quartz
   runner is a per-JVM singleton timer; it stays alone so no group's
   replica count can ever double-fire a trigger.

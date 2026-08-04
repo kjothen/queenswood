@@ -1,6 +1,6 @@
 (ns com.repldriven.queenswood.api.cash-account-product.routes
   (:require
-    [com.repldriven.queenswood.api.cash-account-product.commands :as commands]
+    [com.repldriven.queenswood.api.cash-account-product.handlers :as handlers]
     [com.repldriven.queenswood.api.cash-account-product.examples :refer
      [ProductNotFound VersionNotFound DraftAlreadyExists VersionImmutable
       CurrencyNotAllowed]]
@@ -48,7 +48,7 @@
                               :openapi {:headers {"Location" location-header}
                                         :links links/from-draft}}
                          422 (ErrorResponse [#'CurrencyNotAllowed])}
-             :handler commands/create-product}}]
+             :handler handlers/create-product}}]
     ["/{product-id}" {:parameters {:path {:product-id [:ref "ProductId"]}}}
      [""
       {:get {:summary "Retrieve a product with its version history inline"
@@ -68,7 +68,7 @@
                           404 (ErrorResponse [#'ProductNotFound])
                           409 (ErrorResponse [#'DraftAlreadyExists])
                           422 (ErrorResponse [#'CurrencyNotAllowed])}
-              :handler commands/open-draft}}]
+              :handler handlers/open-draft}}]
      ["/versions/{version-id}"
       {:parameters {:path {:version-id [:ref "VersionId"]}}}
       [""
@@ -88,13 +88,13 @@
                           404 (ErrorResponse [#'VersionNotFound])
                           409 (ErrorResponse [#'VersionImmutable])
                           422 (ErrorResponse [#'CurrencyNotAllowed])}
-              :handler commands/update-draft}
+              :handler handlers/update-draft}
         :delete {:summary "Discard the draft version (draft state only)"
                  :openapi {:operationId "DiscardCashAccountProductDraft"}
                  :responses {204 {}
                              404 (ErrorResponse [#'VersionNotFound])
                              409 (ErrorResponse [#'VersionImmutable])}
-                 :handler commands/discard-draft}}]
+                 :handler handlers/discard-draft}}]
       ["/publish"
        {:post {:summary "Publish the draft version (draft state only)"
                :openapi {:operationId "PublishCashAccountProductDraft"}
@@ -102,4 +102,4 @@
                                 :openapi {:links links/from-published}}
                            404 (ErrorResponse [#'VersionNotFound])
                            409 (ErrorResponse [#'VersionImmutable])}
-               :handler commands/publish-draft}}]]]]])
+               :handler handlers/publish-draft}}]]]]])
