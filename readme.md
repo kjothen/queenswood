@@ -64,20 +64,19 @@ database (FoundationDB) manages the data.
   <img alt="Queenswood system diagram" src="docs/diagrams/system-diagram-light.svg">
 </picture>
 
-**Writes are idempotent commands.** Where a write needs it, the API puts a
-command on the bus instead of doing the work itself. Processors consume
-those commands and scale independently of the web tier, so the work
-spreads across as many instances as it takes while a request costs the
-API only an open connection. Commands sharing an ordering key are
-consumed one at a time and in order, however many processors are running
-— something no number of web servers writing directly can give you.
-Delivery is at-least-once and the envelope absorbs a redelivery, so
-repeating a request replays the first outcome rather than doing the work
-twice. Today the API waits for the reply and answers on the same
-connection; the same split would let it acknowledge immediately and
-return the outcome out of band. A write that needs none of this stays a
-direct call. Processors deploy individually, or bundled along lines of
-responsibility such as financial and operational.
+**Writes are commands, processed in parallel and in order.** Where a write
+needs it, the API puts a command on the bus instead of doing the work itself.
+Processors consume those commands and scale independently of the web tier, so
+the work spreads across as many instances as it takes while a request costs
+the API only an open connection. Commands sharing an ordering key are consumed
+one at a time and in order, however many processors are running — something no
+number of web servers writing directly can give you. Delivery is at-least-once
+and the envelope absorbs a redelivery, so repeating a request replays the
+first outcome rather than doing the work twice. Today the API waits for the
+reply and answers on the same connection; the same split would let it
+acknowledge immediately and return the outcome out of band. A write that needs
+none of this stays a direct call. Processors deploy individually, or bundled
+along lines of responsibility such as financial and operational.
 
 **Reads are queries.** The API read-side loads records directly through a
 separate query surface — no command, no bus, no round-trip. Query bricks
