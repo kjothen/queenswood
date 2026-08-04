@@ -152,11 +152,11 @@ with a doc that goes deep:
   records commit, so reading one costs the same whether a bank has ten
   accounts or ten million.
   See [ADR-0002](docs/adr/0002-foundationdb-record-layer.md).
-- **Built on `mono`.** The generic half lives upstream: messaging,
-  identity, observability, HTTP, and error handling. It arrives tested
-  on its own terms and pinned to a tag and a sha, so the suite here
-  proves banking rather than plumbing, and the ground under a bank moves
-  only when someone decides it should.
+- **Built on `mono`.** The generic half lives upstream: messaging, identity,
+  observability, HTTP, error handling, and the system assembly the bullet
+  above describes. It arrives tested on its own terms and pinned to a tag
+  and a sha, so the suite here proves banking rather than plumbing, and the
+  ground under a bank moves only when someone decides it should.
   See [ADR-0001](docs/adr/0001-reuse-mono-as-upstream.md).
 
 ## Documentation
