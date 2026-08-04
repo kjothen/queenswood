@@ -9,6 +9,7 @@
 
     [com.repldriven.mono.system.interface :as system]
     [com.repldriven.mono.test-system.interface :refer [with-test-system]]
+    [com.repldriven.mono.utility.interface :as utility]
 
     [clojure.test :refer [deftest is testing]]))
 
@@ -25,13 +26,13 @@
 
 (defn- wait-for
   [pred deadline-ms]
-  (let [deadline (+ (System/currentTimeMillis) deadline-ms)]
+  (let [deadline (+ (utility/now) deadline-ms)]
     (loop []
       (cond
        (pred)
        true
 
-       (>= (System/currentTimeMillis) deadline)
+       (>= (utility/now) deadline)
        false
 
        :else

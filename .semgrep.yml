@@ -1,6 +1,14 @@
 # Queenswood lint rules for semgrep (generic/token mode — Clojure has no
 # first-class semgrep parser). Run over changed .clj/.cljc by the
 # pre-commit hook; see scripts/hooks/pre-commit.
+#
+# What belongs here rather than in scripts/hooks/enforce-idioms.sh: a rule
+# decidable from one file's tokens plus its path. Semgrep gives those a
+# per-site `nosemgrep` opt-out, so a legitimate exception is marked where
+# it lives instead of pushing the whole rule down to advisory. A rule
+# needing cross-file knowledge — a count across the tree, a declaration
+# matched to a reference elsewhere, or the name of the brick the file sits
+# in — cannot be expressed here and stays in enforce-idioms.sh.
 rules:
   - id: no-raw-throw
     languages: [generic]
@@ -15,6 +23,124 @@ rules:
       on the same line with `; nosemgrep: no-raw-throw — <reason>`.
     patterns:
       - pattern: (throw ...)
+    paths:
+      include:
+        - "*.clj"
+        - "*.cljc"
+
+  - id: no-raw-time-id
+    languages: [generic]
+    severity: ERROR
+    message: >-
+      Raw time/id primitive: IDs and timestamps come from the `utility`
+      brick (recipes/common-helpers.md, recipes/code-style.md). Use
+      `utility/uuidv7` or `utility/generate-id` for identifiers,
+      `utility/now` for epoch millis, `utility/now-rfc3339` for an
+      RFC-3339 string, `utility/today` for an epoch-day. Calling the
+      JDK directly puts a second, untestable clock in the system. If a
+      raw call is genuinely required, mark it on the line above with
+      `;; nosemgrep: no-raw-time-id — <reason>`.
+    pattern-regex: '\((?:random-uuid|(?:java\.util\.)?UUID/randomUUID|(?:java\.time\.)?Instant/now|System/currentTimeMillis)\)'
+    paths:
+      include:
+        - "*.clj"
+        - "*.cljc"
+
+  - id: no-use-fixtures
+    languages: [generic]
+    severity: ERROR
+    message: >-
+      `use-fixtures`: tests manage system lifecycle with
+      `with-test-system`, which scopes setup to the test that needs it
+      instead of to every test in the namespace
+      (recipes/testing.md). Assert anomaly-freeness with `nom-test>`.
+    pattern-regex: '\buse-fixtures\b'
+    paths:
+      include:
+        - "**/test/**"
+
+  - id: fdb-outside-store
+    languages: [generic]
+    severity: ERROR
+    message: >-
+      FDB required outside `store.clj`: a brick's persistence is confined
+      to its store, which is what keeps the layers above it free of
+      transaction plumbing (tdd/processor-bricks.md). Move the
+      FDB-touching code into `store.clj` and call the new `store/*` fn,
+      passing `txn`. A brick that owns no store and legitimately drives
+      FDB itself puts `;; nosemgrep: fdb-outside-store — <reason>` on
+      the line immediately above the require — semgrep reads only that
+      one line, so the reason has to fit on it.
+    pattern-regex: 'com\.repldriven\.queenswood\.fdb\.interface'
+    paths:
+      include:
+        - "/components/*/src/**"
+      exclude:
+        - "store.clj"
+        - "/components/fdb/**"
+
+  - id: domain-requires-fdb-or-store
+    languages: [generic]
+    severity: ERROR
+    message: >-
+      `domain.clj` requires FDB or a store: domain code is pure — it
+      takes plain data and returns plain data or a rejection
+      (tdd/processor-bricks.md). The caller in `core.clj` does the read
+      and passes the result in; a value needing schema translation is
+      translated in `store.clj`.
+    pattern-regex: 'com\.repldriven\.queenswood\.(?:[a-z0-9-]+\.store|fdb\.interface)'
+    paths:
+      include:
+        - "/components/*/src/**/domain.clj"
+
+  - id: domain-schema-conversion
+    languages: [generic]
+    severity: ERROR
+    message: >-
+      Schema type-conversion in `domain.clj`: domain works on
+      Clojure-shaped maps, and conversion to and from FDB record types
+      happens at the storage boundary in `store.clj`
+      (tdd/processor-bricks.md).
+    pattern-regex: '\bschema/[A-Za-z][A-Za-z0-9_]*->[A-Za-z]'
+    paths:
+      include:
+        - "/components/*/src/**/domain.clj"
+
+  - id: no-changelog-watcher
+    languages: [generic]
+    severity: ERROR
+    message: >-
+      `watcher.clj`: reactive work reaches a brick as an event off the
+      changelog relay and is handled in `events.clj` (ADR-0021). A
+      watcher runs domain work inside the changelog checkpoint
+      transaction, which is what the relay exists to stop.
+    pattern-regex: '\(ns\s'
+    paths:
+      include:
+        - "**/watcher.clj"
+
+  - id: main-outside-a-base
+    languages: [generic]
+    severity: ERROR
+    message: >-
+      `-main` or `:gen-class` outside `bases/`: a base owns the
+      application entry point, and components are libraries it composes
+      (recipes/bases.md, recipes/components.md).
+    pattern-regex: '\((?:defn -main[^a-zA-Z0-9_-]|:gen-class\))'
+    paths:
+      include:
+        - "/components/**"
+
+  - id: message-bus-backend-direct
+    languages: [generic]
+    severity: ERROR
+    message: >-
+      Broker client referenced directly: the message bus stays behind
+      the `message-bus` brick's `Producer` / `Consumer` protocols, which
+      is what lets a deployment swap Kafka for Pulsar or for the local
+      channels backend without touching a component (ADR-0003). Consume
+      the wrapper brick's interface, never the library (ADR-0011).
+    pattern-regex: 'org\.apache\.(?:kafka|pulsar)'
     paths:
       include:
         - "*.clj"

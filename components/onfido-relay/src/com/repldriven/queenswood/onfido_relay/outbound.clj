@@ -31,22 +31,64 @@
     (let [[bnk vid] (.split ^String s "\\|" 2)]
       {:bank-id bnk :verification-id vid})))
 
+(defn- classify
+  "Turn a provider response into itself or the anomaly that names what
+  went wrong. Kinds stay in the `:idv/*` namespace rather than naming
+  the vendor — they surface as the API's RFC 9457 `type`, and a second
+  identity provider consuming this channel must not change the contract
+  (ADR-0020). An unreachable provider, a 5xx and a 429 are retryable and
+  say so, a remaining 4xx means our request is wrong and keeps the
+  call-site name.
+
+  Separate from the call so it can be tested as the pure function it is
+  — stubbing the HTTP layer would mean a global redef, which is not safe
+  alongside a parallel test suite."
+  [url res]
+  (let [status (:status res)]
+    (cond
+     (error/anomaly? res)
+     (error/fail :idv/unavailable
+                 {:message "Identity verification provider unreachable"
+                  :url url
+                  :cause res})
+
+     (nil? status)
+     res
+
+     (= 429 status)
+     (error/fail :idv/rate-limited
+                 {:message "Identity verification provider rate limited"
+                  :url url
+                  :status status
+                  :body (:body res)})
+
+     (>= status 500)
+     (error/fail :idv/unavailable
+                 {:message "Identity verification provider unavailable"
+                  :url url
+                  :status status
+                  :body (:body res)})
+
+     (>= status 400)
+     (error/fail :idv/http
+                 {:message "Identity verification provider rejected request"
+                  :url url
+                  :status status
+                  :body (:body res)})
+
+     :else
+     res)))
+
 (defn- post
   [url body]
   (error/try-nom
-   :onfido/http
-   "Onfido HTTP call failed"
-   (let [res (http/request {:method :post
+   :idv/unavailable
+   "Identity verification provider call failed"
+   (classify url
+             (http/request {:method :post
                             :url url
                             :headers {"Content-Type" "application/json"}
-                            :body (json/write-str body)})]
-     (if (and (:status res) (>= (:status res) 400))
-       (error/fail :onfido/http
-                   {:message "Onfido rejected request"
-                    :url url
-                    :status (:status res)
-                    :body (:body res)})
-       res))))
+                            :body (json/write-str body)}))))
 
 (defn- full-first-name
   [first-name middle-names]

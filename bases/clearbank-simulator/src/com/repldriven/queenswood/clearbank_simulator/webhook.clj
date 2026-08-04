@@ -4,11 +4,7 @@
     [com.repldriven.mono.http-client.interface :as http]
     [com.repldriven.mono.json.interface :as json]
     [com.repldriven.mono.log.interface :as log]
-    [com.repldriven.mono.utility.interface :refer [uuidv7]]))
-
-(defn- now
-  []
-  (str (java.time.Instant/now)))
+    [com.repldriven.mono.utility.interface :refer [now-rfc3339 uuidv7]]))
 
 (defn- nonce
   []
@@ -62,8 +58,8 @@
            :DebitCreditCode (if (= :credit debit-credit-code)
                               "Credit"
                               "Debit")
-           :TimestampSettled (now)
-           :TimestampCreated (now)
+           :TimestampSettled (now-rfc3339)
+           :TimestampCreated (now-rfc3339)
            :Reference (or reference "")
            :IsReturn false
            :Account {:BBAN (or creditor-bban bban)}
@@ -76,7 +72,7 @@
     (fire config
           sort-code
           "OutboundHeldTransaction"
-          {:TimestampCreated (now)
+          {:TimestampCreated (now-rfc3339)
            :Scheme "FasterPayments"
            :Account {:BBAN debtor-bban}
            :CounterpartAccount {:BBAN creditor-bban}
@@ -94,7 +90,7 @@
     (fire config
           sort-code
           "InboundHeldTransaction"
-          {:TimestampCreated (now)
+          {:TimestampCreated (now-rfc3339)
            :Scheme "FasterPayments"
            :Account {:BBAN bban}
            :CounterpartAccount {:OwnerName (or debtor-name "Simulated Debtor")}
@@ -117,7 +113,7 @@
          :EndToEndTransactionId e2e-id
          :CancellationCode "HOPRJ"
          :CancellationReason "Held transaction declined"
-         :TimestampModified (now)
+         :TimestampModified (now-rfc3339)
          :DebitCreditCode "Debit"
          :IsReturn true
          :Account {}
@@ -136,7 +132,7 @@
          :EndToEndTransactionId e2e-id
          :CancellationCode "RR04"
          :CancellationReason "Held inbound declined"
-         :TimestampModified (now)
+         :TimestampModified (now-rfc3339)
          :DebitCreditCode "Credit"
          :IsReturn true
          :Account {}
@@ -172,4 +168,4 @@
            :ProductType accountType
            :AccountDetails {:SortCode sortCode
                             :AccountNumber accountNumber}
-           :TimestampCreated (now)})))
+           :TimestampCreated (now-rfc3339)})))

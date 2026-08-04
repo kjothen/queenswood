@@ -3,11 +3,9 @@
     [com.repldriven.queenswood.onfido-simulator.webhook :as webhook]
 
     [com.repldriven.mono.log.interface :as log]
-    [com.repldriven.mono.utility.interface :refer [uuidv7]]
+    [com.repldriven.mono.utility.interface :refer [now-rfc3339 uuidv7]]
 
     [clojure.string :as str]))
-
-(defn- now-iso8601 [] (str (java.time.Instant/now)))
 
 (defn- result-for-applicant
   "Name-based outcome routing — if the applicant's first_name
@@ -39,7 +37,7 @@
                              :applicant_id applicant_id
                              :status "in_progress"
                              :result nil
-                             :created_at (now-iso8601)}
+                             :created_at (now-rfc3339)}
 
                             external-id
                             (assoc :external_id external-id))
@@ -58,7 +56,7 @@
              (assoc check
                     :status "complete"
                     :result result
-                    :completed_at_iso8601 (now-iso8601)))
+                    :completed_at_iso8601 (now-rfc3339)))
            (webhook/fire-check-completed state id result external-id))
           {:status 201 :body check})))))
 

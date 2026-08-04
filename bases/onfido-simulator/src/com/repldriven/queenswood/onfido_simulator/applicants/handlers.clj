@@ -1,8 +1,6 @@
 (ns com.repldriven.queenswood.onfido-simulator.applicants.handlers
   (:require
-    [com.repldriven.mono.utility.interface :refer [uuidv7]]))
-
-(defn- now-iso8601 [] (str (java.time.Instant/now)))
+    [com.repldriven.mono.utility.interface :refer [now-rfc3339 uuidv7]]))
 
 (defn create-applicant
   [_config]
@@ -12,7 +10,7 @@
           id (str (uuidv7))
           applicant (-> body
                         (select-keys [:first_name :last_name :dob :address])
-                        (assoc :id id :created_at (now-iso8601)))]
+                        (assoc :id id :created_at (now-rfc3339)))]
       (swap! state assoc-in [:applicants id] applicant)
       {:status 201 :body applicant})))
 

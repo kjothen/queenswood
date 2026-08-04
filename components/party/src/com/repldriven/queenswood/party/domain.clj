@@ -9,7 +9,7 @@
 (defn new-party
   [data]
   (let [{:keys [bank-id type display-name]} data
-        now (System/currentTimeMillis)
+        now (utility/now)
         status (if (= :party-type-person type)
                  :party-status-pending
                  :party-status-active)]
@@ -25,13 +25,13 @@
   [party]
   (assoc party
          :status :party-status-active
-         :updated-at (System/currentTimeMillis)))
+         :updated-at (utility/now)))
 
 (defn reject-party
   [party]
   (assoc party
          :status :party-status-rejected
-         :updated-at (System/currentTimeMillis)))
+         :updated-at (utility/now)))
 
 (defn new-party-national-identifier
   [national-identifier bank-id party-id]
@@ -41,7 +41,7 @@
      :type type
      :value value
      :issuing-country issuing-country
-     :created-at (System/currentTimeMillis)}))
+     :created-at (utility/now)}))
 
 (defn- check-capability
   [action policies]

@@ -4,6 +4,7 @@
 
     [com.repldriven.mono.http-client.interface :as http]
     [com.repldriven.mono.json.interface :as json]
+    [com.repldriven.mono.utility.interface :as utility]
 
     [matcher-combinators.matchers :as m]
     [matcher-combinators.standalone :as standalone]
@@ -175,7 +176,7 @@
         until-matcher (expand-matchers (refs/resolve-all captures until))
         timeout (or timeout-ms default-poll-timeout-ms)
         interval (or interval-ms default-poll-interval-ms)
-        deadline (+ (System/currentTimeMillis) timeout)]
+        deadline (+ (utility/now) timeout)]
     (loop [last-response nil]
       (let [res (http/request (build-request ctx resolved-request))
             body (http/res->edn res)
@@ -186,7 +187,7 @@
                  as
                  (assoc-in [:captures as] body))
 
-         (>= (System/currentTimeMillis) deadline)
+         (>= (utility/now) deadline)
          (do (is false
                  (str "poll timed out after "
                       timeout

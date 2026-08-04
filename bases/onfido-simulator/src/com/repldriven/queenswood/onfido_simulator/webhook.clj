@@ -8,9 +8,8 @@
     [com.repldriven.mono.error.interface :as error]
     [com.repldriven.mono.http-client.interface :as http]
     [com.repldriven.mono.json.interface :as json]
-    [com.repldriven.mono.log.interface :as log]))
-
-(defn- now-iso8601 [] (str (java.time.Instant/now)))
+    [com.repldriven.mono.log.interface :as log]
+    [com.repldriven.mono.utility.interface :refer [now-rfc3339]]))
 
 (defn- fire-one
   [url body]
@@ -34,7 +33,7 @@
         object (cond-> {:id check-id
                         :status "complete"
                         :result result
-                        :completed_at_iso8601 (now-iso8601)}
+                        :completed_at_iso8601 (now-rfc3339)}
 
                        external-id
                        (assoc :external_id external-id))

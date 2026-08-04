@@ -1,13 +1,19 @@
 #!/usr/bin/env bash
 # Deterministic guardrail linter for Queenswood Clojure code.
 # Enforces the "Critical guardrails" from CLAUDE.md that a deterministic
-# grep can decide; the `no-raw-throw` throw check is owned by semgrep
-# (.semgrep.yml). Run by the pre-commit hook in --staged mode; also
+# grep can decide. Run by the pre-commit hook in --staged mode; also
 # runnable standalone for a whole-branch or explicit-path sweep.
 #
+# The split against .semgrep.yml: a guardrail decidable from one file's
+# tokens plus its path lives there, because semgrep gives it a per-site
+# `nosemgrep` opt-out. What lands here needs knowledge no single file
+# carries — a count across the tree, a declaration matched to a reference
+# in another file, or the name of the brick a file sits in.
+#
 # Exit status: non-zero if any BLOCKING check fails, so it can gate a
-# commit. `comment-block-bloat` is advisory (WARN, never blocks) — long
-# comment blocks are sometimes legitimately load-bearing.
+# commit. Two are advisory (WARN, never blocks): `comment-block-bloat`,
+# because a long comment block is sometimes legitimately load-bearing,
+# and `interface-imports-foreign-brick`, which still has debt to clear.
 #
 #   bash enforce-idioms.sh           # branch scope (default)
 #   bash enforce-idioms.sh --staged  # only staged changes (pre-commit)
@@ -68,7 +74,7 @@ for f in "${RAW[@]}"; do
   esac
 done
 
-# A config-only commit still has to face check 7 — the include check is
+# A config-only commit still has to face check 5 — the include check is
 # whole-tree and is exactly what a YAML rename breaks.
 if [ ${#ALL_FILES[@]} -eq 0 ]; then
   printf 'Scope: %s — no Clojure files; running config checks only.\n' "$scope"
@@ -77,9 +83,7 @@ else
 fi
 
 # Category subsets.
-TEST_FILES=(      $(printf '%s\n' "${ALL_FILES[@]}" | grep '_test\.clj$') )
-SRC_CLJ=(         $(printf '%s\n' "${ALL_FILES[@]}" | grep -E '\.(clj|cljc)$') )
-NON_UTILITY_CLJ=( $(printf '%s\n' "${SRC_CLJ[@]}"   | grep -v '^components/utility/') )
+SRC_CLJ=( $(printf '%s\n' "${ALL_FILES[@]}" | grep -E '\.(clj|cljc)$') )
 
 # --- Helpers -------------------------------------------------------------
 
@@ -103,30 +107,7 @@ report() {
 
 # --- Checks --------------------------------------------------------------
 
-# 1. Raw time / id helpers used directly (outside the utility brick).
-# Advisory until this earns a clean baseline the way `no-raw-throw` did:
-# the repo still carries pre-existing hits, some legitimate (poll-timer
-# elapsed-time math in test quiescence helpers, where `util/now`'s domain
-# Instant doesn't fit) with no opt-out marker to exempt them. Promote to
-# blocking once the domain-timestamp debt migrates to `util/now` and a
-# `nosemgrep`-style opt-out covers the legitimate millis uses.
-section 'Raw time/id helpers (use the `utility` brick)'
-out=""
-if [ ${#NON_UTILITY_CLJ[@]} -gt 0 ]; then
-  out=$(grep -nE '\((random-uuid|(java\.util\.)?UUID/randomUUID|(java\.time\.)?Instant/now|System/currentTimeMillis)\b' \
-          "${NON_UTILITY_CLJ[@]}" 2>/dev/null)
-fi
-report 'raw-time-id' "$out" advisory
-
-# 2. use-fixtures in tests.
-section 'use-fixtures in tests'
-out=""
-if [ ${#TEST_FILES[@]} -gt 0 ]; then
-  out=$(grep -nE '\buse-fixtures\b' "${TEST_FILES[@]}" 2>/dev/null)
-fi
-report 'use-fixtures-in-tests' "$out"
-
-# 3. Cross-unit internal imports.
+# 1. Cross-unit internal imports.
 # Rules:
 #   - intra-unit (target == own) is always fine
 #   - target is a component: only `.interface` and `.system` are public
@@ -135,8 +116,12 @@ report 'use-fixtures-in-tests' "$out"
 #     Reitit handlers into one process), and only when the importer is
 #     itself a base (component → base is the wrong direction)
 #   - target is neither a component nor a base: ignore (generated namespaces
-#     like com.repldriven.mono.schemas.* live under a brick's gen/ tree
-#     under a non-matching prefix)
+#     like com.repldriven.queenswood.schemas.* live under a brick's gen/
+#     tree, and `schemas` is not the `schema` brick's own name)
+#
+# Both prefixes are matched, but only a name that is also a local brick or
+# base directory is judged — a mono namespace resolves to neither, so
+# reaching into mono's internals is not what this check is for.
 section 'Cross-unit internal imports (components and bases)'
 out=""
 if [ ${#SRC_CLJ[@]} -gt 0 ]; then
@@ -165,7 +150,7 @@ if [ ${#SRC_CLJ[@]} -gt 0 ]; then
     own == "" { next }
     {
       line = $0
-      while (match(line, /com\.repldriven\.mono\.[a-z0-9_-]+\.[a-z0-9_-]+/)) {
+      while (match(line, /com\.repldriven\.(mono|queenswood)\.[a-z0-9_-]+\.[a-z0-9_-]+/)) {
         s = substr(line, RSTART, RLENGTH)
         line = substr(line, RSTART + RLENGTH)
         split(s, p, ".")
@@ -185,16 +170,15 @@ if [ ${#SRC_CLJ[@]} -gt 0 ]; then
 fi
 report 'cross-unit-internal' "$out"
 
-# 4. interface.clj requires only its own component's local namespaces.
+# 2. interface.clj requires only its own component's local namespaces.
 # Stricter than cross-unit-internal above: that check allows any file to
 # require a foreign brick's `.interface`, but `interface.clj` itself must
 # delegate to its own core/domain/store/etc. and never reach into another
 # brick at all — not even via that brick's `.interface`, and not even a
 # library-wrapper brick like `error`/`utility`. Composition across bricks
-# belongs one level down, in core.clj. Advisory: known pre-existing debt
-# (bank-cash-account, bank-party, bank-balance-query, bank-test-scenarios,
-# bank-test-api-scenarios, secret) hasn't migrated yet — promote to
-# blocking once it has.
+# belongs one level down, in core.clj. Advisory: four interfaces
+# (balance-query, cash-account, party twice) still reach across and
+# haven't migrated — promote to blocking once they have.
 section "interface.clj requires only its own component's namespaces"
 out=""
 if [ ${#SRC_CLJ[@]} -gt 0 ]; then
@@ -221,7 +205,7 @@ if [ ${#SRC_CLJ[@]} -gt 0 ]; then
     own == "" || !is_iface { next }
     {
       line = $0
-      while (match(line, /com\.repldriven\.mono\.[a-z0-9_-]+\.[a-z0-9_-]+/)) {
+      while (match(line, /com\.repldriven\.(mono|queenswood)\.[a-z0-9_-]+\.[a-z0-9_-]+/)) {
         s = substr(line, RSTART, RLENGTH)
         line = substr(line, RSTART + RLENGTH)
         split(s, p, ".")
@@ -236,7 +220,7 @@ if [ ${#SRC_CLJ[@]} -gt 0 ]; then
 fi
 report 'interface-imports-foreign-brick' "$out" advisory
 
-# 5. Comment-block bloat — runs of 5+ consecutive `;`-comment lines.
+# 3. Comment-block bloat — runs of 5+ consecutive `;`-comment lines.
 # Advisory: a long block can be a legitimate load-bearing why-block, so
 # this WARNs rather than blocking the commit.
 section 'Comment-block bloat (>= 5 consecutive `;` lines)'
@@ -262,7 +246,7 @@ if [ ${#SRC_CLJ[@]} -gt 0 ]; then
 fi
 report 'comment-block-bloat' "$out" advisory
 
-# 6. api reads are query-only (ADR-0017).
+# 4. api reads are query-only (ADR-0017).
 # A CQRS/design invariant riding along here until the `design` plugin owns
 # its enforcement. A domain brick with a `components/<brick>-query` sibling
 # is split into a read side (`-query`) and a write side (the plain name).
@@ -287,10 +271,10 @@ out=""
 API_BASE=bases/api/src
 API_NS=com.repldriven.queenswood
 if [ ! -d "$API_BASE" ]; then
-  echo "  enforce-idioms: $API_BASE not found — check 6 cannot run" >&2
+  echo "  enforce-idioms: $API_BASE not found — check 4 cannot run" >&2
   FAILED=1
 elif ! grep -rq "$API_NS\." "$API_BASE" 2>/dev/null; then
-  echo "  enforce-idioms: no $API_NS.* under $API_BASE — check 6 cannot run" >&2
+  echo "  enforce-idioms: no $API_NS.* under $API_BASE — check 4 cannot run" >&2
   FAILED=1
 fi
 # Write bricks whose writes earn no command (ADR-0018), so the API
@@ -315,7 +299,7 @@ if [ ${#API_SRC[@]} -gt 0 ]; then
 fi
 report 'api-reads-are-query-only' "$out"
 
-# 7. Config include targets resolve.
+# 5. Config include targets resolve.
 # `!include` and `-c classpath:` name a path on the classpath, which is every
 # `resources` and `test-resources` directory merged. Renaming a file leaves
 # the references pointing at nothing, and nothing catches it: no test loads a
@@ -362,7 +346,7 @@ done < <(grep -rn 'classpath:' justfiles .envrc scripts 2>/dev/null || true)
 out=$(printf '%s' "$out" | grep -v '^$' || true)
 report 'config-includes-resolve' "$out"
 
-# 8. Exactly one logback.xml and one logback-test.xml in the workspace.
+# 6. Exactly one logback.xml and one logback-test.xml in the workspace.
 # Both are looked up by bare name on a merged classpath, so N copies means
 # which one wins is classpath-order dependent. Identical copies hide that;
 # the moment one drifts you get a config heisenbug with no error to grep for.
@@ -391,7 +375,7 @@ done
 out=$(printf '%s' "$out" | grep -v '^$' || true)
 report 'single-logback-config' "$out"
 
-# 9. Every declared command/dispatcher is referenced in a dispatchers map.
+# 7. Every declared command/dispatcher is referenced in a dispatchers map.
 # A dispatcher declared but never wired starts cleanly and is unreachable:
 # the handler looks up [:dispatchers :X], gets nil, and `swap!` on a nil
 # atom throws an NPE — on a live request, not at boot. api-service declared

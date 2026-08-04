@@ -15,7 +15,7 @@
 (defn new-idv
   [data]
   (let [{:keys [bank-id party-id]} data
-        now (System/currentTimeMillis)]
+        now (utility/now)]
     {:bank-id bank-id
      :party-id party-id
      :verification-id (utility/generate-id "idv")

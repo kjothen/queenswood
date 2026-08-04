@@ -14,6 +14,7 @@
   into their control accounts via the fan-out before they count."
   (:require
     [com.repldriven.queenswood.balance-query.interface :as balances]
+    ;; nosemgrep: fdb-outside-store — asserts against raw stored state
     [com.repldriven.queenswood.fdb.interface :as fdb]
     [com.repldriven.queenswood.ledger-account.interface :as ledger-accounts]
 
