@@ -9,7 +9,7 @@
 **Core banking, boxed.** You want a modern banking platform without
 building it all yourself, or renting one you can't see inside.
 Queenswood is the operational core: accounts, payments, a double-entry
-ledger, interest, onboarding, and policies. The machinery of a bank.
+ledger, interest, onboarding, policies, and scheduling. The machinery of a bank.
 You bring the banking licence. You contract with identity and
 payment-rails providers, plug them in where supported, or extend the
 platform where not.
@@ -100,7 +100,7 @@ outbound HTTP call cannot be made atomic: no transaction spans the two,
 and there is no two-phase commit to reach for across someone else's API.
 Committing first risks a call that never happens; calling first risks a
 call that happened but was never recorded. So the adapter commits the
-*intent* to call, and a separate poller makes the call afterwards,
+_intent_ to call, and a separate poller makes the call afterwards,
 retrying each pending intent until it succeeds or exhausts its attempts.
 Webhook events received from an external service are normalized
 by the adapter and written to a deduplicating outbox, atomically with
@@ -110,25 +110,24 @@ external adapter events too.
 
 ## What's interesting
 
-The decisions that make this codebase worth reading — each with a
-doc that goes deep:
+The engineering decisions that make this codebase worth reading, each
+with a doc that goes deep:
 
 - **One unified API for the whole bank, with full OpenAPI 3.x
   compliance.** See
   [ADR-0013](docs/adr/0013-single-unified-api.md) and
   [ADR-0014](docs/adr/0014-openapi-3x-compliance.md).
-- **Policies and bindings as first-class data, not hardcoded
-  rules.** Combining allow/deny capabilities with
-  sophisticated time and volume-based limits, affords
-  fine-grained policies where you need it most.
+- **Policy is data, not code.** Capabilities and limits are records
+  evaluated at runtime, not conditionals compiled into a release, so
+  changing what a bank permits is a write.
   See [policy-evaluation](docs/tdd/policy-evaluation.md).
-- **Daily interest accrual, capitalisation and carry.** Integer
-  micro-unit arithmetic with sub-minor-unit carry; a batch pass that
-  streams a bank's accounts with their balances and posts the ledger
-  once per run rather than once per account; with cadence (daily,
-  monthly, anything) being your choice.
+- **Money is integers, and the remainder is kept.** Amounts are
+  integers end to end, never floats. Interest computes in micro-units
+  and carries the sub-minor-unit remainder between days rather than
+  rounding it away, then posts to the ledger once per run rather than
+  once per account.
   See [interest](docs/tdd/interest.md).
-- **System-level and model-equality property testing**.
+- **System-level and model-equality property testing.**
   Two parallel state machines, the real system and an independent model,
   fed the same commands, with end states compared.
   See [scenario-testing](docs/tdd/scenario-testing.md).
@@ -136,14 +135,14 @@ doc that goes deep:
   Failure is a first-class return value. Every caller engages with
   it; nothing slips by silently.
   See [ADR-0005](docs/adr/0005-error-handling-with-anomalies.md).
-- **System-as-data** Test and production share one bootstrap path.
+- **System-as-data.** Test and production share one bootstrap path.
   See [ADR-0007](docs/adr/0007-system-as-data.md) and the
   [slides](docs/slides/systems-as-data/slides.md).
-- **FoundationDB Record Layer.** Multi-record ACID by default; the
+- **FoundationDB Record Layer.** Multi-record ACID by default, and the
   transactional outbox pattern falls out of the storage engine.
   See [ADR-0002](docs/adr/0002-foundationdb-record-layer.md).
-- **Consumes `mono`** — shared infrastructure pulled in as a
-  pinned git-dependency, not forked into the workspace.
+- **Consumes `mono`.** Shared infrastructure pulled in as a pinned
+  git-dependency, not forked into the workspace.
   See [ADR-0001](docs/adr/0001-reuse-mono-as-upstream.md).
 
 ## Documentation
