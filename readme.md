@@ -135,7 +135,10 @@ with a doc that goes deep:
   Failure is a first-class return value. Every caller engages with
   it; nothing slips by silently.
   See [ADR-0005](docs/adr/0005-error-handling-with-anomalies.md).
-- **System-as-data.** Test and production share one bootstrap path.
+- **System-as-data.** Test and production share one bootstrap path, and
+  what a given process runs is decided by its configuration rather than
+  its code: the same bricks start as a modular monolith in one JVM or as
+  separate services, without either being a special build.
   See [ADR-0007](docs/adr/0007-system-as-data.md) and the
   [slides](docs/slides/systems-as-data/slides.md).
 - **FoundationDB Record Layer.** Multi-record ACID by default, and the
