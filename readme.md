@@ -141,8 +141,12 @@ with a doc that goes deep:
   separate services, without either being a special build.
   See [ADR-0007](docs/adr/0007-system-as-data.md) and the
   [slides](docs/slides/systems-as-data/slides.md).
-- **FoundationDB Record Layer.** Multi-record ACID by default, and the
-  transactional outbox pattern falls out of the storage engine.
+- **FoundationDB Record Layer.** Multi-record ACID across stores in one
+  transaction: creating a bank writes the bank, its party, its ledger
+  chart, house accounts and policy bindings, or none of them. Changelog
+  entries are keyed by versionstamp, which gives a totally ordered
+  append-only log with no sequence generator and no secondary index, and
+  counts and sums read maintained aggregate indexes rather than scanning.
   See [ADR-0002](docs/adr/0002-foundationdb-record-layer.md).
 - **Consumes `mono`.** Shared infrastructure pulled in as a pinned
   git-dependency, not forked into the workspace.
