@@ -64,23 +64,35 @@ database (FoundationDB) manages the data.
   <img alt="Queenswood system diagram" src="docs/diagrams/system-diagram-light.svg">
 </picture>
 
-**Writes are idempotent commands.** The API write-side turns a request into a
-command on the bus where necessary. Processors consume commands, and
-ensure multi-record atomicity under contention through a single
-database transaction. Processors can be deployed individually or,
-for maximum efficiency, bundled according to lines of responsibility,
-such as financial and operational processor bundles.
+**Writes are idempotent commands.** A write is only put on the bus when it
+earns it: when it has to commit across several records at once under
+contention, when a redelivery would do real damage, when other processors
+must react to it, or when it arrives from something unreliable like a
+webhook. Everything else stays a direct call. A processor consumes the
+command, performs the whole write in one database transaction, and replies.
+Repeating a request is safe — the same idempotency key replays the first
+outcome rather than doing the work twice. Processors deploy individually,
+or bundled along lines of responsibility such as financial and
+operational, without any of the above changing.
 
-**Reads are queries.** The API read-side loads records directly using a
-separate query surface — no command round-trip and no overlap with
-the write-path, top-to-bottom.
+**Reads are queries.** The API read-side loads records directly through a
+separate query surface — no command, no bus, no round-trip. The bricks
+that read are the only ones the API is allowed to reach; the bricks that
+write are private to their processor, and the separation is enforced
+rather than merely intended. A read therefore cannot acquire a write path
+by accident, and a busy or unavailable bus does not make the bank
+unreadable.
 
-**Processor choreography through a changelog relay.** State changes are recorded
-in a corresponding changelog in order, atomically with the write, where necessary.
-All changelog records are published to the message bus through a system-wide
-changelog relay, so processors react to one another through event sourcing.
+**Processors react, they never call one another.** Where a change has to
+be reacted to, it is recorded in a changelog in the same transaction as
+the write itself, so a change and the news of it cannot diverge. One
+system-wide relay tails those changelogs in order and publishes to the
+message bus, and the processors that care subscribe. This is
+choreography, not event sourcing: the records stay the source of truth,
+and the changelog exists to cross a boundary rather than to rebuild
+state from.
 
-**External Adapters egress through intents.** A database write and an
+**External calls are recorded before they are made.** A database write and an
 outbound HTTP call cannot be made atomic: no transaction spans the two,
 and there is no two-phase commit to reach for across someone else's API.
 Committing first risks a call that never happens; calling first risks a
