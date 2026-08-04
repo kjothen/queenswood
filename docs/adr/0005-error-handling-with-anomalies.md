@@ -136,8 +136,13 @@ universal practice before it was written down here.
 caller — the server broke, and there is nothing to do but report it —
 so those keep call-site naming and the payload carries the detail. But
 a failure that says *retry* is actionable, and its category has to say
-so: `:fdb/contention` (503) and `:fdb/timeout` (504) come from the
-Record Layer's own type hierarchy, and a client branches on them.
+so: `:fdb/contention` and `:fdb/timeout` come from the Record Layer's
+own type hierarchy, and a client branches on them. Both map to 503,
+because both mean back off and retry — they differ in what they say
+about the cluster, not in what the caller should do, and under load
+retries turn one into the other. The distinction rides `type`, which
+is the case for naming the problem there rather than splitting the
+status.
 
 **Everything else names the call site**, and the stability argument
 holds: call sites rarely change, failure modes proliferate. The

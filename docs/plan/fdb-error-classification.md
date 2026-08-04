@@ -122,16 +122,17 @@ table beside the existing one in `api/errors.clj`:
 ```clojure
 (def ^:private error-status-overrides
   {:fdb/contention 503
-   :fdb/timeout 504})
+   :fdb/timeout 503})
 ```
 
 and branch on it in `anomaly->status` **before** the blanket
 `(not (error/rejection? anomaly)) -> 500`, or it will never be reached.
 
-503 for contention says retries were exhausted and a later attempt may
-succeed, which pairs with `Retry-After`. 504 for timeout says the
-storage layer did not answer in time. Treating both as 503 and letting
-`type` carry the distinction is a defensible alternative.
+Both are 503. Contention means the retry budget was exhausted, timeout
+means a wall clock ran out — but to a caller both say back off and
+retry, and under load retries turn one into the other, so a split
+status would imply a sharper distinction than exists. `type` carries
+it instead.
 
 ## What this needs
 
@@ -139,7 +140,7 @@ storage layer did not answer in time. Treating both as 503 and letting
   `error/fail` call.
 - `api/errors.clj`: `error-status-overrides` plus the branch in
   `anomaly->status`.
-- OpenAPI: 503 and 504 documented on every operation that writes or
+- OpenAPI: 503 documented on every operation that writes or
   reads through FDB, with examples. Per
   [ADR-0014](../adr/0014-openapi-3x-compliance.md) every response shape
   is a documented, referenced component, so this is the bulk of the
@@ -171,9 +172,8 @@ description. `check.clj`'s `meta-data-already-current?` had the same
 latent defect and was corrected with it.
 
 **The OpenAPI work was two lines, not the bulk.** Every `/v1` route
-inherits one shared `:responses` map, so 503 and 504 reached all
-operations at once, with two example components alongside the existing
-ones.
+inherits one shared `:responses` map, so 503 reached all operations at
+once, with two example components alongside the existing ones.
 
 ## Decisions and risks
 

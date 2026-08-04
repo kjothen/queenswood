@@ -197,9 +197,8 @@
                              [#'examples/InternalServerError
                               #'examples/BadResponse])
                         503 (schema/ErrorResponse
-                             [#'examples/ServiceUnavailable])
-                        504 (schema/ErrorResponse
-                             [#'examples/GatewayTimeout])}}]
+                             [#'examples/Contention
+                              #'examples/Timeout])}}]
           (concat
            balance/routes
            bank/routes

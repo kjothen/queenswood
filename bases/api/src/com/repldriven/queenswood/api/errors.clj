@@ -50,10 +50,15 @@
 
 (def ^:private error-status-overrides
   "Statuses for error anomalies the storage layer can name. Not
-  rejections — the request was well-formed and the caller can do
-  nothing differently, so these must not reach the rejection
-  heuristics."
-  {:fdb/contention 503 :fdb/timeout 504})
+  rejections — the request was well-formed, so these must not reach the
+  rejection heuristics.
+
+  Both are 503 because both mean the same thing to a caller: back off
+  and retry. They differ in what they say about the cluster, not in
+  what to do about it, and retries under load turn one into the other —
+  so the distinction rides `type` rather than being overstated as two
+  status codes."
+  {:fdb/contention 503 :fdb/timeout 503})
 
 (defn rejection-kind->status
   "Pick an HTTP status code for a rejection kind keyword.

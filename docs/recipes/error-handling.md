@@ -159,7 +159,7 @@ also the RFC 9457 `type` on any problem response that reaches a
 client, and there `type` is meant to identify the problem. The two
 purposes only conflict when someone outside the process can act on
 the failure, which is the test: a rejection tells a caller what to
-fix, and a 503 or 504 tells them to retry, so both name the problem.
+fix, and a 503 tells them to retry, so both name the problem.
 An opaque 500 has no such reader, so it keeps the stable name and
 puts the detail in the payload.
 

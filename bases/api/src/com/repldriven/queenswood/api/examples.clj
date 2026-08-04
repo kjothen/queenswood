@@ -33,19 +33,18 @@
            :status 500
            :detail "Internal server error"}})
 
-(def ServiceUnavailable
+(def Contention
   {:value {:title "FAILED"
            :type ":fdb/contention"
            :status 503
-           :detail "Failed to save user"}})
+           :detail "Failed to save cash account"}})
 
-(def GatewayTimeout
+(def Timeout
   {:value {:title "FAILED"
            :type ":fdb/timeout"
-           :status 504
-           :detail "Failed to save user"}})
+           :status 503
+           :detail "Failed to save cash account"}})
 
 (def registry
   (examples-registry [#'BadRequest #'Unauthorized #'Forbidden #'BadResponse
-                      #'InternalServerError #'ServiceUnavailable
-                      #'GatewayTimeout]))
+                      #'InternalServerError #'Contention #'Timeout]))
