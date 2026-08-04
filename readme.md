@@ -115,49 +115,48 @@ The engineering decisions that make this codebase worth reading, each
 with a doc that goes deep:
 
 - **One unified API for the whole bank, with full OpenAPI 3.x
-  compliance.** See
-  [ADR-0013](docs/adr/0013-single-unified-api.md) and
+  compliance.** One base URL and one document, not a service per
+  domain, and the document is generated from the routes themselves so
+  it cannot drift from what the API does.
+  See [ADR-0013](docs/adr/0013-single-unified-api.md) and
   [ADR-0014](docs/adr/0014-openapi-3x-compliance.md).
 - **Policy is data, not code.** Capabilities and limits are records
   evaluated at runtime, not conditionals compiled into a release, so
   changing what a bank permits is a write.
   See [policy-evaluation](docs/tdd/policy-evaluation.md).
 - **Money is integers, and the remainder is kept.** Amounts are
-  integers end to end, never floats. Interest computes in micro-units
-  and carries the sub-minor-unit remainder between days rather than
-  rounding it away, then posts to the ledger once per run rather than
-  once per account.
+  integers end to end, never floats, and interest carries the
+  sub-minor-unit remainder between days rather than rounding it away.
   See [interest](docs/tdd/interest.md).
-- **System-level and model-equality property testing.**
-  Two parallel state machines, the real system and an independent model,
-  fed the same commands, with end states compared.
+- **System-level and model-equality property testing.** Two state
+  machines fed the same commands: the real system, and a model that
+  imports nothing from it, no database, no protobuf, no shared code.
+  A divergence shrinks to the shortest sequence that causes it.
   See [scenario-testing](docs/tdd/scenario-testing.md).
-- **Anomalies, not exceptions, at every component interface.**
-  Failure is a first-class return value. Every caller engages with
-  it; nothing slips by silently.
+- **Anomalies, not exceptions, at every component interface.** An
+  interface returns a value or an anomaly and never raises. Three kinds
+  separate a fault from a refusal from a forbidden call, which is how
+  the API picks a status family without inspecting a payload.
   See [ADR-0005](docs/adr/0005-error-handling-with-anomalies.md).
 - **System-as-data.** Test and production share one bootstrap path, and
   what a given process runs is decided by its configuration rather than
   its code: the same bricks start as a modular monolith in one JVM or as
-  separate services, without either being a special build.
+  separate services.
   See [ADR-0007](docs/adr/0007-system-as-data.md) and the
   [slides](docs/slides/systems-as-data/slides.md).
 - **FoundationDB Record Layer.** Multi-record ACID across stores in one
-  transaction: creating a bank writes the bank, its party, its ledger
-  chart, house accounts and policy bindings, or none of them. Changelog
-  entries are keyed by versionstamp, which gives a totally ordered
-  append-only log with no sequence generator and no secondary index, and
-  counts and sums read maintained aggregate indexes rather than scanning.
+  transaction, so creating a bank writes its party, ledger chart, house
+  accounts and policy bindings, or none of them. Changelog entries are
+  keyed by versionstamp, which gives a totally ordered log without a
+  sequence generator, and counts and sums read maintained indexes rather
+  than scanning.
   See [ADR-0002](docs/adr/0002-foundationdb-record-layer.md).
-- **Consumes `mono`.** The generic half of the system lives upstream:
-  error handling, logging, the message bus with its Kafka or Pulsar
-  backends, Avro, the command and event envelopes, identity, secrets and
-  config. It arrives tested on its own terms, so the suite here proves
-  banking rather than plumbing. It is pinned to a tag and a sha, so the
-  ground under a bank moves only when someone decides it should. And
-  anything that turns out not to be domain-specific moves up rather than
-  accumulating here, which is what keeps this workspace readable as a
-  bank.
+- **Consumes `mono`.** The generic half lives upstream: error handling,
+  logging, the message bus with its Kafka or Pulsar backends, Avro, the
+  command and event envelopes, identity and secrets. It arrives tested
+  on its own terms and pinned to a tag and a sha, so the suite here
+  proves banking rather than plumbing, and the ground under a bank moves
+  only when someone decides it should.
   See [ADR-0001](docs/adr/0001-reuse-mono-as-upstream.md).
 
 ## Documentation
