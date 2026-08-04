@@ -113,8 +113,13 @@ single check with no further bindings:
 - Functions in `interface.clj` return a value or an anomaly.
 - Use `error/try-nom` (catch all) or `error/try-nom-ex` (catch a
   specific type) at every Java/library boundary that throws.
-- Anomaly category names the _call site_
-  (`:http-client/request`).
+- Anomaly category names the _call site_ (`:http-client/request`)
+  when nobody outside the process can act on the failure.
+- Anomaly category names the _problem_ when a caller can act on it —
+  every rejection (`:bank/invalid-status`), and the closed set of
+  storage failures that mean retry (`:fdb/contention`,
+  `:fdb/timeout`). The call site moves to the payload as
+  `:operation`.
 - Anomaly payloads contain `:message`.
 - Mark a genuinely unrecoverable `throw` with
   `;; nosemgrep: no-raw-throw` on the line above — the `no-raw-throw`
@@ -124,7 +129,9 @@ single check with no further bindings:
 
 - Throw from `interface.clj` directly or indirectly.
 - Use bare `try`/`catch` in component code.
-- Name categories by failure mode (`:http-client/failed`).
+- Name a category by failure mode where nothing can act on the
+  distinction (`:http-client/failed` says no more than
+  `:http-client/request`).
 - Mix the three anomaly kinds — pick the right one for the
   failure being represented.
 
@@ -145,10 +152,16 @@ unauthorised) without inspecting payload contents. Collapsing
 these into one notion of error makes the upstream routing harder
 and obscures real bugs as denials.
 
-The naming convention (category = call site, not failure mode) is
-non-obvious but right: the call site rarely changes, while
-failure modes proliferate. Naming by site keeps anomaly categories
-stable across refactors.
+The naming convention is non-obvious. Naming by call site keeps
+categories stable across refactors — call sites rarely change, while
+failure modes proliferate — so it is the default. But a category is
+also the RFC 9457 `type` on any problem response that reaches a
+client, and there `type` is meant to identify the problem. The two
+purposes only conflict when someone outside the process can act on
+the failure, which is the test: a rejection tells a caller what to
+fix, and a 503 or 504 tells them to retry, so both name the problem.
+An opaque 500 has no such reader, so it keeps the stable name and
+puts the detail in the payload.
 
 `try-nom` automatically captures the underlying exception and
 stack trace into the anomaly payload, so the debugging information

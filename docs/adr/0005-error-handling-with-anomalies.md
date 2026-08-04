@@ -80,10 +80,12 @@ The rules:
    type) to convert exceptions to anomalies. `try-nom` automatically
    attaches the underlying exception and stack trace to the anomaly
    payload, so debugging information is not lost.
-4. Anomaly category reflects the *call site*, not the failure mode —
-   e.g. `:http-client/request`, not `:http-client/failed`. The
-   category answers "where did this come from"; the payload answers
-   "what went wrong".
+4. Anomaly category names the *call site* when nobody outside the
+   process can act on the failure — e.g. `:http-client/request`, not
+   `:http-client/failed`. There the category answers "where did this
+   come from" and the payload answers "what went wrong". When a caller
+   *can* act, the category names the problem instead, and the call site
+   moves to the payload. See "Naming a category" below.
 5. Anomaly payloads MUST contain `:message`. Pass a string as
    shorthand or a map for additional context.
 6. Compose anomaly-returning calls with `error/let-nom>` (monadic
@@ -109,6 +111,44 @@ at the boundary, never beyond it.
 This convention is inherited from `mono` (ADR-0001) and is the most
 load-bearing piece of mono that Queenswood depends on. Every
 interface boundary, every component, every test relies on it.
+
+### Naming a category
+
+Rule 4 originally said call site, always. That was written while a
+category was an internal diagnostic. The single unified API
+([ADR-0013](0013-single-unified-api.md),
+[ADR-0014](0014-openapi-3x-compliance.md)) then made it the RFC 9457
+`type` on every problem response, and RFC 9457 defines `type` as
+identifying the *problem*, not its origin. The two conventions were
+settled independently and collide wherever an anomaly reaches a client.
+
+The line is whether anyone outside the process can act on it.
+
+**A rejection always names the problem.** A 4xx exists to tell a caller
+what they got wrong so they can fix it and retry — `:bank/invalid-status`,
+`:cash-account-product/currency-not-allowed`,
+`:cash-account-migration/notice-after-due`. A rejection named for its
+call site would be useless to the caller and would defeat the
+rejection-to-status mapping, which reads the category. This was already
+universal practice before it was written down here.
+
+**An actionable error names the problem.** Most 5xx are opaque to a
+caller — the server broke, and there is nothing to do but report it —
+so those keep call-site naming and the payload carries the detail. But
+a failure that says *retry* is actionable, and its category has to say
+so: `:fdb/contention` (503) and `:fdb/timeout` (504) come from the
+Record Layer's own type hierarchy, and a client branches on them.
+
+**Everything else names the call site**, and the stability argument
+holds: call sites rarely change, failure modes proliferate. The
+exception is bounded on purpose — a closed set the storage layer can
+name, with call-site naming as the fallback for everything it cannot.
+`:http-client/failed` is still wrong, because nothing can act on it
+that could not act on `:http-client/request`.
+
+When a category names the problem, the call site is not discarded — it
+moves to the payload (`:operation`) so logs still say where the failure
+arose.
 
 ## Consequences
 

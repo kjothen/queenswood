@@ -10,9 +10,13 @@ regressions; these rules keep you from introducing them.
 A component `interface.clj` returns a value or an anomaly — it never
 raises. Produce a domain rejection with `error/reject`; convert an
 exception at a library edge with `error/try-nom` / `error/try-nom-ex`.
-Thread fallible steps with `let-nom>` / `nom->`. A genuinely
-unrecoverable `throw` is rare and carries `;; nosemgrep: no-raw-throw`
-on the line above.
+Thread fallible steps with `let-nom>` / `nom->`. Name a category for
+the call site (`:http-client/request`) when nobody outside the process
+can act on the failure, and for the problem when someone can — every
+rejection (`:bank/invalid-status`), plus the storage failures that mean
+retry (`:fdb/contention`, `:fdb/timeout`), with the call site moving to
+the payload as `:operation`. A genuinely unrecoverable `throw` is rare
+and carries `;; nosemgrep: no-raw-throw` on the line above.
 See [error-handling](../../../docs/recipes/error-handling.md),
 [ADR-0005](../../../docs/adr/0005-error-handling-with-anomalies.md).
 
