@@ -8,7 +8,7 @@
   :test
   {:extra-deps
    {ext/mono {:local/root "../../deps/mono-test"}
-    bases/external-test-runner {:local/root "../../bases/external-test-runner"}
+    ext/mono-test-runner {:local/root "../../deps/mono-test-runner"}
     bases/uk-companies-house-simulator
     {:local/root "../../bases/uk-companies-house-simulator"}
     component/test-resources {:local/root "../../components/test-resources"}
@@ -22,5 +22,5 @@
         base/uk-companies-house-adapter
         {:local/root "../../bases/uk-companies-house-adapter"}
         org.clojure/clojure {:mvn/version "1.12.5"}
-        pin/clojure {:local/root "../../deps/clojure"}}
+        pin/clojure-core-async {:local/root "../../deps/clojure-core-async"}}
  :paths ["resources"]}

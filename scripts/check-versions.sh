@@ -80,7 +80,7 @@ check "$values (initContainer $fdb_minor tag)" "$fdb" \
           f && /^    "/ {f = 0}
           f && /^        tag:/ {print $2; exit}' "$values")"
 
-# Clojure itself cannot be single-sourced through deps/clojure the way
+# Clojure itself cannot be single-sourced through deps/clojure-core-async the way
 # core.async is: the CLI merges its own root deps.edn into every project's
 # :deps, so Clojure is always a direct dependency and a coordinate one level
 # down never competes. Drop a project's pin and it does not inherit the

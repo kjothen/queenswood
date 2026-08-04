@@ -1,0 +1,15 @@
+;; Single source of the mono external-test-runner coordinate. Projects
+;; reference this by :local/root as ext/mono-test-runner under :test, and
+;; workspace.edn names its `create` fn as the Polylith test runner. Bump
+;; the tag/sha here on upgrade.
+;;
+;; A separate lib symbol from com.repldriven/mono, so it is free to sit on
+;; a different tag from ../mono and ../mono-test: the runner is a leaf base
+;; sharing no components with mono-lib, so two checkouts of the same repo
+;; on the classpath cannot conflict over a brick. Bump all three together
+;; anyway unless there is a reason not to.
+{:deps {com.repldriven.mono/external-test-runner
+        {:git/url "https://github.com/repldriven/mono.git"
+         :git/tag "v0.0.20"
+         :git/sha "e6fa6d04ec917bd1bbf3d9d119caeac512b2dc2e"
+         :deps/root "bases/external-test-runner"}}}

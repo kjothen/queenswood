@@ -7,6 +7,29 @@
 variable "REGISTRY" { default = "ghcr.io/repldriven/queenswood" }
 variable "TAG"      { default = "dev" }
 
+// Provenance. The uberjar carries no usable version of its own: the
+// build stage runs `uber :snapshot true` because `.dockerignore`
+// excludes `.git`, so `git-count-revs` has no repository to count and
+// returns nil. The published tag is `latest`, so without these labels
+// there is nothing on an image saying which commit produced it.
+//
+// REVISION and CREATED are supplied by the release workflow and left
+// empty for a local `just docker-build-*`, where the answer would be
+// "your working tree" rather than a commit. Empty ones are dropped
+// below rather than emitted blank.
+variable "REVISION" { default = "" }
+variable "CREATED"  { default = "" }
+variable "SOURCE"   { default = "https://github.com/repldriven/queenswood" }
+
+// `org.opencontainers.image.source` does double duty on GHCR: it is
+// the standard provenance key, and it is also what links a package to
+// its repository so the package inherits the repo's visibility.
+provenance_labels = merge(
+  { "org.opencontainers.image.source" = SOURCE },
+  REVISION != "" ? { "org.opencontainers.image.revision" = REVISION } : {},
+  CREATED != "" ? { "org.opencontainers.image.created" = CREATED } : {},
+)
+
 services = [
   "migrator-service",
   "bootstrap-service",
@@ -45,6 +68,8 @@ target "service" {
   dockerfile = "infra/docker/service/Dockerfile"
   args       = { PROJECT_NAME = svc }
   tags       = ["${REGISTRY}/${svc}:${TAG}"]
+  labels     = merge(provenance_labels,
+    { "org.opencontainers.image.title" = svc })
   platforms  = platforms_default
   output     = ["type=docker"]
 }
@@ -57,6 +82,8 @@ target "console" {
   context    = "."
   dockerfile = "infra/docker/console/Dockerfile"
   tags       = ["${REGISTRY}/console:${TAG}"]
+  labels     = merge(provenance_labels,
+    { "org.opencontainers.image.title" = "console" })
   platforms  = platforms_default
   output     = ["type=docker"]
 }

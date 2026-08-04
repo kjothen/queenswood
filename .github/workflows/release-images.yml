@@ -94,7 +94,15 @@ jobs:
         env:
           REGISTRY: ghcr.io/${{ github.repository_owner }}/queenswood
           TAG: latest-${{ matrix.arch }}
+          # Provenance for the OCI labels in bake.hcl. The published tag
+          # is `latest`, so the commit is otherwise unrecoverable from a
+          # pulled image. CREATED is computed in the step body because
+          # `env:` cannot run a command.
+          REVISION: ${{ github.sha }}
+          SOURCE: ${{ github.server_url }}/${{ github.repository }}
         run: |
+          CREATED="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          export CREATED
           docker buildx bake \
             -f infra/docker/bake.hcl \
             --set "*.platform=${{ matrix.platform }}" \

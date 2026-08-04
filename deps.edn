@@ -7,10 +7,10 @@
     ;; components/test-resources/test-resources/logback-test.xml is never
     ;; read.
     bases/build {:local/root "bases/build" :exclusions [org.slf4j/slf4j-nop]}
-    bases/external-test-runner {:local/root "bases/external-test-runner"
-                                :exclusions [org.slf4j/slf4j-nop]}
+    ext/mono-test-runner {:local/root "deps/mono-test-runner"
+                          :exclusions [org.slf4j/slf4j-nop]}
     org.clojure/clojure {:mvn/version "1.12.5"}
-    pin/clojure {:local/root "deps/clojure"}
+    pin/clojure-core-async {:local/root "deps/clojure-core-async"}
     djblue/portal {:mvn/version "0.67.1"}
     components/balance {:local/root "components/balance"}
     components/balance-domain {:local/root "components/balance-domain"}
@@ -127,8 +127,7 @@
                        "bases/uk-companies-house-adapter/test-resources"
                        "bases/uk-companies-house-simulator/test"
                        "bases/uk-companies-house-simulator/test-resources"
-                       "bases/monolith/test-resources"
-                       "bases/external-test-runner/test"]}
+                       "bases/monolith/test-resources"]}
   :format/zprint {:extra-deps {zprint/zprint {:mvn/version "1.3.0"}}
                   :main-opts ["-m" "zprint.main"]}
   :lint/clj-kondo {:extra-deps {clj-kondo/clj-kondo {:mvn/version "2026.07.24"}}
@@ -145,8 +144,8 @@
           :main-opts ["-m" "nrepl.cmdline"
                       "--middleware" "[cider.nrepl/cider-middleware]"]}
   :poly {:extra-deps {polylith/clj-poly {:mvn/version "0.3.32"}
-                      bases/external-test-runner {:local/root
-                                                  "bases/external-test-runner"}}
+                      ext/mono-test-runner {:local/root
+                                            "deps/mono-test-runner"}}
          :main-opts ["-m" "polylith.clj.core.poly-cli.core"]}
   :rebel {:extra-deps {com.bhauman/rebel-readline {:mvn/version "0.1.11"}}
           :main-opts ["-m" "rebel-readline.main"]}
