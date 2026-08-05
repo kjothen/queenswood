@@ -171,22 +171,6 @@
           "manage-users"
         ]
       }
-    },
-    {
-      "username": "ops",
-      "enabled": true,
-      "emailVerified": true,
-      "email": "ops@queenswood.local",
-      "firstName": "Ops",
-      "lastName": "User",
-      "realmRoles": ["admin"],
-      "credentials": [
-        {
-          "type": "password",
-          "value": "ops",
-          "temporary": false
-        }
-      ]
     }
   ]
 }
