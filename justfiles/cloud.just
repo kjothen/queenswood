@@ -2,18 +2,44 @@
 # Internal helpers
 # =========================================================================
 
-# Print the active gcloud project on stdout; exit 1 if none set. Use
-# from other recipes as: `PROJECT_ID=$(just _gcp-project-id)`.
+# Print this environment's GCP project id on stdout; exit 1 if unknown.
+# Use from other recipes as: `PROJECT_ID=$(just _gcp-project-id)`.
 [private]
 _gcp-project-id:
     #!/usr/bin/env zsh
     set -e
-    PROJECT_ID=$(gcloud config get project 2>/dev/null)
+    # `pass` first: it records the project for THIS environment, where
+    # `gcloud config` records whatever project was last selected on this
+    # machine. Those differ the moment you touch a second environment,
+    # and the gcloud answer is the one that silently provisions into the
+    # wrong project.
+    PROJECT_ID=$(pass show {{ PASS_ENV }}/ids/project 2>/dev/null | head -1)
     if [[ -z "$PROJECT_ID" ]]; then
-      echo "no active gcloud project; run 'just gcp-project-create' first" >&2
+      PROJECT_ID=$(gcloud config get project 2>/dev/null)
+    fi
+    if [[ -z "$PROJECT_ID" ]]; then
+      echo "no project for {{ QUEENSWOOD_ENV }}: set {{ PASS_ENV }}/ids/project in pass, or run 'just gcp-project-create'" >&2
       exit 1
     fi
     printf '%s\n' "$PROJECT_ID"
+
+# Fail unless the logged-in gcloud account matches this environment's.
+[private]
+_gcp-assert-account:
+    #!/usr/bin/env zsh
+    set -e
+    # Skipped silently when the entry is absent, so a store that hasn't
+    # been populated yet doesn't block every cloud recipe.
+    WANT=$(pass show {{ PASS_ENV }}/ids/account 2>/dev/null | head -1)
+    if [[ -z "$WANT" ]]; then
+      exit 0
+    fi
+    HAVE=$(gcloud config get-value account 2>/dev/null)
+    if [[ "$WANT" != "$HAVE" ]]; then
+      echo "gcloud is authenticated as $HAVE, but {{ QUEENSWOOD_ENV }} belongs to $WANT" >&2
+      echo "run: gcloud config set account $WANT" >&2
+      exit 1
+    fi
 
 # Print the kubeconfig context name for the queenswood GKE cluster.
 # Use as: `KCTX=$(just _gke-ctx)`.
@@ -185,6 +211,7 @@ gcp-up:
     set -e
     PROJECT_ID=$(just _gcp-project-id)
     just gcp-user-login
+    just _gcp-assert-account
     just gcp-iam-bootstrap
     just gcp-crossplane-login
     just gcp-dns-zone-create
@@ -438,6 +465,26 @@ gcp-k8s-redeploy-svc +components:
       kubectl --context $KCTX -n {{ QUEENSWOOD_ENV }} rollout restart deploy/{{ QUEENSWOOD_ENV }}-$c
       kubectl --context $KCTX -n {{ QUEENSWOOD_ENV }} rollout status  deploy/{{ QUEENSWOOD_ENV }}-$c
     done
+
+# Load the Google IdP client secret from `pass` into Keycloak's vault Secret.
+gcp-keycloak-vault-secret:
+    #!/usr/bin/env zsh
+    set -euo pipefail
+    # Mirrors the testcontainer flow in test-resources' keycloak
+    # container config: same `pass` entry, same files-plaintext vault,
+    # same <realm>_<key> filename. The secret goes from `pass` straight
+    # to the cluster -- never git, never the shell environment.
+    KCTX=$(just _gke-ctx)
+    secret=$(pass show {{ PASS_ENV }}/auth/clients/google) || {
+      echo "{{ PASS_ENV }}/auth/clients/google not in pass" >&2; exit 1
+    }
+    kubectl --context $KCTX -n {{ QUEENSWOOD_ENV }} create secret generic \
+      queenswood-keycloak-vault \
+      --from-literal=queenswood_google-client-secret="$secret" \
+      --dry-run=client -o yaml \
+      | kubectl --context $KCTX -n {{ QUEENSWOOD_ENV }} apply -f -
+    echo ">>> restart Keycloak to pick it up:"
+    echo "    kubectl --context $KCTX -n {{ QUEENSWOOD_ENV }} rollout restart statefulset/queenswood-keycloak-keycloak"
 
 # =========================================================================
 # Diagnostics

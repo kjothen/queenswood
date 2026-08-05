@@ -21,11 +21,25 @@ spec:
 {{- range .Values.queenswoodPlatform.valueFiles }}
         - {{ . | quote }}
 {{- end }}
+      # Parameters win over valueFiles, so a bootstrap that supplies
+      # these picks the environment on its own and the values files
+      # serve only as defaults.
+{{- if or .Values.envName .Values.envDomain }}
+      parameters:
+{{- if .Values.envName }}
+        - name: env.name
+          value: {{ .Values.envName | quote }}
+{{- end }}
+{{- if .Values.envDomain }}
+        - name: env.domain
+          value: {{ .Values.envDomain | quote }}
+{{- end }}
+{{- end }}
   destination:
     server: https://kubernetes.default.svc
     # The chart's templates set explicit namespaces; this is the
     # fallback used by the Application's Namespace resource itself.
-    namespace: {{ .Values.envNamespace | quote }}
+    namespace: {{ .Values.envName | default .Values.envNamespace | quote }}
   syncPolicy:
     automated:
       prune: true

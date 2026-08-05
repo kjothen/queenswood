@@ -28,14 +28,18 @@ container: !system/component
   # vault off, so the expression stays an inert literal as before.
   # Optional: if the secret is absent from `pass`, startup skips it with
   # a warning and only Google sign-in is unavailable — local Keycloak
-  # principals still work. Add `queenswood/google-client-secret` to
-  # `pass` to enable it.
+  # principals still work. Add `queenswood/local/dev/auth/clients/google`
+  # to `pass` to enable it.
+  #
+  # `local/dev` is the platform and the profile this file already names,
+  # so the cloud environments sit under `queenswood/gcp/<env>/` and the
+  # two never collide on a shared `dev`.
   vault-dir: !profile
     dev: /opt/keycloak/data/vault
     default: ~
   vault-secrets: !profile
     dev:
-      "queenswood_google-client-secret": ["pass", "show", "queenswood/google-client-secret"]
+      "queenswood_google-client-secret": ["pass", "show", "queenswood/local/dev/auth/clients/google"]
     default: {}
 
 container-http-port: !system/component

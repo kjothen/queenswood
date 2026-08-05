@@ -11,14 +11,26 @@ KIND_XP_CLUSTER := "kind-xp-mp"
 REGION := "europe-west2"
 ZONE := REGION + "-a"
 
-# Active queenswood environment for cloud.just recipes. Override per
-# invocation with `QUEENSWOOD_ENV=queenswood just <recipe>`. Must match
-# the valueFiles entry in `infra/bootstrap/apps/queenswood-platform.yml`;
-# both flip together when changing envs.
+# Active queenswood environment. Names the GKE namespace, the Helm
+# release, and the `pass` branch. `kind-xp-install-root` substitutes it
+# into the root Argo Application, so this is the only place an
+# environment is chosen -- it no longer has to agree with a valueFiles
+# entry in the bootstrap chart.
 QUEENSWOOD_ENV := env_var_or_default("QUEENSWOOD_ENV", "queenswood-test")
-QUEENSWOOD_DOMAIN := QUEENSWOOD_ENV + ".repldriven.com"
+# Stated, not derived from QUEENSWOOD_ENV. Keeping the two independent
+# is what lets the public domain move (repldriven.com -> queenswood.io,
+# `<env>.` prefix -> apex for prod) without renaming the environment
+# and everything named after it.
+QUEENSWOOD_DOMAIN := env_var_or_default("QUEENSWOOD_DOMAIN", "queenswood-test.repldriven.com")
 # Cloud DNS ManagedZone resource name (not a compute zone).
 QUEENSWOOD_DNS_ZONE := QUEENSWOOD_ENV + "-zone"
+
+# `pass` branch for this environment. Every segment is a name the repo
+# already defines -- the product, the platform, and QUEENSWOOD_ENV --
+# so the tree is identical in any operator's store. Concrete values
+# (project id, org id, account, client secrets) are entry contents,
+# never path segments.
+PASS_ENV := "queenswood/gcp/" + QUEENSWOOD_ENV
 
 # List all available recipes
 list:

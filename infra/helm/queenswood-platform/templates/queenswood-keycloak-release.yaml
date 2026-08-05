@@ -38,6 +38,13 @@ spec:
       # load balancer and get a 404 from the proxy, not from Keycloak.
       gateway:
         name: {{ .Values.env.name }}-gateway
+      # Google IdP client secret via Keycloak's files-plaintext vault.
+      # The Secret is applied by `just gcp-keycloak-vault-secret`, and
+      # the mount is optional -- safe to enable before the Secret
+      # exists, since Google sign-in is already unavailable until it
+      # does.
+      vault:
+        enabled: true
       postgresql:
         mode: external
         external:

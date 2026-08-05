@@ -1,0 +1,31 @@
+{{- if .Values.gateway.healthCheck.enabled }}
+# GKE derives a backend health check from the Service behind a
+# Gateway-attached HTTPRoute, and its default probes `/` on the serving
+# port expecting 200. Keycloak answers 302 there, so the backend never
+# goes healthy and the load balancer serves 503 while Keycloak itself is
+# fine -- in-cluster requests to the same Service return 200.
+#
+# Point the check at the management port's readiness endpoint instead.
+# The policy can only attach once the Service is referenced by a
+# Gateway-attached HTTPRoute, which is why this belongs beside the route
+# rather than in the queenswood chart.
+apiVersion: networking.gke.io/v1
+kind: HealthCheckPolicy
+metadata:
+  name: {{ .Release.Name }}-keycloak
+  labels:
+    {{- include "queenswood-keycloak.labels" . | nindent 4 }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "{{ .Values.argocd.syncWave }}"
+spec:
+  default:
+    config:
+      type: HTTP
+      httpHealthCheck:
+        port: {{ .Values.gateway.healthCheck.port }}
+        requestPath: {{ .Values.gateway.healthCheck.requestPath | quote }}
+  targetRef:
+    group: ""
+    kind: Service
+    name: {{ .Release.Name }}-keycloak-service
+{{- end }}

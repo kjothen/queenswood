@@ -246,6 +246,8 @@ kind-xp-install-root:
     #!/usr/bin/env zsh
     set -e
     export PROJECT_ID=$(just _gcp-project-id)
+    export QUEENSWOOD_ENV='{{ QUEENSWOOD_ENV }}'
+    export QUEENSWOOD_DOMAIN='{{ QUEENSWOOD_DOMAIN }}'
     envsubst < infra/bootstrap/root-app.yml.tmpl \
       | kubectl --context {{ KIND_XP_CLUSTER }} apply -f -
 
@@ -254,12 +256,17 @@ keycloak-admin-login:
     #!/usr/bin/env zsh
     set -euo pipefail
     KCTX=$(just _gke-ctx)
-    user=$(kubectl --context $KCTX -n {{ QUEENSWOOD_ENV }} get secret queenswood-keycloak \
-      -o jsonpath='{.data.admin-user}' 2>/dev/null | base64 -d)
-    pass=$(kubectl --context $KCTX -n {{ QUEENSWOOD_ENV }} get secret queenswood-keycloak \
-      -o jsonpath='{.data.admin-password}' 2>/dev/null | base64 -d)
+    # The operator mints this from the Keycloak CR's name
+    # (queenswood-keycloak-keycloak), with basic-auth key names -- not a
+    # chart-rendered `queenswood-keycloak` Secret with admin-user /
+    # admin-password, which has never existed.
+    SECRET=queenswood-keycloak-keycloak-initial-admin
+    user=$(kubectl --context $KCTX -n {{ QUEENSWOOD_ENV }} get secret $SECRET \
+      -o jsonpath='{.data.username}' 2>/dev/null | base64 -d)
+    pass=$(kubectl --context $KCTX -n {{ QUEENSWOOD_ENV }} get secret $SECRET \
+      -o jsonpath='{.data.password}' 2>/dev/null | base64 -d)
     if [[ -z "$user" || -z "$pass" ]]; then
-      echo "queenswood-keycloak Secret missing or empty in namespace {{ QUEENSWOOD_ENV }} — is the Keycloak chart installed?" >&2
+      echo "$SECRET missing or empty in namespace {{ QUEENSWOOD_ENV }} — is the Keycloak chart installed?" >&2
       exit 1
     fi
     echo "Admin console: https://keycloak.{{ QUEENSWOOD_DOMAIN }}/admin/"

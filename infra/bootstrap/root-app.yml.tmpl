@@ -1,8 +1,14 @@
-# Applied locally by `kind-xp-install-root` via envsubst with
-# the live PROJECT_ID. ${PROJECT_ID} is the ONE place the per-deploy
-# project ID enters the bootstrap chain: it flows from here into the
-# bootstrap chart's helm.parameters, then into queenswood-gcp's
-# helm.parameters, and from there into every Crossplane MR.
+# Applied locally by `kind-xp-install-root` via envsubst. This is the
+# ONE place per-installation values enter the bootstrap chain: each
+# flows from here into the bootstrap chart's helm.parameters, then into
+# the child Applications', and from there into the charts.
+#
+# ${PROJECT_ID} carries a random suffix per `gcloud projects create`, so
+# it can't live in git. ${QUEENSWOOD_ENV} and ${QUEENSWOOD_DOMAIN} could,
+# but routing them the same way means the repo holds no installation's
+# names: another operator points this at their own domain without
+# forking a values file, and moving domain is a Justfile edit rather
+# than a rename of everything named after the environment.
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -20,6 +26,10 @@ spec:
       parameters:
         - name: gcpProjectId
           value: "${PROJECT_ID}"
+        - name: envName
+          value: "${QUEENSWOOD_ENV}"
+        - name: envDomain
+          value: "${QUEENSWOOD_DOMAIN}"
   destination:
     server: https://kubernetes.default.svc
     namespace: argocd

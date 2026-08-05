@@ -128,6 +128,10 @@ those in full before non-trivial work on their topic.
 - **Deployment** — Helm chart, kind dev loop, per-service
   Docker images. See
   [recipes/deployment.md](docs/recipes/deployment.md).
+- **Cloud deployment** — running on GCP from GHCR-published
+  charts and images, which tier stays up between sessions and
+  which cycles, and the up/down runbook. See
+  [recipes/cloud-deployment.md](docs/recipes/cloud-deployment.md).
 - **Infrastructure** — GCP via Crossplane on a kind management
   plane; Argo CD wires the bootstrap chain; queenswood-platform
   Composites + Releases drive everything else. See

@@ -94,7 +94,7 @@
       "firstBrokerLoginFlowAlias": "first broker login",
       "config": {
         "clientId": "REPLACE-ME-GOOGLE-CLIENT-ID",
-        "clientSecret": "REPLACE-ME-GOOGLE-CLIENT-SECRET",
+        "clientSecret": "${vault.google-client-secret}",
         "syncMode": "IMPORT",
         "useJwksUrl": "true"
       }
@@ -143,8 +143,7 @@
       },
       "redirectUris": [
         "http://localhost:5173/*",
-        "http://localhost:8081/*",
-        "https://console.*.repldriven.com/*"
+        "http://localhost:8081/*"
       ],
       "webOrigins": ["+"],
       "protocolMappers": [
