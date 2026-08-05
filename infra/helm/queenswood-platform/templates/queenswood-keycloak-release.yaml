@@ -30,6 +30,14 @@ spec:
       env:
         name: {{ .Values.env.name }}
         domain: {{ .Values.env.domain }}
+      # The queenswood chart names its Gateway <release>-gateway, and
+      # that release is named for env.name. The keycloak chart's own
+      # default (queenswood-gateway) only matches when env.name is
+      # `queenswood`, and an HTTPRoute whose parentRef names a
+      # non-existent Gateway is never attached -- requests reach the
+      # load balancer and get a 404 from the proxy, not from Keycloak.
+      gateway:
+        name: {{ .Values.env.name }}-gateway
       # Google IdP client secret via Keycloak's files-plaintext vault.
       # The Secret is applied by `just gcp-keycloak-vault-secret`, and
       # the mount is optional -- safe to enable before the Secret
