@@ -90,6 +90,8 @@ These survive every teardown short of
 - Domain-ownership verification for the parent domain.
 - The Cloud DNS `ManagedZone` and the four nameservers you
   pasted into the registrar.
+- The backup bucket, `gs://<project-id>-backups`, holding the
+  Keycloak exports.
 
 The zone is the expensive-to-rebuild one, and not in money. A new
 zone gets a **different** nameserver set, so the registrar
@@ -101,6 +103,13 @@ allocations. That's why the platform chart declares the zone
 writes it — and why `just gcp-down` leaves it alone.
 `just gcp-dns-zone-delete` exists, prompts for confirmation, and
 is for emergencies.
+
+The bucket is what makes tier 2 disposable rather than
+destructive. CloudSQL's automated backups are enabled, but they
+are tied to the instance's lifecycle and `gcp-down` deletes the
+instance — so an export is the only thing that survives a
+teardown. Object storage costs pennies where a running instance
+does not, which is the whole trade.
 
 ### Tier 1 — the external addresses, the floor worth keeping warm
 
@@ -207,9 +216,22 @@ up/down cycles of the FDB and Kafka StatefulSets is enough to
 exhaust the default regional SSD quota and leave the next cold
 start stuck on a pending PVC.
 
-Then: kill kind, delete the GKE cluster, delete CloudSQL, delete
-the IP, certificate, VPC, and DNS records, prune the local
-kubeconfig context.
+Then: kill kind, delete the GKE cluster, **export the Keycloak
+database to the backup bucket**, delete CloudSQL, delete the IP,
+certificate, VPC, and DNS records, prune the local kubeconfig
+context.
+
+The export runs after GKE is gone, so nothing is writing and the
+dump is consistent, and `gcp-down` refuses to delete the instance
+if it fails. Restore with `just gcp-cloudsql-import`, which takes
+the most recent export unless given one. Scale Keycloak to zero
+first — an import under a live Keycloak leaves it reading rows
+that change underneath it.
+
+FDB has no backup at all, so a teardown loses every org, party
+and account while keeping the identities that reference them.
+That asymmetry is deliberate for now rather than accidental, but
+it is worth knowing before treating `gcp-down` as reversible.
 
 ### Redeploying without cycling the cluster
 
@@ -232,6 +254,73 @@ kubeconfig context.
   With a fixed `latest` tag, a reinstall does not re-run them;
   applying new FDB record metadata means deleting those Jobs so
   the next reconcile recreates them.
+
+### Credentials
+
+Three kinds, and which one a secret is decides where it lives.
+
+**Generated, never seen.** The Keycloak admin client's signing
+key. The chart mints it, preserves it across upgrades by looking
+up the live Secret, and the bootstrap Job registers the public
+half on the client. Nothing outside the cluster holds the
+matching half, so losing it costs a regenerate-and-re-register
+rather than a coordinated rotation — which is why it is in
+neither `pass` nor git.
+
+**Stored, pushed by you.** Anything issued elsewhere: the Google
+IdP client secret today. `pass` holds it,
+`just gcp-keycloak-vault-secret` puts it in Keycloak's vault.
+Google minted it and holds the other half, so it has to be
+recorded.
+
+**Stored, injected at bootstrap.** Keycloak's CloudSQL password.
+It reaches both the CloudSQL user and Keycloak from one
+substitution in the root Application, which is what stops the two
+sides drifting.
+
+The rule that sorts them: **store a secret only when something
+outside your control holds the matching half.**
+
+### Rotating the CloudSQL password
+
+Crossplane cannot do this on a running instance, and it will not
+tell you so. `google_sql_user`'s password is write-only —
+Terraform cannot read it back, so upjet observes no drift and has
+nothing to reconcile. The `User` MR sets the password at
+**create** and never again, and it reports `Synced=True`
+throughout, because "no diff detected" is not "the password is
+what you think it is".
+
+So a new value reaches both Secrets and neither reaches CloudSQL.
+Nothing breaks immediately: an existing Postgres session survives
+a password change, so Keycloak keeps working until it restarts —
+and then fails to connect, at whatever moment it happens to
+restart.
+
+Check before restarting anything, and compare all three:
+
+```bash
+kubectl --context kind-xp-mp -n crossplane-system get secret \
+  queenswood-keycloak-password -o jsonpath='{.data.password}' | base64 -d | md5
+kubectl --context "$(just _gke-ctx)" -n "$QUEENSWOOD_ENV" get secret \
+  queenswood-keycloak-conn -o jsonpath='{.data.password}' | base64 -d | md5
+pass show "queenswood/gcp/$QUEENSWOOD_ENV/db/keycloak" \
+  | head -1 | tr -d '\n' | md5
+```
+
+Agreement between those three is necessary but not sufficient —
+they are all inputs, and CloudSQL is the one that decides. Prove
+it by authenticating, then set it explicitly:
+
+```bash
+gcloud sql users set-password keycloak --instance=queenswood-keycloak \
+  --project="$(just _gcp-project-id)" --prompt-for-password
+```
+
+Then restart Keycloak deliberately rather than waiting to find
+out. On a torn-down-and-rebuilt instance none of this applies —
+the password is applied at create, which is the path the normal
+teardown cycle takes.
 
 ### When Crossplane stops reconciling
 
