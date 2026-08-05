@@ -506,11 +506,12 @@ gcp-oauth-client name="google":
 gcp-keycloak-idp name="google":
     #!/usr/bin/env zsh
     set -euo pipefail
-    # The client id goes over the Admin API rather than through the
-    # realm JSON: the operator won't re-run a completed
-    # KeycloakRealmImport, so a realm that already exists never picks up
-    # a chart change. The secret goes into the vault instead, which is
-    # why only one of the two is sent here.
+    # Both the client id and the vault expression go over the Admin API,
+    # because the operator won't re-run a completed KeycloakRealmImport
+    # -- a realm that already exists never picks up a chart change, so
+    # it keeps whatever placeholder it was first imported with. Only the
+    # expression is sent, never the secret: Keycloak resolves
+    # ${vault.<key>} from the mounted file at token exchange.
     KCTX=$(just _gke-ctx)
     KCHOST=https://keycloak.{{ QUEENSWOOD_DOMAIN }}
     client_id=$(pass show {{ PASS_ENV }}/auth/clients/ids/{{ name }} | head -1)
@@ -519,7 +520,7 @@ gcp-keycloak-idp name="google":
     idp=$(curl -sf --max-time 15 -H "Authorization: Bearer $TOK" \
       "$KCHOST/admin/realms/queenswood/identity-provider/instances/{{ name }}")
     printf '%s' "$idp" \
-      | CLIENT_ID="$client_id" python3 -c 'import sys,json,os; d=json.load(sys.stdin); d["config"]["clientId"]=os.environ["CLIENT_ID"]; json.dump(d,sys.stdout)' \
+      | CLIENT_ID="$client_id" VAULT_KEY='${vault.{{ name }}-client-secret}' python3 -c 'import sys,json,os; d=json.load(sys.stdin); d["config"]["clientId"]=os.environ["CLIENT_ID"]; d["config"]["clientSecret"]=os.environ["VAULT_KEY"]; json.dump(d,sys.stdout)' \
       | curl -sf --max-time 15 -X PUT -H "Authorization: Bearer $TOK" \
           -H 'Content-Type: application/json' --data @- \
           "$KCHOST/admin/realms/queenswood/identity-provider/instances/{{ name }}"
