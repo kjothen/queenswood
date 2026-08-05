@@ -466,8 +466,79 @@ gcp-k8s-redeploy-svc +components:
       kubectl --context $KCTX -n {{ QUEENSWOOD_ENV }} rollout status  deploy/{{ QUEENSWOOD_ENV }}-$c
     done
 
-# Load the Google IdP client secret from `pass` into Keycloak's vault Secret.
-gcp-keycloak-vault-secret:
+# Print what to create in the Google console, then capture the result into `pass`.
+gcp-oauth-client name="google":
+    #!/usr/bin/env zsh
+    set -euo pipefail
+    # Google has no API for creating a Web OAuth client with a custom
+    # redirect URI -- `gcloud iap oauth-clients` is IAP-scoped, sets its
+    # own redirect URI, and went non-functional in Jan 2026. So the
+    # client is created by hand and this recipe owns the two things
+    # that are easy to get wrong: the exact redirect URI, and where the
+    # result belongs in `pass`.
+    PROJECT_ID=$(just _gcp-project-id)
+    BROKER="realms/queenswood/broker/{{ name }}/endpoint"
+    echo "Create a Web application OAuth client here:"
+    echo "  https://console.cloud.google.com/apis/credentials/oauthclient?project=$PROJECT_ID"
+    echo
+    echo "Authorised redirect URIs -- paste both:"
+    echo "  https://keycloak.{{ QUEENSWOOD_DOMAIN }}/$BROKER"
+    echo "  http://localhost:8090/$BROKER"
+    echo
+    printf 'Client ID: '
+    read client_id
+    printf 'Client secret (not echoed): '
+    read -s client_secret
+    echo
+    if [[ -z "$client_id" || -z "$client_secret" ]]; then
+      echo "both values are required" >&2; exit 1
+    fi
+    printf '%s\n' "$client_id" | pass insert -m -f {{ PASS_ENV }}/auth/clients/ids/{{ name }} >/dev/null
+    printf '%s\n' "$client_secret" | pass insert -m -f {{ PASS_ENV }}/auth/clients/{{ name }} >/dev/null
+    echo "stored {{ PASS_ENV }}/auth/clients/{ids/{{ name }},{{ name }}}"
+    echo "now run: just gcp-keycloak-idp {{ name }}"
+
+# Push an IdP's client id + secret from `pass` into the deployed realm.
+gcp-keycloak-idp name="google":
+    #!/usr/bin/env zsh
+    set -euo pipefail
+    # The client id goes over the Admin API rather than through the
+    # realm JSON: the operator won't re-run a completed
+    # KeycloakRealmImport, so a realm that already exists never picks up
+    # a chart change. The secret goes into the vault instead, which is
+    # why only one of the two is sent here.
+    KCTX=$(just _gke-ctx)
+    KCHOST=https://keycloak.{{ QUEENSWOOD_DOMAIN }}
+    client_id=$(pass show {{ PASS_ENV }}/auth/clients/ids/{{ name }} | head -1)
+    just gcp-keycloak-vault-secret {{ name }}
+    TOK=$(just _keycloak-admin-token)
+    idp=$(curl -sf --max-time 15 -H "Authorization: Bearer $TOK" \
+      "$KCHOST/admin/realms/queenswood/identity-provider/instances/{{ name }}")
+    printf '%s' "$idp" \
+      | CLIENT_ID="$client_id" python3 -c 'import sys,json,os; d=json.load(sys.stdin); d["config"]["clientId"]=os.environ["CLIENT_ID"]; json.dump(d,sys.stdout)' \
+      | curl -sf --max-time 15 -X PUT -H "Authorization: Bearer $TOK" \
+          -H 'Content-Type: application/json' --data @- \
+          "$KCHOST/admin/realms/queenswood/identity-provider/instances/{{ name }}"
+    echo ">>> {{ name }} clientId updated; restarting Keycloak for the vault mount"
+    kubectl --context $KCTX -n {{ QUEENSWOOD_ENV }} rollout restart statefulset/queenswood-keycloak-keycloak
+    kubectl --context $KCTX -n {{ QUEENSWOOD_ENV }} rollout status statefulset/queenswood-keycloak-keycloak --timeout=5m
+
+# Print a Keycloak admin access token for the active env.
+[private]
+_keycloak-admin-token:
+    #!/usr/bin/env zsh
+    set -euo pipefail
+    KCTX=$(just _gke-ctx)
+    S=queenswood-keycloak-keycloak-initial-admin
+    u=$(kubectl --context $KCTX -n {{ QUEENSWOOD_ENV }} get secret $S -o jsonpath='{.data.username}' | base64 -d)
+    p=$(kubectl --context $KCTX -n {{ QUEENSWOOD_ENV }} get secret $S -o jsonpath='{.data.password}' | base64 -d)
+    curl -sf --max-time 15 -d client_id=admin-cli -d "username=$u" \
+      --data-urlencode "password=$p" -d grant_type=password \
+      "https://keycloak.{{ QUEENSWOOD_DOMAIN }}/realms/master/protocol/openid-connect/token" \
+      | python3 -c 'import sys,json; print(json.load(sys.stdin)["access_token"])'
+
+# Load an IdP client secret from `pass` into Keycloak's vault Secret.
+gcp-keycloak-vault-secret name="google":
     #!/usr/bin/env zsh
     set -euo pipefail
     # Mirrors the testcontainer flow in test-resources' keycloak
@@ -475,16 +546,16 @@ gcp-keycloak-vault-secret:
     # same <realm>_<key> filename. The secret goes from `pass` straight
     # to the cluster -- never git, never the shell environment.
     KCTX=$(just _gke-ctx)
-    secret=$(pass show {{ PASS_ENV }}/auth/clients/google) || {
-      echo "{{ PASS_ENV }}/auth/clients/google not in pass" >&2; exit 1
+    secret=$(pass show {{ PASS_ENV }}/auth/clients/{{ name }} | head -1) || {
+      echo "{{ PASS_ENV }}/auth/clients/{{ name }} not in pass" >&2; exit 1
     }
+    # <realm>_<key>, which the realm references as ${vault.<key>}.
     kubectl --context $KCTX -n {{ QUEENSWOOD_ENV }} create secret generic \
       queenswood-keycloak-vault \
-      --from-literal=queenswood_google-client-secret="$secret" \
+      --from-literal=queenswood_{{ name }}-client-secret="$secret" \
       --dry-run=client -o yaml \
       | kubectl --context $KCTX -n {{ QUEENSWOOD_ENV }} apply -f -
-    echo ">>> restart Keycloak to pick it up:"
-    echo "    kubectl --context $KCTX -n {{ QUEENSWOOD_ENV }} rollout restart statefulset/queenswood-keycloak-keycloak"
+    echo ">>> stored queenswood_{{ name }}-client-secret in the vault Secret"
 
 # =========================================================================
 # Diagnostics
