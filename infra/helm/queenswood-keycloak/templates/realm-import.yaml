@@ -22,7 +22,22 @@ metadata:
 spec:
   keycloakCRName: {{ .Release.Name }}-keycloak
   realm:
-    {{- .Files.Get "files/queenswood-realm.json" | fromJson | toYaml | nindent 4 }}
+    {{- $realm := .Files.Get "files/queenswood-realm.json" | fromJson }}
+    {{- /*
+      The console's deployed origin is added here rather than listed in
+      the realm JSON. Keycloak honours `*` only as a trailing wildcard on
+      the path -- a pattern like https://console.*.example.com/* matches
+      nothing and fails the authorization request with "Invalid
+      parameter: redirect_uri". So the host has to be literal, and a
+      literal host in a shared realm file would both pin the environment
+      and hardcode the registrar domain.
+    */}}
+    {{- range $client := $realm.clients }}
+      {{- if eq $client.clientId "queenswood-console" }}
+        {{- $_ := set $client "redirectUris" (append $client.redirectUris (printf "https://console.%s/*" $.Values.env.domain)) }}
+      {{- end }}
+    {{- end }}
+    {{- toYaml $realm | nindent 4 }}
 ---
 apiVersion: k8s.keycloak.org/v2beta1
 kind: KeycloakRealmImport

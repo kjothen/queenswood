@@ -143,8 +143,7 @@
       },
       "redirectUris": [
         "http://localhost:5173/*",
-        "http://localhost:8081/*",
-        "https://console.*.repldriven.com/*"
+        "http://localhost:8081/*"
       ],
       "webOrigins": ["+"],
       "protocolMappers": [

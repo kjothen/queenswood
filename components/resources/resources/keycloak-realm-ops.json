@@ -60,8 +60,7 @@
       },
       "redirectUris": [
         "http://localhost:5174/*",
-        "http://localhost:8081/*",
-        "https://app.*.repldriven.com/*"
+        "http://localhost:8081/*"
       ],
       "webOrigins": ["+"],
       "protocolMappers": [
