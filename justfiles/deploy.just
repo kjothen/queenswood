@@ -246,6 +246,8 @@ kind-xp-install-root:
     #!/usr/bin/env zsh
     set -e
     export PROJECT_ID=$(just _gcp-project-id)
+    export QUEENSWOOD_ENV='{{ QUEENSWOOD_ENV }}'
+    export QUEENSWOOD_DOMAIN='{{ QUEENSWOOD_DOMAIN }}'
     envsubst < infra/bootstrap/root-app.yml.tmpl \
       | kubectl --context {{ KIND_XP_CLUSTER }} apply -f -
 
