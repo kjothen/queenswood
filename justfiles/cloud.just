@@ -760,3 +760,19 @@ gcp-health-check:
       "$(curl -sIo /dev/null -w '%{http_code}' --max-time 5 https://{{ QUEENSWOOD_DOMAIN }} 2>/dev/null)" 200
     is "HTTP {{ QUEENSWOOD_DOMAIN }} -> 301" \
       "$(curl -sIo /dev/null -w '%{http_code}' --max-time 5 http://{{ QUEENSWOOD_DOMAIN }} 2>/dev/null)" 301
+
+# Print Keycloak's CloudSQL password from `pass`, creating it on first use.
+[private]
+_keycloak-db-password:
+    #!/usr/bin/env zsh
+    set -euo pipefail
+    # Generated once and kept, not generated per install: CloudSQL holds
+    # the matching half, so a fresh value on a rebuilt cluster would not
+    # match an instance that survived. `pass generate` is idempotent here
+    # only because we check first -- it overwrites otherwise.
+    ENTRY={{ PASS_ENV }}/db/keycloak
+    if ! pass show "$ENTRY" >/dev/null 2>&1; then
+      pass generate -n "$ENTRY" 32 >/dev/null
+      echo ">>> generated $ENTRY" >&2
+    fi
+    pass show "$ENTRY" | head -1

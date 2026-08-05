@@ -19,6 +19,12 @@ gcpProjectId: ""
 envName: ""
 envDomain: ""
 
+# Keycloak's CloudSQL password, from `pass` via the root Application.
+# Two charts need the same value -- queenswood-gcp sets it on the
+# CloudSQL user, queenswood-platform hands it to Keycloak -- and this
+# is the single place it enters, so they cannot drift.
+keycloakDbPassword: ""
+
 # Default K8s namespace for the queenswood-* workloads on GKE. Falls
 # back to envName when that is set.
 envNamespace: queenswood-test

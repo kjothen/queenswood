@@ -24,6 +24,10 @@ spec:
           value: {{ include "bootstrap.projectId" . | quote }}
         - name: envNamespace
           value: {{ .Values.envNamespace | quote }}
+{{- if .Values.keycloakDbPassword }}
+        - name: keycloakDbPassword
+          value: {{ .Values.keycloakDbPassword | quote }}
+{{- end }}
   destination:
     server: https://kubernetes.default.svc
     namespace: crossplane-system

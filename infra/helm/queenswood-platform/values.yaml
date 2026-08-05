@@ -43,6 +43,11 @@ queenswoodKeycloak:
     name: queenswood-keycloak
     repository: oci://ghcr.io/repldriven
     version: 0.3.1
+  # Supplied by the root Application from `pass`, the same substitution
+  # that sets it on the CloudSQL user -- which is what keeps the two
+  # sides in step. Previously a literal in two files with a comment
+  # asking whoever rotated it to remember both.
+  dbPassword: ""
   proxy:
     connectionName: queenswood-820d84:europe-west2:queenswood-keycloak
     gcpServiceAccount: keycloak-sql-proxy@queenswood-820d84.iam.gserviceaccount.com
