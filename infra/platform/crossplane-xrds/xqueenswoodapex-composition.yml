@@ -61,6 +61,52 @@ spec:
           # queenswood-keycloak chart) because `RecordSet` is a
           # Crossplane managed resource: its CRD only exists on the
           # kind management plane, while the chart installs onto GKE.
+          - name: api
+            base:
+              apiVersion: dns.gcp.m.upbound.io/v1beta1
+              kind: RecordSet
+              metadata:
+                name: queenswood-api
+              spec:
+                forProvider:
+                  type: A
+                  ttl: 300
+                  rrdatas: [""]
+            patches:
+              - fromFieldPath: spec.managedZoneRef.name
+                toFieldPath: spec.forProvider.managedZoneRef.name
+              - fromFieldPath: spec.domain
+                toFieldPath: spec.forProvider.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "api.%s."
+              - fromFieldPath: status.ip
+                toFieldPath: spec.forProvider.rrdatas[0]
+          - name: console
+            base:
+              apiVersion: dns.gcp.m.upbound.io/v1beta1
+              kind: RecordSet
+              metadata:
+                name: queenswood-console
+              spec:
+                forProvider:
+                  type: A
+                  ttl: 300
+                  rrdatas: [""]
+            patches:
+              - fromFieldPath: spec.managedZoneRef.name
+                toFieldPath: spec.forProvider.managedZoneRef.name
+              - fromFieldPath: spec.domain
+                toFieldPath: spec.forProvider.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "console.%s."
+              - fromFieldPath: status.ip
+                toFieldPath: spec.forProvider.rrdatas[0]
           - name: keycloak
             base:
               apiVersion: dns.gcp.m.upbound.io/v1beta1

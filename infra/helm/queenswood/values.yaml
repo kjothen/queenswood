@@ -134,6 +134,9 @@ gateway:
   # console SPA. Kept distinct from `host` so the SPA can keep
   # its keycloak-js redirectUris + post-logout origins clean.
   consoleHost: console.api.local
+  # Third hostname, routed to bank-api. Its own origin so CORS stays an
+  # explicit allowlist and the API shares no origin with browser JS.
+  apiHost: api.api.local
   gcp:
     enabled: false
     # Regional Address provisioned in infra/gcp/networking.yml.
