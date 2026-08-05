@@ -14,7 +14,7 @@ release:
   chart:
     name: queenswood
     repository: oci://ghcr.io/repldriven
-    version: 0.6.0
+    version: 0.7.0
   # The Crossplane provider-config that owns GKE-bound Helm releases.
   # Shared by the queenswood, queenswood-keycloak, and
   # keycloak-operator Release resources below.
@@ -55,9 +55,9 @@ queenswoodKeycloak:
   # match what bank-api derives from base-url (internal). Aligning
   # at external keeps the iss match without code changes; a future
   # Envoy egress would let us go internal again while preserving
-  # the external iss. `adminClientSecret` must match the realm-
-  # import JSON.
+  # the external iss. The admin client secret is not configured here:
+  # the queenswood chart generates it and its bootstrap Job pushes it
+  # into Keycloak, so no copy of it exists in git.
   serverSide:
     realm: queenswood
     adminClientId: queenswood-admin
-    adminClientSecret: queenswood-admin-secret-change-me

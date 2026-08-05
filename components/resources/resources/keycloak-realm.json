@@ -118,7 +118,6 @@
   "clients": [
     {
       "clientId": "queenswood-admin",
-      "secret": "queenswood-admin-secret-change-me",
       "enabled": true,
       "publicClient": false,
       "serviceAccountsEnabled": true,
