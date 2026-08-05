@@ -14,6 +14,13 @@ host:
 gateway:
   name: queenswood-gateway
   sectionName: https
+  # GKE-specific: a HealthCheckPolicy overriding the default `/`-on-the-
+  # serving-port probe, which Keycloak answers 302 to. Turn off for a
+  # non-GKE gateway, where the CRD doesn't exist.
+  healthCheck:
+    enabled: true
+    port: 9000
+    requestPath: /health/ready
 
 # Keycloak's files-plaintext vault. Each key is a file in `dir` named
 # <realm>_<key>, so the queenswood realm's ${vault.google-client-secret}
