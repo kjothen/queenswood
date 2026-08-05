@@ -81,6 +81,17 @@ keycloak:
     usernameKey: username
     passwordKey: password
 
+  # Services that call the Admin REST API and therefore need the admin
+  # client's signing key mounted. `bank` issues a per-bank service-
+  # account client on creation and runs in the operational group, which
+  # is why that service is on the list. Everything else gets nothing --
+  # previously every service carried the credential whether or not it
+  # had any use for it.
+  consumers:
+    - api-service
+    - operational-processors-service
+    - monolith-service
+
 # -- OpenTelemetry collector endpoint (gets passed as OTEL_ENDPOINT env
 # to every service). Empty falls back to the in-chart Jaeger when
 # jaeger.enabled=true, and disables the SDK otherwise. Set explicitly to

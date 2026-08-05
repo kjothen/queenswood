@@ -61,17 +61,20 @@ spec:
           volumeMounts:
             - name: fdb-cluster-file
               mountPath: /etc/fdb
-        # Teach Keycloak the admin client secret this release generated.
-        # Nothing shares a literal any more: the realm import carries no
-        # client secret, so Keycloak mints its own at import and this
-        # overwrites it with the value in the Secret bank-api reads.
+        # Register the public half of this release's signing key on the
+        # queenswood-admin client, and switch it to client-jwt.
         #
-        # It belongs here rather than in a helm hook because every
-        # service Deployment already blocks on this Job, so doing it as
-        # an initContainer orders the push ahead of every consumer --
-        # including bootstrap's own container, which authenticates with
-        # exactly this secret.
-        - name: sync-admin-client-secret
+        # Only public material crosses the wire -- the private half never
+        # leaves the pods that mount it, and Keycloak never holds a copy
+        # of anything secret for this client. A URL (jwks.url) would be
+        # the more automatic option but deadlocks cold start: every
+        # service Deployment blocks on this Job, so bank-api can't be
+        # serving a JWKS at the moment Keycloak would need to fetch it.
+        #
+        # It belongs here rather than in a helm hook because that same
+        # gate orders it ahead of every consumer, including bootstrap's
+        # own container.
+        - name: sync-admin-client-key
           image: alpine/k8s:1.30.14
           env:
             - name: KC_BASE_URL
@@ -80,11 +83,8 @@ spec:
               value: {{ .Values.keycloak.adminClientId | quote }}
             - name: KC_REALMS
               value: {{ printf "%s %s" .Values.keycloak.realm .Values.keycloak.opsRealm | quote }}
-            - name: KC_CLIENT_SECRET
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .Release.Name }}-keycloak-admin
-                  key: KEYCLOAK_ADMIN_CLIENT_SECRET
+            - name: KC_KEY_FILE
+              value: /etc/queenswood/keycloak/admin-client.pem
             {{- if .Values.keycloak.adminSecret.name }}
             - name: KC_ADMIN_USER
               valueFrom:
@@ -102,6 +102,10 @@ spec:
             - name: KC_ADMIN_PASSWORD
               value: {{ .Values.keycloak.dev.adminPassword | quote }}
             {{- end }}
+          volumeMounts:
+            - name: keycloak-admin-key
+              mountPath: /etc/queenswood/keycloak
+              readOnly: true
           command:
             - sh
             - -c
@@ -114,6 +118,14 @@ spec:
                 echo "Waiting for Keycloak at $KC_BASE_URL..."
                 sleep 5
               done
+              # Keycloak wants the base64 body of the SubjectPublicKeyInfo,
+              # without the PEM armour or newlines.
+              PUB=$(openssl rsa -in "$KC_KEY_FILE" -pubout 2>/dev/null \
+                | grep -v '^-----' | tr -d '\n')
+              if [ -z "$PUB" ]; then
+                echo "could not derive a public key from $KC_KEY_FILE" >&2
+                exit 1
+              fi
               TOKEN=$(curl -sf -d client_id=admin-cli \
                 -d "username=$KC_ADMIN_USER" \
                 --data-urlencode "password=$KC_ADMIN_PASSWORD" \
@@ -134,11 +146,15 @@ spec:
                 fi
                 curl -sf -H "Authorization: Bearer $TOKEN" \
                   "$KC_BASE_URL/admin/realms/$realm/clients/$id" \
-                  | jq --arg s "$KC_CLIENT_SECRET" '.secret = $s' \
+                  | jq --arg pub "$PUB" '
+                      .clientAuthenticatorType = "client-jwt"
+                      | .attributes = ((.attributes // {})
+                          + {"jwt.credential.publicKey": $pub,
+                             "token.endpoint.auth.signing.alg": "RS256"})' \
                   | curl -sf -X PUT -H "Authorization: Bearer $TOKEN" \
                       -H 'Content-Type: application/json' --data @- \
                       "$KC_BASE_URL/admin/realms/$realm/clients/$id"
-                echo "synced $KC_CLIENT_ID secret in realm $realm"
+                echo "registered $KC_CLIENT_ID signing key in realm $realm"
               done
         {{- if .Values.migrator.enabled }}
         # Block until the migrator Job has applied FDB metadata +
@@ -170,14 +186,14 @@ spec:
               value: {{ .Values.keycloak.realm | quote }}
             - name: KEYCLOAK_ADMIN_CLIENT_ID
               value: {{ .Values.keycloak.adminClientId | quote }}
-            - name: KEYCLOAK_ADMIN_CLIENT_SECRET
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .Release.Name }}-keycloak-admin
-                  key: KEYCLOAK_ADMIN_CLIENT_SECRET
+            - name: KEYCLOAK_ADMIN_CLIENT_PRIVATE_KEY_FILE
+              value: /etc/queenswood/keycloak/admin-client.pem
           volumeMounts:
             - name: fdb-cluster-file
               mountPath: /etc/fdb
+              readOnly: true
+            - name: keycloak-admin-key
+              mountPath: /etc/queenswood/keycloak
               readOnly: true
           {{- with .Values.bootstrap.resources }}
           resources:
@@ -186,4 +202,8 @@ spec:
       volumes:
         - name: fdb-cluster-file
           emptyDir: {}
+        - name: keycloak-admin-key
+          secret:
+            secretName: {{ .Release.Name }}-keycloak-admin
+            defaultMode: 0400
 {{- end }}

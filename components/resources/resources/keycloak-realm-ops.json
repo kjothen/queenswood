@@ -38,6 +38,10 @@
       "clientId": "queenswood-admin",
       "enabled": true,
       "publicClient": false,
+      "clientAuthenticatorType": "client-jwt",
+      "attributes": {
+        "token.endpoint.auth.signing.alg": "RS256"
+      },
       "serviceAccountsEnabled": true,
       "standardFlowEnabled": false,
       "directAccessGrantsEnabled": false,

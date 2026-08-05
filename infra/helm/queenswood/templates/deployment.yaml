@@ -148,11 +148,14 @@ spec:
               value: {{ $.Values.keycloak.realm | quote }}
             - name: KEYCLOAK_ADMIN_CLIENT_ID
               value: {{ $.Values.keycloak.adminClientId | quote }}
-            - name: KEYCLOAK_ADMIN_CLIENT_SECRET
-              valueFrom:
-                secretKeyRef:
-                  name: {{ $.Release.Name }}-keycloak-admin
-                  key: KEYCLOAK_ADMIN_CLIENT_SECRET
+            {{- if has $svcName $.Values.keycloak.consumers }}
+            # private_key_jwt: the client assertion is signed with this
+            # key rather than presenting a shared secret. Mounted as a
+            # file because a multi-line PEM doesn't survive an env var,
+            # and only on the services that call the Admin REST API.
+            - name: KEYCLOAK_ADMIN_CLIENT_PRIVATE_KEY_FILE
+              value: /etc/queenswood/keycloak/admin-client.pem
+            {{- end }}
             {{- with $.Values.keycloak.expectedIssuer }}
             - name: KEYCLOAK_EXPECTED_ISSUER
               value: {{ . | quote }}
@@ -175,6 +178,11 @@ spec:
             - name: fdb-cluster-file
               mountPath: /etc/fdb
               readOnly: true
+            {{- if has $svcName $.Values.keycloak.consumers }}
+            - name: keycloak-admin-key
+              mountPath: /etc/queenswood/keycloak
+              readOnly: true
+            {{- end }}
           {{- with $svc.resources }}
           resources:
             {{- toYaml . | nindent 12 }}
@@ -182,5 +190,11 @@ spec:
       volumes:
         - name: fdb-cluster-file
           emptyDir: {}
+        {{- if has $svcName $.Values.keycloak.consumers }}
+        - name: keycloak-admin-key
+          secret:
+            secretName: {{ $.Release.Name }}-keycloak-admin
+            defaultMode: 0400
+        {{- end }}
 {{- end }}
 {{- end }}
