@@ -12,10 +12,18 @@ identity-provider: !system/component
     dev: queenswood-admin
     test: queenswood-admin
     default: !env KEYCLOAK_ADMIN_CLIENT_ID
+  # Local + tests stay on client_secret against an ephemeral
+  # testcontainer realm. Deployed uses private_key_jwt: a key file
+  # rather than the PEM inline, because a multi-line PEM does not
+  # survive an environment variable intact.
   admin-client-secret: !profile
     dev: queenswood-admin-test-secret
     test: queenswood-admin-test-secret
-    default: !env KEYCLOAK_ADMIN_CLIENT_SECRET
+    default: ~
+  admin-client-private-key-file: !profile
+    dev: ~
+    test: ~
+    default: !env KEYCLOAK_ADMIN_CLIENT_PRIVATE_KEY_FILE
   expected-issuer: !profile
     dev: ~
     test: ~
@@ -35,10 +43,18 @@ identity-provider-ops: !system/component
     dev: queenswood-admin
     test: queenswood-admin
     default: !env KEYCLOAK_ADMIN_CLIENT_ID
+  # Local + tests stay on client_secret against an ephemeral
+  # testcontainer realm. Deployed uses private_key_jwt: a key file
+  # rather than the PEM inline, because a multi-line PEM does not
+  # survive an environment variable intact.
   admin-client-secret: !profile
     dev: queenswood-admin-test-secret
     test: queenswood-admin-test-secret
-    default: !env KEYCLOAK_ADMIN_CLIENT_SECRET
+    default: ~
+  admin-client-private-key-file: !profile
+    dev: ~
+    test: ~
+    default: !env KEYCLOAK_ADMIN_CLIENT_PRIVATE_KEY_FILE
   expected-issuer: !profile
     dev: ~
     test: ~
