@@ -118,7 +118,6 @@
   "clients": [
     {
       "clientId": "queenswood-admin",
-      "secret": "queenswood-admin-secret-change-me",
       "enabled": true,
       "publicClient": false,
       "serviceAccountsEnabled": true,
@@ -242,21 +241,6 @@
           "manage-users"
         ]
       }
-    },
-    {
-      "username": "dev",
-      "enabled": true,
-      "emailVerified": true,
-      "email": "dev@queenswood.local",
-      "firstName": "Dev",
-      "lastName": "User",
-      "credentials": [
-        {
-          "type": "password",
-          "value": "dev",
-          "temporary": false
-        }
-      ]
     }
   ]
 }

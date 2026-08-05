@@ -70,12 +70,16 @@ keycloak:
     # Keycloak's master-realm bootstrap admin. Dev-only credentials.
     adminUser: admin
     adminPassword: admin
-    # When .Values.secrets.keycloakAdminClientSecret is empty AND
-    # dev.enabled is true, the secret-keycloak template falls back to
-    # this value so it matches the dev realm's queenswood-admin client
-    # secret. The realm JSON committed under files/ hardcodes the same
-    # literal -- keep them in sync.
-    realmAdminClientSecret: "queenswood-admin-secret-change-me"
+
+  # Admin REST credentials the bootstrap Job uses to push the generated
+  # admin client secret into Keycloak. Empty means the bundled dev
+  # Keycloak, whose credentials are the dev.admin* values above; on GKE
+  # queenswood-platform points this at the Secret the Keycloak operator
+  # mints for its own instance.
+  adminSecret:
+    name: ""
+    usernameKey: username
+    passwordKey: password
 
 # -- OpenTelemetry collector endpoint (gets passed as OTEL_ENDPOINT env
 # to every service). Empty falls back to the in-chart Jaeger when

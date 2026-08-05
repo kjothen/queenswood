@@ -36,7 +36,6 @@
   "clients": [
     {
       "clientId": "queenswood-admin",
-      "secret": "queenswood-admin-secret-change-me",
       "enabled": true,
       "publicClient": false,
       "serviceAccountsEnabled": true,
@@ -171,22 +170,6 @@
           "manage-users"
         ]
       }
-    },
-    {
-      "username": "ops",
-      "enabled": true,
-      "emailVerified": true,
-      "email": "ops@queenswood.local",
-      "firstName": "Ops",
-      "lastName": "User",
-      "realmRoles": ["admin"],
-      "credentials": [
-        {
-          "type": "password",
-          "value": "ops",
-          "temporary": false
-        }
-      ]
     }
   ]
 }
