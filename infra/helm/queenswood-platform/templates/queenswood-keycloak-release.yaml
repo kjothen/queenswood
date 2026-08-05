@@ -30,6 +30,13 @@ spec:
       env:
         name: {{ .Values.env.name }}
         domain: {{ .Values.env.domain }}
+      # Google IdP client secret via Keycloak's files-plaintext vault.
+      # The Secret is applied by `just gcp-keycloak-vault-secret`, and
+      # the mount is optional -- safe to enable before the Secret
+      # exists, since Google sign-in is already unavailable until it
+      # does.
+      vault:
+        enabled: true
       postgresql:
         mode: external
         external:

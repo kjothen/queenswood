@@ -439,6 +439,26 @@ gcp-k8s-redeploy-svc +components:
       kubectl --context $KCTX -n {{ QUEENSWOOD_ENV }} rollout status  deploy/{{ QUEENSWOOD_ENV }}-$c
     done
 
+# Load the Google IdP client secret from `pass` into Keycloak's vault Secret.
+gcp-keycloak-vault-secret:
+    #!/usr/bin/env zsh
+    set -euo pipefail
+    # Mirrors the testcontainer flow in test-resources' keycloak
+    # container config: same `pass` entry, same files-plaintext vault,
+    # same <realm>_<key> filename. The secret goes from `pass` straight
+    # to the cluster -- never git, never the shell environment.
+    KCTX=$(just _gke-ctx)
+    secret=$(pass show queenswood/google-client-secret) || {
+      echo "queenswood/google-client-secret not in pass" >&2; exit 1
+    }
+    kubectl --context $KCTX -n {{ QUEENSWOOD_ENV }} create secret generic \
+      queenswood-keycloak-vault \
+      --from-literal=queenswood_google-client-secret="$secret" \
+      --dry-run=client -o yaml \
+      | kubectl --context $KCTX -n {{ QUEENSWOOD_ENV }} apply -f -
+    echo ">>> restart Keycloak to pick it up:"
+    echo "    kubectl --context $KCTX -n {{ QUEENSWOOD_ENV }} rollout restart statefulset/queenswood-keycloak-keycloak"
+
 # =========================================================================
 # Diagnostics
 # =========================================================================

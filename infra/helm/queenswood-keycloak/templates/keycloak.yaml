@@ -48,7 +48,31 @@ spec:
     httpEnabled: true
   proxy:
     headers: xforwarded
+  {{- if .Values.vault.enabled }}
+  # `unsupported` is the operator's own name for the escape hatch, not
+  # a warning about this usage -- it's the only way to add a volume to
+  # the pod it manages.
+  unsupported:
+    podTemplate:
+      spec:
+        volumes:
+          - name: keycloak-vault
+            secret:
+              secretName: {{ .Values.vault.secretName | quote }}
+              optional: true
+        containers:
+          - volumeMounts:
+              - name: keycloak-vault
+                mountPath: {{ .Values.vault.dir | quote }}
+                readOnly: true
+  {{- end }}
   additionalOptions:
+    {{- if .Values.vault.enabled }}
+    - name: vault
+      value: files-plaintext
+    - name: vault-dir
+      value: {{ .Values.vault.dir | quote }}
+    {{- end }}
     {{- if eq .Values.postgresql.mode "external" }}
     # cloud-sql-proxy fronts CloudSQL with a plain-TCP listener on
     # localhost; auth/encryption terminates at the proxy via
