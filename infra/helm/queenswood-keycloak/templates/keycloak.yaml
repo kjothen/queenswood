@@ -68,8 +68,12 @@ spec:
   {{- end }}
   additionalOptions:
     {{- if .Values.vault.enabled }}
+    # `file`, not `files-plaintext`. The provider is named
+    # files-plaintext internally and in the SPI options, but the CLI
+    # option takes file or keystore -- anything else fails the server at
+    # startup rather than falling back.
     - name: vault
-      value: files-plaintext
+      value: file
     - name: vault-dir
       value: {{ .Values.vault.dir | quote }}
     {{- end }}
