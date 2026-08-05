@@ -27,4 +27,6 @@ sqlProxyK8sSa: queenswood-keycloak-cloudsql-proxy
 gkeNodeSa: queenswood-gke-nodes
 
 # Postgres password used by the Cloud SQL User MR. Dev-only.
-keycloakDbPassword: change-me-keycloak-db-password
+# Supplied by the root Application from `pass`; no default, because a
+# defaulted credential is one every installation shares.
+keycloakDbPassword: ""

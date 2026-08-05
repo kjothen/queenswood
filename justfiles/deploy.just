@@ -248,6 +248,9 @@ kind-xp-install-root:
     export PROJECT_ID=$(just _gcp-project-id)
     export QUEENSWOOD_ENV='{{ QUEENSWOOD_ENV }}'
     export QUEENSWOOD_DOMAIN='{{ QUEENSWOOD_DOMAIN }}'
+    # CloudSQL holds the matching half of this one, so it is stored
+    # rather than generated -- see the taxonomy in the root-app template.
+    export KEYCLOAK_DB_PASSWORD=$(just _keycloak-db-password)
     envsubst < infra/bootstrap/root-app.yml.tmpl \
       | kubectl --context {{ KIND_XP_CLUSTER }} apply -f -
 

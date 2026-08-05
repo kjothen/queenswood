@@ -9,6 +9,12 @@
 # names: another operator points this at their own domain without
 # forking a values file, and moving domain is a Justfile edit rather
 # than a rename of everything named after the environment.
+#
+# ${KEYCLOAK_DB_PASSWORD} comes from `pass`. It can't be generated in a
+# chart: Argo renders with `helm template`, where `lookup` returns
+# nothing, so a randAlphaNum would be re-minted on every reconcile --
+# and differently in each of the two charts that need it to agree. It
+# reaches both from here instead, which is also what makes them agree.
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -30,6 +36,8 @@ spec:
           value: "${QUEENSWOOD_ENV}"
         - name: envDomain
           value: "${QUEENSWOOD_DOMAIN}"
+        - name: keycloakDbPassword
+          value: "${KEYCLOAK_DB_PASSWORD}"
   destination:
     server: https://kubernetes.default.svc
     namespace: argocd

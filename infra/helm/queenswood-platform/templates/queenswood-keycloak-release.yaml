@@ -55,12 +55,10 @@ spec:
           # cluster sync we'd otherwise need to pull the Crossplane-
           # composed conn Secret from
           # kind to GKE.
-          # Must match the CloudSQL User MR + Secret defined in
-          # `infra/gcp/database/`. Hardcoded here so both sides
-          # share the same source-of-truth in the repo; rotating
-          # means changing both files.
+          # Both sides of this credential come from one substitution in
+          # the root Application, so they cannot drift.
           username: "keycloak"
-          password: "change-me-keycloak-db-password"
+          password: {{ required "queenswoodKeycloak.dbPassword must be set (root-app passes it from pass)" .Values.queenswoodKeycloak.dbPassword | quote }}
           proxy:
             connectionName: {{ .Values.queenswoodKeycloak.proxy.connectionName | quote }}
             gcpServiceAccount: {{ .Values.queenswoodKeycloak.proxy.gcpServiceAccount | quote }}
