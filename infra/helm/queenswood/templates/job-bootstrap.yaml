@@ -83,8 +83,8 @@ spec:
               value: {{ .Values.keycloak.adminClientId | quote }}
             - name: KC_REALMS
               value: {{ printf "%s %s" .Values.keycloak.realm .Values.keycloak.opsRealm | quote }}
-            - name: KC_KEY_FILE
-              value: /etc/queenswood/keycloak/admin-client.pem
+            - name: KC_CERT_FILE
+              value: /etc/queenswood/keycloak/admin-client.crt
             {{- if .Values.keycloak.adminSecret.name }}
             - name: KC_ADMIN_USER
               valueFrom:
@@ -118,12 +118,13 @@ spec:
                 echo "Waiting for Keycloak at $KC_BASE_URL..."
                 sleep 5
               done
-              # Keycloak wants the base64 body of the SubjectPublicKeyInfo,
-              # without the PEM armour or newlines.
-              PUB=$(openssl rsa -in "$KC_KEY_FILE" -pubout 2>/dev/null \
-                | grep -v '^-----' | tr -d '\n')
-              if [ -z "$PUB" ]; then
-                echo "could not derive a public key from $KC_KEY_FILE" >&2
+              # Keycloak wants the base64 DER of the certificate, without
+              # the PEM armour or newlines. Helm generated it alongside
+              # the key, so there is nothing to derive here -- which is
+              # just as well, since this image has no openssl.
+              CRT=$(grep -v '^-----' "$KC_CERT_FILE" | tr -d '\n')
+              if [ -z "$CRT" ]; then
+                echo "no certificate body in $KC_CERT_FILE" >&2
                 exit 1
               fi
               TOKEN=$(curl -sf -d client_id=admin-cli \
@@ -146,15 +147,15 @@ spec:
                 fi
                 curl -sf -H "Authorization: Bearer $TOKEN" \
                   "$KC_BASE_URL/admin/realms/$realm/clients/$id" \
-                  | jq --arg pub "$PUB" '
+                  | jq --arg crt "$CRT" '
                       .clientAuthenticatorType = "client-jwt"
                       | .attributes = ((.attributes // {})
-                          + {"jwt.credential.publicKey": $pub,
+                          + {"jwt.credential.certificate": $crt,
                              "token.endpoint.auth.signing.alg": "RS256"})' \
                   | curl -sf -X PUT -H "Authorization: Bearer $TOKEN" \
                       -H 'Content-Type: application/json' --data @- \
                       "$KC_BASE_URL/admin/realms/$realm/clients/$id"
-                echo "registered $KC_CLIENT_ID signing key in realm $realm"
+                echo "registered $KC_CLIENT_ID certificate in realm $realm"
               done
         {{- if .Values.migrator.enabled }}
         # Block until the migrator Job has applied FDB metadata +
