@@ -72,3 +72,29 @@ spec:
                 toFieldPath: spec.forProvider.location
               - fromFieldPath: spec.domain
                 toFieldPath: spec.forProvider.managed.domains[0]
+          # Subdomain cert (console., keycloak.). Separate resource, not
+          # a second SAN on `cert`: managed.domains is ForceNew, so
+          # editing it destroys and recreates the live apex cert. One
+          # DNS authorization covers both the domain and its wildcard.
+          - name: cert-wildcard
+            base:
+              apiVersion: certificatemanager.gcp.m.upbound.io/v1beta1
+              kind: Certificate
+              metadata:
+                name: queenswood-wildcard-cert
+              spec:
+                forProvider:
+                  managed:
+                    dnsAuthorizationsRefs:
+                      - name: queenswood-dns-auth
+                    domains: [""]
+            patches:
+              - fromFieldPath: spec.location
+                toFieldPath: spec.forProvider.location
+              - fromFieldPath: spec.domain
+                toFieldPath: spec.forProvider.managed.domains[0]
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "*.%s"

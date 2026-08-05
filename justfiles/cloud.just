@@ -506,6 +506,8 @@ gcp-health-check:
       "$(kubectl --context $MGT -n crossplane-system get xplatform.platform.queenswood.repldriven.com queenswood -o jsonpath='{.status.connectionName}' 2>/dev/null)"
     eq "Certificate queenswood-cert ACTIVE" \
       "$(kubectl --context $MGT -n {{ QUEENSWOOD_ENV }} get certificate.certificatemanager.gcp.m.upbound.io queenswood-cert -o jsonpath='{.status.atProvider.managed.state}' 2>/dev/null)" ACTIVE
+    eq "Certificate queenswood-wildcard-cert ACTIVE" \
+      "$(kubectl --context $MGT -n {{ QUEENSWOOD_ENV }} get certificate.certificatemanager.gcp.m.upbound.io queenswood-wildcard-cert -o jsonpath='{.status.atProvider.managed.state}' 2>/dev/null)" ACTIVE
 
     # ---- GKE workloads ----
     pending=$(kubectl --context $KCTX -n {{ QUEENSWOOD_ENV }} get pods --field-selector=status.phase=Pending --no-headers 2>/dev/null | wc -l | tr -d ' ')
@@ -518,8 +520,10 @@ gcp-health-check:
       "$(kubectl --context $KCTX -n {{ QUEENSWOOD_ENV }} get foundationdbcluster -o jsonpath='{.items[0].status.health.available}' 2>/dev/null)" true
     eq "cloud-sql-proxy ready" \
       "$(kubectl --context $KCTX -n {{ QUEENSWOOD_ENV }} get deploy queenswood-keycloak-cloudsql-proxy -o jsonpath='{.status.readyReplicas}/{.status.replicas}' 2>/dev/null)" "1/1"
+    # The operator names the StatefulSet <Keycloak CR>-keycloak, so the
+    # queenswood-keycloak CR yields queenswood-keycloak-keycloak.
     eq "Keycloak StatefulSet ready" \
-      "$(kubectl --context $KCTX -n {{ QUEENSWOOD_ENV }} get statefulset queenswood-keycloak -o jsonpath='{.status.readyReplicas}/{.status.replicas}' 2>/dev/null)" "1/1"
+      "$(kubectl --context $KCTX -n {{ QUEENSWOOD_ENV }} get statefulset queenswood-keycloak-keycloak -o jsonpath='{.status.readyReplicas}/{.status.replicas}' 2>/dev/null)" "1/1"
     eq "Gateway {{ QUEENSWOOD_ENV }}-gateway Programmed" \
       "$(kubectl --context $KCTX -n {{ QUEENSWOOD_ENV }} get gateway {{ QUEENSWOOD_ENV }}-gateway -o jsonpath='{.status.conditions[?(@.type=="Programmed")].status}' 2>/dev/null)" True
 
@@ -528,6 +532,10 @@ gcp-health-check:
       "$(dig +short A {{ QUEENSWOOD_DOMAIN }} @8.8.8.8 2>/dev/null)"
     is "Keycloak realm endpoint -> 200" \
       "$(curl -sIo /dev/null -w '%{http_code}' --max-time 5 https://keycloak.{{ QUEENSWOOD_DOMAIN }}/realms/queenswood/.well-known/openid-configuration 2>/dev/null)" 200
+    present "dig A console.{{ QUEENSWOOD_DOMAIN }} @8.8.8.8" \
+      "$(dig +short A console.{{ QUEENSWOOD_DOMAIN }} @8.8.8.8 2>/dev/null)"
+    is "HTTPS console.{{ QUEENSWOOD_DOMAIN }} -> 200" \
+      "$(curl -sIo /dev/null -w '%{http_code}' --max-time 5 https://console.{{ QUEENSWOOD_DOMAIN }} 2>/dev/null)" 200
     is "HTTPS {{ QUEENSWOOD_DOMAIN }} -> 200" \
       "$(curl -sIo /dev/null -w '%{http_code}' --max-time 5 https://{{ QUEENSWOOD_DOMAIN }} 2>/dev/null)" 200
     is "HTTP {{ QUEENSWOOD_DOMAIN }} -> 301" \

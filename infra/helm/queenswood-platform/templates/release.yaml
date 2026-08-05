@@ -25,8 +25,16 @@ spec:
       gateway:
         enabled: true
         host: {{ .Values.env.domain }}
+        # The console SPA keeps its own hostname -- the realm's
+        # queenswood-console client only accepts redirectUris under
+        # https://console.*.repldriven.com/*.
+        consoleHost: {{ printf "console.%s" .Values.env.domain | quote }}
+        apiHost: {{ printf "api.%s" .Values.env.domain | quote }}
         gcp:
           enabled: true
+          # Apex cert plus the subdomain wildcard: *.<domain> does not
+          # cover <domain>, so the listener binds both.
+          certManagerCerts: queenswood-cert,queenswood-wildcard-cert
       # Server-side Keycloak config: bank-api + bootstrap call the
       # Admin REST API to register per-org service accounts, and
       # bank-api validates JWTs via the realm JWKS. The admin client
