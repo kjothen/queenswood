@@ -476,14 +476,18 @@ gcp-oauth-client name="google":
     # client is created by hand and this recipe owns the two things
     # that are easy to get wrong: the exact redirect URI, and where the
     # result belongs in `pass`.
+    #
+    # One client per environment, not one shared across them: revoking or
+    # rotating a dev client must not touch the one real customers sign in
+    # through, and a client still in Google's Testing mode is a different
+    # risk object from a published one. The local rig has its own, filed
+    # under queenswood/local/dev/auth/clients/.
     PROJECT_ID=$(just _gcp-project-id)
-    BROKER="realms/queenswood/broker/{{ name }}/endpoint"
     echo "Create a Web application OAuth client here:"
     echo "  https://console.cloud.google.com/apis/credentials/oauthclient?project=$PROJECT_ID"
     echo
-    echo "Authorised redirect URIs -- paste both:"
-    echo "  https://keycloak.{{ QUEENSWOOD_DOMAIN }}/$BROKER"
-    echo "  http://localhost:8090/$BROKER"
+    echo "Name it:                  {{ QUEENSWOOD_ENV }}"
+    echo "Authorised redirect URI:  https://keycloak.{{ QUEENSWOOD_DOMAIN }}/realms/queenswood/broker/{{ name }}/endpoint"
     echo
     printf 'Client ID: '
     read client_id
