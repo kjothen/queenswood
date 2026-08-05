@@ -215,6 +215,7 @@ gcp-up:
     just gcp-iam-bootstrap
     just gcp-crossplane-login
     just gcp-dns-zone-create
+    just gcp-backup-bucket-create
     just kind-xp-up
     just gcp-cloudsql-wire
     just gcp-health-check
@@ -238,6 +239,12 @@ gcp-down:
 
     just kind-xp-down || true
     just gcp-gke-delete
+
+    # Export before deleting: an automated CloudSQL backup is tied to the
+    # instance's lifecycle, so it goes with it. The export outlives the
+    # teardown in a bucket that costs pennies to keep. GKE is already
+    # gone at this point, so nothing is writing.
+    just gcp-cloudsql-export || echo "  (export failed -- NOT deleting CloudSQL)" >&2
     just gcp-cloudsql-delete
     just gcp-ip-delete
     just gcp-cert-delete
@@ -561,6 +568,96 @@ gcp-keycloak-vault-secret name="google":
       --dry-run=client -o yaml \
       | kubectl --context $KCTX -n {{ QUEENSWOOD_ENV }} apply -f -
     echo ">>> stored queenswood_{{ name }}-client-secret in the vault Secret"
+
+# =========================================================================
+# Backups
+# =========================================================================
+
+# Create the durable backup bucket. Survives gcp-down; storage is pennies.
+gcp-backup-bucket-create:
+    #!/usr/bin/env zsh
+    set -euo pipefail
+    # Tier 0, alongside the project and the DNS zone: what makes the
+    # expensive tier disposable rather than destructive. Created here
+    # rather than by Crossplane for the same reason the DNS zone is --
+    # no storage provider is installed, and one bucket doesn't justify
+    # another provider package on the management plane.
+    PROJECT_ID=$(just _gcp-project-id)
+    BUCKET=$(just _gcp-backup-bucket)
+    if gcloud storage buckets describe "$BUCKET" --project="$PROJECT_ID" >/dev/null 2>&1; then
+      echo ">>> $BUCKET already exists"
+      exit 0
+    fi
+    gcloud storage buckets create "$BUCKET" \
+      --project="$PROJECT_ID" --location={{ REGION }} \
+      --uniform-bucket-level-access --public-access-prevention
+    echo ">>> created $BUCKET"
+
+# Print the backup bucket URL for this environment.
+[private]
+_gcp-backup-bucket:
+    @printf 'gs://%s-backups\n' "$(just _gcp-project-id)"
+
+# Export the Keycloak database to the backup bucket.
+gcp-cloudsql-export:
+    #!/usr/bin/env zsh
+    set -euo pipefail
+    # An automated CloudSQL backup lives and dies with its instance, and
+    # gcp-down deletes the instance -- so an export is the only thing
+    # that survives a teardown. Run with GKE already drained, which is
+    # where gcp-down calls it: no writers, so the dump is consistent.
+    PROJECT_ID=$(just _gcp-project-id)
+    BUCKET=$(just _gcp-backup-bucket)
+    just gcp-backup-bucket-create
+    # The export is performed BY the instance's own service agent, not
+    # by you, so that agent needs write access to the bucket.
+    SA=$(gcloud sql instances describe queenswood-keycloak \
+      --project="$PROJECT_ID" --format='value(serviceAccountEmailAddress)')
+    gcloud storage buckets add-iam-policy-binding "$BUCKET" \
+      --member="serviceAccount:${SA}" --role=roles/storage.objectAdmin \
+      --project="$PROJECT_ID" >/dev/null
+    DEST="$BUCKET/{{ QUEENSWOOD_ENV }}/keycloak-$(date -u +%Y%m%dT%H%M%SZ).sql.gz"
+    echo ">>> exporting keycloak database to $DEST"
+    gcloud sql export sql queenswood-keycloak "$DEST" \
+      --database=keycloak --project="$PROJECT_ID"
+    echo ">>> exported. Restore with: just gcp-cloudsql-import"
+
+# Restore the Keycloak database from the most recent export (or a named one).
+gcp-cloudsql-import dump="":
+    #!/usr/bin/env zsh
+    set -euo pipefail
+    PROJECT_ID=$(just _gcp-project-id)
+    BUCKET=$(just _gcp-backup-bucket)
+    SRC='{{ dump }}'
+    if [[ -z "$SRC" ]]; then
+      SRC=$(gcloud storage ls "$BUCKET/{{ QUEENSWOOD_ENV }}/keycloak-*.sql.gz" \
+        --project="$PROJECT_ID" 2>/dev/null | sort | tail -1)
+    fi
+    if [[ -z "$SRC" ]]; then
+      echo "no export found under $BUCKET/{{ QUEENSWOOD_ENV }}/" >&2
+      exit 1
+    fi
+    SA=$(gcloud sql instances describe queenswood-keycloak \
+      --project="$PROJECT_ID" --format='value(serviceAccountEmailAddress)')
+    gcloud storage buckets add-iam-policy-binding "$BUCKET" \
+      --member="serviceAccount:${SA}" --role=roles/storage.objectViewer \
+      --project="$PROJECT_ID" >/dev/null
+    cat >&2 <<EOF
+    ================================================================
+    About to import $SRC into the `keycloak` database.
+
+    This overwrites the realms, users and federated identities the
+    instance currently holds. Keycloak should be scaled to zero first
+    -- an import under a live Keycloak leaves it reading rows that
+    changed underneath it.
+    ================================================================
+    EOF
+    printf "Type 'yes' to proceed: "
+    read confirm
+    [[ "$confirm" == "yes" ]] || { echo "aborted." >&2; exit 1; }
+    gcloud sql import sql queenswood-keycloak "$SRC" \
+      --database=keycloak --project="$PROJECT_ID" --quiet
+    echo ">>> imported $SRC"
 
 # =========================================================================
 # Diagnostics
