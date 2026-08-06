@@ -15,7 +15,7 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: {{ .Release.Name }}-bootstrap-{{ .Values.image.tag }}-{{ .Chart.Version }}
+  name: {{ include "queenswood.bootstrapJobName" . }}
   labels:
     {{- include "queenswood.labels" . | nindent 4 }}
     app.kubernetes.io/component: bootstrap
@@ -190,7 +190,7 @@ spec:
             - -c
             - |
               kubectl wait --for=condition=complete --timeout=10m \
-                job/{{ .Release.Name }}-migrator-{{ .Values.image.tag }}-{{ .Chart.Version }}
+                job/{{ include "queenswood.migratorJobName" . }}
         {{- end }}
       containers:
         - name: bootstrap

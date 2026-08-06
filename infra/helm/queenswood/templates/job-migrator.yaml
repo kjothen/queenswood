@@ -6,15 +6,14 @@
 # bootstrap-service Job runs after this one and handles the
 # internal-organization seed + policy records.
 #
-# Job name embeds both .Values.image.tag and .Chart.Version so every
-# helm upgrade -- whether the bump is the image (new app code) or the
-# chart (new template content like added labels) -- creates a fresh
-# Job rather than failing on Job.spec.template immutability; old Jobs
-# age out via ttlSecondsAfterFinished.
+# The name comes from `queenswood.migratorJobName`, which is what keeps
+# a helm upgrade possible: a Job's pod template is immutable, so
+# anything changing the template must change the name too. Old Jobs age
+# out via ttlSecondsAfterFinished.
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: {{ .Release.Name }}-migrator-{{ .Values.image.tag }}-{{ .Chart.Version }}
+  name: {{ include "queenswood.migratorJobName" . }}
   labels:
     {{- include "queenswood.labels" . | nindent 4 }}
     app.kubernetes.io/component: migrator
