@@ -47,8 +47,13 @@ spec:
   backoffLimit: 3
   template:
     metadata:
+      # Not `queenswood-keycloak.labels`, which carries `helm.sh/chart`
+      # -- a Job's pod template is immutable, and this name is derived
+      # from the dump path by two charts, so it cannot absorb a chart
+      # version and stay derivable.
       labels:
-        {{- include "queenswood-keycloak.labels" . | nindent 8 }}
+        app.kubernetes.io/name: {{ .Chart.Name }}
+        app.kubernetes.io/instance: {{ .Release.Name }}
         app.kubernetes.io/component: keycloak-restore
     spec:
       restartPolicy: OnFailure
