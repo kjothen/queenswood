@@ -856,6 +856,63 @@ gcp-fdb-export:
 # non-empty destination. The version above travels to the chart via
 # the root Application, so `gcp-up` restores on its own.
 
+# Create the identity the Keycloak restore Job imports with.
+gcp-keycloak-restore-sa-create:
+    #!/usr/bin/env zsh
+    set -euo pipefail
+    # A dedicated identity rather than the SQL proxy's: that one holds
+    # `cloudsql.client` and nothing else, and is the credential every
+    # Keycloak database connection uses. Importing needs
+    # `cloudsql.instances.import`, which among predefined roles only
+    # `cloudsql.admin` carries -- and that can delete the instance. So
+    # this is a custom role with the two permissions the import
+    # actually makes.
+    PROJECT_ID=$(just _gcp-project-id)
+    BUCKET=$(just _gcp-backup-bucket)
+    SA=$(just _gcp-sa-email keycloak-restore)
+    ROLE=queenswoodKeycloakImport
+
+    if ! gcloud iam roles describe "$ROLE" --project="$PROJECT_ID" >/dev/null 2>&1; then
+      echo ">>> creating custom role $ROLE"
+      gcloud iam roles create "$ROLE" --project="$PROJECT_ID" \
+        --title="Queenswood Keycloak import" \
+        --description="Import a SQL dump into the Keycloak instance" \
+        --permissions=cloudsql.instances.import,cloudsql.instances.get \
+        --stage=GA >/dev/null
+    fi
+
+    if ! gcloud iam service-accounts describe "$SA" --project="$PROJECT_ID" >/dev/null 2>&1; then
+      echo ">>> creating service account keycloak-restore"
+      gcloud iam service-accounts create keycloak-restore --project="$PROJECT_ID" \
+        --display-name="Keycloak restore Job"
+    fi
+    # A freshly created service account is not immediately visible to
+    # IAM policy binding.
+    for i in {1..12}; do
+      gcloud projects add-iam-policy-binding "$PROJECT_ID" \
+        --member="serviceAccount:${SA}" \
+        --role="projects/${PROJECT_ID}/roles/${ROLE}" >/dev/null 2>&1 && break
+      echo ">>> waiting for $SA to propagate ($i/12)"
+      sleep 5
+    done
+    # The import is performed BY the instance's service agent, so that
+    # agent needs to read the object -- the same binding
+    # gcp-cloudsql-import makes. Granted here so a restore on a rebuilt
+    # environment does not depend on anyone having run that recipe.
+    AGENT=$(gcloud sql instances describe queenswood-keycloak \
+      --project="$PROJECT_ID" --format='value(serviceAccountEmailAddress)' 2>/dev/null || true)
+    if [[ -n "$AGENT" ]]; then
+      gcloud storage buckets add-iam-policy-binding "$BUCKET" \
+        --member="serviceAccount:${AGENT}" --role=roles/storage.objectViewer \
+        --project="$PROJECT_ID" >/dev/null
+    fi
+    # Let the Job's Kubernetes SA impersonate it.
+    gcloud iam service-accounts add-iam-policy-binding "$SA" --project="$PROJECT_ID" \
+      --role=roles/iam.workloadIdentityUser \
+      --member="serviceAccount:${PROJECT_ID}.svc.id.goog[{{ QUEENSWOOD_ENV }}/queenswood-keycloak-restore]" \
+      >/dev/null
+    echo ">>> $SA can import into queenswood-keycloak"
+
 # Export the Keycloak database to the backup bucket.
 gcp-cloudsql-export:
     #!/usr/bin/env zsh
@@ -897,7 +954,12 @@ gcp-cloudsql-export:
     # than no LATEST.
     printf '%s\n' "$PREFIX" \
       | gcloud storage cp - "$BUCKET/keycloak/export/LATEST" --project="$PROJECT_ID" >/dev/null
-    echo ">>> exported. Restore with: just gcp-cloudsql-import"
+    # Recorded the same way FDB's restore version is, and for the same
+    # reason: a rebuilt environment must restore the dump taken at THIS
+    # teardown, not whatever happens to be newest when it comes back.
+    printf '%s\n' "$PREFIX" \
+      | pass insert -m -f {{ PASS_ENV }}/backup/keycloak-restore-dump >/dev/null
+    echo ">>> exported $PREFIX; recorded in {{ PASS_ENV }}/backup/keycloak-restore-dump"
 
 # Restore the Keycloak database from the most recent export (or a named one).
 gcp-cloudsql-import dump="":
