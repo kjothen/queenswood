@@ -132,6 +132,10 @@ those in full before non-trivial work on their topic.
   charts and images, which tier stays up between sessions and
   which cycles, and the up/down runbook. See
   [recipes/cloud-deployment.md](docs/recipes/cloud-deployment.md).
+- **Recovery** — restoring FoundationDB from backup: the routine
+  teardown/rebuild cycle, choosing an earlier restore point, and why
+  a stuck restore blocks the whole deployment. See
+  [recipes/recovery-procedures.md](docs/recipes/recovery-procedures.md).
 - **Infrastructure** — GCP via Crossplane on a kind management
   plane; Argo CD wires the bootstrap chain; queenswood-platform
   Composites + Releases drive everything else. See

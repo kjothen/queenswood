@@ -800,6 +800,31 @@ _gcp-fdb-agent-pod:
     fi
     printf '%s\n' "$POD"
 
+# List the versions the FDB backup can be restored to.
+gcp-fdb-restore-points:
+    #!/usr/bin/env zsh
+    set -euo pipefail
+    # For the cases gcp-fdb-export cannot cover: a cluster that died
+    # without a teardown, or a recovery that wants an earlier point than
+    # the last one because the newest data is the problem.
+    KCTX=$(just _gke-ctx)
+    POD=$(just _gcp-fdb-agent-pod)
+    URL=$(just _gcp-fdb-backup-url)
+    kubectl --context "$KCTX" -n {{ QUEENSWOOD_ENV }} exec "$POD" -c foundationdb -- \
+      fdbbackup describe -d "$URL" --json 2>/dev/null \
+      | jq -r '
+        "restorable:  \(.Restorable)",
+        "encrypted:   \(.FileLevelEncryption)",
+        "",
+        "oldest:      \(.MinRestorablePoint.Version)  (\(.MinRestorablePoint.RelativeDays * -24 | round)h ago)",
+        "newest:      \(.MaxRestorablePoint.Version)  (\(.MaxRestorablePoint.RelativeDays * -24 | round)h ago)",
+        "",
+        "snapshots (\(.Snapshots | length)):",
+        (.Snapshots[] | "  \(.End.Version)  \(if .Restorable then "restorable" else "incomplete" end)  \(.TotalBytes) bytes")'
+    echo
+    echo ">>> any version between oldest and newest is restorable, not just a snapshot"
+    echo ">>> choose one with: pass insert -e -f {{ PASS_ENV }}/backup/fdb-restore-version"
+
 # Close off the FDB backup and record the version it can be restored to.
 gcp-fdb-export:
     #!/usr/bin/env zsh
