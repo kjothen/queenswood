@@ -431,6 +431,26 @@ kind-xp-wait-ready timeout="2700":
         --for=jsonpath='{.status.health.status}'=Healthy \
         application/$app --timeout={{ timeout }}s
       if [[ "$app" == "queenswood-gcp" ]]; then
+        # Argo reports this Application Healthy once its manifests are
+        # applied, not once the cloud resources exist -- it has no
+        # health check for Crossplane managed resources, so a GKE
+        # cluster that has not begun provisioning still reads as
+        # Healthy. Wait for the cluster itself, or get-credentials 404s
+        # on a cold start.
+        gke_deadline=$(( $(date +%s) + {{ timeout }} ))
+        until [[ "$(gcloud container clusters describe queenswood-gke \
+                    --zone={{ ZONE }} --project="$PROJECT_ID" \
+                    --format='value(status)' 2>/dev/null)" == "RUNNING" ]]; do
+          if (( $(date +%s) > gke_deadline )); then
+            echo >&2
+            echo "queenswood-gke never reached RUNNING. Check the Crossplane" >&2
+            echo "cluster resource for why it is not provisioning:" >&2
+            echo "  kubectl --context {{ KIND_XP_CLUSTER }} get cluster.container.gcp.m.upbound.io -A" >&2
+            exit 1
+          fi
+          echo "  waiting for queenswood-gke to provision..."
+          sleep 20
+        done
         gcloud container clusters get-credentials queenswood-gke \
           --zone={{ ZONE }} --project="$PROJECT_ID"
       fi
