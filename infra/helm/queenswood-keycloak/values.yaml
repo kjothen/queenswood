@@ -100,3 +100,32 @@ postgresql:
       # `iam.workloadIdentityUser` binding from the K8s SA to the
       # GCP SA is one-time setup outside the chart.
       gcpServiceAccount: ""
+
+# ---------------------------------------------------------------------
+# Restore a Keycloak dump before anything writes to the realm. External
+# mode only -- the dump lives in GCS and is imported by CloudSQL.
+#
+# `dump` is a target, not a mode: it names the export this environment's
+# realm should come from (`keycloak/export/<YYYY>/<MM>/<DD>/<HHMMSSZ>`),
+# recorded by `just gcp-cloudsql-export` at teardown. Empty means no
+# restore. The Job checks the database before importing, so a populated
+# realm is left alone.
+# ---------------------------------------------------------------------
+restore:
+  dump: ""
+  bucket: ""
+  project: ""
+  instance: queenswood-keycloak
+  # Made by `just gcp-keycloak-restore-sa-create` -- a dedicated
+  # identity with a custom role carrying only
+  # cloudsql.instances.{import,get}, not cloudsql.admin.
+  gcpServiceAccount: ""
+  postgresImage: postgres:17-alpine
+  gcloudImage: google/cloud-sdk:slim
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "256Mi"
+    limits:
+      cpu: "500m"
+      memory: "512Mi"

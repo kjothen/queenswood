@@ -45,6 +45,16 @@ spec:
       # does.
       vault:
         enabled: true
+      {{- with .Values.keycloakRestore.dump }}
+      # Imported before the queenswood chart's bootstrap registers this
+      # release's admin signing key -- that Job waits on this one. The
+      # import is skipped if the database already holds a realm.
+      restore:
+        dump: {{ . | quote }}
+        bucket: {{ required "keycloakRestore.bucket must accompany the dump" $.Values.keycloakRestore.bucket | quote }}
+        project: {{ required "keycloakRestore.project must accompany the dump" $.Values.keycloakRestore.project | quote }}
+        gcpServiceAccount: {{ required "keycloakRestore.gcpServiceAccount must accompany the dump" $.Values.keycloakRestore.gcpServiceAccount | quote }}
+      {{- end }}
       postgresql:
         mode: external
         external:

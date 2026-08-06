@@ -54,6 +54,16 @@ spec:
         - name: fdbRestore.version
           value: {{ .Values.fdbRestoreVersion | quote }}
 {{- end }}
+{{- if .Values.keycloakRestoreDump }}
+        - name: keycloakRestore.dump
+          value: {{ .Values.keycloakRestoreDump | quote }}
+        - name: keycloakRestore.project
+          value: {{ required "gcpProjectId must be set to restore Keycloak" .Values.gcpProjectId | quote }}
+        - name: keycloakRestore.bucket
+          value: {{ printf "%s-backups" .Values.gcpProjectId | quote }}
+        - name: keycloakRestore.gcpServiceAccount
+          value: {{ printf "keycloak-restore@%s.iam.gserviceaccount.com" .Values.gcpProjectId | quote }}
+{{- end }}
 {{- end }}
   destination:
     server: https://kubernetes.default.svc

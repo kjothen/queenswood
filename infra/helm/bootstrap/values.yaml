@@ -38,6 +38,10 @@ fdbBackupEncryptionKey: ""
 # what a fresh environment wants.
 fdbRestoreVersion: ""
 
+# Keycloak dump a rebuilt environment restores, recorded by
+# `just gcp-cloudsql-export`. Empty restores nothing.
+keycloakRestoreDump: ""
+
 # Default K8s namespace for the queenswood-* workloads on GKE. Falls
 # back to envName when that is set.
 envNamespace: queenswood-test

@@ -1,0 +1,135 @@
+{{- if and (eq .Values.postgresql.mode "external") .Values.restore.dump }}
+{{- /*
+  One-shot Job: imports a Keycloak dump before anything writes to the
+  realm.
+
+  Ordering is the whole point, and it is not about concurrent reads.
+  A rebuilt environment has a new namespace, so the queenswood chart's
+  `lookup` finds no Secret and mints a FRESH admin signing key, and its
+  bootstrap Job registers the public half on the `queenswood-admin`
+  client. Import a dump after that and the realm reverts to the OLD
+  registered key while the pods hold the new private one --
+  private_key_jwt assertions stop verifying and Admin REST access is
+  lost. Import first and bootstrap re-registers the current key onto
+  the restored realm, which is why this is a gate rather than a
+  warning to scale Keycloak down.
+
+  The operator's realm import runs with `--override=false`, so a realm
+  restored by this Job is left alone rather than overwritten.
+
+  Unlike FDB there is no interlock underneath: `gcloud sql import`
+  overwrites whatever is there. So this checks the database itself
+  before acting, and the Job carries no ttlSecondsAfterFinished --
+  letting it age out would invite a later reconcile to import over a
+  live realm.
+*/ -}}
+{{- $jobSuffix := .Values.restore.dump | sha256sum | trunc 8 -}}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: queenswood-keycloak-restore
+  labels:
+    {{- include "queenswood-keycloak.labels" . | nindent 4 }}
+  annotations:
+    iam.gke.io/gcp-service-account: {{ required "restore.gcpServiceAccount must be set when restore.dump is (just gcp-keycloak-restore-sa-create makes it)" .Values.restore.gcpServiceAccount | quote }}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  # The dump path hashed rather than used raw: it contains slashes, and
+  # a name must be RFC 1123. Re-applying the same dump resolves to the
+  # same completed Job, which is what makes this idempotent.
+  name: queenswood-keycloak-restore-{{ $jobSuffix }}
+  labels:
+    {{- include "queenswood-keycloak.labels" . | nindent 4 }}
+    app.kubernetes.io/component: keycloak-restore
+spec:
+  backoffLimit: 3
+  template:
+    metadata:
+      labels:
+        {{- include "queenswood-keycloak.labels" . | nindent 8 }}
+        app.kubernetes.io/component: keycloak-restore
+    spec:
+      restartPolicy: OnFailure
+      serviceAccountName: queenswood-keycloak-restore
+      initContainers:
+        # Decides whether the import should happen at all, and says so
+        # in a file rather than by failing -- a failed initContainer
+        # would fail the Job and block bootstrap behind it.
+        - name: check-realm
+          image: {{ .Values.restore.postgresImage | quote }}
+          command:
+            - sh
+            - -c
+            - |
+              set -e
+              for i in $(seq 1 60); do
+                if pg_isready -h "$PGHOST" -U "$PGUSER" >/dev/null 2>&1; then break; fi
+                echo "waiting for the SQL proxy ($i/60)"
+                sleep 5
+              done
+              existing=$(psql -h "$PGHOST" -U "$PGUSER" -d "$PGDATABASE" -tAc \
+                "SELECT to_regclass('public.realm') IS NOT NULL" 2>/dev/null || echo f)
+              if [ "$existing" = "t" ]; then
+                echo "realm tables already present; not importing"
+                echo skip > /state/action
+              else
+                echo empty > /state/action
+              fi
+          env:
+            - name: PGHOST
+              value: {{ include "queenswood-keycloak.dbHost" . | quote }}
+            - name: PGDATABASE
+              value: {{ include "queenswood-keycloak.dbName" . | quote }}
+            - name: PGUSER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "queenswood-keycloak.dbSecret" . }}
+                  key: username
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "queenswood-keycloak.dbSecret" . }}
+                  key: password
+          volumeMounts:
+            - name: state
+              mountPath: /state
+      containers:
+        - name: import
+          image: {{ .Values.restore.gcloudImage | quote }}
+          command:
+            - sh
+            - -c
+            - |
+              set -e
+              if [ "$(cat /state/action)" = "skip" ]; then
+                echo "database already holds a realm; leaving it alone"
+                exit 0
+              fi
+              echo "importing gs://$BUCKET/$DUMP/keycloak.sql.gz"
+              exec gcloud sql import sql "$INSTANCE" \
+                "gs://$BUCKET/$DUMP/keycloak.sql.gz" \
+                --database="$DATABASE" --project="$PROJECT" --quiet
+          env:
+            - name: PROJECT
+              value: {{ required "restore.project must be set when restore.dump is" .Values.restore.project | quote }}
+            - name: INSTANCE
+              value: {{ .Values.restore.instance | quote }}
+            - name: BUCKET
+              value: {{ required "restore.bucket must be set when restore.dump is" .Values.restore.bucket | quote }}
+            - name: DUMP
+              value: {{ .Values.restore.dump | quote }}
+            - name: DATABASE
+              value: {{ include "queenswood-keycloak.dbName" . | quote }}
+          volumeMounts:
+            - name: state
+              mountPath: /state
+          {{- with .Values.restore.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+      volumes:
+        - name: state
+          emptyDir: {}
+{{- end }}

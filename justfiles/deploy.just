@@ -263,6 +263,7 @@ kind-xp-install-root:
     # from, and only an empty cluster acts on it. Absent on an
     # environment that has never been torn down, which restores nothing.
     export FDB_RESTORE_VERSION=$(pass show {{ PASS_ENV }}/backup/fdb-restore-version 2>/dev/null | head -1)
+    export KEYCLOAK_RESTORE_DUMP=$(pass show {{ PASS_ENV }}/backup/keycloak-restore-dump 2>/dev/null | head -1)
     envsubst < infra/bootstrap/root-app.yml.tmpl \
       | kubectl --context {{ KIND_XP_CLUSTER }} apply -f -
 
