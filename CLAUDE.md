@@ -141,6 +141,10 @@ those in full before non-trivial work on their topic.
   Composites + Releases drive everything else. See
   [tdd/infrastructure.md](docs/tdd/infrastructure.md) and
   [ADR-0016](docs/adr/0016-crossplane-over-terraform.md).
+- **Cloud foundation** — the folder/seed/hub-and-spoke project
+  layout, one management plane on GKE, foundations liened rather
+  than deleted, and why "down" is a declared state. See
+  [ADR-0022](docs/adr/0022-cloud-foundation-and-environment-lifecycle.md).
 - **Pre-commit hooks** — zprint, clj-kondo, before-commit
   formatting. See
   [ADR-0012](docs/adr/0012-pre-commit-hooks.md).
