@@ -34,8 +34,14 @@ spec:
   backoffLimit: 3
   template:
     metadata:
+      # Deliberately not `queenswood.labels`: that carries
+      # `helm.sh/chart`, so every chart bump would mutate this pod
+      # template. A Job's template is immutable, and this Job's name
+      # tracks the restore version rather than the chart version, so
+      # there is no new name for the upgrade to land on.
       labels:
-        {{- include "queenswood.labels" . | nindent 8 }}
+        app.kubernetes.io/name: {{ .Chart.Name }}
+        app.kubernetes.io/instance: {{ .Release.Name }}
         app.kubernetes.io/component: fdb-restore
     spec:
       restartPolicy: OnFailure
