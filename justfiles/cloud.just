@@ -856,6 +856,30 @@ gcp-fdb-export:
 # non-empty destination. The version above travels to the chart via
 # the root Application, so `gcp-up` restores on its own.
 
+# List the most recent Keycloak dumps available to restore from.
+gcp-keycloak-restore-points count="5":
+    #!/usr/bin/env zsh
+    set -euo pipefail
+    PROJECT_ID=$(just _gcp-project-id)
+    BUCKET=$(just _gcp-backup-bucket)
+    CURRENT=$(gcloud storage cat "$BUCKET/keycloak/export/LATEST" \
+      --project="$PROJECT_ID" 2>/dev/null | head -1 || true)
+    # Sorted by name, which for this layout is chronological:
+    # keycloak/export/<YYYY>/<MM>/<DD>/<HHMMSSZ>/.
+    gcloud storage ls -l "$BUCKET/keycloak/export/**/keycloak.sql.gz" \
+      --project="$PROJECT_ID" 2>/dev/null \
+      | grep '^ ' | sort -k3 | tail -{{ count }} \
+      | while read -r bytes created url _; do
+          prefix=${url#$BUCKET/}
+          prefix=${prefix%/keycloak.sql.gz}
+          marker="  "
+          [[ "$prefix" == "$CURRENT" ]] && marker="* "
+          printf '%s%s  %s  %s bytes\n' "$marker" "$prefix" "$created" "$bytes"
+        done
+    echo
+    echo ">>> * is what LATEST points at, and what gcp-down last recorded"
+    echo ">>> choose one with: pass insert -e -f {{ PASS_ENV }}/backup/keycloak-restore-dump"
+
 # Create the identity the Keycloak restore Job imports with.
 gcp-keycloak-restore-sa-create:
     #!/usr/bin/env zsh
