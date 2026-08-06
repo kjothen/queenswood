@@ -216,6 +216,10 @@ gcp-up:
     just gcp-crossplane-login
     just gcp-dns-zone-create
     just gcp-backup-bucket-create
+    # Before kind-xp-up: the root Application reads both of these out of
+    # `pass` to hand to FDB's backup agents, so they have to exist first.
+    just gcp-backup-hmac-create
+    just gcp-backup-key-create
     just kind-xp-up
     just gcp-cloudsql-wire
     just gcp-health-check
@@ -225,6 +229,14 @@ gcp-down:
     #!/usr/bin/env zsh
     set -e
     GKE_CTX=$(just _gke-ctx)
+
+    # Close the FDB backup off first -- the mirror image of the CloudSQL
+    # export below, which runs after GKE is gone. FDB's backup agents
+    # run in the workload namespace and read from the live cluster, so
+    # both have to still be up. Refuses rather than proceeds if the
+    # backup isn't restorable: draining past this point is what makes
+    # the data unrecoverable.
+    just gcp-fdb-export
 
     # Drain GKE workloads BEFORE killing kind. GKE's CSI driver only
     # DeleteDisks PVs while the cluster is alive; destroying GKE with
@@ -591,12 +603,313 @@ gcp-backup-bucket-create:
     gcloud storage buckets create "$BUCKET" \
       --project="$PROJECT_ID" --location={{ REGION }} \
       --uniform-bucket-level-access --public-access-prevention
+    just gcp-backup-lifecycle-set
     echo ">>> created $BUCKET"
+
+# Apply per-prefix retention to the backup bucket.
+gcp-backup-lifecycle-set:
+    #!/usr/bin/env zsh
+    set -euo pipefail
+    # Retention is policy and belongs here, not in the export recipes --
+    # a backup script that deletes its own old output is one bug away
+    # from deleting the wrong thing. Everything is written to Standard
+    # and demoted by age rather than written cold, so a restore drill
+    # in the first week is not a Coldline retrieval.
+    #
+    # FDB's prefixes are not age-managed: a continuous backup's older
+    # objects are not stale copies, they are the log a restore reads
+    # through. `fdbbackup expire` is what prunes those, by version.
+    PROJECT_ID=$(just _gcp-project-id)
+    BUCKET=$(just _gcp-backup-bucket)
+    cat > /tmp/backup-lifecycle.json <<'EOF'
+    {
+      "lifecycle": {
+        "rule": [
+          {
+            "action": {"type": "SetStorageClass", "storageClass": "NEARLINE"},
+            "condition": {"age": 7, "matchesPrefix": ["keycloak/export/"]}
+          },
+          {
+            "action": {"type": "SetStorageClass", "storageClass": "COLDLINE"},
+            "condition": {"age": 30, "matchesPrefix": ["keycloak/export/"]}
+          },
+          {
+            "action": {"type": "Delete"},
+            "condition": {"age": 365, "matchesPrefix": ["keycloak/export/"]}
+          }
+        ]
+      }
+    }
+    EOF
+    gcloud storage buckets update "$BUCKET" \
+      --lifecycle-file=/tmp/backup-lifecycle.json --project="$PROJECT_ID" >/dev/null
+    echo ">>> lifecycle applied to $BUCKET"
 
 # Print the backup bucket URL for this environment.
 [private]
 _gcp-backup-bucket:
     @printf 'gs://%s-backups\n' "$(just _gcp-project-id)"
+
+# Print the bucket name (no gs:// scheme), which is what FDB wants.
+[private]
+_gcp-backup-bucket-name:
+    @printf '%s-backups\n' "$(just _gcp-project-id)"
+
+# Exempt this project from the org's ban on service-account key creation.
+[private]
+_gcp-allow-sa-keys:
+    #!/usr/bin/env zsh
+    set -euo pipefail
+    # GCP enforces iam.disableServiceAccountKeyCreation at the org by
+    # default, and an HMAC key counts as a service-account key -- so
+    # minting one fails with a 412 until the project is exempted. The
+    # exception is set on the project rather than the org: every other
+    # project stays locked, and the one key it permits is scoped to the
+    # fdb-backup service account, which holds objectAdmin on the backup
+    # bucket and nothing else.
+    #
+    # The v1 `resource-manager org-policies` surface, not the v2
+    # `org-policies` one used at org scope in gcp-org-create: v2 needs
+    # orgpolicy.googleapis.com enabled on the project, which is one more
+    # bootstrap API for a call v1 already serves off
+    # cloudresourcemanager.
+    PROJECT_ID=$(just _gcp-project-id)
+    ENFORCED=$(gcloud resource-manager org-policies describe \
+      constraints/iam.disableServiceAccountKeyCreation \
+      --project="$PROJECT_ID" --effective \
+      --format='value(booleanPolicy.enforced)' 2>/dev/null)
+    if [[ "$ENFORCED" != "True" ]]; then
+      exit 0
+    fi
+    echo ">>> exempting $PROJECT_ID from iam.disableServiceAccountKeyCreation"
+    gcloud resource-manager org-policies disable-enforce \
+      constraints/iam.disableServiceAccountKeyCreation \
+      --project="$PROJECT_ID" >/dev/null
+
+# Mint the HMAC key FDB's backup agents authenticate with; store it in pass.
+gcp-backup-hmac-create:
+    #!/usr/bin/env zsh
+    set -euo pipefail
+    # FDB's backup agent speaks S3, not GCS, so it reaches the bucket
+    # through the interop endpoint at storage.googleapis.com -- which
+    # authenticates with an HMAC key rather than a service-account
+    # token. The key belongs to a dedicated service account so revoking
+    # it costs nothing else.
+    PROJECT_ID=$(just _gcp-project-id)
+    BUCKET=$(just _gcp-backup-bucket)
+    SA=$(just _gcp-sa-email fdb-backup)
+    just gcp-backup-bucket-create
+    just _gcp-allow-sa-keys
+    if ! gcloud iam service-accounts describe "$SA" --project="$PROJECT_ID" >/dev/null 2>&1; then
+      echo ">>> creating service account fdb-backup"
+      gcloud iam service-accounts create fdb-backup --project="$PROJECT_ID" \
+        --display-name="FDB backup agents"
+    fi
+    # A freshly created service account is not immediately visible to
+    # IAM policy binding -- the first attempt reports it doesn't exist.
+    for i in {1..12}; do
+      gcloud storage buckets add-iam-policy-binding "$BUCKET" \
+        --member="serviceAccount:${SA}" --role=roles/storage.objectAdmin \
+        --project="$PROJECT_ID" >/dev/null 2>&1 && break
+      echo ">>> waiting for $SA to propagate ($i/12)"
+      sleep 5
+    done
+    ACTIVE=$(gcloud storage hmac list --project="$PROJECT_ID" \
+      --filter="serviceAccountEmail=$SA AND state=ACTIVE" \
+      --format='value(accessId)')
+    if [[ -n "$ACTIVE" ]]; then
+      echo ">>> $SA already has an active HMAC key ($ACTIVE)"
+      echo ">>> to rotate: gcloud storage hmac update $ACTIVE --deactivate && just gcp-backup-hmac-create"
+      exit 0
+    fi
+    # The secret is returned once, at creation, and is unrecoverable
+    # afterwards -- so it goes straight into pass in the same pipeline.
+    #
+    # Retried because _gcp-allow-sa-keys may have only just lifted the
+    # org-policy ban, and a policy change takes minutes to reach the
+    # admission path -- until it does, this fails with a 412 naming the
+    # constraint that the effective policy already says is unenforced.
+    KEY=""
+    for i in {1..20}; do
+      KEY=$(gcloud storage hmac create "$SA" --project="$PROJECT_ID" --format=json 2>/dev/null) && break
+      echo ">>> waiting for the key-creation policy to propagate ($i/20)"
+      sleep 30
+    done
+    if [[ -z "$KEY" ]]; then
+      echo "could not mint an HMAC key for $SA" >&2
+      exit 1
+    fi
+    ACCESS_ID=$(printf '%s' "$KEY" | jq -r '.metadata.accessId')
+    SECRET=$(printf '%s' "$KEY" | jq -r '.secret')
+    printf '%s\n' "$ACCESS_ID" | pass insert -m -f {{ PASS_ENV }}/storage/ids/hmac >/dev/null
+    printf '%s\n' "$SECRET" | pass insert -m -f {{ PASS_ENV }}/storage/hmac >/dev/null
+    echo ">>> minted $ACCESS_ID and stored it in {{ PASS_ENV }}/storage/{ids/hmac,hmac}"
+
+# Generate the AES-256 key FDB encrypts its backup files with; store it in pass.
+gcp-backup-key-create:
+    #!/usr/bin/env zsh
+    set -euo pipefail
+    # Stored rather than generated per install, and the one secret in
+    # this repo that breaks the usual rule: nothing outside holds the
+    # matching half, but the backup does, and the backup outlives every
+    # cluster that could regenerate it. Lose this and the bucket is a
+    # pile of undecryptable objects.
+    #
+    # Base64 because that is what a Secret's `data` takes verbatim --
+    # the chart writes it through unchanged, and the agents see the 32
+    # raw bytes fdbbackup wants.
+    ENTRY={{ PASS_ENV }}/backup/fdb-encryption
+    if pass show "$ENTRY" >/dev/null 2>&1; then
+      echo ">>> $ENTRY already exists"
+      exit 0
+    fi
+    openssl rand -base64 32 | pass insert -m -f "$ENTRY" >/dev/null
+    echo ">>> generated $ENTRY"
+
+# Print the blobstore URL FDB backs this environment up to.
+[private]
+_gcp-fdb-backup-url:
+    #!/usr/bin/env zsh
+    set -euo pipefail
+    ACCESS_ID=$(pass show {{ PASS_ENV }}/storage/ids/hmac | head -1)
+    BUCKET=$(just _gcp-backup-bucket-name)
+    # Port 80 and secure_connection=0 -- FDB's blobstore has no usable
+    # trust store and the operator cannot pass it a CA, so the transport
+    # is plaintext and the files are encrypted instead. See
+    # infra/helm/queenswood/templates/fdb-backup.yaml.
+    printf 'blobstore://%s@storage.googleapis.com:80/%s?bucket=%s&region=%s&secure_connection=0\n' \
+      "$ACCESS_ID" "$(just _gcp-fdb-backup-name)" "$BUCKET" '{{ REGION }}'
+
+# Print FDB's backup name -- <service>/<backup-type>, matching the chart.
+[private]
+_gcp-fdb-backup-name:
+    @printf 'fdb/continuous\n'
+
+# Print the name of a running FDB backup-agent pod on GKE.
+[private]
+_gcp-fdb-agent-pod:
+    #!/usr/bin/env zsh
+    set -euo pipefail
+    KCTX=$(just _gke-ctx)
+    POD=$(kubectl --context "$KCTX" -n {{ QUEENSWOOD_ENV }} get pods \
+      -o name --field-selector=status.phase=Running \
+      | grep 'fdb-backup-agents' | head -1 | cut -d/ -f2)
+    if [[ -z "$POD" ]]; then
+      echo "no running FDB backup agent in {{ QUEENSWOOD_ENV }}" >&2
+      exit 1
+    fi
+    printf '%s\n' "$POD"
+
+# Close off the FDB backup and record the version it can be restored to.
+gcp-fdb-export:
+    #!/usr/bin/env zsh
+    set -euo pipefail
+    # Unlike the CloudSQL export, this runs BEFORE the workload
+    # namespace is drained: the agents that flush the backup live in
+    # that namespace and need a live cluster to read from. Nothing here
+    # copies data -- the continuous backup has been shipping it all
+    # along. What this does is stop the backup cleanly so the last
+    # mutations land, then write down the version to restore to.
+    KCTX=$(just _gke-ctx)
+    POD=$(just _gcp-fdb-agent-pod)
+    URL=$(just _gcp-fdb-backup-url)
+
+    echo ">>> waiting for the backup to be restorable"
+    for i in {1..60}; do
+      R=$(kubectl --context "$KCTX" -n {{ QUEENSWOOD_ENV }} get foundationdbbackup \
+        {{ QUEENSWOOD_ENV }}-fdb -o jsonpath='{.status.backupDetails.restorable}' 2>/dev/null)
+      [[ "$R" == "true" ]] && break
+      if (( i == 60 )); then
+        echo "backup never became restorable -- NOT safe to tear down" >&2
+        exit 1
+      fi
+      sleep 10
+    done
+
+    # -w waits for the backup to finish flushing rather than only
+    # submitting the request.
+    echo ">>> discontinuing the backup"
+    kubectl --context "$KCTX" -n {{ QUEENSWOOD_ENV }} exec "$POD" -c foundationdb -- \
+      fdbbackup discontinue -t default -w -C /var/dynamic-conf/fdb.cluster \
+      || echo "  (discontinue reported an error -- checking restorability anyway)" >&2
+
+    VERSION=$(kubectl --context "$KCTX" -n {{ QUEENSWOOD_ENV }} exec "$POD" -c foundationdb -- \
+      fdbbackup describe -d "$URL" --json 2>/dev/null \
+      | jq -r 'select(.Restorable == true) | .MaxRestorablePoint.Version')
+    if [[ -z "$VERSION" || "$VERSION" == "null" ]]; then
+      echo "backup is not restorable -- NOT safe to tear down" >&2
+      exit 1
+    fi
+    # Recorded rather than rediscovered at restore time: the rebuilt
+    # cluster backs up into the same container, and its versions bear no
+    # relation to this one's -- so "the latest restorable point" could
+    # be the new empty cluster's.
+    printf '%s\n' "$VERSION" | pass insert -m -f {{ PASS_ENV }}/backup/fdb-restore-version >/dev/null
+    echo ">>> restorable to version $VERSION; recorded in {{ PASS_ENV }}/backup/fdb-restore-version"
+
+# Restore FDB from the backup recorded by the last gcp-fdb-export.
+gcp-fdb-import version="":
+    #!/usr/bin/env zsh
+    set -euo pipefail
+    KCTX=$(just _gke-ctx)
+    POD=$(just _gcp-fdb-agent-pod)
+    URL=$(just _gcp-fdb-backup-url)
+    VERSION='{{ version }}'
+    if [[ -z "$VERSION" ]]; then
+      VERSION=$(pass show {{ PASS_ENV }}/backup/fdb-restore-version 2>/dev/null | head -1)
+    fi
+    if [[ -z "$VERSION" ]]; then
+      echo "no recorded restore version; run gcp-fdb-export first, or pass one" >&2
+      exit 1
+    fi
+    cat >&2 <<EOF
+    ================================================================
+    About to restore FDB to version $VERSION.
+
+    This replaces everything the cluster currently holds -- every org,
+    party, account and transaction written since it came up. FDB
+    requires the destination to be empty, so a restore onto a cluster
+    that has already been written to will fail rather than merge.
+    ================================================================
+    EOF
+    printf "Type 'yes' to proceed: "
+    read confirm
+    [[ "$confirm" == "yes" ]] || { echo "aborted." >&2; exit 1; }
+
+    kubectl --context "$KCTX" -n {{ QUEENSWOOD_ENV }} apply -f - <<EOF
+    apiVersion: apps.foundationdb.org/v1beta2
+    kind: FoundationDBRestore
+    metadata:
+      name: {{ QUEENSWOOD_ENV }}-fdb
+    spec:
+      destinationClusterName: {{ QUEENSWOOD_ENV }}-fdb
+      backupVersion: $VERSION
+      encryptionKeyPath: /var/backup-credentials/encryption-key
+      blobStoreConfiguration:
+        accountName: "$(pass show {{ PASS_ENV }}/storage/ids/hmac | head -1)@storage.googleapis.com:80"
+        bucket: "$(just _gcp-backup-bucket-name)"
+        backupName: "$(just _gcp-fdb-backup-name)"
+        urlParameters:
+          - "region={{ REGION }}"
+          - secure_connection=0
+    EOF
+
+    # Polled with fdbrestore rather than off the CR: the operator's
+    # status stays "queued" through a restore that has already
+    # completed, so the CR is not a usable progress signal.
+    echo ">>> restoring (this reads every file in the container)"
+    for i in {1..120}; do
+      STATE=$(kubectl --context "$KCTX" -n {{ QUEENSWOOD_ENV }} exec "$POD" -c foundationdb -- \
+        fdbrestore status --dest_cluster_file /var/dynamic-conf/fdb.cluster 2>/dev/null \
+        | grep -o 'State: [a-z]*' | head -1 | cut -d' ' -f2)
+      case "$STATE" in
+        completed) echo ">>> restore completed"; exit 0 ;;
+        aborted|error) echo "restore $STATE" >&2; exit 1 ;;
+      esac
+      sleep 10
+    done
+    echo "restore did not complete in 20 minutes; check 'fdbrestore status'" >&2
+    exit 1
 
 # Export the Keycloak database to the backup bucket.
 gcp-cloudsql-export:
@@ -616,10 +929,29 @@ gcp-cloudsql-export:
     gcloud storage buckets add-iam-policy-binding "$BUCKET" \
       --member="serviceAccount:${SA}" --role=roles/storage.objectAdmin \
       --project="$PROJECT_ID" >/dev/null
-    DEST="$BUCKET/{{ QUEENSWOOD_ENV }}/keycloak-$(date -u +%Y%m%dT%H%M%SZ).sql.gz"
+    # <service>/<backup-type>/<YYYY>/<MM>/<DD>/<HHMMSSZ>/. Date
+    # components are separate segments so a prefix listing can select a
+    # day or a month; the leaf is a full UTC stamp so two exports on one
+    # day cannot collide. No environment segment -- the bucket is the
+    # project's and the project is the environment's.
+    STAMP=$(date -u +%Y/%m/%d/%H%M%SZ)
+    PREFIX="keycloak/export/$STAMP"
+    DEST="$BUCKET/$PREFIX/keycloak.sql.gz"
     echo ">>> exporting keycloak database to $DEST"
     gcloud sql export sql queenswood-keycloak "$DEST" \
       --database=keycloak --project="$PROJECT_ID"
+    # A manifest beside each dump so a restore can tell what it is
+    # holding without inferring it from the path.
+    SIZE=$(gcloud storage ls -l "$DEST" --project="$PROJECT_ID" \
+      | head -1 | awk '{print $1}')
+    printf '{"service":"keycloak","type":"export","instance":"queenswood-keycloak","database":"keycloak","object":"keycloak.sql.gz","bytes":%s,"createdAt":"%s"}\n' \
+      "${SIZE:-0}" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+      | gcloud storage cp - "$BUCKET/$PREFIX/manifest.json" --project="$PROJECT_ID" >/dev/null
+    # Written last, and only once the dump and its manifest are both
+    # there: a LATEST that can point at a half-written export is worse
+    # than no LATEST.
+    printf '%s\n' "$PREFIX" \
+      | gcloud storage cp - "$BUCKET/keycloak/export/LATEST" --project="$PROJECT_ID" >/dev/null
     echo ">>> exported. Restore with: just gcp-cloudsql-import"
 
 # Restore the Keycloak database from the most recent export (or a named one).
@@ -630,11 +962,15 @@ gcp-cloudsql-import dump="":
     BUCKET=$(just _gcp-backup-bucket)
     SRC='{{ dump }}'
     if [[ -z "$SRC" ]]; then
-      SRC=$(gcloud storage ls "$BUCKET/{{ QUEENSWOOD_ENV }}/keycloak-*.sql.gz" \
-        --project="$PROJECT_ID" 2>/dev/null | sort | tail -1)
+      # The LATEST pointer rather than a listing sorted by name: it is
+      # written only after an export finishes, so it cannot name a
+      # half-written one.
+      PREFIX=$(gcloud storage cat "$BUCKET/keycloak/export/LATEST" \
+        --project="$PROJECT_ID" 2>/dev/null | head -1)
+      [[ -n "$PREFIX" ]] && SRC="$BUCKET/$PREFIX/keycloak.sql.gz"
     fi
     if [[ -z "$SRC" ]]; then
-      echo "no export found under $BUCKET/{{ QUEENSWOOD_ENV }}/" >&2
+      echo "no export found under $BUCKET/keycloak/export/" >&2
       exit 1
     fi
     SA=$(gcloud sql instances describe queenswood-keycloak \

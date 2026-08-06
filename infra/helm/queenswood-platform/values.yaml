@@ -7,6 +7,20 @@ env:
 apex:
   region: europe-west2
 
+# Continuous FDB backup to the tier-0 bucket. The three credentials are
+# supplied by the root Application from `pass`, and the bucket is
+# derived there from the project id; empty defaults are the state
+# before a bootstrap has passed them, and leave the backup off.
+fdbBackup:
+  enabled: true
+  bucket: ""
+  # Must match the bucket's location -- it is what the SigV4 signature
+  # is computed over, not merely where requests are routed.
+  region: europe-west2
+  accessKeyId: ""
+  secretAccessKey: ""
+  encryptionKey: ""
+
 cert:
   location: europe-west2
 
@@ -14,7 +28,7 @@ release:
   chart:
     name: queenswood
     repository: oci://ghcr.io/repldriven
-    version: 0.8.2
+    version: 0.9.0
   # The Crossplane provider-config that owns GKE-bound Helm releases.
   # Shared by the queenswood, queenswood-keycloak, and
   # keycloak-operator Release resources below.

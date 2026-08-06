@@ -22,6 +22,20 @@ spec:
       image:
         registry: {{ .Values.release.image.registry }}
         tag: {{ .Values.release.image.tag }}
+      {{- if and .Values.fdbBackup.enabled .Values.fdbBackup.accessKeyId }}
+      # Credentials travel in the Release's values, the same path the
+      # Keycloak DB password takes -- readable to anyone who can read
+      # the MR on the management plane, which is the same audience that
+      # can read the Secret they end up in.
+      fdb:
+        backup:
+          enabled: true
+          bucket: {{ required "fdbBackup.bucket must be set (the root Application derives it from gcpProjectId)" .Values.fdbBackup.bucket | quote }}
+          region: {{ .Values.fdbBackup.region | quote }}
+          accessKeyId: {{ .Values.fdbBackup.accessKeyId | quote }}
+          secretAccessKey: {{ .Values.fdbBackup.secretAccessKey | quote }}
+          encryptionKey: {{ .Values.fdbBackup.encryptionKey | quote }}
+      {{- end }}
       gateway:
         enabled: true
         host: {{ .Values.env.domain }}
