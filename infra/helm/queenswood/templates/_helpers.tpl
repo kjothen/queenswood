@@ -75,3 +75,32 @@ it a CA, so the files are encrypted instead. See fdb-backup.yaml.
 {{- $params := printf "bucket=%s&region=%s&secure_connection=0" $b.bucket $b.region -}}
 {{- printf "blobstore://%s@%s:%v/%s?%s" $b.accessKeyId $b.endpoint $b.port $b.backupName $params -}}
 {{- end -}}
+
+{{/*
+Names of the one-shot Jobs, defined once because four templates refer
+to them and a name that disagrees is a gate that waits forever.
+
+The suffix is what makes an upgrade possible at all: a Job's pod
+template is immutable, so anything that changes the template must also
+change the name, or `helm upgrade` fails trying to patch it. The image
+tag and chart version cover new code and new template content. The
+restore values cover the wait-for-restore initContainers, which appear
+and disappear as a restore is declared -- a change in template with no
+change in either of the other two.
+*/}}
+{{- define "queenswood.jobSuffix" -}}
+{{- $gates := printf "%s|%s" (.Values.fdb.restore.version | default "") (.Values.keycloak.restoreDump | default "") -}}
+{{- if eq $gates "|" -}}
+{{- printf "%s-%s" .Values.image.tag .Chart.Version -}}
+{{- else -}}
+{{- printf "%s-%s-%s" .Values.image.tag .Chart.Version (sha256sum $gates | trunc 6) -}}
+{{- end -}}
+{{- end -}}
+
+{{- define "queenswood.migratorJobName" -}}
+{{- printf "%s-migrator-%s" .Release.Name (include "queenswood.jobSuffix" .) -}}
+{{- end -}}
+
+{{- define "queenswood.bootstrapJobName" -}}
+{{- printf "%s-bootstrap-%s" .Release.Name (include "queenswood.jobSuffix" .) -}}
+{{- end -}}
