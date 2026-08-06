@@ -1,0 +1,126 @@
+{{- if and .Values.fdb.enabled .Values.fdb.backup.enabled .Values.fdb.restore.version }}
+{{- /*
+  One-shot Job: restores FDB from the backup before anything writes to
+  it.
+
+  `fdb.restore.version` is a target, not a mode -- it says where this
+  cluster's data should come from, not "run a restore now". That
+  distinction is what makes it safe to leave in values: a reconcile
+  cannot re-run a restore that already happened, because the Job's name
+  embeds the version, so re-applying the same value resolves to the
+  same already-complete Job. Changing the version is a deliberate act,
+  and in GitOps a reviewable one.
+
+  Deliberately no ttlSecondsAfterFinished, unlike the migrator: the
+  completed Job IS the record that this cluster has been restored. Let
+  it age out and a later reconcile would recreate it and attempt the
+  restore again.
+
+  Two further things stop this destroying live data. FDB refuses a
+  restore into a non-empty destination -- the `--incremental` flag
+  exists precisely to opt out of that, and is never passed here. And
+  the Job checks emptiness itself, so a cluster that already holds data
+  is left alone rather than failing the Job and blocking the migrator
+  behind it.
+*/ -}}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ .Release.Name }}-fdb-restore-{{ .Values.fdb.restore.version }}
+  labels:
+    {{- include "queenswood.labels" . | nindent 4 }}
+    app.kubernetes.io/component: fdb-restore
+spec:
+  backoffLimit: 3
+  template:
+    metadata:
+      labels:
+        {{- include "queenswood.labels" . | nindent 8 }}
+        app.kubernetes.io/component: fdb-restore
+    spec:
+      restartPolicy: OnFailure
+      initContainers:
+        - name: wait-for-fdb-cluster
+          image: alpine/k8s:1.30.14
+          command:
+            - sh
+            - -c
+            - |
+              TOKEN=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)
+              NS=$(cat /var/run/secrets/kubernetes.io/serviceaccount/namespace)
+              CA=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+              URL="https://kubernetes.default.svc/api/v1/namespaces/$NS/configmaps/{{ include "queenswood.fdbClusterConfigMap" . }}"
+              for i in $(seq 1 120); do
+                content=$(curl -sS --cacert "$CA" \
+                  -H "Authorization: Bearer $TOKEN" "$URL" 2>/dev/null \
+                  | jq -r '.data["cluster-file"] // ""')
+                if [ -n "$content" ]; then
+                  echo "FDB cluster file ready: $content"
+                  printf '%s\n' "$content" > /etc/fdb/fdb.cluster
+                  exit 0
+                fi
+                echo "Waiting for FDB cluster-file content..."
+                sleep 5
+              done
+              echo "FDB cluster-file did not appear in time" >&2
+              exit 1
+          volumeMounts:
+            - name: fdb-cluster-file
+              mountPath: /etc/fdb
+      containers:
+        - name: fdb-restore
+          image: {{ .Values.fdb.restore.image | default (printf "foundationdb/foundationdb:%s" .Values.fdb.version) | quote }}
+          command:
+            - sh
+            - -c
+            - |
+              set -e
+              # Emptiness decides, not the presence of this Job. The
+              # migrator is gated behind this Job, and nothing else
+              # writes before it, so a non-empty cluster here means the
+              # data is already in place.
+              keys=$(fdbcli -C "$FDB_CLUSTER_FILE" \
+                --exec 'getrangekeys "" \xff 1' 2>/dev/null \
+                | grep -c '^`' || true)
+              if [ "$keys" -gt 0 ]; then
+                echo "destination already holds data; leaving it alone"
+                exit 0
+              fi
+              echo "restoring to version $RESTORE_VERSION"
+              # -w blocks until the restore finishes, so this Job's
+              # completion is a real signal rather than a submission
+              # receipt -- the operator's FoundationDBRestore status
+              # reports `queued` for a restore that has already
+              # completed, which is why this does not use the CR.
+              exec fdbrestore start \
+                -r "$BACKUP_URL" \
+                -v "$RESTORE_VERSION" \
+                --encryption-key-file /var/backup-credentials/encryption-key \
+                --dest-cluster-file "$FDB_CLUSTER_FILE" \
+                -w
+          env:
+            - name: FDB_CLUSTER_FILE
+              value: "/etc/fdb/fdb.cluster"
+            - name: FDB_BLOB_CREDENTIALS
+              value: /var/backup-credentials/credentials
+            - name: BACKUP_URL
+              value: {{ include "queenswood.fdbBackupUrl" . | quote }}
+            - name: RESTORE_VERSION
+              value: {{ .Values.fdb.restore.version | quote }}
+          volumeMounts:
+            - name: fdb-cluster-file
+              mountPath: /etc/fdb
+              readOnly: true
+            - name: backup-credentials
+              mountPath: /var/backup-credentials
+          {{- with .Values.fdb.restore.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+      volumes:
+        - name: fdb-cluster-file
+          emptyDir: {}
+        - name: backup-credentials
+          secret:
+            secretName: fdb-backup-credentials
+{{- end }}

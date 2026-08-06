@@ -35,6 +35,10 @@ spec:
           accessKeyId: {{ .Values.fdbBackup.accessKeyId | quote }}
           secretAccessKey: {{ .Values.fdbBackup.secretAccessKey | quote }}
           encryptionKey: {{ .Values.fdbBackup.encryptionKey | quote }}
+        {{- with .Values.fdbRestore.version }}
+        restore:
+          version: {{ . | quote }}
+        {{- end }}
       {{- end }}
       gateway:
         enabled: true

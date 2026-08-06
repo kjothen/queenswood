@@ -259,14 +259,37 @@ version it can be restored to. It refuses rather than continues if
 the backup is not restorable — draining past that point is what
 makes the data unrecoverable.
 
-Restore with `just gcp-fdb-import` onto a freshly rebuilt,
-still-empty cluster. FDB requires an empty destination and fails
-rather than merges, so this belongs immediately after `gcp-up` and
-before anything writes. It restores the recorded version rather
-than the latest restorable point, deliberately: the rebuilt
-cluster backs up into the same container, and its versions bear no
-relation to the old one's, so "latest" could mean the new empty
-cluster's own snapshot.
+There is nothing to run to restore it. `gcp-up` reads that
+recorded version out of `pass` and it travels to the chart as
+`fdb.restore.version`, where a Job acts on it before anything
+writes. That is not a convenience: the migrator saves record
+metadata as soon as FDB is reachable, FDB refuses to restore into
+a non-empty destination, and no human is fast enough to fit
+between the two.
+
+Read the value as a target — "this cluster's data should come
+from version N" — rather than an instruction, which is what makes
+it safe to leave set. The Job's name embeds the version, so
+re-applying the same value resolves to the same completed Job,
+and the Job checks the cluster is empty before doing anything.
+Changing the version is the deliberate act, and in a GitOps flow
+a reviewable one.
+
+It restores the recorded version rather than the latest
+restorable point, deliberately: the rebuilt cluster backs up into
+the same container, and its versions bear no relation to the old
+one's, so "latest" could mean the new empty cluster's own
+snapshot.
+
+The migrator blocks on that Job with no timeout escape, so a
+failed restore stops the whole deployment rather than booting an
+empty bank. Once the migrator writes, the restore is impossible
+for good — failing loudly is the lesser outcome.
+
+To skip a restore, remove
+`<env>/backup/fdb-restore-version` from `pass` before
+`gcp-up`; to restore a different point, put that version there
+instead.
 
 ### Redeploying without cycling the cluster
 

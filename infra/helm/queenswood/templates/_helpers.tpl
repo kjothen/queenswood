@@ -57,3 +57,21 @@ name once the FoundationDBCluster CR is reconciled).
 {{- define "queenswood.fdbClusterConfigMap" -}}
 {{- printf "%s-fdb-config" .Release.Name -}}
 {{- end -}}
+
+{{/*
+The blobstore URL the restore Job reads from. The backup CR does not
+use this: the operator assembles the same URL from the structured
+fields of `blobStoreConfiguration`. What keeps the two in step is that
+both derive from `fdb.backup.*` -- so a URL that disagrees means a
+value was changed for one and not the other, and it names a container
+that does not exist rather than the wrong one.
+
+Plaintext by construction (port 80, secure_connection=0): FDB's
+blobstore client has no usable trust store and the operator cannot pass
+it a CA, so the files are encrypted instead. See fdb-backup.yaml.
+*/}}
+{{- define "queenswood.fdbBackupUrl" -}}
+{{- $b := .Values.fdb.backup -}}
+{{- $params := printf "bucket=%s&region=%s&secure_connection=0" $b.bucket $b.region -}}
+{{- printf "blobstore://%s@%s:%v/%s?%s" $b.accessKeyId $b.endpoint $b.port $b.backupName $params -}}
+{{- end -}}
