@@ -113,9 +113,22 @@ spec:
                 exit 0
               fi
               echo "importing gs://$BUCKET/$DUMP/keycloak.sql.gz"
-              exec gcloud sql import sql "$INSTANCE" \
-                "gs://$BUCKET/$DUMP/keycloak.sql.gz" \
-                --database="$DATABASE" --project="$PROJECT" --quiet
+              # Retried rather than run once. The import is performed by
+              # the instance's own service agent, whose identity is
+              # per-instance, so on a rebuilt instance the binding
+              # letting it read the dump may be granted moments after
+              # this Job starts. Giving up would block bootstrap behind
+              # a gate that can never open. Re-importing the same dump
+              # is harmless.
+              for i in $(seq 1 20); do
+                gcloud sql import sql "$INSTANCE" \
+                  "gs://$BUCKET/$DUMP/keycloak.sql.gz" \
+                  --database="$DATABASE" --project="$PROJECT" --quiet && exit 0
+                echo "import attempt $i failed; retrying in 30s"
+                sleep 30
+              done
+              echo "import never succeeded" >&2
+              exit 1
           env:
             - name: PROJECT
               value: {{ required "restore.project must be set when restore.dump is" .Values.restore.project | quote }}

@@ -222,6 +222,12 @@ gcp-up:
     just gcp-backup-key-create
     just kind-xp-up
     just gcp-cloudsql-wire
+    # After CloudSQL exists, because the import is performed by the
+    # instance's own service agent and that identity is per-instance --
+    # a rebuilt instance has a new one, and the binding letting it read
+    # the dump has to be granted again or the restore Job cannot read
+    # the object.
+    just gcp-keycloak-restore-sa-create
     just gcp-health-check
 
 # Tear down kind + GKE + expensive GCP resources; keep project, SA, DNS zone.
