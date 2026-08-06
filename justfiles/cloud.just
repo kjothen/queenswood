@@ -402,7 +402,10 @@ kind-xp-wait-ready timeout="2700":
           NS=$(kubectl --context {{ KIND_XP_CLUSTER }} -n {{ QUEENSWOOD_ENV }} get \
                 managedzone.dns.gcp.m.upbound.io {{ QUEENSWOOD_DNS_ZONE }} \
                 -o jsonpath='{.status.atProvider.nameServers}' 2>/dev/null)
-          [[ -n "$NS" ]] && break
+          # `[[ ... ]] && break` would abort the whole recipe under
+          # set -e whenever the test fails, which is every iteration
+          # this loop exists for.
+          if [[ -n "$NS" ]]; then break; fi
           if (( $(date +%s) > zone_deadline )); then
             echo >&2
             echo "ManagedZone {{ QUEENSWOOD_DNS_ZONE }} never published nameservers." >&2
