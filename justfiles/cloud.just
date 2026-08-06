@@ -391,14 +391,29 @@ kind-xp-wait-ready timeout="2700":
       until kubectl --context {{ KIND_XP_CLUSTER }} -n argocd \
             get application/$app >/dev/null 2>&1; do sleep 5; done
       if [[ "$app" == "queenswood-platform" ]]; then
-        until kubectl --context {{ KIND_XP_CLUSTER }} -n {{ QUEENSWOOD_ENV }} get \
-              managedzone.dns.gcp.m.upbound.io {{ QUEENSWOOD_DNS_ZONE }} >/dev/null 2>&1; do
-          sleep 5
-        done
-        until [[ -n "$(kubectl --context {{ KIND_XP_CLUSTER }} -n {{ QUEENSWOOD_ENV }} get \
-              managedzone.dns.gcp.m.upbound.io {{ QUEENSWOOD_DNS_ZONE }} \
-              -o jsonpath='{.status.atProvider.nameServers}' 2>/dev/null)" ]]; do
-          sleep 5
+        # Bounded and noisy on purpose. The zone is observe-only, so
+        # Crossplane never creates it -- if the real Cloud DNS zone is
+        # absent or named differently, nameServers never appear and an
+        # unbounded loop here is indistinguishable from a slow
+        # reconcile, with nothing printed either way.
+        zone_deadline=$(( $(date +%s) + {{ timeout }} ))
+        NS=""
+        while [[ -z "$NS" ]]; do
+          NS=$(kubectl --context {{ KIND_XP_CLUSTER }} -n {{ QUEENSWOOD_ENV }} get \
+                managedzone.dns.gcp.m.upbound.io {{ QUEENSWOOD_DNS_ZONE }} \
+                -o jsonpath='{.status.atProvider.nameServers}' 2>/dev/null)
+          [[ -n "$NS" ]] && break
+          if (( $(date +%s) > zone_deadline )); then
+            echo >&2
+            echo "ManagedZone {{ QUEENSWOOD_DNS_ZONE }} never published nameservers." >&2
+            echo "It is observe-only, so Crossplane will not create it. Check the" >&2
+            echo "Cloud DNS zone exists under that exact name:" >&2
+            echo "  gcloud dns managed-zones describe {{ QUEENSWOOD_DNS_ZONE }} --project=$PROJECT_ID" >&2
+            echo "  just gcp-dns-zone-create" >&2
+            exit 1
+          fi
+          echo "  waiting for {{ QUEENSWOOD_DNS_ZONE }} nameservers..."
+          sleep 10
         done
         echo
         echo "------------------------------------------------------"
