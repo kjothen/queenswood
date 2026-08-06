@@ -445,10 +445,17 @@ spec:
                   initialNodeCount: 1
                   removeDefaultNodePool: true
                   deletionProtection: false
-                  nodeConfig:
-                    machineType: e2-standard-2
-                    diskType: pd-standard
-                    diskSizeGb: 50
+                  # No nodeConfig here on purpose. It only ever
+                  # configures the default node pool, which
+                  # removeDefaultNodePool deletes immediately, and GKE
+                  # then recomputes node_config on the cluster. The
+                  # provider sees a diff on a field that can only change
+                  # by replacing the cluster and refuses to reconcile:
+                  #   cannot change the value of the argument
+                  #   "node_config.0.metadata.%" from "" to ""
+                  # leaving the cluster stuck Ready=False Creating. The
+                  # real node configuration is on the queenswood-pool
+                  # NodePool below.
                   networkRef:
                     name: queenswood-vpc
                   subnetworkRef:
