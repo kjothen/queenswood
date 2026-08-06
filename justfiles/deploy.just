@@ -258,6 +258,11 @@ kind-xp-install-root:
     export FDB_BACKUP_ACCESS_KEY_ID=$(pass show {{ PASS_ENV }}/storage/ids/hmac 2>/dev/null | head -1)
     export FDB_BACKUP_SECRET_ACCESS_KEY=$(pass show {{ PASS_ENV }}/storage/hmac 2>/dev/null | head -1)
     export FDB_BACKUP_ENCRYPTION_KEY=$(pass show {{ PASS_ENV }}/backup/fdb-encryption 2>/dev/null | head -1)
+    # Recorded by gcp-fdb-export at the last teardown. Passing it does
+    # not run a restore -- it states where a cluster's data should come
+    # from, and only an empty cluster acts on it. Absent on an
+    # environment that has never been torn down, which restores nothing.
+    export FDB_RESTORE_VERSION=$(pass show {{ PASS_ENV }}/backup/fdb-restore-version 2>/dev/null | head -1)
     envsubst < infra/bootstrap/root-app.yml.tmpl \
       | kubectl --context {{ KIND_XP_CLUSTER }} apply -f -
 

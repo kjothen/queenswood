@@ -21,6 +21,14 @@ fdbBackup:
   secretAccessKey: ""
   encryptionKey: ""
 
+# Backup version a rebuilt cluster restores from before anything
+# writes to it. A target rather than a mode -- see the queenswood
+# chart's fdb.restore values. Supplied by the root Application from
+# what `just gcp-fdb-export` recorded at teardown; empty means a
+# fresh environment that has nothing to restore.
+fdbRestore:
+  version: ""
+
 cert:
   location: europe-west2
 
@@ -28,7 +36,7 @@ release:
   chart:
     name: queenswood
     repository: oci://ghcr.io/repldriven
-    version: 0.9.0
+    version: 0.10.0
   # The Crossplane provider-config that owns GKE-bound Helm releases.
   # Shared by the queenswood, queenswood-keycloak, and
   # keycloak-operator Release resources below.

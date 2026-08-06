@@ -1,8 +1,9 @@
-{{- if .Values.bootstrap.enabled }}
+{{- if or .Values.bootstrap.enabled (and .Values.fdb.backup.enabled .Values.fdb.restore.version) }}
 ---
 # Service deployments use a `kubectl wait --for=condition=complete
-# job/...` initContainer to gate startup on bootstrap success. That
-# container needs `get`/`watch` on Jobs in the release namespace.
+# job/...` initContainer to gate startup on bootstrap success, and the
+# migrator uses the same pattern to gate on the FDB restore. Those
+# containers need `get`/`watch` on Jobs in the release namespace.
 # Bind the perms to the namespace's default ServiceAccount (which
 # every service pod inherits unless explicitly overridden).
 apiVersion: rbac.authorization.k8s.io/v1

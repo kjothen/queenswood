@@ -33,6 +33,11 @@ fdbBackupAccessKeyId: ""
 fdbBackupSecretAccessKey: ""
 fdbBackupEncryptionKey: ""
 
+# Backup version a rebuilt cluster should restore from, recorded by
+# `just gcp-fdb-export` at teardown. Empty means no restore, which is
+# what a fresh environment wants.
+fdbRestoreVersion: ""
+
 # Default K8s namespace for the queenswood-* workloads on GKE. Falls
 # back to envName when that is set.
 envNamespace: queenswood-test

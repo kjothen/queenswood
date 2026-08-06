@@ -372,6 +372,24 @@ fdb:
       limits:
         cpu: "500m"
         memory: "1Gi"
+  # Restore before anything writes. A target, not a mode: the version
+  # says where this cluster's data should come from, so leaving it set
+  # is safe -- the Job's name embeds it, and re-applying the same value
+  # resolves to the same completed Job. Empty means no restore, which is
+  # what a fresh environment with no prior backup wants.
+  # `just gcp-fdb-export` records the version to use.
+  restore:
+    version: ""
+    # Defaults to foundationdb/foundationdb:<fdb.version>. Needs
+    # fdbrestore and fdbcli, which the official image carries.
+    image: ""
+    resources:
+      requests:
+        cpu: "100m"
+        memory: "512Mi"
+      limits:
+        cpu: "1000m"
+        memory: "1Gi"
 
 # Sub-chart: FDB Kubernetes Operator (CRDs + controller).
 # nameOverride forces lowercase resource names — the chart derives

@@ -50,6 +50,10 @@ spec:
         - name: fdbBackup.bucket
           value: {{ printf "%s-backups" (required "gcpProjectId must be set to enable FDB backup" .Values.gcpProjectId) | quote }}
 {{- end }}
+{{- if .Values.fdbRestoreVersion }}
+        - name: fdbRestore.version
+          value: {{ .Values.fdbRestoreVersion | quote }}
+{{- end }}
 {{- end }}
   destination:
     server: https://kubernetes.default.svc

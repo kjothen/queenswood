@@ -50,6 +50,8 @@ spec:
           value: "${FDB_BACKUP_SECRET_ACCESS_KEY}"
         - name: fdbBackupEncryptionKey
           value: "${FDB_BACKUP_ENCRYPTION_KEY}"
+        - name: fdbRestoreVersion
+          value: "${FDB_RESTORE_VERSION}"
   destination:
     server: https://kubernetes.default.svc
     namespace: argocd

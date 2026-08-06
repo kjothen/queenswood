@@ -847,69 +847,14 @@ gcp-fdb-export:
     printf '%s\n' "$VERSION" | pass insert -m -f {{ PASS_ENV }}/backup/fdb-restore-version >/dev/null
     echo ">>> restorable to version $VERSION; recorded in {{ PASS_ENV }}/backup/fdb-restore-version"
 
-# Restore FDB from the backup recorded by the last gcp-fdb-export.
-gcp-fdb-import version="":
-    #!/usr/bin/env zsh
-    set -euo pipefail
-    KCTX=$(just _gke-ctx)
-    POD=$(just _gcp-fdb-agent-pod)
-    URL=$(just _gcp-fdb-backup-url)
-    VERSION='{{ version }}'
-    if [[ -z "$VERSION" ]]; then
-      VERSION=$(pass show {{ PASS_ENV }}/backup/fdb-restore-version 2>/dev/null | head -1)
-    fi
-    if [[ -z "$VERSION" ]]; then
-      echo "no recorded restore version; run gcp-fdb-export first, or pass one" >&2
-      exit 1
-    fi
-    cat >&2 <<EOF
-    ================================================================
-    About to restore FDB to version $VERSION.
-
-    This replaces everything the cluster currently holds -- every org,
-    party, account and transaction written since it came up. FDB
-    requires the destination to be empty, so a restore onto a cluster
-    that has already been written to will fail rather than merge.
-    ================================================================
-    EOF
-    printf "Type 'yes' to proceed: "
-    read confirm
-    [[ "$confirm" == "yes" ]] || { echo "aborted." >&2; exit 1; }
-
-    kubectl --context "$KCTX" -n {{ QUEENSWOOD_ENV }} apply -f - <<EOF
-    apiVersion: apps.foundationdb.org/v1beta2
-    kind: FoundationDBRestore
-    metadata:
-      name: {{ QUEENSWOOD_ENV }}-fdb
-    spec:
-      destinationClusterName: {{ QUEENSWOOD_ENV }}-fdb
-      backupVersion: $VERSION
-      encryptionKeyPath: /var/backup-credentials/encryption-key
-      blobStoreConfiguration:
-        accountName: "$(pass show {{ PASS_ENV }}/storage/ids/hmac | head -1)@storage.googleapis.com:80"
-        bucket: "$(just _gcp-backup-bucket-name)"
-        backupName: "$(just _gcp-fdb-backup-name)"
-        urlParameters:
-          - "region={{ REGION }}"
-          - secure_connection=0
-    EOF
-
-    # Polled with fdbrestore rather than off the CR: the operator's
-    # status stays "queued" through a restore that has already
-    # completed, so the CR is not a usable progress signal.
-    echo ">>> restoring (this reads every file in the container)"
-    for i in {1..120}; do
-      STATE=$(kubectl --context "$KCTX" -n {{ QUEENSWOOD_ENV }} exec "$POD" -c foundationdb -- \
-        fdbrestore status --dest_cluster_file /var/dynamic-conf/fdb.cluster 2>/dev/null \
-        | grep -o 'State: [a-z]*' | head -1 | cut -d' ' -f2)
-      case "$STATE" in
-        completed) echo ">>> restore completed"; exit 0 ;;
-        aborted|error) echo "restore $STATE" >&2; exit 1 ;;
-      esac
-      sleep 10
-    done
-    echo "restore did not complete in 20 minutes; check 'fdbrestore status'" >&2
-    exit 1
+# There is no gcp-fdb-import. A restore is declared, not run:
+# `fdb.restore.version` in the queenswood chart names the version a
+# cluster's data should come from, and the chart's restore Job acts
+# on it before the migrator writes anything. A recipe could not do
+# the same job -- by the time one could be typed the migrator has
+# already saved record metadata, and FDB refuses to restore into a
+# non-empty destination. The version above travels to the chart via
+# the root Application, so `gcp-up` restores on its own.
 
 # Export the Keycloak database to the backup bucket.
 gcp-cloudsql-export:
