@@ -2,9 +2,9 @@
 
 # Recovery procedures
 
-What to run when data has to come back. Covers FoundationDB only —
-Keycloak's restore is still a manual `just gcp-cloudsql-import` and
-carries a known ordering bug, tracked in issue #338.
+What to run when data has to come back. Both stores restore the same
+way — a version or dump recorded at teardown, acted on before anything
+writes — so the routine cycle needs no commands at all.
 
 Everything here assumes `QUEENSWOOD_ENV` is set to the environment you
 mean, since every recipe keys `pass` and the GCP project off it.
@@ -14,9 +14,13 @@ mean, since every recipe keys `pass` and the GCP project off it.
 A teardown and rebuild restores itself.
 
 ```bash
-just gcp-down    # records the restore version while the cluster lives
-just gcp-up      # the rebuilt cluster restores to it
+just gcp-down    # records what to restore, while it can still be known
+just gcp-up      # the rebuilt environment restores to it
 ```
+
+`gcp-down` records two things: FDB's restore version, and the Keycloak
+dump it exported. `gcp-up` re-renders the root Application from both,
+and each store's restore Job acts before its own writer runs.
 
 `gcp-down` runs `gcp-fdb-export` **before** draining the workload
 namespace, because the backup agents live in that namespace and read
@@ -29,7 +33,7 @@ makes the data unrecoverable.
 `gcp-up` re-renders the root Application with that version, and the
 chart's restore Job acts on it before the migrator writes anything.
 
-## Restoring to a chosen point
+## Restoring FDB to a chosen point
 
 When the newest data is the problem, or no teardown ran.
 
@@ -79,21 +83,58 @@ into. Bring the environment up first, empty, then use the steps above:
 the restore Job no-ops on the way up, agents start, and you can list
 points and rebuild once more.
 
+## Keycloak
+
+Same shape as FDB, with one difference worth knowing: an import
+overwrites, where FDB refuses a non-empty destination. The Job asks
+the database whether a realm exists and leaves it alone if so, but
+that guard is the only one — there is nothing underneath it.
+
+Once per project, create the identity the import runs as:
+
+```bash
+just gcp-keycloak-restore-sa-create
+```
+
+To restore a chosen dump rather than the one `gcp-down` recorded:
+
+```bash
+gcloud storage ls "gs://$(just _gcp-backup-bucket-name)/keycloak/export/**/"
+pass insert -e -f "queenswood/gcp/$QUEENSWOOD_ENV/backup/keycloak-restore-dump"
+```
+
+The value is the prefix, not the object —
+`keycloak/export/2026/08/05/161016Z`.
+
+Order matters for a reason that is easy to miss. A rebuilt environment
+mints a fresh admin signing key and bootstrap registers its public half
+on the `queenswood-admin` client. Importing a dump after that reverts
+the realm to the key the dump was taken with, while the pods hold the
+new private half, and `private_key_jwt` stops verifying. The import is
+therefore gated ahead of that registration, and bootstrap re-registers
+the current key onto the restored realm. The operator's realm import
+runs with `--override=false`, so it leaves the restored realm alone.
+
 ## When the deployment appears to hang
 
-A restore blocks the migrator by design, so a stuck restore looks like
-a stalled deploy. Services never start because they wait on bootstrap,
-which waits on the migrator, which waits on the restore.
+Either restore blocks the chain by design, so a stuck one looks like a
+stalled deploy. Services wait on bootstrap, which waits on both the
+migrator and the Keycloak import, and the migrator waits on the FDB
+restore.
 
 ```bash
 kubectl -n "$QUEENSWOOD_ENV" get jobs
-kubectl -n "$QUEENSWOOD_ENV" logs -l app.kubernetes.io/component=fdb-restore
+kubectl -n "$QUEENSWOOD_ENV" logs \
+  -l app.kubernetes.io/component=fdb-restore
+kubectl -n "$QUEENSWOOD_ENV" logs \
+  -l app.kubernetes.io/component=keycloak-restore
 ```
 
-The gate has no timeout on purpose. Saving record metadata is a write,
-and FDB refuses to restore into a non-empty destination — a migrator
-that gave up waiting and ran anyway would destroy the ability to
-restore rather than carry on safely.
+Neither gate has a timeout escape, on purpose. Both writers are
+destructive to the thing being restored: saving record metadata makes
+FDB non-empty and it refuses to restore into that, and registering the
+admin signing key is what a late Keycloak import would undo. A gate
+that gave up and ran anyway would not be carrying on safely.
 
 To abandon the restore and boot empty, clear the version and re-render:
 
@@ -125,6 +166,14 @@ status, compare key counts against what you expect:
 kubectl -n "$QUEENSWOOD_ENV" exec "$POD" -c foundationdb -- \
   fdbcli -C /var/dynamic-conf/fdb.cluster \
   --exec 'getrangekeys "" \xff 100000' | grep -c '^`'
+```
+
+For Keycloak, the Job says what it did — either the import command or
+a line saying it found a realm already there:
+
+```bash
+kubectl -n "$QUEENSWOOD_ENV" logs \
+  -l app.kubernetes.io/component=keycloak-restore
 ```
 
 ## Helm refuses to upgrade after manual intervention
