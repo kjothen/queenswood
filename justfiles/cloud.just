@@ -431,6 +431,38 @@ kind-xp-wait-ready timeout="2700":
         --for=jsonpath='{.status.health.status}'=Healthy \
         application/$app --timeout={{ timeout }}s
       if [[ "$app" == "queenswood-gcp" ]]; then
+        # Argo reports this Application Healthy once its manifests are
+        # applied, not once the cloud resources exist -- it has no
+        # health check for Crossplane managed resources.
+        #
+        # The signal is the managed resources, not gcloud. A cluster is
+        # created without its node pool and gets ours separately, so
+        # gcloud reports RUNNING in the gap and flips back to
+        # RECONCILING -- a cluster with no nodes, briefly indis-
+        # tinguishable from a finished one. The Ready condition also
+        # gates something get-credentials does not: the cluster
+        # publishes its kubeconfig connection secret when it goes
+        # Ready, and until it does provider-helm cannot build a client
+        # ("currentContext not set in kubeconfig") and every Release in
+        # the platform wave fails to sync.
+        gke_deadline=$(( $(date +%s) + {{ timeout }} ))
+        ready() {
+          [[ "$(kubectl --context {{ KIND_XP_CLUSTER }} -n crossplane-system get \
+                "$1" "$2" -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}' \
+                2>/dev/null)" == "True" ]]
+        }
+        until ready cluster.container.gcp.m.upbound.io queenswood-gke \
+           && ready nodepool.container.gcp.m.upbound.io queenswood-pool; do
+          if (( $(date +%s) > gke_deadline )); then
+            echo >&2
+            echo "queenswood-gke/queenswood-pool never went Ready. Check them:" >&2
+            echo "  kubectl --context {{ KIND_XP_CLUSTER }} -n crossplane-system get \\" >&2
+            echo "    cluster.container.gcp.m.upbound.io nodepool.container.gcp.m.upbound.io" >&2
+            exit 1
+          fi
+          echo "  waiting for queenswood-gke + queenswood-pool to go Ready..."
+          sleep 20
+        done
         gcloud container clusters get-credentials queenswood-gke \
           --zone={{ ZONE }} --project="$PROJECT_ID"
       fi
