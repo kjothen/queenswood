@@ -1,0 +1,115 @@
+{{- if and .Values.fdb.enabled .Values.fdb.backup.enabled }}
+{{- /*
+  Continuous backup of the FDB cluster to object storage.
+
+  FDB's backup agent knows one remote destination protocol,
+  `blobstore://`, which is S3. GCS accepts that through its interop
+  endpoint at storage.googleapis.com, which authenticates with an HMAC
+  key rather than a service-account token -- the agent has no idea it
+  is talking to Google, so Workload Identity cannot reach it. The key
+  is minted by `just gcp-backup-hmac-create` and travels from `pass`
+  through the root Application, the same path as the CloudSQL
+  password: GCS holds the matching half, so it is stored rather than
+  generated.
+
+  `accountName` doubles as the credentials-file key and as the
+  endpoint the agent connects to -- the part after the `@` is the
+  hostname and port.
+
+  The transport is plaintext HTTP, and the backup files are encrypted
+  instead. FDB's blobstore client has no usable trust store: it
+  statically links OpenSSL with OPENSSLDIR=/usr/local/ssl, a path
+  absent from the image, so every public certificate verifies as
+  self-signed. Only `--tls-ca-file` loads a CA -- not SSL_CERT_FILE,
+  FDB_TLS_CA_FILE, or FDB_NETWORK_OPTION_TLS_CA_PATH -- and the
+  operator builds the `fdbbackup start` command itself, passing no TLS
+  arguments and offering no way to add them. So HTTPS is unreachable
+  through the operator no matter how the agents are configured.
+
+  What that costs is bounded: SigV4 never transmits the secret key,
+  only an access id and a signature, and `encryptionKeyPath` means the
+  payload is AES-256-GCM ciphertext before it reaches the socket.
+  Request metadata -- bucket, object names, sizes -- is what travels in
+  the clear, over Google's own network via Private Google Access.
+
+  The Secret is named without the release prefix because the FDB
+  operator has to mount it too -- `fdbbackup start` runs in the
+  operator pod, not in an agent -- and subchart values cannot see
+  `.Release.Name`. It is mounted there as an optional volume, so an
+  install with backup disabled still starts.
+*/ -}}
+{{- $accessKeyId := required "fdb.backup.accessKeyId must be set when fdb.backup.enabled (root-app passes it from pass)" .Values.fdb.backup.accessKeyId -}}
+{{- $secretAccessKey := required "fdb.backup.secretAccessKey must be set when fdb.backup.enabled (root-app passes it from pass)" .Values.fdb.backup.secretAccessKey -}}
+{{- $encryptionKey := required "fdb.backup.encryptionKey must be set when fdb.backup.enabled (root-app passes it from pass)" .Values.fdb.backup.encryptionKey -}}
+{{- $accountName := printf "%s@%s:%v" $accessKeyId .Values.fdb.backup.endpoint .Values.fdb.backup.port -}}
+{{- $credentialsKey := printf "%s@%s" $accessKeyId .Values.fdb.backup.endpoint -}}
+{{- $secretName := "fdb-backup-credentials" -}}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ $secretName }}
+  labels:
+    {{- include "queenswood.labels" . | nindent 4 }}
+type: Opaque
+stringData:
+  # Keyed without the port: fdbbackup strips it before looking the
+  # account up.
+  credentials: |
+    {{ dict "accounts" (dict $credentialsKey (dict "secret" $secretAccessKey)) | toJson }}
+data:
+  # Already base64 in `pass`, which is exactly what `data` wants -- it
+  # lands on disk as the 32 raw bytes fdbbackup reads.
+  encryption-key: {{ $encryptionKey | quote }}
+---
+apiVersion: apps.foundationdb.org/v1beta2
+kind: FoundationDBBackup
+metadata:
+  name: {{ .Release.Name }}-fdb
+  labels:
+    {{- include "queenswood.labels" . | nindent 4 }}
+spec:
+  clusterName: {{ .Release.Name }}-fdb
+  version: {{ .Values.fdb.version | quote }}
+  agentCount: {{ .Values.fdb.backup.agentCount }}
+  # Continuous rather than oneTime: between full snapshots the agents
+  # ship a mutation log, so the backup is restorable to within seconds
+  # of any moment rather than only to the last snapshot. That is what
+  # lets a teardown pick a point FDB and Keycloak can both be aligned
+  # to.
+  backupMode: continuous
+  snapshotPeriodSeconds: {{ .Values.fdb.backup.snapshotPeriodSeconds }}
+  encryptionKeyPath: /var/backup-credentials/encryption-key
+  blobStoreConfiguration:
+    accountName: {{ $accountName | quote }}
+    bucket: {{ required "fdb.backup.bucket must be set when fdb.backup.enabled" .Values.fdb.backup.bucket | quote }}
+    backupName: {{ .Values.fdb.backup.backupName | quote }}
+    urlParameters:
+      # Not optional. The agent signs with AWS SigV4, which needs a
+      # region, and it reads one off an AWS-shaped hostname
+      # (s3.<region>.amazonaws.com). storage.googleapis.com encodes
+      # none, so without this the URL is rejected before any request
+      # is made.
+      - {{ printf "region=%s" (required "fdb.backup.region must be set when fdb.backup.enabled" .Values.fdb.backup.region) | quote }}
+      - secure_connection=0
+      {{- range .Values.fdb.backup.urlParameters }}
+      - {{ . | quote }}
+      {{- end }}
+  podTemplateSpec:
+    spec:
+      volumes:
+        - name: backup-credentials
+          secret:
+            secretName: {{ $secretName }}
+      containers:
+        - name: foundationdb
+          env:
+            - name: FDB_BLOB_CREDENTIALS
+              value: /var/backup-credentials/credentials
+          volumeMounts:
+            - name: backup-credentials
+              mountPath: /var/backup-credentials
+          {{- with .Values.fdb.backup.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+{{- end }}

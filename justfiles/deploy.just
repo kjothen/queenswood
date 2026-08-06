@@ -251,6 +251,13 @@ kind-xp-install-root:
     # CloudSQL holds the matching half of this one, so it is stored
     # rather than generated -- see the taxonomy in the root-app template.
     export KEYCLOAK_DB_PASSWORD=$(just _keycloak-db-password)
+    # Minted by gcp-backup-hmac-create / gcp-backup-key-create, which
+    # gcp-up runs before this. Absent on a management plane brought up
+    # on its own, which leaves the backup switched off rather than
+    # failing the bootstrap.
+    export FDB_BACKUP_ACCESS_KEY_ID=$(pass show {{ PASS_ENV }}/storage/ids/hmac 2>/dev/null | head -1)
+    export FDB_BACKUP_SECRET_ACCESS_KEY=$(pass show {{ PASS_ENV }}/storage/hmac 2>/dev/null | head -1)
+    export FDB_BACKUP_ENCRYPTION_KEY=$(pass show {{ PASS_ENV }}/backup/fdb-encryption 2>/dev/null | head -1)
     envsubst < infra/bootstrap/root-app.yml.tmpl \
       | kubectl --context {{ KIND_XP_CLUSTER }} apply -f -
 

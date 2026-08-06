@@ -24,7 +24,7 @@ spec:
       # Parameters win over valueFiles, so a bootstrap that supplies
       # these picks the environment on its own and the values files
       # serve only as defaults.
-{{- if or .Values.envName .Values.envDomain .Values.keycloakDbPassword }}
+{{- if or .Values.envName .Values.envDomain .Values.keycloakDbPassword .Values.fdbBackupAccessKeyId }}
       parameters:
 {{- if .Values.envName }}
         - name: env.name
@@ -37,6 +37,18 @@ spec:
 {{- if .Values.keycloakDbPassword }}
         - name: queenswoodKeycloak.dbPassword
           value: {{ .Values.keycloakDbPassword | quote }}
+{{- end }}
+{{- if .Values.fdbBackupAccessKeyId }}
+        - name: fdbBackup.accessKeyId
+          value: {{ .Values.fdbBackupAccessKeyId | quote }}
+        - name: fdbBackup.secretAccessKey
+          value: {{ required "fdbBackupSecretAccessKey must accompany fdbBackupAccessKeyId" .Values.fdbBackupSecretAccessKey | quote }}
+        - name: fdbBackup.encryptionKey
+          value: {{ required "fdbBackupEncryptionKey must accompany fdbBackupAccessKeyId" .Values.fdbBackupEncryptionKey | quote }}
+        # Derived, not passed: the bucket `gcp-backup-bucket-create`
+        # makes is always named for the project.
+        - name: fdbBackup.bucket
+          value: {{ printf "%s-backups" (required "gcpProjectId must be set to enable FDB backup" .Values.gcpProjectId) | quote }}
 {{- end }}
 {{- end }}
   destination:

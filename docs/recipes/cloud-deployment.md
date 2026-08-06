@@ -91,7 +91,11 @@ These survive every teardown short of
 - The Cloud DNS `ManagedZone` and the four nameservers you
   pasted into the registrar.
 - The backup bucket, `gs://<project-id>-backups`, holding the
-  Keycloak exports.
+  Keycloak exports and FDB's continuous backup.
+- The `fdb-backup` service account and its HMAC key, plus the
+  AES-256 key FDB encrypts backup files with. Both are in `pass`;
+  losing the second one turns the bucket into objects nothing can
+  read.
 
 The zone is the expensive-to-rebuild one, and not in money. A new
 zone gets a **different** nameserver set, so the registrar
@@ -104,12 +108,27 @@ writes it — and why `just gcp-down` leaves it alone.
 `just gcp-dns-zone-delete` exists, prompts for confirmation, and
 is for emergencies.
 
+Objects in it are laid out as
+`<service>/<backup-type>/<YYYY>/<MM>/<DD>/<HHMMSSZ>/`, so a
+prefix listing selects a day or a month and per-service lifecycle
+rules are expressible. FDB is the partial exception: `fdbbackup`
+appends its destination to its own `backups/` and `data/` roots,
+so its two segments land as `data/fdb/continuous/` and everything
+below that is FDB's own. Nothing carries an environment segment,
+because the bucket belongs to one project and the project to one
+environment — which also assumes one system per project. A second
+system sharing a project would take a `<system>` segment in front
+of the service, or better, its own bucket: that scopes FDB's HMAC
+key, which today holds `objectAdmin` over everything here
+including the Keycloak dumps.
+
 The bucket is what makes tier 2 disposable rather than
 destructive. CloudSQL's automated backups are enabled, but they
 are tied to the instance's lifecycle and `gcp-down` deletes the
 instance — so an export is the only thing that survives a
 teardown. Object storage costs pennies where a running instance
-does not, which is the whole trade.
+does not, which is the whole trade. FDB is covered the same way,
+by a continuous backup rather than an export at teardown.
 
 ### Tier 1 — the external addresses, the floor worth keeping warm
 
@@ -216,22 +235,38 @@ up/down cycles of the FDB and Kafka StatefulSets is enough to
 exhaust the default regional SSD quota and leave the next cold
 start stuck on a pending PVC.
 
-Then: kill kind, delete the GKE cluster, **export the Keycloak
-database to the backup bucket**, delete CloudSQL, delete the IP,
+Before any of that, `gcp-down` closes off the FDB backup. Then:
+kill kind, delete the GKE cluster, **export the Keycloak database
+to the backup bucket**, delete CloudSQL, delete the IP,
 certificate, VPC, and DNS records, prune the local kubeconfig
 context.
 
-The export runs after GKE is gone, so nothing is writing and the
-dump is consistent, and `gcp-down` refuses to delete the instance
-if it fails. Restore with `just gcp-cloudsql-import`, which takes
-the most recent export unless given one. Scale Keycloak to zero
-first — an import under a live Keycloak leaves it reading rows
-that change underneath it.
+The two stores are backed up at opposite ends of the teardown,
+and for opposite reasons. The Keycloak export runs *after* GKE is
+gone, so nothing is writing and the dump is consistent, and
+`gcp-down` refuses to delete the instance if it fails. Restore
+with `just gcp-cloudsql-import`, which takes the most recent
+export unless given one. Scale Keycloak to zero first — an import
+under a live Keycloak leaves it reading rows that change
+underneath it.
 
-FDB has no backup at all, so a teardown loses every org, party
-and account while keeping the identities that reference them.
-That asymmetry is deliberate for now rather than accidental, but
-it is worth knowing before treating `gcp-down` as reversible.
+FDB goes *first*, before the namespace drain, because its backup
+agents run in that namespace and read from a live cluster. Little
+is copied at that moment: a continuous backup has been shipping
+snapshots and a mutation log all along, so `just gcp-fdb-export`
+only stops it cleanly, so the last mutations land, and records the
+version it can be restored to. It refuses rather than continues if
+the backup is not restorable — draining past that point is what
+makes the data unrecoverable.
+
+Restore with `just gcp-fdb-import` onto a freshly rebuilt,
+still-empty cluster. FDB requires an empty destination and fails
+rather than merges, so this belongs immediately after `gcp-up` and
+before anything writes. It restores the recorded version rather
+than the latest restorable point, deliberately: the rebuilt
+cluster backs up into the same container, and its versions bear no
+relation to the old one's, so "latest" could mean the new empty
+cluster's own snapshot.
 
 ### Redeploying without cycling the cluster
 
@@ -273,13 +308,24 @@ IdP client secret today. `pass` holds it,
 Google minted it and holds the other half, so it has to be
 recorded.
 
-**Stored, injected at bootstrap.** Keycloak's CloudSQL password.
-It reaches both the CloudSQL user and Keycloak from one
-substitution in the root Application, which is what stops the two
-sides drifting.
+**Stored, injected at bootstrap.** Keycloak's CloudSQL password,
+and FDB's two backup secrets — the GCS HMAC key and the AES-256
+key its backup files are encrypted with. Each reaches every side
+that needs it from one substitution in the root Application, which
+is what stops those sides drifting.
 
 The rule that sorts them: **store a secret only when something
 outside your control holds the matching half.**
+
+FDB's encryption key is the one that bends the rule, and it is
+worth seeing why rather than treating it as an exception. Nothing
+outside holds the matching half — we generate it, and no third
+party ever sees it, which by the rule above would make it a
+generate-and-forget secret like the Keycloak signing key. But the
+*backup* holds the matching half, and the backup outlives every
+cluster that could regenerate it. So the test is not really "does
+someone else hold it" but "does anything we cannot recreate depend
+on it", and a bucket full of ciphertext qualifies.
 
 ### Rotating the CloudSQL password
 

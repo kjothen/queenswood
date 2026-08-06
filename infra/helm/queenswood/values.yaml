@@ -326,6 +326,52 @@ fdb:
     limits:
       cpu: "1000m"
       memory: "1Gi"
+  # Continuous backup to object storage. Off by default: a local kind
+  # install has no bucket to write to, and the credentials only exist
+  # in a cloud environment. See templates/fdb-backup.yaml.
+  backup:
+    enabled: false
+    # S3-compatible endpoint. GCS serves one for interop; the access
+    # key id is prefixed onto this to form `accountName`.
+    endpoint: storage.googleapis.com
+    # Plaintext, because FDB's blobstore cannot be given a CA through
+    # the operator -- see templates/fdb-backup.yaml. The backup files
+    # are encrypted instead.
+    port: 80
+    bucket: ""
+    # The bucket's region, which the SigV4 signature is computed over.
+    region: ""
+    # <service>/<backup-type>, the bucket's convention. No environment
+    # segment: the bucket belongs to one project, the project to one
+    # environment, and that environment to this system alone. A project
+    # hosting a second system would need a <system> segment in front --
+    # this is a path, so it takes one. fdbbackup appends the whole thing
+    # to its own `backups/` and `data/` roots rather than treating it as
+    # a bucket prefix, so objects land under `data/fdb/continuous/`.
+    backupName: fdb/continuous
+    accessKeyId: ""
+    secretAccessKey: ""
+    # Base64 AES-256 key from `just gcp-backup-key-create`. Lose it and
+    # the bucket is undecryptable.
+    encryptionKey: ""
+    # Extra blobstore URL parameters (e.g. request timeouts), beyond
+    # the region and secure_connection the template always sets.
+    urlParameters: []
+    agentCount: 2
+    # FDB paces a snapshot across this whole window rather than writing
+    # it at once, and a backup is not restorable until its first
+    # snapshot completes -- so this is how long a fresh cluster is
+    # unprotected, not just how often a full copy lands. An hour suits a
+    # test environment's data volume; raise it where the write
+    # amplification of frequent full copies costs more than the exposure.
+    snapshotPeriodSeconds: 3600
+    resources:
+      requests:
+        cpu: "100m"
+        memory: "256Mi"
+      limits:
+        cpu: "500m"
+        memory: "1Gi"
 
 # Sub-chart: FDB Kubernetes Operator (CRDs + controller).
 # nameOverride forces lowercase resource names — the chart derives
@@ -342,6 +388,23 @@ fdb:
 fdbOperator:
   enabled: true
   nameOverride: fdb-operator
+  # `fdbbackup start`, `status` and `discontinue` run in the operator
+  # pod, not in an agent, so the operator needs the blobstore
+  # credentials and the encryption key too -- see
+  # templates/fdb-backup.yaml for why the Secret has no release prefix.
+  # Mounted optional and set unconditionally so an install with
+  # `fdb.backup.enabled: false` still starts.
+  extraEnv:
+    - name: FDB_BLOB_CREDENTIALS
+      value: /var/backup-credentials/credentials
+  volumes:
+    - name: backup-credentials
+      secret:
+        secretName: fdb-backup-credentials
+        optional: true
+  volumeMounts:
+    - name: backup-credentials
+      mountPath: /var/backup-credentials
   # Helm merges submap entries rather than replacing the map, so
   # we have to explicitly null the unused 7.1 and 7.3 keys to keep
   # only the 7.4 monitor binaries the chart actually uses.

@@ -15,6 +15,12 @@
 # nothing, so a randAlphaNum would be re-minted on every reconcile --
 # and differently in each of the two charts that need it to agree. It
 # reaches both from here instead, which is also what makes them agree.
+#
+# The three ${FDB_BACKUP_*} values come from `pass` for the same
+# reason, and one further one: they have to outlive the cluster. GCS
+# holds the other half of the HMAC pair, and the backup itself holds
+# the other half of the encryption key -- regenerate either and the
+# bucket becomes a pile of objects nothing can read.
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -38,6 +44,12 @@ spec:
           value: "${QUEENSWOOD_DOMAIN}"
         - name: keycloakDbPassword
           value: "${KEYCLOAK_DB_PASSWORD}"
+        - name: fdbBackupAccessKeyId
+          value: "${FDB_BACKUP_ACCESS_KEY_ID}"
+        - name: fdbBackupSecretAccessKey
+          value: "${FDB_BACKUP_SECRET_ACCESS_KEY}"
+        - name: fdbBackupEncryptionKey
+          value: "${FDB_BACKUP_ENCRYPTION_KEY}"
   destination:
     server: https://kubernetes.default.svc
     namespace: argocd
