@@ -150,6 +150,21 @@ gate, expressed through Job status rather than an initContainer.
 The Usages and Jobs are emitted by the environment Composition on
 entering `state: draining`, which precedes `down`.
 
+Gating the right writers is harder than it looks, and issue #349 is
+the evidence. The first real teardown-and-rebuild restored
+FoundationDB with no intervention and needed four manual steps for
+Keycloak, because the restore was ordered ahead of the writer that
+seemed to matter -- the bootstrap Job -- while Keycloak itself starts
+two seconds earlier and creates its own schema. A gate is only as good
+as the census of writers behind it.
+
+The same teardown found three infrastructure defects of one shape: a
+wait that could never finish, a cluster's credentials fetched before
+it existed, and an IAM binding that does not survive a rebuilt
+instance. Each was an assumption that held while an environment was
+running. That is the class of failure `draining` automates, so this
+design should be treated as unproven until a cycle runs unattended.
+
 ### Backups are ours, and CloudSQL's are off
 
 CloudSQL's automated backups are disabled outside prod. They are tied
@@ -244,6 +259,12 @@ solve. Acceptable for dev and test, self-defeating for prod.
 **Migration is incremental.** The folder, seed and management project
 can be created while the kind plane still runs, and environments moved
 one at a time. Nothing here requires a flag day.
+
+**The restores this depends on are proven for FDB and not for
+Keycloak.** A full teardown and rebuild returned FoundationDB intact
+without intervention, and Keycloak only after four manual steps
+(#349). `state: draining` assumes both are unattended, so that gap
+closes before this is built, not after.
 
 ## Future
 
