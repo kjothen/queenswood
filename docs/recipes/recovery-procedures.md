@@ -99,12 +99,13 @@ just gcp-keycloak-restore-sa-create
 To restore a chosen dump rather than the one `gcp-down` recorded:
 
 ```bash
-gcloud storage ls "gs://$(just _gcp-backup-bucket-name)/keycloak/export/**/"
+just gcp-keycloak-restore-points        # last 5; pass a count for more
 pass insert -e -f "queenswood/gcp/$QUEENSWOOD_ENV/backup/keycloak-restore-dump"
 ```
 
-The value is the prefix, not the object —
-`keycloak/export/2026/08/05/161016Z`.
+The value is the prefix it prints, not the object —
+`keycloak/export/2026/08/05/161016Z`. A `*` marks the one `gcp-down`
+last recorded.
 
 Order matters for a reason that is easy to miss. A rebuilt environment
 mints a fresh admin signing key and bootstrap registers its public half
