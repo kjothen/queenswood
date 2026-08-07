@@ -1,53 +1,394 @@
-# `KeycloakRealmImport` CRs — the operator picks each one up, runs a
-# Job that imports the realm against the Keycloak instance, and marks
-# the CR as Done. Re-imports happen if the realm spec changes.
-#
-# Both payloads come from `files/*.json` symlinks pointing at the
-# canonical realm definitions in `components/resources/resources/
-# bank/`. The same files back the testcontainer-fixture realm (in
-# `bank-test-resources/`), so the helm-deployed realm, the operator-
-# managed realm, and the testcontainer realm all trace to one source.
-#
-# Two realms live on this Keycloak: `queenswood` is the
-# organisation-user realm (console SPA + per-org service
-# accounts); `queenswood-ops` is the operator realm (operator SPA).
-apiVersion: k8s.keycloak.org/v2beta1
-kind: KeycloakRealmImport
+{{- /*
+  Realm import, from a backup when one is named and from the chart's
+  committed definitions otherwise. One mechanism, not two.
+
+  The operator's `KeycloakRealmImport` creates realms and never
+  overwrites them: "if a Realm with the same name already exists in
+  Keycloak, it will not be overwritten". Whichever definition reaches
+  the realm first therefore wins permanently, which is why a restore
+  cannot be a second step layered on top of a declarative import. It
+  has to be the same step, deciding its source before it creates
+  anything.
+
+  That decision is what protects identity. FDB references the Keycloak
+  subject, so a realm rebuilt from the committed JSON rather than from
+  the backup mints new user ids, and the bank silently duplicates
+  itself around them (issue #356). A restored FDB beside a fresh realm
+  is worse than no restore at all: a missing realm is obvious, an
+  orphaned bank is not.
+
+  Three consequences follow, and each is enforced below rather than
+  assumed:
+
+  - a requested backup that cannot be fetched fails the Job; it never
+    falls back to the committed JSON, because falling back is exactly
+    the silent duplication
+  - a requested restore arriving at a realm that already exists fails
+    loudly, because the operator cannot import over it and a skip here
+    is the most expensive outcome there is
+  - a completed restore is recorded on the realm itself, so re-running
+    this Job against an already-restored realm is quiet rather than
+    fatal
+*/ -}}
+{{- $realmFiles := dict "queenswood-realm.json" (.Files.Get "files/queenswood-realm.json") "queenswood-ops-realm.json" (.Files.Get "files/queenswood-ops-realm.json") -}}
+{{- $realms := list (.Files.Get "files/queenswood-realm.json" | fromJson).realm (.Files.Get "files/queenswood-ops-realm.json" | fromJson).realm -}}
+{{- $restore := .Values.restore.realms | default "" -}}
+apiVersion: v1
+kind: ConfigMap
 metadata:
-  name: {{ .Release.Name }}-realm
+  name: {{ .Release.Name }}-realm-source
   labels:
     {{- include "queenswood-keycloak.labels" . | nindent 4 }}
   annotations:
     argocd.argoproj.io/sync-wave: "{{ .Values.argocd.syncWave }}"
-spec:
-  keycloakCRName: {{ .Release.Name }}-keycloak
-  realm:
-    {{- $realm := .Files.Get "files/queenswood-realm.json" | fromJson }}
-    {{- /*
-      The console's deployed origin is added here rather than listed in
-      the realm JSON. Keycloak honours `*` only as a trailing wildcard on
-      the path -- a pattern like https://console.*.example.com/* matches
-      nothing and fails the authorization request with "Invalid
-      parameter: redirect_uri". So the host has to be literal, and a
-      literal host in a shared realm file would both pin the environment
-      and hardcode the registrar domain.
-    */}}
-    {{- range $client := $realm.clients }}
-      {{- if eq $client.clientId "queenswood-console" }}
-        {{- $_ := set $client "redirectUris" (append $client.redirectUris (printf "https://console.%s/*" $.Values.env.domain)) }}
-      {{- end }}
-    {{- end }}
-    {{- toYaml $realm | nindent 4 }}
+data:
+  {{- range $name, $content := $realmFiles }}
+  {{ $name }}: |
+{{ $content | indent 4 }}
+  {{- end }}
 ---
-apiVersion: k8s.keycloak.org/v2beta1
-kind: KeycloakRealmImport
+apiVersion: v1
+kind: ServiceAccount
 metadata:
-  name: {{ .Release.Name }}-realm-ops
+  name: {{ .Release.Name }}-realm-import
   labels:
     {{- include "queenswood-keycloak.labels" . | nindent 4 }}
   annotations:
     argocd.argoproj.io/sync-wave: "{{ .Values.argocd.syncWave }}"
+    {{- if $restore }}
+    iam.gke.io/gcp-service-account: {{ required "restore.gcpServiceAccount must be set when restore.realms is (just gcp-keycloak-restore-sa-create makes it)" .Values.restore.gcpServiceAccount | quote }}
+    {{- end }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ .Release.Name }}-realm-import
+  labels:
+    {{- include "queenswood-keycloak.labels" . | nindent 4 }}
+rules:
+  # Creating the import CR is the whole job. Delete is for retrying a
+  # CR whose import failed -- the operator reconciles a given CR once.
+  - apiGroups: ["k8s.keycloak.org"]
+    resources: ["keycloakrealmimports"]
+    verbs: ["get", "list", "create", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ .Release.Name }}-realm-import
+  labels:
+    {{- include "queenswood-keycloak.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ .Release.Name }}-realm-import
+subjects:
+  - kind: ServiceAccount
+    name: {{ .Release.Name }}-realm-import
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  # Content-addressed: a Job's pod template is immutable, so the name
+  # has to change whenever anything it runs on does. Re-applying the
+  # same chart and the same backup resolves to the same completed Job.
+  name: {{ .Release.Name }}-realm-import-{{ printf "%s|%s|%s|%s" $restore .Chart.Version (get $realmFiles "queenswood-realm.json") (get $realmFiles "queenswood-ops-realm.json") | sha256sum | trunc 8 }}
+  labels:
+    {{- include "queenswood-keycloak.labels" . | nindent 4 }}
+    app.kubernetes.io/component: keycloak-realm-import
+  annotations:
+    argocd.argoproj.io/sync-wave: "{{ .Values.argocd.syncWave }}"
 spec:
-  keycloakCRName: {{ .Release.Name }}-keycloak
-  realm:
-    {{- .Files.Get "files/queenswood-ops-realm.json" | fromJson | toYaml | nindent 4 }}
+  backoffLimit: 3
+  template:
+    metadata:
+      # Deliberately not `queenswood-keycloak.labels`, which carries
+      # `helm.sh/chart`: the component label is what the queenswood
+      # chart's bootstrap Job selects on, and it must not move with a
+      # chart version.
+      labels:
+        app.kubernetes.io/name: {{ .Chart.Name }}
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/component: keycloak-realm-import
+    spec:
+      restartPolicy: OnFailure
+      serviceAccountName: {{ .Release.Name }}-realm-import
+      {{- if $restore }}
+      initContainers:
+        # Fetches the named export. Its failure is the Job's failure --
+        # there is deliberately no path from "the backup could not be
+        # read" to "import the committed JSON instead".
+        - name: fetch-backup
+          image: {{ .Values.restore.gcloudImage | quote }}
+          command:
+            - sh
+            - -c
+            - |
+              set -e
+              PREFIX="$RESTORE"
+              if [ "$PREFIX" = "LATEST" ]; then
+                PREFIX=$(gcloud storage cat "gs://$BUCKET/keycloak/realms/LATEST" \
+                  --project="$PROJECT" | head -1)
+                echo "LATEST resolves to $PREFIX"
+              fi
+              if [ -z "$PREFIX" ]; then
+                echo "no export to restore from under gs://$BUCKET/keycloak/realms/" >&2
+                exit 1
+              fi
+              for realm in $REALMS; do
+                echo "fetching gs://$BUCKET/$PREFIX/$realm-realm.json"
+                gcloud storage cp "gs://$BUCKET/$PREFIX/$realm-realm.json" \
+                  "/source/$realm-realm.json" --project="$PROJECT"
+              done
+              # Written last: the import step reads this to know which
+              # export it is applying, and records it on the realm.
+              printf '%s' "$PREFIX" > /source/PREFIX
+          env:
+            - name: RESTORE
+              value: {{ $restore | quote }}
+            - name: PROJECT
+              value: {{ required "restore.project must be set when restore.realms is" .Values.restore.project | quote }}
+            - name: BUCKET
+              value: {{ required "restore.bucket must be set when restore.realms is" .Values.restore.bucket | quote }}
+            - name: REALMS
+              value: {{ join " " $realms | quote }}
+          volumeMounts:
+            - name: source
+              mountPath: /source
+      {{- end }}
+      containers:
+        - name: import
+          image: {{ .Values.restore.kubectlImage | quote }}
+          command:
+            - sh
+            - -c
+            - |
+              set -e
+
+              for i in $(seq 1 120); do
+                if curl -sf "$KC/realms/master/.well-known/openid-configuration" \
+                     >/dev/null 2>&1; then break; fi
+                echo "waiting for Keycloak ($i/120)"
+                sleep 5
+              done
+
+              token() {
+                curl -sf -X POST \
+                  "$KC/realms/master/protocol/openid-connect/token" \
+                  -d grant_type=password -d client_id=admin-cli \
+                  --data-urlencode "username=$ADMIN_USER" \
+                  --data-urlencode "password=$ADMIN_PASSWORD" \
+                  | jq -r '.access_token // empty'
+              }
+              TOK=$(token || true)
+              if [ -z "$TOK" ]; then
+                echo "could not obtain a Keycloak admin token" >&2
+                exit 1
+              fi
+
+              api() {
+                curl -s -H "Authorization: Bearer $TOK" "$@"
+              }
+              # `|| true` so a transport error reads as "no status" and
+              # is judged by the caller, rather than killing the script
+              # under `set -e` with curl's exit code and no explanation.
+              status_of() {
+                curl -s -o /dev/null -w '%{http_code}' \
+                  -H "Authorization: Bearer $TOK" "$KC/admin/realms/$1" \
+                  || true
+              }
+
+              # An `if`, not `[ -f x ] && y`: under `set -e` a failed
+              # test is the exit status of the whole AND-OR list, so
+              # the shell would leave here whenever the file is absent
+              # -- which is every non-restoring run.
+              RESTORED_FROM=""
+              if [ -f /source/PREFIX ]; then
+                RESTORED_FROM=$(cat /source/PREFIX)
+              fi
+
+              for realm in $REALMS; do
+                CR="$RELEASE-realm-$realm"
+
+                if [ -n "$RESTORED_FROM" ]; then
+                  src="/source/$realm-realm.json"
+                  origin="backup ($RESTORED_FROM)"
+                else
+                  src="/chart/$realm-realm.json"
+                  origin="the chart's committed definition"
+                fi
+
+                if [ "$(status_of "$realm")" = "200" ]; then
+                  if [ -z "$RESTORED_FROM" ]; then
+                    echo "realm '$realm' exists; nothing to import"
+                    continue
+                  fi
+                  # Set by this Job after a successful restore. Equal
+                  # means the restore already landed and this is a
+                  # re-run; anything else means the realm was built
+                  # from something other than the backup we were told
+                  # to restore, and the operator cannot import over it.
+                  was=$(api "$KC/admin/realms/$realm" \
+                    | jq -r '.attributes["queenswood.restoredFrom"] // ""')
+                  if [ "$was" = "$RESTORED_FROM" ]; then
+                    echo "realm '$realm' already restored from $RESTORED_FROM"
+                    continue
+                  fi
+                  echo "FATAL: a restore from $RESTORED_FROM was requested," >&2
+                  echo "but realm '$realm' already exists${was:+, restored from $was}." >&2
+                  echo "The operator imports realms and never overwrites them, so" >&2
+                  echo "this restore cannot be applied. Skipping it silently would" >&2
+                  echo "leave a realm whose user ids no longer match FDB." >&2
+                  exit 1
+                fi
+
+                echo "importing realm '$realm' from $origin"
+
+                # The console's deployed origin is added here rather
+                # than carried in the realm definition. Keycloak honours
+                # `*` only as a trailing wildcard on the path, so the
+                # host must be literal -- and a literal host in a shared
+                # file would pin both the environment and the registrar
+                # domain. Applied to whichever source, so a backup taken
+                # against one domain restores into another.
+                jq --arg uri "https://console.$DOMAIN/*" '
+                  .clients = ((.clients // []) | map(
+                    if .clientId == "queenswood-console"
+                    then .redirectUris = (((.redirectUris // []) + [$uri]) | unique)
+                    else . end))
+                ' "$src" > /tmp/$realm.json
+
+                # A CR left behind by an import that failed: the
+                # operator reconciles a given CR once, so the retry
+                # needs a new one.
+                kubectl delete keycloakrealmimport "$CR" --ignore-not-found
+
+                jq -n --arg name "$CR" --arg kc "$KC_CR" \
+                      --slurpfile realm "/tmp/$realm.json" '{
+                  apiVersion: "k8s.keycloak.org/v2beta1",
+                  kind: "KeycloakRealmImport",
+                  metadata: {name: $name},
+                  spec: {keycloakCRName: $kc, realm: $realm[0]}
+                }' | kubectl create -f -
+
+                done_s=""
+                for i in $(seq 1 240); do
+                  done_s=$(kubectl get keycloakrealmimport "$CR" \
+                    -o jsonpath='{.status.conditions[?(@.type=="Done")].status}' \
+                    2>/dev/null || true)
+                  if [ "$done_s" = "True" ]; then break; fi
+                  err_s=$(kubectl get keycloakrealmimport "$CR" \
+                    -o jsonpath='{.status.conditions[?(@.type=="HasErrors")].status}' \
+                    2>/dev/null || true)
+                  if [ "$err_s" = "True" ]; then
+                    kubectl get keycloakrealmimport "$CR" \
+                      -o jsonpath='{.status.conditions}' >&2
+                    echo >&2
+                    echo "the import of realm '$realm' reported errors" >&2
+                    exit 1
+                  fi
+                  echo "waiting for realm '$realm' to import ($i/240)"
+                  sleep 5
+                done
+                if [ "$done_s" != "True" ]; then
+                  echo "the import of realm '$realm' never completed" >&2
+                  exit 1
+                fi
+
+                if [ -z "$RESTORED_FROM" ]; then
+                  echo "imported realm '$realm'"
+                  continue
+                fi
+
+                # The import can outlast the token that started it.
+                TOK=$(token || true)
+                if [ -z "$TOK" ]; then
+                  echo "could not obtain a token to verify the restore" >&2
+                  exit 1
+                fi
+
+                # Identity continuity, proved rather than assumed. FDB
+                # references these ids; an import that dropped users, or
+                # that Keycloak declined, leaves a realm that looks
+                # restored and duplicates the bank on first login.
+                missing=0
+                total=0
+                for id in $(jq -r '(.users // [])[].id' "$src"); do
+                  total=$((total + 1))
+                  code=$(curl -s -o /dev/null -w '%{http_code}' \
+                    -H "Authorization: Bearer $TOK" \
+                    "$KC/admin/realms/$realm/users/$id" || true)
+                  if [ "$code" != "200" ]; then
+                    echo "user id $id is absent after the import" >&2
+                    missing=$((missing + 1))
+                  fi
+                done
+                if [ "$missing" -gt 0 ]; then
+                  echo "$missing of $total user ids did not survive the restore of '$realm'" >&2
+                  exit 1
+                fi
+
+                # The federated identity link is what makes Google
+                # sign-in resolve to the restored user rather than mint
+                # a new one, and it is the part of the round trip most
+                # easily lost -- the admin REST partial export drops
+                # users entirely.
+                for id in $(jq -r '(.users // [])[]
+                              | select((.federatedIdentities // []) | length > 0)
+                              | .id' "$src"); do
+                  n=$(api "$KC/admin/realms/$realm/users/$id/federated-identity" \
+                    | jq 'length' 2>/dev/null || echo 0)
+                  if [ "${n:-0}" -lt 1 ]; then
+                    echo "federated identity links lost for user $id" >&2
+                    exit 1
+                  fi
+                done
+
+                # Recorded on the realm, so a later run of this Job can
+                # tell "already restored" from "built from something
+                # else" without keeping state of its own.
+                api "$KC/admin/realms/$realm" \
+                  | jq --arg p "$RESTORED_FROM" \
+                      '.attributes = ((.attributes // {}) + {"queenswood.restoredFrom": $p})' \
+                  | curl -sf -X PUT -H "Authorization: Bearer $TOK" \
+                      -H 'Content-Type: application/json' -d @- \
+                      -o /dev/null "$KC/admin/realms/$realm"
+
+                echo "restored realm '$realm' from $RESTORED_FROM; $total user ids intact"
+              done
+          env:
+            - name: RELEASE
+              value: {{ .Release.Name | quote }}
+            - name: REALMS
+              value: {{ join " " $realms | quote }}
+            - name: DOMAIN
+              value: {{ .Values.env.domain | quote }}
+            - name: KC
+              value: "http://{{ .Release.Name }}-keycloak-service:8080"
+            - name: KC_CR
+              value: {{ .Release.Name }}-keycloak
+            - name: ADMIN_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-keycloak-initial-admin
+                  key: username
+            - name: ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-keycloak-initial-admin
+                  key: password
+          volumeMounts:
+            - name: chart
+              mountPath: /chart
+            - name: source
+              mountPath: /source
+          {{- with .Values.restore.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+      volumes:
+        - name: chart
+          configMap:
+            name: {{ .Release.Name }}-realm-source
+        - name: source
+          emptyDir: {}

@@ -3,8 +3,8 @@
 # Recovery procedures
 
 What to run when data has to come back. Both stores restore the same
-way — a version or dump recorded at teardown, acted on before anything
-writes — so the routine cycle needs no commands at all.
+way — a target recorded at teardown, acted on before anything writes —
+so the routine cycle needs no commands at all.
 
 Everything here assumes `QUEENSWOOD_ENV` is set to the environment you
 mean, since every recipe keys `pass` and the GCP project off it.
@@ -18,17 +18,23 @@ just gcp-down    # records what to restore, while it can still be known
 just gcp-up      # the rebuilt environment restores to it
 ```
 
-`gcp-down` records two things: FDB's restore version, and the Keycloak
-dump it exported. `gcp-up` re-renders the root Application from both,
-and each store's restore Job acts before its own writer runs.
+`gcp-down` records two things: FDB's restore version, and the prefix of
+the Keycloak realm export it took. `gcp-up` re-renders the root
+Application from both, and each store's import acts before its own
+writer runs. The pair is what matters — FDB references the Keycloak
+subject, so restoring one without the other leaves a bank whose users
+no longer resolve.
 
-`gcp-down` runs `gcp-fdb-export` **before** draining the workload
-namespace, because the backup agents live in that namespace and read
-from a live cluster. It waits for the backup to be restorable, stops
-it cleanly so the last mutations land, and writes the version to
-`<env>/backup/fdb-restore-version` in `pass`. It refuses to continue
-if the backup is not restorable — draining past that point is what
-makes the data unrecoverable.
+Both exports run **before** the workload namespace is drained, because
+both read from a live cluster: FDB through the backup agents that live
+in that namespace, Keycloak through a Job running `kc.sh export` on its
+own image. `gcp-fdb-export` waits for the backup to be restorable,
+stops it cleanly so the last mutations land, and writes the version to
+`<env>/backup/fdb-restore-version` in `pass`. `gcp-keycloak-export`
+takes a final export on top of the hourly scheduled one and writes its
+prefix to `<env>/backup/keycloak-restore-realms`. Either refuses to
+continue if what it produced is not restorable — draining past that
+point is what makes the data unrecoverable.
 
 `gcp-up` re-renders the root Application with that version, and the
 chart's restore Job acts on it before the migrator writes anything.
@@ -85,36 +91,69 @@ points and rebuild once more.
 
 ## Keycloak
 
-Same shape as FDB, with one difference worth knowing: an import
-overwrites, where FDB refuses a non-empty destination. The Job asks
-the database whether a realm exists and leaves it alone if so, but
-that guard is the only one — there is nothing underneath it.
+Same shape as FDB, and stricter for a reason FDB does not have. The
+operator's realm import creates realms and never overwrites them, so
+whichever definition reaches a realm first wins permanently. There is
+no second chance to correct it.
 
-Once per project, create the identity the import runs as:
+That is why restore is not a separate step. One Job imports the realms
+in every environment, and it chooses its source — the named export, or
+the chart's committed definitions — before it creates anything. A
+restore layered on top of a declarative import would always arrive too
+late.
+
+What it protects is identity. FDB references the Keycloak subject, so a
+realm rebuilt from the committed JSON mints new user ids and the bank
+silently duplicates itself around them: a restored bank sits in FDB,
+unreachable, while a second one is built alongside it on first login. A
+missing realm is obvious; an orphaned bank is not.
+
+Once per project, create the identity the import reads exports with:
 
 ```bash
 just gcp-keycloak-restore-sa-create
 ```
 
-To restore a chosen dump rather than the one `gcp-down` recorded:
+To restore a chosen export rather than the one `gcp-down` recorded:
 
 ```bash
 just gcp-keycloak-restore-points        # last 5; pass a count for more
-pass insert -e -f "queenswood/gcp/$QUEENSWOOD_ENV/backup/keycloak-restore-dump"
+pass insert -e -f \
+  "queenswood/gcp/$QUEENSWOOD_ENV/backup/keycloak-restore-realms"
 ```
 
-The value is the prefix it prints, not the object —
-`keycloak/export/2026/08/05/161016Z`. A `*` marks the one `gcp-down`
+The value is the prefix it prints, not an object —
+`keycloak/realms/2026/08/05/161016Z`. A `*` marks the one `gcp-down`
 last recorded.
+
+Three things fail the Job rather than being worked around, each because
+the quiet version of it is the expensive one:
+
+- **A named export that cannot be fetched.** It never falls back to the
+  committed definitions, because falling back is precisely the silent
+  duplication.
+- **A restore arriving at a realm that already exists.** The operator
+  cannot import over it, and a skip here leaves a realm whose user ids
+  no longer match FDB. A completed restore is recorded on the realm
+  itself, so re-running against an already-restored realm stays quiet.
+- **User ids or federated identity links missing after the import.**
+  Both are checked over the admin REST API against the export the Job
+  applied. The Google link is what makes a returning user resolve to
+  the restored account rather than minting a new one.
 
 Order matters for a reason that is easy to miss. A rebuilt environment
 mints a fresh admin signing key and bootstrap registers its public half
-on the `queenswood-admin` client. Importing a dump after that reverts
-the realm to the key the dump was taken with, while the pods hold the
-new private half, and `private_key_jwt` stops verifying. The import is
-therefore gated ahead of that registration, and bootstrap re-registers
-the current key onto the restored realm. The operator's realm import
-runs with `--override=false`, so it leaves the restored realm alone.
+on the `queenswood-admin` client. Importing a realm after that reverts
+it to the key the export was taken with, while the pods hold the new
+private half, and `private_key_jwt` stops verifying. Bootstrap is
+therefore gated behind the realm import, and re-registers the current
+key onto whichever realm was imported.
+
+Google sign-in needs one more thing that no chart carries: the realm's
+committed JSON holds a placeholder client id and secret, so `gcp-up`
+runs `just gcp-keycloak-idp google` to push the real pair in. Without
+it Google answers `401 invalid_client`, which on a restored environment
+is indistinguishable from the restore itself having failed.
 
 ## When the deployment appears to hang
 
@@ -128,7 +167,7 @@ kubectl -n "$QUEENSWOOD_ENV" get jobs
 kubectl -n "$QUEENSWOOD_ENV" logs \
   -l app.kubernetes.io/component=fdb-restore
 kubectl -n "$QUEENSWOOD_ENV" logs \
-  -l app.kubernetes.io/component=keycloak-restore
+  -l app.kubernetes.io/component=keycloak-realm-import
 ```
 
 Neither gate has a timeout escape, on purpose. Both writers are
@@ -169,12 +208,12 @@ kubectl -n "$QUEENSWOOD_ENV" exec "$POD" -c foundationdb -- \
   --exec 'getrangekeys "" \xff 100000' | grep -c '^`'
 ```
 
-For Keycloak, the Job says what it did — either the import command or
-a line saying it found a realm already there:
+For Keycloak, the Job says what it did — which source each realm came
+from, and for a restore the count of user ids it confirmed intact:
 
 ```bash
 kubectl -n "$QUEENSWOOD_ENV" logs \
-  -l app.kubernetes.io/component=keycloak-restore
+  -l app.kubernetes.io/component=keycloak-realm-import
 ```
 
 ## Helm refuses to upgrade after manual intervention

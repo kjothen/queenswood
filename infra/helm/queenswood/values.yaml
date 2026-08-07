@@ -24,11 +24,12 @@ secrets:
 # service` -- override to an external URL (or an Envoy egress
 # entry) if Keycloak lives elsewhere.
 keycloak:
-  # Dump path the queenswood-keycloak chart is restoring, if any.
-  # Not used to restore anything here -- bootstrap only needs it to
-  # derive that Job's name and wait for it, because registering the
-  # admin signing key before the import would be undone by it.
-  restoreDump: ""
+  # Gate bootstrap on the queenswood-keycloak chart's realm import.
+  # Registering the admin signing key before the realm is imported
+  # would be undone by it. Off by default because a standalone install
+  # runs the bundled dev Keycloak, where no such Job exists and the
+  # gate would wait for something that never appears.
+  waitForRealmImport: false
   # The bundled dev Keycloak runs under the `/keycloak/` path
   # (KC_HTTP_RELATIVE_PATH) so the SPA's same-origin proxy carries a
   # consistent prefix and Keycloak's own generated URLs include it.

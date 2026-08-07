@@ -60,11 +60,10 @@ spec:
       # Keycloak by its bootstrap Job, so it appears in neither this
       # file nor the realm import.
       keycloak:
-        {{- with .Values.keycloakRestore.dump }}
-        # Only so bootstrap can derive the restore Job's name and wait
-        # for it; the import itself is the other chart's.
-        restoreDump: {{ . | quote }}
-        {{- end }}
+        # The realm is imported by the queenswood-keycloak chart's Job
+        # in every environment, restore or not, and bootstrap must not
+        # register its signing key ahead of it.
+        waitForRealmImport: true
         # On GKE, the operator-driven queenswood-keycloak chart
         # (sync-wave 6) provides Keycloak -- keep the bundled dev
         # Keycloak off so we don't run two side by side. (The

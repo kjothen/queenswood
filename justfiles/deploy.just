@@ -263,7 +263,11 @@ kind-xp-install-root:
     # from, and only an empty cluster acts on it. Absent on an
     # environment that has never been torn down, which restores nothing.
     export FDB_RESTORE_VERSION=$(pass show {{ PASS_ENV }}/backup/fdb-restore-version 2>/dev/null | head -1)
-    export KEYCLOAK_RESTORE_DUMP=$(pass show {{ PASS_ENV }}/backup/keycloak-restore-dump 2>/dev/null | head -1)
+    # Recorded by gcp-keycloak-export at the last teardown. Absent on an
+    # environment that has never been torn down, which imports the
+    # chart's committed realms -- right there, and wrong anywhere FDB is
+    # also being restored, since fresh user ids duplicate the bank.
+    export KEYCLOAK_RESTORE_REALMS=$(pass show {{ PASS_ENV }}/backup/keycloak-restore-realms 2>/dev/null | head -1)
     envsubst < infra/bootstrap/root-app.yml.tmpl \
       | kubectl --context {{ KIND_XP_CLUSTER }} apply -f -
 

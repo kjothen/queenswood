@@ -1,8 +1,9 @@
 {{- if .Values.queenswoodKeycloak.enabled }}
 # Per-environment Keycloak instance, installed onto GKE via
 # Crossplane provider-helm. The chart emits a `Keycloak` CR (consumed
-# by the operator from sync-wave 3), a `KeycloakRealmImport`, the
-# HTTPRoute on the gateway, the keycloak DNS record, and — in
+# by the operator from sync-wave 3), the realm-import Job that creates
+# the `KeycloakRealmImport` CRs, the HTTPRoute on the gateway, the
+# keycloak DNS record, and — in
 # `postgresql.mode: external` — a `cloud-sql-proxy` Deployment that
 # fronts the CloudSQL instance provisioned by the flat MRs in
 # `infra/gcp/database/` (sync-wave 3).
@@ -45,15 +46,24 @@ spec:
       # does.
       vault:
         enabled: true
-      {{- with .Values.keycloakRestore.dump }}
-      # Imported before the queenswood chart's bootstrap registers this
-      # release's admin signing key -- that Job waits on this one. The
-      # import is skipped if the database already holds a realm.
+      {{- if .Values.keycloakBackup.enabled }}
+      # Hourly `kc.sh export` of both realms to the tier-0 bucket, and
+      # the source every restore above reads from.
+      backup:
+        enabled: true
+        bucket: {{ required "keycloakBackup.bucket must be set when enabled" .Values.keycloakBackup.bucket | quote }}
+        project: {{ required "keycloakBackup.project must be set when enabled" .Values.keycloakBackup.project | quote }}
+        gcpServiceAccount: {{ required "keycloakBackup.gcpServiceAccount must be set when enabled" .Values.keycloakBackup.gcpServiceAccount | quote }}
+      {{- end }}
+      {{- with .Values.keycloakRestore.realms }}
+      # Where the realm import takes its definition from. Imported
+      # before the queenswood chart's bootstrap registers this release's
+      # admin signing key -- that Job waits on this one.
       restore:
-        dump: {{ . | quote }}
-        bucket: {{ required "keycloakRestore.bucket must accompany the dump" $.Values.keycloakRestore.bucket | quote }}
-        project: {{ required "keycloakRestore.project must accompany the dump" $.Values.keycloakRestore.project | quote }}
-        gcpServiceAccount: {{ required "keycloakRestore.gcpServiceAccount must accompany the dump" $.Values.keycloakRestore.gcpServiceAccount | quote }}
+        realms: {{ . | quote }}
+        bucket: {{ required "keycloakRestore.bucket must accompany the export" $.Values.keycloakRestore.bucket | quote }}
+        project: {{ required "keycloakRestore.project must accompany the export" $.Values.keycloakRestore.project | quote }}
+        gcpServiceAccount: {{ required "keycloakRestore.gcpServiceAccount must accompany the export" $.Values.keycloakRestore.gcpServiceAccount | quote }}
       {{- end }}
       postgresql:
         mode: external

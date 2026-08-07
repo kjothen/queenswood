@@ -102,25 +102,58 @@ postgresql:
       gcpServiceAccount: ""
 
 # ---------------------------------------------------------------------
-# Restore a Keycloak dump before anything writes to the realm. External
-# mode only -- the dump lives in GCS and is imported by CloudSQL.
+# Where the realm import takes its definition from -- see
+# templates/realm-import.yaml. Not a separate restore path: the same
+# Job imports the chart's committed realms when this is empty.
 #
-# `dump` is a target, not a mode: it names the export this environment's
-# realm should come from (`keycloak/export/<YYYY>/<MM>/<DD>/<HHMMSSZ>`),
-# recorded by `just gcp-cloudsql-export` at teardown. Empty means no
-# restore. The Job checks the database before importing, so a populated
-# realm is left alone.
+# `realms` is a target, not a mode. It names the export this
+# environment's realms should come from
+# (`keycloak/realms/<YYYY>/<MM>/<DD>/<HHMMSSZ>`, or `LATEST`), recorded
+# by `just gcp-keycloak-export` at teardown. Empty imports the
+# committed definitions instead, which is right for an environment that
+# has never been torn down and wrong for one that has -- restoring FDB
+# beside a freshly minted realm duplicates the bank.
 # ---------------------------------------------------------------------
 restore:
-  dump: ""
+  realms: ""
   bucket: ""
   project: ""
-  instance: queenswood-keycloak
-  # Made by `just gcp-keycloak-restore-sa-create` -- a dedicated
-  # identity with a custom role carrying only
-  # cloudsql.instances.{import,get}, not cloudsql.admin.
+  # Made by `just gcp-keycloak-restore-sa-create` -- needs only object
+  # read on the backup bucket, where the CloudSQL import it replaced
+  # needed cloudsql.instances.import and a per-instance service-agent
+  # binding that did not survive a rebuild.
   gcpServiceAccount: ""
-  postgresImage: postgres:17-alpine
+  # Needs kubectl, curl and jq: it creates the import CR, waits on its
+  # status, and checks the restored user ids over the admin REST API.
+  kubectlImage: alpine/k8s:1.30.14
+  gcloudImage: google/cloud-sdk:slim
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "256Mi"
+    limits:
+      cpu: "500m"
+      memory: "512Mi"
+
+# ---------------------------------------------------------------------
+# Scheduled realm export, using Keycloak's own tooling rather than a
+# database dump -- see templates/cronjob-backup.yaml for why. External
+# mode only: the dump lands in the tier-0 bucket.
+# ---------------------------------------------------------------------
+backup:
+  enabled: false
+  # Hourly. The export is realm JSON, tens of kilobytes, so frequency
+  # costs little; what it buys is a smaller window of lost realm
+  # changes between a teardown and the export that precedes it.
+  schedule: "0 * * * *"
+  bucket: ""
+  project: ""
+  # Made by `just gcp-keycloak-backup-sa-create` -- needs only
+  # object write on the backup bucket.
+  gcpServiceAccount: ""
+  # Defaults to the same image the Keycloak instance runs, so the
+  # export is always produced by the version that wrote the data.
+  keycloakImage: ""
   gcloudImage: google/cloud-sdk:slim
   resources:
     requests:

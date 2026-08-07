@@ -24,7 +24,7 @@ spec:
       # Parameters win over valueFiles, so a bootstrap that supplies
       # these picks the environment on its own and the values files
       # serve only as defaults.
-{{- if or .Values.envName .Values.envDomain .Values.keycloakDbPassword .Values.fdbBackupAccessKeyId }}
+{{- if or .Values.envName .Values.envDomain .Values.keycloakDbPassword .Values.fdbBackupAccessKeyId .Values.gcpProjectId }}
       parameters:
 {{- if .Values.envName }}
         - name: env.name
@@ -54,9 +54,22 @@ spec:
         - name: fdbRestore.version
           value: {{ .Values.fdbRestoreVersion | quote }}
 {{- end }}
-{{- if .Values.keycloakRestoreDump }}
-        - name: keycloakRestore.dump
-          value: {{ .Values.keycloakRestoreDump | quote }}
+{{- if .Values.gcpProjectId }}
+        # The scheduled realm export. Needs no secret of its own -- the
+        # CronJob writes through Workload Identity -- so it turns on
+        # wherever there is a project to write into.
+        - name: keycloakBackup.enabled
+          value: "true"
+        - name: keycloakBackup.project
+          value: {{ .Values.gcpProjectId | quote }}
+        - name: keycloakBackup.bucket
+          value: {{ printf "%s-backups" .Values.gcpProjectId | quote }}
+        - name: keycloakBackup.gcpServiceAccount
+          value: {{ printf "keycloak-backup@%s.iam.gserviceaccount.com" .Values.gcpProjectId | quote }}
+{{- end }}
+{{- if .Values.keycloakRestoreRealms }}
+        - name: keycloakRestore.realms
+          value: {{ .Values.keycloakRestoreRealms | quote }}
         - name: keycloakRestore.project
           value: {{ required "gcpProjectId must be set to restore Keycloak" .Values.gcpProjectId | quote }}
         - name: keycloakRestore.bucket
