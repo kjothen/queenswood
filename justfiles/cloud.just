@@ -228,6 +228,11 @@ gcp-up:
     # the dump has to be granted again or the restore Job cannot read
     # the object.
     just gcp-keycloak-restore-sa-create
+    # Google sign-in reads its client secret from Keycloak's vault, and
+    # the Secret behind it is not part of any chart -- without this a
+    # rebuilt environment authenticates nobody, failing with
+    # "Unexpected error when authenticating with identity provider".
+    just gcp-keycloak-vault-secret google
     just gcp-health-check
 
 # Tear down kind + GKE + expensive GCP resources; keep project, SA, DNS zone.

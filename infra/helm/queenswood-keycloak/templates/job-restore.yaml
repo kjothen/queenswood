@@ -1,29 +1,42 @@
 {{- if and (eq .Values.postgresql.mode "external") .Values.restore.dump }}
 {{- /*
-  One-shot Job: imports a Keycloak dump before anything writes to the
-  realm.
+  One-shot Job: restores a Keycloak dump, and repairs everything the
+  restore invalidates.
 
-  Ordering is the whole point, and it is not about concurrent reads.
-  A rebuilt environment has a new namespace, so the queenswood chart's
-  `lookup` finds no Secret and mints a FRESH admin signing key, and its
-  bootstrap Job registers the public half on the `queenswood-admin`
-  client. Import a dump after that and the realm reverts to the OLD
-  registered key while the pods hold the new private one --
-  private_key_jwt assertions stop verifying and Admin REST access is
-  lost. Import first and bootstrap re-registers the current key onto
-  the restored realm, which is why this is a gate rather than a
-  warning to scale Keycloak down.
+  `restore.dump` is a target, not a mode -- it names the export this
+  environment's realm should come from. The Job's name derives from it,
+  so re-applying the same value resolves to the same completed Job, and
+  it carries no ttlSecondsAfterFinished because its completion is the
+  record that this cluster has been restored.
 
-  The operator's realm import runs with `--override=false`, so a realm
-  restored by this Job is left alone rather than overwritten.
+  It is order-independent by design rather than ordered ahead of
+  Keycloak. An earlier version gated it before the bootstrap Job, on
+  the theory that bootstrap was the writer that mattered. That was the
+  wrong census: Keycloak starts seconds earlier and creates its own
+  schema, and the import then died on `relation "admin_event_entity"
+  already exists`. A Helm pre-install hook does not fix it either --
+  the database credentials this needs are an ordinary release resource
+  that a hook would run before. So each step reconciles whatever it
+  finds instead.
 
-  Unlike FDB there is no interlock underneath: `gcloud sql import`
-  overwrites whatever is there. So this checks the database itself
-  before acting, and the Job carries no ttlSecondsAfterFinished --
-  letting it age out would invite a later reconcile to import over a
-  live realm.
+  Three things a restore invalidates, none of them obvious until a real
+  teardown (see issue #349):
+
+  - The schema. Keycloak may already have created it, so the guard
+    tests for the realm ROW, not for tables. Testing for tables reads a
+    raced, empty schema as "already restored" and silently skips.
+  - Ownership. Once `public` belongs to the database user, an import
+    running as the default superuser cannot create in it.
+  - The admin account. Keycloak's master-realm admin lives in the
+    database, so a restore reinstates the PREVIOUS instance's admin
+    while the operator has minted a fresh Secret for this one. They can
+    never agree, and bootstrap then fails with "could not obtain a
+    Keycloak admin token". Removing the account lets Keycloak recreate
+    it from its own environment -- which is why the last step restarts
+    it.
 */ -}}
-{{- $jobSuffix := .Values.restore.dump | sha256sum | trunc 8 -}}
+{{- $realm := (.Files.Get "files/queenswood-realm.json" | fromJson).realm -}}
+{{- $adminSecret := printf "%s-keycloak-initial-admin" .Release.Name -}}
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -33,13 +46,39 @@ metadata:
   annotations:
     iam.gke.io/gcp-service-account: {{ required "restore.gcpServiceAccount must be set when restore.dump is (just gcp-keycloak-restore-sa-create makes it)" .Values.restore.gcpServiceAccount | quote }}
 ---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: queenswood-keycloak-restore
+  labels:
+    {{- include "queenswood-keycloak.labels" . | nindent 4 }}
+rules:
+  # Only to restart Keycloak once the database beneath it has changed.
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: queenswood-keycloak-restore
+  labels:
+    {{- include "queenswood-keycloak.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: queenswood-keycloak-restore
+subjects:
+  - kind: ServiceAccount
+    name: queenswood-keycloak-restore
+---
 apiVersion: batch/v1
 kind: Job
 metadata:
   # The dump path hashed rather than used raw: it contains slashes, and
   # a name must be RFC 1123. Re-applying the same dump resolves to the
   # same completed Job, which is what makes this idempotent.
-  name: queenswood-keycloak-restore-{{ $jobSuffix }}
+  name: queenswood-keycloak-restore-{{ .Values.restore.dump | sha256sum | trunc 8 }}
   labels:
     {{- include "queenswood-keycloak.labels" . | nindent 4 }}
     app.kubernetes.io/component: keycloak-restore
@@ -59,9 +98,9 @@ spec:
       restartPolicy: OnFailure
       serviceAccountName: queenswood-keycloak-restore
       initContainers:
-        # Decides whether the import should happen at all, and says so
-        # in a file rather than by failing -- a failed initContainer
-        # would fail the Job and block bootstrap behind it.
+        # Decides, and clears the way. Reports its verdict in a file
+        # rather than by failing: a failed initContainer would fail the
+        # Job and block bootstrap behind a gate that can never open.
         - name: check-realm
           image: {{ .Values.restore.postgresImage | quote }}
           command:
@@ -74,19 +113,27 @@ spec:
                 echo "waiting for the SQL proxy ($i/60)"
                 sleep 5
               done
-              existing=$(psql -h "$PGHOST" -U "$PGUSER" -d "$PGDATABASE" -tAc \
-                "SELECT to_regclass('public.realm') IS NOT NULL" 2>/dev/null || echo f)
-              if [ "$existing" = "t" ]; then
-                echo "realm tables already present; not importing"
+              # The realm row, not the tables. Keycloak may have raced
+              # ahead and created an empty schema, and testing for
+              # tables would read that as restored and skip.
+              present=$(psql -h "$PGHOST" -U "$PGUSER" -d "$PGDATABASE" -tAc \
+                "SELECT count(*) FROM realm WHERE name = '$REALM'" 2>/dev/null || echo 0)
+              if [ "${present:-0}" -gt 0 ]; then
+                echo "realm '$REALM' already present; leaving the database alone"
                 echo skip > /state/action
-              else
-                echo empty > /state/action
+                exit 0
               fi
+              echo "realm '$REALM' absent; clearing the schema so the import cannot collide"
+              psql -h "$PGHOST" -U "$PGUSER" -d "$PGDATABASE" \
+                -c 'DROP SCHEMA IF EXISTS public CASCADE' -c 'CREATE SCHEMA public'
+              echo restore > /state/action
           env:
             - name: PGHOST
               value: {{ include "queenswood-keycloak.dbHost" . | quote }}
             - name: PGDATABASE
               value: {{ include "queenswood-keycloak.dbName" . | quote }}
+            - name: REALM
+              value: {{ $realm | quote }}
             - name: PGUSER
               valueFrom:
                 secretKeyRef:
@@ -100,7 +147,6 @@ spec:
           volumeMounts:
             - name: state
               mountPath: /state
-      containers:
         - name: import
           image: {{ .Values.restore.gcloudImage | quote }}
           command:
@@ -108,22 +154,22 @@ spec:
             - -c
             - |
               set -e
-              if [ "$(cat /state/action)" = "skip" ]; then
-                echo "database already holds a realm; leaving it alone"
-                exit 0
-              fi
+              [ "$(cat /state/action)" = "restore" ] || exit 0
               echo "importing gs://$BUCKET/$DUMP/keycloak.sql.gz"
-              # Retried rather than run once. The import is performed by
-              # the instance's own service agent, whose identity is
-              # per-instance, so on a rebuilt instance the binding
+              # --user matters: the step above recreated `public` owned
+              # by $DBUSER, and an import running as the default
+              # superuser cannot create in a schema it does not own.
+              #
+              # Retried because the import is performed by the
+              # instance's own service agent, whose identity is
+              # per-instance -- on a rebuilt instance the binding
               # letting it read the dump may be granted moments after
-              # this Job starts. Giving up would block bootstrap behind
-              # a gate that can never open. Re-importing the same dump
-              # is harmless.
+              # this starts. Re-importing the same dump is harmless.
               for i in $(seq 1 20); do
-                gcloud sql import sql "$INSTANCE" \
-                  "gs://$BUCKET/$DUMP/keycloak.sql.gz" \
-                  --database="$DATABASE" --project="$PROJECT" --quiet && exit 0
+                if gcloud sql import sql "$INSTANCE" \
+                     "gs://$BUCKET/$DUMP/keycloak.sql.gz" \
+                     --database="$DATABASE" --user="$DBUSER" \
+                     --project="$PROJECT" --quiet; then exit 0; fi
                 echo "import attempt $i failed; retrying in 30s"
                 sleep 30
               done
@@ -140,6 +186,73 @@ spec:
               value: {{ .Values.restore.dump | quote }}
             - name: DATABASE
               value: {{ include "queenswood-keycloak.dbName" . | quote }}
+            - name: DBUSER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "queenswood-keycloak.dbSecret" . }}
+                  key: username
+          volumeMounts:
+            - name: state
+              mountPath: /state
+        - name: clear-stale-admin
+          image: {{ .Values.restore.postgresImage | quote }}
+          command:
+            - sh
+            - -c
+            - |
+              set -e
+              [ "$(cat /state/action)" = "restore" ] || exit 0
+              # The dump carries the previous instance's master-realm
+              # admin; the operator has minted a fresh Secret for this
+              # one. Deleting the account is what lets Keycloak recreate
+              # it from KC_BOOTSTRAP_ADMIN_* on next start, which is the
+              # only way the two ever agree again.
+              psql -h "$PGHOST" -U "$PGUSER" -d "$PGDATABASE" -c \
+                "DELETE FROM user_entity WHERE username = '$ADMIN_USER'
+                   AND realm_id IN (SELECT id FROM realm WHERE name = 'master')"
+              echo "removed the restored master admin '$ADMIN_USER'"
+          env:
+            - name: PGHOST
+              value: {{ include "queenswood-keycloak.dbHost" . | quote }}
+            - name: PGDATABASE
+              value: {{ include "queenswood-keycloak.dbName" . | quote }}
+            - name: PGUSER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "queenswood-keycloak.dbSecret" . }}
+                  key: username
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "queenswood-keycloak.dbSecret" . }}
+                  key: password
+            - name: ADMIN_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $adminSecret }}
+                  key: username
+          volumeMounts:
+            - name: state
+              mountPath: /state
+      containers:
+        - name: restart-keycloak
+          image: alpine/k8s:1.30.14
+          command:
+            - sh
+            - -c
+            - |
+              set -e
+              if [ "$(cat /state/action)" != "restore" ]; then
+                echo "nothing restored; leaving Keycloak alone"
+                exit 0
+              fi
+              # Keycloak has been running against the schema this Job
+              # replaced beneath it, and its admin has just been
+              # removed. Restarting is what makes it read the restored
+              # realm and bootstrap an admin matching its own Secret.
+              kubectl delete pod -l app=keycloak \
+                --ignore-not-found --wait=false
+              echo "restarted Keycloak onto the restored database"
           volumeMounts:
             - name: state
               mountPath: /state
