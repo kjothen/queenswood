@@ -2,13 +2,26 @@
   Realm import, from a backup when one is named and from the chart's
   committed definitions otherwise. One mechanism, not two.
 
-  The operator's `KeycloakRealmImport` creates realms and never
-  overwrites them: "if a Realm with the same name already exists in
-  Keycloak, it will not be overwritten". Whichever definition reaches
-  the realm first therefore wins permanently, which is why a restore
-  cannot be a second step layered on top of a declarative import. It
-  has to be the same step, deciding its source before it creates
-  anything.
+  The realm is POSTed to Keycloak's own Admin API rather than handed
+  to the operator's `KeycloakRealmImport`. Three reasons, each learned
+  the hard way:
+
+  - the CRD declares a subset of the realm schema and rejects the
+    rest, so an operator even one release behind the server refuses
+    every export it produces -- and only on the restore path, since
+    the committed JSON happens to use fewer fields
+  - the operator imports from a separate process that does not join
+    the cache cluster, so the running server serves a realm it cannot
+    yet see; checks made straight after the import read 404 for users
+    that appear moments later
+  - a realm that already exists is silently not overwritten, where a
+    POST answers 409 and can be acted on
+
+  Keycloak accepts its own export by definition, and the server that
+  performs the import is the one that serves it, so there is nothing
+  to translate and no cache to lag. A realm still cannot be
+  overwritten, so whichever definition arrives first wins permanently
+  -- which is why the source is chosen before anything is created.
 
   That decision is what protects identity. FDB references the Keycloak
   subject, so a realm rebuilt from the committed JSON rather than from
@@ -58,33 +71,6 @@ metadata:
     {{- if $restore }}
     iam.gke.io/gcp-service-account: {{ required "restore.gcpServiceAccount must be set when restore.realms is (just gcp-keycloak-restore-sa-create makes it)" .Values.restore.gcpServiceAccount | quote }}
     {{- end }}
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
-metadata:
-  name: {{ .Release.Name }}-realm-import
-  labels:
-    {{- include "queenswood-keycloak.labels" . | nindent 4 }}
-rules:
-  # Creating the import CR is the whole job. Delete is for retrying a
-  # CR whose import failed -- the operator reconciles a given CR once.
-  - apiGroups: ["k8s.keycloak.org"]
-    resources: ["keycloakrealmimports"]
-    verbs: ["get", "list", "create", "delete"]
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
-metadata:
-  name: {{ .Release.Name }}-realm-import
-  labels:
-    {{- include "queenswood-keycloak.labels" . | nindent 4 }}
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: Role
-  name: {{ .Release.Name }}-realm-import
-subjects:
-  - kind: ServiceAccount
-    name: {{ .Release.Name }}-realm-import
 ---
 apiVersion: batch/v1
 kind: Job
@@ -158,7 +144,7 @@ spec:
       {{- end }}
       containers:
         - name: import
-          image: {{ .Values.restore.kubectlImage | quote }}
+          image: {{ .Values.restore.toolsImage | quote }}
           command:
             - sh
             - -c
@@ -208,7 +194,6 @@ spec:
               fi
 
               for realm in $REALMS; do
-                CR="$RELEASE-realm-$realm"
 
                 if [ -n "$RESTORED_FROM" ]; then
                   src="/source/$realm-realm.json"
@@ -258,42 +243,31 @@ spec:
                     else . end))
                 ' "$src" > /tmp/$realm.json
 
-                # A CR left behind by an import that failed: the
-                # operator reconciles a given CR once, so the retry
-                # needs a new one.
-                kubectl delete keycloakrealmimport "$CR" --ignore-not-found
-
-                jq -n --arg name "$CR" --arg kc "$KC_CR" \
-                      --slurpfile realm "/tmp/$realm.json" '{
-                  apiVersion: "k8s.keycloak.org/v2beta1",
-                  kind: "KeycloakRealmImport",
-                  metadata: {name: $name},
-                  spec: {keycloakCRName: $kc, realm: $realm[0]}
-                }' | kubectl create -f -
-
-                done_s=""
-                for i in $(seq 1 240); do
-                  done_s=$(kubectl get keycloakrealmimport "$CR" \
-                    -o jsonpath='{.status.conditions[?(@.type=="Done")].status}' \
-                    2>/dev/null || true)
-                  if [ "$done_s" = "True" ]; then break; fi
-                  err_s=$(kubectl get keycloakrealmimport "$CR" \
-                    -o jsonpath='{.status.conditions[?(@.type=="HasErrors")].status}' \
-                    2>/dev/null || true)
-                  if [ "$err_s" = "True" ]; then
-                    kubectl get keycloakrealmimport "$CR" \
-                      -o jsonpath='{.status.conditions}' >&2
+                # Performed by the running server, so the realm it
+                # creates is the realm it serves -- no second process,
+                # no cache to lag behind, and nothing translated
+                # through a schema that is not Keycloak's own.
+                code=$(curl -s -o /tmp/$realm.err -w '%{http_code}' \
+                  -X POST "$KC/admin/realms" \
+                  -H "Authorization: Bearer $TOK" \
+                  -H 'Content-Type: application/json' \
+                  --data @/tmp/$realm.json || true)
+                case "$code" in
+                  201) ;;
+                  409)
+                    # Only reachable as a race: the guard above found
+                    # no realm moments ago. Loud either way -- a realm
+                    # is never overwritten, so a restore arriving
+                    # second has not been applied.
+                    echo "realm '$realm' appeared while importing it; not overwritten" >&2
+                    exit 1 ;;
+                  *)
+                    echo "importing realm '$realm' failed: HTTP ${code:-none}" >&2
+                    head -c 600 /tmp/$realm.err >&2
                     echo >&2
-                    echo "the import of realm '$realm' reported errors" >&2
-                    exit 1
-                  fi
-                  echo "waiting for realm '$realm' to import ($i/240)"
-                  sleep 5
-                done
-                if [ "$done_s" != "True" ]; then
-                  echo "the import of realm '$realm' never completed" >&2
-                  exit 1
-                fi
+                    exit 1 ;;
+                esac
+
 
                 if [ -z "$RESTORED_FROM" ]; then
                   echo "imported realm '$realm'"
@@ -365,8 +339,6 @@ spec:
               value: {{ .Values.env.domain | quote }}
             - name: KC
               value: "http://{{ .Release.Name }}-keycloak-service:8080"
-            - name: KC_CR
-              value: {{ .Release.Name }}-keycloak
             - name: ADMIN_USER
               valueFrom:
                 secretKeyRef:

@@ -123,9 +123,11 @@ restore:
   # needed cloudsql.instances.import and a per-instance service-agent
   # binding that did not survive a rebuild.
   gcpServiceAccount: ""
-  # Needs kubectl, curl and jq: it creates the import CR, waits on its
-  # status, and checks the restored user ids over the admin REST API.
-  kubectlImage: alpine/k8s:1.30.14
+  # Needs curl and jq: it POSTs the realm to Keycloak's Admin API and
+  # checks the restored user ids over the same API. No kubectl -- the
+  # operator's import CR is not used, so the Job touches no Kubernetes
+  # API at all.
+  toolsImage: alpine/k8s:1.30.14
   gcloudImage: google/cloud-sdk:slim
   resources:
     requests:
