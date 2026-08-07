@@ -35,5 +35,6 @@ spec:
     automated:
       prune: true
       selfHeal: true
+    {{- include "bootstrap.syncRetry" . | nindent 4 }}
     syncOptions:
       - CreateNamespace=true
