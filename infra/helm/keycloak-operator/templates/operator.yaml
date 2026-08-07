@@ -1,35 +1,129 @@
-# Cluster-wide install of the official Keycloak Operator (Quarkus-based,
-# 26.x). Vendored from the upstream release tag, with two deviations
-# from `kubernetes/kubernetes.yml`:
-#   1. Converts the namespace-scoped `keycloak-operator-role` (and all
-#      RoleBindings referencing cluster-scoped roles) into ClusterRole /
-#      ClusterRoleBinding so the operator can manage Keycloak instances
-#      anywhere on the cluster.
-#   2. Switches both controller `JOSDK_WATCH_CURRENT` env vars to
-#      `JOSDK_ALL_NAMESPACES` (the Quarkus operator-sdk sentinel for
-#      cluster-wide watch). The upstream `JOSDK_WATCH_ALL_NAMESPACES`
-#      mentioned in some docs is NOT recognised by 26.6.x and ends up
-#      treated as a literal namespace name — silently nothing watched.
-# The upstream `Namespace: keycloak-operator` resource was dropped --
-# `spec.forProvider.namespace` on the Crossplane Release that installs
-# this chart creates it via Helm's `--create-namespace`, with the
-# right ownership annotations. Including it again here would race that
-# logic and Helm would refuse to import the unowned namespace.
-# CRDs live under `crds/` so Helm installs them ahead of templates.
----
+# Cluster-wide install of the official Keycloak Operator.
+#
+# Vendored VERBATIM from keycloak-k8s-resources, tag 26.7.0, as
+# `kubectl kustomize` output over kubernetes/cluster-wide/ -- which
+# upstream now ships and which does what this chart used to patch by
+# hand: ClusterRole/ClusterRoleBinding instead of namespaced Roles,
+# JOSDK_ALL_NAMESPACES on both controllers, no Namespace resource,
+# and namespace `keycloak-operator`. Four deviations became none.
+#
+# The kustomize step is not optional: the raw kubernetes.yml leaves
+# ServiceAccount subjects without a namespace, and upstream's
+# NamespaceTransformer fills them in. Applied raw, the operator gets
+# no permissions and silently reconciles nothing.
+#
+# One upstream quirk is kept as-is rather than patched:
+# keycloak-operator-clusterrole-binding names its subject in
+# namespace `keycloak` (the transformer does not rewrite an
+# explicitly set one), so it binds to nothing. It grants only
+# config.openshift.io/ingresses, which does not exist on GKE, so
+# the binding is inert either way -- not worth a deviation that
+# every future upgrade would have to reapply.
+#
+# CRDs live under crds/ so Helm installs them ahead of templates.
 apiVersion: v1
 kind: ServiceAccount
 metadata:
   annotations:
-    app.quarkus.io/quarkus-version: 3.33.1
+    app.quarkus.io/build-timestamp: 2026-07-23 - 07:35:52 +0000
+    app.quarkus.io/quarkus-version: 3.33.2.1
     app.quarkus.io/vcs-uri: https://github.com/keycloak/keycloak.git
-    app.quarkus.io/build-timestamp: 2026-05-07 - 14:35:40 +0000
   labels:
-    app.kubernetes.io/name: keycloak-operator
-    app.kubernetes.io/version: 26.6.1
     app.kubernetes.io/managed-by: quarkus
+    app.kubernetes.io/name: keycloak-operator
+    app.kubernetes.io/version: 26.7.0
   name: keycloak-operator
   namespace: keycloak-operator
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  labels:
+    app.kubernetes.io/name: keycloak-operator
+  name: keycloak-operator-role
+  namespace: keycloak-operator
+rules:
+- apiGroups:
+  - apps
+  resources:
+  - statefulsets
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - delete
+  - patch
+  - update
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  - services
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - delete
+  - patch
+  - update
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  verbs:
+  - list
+- apiGroups:
+  - ""
+  resources:
+  - pods/log
+  verbs:
+  - get
+- apiGroups:
+  - batch
+  resources:
+  - jobs
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - delete
+  - patch
+  - update
+- apiGroups:
+  - networking.k8s.io
+  resources:
+  - ingresses
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - delete
+  - patch
+  - update
+- apiGroups:
+  - monitoring.coreos.com
+  resources:
+  - servicemonitors
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - update
+  - watch
+  - patch
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -38,151 +132,230 @@ metadata:
     app.kubernetes.io/name: keycloak-operator
   name: keycloak-operator-clusterrole
 rules:
-  - apiGroups:
-      - config.openshift.io
-    resources:
-      - ingresses
-    verbs:
-      - get
+- apiGroups:
+  - config.openshift.io
+  resources:
+  - ingresses
+  verbs:
+  - get
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   labels:
     app.kubernetes.io/name: keycloak-operator
-    app.kubernetes.io/version: 26.6.1
-  name: keycloakrealmimportcontroller-cluster-role
-rules:
-  - apiGroups:
-      - k8s.keycloak.org
-    resources:
-      - keycloakrealmimports
-      - keycloakrealmimports/status
-      - keycloakrealmimports/finalizers
-    verbs:
-      - get
-      - list
-      - watch
-      - patch
-      - update
-      - create
-      - delete
-  - apiGroups:
-      - batch
-    resources:
-      - jobs
-    verbs:
-      - create
-      - delete
-      - get
-      - list
-      - patch
-      - watch
-  - apiGroups:
-      - ""
-    resources:
-      - secrets
-    verbs:
-      - create
-      - delete
-      - get
-      - list
-      - patch
-      - update
-      - watch
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  labels:
-    app.kubernetes.io/name: keycloak-operator
-    app.kubernetes.io/version: 26.6.1
+    app.kubernetes.io/version: 26.7.0
   name: keycloakcontroller-cluster-role
 rules:
-  - apiGroups:
-      - k8s.keycloak.org
-    resources:
-      - keycloaks
-      - keycloaks/status
-      - keycloaks/finalizers
-    verbs:
-      - get
-      - list
-      - watch
-      - patch
-      - update
-      - create
-      - delete
-  - apiGroups:
-      - ""
-    resources:
-      - services
-    verbs:
-      - create
-      - delete
-      - get
-      - list
-      - patch
-      - update
-      - watch
-  - apiGroups:
-      - monitoring.coreos.com
-    resources:
-      - servicemonitors
-    verbs:
-      - create
-      - delete
-      - get
-      - list
-      - patch
-      - update
-      - watch
-  - apiGroups:
-      - networking.k8s.io
-    resources:
-      - networkpolicies
-    verbs:
-      - create
-      - delete
-      - get
-      - list
-      - patch
-      - update
-      - watch
-  - apiGroups:
-      - apps
-    resources:
-      - statefulsets
-    verbs:
-      - create
-      - delete
-      - get
-      - list
-      - patch
-      - update
-      - watch
-  - apiGroups:
-      - networking.k8s.io
-    resources:
-      - ingresses
-    verbs:
-      - create
-      - delete
-      - get
-      - list
-      - patch
-      - update
-      - watch
-  - apiGroups:
-      - ""
-    resources:
-      - secrets
-    verbs:
-      - create
-      - delete
-      - get
-      - list
-      - watch
+- apiGroups:
+  - k8s.keycloak.org
+  resources:
+  - keycloaks
+  - keycloaks/status
+  - keycloaks/finalizers
+  verbs:
+  - get
+  - list
+  - watch
+  - patch
+  - update
+  - create
+  - delete
+- apiGroups:
+  - ""
+  resources:
+  - services
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - monitoring.coreos.com
+  resources:
+  - servicemonitors
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - networking.k8s.io
+  resources:
+  - networkpolicies
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - apps
+  resources:
+  - statefulsets
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - networking.k8s.io
+  resources:
+  - ingresses
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: keycloak-operator
+    app.kubernetes.io/version: 26.7.0
+  name: keycloakoidcclientcontroller-cluster-role
+rules:
+- apiGroups:
+  - k8s.keycloak.org
+  resources:
+  - keycloakoidcclients
+  - keycloakoidcclients/status
+  - keycloakoidcclients/finalizers
+  verbs:
+  - get
+  - list
+  - watch
+  - patch
+  - update
+  - create
+  - delete
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: keycloak-operator
+    app.kubernetes.io/version: 26.7.0
+  name: keycloakrealmimportcontroller-cluster-role
+rules:
+- apiGroups:
+  - k8s.keycloak.org
+  resources:
+  - keycloakrealmimports
+  - keycloakrealmimports/status
+  - keycloakrealmimports/finalizers
+  verbs:
+  - get
+  - list
+  - watch
+  - patch
+  - update
+  - create
+  - delete
+- apiGroups:
+  - batch
+  resources:
+  - jobs
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: keycloak-operator
+    app.kubernetes.io/version: 26.7.0
+  name: keycloaksamlclientcontroller-cluster-role
+rules:
+- apiGroups:
+  - k8s.keycloak.org
+  resources:
+  - keycloaksamlclients
+  - keycloaksamlclients/status
+  - keycloaksamlclients/finalizers
+  verbs:
+  - get
+  - list
+  - watch
+  - patch
+  - update
+  - create
+  - delete
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  labels:
+    app.kubernetes.io/name: keycloak-operator
+  name: keycloak-operator-role-binding
+  namespace: keycloak-operator
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: keycloak-operator-role
+subjects:
+- kind: ServiceAccount
+  name: keycloak-operator
+  namespace: keycloak-operator
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  labels:
+    app.kubernetes.io/name: keycloak-operator
+    app.kubernetes.io/version: 26.7.0
+  name: keycloak-operator-view
+  namespace: keycloak-operator
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: view
+subjects:
+- kind: ServiceAccount
+  name: keycloak-operator
+  namespace: keycloak-operator
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -191,185 +364,97 @@ metadata:
     app.kubernetes.io/name: keycloak-operator
   name: keycloak-operator-clusterrole-binding
 roleRef:
-  kind: ClusterRole
   apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
   name: keycloak-operator-clusterrole
 subjects:
-  - kind: ServiceAccount
-    name: keycloak-operator
-    namespace: keycloak-operator
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  labels:
-    app.kubernetes.io/name: keycloak-operator
-  name: keycloak-operator-resources-clusterrole
-rules:
-  - apiGroups:
-      - apps
-    resources:
-      - statefulsets
-    verbs:
-      - get
-      - list
-      - watch
-      - create
-      - delete
-      - patch
-      - update
-  - apiGroups:
-      - ""
-    resources:
-      - configmaps
-    verbs:
-      - get
-      - list
-      - watch
-  - apiGroups:
-      - ""
-    resources:
-      - secrets
-      - services
-    verbs:
-      - get
-      - list
-      - watch
-      - create
-      - delete
-      - patch
-      - update
-  - apiGroups:
-      - ""
-    resources:
-      - pods
-    verbs:
-      - list
-  - apiGroups:
-      - ""
-    resources:
-      - pods/log
-    verbs:
-      - get
-  - apiGroups:
-      - batch
-    resources:
-      - jobs
-    verbs:
-      - get
-      - list
-      - watch
-      - create
-      - delete
-      - patch
-      - update
-  - apiGroups:
-      - networking.k8s.io
-    resources:
-      - ingresses
-    verbs:
-      - get
-      - list
-      - watch
-      - create
-      - delete
-      - patch
-      - update
-  - apiGroups:
-      - monitoring.coreos.com
-    resources:
-      - servicemonitors
-    verbs:
-      - create
-      - delete
-      - get
-      - list
-      - update
-      - watch
-      - patch
+- kind: ServiceAccount
+  name: keycloak-operator
+  namespace: keycloak
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   labels:
     app.kubernetes.io/name: keycloak-operator
-  name: keycloak-operator-resources-binding
+    app.kubernetes.io/version: 26.7.0
+  name: keycloakcontroller-cluster-role-binding
 roleRef:
-  kind: ClusterRole
   apiGroup: rbac.authorization.k8s.io
-  name: keycloak-operator-resources-clusterrole
-subjects:
-  - kind: ServiceAccount
-    name: keycloak-operator
-    namespace: keycloak-operator
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  labels:
-    app.kubernetes.io/name: keycloak-operator
-    app.kubernetes.io/version: 26.6.1
-  name: keycloakrealmimportcontroller-binding
-roleRef:
   kind: ClusterRole
-  apiGroup: rbac.authorization.k8s.io
-  name: keycloakrealmimportcontroller-cluster-role
-subjects:
-  - kind: ServiceAccount
-    name: keycloak-operator
-    namespace: keycloak-operator
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  labels:
-    app.kubernetes.io/name: keycloak-operator
-    app.kubernetes.io/version: 26.6.1
-  name: keycloakcontroller-binding
-roleRef:
-  kind: ClusterRole
-  apiGroup: rbac.authorization.k8s.io
   name: keycloakcontroller-cluster-role
 subjects:
-  - kind: ServiceAccount
-    name: keycloak-operator
-    namespace: keycloak-operator
+- kind: ServiceAccount
+  name: keycloak-operator
+  namespace: keycloak-operator
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   labels:
     app.kubernetes.io/name: keycloak-operator
-    app.kubernetes.io/version: 26.6.1
-  name: keycloak-operator-view
+    app.kubernetes.io/version: 26.7.0
+  name: keycloakoidcclientcontroller-cluster-role-binding
 roleRef:
-  kind: ClusterRole
   apiGroup: rbac.authorization.k8s.io
-  name: view
+  kind: ClusterRole
+  name: keycloakoidcclientcontroller-cluster-role
 subjects:
-  - kind: ServiceAccount
-    name: keycloak-operator
-    namespace: keycloak-operator
+- kind: ServiceAccount
+  name: keycloak-operator
+  namespace: keycloak-operator
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  labels:
+    app.kubernetes.io/name: keycloak-operator
+    app.kubernetes.io/version: 26.7.0
+  name: keycloakrealmimportcontroller-cluster-role-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: keycloakrealmimportcontroller-cluster-role
+subjects:
+- kind: ServiceAccount
+  name: keycloak-operator
+  namespace: keycloak-operator
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  labels:
+    app.kubernetes.io/name: keycloak-operator
+    app.kubernetes.io/version: 26.7.0
+  name: keycloaksamlclientcontroller-cluster-role-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: keycloaksamlclientcontroller-cluster-role
+subjects:
+- kind: ServiceAccount
+  name: keycloak-operator
+  namespace: keycloak-operator
 ---
 apiVersion: v1
 kind: Service
 metadata:
   annotations:
-    app.quarkus.io/quarkus-version: 3.33.1
+    app.quarkus.io/build-timestamp: 2026-07-23 - 07:35:52 +0000
+    app.quarkus.io/quarkus-version: 3.33.2.1
     app.quarkus.io/vcs-uri: https://github.com/keycloak/keycloak.git
-    app.quarkus.io/build-timestamp: 2026-05-07 - 14:35:40 +0000
   labels:
-    app.kubernetes.io/name: keycloak-operator
-    app.kubernetes.io/version: 26.6.1
     app.kubernetes.io/managed-by: quarkus
+    app.kubernetes.io/name: keycloak-operator
+    app.kubernetes.io/version: 26.7.0
   name: keycloak-operator
   namespace: keycloak-operator
 spec:
   ports:
-    - name: http
-      port: 80
-      protocol: TCP
-      targetPort: 8080
+  - name: http
+    port: 80
+    protocol: TCP
+    targetPort: 8080
   selector:
     app.kubernetes.io/name: keycloak-operator
   type: ClusterIP
@@ -378,13 +463,13 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   annotations:
-    app.quarkus.io/quarkus-version: 3.33.1
+    app.quarkus.io/build-timestamp: 2026-07-23 - 07:35:52 +0000
+    app.quarkus.io/quarkus-version: 3.33.2.1
     app.quarkus.io/vcs-uri: https://github.com/keycloak/keycloak.git
-    app.quarkus.io/build-timestamp: 2026-05-07 - 14:35:40 +0000
   labels:
-    app.kubernetes.io/name: keycloak-operator
-    app.kubernetes.io/version: 26.6.1
     app.kubernetes.io/managed-by: quarkus
+    app.kubernetes.io/name: keycloak-operator
+    app.kubernetes.io/version: 26.7.0
   name: keycloak-operator
   namespace: keycloak-operator
 spec:
@@ -395,68 +480,72 @@ spec:
   template:
     metadata:
       annotations:
-        app.quarkus.io/quarkus-version: 3.33.1
+        app.quarkus.io/build-timestamp: 2026-07-23 - 07:35:52 +0000
+        app.quarkus.io/quarkus-version: 3.33.2.1
         app.quarkus.io/vcs-uri: https://github.com/keycloak/keycloak.git
-        app.quarkus.io/build-timestamp: 2026-05-07 - 14:35:40 +0000
       labels:
         app.kubernetes.io/managed-by: quarkus
         app.kubernetes.io/name: keycloak-operator
-        app.kubernetes.io/version: 26.6.1
+        app.kubernetes.io/version: 26.7.0
     spec:
       containers:
-        - env:
-            - name: KUBERNETES_NAMESPACE
-              valueFrom:
-                fieldRef:
-                  fieldPath: metadata.namespace
-            - name: RELATED_IMAGE_KEYCLOAK
-              value: quay.io/keycloak/keycloak:26.6.1
-            - name: QUARKUS_OPERATOR_SDK_CONTROLLERS_KEYCLOAKREALMIMPORTCONTROLLER_NAMESPACES
-              value: JOSDK_ALL_NAMESPACES
-            - name: QUARKUS_OPERATOR_SDK_CONTROLLERS_KEYCLOAKCONTROLLER_NAMESPACES
-              value: JOSDK_ALL_NAMESPACES
-          image: quay.io/keycloak/keycloak-operator:26.6.1
-          imagePullPolicy: Always
-          livenessProbe:
-            failureThreshold: 3
-            httpGet:
-              path: /q/health/live
-              port: 8080
-              scheme: HTTP
-            initialDelaySeconds: 5
-            periodSeconds: 10
-            successThreshold: 1
-            timeoutSeconds: 10
-          name: keycloak-operator
-          ports:
-            - containerPort: 8080
-              name: http
-              protocol: TCP
-          readinessProbe:
-            failureThreshold: 3
-            httpGet:
-              path: /q/health/ready
-              port: 8080
-              scheme: HTTP
-            initialDelaySeconds: 5
-            periodSeconds: 10
-            successThreshold: 1
-            timeoutSeconds: 10
-          resources:
-            limits:
-              cpu: 700m
-              memory: 450Mi
-            requests:
-              cpu: 300m
-              memory: 450Mi
-          startupProbe:
-            failureThreshold: 3
-            httpGet:
-              path: /q/health/started
-              port: 8080
-              scheme: HTTP
-            initialDelaySeconds: 5
-            periodSeconds: 10
-            successThreshold: 1
-            timeoutSeconds: 10
+      - env:
+        - name: KUBERNETES_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: RELATED_IMAGE_KEYCLOAK
+          value: quay.io/keycloak/keycloak:26.7.0
+        - name: QUARKUS_OPERATOR_SDK_CONTROLLERS_KEYCLOAKREALMIMPORTCONTROLLER_NAMESPACES
+          value: JOSDK_ALL_NAMESPACES
+        - name: QUARKUS_OPERATOR_SDK_CONTROLLERS_KEYCLOAKSAMLCLIENTCONTROLLER_NAMESPACES
+          value: JOSDK_ALL_NAMESPACES
+        - name: QUARKUS_OPERATOR_SDK_CONTROLLERS_KEYCLOAKCONTROLLER_NAMESPACES
+          value: JOSDK_ALL_NAMESPACES
+        - name: QUARKUS_OPERATOR_SDK_CONTROLLERS_KEYCLOAKOIDCCLIENTCONTROLLER_NAMESPACES
+          value: JOSDK_ALL_NAMESPACES
+        image: quay.io/keycloak/keycloak-operator:26.7.0
+        imagePullPolicy: Always
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /q/health/live
+            port: 8080
+            scheme: HTTP
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 10
+        name: keycloak-operator
+        ports:
+        - containerPort: 8080
+          name: http
+          protocol: TCP
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /q/health/ready
+            port: 8080
+            scheme: HTTP
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 10
+        resources:
+          limits:
+            cpu: 700m
+            memory: 450Mi
+          requests:
+            cpu: 300m
+            memory: 450Mi
+        startupProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /q/health/started
+            port: 8080
+            scheme: HTTP
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 10
       serviceAccountName: keycloak-operator

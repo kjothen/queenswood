@@ -12,6 +12,7 @@ cd "$(dirname "$0")/.."
 
 versions=versions.json
 fdb=$(jq -r '.foundationdb.version' "$versions")
+keycloak=$(jq -r '.keycloak.version' "$versions")
 fdb_minor=${fdb%.*}
 fail=0
 
@@ -99,15 +100,44 @@ for f in projects/*/deps.edn; do
          "$f" | head -1)"
 done
 
+
+# Keycloak: the server image, and the operator whose CRDs are vendored from
+# the matching release. These are not merely "nice to keep in step" -- the
+# operator's KeycloakRealmImport CRD is generated from the server's realm
+# schema, and an older operator rejects fields a newer server exports.
+# Keycloak 26.7 emits webAuthnPolicyResidentKey; the 26.6.1 CRD does not
+# declare it, so the API server refused the whole import with a strict
+# decoding error. Only the restore path hit it, because the chart's
+# committed realm JSON carries no such field -- which is the worst way to
+# find out, an hour into a teardown cycle.
+echo "keycloak $keycloak"
+check "queenswood-keycloak values.yaml (server image)" "$keycloak" \
+  "$(sed -n 's|^  image: quay.io/keycloak/keycloak:\(.*\)$|\1|p' \
+      infra/helm/queenswood-keycloak/values.yaml | head -1)"
+check "keycloak-operator Chart.yaml appVersion" "$keycloak" \
+  "$(sed -n 's/^appVersion: "\(.*\)"$/\1/p' \
+      infra/helm/keycloak-operator/Chart.yaml | head -1)"
+check "keycloak-operator vendored image" "$keycloak" \
+  "$(grep -oE 'quay.io/keycloak/keycloak-operator:[0-9.]+' \
+      infra/helm/keycloak-operator/templates/operator.yaml \
+      | head -1 | cut -d: -f2)"
+check "keycloak-operator vendored CRD accepts server schema" "yes" \
+  "$(grep -q 'webAuthnPolicyResidentKey:' \
+      infra/helm/keycloak-operator/crds/crd-keycloakrealmimports.yaml \
+      && echo yes || echo no)"
+
 if [ "$fail" -ne 0 ]; then
   cat <<EOF
 
 Update the files above to match their source, or change the source if the
-intent was to move the pin. The FoundationDB client, the client baked into
-the service image, and the deployed cluster all share a protocol version and
-must move together.
+intent was to move the pin. None of these are cosmetic: the FoundationDB
+client, the client baked into the service image and the deployed cluster
+share a protocol version, and the Keycloak operator's CRDs are generated
+from the server's realm schema -- an older operator rejects fields a newer
+server exports.
 EOF
   exit 1
 fi
 
 echo "All pinned copies agree."
+exit $fail

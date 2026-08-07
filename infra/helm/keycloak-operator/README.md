@@ -1,45 +1,78 @@
-# Keycloak Operator (vendored)
+# keycloak-operator
 
-Cluster-wide install of the official Keycloak Operator, wrapped as a
-thin Helm chart. Installed onto GKE by a Crossplane provider-helm
-`Release` resource templated from `queenswood-platform`
-(`templates/keycloak-operator-release.yaml`, sync-wave `3`) so its
-CRDs are present before the queenswood-keycloak chart (sync-wave `6`)
-emits a `Keycloak` CR.
+Cluster-wide install of the official Keycloak Operator, vendored from
+upstream so the CRDs land ahead of the templates that use them.
 
-## Files
+## Layout
 
-- `crds/crd-keycloaks.yaml` — `Keycloak` CRD (cluster scope).
-- `crds/crd-realmimports.yaml` — `KeycloakRealmImport` CRD (cluster
-  scope). Both live under `crds/` so Helm installs them once,
-  ahead of templates, and skips template rendering on them.
-- `templates/operator.yaml` — the operator itself: Namespace,
-  ServiceAccount, ClusterRoles, ClusterRoleBindings, Service,
-  Deployment.
+- `crds/` — the four CRDs (`keycloaks`, `keycloakrealmimports`,
+  `keycloakoidcclients`, `keycloaksamlclients`). Helm installs
+  everything here before templates, and never templates it.
+- `templates/operator.yaml` — the operator: ServiceAccount, roles and
+  bindings, Service, Deployment.
 
 ## Sourced from
 
-- Tag `26.6.1` of [`keycloak/keycloak-k8s-resources`](https://github.com/keycloak/keycloak-k8s-resources/tree/26.6.1/kubernetes).
-- The two `.yml` files come from `kubernetes/keycloaks.k8s.keycloak.org-v1.yml` and
-  `kubernetes/keycloakrealmimports.k8s.keycloak.org-v1.yml` verbatim.
-- `operator.yml` derives from `kubernetes/kubernetes.yml` with three
-  deviations:
-  1. Adds a `keycloak-operator` `Namespace` at the top.
-  2. Lifts the namespace-scoped `keycloak-operator-role` and its
-     four `RoleBinding`s to `ClusterRole` / `ClusterRoleBinding` so
-     the operator can manage Keycloak instances anywhere on the
-     cluster.
-  3. Switches both
-     `QUARKUS_OPERATOR_SDK_CONTROLLERS_*_NAMESPACES` env vars from
-     `JOSDK_WATCH_CURRENT` to `JOSDK_WATCH_ALL_NAMESPACES`.
+Tag `26.7.0` of
+[`keycloak/keycloak-k8s-resources`](https://github.com/keycloak/keycloak-k8s-resources/tree/26.7.0/kubernetes),
+`kubernetes/cluster-wide/` — **verbatim, with no deviations**.
+
+Earlier versions of this chart carried four hand-applied patches
+(cluster-scoped roles, cluster-wide watch, a Namespace resource, and a
+namespace rename). Upstream now ships a `cluster-wide/` variant that
+does all of it, including defaulting to the `keycloak-operator`
+namespace this chart installs into, so the patches are gone.
 
 ## Refreshing
 
+The version lives in `versions.json` and is asserted by
+`just check-versions`. Change it there first, then re-vendor at the
+same tag:
+
 ```
-TAG=26.6.1
-BASE=https://raw.githubusercontent.com/keycloak/keycloak-k8s-resources/$TAG/kubernetes
-curl -sLo crd-keycloaks.yml      $BASE/keycloaks.k8s.keycloak.org-v1.yml
-curl -sLo crd-realmimports.yml   $BASE/keycloakrealmimports.k8s.keycloak.org-v1.yml
-curl -sLo operator.yml.upstream  $BASE/kubernetes.yml
-# Reapply the three patches above, then drop `operator.yml.upstream`.
+TAG=$(jq -r .keycloak.version versions.json)
+BASE=https://raw.githubusercontent.com/keycloak/keycloak-k8s-resources/$TAG/kubernetes/cluster-wide
+D=$(mktemp -d)
+for f in kustomization.yml kubernetes.yml \
+         keycloakoidcclients.k8s.keycloak.org-v1.yml \
+         keycloakrealmimports.k8s.keycloak.org-v1.yml \
+         keycloaks.k8s.keycloak.org-v1.yml \
+         keycloaksamlclients.k8s.keycloak.org-v1.yml; do
+  curl -sLo "$D/$f" "$BASE/$f"
+done
+
+# CRDs verbatim.
+for f in keycloaks keycloakrealmimports keycloakoidcclients keycloaksamlclients; do
+  cp "$D/$f.k8s.keycloak.org-v1.yml" crds/crd-$f.yaml
+done
+
+# The operator, through kustomize with only kubernetes.yml as input so
+# the CRDs are not duplicated into templates/.
+printf 'apiVersion: kustomize.config.k8s.io/v1beta1\nkind: Kustomization\nnamespace: keycloak-operator\nresources:\n  - kubernetes.yml\ntransformers:\n  - |-\n    apiVersion: builtin\n    kind: NamespaceTransformer\n    metadata:\n      name: notImportantHere\n    setRoleBindingSubjects: allServiceAccounts\n    fieldSpecs:\n    - path: metadata/namespace\n      create: true\n' > "$D/kustomization.yml"
+kubectl kustomize "$D"   # prepend the provenance header, then write templates/operator.yaml
 ```
+
+**The kustomize step is not optional.** Upstream's raw `kubernetes.yml`
+leaves ServiceAccount subjects without a namespace and relies on its
+own `NamespaceTransformer` to fill them in. Applied raw, the operator
+holds no permissions and silently reconciles nothing.
+
+## Keep it in step with the server
+
+The operator's `KeycloakRealmImport` CRD is generated from the
+server's realm schema. An operator older than the Keycloak it manages
+rejects fields the server exports — 26.6.1 against a 26.7.0 server
+refused every realm import produced by `kc.sh export`, because 26.7
+emits `webAuthnPolicyResidentKey` and the older CRD does not declare
+it. The chart's committed realm JSON carries no such field, so only
+the restore path failed. `just check-versions` now asserts both sides.
+
+## Known upstream quirk
+
+`keycloak-operator-clusterrole-binding` names its subject in namespace
+`keycloak` rather than `keycloak-operator`; upstream's
+NamespaceTransformer does not rewrite an explicitly set namespace, so
+its own build has the same result. The binding therefore matches no
+ServiceAccount. It grants only `config.openshift.io/ingresses`, which
+does not exist outside OpenShift, so it is inert here and is left
+verbatim rather than becoming a deviation every upgrade must reapply.
