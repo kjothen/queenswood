@@ -360,7 +360,7 @@ gcp-dns-zone-delete:
     gcloud dns record-sets list --zone={{ QUEENSWOOD_DNS_ZONE }} --project="$PROJECT_ID" \
         --format='value(name,type)' 2>/dev/null \
       | while read name type; do
-          [[ "$type" == "SOA" || "$type" == "NS" ]] && continue
+          if [[ "$type" == "SOA" || "$type" == "NS" ]]; then continue; fi
           gcloud dns record-sets delete "$name" --type="$type" \
             --zone={{ QUEENSWOOD_DNS_ZONE }} --project="$PROJECT_ID" --quiet 2>/dev/null || true
         done
@@ -406,7 +406,7 @@ kind-xp-wait-ready timeout="2700":
         while [[ -z "$NS" ]]; do
           NS=$(kubectl --context {{ KIND_XP_CLUSTER }} -n {{ QUEENSWOOD_ENV }} get \
                 managedzone.dns.gcp.m.upbound.io {{ QUEENSWOOD_DNS_ZONE }} \
-                -o jsonpath='{.status.atProvider.nameServers}' 2>/dev/null)
+                -o jsonpath='{.status.atProvider.nameServers}' 2>/dev/null || true)
           # `[[ ... ]] && break` would abort the whole recipe under
           # set -e whenever the test fails, which is every iteration
           # this loop exists for.
@@ -497,7 +497,7 @@ gcp-cloudsql-wire:
       CONN=$(kubectl --context {{ KIND_XP_CLUSTER }} -n crossplane-system \
                get xplatform.platform.queenswood.repldriven.com queenswood \
                -o jsonpath='{.status.connectionName}' 2>/dev/null || true)
-      [[ -z "$CONN" ]] && sleep 10
+      if [[ -z "$CONN" ]]; then sleep 10; fi
     done
     if [[ -z "$CONN" ]]; then
       echo "" >&2
@@ -738,7 +738,7 @@ _gcp-allow-sa-keys:
     ENFORCED=$(gcloud resource-manager org-policies describe \
       constraints/iam.disableServiceAccountKeyCreation \
       --project="$PROJECT_ID" --effective \
-      --format='value(booleanPolicy.enforced)' 2>/dev/null)
+      --format='value(booleanPolicy.enforced)' 2>/dev/null || true)
     if [[ "$ENFORCED" != "True" ]]; then
       exit 0
     fi
@@ -777,7 +777,7 @@ gcp-backup-hmac-create:
     done
     ACTIVE=$(gcloud storage hmac list --project="$PROJECT_ID" \
       --filter="serviceAccountEmail=$SA AND state=ACTIVE" \
-      --format='value(accessId)')
+      --format='value(accessId)' || true)
     if [[ -n "$ACTIVE" ]]; then
       echo ">>> $SA already has an active HMAC key ($ACTIVE)"
       echo ">>> to rotate: gcloud storage hmac update $ACTIVE --deactivate && just gcp-backup-hmac-create"
@@ -854,7 +854,7 @@ _gcp-fdb-agent-pod:
     KCTX=$(just _gke-ctx)
     POD=$(kubectl --context "$KCTX" -n {{ QUEENSWOOD_ENV }} get pods \
       -o name --field-selector=status.phase=Running \
-      | grep 'fdb-backup-agents' | head -1 | cut -d/ -f2)
+      | grep 'fdb-backup-agents' | head -1 | cut -d/ -f2 || true)
     if [[ -z "$POD" ]]; then
       echo "no running FDB backup agent in {{ QUEENSWOOD_ENV }}" >&2
       exit 1
@@ -903,7 +903,7 @@ gcp-fdb-export:
     echo ">>> waiting for the backup to be restorable"
     for i in {1..60}; do
       R=$(kubectl --context "$KCTX" -n {{ QUEENSWOOD_ENV }} get foundationdbbackup \
-        {{ QUEENSWOOD_ENV }}-fdb -o jsonpath='{.status.backupDetails.restorable}' 2>/dev/null)
+        {{ QUEENSWOOD_ENV }}-fdb -o jsonpath='{.status.backupDetails.restorable}' 2>/dev/null || true)
       if [[ "$R" == "true" ]]; then break; fi
       if (( i == 60 )); then
         echo "backup never became restorable -- NOT safe to tear down" >&2
@@ -921,7 +921,7 @@ gcp-fdb-export:
 
     VERSION=$(kubectl --context "$KCTX" -n {{ QUEENSWOOD_ENV }} exec "$POD" -c foundationdb -- \
       fdbbackup describe -d "$URL" --json 2>/dev/null \
-      | jq -r 'select(.Restorable == true) | .MaxRestorablePoint.Version')
+      | jq -r 'select(.Restorable == true) | .MaxRestorablePoint.Version' || true)
     if [[ -z "$VERSION" || "$VERSION" == "null" ]]; then
       echo "backup is not restorable -- NOT safe to tear down" >&2
       exit 1
@@ -959,7 +959,7 @@ gcp-keycloak-restore-points count="5":
           prefix=${url#$BUCKET/}
           prefix=${prefix%/keycloak.sql.gz}
           marker="  "
-          [[ "$prefix" == "$CURRENT" ]] && marker="* "
+          if [[ "$prefix" == "$CURRENT" ]]; then marker="* "; fi
           printf '%s%s  %s  %s bytes\n' "$marker" "$prefix" "$created" "$bytes"
         done
     echo
@@ -1084,7 +1084,7 @@ gcp-cloudsql-import dump="":
       # half-written one.
       PREFIX=$(gcloud storage cat "$BUCKET/keycloak/export/LATEST" \
         --project="$PROJECT_ID" 2>/dev/null | head -1)
-      [[ -n "$PREFIX" ]] && SRC="$BUCKET/$PREFIX/keycloak.sql.gz"
+      if [[ -n "$PREFIX" ]]; then SRC="$BUCKET/$PREFIX/keycloak.sql.gz"; fi
     fi
     if [[ -z "$SRC" ]]; then
       echo "no export found under $BUCKET/keycloak/export/" >&2
@@ -1158,7 +1158,7 @@ gcp-health-check:
     kubectl --context $MGT get providers.pkg.crossplane.io \
       -o jsonpath='{range .items[*]}{.metadata.name} {.status.conditions[?(@.type=="Installed")].status} {.status.conditions[?(@.type=="Healthy")].status}{"\n"}{end}' 2>/dev/null \
       | while read name installed healthy; do
-        [[ -z "$name" ]] && continue
+        if [[ -z "$name" ]]; then continue; fi
         if [[ "$installed" == "True" && "$healthy" == "True" ]]; then
           printf "%s provider/%s\n" "$ok" "$name"
         else
