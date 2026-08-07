@@ -3,7 +3,9 @@
 
 ## Status
 
-Accepted.
+Accepted. The choice of Crossplane stands; the management plane it
+describes — a local kind cluster — is superseded by
+[ADR-0022](0022-cloud-foundation-and-environment-lifecycle.md).
 
 ## Context
 
