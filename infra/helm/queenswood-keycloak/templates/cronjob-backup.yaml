@@ -1,0 +1,144 @@
+{{- if and (eq .Values.postgresql.mode "external") .Values.backup.enabled }}
+{{- /*
+  Scheduled realm export, using Keycloak's own tooling rather than a
+  database dump.
+
+  A dump restores bytes underneath Keycloak and then has to persuade it
+  that nothing happened: it recreates its schema on start so the import
+  collides, `public` ends up owned by the wrong role, and the dump
+  carries the previous instance's master-realm admin, orphaning the
+  operator's freshly minted Secret. Every one of those is an apology
+  for having gone underneath the application (issue #349).
+
+  `kc.sh export` has none of them. It is realm-scoped, so `master` and
+  its admin are never touched; it writes JSON, so there is no schema
+  and no ownership; and the same file is what a realm import consumes,
+  so restore and ordinary realm import are one mechanism rather than
+  two that must be sequenced.
+
+  It also drops what we do not want: sessions, revoked tokens, admin
+  events. Ad-hoc runtime state is not worth the machinery of carrying
+  it.
+
+  The export runs against the live database from a separate process, so
+  Keycloak stays up throughout -- the management port is moved aside
+  because the running server holds the default.
+*/ -}}
+{{- $realms := list (.Files.Get "files/queenswood-realm.json" | fromJson).realm (.Files.Get "files/queenswood-ops-realm.json" | fromJson).realm -}}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: queenswood-keycloak-backup
+  labels:
+    {{- include "queenswood-keycloak.labels" . | nindent 4 }}
+  annotations:
+    iam.gke.io/gcp-service-account: {{ required "backup.gcpServiceAccount must be set when backup.enabled" .Values.backup.gcpServiceAccount | quote }}
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: queenswood-keycloak-backup
+  labels:
+    {{- include "queenswood-keycloak.labels" . | nindent 4 }}
+    app.kubernetes.io/component: keycloak-backup
+spec:
+  schedule: {{ .Values.backup.schedule | quote }}
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/name: {{ .Chart.Name }}
+            app.kubernetes.io/instance: {{ .Release.Name }}
+            app.kubernetes.io/component: keycloak-backup
+        spec:
+          restartPolicy: OnFailure
+          serviceAccountName: queenswood-keycloak-backup
+          initContainers:
+            - name: export
+              image: {{ .Values.backup.keycloakImage | default .Values.image | quote }}
+              command:
+                - sh
+                - -c
+                - |
+                  set -e
+                  for realm in $REALMS; do
+                    echo "exporting realm $realm"
+                    # Ports moved aside: the running server holds the
+                    # defaults, and the CLI starts its own listeners.
+                    KC_HTTP_MANAGEMENT_PORT=9111 KC_HTTP_PORT=8111 \
+                      /opt/keycloak/bin/kc.sh export \
+                        --dir /export --users realm_file --realm "$realm"
+                  done
+                  ls -l /export
+              env:
+                - name: REALMS
+                  value: {{ join " " $realms | quote }}
+                - name: KC_DB
+                  value: postgres
+                - name: KC_DB_URL_HOST
+                  value: {{ include "queenswood-keycloak.dbHost" . | quote }}
+                - name: KC_DB_URL_DATABASE
+                  value: {{ include "queenswood-keycloak.dbName" . | quote }}
+                - name: KC_DB_URL_PORT
+                  value: {{ include "queenswood-keycloak.dbPort" . | quote }}
+                - name: KC_DB_USERNAME
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ include "queenswood-keycloak.dbSecret" . }}
+                      key: username
+                - name: KC_DB_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ include "queenswood-keycloak.dbSecret" . }}
+                      key: password
+              volumeMounts:
+                - name: export
+                  mountPath: /export
+          containers:
+            - name: upload
+              image: {{ .Values.backup.gcloudImage | quote }}
+              command:
+                - sh
+                - -c
+                - |
+                  set -e
+                  # <service>/<backup-type>/<YYYY>/<MM>/<DD>/<HHMMSSZ>/,
+                  # the bucket's convention, matching the FDB side.
+                  PREFIX="keycloak/realms/$(date -u +%Y/%m/%d/%H%M%SZ)"
+                  DEST="gs://$BUCKET/$PREFIX"
+                  for f in /export/*.json; do
+                    gcloud storage cp "$f" "$DEST/$(basename "$f")" --project="$PROJECT"
+                  done
+                  bytes=$(cat /export/*.json | wc -c)
+                  printf '{"service":"keycloak","type":"realms","realms":"%s","bytes":%s,"createdAt":"%s"}\n' \
+                    "$REALMS" "$bytes" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+                    | gcloud storage cp - "$DEST/manifest.json" --project="$PROJECT"
+                  # Written last, and only once every realm and the
+                  # manifest are there: a LATEST that can point at a
+                  # half-written export is worse than no LATEST.
+                  printf '%s\n' "$PREFIX" \
+                    | gcloud storage cp - "gs://$BUCKET/keycloak/realms/LATEST" --project="$PROJECT"
+                  echo "exported $PREFIX"
+              env:
+                - name: PROJECT
+                  value: {{ required "backup.project must be set when backup.enabled" .Values.backup.project | quote }}
+                - name: BUCKET
+                  value: {{ required "backup.bucket must be set when backup.enabled" .Values.backup.bucket | quote }}
+                - name: REALMS
+                  value: {{ join " " $realms | quote }}
+              volumeMounts:
+                - name: export
+                  mountPath: /export
+              {{- with .Values.backup.resources }}
+              resources:
+                {{- toYaml . | nindent 16 }}
+              {{- end }}
+          volumes:
+            - name: export
+              emptyDir: {}
+{{- end }}

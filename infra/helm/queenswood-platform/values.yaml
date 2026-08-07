@@ -76,7 +76,7 @@ queenswoodKeycloak:
   chart:
     name: queenswood-keycloak
     repository: oci://ghcr.io/repldriven
-    version: 0.5.0
+    version: 0.6.0
   # Supplied by the root Application from `pass`, the same substitution
   # that sets it on the CloudSQL user -- which is what keeps the two
   # sides in step. Previously a literal in two files with a comment
