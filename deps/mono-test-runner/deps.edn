@@ -10,6 +10,6 @@
 ;; anyway unless there is a reason not to.
 {:deps {com.repldriven.mono/external-test-runner
         {:git/url "https://github.com/repldriven/mono.git"
-         :git/tag "v0.0.20"
-         :git/sha "e6fa6d04ec917bd1bbf3d9d119caeac512b2dc2e"
+         :git/tag "v0.0.22"
+         :git/sha "3890d1a31c8692f9d640bc647030963247fdb41b"
          :deps/root "bases/external-test-runner"}}}
