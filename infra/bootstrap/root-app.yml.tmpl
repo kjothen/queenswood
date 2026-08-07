@@ -65,6 +65,16 @@ spec:
     automated:
       prune: true
       selfHeal: true
+    # Matches the child Applications' policy in the bootstrap chart --
+    # see `bootstrap.syncRetry`. Argo's default gives up after 5
+    # attempts and never retries a failed sync afterwards, so a
+    # cold-start ordering problem becomes a permanent stop.
+    retry:
+      limit: 20
+      backoff:
+        duration: 15s
+        factor: 2
+        maxDuration: 5m
     syncOptions:
       - CreateNamespace=true
       # provider-helm registers helm.crossplane.io/Release; until that
