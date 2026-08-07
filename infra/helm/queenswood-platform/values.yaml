@@ -14,6 +14,12 @@ apex:
 fdbBackup:
   enabled: true
   bucket: ""
+  # Container this cluster's backup writes to, one per cluster
+  # generation. Minted by `just gcp-up` and rotated by `gcp-down`, so a
+  # rebuilt cluster never shares a container with the one it replaced --
+  # which is what let `fdbbackup describe` answer with a previous
+  # generation's restore point.
+  name: ""
   # Must match the bucket's location -- it is what the SigV4 signature
   # is computed over, not merely where requests are routed.
   region: europe-west2
@@ -28,6 +34,11 @@ fdbBackup:
 # fresh environment that has nothing to restore.
 fdbRestore:
   version: ""
+  # Container that version lives in -- the generation recorded at the
+  # last teardown, not the one this cluster is about to write. Empty
+  # falls back to the backup container, right only where there has been
+  # exactly one generation.
+  backupName: ""
 
 cert:
   location: europe-west2
@@ -36,7 +47,7 @@ release:
   chart:
     name: queenswood
     repository: oci://ghcr.io/repldriven
-    version: 0.11.3
+    version: 0.11.4
   # The Crossplane provider-config that owns GKE-bound Helm releases.
   # Shared by the queenswood, queenswood-keycloak, and
   # keycloak-operator Release resources below.

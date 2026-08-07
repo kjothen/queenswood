@@ -1,4 +1,4 @@
-{{- if and .Values.fdb.enabled .Values.fdb.backup.enabled .Values.fdb.restore.version }}
+{{- if and .Values.fdb.enabled .Values.fdb.backup.enabled (or .Values.fdb.restore.version .Values.fdb.restore.backupName) }}
 {{- /*
   One-shot Job: restores FDB from the backup before anything writes to
   it.
@@ -26,7 +26,7 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: {{ .Release.Name }}-fdb-restore-{{ .Values.fdb.restore.version }}
+  name: {{ .Release.Name }}-fdb-restore-{{ printf "%s|%s" (.Values.fdb.restore.backupName | default "") (.Values.fdb.restore.version | default "") | sha256sum | trunc 10 }}
   labels:
     {{- include "queenswood.labels" . | nindent 4 }}
     app.kubernetes.io/component: fdb-restore
@@ -92,15 +92,31 @@ spec:
                 echo "destination already holds data; leaving it alone"
                 exit 0
               fi
-              echo "restoring to version $RESTORE_VERSION"
               # -w blocks until the restore finishes, so this Job's
               # completion is a real signal rather than a submission
               # receipt -- the operator's FoundationDBRestore status
               # reports `queued` for a restore that has already
               # completed, which is why this does not use the CR.
+              #
+              # No version means restore this container's latest
+              # restorable point, which is what a cluster that died
+              # without an orderly teardown leaves behind: the data is
+              # in the container but nothing recorded where to stop.
+              # That is only well defined because a container now holds
+              # exactly one cluster generation -- while they were
+              # shared, "latest" could be another cluster's.
+              if [ -n "$RESTORE_VERSION" ]; then
+                echo "restoring to version $RESTORE_VERSION"
+                exec fdbrestore start \
+                  -r "$BACKUP_URL" \
+                  -v "$RESTORE_VERSION" \
+                  --encryption-key-file /var/backup-credentials/encryption-key \
+                  --dest-cluster-file "$FDB_CLUSTER_FILE" \
+                  -w
+              fi
+              echo "no recorded version; restoring the latest restorable point"
               exec fdbrestore start \
                 -r "$BACKUP_URL" \
-                -v "$RESTORE_VERSION" \
                 --encryption-key-file /var/backup-credentials/encryption-key \
                 --dest-cluster-file "$FDB_CLUSTER_FILE" \
                 -w

@@ -35,9 +35,21 @@ spec:
           accessKeyId: {{ .Values.fdbBackup.accessKeyId | quote }}
           secretAccessKey: {{ .Values.fdbBackup.secretAccessKey | quote }}
           encryptionKey: {{ .Values.fdbBackup.encryptionKey | quote }}
-        {{- with .Values.fdbRestore.version }}
+          {{- with .Values.fdbBackup.name }}
+          # One container per cluster generation. Two generations in one
+          # container leave `fdbbackup describe` choosing by version
+          # number, and a rebuilt cluster's numbers start again near
+          # zero -- so it answers with the older generation.
+          backupName: {{ . | quote }}
+          {{- end }}
+        {{- if .Values.fdbRestore.version }}
         restore:
-          version: {{ . | quote }}
+          version: {{ .Values.fdbRestore.version | quote }}
+          {{- with .Values.fdbRestore.backupName }}
+          # The generation that version belongs to, which is the one
+          # this cluster replaced -- never the one it writes to.
+          backupName: {{ . | quote }}
+          {{- end }}
         {{- end }}
       {{- end }}
       gateway:

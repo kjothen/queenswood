@@ -50,9 +50,17 @@ spec:
         - name: fdbBackup.bucket
           value: {{ printf "%s-backups" (required "gcpProjectId must be set to enable FDB backup" .Values.gcpProjectId) | quote }}
 {{- end }}
+{{- if .Values.fdbBackupName }}
+        - name: fdbBackup.name
+          value: {{ .Values.fdbBackupName | quote }}
+{{- end }}
 {{- if .Values.fdbRestoreVersion }}
         - name: fdbRestore.version
           value: {{ .Values.fdbRestoreVersion | quote }}
+{{- if .Values.fdbRestoreBackupName }}
+        - name: fdbRestore.backupName
+          value: {{ .Values.fdbRestoreBackupName | quote }}
+{{- end }}
 {{- end }}
 {{- if .Values.gcpProjectId }}
         # The scheduled realm export. Needs no secret of its own -- the

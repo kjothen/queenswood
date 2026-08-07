@@ -877,10 +877,56 @@ _gcp-fdb-backup-url:
     printf 'blobstore://%s@storage.googleapis.com:80/%s?bucket=%s&region=%s&secure_connection=0\n' \
       "$ACCESS_ID" "$(just _gcp-fdb-backup-name)" "$BUCKET" '{{ REGION }}'
 
-# Print FDB's backup name -- <service>/<backup-type>, matching the chart.
+# Print the backup container for THIS cluster generation, minting one
+# when there is no cluster to own the current value.
+#
+# One container per generation. Two generations sharing one leave
+# `fdbbackup describe` picking the highest restorable version, and a
+# rebuilt cluster numbers from near zero -- so it answers with the
+# generation being replaced rather than the one just torn down.
+#
+# The signal is a live GKE cluster, not a teardown having run. Rotating
+# on teardown only works when a teardown happens: a cluster that died
+# without one would leave its container current, and the replacement
+# would write its own low versions into it -- the same collision, from
+# the other direction. Tying the generation to the cluster's existence
+# covers the unclean case too, and keeps a re-run of `gcp-up` against a
+# live cluster on the container its backup is already writing to.
 [private]
 _gcp-fdb-backup-name:
-    @printf 'fdb/continuous\n'
+    #!/usr/bin/env zsh
+    set -euo pipefail
+    PROJECT_ID=$(just _gcp-project-id)
+    NAME=$(pass show {{ PASS_ENV }}/backup/fdb-generation 2>/dev/null | head -1 || true)
+    if [[ -n "$NAME" ]] \
+       && gcloud container clusters describe queenswood-gke \
+            --zone={{ ZONE }} --project="$PROJECT_ID" >/dev/null 2>&1; then
+      printf '%s\n' "$NAME"
+      exit 0
+    fi
+    # Whatever the departing cluster was writing to becomes what the
+    # replacement restores from. An orderly teardown already recorded
+    # exactly this, plus the version it flushed to; doing it here as
+    # well is what makes recovery independent of a teardown having run.
+    if [[ -n "$NAME" ]]; then
+      RECORDED=$(pass show {{ PASS_ENV }}/backup/fdb-restore-generation 2>/dev/null | head -1 || true)
+      if [[ "$RECORDED" != "$NAME" ]]; then
+        printf '%s\n' "$NAME" \
+          | pass insert -m -f {{ PASS_ENV }}/backup/fdb-restore-generation >/dev/null
+        # No version with it: this generation was never closed, so
+        # nothing flushed a final point to aim at, and the version on
+        # file belongs to an older container entirely. Cleared rather
+        # than carried, because the restore reads the latest point in
+        # the container when there is no version -- and a version from
+        # the wrong container is the failure this whole change is about.
+        pass rm -f {{ PASS_ENV }}/backup/fdb-restore-version >/dev/null 2>&1 || true
+        echo ">>> $NAME ended without a teardown; restoring its latest point" >&2
+      fi
+    fi
+    NAME="fdb/$(date -u +%Y%m%dT%H%M%SZ)"
+    printf '%s\n' "$NAME" | pass insert -m -f {{ PASS_ENV }}/backup/fdb-generation >/dev/null
+    echo ">>> minted FDB backup generation $NAME" >&2
+    printf '%s\n' "$NAME"
 
 # Print the name of a running FDB backup-agent pod on GKE.
 [private]
@@ -967,7 +1013,12 @@ gcp-fdb-export:
     # relation to this one's -- so "the latest restorable point" could
     # be the new empty cluster's.
     printf '%s\n' "$VERSION" | pass insert -m -f {{ PASS_ENV }}/backup/fdb-restore-version >/dev/null
-    echo ">>> restorable to version $VERSION; recorded in {{ PASS_ENV }}/backup/fdb-restore-version"
+    # The container as well as the version. A version alone names a
+    # point in whichever container the next cluster happens to use, and
+    # after a rebuild that is the wrong one.
+    GEN=$(just _gcp-fdb-backup-name)
+    printf '%s\n' "$GEN" | pass insert -m -f {{ PASS_ENV }}/backup/fdb-restore-generation >/dev/null
+    echo ">>> restorable to version $VERSION in $GEN; recorded in {{ PASS_ENV }}/backup/"
 
 # There is no gcp-fdb-import. A restore is declared, not run:
 # `fdb.restore.version` in the queenswood chart names the version a
