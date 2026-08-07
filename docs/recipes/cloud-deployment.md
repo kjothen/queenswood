@@ -235,29 +235,31 @@ up/down cycles of the FDB and Kafka StatefulSets is enough to
 exhaust the default regional SSD quota and leave the next cold
 start stuck on a pending PVC.
 
-Before any of that, `gcp-down` closes off the FDB backup. Then:
-kill kind, delete the GKE cluster, **export the Keycloak database
-to the backup bucket**, delete CloudSQL, delete the IP,
+Before any of that, `gcp-down` closes off both backups. Then:
+kill kind, delete the GKE cluster, delete CloudSQL, delete the IP,
 certificate, VPC, and DNS records, prune the local kubeconfig
 context.
 
-The two stores are backed up at opposite ends of the teardown,
-and for opposite reasons. The Keycloak export runs *after* GKE is
-gone, so nothing is writing and the dump is consistent, and
-`gcp-down` refuses to delete the instance if it fails. Restore
-with `just gcp-cloudsql-import`, which takes the most recent
-export unless given one. Scale Keycloak to zero first — an import
-under a live Keycloak leaves it reading rows that change
-underneath it.
+Both stores are backed up at the same end of the teardown, before
+the namespace drain, because both read from a live cluster — FDB
+through the backup agents that run in that namespace, Keycloak
+through a Job on its own image running `kc.sh export`. They are
+taken together because they are only useful together: FDB
+references the Keycloak subject, so a pair captured at different
+moments restores a bank whose users no longer resolve.
 
-FDB goes *first*, before the namespace drain, because its backup
-agents run in that namespace and read from a live cluster. Little
-is copied at that moment: a continuous backup has been shipping
-snapshots and a mutation log all along, so `just gcp-fdb-export`
-only stops it cleanly, so the last mutations land, and records the
-version it can be restored to. It refuses rather than continues if
-the backup is not restorable — draining past that point is what
-makes the data unrecoverable.
+`just gcp-keycloak-export` takes a final realm export on top of
+the hourly scheduled one, confirms it landed whole by reading back
+the `LATEST` pointer the export writes last, and records the
+prefix. It refuses rather than continues if either step fails.
+
+FDB's half is the same shape. Little is copied at that moment: a
+continuous backup has been shipping snapshots and a mutation log
+all along, so `just gcp-fdb-export` only stops it cleanly, so the
+last mutations land, and records the version it can be restored
+to. It refuses rather than continues if the backup is not
+restorable — draining past that point is what makes the data
+unrecoverable.
 
 There is nothing to run to restore it. `gcp-up` reads that
 recorded version out of `pass` and it travels to the chart as

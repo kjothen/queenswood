@@ -84,12 +84,12 @@ The suffix is what makes an upgrade possible at all: a Job's pod
 template is immutable, so anything that changes the template must also
 change the name, or `helm upgrade` fails trying to patch it. The image
 tag and chart version cover new code and new template content. The
-restore values cover the wait-for-restore initContainers, which appear
-and disappear as a restore is declared -- a change in template with no
-change in either of the other two.
+gate values cover the wait-for-restore and wait-for-realm-import
+initContainers, which appear and disappear as they are declared -- a
+change in template with no change in either of the other two.
 */}}
 {{- define "queenswood.jobSuffix" -}}
-{{- $gates := printf "%s|%s" (.Values.fdb.restore.version | default "") (.Values.keycloak.restoreDump | default "") -}}
+{{- $gates := printf "%s|%s" (.Values.fdb.restore.version | default "") (.Values.keycloak.waitForRealmImport | default "") -}}
 {{- if eq $gates "|" -}}
 {{- printf "%s-%s" .Values.image.tag .Chart.Version -}}
 {{- else -}}

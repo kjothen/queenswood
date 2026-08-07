@@ -52,8 +52,8 @@ spec:
           value: "${FDB_BACKUP_ENCRYPTION_KEY}"
         - name: fdbRestoreVersion
           value: "${FDB_RESTORE_VERSION}"
-        - name: keycloakRestoreDump
-          value: "${KEYCLOAK_RESTORE_DUMP}"
+        - name: keycloakRestoreRealms
+          value: "${KEYCLOAK_RESTORE_REALMS}"
   destination:
     server: https://kubernetes.default.svc
     namespace: argocd

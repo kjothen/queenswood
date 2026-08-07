@@ -222,17 +222,21 @@ gcp-up:
     just gcp-backup-key-create
     just kind-xp-up
     just gcp-cloudsql-wire
-    # After CloudSQL exists, because the import is performed by the
-    # instance's own service agent and that identity is per-instance --
-    # a rebuilt instance has a new one, and the binding letting it read
-    # the dump has to be granted again or the restore Job cannot read
-    # the object.
+    # Identities for the realm export and the realm import. Both are
+    # bucket-scoped, so neither depends on CloudSQL existing yet.
     just gcp-keycloak-restore-sa-create
+    just gcp-keycloak-backup-sa-create
     # Google sign-in reads its client secret from Keycloak's vault, and
     # the Secret behind it is not part of any chart -- without this a
     # rebuilt environment authenticates nobody, failing with
     # "Unexpected error when authenticating with identity provider".
     just gcp-keycloak-vault-secret google
+    # And the realm's own copy of the client id/secret, which the
+    # committed realm JSON carries only as a placeholder. Without it
+    # Google returns `401 invalid_client` and nobody can sign in --
+    # which on a restored environment is indistinguishable from the
+    # restore having failed.
+    just gcp-keycloak-idp google
     just gcp-health-check
 
 # Tear down kind + GKE + expensive GCP resources; keep project, SA, DNS zone.
@@ -241,13 +245,17 @@ gcp-down:
     set -e
     GKE_CTX=$(just _gke-ctx)
 
-    # Close the FDB backup off first -- the mirror image of the CloudSQL
-    # export below, which runs after GKE is gone. FDB's backup agents
-    # run in the workload namespace and read from the live cluster, so
-    # both have to still be up. Refuses rather than proceeds if the
-    # backup isn't restorable: draining past this point is what makes
-    # the data unrecoverable.
+    # Close both backups off first. Each runs in the workload namespace
+    # against a live cluster, and each refuses rather than proceeds if
+    # what it produced is not restorable -- draining past this point is
+    # what makes the data unrecoverable.
+    #
+    # They are taken together because they are only useful together:
+    # FDB references the Keycloak subject, so a pair whose identities
+    # were captured at different moments restores a bank whose users no
+    # longer resolve. That pairing is the property ADR-0022 asks for.
     just gcp-fdb-export
+    just gcp-keycloak-export
 
     # Drain GKE workloads BEFORE killing kind. GKE's CSI driver only
     # DeleteDisks PVs while the cluster is alive; destroying GKE with
@@ -263,11 +271,9 @@ gcp-down:
     just kind-xp-down || true
     just gcp-gke-delete
 
-    # Export before deleting: an automated CloudSQL backup is tied to the
-    # instance's lifecycle, so it goes with it. The export outlives the
-    # teardown in a bucket that costs pennies to keep. GKE is already
-    # gone at this point, so nothing is writing.
-    just gcp-cloudsql-export || echo "  (export failed -- NOT deleting CloudSQL)" >&2
+    # The realms were exported before the drain, above -- an automated
+    # CloudSQL backup is tied to the instance's lifecycle and goes with
+    # it, but nothing here needs the database itself to survive.
     just gcp-cloudsql-delete
     just gcp-ip-delete
     just gcp-cert-delete
@@ -688,15 +694,15 @@ gcp-backup-lifecycle-set:
         "rule": [
           {
             "action": {"type": "SetStorageClass", "storageClass": "NEARLINE"},
-            "condition": {"age": 7, "matchesPrefix": ["keycloak/export/"]}
+            "condition": {"age": 7, "matchesPrefix": ["keycloak/realms/"]}
           },
           {
             "action": {"type": "SetStorageClass", "storageClass": "COLDLINE"},
-            "condition": {"age": 30, "matchesPrefix": ["keycloak/export/"]}
+            "condition": {"age": 30, "matchesPrefix": ["keycloak/realms/"]}
           },
           {
             "action": {"type": "Delete"},
-            "condition": {"age": 365, "matchesPrefix": ["keycloak/export/"]}
+            "condition": {"age": 365, "matchesPrefix": ["keycloak/realms/"]}
           }
         ]
       }
@@ -942,175 +948,151 @@ gcp-fdb-export:
 # non-empty destination. The version above travels to the chart via
 # the root Application, so `gcp-up` restores on its own.
 
-# List the most recent Keycloak dumps available to restore from.
+# List the most recent Keycloak realm exports available to restore from.
 gcp-keycloak-restore-points count="5":
     #!/usr/bin/env zsh
     set -euo pipefail
     PROJECT_ID=$(just _gcp-project-id)
     BUCKET=$(just _gcp-backup-bucket)
-    CURRENT=$(gcloud storage cat "$BUCKET/keycloak/export/LATEST" \
+    CURRENT=$(gcloud storage cat "$BUCKET/keycloak/realms/LATEST" \
       --project="$PROJECT_ID" 2>/dev/null | head -1 || true)
     # Sorted by name, which for this layout is chronological:
-    # keycloak/export/<YYYY>/<MM>/<DD>/<HHMMSSZ>/.
-    gcloud storage ls -l "$BUCKET/keycloak/export/**/keycloak.sql.gz" \
+    # keycloak/realms/<YYYY>/<MM>/<DD>/<HHMMSSZ>/. Listed by manifest
+    # because there is one per export, where realm files are one each.
+    gcloud storage ls -l "$BUCKET/keycloak/realms/**/manifest.json" \
       --project="$PROJECT_ID" 2>/dev/null \
       | grep '^ ' | sort -k3 | tail -{{ count }} \
       | while read -r bytes created url _; do
           prefix=${url#$BUCKET/}
-          prefix=${prefix%/keycloak.sql.gz}
+          prefix=${prefix%/manifest.json}
           marker="  "
           if [[ "$prefix" == "$CURRENT" ]]; then marker="* "; fi
-          printf '%s%s  %s  %s bytes\n' "$marker" "$prefix" "$created" "$bytes"
+          printf '%s%s  %s\n' "$marker" "$prefix" "$created"
         done
     echo
     echo ">>> * is what LATEST points at, and what gcp-down last recorded"
-    echo ">>> choose one with: pass insert -e -f {{ PASS_ENV }}/backup/keycloak-restore-dump"
+    echo ">>> choose one with: pass insert -e -f {{ PASS_ENV }}/backup/keycloak-restore-realms"
 
-# Create the identity the Keycloak restore Job imports with.
+# Create the identity the Keycloak realm-import Job reads exports with.
 gcp-keycloak-restore-sa-create:
     #!/usr/bin/env zsh
     set -euo pipefail
-    # A dedicated identity rather than the SQL proxy's: that one holds
-    # `cloudsql.client` and nothing else, and is the credential every
-    # Keycloak database connection uses. Importing needs
-    # `cloudsql.instances.import`, which among predefined roles only
-    # `cloudsql.admin` carries -- and that can delete the instance. So
-    # this is a custom role with the two permissions the import
-    # actually makes.
+    # Reading an object from the backup bucket is the whole of it. The
+    # CloudSQL import this replaced needed `cloudsql.instances.import`
+    # -- carried among predefined roles only by `cloudsql.admin`, which
+    # can delete the instance, so it took a custom role -- plus a
+    # binding for the instance's own service agent, whose identity is
+    # per-instance and so had to be re-granted after every rebuild.
+    # Importing through Keycloak rather than underneath it leaves none
+    # of that.
     PROJECT_ID=$(just _gcp-project-id)
     BUCKET=$(just _gcp-backup-bucket)
     SA=$(just _gcp-sa-email keycloak-restore)
-    ROLE=queenswoodKeycloakImport
-
-    if ! gcloud iam roles describe "$ROLE" --project="$PROJECT_ID" >/dev/null 2>&1; then
-      echo ">>> creating custom role $ROLE"
-      gcloud iam roles create "$ROLE" --project="$PROJECT_ID" \
-        --title="Queenswood Keycloak import" \
-        --description="Import a SQL dump into the Keycloak instance" \
-        --permissions=cloudsql.instances.import,cloudsql.instances.get \
-        --stage=GA >/dev/null
-    fi
 
     if ! gcloud iam service-accounts describe "$SA" --project="$PROJECT_ID" >/dev/null 2>&1; then
       echo ">>> creating service account keycloak-restore"
       gcloud iam service-accounts create keycloak-restore --project="$PROJECT_ID" \
-        --display-name="Keycloak restore Job"
+        --display-name="Keycloak realm-import Job"
     fi
     # A freshly created service account is not immediately visible to
     # IAM policy binding.
     for i in {1..12}; do
-      if gcloud projects add-iam-policy-binding "$PROJECT_ID" \
-           --member="serviceAccount:${SA}" \
-           --role="projects/${PROJECT_ID}/roles/${ROLE}" >/dev/null 2>&1; then break; fi
+      if gcloud storage buckets add-iam-policy-binding "$BUCKET" \
+           --member="serviceAccount:${SA}" --role=roles/storage.objectViewer \
+           --project="$PROJECT_ID" >/dev/null 2>&1; then break; fi
       echo ">>> waiting for $SA to propagate ($i/12)"
       sleep 5
     done
-    # The import is performed BY the instance's service agent, so that
-    # agent needs to read the object -- the same binding
-    # gcp-cloudsql-import makes. Granted here so a restore on a rebuilt
-    # environment does not depend on anyone having run that recipe.
-    AGENT=$(gcloud sql instances describe queenswood-keycloak \
-      --project="$PROJECT_ID" --format='value(serviceAccountEmailAddress)' 2>/dev/null || true)
-    if [[ -n "$AGENT" ]]; then
-      gcloud storage buckets add-iam-policy-binding "$BUCKET" \
-        --member="serviceAccount:${AGENT}" --role=roles/storage.objectViewer \
-        --project="$PROJECT_ID" >/dev/null
-    fi
     # Let the Job's Kubernetes SA impersonate it.
     gcloud iam service-accounts add-iam-policy-binding "$SA" --project="$PROJECT_ID" \
       --role=roles/iam.workloadIdentityUser \
-      --member="serviceAccount:${PROJECT_ID}.svc.id.goog[{{ QUEENSWOOD_ENV }}/queenswood-keycloak-restore]" \
+      --member="serviceAccount:${PROJECT_ID}.svc.id.goog[{{ QUEENSWOOD_ENV }}/queenswood-keycloak-realm-import]" \
       >/dev/null
-    echo ">>> $SA can import into queenswood-keycloak"
+    echo ">>> $SA can read realm exports from $BUCKET"
 
-# Export the Keycloak database to the backup bucket.
-gcp-cloudsql-export:
+# Create the identity the Keycloak export CronJob writes with.
+gcp-keycloak-backup-sa-create:
     #!/usr/bin/env zsh
     set -euo pipefail
-    # An automated CloudSQL backup lives and dies with its instance, and
-    # gcp-down deletes the instance -- so an export is the only thing
-    # that survives a teardown. Run with GKE already drained, which is
-    # where gcp-down calls it: no writers, so the dump is consistent.
+    # objectAdmin rather than objectCreator: the export rewrites the
+    # LATEST pointer on every run, and overwriting an object needs
+    # delete. Scoped to the backup bucket, so it is narrower than the
+    # project-level CloudSQL permissions the dump path needed.
     PROJECT_ID=$(just _gcp-project-id)
     BUCKET=$(just _gcp-backup-bucket)
-    just gcp-backup-bucket-create
-    # The export is performed BY the instance's own service agent, not
-    # by you, so that agent needs write access to the bucket.
-    SA=$(gcloud sql instances describe queenswood-keycloak \
-      --project="$PROJECT_ID" --format='value(serviceAccountEmailAddress)')
-    gcloud storage buckets add-iam-policy-binding "$BUCKET" \
-      --member="serviceAccount:${SA}" --role=roles/storage.objectAdmin \
-      --project="$PROJECT_ID" >/dev/null
-    # <service>/<backup-type>/<YYYY>/<MM>/<DD>/<HHMMSSZ>/. Date
-    # components are separate segments so a prefix listing can select a
-    # day or a month; the leaf is a full UTC stamp so two exports on one
-    # day cannot collide. No environment segment -- the bucket is the
-    # project's and the project is the environment's.
-    STAMP=$(date -u +%Y/%m/%d/%H%M%SZ)
-    PREFIX="keycloak/export/$STAMP"
-    DEST="$BUCKET/$PREFIX/keycloak.sql.gz"
-    echo ">>> exporting keycloak database to $DEST"
-    gcloud sql export sql queenswood-keycloak "$DEST" \
-      --database=keycloak --project="$PROJECT_ID"
-    # A manifest beside each dump so a restore can tell what it is
-    # holding without inferring it from the path.
-    SIZE=$(gcloud storage ls -l "$DEST" --project="$PROJECT_ID" \
-      | head -1 | awk '{print $1}')
-    printf '{"service":"keycloak","type":"export","instance":"queenswood-keycloak","database":"keycloak","object":"keycloak.sql.gz","bytes":%s,"createdAt":"%s"}\n' \
-      "${SIZE:-0}" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-      | gcloud storage cp - "$BUCKET/$PREFIX/manifest.json" --project="$PROJECT_ID" >/dev/null
-    # Written last, and only once the dump and its manifest are both
-    # there: a LATEST that can point at a half-written export is worse
-    # than no LATEST.
-    printf '%s\n' "$PREFIX" \
-      | gcloud storage cp - "$BUCKET/keycloak/export/LATEST" --project="$PROJECT_ID" >/dev/null
-    # Recorded the same way FDB's restore version is, and for the same
-    # reason: a rebuilt environment must restore the dump taken at THIS
-    # teardown, not whatever happens to be newest when it comes back.
-    printf '%s\n' "$PREFIX" \
-      | pass insert -m -f {{ PASS_ENV }}/backup/keycloak-restore-dump >/dev/null
-    echo ">>> exported $PREFIX; recorded in {{ PASS_ENV }}/backup/keycloak-restore-dump"
+    SA=$(just _gcp-sa-email keycloak-backup)
 
-# Restore the Keycloak database from the most recent export (or a named one).
-gcp-cloudsql-import dump="":
-    #!/usr/bin/env zsh
-    set -euo pipefail
-    PROJECT_ID=$(just _gcp-project-id)
-    BUCKET=$(just _gcp-backup-bucket)
-    SRC='{{ dump }}'
-    if [[ -z "$SRC" ]]; then
-      # The LATEST pointer rather than a listing sorted by name: it is
-      # written only after an export finishes, so it cannot name a
-      # half-written one.
-      PREFIX=$(gcloud storage cat "$BUCKET/keycloak/export/LATEST" \
-        --project="$PROJECT_ID" 2>/dev/null | head -1)
-      if [[ -n "$PREFIX" ]]; then SRC="$BUCKET/$PREFIX/keycloak.sql.gz"; fi
+    if ! gcloud iam service-accounts describe "$SA" --project="$PROJECT_ID" >/dev/null 2>&1; then
+      echo ">>> creating service account keycloak-backup"
+      gcloud iam service-accounts create keycloak-backup --project="$PROJECT_ID" \
+        --display-name="Keycloak realm export CronJob"
     fi
-    if [[ -z "$SRC" ]]; then
-      echo "no export found under $BUCKET/keycloak/export/" >&2
+    for i in {1..12}; do
+      if gcloud storage buckets add-iam-policy-binding "$BUCKET" \
+           --member="serviceAccount:${SA}" --role=roles/storage.objectAdmin \
+           --project="$PROJECT_ID" >/dev/null 2>&1; then break; fi
+      echo ">>> waiting for $SA to propagate ($i/12)"
+      sleep 5
+    done
+    gcloud iam service-accounts add-iam-policy-binding "$SA" --project="$PROJECT_ID" \
+      --role=roles/iam.workloadIdentityUser \
+      --member="serviceAccount:${PROJECT_ID}.svc.id.goog[{{ QUEENSWOOD_ENV }}/queenswood-keycloak-backup]" \
+      >/dev/null
+    echo ">>> $SA can write realm exports to $BUCKET"
+
+# Close off the Keycloak realm export and record the prefix to restore from.
+gcp-keycloak-export:
+    #!/usr/bin/env zsh
+    set -euo pipefail
+    # Like gcp-fdb-export and unlike the CloudSQL dump it replaces, this
+    # runs BEFORE the workload namespace is drained: `kc.sh export` is a
+    # Job on the Keycloak image reading the live database, so it needs
+    # the cluster up. The scheduled CronJob has been exporting all
+    # along; this takes one final export so the window between the last
+    # scheduled run and the teardown is not lost.
+    PROJECT_ID=$(just _gcp-project-id)
+    BUCKET=$(just _gcp-backup-bucket)
+    KCTX=$(just _gke-ctx)
+    JOB="keycloak-export-$(date -u +%Y%m%d%H%M%S)"
+
+    echo ">>> running a final realm export"
+    kubectl --context "$KCTX" -n {{ QUEENSWOOD_ENV }} create job "$JOB" \
+      --from=cronjob/queenswood-keycloak-backup
+    if ! kubectl --context "$KCTX" -n {{ QUEENSWOOD_ENV }} wait \
+           --for=condition=complete --timeout=10m "job/$JOB"; then
+      kubectl --context "$KCTX" -n {{ QUEENSWOOD_ENV }} logs "job/$JOB" --all-containers \
+        --tail=40 >&2 || true
+      echo "the realm export failed -- NOT safe to tear down" >&2
       exit 1
     fi
-    SA=$(gcloud sql instances describe queenswood-keycloak \
-      --project="$PROJECT_ID" --format='value(serviceAccountEmailAddress)')
-    gcloud storage buckets add-iam-policy-binding "$BUCKET" \
-      --member="serviceAccount:${SA}" --role=roles/storage.objectViewer \
-      --project="$PROJECT_ID" >/dev/null
-    cat >&2 <<EOF
-    ================================================================
-    About to import $SRC into the `keycloak` database.
 
-    This overwrites the realms, users and federated identities the
-    instance currently holds. Keycloak should be scaled to zero first
-    -- an import under a live Keycloak leaves it reading rows that
-    changed underneath it.
-    ================================================================
-    EOF
-    printf "Type 'yes' to proceed: "
-    read confirm
-    [[ "$confirm" == "yes" ]] || { echo "aborted." >&2; exit 1; }
-    gcloud sql import sql queenswood-keycloak "$SRC" \
-      --database=keycloak --project="$PROJECT_ID" --quiet
-    echo ">>> imported $SRC"
+    # The Job writes LATEST only once every realm and the manifest are
+    # uploaded, so reading it back is what confirms the export landed
+    # whole rather than merely that the Job exited.
+    PREFIX=$(gcloud storage cat "$BUCKET/keycloak/realms/LATEST" \
+      --project="$PROJECT_ID" 2>/dev/null | head -1 || true)
+    if [[ -z "$PREFIX" ]]; then
+      echo "the export left no LATEST pointer -- NOT safe to tear down" >&2
+      exit 1
+    fi
+
+    # Recorded rather than rediscovered at restore time, for the reason
+    # FDB's version is: a rebuilt environment must import the realms
+    # captured at THIS teardown. Anything newer is the rebuilt
+    # environment's own first export, whose user ids are the ones that
+    # duplicate the bank.
+    printf '%s\n' "$PREFIX" \
+      | pass insert -m -f {{ PASS_ENV }}/backup/keycloak-restore-realms >/dev/null
+    echo ">>> exported $PREFIX; recorded in {{ PASS_ENV }}/backup/keycloak-restore-realms"
+
+# There is no gcp-keycloak-import. A restore is declared, not run:
+# `restore.realms` in the queenswood-keycloak chart names the export a
+# realm's definition should come from, and the chart's realm-import Job
+# acts on it instead of importing the committed JSON. A recipe could
+# not do the same job -- the operator creates realms and never
+# overwrites them, so by the time one could be typed the realm exists
+# and the import is refused. The prefix above travels to the chart via
+# the root Application, so `gcp-up` restores on its own.
 
 # =========================================================================
 # Diagnostics

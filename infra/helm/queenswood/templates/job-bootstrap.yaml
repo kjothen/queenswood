@@ -61,27 +61,49 @@ spec:
           volumeMounts:
             - name: fdb-cluster-file
               mountPath: /etc/fdb
-        {{- if .Values.keycloak.restoreDump }}
-        # Block until the Keycloak dump has been imported, because the
-        # next initContainer registers this release's signing key on the
-        # realm. Import after that and the realm reverts to the key the
-        # dump was taken with, while the pods hold the new private half
-        # -- private_key_jwt stops verifying. Ordering it here means
-        # bootstrap re-registers the current key onto the restored
-        # realm.
+        {{- if .Values.keycloak.waitForRealmImport }}
+        # Block until the realm exists, because the next initContainer
+        # registers this release's signing key on it. Import after that
+        # and the realm reverts to the key its definition was captured
+        # with, while the pods hold the new private half -- private_key_
+        # jwt stops verifying. Ordering it here means bootstrap
+        # registers the current key onto whichever realm was imported.
         #
-        # The Job is rendered by the queenswood-keycloak chart, so this
-        # waits across a release boundary. Both charts derive the name
-        # from the same dump path, passed to each from one place in
-        # queenswood-platform, so they cannot disagree.
-        - name: wait-for-keycloak-restore
+        # Unconditional, where this once ran only for a restore: the
+        # realm import is a Job in every environment now, not a
+        # declarative CR that a restore had to be sequenced against.
+        #
+        # Selected by label rather than by name. The Job is rendered by
+        # the queenswood-keycloak chart, and its name is content-
+        # addressed there -- a name this chart could only re-derive by
+        # holding a copy of everything that goes into the hash.
+        - name: wait-for-realm-import
           image: alpine/k8s:1.30.14
           command:
             - sh
             - -c
             - |
-              kubectl wait --for=condition=complete --timeout=30m \
-                job/queenswood-keycloak-restore-{{ .Values.keycloak.restoreDump | sha256sum | trunc 8 }}
+              set -e
+              SEL=app.kubernetes.io/component=keycloak-realm-import
+              # `kubectl wait` on a selector matching nothing succeeds
+              # immediately, so the gate has to see the Job exist before
+              # it can wait on it -- otherwise racing ahead of the other
+              # chart's release reads as "already done".
+              for i in $(seq 1 120); do
+                n=$(kubectl get job -l "$SEL" \
+                  -o jsonpath='{.items[*].metadata.name}' 2>/dev/null || true)
+                if [ -n "$n" ]; then
+                  echo "waiting on realm import $n"
+                  break
+                fi
+                echo "waiting for the realm import Job to appear ($i/120)"
+                sleep 5
+              done
+              if [ -z "$n" ]; then
+                echo "no realm import Job ever appeared" >&2
+                exit 1
+              fi
+              kubectl wait --for=condition=complete --timeout=30m job -l "$SEL"
         {{- end }}
         # Register the public half of this release's signing key on the
         # queenswood-admin client, and switch it to client-jwt.

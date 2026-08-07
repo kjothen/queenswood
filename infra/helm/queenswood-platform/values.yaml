@@ -59,14 +59,22 @@ keycloakOperator:
 # the CloudSQL DatabaseInstance MR (in `infra/gcp/database/`) has
 # published its `status.atProvider.connectionName`. Empty defaults
 # are the cold-start state; the recipe rewrites them in place.
-# Keycloak dump a rebuilt environment restores before its realm is
-# written to. Supplied by the root Application from what
-# `just gcp-cloudsql-export` recorded at teardown; empty restores
-# nothing. Passed to BOTH charts -- queenswood-keycloak runs the
-# import, queenswood's bootstrap waits for it -- from here, so the
-# Job name they each derive cannot drift.
+# Keycloak realm export a rebuilt environment imports from, instead of
+# the chart's committed realm definitions. Supplied by the root
+# Application from what `just gcp-keycloak-export` recorded at
+# teardown; empty imports the committed definitions, which mints new
+# user ids and so duplicates a bank restored from FDB alongside it.
 keycloakRestore:
-  dump: ""
+  realms: ""
+  bucket: ""
+  project: ""
+  gcpServiceAccount: ""
+
+# Scheduled realm export, the other half of the pair above. Supplied by
+# the root Application from the project id -- it needs no credential of
+# its own, writing through Workload Identity.
+keycloakBackup:
+  enabled: false
   bucket: ""
   project: ""
   gcpServiceAccount: ""
