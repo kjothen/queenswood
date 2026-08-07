@@ -63,7 +63,7 @@ keycloakOperator:
   chart:
     name: keycloak-operator
     repository: oci://ghcr.io/repldriven
-    version: 0.1.2
+    version: 0.1.3
 
 # Per-env Keycloak instance + cloud-sql-proxy. The two `proxy.*`
 # fields are pinned by `just gcp-cloudsql-wire` once
