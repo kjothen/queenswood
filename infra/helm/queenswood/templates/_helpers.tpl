@@ -79,7 +79,11 @@ it a CA, so the files are encrypted instead. See fdb-backup.yaml.
 */}}
 {{- define "queenswood.fdbRestoreUrl" -}}
 {{- $b := .Values.fdb.backup -}}
-{{- $container := .Values.fdb.restore.backupName | default $b.backupName -}}
+{{- $r := .Values.fdb.restore -}}
+{{- if and $r.version (not $r.backupName) -}}
+{{- fail "fdb.restore.version was given without fdb.restore.backupName. A version names a point inside one backup container, and each cluster generation now has its own -- so a version alone cannot say which container to look in. Falling back to the container this cluster writes to would read a different generation and restore the wrong data, or silently find nothing. Record the generation alongside the version (gcp-fdb-export does), or clear the version to restore that container's latest point." -}}
+{{- end -}}
+{{- $container := $r.backupName | default $b.backupName -}}
 {{- $params := printf "bucket=%s&region=%s&secure_connection=0" $b.bucket $b.region -}}
 {{- printf "blobstore://%s@%s:%v/%s?%s" $b.accessKeyId $b.endpoint $b.port $container $params -}}
 {{- end -}}
