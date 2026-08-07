@@ -1,3 +1,103 @@
+{{- /*
+  The pod spec is a template of its own so the Job name can be a
+  hash of it. A pod template is immutable once the Job exists, so
+  anything changing what the Job runs must also change its name.
+  Deriving that from the rendered spec means it cannot be missed --
+  where a hand-listed set of values silently misses whatever is not
+  on the list.
+*/ -}}
+{{- define "queenswood.migratorPodSpec" -}}
+{{- with .Values.image.pullSecrets }}
+imagePullSecrets:
+  {{- toYaml . | nindent 8 }}
+{{- end }}
+restartPolicy: OnFailure
+initContainers:
+  - name: wait-for-fdb-cluster
+    image: alpine/k8s:1.30.14
+    command:
+      - sh
+      - -c
+      - |
+        TOKEN=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)
+        NS=$(cat /var/run/secrets/kubernetes.io/serviceaccount/namespace)
+        CA=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+        URL="https://kubernetes.default.svc/api/v1/namespaces/$NS/configmaps/{{ include "queenswood.fdbClusterConfigMap" . }}"
+        for i in $(seq 1 120); do
+          content=$(curl -sS --cacert "$CA" \
+            -H "Authorization: Bearer $TOKEN" "$URL" 2>/dev/null \
+            | jq -r '.data["cluster-file"] // ""')
+          if [ -n "$content" ]; then
+            echo "FDB cluster file ready: $content"
+            printf '%s\n' "$content" > /etc/fdb/fdb.cluster
+            exit 0
+          fi
+          echo "Waiting for FDB cluster-file content..."
+          sleep 5
+        done
+        echo "FDB cluster-file did not appear in time" >&2
+        exit 1
+    volumeMounts:
+      - name: fdb-cluster-file
+        mountPath: /etc/fdb
+  {{- if and .Values.fdb.backup.enabled .Values.fdb.restore.version }}
+  # Block until the restore has finished. This gate has no
+  # timeout escape on purpose: saving record metadata is a write,
+  # and FDB refuses to restore into a non-empty destination, so a
+  # migrator that gave up waiting and ran anyway would not "carry
+  # on safely" -- it would permanently destroy the ability to
+  # restore. Failing loudly here is the lesser outcome.
+  - name: wait-for-restore
+    image: alpine/k8s:1.30.14
+    command:
+      - sh
+      - -c
+      - |
+        kubectl wait --for=condition=complete --timeout=60m \
+          job/{{ .Release.Name }}-fdb-restore-{{ .Values.fdb.restore.version }}
+  {{- end }}
+containers:
+  - name: migrator
+    image: "{{ .Values.image.registry }}/migrator-service:{{ .Values.image.tag }}"
+    imagePullPolicy: {{ include "queenswood.imagePullPolicy" $ }}
+    # Override the baked config file so the channel-bus monolith
+    # can point the migrator at a Kafka-free config (FDB metadata
+    # only — no broker to declare topology on).
+    command:
+      - java
+      - -jar
+      - /app/app.jar
+      - -c
+      - classpath:{{ .Values.migrator.configFile | default "application.yml" }}
+      - -p
+      - default
+    env:
+      - name: SERVICE_NAME
+        value: "migrator-service"
+      - name: KAFKA_BOOTSTRAP_SERVERS
+        value: {{ include "queenswood.kafkaBootstrapServers" . | quote }}
+      - name: FDB_CLUSTER_FILE
+        value: "/etc/fdb/fdb.cluster"
+      # Enables `fdb/meta-store` schema-write at start. Only
+      # the migrator Job sets this; services run with the
+      # default (empty/unset → falsy → read-only mode).
+      - name: FDB_MIGRATE
+        value: "true"
+      - name: OTEL_ENDPOINT
+        value: {{ include "queenswood.otelEndpoint" . | quote }}
+    volumeMounts:
+      - name: fdb-cluster-file
+        mountPath: /etc/fdb
+        readOnly: true
+    {{- with .Values.migrator.resources }}
+    resources:
+      {{- toYaml . | nindent 12 }}
+    {{- end }}
+volumes:
+  - name: fdb-cluster-file
+    emptyDir: {}
+{{- end -}}
+
 {{- if .Values.migrator.enabled }}
 ---
 # One-shot Job: applies FDB record metadata (via fdb/meta-store with
@@ -26,93 +126,5 @@ spec:
         {{- include "queenswood.labels" . | nindent 8 }}
         app.kubernetes.io/component: migrator
     spec:
-      {{- with .Values.image.pullSecrets }}
-      imagePullSecrets:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
-      restartPolicy: OnFailure
-      initContainers:
-        - name: wait-for-fdb-cluster
-          image: alpine/k8s:1.30.14
-          command:
-            - sh
-            - -c
-            - |
-              TOKEN=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)
-              NS=$(cat /var/run/secrets/kubernetes.io/serviceaccount/namespace)
-              CA=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt
-              URL="https://kubernetes.default.svc/api/v1/namespaces/$NS/configmaps/{{ include "queenswood.fdbClusterConfigMap" . }}"
-              for i in $(seq 1 120); do
-                content=$(curl -sS --cacert "$CA" \
-                  -H "Authorization: Bearer $TOKEN" "$URL" 2>/dev/null \
-                  | jq -r '.data["cluster-file"] // ""')
-                if [ -n "$content" ]; then
-                  echo "FDB cluster file ready: $content"
-                  printf '%s\n' "$content" > /etc/fdb/fdb.cluster
-                  exit 0
-                fi
-                echo "Waiting for FDB cluster-file content..."
-                sleep 5
-              done
-              echo "FDB cluster-file did not appear in time" >&2
-              exit 1
-          volumeMounts:
-            - name: fdb-cluster-file
-              mountPath: /etc/fdb
-        {{- if and .Values.fdb.backup.enabled .Values.fdb.restore.version }}
-        # Block until the restore has finished. This gate has no
-        # timeout escape on purpose: saving record metadata is a write,
-        # and FDB refuses to restore into a non-empty destination, so a
-        # migrator that gave up waiting and ran anyway would not "carry
-        # on safely" -- it would permanently destroy the ability to
-        # restore. Failing loudly here is the lesser outcome.
-        - name: wait-for-restore
-          image: alpine/k8s:1.30.14
-          command:
-            - sh
-            - -c
-            - |
-              kubectl wait --for=condition=complete --timeout=60m \
-                job/{{ .Release.Name }}-fdb-restore-{{ .Values.fdb.restore.version }}
-        {{- end }}
-      containers:
-        - name: migrator
-          image: "{{ .Values.image.registry }}/migrator-service:{{ .Values.image.tag }}"
-          imagePullPolicy: {{ include "queenswood.imagePullPolicy" $ }}
-          # Override the baked config file so the channel-bus monolith
-          # can point the migrator at a Kafka-free config (FDB metadata
-          # only — no broker to declare topology on).
-          command:
-            - java
-            - -jar
-            - /app/app.jar
-            - -c
-            - classpath:{{ .Values.migrator.configFile | default "application.yml" }}
-            - -p
-            - default
-          env:
-            - name: SERVICE_NAME
-              value: "migrator-service"
-            - name: KAFKA_BOOTSTRAP_SERVERS
-              value: {{ include "queenswood.kafkaBootstrapServers" . | quote }}
-            - name: FDB_CLUSTER_FILE
-              value: "/etc/fdb/fdb.cluster"
-            # Enables `fdb/meta-store` schema-write at start. Only
-            # the migrator Job sets this; services run with the
-            # default (empty/unset → falsy → read-only mode).
-            - name: FDB_MIGRATE
-              value: "true"
-            - name: OTEL_ENDPOINT
-              value: {{ include "queenswood.otelEndpoint" . | quote }}
-          volumeMounts:
-            - name: fdb-cluster-file
-              mountPath: /etc/fdb
-              readOnly: true
-          {{- with .Values.migrator.resources }}
-          resources:
-            {{- toYaml . | nindent 12 }}
-          {{- end }}
-      volumes:
-        - name: fdb-cluster-file
-          emptyDir: {}
+      {{- include "queenswood.migratorPodSpec" . | nindent 6 }}
 {{- end }}

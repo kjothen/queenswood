@@ -1,3 +1,237 @@
+{{- /*
+  The pod spec is a template of its own so the Job name can be a
+  hash of it. A pod template is immutable once the Job exists, so
+  anything changing what the Job runs must also change its name.
+  Deriving that from the rendered spec means it cannot be missed --
+  where a hand-listed set of values silently misses whatever is not
+  on the list.
+*/ -}}
+{{- define "queenswood.bootstrapPodSpec" -}}
+{{- with .Values.image.pullSecrets }}
+imagePullSecrets:
+  {{- toYaml . | nindent 8 }}
+{{- end }}
+restartPolicy: OnFailure
+initContainers:
+  - name: wait-for-fdb-cluster
+    image: alpine/k8s:1.30.14
+    command:
+      - sh
+      - -c
+      - |
+        TOKEN=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)
+        NS=$(cat /var/run/secrets/kubernetes.io/serviceaccount/namespace)
+        CA=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+        URL="https://kubernetes.default.svc/api/v1/namespaces/$NS/configmaps/{{ include "queenswood.fdbClusterConfigMap" . }}"
+        for i in $(seq 1 120); do
+          content=$(curl -sS --cacert "$CA" \
+            -H "Authorization: Bearer $TOKEN" "$URL" 2>/dev/null \
+            | jq -r '.data["cluster-file"] // ""')
+          if [ -n "$content" ]; then
+            echo "FDB cluster file ready: $content"
+            printf '%s\n' "$content" > /etc/fdb/fdb.cluster
+            exit 0
+          fi
+          echo "Waiting for FDB cluster-file content..."
+          sleep 5
+        done
+        echo "FDB cluster-file did not appear in time" >&2
+        exit 1
+    volumeMounts:
+      - name: fdb-cluster-file
+        mountPath: /etc/fdb
+  {{- if .Values.keycloak.waitForRealmImport }}
+  # Block until the realm exists, because the next initContainer
+  # registers this release's signing key on it. Import after that
+  # and the realm reverts to the key its definition was captured
+  # with, while the pods hold the new private half -- private_key_
+  # jwt stops verifying. Ordering it here means bootstrap
+  # registers the current key onto whichever realm was imported.
+  #
+  # Unconditional, where this once ran only for a restore: the
+  # realm import is a Job in every environment now, not a
+  # declarative CR that a restore had to be sequenced against.
+  #
+  # Selected by label rather than by name. The Job is rendered by
+  # the queenswood-keycloak chart, and its name is content-
+  # addressed there -- a name this chart could only re-derive by
+  # holding a copy of everything that goes into the hash.
+  - name: wait-for-realm-import
+    image: alpine/k8s:1.30.14
+    command:
+      - sh
+      - -c
+      - |
+        set -e
+        SEL=app.kubernetes.io/component=keycloak-realm-import
+        # `kubectl wait` on a selector matching nothing succeeds
+        # immediately, so the gate has to see the Job exist before
+        # it can wait on it -- otherwise racing ahead of the other
+        # chart's release reads as "already done".
+        for i in $(seq 1 120); do
+          n=$(kubectl get job -l "$SEL" \
+            -o jsonpath='{.items[*].metadata.name}' 2>/dev/null || true)
+          if [ -n "$n" ]; then
+            echo "waiting on realm import $n"
+            break
+          fi
+          echo "waiting for the realm import Job to appear ($i/120)"
+          sleep 5
+        done
+        if [ -z "$n" ]; then
+          echo "no realm import Job ever appeared" >&2
+          exit 1
+        fi
+        kubectl wait --for=condition=complete --timeout=30m job -l "$SEL"
+  {{- end }}
+  # Register the public half of this release's signing key on the
+  # queenswood-admin client, and switch it to client-jwt.
+  #
+  # Only public material crosses the wire -- the private half never
+  # leaves the pods that mount it, and Keycloak never holds a copy
+  # of anything secret for this client. A URL (jwks.url) would be
+  # the more automatic option but deadlocks cold start: every
+  # service Deployment blocks on this Job, so bank-api can't be
+  # serving a JWKS at the moment Keycloak would need to fetch it.
+  #
+  # It belongs here rather than in a helm hook because that same
+  # gate orders it ahead of every consumer, including bootstrap's
+  # own container.
+  - name: sync-admin-client-key
+    image: alpine/k8s:1.30.14
+    env:
+      - name: KC_BASE_URL
+        value: {{ .Values.keycloak.baseUrl | quote }}
+      - name: KC_CLIENT_ID
+        value: {{ .Values.keycloak.adminClientId | quote }}
+      - name: KC_REALMS
+        value: {{ printf "%s %s" .Values.keycloak.realm .Values.keycloak.opsRealm | quote }}
+      - name: KC_CERT_FILE
+        value: /etc/queenswood/keycloak/admin-client.crt
+      {{- if .Values.keycloak.adminSecret.name }}
+      - name: KC_ADMIN_USER
+        valueFrom:
+          secretKeyRef:
+            name: {{ .Values.keycloak.adminSecret.name | quote }}
+            key: {{ .Values.keycloak.adminSecret.usernameKey | quote }}
+      - name: KC_ADMIN_PASSWORD
+        valueFrom:
+          secretKeyRef:
+            name: {{ .Values.keycloak.adminSecret.name | quote }}
+            key: {{ .Values.keycloak.adminSecret.passwordKey | quote }}
+      {{- else }}
+      - name: KC_ADMIN_USER
+        value: {{ .Values.keycloak.dev.adminUser | quote }}
+      - name: KC_ADMIN_PASSWORD
+        value: {{ .Values.keycloak.dev.adminPassword | quote }}
+      {{- end }}
+    volumeMounts:
+      - name: keycloak-admin-key
+        mountPath: /etc/queenswood/keycloak
+        readOnly: true
+    command:
+      - sh
+      - -c
+      - |
+        set -eu
+        for i in $(seq 1 120); do
+          if curl -sf -o /dev/null "$KC_BASE_URL/realms/master/.well-known/openid-configuration"; then
+            break
+          fi
+          echo "Waiting for Keycloak at $KC_BASE_URL..."
+          sleep 5
+        done
+        # Keycloak wants the base64 DER of the certificate, without
+        # the PEM armour or newlines. Helm generated it alongside
+        # the key, so there is nothing to derive here -- which is
+        # just as well, since this image has no openssl.
+        CRT=$(grep -v '^-----' "$KC_CERT_FILE" | tr -d '\n')
+        if [ -z "$CRT" ]; then
+          echo "no certificate body in $KC_CERT_FILE" >&2
+          exit 1
+        fi
+        TOKEN=$(curl -sf -d client_id=admin-cli \
+          -d "username=$KC_ADMIN_USER" \
+          --data-urlencode "password=$KC_ADMIN_PASSWORD" \
+          -d grant_type=password \
+          "$KC_BASE_URL/realms/master/protocol/openid-connect/token" \
+          | jq -r '.access_token // empty')
+        if [ -z "$TOKEN" ]; then
+          echo "could not obtain a Keycloak admin token" >&2
+          exit 1
+        fi
+        for realm in $KC_REALMS; do
+          id=$(curl -sf -H "Authorization: Bearer $TOKEN" \
+            "$KC_BASE_URL/admin/realms/$realm/clients?clientId=$KC_CLIENT_ID" \
+            | jq -r '.[0].id // empty')
+          if [ -z "$id" ]; then
+            echo "no $KC_CLIENT_ID client in $realm, skipping"
+            continue
+          fi
+          curl -sf -H "Authorization: Bearer $TOKEN" \
+            "$KC_BASE_URL/admin/realms/$realm/clients/$id" \
+            | jq --arg crt "$CRT" '
+                .clientAuthenticatorType = "client-jwt"
+                | .attributes = ((.attributes // {})
+                    + {"jwt.credential.certificate": $crt,
+                       "token.endpoint.auth.signing.alg": "RS256"})' \
+            | curl -sf -X PUT -H "Authorization: Bearer $TOKEN" \
+                -H 'Content-Type: application/json' --data @- \
+                "$KC_BASE_URL/admin/realms/$realm/clients/$id"
+          echo "registered $KC_CLIENT_ID certificate in realm $realm"
+        done
+  {{- if .Values.migrator.enabled }}
+  # Block until the migrator Job has applied FDB metadata +
+  # Kafka topics — bootstrap reads the persisted FDB schema
+  # via fdb/meta-store, so the migration must land first.
+  - name: wait-for-migrator
+    image: alpine/k8s:1.30.14
+    command:
+      - sh
+      - -c
+      - |
+        kubectl wait --for=condition=complete --timeout=10m \
+          job/{{ include "queenswood.migratorJobName" . }}
+  {{- end }}
+containers:
+  - name: bootstrap
+    image: "{{ .Values.image.registry }}/bootstrap-service:{{ .Values.image.tag }}"
+    imagePullPolicy: {{ include "queenswood.imagePullPolicy" $ }}
+    env:
+      - name: SERVICE_NAME
+        value: "bootstrap-service"
+      - name: FDB_CLUSTER_FILE
+        value: "/etc/fdb/fdb.cluster"
+      - name: OTEL_ENDPOINT
+        value: {{ include "queenswood.otelEndpoint" . | quote }}
+      - name: KEYCLOAK_BASE_URL
+        value: {{ .Values.keycloak.baseUrl | quote }}
+      - name: KEYCLOAK_REALM
+        value: {{ .Values.keycloak.realm | quote }}
+      - name: KEYCLOAK_ADMIN_CLIENT_ID
+        value: {{ .Values.keycloak.adminClientId | quote }}
+      - name: KEYCLOAK_ADMIN_CLIENT_PRIVATE_KEY_FILE
+        value: /etc/queenswood/keycloak/admin-client.pem
+    volumeMounts:
+      - name: fdb-cluster-file
+        mountPath: /etc/fdb
+        readOnly: true
+      - name: keycloak-admin-key
+        mountPath: /etc/queenswood/keycloak
+        readOnly: true
+    {{- with .Values.bootstrap.resources }}
+    resources:
+      {{- toYaml . | nindent 12 }}
+    {{- end }}
+volumes:
+  - name: fdb-cluster-file
+    emptyDir: {}
+  - name: keycloak-admin-key
+    secret:
+      secretName: {{ .Release.Name }}-keycloak-admin
+      defaultMode: 0400
+{{- end -}}
+
 {{- if .Values.bootstrap.enabled }}
 ---
 # One-shot Job: idempotently seeds the singleton internal Queenswood
@@ -28,227 +262,5 @@ spec:
         {{- include "queenswood.labels" . | nindent 8 }}
         app.kubernetes.io/component: bootstrap
     spec:
-      {{- with .Values.image.pullSecrets }}
-      imagePullSecrets:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
-      restartPolicy: OnFailure
-      initContainers:
-        - name: wait-for-fdb-cluster
-          image: alpine/k8s:1.30.14
-          command:
-            - sh
-            - -c
-            - |
-              TOKEN=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)
-              NS=$(cat /var/run/secrets/kubernetes.io/serviceaccount/namespace)
-              CA=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt
-              URL="https://kubernetes.default.svc/api/v1/namespaces/$NS/configmaps/{{ include "queenswood.fdbClusterConfigMap" . }}"
-              for i in $(seq 1 120); do
-                content=$(curl -sS --cacert "$CA" \
-                  -H "Authorization: Bearer $TOKEN" "$URL" 2>/dev/null \
-                  | jq -r '.data["cluster-file"] // ""')
-                if [ -n "$content" ]; then
-                  echo "FDB cluster file ready: $content"
-                  printf '%s\n' "$content" > /etc/fdb/fdb.cluster
-                  exit 0
-                fi
-                echo "Waiting for FDB cluster-file content..."
-                sleep 5
-              done
-              echo "FDB cluster-file did not appear in time" >&2
-              exit 1
-          volumeMounts:
-            - name: fdb-cluster-file
-              mountPath: /etc/fdb
-        {{- if .Values.keycloak.waitForRealmImport }}
-        # Block until the realm exists, because the next initContainer
-        # registers this release's signing key on it. Import after that
-        # and the realm reverts to the key its definition was captured
-        # with, while the pods hold the new private half -- private_key_
-        # jwt stops verifying. Ordering it here means bootstrap
-        # registers the current key onto whichever realm was imported.
-        #
-        # Unconditional, where this once ran only for a restore: the
-        # realm import is a Job in every environment now, not a
-        # declarative CR that a restore had to be sequenced against.
-        #
-        # Selected by label rather than by name. The Job is rendered by
-        # the queenswood-keycloak chart, and its name is content-
-        # addressed there -- a name this chart could only re-derive by
-        # holding a copy of everything that goes into the hash.
-        - name: wait-for-realm-import
-          image: alpine/k8s:1.30.14
-          command:
-            - sh
-            - -c
-            - |
-              set -e
-              SEL=app.kubernetes.io/component=keycloak-realm-import
-              # `kubectl wait` on a selector matching nothing succeeds
-              # immediately, so the gate has to see the Job exist before
-              # it can wait on it -- otherwise racing ahead of the other
-              # chart's release reads as "already done".
-              for i in $(seq 1 120); do
-                n=$(kubectl get job -l "$SEL" \
-                  -o jsonpath='{.items[*].metadata.name}' 2>/dev/null || true)
-                if [ -n "$n" ]; then
-                  echo "waiting on realm import $n"
-                  break
-                fi
-                echo "waiting for the realm import Job to appear ($i/120)"
-                sleep 5
-              done
-              if [ -z "$n" ]; then
-                echo "no realm import Job ever appeared" >&2
-                exit 1
-              fi
-              kubectl wait --for=condition=complete --timeout=30m job -l "$SEL"
-        {{- end }}
-        # Register the public half of this release's signing key on the
-        # queenswood-admin client, and switch it to client-jwt.
-        #
-        # Only public material crosses the wire -- the private half never
-        # leaves the pods that mount it, and Keycloak never holds a copy
-        # of anything secret for this client. A URL (jwks.url) would be
-        # the more automatic option but deadlocks cold start: every
-        # service Deployment blocks on this Job, so bank-api can't be
-        # serving a JWKS at the moment Keycloak would need to fetch it.
-        #
-        # It belongs here rather than in a helm hook because that same
-        # gate orders it ahead of every consumer, including bootstrap's
-        # own container.
-        - name: sync-admin-client-key
-          image: alpine/k8s:1.30.14
-          env:
-            - name: KC_BASE_URL
-              value: {{ .Values.keycloak.baseUrl | quote }}
-            - name: KC_CLIENT_ID
-              value: {{ .Values.keycloak.adminClientId | quote }}
-            - name: KC_REALMS
-              value: {{ printf "%s %s" .Values.keycloak.realm .Values.keycloak.opsRealm | quote }}
-            - name: KC_CERT_FILE
-              value: /etc/queenswood/keycloak/admin-client.crt
-            {{- if .Values.keycloak.adminSecret.name }}
-            - name: KC_ADMIN_USER
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .Values.keycloak.adminSecret.name | quote }}
-                  key: {{ .Values.keycloak.adminSecret.usernameKey | quote }}
-            - name: KC_ADMIN_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .Values.keycloak.adminSecret.name | quote }}
-                  key: {{ .Values.keycloak.adminSecret.passwordKey | quote }}
-            {{- else }}
-            - name: KC_ADMIN_USER
-              value: {{ .Values.keycloak.dev.adminUser | quote }}
-            - name: KC_ADMIN_PASSWORD
-              value: {{ .Values.keycloak.dev.adminPassword | quote }}
-            {{- end }}
-          volumeMounts:
-            - name: keycloak-admin-key
-              mountPath: /etc/queenswood/keycloak
-              readOnly: true
-          command:
-            - sh
-            - -c
-            - |
-              set -eu
-              for i in $(seq 1 120); do
-                if curl -sf -o /dev/null "$KC_BASE_URL/realms/master/.well-known/openid-configuration"; then
-                  break
-                fi
-                echo "Waiting for Keycloak at $KC_BASE_URL..."
-                sleep 5
-              done
-              # Keycloak wants the base64 DER of the certificate, without
-              # the PEM armour or newlines. Helm generated it alongside
-              # the key, so there is nothing to derive here -- which is
-              # just as well, since this image has no openssl.
-              CRT=$(grep -v '^-----' "$KC_CERT_FILE" | tr -d '\n')
-              if [ -z "$CRT" ]; then
-                echo "no certificate body in $KC_CERT_FILE" >&2
-                exit 1
-              fi
-              TOKEN=$(curl -sf -d client_id=admin-cli \
-                -d "username=$KC_ADMIN_USER" \
-                --data-urlencode "password=$KC_ADMIN_PASSWORD" \
-                -d grant_type=password \
-                "$KC_BASE_URL/realms/master/protocol/openid-connect/token" \
-                | jq -r '.access_token // empty')
-              if [ -z "$TOKEN" ]; then
-                echo "could not obtain a Keycloak admin token" >&2
-                exit 1
-              fi
-              for realm in $KC_REALMS; do
-                id=$(curl -sf -H "Authorization: Bearer $TOKEN" \
-                  "$KC_BASE_URL/admin/realms/$realm/clients?clientId=$KC_CLIENT_ID" \
-                  | jq -r '.[0].id // empty')
-                if [ -z "$id" ]; then
-                  echo "no $KC_CLIENT_ID client in $realm, skipping"
-                  continue
-                fi
-                curl -sf -H "Authorization: Bearer $TOKEN" \
-                  "$KC_BASE_URL/admin/realms/$realm/clients/$id" \
-                  | jq --arg crt "$CRT" '
-                      .clientAuthenticatorType = "client-jwt"
-                      | .attributes = ((.attributes // {})
-                          + {"jwt.credential.certificate": $crt,
-                             "token.endpoint.auth.signing.alg": "RS256"})' \
-                  | curl -sf -X PUT -H "Authorization: Bearer $TOKEN" \
-                      -H 'Content-Type: application/json' --data @- \
-                      "$KC_BASE_URL/admin/realms/$realm/clients/$id"
-                echo "registered $KC_CLIENT_ID certificate in realm $realm"
-              done
-        {{- if .Values.migrator.enabled }}
-        # Block until the migrator Job has applied FDB metadata +
-        # Kafka topics — bootstrap reads the persisted FDB schema
-        # via fdb/meta-store, so the migration must land first.
-        - name: wait-for-migrator
-          image: alpine/k8s:1.30.14
-          command:
-            - sh
-            - -c
-            - |
-              kubectl wait --for=condition=complete --timeout=10m \
-                job/{{ include "queenswood.migratorJobName" . }}
-        {{- end }}
-      containers:
-        - name: bootstrap
-          image: "{{ .Values.image.registry }}/bootstrap-service:{{ .Values.image.tag }}"
-          imagePullPolicy: {{ include "queenswood.imagePullPolicy" $ }}
-          env:
-            - name: SERVICE_NAME
-              value: "bootstrap-service"
-            - name: FDB_CLUSTER_FILE
-              value: "/etc/fdb/fdb.cluster"
-            - name: OTEL_ENDPOINT
-              value: {{ include "queenswood.otelEndpoint" . | quote }}
-            - name: KEYCLOAK_BASE_URL
-              value: {{ .Values.keycloak.baseUrl | quote }}
-            - name: KEYCLOAK_REALM
-              value: {{ .Values.keycloak.realm | quote }}
-            - name: KEYCLOAK_ADMIN_CLIENT_ID
-              value: {{ .Values.keycloak.adminClientId | quote }}
-            - name: KEYCLOAK_ADMIN_CLIENT_PRIVATE_KEY_FILE
-              value: /etc/queenswood/keycloak/admin-client.pem
-          volumeMounts:
-            - name: fdb-cluster-file
-              mountPath: /etc/fdb
-              readOnly: true
-            - name: keycloak-admin-key
-              mountPath: /etc/queenswood/keycloak
-              readOnly: true
-          {{- with .Values.bootstrap.resources }}
-          resources:
-            {{- toYaml . | nindent 12 }}
-          {{- end }}
-      volumes:
-        - name: fdb-cluster-file
-          emptyDir: {}
-        - name: keycloak-admin-key
-          secret:
-            secretName: {{ .Release.Name }}-keycloak-admin
-            defaultMode: 0400
+      {{- include "queenswood.bootstrapPodSpec" . | nindent 6 }}
 {{- end }}
