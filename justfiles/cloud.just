@@ -923,7 +923,13 @@ _gcp-fdb-backup-name:
         echo ">>> $NAME ended without a teardown; restoring its latest point" >&2
       fi
     fi
-    NAME="fdb/$(date -u +%Y%m%dT%H%M%SZ)"
+    # <service>/<backup-type>/<generation>. The first two segments are
+    # the bucket's convention and carry the same weight they do for
+    # Keycloak, where `keycloak/export` (database dump) and
+    # `keycloak/realms` (realm export) coexist precisely because the
+    # type is in the path. The generation is a third segment rather
+    # than a replacement for the second.
+    NAME="fdb/continuous/$(date -u +%Y%m%dT%H%M%SZ)"
     printf '%s\n' "$NAME" | pass insert -m -f {{ PASS_ENV }}/backup/fdb-generation >/dev/null
     echo ">>> minted FDB backup generation $NAME" >&2
     printf '%s\n' "$NAME"

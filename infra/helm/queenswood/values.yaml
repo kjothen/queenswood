@@ -347,13 +347,22 @@ fdb:
     bucket: ""
     # The bucket's region, which the SigV4 signature is computed over.
     region: ""
-    # <service>/<backup-type>, the bucket's convention. No environment
-    # segment: the bucket belongs to one project, the project to one
-    # environment, and that environment to this system alone. A project
-    # hosting a second system would need a <system> segment in front --
-    # this is a path, so it takes one. fdbbackup appends the whole thing
-    # to its own `backups/` and `data/` roots rather than treating it as
-    # a bucket prefix, so objects land under `data/fdb/continuous/`.
+    # <service>/<backup-type>[/<generation>], the bucket's convention.
+    # No environment segment: the bucket belongs to one project, the
+    # project to one environment, and that environment to this system
+    # alone. A project hosting a second system would need a <system>
+    # segment in front -- this is a path, so it takes one. fdbbackup
+    # appends the whole thing to its own `backups/` and `data/` roots
+    # rather than treating it as a bucket prefix, so objects land under
+    # `data/<backupName>/`.
+    #
+    # `gcp-up` overrides this with a third segment naming the cluster
+    # generation, because a folder holds one backup and version numbers
+    # restart with each cluster. The type stays a segment of its own:
+    # it is what let Keycloak's `keycloak/export` (database dump) and
+    # `keycloak/realms` (realm export) coexist rather than collide. The
+    # two-segment default here is the single-generation case -- a
+    # standalone install that is never rebuilt.
     backupName: fdb/continuous
     accessKeyId: ""
     secretAccessKey: ""
