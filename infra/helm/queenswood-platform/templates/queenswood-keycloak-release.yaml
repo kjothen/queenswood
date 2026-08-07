@@ -46,13 +46,6 @@ spec:
       # does.
       vault:
         enabled: true
-      # Off, because the queenswood chart now reaches Keycloak on its
-      # public hostname. The rewrite points that name at the in-cluster
-      # Service, which serves plain HTTP on 8080 and has no 443 -- so
-      # with it on, an https base-url cannot connect at all.
-      coredns:
-        rewrite:
-          enabled: false
       {{- if .Values.keycloakBackup.enabled }}
       # Hourly `kc.sh export` of both realms to the tier-0 bucket, and
       # the source every restore above reads from.

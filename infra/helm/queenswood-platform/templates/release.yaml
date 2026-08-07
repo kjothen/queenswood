@@ -71,15 +71,14 @@ spec:
         # standalone installs.)
         dev:
           enabled: false
-        # The public hostname, at the cost of an LB round-trip per
-        # call, because base-url is not only where requests are sent:
-        # the `private_key_jwt` client assertion takes its `aud` from
-        # it. Keycloak checks that audience against its own frontend
-        # URL, which is the public hostname, so an in-cluster base-url
-        # produced `invalid_client / Invalid token audience` on every
-        # admin call once #329 replaced the shared secret -- a secret
-        # carries no audience, which is why the mismatch sat unnoticed.
-        baseUrl: "https://keycloak.{{ .Values.env.domain }}"
+        # The in-cluster Service, so admin REST and token exchange stay
+        # inside the cluster. Tokens still embed the public hostname as
+        # iss, which expectedIssuer below accounts for -- and since
+        # mono v0.0.22 the `private_key_jwt` client assertion takes its
+        # audience from that same expectedIssuer rather than from
+        # base-url, which is what makes an internal base-url viable
+        # again (repldriven/mono#128).
+        baseUrl: "http://queenswood-keycloak-keycloak-service:8080"
         expectedIssuer: {{ printf "https://keycloak.%s/realms/%s" .Values.env.domain .Values.queenswoodKeycloak.serverSide.realm | quote }}
         opsExpectedIssuer: {{ printf "https://keycloak.%s/realms/queenswood-ops" .Values.env.domain | quote }}
         realm: {{ .Values.queenswoodKeycloak.serverSide.realm | quote }}
