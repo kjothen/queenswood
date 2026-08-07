@@ -113,3 +113,30 @@ nothing to replace.
 {{- define "queenswood.bootstrapJobName" -}}
 {{- printf "%s-bootstrap-%s" .Release.Name (include "queenswood.bootstrapPodSpec" . | sha256sum | trunc 10) -}}
 {{- end -}}
+
+{{/*
+Name of the FDB restore Job. Defined once because the migrator gates on
+it: the restore Job renders it as its own name, and `wait-for-restore`
+resolves the same string. Two derivations of one name is a gate that
+waits for a Job nobody created -- which is exactly what happened when
+the name became content-addressed here and stayed version-derived
+there.
+
+Content-addressed on (container, version) rather than version alone,
+because a restore can now be requested with no version at all -- the
+container's latest point -- and two such restores from different
+generations must not collide on one name.
+*/}}
+{{- define "queenswood.fdbRestoreJobName" -}}
+{{- $r := .Values.fdb.restore -}}
+{{- printf "%s-fdb-restore-%s" .Release.Name (printf "%s|%s" ($r.backupName | default "") ($r.version | default "") | sha256sum | trunc 10) -}}
+{{- end -}}
+
+{{/*
+Whether a restore is being asked for at all. A container with no
+version means "this container's latest point", so the version alone no
+longer answers the question.
+*/}}
+{{- define "queenswood.fdbRestoreRequested" -}}
+{{- if or .Values.fdb.restore.version .Values.fdb.restore.backupName -}}true{{- end -}}
+{{- end -}}
