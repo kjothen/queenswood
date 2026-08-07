@@ -60,7 +60,7 @@ spec:
           serviceAccountName: queenswood-keycloak-backup
           initContainers:
             - name: export
-              image: {{ .Values.backup.keycloakImage | default .Values.image | quote }}
+              image: {{ .Values.backup.keycloakImage | default .Values.keycloak.image | required "keycloak.image must be set to run the realm export" | quote }}
               command:
                 - sh
                 - -c
