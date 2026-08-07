@@ -263,6 +263,13 @@ kind-xp-install-root:
     # from, and only an empty cluster acts on it. Absent on an
     # environment that has never been torn down, which restores nothing.
     export FDB_RESTORE_VERSION=$(pass show {{ PASS_ENV }}/backup/fdb-restore-version 2>/dev/null | head -1)
+    # The container that version lives in, and the container this
+    # cluster will write to -- deliberately different. Sharing one is
+    # what let `fdbbackup describe` report a previous generation's
+    # restore point. The backup name is minted here if this is the
+    # first call of a new generation.
+    export FDB_RESTORE_BACKUP_NAME=$(pass show {{ PASS_ENV }}/backup/fdb-restore-generation 2>/dev/null | head -1)
+    export FDB_BACKUP_NAME=$(just _gcp-fdb-backup-name)
     # Recorded by gcp-keycloak-export at the last teardown. Absent on an
     # environment that has never been torn down, which imports the
     # chart's committed realms -- right there, and wrong anywhere FDB is

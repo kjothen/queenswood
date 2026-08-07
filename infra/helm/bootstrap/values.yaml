@@ -38,6 +38,16 @@ fdbBackupEncryptionKey: ""
 # what a fresh environment wants.
 fdbRestoreVersion: ""
 
+# Backup container that version lives in -- the generation recorded at
+# the last teardown. Paired with fdbRestoreVersion: a version without
+# its generation names a point in the wrong container.
+fdbRestoreBackupName: ""
+
+# Backup container THIS cluster writes to. Minted per generation by
+# `just gcp-up`, so a rebuilt cluster never shares one with the cluster
+# it replaced.
+fdbBackupName: ""
+
 # Keycloak realm export a rebuilt environment imports from, recorded
 # by `just gcp-keycloak-export` at teardown. Empty imports the chart's
 # committed realm definitions instead.

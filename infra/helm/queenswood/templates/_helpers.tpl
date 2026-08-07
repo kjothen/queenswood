@@ -60,20 +60,32 @@ name once the FoundationDBCluster CR is reconciled).
 
 {{/*
 The blobstore URL the restore Job reads from. The backup CR does not
-use this: the operator assembles the same URL from the structured
-fields of `blobStoreConfiguration`. What keeps the two in step is that
-both derive from `fdb.backup.*` -- so a URL that disagrees means a
-value was changed for one and not the other, and it names a container
-that does not exist rather than the wrong one.
+use this: the operator assembles its own URL from the structured fields
+of `blobStoreConfiguration`.
+
+The container is deliberately NOT the one this cluster backs up to.
+`fdb.restore.backupName` names the generation the recorded version
+belongs to, and only `fdb.backup.backupName` names where this cluster
+writes. Sharing one container across generations is what made a restore
+unreliable: a rebuilt cluster numbers its versions again from near
+zero, so `fdbbackup describe` -- which picks the highest restorable
+version -- keeps answering with the OLDEST generation present, not the
+newest. Empty falls back to the backup container, which is correct only
+where there has been exactly one generation.
 
 Plaintext by construction (port 80, secure_connection=0): FDB's
 blobstore client has no usable trust store and the operator cannot pass
 it a CA, so the files are encrypted instead. See fdb-backup.yaml.
 */}}
-{{- define "queenswood.fdbBackupUrl" -}}
+{{- define "queenswood.fdbRestoreUrl" -}}
 {{- $b := .Values.fdb.backup -}}
+{{- $r := .Values.fdb.restore -}}
+{{- if and $r.version (not $r.backupName) -}}
+{{- fail "fdb.restore.version was given without fdb.restore.backupName. A version names a point inside one backup container, and each cluster generation now has its own -- so a version alone cannot say which container to look in. Falling back to the container this cluster writes to would read a different generation and restore the wrong data, or silently find nothing. Record the generation alongside the version (gcp-fdb-export does), or clear the version to restore that container's latest point." -}}
+{{- end -}}
+{{- $container := $r.backupName | default $b.backupName -}}
 {{- $params := printf "bucket=%s&region=%s&secure_connection=0" $b.bucket $b.region -}}
-{{- printf "blobstore://%s@%s:%v/%s?%s" $b.accessKeyId $b.endpoint $b.port $b.backupName $params -}}
+{{- printf "blobstore://%s@%s:%v/%s?%s" $b.accessKeyId $b.endpoint $b.port $container $params -}}
 {{- end -}}
 
 {{/*
