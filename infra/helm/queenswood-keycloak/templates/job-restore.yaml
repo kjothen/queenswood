@@ -9,15 +9,20 @@
   it carries no ttlSecondsAfterFinished because its completion is the
   record that this cluster has been restored.
 
-  It is order-independent by design rather than ordered ahead of
-  Keycloak. An earlier version gated it before the bootstrap Job, on
-  the theory that bootstrap was the writer that mattered. That was the
-  wrong census: Keycloak starts seconds earlier and creates its own
-  schema, and the import then died on `relation "admin_event_entity"
-  already exists`. A Helm pre-install hook does not fix it either --
-  the database credentials this needs are an ordinary release resource
-  that a hook would run before. So each step reconciles whatever it
-  finds instead.
+  It stops Keycloak rather than trying to be quicker than it. An early
+  version gated the restore ahead of the bootstrap Job, on the theory
+  that bootstrap was the writer that mattered; Keycloak starts seconds
+  earlier and creates its own schema, and the import died on
+  `relation "admin_event_entity" already exists`. A Helm pre-install
+  hook does not help either -- the database credentials this needs are
+  an ordinary release resource a hook would run before. Clearing the
+  schema first does not help on its own: the import's own retries,
+  waiting on a per-instance IAM binding, leave a window long enough for
+  Keycloak to rebuild everything that was dropped.
+
+  So the writer is stopped for the duration. `instances: 0` before the
+  schema is cleared, `instances: 1` once the data and the admin account
+  are both in the state the restore intends.
 
   Three things a restore invalidates, none of them obvious until a real
   teardown (see issue #349):
@@ -32,8 +37,7 @@
     while the operator has minted a fresh Secret for this one. They can
     never agree, and bootstrap then fails with "could not obtain a
     Keycloak admin token". Removing the account lets Keycloak recreate
-    it from its own environment -- which is why the last step restarts
-    it.
+    it from its own environment when the last step starts it again.
 */ -}}
 {{- $realm := (.Files.Get "files/queenswood-realm.json" | fromJson).realm -}}
 {{- $adminSecret := printf "%s-keycloak-initial-admin" .Release.Name -}}
@@ -53,10 +57,16 @@ metadata:
   labels:
     {{- include "queenswood-keycloak.labels" . | nindent 4 }}
 rules:
-  # Only to restart Keycloak once the database beneath it has changed.
+  # To stop Keycloak for the duration of the restore and start it after.
+  # Dropping a schema out from under a running Keycloak is a race that
+  # cannot be won by being quick -- it recreates what it needs within
+  # seconds, and the import's own retries widen the window.
+  - apiGroups: ["k8s.keycloak.org"]
+    resources: ["keycloaks"]
+    verbs: ["get", "patch"]
   - apiGroups: [""]
     resources: ["pods"]
-    verbs: ["get", "list", "delete"]
+    verbs: ["get", "list"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
@@ -123,9 +133,7 @@ spec:
                 echo skip > /state/action
                 exit 0
               fi
-              echo "realm '$REALM' absent; clearing the schema so the import cannot collide"
-              psql -h "$PGHOST" -U "$PGUSER" -d "$PGDATABASE" \
-                -c 'DROP SCHEMA IF EXISTS public CASCADE' -c 'CREATE SCHEMA public'
+              echo "realm '$REALM' absent; a restore is needed"
               echo restore > /state/action
           env:
             - name: PGHOST
@@ -134,6 +142,64 @@ spec:
               value: {{ include "queenswood-keycloak.dbName" . | quote }}
             - name: REALM
               value: {{ $realm | quote }}
+            - name: PGUSER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "queenswood-keycloak.dbSecret" . }}
+                  key: username
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "queenswood-keycloak.dbSecret" . }}
+                  key: password
+          volumeMounts:
+            - name: state
+              mountPath: /state
+        - name: stop-keycloak
+          image: alpine/k8s:1.30.14
+          command:
+            - sh
+            - -c
+            - |
+              set -e
+              [ "$(cat /state/action)" = "restore" ] || exit 0
+              echo "stopping Keycloak for the restore"
+              kubectl patch keycloak "$KC_NAME" --type=merge \
+                -p '{"spec":{"instances":0}}'
+              for i in $(seq 1 60); do
+                n=$(kubectl get pods -l app=keycloak --no-headers 2>/dev/null | wc -l)
+                if [ "$n" -eq 0 ]; then echo "Keycloak stopped"; exit 0; fi
+                echo "waiting for Keycloak to stop ($i/60)"
+                sleep 5
+              done
+              echo "Keycloak did not stop" >&2
+              exit 1
+          env:
+            - name: KC_NAME
+              value: {{ printf "%s-keycloak" .Release.Name | quote }}
+          volumeMounts:
+            - name: state
+              mountPath: /state
+        - name: clear-schema
+          image: {{ .Values.restore.postgresImage | quote }}
+          command:
+            - sh
+            - -c
+            - |
+              set -e
+              [ "$(cat /state/action)" = "restore" ] || exit 0
+              # Immediately before the import, and only with Keycloak
+              # stopped. Done any earlier, Keycloak rebuilds the schema
+              # in the gap -- the import's own retries are enough of a
+              # gap on their own.
+              psql -h "$PGHOST" -U "$PGUSER" -d "$PGDATABASE" \
+                -c 'DROP SCHEMA IF EXISTS public CASCADE' -c 'CREATE SCHEMA public'
+              echo "schema cleared for import"
+          env:
+            - name: PGHOST
+              value: {{ include "queenswood-keycloak.dbHost" . | quote }}
+            - name: PGDATABASE
+              value: {{ include "queenswood-keycloak.dbName" . | quote }}
             - name: PGUSER
               valueFrom:
                 secretKeyRef:
@@ -235,7 +301,7 @@ spec:
             - name: state
               mountPath: /state
       containers:
-        - name: restart-keycloak
+        - name: start-keycloak
           image: alpine/k8s:1.30.14
           command:
             - sh
@@ -246,13 +312,15 @@ spec:
                 echo "nothing restored; leaving Keycloak alone"
                 exit 0
               fi
-              # Keycloak has been running against the schema this Job
-              # replaced beneath it, and its admin has just been
-              # removed. Restarting is what makes it read the restored
-              # realm and bootstrap an admin matching its own Secret.
-              kubectl delete pod -l app=keycloak \
-                --ignore-not-found --wait=false
-              echo "restarted Keycloak onto the restored database"
+              # Starting it here is what makes it read the restored
+              # realm and bootstrap an admin matching its own Secret,
+              # the account the previous step removed.
+              kubectl patch keycloak "$KC_NAME" --type=merge \
+                -p '{"spec":{"instances":1}}'
+              echo "started Keycloak onto the restored database"
+          env:
+            - name: KC_NAME
+              value: {{ printf "%s-keycloak" .Release.Name | quote }}
           volumeMounts:
             - name: state
               mountPath: /state
