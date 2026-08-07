@@ -40,7 +40,7 @@ initContainers:
     volumeMounts:
       - name: fdb-cluster-file
         mountPath: /etc/fdb
-  {{- if and .Values.fdb.backup.enabled .Values.fdb.restore.version }}
+  {{- if and .Values.fdb.backup.enabled (include "queenswood.fdbRestoreRequested" .) }}
   # Block until the restore has finished. This gate has no
   # timeout escape on purpose: saving record metadata is a write,
   # and FDB refuses to restore into a non-empty destination, so a
@@ -54,7 +54,7 @@ initContainers:
       - -c
       - |
         kubectl wait --for=condition=complete --timeout=60m \
-          job/{{ .Release.Name }}-fdb-restore-{{ .Values.fdb.restore.version }}
+          job/{{ include "queenswood.fdbRestoreJobName" . }}
   {{- end }}
 containers:
   - name: migrator

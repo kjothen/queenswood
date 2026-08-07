@@ -1,4 +1,4 @@
-{{- if and .Values.fdb.enabled .Values.fdb.backup.enabled (or .Values.fdb.restore.version .Values.fdb.restore.backupName) }}
+{{- if and .Values.fdb.enabled .Values.fdb.backup.enabled (include "queenswood.fdbRestoreRequested" .) }}
 {{- /*
   One-shot Job: restores FDB from the backup before anything writes to
   it.
@@ -26,7 +26,7 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: {{ .Release.Name }}-fdb-restore-{{ printf "%s|%s" (.Values.fdb.restore.backupName | default "") (.Values.fdb.restore.version | default "") | sha256sum | trunc 10 }}
+  name: {{ include "queenswood.fdbRestoreJobName" . }}
   labels:
     {{- include "queenswood.labels" . | nindent 4 }}
     app.kubernetes.io/component: fdb-restore
