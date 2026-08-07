@@ -386,6 +386,15 @@ fdb:
   # `just gcp-fdb-export` records the version to use.
   restore:
     version: ""
+    # Container the restore reads from, which is NOT the one this
+    # cluster backs up to. A rebuilt cluster starts its version numbers
+    # again from near zero, so two generations sharing a container
+    # leave `fdbbackup describe` picking by version number -- and the
+    # older generation's numbers are the higher ones. It reported a
+    # restore point belonging to a cluster two rebuilds back. Empty
+    # falls back to backup.backupName, which is right only for an
+    # environment that has never been rebuilt.
+    backupName: ""
     # Defaults to foundationdb/foundationdb:<fdb.version>. Needs
     # fdbrestore and fdbcli, which the official image carries.
     image: ""

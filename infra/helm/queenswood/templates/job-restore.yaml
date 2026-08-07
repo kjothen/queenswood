@@ -110,7 +110,7 @@ spec:
             - name: FDB_BLOB_CREDENTIALS
               value: /var/backup-credentials/credentials
             - name: BACKUP_URL
-              value: {{ include "queenswood.fdbBackupUrl" . | quote }}
+              value: {{ include "queenswood.fdbRestoreUrl" . | quote }}
             - name: RESTORE_VERSION
               value: {{ .Values.fdb.restore.version | quote }}
           volumeMounts:
