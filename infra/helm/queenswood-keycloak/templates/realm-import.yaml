@@ -97,7 +97,14 @@ spec:
         app.kubernetes.io/instance: {{ .Release.Name }}
         app.kubernetes.io/component: keycloak-realm-import
     spec:
-      restartPolicy: OnFailure
+      # Never, not OnFailure: OnFailure restarts the container inside
+      # one pod, so each attempt overwrites the last one's log and the
+      # pod is garbage-collected the moment the Job gives up. Three
+      # failures were diagnosed by rebuilding a copy of this Job to
+      # watch it fail again, because the evidence had already been
+      # deleted. Never leaves one pod per attempt, and their logs
+      # outlive the Job.
+      restartPolicy: Never
       serviceAccountName: {{ .Release.Name }}-realm-import
       {{- if $restore }}
       initContainers:
