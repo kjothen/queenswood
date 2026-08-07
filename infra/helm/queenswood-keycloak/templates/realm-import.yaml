@@ -209,6 +209,7 @@ spec:
 
               for realm in $REALMS; do
                 CR="$RELEASE-realm-$realm"
+                imported=""
 
                 if [ -n "$RESTORED_FROM" ]; then
                   src="/source/$realm-realm.json"
@@ -231,17 +232,25 @@ spec:
                   was=$(api "$KC/admin/realms/$realm" \
                     | jq -r '.attributes["queenswood.restoredFrom"] // ""')
                   if [ "$was" = "$RESTORED_FROM" ]; then
-                    echo "realm '$realm' already restored from $RESTORED_FROM"
-                    continue
+                    # Already imported by this Job. The checks below
+                    # still run: the marker says where the realm came
+                    # from, not that it arrived intact, and a run that
+                    # marked the realm and then failed verification
+                    # would otherwise be waved through on its retry --
+                    # the silent skip this whole Job exists to avoid.
+                    echo "realm '$realm' already restored from $RESTORED_FROM; re-checking"
+                    imported=already
+                  else
+                    echo "FATAL: a restore from $RESTORED_FROM was requested," >&2
+                    echo "but realm '$realm' already exists${was:+, restored from $was}." >&2
+                    echo "The operator imports realms and never overwrites them, so" >&2
+                    echo "this restore cannot be applied. Skipping it silently would" >&2
+                    echo "leave a realm whose user ids no longer match FDB." >&2
+                    exit 1
                   fi
-                  echo "FATAL: a restore from $RESTORED_FROM was requested," >&2
-                  echo "but realm '$realm' already exists${was:+, restored from $was}." >&2
-                  echo "The operator imports realms and never overwrites them, so" >&2
-                  echo "this restore cannot be applied. Skipping it silently would" >&2
-                  echo "leave a realm whose user ids no longer match FDB." >&2
-                  exit 1
                 fi
 
+                if [ -z "$imported" ]; then
                 echo "importing realm '$realm' from $origin"
 
                 # The console's deployed origin is added here rather
@@ -295,16 +304,49 @@ spec:
                   exit 1
                 fi
 
+                # An import takes Keycloak briefly out of service, so
+                # nothing below may assume it is answering. Asking too
+                # early reads a 503 as a missing user and fails a
+                # restore that in fact worked.
+                for i in $(seq 1 120); do
+                  if curl -sf "$KC/realms/master/.well-known/openid-configuration" \
+                       >/dev/null 2>&1; then break; fi
+                  echo "waiting for Keycloak after importing '$realm' ($i/120)"
+                  sleep 5
+                done
+                # And it certainly outlasts the token that started it.
+                TOK=$(token || true)
+                if [ -z "$TOK" ]; then
+                  echo "could not obtain a token after importing '$realm'" >&2
+                  exit 1
+                fi
+
                 if [ -z "$RESTORED_FROM" ]; then
                   echo "imported realm '$realm'"
                   continue
                 fi
 
-                # The import can outlast the token that started it.
-                TOK=$(token || true)
-                if [ -z "$TOK" ]; then
-                  echo "could not obtain a token to verify the restore" >&2
+                # Recorded before the checks below rather than after
+                # them. A run that imports and then dies leaves a realm
+                # this Job created but did not mark, which on the retry
+                # is indistinguishable from a realm built from something
+                # else -- so the guard above declares FATAL and the
+                # environment can never converge. Marking first makes
+                # the retry re-verify instead, which is the outcome
+                # worth having: the checks are cheap and idempotent,
+                # where a permanent stop is neither.
+                mark_restored() {
+                  api "$KC/admin/realms/$1" \
+                    | jq --arg p "$RESTORED_FROM" \
+                        '.attributes = ((.attributes // {}) + {"queenswood.restoredFrom": $p})' \
+                    | curl -sf -X PUT -H "Authorization: Bearer $TOK" \
+                        -H 'Content-Type: application/json' -d @- \
+                        -o /dev/null "$KC/admin/realms/$1"
+                }
+                if ! mark_restored "$realm"; then
+                  echo "could not record the restore on realm '$realm'" >&2
                   exit 1
+                fi
                 fi
 
                 # Identity continuity, proved rather than assumed. FDB
@@ -315,9 +357,18 @@ spec:
                 total=0
                 for id in $(jq -r '(.users // [])[].id' "$src"); do
                   total=$((total + 1))
-                  code=$(curl -s -o /dev/null -w '%{http_code}' \
-                    -H "Authorization: Bearer $TOK" \
-                    "$KC/admin/realms/$realm/users/$id" || true)
+                  # 404 means absent; anything else non-200 means
+                  # Keycloak could not answer, which is not the same
+                  # thing and must not be counted as a missing user.
+                  code=""
+                  for a in 1 2 3 4 5; do
+                    code=$(curl -s -o /dev/null -w '%{http_code}' \
+                      -H "Authorization: Bearer $TOK" \
+                      "$KC/admin/realms/$realm/users/$id" || true)
+                    case "$code" in 200|404) break;; esac
+                    sleep 5
+                    TOK=$(token || echo "$TOK")
+                  done
                   if [ "$code" != "200" ]; then
                     echo "user id $id is absent after the import" >&2
                     missing=$((missing + 1))
@@ -343,16 +394,6 @@ spec:
                     exit 1
                   fi
                 done
-
-                # Recorded on the realm, so a later run of this Job can
-                # tell "already restored" from "built from something
-                # else" without keeping state of its own.
-                api "$KC/admin/realms/$realm" \
-                  | jq --arg p "$RESTORED_FROM" \
-                      '.attributes = ((.attributes // {}) + {"queenswood.restoredFrom": $p})' \
-                  | curl -sf -X PUT -H "Authorization: Bearer $TOK" \
-                      -H 'Content-Type: application/json' -d @- \
-                      -o /dev/null "$KC/admin/realms/$realm"
 
                 echo "restored realm '$realm' from $RESTORED_FROM; $total user ids intact"
               done
