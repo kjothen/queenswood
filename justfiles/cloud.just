@@ -764,9 +764,9 @@ gcp-backup-hmac-create:
     # A freshly created service account is not immediately visible to
     # IAM policy binding -- the first attempt reports it doesn't exist.
     for i in {1..12}; do
-      gcloud storage buckets add-iam-policy-binding "$BUCKET" \
-        --member="serviceAccount:${SA}" --role=roles/storage.objectAdmin \
-        --project="$PROJECT_ID" >/dev/null 2>&1 && break
+      if gcloud storage buckets add-iam-policy-binding "$BUCKET" \
+           --member="serviceAccount:${SA}" --role=roles/storage.objectAdmin \
+           --project="$PROJECT_ID" >/dev/null 2>&1; then break; fi
       echo ">>> waiting for $SA to propagate ($i/12)"
       sleep 5
     done
@@ -787,7 +787,7 @@ gcp-backup-hmac-create:
     # constraint that the effective policy already says is unenforced.
     KEY=""
     for i in {1..20}; do
-      KEY=$(gcloud storage hmac create "$SA" --project="$PROJECT_ID" --format=json 2>/dev/null) && break
+      if KEY=$(gcloud storage hmac create "$SA" --project="$PROJECT_ID" --format=json 2>/dev/null); then break; fi
       echo ">>> waiting for the key-creation policy to propagate ($i/20)"
       sleep 30
     done
@@ -899,7 +899,7 @@ gcp-fdb-export:
     for i in {1..60}; do
       R=$(kubectl --context "$KCTX" -n {{ QUEENSWOOD_ENV }} get foundationdbbackup \
         {{ QUEENSWOOD_ENV }}-fdb -o jsonpath='{.status.backupDetails.restorable}' 2>/dev/null)
-      [[ "$R" == "true" ]] && break
+      if [[ "$R" == "true" ]]; then break; fi
       if (( i == 60 )); then
         echo "backup never became restorable -- NOT safe to tear down" >&2
         exit 1
@@ -994,9 +994,9 @@ gcp-keycloak-restore-sa-create:
     # A freshly created service account is not immediately visible to
     # IAM policy binding.
     for i in {1..12}; do
-      gcloud projects add-iam-policy-binding "$PROJECT_ID" \
-        --member="serviceAccount:${SA}" \
-        --role="projects/${PROJECT_ID}/roles/${ROLE}" >/dev/null 2>&1 && break
+      if gcloud projects add-iam-policy-binding "$PROJECT_ID" \
+           --member="serviceAccount:${SA}" \
+           --role="projects/${PROJECT_ID}/roles/${ROLE}" >/dev/null 2>&1; then break; fi
       echo ">>> waiting for $SA to propagate ($i/12)"
       sleep 5
     done
