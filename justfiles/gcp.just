@@ -277,11 +277,17 @@ gcp-bootstrap-org-roles org="":
     # they create a folder and grant roles inside it, and cannot delete
     # one. projectCreator is org-scoped because the folder it will
     # create does not exist yet.
+    #
+    # browser is read-only and not optional: GCP masks a project that
+    # does not exist as permission denied unless the caller can read the
+    # hierarchy, and an identity that cannot tell "absent" from
+    # "forbidden" never gets past its first observation to create one.
     for role in \
       roles/resourcemanager.folderCreator \
       roles/resourcemanager.folderIamAdmin \
       roles/resourcemanager.projectCreator \
-      roles/orgpolicy.policyAdmin ; do
+      roles/orgpolicy.policyAdmin \
+      roles/browser ; do
       echo ">>> granting $role on organization $ORG"
       gcloud organizations add-iam-policy-binding "$ORG" \
         --member="serviceAccount:${SA}" --role="$role" \
@@ -477,21 +483,50 @@ gcp-plane-up:
     kind get clusters | grep -q '^{{ BOOT_CLUSTER }}$' \
       || kind create cluster --name '{{ BOOT_CLUSTER }}'
 
-    # The xp-mp chart, not a hand-written provider pin: it already
-    # holds the versions for Crossplane, every GCP provider and the
-    # function, and the audit treats it as the source of truth. Argo is
-    # off -- a plane that lives for minutes has nothing to reconcile
-    # from git.
+    # Crossplane from the xp-mp chart, providers from the manifest Argo
+    # applies on the real plane. Both, because the chart templates
+    # Provider and Function CRs in the same release as the subchart that
+    # installs their CRDs, so Helm rejects the render on a new cluster --
+    # its provider block is an audit re-export, not an install path.
+    # Argo is off: a plane that lives for minutes reconciles nothing.
     helm dependency build infra/helm/xp-mp >/dev/null
     helm upgrade --install xp-mp infra/helm/xp-mp \
       --kube-context {{ BOOT_CTX }} \
       --namespace crossplane-system --create-namespace \
-      --set argo-cd.enabled=false --wait
+      --set argo-cd.enabled=false --set providers.enabled=false --wait
+
+    # Only what this plane needs: it creates a folder, a project and
+    # its APIs, then hands over. dns, sql and certificatemanager serve
+    # instances and belong to the management plane, not to a cluster
+    # that lives for minutes. Versions still come from the one manifest
+    # Argo applies, so nothing drifts -- only the set is narrowed.
+    PROVIDER_PKG=$(grep -A2 'name: provider-gcp-cloudplatform' \
+      infra/platform/crossplane-providers/providers.yml \
+      | grep 'package:' | awk '{print $2}')
+    FUNCTION_PKG=$(grep -A2 'name: function-patch-and-transform' \
+      infra/platform/crossplane-providers/providers.yml \
+      | grep 'package:' | awk '{print $2}')
+    echo ">>> installing $PROVIDER_PKG"
+    kubectl --context {{ BOOT_CTX }} apply -f - <<YAML
+    apiVersion: pkg.crossplane.io/v1
+    kind: Provider
+    metadata:
+      name: provider-gcp-cloudplatform
+    spec:
+      package: $PROVIDER_PKG
+    ---
+    apiVersion: pkg.crossplane.io/v1
+    kind: Function
+    metadata:
+      name: function-patch-and-transform
+    spec:
+      package: $FUNCTION_PKG
+    YAML
 
     echo ">>> waiting for the provider and function"
-    kubectl --context {{ BOOT_CTX }} wait --for=condition=healthy --timeout=300s \
+    kubectl --context {{ BOOT_CTX }} wait --for=condition=healthy --timeout=600s \
       provider.pkg.crossplane.io/provider-gcp-cloudplatform
-    kubectl --context {{ BOOT_CTX }} wait --for=condition=healthy --timeout=300s \
+    kubectl --context {{ BOOT_CTX }} wait --for=condition=healthy --timeout=600s \
       function.pkg.crossplane.io/function-patch-and-transform
 
     kubectl --context {{ BOOT_CTX }} create secret generic gcp-creds \
@@ -576,6 +611,19 @@ gcp-plane-apply parent name="" folder="" mgmt="" billing="":
       echo ">>> naming the management project $MGMT"
     fi
 
+    # Set only when the project already exists, for the same reason the
+    # folder's adoption field is: a pre-set external name turns a
+    # first-run create into a failed observe.
+    MGMT_ADOPT=""
+    if [[ -n "{{ mgmt }}" ]]; then
+      # Prefixed: that is the form Crossplane records as the external
+      # name, and adoption matches on it exactly.
+      case "$MGMT" in
+        projects/*) MGMT_ADOPT="adopt: $MGMT"; MGMT="${MGMT#projects/}" ;;
+        *)          MGMT_ADOPT="adopt: projects/$MGMT" ;;
+      esac
+    fi
+
     FOLDER="{{ folder }}"
     if [[ -n "$FOLDER" && "$FOLDER" != folders/* ]]; then
       FOLDER="folders/$FOLDER"
@@ -596,6 +644,7 @@ gcp-plane-apply parent name="" folder="" mgmt="" billing="":
       billingAccountId: "$BILLING"
       management:
         projectId: "$MGMT"
+        $MGMT_ADOPT
       createFolder:
         parent: "{{ parent }}"
         displayName: "$NAME"

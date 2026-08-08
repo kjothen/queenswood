@@ -116,7 +116,11 @@ spec:
                     string:
                       type: Format
                       fmt: "%s-management"
-              - fromFieldPath: spec.management.projectId
+              # Adoption only. Setting this before the project exists
+              # makes observe fail with permission denied, which
+              # Crossplane cannot tell from a real error, so it never
+              # creates.
+              - fromFieldPath: spec.management.adopt
                 toFieldPath: metadata.annotations[crossplane.io/external-name]
               - fromFieldPath: spec.management.projectId
                 toFieldPath: spec.forProvider.projectId

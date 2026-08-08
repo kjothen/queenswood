@@ -39,11 +39,24 @@ spec:
                     projectId:
                       type: string
                       description: |
-                        An existing management project to adopt. Unlike a
-                        folder there is no undelete worth the name and a
-                        project id is consumed permanently, so a rebuilt
-                        plane must be told, or it mints a second one that
-                        cannot be reclaimed.
+                        The management project's id. Always supplied: a
+                        project id is consumed permanently and cannot be
+                        undeleted into usefulness, so a rebuilt plane
+                        that invented one would strand the first.
+                    adopt:
+                      type: string
+                      pattern: '^projects/[a-z][a-z0-9-]{4,28}[a-z0-9]$'
+                      description: |
+                        An existing management project to take over,
+                        written projects/<id> -- the prefixed form
+                        Crossplane records as the external name.
+
+                        Separate from projectId because creation and
+                        adoption cannot share a field. GCP answers
+                        permission denied, never not found, for a project
+                        id you do not own, so an external name set before
+                        the project exists makes the first observation
+                        fail and creation never follows.
                     displayName:
                       type: string
                       default: queenswood management
