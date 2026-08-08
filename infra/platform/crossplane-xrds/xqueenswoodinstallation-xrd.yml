@@ -30,6 +30,7 @@ spec:
                   type: object
                   required:
                     - parent
+                    - displayName
                   properties:
                     parent:
                       type: string
@@ -40,7 +41,13 @@ spec:
                         the organisation, so it may be either.
                     displayName:
                       type: string
-                      default: queenswood
+                      description: |
+                        Names this installation for humans, and nothing
+                        else -- the folder id is the identifier. GCP
+                        permits two folders with the same name under one
+                        parent, so there is no default: an installation
+                        called queenswood beside another called
+                        queenswood cannot be told apart in a console.
                     folderId:
                       type: string
                       pattern: '^folders/[0-9]+$'

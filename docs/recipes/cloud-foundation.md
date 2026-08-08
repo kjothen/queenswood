@@ -92,6 +92,13 @@ act: lift the lien, then delete.
 It lives outside the installation — in the organisation's automation
 project, or one small project you create for it.
 
+`spec.createFolder.displayName` names the installation for people and
+nothing else — the folder id is the identifier, GCP allows two folders
+with the same name under one parent, and there is no default for that
+reason. `spec.createFolder.folderId` adopts an existing folder instead of
+creating one, which is what makes a rebuilt control plane take over
+rather than build a second installation beside the first.
+
 `spec.createFolder.parent` takes `organizations/{id}` or `folders/{id}`,
 and `folders.create` is checked on that parent. So the split below is
 whether you were given a parent to create in or one folder to use. Ids

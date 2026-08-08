@@ -529,10 +529,37 @@ gcp-plane-up:
     echo
     echo ">>> plane ready. Next: just gcp-plane-apply <parent> [display-name]"
 
-# Create or adopt the folder, e.g. just gcp-plane-apply organizations/85415540850
-gcp-plane-apply parent name="queenswood" folder="":
+# Create or adopt the folder, e.g. just gcp-plane-apply organizations/85415540850 queenswood-dev
+gcp-plane-apply parent name folder="":
     #!/usr/bin/env zsh
     set -e
+    # Refuse to make a second installation by accident. GCP allows the
+    # duplicate name, so this is the only thing that would notice.
+    if [[ -z "{{ folder }}" ]]; then
+      case "{{ parent }}" in
+        organizations/*) SCOPE="--organization=${${:-{{ parent }}}#organizations/}" ;;
+        folders/*)       SCOPE="--folder=${${:-{{ parent }}}#folders/}" ;;
+        *) echo "parent must be organizations/<id> or folders/<id>" >&2; exit 1 ;;
+      esac
+      EXISTING=$(gcloud resource-manager folders list $SCOPE \
+                   --filter="displayName={{ name }}" \
+                   --format='value(name)' 2>/dev/null | head -1 || true)
+      if [[ -n "$EXISTING" ]]; then
+        echo "a folder named {{ name }} already exists under {{ parent }}: folders/$EXISTING" >&2
+        echo "adopt it:  just gcp-plane-apply {{ parent }} {{ name }} folders/$EXISTING" >&2
+        echo "or choose a different name" >&2
+        exit 1
+      fi
+    fi
+    FOLDER="{{ folder }}"
+    if [[ -n "$FOLDER" && "$FOLDER" != folders/* ]]; then
+      FOLDER="folders/$FOLDER"
+    fi
+    ADOPT=""
+    if [[ -n "$FOLDER" ]]; then
+      ADOPT="folderId: $FOLDER"
+    fi
+
     kubectl --context {{ BOOT_CTX }} apply -f - <<YAML
     apiVersion: platform.queenswood.repldriven.com/v1alpha1
     kind: XQueenswoodInstallation
@@ -543,7 +570,7 @@ gcp-plane-apply parent name="queenswood" folder="":
       createFolder:
         parent: "{{ parent }}"
         displayName: "{{ name }}"
-        {{ if folder == "" { "" } else { "folderId: " + folder } }}
+        $ADOPT
     YAML
 
     echo ">>> waiting for the folder"
