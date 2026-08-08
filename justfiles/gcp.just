@@ -11,6 +11,12 @@
 # name says who is in the group, not what one of its bindings grants --
 # gcp-platform-operators holds two roles at two scopes, and calling it
 # after either would undersell what impersonation reaches.
+# Throwaway control plane used to create the folder and the management
+# project, then discarded. Deliberately not XP_CLUSTER: that one is the
+# previous generation's permanent plane.
+BOOT_CLUSTER := "qw-boot"
+BOOT_CTX := "kind-qw-boot"
+
 ADMINS_GROUP := "gcp-organization-admins"
 BILLING_GROUP := "gcp-billing-admins"
 OPERATORS_GROUP := "gcp-platform-operators"
@@ -252,7 +258,8 @@ gcp-bootstrap-identity org="" billing="":
     echo ">>> project  $PROJECT"
     echo ">>> identity $SA"
     echo ">>> act as it by joining $OPERATORS"
-    echo ">>> next, as an organization admin: just gcp-bootstrap-org-roles"
+    echo ">>> if it holds no organization roles yet, an organization admin"
+    echo ">>> runs: just gcp-bootstrap-org-roles"
 
 # Grant the bootstrap identity its organisation roles (as an org admin).
 gcp-bootstrap-org-roles org="":
@@ -333,6 +340,7 @@ gcp-groups-bind org="":
     for spec in \
       "{{ ADMINS_GROUP }}:roles/resourcemanager.organizationAdmin" \
       "{{ OPERATORS_GROUP }}:roles/resourcemanager.organizationViewer" \
+      "{{ OPERATORS_GROUP }}:roles/browser" \
       "{{ BILLING_GROUP }}:" ; do
       NAME="${spec%%:*}"
       ROLE="${spec#*:}"
@@ -397,3 +405,164 @@ gcp-access-status org="":
         echo "  not readable by this account"
       fi
     done
+
+# =========================================================================
+# Acting as the bootstrap identity
+#
+# Crossplane authenticates from a credentials file, so the plane needs
+# ADC that impersonates the bootstrap identity -- no key, and revocable
+# in one command. Membership of the operators group is what permits it.
+# =========================================================================
+
+# Point ADC at the bootstrap identity (interactive, opens a browser).
+gcp-adc-impersonate:
+    #!/usr/bin/env zsh
+    set -e
+    SA=$(just _gcp-bootstrap-sa)
+    echo ">>> ADC will impersonate $SA"
+    gcloud auth application-default login --impersonate-service-account="$SA"
+
+# Revoke ADC. Run this as soon as the plane is gone.
+gcp-adc-revoke:
+    @gcloud auth application-default revoke --quiet
+
+# Show what ADC is, without printing any secret.
+gcp-adc-status:
+    #!/usr/bin/env zsh
+    set -e
+    F="$HOME/.config/gcloud/application_default_credentials.json"
+    if [[ ! -f "$F" ]]; then
+      echo "no ADC"
+      exit 0
+    fi
+    TYPE=$(grep -o '"type"[^,]*' "$F" | head -1 | sed 's/.*: *"//; s/"//')
+    SA=$(grep -o 'serviceAccounts/[^:]*' "$F" | head -1 | sed 's|serviceAccounts/||')
+    echo "type         ${TYPE:-unknown}"
+    echo "impersonates ${SA:-nothing}"
+
+# =========================================================================
+# The throwaway control plane
+#
+# Exists for as long as it takes to create the folder and the management
+# project, and is then discarded. The composite it applies is orphaned
+# rather than deleted with it.
+# =========================================================================
+
+# Stand up kind + Crossplane + the GCP provider, credentialed by ADC.
+gcp-plane-up:
+    #!/usr/bin/env zsh
+    set -e
+    F="$HOME/.config/gcloud/application_default_credentials.json"
+    if [[ ! -f "$F" ]]; then
+      echo "no ADC -- run 'just gcp-adc-impersonate' first" >&2
+      exit 1
+    fi
+    if ! grep -q impersonated_service_account "$F"; then
+      echo "ADC is not impersonating the bootstrap identity --" >&2
+      echo "run 'just gcp-adc-impersonate'" >&2
+      exit 1
+    fi
+
+    kind get clusters | grep -q '^{{ BOOT_CLUSTER }}$' \
+      || kind create cluster --name '{{ BOOT_CLUSTER }}'
+
+    helm repo add crossplane-stable https://charts.crossplane.io/stable \
+      --kube-context {{ BOOT_CTX }} >/dev/null
+    helm repo update --kube-context {{ BOOT_CTX }} >/dev/null
+    helm upgrade --install crossplane crossplane-stable/crossplane \
+      --kube-context {{ BOOT_CTX }} \
+      --namespace crossplane-system --create-namespace --wait
+
+    # Only what a folder needs. The other providers arrive with the rest
+    # of the composite.
+    kubectl --context {{ BOOT_CTX }} apply -f - <<'YAML'
+    apiVersion: pkg.crossplane.io/v1
+    kind: Provider
+    metadata:
+      name: provider-gcp-cloudplatform
+    spec:
+      package: xpkg.upbound.io/upbound/provider-gcp-cloudplatform:v2.5.1
+    ---
+    apiVersion: pkg.crossplane.io/v1
+    kind: Function
+    metadata:
+      name: function-patch-and-transform
+    spec:
+      package: xpkg.crossplane.io/crossplane-contrib/function-patch-and-transform:v0.8.2
+    YAML
+
+    echo ">>> waiting for the provider and function"
+    kubectl --context {{ BOOT_CTX }} wait --for=condition=healthy --timeout=300s \
+      provider.pkg.crossplane.io/provider-gcp-cloudplatform
+    kubectl --context {{ BOOT_CTX }} wait --for=condition=healthy --timeout=300s \
+      function.pkg.crossplane.io/function-patch-and-transform
+
+    kubectl --context {{ BOOT_CTX }} create secret generic gcp-creds \
+      -n crossplane-system --from-file=creds="$F" \
+      --dry-run=client -o yaml | kubectl --context {{ BOOT_CTX }} apply -f -
+
+    # projectID is required by the provider config and unused by a
+    # Folder, which is parented by an organisation rather than a project.
+    PROJECT=$(just _gcp-bootstrap-project)
+    kubectl --context {{ BOOT_CTX }} apply -f - <<YAML
+    apiVersion: gcp.m.upbound.io/v1beta1
+    kind: ClusterProviderConfig
+    metadata:
+      name: default
+    spec:
+      projectID: "$PROJECT"
+      credentials:
+        source: Secret
+        secretRef:
+          namespace: crossplane-system
+          name: gcp-creds
+          key: creds
+    YAML
+
+    kubectl --context {{ BOOT_CTX }} apply \
+      -f infra/platform/crossplane-xrds/xqueenswoodinstallation-xrd.yml
+    kubectl --context {{ BOOT_CTX }} wait --for=condition=established --timeout=120s \
+      xrd/xqueenswoodinstallations.platform.queenswood.repldriven.com
+    kubectl --context {{ BOOT_CTX }} apply \
+      -f infra/platform/crossplane-xrds/xqueenswoodinstallation-composition.yml
+
+    echo
+    echo ">>> plane ready. Next: just gcp-plane-apply <parent> [display-name]"
+
+# Create the folder, e.g. just gcp-plane-apply organizations/85415540850
+gcp-plane-apply parent name="queenswood":
+    #!/usr/bin/env zsh
+    set -e
+    kubectl --context {{ BOOT_CTX }} apply -f - <<YAML
+    apiVersion: platform.queenswood.repldriven.com/v1alpha1
+    kind: XQueenswoodInstallation
+    metadata:
+      name: queenswood
+      namespace: crossplane-system
+    spec:
+      createFolder:
+        parent: "{{ parent }}"
+        displayName: "{{ name }}"
+    YAML
+
+    echo ">>> waiting for the folder"
+    kubectl --context {{ BOOT_CTX }} -n crossplane-system wait \
+      --for=condition=ready --timeout=300s \
+      xqueenswoodinstallation/queenswood || true
+    just gcp-plane-status
+
+# Report the composite and the folder it made.
+gcp-plane-status:
+    #!/usr/bin/env zsh
+    set -e
+    kubectl --context {{ BOOT_CTX }} -n crossplane-system get \
+      xqueenswoodinstallation queenswood -o yaml 2>/dev/null \
+      | grep -E 'folderId|folderName|type: (Ready|Synced)|status: "(True|False)"|reason:' \
+      || echo "no composite applied yet"
+    echo
+    kubectl --context {{ BOOT_CTX }} -n crossplane-system \
+      get folder.cloudplatform.gcp.m.upbound.io 2>/dev/null || true
+
+# Delete the throwaway plane. The folder is orphaned, not deleted.
+gcp-plane-down:
+    @kind delete cluster --name {{ BOOT_CLUSTER }}

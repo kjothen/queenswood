@@ -1,0 +1,52 @@
+apiVersion: apiextensions.crossplane.io/v1
+kind: Composition
+metadata:
+  name: xqueenswoodinstallation.gcp
+spec:
+  compositeTypeRef:
+    apiVersion: platform.queenswood.repldriven.com/v1alpha1
+    kind: XQueenswoodInstallation
+  mode: Pipeline
+  pipeline:
+    - step: patch-and-transform
+      functionRef:
+        name: function-patch-and-transform
+      input:
+        apiVersion: pt.fn.crossplane.io/v1beta1
+        kind: Resources
+        resources:
+          # ===================================================================
+          # The folder is the installation. Everything but Delete: a
+          # folder holds every project, and reconciliation must never be
+          # able to take it. v2 namespaced MRs have no deletionPolicy, so
+          # managementPolicies is the only spelling. Liens are applied
+          # separately, and are the control that holds if this is edited.
+          # ===================================================================
+          - name: folder
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: Folder
+              metadata:
+                namespace: crossplane-system
+              spec:
+                managementPolicies:
+                  - Observe
+                  - Create
+                  - Update
+                  - LateInitialize
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  displayName: queenswood
+                  parent: organizations/0
+            patches:
+              - fromFieldPath: spec.createFolder.parent
+                toFieldPath: spec.forProvider.parent
+              - fromFieldPath: spec.createFolder.displayName
+                toFieldPath: spec.forProvider.displayName
+              # The numeric id lands in the external-name annotation
+              # before it appears anywhere in status.atProvider.
+              - type: ToCompositeFieldPath
+                fromFieldPath: metadata.annotations[crossplane.io/external-name]
+                toFieldPath: status.folderId

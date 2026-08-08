@@ -1,0 +1,54 @@
+apiVersion: apiextensions.crossplane.io/v1
+kind: CompositeResourceDefinition
+metadata:
+  name: xqueenswoodinstallations.platform.queenswood.repldriven.com
+spec:
+  scope: Namespaced
+  group: platform.queenswood.repldriven.com
+  names:
+    kind: XQueenswoodInstallation
+    plural: xqueenswoodinstallations
+  defaultCompositionRef:
+    name: xqueenswoodinstallation.gcp
+  versions:
+    - name: v1alpha1
+      served: true
+      referenceable: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              required:
+                - createFolder
+              properties:
+                # Folder only, for now. The management project, the
+                # durable tier and the instances join this spec as they
+                # are built; see docs/recipes/cloud-foundation.md.
+                createFolder:
+                  type: object
+                  required:
+                    - parent
+                  properties:
+                    parent:
+                      type: string
+                      pattern: '^(organizations|folders)/[0-9]+$'
+                      description: |
+                        Where the folder is nested. GCP checks
+                        resourcemanager.folders.create on this, not on
+                        the organisation, so it may be either.
+                    displayName:
+                      type: string
+                      default: queenswood
+            status:
+              type: object
+              properties:
+                folderId:
+                  type: string
+                  description: |
+                    The folder as folders/<id>, which is the form a
+                    parent reference takes and what every later step
+                    reads. Comes from the external-name annotation,
+                    which holds the resource name rather than the
+                    bare number.

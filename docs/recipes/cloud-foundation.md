@@ -111,8 +111,10 @@ No Google Cloud at all yet: start with
 3. `just gcp-bootstrap-org-roles`, as a member of
    `gcp-organization-admins@` — the organisation roles only an admin can
    grant. The one step needing break-glass.
-4. `just gcp-plane-up` — a throwaway kind cluster running Crossplane and
-   the Configuration package, impersonating that identity.
+4. `just gcp-adc-impersonate`, then `just gcp-plane-up` — a throwaway
+   kind cluster running Crossplane and the GCP provider, authenticating
+   from ADC that impersonates the bootstrap identity. No key exists, and
+   `just gcp-adc-revoke` ends it.
 5. Apply the manifest with `spec.createFolder` in place of
    `spec.folderId`.
 6. Read the folder id, management project and platform identity from
@@ -225,5 +227,7 @@ generations.
 - [infrastructure](../tdd/infrastructure.md) — the bootstrap chain, sync
   waves and existing compositions.
 - `justfiles/gcp.just` — `gcp-preflight`, `gcp-groups-bind`,
-  `gcp-access-*`, `gcp-bootstrap-*`. The `gcp-plane-*` recipes are not
-  written yet.
+  `gcp-access-*`, `gcp-bootstrap-*`, `gcp-adc-*`, `gcp-plane-up` /
+  `-apply` / `-status` / `-down`. `gcp-plane-pivot` is not written yet.
+- `infra/platform/crossplane-xrds/xqueenswoodinstallation-*.yml` — the
+  XRD and Composition. Folder only, so far.

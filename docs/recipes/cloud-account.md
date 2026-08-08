@@ -53,8 +53,10 @@ Three security groups, in `admin.google.com` under Directory then Groups:
 
 - `gcp-organization-admins@` — Organization Administrator. Empty in
   steady state; joining it is the break-glass act.
-- `gcp-platform-operators@` — Organization Viewer, and later the right to
-  impersonate the bootstrap identity.
+- `gcp-platform-operators@` — Organization Viewer and Browser, and later
+  the right to impersonate the bootstrap identity. Without Browser a
+  folder is invisible in the console even to the account whose identity
+  created it.
 - `gcp-billing-admins@` — Billing Account Administrator, bound on the
   billing account in step 7.
 
