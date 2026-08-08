@@ -7,7 +7,7 @@ initContainers:
   # Each key is an FDB minor version and the init container copies
   # libfdb_c_<key>.so out of the image, so the tag MUST stay on that
   # same minor. Renovate cannot see that constraint -- the monitor
-  # image is disabled in renovate.json for this reason.
+  # image is disabled in .github/renovate.json for this reason.
   7.1:
     image:
       repository: foundationdb/fdb-kubernetes-monitor

@@ -5,11 +5,11 @@
 <script>
   // Excalidraw resolves its font woff2 files (Excalifont, …) relative to
   // this path at export time, then inlines them into the SVG as base64.
-  // The exporter server (export-diagrams.mjs) serves the library's dist
-  // assets under /assets.
+  // The exporter server (export.mjs) serves the library's dist assets
+  // under /assets.
   window.EXCALIDRAW_ASSET_PATH = location.origin + '/assets/';
 </script>
-<script src="./excalidraw-bundle.js"></script>
+<script src="/bundle.js"></script>
 </head>
 <body>
 <script>

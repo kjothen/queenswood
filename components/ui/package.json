@@ -10,7 +10,8 @@
     "./*.svelte": "./src/*.svelte"
   },
   "scripts": {
-    "showcase": "vite --config showcase/vite.config.js"
+    "showcase": "vite --config showcase/vite.config.js",
+    "build": "vite build --config showcase/vite.config.js"
   },
   "peerDependencies": {
     "svelte": "^5.25.3"

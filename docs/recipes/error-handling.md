@@ -123,7 +123,7 @@ single check with no further bindings:
 - Anomaly payloads contain `:message`.
 - Mark a genuinely unrecoverable `throw` with
   `;; nosemgrep: no-raw-throw` on the line above — the `no-raw-throw`
-  semgrep rule (`.semgrep.yml`) blocks any unmarked one.
+  semgrep rule (`.config/semgrep/semgrep.yml`) blocks any unmarked one.
 
 **MUST NOT:**
 

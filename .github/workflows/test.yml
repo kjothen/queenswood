@@ -5,6 +5,8 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  # Escape hatch: runs every job regardless of what changed.
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -16,7 +18,51 @@ permissions:
   pull-requests: write
 
 jobs:
+  # Which trees a change touched. Classified in-workflow rather than with
+  # `on.push.paths`: branch protection requires the `tests` check, and a
+  # workflow skipped at the trigger never reports it.
+  changes:
+    runs-on: ubuntu-latest
+
+    outputs:
+      clojure: ${{ steps.decide.outputs.clojure }}
+      js: ${{ steps.decide.outputs.js }}
+      helm: ${{ steps.decide.outputs.helm }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+        with:
+          # The classifier needs both ends of the range in local history,
+          # and diffs from the merge base on a pull request.
+          fetch-depth: 0
+
+      # Bucket definitions live in the script, shared with
+      # release-images.yml.
+      - name: Classify changed paths
+        id: decide
+        env:
+          ALL: ${{ github.event_name == 'workflow_dispatch' }}
+          BASE: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+          HEAD: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+        run: ./scripts/ci-changed-paths.sh
+
+  # Ungated — the pins it checks live in Helm values and Dockerfile ARG
+  # defaults, not only in deps.edn.
+  versions:
+    runs-on: ubuntu-latest
+    name: check pinned versions
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Check pinned versions
+        run: ./scripts/check-versions.sh
+
   discover:
+    needs: changes
+    if: needs.changes.outputs.clojure == 'true'
     runs-on: ubuntu-latest
 
     outputs:
@@ -26,20 +72,14 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v7
 
-      # Gates the matrix: a drifted FDB pin would otherwise surface as a
-      # connection failure in every project's tests at once.
-      - name: Check pinned versions
-        run: ./scripts/check-versions.sh
-
       - name: Discover projects
         id: projects
         run: |
-          # Every service project under projects/ plus a `dev` entry
-          # that runs only the dev-only bricks (bank-test-scenarios,
-          # bank-monolith, bank-test-model, bank-test-projections).
-          # Those bricks don't belong to any deployable service but
-          # carry the end-to-end and model-equality coverage; without
-          # this entry the matrix would never exercise them.
+          # Every service project under projects/ plus a `dev` entry for
+          # the bricks that belong to no deployable service and so appear
+          # in no other matrix entry: test-scenarios, test-model,
+          # test-projections and test-api-scenarios, which carry the
+          # end-to-end and model-equality coverage.
           matrix=$(ls projects/ | jq -Rc '[., inputs] + ["dev"]')
           echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
           echo "Discovered projects: $matrix"
@@ -119,9 +159,9 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-clojure-
 
-      # Services floor is temporarily 0 post-mono-pulldown: service
-      # projects import infra from mono without its tests, so local
-      # coverage is not representative. dev stays at 90.
+      # The coverage floor is 90 for dev and 0 for a service project: a
+      # service imports its infra from mono without mono's tests, so the
+      # coverage measured here is not representative of the code it runs.
       - name: Run tests
         env:
           TESTCONTAINERS_REUSE_ENABLE: "true"
@@ -182,7 +222,47 @@ jobs:
           path: target/coverage/${{ matrix.project == 'dev' && 'development' || matrix.project }}/
           retention-days: 7
 
+  # Compiles the console bundle and the ui showcase. These packages carry
+  # no test suite; the build is what catches a component missing from ui's
+  # index.js, or a Svelte template that does not parse.
+  js:
+    needs: changes
+    if: needs.changes.outputs.js == 'true'
+    runs-on: ubuntu-latest
+    name: js build
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      # Matches the build stage of infra/docker/console/Dockerfile.
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
+
+      - name: Enable corepack
+        run: corepack enable
+
+      # --immutable fails if the lockfile would change.
+      - name: Install
+        run: corepack yarn install --immutable
+
+      # Fails if the workspace resolves two copies of a package. Both
+      # members declare svelte, vite and the vite plugin, and two svelte
+      # copies compile to mutually unreadable context.
+      - name: Check for duplicate resolutions
+        run: corepack yarn dedupe --check
+
+      - name: Build console
+        run: corepack yarn workspace console build
+
+      - name: Build ui showcase
+        run: corepack yarn workspace @queenswood/ui build
+
   helm:
+    needs: changes
+    if: needs.changes.outputs.helm == 'true'
     runs-on: ubuntu-latest
     name: helm validate
 
@@ -223,19 +303,26 @@ jobs:
             --set image.tag=ci \
             | kubeconform -strict -ignore-missing-schemas -summary
 
-  # Gate job for branch protection — produces a single required check
+  # Gate job for branch protection — a single required check. `skipped`
+  # passes; only failure and cancellation block.
   tests:
     if: always()
-    needs: [test, helm]
+    needs: [versions, test, js, helm]
     runs-on: ubuntu-latest
     steps:
       - name: Check results
+        env:
+          RESULTS: >-
+            versions=${{ needs.versions.result }}
+            test=${{ needs.test.result }}
+            js=${{ needs.js.result }}
+            helm=${{ needs.helm.result }}
         run: |
-          if [[ "${{ needs.test.result }}" != "success" ]]; then
-            echo "Tests failed or were cancelled"
-            exit 1
-          fi
-          if [[ "${{ needs.helm.result }}" != "success" ]]; then
-            echo "Helm validation failed or was cancelled"
-            exit 1
-          fi
+          blocked=0
+          for entry in $RESULTS; do
+            case "${entry#*=}" in
+              success|skipped) echo "ok       $entry" ;;
+              *)               echo "BLOCKING $entry"; blocked=1 ;;
+            esac
+          done
+          exit "$blocked"

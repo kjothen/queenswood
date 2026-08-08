@@ -16,8 +16,8 @@ Clojure repo; a design rule is meaningless outside this system.
 
 Rules are guidance — they shape how code gets written. Enforcement is
 separate and deterministic: the `no-raw-throw` semgrep rule
-(`.semgrep.yml`) runs in the pre-commit hook, so a regression is caught
-by the linter, not by asking an agent to look.
+(`.config/semgrep/semgrep.yml`) runs in the pre-commit hook, so a
+regression is caught by the linter, not by asking an agent to look.
 
 Planned: dedicated code-style rules (requires/naming/`cond->`) and a
 kebab-case-keys rule, split out if this file ever grows unwieldy.

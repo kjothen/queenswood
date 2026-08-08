@@ -1,0 +1,18 @@
+{
+  "name": "@queenswood/excalidraw",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Headless light/dark SVG export for the Excalidraw scenes in docs/diagrams.",
+  "$comment": "Not a member of the root yarn workspace, so it carries its own lockfile. infra/docker/console/Dockerfile copies every member's package.json and runs `yarn install --immutable`; membership would pull React, esbuild and a Playwright Chromium into the console image build.",
+  "scripts": {
+    "export": "node src/export.mjs"
+  },
+  "dependencies": {
+    "@excalidraw/excalidraw": "0.18.1",
+    "esbuild": "0.28.1",
+    "playwright": "1.62.0",
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
+  }
+}

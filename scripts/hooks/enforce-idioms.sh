@@ -4,9 +4,9 @@
 # grep can decide. Run by the pre-commit hook in --staged mode; also
 # runnable standalone for a whole-branch or explicit-path sweep.
 #
-# The split against .semgrep.yml: a guardrail decidable from one file's
-# tokens plus its path lives there, because semgrep gives it a per-site
-# `nosemgrep` opt-out. What lands here needs knowledge no single file
+# The split against .config/semgrep/semgrep.yml: a guardrail decidable
+# from one file's tokens plus its path lives there, because semgrep gives
+# it a per-site `nosemgrep` opt-out. What lands here needs knowledge no single file
 # carries — a count across the tree, a declaration matched to a reference
 # in another file, or the name of the brick a file sits in.
 #
