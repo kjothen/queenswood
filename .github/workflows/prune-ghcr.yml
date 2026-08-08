@@ -62,14 +62,8 @@ jobs:
           - queenswood/monolith-service
           - queenswood/financial-processors-service
           - queenswood/operational-processors-service
-          - queenswood/scheduler-processor-service
-          - queenswood/relay-service
-          - queenswood/clearbank-adapter-service
-          - queenswood/clearbank-simulator-service
-          - queenswood/onfido-adapter-service
-          - queenswood/onfido-simulator-service
-          - queenswood/uk-companies-house-adapter-service
-          - queenswood/uk-companies-house-simulator-service
+          - queenswood/exclusive-dispatchers-service
+          - queenswood/external-adapters-service
           - queenswood/console
           - queenswood
           - queenswood-keycloak

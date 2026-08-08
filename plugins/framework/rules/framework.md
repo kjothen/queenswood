@@ -30,10 +30,20 @@ components the same way any component reaches a peer — through
 `interface.clj` — and bare-requires every brick whose system
 multimethods need to extend at startup. Bases never depend on other
 bases and share nothing between them except through components; the
-one bounded exception is `monolith`, the designated multi-base
-aggregator, which bare-requires other bases' `.system` namespaces to
-extend their multimethods and requires their `.api` namespaces to
-compose an in-process system for end-to-end tests.
+one bounded exception is a designated multi-base aggregator
+(`monolith`, `external-adapters`), which composes other bases into one
+in-process system. A base that only ever appears inside an aggregator
+is a composed base: it has no project, so it has no `-main` of its
+own, and it carries an `interface.clj` that bare-requires its own
+`system` namespace and exposes what the aggregator wires in
+(typically `app`). An aggregator reaches a composed base by that
+interface and nothing else — `.api` is reserved for a base that has
+none. `poly` still treats it as a base, so the idioms hook enforces
+this, not Polylith. A base never owns a store: persistence belongs in
+a component, and a base may bare-require `fdb.interface` from its
+`system.clj` to register FDB component-kinds and nothing more —
+`component → base` is disallowed, so state behind an entry point
+would be unreachable by every component.
 See [bases](../../../docs/recipes/bases.md).
 
 ## Projects are pure config

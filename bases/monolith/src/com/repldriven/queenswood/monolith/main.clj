@@ -3,12 +3,14 @@
     [com.repldriven.queenswood.monolith.system]
 
     [com.repldriven.queenswood.api.api :as api]
-    [com.repldriven.queenswood.clearbank-adapter.api :as adapter-api]
-    [com.repldriven.queenswood.clearbank-simulator.api :as simulator-api]
-    [com.repldriven.queenswood.onfido-adapter.api :as onfido-adapter-api]
-    [com.repldriven.queenswood.onfido-simulator.api :as onfido-simulator-api]
-    [com.repldriven.queenswood.uk-companies-house-simulator.api :as
-     ch-simulator-api]
+    [com.repldriven.queenswood.clearbank-adapter.interface :as
+     clearbank-adapter]
+    [com.repldriven.queenswood.clearbank-simulator.interface :as
+     clearbank-simulator]
+    [com.repldriven.queenswood.onfido-adapter.interface :as onfido-adapter]
+    [com.repldriven.queenswood.onfido-simulator.interface :as onfido-simulator]
+    [com.repldriven.queenswood.uk-companies-house-simulator.interface :as
+     ukch-simulator]
 
     [com.repldriven.mono.cli.interface :as cli]
     [com.repldriven.mono.env.interface :as env]
@@ -24,19 +26,19 @@
          (assoc-in [:system/defs :server :handler] api/app)
          (assoc-in [:system/defs :clearbank-simulator-server
                     :handler]
-          simulator-api/app)
+          clearbank-simulator/app)
          (assoc-in [:system/defs :clearbank-adapter-server
                     :handler]
-          adapter-api/app)
+          clearbank-adapter/app)
          (assoc-in [:system/defs :onfido-simulator-server
                     :handler]
-          onfido-simulator-api/app)
+          onfido-simulator/app)
          (assoc-in [:system/defs :onfido-adapter-server
                     :handler]
-          onfido-adapter-api/app)
+          onfido-adapter/app)
          (assoc-in [:system/defs :uk-companies-house-simulator-server
                     :handler]
-          ch-simulator-api/app)
+          ukch-simulator/app)
          system/start))
 
 (defn stop [system] (system/stop system))

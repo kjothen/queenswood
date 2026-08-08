@@ -1,3 +1,0 @@
-system:
-  telemetry: !include system/telemetry.yml
-  clearbank-simulator-server: !include system/clearbank-simulator-server.yml

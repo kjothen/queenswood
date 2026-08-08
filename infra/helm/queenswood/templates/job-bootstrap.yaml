@@ -234,12 +234,11 @@ volumes:
 
 {{- if .Values.bootstrap.enabled }}
 ---
-# One-shot Job: idempotently seeds the singleton internal Queenswood
-# organization (with API key, internal Party, internal
-# CashAccountProduct, one CashAccount per currency) and writes the
-# platform + micro Policy records. Runs after migrator-service
-# has applied FDB record metadata + Kafka topics; reads the
-# persisted FDB schema (no Kafka interaction).
+# One-shot Job: idempotently writes the platform + micro Policy
+# records and the four cash-account-product templates. It seeds no
+# organization -- a user's first login creates their own bank. Runs
+# after migrator-service has applied FDB record metadata + Kafka
+# topics; reads the persisted FDB schema (no Kafka interaction).
 #
 # Job name embeds both .Values.image.tag and .Chart.Version so every
 # helm upgrade -- whether the bump is the image (new app code) or the

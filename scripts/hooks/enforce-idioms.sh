@@ -111,10 +111,12 @@ report() {
 # Rules:
 #   - intra-unit (target == own) is always fine
 #   - target is a component: only `.interface` and `.system` are public
-#   - target is a base: only `.system` or `.api` are public (`.api` is the
-#     multi-base aggregator pattern — bank-monolith wires several bases'
-#     Reitit handlers into one process), and only when the importer is
-#     itself a base (component → base is the wrong direction)
+#   - target is a base: only `.interface`, `.system` or `.api` are public,
+#     and only when the importer is itself a base (component → base is the
+#     wrong direction). This is the multi-base aggregator pattern — the
+#     aggregator wires several composed bases into one process. A composed
+#     base carries an `interface.clj` and that is the form to reach it by;
+#     `.api` remains for a base that has no interface (bank-api).
 #   - target is neither a component nor a base: ignore (generated namespaces
 #     like com.repldriven.queenswood.schemas.* live under a brick's gen/
 #     tree, and `schemas` is not the `schema` brick's own name)
@@ -161,7 +163,9 @@ if [ ${#SRC_CLJ[@]} -gt 0 ]; then
         if (target in is_brick) {
           if (sub_ns != "interface" && sub_ns != "system") bad = 1
         } else if (target in is_base) {
-          if (!(own_kind == "base" && (sub_ns == "system" || sub_ns == "api"))) bad = 1
+          if (!(own_kind == "base" &&
+                (sub_ns == "interface" || sub_ns == "system" ||
+                 sub_ns == "api"))) bad = 1
         }
         if (bad) print FILENAME ":" FNR ": " s
       }
@@ -403,5 +407,38 @@ for f in $(find projects bases components -type f \
 done
 out=$(printf '%s' "$out" | grep -v '^$' || true)
 report 'dispatcher-declared-not-wired' "$out"
+
+# 8. A base owns no store.
+# A store is durable state; a base is an entry point chosen by a project.
+# `component -> base` is already blocked by check 1, so a store that lived
+# in a base would be permanently unreachable by any component -- a one-way
+# door, not just an odd shape. It would also leave the guarded set
+# silently: `check-processors` iterates `components/*`, and semgrep's
+# `fdb-outside-store` is pathed to `/components/*/src/**`, so neither
+# would see it. A base still bare-requires `fdb.interface` from its
+# `system.clj` to register FDB component-kinds -- that is registration,
+# not access, and is the only form allowed.
+#
+# Whole-tree regardless of scope: a store arrives as a new file, which a
+# staged-only diff of edited files would not necessarily surface.
+section 'Bases own no store'
+out=""
+found=$(find bases -type f -name 'store.clj' -not -path '*/test/*' 2>/dev/null | sort)
+if [ -n "$found" ]; then
+  out="$(printf '%s\n' "$found" | sed 's/$/: store.clj in a base/')"$'\n'
+fi
+base_fdb=$(grep -rn 'com\.repldriven\.queenswood\.fdb\.interface' \
+             --include='*.clj' --include='*.cljc' bases/*/src 2>/dev/null \
+           | grep -v '/system\.clj:' || true)
+[ -n "$base_fdb" ] && out="${out}$(printf '%s\n' "$base_fdb" \
+  | sed 's/$/  <- fdb outside a base system.clj/')"$'\n'
+# `[^]]|$` so a require wrapped onto the next line is caught too: a bare
+# one always closes with `]` on the same line.
+base_fdb_alias=$(grep -rnE 'com\.repldriven\.queenswood\.fdb\.interface([^]]|$)' \
+                   --include='*.clj' --include='*.cljc' bases/*/src 2>/dev/null || true)
+[ -n "$base_fdb_alias" ] && out="${out}$(printf '%s\n' "$base_fdb_alias" \
+  | sed 's/$/  <- fdb require in a base must be bare/')"$'\n'
+out=$(printf '%s' "$out" | grep -v '^$' || true)
+report 'store-in-a-base' "$out"
 
 exit "$FAILED"

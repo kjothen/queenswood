@@ -5,7 +5,7 @@ relay-handler: !system/component
   store-name: cash-accounts
 
 # One JVM, so the monolith owns the cursor itself rather than
-# deferring to relay-service.
+# deferring to the operational processors.
 
 relay-runners: !system/component
   system/component-kind: changelog-relay/runners

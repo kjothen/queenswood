@@ -5,10 +5,10 @@
 
     [com.repldriven.queenswood.test-scenarios.interface :as SUT]
 
-    [com.repldriven.queenswood.clearbank-adapter.api :as cb-adapter]
-    [com.repldriven.queenswood.clearbank-simulator.api :as cb-simulator]
-    [com.repldriven.queenswood.onfido-adapter.api :as onfido-adapter]
-    [com.repldriven.queenswood.onfido-simulator.api :as onfido-simulator]
+    [com.repldriven.queenswood.clearbank-adapter.interface :as cb-adapter]
+    [com.repldriven.queenswood.clearbank-simulator.interface :as cb-simulator]
+    [com.repldriven.queenswood.onfido-adapter.interface :as onfido-adapter]
+    [com.repldriven.queenswood.onfido-simulator.interface :as onfido-simulator]
     [com.repldriven.queenswood.test-model.interface :as model]
     [com.repldriven.queenswood.test-projections.interface :as projections]
 

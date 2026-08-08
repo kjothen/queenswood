@@ -114,9 +114,14 @@ project's deps carry only the bricks its group runs. Group by
 boundary, not throughput — financial processors (payment,
 transaction, interest, payee-check) never share a JVM with
 operational processors (bank, party, cash-account,
-cash-account-product, idv); the scheduler stays its own singleton
-group; external adapters and simulators are never grouped with
-domain processors.
+cash-account-product, idv); external adapters and simulators are
+never grouped with domain processors, and share one JVM of their
+own. Work that admits exactly one dispatcher — every store's
+changelog runner and the Quartz scheduler — goes in
+`exclusive-dispatchers-service`, pinned to `replicas: 1`, which is
+what leaves every other group free of the constraint. When a
+processor moves between groups its consumer groups and changelog
+`consumer-id`s move with it verbatim, or the cursor is abandoned.
 See [ADR-0019](../../../docs/adr/0019-processor-packaging.md).
 
 ## External providers are deployment facts

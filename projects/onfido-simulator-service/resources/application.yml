@@ -1,3 +1,0 @@
-system:
-  telemetry: !include system/telemetry.yml
-  onfido-simulator-server: !include system/onfido-simulator-server.yml

@@ -18,5 +18,11 @@ spec:
       port: {{ $svc.port }}
       targetPort: http
       protocol: TCP
+    {{- range $extra := $svc.extraPorts }}
+    - name: {{ $extra.name }}
+      port: {{ $extra.port }}
+      targetPort: {{ $extra.name }}
+      protocol: TCP
+    {{- end }}
 {{- end }}
 {{- end }}

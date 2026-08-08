@@ -34,14 +34,14 @@ A deployable service is a triple:
   and runs the uberjar with
   `-c classpath:application.yml -p default`.
 
-Naming: HTTP services keep their bare name
-(`api-service`,
-`clearbank-{adapter,simulator}-service`,
-`onfido-{adapter,simulator}-service`). Message-bus
+Naming: the HTTP surface is `api-service`. Message-bus
 processors are grouped along the financial boundary into
 `financial-processors-service` and
-`operational-processors-service`, with the Quartz
-singleton in `scheduler-processor-service` — see
+`operational-processors-service`. Work that admits exactly
+one dispatcher — the changelog relay runners and the Quartz
+scheduler — is `exclusive-dispatchers-service`. Every
+vendor adapter and its simulator share
+`external-adapters-service` — see
 [ADR-0019](../adr/0019-processor-packaging.md). The two
 one-shots are `migrator-service` and
 `bootstrap-service`.
@@ -76,9 +76,10 @@ Each pod's spec carries an `initContainers` chain:
    Job's name embeds `image.tag`, so a `helm upgrade` with a
    new tag spawns a fresh Job.
 3. Optional **`wait-for-<dep>`** — polls a sibling service's
-   `/actuator/health/liveness` endpoint, used by adapters
-   that need to register webhooks against their simulator
-   on startup.
+   `/actuator/health/liveness` endpoint, for a service that
+   cannot start until another pod is answering. Nothing
+   declares one today: the adapters that used to wait for
+   their simulator now share its JVM.
 
 ### Migrator and bootstrap
 
@@ -93,10 +94,10 @@ metadata vs data, and platform-wide vs tenant-specific:
   "meta-data version must increase" as a no-op. Exits
   non-zero if topic creation fails.
 - **`bootstrap-service`** — runs after the migrator
-  completes; idempotently seeds the singleton internal
-  Queenswood organisation and the platform/micro Policy
-  records. Services discover the seeded organisation by
-  reading FDB at startup.
+  completes; idempotently seeds the platform and micro
+  Policy records and the four cash-account-product
+  templates. It seeds no organisation: a user's first
+  login creates their own bank.
 
 K8s Job specs are immutable. Re-running bootstrap on code
 change requires deleting the old Job; embedding
@@ -170,10 +171,9 @@ kind node's containerd, then `helm-install`s the chart.
 - Deploy flows use the same Helm release name
   (`queenswood`) so resource names don't diverge between the two
   flows.
-- Cross-pod startup dependencies (e.g. an adapter waiting
-  for its simulator) are expressed via the deployment's
-  `waitFor` list, which adds a `wait-for-<dep>`
-  initContainer polling the target's
+- Cross-pod startup dependencies are expressed via the
+  deployment's `waitFor` list, which adds a
+  `wait-for-<dep>` initContainer polling the target's
   `/actuator/health/liveness`.
 
 **MUST NOT:**
@@ -184,9 +184,9 @@ kind node's containerd, then `helm-install`s the chart.
   environment-agnostic. See the no-env-in-resource-names
   memory.
 - Skip the migrator or bootstrap Jobs in any deployment
-  flow. The internal organisation, the Kafka topics,
-  and the FDB metadata are all preconditions to any
-  service's startup.
+  flow. The policies, the product templates, the Kafka
+  topics and the FDB metadata are all preconditions to
+  any service's startup.
 - Build a service from anything other than the shared
   Dockerfile. The arch-aware `libfdb_c.so` install and the
   shared base layer are the parts that need to stay
@@ -198,11 +198,20 @@ kind node's containerd, then `helm-install`s the chart.
   service-specific `application.yml` in `resources/` (the
   Dockerfile loads it via `-c classpath:application.yml -p
   default`).
+- A service listen on more than one port. `port` is the
+  primary — the probes and the Service's `http` port target
+  it — and further listeners go in `extraPorts` as
+  `{name, port}`, which renders one named `containerPort`
+  and one Service port each. `external-adapters-service`
+  uses this: its probe port is the one another service
+  calls, and the rest are reachable for a human or a
+  vendor callback.
 - A service set `replicas > 1` in `values.yaml`.
-  `relay-service` must stay at 1 — it owns every changelog
-  cursor, and a cursor has exactly one owner. Scale that
-  tier by sharding stores across deployments, not by
-  adding replicas. Other services are free of the cursor
+  `exclusive-dispatchers-service` must stay at 1 — it owns
+  every changelog cursor and every cron trigger, and each
+  admits exactly one dispatcher. Scale the relay tier by
+  sharding stores across deployments, not by adding
+  replicas. Other services are free of the cursor
   constraint, but raising their replicas buys standbys
   rather than throughput until `message-bus/send` carries
   a partition key and topics have more than one partition
@@ -211,8 +220,8 @@ kind node's containerd, then `helm-install`s the chart.
 ## Discussion
 
 Processors were originally one project each; at current
-volume that meant ten under-utilised JVMs, so they are
-packaged into boundary groups instead, per
+volume that meant a JVM per domain, each under-utilised, so
+they are packaged into boundary groups instead, per
 [ADR-0019](../adr/0019-processor-packaging.md). Each
 processor still owns its Kafka consumer group and changelog
 cursors — the group a processor runs in is deployment-time
@@ -233,14 +242,15 @@ only because the stages are split to make it so. The `deps`
 stage — base image, code-gen tooling, `COPY`, prep, dependency
 resolution — must never reference `PROJECT_NAME`. A build arg
 declared in a stage joins the cache key of everything after
-it, so naming it there gives all fifteen targets a distinct
-key for byte-identical work, and they each run it rather than
+it, so naming it there gives every target a distinct key for
+byte-identical work, and they each run it rather than
 sharing one result. The arg first appears in a thin `build`
 stage layered on top, whose only job is the uberjar. That
 split is what the two cache-mount sharing modes track. The shared
 step is the only writer and holds `sharing=locked`, which
-costs nothing because one build holds it rather than
-fifteen. The per-service step takes `sharing=shared`, so the
+costs nothing because one build holds it rather than one
+queue per target. The per-service step takes
+`sharing=shared`, so the
 uberjars actually run in parallel — locking there would
 serialise them behind one mutex and give back most of what
 `bake` buys. Prefetching each project's `:build` deps with
@@ -255,10 +265,10 @@ re-runnability:
   types, Kafka topics, Avro schemas. These are
   schema-shaped and rarely change. Re-running the migrator
   is treated as authoritative.
-- The bootstrap handles **tenant data** — the singleton
-  internal organisation and the platform-tier policies.
-  These are domain-shaped, idempotent on the singleton,
-  and don't change often.
+- The bootstrap handles **domain seed data** — the
+  platform and micro policies and the cash-account-product
+  templates. These are domain-shaped, idempotent on their
+  own keys, and don't change often.
 
 Conflating them would mean a bootstrap that has to know
 about Kafka topics, or a migrator that knows what a

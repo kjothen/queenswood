@@ -1,0 +1,50 @@
+{:aliases
+ {:build {:deps {bases/build {:local/root "../../bases/build"}}
+          :exec-args {:lib 'com.repldriven.queenswood/external-adapters-service
+                      :main com.repldriven.queenswood.external-adapters.main
+                      :major-minor-version "0.0"}
+          :ns-default com.repldriven.queenswood.build.build}
+  ;; The external test runner (cloverage + eftest) plus the test-helper
+  ;; components the included bricks' tests require. CI runs every
+  ;; project through this runner for coverage; matches the sibling
+  ;; processor projects.
+  :test
+  {:extra-deps
+   {ext/mono {:local/root "../../deps/mono-test"}
+    ext/mono-test-runner {:local/root "../../deps/mono-test-runner"}
+    component/changelog-relay {:local/root "../../components/changelog-relay"}
+    component/test-resources {:local/root "../../components/test-resources"}
+    component/testcontainers {:local/root "../../components/testcontainers"}
+    component/test-schema {:local/root "../../components/test-schema"}}}}
+ :deps
+ {ext/mono {:local/root "../../deps/mono"}
+  component/fdb {:local/root "../../components/fdb"}
+  component/balance {:local/root "../../components/balance"}
+  component/balance-domain {:local/root "../../components/balance-domain"}
+  component/balance-query {:local/root "../../components/balance-query"}
+  component/cash-account-query {:local/root
+                                "../../components/cash-account-query"}
+  component/clearbank-relay {:local/root "../../components/clearbank-relay"}
+  component/clearbank-webhook {:local/root "../../components/clearbank-webhook"}
+  component/company {:local/root "../../components/company"}
+  component/onfido-relay {:local/root "../../components/onfido-relay"}
+  component/onfido-webhook {:local/root "../../components/onfido-webhook"}
+  component/party-query {:local/root "../../components/party-query"}
+  component/person-identification {:local/root
+                                   "../../components/person-identification"}
+  component/policy {:local/root "../../components/policy"}
+  component/resources {:local/root "../../components/resources"}
+  component/schema {:local/root "../../components/schema"}
+  component/transaction {:local/root "../../components/transaction"}
+  base/clearbank-adapter {:local/root "../../bases/clearbank-adapter"}
+  base/clearbank-simulator {:local/root "../../bases/clearbank-simulator"}
+  base/onfido-adapter {:local/root "../../bases/onfido-adapter"}
+  base/onfido-simulator {:local/root "../../bases/onfido-simulator"}
+  base/uk-companies-house-adapter
+  {:local/root "../../bases/uk-companies-house-adapter"}
+  base/uk-companies-house-simulator
+  {:local/root "../../bases/uk-companies-house-simulator"}
+  base/external-adapters {:local/root "../../bases/external-adapters"}
+  org.clojure/clojure {:mvn/version "1.12.5"}
+  pin/clojure-core-async {:local/root "../../deps/clojure-core-async"}}
+ :paths ["resources"]}

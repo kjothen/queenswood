@@ -155,20 +155,21 @@ Projects exist so the same components can be assembled into
 different deployables. Today's deployables come in three
 shapes:
 
-- **HTTP services** — `api-service`, the
-  `clearbank-{adapter,simulator}-service` pair, the
-  `onfido-{adapter,simulator}-service` pair, each
-  pulling in its corresponding base.
-- **Message-bus processor services** — one per command
-  processor: cash-account, party, payment, interest,
-  transaction, idv.
+- **HTTP services** — `api-service` for the bank's own
+  surface, and `external-adapters-service` for every vendor
+  adapter and the simulator standing in for it.
+- **Message-bus processor services** — grouped by boundary:
+  `financial-processors-service` and
+  `operational-processors-service`, plus
+  `exclusive-dispatchers-service` for the work that admits
+  exactly one dispatcher.
 - **One-shots** — `migrator-service` and
   `bootstrap-service` for the cold-start chain.
 
-Plus a test-only outlier: the `monolith` base bundles
-every component into one in-process system for end-to-end
-tests. It has no corresponding deployable project; it's
-booted under Testcontainers from a test harness.
+Plus `monolith-service`, which bundles every component into
+one in-process system — the shape end-to-end tests boot
+under Testcontainers, and a deployable in its own right for
+a single-pod install.
 
 Keeping projects code-free has two benefits. First, a
 project review reads like a deployment manifest, not a

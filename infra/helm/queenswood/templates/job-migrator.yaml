@@ -103,8 +103,8 @@ volumes:
 # One-shot Job: applies FDB record metadata (via fdb/meta-store with
 # `migrate: true` enabled by FDB_MIGRATE=true) and declares the
 # Kafka topics. Runs first;
-# bootstrap-service Job runs after this one and handles the
-# internal-organization seed + policy records.
+# bootstrap-service Job runs after this one and seeds the policy
+# records and cash-account-product templates.
 #
 # The name comes from `queenswood.migratorJobName`, which is what keeps
 # a helm upgrade possible: a Job's pod template is immutable, so

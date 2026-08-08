@@ -11,20 +11,23 @@ base (owns `main.clj`) plus an image built from the shared
 never a bespoke Dockerfile. Every service Deployment waits on the
 bootstrap Job via a `wait-for-bootstrap` initContainer before
 starting; neither the migrator nor the bootstrap Job may be skipped
-in any deployment flow. A cross-pod startup dependency (an adapter
-waiting for its simulator) is expressed via the deployment's
-`waitFor` list, which adds a `wait-for-<dep>` initContainer polling
-the target's `/actuator/health/liveness`. Deploy flows
-share the same Helm release name (`bank`) so resource names don't
-diverge between them. Never bake an environment name into a resource
-name — discriminate via `values.yaml` overrides and env vars. A
-project MAY carry a service-specific `application.yml`; a service MAY
-set `replicas > 1` if it's HTTP-fronted or a processor that doesn't
-own a changelog cursor. `relay-service` stays at 1 — it owns every
-cursor, and a cursor has exactly one owner; scale that tier by
-sharding stores across deployments. Raising replicas elsewhere buys
-standbys rather than throughput until `message-bus/send` carries a
-partition key and topics have more than one partition.
+in any deployment flow. A cross-pod startup dependency is expressed
+via the deployment's `waitFor` list, which adds a `wait-for-<dep>`
+initContainer polling the target's `/actuator/health/liveness`.
+Deploy flows share the same Helm release name (`bank`) so resource
+names don't diverge between them. Never bake an environment name into
+a resource name — discriminate via `values.yaml` overrides and env
+vars. A project MAY carry a service-specific `application.yml`; a
+service MAY listen on more than one port, with `port` the primary
+(probes and the Service's `http` port target it) and further
+listeners in `extraPorts`; a service MAY set `replicas > 1` if it's
+HTTP-fronted or a processor that doesn't own a changelog cursor.
+`exclusive-dispatchers-service` stays at 1 — it owns every changelog
+cursor and every cron trigger, and each admits exactly one
+dispatcher; scale the relay tier by sharding stores across
+deployments. Raising replicas elsewhere buys standbys
+rather than throughput until `message-bus/send` carries a partition
+key and topics have more than one partition.
 See [deployment](../../../docs/recipes/deployment.md).
 
 ## Cloud infrastructure is Crossplane, not Terraform

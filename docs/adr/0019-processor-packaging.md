@@ -46,17 +46,22 @@ Grouping is by boundary, not throughput:
   [ADR-0018](0018-command-writes-are-earned.md) was applied to them
   and they went back to being synchronous — a group holds whatever
   earns a processor, so it shrinks as well as grows.
-- **`scheduler-processor-service`** — unchanged. The Quartz
-  runner is a per-JVM singleton timer; it stays alone so no group's
-  replica count can ever double-fire a trigger.
-- **External adapters and simulators** — unchanged, never grouped
-  with domain processors. They own outbox/intent stores and webhook
-  servers with their own lifecycles.
-- **`relay-service`** — the relay tier. Grouped by an ownership
-  constraint rather than a domain boundary: it hosts every store's
-  changelog runner, and a cursor has exactly one owner. Never grouped
-  with domain processors, because co-locating a cursor pins whatever
-  JVM hosts it. It carries no domain code — the runner is generic.
+- **`exclusive-dispatchers-service`** — work that must have exactly
+  one dispatcher, whatever else scales: every store's changelog runner
+  (a cursor has exactly one owner) and the Quartz scheduler (a trigger
+  is registered per JVM). Grouped by that constraint rather than a
+  domain boundary, and never grouped with domain processors — both
+  would double-act on a second replica, so co-locating either pins
+  whatever JVM hosts it. Putting them together is what leaves every
+  other group free. Neither carries domain code: the changelog runner
+  is generic, and the scheduler's tasks live in the bricks it calls.
+- **`external-adapters-service`** — every external-vendor adapter
+  and the simulator that stands in for that vendor, in one JVM.
+  Grouped away from domain processors, not by each other: they own
+  outbox/intent stores and webhook servers whose lifecycles differ
+  from a command processor's. An adapter reaches its simulator over
+  localhost rather than a Service, which removes the startup race
+  the cross-pod webhook registration had to retry around.
 
 Financial and operational processors never share a JVM: a poison
 message, memory spike, or deploy of a provisioning domain must not
@@ -69,21 +74,23 @@ Two invariants when regrouping:
   and changelog cursor identify the *consumer role*, not the pod
   that happens to host it; renaming one abandons a cursor and
   re-consumes or skips.
-- **Cursors live in `relay-service`, nowhere else.** A single-cursor
-  consumer pins its whole JVM to one replica, so hosting one inside a
-  processor group would pin that group. `relay-service` is pinned by
-  design; groups that host none are free of the constraint. Note that
-  freedom is necessary but not sufficient — every topic is currently
-  single-partition and `message-bus/send` passes no partition key, so
-  raising replicas buys standbys rather than throughput until that key
-  exists (ADR-0008).
+- **Exclusive work lives in one group, nowhere else.** A changelog
+  cursor and a cron trigger each admit exactly one dispatcher, so a
+  group hosting either is pinned to `replicas: 1`.
+  `exclusive-dispatchers-service` is pinned by design; every other
+  group is free of the constraint precisely because it hosts none.
+  Note that freedom is necessary but not sufficient — every topic is
+  currently single-partition and `message-bus/send` passes no
+  partition key, so raising replicas buys standbys rather than
+  throughput until that key exists (ADR-0008).
 
 ## Consequences
 
 Easier:
 
-- Three processor deployments instead of ten; CI's per-project
-  matrix and the Helm/Tilt/bake/release inventories shrink to match.
+- A handful of deployments instead of one per domain; CI's
+  per-project matrix and the Helm/bake/release inventories shrink to
+  match.
 - Regrouping is configuration and plumbing, never brick code.
   Promoting a hot domain to its own deployment (or moving one
   between groups) relocates its YAML, message-bus wiring, bundle require,

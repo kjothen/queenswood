@@ -1,3 +1,0 @@
-system:
-  telemetry: !include system/telemetry.yml
-  uk-companies-house-simulator-server: !include system/uk-companies-house-simulator-server.yml
