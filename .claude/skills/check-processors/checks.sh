@@ -9,7 +9,8 @@
 # Four of these now also gate every commit as semgrep rules, widened
 # from processor bricks to every brick, where the repo already had a
 # clean baseline: fdb-outside-store, no-changelog-watcher,
-# domain-requires-fdb-or-store, domain-schema-conversion (.semgrep.yml).
+# domain-requires-fdb-or-store, domain-schema-conversion
+# (.config/semgrep/semgrep.yml).
 # Running them here too costs nothing and keeps the audit readable as
 # one list. The rest can't move: rejection placement varies by brick
 # kind (a query brick's store legitimately rejects :X/not-found), and

@@ -14,8 +14,9 @@ Two project-specific rules sit on top of standard git practice:
    schedule, so a feature branch that hasn't pulled is
    likely already behind.
 2. **Don't manually bump dependency versions Renovate
-   manages.** Renovate (configured in `renovate.json`) handles
-   all Clojure `deps.edn` and GitHub Actions version bumps.
+   manages.** Renovate (configured in `.github/renovate.json`)
+   handles all Clojure `deps.edn` and GitHub Actions version
+   bumps.
    Manual bumps fight the next Renovate PR.
 
 ### Merging from main
@@ -37,7 +38,7 @@ real and needs human resolution.
 
 ### What Renovate manages
 
-`renovate.json` configures the bot to update:
+`.github/renovate.json` configures the bot to update:
 
 - Clojure dependencies in `deps.edn` files (workspace root,
   bricks, projects).
@@ -143,5 +144,5 @@ narrow so the bot's next PR can reconcile cleanly.
 
 ## References
 
-- `renovate.json` (workspace root)
+- `.github/renovate.json` (Renovate configuration)
 - [Renovate documentation](https://docs.renovatebot.com/)

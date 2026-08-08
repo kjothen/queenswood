@@ -68,6 +68,10 @@ lint:
   just lint-eastwood
   just lint-clj-kondo
 
+# Scan for semgrep guardrails (no args = all bricks, or pass paths)
+semgrep *paths="bases components projects":
+    semgrep --config .config/semgrep/semgrep.yml --error --disable-version-check {{ paths }}
+
 # Static-analysis metrics across all brick src dirs (cyclomatic, Halstead, MI).
 metrics:
     #!/usr/bin/env zsh

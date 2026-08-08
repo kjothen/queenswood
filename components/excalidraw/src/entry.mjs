@@ -1,3 +1,3 @@
 // esbuild entry: expose just the headless SVG exporter on the window.
-// Bundled to excalidraw-bundle.js by export-diagrams.mjs (git-ignored).
+// Bundled to gen/excalidraw-bundle.js by export.mjs.
 export { exportToSvg } from '@excalidraw/excalidraw';

@@ -1,41 +1,27 @@
 name: Release Images
 
-# Builds every Queenswood service image and pushes to ghcr.io with
-# the `:latest` tag. Runs from `main` (push) or manual trigger.
+# Builds the Queenswood images a push invalidated and pushes them to
+# ghcr.io with the `:latest` tag. Runs from `main` (push) or manual
+# trigger, which builds all of them.
 #
-# Strategy: fan out by architecture, not by service. Each matrix arm
-# runs natively on a GitHub-hosted runner of the right arch (no QEMU,
-# which is the wall-clock dominator), uses `docker buildx bake` to
-# build every service in parallel on that one runner, and pushes
-# `:latest-<arch>` tags. A final `manifest` job stitches the two
-# per-arch tags into a single multi-arch `:latest` manifest with
+# Fans out by architecture, not by service. Each matrix arm runs natively
+# on a runner of the right arch, so nothing builds under QEMU, and calls
+# `docker buildx bake` once for every selected target on that one runner:
+# a single invocation shares the Clojure base layer and the Maven
+# `--mount=type=cache` across them, which a matrix-per-service does not.
+# Each arm pushes `:latest-<arch>`, and the `manifest` job stitches the
+# per-arch tags into one multi-arch `:latest` with
 # `docker buildx imagetools create`.
 #
-# Why not matrix-per-service: bake's intra-runner parallelism shares
-# the Clojure base layer and the Maven `--mount=type=cache` across
-# every JVM service in one invocation. Splitting per service loses
-# that cache entirely and burns a multiple of the runner minutes for a slower
-# wall clock.
-#
-# First-run setup: GHCR packages are private by default. After the
-# first successful run, visit
+# First-run setup: GHCR packages are private by default. After the first
+# successful run, visit
 #   https://github.com/users/<owner>/packages/container/<service>/settings
-# for each service and flip the visibility to "public". Pulls into
-# the kind cluster rely on public access — the alternative would be
-# `helm registry login` plus a per-namespace imagePullSecret.
+# for each service and flip the visibility to "public". Pulls into the
+# kind cluster rely on public access.
 
 on:
   push:
     branches: [main]
-    # Skip when only chart/infra/docs changed — the chart workflow
-    # handles those and there's no reason to burn runner minutes
-    # rebuilding identical images.
-    paths-ignore:
-      - 'infra/helm/**'
-      - 'infra/bootstrap/**'
-      - 'docs/**'
-      - '*.md'
-      - '.github/workflows/release-chart.yml'
   workflow_dispatch:
 
 # `latest` is a single moving tag — serialise concurrent runs to
@@ -49,7 +35,54 @@ permissions:
   packages: write       # push images to ghcr.io
 
 jobs:
+  # Which images the push invalidated.
+  changes:
+    runs-on: ubuntu-latest
+
+    outputs:
+      # Space-separated bake targets, consumed by both jobs below.
+      targets: ${{ steps.targets.outputs.targets }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          # The classifier diffs against `github.event.before`, which has
+          # to be in the local history.
+          fetch-depth: 0
+
+      # Bucket definitions live in the script, shared with test.yml. The
+      # service Dockerfile is `COPY . .` minus its own
+      # Dockerfile.dockerignore: a console edit invalidates the JVM build
+      # context, but not the uberjar, which carries no console or ui code.
+      - name: Classify changed paths
+        id: decide
+        env:
+          ALL: ${{ github.event_name == 'workflow_dispatch' }}
+          BASE: ${{ github.event.before }}
+          HEAD: ${{ github.sha }}
+        run: ./scripts/ci-changed-paths.sh
+
+      - name: Compose bake targets
+        id: targets
+        env:
+          SERVICES: ${{ steps.decide.outputs.services }}
+          CONSOLE: ${{ steps.decide.outputs.console }}
+        run: |
+          targets=()
+          # bake's `services` matrix is one target per deployable project.
+          if [[ "$SERVICES" == "true" ]]; then
+            targets+=( $(ls projects/) )
+          fi
+          if [[ "$CONSOLE" == "true" ]]; then
+            targets+=( console )
+          fi
+          echo "targets=${targets[*]}" >> "$GITHUB_OUTPUT"
+          echo "building: ${targets[*]:-<nothing>}"
+
   build:
+    needs: changes
+    if: needs.changes.outputs.targets != ''
     strategy:
       # An amd64 failure shouldn't kill the arm64 run (or vice versa);
       # better to push one arch's `:latest-<arch>` and skip the
@@ -90,10 +123,11 @@ jobs:
       #
       # `cache-from`/`cache-to=type=gha` scoped per arch so each
       # runner has its own layer cache.
-      - name: Build and push all service images (${{ matrix.arch }})
+      - name: Build and push affected images (${{ matrix.arch }})
         env:
           REGISTRY: ghcr.io/${{ github.repository_owner }}/queenswood
           TAG: latest-${{ matrix.arch }}
+          TARGETS: ${{ needs.changes.outputs.targets }}
           # Provenance for the OCI labels in bake.hcl. The published tag
           # is `latest`, so the commit is otherwise unrecoverable from a
           # pulled image. CREATED is computed in the step body because
@@ -103,15 +137,18 @@ jobs:
         run: |
           CREATED="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
           export CREATED
+          # Unquoted on purpose: TARGETS is a space-separated list of
+          # bake target names and must word-split into arguments.
           docker buildx bake \
             -f infra/docker/bake.hcl \
             --set "*.platform=${{ matrix.platform }}" \
             --set "*.output=type=registry,push=true" \
             --set "*.cache-from=type=gha,scope=release-${{ matrix.arch }}" \
-            --set "*.cache-to=type=gha,scope=release-${{ matrix.arch }},mode=max"
+            --set "*.cache-to=type=gha,scope=release-${{ matrix.arch }},mode=max" \
+            $TARGETS
 
   manifest:
-    needs: build
+    needs: [changes, build]
     runs-on: ubuntu-latest
     steps:
       - name: Login to GHCR
@@ -126,26 +163,14 @@ jobs:
       # manifests are the per-arch images pushed above. No image data
       # is re-uploaded — only the manifest list is created.
       #
-      # The service list is the same one bake.hcl defines; kept in
-      # sync by hand. (Bake can emit it, but the extra dependency to
-      # parse JSON output from `docker buildx bake --print` isn't
-      # worth saving 15 lines here.)
+      # Only the images this run built: anything else has no fresh
+      # `:latest-<arch>` pair to stitch.
       - name: Stitch multi-arch manifests
         env:
           REGISTRY: ghcr.io/${{ github.repository_owner }}/queenswood
+          TARGETS: ${{ needs.changes.outputs.targets }}
         run: |
-          images=(
-            migrator-service
-            bootstrap-service
-            api-service
-            monolith-service
-            financial-processors-service
-            operational-processors-service
-            exclusive-dispatchers-service
-            external-adapters-service
-            console
-          )
-          for img in "${images[@]}"; do
+          for img in $TARGETS; do
             docker buildx imagetools create \
               -t "$REGISTRY/$img:latest" \
               "$REGISTRY/$img:latest-amd64" \

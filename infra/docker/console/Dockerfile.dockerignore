@@ -1,7 +1,6 @@
-# Per-Dockerfile ignore. The repo-root
-# .dockerignore is tuned for JVM service images and excludes
-# bases/console + infra/docker by default; this file
-# whitelists the bits this Dockerfile actually copies.
+# Per-Dockerfile ignore: excludes everything, then whitelists the bits this
+# Dockerfile actually copies. The JVM service images have their own, next to
+# infra/docker/service/Dockerfile.
 *
 
 # Yarn workspace root manifests. Yarn validates the whole workspace
