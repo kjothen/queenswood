@@ -117,6 +117,11 @@ a member, and an empty group is never a lockout.
 What the groups are and how they come to exist is
 [cloud-account](../recipes/cloud-account.md).
 
+The groups are not one per tier of seniority but one per capability that
+must be separable. Organization Administrator and Folder Administrator
+are two groups because the first cannot delete a folder and the second
+cannot touch organisation IAM, and collapsing them would hand out both.
+
 A billing account is the exception, and keeps one direct human
 administrator beside its group. The organisation has a recovery path
 outside its IAM policy; a billing account has none, so removing its last
@@ -138,9 +143,17 @@ The tier model in
 [cloud-deployment](../recipes/cloud-deployment.md) extends up to the
 projects themselves:
 
-- Folder, bootstrap project, management project, instance projects, DNS
-  zones and backup buckets are `Orphan` or `managementPolicies` without
-  `Delete`, and protected by GCP project **liens**.
+- Bootstrap project, management project, instance projects, DNS zones and
+  backup buckets carry `managementPolicies` without `Delete` — v2
+  namespaced resources have no `deletionPolicy` — and are protected by
+  GCP project **liens**.
+- The folder is protected differently, because liens are a project
+  mechanism and do not apply to folders. What protects it is that
+  `resourcemanager.folders.delete` is held by nobody: Organization
+  Administrator does not carry it, and the bootstrap identity is given
+  `folderCreator` and `folderIamAdmin` precisely so that it cannot.
+  Deleting one means joining `gcp-folder-admins@` deliberately. GCP also
+  refuses to delete a folder that still holds projects.
 - Instance clusters, CloudSQL instances, addresses and certificates are
   fully managed, `Delete` included.
 

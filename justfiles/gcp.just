@@ -9,8 +9,12 @@
 
 # Group names. Roles bind to these and never move; membership does. A
 # name says who is in the group, not what one of its bindings grants --
-# gcp-platform-operators holds two roles at two scopes, and calling it
-# after either would undersell what impersonation reaches.
+# gcp-platform-operators holds three roles at two scopes, and calling it
+# after any of them would undersell what impersonation reaches.
+#
+# Organization Administrator does not include resourcemanager.folders
+# .delete, so folder admins are a separate group. Both are empty in
+# steady state.
 # Throwaway control plane used to create the folder and the management
 # project, then discarded. Deliberately not XP_CLUSTER: that one is the
 # previous generation's permanent plane.
@@ -18,6 +22,7 @@ BOOT_CLUSTER := "qw-boot"
 BOOT_CTX := "kind-qw-boot"
 
 ADMINS_GROUP := "gcp-organization-admins"
+FOLDER_ADMINS_GROUP := "gcp-folder-admins"
 BILLING_GROUP := "gcp-billing-admins"
 OPERATORS_GROUP := "gcp-platform-operators"
 
@@ -339,6 +344,7 @@ gcp-groups-bind org="":
     MISSING=0
     for spec in \
       "{{ ADMINS_GROUP }}:roles/resourcemanager.organizationAdmin" \
+      "{{ FOLDER_ADMINS_GROUP }}:roles/resourcemanager.folderAdmin" \
       "{{ OPERATORS_GROUP }}:roles/resourcemanager.organizationViewer" \
       "{{ OPERATORS_GROUP }}:roles/browser" \
       "{{ BILLING_GROUP }}:" ; do
@@ -369,6 +375,7 @@ gcp-groups-bind org="":
 
     echo
     echo ">>> bound. Nobody should stand in {{ ADMINS_GROUP }}@${DOMAIN}"
+    echo ">>> or in {{ FOLDER_ADMINS_GROUP }}@${DOMAIN}"
     echo ">>> billing: as an administrator of the billing account, run"
     echo ">>>   gcloud billing accounts add-iam-policy-binding <account-id> \\"
     echo ">>>     --member=group:{{ BILLING_GROUP }}@${DOMAIN} --role=roles/billing.admin"
@@ -394,7 +401,8 @@ gcp-access-status org="":
     #!/usr/bin/env zsh
     set -e
     DOMAIN=$(just _gcp-domain "{{ org }}")
-    for NAME in {{ ADMINS_GROUP }} {{ OPERATORS_GROUP }} {{ BILLING_GROUP }} ; do
+    for NAME in {{ ADMINS_GROUP }} {{ FOLDER_ADMINS_GROUP }} \
+                {{ OPERATORS_GROUP }} {{ BILLING_GROUP }} ; do
       EMAIL="${NAME}@${DOMAIN}"
       echo "$EMAIL"
       if OUT=$(gcloud identity groups memberships list \

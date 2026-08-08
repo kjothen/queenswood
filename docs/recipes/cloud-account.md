@@ -49,10 +49,15 @@ action.
 
 ### 5. Create the access groups
 
-Three security groups, in `admin.google.com` under Directory then Groups:
+Four security groups, in `admin.google.com` under Directory then Groups:
 
 - `gcp-organization-admins@` — Organization Administrator. Empty in
   steady state; joining it is the break-glass act.
+- `gcp-folder-admins@` — Folder Administrator, and also empty. A separate
+  group because Organization Administrator does **not** carry
+  `resourcemanager.folders.delete`: without this nobody can delete or
+  move a folder at all, and the only route would be granting a role that
+  appears nowhere in the policy.
 - `gcp-platform-operators@` — Organization Viewer and Browser, and later
   the right to impersonate the bootstrap identity. Without Browser a
   folder is invisible in the console even to the account whose identity
@@ -152,7 +157,8 @@ excludes `getIamPolicy`, and group-derived roles never appear there.
 
 **MUST NOT:**
 
-- Leave anybody standing in `gcp-organization-admins@`.
+- Leave anybody standing in `gcp-organization-admins@` or
+  `gcp-folder-admins@`.
 - Give these groups an owner or a manager. Both are members.
 - Use `gcloud identity groups describe` to test whether a group exists.
 
