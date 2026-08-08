@@ -410,7 +410,10 @@ gcp-access-status org="":
                  --format='value(preferredMemberKey.id)' 2>/dev/null); then
         printf '%s\n' "${OUT:-  (empty)}" | sed 's/^/  /'
       else
-        echo "  not readable by this account"
+        # Restricted groups show their members only to members, so this
+        # is the expected reading for a group you are rightly not in.
+        # Auditing them is a super admin's job, in the Admin console.
+        echo "  not readable, so you are not in it"
       fi
     done
 
