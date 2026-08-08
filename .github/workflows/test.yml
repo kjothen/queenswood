@@ -236,10 +236,14 @@ jobs:
         uses: actions/checkout@v7
 
       # Matches the build stage of infra/docker/console/Dockerfile.
+      # package-manager-cache defaults on and shells out to the runner's
+      # global yarn 1, which refuses a project pinned to yarn 4; corepack
+      # below provides the pinned version.
       - name: Setup Node
         uses: actions/setup-node@v5
         with:
           node-version: 24
+          package-manager-cache: false
 
       - name: Enable corepack
         run: corepack enable
