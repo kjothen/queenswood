@@ -46,9 +46,12 @@ spec:
                   # Already the default, stated because it matters.
                   deletionProtection: true
             # A soft-deleted folder still reads as existing, so the
-            # provider reports Available over one scheduled for
-            # destruction. Ready must mean ACTIVE, or the composite lies
-            # for the whole 30-day window.
+            # provider reports this resource Ready for the whole 30-day
+            # window and goes on doing so -- 22 minutes of deletion
+            # produced no condition change, no event and no log line.
+            # This check moves the composite to Ready: False. The managed
+            # resource itself still says True, so alerting belongs on
+            # composites rather than on MRs.
             readinessChecks:
               - type: MatchString
                 fieldPath: status.atProvider.lifecycleState
