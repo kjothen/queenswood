@@ -62,13 +62,17 @@ bucket() {
 
 WORKSPACE='^(bases/|components/|deps/|projects/|deps\.edn$|workspace\.edn$|versions\.json$)'
 
+# The docs the console bundles. Landing.svelte `?raw`-imports ADRs, TDDs
+# and a recipe, and infra/docker/console/Dockerfile.dockerignore whitelists
+# exactly these three subtrees into the image build.
+BUNDLED_DOCS='^docs/(adr|tdd|recipes)/'
+
 # Runs the polylith matrix. `development/` carries project:dev's extra
 # paths, and scripts/ holds the hooks and check-versions.sh.
 bucket clojure "$WORKSPACE|^(development/|scripts/)|^\.github/workflows/test\.yml$" "$clojure_files"
 
-# Builds the console bundle and the ui showcase. docs/ counts because
-# Landing.svelte `?raw`-imports ADRs and TDDs into the bundle.
-bucket js "$CONSOLE_TREES|^(docs/|infra/docker/console/)|^\.github/workflows/test\.yml$"
+# Builds the console bundle and the ui showcase.
+bucket js "$CONSOLE_TREES|$BUNDLED_DOCS|^infra/docker/console/|^\.github/workflows/test\.yml$"
 
 bucket helm '^infra/helm/|^\.github/workflows/test\.yml$'
 
@@ -77,4 +81,4 @@ bucket helm '^infra/helm/|^\.github/workflows/test\.yml$'
 bucket services "$WORKSPACE|^infra/docker/(service/|bake\.hcl$)|^\.github/workflows/release-images\.yml$" "$clojure_files"
 
 # Goes into the console image.
-bucket console "$CONSOLE_TREES|^(docs/|infra/docker/console/)|^infra/docker/bake\.hcl$|^\.github/workflows/release-images\.yml$"
+bucket console "$CONSOLE_TREES|$BUNDLED_DOCS|^infra/docker/console/|^infra/docker/bake\.hcl$|^\.github/workflows/release-images\.yml$"

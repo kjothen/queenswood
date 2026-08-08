@@ -52,9 +52,9 @@ jobs:
           fetch-depth: 0
 
       # Bucket definitions live in the script, shared with test.yml. The
-      # service Dockerfile is `COPY . .` minus `.dockerignore`: a console
-      # edit invalidates the JVM build context, but not the uberjar, which
-      # carries no console or ui code.
+      # service Dockerfile is `COPY . .` minus its own
+      # Dockerfile.dockerignore: a console edit invalidates the JVM build
+      # context, but not the uberjar, which carries no console or ui code.
       - name: Classify changed paths
         id: decide
         env:

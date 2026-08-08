@@ -8,9 +8,9 @@ variable "REGISTRY" { default = "ghcr.io/repldriven/queenswood" }
 variable "TAG"      { default = "dev" }
 
 // Provenance. The uberjar carries no usable version of its own: the
-// build stage runs `uber :snapshot true` because `.dockerignore`
-// excludes `.git`, so `git-count-revs` has no repository to count and
-// returns nil. The published tag is `latest`, so without these labels
+// build stage runs `uber :snapshot true` because the service's
+// Dockerfile.dockerignore excludes `.git`, so `git-count-revs` has no
+// repository to count and returns nil. The published tag is `latest`, so without these labels
 // there is nothing on an image saying which commit produced it.
 //
 // REVISION and CREATED are supplied by the release workflow and left

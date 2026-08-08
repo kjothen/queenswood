@@ -1,0 +1,4 @@
+# This build reads nothing from the main context — it seeds the Maven cache
+# from the `m2` named build context alone. Sending an empty context keeps the
+# repo, its .git and its node_modules out of the transfer.
+*
