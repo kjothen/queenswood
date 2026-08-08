@@ -477,30 +477,16 @@ gcp-plane-up:
     kind get clusters | grep -q '^{{ BOOT_CLUSTER }}$' \
       || kind create cluster --name '{{ BOOT_CLUSTER }}'
 
-    helm repo add crossplane-stable https://charts.crossplane.io/stable \
-      --kube-context {{ BOOT_CTX }} >/dev/null
-    helm repo update --kube-context {{ BOOT_CTX }} >/dev/null
-    helm upgrade --install crossplane crossplane-stable/crossplane \
+    # The xp-mp chart, not a hand-written provider pin: it already
+    # holds the versions for Crossplane, every GCP provider and the
+    # function, and the audit treats it as the source of truth. Argo is
+    # off -- a plane that lives for minutes has nothing to reconcile
+    # from git.
+    helm dependency build infra/helm/xp-mp >/dev/null
+    helm upgrade --install xp-mp infra/helm/xp-mp \
       --kube-context {{ BOOT_CTX }} \
-      --namespace crossplane-system --create-namespace --wait
-
-    # Only what a folder needs. The other providers arrive with the rest
-    # of the composite.
-    kubectl --context {{ BOOT_CTX }} apply -f - <<'YAML'
-    apiVersion: pkg.crossplane.io/v1
-    kind: Provider
-    metadata:
-      name: provider-gcp-cloudplatform
-    spec:
-      package: xpkg.upbound.io/upbound/provider-gcp-cloudplatform:v2.5.1
-    ---
-    apiVersion: pkg.crossplane.io/v1
-    kind: Function
-    metadata:
-      name: function-patch-and-transform
-    spec:
-      package: xpkg.crossplane.io/crossplane-contrib/function-patch-and-transform:v0.8.2
-    YAML
+      --namespace crossplane-system --create-namespace \
+      --set argo-cd.enabled=false --wait
 
     echo ">>> waiting for the provider and function"
     kubectl --context {{ BOOT_CTX }} wait --for=condition=healthy --timeout=300s \
@@ -541,7 +527,7 @@ gcp-plane-up:
     echo ">>> plane ready. Next: just gcp-plane-apply <parent> [display-name]"
 
 # Create or adopt the folder, e.g. just gcp-plane-apply organizations/85415540850
-gcp-plane-apply parent name="" folder="":
+gcp-plane-apply parent name="" folder="" mgmt="" billing="":
     #!/usr/bin/env zsh
     set -e
     # Suffixed like every project id, because a folder's display name
@@ -571,6 +557,25 @@ gcp-plane-apply parent name="" folder="":
         exit 1
       fi
     fi
+    BILLING="{{ billing }}"
+    if [[ -z "$BILLING" ]]; then
+      BILLING=$(gcloud billing accounts list --filter='OPEN=True' \
+                  --format='value(ACCOUNT_ID)' | head -1 || true)
+    fi
+    if [[ -z "$BILLING" ]]; then
+      echo "no open billing account; pass one" >&2
+      exit 1
+    fi
+
+    # A project id is consumed permanently and cannot be undeleted into
+    # usefulness, so it is generated once and then carried in the
+    # manifest. That is what stops a rebuilt plane minting a second one.
+    MGMT="{{ mgmt }}"
+    if [[ -z "$MGMT" ]]; then
+      MGMT="queenswood-mgmt-$(openssl rand -hex 3)"
+      echo ">>> naming the management project $MGMT"
+    fi
+
     FOLDER="{{ folder }}"
     if [[ -n "$FOLDER" && "$FOLDER" != folders/* ]]; then
       FOLDER="folders/$FOLDER"
@@ -579,6 +584,7 @@ gcp-plane-apply parent name="" folder="":
     if [[ -n "$FOLDER" ]]; then
       ADOPT="folderId: $FOLDER"
     fi
+    PARENT_ECHO="{{ parent }}"
 
     kubectl --context {{ BOOT_CTX }} apply -f - <<YAML
     apiVersion: platform.queenswood.repldriven.com/v1alpha1
@@ -587,13 +593,18 @@ gcp-plane-apply parent name="" folder="":
       name: queenswood
       namespace: crossplane-system
     spec:
+      billingAccountId: "$BILLING"
+      management:
+        projectId: "$MGMT"
       createFolder:
         parent: "{{ parent }}"
         displayName: "$NAME"
         $ADOPT
     YAML
 
-    echo ">>> waiting for the folder"
+    echo ">>> commit this to keep the installation reproducible:"
+    echo ">>>   parent=$PARENT_ECHO folder=$FOLDER mgmt=$MGMT"
+    echo ">>> waiting for the folder and management project"
     kubectl --context {{ BOOT_CTX }} -n crossplane-system wait \
       --for=condition=ready --timeout=300s \
       xqueenswoodinstallation/queenswood || true

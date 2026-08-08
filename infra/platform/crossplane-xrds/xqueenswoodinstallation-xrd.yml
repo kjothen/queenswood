@@ -22,10 +22,31 @@ spec:
               type: object
               required:
                 - createFolder
+                - billingAccountId
               properties:
                 # Folder only, for now. The management project, the
                 # durable tier and the instances join this spec as they
                 # are built; see docs/recipes/cloud-foundation.md.
+                billingAccountId:
+                  type: string
+                  description: |
+                    Billing account for every project in the
+                    installation. The bootstrap identity holds
+                    billing.user on it.
+                management:
+                  type: object
+                  properties:
+                    projectId:
+                      type: string
+                      description: |
+                        An existing management project to adopt. Unlike a
+                        folder there is no undelete worth the name and a
+                        project id is consumed permanently, so a rebuilt
+                        plane must be told, or it mints a second one that
+                        cannot be reclaimed.
+                    displayName:
+                      type: string
+                      default: queenswood management
                 createFolder:
                   type: object
                   required:
@@ -62,6 +83,9 @@ spec:
             status:
               type: object
               properties:
+                managementProjectId:
+                  type: string
+                  description: The management project, once it exists.
                 folderId:
                   type: string
                   description: |

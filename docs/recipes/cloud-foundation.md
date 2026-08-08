@@ -102,6 +102,11 @@ existing folder instead of creating one, which is what makes a rebuilt
 control plane take over rather than build a second installation beside
 the first.
 
+`spec.management.projectId` is always supplied rather than optional. A
+project id is consumed permanently and cannot be undeleted into
+usefulness, so carrying it in the manifest is what stops a rebuilt plane
+minting a second management project beside the first.
+
 Deleting a folder is not something reconciliation repairs. A soft-deleted
 folder still reads as existing, so the provider reports it Available for
 the whole 30-day window; the composite's readiness check on
@@ -192,10 +197,13 @@ request runs as the platform identity.
 
 ### Where this stands
 
-`justfiles/cloud.just` and the `queenswood-gcp` chart are what run today:
-one instance's project-scoped resources, with the project id supplied
-rather than created. This is where that goes, per
-[ADR-0022](../adr/0022-cloud-foundation-and-environment-lifecycle.md).
+The composite creates the folder, the management project and the APIs
+that project needs, and nothing below that yet. Instances, the durable
+tier and `state: draining` are described above because that is where
+this goes, per
+[ADR-0022](../adr/0022-cloud-foundation-and-environment-lifecycle.md);
+`justfiles/cloud.just` and the `queenswood-gcp` chart are what run an
+instance today.
 
 New GCP recipes go in `justfiles/gcp.just`, and anything still needed
 from `cloud.just` moves across rather than being called into. That way
