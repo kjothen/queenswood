@@ -121,42 +121,34 @@ going to apply the manifest for you.
 
 ### If you have no account at all
 
-- Sign up for Cloud Identity Free. This creates the organisation, plus
-  one super admin account.
-- Verify the domain it is signed up against, with a TXT record at that
-  domain's registrar.
-- Create a billing account and attach a payment method.
-- Reconcile conflict accounts — personal Google accounts already using
-  an address on that domain.
-
-None of this has an API, so none of it is a recipe. Cloud Identity needs
-a domain you control, which is Google's condition for creating an
-organisation rather than anything Queenswood asks for, and it does not
-have to be a domain Queenswood is served on.
-
-Signing in to the console with a personal Google account is not the same
-thing. That gives you projects with no organisation above them, and so
-no folder to install into.
+An organisation comes from Cloud Identity rather than from Google Cloud,
+and claiming a domain, creating the billing account and setting up the
+access groups is a browser exercise with no API behind it. That is a
+runbook of its own: [cloud-account](cloud-account.md). Come back when
+`just gcp-preflight` reports an organisation and a billing account.
 
 ### Standing it up
 
 1. `just gcp-preflight` — reports the organisation, the billing account,
    the organisation roles bound directly to you, and the parents a
    folder could be created under.
-2. `just gcp-bootstrap-identity` — creates one small project to hold the
-   bootstrap service account, grants it the rights above, and grants you
-   `serviceAccountTokenCreator` so you can impersonate it. The project
-   is retained: it costs nothing, and a project id is consumed
-   permanently. Drop that one binding when you are done, and add it back
-   when you next need to act.
-3. `just gcp-plane-up` — a local kind cluster running Crossplane and the
-   Configuration package, authenticating as that service account.
-4. Apply the manifest with `spec.createFolder` in place of
+2. `just gcp-bootstrap-identity`, as the operating user — creates one
+   small project to hold the bootstrap service account, grants it
+   `billing.user`, and gives `gcp-platform-operators@` the right to
+   impersonate it. The project is retained: it costs nothing, and a
+   project id is consumed permanently.
+3. `just gcp-bootstrap-org-roles`, as a member of
+   `gcp-organization-admins@` — grants the identity the organisation
+   roles only an organisation admin can grant. Two recipes because two
+   accounts are involved, and this is the one that needs break-glass.
+4. `just gcp-plane-up` — a local kind cluster running Crossplane and the
+   Configuration package, impersonating that service account.
+5. Apply the manifest with `spec.createFolder` in place of
    `spec.folderId`, naming the parent to nest the folder under — the
    organisation, or an existing folder.
-5. Read the folder id, the management project id and the platform
+6. Read the folder id, the management project id and the platform
    identity out of the composite's `status`.
-6. `just gcp-plane-pivot` — move the manifest onto the management
+7. `just gcp-plane-pivot` — move the manifest onto the management
    cluster it just created, then discard the kind cluster.
 
 The local plane exists for minutes, not permanently. After the pivot the
@@ -164,8 +156,9 @@ management cluster reconciles its own project and folder, which is what
 the liens are for: a live Crossplane that can delete its own project is
 the hazard.
 
-Break-glass is you, using your organisation rights, with nothing
-standing the rest of the time.
+Break-glass is joining `gcp-organization-admins@` for as long as step 3
+takes, and leaving. Nothing stands between times, and the joining is
+recorded.
 
 ## If you are given a folder
 
@@ -225,19 +218,24 @@ Neither ever has a key. `iam.disableServiceAccountKeyCreation` is
 enforced on the folder, so the stored-credential shortcut is unavailable
 rather than discouraged.
 
-Impersonate deliberately even when you could simply hold the rights. The
-whole role set is revoked by removing one `serviceAccountTokenCreator`
-binding, without touching any folder or organisation policy, and granted
-again the same way. Elevation becomes an explicit act, so your everyday
-identity cannot do damage by accident. The tokens are short-lived rather
-than a long-lived login. Audit logs still name you, through
-`serviceAccountDelegationInfo`, while the acting principal stays narrow.
-And swapping yourself for a federated repository principal later changes
-who may assume the identity, not what the identity is.
+Impersonate deliberately even when you could simply hold the rights.
+Elevation becomes an explicit act, so your everyday identity cannot do
+damage by accident. The tokens are short-lived rather than a long-lived
+login. Audit logs still name you, through `serviceAccountDelegationInfo`,
+while the acting principal stays narrow. And swapping yourself for a
+federated repository principal later changes who may assume the identity,
+not what the identity is.
 
-What it does not do is bound you. Creating the service account takes
-organisation rights in the first place, so you can always grant yourself
-back in. This removes standing authority, not authority.
+`serviceAccountTokenCreator` on the bootstrap identity is held by
+`gcp-platform-operators@`, never by a person, so who may act as it is a
+question of group membership. Revoking is leaving the group: one place,
+no policy edit, and recorded in the Admin audit log — which
+`gcloud config set account` is not. See
+[cloud-account](cloud-account.md) for how the groups are created.
+
+What none of this does is bound you. A Workspace super admin can rejoin
+the admins group and grant anything back. This removes standing
+authority, not authority.
 
 ### What lives in git
 
@@ -271,6 +269,16 @@ the project id as a given. The shape here is where that is going, per
   directly.
 - Apply from merged state only. A `pull_request` trigger gets no cloud
   identity.
+- Bind groups where humans hold access, and principals directly where
+  automation does. Membership is the lever worth having for people; for a
+  service account, the recipe that grants the role is the only thing that
+  would ever change the holder, so the indirection buys nothing and adds
+  a propagation delay to automation. Which is why the bootstrap
+  identity's organisation roles are bound to it directly, while
+  `serviceAccountTokenCreator` on it belongs to a group — who may act as
+  it is a human question.
+- Keep one direct human administrator on a billing account alongside its
+  group. It has no recovery path outside its own policy.
 - Give each folder its own identity. The rights are folder-scoped, so
   one identity cannot serve two installations.
 - Pivot the manifest off a throwaway control plane before discarding it.
@@ -278,10 +286,13 @@ the project id as a given. The shape here is where that is going, per
 
 **MUST NOT:**
 
-- Grant a person `serviceAccountTokenCreator` on the platform identity,
-  or create a key for either identity.
+- Grant a person `serviceAccountTokenCreator` on either identity, or
+  create a key for either. That right belongs to a group, so that
+  leaving the group is the revocation.
 - Carry the bootstrap identity's rights on your own account. Impersonate
-  it instead, so one binding grants and revokes the lot.
+  it instead.
+- Leave anybody standing in `gcp-organization-admins@`, or leave a
+  break-glass credential in the local gcloud store.
 - Assume you can create a folder. Plenty of organisations won't grant
   it, and only one of the two paths needs it.
 - Make retention or liens a spec field, or delete a project as a side
@@ -301,9 +312,13 @@ the project id as a given. The shape here is where that is going, per
   why foundations are liened rather than deleted.
 - [ADR-0016](../adr/0016-crossplane-over-terraform.md) — why
   infrastructure is declared rather than scripted.
+- [cloud-account](cloud-account.md) — claiming a domain, the access
+  groups, and the billing account. Everything with no API behind it.
 - [cloud-deployment](cloud-deployment.md) — the tier model and the
   up/down runbook for an instance.
 - [infrastructure](../tdd/infrastructure.md) — the bootstrap chain,
   sync waves, and the compositions this builds on.
-- `justfiles/foundation.just` — `gcp-preflight`. The recipes named in
-  the runbooks above are not written yet.
+- `justfiles/foundation.just` — `gcp-preflight`, `gcp-groups-create`,
+  `gcp-access-grant` / `-revoke` / `-status`, `gcp-bootstrap-identity`,
+  `gcp-bootstrap-org-roles`, `gcp-bootstrap-status`. The `gcp-plane-*`
+  recipes are not written yet.
