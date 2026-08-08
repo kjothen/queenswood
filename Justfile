@@ -39,6 +39,7 @@ list:
 import 'justfiles/github.just'
 import 'justfiles/build.just'
 import 'justfiles/cloud.just'
+import 'justfiles/foundation.just'
 import 'justfiles/docker/docker.just'
 import 'justfiles/deploy.just'
 import 'justfiles/run.just'
