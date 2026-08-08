@@ -95,11 +95,17 @@ project, or one small project you create for it.
 `spec.createFolder.displayName` labels the installation for people and
 nothing else — the folder id is the identifier, and a folder handed to
 you carries whatever name its organisation chose. `gcp-plane-apply`
-suffixes it like a project id unless you pass one, since GCP allows two
-folders with the same name under one parent and a console cannot tell
-them apart. `spec.createFolder.folderId` adopts an existing folder instead of
-creating one, which is what makes a rebuilt control plane take over
-rather than build a second installation beside the first.
+suffixes it like a project id unless you pass one, since display names
+must be unique among siblings and a fixed name would refuse the second
+installation under a parent. `spec.createFolder.folderId` adopts an
+existing folder instead of creating one, which is what makes a rebuilt
+control plane take over rather than build a second installation beside
+the first.
+
+Deleting a folder is not something reconciliation repairs. A soft-deleted
+folder still reads as existing, so the provider reports it Available for
+the whole 30-day window; the composite's readiness check on
+`lifecycleState` is what turns that into a visible failure.
 
 `spec.createFolder.parent` takes `organizations/{id}` or `folders/{id}`,
 and `folders.create` is checked on that parent. So the split below is

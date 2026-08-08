@@ -46,9 +46,9 @@ spec:
                         else -- the folder id is the identifier, and a
                         folder handed to you carries whatever name its
                         organisation chose. Suffixed like a project id by
-                        default, because two folders called queenswood
-                        cannot be told apart in a console and GCP permits
-                        exactly that.
+                        default: display names must be unique among
+                        siblings, so a fixed name means the second
+                        installation under a parent is refused.
                     folderId:
                       type: string
                       pattern: '^folders/[0-9]+$'

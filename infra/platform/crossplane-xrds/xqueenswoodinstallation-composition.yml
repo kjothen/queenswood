@@ -40,6 +40,19 @@ spec:
                 forProvider:
                   displayName: queenswood
                   parent: organizations/0
+                  # Stops the provider deleting the folder. Not a
+                  # person: a console delete goes through regardless,
+                  # which is what nobody holding folders.delete is for.
+                  # Already the default, stated because it matters.
+                  deletionProtection: true
+            # A soft-deleted folder still reads as existing, so the
+            # provider reports Available over one scheduled for
+            # destruction. Ready must mean ACTIVE, or the composite lies
+            # for the whole 30-day window.
+            readinessChecks:
+              - type: MatchString
+                fieldPath: status.atProvider.lifecycleState
+                matchString: ACTIVE
             patches:
               # Adoption. Skipped when absent, so a first run creates and
               # a rebuild takes over what is already there.

@@ -57,7 +57,9 @@ Four security groups, in `admin.google.com` under Directory then Groups:
   group because Organization Administrator does **not** carry
   `resourcemanager.folders.delete`: without this nobody can delete or
   move a folder at all, and the only route would be granting a role that
-  appears nowhere in the policy.
+  appears nowhere in the policy. Note that deleting a folder is not
+  something reconciliation undoes — see
+  [cloud-foundation](cloud-foundation.md).
 - `gcp-platform-operators@` — Organization Viewer and Browser, and later
   the right to impersonate the bootstrap identity. Without Browser a
   folder is invisible in the console even to the account whose identity
