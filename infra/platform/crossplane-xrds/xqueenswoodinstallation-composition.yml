@@ -41,6 +41,10 @@ spec:
                   displayName: queenswood
                   parent: organizations/0
             patches:
+              # Adoption. Skipped when absent, so a first run creates and
+              # a rebuild takes over what is already there.
+              - fromFieldPath: spec.createFolder.folderId
+                toFieldPath: metadata.annotations[crossplane.io/external-name]
               - fromFieldPath: spec.createFolder.parent
                 toFieldPath: spec.forProvider.parent
               - fromFieldPath: spec.createFolder.displayName

@@ -529,8 +529,8 @@ gcp-plane-up:
     echo
     echo ">>> plane ready. Next: just gcp-plane-apply <parent> [display-name]"
 
-# Create the folder, e.g. just gcp-plane-apply organizations/85415540850
-gcp-plane-apply parent name="queenswood":
+# Create or adopt the folder, e.g. just gcp-plane-apply organizations/85415540850
+gcp-plane-apply parent name="queenswood" folder="":
     #!/usr/bin/env zsh
     set -e
     kubectl --context {{ BOOT_CTX }} apply -f - <<YAML
@@ -543,6 +543,7 @@ gcp-plane-apply parent name="queenswood":
       createFolder:
         parent: "{{ parent }}"
         displayName: "{{ name }}"
+        {{ if folder == "" { "" } else { "folderId: " + folder } }}
     YAML
 
     echo ">>> waiting for the folder"

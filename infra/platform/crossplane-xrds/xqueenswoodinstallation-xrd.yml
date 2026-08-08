@@ -1,4 +1,4 @@
-apiVersion: apiextensions.crossplane.io/v1
+apiVersion: apiextensions.crossplane.io/v2
 kind: CompositeResourceDefinition
 metadata:
   name: xqueenswoodinstallations.platform.queenswood.repldriven.com
@@ -41,6 +41,16 @@ spec:
                     displayName:
                       type: string
                       default: queenswood
+                    folderId:
+                      type: string
+                      pattern: '^folders/[0-9]+$'
+                      description: |
+                        An existing folder to adopt instead of creating
+                        one. A rebuilt control plane has no record of
+                        what the last one made, and GCP permits two
+                        folders with the same display name under one
+                        parent, so without this a rebuild silently
+                        creates a second installation.
             status:
               type: object
               properties:
