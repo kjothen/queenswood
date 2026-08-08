@@ -194,9 +194,9 @@ clojure -M:poly test brick:<brick1>:<brick2> project:dev
 # Code generation prep (add :force true after a schema change)
 clj -X:deps prep :aliases '[:dev]'
 
-# Pre-commit hook install (once per clone)
-cp scripts/hooks/pre-commit .git/hooks/pre-commit
-chmod +x .git/hooks/pre-commit
+# Install the pre-commit hook (once per clone, and again whenever
+# scripts/hooks/pre-commit changes — the hook is a copy, not a symlink)
+just install-hooks
 ```
 
 @AGENTS.md
