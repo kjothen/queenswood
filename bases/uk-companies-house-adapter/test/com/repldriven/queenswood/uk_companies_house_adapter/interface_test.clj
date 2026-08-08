@@ -5,16 +5,15 @@
   simulator and caches to FDB, and the reply comes back on the response
   channel deserialised against the `company` schema."
   (:require
-    [com.repldriven.queenswood.uk-companies-house-adapter.system]
+    [com.repldriven.queenswood.uk-companies-house-adapter.interface]
 
     [com.repldriven.queenswood.fdb.interface]
     [com.repldriven.queenswood.schema.interface]
     [com.repldriven.queenswood.testcontainers.interface]
-    [com.repldriven.queenswood.uk-companies-house-simulator.system]
 
     [com.repldriven.mono.command-processor.interface]
 
-    [com.repldriven.queenswood.uk-companies-house-simulator.api :as
+    [com.repldriven.queenswood.uk-companies-house-simulator.interface :as
      simulator-api]
 
     [com.repldriven.mono.avro.interface :as avro]

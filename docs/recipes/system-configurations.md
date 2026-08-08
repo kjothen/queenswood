@@ -179,7 +179,7 @@ that would otherwise catch it drifting:
   `application.yml`. Every brick test can pass against a service that
   cannot start.
 
-Three have been found this way. `relay-service` inlined its relay
+Three have been found this way. The relay wiring inlined its relay
 handlers and kept naming two component-kinds after they were deleted —
 the service could not have started, and `poly check` was green.
 `bootstrap-service` inlined all four cash-account-product template

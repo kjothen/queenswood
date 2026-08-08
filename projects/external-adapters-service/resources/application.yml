@@ -1,0 +1,114 @@
+system:
+  kafka:
+    schemas: !system/component
+      system/component-kind: avro/serde
+      schemas:
+        command: schemas/command/command-envelope.avsc.json
+        command-response: schemas/command/command-response.avsc.json
+        event: schemas/event/event-envelope.avsc.json
+    producers: !system/component
+      system/component-kind: kafka/producers
+      schemes-payment-command-response:
+        schemas: !system/local-ref schemas
+        schema: !keyword command-response
+        conf:
+          bootstrap.servers: !env KAFKA_BOOTSTRAP_SERVERS
+          topic: topic-schemes-payment-command-response
+          acks: all
+      schemes-payments-event:
+        schemas: !system/local-ref schemas
+        schema: !keyword event
+        conf:
+          bootstrap.servers: !env KAFKA_BOOTSTRAP_SERVERS
+          topic: topic-schemes-payments-event
+          acks: all
+      idv-command-response:
+        schemas: !system/local-ref schemas
+        schema: !keyword command-response
+        conf:
+          bootstrap.servers: !env KAFKA_BOOTSTRAP_SERVERS
+          topic: topic-idv-command-response
+          acks: all
+      idv-event:
+        schemas: !system/local-ref schemas
+        schema: !keyword event
+        conf:
+          bootstrap.servers: !env KAFKA_BOOTSTRAP_SERVERS
+          topic: topic-idv-event
+          acks: all
+      companies-command-response:
+        schemas: !system/local-ref schemas
+        schema: !keyword command-response
+        conf:
+          bootstrap.servers: !env KAFKA_BOOTSTRAP_SERVERS
+          topic: topic-companies-command-response
+          acks: all
+      schemes-payment-command-dlq:
+        conf:
+          bootstrap.servers: !env KAFKA_BOOTSTRAP_SERVERS
+          topic: topic-schemes-payment-command-dlq
+          acks: all
+    # The group.ids name the per-adapter services this one absorbed.
+    # They are carried over verbatim: a consumer group identifies the
+    # consumer role, not the pod hosting it, and renaming one
+    # re-consumes or skips (ADR-0019 cursor continuity).
+    consumers: !system/component
+      system/component-kind: kafka/consumers
+      schemes-payment-command:
+        schemas: !system/local-ref schemas
+        schema: !keyword command
+        topics: [topic-schemes-payment-command]
+        dead-letter-producer: !system/local-ref producers.schemes-payment-command-dlq
+        max-redeliveries: 5
+        conf:
+          bootstrap.servers: !env KAFKA_BOOTSTRAP_SERVERS
+          group.id: clearbank-adapter-service-schemes-payment-command
+      idv-command:
+        schemas: !system/local-ref schemas
+        schema: !keyword command
+        topics: [topic-idv-command]
+        conf:
+          bootstrap.servers: !env KAFKA_BOOTSTRAP_SERVERS
+          group.id: onfido-adapter-service-idv-command
+      companies-command:
+        schemas: !system/local-ref schemas
+        schema: !keyword command
+        topics: [topic-companies-command]
+        conf:
+          bootstrap.servers: !env KAFKA_BOOTSTRAP_SERVERS
+          group.id: uk-companies-house-adapter-service-companies-command
+    message-bus-producers: !system/component
+      system/component-kind: kafka/message-bus-producers
+      schemes-payment-command-response:
+        producer: !system/local-ref producers.schemes-payment-command-response
+      schemes-payments-event:
+        producer: !system/local-ref producers.schemes-payments-event
+      idv-command-response:
+        producer: !system/local-ref producers.idv-command-response
+      idv-event:
+        producer: !system/local-ref producers.idv-event
+      companies-command-response:
+        producer: !system/local-ref producers.companies-command-response
+    message-bus-consumers: !system/component
+      system/component-kind: kafka/message-bus-consumers
+      schemes-payment-command:
+        consumer: !system/local-ref consumers.schemes-payment-command
+        timeout: 500
+      idv-command:
+        consumer: !system/local-ref consumers.idv-command
+        timeout: 500
+      companies-command:
+        consumer: !system/local-ref consumers.companies-command
+        timeout: 500
+  message-bus: !include system/message-bus.yml
+  fdb: !include system/fdb.yml
+  avro: !include system/avro.yml
+  telemetry: !include system/telemetry.yml
+  clearbank-simulator-server: !include system/clearbank-simulator-server.yml
+  clearbank-adapter-server: !include system/clearbank-adapter-server.yml
+  clearbank-adapter: !include system/clearbank-adapter.yml
+  onfido-simulator-server: !include system/onfido-simulator-server.yml
+  onfido-adapter-server: !include system/onfido-adapter-server.yml
+  onfido-adapter: !include system/onfido-adapter.yml
+  uk-companies-house-simulator-server: !include system/uk-companies-house-simulator-server.yml
+  uk-companies-house-adapter: !include system/uk-companies-house-adapter.yml

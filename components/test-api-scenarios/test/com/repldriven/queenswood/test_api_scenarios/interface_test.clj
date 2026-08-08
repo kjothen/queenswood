@@ -10,17 +10,15 @@
   (:require
     [com.repldriven.queenswood.test-api-scenarios.system]
 
-    [com.repldriven.queenswood.uk-companies-house-simulator.system]
-
     [com.repldriven.queenswood.test-api-scenarios.interface :as SUT]
 
     [com.repldriven.queenswood.api.api :as api]
-    [com.repldriven.queenswood.clearbank-adapter.api :as cb-adapter]
-    [com.repldriven.queenswood.clearbank-simulator.api :as cb-simulator]
-    [com.repldriven.queenswood.onfido-adapter.api :as onfido-adapter]
-    [com.repldriven.queenswood.onfido-simulator.api :as onfido-simulator]
-    [com.repldriven.queenswood.uk-companies-house-simulator.api :as
-     ch-simulator]
+    [com.repldriven.queenswood.clearbank-adapter.interface :as cb-adapter]
+    [com.repldriven.queenswood.clearbank-simulator.interface :as cb-simulator]
+    [com.repldriven.queenswood.onfido-adapter.interface :as onfido-adapter]
+    [com.repldriven.queenswood.onfido-simulator.interface :as onfido-simulator]
+    [com.repldriven.queenswood.uk-companies-house-simulator.interface :as
+     ukch-simulator]
 
     [com.repldriven.mono.http-client.interface :as http]
     [com.repldriven.mono.log.interface :as log]
@@ -75,7 +73,7 @@
       (assoc-in [:system/defs :onfido-adapter-server :handler]
                 onfido-adapter/app)
       (assoc-in [:system/defs :uk-companies-house-simulator-server :handler]
-                ch-simulator/app)))
+                ukch-simulator/app)))
 
 (defn- scenario-files
   "Walk `bank-test-api-scenarios/scenarios/` recursively, returning

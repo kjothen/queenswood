@@ -13,8 +13,8 @@ name: Release Images
 #
 # Why not matrix-per-service: bake's intra-runner parallelism shares
 # the Clojure base layer and the Maven `--mount=type=cache` across
-# all 13 JVM services in one invocation. Splitting per service loses
-# that cache entirely and burns ~13x the runner minutes for a slower
+# every JVM service in one invocation. Splitting per service loses
+# that cache entirely and burns a multiple of the runner minutes for a slower
 # wall clock.
 #
 # First-run setup: GHCR packages are private by default. After the
@@ -141,14 +141,8 @@ jobs:
             monolith-service
             financial-processors-service
             operational-processors-service
-            scheduler-processor-service
-            relay-service
-            clearbank-adapter-service
-            clearbank-simulator-service
-            onfido-adapter-service
-            onfido-simulator-service
-            uk-companies-house-adapter-service
-            uk-companies-house-simulator-service
+            exclusive-dispatchers-service
+            external-adapters-service
             console
           )
           for img in "${images[@]}"; do

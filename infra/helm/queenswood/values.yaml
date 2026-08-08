@@ -128,9 +128,10 @@ migrator:
     limits: { cpu: "1000m", memory: "1Gi" }
     requests: { cpu: "100m", memory: "512Mi" }
 
-# -- One-shot bootstrap Job. Idempotently seeds the singleton
-# internal Queenswood organization + platform/micro Policy records.
-# Runs after the migrator Job; service Deployments block on this
+# -- One-shot bootstrap Job. Idempotently seeds the platform and micro
+# Policy records and the four cash-account-product templates. There is
+# no organization to seed -- a user's first login creates their own
+# bank. Runs after the migrator Job; service Deployments block on this
 # Job (kubectl wait) before starting their main container, so the
 # whole chain is migrator → bootstrap → services.
 bootstrap:
@@ -219,7 +220,7 @@ services:
       limits: { cpu: "1500m", memory: "2Gi" }
       requests: { cpu: "300m", memory: "1Gi" }
     extraEnv:
-      CLEARBANK_ADAPTER_URL: "http://{{ .Release.Name }}-clearbank-adapter-service:8082"
+      CLEARBANK_ADAPTER_URL: "http://{{ .Release.Name }}-external-adapters-service:8082"
 
   # Provisioning + identity: bank, party, cash-account, product, idv
   # processors in one JVM. Bank provisioning issues service-account
@@ -231,79 +232,51 @@ services:
       limits: { cpu: "1000m", memory: "1536Mi" }
       requests: { cpu: "200m", memory: "768Mi" }
 
-  # Cron-driven processor (no message bus): registers a Quartz trigger per
-  # enabled scheduled job at startup and runs interest accrue/capitalize
-  # tasks straight against FDB.
-  scheduler-processor-service:
-    enabled: true
-    replicas: 1
-
-  # Owns every store's changelog cursor and republishes each committed
-  # entry to the bus. A cursor has exactly one owner, so this stays at
-  # replicas: 1 — scale the tier by sharding stores across deployments,
-  # not by adding replicas here.
-  relay-service:
+  # Work that must have exactly one dispatcher, whatever else scales:
+  # the changelog runners that own every store's cursor, and the Quartz
+  # scheduler that registers a trigger per enabled job. Both would
+  # double-act on a second replica, so this stays at 1 — scale the
+  # relay tier by sharding stores across deployments, not by adding
+  # replicas here. Keeping them together is what leaves every other
+  # group free of the constraint.
+  exclusive-dispatchers-service:
     enabled: true
     replicas: 1
     resources:
-      limits: { cpu: "500m", memory: "768Mi" }
-      requests: { cpu: "100m", memory: "384Mi" }
+      limits: { cpu: "1000m", memory: "1536Mi" }
+      requests: { cpu: "200m", memory: "768Mi" }
 
-  clearbank-adapter-service:
+  # Every external-vendor adapter and the simulators that stand in for
+  # those vendors, in one JVM: ClearBank (8081 simulator / 8082
+  # adapter), Onfido (8083 / 8084), Companies House (8085 simulator,
+  # bus-only adapter). Adapters reach their simulator over localhost, so
+  # there is no cross-pod wait and no webhook registration race. The
+  # `_URL` env vars stay so a deployment can point an adapter at the
+  # real vendor instead. Port 8082 is the probe target because it is
+  # the one financial-processors calls (Confirmation of Payee).
+  external-adapters-service:
     enabled: true
     http: true
     port: 8082
-    replicas: 1
-    waitFor:
-      - service: clearbank-simulator-service
+    extraPorts:
+      - name: clearbank-sim
         port: 8081
-    extraEnv:
-      CLEARBANK_SIMULATOR_URL: "http://{{ .Release.Name }}-clearbank-simulator-service:8081"
-      CLEARBANK_ADAPTER_PUBLIC_URL: "http://{{ .Release.Name }}-clearbank-adapter-service:8082"
-
-  clearbank-simulator-service:
-    # Disabled in production values; enable for dev/non-prod.
-    enabled: true
-    http: true
-    port: 8081
-    replicas: 1
-
-  onfido-adapter-service:
-    enabled: true
-    http: true
-    port: 8084
-    replicas: 1
-    waitFor:
-      - service: onfido-simulator-service
+      - name: onfido-sim
         port: 8083
-    extraEnv:
-      ONFIDO_URL: "http://{{ .Release.Name }}-onfido-simulator-service:8083"
-      IDV_ONFIDO_ADAPTER_PUBLIC_URL: "http://{{ .Release.Name }}-onfido-adapter-service:8084"
-
-  onfido-simulator-service:
-    enabled: true
-    http: true
-    port: 8083
-    replicas: 1
-
-  # Companies House egress. No http: the lookup arrives as a command on
-  # the bus and the reply goes back on the response channel, so there is
-  # no inbound route and no webhook to receive.
-  uk-companies-house-adapter-service:
-    enabled: true
-    replicas: 1
-    waitFor:
-      - service: uk-companies-house-simulator-service
+      - name: onfido
         port: 8084
-    extraEnv:
-      COMPANIES_HOUSE_URL: "http://{{ .Release.Name }}-uk-companies-house-simulator-service:8084"
-
-  uk-companies-house-simulator-service:
-    # Disabled in production values; enable for dev/non-prod.
-    enabled: true
-    http: true
-    port: 8084
+      - name: companies-sim
+        port: 8085
     replicas: 1
+    resources:
+      limits: { cpu: "1500m", memory: "2Gi" }
+      requests: { cpu: "300m", memory: "1Gi" }
+    extraEnv:
+      CLEARBANK_SIMULATOR_URL: "http://localhost:8081"
+      CLEARBANK_ADAPTER_PUBLIC_URL: "http://localhost:8082"
+      ONFIDO_URL: "http://localhost:8083"
+      IDV_ONFIDO_ADAPTER_PUBLIC_URL: "http://localhost:8084"
+      COMPANIES_HOUSE_URL: "http://localhost:8085"
 
 # ---------------------------------------------------------------------
 # FDB cluster managed by the FDB Kubernetes operator. The version MUST

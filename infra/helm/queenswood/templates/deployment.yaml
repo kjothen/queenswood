@@ -63,8 +63,8 @@ spec:
               mountPath: /etc/fdb
         {{- if $.Values.bootstrap.enabled }}
         # Block until the bootstrap Job has applied FDB metadata,
-        # Kafka topics, and the internal-organization seed.
-        # Services discover the seeded org from FDB at startup.
+        # Kafka topics, and the policy + product-template seed.
+        # Services read those from FDB at startup.
         - name: wait-for-bootstrap
           image: alpine/k8s:1.30.14
           command:
@@ -108,6 +108,13 @@ spec:
             - name: http
               containerPort: {{ $svc.port }}
               protocol: TCP
+            {{- /* Further listeners in the same JVM. Named ports so the
+                   Service can target them; the probes stay on `http`. */}}
+            {{- range $extra := $svc.extraPorts }}
+            - name: {{ $extra.name }}
+              containerPort: {{ $extra.port }}
+              protocol: TCP
+            {{- end }}
           # Spring Boot Actuator-style endpoints. Generous startup
           # window for FDB/Kafka wiring + initial webhook
           # registration on adapters (~2 min worst case); liveness

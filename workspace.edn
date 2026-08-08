@@ -21,28 +21,13 @@
   "migrator-service" {:alias "mig"
                       :necessary ["resources" "schema"
                                   "test-resources"]}
-  "clearbank-adapter-service" {:alias "cba"
+  "exclusive-dispatchers-service" {:alias "exd"
+                                   :necessary ["resources"
+                                               "schema" "test-resources"]}
+  "external-adapters-service" {:alias "ext"
                                :necessary ["resources"
                                            "schema" "test-resources"]}
-  "clearbank-simulator-service" {:alias "cbs"
-                                 :necessary ["resources" "test-resources"]}
-  "onfido-adapter-service" {:alias "ioa"
-                            :necessary ["resources"
-                                        "schema" "test-resources"]}
-  "onfido-simulator-service" {:alias "ios"
-                              :necessary ["resources" "test-resources"]}
-  "uk-companies-house-simulator-service"
-  {:alias "ucs" :necessary ["resources" "test-resources"]}
-  "uk-companies-house-adapter-service" {:alias "uca"
-                                        :necessary ["resources"
-                                                    "schema"
-                                                    "test-resources"]}
-  "monolith-service" {:alias "mon" :necessary ["resources" "test-resources"]}
-  "scheduler-processor-service" {:alias "scp"
-                                 :necessary ["resources" "test-resources"]}
-  "relay-service" {:alias "rly"
-                   :necessary ["resources" "schema"
-                               "test-resources"]}}
+  "monolith-service" {:alias "mon" :necessary ["resources" "test-resources"]}}
  :tag-patterns {:release "v[0-9]*" :stable "stable-*"}
  :test {:create-test-runner
         com.repldriven.mono.external-test-runner.core/create}

@@ -9,13 +9,15 @@ Kubernetes:
   operator (subchart provides the operator + CRDs; this
   chart provides the `FoundationDBCluster` CR)
 - **api-service** (HTTP REST API + dispatchers)
-- **bank-clearbank-{adapter,simulator}-service**,
-  **bank-onfido-{adapter,simulator}-service**, and
-  **uk-companies-house-simulator-service** (HTTP)
-- **bank-{cash-account,party,payment,interest,transaction,idv}-processor-service**
-  (message-bus processors) and
-  **scheduler-processor-service** (cron-driven, no
-  message bus)
+- **financial-processors-service** (payment, transaction,
+  interest, payee-check) and
+  **operational-processors-service** (bank, party,
+  cash-account, cash-account-product, idv)
+- **exclusive-dispatchers-service** — the changelog relay
+  runners and the cron scheduler, pinned to one replica
+- **external-adapters-service** — the ClearBank, Onfido and
+  Companies House adapters plus their simulators, in one
+  JVM on ports 8081-8085
 - **console** (Svelte SPA served via nginx)
 - **Keycloak** with embedded H2 for standalone installs
   (`keycloak.dev.enabled: true` by default). GKE
@@ -57,13 +59,13 @@ and the `kind-*` recipes in `Justfile`.
 
 `bootstrap-service` runs as a one-shot Job (named
 `<release>-bootstrap-<image.tag>`) before any service
-starts. It opens FDB (applying record metadata declared in
-`bank-resources`), declares the Kafka topics from the same
-component, and idempotently seeds the internal Organization. Service
-Deployments block on its completion via a
-`kubectl wait --for=condition=complete` initContainer;
-services discover the seeded organization by querying FDB
-on startup.
+starts. It opens FDB and idempotently seeds the platform and
+micro policies and the four cash-account-product templates.
+It seeds no organization -- a user's first login creates their
+own bank. The FDB record metadata and the Kafka topics are the
+migrator Job's work, which runs before it. Service Deployments
+block on bootstrap's completion via a
+`kubectl wait --for=condition=complete` initContainer.
 
 The Job name embeds `image.tag`, so `helm upgrade` with a
 new tag produces a fresh Job rather than failing on the

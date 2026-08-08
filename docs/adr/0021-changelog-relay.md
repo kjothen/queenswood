@@ -57,9 +57,9 @@ The rules that follow from that split:
    republishes each entry to the message bus. It holds no domain logic.
    It passes `{:deduplicate? false}`, because a relay carries
    transitions and collapsing two of them would drop an event.
-   `relay-service` hosts every runner and runs at `replicas: 1`; the
-   tier scales by sharding stores across deployments, not by adding
-   replicas.
+   `exclusive-dispatchers-service` hosts every runner and runs at
+   `replicas: 1`; the tier scales by sharding stores across
+   deployments, not by adding replicas.
 2. **Every store writes one envelope.** A store's `write-changelog`
    payload is a `ChangelogEvent`: `event_id` (uuidv7, the consumer's
    dedup key), `dedup_key`, `event_name`, `payload` (Avro),

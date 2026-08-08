@@ -20,7 +20,7 @@ ARG PROJECT_NAME
 # `$TARGETPLATFORM` because the JRE and libfdb_c.so are arch-specific.
 # This stage must never reference PROJECT_NAME. A build arg declared in
 # a stage becomes part of the cache key for everything after it, so
-# naming it here would give all fifteen bake targets a distinct key for
+# naming it here would give every bake target a distinct key for
 # work that is byte-identical — and they would each run it, serialised
 # by the lock below. Keeping the arg out until the next stage is what
 # makes this run exactly once.
@@ -65,7 +65,7 @@ COPY . .
 #
 # This step is the only writer, and every target shares one execution
 # of it, so `sharing=locked` costs a single lock holder rather than
-# fifteen queueing.
+# one queue per target.
 #
 # Two jobs, in one layer so they share that lock:
 #  - Code-gen (Lancaster Avro schemas, protobuf classes) must run from
@@ -91,11 +91,11 @@ RUN --mount=type=cache,id=queenswood-m2,target=/root/.m2,sharing=locked \
 FROM deps AS build
 ARG PROJECT_NAME
 WORKDIR /workspace/projects/${PROJECT_NAME}
-# `sharing=shared`, not locked: this is the per-project step, so all
-# fifteen bake targets reach it at once. The prefetch above leaves them
-# with reads only, and Maven Resolver's parallel-write race needs a
-# writer to bite. Locking here would serialise the fifteen uberjar
-# builds behind one mutex — most of what bake's parallelism buys.
+# `sharing=shared`, not locked: this is the per-project step, so every
+# bake target reaches it at once. The prefetch above leaves them with
+# reads only, and Maven Resolver's parallel-write race needs a writer to
+# bite. Locking here would serialise the uberjar builds behind one
+# mutex — most of what bake's parallelism buys.
 RUN --mount=type=cache,id=queenswood-m2,target=/root/.m2,sharing=shared \
     --mount=type=cache,id=queenswood-gitlibs,target=/root/.gitlibs,sharing=shared \
     clojure -X:build uber :snapshot true \

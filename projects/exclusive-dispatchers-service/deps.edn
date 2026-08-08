@@ -1,0 +1,46 @@
+{:aliases
+ {:build {:deps {bases/build {:local/root "../../bases/build"}}
+          :exec-args
+          {:lib 'com.repldriven.queenswood/exclusive-dispatchers-service
+           :main com.repldriven.queenswood.exclusive-dispatchers.main
+           :major-minor-version "0.0"}
+          :ns-default com.repldriven.queenswood.build.build}
+  ;; The external test runner (cloverage + eftest) plus the test-helper
+  ;; components the included bricks' tests require. CI runs every
+  ;; project through this runner for coverage; matches the sibling
+  ;; processor projects.
+  :test
+  {:extra-deps
+   {ext/mono {:local/root "../../deps/mono-test"}
+    ext/mono-test-runner {:local/root "../../deps/mono-test-runner"}
+    component/test-resources {:local/root "../../components/test-resources"}
+    component/testcontainers {:local/root "../../components/testcontainers"}
+    component/test-schema {:local/root "../../components/test-schema"}}}}
+ :deps
+ {ext/mono {:local/root "../../deps/mono"}
+  component/fdb {:local/root "../../components/fdb"}
+  component/balance {:local/root "../../components/balance"}
+  component/balance-domain {:local/root "../../components/balance-domain"}
+  component/balance-query {:local/root "../../components/balance-query"}
+  component/cash-account {:local/root "../../components/cash-account"}
+  component/cash-account-migration
+  {:local/root "../../components/cash-account-migration"}
+  component/cash-account-query {:local/root
+                                "../../components/cash-account-query"}
+  component/cash-account-product-query
+  {:local/root "../../components/cash-account-product-query"}
+  component/changelog-relay {:local/root "../../components/changelog-relay"}
+  component/interest {:local/root "../../components/interest"}
+  component/ledger-account {:local/root "../../components/ledger-account"}
+  component/party-query {:local/root "../../components/party-query"}
+  component/person-identification {:local/root
+                                   "../../components/person-identification"}
+  component/policy {:local/root "../../components/policy"}
+  component/resources {:local/root "../../components/resources"}
+  component/scheduler {:local/root "../../components/scheduler"}
+  component/schema {:local/root "../../components/schema"}
+  component/transaction {:local/root "../../components/transaction"}
+  base/exclusive-dispatchers {:local/root "../../bases/exclusive-dispatchers"}
+  org.clojure/clojure {:mvn/version "1.12.5"}
+  pin/clojure-core-async {:local/root "../../deps/clojure-core-async"}}
+ :paths ["resources"]}

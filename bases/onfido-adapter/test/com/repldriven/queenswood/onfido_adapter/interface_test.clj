@@ -4,7 +4,7 @@
     [com.repldriven.queenswood.fdb.interface]
     [com.repldriven.queenswood.testcontainers.interface]
 
-    [com.repldriven.queenswood.onfido-adapter.api :as api]
+    [com.repldriven.queenswood.onfido-adapter.interface :as SUT]
 
     [com.repldriven.mono.http-client.interface :as http]
     [com.repldriven.mono.json.interface :as json]
@@ -28,7 +28,7 @@
   (with-test-system
    [sys
     ["classpath:onfido-adapter/application-test.yml"
-     #(assoc-in % [:system/defs :server :handler] api/app)]]
+     #(assoc-in % [:system/defs :server :handler] SUT/app)]]
    (let [jetty (system/instance sys [:server :jetty-adapter])]
      (binding [*base-url* (server/http-local-url jetty)]
        (testing "POST /webhooks/onfido/check-completed acknowledges 200"

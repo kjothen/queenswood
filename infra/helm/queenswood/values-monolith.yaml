@@ -22,8 +22,11 @@ console:
   apiUpstream: "http://{{ .Release.Name }}-monolith-service:8080"
 
 services:
-  # The single all-in-one service. Adapters + simulators reach each
-  # other in-process via bound http-urls, so no adapter env URLs.
+  # The single all-in-one service. Adapters and simulators share this
+  # JVM, so their URLs are loopback — the shared system includes read
+  # them from these env vars under the `default` profile the image
+  # runs with, and point an adapter at the real vendor by overriding
+  # one of them.
   monolith-service:
     enabled: true
     http: true
@@ -32,16 +35,17 @@ services:
     resources:
       limits: { cpu: "2000m", memory: "3Gi" }
       requests: { cpu: "500m", memory: "1536Mi" }
+    extraEnv:
+      CLEARBANK_SIMULATOR_URL: "http://localhost:8081"
+      CLEARBANK_ADAPTER_PUBLIC_URL: "http://localhost:8082"
+      ONFIDO_URL: "http://localhost:8083"
+      IDV_ONFIDO_ADAPTER_PUBLIC_URL: "http://localhost:8084"
+      COMPANIES_HOUSE_URL: "http://localhost:8085"
 
-  # Everything the monolith subsumes is turned off.
+  # Everything the monolith subsumes is turned off. The monolith hosts
+  # the changelog relay runners and the scheduler in-process too.
   api-service: { enabled: false }
   financial-processors-service: { enabled: false }
   operational-processors-service: { enabled: false }
-  scheduler-processor-service: { enabled: false }
-  # The monolith hosts the changelog relay runners in-process.
-  relay-service: { enabled: false }
-  clearbank-adapter-service: { enabled: false }
-  clearbank-simulator-service: { enabled: false }
-  onfido-adapter-service: { enabled: false }
-  onfido-simulator-service: { enabled: false }
-  uk-companies-house-simulator-service: { enabled: false }
+  exclusive-dispatchers-service: { enabled: false }
+  external-adapters-service: { enabled: false }

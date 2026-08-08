@@ -65,8 +65,8 @@
                                       "bases/uk-companies-house-adapter"}
     bases/uk-companies-house-simulator {:local/root
                                         "bases/uk-companies-house-simulator"}
-    bases/scheduler-processor {:local/root "bases/scheduler-processor"}
-    bases/relay {:local/root "bases/relay"}
+    bases/exclusive-dispatchers {:local/root "bases/exclusive-dispatchers"}
+    bases/external-adapters {:local/root "bases/external-adapters"}
     bases/monolith {:local/root "bases/monolith"}}
    :extra-paths ["development/src" "development/resources"]
    :jvm-opts
