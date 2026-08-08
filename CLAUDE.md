@@ -141,16 +141,9 @@ those in full before non-trivial work on their topic.
   Composites + Releases drive everything else. See
   [tdd/infrastructure.md](docs/tdd/infrastructure.md) and
   [ADR-0016](docs/adr/0016-crossplane-over-terraform.md).
-- **Cloud account** — getting an organisation at all: Cloud
-  Identity, the access groups roles bind to, the billing account.
-  The browser-only half, with no API behind it. See
-  [recipes/cloud-account.md](docs/recipes/cloud-account.md).
-- **Cloud foundation** — a folder is an installation; the
-  XQueenswoodInstallation manifest that declares what exists in
-  it, the bootstrap identity that creates it, and the two paths
-  depending on whether you own the organisation. See
-  [recipes/cloud-foundation.md](docs/recipes/cloud-foundation.md)
-  and
+- **Cloud foundation** — the folder/seed/hub-and-spoke project
+  layout, one management plane on GKE, foundations liened rather
+  than deleted, and why "down" is a declared state. See
   [ADR-0022](docs/adr/0022-cloud-foundation-and-environment-lifecycle.md).
 - **Pre-commit hooks** — zprint, clj-kondo, before-commit
   formatting. See
