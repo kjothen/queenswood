@@ -68,6 +68,19 @@ lint:
   just lint-eastwood
   just lint-clj-kondo
 
+# Install the pre-commit hook (run again whenever the hook itself changes)
+install-hooks:
+    #!/usr/bin/env zsh
+    set -euo pipefail
+    # git resolves this for a worktree too, where .git is a file and the real
+    # hooks directory lives in the primary checkout — so one install covers
+    # every worktree of this clone.
+    hook=$(git rev-parse --git-path hooks/pre-commit)
+    mkdir -p "$(dirname "$hook")"
+    cp scripts/hooks/pre-commit "$hook"
+    chmod +x "$hook"
+    echo "installed $hook"
+
 # Scan for semgrep guardrails (no args = all bricks, or pass paths)
 semgrep *paths="bases components projects":
     semgrep --config .config/semgrep/semgrep.yml --error --disable-version-check {{ paths }}

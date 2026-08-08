@@ -7,6 +7,11 @@ Accepted. Supersedes the management-plane half of
 [ADR-0016](0016-crossplane-over-terraform.md), which chose Crossplane
 but assumed the plane running it is a local kind cluster.
 
+Revised once the foundation was first built. Three things this originally
+got wrong: a folder is an installation boundary rather than a singleton,
+the seed project exists only where you are your own platform team, and
+access is granted through groups rather than to people.
+
 ## Context
 
 ADR-0016 settled that infrastructure is declared rather than scripted.
@@ -37,32 +42,90 @@ up" is a laptop and a password store.
 
 ## Decision
 
-### A folder, a seed, a hub, and spokes
+### A folder is an installation, and there may be several
 
-Everything lives under one GCP **folder**, not directly on the
-organisation. The folder is an IAM boundary, so the identity that
-creates projects holds folder-level roles rather than org-level ones,
-and it is where an org-policy exemption is expressed once instead of
-per project.
+A GCP **folder** is what an installation is. It is an IAM boundary, the
+place an org-policy exemption is expressed once instead of per project,
+and the only stable handle in the design — project ids carry random
+suffixes, so everything else is discovered from the folder downwards.
 
 Inside it:
 
-- A **seed project**, holding nothing but a service account with
-  folder-scoped roles. Created once by a human; its only job is to
-  create the management project.
 - A **management project** — the hub — running one GKE cluster with
   Crossplane and Argo CD. Never torn down.
-- One **workload project per environment** — dev, test, prod — each
-  disposable.
+- One **project per instance** — dev, test, prod, or whatever the
+  installer chooses — each disposable.
 
-The seed keeps a random-suffixed id, and is retained rather than
-deleted. It is designed so that it *could* be deleted — which is what
-forces the management plane to hold its own service account instead of
-borrowing the seed's — but it stays, because once it is gone the
-management plane manages its own project and cluster with no external
-actor able to repair it. An empty project costs nothing, and a
-project id is consumed permanently, so a deterministic name could
-never be recreated.
+There may be as many folders as the installer wants: one holding
+everything, one for non-production and another for production, one per
+jurisdiction. Each is independent and identically shaped, and nothing is
+shared between them — a second installation gets its own bootstrap
+identity, because those rights are folder-scoped, and its own management
+project, because that is what reconciles the instances inside it. How
+many instances there are and whether they are grouped into sub-folders is
+the installer's concern, expressed as fields rather than settled here.
+
+### The bootstrap identity, and when a project holds it
+
+Something outside the installation must create the management project.
+Where an organisation provisions folders, that identity already exists in
+its own automation project and is handed over with the folder, and a CI
+runner assumes it through Workload Identity Federation.
+
+Only where you are your own platform team does a **bootstrap project**
+exist: a service account has to live somewhere, and on a new
+organisation no project does. It keeps a random-suffixed id and is
+retained rather than deleted — an empty project costs nothing, and a
+project id is consumed permanently, so a deterministic name could never
+be recreated. It is designed so that it *could* be deleted, which is
+what forces the management plane to hold its own service account rather
+than borrowing this one.
+
+The runbook for both paths is
+[cloud-foundation](../recipes/cloud-foundation.md).
+
+Its rights are folder-scoped once the folder exists, but creating the
+folder is not: `resourcemanager.folders.create` is checked on the
+**parent**, so on that path the identity holds folderCreator and
+folderIamAdmin there — the pair rather than folderAdmin, because
+together they create a folder and grant roles inside it without being
+able to delete one.
+
+### Access is granted through groups, and nothing stands
+
+Roles bind to groups, and membership is the only thing that moves
+afterwards: one place to look, one thing to revoke, and recorded in the
+directory's audit log rather than invisible. It is also the seam access
+tooling drives, granting a role by adding a member for as long as it is
+needed.
+
+The rule is narrower than "always groups". Bind groups where humans hold
+access, and principals directly where automation does — nothing but the
+recipe would ever change which service account holds a role, so the
+indirection buys only a propagation delay. Who may *act as* that service
+account is a human question, so `serviceAccountTokenCreator` on it is
+group-bound.
+
+A group owner is always a member, so these groups have no owner and no
+manager: administering a privilege-granting group is itself privileged
+and belongs with directory administration, which a super admin holds
+without being in the group. That is what makes it safe for the
+organisation-admin group to be **empty** and for nobody to hold
+Organization Administrator at all — break-glass is a super admin adding
+a member, and an empty group is never a lockout.
+
+What the groups are and how they come to exist is
+[cloud-account](../recipes/cloud-account.md).
+
+The groups are not one per tier of seniority but one per capability that
+must be separable. Organization Administrator and Folder Administrator
+are two groups because the first cannot delete a folder and the second
+cannot touch organisation IAM, and collapsing them would hand out both.
+
+A billing account is the exception, and keeps one direct human
+administrator beside its group. The organisation has a recovery path
+outside its IAM policy; a billing account has none, so removing its last
+administrator means a support ticket rather than a command.
 
 ### One management plane, not one per environment
 
@@ -80,11 +143,19 @@ The tier model in
 [cloud-deployment](../recipes/cloud-deployment.md) extends up to the
 projects themselves:
 
-- Folder, seed, management project, workload projects, DNS zones and
-  backup buckets are `Orphan` or `managementPolicies` without `Delete`,
-  and protected by GCP project **liens**.
-- Workload clusters, CloudSQL instances, addresses and certificates
-  are fully managed, `Delete` included.
+- Bootstrap project, management project, instance projects, DNS zones and
+  backup buckets carry `managementPolicies` without `Delete` — v2
+  namespaced resources have no `deletionPolicy` — and are protected by
+  GCP project **liens**.
+- The folder is protected differently, because liens are a project
+  mechanism and do not apply to folders. What protects it is that
+  `resourcemanager.folders.delete` is held by nobody: Organization
+  Administrator does not carry it, and the bootstrap identity is given
+  `folderCreator` and `folderIamAdmin` precisely so that it cannot.
+  Deleting one means joining `gcp-folder-admins@` deliberately. GCP also
+  refuses to delete a folder that still holds projects.
+- Instance clusters, CloudSQL instances, addresses and certificates are
+  fully managed, `Delete` included.
 
 The liens matter more than the policies. A deletion policy is a
 convention a later edit can quietly undo; a lien lives in GCP and
@@ -228,12 +299,20 @@ Once the management project is durable, almost nothing needs to be:
 - **Secrets that must outlive a teardown** — the FDB backup encryption
   key, the GCS HMAC key, database passwords — live in Secret Manager in
   the management project.
-- **One pointer** — which project is the seed.
+- **The manifest** — one per installation, naming the folder, the billing
+  account and the instances. It holds no secret, and it is the whole
+  record of what exists.
 
-Billing account and organisation are discoverable from the operator's
-own credentials. The irreducible human steps are three: authenticate,
-verify domain ownership once per domain, and run one command that
-creates the folder, the seed project and its service account.
+No pointer is needed. The organisation and billing account are
+discoverable from the operator's own credentials, and the bootstrap
+project is found by its label.
+
+What cannot be automated is the directory: an organisation comes from
+Cloud Identity rather than Google Cloud, and every Cloud Identity call
+needs a project to attribute quota to, which at foundation time does not
+exist. So claiming the domain, creating the billing account and creating
+the access groups are done in a browser, and everything after them is
+declared.
 
 ## Consequences
 
@@ -247,7 +326,9 @@ confirming against current pricing rather than assumed.
 **Most of `cloud.just` dissolves.** Project creation, API enablement,
 IAM bindings, custom roles, the backup bucket and its lifecycle, the
 HMAC key and the org-policy exemption all become managed resources.
-What survives is the one seed command. The recipes added for FDB and
+What survives is the directory work that has no API — claiming the
+domain, the billing account, the access groups — and the two commands
+that create the bootstrap identity. The recipes added for FDB and
 Keycloak backup are the last generation of that style rather than the
 start of one.
 
@@ -256,9 +337,9 @@ can be scaled down to save cost, but a management plane at zero does
 not reconcile — which is the problem moving off kind was meant to
 solve. Acceptable for dev and test, self-defeating for prod.
 
-**Migration is incremental.** The folder, seed and management project
-can be created while the kind plane still runs, and environments moved
-one at a time. Nothing here requires a flag day.
+**Migration is incremental.** The folder, the bootstrap identity and the
+management project can be created while the kind plane still runs, and
+instances moved one at a time. Nothing here requires a flag day.
 
 **The restores this depends on are proven for FDB and not for
 Keycloak.** A full teardown and rebuild returned FoundationDB intact

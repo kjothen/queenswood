@@ -1,0 +1,176 @@
+# Cloud account
+
+<!-- tessl-plugin: deployment -->
+
+## Problem
+
+You have no Google Cloud. An organisation comes from Cloud Identity
+rather than from Google Cloud, and none of this step has an API.
+
+## Solution
+
+### Before you start
+
+- A domain, with access to edit its DNS.
+- A recovery email and phone for the admin account. It gets no mailbox,
+  so it cannot receive its own password reset.
+- A private browser window. Signing up as an existing Google account is
+  the usual way this goes wrong.
+
+### 1. Sign up for Cloud Identity Free
+
+At `workspace.google.com/gcpidentity/signup?sku=identitybasic`. Google
+moves that page; if it steers you to a paid Workspace plan, find the free
+Cloud Identity edition instead.
+
+Use `admin@yourdomain` for the admin. It is a new Google account,
+unrelated to your existing one.
+
+### 2. Verify the domain
+
+Google may hand off to your registrar and add the TXT record itself.
+Success reads "You're all set to use Google Workspace apps" — the
+branding is shared with Workspace and says nothing about your edition.
+
+### 3. Check the edition
+
+`admin.google.com`, Billing then Subscriptions: Cloud Identity Free, 50
+licences. A Workspace trial expires and takes the account with it.
+
+Turn on 2-step verification here, and store the password and backup
+codes. This account is the root of trust for everything below.
+
+### 4. Create the organisation
+
+Sign in to `console.cloud.google.com` as the admin and accept the terms.
+The organisation appears on that first sign-in — no project needed — and
+the console grants the admin Organization Administrator in the same
+action.
+
+### 5. Create the access groups
+
+Four security groups, in `admin.google.com` under Directory then Groups:
+
+- `gcp-organization-admins@` — Organization Administrator. Empty in
+  steady state; joining it is the break-glass act.
+- `gcp-folder-admins@` — Folder Administrator, and also empty. A separate
+  group because Organization Administrator does **not** carry
+  `resourcemanager.folders.delete`: without this nobody can delete or
+  move a folder at all, and the only route would be granting a role that
+  appears nowhere in the policy. Note that deleting a folder is not
+  something reconciliation undoes — see
+  [cloud-foundation](cloud-foundation.md).
+- `gcp-platform-operators@` — Organization Viewer and Browser, and later
+  the right to impersonate the bootstrap identity. Without Browser a
+  folder is invisible in the console even to the account whose identity
+  created it.
+- `gcp-billing-admins@` — Billing Account Administrator, bound on the
+  billing account in step 7.
+
+For each, in this order: **Access type: Restricted**, *then* **Who can
+join: Only invited users**. Reversing it discards the join rule, and the
+type then reads Custom, which is correct. Leave the access matrix alone.
+
+Then **remove the owner**. An owner is always a member, so owning the
+admins group means holding Organization Administrator permanently. No
+managers either — administering a privilege-granting group is privileged,
+and a super admin can do it without being in the group.
+
+Bind the two organisation roles:
+
+```bash
+gcloud config unset project
+just gcp-groups-bind
+```
+
+Creating groups cannot be scripted here: every Cloud Identity call needs
+a project to attribute quota to, taken from the active gcloud project,
+and none exists yet. Beware that without one,
+`gcloud identity groups describe` answers "There is no such a group" for
+groups that plainly exist.
+
+### 6. Create the operating user
+
+Directory then Users. Add it to `gcp-platform-operators@` and
+`gcp-billing-admins@` — not the admins group.
+
+It needs no direct organisation bindings: Project Creator and Billing
+Account Creator are already granted to the whole domain, and the rest
+arrives through membership. Prefer a domain user over a personal address,
+which `iam.allowedPolicyMemberDomains` would later invalidate.
+
+### 7. Create the billing account
+
+As the operating user, so that user administers it. Take the free trial
+if offered; some payment methods are asked for a small refundable
+prepayment first.
+
+Two traps. Card verification runs through 3-D Secure, which private
+windows break. And whether the payments profile is for an individual or
+an organisation cannot be changed afterwards — pick organisation only if
+a registered entity exists to name, matching the payment instrument.
+
+Then bind the group, and keep your own direct binding:
+
+```bash
+gcloud billing accounts add-iam-policy-binding <account-id> \
+  --member=group:gcp-billing-admins@yourdomain --role=roles/billing.admin
+```
+
+A billing account has no recovery path outside its own IAM policy, so
+never remove its last human administrator. This is the one place a person
+is bound directly on purpose.
+
+### 8. Put the standing grants away
+
+Once the group carries Organization Administrator, remove the admin
+account's direct binding, then revoke it locally:
+
+```bash
+gcloud auth revoke admin@yourdomain
+```
+
+Until you do, `gcloud config set account` reaches super admin with no
+password, no prompt and nothing in the audit log.
+
+### 9. Check
+
+```bash
+gcloud auth login
+just gcp-preflight
+```
+
+An organisation and a billing account is enough to continue with
+[cloud-foundation](cloud-foundation.md). Run as the operating user, the
+roles line reads "not readable by this account" — Organization Viewer
+excludes `getIamPolicy`, and group-derived roles never appear there.
+
+## Rules
+
+**MUST:**
+
+- Set recovery email and phone on the super admin, and 2-step
+  verification. It has no mailbox and no one above it.
+- Bind groups where humans hold access, and principals directly where
+  automation does.
+- Keep one direct human administrator on the billing account.
+- Revoke the super admin's local credentials, and its direct organisation
+  binding, once the group carries the role.
+
+**MUST NOT:**
+
+- Leave anybody standing in `gcp-organization-admins@` or
+  `gcp-folder-admins@`.
+- Give these groups an owner or a manager. Both are members.
+- Use `gcloud identity groups describe` to test whether a group exists.
+
+**MAY:**
+
+- Reuse an existing billing account instead of creating one.
+- Keep a second super admin, unused, so one lost device is not the end of
+  the organisation.
+
+## References
+
+- [cloud-foundation](cloud-foundation.md) — what to do once the
+  organisation exists.
