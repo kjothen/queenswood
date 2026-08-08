@@ -92,10 +92,12 @@ act: lift the lien, then delete.
 It lives outside the installation — in the organisation's automation
 project, or one small project you create for it.
 
-`spec.createFolder.displayName` names the installation for people and
-nothing else — the folder id is the identifier, GCP allows two folders
-with the same name under one parent, and there is no default for that
-reason. `spec.createFolder.folderId` adopts an existing folder instead of
+`spec.createFolder.displayName` labels the installation for people and
+nothing else — the folder id is the identifier, and a folder handed to
+you carries whatever name its organisation chose. `gcp-plane-apply`
+suffixes it like a project id unless you pass one, since GCP allows two
+folders with the same name under one parent and a console cannot tell
+them apart. `spec.createFolder.folderId` adopts an existing folder instead of
 creating one, which is what makes a rebuilt control plane take over
 rather than build a second installation beside the first.
 

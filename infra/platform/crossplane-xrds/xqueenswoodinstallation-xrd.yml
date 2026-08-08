@@ -42,12 +42,13 @@ spec:
                     displayName:
                       type: string
                       description: |
-                        Names this installation for humans, and nothing
-                        else -- the folder id is the identifier. GCP
-                        permits two folders with the same name under one
-                        parent, so there is no default: an installation
-                        called queenswood beside another called
-                        queenswood cannot be told apart in a console.
+                        Labels this installation for humans and nothing
+                        else -- the folder id is the identifier, and a
+                        folder handed to you carries whatever name its
+                        organisation chose. Suffixed like a project id by
+                        default, because two folders called queenswood
+                        cannot be told apart in a console and GCP permits
+                        exactly that.
                     folderId:
                       type: string
                       pattern: '^folders/[0-9]+$'

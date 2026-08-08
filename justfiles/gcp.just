@@ -537,10 +537,19 @@ gcp-plane-up:
     echo
     echo ">>> plane ready. Next: just gcp-plane-apply <parent> [display-name]"
 
-# Create or adopt the folder, e.g. just gcp-plane-apply organizations/85415540850 queenswood-dev
-gcp-plane-apply parent name folder="":
+# Create or adopt the folder, e.g. just gcp-plane-apply organizations/85415540850
+gcp-plane-apply parent name="" folder="":
     #!/usr/bin/env zsh
     set -e
+    # Suffixed like every project id, because a folder's display name
+    # identifies nothing -- the id does. A fixed name implies meaning it
+    # does not carry, and two installations called queenswood cannot be
+    # told apart in a console. Pass a name to choose your own.
+    NAME="{{ name }}"
+    if [[ -z "$NAME" ]]; then
+      NAME="queenswood-$(openssl rand -hex 3)"
+      echo ">>> naming the folder $NAME"
+    fi
     # Refuse to make a second installation by accident. GCP allows the
     # duplicate name, so this is the only thing that would notice.
     if [[ -z "{{ folder }}" ]]; then
@@ -550,11 +559,11 @@ gcp-plane-apply parent name folder="":
         *) echo "parent must be organizations/<id> or folders/<id>" >&2; exit 1 ;;
       esac
       EXISTING=$(gcloud resource-manager folders list $SCOPE \
-                   --filter="displayName={{ name }}" \
+                   --filter="displayName=$NAME" \
                    --format='value(name)' 2>/dev/null | head -1 || true)
       if [[ -n "$EXISTING" ]]; then
-        echo "a folder named {{ name }} already exists under {{ parent }}: folders/$EXISTING" >&2
-        echo "adopt it:  just gcp-plane-apply {{ parent }} {{ name }} folders/$EXISTING" >&2
+        echo "a folder named $NAME already exists under {{ parent }}: folders/$EXISTING" >&2
+        echo "adopt it:  just gcp-plane-apply {{ parent }} $NAME folders/$EXISTING" >&2
         echo "or choose a different name" >&2
         exit 1
       fi
@@ -577,7 +586,7 @@ gcp-plane-apply parent name folder="":
     spec:
       createFolder:
         parent: "{{ parent }}"
-        displayName: "{{ name }}"
+        displayName: "$NAME"
         $ADOPT
     YAML
 
