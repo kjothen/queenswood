@@ -180,6 +180,11 @@ one instance's project-scoped resources, with the project id supplied
 rather than created. This is where that goes, per
 [ADR-0022](../adr/0022-cloud-foundation-and-environment-lifecycle.md).
 
+New GCP recipes go in `justfiles/gcp.just`, and anything still needed
+from `cloud.just` moves across rather than being called into. That way
+`cloud.just` only ever shrinks, instead of becoming a file of two
+generations.
+
 ## Rules
 
 **MUST:**
@@ -219,6 +224,6 @@ rather than created. This is where that goes, per
   runbook for an instance.
 - [infrastructure](../tdd/infrastructure.md) — the bootstrap chain, sync
   waves and existing compositions.
-- `justfiles/foundation.just` — `gcp-preflight`, `gcp-groups-bind`,
+- `justfiles/gcp.just` — `gcp-preflight`, `gcp-groups-bind`,
   `gcp-access-*`, `gcp-bootstrap-*`. The `gcp-plane-*` recipes are not
   written yet.

@@ -1,10 +1,10 @@
 # =========================================================================
-# Foundation -- what exists before an installation does.
+# Google Cloud, from the foundation up.
 #
-# `gcp-preflight` reports whether the organisation, billing and rights
-# described in docs/recipes/cloud-account.md are in place. The
-# gcp-bootstrap-* recipes create the identity that everything after
-# this is applied by.
+# All new GCP work lands here, and anything still needed from
+# cloud.just moves here rather than being called across -- cloud.just is
+# the previous generation and shrinks as its recipes are replaced by
+# managed resources. See docs/recipes/cloud-foundation.md.
 # =========================================================================
 
 # Group names. Roles bind to these and never move; membership does. A
