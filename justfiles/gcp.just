@@ -507,6 +507,16 @@ gcp-adc-status:
     SA=$(grep -o 'serviceAccounts/[^:]*' "$F" | head -1 | sed 's|serviceAccounts/||')
     echo "type         ${TYPE:-unknown}"
     echo "impersonates ${SA:-nothing}"
+    # Exercised, not described. A file that reads correctly still fails
+    # once its source credential needs reauthentication, and that error
+    # then surfaces inside a controller that cannot prompt for one.
+    if ERR=$(gcloud auth application-default print-access-token 2>&1 >/dev/null); then
+      echo "token        mints"
+    else
+      echo "token        FAILS -- run 'just gcp-adc-impersonate'"
+      printf '%s\n' "$ERR" | sed 's/^/  /'
+      exit 1
+    fi
 
 # =========================================================================
 # The throwaway control plane
@@ -528,6 +538,15 @@ gcp-plane-up:
     if ! grep -q impersonated_service_account "$F"; then
       echo "ADC is not impersonating the bootstrap identity --" >&2
       echo "run 'just gcp-adc-impersonate'" >&2
+      exit 1
+    fi
+    # Before kind and Helm, not after. A credential that needs
+    # reauthentication fails only when the provider first calls out,
+    # which is ten minutes later and reported as a folder that cannot
+    # be observed.
+    if ! ERR=$(gcloud auth application-default print-access-token 2>&1 >/dev/null); then
+      echo "ADC cannot mint a token -- run 'just gcp-adc-impersonate'" >&2
+      printf '%s\n' "$ERR" | sed 's/^/  /' >&2
       exit 1
     fi
 
