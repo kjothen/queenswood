@@ -41,7 +41,7 @@ metadata:
   name: queenswood
   namespace: crossplane-system
 spec:
-  folderId: folders/123456789012
+  folderId: folders/<folder-id>
   billingAccountId: 0X0X0X-0X0X0X-0X0X0X
   region: europe-west2
   instances:
@@ -84,7 +84,7 @@ act: lift the lien, then delete.
 
 ### The two values you need
 
-- **A folder id**, such as `folders/123456789012`.
+- **A folder id**, written `folders/<folder-id>`.
 - **An identity** with `projectCreator` and `folderIamAdmin` on that
   folder, `billing.user` on a billing account, and
   `orgpolicy.policyAdmin` on the folder where the organisation allows it.
