@@ -296,11 +296,13 @@ pull request runs as the platform identity.
 
 #### Which repository, and why it is a second one
 
-The manifest is nothing but identifiers, this repository is public, and
-the billing account id in particular is the pretexting vector
-[ADR-0023](../adr/0023-installation-naming-and-access.md) singled out.
-So the manifests live in a private `queenswood-infra`, which Argo
-reconciles from with a deploy key. **Public is how, private is what**:
+The manifest is nothing but identifiers and this repository is public.
+The most sensitive of them, the billing account id, leaves the composite
+altogether rather than being hidden — see below. What remains is the
+project hierarchy: the organisation id in `createFolder.parent`, the
+folder id, and the management project id with its random suffix. So the
+manifests live in a private `queenswood-infra`, which Argo reconciles
+from with a deploy key. **Public is how, private is what**:
 the XRD, the Composition, `providers.yml`, the charts, the recipes and
 the ADRs stay here, because they are the part with value to a reader;
 what moves is a list of identifiers with value to nobody but the
@@ -385,6 +387,115 @@ the old project ids permanently — which
 accepted once, for this reason. So that is an argument for rebuilding
 eventually rather than for treating the current ids as recoverable
 secrets.
+
+#### The billing account is a property of the identity
+
+It does not go in the manifest at all, and the reason is
+[ADR-0020](../adr/0020-providers-are-deployment-facts.md)'s one layer
+down: a value that selects behaviour belongs in deployment rather than
+in a request. The identity must hold `billing.user` on an account
+before it can link a project to it, so that binding already settles
+which account is used. A field restating it is a second copy that can
+disagree with the first.
+
+Three facts make this cleaner than it first looks:
+
+- **A folder has no billing account.** Billing attaches to projects, and
+  a folder is only a hierarchy and IAM node — which is why projects are
+  portable. There is nothing to inherit.
+- **`billing.user` is bound on the billing account, not the folder**,
+  which `gcp-boot-identity` already does. Linking a project needs
+  `resourcemanager.projects.createBillingAssignment` on the project and
+  `billing.resourceAssociations.create` on the account.
+- **The identity can list what it is bound to.** Where an organisation
+  hands over a folder and an identity, that list has exactly one entry.
+  Discovery through the identity is therefore *more* reliable than the
+  current `gcp-plane-apply` behaviour, which takes the first open
+  account visible to the operator, who may see several.
+
+The mechanism is the open part, because the value is still needed once —
+at project creation, by the boot plane, which can discover it. Three
+candidates, to be settled by spiking the first:
+
+- **Late-initialisation.** The management project already carries
+  `LateInitialize`. With the field absent from the composite the patch
+  never fires, and an already-linked project may populate
+  `forProvider.billingAccount` from its own observed state. The question
+  is whether that survives the next pass, since desired state is
+  recomputed from base plus patches each time. Cheapest if it holds.
+- **Argo `ignoreDifferences`** on that path, so a manifest without the
+  field never removes it. Standard, and treated with suspicion here: a
+  `ProviderConfig` field reverting despite `RespectIgnoreDifferences`
+  is a failure this project has already had.
+- **The composition not managing billing at all**, with the boot plane
+  linking the project once at creation. Least declarative, most
+  predictable, and the fallback if the first does not hold.
+
+Whichever wins, `billingAccountId` becomes optional in the XRD, with a
+docstring saying it is discovered from the identity's bindings and
+wanted only at creation.
+
+This does not retire the private repository: `createFolder.parent`
+still carries the organisation id, and a folder's parent is required
+rather than late-initialisable. It does mean the repository holds one
+identifier rather than the most sensitive one.
+
+#### The layout
+
+```
+queenswood-infra/
+├── README.md                     what this is, where the schema lives,
+│                                 and that it holds no credentials
+└── installations/
+    └── qw01/
+        └── installation.yaml     the XQueenswoodInstallation
+```
+
+`just gcp-plane-manifest` prints that file, resolved, on stdout with
+every message on stderr, so it redirects straight into place. A second
+installation is `installations/qw02/`. `INFRA_REPO` in `gcp.just` says
+where the checkout is, defaulting beside this one.
+
+**Argo's wiring stays in this repository**, beside the XRD it depends
+on: one Application with `path: installations` and
+`directory.recurse: true`. That keeps the private repository purely
+data — not merely free of workflows but free of Argo configuration too.
+The Application names the private repository's URL, which is not
+sensitive.
+
+An ApplicationSet with a git generator over `installations/*` earns its
+place when installations need *different* sync policies, which
+[ADR-0022](../adr/0022-cloud-foundation-and-environment-lifecycle.md)
+already anticipates in wanting manual rather than automatic sync for
+prod. Until then it is machinery for one directory.
+
+**This layout survives a second cloud**, because the design already put
+the seam in the right place: the composite is `XQueenswoodInstallation`
+with no provider in its name, and the Composition is
+`xqueenswoodinstallation.gcp`, which the XRD names as its default. One
+API, one Composition per provider, chosen per manifest. So a provider is
+a property of an installation rather than of the tree, and there is no
+`gcp/` level — an installation is on one cloud, and its code is already
+unique.
+
+Where a second cloud actually bites is the XRD, not the directory
+structure. `billingAccountId`, `createFolder.parent` and
+`management.projectId` are GCP nouns; AWS has organizational units and
+accounts, Azure management groups and subscriptions. Either the XRD
+grows a neutral core plus a per-provider block, or there is a second
+XRD. The first is the more likely answer given the Composition is
+already named for its provider, but it is a decision for when the
+second cloud is real, and nothing here prejudges it.
+
+**One repository holds installations that share an audience.** Access
+control is per repository, so an installation belonging to a different
+customer or operator wants its own rather than a directory. That is the
+same seam [ADR-0023](../adr/0023-installation-naming-and-access.md)
+draws in assuming a folder handed to us by an organisation whose groups
+are named nothing like ours.
+
+Nothing else belongs in there. In particular no credential, for the
+reason the next section gives.
 
 #### What the GitOps model says, and where it binds
 
