@@ -53,9 +53,25 @@ The files this plan acts on:
 - `justfiles/cloud.just` — the ones being retired
 
 To re-read the live state rather than trusting this document:
-`just gcp-preflight`, `just gcp-boot-status`, `just gcp-access-status`,
-`kubectl --context qw01-mgmt get crd`, and
+`just gcp-preflight`, `just gcp-boot-status`, `just gcp-platform-status`,
+`just gcp-access-status`, `kubectl --context qw01-mgmt get crd`, and
 `gcloud resource-manager folders get-iam-policy <folder-id>`.
+
+To get back to a working control plane from nothing, join
+`grp-gcp-qw01-platform-admin` and:
+
+```
+just gcp-adc-boot                 # interactive, opens a browser
+just gcp-plane-up
+just gcp-plane-apply \
+  organizations/<org-id> fldr-qw01 \
+  folders/<folder-id> <mgmt-project-id>
+```
+
+The last two arguments are the adopt values, and they are what make
+that an adoption rather than a second installation. Then
+`just gcp-plane-down`, `just gcp-adc-revoke`, and leave the group.
+Nothing reconciles between sessions, which is what the pivot is for.
 
 ## How the machinery fits together
 
@@ -136,11 +152,13 @@ scrollback.
 CRDs and nothing else. No `crossplane-system` namespace, no Argo, no
 provider packages.
 
-**The platform identity can do nothing.** `sa-qw01-platform` holds no
-role on the folder, on the management project, or on the billing
-account. The only identity with rights inside the installation is
-`sa-qw01-boot`, which GCP granted `resourcemanager.folderAdmin` for
-having created the folder.
+**The platform identity holds one role.** `sa-qw01-platform` has
+`roles/billing.user` on the billing account, granted by
+`gcp-platform-billing-role`, and nothing at all on the folder or the
+management project — those are step 2 below and are not written yet.
+`just gcp-platform-status` prints both. The only identity with real
+rights inside the installation is still `sa-qw01-boot`, which GCP
+granted `resourcemanager.folderAdmin` for having created the folder.
 
 **Nothing is liened.** `liens list` on the management project returns
 nothing. The declarations are all in place —
@@ -504,13 +522,27 @@ committed manifest never does.
 Two things that run did **not** establish, both worth knowing before
 trusting it again:
 
-**The dangerous transition was not exercised.** Running the spike left
-the field owned by *both* the composition and the provider, because
-restoring the real composition re-claimed it alongside the provider's
-late-init. With two owners, one relinquishing cannot remove the field,
-so there was no window. On a plane where the composition has been the
-sole owner from the start — which is the management cluster after the
-pivot — the window is real and untested.
+**The dangerous transition was not exercised, and it is not where it
+first appeared to be.** Running the spike had left the field owned by
+*both* the composition and the provider, since restoring the real
+composition re-claimed it alongside late-init. With two owners, one
+relinquishing cannot remove the field, so no window opened.
+
+Where the window actually is: the composition owns `billingAccount`
+only when a composite supplies `billingAccountId`, and the only thing
+that supplies it is `gcp-plane-apply`, at creation. So the window is
+the *first reconcile from the committed manifest* after a new
+installation is created — the moment the composition stops declaring
+what it declared at creation. That is a fresh-installation concern, on
+every new installation, and it was never qw01's pivot: an existing
+project reconciled from a manifest that never carries the field means
+the composition never owns it in the first place.
+
+qw01 is past it permanently for the same reason. Note also that the
+handover's effect was entirely cluster-side — the XRD, the composite
+and the field ownership all went with the boot plane when it was
+deleted. What persists is the committed code and GCP itself, which is
+the design working rather than a loss.
 
 **Guarding it by patching the resource does not work.** The handover
 script cut the project to `[Observe, LateInitialize]` with `kubectl
