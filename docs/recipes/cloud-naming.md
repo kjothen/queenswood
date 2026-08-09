@@ -28,7 +28,10 @@ folder, cluster or bucket renames only by being rebuilt.
 ```
 
 - **prefix** — the kind, abbreviated. Fixed per kind, listed below.
-- **code** — the installation's four-character code, `qw01`.
+- **code** — the installation's four-character code, chosen when it is
+  created and carried in its manifest. `qw01` stands in for it
+  everywhere below, and is an example rather than a constant: a second
+  installation is `qw02`, and one built for somebody else is neither.
 - **env** — one letter: `b` bootstrap, `c` common, `d` dev, `n` nonprod,
   `p` prod.
 - **label** — what this one is for, within its kind and environment.
