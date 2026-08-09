@@ -892,9 +892,9 @@ gcp-platform-billing-role billing="":
     # identity may do inside the folder is a FolderIAMMember or a
     # ProjectIAMMember, but a billing account sits above the folder, and
     # the boot identity holds billing.user rather than billing.admin --
-    # so it cannot delegate what it was given. Run this as somebody who
-    # administers the billing account: join grp-gcp-billing-admin for
-    # the task, and leave.
+    # so it cannot delegate what it was given. Run this as an
+    # administrator of the billing account: the direct one it keeps, or
+    # a member of grp-gcp-billing-admin joined for the task.
     SA=$(just _gcp-platform-sa)
 
     BILLING="{{ billing }}"
@@ -910,7 +910,9 @@ gcp-platform-billing-role billing="":
     if ! gcloud billing accounts add-iam-policy-binding "$BILLING" \
            --member="serviceAccount:${SA}" --role=roles/billing.user \
            >/dev/null; then
-      echo "could not grant billing.user -- are you in {{ BILLING_ADMIN_GROUP }}?" >&2
+      echo "could not grant billing.user on $BILLING" >&2
+      echo "needs roles/billing.admin there -- held directly by the" >&2
+      echo "account's own administrator, or through {{ BILLING_ADMIN_GROUP }}" >&2
       exit 1
     fi
     echo ">>> granted. The platform identity can now bill the projects"

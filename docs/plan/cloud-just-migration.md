@@ -492,11 +492,38 @@ it patches, Crossplane's reference resolver owns what it resolves, and
 the provider owns what it late-initialises. Ownership is what decides
 whether a field survives a patch being deleted.
 
-The remaining work is not a question, it is a change: drop the patch
-from the composition, take `billingAccountId` out of the XRD's
-`required` list, and have the boot plane link a newly created project
-to the account it discovers from its own binding. Those land together —
-dropping the patch alone would leave the next project created unbilled.
+##### Done for qw01, and what it did not prove
+
+The live installation has crossed over: the XRD makes the field
+optional, the XR carries no `billingAccountId`, the provider owns
+`forProvider.billingAccount` alone, and GCP still bills the project.
+The composition keeps its patch, which now fires only when a manifest
+supplies the field — which `gcp-plane-apply` does at creation and the
+committed manifest never does.
+
+Two things that run did **not** establish, both worth knowing before
+trusting it again:
+
+**The dangerous transition was not exercised.** Running the spike left
+the field owned by *both* the composition and the provider, because
+restoring the real composition re-claimed it alongside the provider's
+late-init. With two owners, one relinquishing cannot remove the field,
+so there was no window. On a plane where the composition has been the
+sole owner from the start — which is the management cluster after the
+pivot — the window is real and untested.
+
+**Guarding it by patching the resource does not work.** The handover
+script cut the project to `[Observe, LateInitialize]` with `kubectl
+patch` and the composition reverted it within seconds, because
+`managementPolicies` is set in the composition's `base` and is
+therefore a field the composition owns. The guard was inert for the
+whole run. The spike worked because it changed the *composition*; that
+is the only thing that changes a composition-owned field.
+
+So the ownership rule has now caught three separate things — the
+billing account, the readiness of go-templated resources, and a safety
+mechanism built to protect against it. Treat "who owns this field" as
+the first question about any composed resource, not a detail.
 
 This does not retire the private repository: `createFolder.parent`
 still carries the organisation id, and a folder's parent is required
