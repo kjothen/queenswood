@@ -151,13 +151,12 @@ spec:
                     displayName:
                       type: string
                       description: |
-                        Labels this installation for humans and nothing
-                        else -- the folder id is the identifier, and a
-                        folder handed to you carries whatever name its
-                        organisation chose. Suffixed like a project id by
-                        default: display names must be unique among
-                        siblings, so a fixed name means the second
-                        installation under a parent is refused.
+                        Names this installation for humans -- the
+                        folder id is the identifier, and a folder handed
+                        to you carries whatever name its organisation
+                        chose. fldr-<code> by convention: display names
+                        must be unique among siblings, and the code
+                        already makes them so.
                     folderId:
                       type: string
                       pattern: '^folders/[0-9]+$'

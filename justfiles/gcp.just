@@ -587,17 +587,18 @@ gcp-plane-up:
 gcp-plane-apply parent name="" folder="" mgmt="" billing="":
     #!/usr/bin/env zsh
     set -e
-    # Suffixed like every project id, because a folder's display name
-    # identifies nothing -- the id does. A fixed name implies meaning it
-    # does not carry, and two installations called queenswood cannot be
-    # told apart in a console. Pass a name to choose your own.
+    # Deterministic, because the code is what tells one installation
+    # from another -- a suffix on top of it would only obscure that.
+    # Pass a name where the folder is handed to you already named.
     NAME="{{ name }}"
     if [[ -z "$NAME" ]]; then
-      NAME="queenswood-$(openssl rand -hex 3)"
+      NAME="fldr-{{ CODE }}"
       echo ">>> naming the folder $NAME"
     fi
     # Refuse to make a second installation by accident. GCP allows the
-    # duplicate name, so this is the only thing that would notice.
+    # duplicate name, so this is the only thing that would notice -- and
+    # with a deterministic name it is what catches a rebuild that meant
+    # to adopt.
     if [[ -z "{{ folder }}" ]]; then
       case "{{ parent }}" in
         organizations/*) SCOPE="--organization=${${:-{{ parent }}}#organizations/}" ;;
