@@ -46,15 +46,17 @@ _gcp-customer-id org="":
     gcloud organizations describe "$ORG" \
       --format='value(owner.directoryCustomerId)'
 
-# Print the bootstrap project id, found by label.
+# Print the seed project id, found by label. One per organisation: it
+# holds the identity that creates installations, so it sits above every
+# folder and outlives all of them.
 [private]
 _gcp-bootstrap-project:
     #!/usr/bin/env zsh
     set -e
-    ID=$(gcloud projects list --filter="labels.queenswood-tier=bootstrap" \
+    ID=$(gcloud projects list --filter="labels.queenswood-tier=seed" \
            --format='value(projectId)' 2>/dev/null | head -1 || true)
     if [[ -z "$ID" ]]; then
-      echo "no bootstrap project; run 'just gcp-bootstrap-identity'" >&2
+      echo "no seed project; run 'just gcp-bootstrap-identity'" >&2
       exit 1
     fi
     printf '%s\n' "$ID"
@@ -62,7 +64,7 @@ _gcp-bootstrap-project:
 # Print the bootstrap service account's email.
 [private]
 _gcp-bootstrap-sa:
-    @printf 'bootstrap@%s.iam.gserviceaccount.com\n' "$(just _gcp-bootstrap-project)"
+    @printf 'sa-{{ CODE }}-boot@%s.iam.gserviceaccount.com\n' "$(just _gcp-bootstrap-project)"
 
 # Print the organisation id, discovering it when only one is visible.
 [private]
@@ -185,6 +187,10 @@ gcp-preflight org="":
 # billing account and can create projects, but only an organisation
 # admin can grant roles at the organisation -- which is the whole of
 # what break-glass is for.
+#
+# The seed project holding the identity carries no installation code:
+# one serves the organisation. The identities inside it do carry one,
+# because each creates a particular installation.
 # =========================================================================
 
 # Create the bootstrap identity and your right to impersonate it (as the operator).
@@ -204,15 +210,15 @@ gcp-bootstrap-identity org="" billing="":
       exit 1
     fi
 
-    PROJECT=$(gcloud projects list --filter="labels.queenswood-tier=bootstrap" \
+    PROJECT=$(gcloud projects list --filter="labels.queenswood-tier=seed" \
                 --format='value(projectId)' 2>/dev/null | head -1 || true)
     if [[ -n "$PROJECT" ]]; then
       echo ">>> reusing bootstrap project $PROJECT"
     else
-      PROJECT="queenswood-bootstrap-$(openssl rand -hex 3)"
+      PROJECT="prj-b-seed-$(openssl rand -hex 3)"
       echo ">>> creating project $PROJECT under organization $ORG"
-      gcloud projects create "$PROJECT" --name=queenswood-bootstrap \
-        --organization="$ORG" --labels=queenswood-tier=bootstrap
+      gcloud projects create "$PROJECT" --name=prj-b-seed \
+        --organization="$ORG" --labels=queenswood-tier=seed
       echo ">>> linking billing $BILLING"
       gcloud billing projects link "$PROJECT" \
         --billing-account="$BILLING" >/dev/null
@@ -226,12 +232,12 @@ gcp-bootstrap-identity org="" billing="":
       iamcredentials.googleapis.com \
       serviceusage.googleapis.com
 
-    SA="bootstrap@${PROJECT}.iam.gserviceaccount.com"
+    SA="sa-{{ CODE }}-boot@${PROJECT}.iam.gserviceaccount.com"
     if ! gcloud iam service-accounts describe "$SA" \
            --project="$PROJECT" >/dev/null 2>&1; then
       echo ">>> creating service account $SA"
-      gcloud iam service-accounts create bootstrap --project="$PROJECT" \
-        --display-name="Queenswood bootstrap" \
+      gcloud iam service-accounts create sa-{{ CODE }}-boot --project="$PROJECT" \
+        --display-name="sa-{{ CODE }}-boot" \
         --description="Creates the management project; see docs/recipes/cloud-foundation.md"
     fi
 
@@ -630,7 +636,7 @@ gcp-plane-apply parent name="" folder="" mgmt="" billing="":
     # manifest. That is what stops a rebuilt plane minting a second one.
     MGMT="{{ mgmt }}"
     if [[ -z "$MGMT" ]]; then
-      MGMT="queenswood-mgmt-$(openssl rand -hex 3)"
+      MGMT="prj-{{ CODE }}-c-mgmt-$(openssl rand -hex 3)"
       echo ">>> naming the management project $MGMT"
     fi
 

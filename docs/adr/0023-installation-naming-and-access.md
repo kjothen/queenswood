@@ -75,6 +75,14 @@ Environment codes are the guide's: `b` bootstrap, `c` common, `d` dev,
 Two kinds the guide does not cover take the same shape: GKE cluster
 `gke-qw01-mgmt`, node pool `np-qw01-mgmt`.
 
+One project carries no code, because it belongs to no installation. The
+identity that creates a folder must exist before the folder does, and
+one such project serves the whole organisation — the guide calls it the
+seed, so `prj-b-seed-<suffix>`. The identities inside it are named per
+installation, `sa-qw01-boot`, because each creates a particular one.
+Where the organisation is not ours there is no seed project at all: the
+identity is handed to us.
+
 The suffix on a project is six hex characters rather than the guide's
 five-digit number, because that is what generates a globally unique id
 with the least ceremony. Everything else is as published.
