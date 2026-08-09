@@ -635,7 +635,7 @@ gcp-plane-up:
     echo
     echo ">>> plane ready. Next: just gcp-plane-apply <parent> [display-name]"
 
-# Create or adopt the folder, e.g. just gcp-plane-apply organizations/85415540850
+# Create or adopt the folder, e.g. just gcp-plane-apply organizations/<org-id>
 gcp-plane-apply parent name="" folder="" mgmt="" billing="":
     #!/usr/bin/env zsh
     set -e
