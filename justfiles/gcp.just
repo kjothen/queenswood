@@ -7,24 +7,27 @@
 # managed resources. See docs/recipes/cloud-foundation.md.
 # =========================================================================
 
-# Group names. Roles bind to these and never move; membership does. A
-# name says who is in the group, not what one of its bindings grants --
-# gcp-platform-operators holds three roles at two scopes, and calling it
-# after any of them would undersell what impersonation reaches.
-#
-# Organization Administrator does not include resourcemanager.folders
-# .delete, so folder admins are a separate group. Both are empty in
-# steady state.
 # Throwaway control plane used to create the folder and the management
 # project, then discarded. Deliberately not XP_CLUSTER: that one is the
 # previous generation's permanent plane.
 BOOT_CLUSTER := "qw-boot"
 BOOT_CTX := "kind-qw-boot"
 
-ADMINS_GROUP := "gcp-organization-admins"
-FOLDER_ADMINS_GROUP := "gcp-folder-admins"
-BILLING_GROUP := "gcp-billing-admins"
-OPERATORS_GROUP := "gcp-platform-operators"
+# The installation these recipes act on. Names derive from the code.
+CODE := "qw01"
+
+# Access groups, named for the capability each carries. Roles bind to
+# these and never move; membership does. The organisation set outlives
+# every installation, the coded set dies with one. See ADR-0023.
+ORG_ADMIN_GROUP := "grp-gcp-org-admin"
+FOLDER_ADMIN_GROUP := "grp-gcp-folder-admin"
+BILLING_ADMIN_GROUP := "grp-gcp-billing-admin"
+SECURITY_REVIEWER_GROUP := "grp-gcp-security-reviewer"
+
+PLATFORM_VIEWER_GROUP := "grp-gcp-" + CODE + "-platform-viewer"
+PLATFORM_ADMIN_GROUP := "grp-gcp-" + CODE + "-platform-admin"
+CLUSTER_ADMIN_GROUP := "grp-gcp-" + CODE + "-cluster-admin"
+SECRETS_ADMIN_GROUP := "grp-gcp-" + CODE + "-secrets-admin"
 
 # Print the organisation's primary domain, which is its display name.
 [private]
@@ -141,9 +144,9 @@ gcp-preflight org="":
     # here, so an absent line is a prompt to check rather than proof.
     echo
     echo "organization roles bound directly to $ME:"
-    # Not fatal, unlike the describe above. Organization Viewer does not
-    # include getIamPolicy, so the operating user legitimately cannot
-    # read this -- and a denial must never render as "(none)".
+    # Not fatal, unlike the describe above. Browser carries no
+    # organizations.getIamPolicy, so the operating user legitimately
+    # cannot read this -- and a denial must never render as "(none)".
     if ROLES=$(gcloud organizations get-iam-policy "$ORG" \
                  --flatten='bindings[].members' \
                  --filter="bindings.members:user:$ME" \
@@ -156,7 +159,7 @@ gcp-preflight org="":
       echo "  (domain-wide grants are not listed here -- they name the domain)"
     else
       echo "  not readable by this account, which blocks nothing"
-      echo "  (Organization Viewer excludes getIamPolicy)"
+      echo "  (Browser carries no organizations.getIamPolicy)"
     fi
 
     # What the two paths need, stated rather than asserted, because the
@@ -238,12 +241,14 @@ gcp-bootstrap-identity org="" billing="":
 
     # The group, never a person. Membership is then the whole of who can
     # act as this identity, and removing it is one revocation in one
-    # place rather than an edit to this policy.
+    # place rather than an edit to this policy. platform-admin rather
+    # than platform-viewer: assuming this identity is a write capability,
+    # so it is joined for a task and left.
     DOMAIN=$(just _gcp-domain "{{ org }}")
-    OPERATORS="{{ OPERATORS_GROUP }}@${DOMAIN}"
-    echo ">>> letting $OPERATORS impersonate $SA"
+    PLATFORM_ADMIN="{{ PLATFORM_ADMIN_GROUP }}@${DOMAIN}"
+    echo ">>> letting $PLATFORM_ADMIN impersonate $SA"
     gcloud iam service-accounts add-iam-policy-binding "$SA" \
-      --project="$PROJECT" --member="group:${OPERATORS}" \
+      --project="$PROJECT" --member="group:${PLATFORM_ADMIN}" \
       --role=roles/iam.serviceAccountTokenCreator >/dev/null
 
     # Converge on group-only: a person named here would be standing
@@ -262,7 +267,7 @@ gcp-bootstrap-identity org="" billing="":
     echo
     echo ">>> project  $PROJECT"
     echo ">>> identity $SA"
-    echo ">>> act as it by joining $OPERATORS"
+    echo ">>> act as it by joining $PLATFORM_ADMIN, and leave after"
     echo ">>> if it holds no organization roles yet, an organization admin"
     echo ">>> runs: just gcp-bootstrap-org-roles"
 
@@ -277,11 +282,17 @@ gcp-bootstrap-org-roles org="":
     # they create a folder and grant roles inside it, and cannot delete
     # one. projectCreator is org-scoped because the folder it will
     # create does not exist yet.
+    #
+    # browser is read-only and not optional: GCP masks a project that
+    # does not exist as permission denied unless the caller can read the
+    # hierarchy, and an identity that cannot tell "absent" from
+    # "forbidden" never gets past its first observation to create one.
     for role in \
       roles/resourcemanager.folderCreator \
       roles/resourcemanager.folderIamAdmin \
       roles/resourcemanager.projectCreator \
-      roles/orgpolicy.policyAdmin ; do
+      roles/orgpolicy.policyAdmin \
+      roles/browser ; do
       echo ">>> granting $role on organization $ORG"
       gcloud organizations add-iam-policy-binding "$ORG" \
         --member="serviceAccount:${SA}" --role="$role" \
@@ -341,19 +352,28 @@ gcp-groups-bind org="":
     ORG=$(just _gcp-org-id "{{ org }}")
     DOMAIN=$(just _gcp-domain "{{ org }}")
 
+    # browser on the platform-viewer group is the one place an
+    # installation group is bound at the organisation. Hierarchy metadata
+    # only, and the tooling cannot reach a folder without first resolving
+    # the organisation that holds it. organizationViewer would add
+    # nothing: its one permission is already in browser. Where the
+    # organisation is not ours, this is whatever it grants its own people.
     MISSING=0
     for spec in \
-      "{{ ADMINS_GROUP }}:roles/resourcemanager.organizationAdmin" \
-      "{{ FOLDER_ADMINS_GROUP }}:roles/resourcemanager.folderAdmin" \
-      "{{ OPERATORS_GROUP }}:roles/resourcemanager.organizationViewer" \
-      "{{ OPERATORS_GROUP }}:roles/browser" \
-      "{{ BILLING_GROUP }}:" ; do
+      "{{ ORG_ADMIN_GROUP }}:roles/resourcemanager.organizationAdmin" \
+      "{{ FOLDER_ADMIN_GROUP }}:roles/resourcemanager.folderAdmin" \
+      "{{ SECURITY_REVIEWER_GROUP }}:roles/iam.securityReviewer" \
+      "{{ BILLING_ADMIN_GROUP }}:" \
+      "{{ PLATFORM_VIEWER_GROUP }}:roles/browser" \
+      "{{ PLATFORM_ADMIN_GROUP }}:" \
+      "{{ CLUSTER_ADMIN_GROUP }}:" \
+      "{{ SECRETS_ADMIN_GROUP }}:" ; do
       NAME="${spec%%:*}"
       ROLE="${spec#*:}"
       EMAIL="${NAME}@${DOMAIN}"
 
       if [[ -z "$ROLE" ]]; then
-        echo ">>> $EMAIL is bound on the billing account, not here"
+        echo ">>> $EMAIL is bound below the organisation, not here"
         continue
       fi
 
@@ -374,11 +394,12 @@ gcp-groups-bind org="":
     fi
 
     echo
-    echo ">>> bound. Nobody should stand in {{ ADMINS_GROUP }}@${DOMAIN}"
-    echo ">>> or in {{ FOLDER_ADMINS_GROUP }}@${DOMAIN}"
+    echo ">>> bound. Only {{ SECURITY_REVIEWER_GROUP }} and"
+    echo ">>> {{ PLATFORM_VIEWER_GROUP }} carry anyone: the rest"
+    echo ">>> are break-glass, joined for a task and left."
     echo ">>> billing: as an administrator of the billing account, run"
     echo ">>>   gcloud billing accounts add-iam-policy-binding <account-id> \\"
-    echo ">>>     --member=group:{{ BILLING_GROUP }}@${DOMAIN} --role=roles/billing.admin"
+    echo ">>>     --member=group:{{ BILLING_ADMIN_GROUP }}@${DOMAIN} --role=roles/billing.admin"
 
 # Add a member to an access group (needs an active project you can use).
 gcp-access-grant group member:
@@ -401,8 +422,10 @@ gcp-access-status org="":
     #!/usr/bin/env zsh
     set -e
     DOMAIN=$(just _gcp-domain "{{ org }}")
-    for NAME in {{ ADMINS_GROUP }} {{ FOLDER_ADMINS_GROUP }} \
-                {{ OPERATORS_GROUP }} {{ BILLING_GROUP }} ; do
+    for NAME in {{ ORG_ADMIN_GROUP }} {{ FOLDER_ADMIN_GROUP }} \
+                {{ BILLING_ADMIN_GROUP }} {{ SECURITY_REVIEWER_GROUP }} \
+                {{ PLATFORM_VIEWER_GROUP }} {{ PLATFORM_ADMIN_GROUP }} \
+                {{ CLUSTER_ADMIN_GROUP }} {{ SECRETS_ADMIN_GROUP }} ; do
       EMAIL="${NAME}@${DOMAIN}"
       echo "$EMAIL"
       if OUT=$(gcloud identity groups memberships list \
@@ -422,7 +445,8 @@ gcp-access-status org="":
 #
 # Crossplane authenticates from a credentials file, so the plane needs
 # ADC that impersonates the bootstrap identity -- no key, and revocable
-# in one command. Membership of the operators group is what permits it.
+# in one command. Membership of the platform-admin group is what permits
+# it, so join before bringing a plane up and leave once it is down.
 # =========================================================================
 
 # Point ADC at the bootstrap identity (interactive, opens a browser).
@@ -477,36 +501,55 @@ gcp-plane-up:
     kind get clusters | grep -q '^{{ BOOT_CLUSTER }}$' \
       || kind create cluster --name '{{ BOOT_CLUSTER }}'
 
-    helm repo add crossplane-stable https://charts.crossplane.io/stable \
-      --kube-context {{ BOOT_CTX }} >/dev/null
-    helm repo update --kube-context {{ BOOT_CTX }} >/dev/null
-    helm upgrade --install crossplane crossplane-stable/crossplane \
+    # Crossplane from the xp-mp chart, providers from the manifest Argo
+    # applies on the real plane. Both, because the chart templates
+    # Provider and Function CRs in the same release as the subchart that
+    # installs their CRDs, so Helm rejects the render on a new cluster --
+    # its provider block is an audit re-export, not an install path.
+    # Argo is off: a plane that lives for minutes reconciles nothing.
+    helm dependency build infra/helm/xp-mp >/dev/null
+    helm upgrade --install xp-mp infra/helm/xp-mp \
       --kube-context {{ BOOT_CTX }} \
-      --namespace crossplane-system --create-namespace --wait
+      --namespace crossplane-system --create-namespace \
+      --set argo-cd.enabled=false --set providers.enabled=false --wait
 
-    # Only what a folder needs. The other providers arrive with the rest
-    # of the composite.
-    kubectl --context {{ BOOT_CTX }} apply -f - <<'YAML'
+    # Only what this plane needs: a folder, a project and its APIs
+    # (cloudplatform), then a network and a GKE cluster to hand over to
+    # (compute, container). dns, sql and certificatemanager serve
+    # instances and belong to the management plane, not to a cluster
+    # that lives for minutes. Versions come from the manifest Argo
+    # applies, so only the set is narrowed.
+    MANIFEST=infra/platform/crossplane-providers/providers.yml
+    for name in provider-gcp-cloudplatform provider-gcp-compute \
+                provider-gcp-container function-patch-and-transform \
+                function-go-templating ; do
+      PKG=$(grep -A2 "name: $name\$" "$MANIFEST" | grep 'package:' | awk '{print $2}')
+      if [[ -z "$PKG" ]]; then
+        echo "no package for $name in $MANIFEST" >&2
+        exit 1
+      fi
+      KIND=Provider
+      case "$name" in function-*) KIND=Function ;; esac
+      echo ">>> installing $PKG"
+      kubectl --context {{ BOOT_CTX }} apply -f - <<YAML
     apiVersion: pkg.crossplane.io/v1
-    kind: Provider
+    kind: $KIND
     metadata:
-      name: provider-gcp-cloudplatform
+      name: $name
     spec:
-      package: xpkg.upbound.io/upbound/provider-gcp-cloudplatform:v2.5.1
-    ---
-    apiVersion: pkg.crossplane.io/v1
-    kind: Function
-    metadata:
-      name: function-patch-and-transform
-    spec:
-      package: xpkg.crossplane.io/crossplane-contrib/function-patch-and-transform:v0.8.2
+      package: $PKG
     YAML
+    done
 
     echo ">>> waiting for the provider and function"
-    kubectl --context {{ BOOT_CTX }} wait --for=condition=healthy --timeout=300s \
+    kubectl --context {{ BOOT_CTX }} wait --for=condition=healthy --timeout=600s \
       provider.pkg.crossplane.io/provider-gcp-cloudplatform
-    kubectl --context {{ BOOT_CTX }} wait --for=condition=healthy --timeout=300s \
+    kubectl --context {{ BOOT_CTX }} wait --for=condition=healthy --timeout=600s \
+      provider.pkg.crossplane.io/provider-gcp-container
+    kubectl --context {{ BOOT_CTX }} wait --for=condition=healthy --timeout=600s \
       function.pkg.crossplane.io/function-patch-and-transform
+    kubectl --context {{ BOOT_CTX }} wait --for=condition=healthy --timeout=600s \
+      function.pkg.crossplane.io/function-go-templating
 
     kubectl --context {{ BOOT_CTX }} create secret generic gcp-creds \
       -n crossplane-system --from-file=creds="$F" \
@@ -541,7 +584,7 @@ gcp-plane-up:
     echo ">>> plane ready. Next: just gcp-plane-apply <parent> [display-name]"
 
 # Create or adopt the folder, e.g. just gcp-plane-apply organizations/85415540850
-gcp-plane-apply parent name="" folder="":
+gcp-plane-apply parent name="" folder="" mgmt="" billing="":
     #!/usr/bin/env zsh
     set -e
     # Suffixed like every project id, because a folder's display name
@@ -571,6 +614,40 @@ gcp-plane-apply parent name="" folder="":
         exit 1
       fi
     fi
+    BILLING="{{ billing }}"
+    if [[ -z "$BILLING" ]]; then
+      BILLING=$(gcloud billing accounts list --filter='OPEN=True' \
+                  --format='value(ACCOUNT_ID)' | head -1 || true)
+    fi
+    if [[ -z "$BILLING" ]]; then
+      echo "no open billing account; pass one" >&2
+      exit 1
+    fi
+
+    # A project id is consumed permanently and cannot be undeleted into
+    # usefulness, so it is generated once and then carried in the
+    # manifest. That is what stops a rebuilt plane minting a second one.
+    MGMT="{{ mgmt }}"
+    if [[ -z "$MGMT" ]]; then
+      MGMT="queenswood-mgmt-$(openssl rand -hex 3)"
+      echo ">>> naming the management project $MGMT"
+    fi
+
+    # Set only when the project already exists, for the same reason the
+    # folder's adoption field is: a pre-set external name turns a
+    # first-run create into a failed observe.
+    MGMT_ADOPT=""
+    if [[ -n "{{ mgmt }}" ]]; then
+      # Prefixed: that is the form Crossplane records as the external
+      # name, and adoption matches on it exactly.
+      case "$MGMT" in
+        projects/*) MGMT_ADOPT="adopt: $MGMT"; MGMT="${MGMT#projects/}" ;;
+        *)          MGMT_ADOPT="adopt: projects/$MGMT" ;;
+      esac
+    fi
+
+    DOMAIN=$(just _gcp-domain)
+
     FOLDER="{{ folder }}"
     if [[ -n "$FOLDER" && "$FOLDER" != folders/* ]]; then
       FOLDER="folders/$FOLDER"
@@ -579,6 +656,7 @@ gcp-plane-apply parent name="" folder="":
     if [[ -n "$FOLDER" ]]; then
       ADOPT="folderId: $FOLDER"
     fi
+    PARENT_ECHO="{{ parent }}"
 
     kubectl --context {{ BOOT_CTX }} apply -f - <<YAML
     apiVersion: platform.queenswood.repldriven.com/v1alpha1
@@ -587,13 +665,27 @@ gcp-plane-apply parent name="" folder="":
       name: queenswood
       namespace: crossplane-system
     spec:
+      billingAccountId: "$BILLING"
+      # Capability -> principal. Whole IAM member strings, because the
+      # principal need not be a group. A capability left out binds
+      # nothing.
+      access:
+        platformViewer: ["group:{{ PLATFORM_VIEWER_GROUP }}@${DOMAIN}"]
+        platformAdmin: ["group:{{ PLATFORM_ADMIN_GROUP }}@${DOMAIN}"]
+        clusterAdmin: ["group:{{ CLUSTER_ADMIN_GROUP }}@${DOMAIN}"]
+        secretsAdmin: ["group:{{ SECRETS_ADMIN_GROUP }}@${DOMAIN}"]
+      management:
+        projectId: "$MGMT"
+        $MGMT_ADOPT
       createFolder:
         parent: "{{ parent }}"
         displayName: "$NAME"
         $ADOPT
     YAML
 
-    echo ">>> waiting for the folder"
+    echo ">>> commit this to keep the installation reproducible:"
+    echo ">>>   parent=$PARENT_ECHO folder=$FOLDER mgmt=$MGMT"
+    echo ">>> waiting for the folder and management project"
     kubectl --context {{ BOOT_CTX }} -n crossplane-system wait \
       --for=condition=ready --timeout=300s \
       xqueenswoodinstallation/queenswood || true

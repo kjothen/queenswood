@@ -57,6 +57,15 @@ spec:
                 fieldPath: status.atProvider.lifecycleState
                 matchString: ACTIVE
             patches:
+              # Named after the composite rather than generated, so the
+              # management project can reference it.
+              - fromFieldPath: metadata.name
+                toFieldPath: metadata.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "%s-folder"
               # Adoption. Skipped when absent, so a first run creates and
               # a rebuild takes over what is already there.
               - fromFieldPath: spec.createFolder.folderId
@@ -70,3 +79,614 @@ spec:
               - type: ToCompositeFieldPath
                 fromFieldPath: metadata.annotations[crossplane.io/external-name]
                 toFieldPath: status.folderId
+          # ===================================================================
+          # The management project, referenced to the folder rather than
+          # patched from its id: folderIdRef resolves the composed
+          # Folder by name, so Crossplane orders the two itself.
+          # ===================================================================
+          - name: management-project
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: Project
+              metadata:
+                namespace: crossplane-system
+              spec:
+                managementPolicies:
+                  - Observe
+                  - Create
+                  - Update
+                  - LateInitialize
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  name: queenswood management
+                  # No default VPC. The org policy says the same thing,
+                  # and a folder handed to us may not carry it.
+                  autoCreateNetwork: false
+                  # Provider-side, and already the default. The project
+                  # holds the platform: nothing reconciling should be
+                  # able to remove it.
+                  deletionPolicy: PREVENT
+            patches:
+              - fromFieldPath: metadata.name
+                toFieldPath: metadata.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "%s-management"
+              # Adoption only. Setting this before the project exists
+              # makes observe fail with permission denied, which
+              # Crossplane cannot tell from a real error, so it never
+              # creates.
+              - fromFieldPath: spec.management.adopt
+                toFieldPath: metadata.annotations[crossplane.io/external-name]
+              - fromFieldPath: spec.management.projectId
+                toFieldPath: spec.forProvider.projectId
+              - fromFieldPath: spec.management.displayName
+                toFieldPath: spec.forProvider.name
+              - fromFieldPath: spec.billingAccountId
+                toFieldPath: spec.forProvider.billingAccount
+              # Names the composed Folder, so Crossplane resolves it and
+              # orders the two itself rather than the id being threaded
+              # through status.
+              - fromFieldPath: metadata.name
+                toFieldPath: spec.forProvider.folderIdRef.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "%s-folder"
+              - type: ToCompositeFieldPath
+                fromFieldPath: metadata.annotations[crossplane.io/external-name]
+                toFieldPath: status.managementProjectId
+          # ===================================================================
+          # APIs the management project needs before anything runs in it.
+          # projectRef names the composed Project, so each waits for it
+          # without an id being threaded through.
+          # ===================================================================
+          - name: management-service-iam
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: ProjectService
+              metadata:
+                namespace: crossplane-system
+              spec:
+                managementPolicies:
+                  - Observe
+                  - Create
+                  - Update
+                  - LateInitialize
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  service: iam.googleapis.com
+                  # Leaving an API enabled on the way down is harmless
+                  # and avoids a dependent-resource cascade.
+                  disableOnDestroy: false
+            patches:
+              - fromFieldPath: metadata.name
+                toFieldPath: metadata.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "%s-iam"
+              - fromFieldPath: metadata.name
+                toFieldPath: spec.forProvider.projectRef.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "%s-management"
+          - name: management-service-iamcredentials
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: ProjectService
+              metadata:
+                namespace: crossplane-system
+              spec:
+                managementPolicies:
+                  - Observe
+                  - Create
+                  - Update
+                  - LateInitialize
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  service: iamcredentials.googleapis.com
+                  # Leaving an API enabled on the way down is harmless
+                  # and avoids a dependent-resource cascade.
+                  disableOnDestroy: false
+            patches:
+              - fromFieldPath: metadata.name
+                toFieldPath: metadata.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "%s-iamcredentials"
+              - fromFieldPath: metadata.name
+                toFieldPath: spec.forProvider.projectRef.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "%s-management"
+          - name: management-service-serviceusage
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: ProjectService
+              metadata:
+                namespace: crossplane-system
+              spec:
+                managementPolicies:
+                  - Observe
+                  - Create
+                  - Update
+                  - LateInitialize
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  service: serviceusage.googleapis.com
+                  # Leaving an API enabled on the way down is harmless
+                  # and avoids a dependent-resource cascade.
+                  disableOnDestroy: false
+            patches:
+              - fromFieldPath: metadata.name
+                toFieldPath: metadata.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "%s-serviceusage"
+              - fromFieldPath: metadata.name
+                toFieldPath: spec.forProvider.projectRef.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "%s-management"
+          - name: management-service-resourcemanager
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: ProjectService
+              metadata:
+                namespace: crossplane-system
+              spec:
+                managementPolicies:
+                  - Observe
+                  - Create
+                  - Update
+                  - LateInitialize
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  service: cloudresourcemanager.googleapis.com
+                  # Leaving an API enabled on the way down is harmless
+                  # and avoids a dependent-resource cascade.
+                  disableOnDestroy: false
+            patches:
+              - fromFieldPath: metadata.name
+                toFieldPath: metadata.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "%s-resourcemanager"
+              - fromFieldPath: metadata.name
+                toFieldPath: spec.forProvider.projectRef.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "%s-management"
+          - name: management-service-compute
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: ProjectService
+              metadata:
+                namespace: crossplane-system
+              spec:
+                managementPolicies:
+                  - Observe
+                  - Create
+                  - Update
+                  - LateInitialize
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  service: compute.googleapis.com
+                  disableOnDestroy: false
+            patches:
+              - fromFieldPath: metadata.name
+                toFieldPath: metadata.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "%s-compute"
+              - fromFieldPath: metadata.name
+                toFieldPath: spec.forProvider.projectRef.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "%s-management"
+          - name: management-service-container
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: ProjectService
+              metadata:
+                namespace: crossplane-system
+              spec:
+                managementPolicies:
+                  - Observe
+                  - Create
+                  - Update
+                  - LateInitialize
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  service: container.googleapis.com
+                  disableOnDestroy: false
+            patches:
+              - fromFieldPath: metadata.name
+                toFieldPath: metadata.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "%s-container"
+              - fromFieldPath: metadata.name
+                toFieldPath: spec.forProvider.projectRef.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "%s-management"
+          # ===================================================================
+          # Network for the management cluster. Nothing else lives here,
+          # so one subnet with the two secondary ranges GKE needs.
+          # Network and Subnetwork take a project id rather than a ref,
+          # so it comes from the manifest, which always carries it.
+          # ===================================================================
+          - name: management-vpc
+            base:
+              apiVersion: compute.gcp.m.upbound.io/v1beta1
+              kind: Network
+              metadata:
+                namespace: crossplane-system
+              spec:
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  autoCreateSubnetworks: false
+                  routingMode: REGIONAL
+            patches:
+              - fromFieldPath: metadata.name
+                toFieldPath: metadata.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "%s-vpc"
+              - fromFieldPath: spec.management.projectId
+                toFieldPath: spec.forProvider.project
+          - name: management-subnet
+            base:
+              apiVersion: compute.gcp.m.upbound.io/v1beta1
+              kind: Subnetwork
+              metadata:
+                namespace: crossplane-system
+              spec:
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  ipCidrRange: 10.60.0.0/16
+                  privateIpGoogleAccess: true
+                  secondaryIpRange:
+                    - rangeName: pods
+                      ipCidrRange: 10.61.0.0/16
+                    - rangeName: services
+                      ipCidrRange: 10.62.0.0/20
+            patches:
+              - fromFieldPath: metadata.name
+                toFieldPath: metadata.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "%s-subnet"
+              - fromFieldPath: metadata.name
+                toFieldPath: spec.forProvider.networkRef.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "%s-vpc"
+              - fromFieldPath: spec.management.projectId
+                toFieldPath: spec.forProvider.project
+              - fromFieldPath: spec.region
+                toFieldPath: spec.forProvider.region
+
+          # ===================================================================
+          # The cluster that will run Crossplane and Argo, and nothing
+          # else. Zonal, because one zonal control plane falls under the
+          # free allowance and a management plane does not need three.
+          #
+          # The default node pool is removed and replaced, which costs
+          # about ten minutes here but makes every later change of
+          # machine type a pool replacement rather than a cluster one --
+          # and the right size for this is not yet known.
+          # ===================================================================
+          - name: management-cluster
+            base:
+              apiVersion: container.gcp.m.upbound.io/v1beta1
+              kind: Cluster
+              metadata:
+                namespace: crossplane-system
+              spec:
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  initialNodeCount: 1
+                  removeDefaultNodePool: true
+                  deletionProtection: false
+                  releaseChannel:
+                    channel: REGULAR
+                  ipAllocationPolicy:
+                    clusterSecondaryRangeName: pods
+                    servicesSecondaryRangeName: services
+            patches:
+              - fromFieldPath: metadata.name
+                toFieldPath: metadata.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "%s-cluster"
+              - fromFieldPath: metadata.name
+                toFieldPath: spec.forProvider.networkRef.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "%s-vpc"
+              - fromFieldPath: metadata.name
+                toFieldPath: spec.forProvider.subnetworkRef.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "%s-subnet"
+              - fromFieldPath: spec.management.projectId
+                toFieldPath: spec.forProvider.project
+              - fromFieldPath: spec.zone
+                toFieldPath: spec.forProvider.location
+              # Workload Identity, so the platform's own service account
+              # is assumed by a pod rather than held as a key.
+              - fromFieldPath: spec.management.projectId
+                toFieldPath: spec.forProvider.workloadIdentityConfig.workloadPool
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "%s.svc.id.goog"
+              - type: ToCompositeFieldPath
+                fromFieldPath: status.atProvider.endpoint
+                toFieldPath: status.clusterEndpoint
+          - name: management-nodes
+            base:
+              apiVersion: container.gcp.m.upbound.io/v1beta1
+              kind: NodePool
+              metadata:
+                namespace: crossplane-system
+              spec:
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  nodeCount: 1
+                  nodeConfig:
+                    diskSizeGb: 50
+                    diskType: pd-standard
+                    oauthScopes:
+                      - https://www.googleapis.com/auth/cloud-platform
+                    workloadMetadataConfig:
+                      mode: GKE_METADATA
+            patches:
+              - fromFieldPath: metadata.name
+                toFieldPath: metadata.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "%s-nodes"
+              # By value, not clusterRef. The reference extractor reads a
+              # field the provider never fills for Cluster -- there is no
+              # forProvider.name, and atProvider.name stays empty -- so it
+              # resolves to nothing forever. The cluster's name is its
+              # external name, which this composition sets, so the value
+              # is as deterministic as the reference would have been.
+              - fromFieldPath: metadata.name
+                toFieldPath: spec.forProvider.cluster
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "%s-cluster"
+              - fromFieldPath: spec.management.projectId
+                toFieldPath: spec.forProvider.project
+              - fromFieldPath: spec.zone
+                toFieldPath: spec.forProvider.location
+              - fromFieldPath: spec.management.machineType
+                toFieldPath: spec.forProvider.nodeConfig.machineType
+          # ===================================================================
+          # The platform's own identity. Created here, assumed by pods on
+          # the management cluster through Workload Identity, and never
+          # held by anyone -- the same property the bootstrap identity
+          # has, arrived at differently.
+          #
+          # What it is allowed to do is not here yet: folder-scoped
+          # bindings need FolderIAMMember, which is unverified against
+          # this provider version.
+          # ===================================================================
+          - name: platform-identity
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: ServiceAccount
+              metadata:
+                namespace: crossplane-system
+              spec:
+                managementPolicies:
+                  - Observe
+                  - Create
+                  - Update
+                  - LateInitialize
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  displayName: Queenswood platform
+                  description: Runs the management plane; see docs/recipes/cloud-foundation.md
+            patches:
+              - fromFieldPath: metadata.name
+                toFieldPath: metadata.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "%s-platform"
+              - fromFieldPath: spec.management.projectId
+                toFieldPath: spec.forProvider.project
+              # The account id is the external name, so it is stated
+              # rather than generated: the Workload Identity member
+              # string below has to spell the same address.
+              - fromFieldPath: metadata.name
+                toFieldPath: metadata.annotations[crossplane.io/external-name]
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "%s-platform"
+          - name: platform-identity-workload-identity
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: ServiceAccountIAMMember
+              metadata:
+                namespace: crossplane-system
+              spec:
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  role: roles/iam.workloadIdentityUser
+            patches:
+              - fromFieldPath: metadata.name
+                toFieldPath: metadata.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "%s-platform-wi"
+              - fromFieldPath: metadata.name
+                toFieldPath: spec.forProvider.serviceAccountIdRef.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "%s-platform"
+              # serviceAccount:<project>.svc.id.goog[<namespace>/<ksa>]
+              - fromFieldPath: spec.management.projectId
+                toFieldPath: spec.forProvider.member
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "serviceAccount:%s.svc.id.goog[crossplane-system/crossplane-provider-gcp]"
+    # =======================================================================
+    # What each capability may do inside the installation, and nothing
+    # about who holds it -- that is the manifest's access mapping, and
+    # the principals in it belong to whoever owns the directory.
+    # Organisation scope is bound by gcp-groups-bind; everything here is
+    # folder or project scoped, so it belongs beside what it applies to.
+    #
+    # A separate step because the resources vary: none for a capability
+    # the organisation does not provide, one per member per role where it
+    # does. Patch-and-transform composes a fixed set.
+    # =======================================================================
+    - step: access
+      functionRef:
+        name: function-go-templating
+      input:
+        apiVersion: gotemplating.fn.crossplane.io/v1beta1
+        kind: GoTemplate
+        source: Inline
+        inline:
+          template: |
+            {{- $xr := .observed.composite.resource }}
+            {{- $name := $xr.metadata.name }}
+            {{- $access := dig "access" dict $xr.spec }}
+            {{- $project := dig "management" "projectId" "" $xr.spec }}
+            {{- $capabilities := list
+                  (dict "key" "platformViewer" "kind" "FolderIAMMember" "roles" (list
+                    "roles/browser"
+                    "roles/compute.viewer"
+                    "roles/container.viewer"
+                    "roles/iam.serviceAccountViewer"
+                    "roles/logging.viewer"
+                    "roles/monitoring.viewer"))
+                  (dict "key" "platformAdmin" "kind" "ServiceAccountIAMMember" "roles" (list
+                    "roles/iam.serviceAccountTokenCreator"))
+                  (dict "key" "clusterAdmin" "kind" "FolderIAMMember" "roles" (list
+                    "roles/container.admin"))
+                  (dict "key" "secretsAdmin" "kind" "ProjectIAMMember" "roles" (list
+                    "roles/secretmanager.admin")) }}
+            {{- range $capability := $capabilities }}
+            {{- range $member := dig $capability.key list $access }}
+            {{- range $role := $capability.roles }}
+            {{- /* Hashed, not indexed: a member removed from the middle of
+                   the list would otherwise renumber the ones after it, and
+                   Crossplane would delete and recreate live bindings. */}}
+            {{- $slug := printf "%s-%s"
+                  ($role | trimPrefix "roles/" | replace "." "-" | lower)
+                  (sha256sum $member | trunc 8) }}
+            {{- $resource := printf "access-%s-%s" (kebabcase $capability.key) $slug }}
+            ---
+            apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+            kind: {{ $capability.kind }}
+            metadata:
+              name: {{ printf "%s-%s" $name $resource }}
+              namespace: crossplane-system
+              annotations:
+                gotemplating.fn.crossplane.io/composition-resource-name: {{ $resource }}
+            spec:
+              providerConfigRef:
+                kind: ClusterProviderConfig
+                name: default
+              forProvider:
+                role: {{ $role | quote }}
+                member: {{ $member | quote }}
+            {{- if eq $capability.kind "FolderIAMMember" }}
+                folderRef:
+                  name: {{ printf "%s-folder" $name | quote }}
+            {{- else if eq $capability.kind "ProjectIAMMember" }}
+                project: {{ $project | quote }}
+            {{- else if eq $capability.kind "ServiceAccountIAMMember" }}
+                serviceAccountIdRef:
+                  name: {{ printf "%s-platform" $name | quote }}
+            {{- end }}
+            {{- end }}
+            {{- end }}
+            {{- end }}

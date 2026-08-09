@@ -22,10 +22,119 @@ spec:
               type: object
               required:
                 - createFolder
+                - billingAccountId
               properties:
                 # Folder only, for now. The management project, the
                 # durable tier and the instances join this spec as they
                 # are built; see docs/recipes/cloud-foundation.md.
+                billingAccountId:
+                  type: string
+                  description: |
+                    Billing account for every project in the
+                    installation. The bootstrap identity holds
+                    billing.user on it.
+                access:
+                  type: object
+                  description: |
+                    Which principals hold which capability inside the
+                    installation; see ADR-0023. The capability names are
+                    ours, the principals are the organisation's to create
+                    and to name, and a folder may be handed to you by one
+                    whose groups are named nothing like ours. A capability
+                    the organisation does not provide is left out, and
+                    nothing is bound for it: an installation stands up
+                    with no human bindings at all.
+                  properties:
+                    platformViewer:
+                      type: array
+                      description: |
+                        Read inside the folder, assembled from predefined
+                        viewer roles -- never roles/viewer, which is
+                        primitive. The populated one: somebody's job
+                        rather than a capability they join for.
+                      items: &member
+                        type: string
+                        pattern: '^(user|group|serviceAccount|domain|principal|principalSet):'
+                        description: |
+                          A whole IAM member string, not a bare group
+                          address: a capability may be answered by a
+                          group, by a user in a small organisation, or by
+                          a principalSet from a federated directory.
+                    platformAdmin:
+                      type: array
+                      description: |
+                        May assume the identity that runs the
+                        installation, which holds the administrative
+                        rights GCP grants a folder's creator -- so this
+                        is administration of the whole folder, arrived at
+                        by impersonation. Break-glass.
+                      items: *member
+                    clusterAdmin:
+                      type: array
+                      description: |
+                        container.admin on the folder. Break-glass: acting
+                        on a cluster by hand bypasses what reconciles it.
+                      items: *member
+                    secretsAdmin:
+                      type: array
+                      description: |
+                        secretmanager.admin on the management project.
+                        Break-glass.
+                      items: *member
+                region:
+                  type: string
+                  default: europe-west2
+                zone:
+                  type: string
+                  default: europe-west2-a
+                  description: |
+                    The cluster is zonal, not regional: one zonal control
+                    plane falls under the free allowance, and a plane
+                    running Crossplane and Argo does not need three.
+                management:
+                  type: object
+                  properties:
+                    providerServiceAccount:
+                      type: string
+                      default: crossplane-provider-gcp
+                      description: |
+                        The Kubernetes service account Crossplane's GCP
+                        providers run as on the management cluster,
+                        pinned by a DeploymentRuntimeConfig. Workload
+                        Identity binds to this name, so it cannot be the
+                        generated one.
+                    machineType:
+                      type: string
+                      default: e2-standard-2
+                      description: |
+                        Each upjet provider pod is a Terraform runtime,
+                        and Argo brings five components, so the floor is
+                        higher than it looks. Smaller is worth trying,
+                        measured rather than assumed.
+                    projectId:
+                      type: string
+                      description: |
+                        The management project's id. Always supplied: a
+                        project id is consumed permanently and cannot be
+                        undeleted into usefulness, so a rebuilt plane
+                        that invented one would strand the first.
+                    adopt:
+                      type: string
+                      pattern: '^projects/[a-z][a-z0-9-]{4,28}[a-z0-9]$'
+                      description: |
+                        An existing management project to take over,
+                        written projects/<id> -- the prefixed form
+                        Crossplane records as the external name.
+
+                        Separate from projectId because creation and
+                        adoption cannot share a field. GCP answers
+                        permission denied, never not found, for a project
+                        id you do not own, so an external name set before
+                        the project exists makes the first observation
+                        fail and creation never follows.
+                    displayName:
+                      type: string
+                      default: queenswood management
                 createFolder:
                   type: object
                   required:
@@ -62,6 +171,12 @@ spec:
             status:
               type: object
               properties:
+                managementProjectId:
+                  type: string
+                  description: The management project, once it exists.
+                clusterEndpoint:
+                  type: string
+                  description: The management cluster's API endpoint.
                 folderId:
                   type: string
                   description: |

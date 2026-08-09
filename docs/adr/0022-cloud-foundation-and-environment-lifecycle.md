@@ -152,7 +152,7 @@ projects themselves:
   `resourcemanager.folders.delete` is held by nobody: Organization
   Administrator does not carry it, and the bootstrap identity is given
   `folderCreator` and `folderIamAdmin` precisely so that it cannot.
-  Deleting one means joining `gcp-folder-admins@` deliberately. GCP also
+  Deleting one means joining `grp-gcp-folder-admin@` deliberately. GCP also
   refuses to delete a folder that still holds projects.
 - Instance clusters, CloudSQL instances, addresses and certificates are
   fully managed, `Delete` included.

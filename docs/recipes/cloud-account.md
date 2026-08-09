@@ -49,34 +49,66 @@ action.
 
 ### 5. Create the access groups
 
-Four security groups, in `admin.google.com` under Directory then Groups:
+Eight security groups, in `admin.google.com` under Directory then
+Groups. Each carries one capability, and the descriptions below are
+worth pasting in — a group whose purpose is not written down acquires
+members. A description says what holding the capability lets you do, and
+never which roles implement it: those change in a pull request, and
+nothing goes back to correct a field in the directory. The display name
+is the address, so one string appears on every screen and the console
+sorts by scope.
 
-- `gcp-organization-admins@` — Organization Administrator. Empty in
-  steady state; joining it is the break-glass act.
-- `gcp-folder-admins@` — Folder Administrator, and also empty. A separate
-  group because Organization Administrator does **not** carry
-  `resourcemanager.folders.delete`: without this nobody can delete or
-  move a folder at all, and the only route would be granting a role that
-  appears nowhere in the policy. Note that deleting a folder is not
-  something reconciliation undoes — see
-  [cloud-foundation](cloud-foundation.md).
-- `gcp-platform-operators@` — Organization Viewer and Browser, and later
-  the right to impersonate the bootstrap identity. Without Browser a
-  folder is invisible in the console even to the account whose identity
-  created it.
-- `gcp-billing-admins@` — Billing Account Administrator, bound on the
-  billing account in step 7.
+Four at the organisation, which outlive every installation:
+
+- **`grp-gcp-org-admin@`** — Empty. *"Grants and revokes IAM across the
+  organisation. Break-glass: join for the task, then leave."*
+- **`grp-gcp-folder-admin@`** — Empty. *"Creates, moves and deletes
+  folders. Break-glass: join for the task, then leave."*
+- **`grp-gcp-billing-admin@`** — Empty. *"Administers the billing account
+  — linking projects, budgets and payment. Break-glass: join for the
+  task, then leave. One person also holds this directly, because a
+  billing account has no recovery path outside its own policy."*
+- **`grp-gcp-security-reviewer@`** — Populated. *"Reads IAM policy across
+  the organisation and changes nothing. Populated: auditing who holds
+  what must never require the power to change it."*
+
+Four per installation, coded to it and deleted with it — `qw01` here:
+
+- **`grp-gcp-qw01-platform-viewer@`** — Populated. *"Reads qw01 and
+  everything inside it, and writes nothing. Populated: this is
+  day-to-day operation."*
+- **`grp-gcp-qw01-platform-admin@`** — Empty. *"Assumes the identity that
+  runs qw01, which administers all of it. Break-glass: join for the
+  task, then leave."*
+- **`grp-gcp-qw01-cluster-admin@`** — Empty. *"Administers qw01's
+  Kubernetes clusters directly. Break-glass: join for the task, then
+  leave. Acting on a cluster by hand bypasses whatever reconciles it."*
+- **`grp-gcp-qw01-secrets-admin@`** — Empty. *"Reads and manages qw01's
+  secrets. Break-glass: join for the task, then leave. Handling secret
+  contents is a different job from running the infrastructure that holds
+  them."*
+
+Only the organisation set is bound by `gcp-groups-bind`, and billing is
+bound on the billing account rather than on the organisation. The one
+exception is `grp-gcp-qw01-platform-viewer@`, which takes Browser there
+too: it is hierarchy metadata, and the tooling cannot reach a folder
+without first resolving the organisation holding it. The rest of the
+installation set is folder and project scoped, so it belongs in the
+installation manifest beside the resources it applies to. The manifest
+names each capability and maps it to a principal, so which group answers
+is configuration; see
+[ADR-0023](../adr/0023-installation-naming-and-access.md).
 
 For each, in this order: **Access type: Restricted**, *then* **Who can
 join: Only invited users**. Reversing it discards the join rule, and the
 type then reads Custom, which is correct. Leave the access matrix alone.
 
-Then **remove the owner**. An owner is always a member, so owning the
-admins group means holding Organization Administrator permanently. No
-managers either — administering a privilege-granting group is privileged,
-and a super admin can do it without being in the group.
+Create each **without an owner**. An owner is always a member, so owning
+the admins group means holding Organization Administrator permanently.
+No managers either — administering a privilege-granting group is
+privileged, and a super admin can do it without being in the group.
 
-Bind the two organisation roles:
+Bind the organisation roles:
 
 ```bash
 gcloud config unset project
@@ -91,8 +123,9 @@ groups that plainly exist.
 
 ### 6. Create the operating user
 
-Directory then Users. Add it to `gcp-platform-operators@` and
-`gcp-billing-admins@` — not the admins group.
+Directory then Users. Add it to `grp-gcp-qw01-platform-viewer@` and
+nothing else — not a break-glass group, and not the billing group, which
+stays empty beside your own direct binding.
 
 It needs no direct organisation bindings: Project Creator and Billing
 Account Creator are already granted to the whole domain, and the rest
@@ -114,7 +147,7 @@ Then bind the group, and keep your own direct binding:
 
 ```bash
 gcloud billing accounts add-iam-policy-binding <account-id> \
-  --member=group:gcp-billing-admins@yourdomain --role=roles/billing.admin
+  --member=group:grp-gcp-billing-admin@yourdomain --role=roles/billing.admin
 ```
 
 A billing account has no recovery path outside its own IAM policy, so
@@ -142,8 +175,9 @@ just gcp-preflight
 
 An organisation and a billing account is enough to continue with
 [cloud-foundation](cloud-foundation.md). Run as the operating user, the
-roles line reads "not readable by this account" — Organization Viewer
-excludes `getIamPolicy`, and group-derived roles never appear there.
+roles line reads "not readable by this account" — Browser carries no
+`organizations.getIamPolicy`, and group-derived roles never appear
+there anyway.
 
 ## Rules
 
@@ -159,8 +193,10 @@ excludes `getIamPolicy`, and group-derived roles never appear there.
 
 **MUST NOT:**
 
-- Leave anybody standing in `gcp-organization-admins@` or
-  `gcp-folder-admins@`.
+- Leave anybody standing in a break-glass group: `grp-gcp-org-admin@`,
+  `grp-gcp-folder-admin@`, `grp-gcp-billing-admin@`,
+  `grp-gcp-qw01-platform-admin@`, `grp-gcp-qw01-cluster-admin@`,
+  `grp-gcp-qw01-secrets-admin@`.
 - Give these groups an owner or a manager. Both are members.
 - Use `gcloud identity groups describe` to test whether a group exists.
 

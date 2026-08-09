@@ -102,6 +102,11 @@ existing folder instead of creating one, which is what makes a rebuilt
 control plane take over rather than build a second installation beside
 the first.
 
+`spec.management.projectId` is always supplied rather than optional. A
+project id is consumed permanently and cannot be undeleted into
+usefulness, so carrying it in the manifest is what stops a rebuilt plane
+minting a second management project beside the first.
+
 Deleting a folder is not something reconciliation repairs. A soft-deleted
 folder still reads as existing, so the provider reports it Available for
 the whole 30-day window; the composite's readiness check on
@@ -122,10 +127,9 @@ No Google Cloud at all yet: start with
    roles, and candidate parents.
 2. `just gcp-bootstrap-identity`, as the operating user — the bootstrap
    project and service account, `billing.user`, and
-   `gcp-platform-operators@` allowed to impersonate it.
-3. `just gcp-bootstrap-org-roles`, as a member of
-   `gcp-organization-admins@` — the organisation roles only an admin can
-   grant. The one step needing break-glass.
+   `grp-gcp-qw01-platform-admin@` allowed to impersonate it.
+3. `just gcp-bootstrap-org-roles`, as a member of `grp-gcp-org-admin@`
+   — the organisation roles only an admin can grant.
 4. `just gcp-adc-impersonate`, then `just gcp-plane-up` — a throwaway
    kind cluster running Crossplane and the GCP provider, authenticating
    from ADC that impersonates the bootstrap identity. No key exists, and
@@ -170,7 +174,7 @@ request rather than a command.
 ### Two identities
 
 - **The bootstrap identity** creates the management project. Members of
-  `gcp-platform-operators@` impersonate it; where an organisation
+  `grp-gcp-qw01-platform-admin@` impersonate it; where an organisation
   provisions folders, a CI runner assumes it through federation and no
   person can.
 - **The platform identity** is created by the manifest and used by the
@@ -192,10 +196,16 @@ request runs as the platform identity.
 
 ### Where this stands
 
-`justfiles/cloud.just` and the `queenswood-gcp` chart are what run today:
-one instance's project-scoped resources, with the project id supplied
-rather than created. This is where that goes, per
-[ADR-0022](../adr/0022-cloud-foundation-and-environment-lifecycle.md).
+The composite creates the folder, the management project and its APIs,
+the network and the zonal GKE cluster the platform will run on, and the
+platform's own identity with a Workload Identity binding to it. What
+that identity is allowed to do, and moving the manifest onto the cluster
+it just built, are the next steps. Instances, the durable
+tier and `state: draining` are described above because that is where
+this goes, per
+[ADR-0022](../adr/0022-cloud-foundation-and-environment-lifecycle.md);
+`justfiles/cloud.just` and the `queenswood-gcp` chart are what run an
+instance today.
 
 New GCP recipes go in `justfiles/gcp.just`, and anything still needed
 from `cloud.just` moves across rather than being called into. That way
