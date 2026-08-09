@@ -7,27 +7,27 @@
 # managed resources. See docs/recipes/cloud-foundation.md.
 # =========================================================================
 
-# Group names. Roles bind to these and never move; membership does. A
-# name says who is in the group, not what one of its bindings grants --
-# gcp-platform-operators holds three roles at two scopes, and calling it
-# after any of them would undersell what impersonation reaches.
-#
-# Organization Administrator does not include resourcemanager.folders
-# .delete, so folder admins are a separate group. Both are empty in
-# steady state.
 # Throwaway control plane used to create the folder and the management
 # project, then discarded. Deliberately not XP_CLUSTER: that one is the
 # previous generation's permanent plane.
 BOOT_CLUSTER := "qw-boot"
 BOOT_CTX := "kind-qw-boot"
 
-ADMINS_GROUP := "gcp-organization-admins"
-FOLDER_ADMINS_GROUP := "gcp-folder-admins"
-SECURITY_GROUP := "gcp-security-reviewers"
-CLUSTER_ADMINS_GROUP := "gcp-cluster-admins"
-SECRETS_GROUP := "gcp-secret-admins"
-BILLING_GROUP := "gcp-billing-admins"
-OPERATORS_GROUP := "gcp-platform-operators"
+# The installation these recipes act on. Names derive from the code.
+CODE := "qw01"
+
+# Access groups, named for the capability each carries. Roles bind to
+# these and never move; membership does. The organisation set outlives
+# every installation, the coded set dies with one. See ADR-0023.
+ORG_ADMIN_GROUP := "grp-gcp-org-admin"
+FOLDER_ADMIN_GROUP := "grp-gcp-folder-admin"
+BILLING_ADMIN_GROUP := "grp-gcp-billing-admin"
+SECURITY_REVIEWER_GROUP := "grp-gcp-security-reviewer"
+
+PLATFORM_VIEWER_GROUP := "grp-gcp-" + CODE + "-platform-viewer"
+PLATFORM_ADMIN_GROUP := "grp-gcp-" + CODE + "-platform-admin"
+CLUSTER_ADMIN_GROUP := "grp-gcp-" + CODE + "-cluster-admin"
+SECRETS_ADMIN_GROUP := "grp-gcp-" + CODE + "-secrets-admin"
 
 # Print the organisation's primary domain, which is its display name.
 [private]
@@ -241,12 +241,14 @@ gcp-bootstrap-identity org="" billing="":
 
     # The group, never a person. Membership is then the whole of who can
     # act as this identity, and removing it is one revocation in one
-    # place rather than an edit to this policy.
+    # place rather than an edit to this policy. platform-admin rather
+    # than platform-viewer: assuming this identity is a write capability,
+    # so it is joined for a task and left.
     DOMAIN=$(just _gcp-domain "{{ org }}")
-    OPERATORS="{{ OPERATORS_GROUP }}@${DOMAIN}"
-    echo ">>> letting $OPERATORS impersonate $SA"
+    PLATFORM_ADMIN="{{ PLATFORM_ADMIN_GROUP }}@${DOMAIN}"
+    echo ">>> letting $PLATFORM_ADMIN impersonate $SA"
     gcloud iam service-accounts add-iam-policy-binding "$SA" \
-      --project="$PROJECT" --member="group:${OPERATORS}" \
+      --project="$PROJECT" --member="group:${PLATFORM_ADMIN}" \
       --role=roles/iam.serviceAccountTokenCreator >/dev/null
 
     # Converge on group-only: a person named here would be standing
@@ -265,7 +267,7 @@ gcp-bootstrap-identity org="" billing="":
     echo
     echo ">>> project  $PROJECT"
     echo ">>> identity $SA"
-    echo ">>> act as it by joining $OPERATORS"
+    echo ">>> act as it by joining $PLATFORM_ADMIN, and leave after"
     echo ">>> if it holds no organization roles yet, an organization admin"
     echo ">>> runs: just gcp-bootstrap-org-roles"
 
@@ -350,16 +352,22 @@ gcp-groups-bind org="":
     ORG=$(just _gcp-org-id "{{ org }}")
     DOMAIN=$(just _gcp-domain "{{ org }}")
 
+    # The two reads on the platform-viewer group are the one place an
+    # installation group is bound at the organisation. Hierarchy metadata
+    # only, and the tooling cannot reach a folder without first resolving
+    # the organisation that holds it. Where the organisation is not ours,
+    # this is whatever it already grants its own people.
     MISSING=0
     for spec in \
-      "{{ ADMINS_GROUP }}:roles/resourcemanager.organizationAdmin" \
-      "{{ FOLDER_ADMINS_GROUP }}:roles/resourcemanager.folderAdmin" \
-      "{{ OPERATORS_GROUP }}:roles/resourcemanager.organizationViewer" \
-      "{{ OPERATORS_GROUP }}:roles/browser" \
-      "{{ SECURITY_GROUP }}:roles/iam.securityReviewer" \
-      "{{ BILLING_GROUP }}:" \
-      "{{ CLUSTER_ADMINS_GROUP }}:" \
-      "{{ SECRETS_GROUP }}:" ; do
+      "{{ ORG_ADMIN_GROUP }}:roles/resourcemanager.organizationAdmin" \
+      "{{ FOLDER_ADMIN_GROUP }}:roles/resourcemanager.folderAdmin" \
+      "{{ SECURITY_REVIEWER_GROUP }}:roles/iam.securityReviewer" \
+      "{{ BILLING_ADMIN_GROUP }}:" \
+      "{{ PLATFORM_VIEWER_GROUP }}:roles/resourcemanager.organizationViewer" \
+      "{{ PLATFORM_VIEWER_GROUP }}:roles/browser" \
+      "{{ PLATFORM_ADMIN_GROUP }}:" \
+      "{{ CLUSTER_ADMIN_GROUP }}:" \
+      "{{ SECRETS_ADMIN_GROUP }}:" ; do
       NAME="${spec%%:*}"
       ROLE="${spec#*:}"
       EMAIL="${NAME}@${DOMAIN}"
@@ -386,12 +394,12 @@ gcp-groups-bind org="":
     fi
 
     echo
-    echo ">>> bound. These stay empty: {{ ADMINS_GROUP }},"
-    echo ">>> {{ FOLDER_ADMINS_GROUP }}, {{ CLUSTER_ADMINS_GROUP }},"
-    echo ">>> {{ SECRETS_GROUP }} -- each a capability, not a job."
+    echo ">>> bound. Only {{ SECURITY_REVIEWER_GROUP }} and"
+    echo ">>> {{ PLATFORM_VIEWER_GROUP }} carry anyone: the rest"
+    echo ">>> are break-glass, joined for a task and left."
     echo ">>> billing: as an administrator of the billing account, run"
     echo ">>>   gcloud billing accounts add-iam-policy-binding <account-id> \\"
-    echo ">>>     --member=group:{{ BILLING_GROUP }}@${DOMAIN} --role=roles/billing.admin"
+    echo ">>>     --member=group:{{ BILLING_ADMIN_GROUP }}@${DOMAIN} --role=roles/billing.admin"
 
 # Add a member to an access group (needs an active project you can use).
 gcp-access-grant group member:
@@ -414,10 +422,10 @@ gcp-access-status org="":
     #!/usr/bin/env zsh
     set -e
     DOMAIN=$(just _gcp-domain "{{ org }}")
-    for NAME in {{ ADMINS_GROUP }} {{ FOLDER_ADMINS_GROUP }} \
-                {{ CLUSTER_ADMINS_GROUP }} {{ SECRETS_GROUP }} \
-                {{ SECURITY_GROUP }} {{ OPERATORS_GROUP }} \
-                {{ BILLING_GROUP }} ; do
+    for NAME in {{ ORG_ADMIN_GROUP }} {{ FOLDER_ADMIN_GROUP }} \
+                {{ BILLING_ADMIN_GROUP }} {{ SECURITY_REVIEWER_GROUP }} \
+                {{ PLATFORM_VIEWER_GROUP }} {{ PLATFORM_ADMIN_GROUP }} \
+                {{ CLUSTER_ADMIN_GROUP }} {{ SECRETS_ADMIN_GROUP }} ; do
       EMAIL="${NAME}@${DOMAIN}"
       echo "$EMAIL"
       if OUT=$(gcloud identity groups memberships list \
@@ -437,7 +445,8 @@ gcp-access-status org="":
 #
 # Crossplane authenticates from a credentials file, so the plane needs
 # ADC that impersonates the bootstrap identity -- no key, and revocable
-# in one command. Membership of the operators group is what permits it.
+# in one command. Membership of the platform-admin group is what permits
+# it, so join before bringing a plane up and leave once it is down.
 # =========================================================================
 
 # Point ADC at the bootstrap identity (interactive, opens a browser).
@@ -655,14 +664,13 @@ gcp-plane-apply parent name="" folder="" mgmt="" billing="":
     spec:
       billingAccountId: "$BILLING"
       # Capability -> principal. Whole IAM member strings, because the
-      # principal need not be a group. No platformAdmin entry: assuming
-      # the identity that runs the installation is break-glass and this
-      # organisation has no group for it yet, and a capability left out
-      # binds nothing.
+      # principal need not be a group. A capability left out binds
+      # nothing.
       access:
-        platformViewer: ["group:{{ OPERATORS_GROUP }}@${DOMAIN}"]
-        clusterAdmin: ["group:{{ CLUSTER_ADMINS_GROUP }}@${DOMAIN}"]
-        secretsAdmin: ["group:{{ SECRETS_GROUP }}@${DOMAIN}"]
+        platformViewer: ["group:{{ PLATFORM_VIEWER_GROUP }}@${DOMAIN}"]
+        platformAdmin: ["group:{{ PLATFORM_ADMIN_GROUP }}@${DOMAIN}"]
+        clusterAdmin: ["group:{{ CLUSTER_ADMIN_GROUP }}@${DOMAIN}"]
+        secretsAdmin: ["group:{{ SECRETS_ADMIN_GROUP }}@${DOMAIN}"]
       management:
         projectId: "$MGMT"
         $MGMT_ADOPT

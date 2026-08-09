@@ -127,10 +127,9 @@ No Google Cloud at all yet: start with
    roles, and candidate parents.
 2. `just gcp-bootstrap-identity`, as the operating user — the bootstrap
    project and service account, `billing.user`, and
-   `gcp-platform-operators@` allowed to impersonate it.
-3. `just gcp-bootstrap-org-roles`, as a member of
-   `gcp-organization-admins@` — the organisation roles only an admin can
-   grant. The one step needing break-glass.
+   `grp-gcp-qw01-platform-admin@` allowed to impersonate it.
+3. `just gcp-bootstrap-org-roles`, as a member of `grp-gcp-org-admin@`
+   — the organisation roles only an admin can grant.
 4. `just gcp-adc-impersonate`, then `just gcp-plane-up` — a throwaway
    kind cluster running Crossplane and the GCP provider, authenticating
    from ADC that impersonates the bootstrap identity. No key exists, and
@@ -175,7 +174,7 @@ request rather than a command.
 ### Two identities
 
 - **The bootstrap identity** creates the management project. Members of
-  `gcp-platform-operators@` impersonate it; where an organisation
+  `grp-gcp-qw01-platform-admin@` impersonate it; where an organisation
   provisions folders, a CI runner assumes it through federation and no
   person can.
 - **The platform identity** is created by the manifest and used by the
