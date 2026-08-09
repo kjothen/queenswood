@@ -72,8 +72,9 @@ Environment codes are the guide's: `b` bootstrap, `c` common, `d` dev,
 - bucket — `bkt-qw01-<label>`
 - custom role — `rl-<function>`
 
-Two kinds the guide does not cover take the same shape: GKE cluster
-`gke-qw01-mgmt`, node pool `np-qw01-mgmt`.
+Two kinds the guide does not cover take the same shape, environment
+segment included: GKE cluster `gke-qw01-c-mgmt`, node pool
+`np-qw01-c-mgmt`.
 
 One project carries no code, because it belongs to no installation. The
 identity that creates a folder must exist before the folder does, and

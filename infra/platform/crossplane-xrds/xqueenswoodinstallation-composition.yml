@@ -458,7 +458,7 @@ spec:
                   - type: string
                     string:
                       type: Format
-                      fmt: "gke-%s-mgmt"
+                      fmt: "gke-%s-c-mgmt"
               - fromFieldPath: spec.code
                 toFieldPath: spec.forProvider.networkRef.name
                 transforms:
@@ -517,7 +517,7 @@ spec:
                   - type: string
                     string:
                       type: Format
-                      fmt: "np-%s-mgmt"
+                      fmt: "np-%s-c-mgmt"
               # By value, not clusterRef. The reference extractor reads a
               # field the provider never fills for Cluster -- there is no
               # forProvider.name, and atProvider.name stays empty -- so it
@@ -530,7 +530,7 @@ spec:
                   - type: string
                     string:
                       type: Format
-                      fmt: "gke-%s-mgmt"
+                      fmt: "gke-%s-c-mgmt"
               - fromFieldPath: spec.management.projectId
                 toFieldPath: spec.forProvider.project
               - fromFieldPath: spec.zone
