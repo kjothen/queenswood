@@ -715,9 +715,10 @@ gcp-plane-apply parent name="" folder="" mgmt="" billing="":
     apiVersion: platform.queenswood.repldriven.com/v1alpha1
     kind: XQueenswoodInstallation
     metadata:
-      name: queenswood
+      name: {{ CODE }}
       namespace: crossplane-system
     spec:
+      code: "{{ CODE }}"
       billingAccountId: "$BILLING"
       # Capability -> principal. Whole IAM member strings, because the
       # principal need not be a group. A capability left out binds
@@ -741,7 +742,7 @@ gcp-plane-apply parent name="" folder="" mgmt="" billing="":
     echo ">>> waiting for the folder and management project"
     kubectl --context {{ BOOT_CTX }} -n crossplane-system wait \
       --for=condition=ready --timeout=300s \
-      xqueenswoodinstallation/queenswood || true
+      xqueenswoodinstallation/{{ CODE }} || true
     just gcp-plane-status
 
 # Report the composite and the folder it made.
@@ -749,7 +750,7 @@ gcp-plane-status:
     #!/usr/bin/env zsh
     set -e
     kubectl --context {{ BOOT_CTX }} -n crossplane-system get \
-      xqueenswoodinstallation queenswood -o yaml 2>/dev/null \
+      xqueenswoodinstallation {{ CODE }} -o yaml 2>/dev/null \
       | grep -E 'folderId|folderName|type: (Ready|Synced)|status: "(True|False)"|reason:' \
       || echo "no composite applied yet"
     echo

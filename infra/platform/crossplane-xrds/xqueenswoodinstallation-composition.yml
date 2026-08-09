@@ -57,15 +57,16 @@ spec:
                 fieldPath: status.atProvider.lifecycleState
                 matchString: ACTIVE
             patches:
-              # Named after the composite rather than generated, so the
-              # management project can reference it.
-              - fromFieldPath: metadata.name
+              # Named from the code rather than generated, so every
+              # reference below can spell it and the Kubernetes name
+              # matches the GCP one.
+              - fromFieldPath: spec.code
                 toFieldPath: metadata.name
                 transforms:
                   - type: string
                     string:
                       type: Format
-                      fmt: "%s-folder"
+                      fmt: "fldr-%s"
               # Adoption. Skipped when absent, so a first run creates and
               # a rebuild takes over what is already there.
               - fromFieldPath: spec.createFolder.folderId
@@ -109,13 +110,13 @@ spec:
                   # able to remove it.
                   deletionPolicy: PREVENT
             patches:
-              - fromFieldPath: metadata.name
+              - fromFieldPath: spec.code
                 toFieldPath: metadata.name
                 transforms:
                   - type: string
                     string:
                       type: Format
-                      fmt: "%s-management"
+                      fmt: "prj-%s-c-mgmt"
               # Adoption only. Setting this before the project exists
               # makes observe fail with permission denied, which
               # Crossplane cannot tell from a real error, so it never
@@ -131,13 +132,13 @@ spec:
               # Names the composed Folder, so Crossplane resolves it and
               # orders the two itself rather than the id being threaded
               # through status.
-              - fromFieldPath: metadata.name
+              - fromFieldPath: spec.code
                 toFieldPath: spec.forProvider.folderIdRef.name
                 transforms:
                   - type: string
                     string:
                       type: Format
-                      fmt: "%s-folder"
+                      fmt: "fldr-%s"
               - type: ToCompositeFieldPath
                 fromFieldPath: metadata.annotations[crossplane.io/external-name]
                 toFieldPath: status.managementProjectId
@@ -167,20 +168,20 @@ spec:
                   # and avoids a dependent-resource cascade.
                   disableOnDestroy: false
             patches:
-              - fromFieldPath: metadata.name
+              - fromFieldPath: spec.code
                 toFieldPath: metadata.name
                 transforms:
                   - type: string
                     string:
                       type: Format
-                      fmt: "%s-iam"
-              - fromFieldPath: metadata.name
+                      fmt: "svc-%s-c-iam"
+              - fromFieldPath: spec.code
                 toFieldPath: spec.forProvider.projectRef.name
                 transforms:
                   - type: string
                     string:
                       type: Format
-                      fmt: "%s-management"
+                      fmt: "prj-%s-c-mgmt"
           - name: management-service-iamcredentials
             base:
               apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
@@ -202,20 +203,20 @@ spec:
                   # and avoids a dependent-resource cascade.
                   disableOnDestroy: false
             patches:
-              - fromFieldPath: metadata.name
+              - fromFieldPath: spec.code
                 toFieldPath: metadata.name
                 transforms:
                   - type: string
                     string:
                       type: Format
-                      fmt: "%s-iamcredentials"
-              - fromFieldPath: metadata.name
+                      fmt: "svc-%s-c-iamcredentials"
+              - fromFieldPath: spec.code
                 toFieldPath: spec.forProvider.projectRef.name
                 transforms:
                   - type: string
                     string:
                       type: Format
-                      fmt: "%s-management"
+                      fmt: "prj-%s-c-mgmt"
           - name: management-service-serviceusage
             base:
               apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
@@ -237,20 +238,20 @@ spec:
                   # and avoids a dependent-resource cascade.
                   disableOnDestroy: false
             patches:
-              - fromFieldPath: metadata.name
+              - fromFieldPath: spec.code
                 toFieldPath: metadata.name
                 transforms:
                   - type: string
                     string:
                       type: Format
-                      fmt: "%s-serviceusage"
-              - fromFieldPath: metadata.name
+                      fmt: "svc-%s-c-serviceusage"
+              - fromFieldPath: spec.code
                 toFieldPath: spec.forProvider.projectRef.name
                 transforms:
                   - type: string
                     string:
                       type: Format
-                      fmt: "%s-management"
+                      fmt: "prj-%s-c-mgmt"
           - name: management-service-resourcemanager
             base:
               apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
@@ -272,20 +273,20 @@ spec:
                   # and avoids a dependent-resource cascade.
                   disableOnDestroy: false
             patches:
-              - fromFieldPath: metadata.name
+              - fromFieldPath: spec.code
                 toFieldPath: metadata.name
                 transforms:
                   - type: string
                     string:
                       type: Format
-                      fmt: "%s-resourcemanager"
-              - fromFieldPath: metadata.name
+                      fmt: "svc-%s-c-resourcemanager"
+              - fromFieldPath: spec.code
                 toFieldPath: spec.forProvider.projectRef.name
                 transforms:
                   - type: string
                     string:
                       type: Format
-                      fmt: "%s-management"
+                      fmt: "prj-%s-c-mgmt"
           - name: management-service-compute
             base:
               apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
@@ -305,20 +306,20 @@ spec:
                   service: compute.googleapis.com
                   disableOnDestroy: false
             patches:
-              - fromFieldPath: metadata.name
+              - fromFieldPath: spec.code
                 toFieldPath: metadata.name
                 transforms:
                   - type: string
                     string:
                       type: Format
-                      fmt: "%s-compute"
-              - fromFieldPath: metadata.name
+                      fmt: "svc-%s-c-compute"
+              - fromFieldPath: spec.code
                 toFieldPath: spec.forProvider.projectRef.name
                 transforms:
                   - type: string
                     string:
                       type: Format
-                      fmt: "%s-management"
+                      fmt: "prj-%s-c-mgmt"
           - name: management-service-container
             base:
               apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
@@ -338,20 +339,20 @@ spec:
                   service: container.googleapis.com
                   disableOnDestroy: false
             patches:
-              - fromFieldPath: metadata.name
+              - fromFieldPath: spec.code
                 toFieldPath: metadata.name
                 transforms:
                   - type: string
                     string:
                       type: Format
-                      fmt: "%s-container"
-              - fromFieldPath: metadata.name
+                      fmt: "svc-%s-c-container"
+              - fromFieldPath: spec.code
                 toFieldPath: spec.forProvider.projectRef.name
                 transforms:
                   - type: string
                     string:
                       type: Format
-                      fmt: "%s-management"
+                      fmt: "prj-%s-c-mgmt"
           # ===================================================================
           # Network for the management cluster. Nothing else lives here,
           # so one subnet with the two secondary ranges GKE needs.
@@ -372,13 +373,13 @@ spec:
                   autoCreateSubnetworks: false
                   routingMode: REGIONAL
             patches:
-              - fromFieldPath: metadata.name
+              - fromFieldPath: spec.code
                 toFieldPath: metadata.name
                 transforms:
                   - type: string
                     string:
                       type: Format
-                      fmt: "%s-vpc"
+                      fmt: "vpc-%s-c-mgmt"
               - fromFieldPath: spec.management.projectId
                 toFieldPath: spec.forProvider.project
           - name: management-subnet
@@ -400,20 +401,22 @@ spec:
                     - rangeName: services
                       ipCidrRange: 10.62.0.0/20
             patches:
-              - fromFieldPath: metadata.name
+              - type: CombineFromComposite
+                combine:
+                  variables:
+                    - fromFieldPath: spec.code
+                    - fromFieldPath: spec.regionCode
+                  strategy: string
+                  string:
+                    fmt: "sb-%s-c-mgmt-%s"
                 toFieldPath: metadata.name
-                transforms:
-                  - type: string
-                    string:
-                      type: Format
-                      fmt: "%s-subnet"
-              - fromFieldPath: metadata.name
+              - fromFieldPath: spec.code
                 toFieldPath: spec.forProvider.networkRef.name
                 transforms:
                   - type: string
                     string:
                       type: Format
-                      fmt: "%s-vpc"
+                      fmt: "vpc-%s-c-mgmt"
               - fromFieldPath: spec.management.projectId
                 toFieldPath: spec.forProvider.project
               - fromFieldPath: spec.region
@@ -449,27 +452,29 @@ spec:
                     clusterSecondaryRangeName: pods
                     servicesSecondaryRangeName: services
             patches:
-              - fromFieldPath: metadata.name
+              - fromFieldPath: spec.code
                 toFieldPath: metadata.name
                 transforms:
                   - type: string
                     string:
                       type: Format
-                      fmt: "%s-cluster"
-              - fromFieldPath: metadata.name
+                      fmt: "gke-%s-mgmt"
+              - fromFieldPath: spec.code
                 toFieldPath: spec.forProvider.networkRef.name
                 transforms:
                   - type: string
                     string:
                       type: Format
-                      fmt: "%s-vpc"
-              - fromFieldPath: metadata.name
+                      fmt: "vpc-%s-c-mgmt"
+              - type: CombineFromComposite
+                combine:
+                  variables:
+                    - fromFieldPath: spec.code
+                    - fromFieldPath: spec.regionCode
+                  strategy: string
+                  string:
+                    fmt: "sb-%s-c-mgmt-%s"
                 toFieldPath: spec.forProvider.subnetworkRef.name
-                transforms:
-                  - type: string
-                    string:
-                      type: Format
-                      fmt: "%s-subnet"
               - fromFieldPath: spec.management.projectId
                 toFieldPath: spec.forProvider.project
               - fromFieldPath: spec.zone
@@ -506,26 +511,26 @@ spec:
                     workloadMetadataConfig:
                       mode: GKE_METADATA
             patches:
-              - fromFieldPath: metadata.name
+              - fromFieldPath: spec.code
                 toFieldPath: metadata.name
                 transforms:
                   - type: string
                     string:
                       type: Format
-                      fmt: "%s-nodes"
+                      fmt: "np-%s-mgmt"
               # By value, not clusterRef. The reference extractor reads a
               # field the provider never fills for Cluster -- there is no
               # forProvider.name, and atProvider.name stays empty -- so it
               # resolves to nothing forever. The cluster's name is its
               # external name, which this composition sets, so the value
               # is as deterministic as the reference would have been.
-              - fromFieldPath: metadata.name
+              - fromFieldPath: spec.code
                 toFieldPath: spec.forProvider.cluster
                 transforms:
                   - type: string
                     string:
                       type: Format
-                      fmt: "%s-cluster"
+                      fmt: "gke-%s-mgmt"
               - fromFieldPath: spec.management.projectId
                 toFieldPath: spec.forProvider.project
               - fromFieldPath: spec.zone
@@ -561,25 +566,25 @@ spec:
                   displayName: Queenswood platform
                   description: Runs the management plane; see docs/recipes/cloud-foundation.md
             patches:
-              - fromFieldPath: metadata.name
+              - fromFieldPath: spec.code
                 toFieldPath: metadata.name
                 transforms:
                   - type: string
                     string:
                       type: Format
-                      fmt: "%s-platform"
+                      fmt: "sa-%s-platform"
               - fromFieldPath: spec.management.projectId
                 toFieldPath: spec.forProvider.project
               # The account id is the external name, so it is stated
               # rather than generated: the Workload Identity member
               # string below has to spell the same address.
-              - fromFieldPath: metadata.name
+              - fromFieldPath: spec.code
                 toFieldPath: metadata.annotations[crossplane.io/external-name]
                 transforms:
                   - type: string
                     string:
                       type: Format
-                      fmt: "%s-platform"
+                      fmt: "sa-%s-platform"
           - name: platform-identity-workload-identity
             base:
               apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
@@ -593,20 +598,20 @@ spec:
                 forProvider:
                   role: roles/iam.workloadIdentityUser
             patches:
-              - fromFieldPath: metadata.name
+              - fromFieldPath: spec.code
                 toFieldPath: metadata.name
                 transforms:
                   - type: string
                     string:
                       type: Format
-                      fmt: "%s-platform-wi"
-              - fromFieldPath: metadata.name
+                      fmt: "sa-%s-platform-wi"
+              - fromFieldPath: spec.code
                 toFieldPath: spec.forProvider.serviceAccountIdRef.name
                 transforms:
                   - type: string
                     string:
                       type: Format
-                      fmt: "%s-platform"
+                      fmt: "sa-%s-platform"
               # serviceAccount:<project>.svc.id.goog[<namespace>/<ksa>]
               - fromFieldPath: spec.management.projectId
                 toFieldPath: spec.forProvider.member
@@ -636,7 +641,7 @@ spec:
         inline:
           template: |
             {{- $xr := .observed.composite.resource }}
-            {{- $name := $xr.metadata.name }}
+            {{- $code := $xr.spec.code }}
             {{- $access := dig "access" dict $xr.spec }}
             {{- $project := dig "management" "projectId" "" $xr.spec }}
             {{- $capabilities := list
@@ -667,7 +672,7 @@ spec:
             apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
             kind: {{ $capability.kind }}
             metadata:
-              name: {{ printf "%s-%s" $name $resource }}
+              name: {{ printf "%s-%s" $code $resource }}
               namespace: crossplane-system
               annotations:
                 gotemplating.fn.crossplane.io/composition-resource-name: {{ $resource }}
@@ -680,12 +685,12 @@ spec:
                 member: {{ $member | quote }}
             {{- if eq $capability.kind "FolderIAMMember" }}
                 folderRef:
-                  name: {{ printf "%s-folder" $name | quote }}
+                  name: {{ printf "fldr-%s" $code | quote }}
             {{- else if eq $capability.kind "ProjectIAMMember" }}
                 project: {{ $project | quote }}
             {{- else if eq $capability.kind "ServiceAccountIAMMember" }}
                 serviceAccountIdRef:
-                  name: {{ printf "%s-platform" $name | quote }}
+                  name: {{ printf "sa-%s-platform" $code | quote }}
             {{- end }}
             {{- end }}
             {{- end }}

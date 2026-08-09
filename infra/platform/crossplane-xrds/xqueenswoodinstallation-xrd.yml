@@ -21,9 +21,26 @@ spec:
             spec:
               type: object
               required:
+                - code
                 - createFolder
                 - billingAccountId
               properties:
+                code:
+                  type: string
+                  pattern: '^[a-z0-9]{4}$'
+                  description: |
+                    The installation's four-character code. Every name
+                    below derives from it, so nothing needs a lookup to
+                    place a resource and a second installation cannot
+                    collide with the first. See ADR-0023.
+                regionCode:
+                  type: string
+                  default: euw2
+                  description: |
+                    The region, abbreviated, for names that carry one --
+                    a subnet is per-region and says so. Separate from
+                    region because GCP publishes no short form.
+
                 # Folder only, for now. The management project, the
                 # durable tier and the instances join this spec as they
                 # are built; see docs/recipes/cloud-foundation.md.
