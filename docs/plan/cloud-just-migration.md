@@ -413,27 +413,90 @@ Three facts make this cleaner than it first looks:
   current `gcp-plane-apply` behaviour, which takes the first open
   account visible to the operator, who may see several.
 
-The mechanism is the open part, because the value is still needed once —
-at project creation, by the boot plane, which can discover it. Three
-candidates, to be settled by spiking the first:
+Discovery is confirmed rather than assumed: `gcloud billing accounts
+list`, run as the boot identity, returns exactly one open account. Run
+as the operator it may return several, which is why `gcp-plane-apply`
+taking the first one is fragile today and stops being so here.
 
-- **Late-initialisation.** The management project already carries
-  `LateInitialize`. With the field absent from the composite the patch
-  never fires, and an already-linked project may populate
-  `forProvider.billingAccount` from its own observed state. The question
-  is whether that survives the next pass, since desired state is
-  recomputed from base plus patches each time. Cheapest if it holds.
-- **Argo `ignoreDifferences`** on that path, so a manifest without the
-  field never removes it. Standard, and treated with suspicion here: a
-  `ProviderConfig` field reverting despite `RespectIgnoreDifferences`
-  is a failure this project has already had.
-- **The composition not managing billing at all**, with the boot plane
-  linking the project once at creation. Least declarative, most
-  predictable, and the fallback if the first does not hold.
+The design is one shape, not a choice between mechanisms:
 
-Whichever wins, `billingAccountId` becomes optional in the XRD, with a
-docstring saying it is discovered from the identity's bindings and
-wanted only at creation.
+```
+composition   never declares billingAccount
+creation      the boot plane links, the account discovered from the
+              identity's own binding
+steady state  late-initialisation owns the field
+the manifest  says nothing about billing at all
+```
+
+**The composition never declaring it is the invariant**, and what
+forces that is server-side apply. Field ownership on the live Project
+shows two managers: the composition owns `autoCreateNetwork`,
+`billingAccount`, `deletionPolicy`, `folderIdRef`, `name` and
+`projectId`, while `folderId` is owned by Crossplane's reference
+resolver. `folderId` survives precisely because the composition has
+never once set it. A field the composition *does* own and then stops
+setting is deleted on the apply that relinquishes it, since SSA removes
+a field its sole owner no longer declares.
+
+That makes removing the patch from the *existing* resource a one-time
+transition rather than a steady state: the field is dropped, late-init
+writes it back under its own manager, and subsequent applies never
+reclaim it. The hazard is only inside that window, and only because the
+composition owns the field today — a composition that had never set it
+would look like `folderId` from the start.
+
+**Creation is the case late-initialisation cannot cover**, because it
+can only reflect a link that already exists. A GCP project may be
+created unbilled and linked immediately after, so the boot plane does
+that once, as the identity, against the account it just discovered.
+
+`billingAccountId` then leaves the XRD's `required` list, and its
+docstring says it is discovered from the identity's bindings.
+
+A general hazard worth carrying beyond billing: **every field this
+composition sets, it owns.** Deleting a patch later deletes the field
+from the resource, so a patch is not a free thing to add.
+
+##### Tested, and it holds
+
+Run against the live management project with its `managementPolicies`
+cut to `[Observe, LateInitialize]`, so nothing could reach GCP — both,
+because `LateInitialize` is itself a policy and `[Observe]` alone would
+have disabled the thing under test.
+
+Dropping the patch moved the field to a third manager:
+
+```
+before   composition   autoCreateNetwork billingAccount deletionPolicy
+                       folderIdRef name projectId
+         resolver      folderId
+
+after    composition   autoCreateNetwork deletionPolicy folderIdRef
+                       name projectId
+         resolver      folderId
+         provider      billingAccount
+```
+
+So late-initialisation does own it, under the provider's own field
+manager, and the design holds: the composition stops declaring the
+field, the provider keeps it, and the manifest carries nothing about
+billing.
+
+The value stayed populated in every three-second sample, so no
+transition gap was observed — which is not the same as proving there
+was none at finer resolution. Treat the window as real but very short,
+and do the change once, deliberately, rather than assuming it is free.
+
+Three field managers is the model to carry: the composition owns what
+it patches, Crossplane's reference resolver owns what it resolves, and
+the provider owns what it late-initialises. Ownership is what decides
+whether a field survives a patch being deleted.
+
+The remaining work is not a question, it is a change: drop the patch
+from the composition, take `billingAccountId` out of the XRD's
+`required` list, and have the boot plane link a newly created project
+to the account it discovers from its own binding. Those land together —
+dropping the patch alone would leave the next project created unbilled.
 
 This does not retire the private repository: `createFolder.parent`
 still carries the organisation id, and a folder's parent is required
