@@ -521,7 +521,8 @@ gcp-plane-up:
     # applies, so only the set is narrowed.
     MANIFEST=infra/platform/crossplane-providers/providers.yml
     for name in provider-gcp-cloudplatform provider-gcp-compute \
-                provider-gcp-container function-patch-and-transform ; do
+                provider-gcp-container function-patch-and-transform \
+                function-go-templating ; do
       PKG=$(grep -A2 "name: $name\$" "$MANIFEST" | grep 'package:' | awk '{print $2}')
       if [[ -z "$PKG" ]]; then
         echo "no package for $name in $MANIFEST" >&2
@@ -547,6 +548,8 @@ gcp-plane-up:
       provider.pkg.crossplane.io/provider-gcp-container
     kubectl --context {{ BOOT_CTX }} wait --for=condition=healthy --timeout=600s \
       function.pkg.crossplane.io/function-patch-and-transform
+    kubectl --context {{ BOOT_CTX }} wait --for=condition=healthy --timeout=600s \
+      function.pkg.crossplane.io/function-go-templating
 
     kubectl --context {{ BOOT_CTX }} create secret generic gcp-creds \
       -n crossplane-system --from-file=creds="$F" \
