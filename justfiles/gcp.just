@@ -16,6 +16,16 @@ BOOT_CTX := "kind-qw-boot"
 # The installation these recipes act on. Names derive from the code.
 CODE := "qw01"
 
+# The region abbreviated, for the names that carry one. GCP publishes
+# no short form, so the installation states it. REGION and ZONE come
+# from the root Justfile.
+REGION_CODE := "euw2"
+
+# Where the installation manifests are checked out. A separate, private
+# repository holding data and nothing executable: this one is public,
+# and a manifest is identifiers. See docs/plan/cloud-just-migration.md.
+INFRA_REPO := "../queenswood-infra"
+
 # The management cluster's kubectl context, added by
 # gcp-mgmt-cluster-ctx. Every recipe acting on a cluster names the
 # context on the command line rather than trusting the current one.
@@ -579,7 +589,7 @@ gcp-plane-up:
     MANIFEST=infra/platform/crossplane-providers/providers.yml
     for name in provider-gcp-cloudplatform provider-gcp-compute \
                 provider-gcp-container function-patch-and-transform \
-                function-go-templating ; do
+                function-go-templating function-auto-ready ; do
       PKG=$(grep -A2 "name: $name\$" "$MANIFEST" | grep 'package:' | awk '{print $2}')
       if [[ -z "$PKG" ]]; then
         echo "no package for $name in $MANIFEST" >&2
@@ -607,6 +617,8 @@ gcp-plane-up:
       function.pkg.crossplane.io/function-patch-and-transform
     kubectl --context {{ BOOT_CTX }} wait --for=condition=healthy --timeout=600s \
       function.pkg.crossplane.io/function-go-templating
+    kubectl --context {{ BOOT_CTX }} wait --for=condition=healthy --timeout=600s \
+      function.pkg.crossplane.io/function-auto-ready
 
     kubectl --context {{ BOOT_CTX }} create secret generic gcp-creds \
       -n crossplane-system --from-file=creds="$F" \
@@ -640,17 +652,27 @@ gcp-plane-up:
     echo
     echo ">>> plane ready. Next: just gcp-plane-apply <parent> [display-name]"
 
-# Create or adopt the folder, e.g. just gcp-plane-apply organizations/<org-id>
-gcp-plane-apply parent name="" folder="" mgmt="" billing="":
+# Print the installation manifest, resolved, e.g. just gcp-plane-manifest organizations/<org-id>
+gcp-plane-manifest parent name="" folder="" mgmt="" billing="":
     #!/usr/bin/env zsh
     set -e
+    # stdout carries the manifest and nothing else, so this can be
+    # redirected straight into a file; every message below goes to
+    # stderr. That file is the installation's whole record -- see
+    # docs/plan/cloud-just-migration.md -- and it lives in a private
+    # repository, because two of the values here are identifiers worth
+    # keeping out of a public one.
+    #
+    # Anything generated rather than derived is minted per call, so
+    # capture the output rather than re-running this and expecting the
+    # same answer.
     # Deterministic, because the code is what tells one installation
     # from another -- a suffix on top of it would only obscure that.
     # Pass a name where the folder is handed to you already named.
     NAME="{{ name }}"
     if [[ -z "$NAME" ]]; then
       NAME="fldr-{{ CODE }}"
-      echo ">>> naming the folder $NAME"
+      echo ">>> naming the folder $NAME" >&2
     fi
     # Refuse to make a second installation by accident. GCP allows the
     # duplicate name, so this is the only thing that would notice -- and
@@ -688,7 +710,7 @@ gcp-plane-apply parent name="" folder="" mgmt="" billing="":
     MGMT="{{ mgmt }}"
     if [[ -z "$MGMT" ]]; then
       MGMT="prj-{{ CODE }}-c-mgmt-$(openssl rand -hex 3)"
-      echo ">>> naming the management project $MGMT"
+      echo ">>> naming the management project $MGMT" >&2
     fi
 
     # Set only when the project already exists, for the same reason the
@@ -714,9 +736,13 @@ gcp-plane-apply parent name="" folder="" mgmt="" billing="":
     if [[ -n "$FOLDER" ]]; then
       ADOPT="folderId: $FOLDER"
     fi
-    PARENT_ECHO="{{ parent }}"
 
-    kubectl --context {{ BOOT_CTX }} apply -f - <<YAML
+    # region, zone and regionCode are stated rather than left to the
+    # XRD's defaults. They are load-bearing -- a name carries the
+    # region abbreviation, and moving either rebuilds the subnet and
+    # the cluster -- so a default that changed underneath a live
+    # installation would move it silently.
+    cat <<YAML
     apiVersion: platform.queenswood.repldriven.com/v1alpha1
     kind: XQueenswoodInstallation
     metadata:
@@ -724,6 +750,9 @@ gcp-plane-apply parent name="" folder="" mgmt="" billing="":
       namespace: crossplane-system
     spec:
       code: "{{ CODE }}"
+      region: "{{ REGION }}"
+      regionCode: "{{ REGION_CODE }}"
+      zone: "{{ ZONE }}"
       billingAccountId: "$BILLING"
       # Capability -> principal. Whole IAM member strings, because the
       # principal need not be a group. A capability left out binds
@@ -742,8 +771,25 @@ gcp-plane-apply parent name="" folder="" mgmt="" billing="":
         $ADOPT
     YAML
 
-    echo ">>> commit this to keep the installation reproducible:"
-    echo ">>>   parent=$PARENT_ECHO folder=$FOLDER mgmt=$MGMT"
+# Create or adopt the folder, e.g. just gcp-plane-apply organizations/<org-id>
+gcp-plane-apply parent name="" folder="" mgmt="" billing="":
+    #!/usr/bin/env zsh
+    set -e
+    # Built once and applied, rather than templated here a second time:
+    # the manifest recipe mints the management project id when one is
+    # not passed, so generating it twice would produce two.
+    MANIFEST=$(just gcp-plane-manifest '{{ parent }}' '{{ name }}' \
+                 '{{ folder }}' '{{ mgmt }}' '{{ billing }}')
+
+    printf '%s\n' "$MANIFEST" \
+      | kubectl --context {{ BOOT_CTX }} apply -f -
+
+    echo ">>> keep this installation reproducible by committing the"
+    echo ">>> manifest, which is the whole record of what exists:"
+    echo ">>>   just gcp-plane-manifest ... > \\"
+    echo ">>>     {{ INFRA_REPO }}/installations/{{ CODE }}/installation.yaml"
+    echo ">>> re-running this without those values mints a second"
+    echo ">>> installation beside the first -- see the adopt fields."
     echo ">>> waiting for the folder and management project"
     kubectl --context {{ BOOT_CTX }} -n crossplane-system wait \
       --for=condition=ready --timeout=300s \

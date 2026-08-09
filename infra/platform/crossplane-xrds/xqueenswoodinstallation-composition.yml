@@ -705,3 +705,15 @@ spec:
             {{- end }}
             {{- end }}
             {{- end }}
+    # =======================================================================
+    # Readiness for whatever the access step composed. Last, and not
+    # optional: patch-and-transform sets readiness only for the resources
+    # it composes itself, and go-templating sets none at all, so without
+    # this the access bindings are never ready in the desired state. The
+    # composite then sits at Creating however healthy GCP is -- every
+    # managed resource Ready, nine unready names in the message, and a
+    # wait on the composite that can only time out.
+    # =======================================================================
+    - step: auto-ready
+      functionRef:
+        name: function-auto-ready
