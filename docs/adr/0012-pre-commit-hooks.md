@@ -32,8 +32,15 @@ The shortlist:
 ## Decision
 
 We will keep a pre-commit hook at `scripts/hooks/pre-commit`,
-checked in to the repo. The hook does two jobs:
+checked in to the repo. The hook does these jobs:
 
+- **Refuse a cloud account identifier**, over every staged file
+  rather than only Clojure. This repository is public, and an
+  organisation, folder or billing account id cannot be unpublished
+  once pushed. Resource names are wanted; account numbers say
+  nothing and cost something. A line that genuinely needs one
+  carries `cloud-id-ok`. Implemented by
+  `scripts/hooks/check-cloud-ids.sh`.
 - **Format staged Clojure files with zprint.** Auto-fix; the
   reformatted files are restaged. Configured by `.zprint.edn`
   (80-column width).

@@ -41,7 +41,7 @@ metadata:
   name: queenswood
   namespace: crossplane-system
 spec:
-  folderId: folders/123456789012
+  folderId: folders/<folder-id>
   billingAccountId: 0X0X0X-0X0X0X-0X0X0X
   region: europe-west2
   instances:
@@ -84,7 +84,7 @@ act: lift the lien, then delete.
 
 ### The two values you need
 
-- **A folder id**, such as `folders/123456789012`.
+- **A folder id**, written `folders/<folder-id>`.
 - **An identity** with `projectCreator` and `folderIamAdmin` on that
   folder, `billing.user` on a billing account, and
   `orgpolicy.policyAdmin` on the folder where the organisation allows it.
@@ -125,12 +125,12 @@ No Google Cloud at all yet: start with
 
 1. `just gcp-preflight` — organisation, billing account, your direct
    roles, and candidate parents.
-2. `just gcp-bootstrap-identity`, as the operating user — the bootstrap
+2. `just gcp-boot-identity`, as the operating user — the bootstrap
    project and service account, `billing.user`, and
    `grp-gcp-qw01-platform-admin@` allowed to impersonate it.
-3. `just gcp-bootstrap-org-roles`, as a member of `grp-gcp-org-admin@`
+3. `just gcp-boot-org-roles`, as a member of `grp-gcp-org-admin@`
    — the organisation roles only an admin can grant.
-4. `just gcp-adc-impersonate`, then `just gcp-plane-up` — a throwaway
+4. `just gcp-adc-boot`, then `just gcp-plane-up` — a throwaway
    kind cluster running Crossplane and the GCP provider, authenticating
    from ADC that impersonates the bootstrap identity. No key exists, and
    `just gcp-adc-revoke` ends it.

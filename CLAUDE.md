@@ -145,6 +145,11 @@ those in full before non-trivial work on their topic.
   layout, one management plane on GKE, foundations liened rather
   than deleted, and why "down" is a declared state. See
   [ADR-0022](docs/adr/0022-cloud-foundation-and-environment-lifecycle.md).
+- **Cloud naming** — the installation code, the prefix/code/env/label
+  rule and its exceptions, the inventory of every kind and a worked
+  example of one installation. See
+  [recipes/cloud-naming.md](docs/recipes/cloud-naming.md) and
+  [ADR-0023](docs/adr/0023-installation-naming-and-access.md).
 - **Pre-commit hooks** — zprint, clj-kondo, before-commit
   formatting. See
   [ADR-0012](docs/adr/0012-pre-commit-hooks.md).

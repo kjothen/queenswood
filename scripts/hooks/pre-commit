@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 set -e
 
+# First, and over every staged file rather than only Clojure: this
+# repository is public, and a Google Cloud account identifier cannot be
+# unpublished once pushed. Names are wanted, account numbers are not.
+echo "Checking for cloud account identifiers..."
+bash scripts/hooks/check-cloud-ids.sh --staged
+
 files=$(git diff --cached --name-only --diff-filter=ACM \
   | grep -E '\.(clj|cljc|cljs)$' \
   | grep -Ev '(^|/)evals/' \

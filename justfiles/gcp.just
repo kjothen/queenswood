@@ -16,6 +16,11 @@ BOOT_CTX := "kind-qw-boot"
 # The installation these recipes act on. Names derive from the code.
 CODE := "qw01"
 
+# The management cluster's kubectl context, added by
+# gcp-mgmt-cluster-ctx. Every recipe acting on a cluster names the
+# context on the command line rather than trusting the current one.
+MGMT_CTX := CODE + "-mgmt"
+
 # Access groups, named for the capability each carries. Roles bind to
 # these and never move; membership does. The organisation set outlives
 # every installation, the coded set dies with one. See ADR-0023.
@@ -46,23 +51,33 @@ _gcp-customer-id org="":
     gcloud organizations describe "$ORG" \
       --format='value(owner.directoryCustomerId)'
 
-# Print the bootstrap project id, found by label.
+# Print the seed project id, found by label. One per organisation: it
+# holds the identity that creates installations, so it sits above every
+# folder and outlives all of them.
 [private]
-_gcp-bootstrap-project:
+_gcp-seed-project:
     #!/usr/bin/env zsh
     set -e
-    ID=$(gcloud projects list --filter="labels.queenswood-tier=bootstrap" \
-           --format='value(projectId)' 2>/dev/null | head -1 || true)
+    # Not silenced. A denial or an expired session exits non-zero with an
+    # empty stdout, and swallowing that reports "no seed project" for one
+    # that plainly exists.
+    if ! OUT=$(gcloud projects list --filter="labels.queenswood-tier=seed" \
+                 --format='value(projectId)' 2>&1); then
+      echo "cannot list projects:" >&2
+      printf '%s\n' "$OUT" | sed 's/^/  /' >&2
+      exit 1
+    fi
+    ID=$(printf '%s\n' "$OUT" | head -1)
     if [[ -z "$ID" ]]; then
-      echo "no bootstrap project; run 'just gcp-bootstrap-identity'" >&2
+      echo "no seed project; run 'just gcp-boot-identity'" >&2
       exit 1
     fi
     printf '%s\n' "$ID"
 
 # Print the bootstrap service account's email.
 [private]
-_gcp-bootstrap-sa:
-    @printf 'bootstrap@%s.iam.gserviceaccount.com\n' "$(just _gcp-bootstrap-project)"
+_gcp-boot-sa:
+    @printf 'sa-{{ CODE }}-boot@%s.iam.gserviceaccount.com\n' "$(just _gcp-seed-project)"
 
 # Print the organisation id, discovering it when only one is visible.
 [private]
@@ -185,10 +200,14 @@ gcp-preflight org="":
 # billing account and can create projects, but only an organisation
 # admin can grant roles at the organisation -- which is the whole of
 # what break-glass is for.
+#
+# The seed project holding the identity carries no installation code:
+# one serves the organisation. The identities inside it do carry one,
+# because each creates a particular installation.
 # =========================================================================
 
 # Create the bootstrap identity and your right to impersonate it (as the operator).
-gcp-bootstrap-identity org="" billing="":
+gcp-boot-identity org="" billing="":
     #!/usr/bin/env zsh
     set -e
     ORG=$(just _gcp-org-id "{{ org }}")
@@ -204,15 +223,22 @@ gcp-bootstrap-identity org="" billing="":
       exit 1
     fi
 
-    PROJECT=$(gcloud projects list --filter="labels.queenswood-tier=bootstrap" \
-                --format='value(projectId)' 2>/dev/null | head -1 || true)
+    # Same reason, and worse here: a swallowed denial reads as "none
+    # exists" and mints a second seed project, consuming an id forever.
+    if ! OUT=$(gcloud projects list --filter="labels.queenswood-tier=seed" \
+                 --format='value(projectId)' 2>&1); then
+      echo "cannot list projects:" >&2
+      printf '%s\n' "$OUT" | sed 's/^/  /' >&2
+      exit 1
+    fi
+    PROJECT=$(printf '%s\n' "$OUT" | head -1)
     if [[ -n "$PROJECT" ]]; then
       echo ">>> reusing bootstrap project $PROJECT"
     else
-      PROJECT="queenswood-bootstrap-$(openssl rand -hex 3)"
+      PROJECT="prj-b-seed-$(openssl rand -hex 3)"
       echo ">>> creating project $PROJECT under organization $ORG"
-      gcloud projects create "$PROJECT" --name=queenswood-bootstrap \
-        --organization="$ORG" --labels=queenswood-tier=bootstrap
+      gcloud projects create "$PROJECT" --name=prj-b-seed \
+        --organization="$ORG" --labels=queenswood-tier=seed
       echo ">>> linking billing $BILLING"
       gcloud billing projects link "$PROJECT" \
         --billing-account="$BILLING" >/dev/null
@@ -226,18 +252,30 @@ gcp-bootstrap-identity org="" billing="":
       iamcredentials.googleapis.com \
       serviceusage.googleapis.com
 
-    SA="bootstrap@${PROJECT}.iam.gserviceaccount.com"
+    SA="sa-{{ CODE }}-boot@${PROJECT}.iam.gserviceaccount.com"
     if ! gcloud iam service-accounts describe "$SA" \
            --project="$PROJECT" >/dev/null 2>&1; then
       echo ">>> creating service account $SA"
-      gcloud iam service-accounts create bootstrap --project="$PROJECT" \
-        --display-name="Queenswood bootstrap" \
+      gcloud iam service-accounts create sa-{{ CODE }}-boot --project="$PROJECT" \
+        --display-name="sa-{{ CODE }}-boot" \
         --description="Creates the management project; see docs/recipes/cloud-foundation.md"
     fi
 
+    # A freshly created service account is not immediately visible to
+    # IAM policy binding -- the first attempt reports it doesn't exist.
     echo ">>> granting roles/billing.user on billing account $BILLING"
-    gcloud billing accounts add-iam-policy-binding "$BILLING" \
-      --member="serviceAccount:${SA}" --role=roles/billing.user >/dev/null
+    BOUND=""
+    for i in {1..12}; do
+      if gcloud billing accounts add-iam-policy-binding "$BILLING" \
+           --member="serviceAccount:${SA}" --role=roles/billing.user \
+           >/dev/null 2>&1; then BOUND=1; break; fi
+      echo ">>> waiting for $SA to propagate ($i/12)"
+      sleep 5
+    done
+    if [[ -z "$BOUND" ]]; then
+      echo "could not grant billing.user to $SA on $BILLING" >&2
+      exit 1
+    fi
 
     # The group, never a person. Membership is then the whole of who can
     # act as this identity, and removing it is one revocation in one
@@ -269,14 +307,14 @@ gcp-bootstrap-identity org="" billing="":
     echo ">>> identity $SA"
     echo ">>> act as it by joining $PLATFORM_ADMIN, and leave after"
     echo ">>> if it holds no organization roles yet, an organization admin"
-    echo ">>> runs: just gcp-bootstrap-org-roles"
+    echo ">>> runs: just gcp-boot-org-roles"
 
 # Grant the bootstrap identity its organisation roles (as an org admin).
-gcp-bootstrap-org-roles org="":
+gcp-boot-org-roles org="":
     #!/usr/bin/env zsh
     set -e
     ORG=$(just _gcp-org-id "{{ org }}")
-    SA=$(just _gcp-bootstrap-sa)
+    SA=$(just _gcp-boot-sa)
 
     # folderCreator + folderIamAdmin rather than folderAdmin: together
     # they create a folder and grant roles inside it, and cannot delete
@@ -302,12 +340,12 @@ gcp-bootstrap-org-roles org="":
     echo ">>> $SA can now create the folder"
 
 # Show the bootstrap identity, its rights, and who may impersonate it.
-gcp-bootstrap-status org="":
+gcp-boot-status org="":
     #!/usr/bin/env zsh
     set -e
     ORG=$(just _gcp-org-id "{{ org }}")
-    PROJECT=$(just _gcp-bootstrap-project)
-    SA=$(just _gcp-bootstrap-sa)
+    PROJECT=$(just _gcp-seed-project)
+    SA=$(just _gcp-boot-sa)
     echo "project   $PROJECT"
     echo "identity  $SA"
     # Captured before printing: piping into sed takes sed's exit status,
@@ -450,10 +488,10 @@ gcp-access-status org="":
 # =========================================================================
 
 # Point ADC at the bootstrap identity (interactive, opens a browser).
-gcp-adc-impersonate:
+gcp-adc-boot:
     #!/usr/bin/env zsh
     set -e
-    SA=$(just _gcp-bootstrap-sa)
+    SA=$(just _gcp-boot-sa)
     echo ">>> ADC will impersonate $SA"
     gcloud auth application-default login --impersonate-service-account="$SA"
 
@@ -474,6 +512,16 @@ gcp-adc-status:
     SA=$(grep -o 'serviceAccounts/[^:]*' "$F" | head -1 | sed 's|serviceAccounts/||')
     echo "type         ${TYPE:-unknown}"
     echo "impersonates ${SA:-nothing}"
+    # Exercised, not described. A file that reads correctly still fails
+    # once its source credential needs reauthentication, and that error
+    # then surfaces inside a controller that cannot prompt for one.
+    if ERR=$(gcloud auth application-default print-access-token 2>&1 >/dev/null); then
+      echo "token        mints"
+    else
+      echo "token        FAILS -- run 'just gcp-adc-boot'"
+      printf '%s\n' "$ERR" | sed 's/^/  /'
+      exit 1
+    fi
 
 # =========================================================================
 # The throwaway control plane
@@ -489,12 +537,21 @@ gcp-plane-up:
     set -e
     F="$HOME/.config/gcloud/application_default_credentials.json"
     if [[ ! -f "$F" ]]; then
-      echo "no ADC -- run 'just gcp-adc-impersonate' first" >&2
+      echo "no ADC -- run 'just gcp-adc-boot' first" >&2
       exit 1
     fi
     if ! grep -q impersonated_service_account "$F"; then
       echo "ADC is not impersonating the bootstrap identity --" >&2
-      echo "run 'just gcp-adc-impersonate'" >&2
+      echo "run 'just gcp-adc-boot'" >&2
+      exit 1
+    fi
+    # Before kind and Helm, not after. A credential that needs
+    # reauthentication fails only when the provider first calls out,
+    # which is ten minutes later and reported as a folder that cannot
+    # be observed.
+    if ! ERR=$(gcloud auth application-default print-access-token 2>&1 >/dev/null); then
+      echo "ADC cannot mint a token -- run 'just gcp-adc-boot'" >&2
+      printf '%s\n' "$ERR" | sed 's/^/  /' >&2
       exit 1
     fi
 
@@ -557,7 +614,7 @@ gcp-plane-up:
 
     # projectID is required by the provider config and unused by a
     # Folder, which is parented by an organisation rather than a project.
-    PROJECT=$(just _gcp-bootstrap-project)
+    PROJECT=$(just _gcp-seed-project)
     kubectl --context {{ BOOT_CTX }} apply -f - <<YAML
     apiVersion: gcp.m.upbound.io/v1beta1
     kind: ClusterProviderConfig
@@ -583,21 +640,22 @@ gcp-plane-up:
     echo
     echo ">>> plane ready. Next: just gcp-plane-apply <parent> [display-name]"
 
-# Create or adopt the folder, e.g. just gcp-plane-apply organizations/85415540850
+# Create or adopt the folder, e.g. just gcp-plane-apply organizations/<org-id>
 gcp-plane-apply parent name="" folder="" mgmt="" billing="":
     #!/usr/bin/env zsh
     set -e
-    # Suffixed like every project id, because a folder's display name
-    # identifies nothing -- the id does. A fixed name implies meaning it
-    # does not carry, and two installations called queenswood cannot be
-    # told apart in a console. Pass a name to choose your own.
+    # Deterministic, because the code is what tells one installation
+    # from another -- a suffix on top of it would only obscure that.
+    # Pass a name where the folder is handed to you already named.
     NAME="{{ name }}"
     if [[ -z "$NAME" ]]; then
-      NAME="queenswood-$(openssl rand -hex 3)"
+      NAME="fldr-{{ CODE }}"
       echo ">>> naming the folder $NAME"
     fi
     # Refuse to make a second installation by accident. GCP allows the
-    # duplicate name, so this is the only thing that would notice.
+    # duplicate name, so this is the only thing that would notice -- and
+    # with a deterministic name it is what catches a rebuild that meant
+    # to adopt.
     if [[ -z "{{ folder }}" ]]; then
       case "{{ parent }}" in
         organizations/*) SCOPE="--organization=${${:-{{ parent }}}#organizations/}" ;;
@@ -629,7 +687,7 @@ gcp-plane-apply parent name="" folder="" mgmt="" billing="":
     # manifest. That is what stops a rebuilt plane minting a second one.
     MGMT="{{ mgmt }}"
     if [[ -z "$MGMT" ]]; then
-      MGMT="queenswood-mgmt-$(openssl rand -hex 3)"
+      MGMT="prj-{{ CODE }}-c-mgmt-$(openssl rand -hex 3)"
       echo ">>> naming the management project $MGMT"
     fi
 
@@ -662,9 +720,10 @@ gcp-plane-apply parent name="" folder="" mgmt="" billing="":
     apiVersion: platform.queenswood.repldriven.com/v1alpha1
     kind: XQueenswoodInstallation
     metadata:
-      name: queenswood
+      name: {{ CODE }}
       namespace: crossplane-system
     spec:
+      code: "{{ CODE }}"
       billingAccountId: "$BILLING"
       # Capability -> principal. Whole IAM member strings, because the
       # principal need not be a group. A capability left out binds
@@ -688,7 +747,7 @@ gcp-plane-apply parent name="" folder="" mgmt="" billing="":
     echo ">>> waiting for the folder and management project"
     kubectl --context {{ BOOT_CTX }} -n crossplane-system wait \
       --for=condition=ready --timeout=300s \
-      xqueenswoodinstallation/queenswood || true
+      xqueenswoodinstallation/{{ CODE }} || true
     just gcp-plane-status
 
 # Report the composite and the folder it made.
@@ -696,7 +755,7 @@ gcp-plane-status:
     #!/usr/bin/env zsh
     set -e
     kubectl --context {{ BOOT_CTX }} -n crossplane-system get \
-      xqueenswoodinstallation queenswood -o yaml 2>/dev/null \
+      xqueenswoodinstallation {{ CODE }} -o yaml 2>/dev/null \
       | grep -E 'folderId|folderName|type: (Ready|Synced)|status: "(True|False)"|reason:' \
       || echo "no composite applied yet"
     echo
@@ -706,3 +765,67 @@ gcp-plane-status:
 # Delete the throwaway plane. The folder is orphaned, not deleted.
 gcp-plane-down:
     @kind delete cluster --name {{ BOOT_CLUSTER }}
+
+# =========================================================================
+# The management cluster
+#
+# The durable plane, inside the installation's folder -- as opposed to
+# the throwaway one above, which exists only long enough to create it.
+# =========================================================================
+
+# Add a kubectl context for the management cluster, named MGMT_CTX.
+gcp-mgmt-cluster-ctx project="":
+    #!/usr/bin/env zsh
+    set -e
+    CLUSTER="gke-{{ CODE }}-c-mgmt"
+
+    PROJECT="{{ project }}"
+    if [[ -z "$PROJECT" ]]; then
+      # By id prefix: the suffix is random, so it is not derivable, and
+      # nothing labels the project. Not silenced -- an expired session
+      # exits non-zero with empty stdout, which would read as "no
+      # management project" for one that plainly exists.
+      if ! OUT=$(gcloud projects list \
+                   --filter="projectId ~ ^prj-{{ CODE }}-c-mgmt-" \
+                   --format='value(projectId)' 2>&1); then
+        echo "cannot list projects:" >&2
+        printf '%s\n' "$OUT" | sed 's/^/  /' >&2
+        exit 1
+      fi
+      PROJECT=$(printf '%s\n' "$OUT" | head -1)
+    fi
+    if [[ -z "$PROJECT" ]]; then
+      echo "no management project for {{ CODE }}; pass one" >&2
+      exit 1
+    fi
+
+    # Read from the cluster rather than stated here, so this cannot
+    # drift from the zone the installation manifest chose.
+    ZONE=$(gcloud container clusters list --project="$PROJECT" \
+             --filter="name=$CLUSTER" --format='value(location)' | head -1)
+    if [[ -z "$ZONE" ]]; then
+      echo "no cluster $CLUSTER in $PROJECT" >&2
+      exit 1
+    fi
+
+    # get-credentials makes its context current, which silently
+    # retargets a shell that was working against the throwaway plane.
+    # Captured and put back: this recipe adds a context, it does not
+    # choose one.
+    WAS=$(kubectl config current-context 2>/dev/null || true)
+
+    gcloud container clusters get-credentials "$CLUSTER" \
+      --zone="$ZONE" --project="$PROJECT"
+    kubectl config rename-context \
+      "gke_${PROJECT}_${ZONE}_${CLUSTER}" "{{ MGMT_CTX }}" >/dev/null 2>&1 || true
+
+    if [[ -n "$WAS" && "$WAS" != "gke_${PROJECT}_${ZONE}_${CLUSTER}" ]]; then
+      kubectl config use-context "$WAS" >/dev/null
+    fi
+
+    echo
+    echo ">>> context {{ MGMT_CTX }} -> $CLUSTER in $PROJECT ($ZONE)"
+    echo ">>> still on ${WAS:-none}; use --context {{ MGMT_CTX }}"
+    echo ">>> fetching credentials needs only container.viewer, which you"
+    echo ">>> hold. Calling the API needs container.admin: join"
+    echo ">>> grp-gcp-{{ CODE }}-cluster-admin for the task, and leave."
