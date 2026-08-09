@@ -92,10 +92,11 @@ Only the organisation set is bound by `gcp-groups-bind`, and billing is
 bound on the billing account rather than on the organisation. The one
 exception is `grp-gcp-qw01-platform-viewer@`, which takes Browser there
 too: it is hierarchy metadata, and the tooling cannot reach a folder
-without first resolving the organisation holding it. The rest of the installation set is folder and project
-scoped, so it belongs in the installation manifest beside the resources
-it applies to. The manifest names each capability and maps it to a
-principal, so which group answers is configuration; see
+without first resolving the organisation holding it. The rest of the
+installation set is folder and project scoped, so it belongs in the
+installation manifest beside the resources it applies to. The manifest
+names each capability and maps it to a principal, so which group answers
+is configuration; see
 [ADR-0023](../adr/0023-installation-naming-and-access.md).
 
 For each, in this order: **Access type: Restricted**, *then* **Who can
@@ -174,8 +175,9 @@ just gcp-preflight
 
 An organisation and a billing account is enough to continue with
 [cloud-foundation](cloud-foundation.md). Run as the operating user, the
-roles line reads "not readable by this account" — Organization Viewer
-excludes `getIamPolicy`, and group-derived roles never appear there.
+roles line reads "not readable by this account" — Browser carries no
+`organizations.getIamPolicy`, and group-derived roles never appear
+there anyway.
 
 ## Rules
 

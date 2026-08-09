@@ -144,9 +144,9 @@ gcp-preflight org="":
     # here, so an absent line is a prompt to check rather than proof.
     echo
     echo "organization roles bound directly to $ME:"
-    # Not fatal, unlike the describe above. Organization Viewer does not
-    # include getIamPolicy, so the operating user legitimately cannot
-    # read this -- and a denial must never render as "(none)".
+    # Not fatal, unlike the describe above. Browser carries no
+    # organizations.getIamPolicy, so the operating user legitimately
+    # cannot read this -- and a denial must never render as "(none)".
     if ROLES=$(gcloud organizations get-iam-policy "$ORG" \
                  --flatten='bindings[].members' \
                  --filter="bindings.members:user:$ME" \
@@ -159,7 +159,7 @@ gcp-preflight org="":
       echo "  (domain-wide grants are not listed here -- they name the domain)"
     else
       echo "  not readable by this account, which blocks nothing"
-      echo "  (Organization Viewer excludes getIamPolicy)"
+      echo "  (Browser carries no organizations.getIamPolicy)"
     fi
 
     # What the two paths need, stated rather than asserted, because the
