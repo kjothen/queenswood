@@ -352,18 +352,18 @@ gcp-groups-bind org="":
     ORG=$(just _gcp-org-id "{{ org }}")
     DOMAIN=$(just _gcp-domain "{{ org }}")
 
-    # The two reads on the platform-viewer group are the one place an
+    # browser on the platform-viewer group is the one place an
     # installation group is bound at the organisation. Hierarchy metadata
     # only, and the tooling cannot reach a folder without first resolving
-    # the organisation that holds it. Where the organisation is not ours,
-    # this is whatever it already grants its own people.
+    # the organisation that holds it. organizationViewer would add
+    # nothing: its one permission is already in browser. Where the
+    # organisation is not ours, this is whatever it grants its own people.
     MISSING=0
     for spec in \
       "{{ ORG_ADMIN_GROUP }}:roles/resourcemanager.organizationAdmin" \
       "{{ FOLDER_ADMIN_GROUP }}:roles/resourcemanager.folderAdmin" \
       "{{ SECURITY_REVIEWER_GROUP }}:roles/iam.securityReviewer" \
       "{{ BILLING_ADMIN_GROUP }}:" \
-      "{{ PLATFORM_VIEWER_GROUP }}:roles/resourcemanager.organizationViewer" \
       "{{ PLATFORM_VIEWER_GROUP }}:roles/browser" \
       "{{ PLATFORM_ADMIN_GROUP }}:" \
       "{{ CLUSTER_ADMIN_GROUP }}:" \

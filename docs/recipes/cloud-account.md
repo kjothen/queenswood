@@ -90,10 +90,9 @@ Four per installation, coded to it and deleted with it — `qw01` here:
 
 Only the organisation set is bound by `gcp-groups-bind`, and billing is
 bound on the billing account rather than on the organisation. The one
-exception is `grp-gcp-qw01-platform-viewer@`, which takes Organization
-Viewer and Browser there too: both are hierarchy metadata, and the
-tooling cannot reach a folder without first resolving the organisation
-holding it. The rest of the installation set is folder and project
+exception is `grp-gcp-qw01-platform-viewer@`, which takes Browser there
+too: it is hierarchy metadata, and the tooling cannot reach a folder
+without first resolving the organisation holding it. The rest of the installation set is folder and project
 scoped, so it belongs in the installation manifest beside the resources
 it applies to. The manifest names each capability and maps it to a
 principal, so which group answers is configuration; see
