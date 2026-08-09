@@ -125,6 +125,16 @@ spec:
                 toFieldPath: metadata.annotations[crossplane.io/external-name]
               - fromFieldPath: spec.management.projectId
                 toFieldPath: spec.forProvider.projectId
+              # Derived first, then overridden: a later patch wins when
+              # its source is set and is skipped when it is absent, so
+              # this is how a field gets a default it cannot state.
+              - fromFieldPath: spec.code
+                toFieldPath: spec.forProvider.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "prj-%s-c-mgmt"
               - fromFieldPath: spec.management.displayName
                 toFieldPath: spec.forProvider.name
               - fromFieldPath: spec.billingAccountId

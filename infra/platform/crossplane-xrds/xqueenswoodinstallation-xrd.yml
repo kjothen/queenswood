@@ -151,7 +151,12 @@ spec:
                         fail and creation never follows.
                     displayName:
                       type: string
-                      default: queenswood management
+                      description: |
+                        Overrides the derived name. Absent by default:
+                        a project's display name mirrors its id, so the
+                        console and a manifest read alike and meaning
+                        lives in labels. Set it where a project is
+                        handed to us already named.
                 createFolder:
                   type: object
                   required:
