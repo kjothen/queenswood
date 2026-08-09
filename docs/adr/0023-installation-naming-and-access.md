@@ -36,6 +36,13 @@ answers are consistent with each other. Two lines carry most of it:
 > inherent in these roles goes against the principles of least
 > privilege.
 
+There is a second audience for all of this. An installation need not be
+created in an organisation we control, and the likelier case is that we
+are handed a folder and an identity with administrative rights on it,
+with everything above belonging to somebody else. Nothing about access
+can assume we may create a group, choose what it is called, or read an
+organisation's IAM policy.
+
 ## Decision
 
 ### An installation has a code, and the code is in every name
@@ -72,6 +79,10 @@ The suffix on a project is six hex characters rather than the guide's
 five-digit number, because that is what generates a globally unique id
 with the least ceremony. Everything else is as published.
 
+Every name here is ours to choose because every resource it names lives
+inside the folder. The group names are the exception: a directory is
+never inside a folder, so they hold only in an organisation we own.
+
 ### Kubernetes names mirror GCP names
 
 A managed resource is named for what it manages: `fldr-qw01`,
@@ -101,7 +112,9 @@ anything means joining a group that is normally empty, doing the work,
 and leaving. Assuming an automation identity is a write capability and
 belongs in the second category, not the first.
 
-At the organisation, one set of groups:
+In an organisation we own, one set of groups bound at the organisation
+node. In one we do not, these are its own business under its own names,
+and an installation never refers to them:
 
 - `grp-gcp-organization-admin` — organisation IAM. Empty.
 - `grp-gcp-folder-admin` — the boundary itself. Empty. Organization
@@ -112,22 +125,53 @@ At the organisation, one set of groups:
 - `grp-gcp-security-reviewer` — read-only IAM everywhere. Populated:
   auditing access must never require the power to change it.
 
-Per installation, one set:
+Per installation, four capabilities:
 
-- `grp-gcp-qw01-operator` — read inside the folder. Populated.
-- `grp-gcp-qw01-automation` — may assume the installation's automation
-  identities. Empty.
-- `grp-gcp-qw01-cluster-admin` — Kubernetes administration. Empty.
-- `grp-gcp-qw01-secret-admin` — secret contents. Empty.
+- **operator** — read inside the folder. Populated.
+- **automation** — may assume the installation's automation identities.
+  Empty.
+- **cluster-admin** — Kubernetes administration. Empty.
+- **secret-admin** — secret contents. Empty.
 
 Roles bound to these are predefined and granular. Primitive roles —
 Owner, Editor, Viewer — are not used, including for the operator's read
 access, which is assembled from predefined viewer roles instead.
 
+### Capabilities are logical, principals are configuration
+
+The four are logical names. What each resolves to is per-installation
+configuration, mapped in the manifest:
+
+```yaml
+access:
+  operator: [group:grp-gcp-qw01-operator@queenswood.io]
+  automation: [group:grp-gcp-qw01-automation@queenswood.io]
+  cluster-admin: [group:grp-gcp-qw01-cluster-admin@queenswood.io]
+  secret-admin: [group:grp-gcp-qw01-secret-admin@queenswood.io]
+```
+
+A value is an IAM member string rather than a group name, because a
+capability may be answered by a group, by a user in a small
+organisation, or by a `principalSet://` from an external identity
+provider — and by more than one of them. A capability the organisation
+declines to provide is simply absent, and nothing is bound for it: an
+installation stands up correctly with no human bindings at all.
+
+Creating the principals is the organisation's act and binding them
+inside the folder is ours. That division is the point. The directory
+stays theirs, the folder stays ours, and asking for a principal per
+capability shows them precisely what is being requested — which
+requesting a role on an existing group would not.
+
+Where we own the organisation the mapping is one-to-one and reads as
+pure ceremony. It earns its place in the case where the names are not
+ours to choose.
+
 ### Above the folder we consume, we do not manage
 
-An installation needs an organisation, a billing account and a parent to
-create in. It takes those as given and forms no opinion about them.
+An installation needs an organisation, a billing account, a parent to
+create in, and an identity holding administrative rights inside it. It
+takes those as given and forms no opinion about them.
 Domain-wide default grants, other folders, and organisation policy
 outside the installation's own folder belong to whoever owns the
 organisation, who may not be us.
@@ -148,10 +192,23 @@ tells a console browser nothing, so the folder's description says
 "Queenswood installation 01" and projects carry labels. The name is for
 machines and greppability; the description is for people.
 
-**A per-installation group set multiplies with installations.** Four
-groups each. That is the cost of bindings that name their scope, and the
-alternative — one `cluster-admin` group bound on every folder — grants
-across installations that are supposed to share nothing.
+**A per-installation capability set multiplies with installations.**
+Four principals each, which where we own the organisation means four
+groups to create. That is the cost of bindings that name their scope,
+and the alternative — one `cluster-admin` group bound on every folder —
+grants across installations that are supposed to share nothing.
+
+**A capability is only as separate as its mapping.** Two may resolve to
+one principal, and then joining for one grants the other: `cluster-admin`
+and `secret-admin` collapsed onto a single group makes their separation
+fiction. In an organisation we do not own we cannot prevent that. What
+we get is that the collapse is written in the manifest and read in a
+pull request, rather than emerging from a policy nobody opens.
+
+**The manifest records what we granted, not what is held.** An
+organisation may bind its own principals above the folder, and we may
+have no rights to read that policy. The mapping is the whole truth about
+our own bindings and no evidence at all about anyone else's.
 
 **The operator's read access is more work to assemble.** `roles/viewer`
 would have been one binding; predefined viewer roles are several, and
@@ -167,6 +224,6 @@ the set grows as the installation gains resource types.
 
 ## Future
 
-Whether instances get their own group sets — `grp-gcp-qw01-p-operator`
-against the production instance alone — is left open. It follows the
-same shape and should wait until an instance has someone to grant it to.
+Whether instances get their own capabilities — a `p-operator` against
+the production instance alone — is left open. It follows the same shape
+and should wait until an instance has someone to grant it to.
