@@ -198,7 +198,18 @@ delete.
 **Codes are opaque, and descriptions carry the meaning.** `fldr-qw01`
 tells a console browser nothing, so the folder's description says
 "Queenswood installation 01" and projects carry labels. The name is for
-machines and greppability; the description is for people.
+machines and greppability; the description is for people. The expansion
+is written once, on the folder, and the code is used bare everywhere
+else — repeated in each group description it would be as many places to
+correct.
+
+**A group's display name is its address, and its description names no
+roles.** One string then appears on every screen and in every binding,
+and the console sorts by scope rather than by prose. The description
+says what holding the capability lets you do and whether it is standing
+or joined; which roles implement it stays in the composition, where a
+change is reviewed. A role named in a directory field is a claim nobody
+will come back to correct.
 
 **A per-installation capability set multiplies with installations.**
 Four principals each, which where we own the organisation means four
