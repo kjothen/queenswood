@@ -89,6 +89,32 @@ _gcp-seed-project:
 _gcp-boot-sa:
     @printf 'sa-{{ CODE }}-boot@%s.iam.gserviceaccount.com\n' "$(just _gcp-seed-project)"
 
+# Print the billing account the bootstrap identity may bill projects to.
+[private]
+_gcp-billing-account:
+    #!/usr/bin/env zsh
+    set -e
+    # Asked of the identity rather than of the operator. It holds
+    # billing.user on exactly the account the organisation gave it,
+    # where a person may see several and the first is not necessarily
+    # the right one. Ambiguity is an error here rather than a guess:
+    # billing the wrong account is not something a later run corrects.
+    SA=$(just _gcp-boot-sa)
+    OUT=$(gcloud billing accounts list --impersonate-service-account="$SA" \
+            --filter='OPEN=True' --format='value(ACCOUNT_ID)' 2>/dev/null || true)
+    COUNT=$(printf '%s' "$OUT" | grep -c . || true)
+    if [[ "$COUNT" -eq 0 ]]; then
+      echo "no open billing account visible to $SA" >&2
+      echo "grant it roles/billing.user -- see gcp-boot-identity" >&2
+      exit 1
+    fi
+    if [[ "$COUNT" -ne 1 ]]; then
+      echo "$COUNT open billing accounts visible to $SA; pass one" >&2
+      printf '%s\n' "$OUT" | sed 's/^/  /' >&2
+      exit 1
+    fi
+    printf '%s\n' "$OUT"
+
 # Print the organisation id, discovering it when only one is visible.
 [private]
 _gcp-org-id org="":
@@ -694,14 +720,16 @@ gcp-plane-manifest parent name="" folder="" mgmt="" billing="":
         exit 1
       fi
     fi
-    BILLING="{{ billing }}"
-    if [[ -z "$BILLING" ]]; then
-      BILLING=$(gcloud billing accounts list --filter='OPEN=True' \
-                  --format='value(ACCOUNT_ID)' | head -1 || true)
-    fi
-    if [[ -z "$BILLING" ]]; then
-      echo "no open billing account; pass one" >&2
-      exit 1
+    # Omitted unless passed, and normally not passed. The account is a
+    # property of the identity -- it holds billing.user on exactly one --
+    # so the manifest does not record it. Once a project exists the
+    # provider's late-initialisation owns forProvider.billingAccount, so
+    # a manifest without this leaves billing alone rather than unsetting
+    # it. gcp-plane-apply supplies it, because creating a project is the
+    # one moment it is needed.
+    BILLING_LINE=""
+    if [[ -n "{{ billing }}" ]]; then
+      BILLING_LINE="billingAccountId: \"{{ billing }}\""
     fi
 
     # A project id is consumed permanently and cannot be undeleted into
@@ -753,7 +781,7 @@ gcp-plane-manifest parent name="" folder="" mgmt="" billing="":
       region: "{{ REGION }}"
       regionCode: "{{ REGION_CODE }}"
       zone: "{{ ZONE }}"
-      billingAccountId: "$BILLING"
+      $BILLING_LINE
       # Capability -> principal. Whole IAM member strings, because the
       # principal need not be a group. A capability left out binds
       # nothing.
@@ -775,11 +803,20 @@ gcp-plane-manifest parent name="" folder="" mgmt="" billing="":
 gcp-plane-apply parent name="" folder="" mgmt="" billing="":
     #!/usr/bin/env zsh
     set -e
+    # Supplied here and not in the committed manifest, because creating
+    # a project is the one moment it is needed. Discovered from the
+    # identity's own binding, so applying does not depend on remembering
+    # it, and the file this repository holds never carries it.
+    BILLING="{{ billing }}"
+    if [[ -z "$BILLING" ]]; then
+      BILLING=$(just _gcp-billing-account)
+    fi
+
     # Built once and applied, rather than templated here a second time:
     # the manifest recipe mints the management project id when one is
     # not passed, so generating it twice would produce two.
     MANIFEST=$(just gcp-plane-manifest '{{ parent }}' '{{ name }}' \
-                 '{{ folder }}' '{{ mgmt }}' '{{ billing }}')
+                 '{{ folder }}' '{{ mgmt }}' "$BILLING")
 
     printf '%s\n' "$MANIFEST" \
       | kubectl --context {{ BOOT_CTX }} apply -f -
