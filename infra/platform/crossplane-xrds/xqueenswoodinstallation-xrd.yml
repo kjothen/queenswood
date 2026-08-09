@@ -46,6 +46,15 @@ spec:
                 management:
                   type: object
                   properties:
+                    providerServiceAccount:
+                      type: string
+                      default: crossplane-provider-gcp
+                      description: |
+                        The Kubernetes service account Crossplane's GCP
+                        providers run as on the management cluster,
+                        pinned by a DeploymentRuntimeConfig. Workload
+                        Identity binds to this name, so it cannot be the
+                        generated one.
                     machineType:
                       type: string
                       default: e2-standard-2

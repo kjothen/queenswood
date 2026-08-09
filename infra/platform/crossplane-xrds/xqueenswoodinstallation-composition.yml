@@ -532,3 +532,86 @@ spec:
                 toFieldPath: spec.forProvider.location
               - fromFieldPath: spec.management.machineType
                 toFieldPath: spec.forProvider.nodeConfig.machineType
+          # ===================================================================
+          # The platform's own identity. Created here, assumed by pods on
+          # the management cluster through Workload Identity, and never
+          # held by anyone -- the same property the bootstrap identity
+          # has, arrived at differently.
+          #
+          # What it is allowed to do is not here yet: folder-scoped
+          # bindings need FolderIAMMember, which is unverified against
+          # this provider version.
+          # ===================================================================
+          - name: platform-identity
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: ServiceAccount
+              metadata:
+                namespace: crossplane-system
+              spec:
+                managementPolicies:
+                  - Observe
+                  - Create
+                  - Update
+                  - LateInitialize
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  displayName: Queenswood platform
+                  description: Runs the management plane; see docs/recipes/cloud-foundation.md
+            patches:
+              - fromFieldPath: metadata.name
+                toFieldPath: metadata.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "%s-platform"
+              - fromFieldPath: spec.management.projectId
+                toFieldPath: spec.forProvider.project
+              # The account id is the external name, so it is stated
+              # rather than generated: the Workload Identity member
+              # string below has to spell the same address.
+              - fromFieldPath: spec.management.projectId
+                toFieldPath: metadata.annotations[crossplane.io/external-name]
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "queenswood-platform"
+          - name: platform-identity-workload-identity
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: ServiceAccountIAMMember
+              metadata:
+                namespace: crossplane-system
+              spec:
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  role: roles/iam.workloadIdentityUser
+            patches:
+              - fromFieldPath: metadata.name
+                toFieldPath: metadata.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "%s-platform-wi"
+              - fromFieldPath: metadata.name
+                toFieldPath: spec.forProvider.serviceAccountIdRef.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "%s-platform"
+              # serviceAccount:<project>.svc.id.goog[<namespace>/<ksa>]
+              - fromFieldPath: spec.management.projectId
+                toFieldPath: spec.forProvider.member
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "serviceAccount:%s.svc.id.goog[crossplane-system/crossplane-provider-gcp]"

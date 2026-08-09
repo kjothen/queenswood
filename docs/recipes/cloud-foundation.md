@@ -197,8 +197,11 @@ request runs as the platform identity.
 
 ### Where this stands
 
-The composite creates the folder, the management project and the APIs
-that project needs, and nothing below that yet. Instances, the durable
+The composite creates the folder, the management project and its APIs,
+the network and the zonal GKE cluster the platform will run on, and the
+platform's own identity with a Workload Identity binding to it. What
+that identity is allowed to do, and moving the manifest onto the cluster
+it just built, are the next steps. Instances, the durable
 tier and `state: draining` are described above because that is where
 this goes, per
 [ADR-0022](../adr/0022-cloud-foundation-and-environment-lifecycle.md);
