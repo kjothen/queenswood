@@ -640,14 +640,14 @@ spec:
             {{- $access := dig "access" dict $xr.spec }}
             {{- $project := dig "management" "projectId" "" $xr.spec }}
             {{- $capabilities := list
-                  (dict "key" "operator" "kind" "FolderIAMMember" "roles" (list
+                  (dict "key" "viewer" "kind" "FolderIAMMember" "roles" (list
                     "roles/browser"
                     "roles/compute.viewer"
                     "roles/container.viewer"
                     "roles/iam.serviceAccountViewer"
                     "roles/logging.viewer"
                     "roles/monitoring.viewer"))
-                  (dict "key" "automation" "kind" "ServiceAccountIAMMember" "roles" (list
+                  (dict "key" "automationUser" "kind" "ServiceAccountIAMMember" "roles" (list
                     "roles/iam.serviceAccountTokenCreator"))
                   (dict "key" "clusterAdmin" "kind" "FolderIAMMember" "roles" (list
                     "roles/container.admin"))

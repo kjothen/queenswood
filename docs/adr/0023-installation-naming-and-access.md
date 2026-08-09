@@ -125,17 +125,22 @@ and an installation never refers to them:
 - `grp-gcp-security-reviewer` — read-only IAM everywhere. Populated:
   auditing access must never require the power to change it.
 
-Per installation, four capabilities:
+Per installation, four capabilities. Each is named for what holding it
+lets you do, not for the job of the person holding it or the thing it
+acts on — an `operator` who may only read, or an `automation` group
+whose members are people, both invite the reader to assume more than the
+binding gives:
 
-- **operator** — read inside the folder. Populated.
-- **automation** — may assume the installation's automation identities.
-  Empty.
-- **cluster-admin** — Kubernetes administration. Empty.
-- **secret-admin** — secret contents. Empty.
+- **viewer** — read inside the folder. Populated.
+- **automationUser** — may assume the installation's automation
+  identities. Use them, not administer them. Empty.
+- **clusterAdmin** — Kubernetes administration. Empty.
+- **secretAdmin** — secret contents. Empty.
 
 Roles bound to these are predefined and granular. Primitive roles —
-Owner, Editor, Viewer — are not used, including for the operator's read
-access, which is assembled from predefined viewer roles instead.
+Owner, Editor, Viewer — are not used, including for the viewer
+capability, which despite the name is assembled from predefined viewer
+roles rather than granted `roles/viewer`.
 
 ### Capabilities are logical, principals are configuration
 
@@ -144,8 +149,8 @@ configuration, mapped in the manifest:
 
 ```yaml
 access:
-  operator: [group:grp-gcp-qw01-operator@queenswood.io]
-  automation: [group:grp-gcp-qw01-automation@queenswood.io]
+  viewer: [group:grp-gcp-qw01-viewer@queenswood.io]
+  automationUser: [group:grp-gcp-qw01-automation-user@queenswood.io]
   clusterAdmin: [group:grp-gcp-qw01-cluster-admin@queenswood.io]
   secretAdmin: [group:grp-gcp-qw01-secret-admin@queenswood.io]
 ```

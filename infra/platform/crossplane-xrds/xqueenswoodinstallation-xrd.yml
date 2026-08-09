@@ -45,11 +45,12 @@ spec:
                     nothing is bound for it: an installation stands up
                     with no human bindings at all.
                   properties:
-                    operator:
+                    viewer:
                       type: array
                       description: |
                         Read inside the folder, assembled from predefined
-                        viewer roles. The populated one -- somebody's job
+                        viewer roles -- never roles/viewer, which is
+                        primitive. The populated one: somebody's job
                         rather than a capability they join for.
                       items: &member
                         type: string
@@ -59,12 +60,12 @@ spec:
                           address: a capability may be answered by a
                           group, by a user in a small organisation, or by
                           a principalSet from a federated directory.
-                    automation:
+                    automationUser:
                       type: array
                       description: |
                         May assume the installation's automation
-                        identities. Break-glass, so normally nobody
-                        stands in it.
+                        identities -- use them, not administer them.
+                        Break-glass, so normally nobody stands in it.
                       items: *member
                     clusterAdmin:
                       type: array
