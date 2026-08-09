@@ -23,7 +23,6 @@ spec:
               required:
                 - code
                 - createFolder
-                - billingAccountId
               properties:
                 code:
                   type: string
@@ -48,8 +47,18 @@ spec:
                   type: string
                   description: |
                     Billing account for every project in the
-                    installation. The bootstrap identity holds
-                    billing.user on it.
+                    installation. Optional, and normally absent: the
+                    identity holds billing.user on exactly one account,
+                    so the binding already settles which is used and a
+                    field restating it is a second copy that can
+                    disagree.
+
+                    Wanted only where a project is being created, and
+                    supplied then by gcp-plane-apply from the identity's
+                    own binding. Once a project exists the provider's
+                    late-initialisation owns forProvider.billingAccount,
+                    so a manifest omitting this leaves billing untouched
+                    rather than unsetting it.
                 access:
                   type: object
                   description: |
