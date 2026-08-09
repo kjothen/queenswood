@@ -33,9 +33,27 @@ spec:
                     Billing account for every project in the
                     installation. The bootstrap identity holds
                     billing.user on it.
+                region:
+                  type: string
+                  default: europe-west2
+                zone:
+                  type: string
+                  default: europe-west2-a
+                  description: |
+                    The cluster is zonal, not regional: one zonal control
+                    plane falls under the free allowance, and a plane
+                    running Crossplane and Argo does not need three.
                 management:
                   type: object
                   properties:
+                    machineType:
+                      type: string
+                      default: e2-standard-2
+                      description: |
+                        Each upjet provider pod is a Terraform runtime,
+                        and Argo brings five components, so the floor is
+                        higher than it looks. Smaller is worth trying,
+                        measured rather than assumed.
                     projectId:
                       type: string
                       description: |
@@ -99,6 +117,9 @@ spec:
                 managementProjectId:
                   type: string
                   description: The management project, once it exists.
+                clusterEndpoint:
+                  type: string
+                  description: The management cluster's API endpoint.
                 folderId:
                   type: string
                   description: |

@@ -286,3 +286,243 @@ spec:
                     string:
                       type: Format
                       fmt: "%s-management"
+          - name: management-service-compute
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: ProjectService
+              metadata:
+                namespace: crossplane-system
+              spec:
+                managementPolicies:
+                  - Observe
+                  - Create
+                  - Update
+                  - LateInitialize
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  service: compute.googleapis.com
+                  disableOnDestroy: false
+            patches:
+              - fromFieldPath: metadata.name
+                toFieldPath: metadata.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "%s-compute"
+              - fromFieldPath: metadata.name
+                toFieldPath: spec.forProvider.projectRef.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "%s-management"
+          - name: management-service-container
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: ProjectService
+              metadata:
+                namespace: crossplane-system
+              spec:
+                managementPolicies:
+                  - Observe
+                  - Create
+                  - Update
+                  - LateInitialize
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  service: container.googleapis.com
+                  disableOnDestroy: false
+            patches:
+              - fromFieldPath: metadata.name
+                toFieldPath: metadata.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "%s-container"
+              - fromFieldPath: metadata.name
+                toFieldPath: spec.forProvider.projectRef.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "%s-management"
+          # ===================================================================
+          # Network for the management cluster. Nothing else lives here,
+          # so one subnet with the two secondary ranges GKE needs.
+          # Network and Subnetwork take a project id rather than a ref,
+          # so it comes from the manifest, which always carries it.
+          # ===================================================================
+          - name: management-vpc
+            base:
+              apiVersion: compute.gcp.m.upbound.io/v1beta1
+              kind: Network
+              metadata:
+                namespace: crossplane-system
+              spec:
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  autoCreateSubnetworks: false
+                  routingMode: REGIONAL
+            patches:
+              - fromFieldPath: metadata.name
+                toFieldPath: metadata.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "%s-vpc"
+              - fromFieldPath: spec.management.projectId
+                toFieldPath: spec.forProvider.project
+          - name: management-subnet
+            base:
+              apiVersion: compute.gcp.m.upbound.io/v1beta1
+              kind: Subnetwork
+              metadata:
+                namespace: crossplane-system
+              spec:
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  ipCidrRange: 10.60.0.0/16
+                  privateIpGoogleAccess: true
+                  secondaryIpRange:
+                    - rangeName: pods
+                      ipCidrRange: 10.61.0.0/16
+                    - rangeName: services
+                      ipCidrRange: 10.62.0.0/20
+            patches:
+              - fromFieldPath: metadata.name
+                toFieldPath: metadata.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "%s-subnet"
+              - fromFieldPath: metadata.name
+                toFieldPath: spec.forProvider.networkRef.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "%s-vpc"
+              - fromFieldPath: spec.management.projectId
+                toFieldPath: spec.forProvider.project
+              - fromFieldPath: spec.region
+                toFieldPath: spec.forProvider.region
+
+          # ===================================================================
+          # The cluster that will run Crossplane and Argo, and nothing
+          # else. Zonal, because one zonal control plane falls under the
+          # free allowance and a management plane does not need three.
+          #
+          # The default node pool is removed and replaced, which costs
+          # about ten minutes here but makes every later change of
+          # machine type a pool replacement rather than a cluster one --
+          # and the right size for this is not yet known.
+          # ===================================================================
+          - name: management-cluster
+            base:
+              apiVersion: container.gcp.m.upbound.io/v1beta1
+              kind: Cluster
+              metadata:
+                namespace: crossplane-system
+              spec:
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  initialNodeCount: 1
+                  removeDefaultNodePool: true
+                  deletionProtection: false
+                  releaseChannel:
+                    channel: REGULAR
+                  ipAllocationPolicy:
+                    clusterSecondaryRangeName: pods
+                    servicesSecondaryRangeName: services
+            patches:
+              - fromFieldPath: metadata.name
+                toFieldPath: metadata.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "%s-cluster"
+              - fromFieldPath: metadata.name
+                toFieldPath: spec.forProvider.networkRef.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "%s-vpc"
+              - fromFieldPath: metadata.name
+                toFieldPath: spec.forProvider.subnetworkRef.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "%s-subnet"
+              - fromFieldPath: spec.management.projectId
+                toFieldPath: spec.forProvider.project
+              - fromFieldPath: spec.zone
+                toFieldPath: spec.forProvider.location
+              # Workload Identity, so the platform's own service account
+              # is assumed by a pod rather than held as a key.
+              - fromFieldPath: spec.management.projectId
+                toFieldPath: spec.forProvider.workloadIdentityConfig.workloadPool
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "%s.svc.id.goog"
+              - type: ToCompositeFieldPath
+                fromFieldPath: status.atProvider.endpoint
+                toFieldPath: status.clusterEndpoint
+          - name: management-nodes
+            base:
+              apiVersion: container.gcp.m.upbound.io/v1beta1
+              kind: NodePool
+              metadata:
+                namespace: crossplane-system
+              spec:
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  nodeCount: 1
+                  nodeConfig:
+                    diskSizeGb: 50
+                    diskType: pd-standard
+                    oauthScopes:
+                      - https://www.googleapis.com/auth/cloud-platform
+                    workloadMetadataConfig:
+                      mode: GKE_METADATA
+            patches:
+              - fromFieldPath: metadata.name
+                toFieldPath: metadata.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "%s-nodes"
+              - fromFieldPath: metadata.name
+                toFieldPath: spec.forProvider.clusterRef.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "%s-cluster"
+              - fromFieldPath: spec.management.projectId
+                toFieldPath: spec.forProvider.project
+              - fromFieldPath: spec.zone
+                toFieldPath: spec.forProvider.location
+              - fromFieldPath: spec.management.machineType
+                toFieldPath: spec.forProvider.nodeConfig.machineType

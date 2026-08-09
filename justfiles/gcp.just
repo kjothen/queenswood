@@ -495,37 +495,38 @@ gcp-plane-up:
       --namespace crossplane-system --create-namespace \
       --set argo-cd.enabled=false --set providers.enabled=false --wait
 
-    # Only what this plane needs: it creates a folder, a project and
-    # its APIs, then hands over. dns, sql and certificatemanager serve
+    # Only what this plane needs: a folder, a project and its APIs
+    # (cloudplatform), then a network and a GKE cluster to hand over to
+    # (compute, container). dns, sql and certificatemanager serve
     # instances and belong to the management plane, not to a cluster
-    # that lives for minutes. Versions still come from the one manifest
-    # Argo applies, so nothing drifts -- only the set is narrowed.
-    PROVIDER_PKG=$(grep -A2 'name: provider-gcp-cloudplatform' \
-      infra/platform/crossplane-providers/providers.yml \
-      | grep 'package:' | awk '{print $2}')
-    FUNCTION_PKG=$(grep -A2 'name: function-patch-and-transform' \
-      infra/platform/crossplane-providers/providers.yml \
-      | grep 'package:' | awk '{print $2}')
-    echo ">>> installing $PROVIDER_PKG"
-    kubectl --context {{ BOOT_CTX }} apply -f - <<YAML
+    # that lives for minutes. Versions come from the manifest Argo
+    # applies, so only the set is narrowed.
+    MANIFEST=infra/platform/crossplane-providers/providers.yml
+    for name in provider-gcp-cloudplatform provider-gcp-compute \
+                provider-gcp-container function-patch-and-transform ; do
+      PKG=$(grep -A2 "name: $name\$" "$MANIFEST" | grep 'package:' | awk '{print $2}')
+      if [[ -z "$PKG" ]]; then
+        echo "no package for $name in $MANIFEST" >&2
+        exit 1
+      fi
+      KIND=Provider
+      case "$name" in function-*) KIND=Function ;; esac
+      echo ">>> installing $PKG"
+      kubectl --context {{ BOOT_CTX }} apply -f - <<YAML
     apiVersion: pkg.crossplane.io/v1
-    kind: Provider
+    kind: $KIND
     metadata:
-      name: provider-gcp-cloudplatform
+      name: $name
     spec:
-      package: $PROVIDER_PKG
-    ---
-    apiVersion: pkg.crossplane.io/v1
-    kind: Function
-    metadata:
-      name: function-patch-and-transform
-    spec:
-      package: $FUNCTION_PKG
+      package: $PKG
     YAML
+    done
 
     echo ">>> waiting for the provider and function"
     kubectl --context {{ BOOT_CTX }} wait --for=condition=healthy --timeout=600s \
       provider.pkg.crossplane.io/provider-gcp-cloudplatform
+    kubectl --context {{ BOOT_CTX }} wait --for=condition=healthy --timeout=600s \
+      provider.pkg.crossplane.io/provider-gcp-container
     kubectl --context {{ BOOT_CTX }} wait --for=condition=healthy --timeout=600s \
       function.pkg.crossplane.io/function-patch-and-transform
 
