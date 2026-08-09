@@ -856,6 +856,107 @@ gcp-plane-down:
 # the throwaway one above, which exists only long enough to create it.
 # =========================================================================
 
+# Print the management project's id, found by id prefix.
+[private]
+_gcp-mgmt-project:
+    #!/usr/bin/env zsh
+    set -e
+    # By id prefix: the suffix is random, so it is not derivable, and
+    # nothing labels the project. Not silenced -- an expired session
+    # exits non-zero with empty stdout, which would read as "no
+    # management project" for one that plainly exists.
+    if ! OUT=$(gcloud projects list \
+                 --filter="projectId ~ ^prj-{{ CODE }}-c-mgmt-" \
+                 --format='value(projectId)' 2>&1); then
+      echo "cannot list projects:" >&2
+      printf '%s\n' "$OUT" | sed 's/^/  /' >&2
+      exit 1
+    fi
+    ID=$(printf '%s\n' "$OUT" | head -1)
+    if [[ -z "$ID" ]]; then
+      echo "no management project for {{ CODE }}" >&2
+      exit 1
+    fi
+    printf '%s\n' "$ID"
+
+# Print the platform identity's email.
+[private]
+_gcp-platform-sa:
+    @printf 'sa-{{ CODE }}-platform@%s.iam.gserviceaccount.com\n' "$(just _gcp-mgmt-project)"
+
+# Let the platform identity bill the projects it creates (as a billing admin).
+gcp-platform-billing-role billing="":
+    #!/usr/bin/env zsh
+    set -e
+    # The one grant the composition cannot make. Everything the platform
+    # identity may do inside the folder is a FolderIAMMember or a
+    # ProjectIAMMember, but a billing account sits above the folder, and
+    # the boot identity holds billing.user rather than billing.admin --
+    # so it cannot delegate what it was given. Run this as somebody who
+    # administers the billing account: join grp-gcp-billing-admin for
+    # the task, and leave.
+    SA=$(just _gcp-platform-sa)
+
+    BILLING="{{ billing }}"
+    if [[ -z "$BILLING" ]]; then
+      # Asked of the boot identity, so this names the account the
+      # installation already bills to rather than whichever one the
+      # person running this happens to see first.
+      BILLING=$(just _gcp-billing-account)
+    fi
+
+    echo ">>> granting roles/billing.user on $BILLING"
+    echo ">>> to $SA"
+    if ! gcloud billing accounts add-iam-policy-binding "$BILLING" \
+           --member="serviceAccount:${SA}" --role=roles/billing.user \
+           >/dev/null; then
+      echo "could not grant billing.user -- are you in {{ BILLING_ADMIN_GROUP }}?" >&2
+      exit 1
+    fi
+    echo ">>> granted. The platform identity can now bill the projects"
+    echo ">>> it creates, which is what an instance needs."
+
+# Show what the platform identity may do, and where.
+gcp-platform-status:
+    #!/usr/bin/env zsh
+    set -e
+    SA=$(just _gcp-platform-sa)
+    PROJECT=$(just _gcp-mgmt-project)
+    echo "identity  $SA"
+    echo "project   $PROJECT"
+
+    # Each captured before printing: piping into sed takes sed's exit
+    # status, so a denial would print nothing and read as "none".
+    BILLING=$(just _gcp-billing-account 2>/dev/null || true)
+    echo "billing role:"
+    if [[ -z "$BILLING" ]]; then
+      echo "  no billing account readable from here"
+    elif OUT=$(gcloud billing accounts get-iam-policy "$BILLING" \
+                 --flatten='bindings[].members' \
+                 --filter="bindings.members:serviceAccount:$SA" \
+                 --format='value(bindings.role)' 2>/dev/null); then
+      printf '%s\n' "${OUT:-  none -- run 'just gcp-platform-billing-role'}" \
+        | sed 's/^/  /'
+    else
+      echo "  not readable by this account"
+    fi
+
+    echo "folder roles:"
+    FOLDER=$(gcloud resource-manager folders list \
+               --organization="$(just _gcp-org-id)" \
+               --filter="displayName=fldr-{{ CODE }}" \
+               --format='value(name)' 2>/dev/null | head -1 || true)
+    if [[ -z "$FOLDER" ]]; then
+      echo "  no folder fldr-{{ CODE }}"
+    elif OUT=$(gcloud resource-manager folders get-iam-policy "$FOLDER" \
+                 --flatten='bindings[].members' \
+                 --filter="bindings.members:serviceAccount:$SA" \
+                 --format='value(bindings.role)' 2>/dev/null); then
+      printf '%s\n' "${OUT:-  none}" | sed 's/^/  /'
+    else
+      echo "  not readable by this account"
+    fi
+
 # Add a kubectl context for the management cluster, named MGMT_CTX.
 gcp-mgmt-cluster-ctx project="":
     #!/usr/bin/env zsh
@@ -864,22 +965,7 @@ gcp-mgmt-cluster-ctx project="":
 
     PROJECT="{{ project }}"
     if [[ -z "$PROJECT" ]]; then
-      # By id prefix: the suffix is random, so it is not derivable, and
-      # nothing labels the project. Not silenced -- an expired session
-      # exits non-zero with empty stdout, which would read as "no
-      # management project" for one that plainly exists.
-      if ! OUT=$(gcloud projects list \
-                   --filter="projectId ~ ^prj-{{ CODE }}-c-mgmt-" \
-                   --format='value(projectId)' 2>&1); then
-        echo "cannot list projects:" >&2
-        printf '%s\n' "$OUT" | sed 's/^/  /' >&2
-        exit 1
-      fi
-      PROJECT=$(printf '%s\n' "$OUT" | head -1)
-    fi
-    if [[ -z "$PROJECT" ]]; then
-      echo "no management project for {{ CODE }}; pass one" >&2
-      exit 1
+      PROJECT=$(just _gcp-mgmt-project)
     fi
 
     # Read from the cluster rather than stated here, so this cannot
