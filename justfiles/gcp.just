@@ -241,9 +241,21 @@ gcp-bootstrap-identity org="" billing="":
         --description="Creates the management project; see docs/recipes/cloud-foundation.md"
     fi
 
+    # A freshly created service account is not immediately visible to
+    # IAM policy binding -- the first attempt reports it doesn't exist.
     echo ">>> granting roles/billing.user on billing account $BILLING"
-    gcloud billing accounts add-iam-policy-binding "$BILLING" \
-      --member="serviceAccount:${SA}" --role=roles/billing.user >/dev/null
+    BOUND=""
+    for i in {1..12}; do
+      if gcloud billing accounts add-iam-policy-binding "$BILLING" \
+           --member="serviceAccount:${SA}" --role=roles/billing.user \
+           >/dev/null 2>&1; then BOUND=1; break; fi
+      echo ">>> waiting for $SA to propagate ($i/12)"
+      sleep 5
+    done
+    if [[ -z "$BOUND" ]]; then
+      echo "could not grant billing.user to $SA on $BILLING" >&2
+      exit 1
+    fi
 
     # The group, never a person. Membership is then the whole of who can
     # act as this identity, and removing it is one revocation in one
