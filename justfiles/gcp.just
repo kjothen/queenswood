@@ -655,13 +655,14 @@ gcp-plane-apply parent name="" folder="" mgmt="" billing="":
     spec:
       billingAccountId: "$BILLING"
       # Capability -> principal. Whole IAM member strings, because the
-      # principal need not be a group. No automationUser entry: assuming
-      # an identity is break-glass and this organisation has no group for
-      # it yet, and a capability left out binds nothing.
+      # principal need not be a group. No platformAdmin entry: assuming
+      # the identity that runs the installation is break-glass and this
+      # organisation has no group for it yet, and a capability left out
+      # binds nothing.
       access:
-        viewer: ["group:{{ OPERATORS_GROUP }}@${DOMAIN}"]
+        platformViewer: ["group:{{ OPERATORS_GROUP }}@${DOMAIN}"]
         clusterAdmin: ["group:{{ CLUSTER_ADMINS_GROUP }}@${DOMAIN}"]
-        secretAdmin: ["group:{{ SECRETS_GROUP }}@${DOMAIN}"]
+        secretsAdmin: ["group:{{ SECRETS_GROUP }}@${DOMAIN}"]
       management:
         projectId: "$MGMT"
         $MGMT_ADOPT

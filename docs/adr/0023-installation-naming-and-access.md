@@ -116,7 +116,8 @@ In an organisation we own, one set of groups bound at the organisation
 node. In one we do not, these are its own business under its own names,
 and an installation never refers to them:
 
-- `grp-gcp-organization-admin` — organisation IAM. Empty.
+- `grp-gcp-org-admin` — organisation IAM. Empty. Abbreviated as the
+  guide abbreviates it.
 - `grp-gcp-folder-admin` — the boundary itself. Empty. Organization
   Administrator does not carry `resourcemanager.folders.delete`.
 - `grp-gcp-billing-admin` — the billing account. Empty, with one direct
@@ -125,22 +126,24 @@ and an installation never refers to them:
 - `grp-gcp-security-reviewer` — read-only IAM everywhere. Populated:
   auditing access must never require the power to change it.
 
-Per installation, four capabilities. Each is named for what holding it
-lets you do, not for the job of the person holding it or the thing it
-acts on — an `operator` who may only read, or an `automation` group
-whose members are people, both invite the reader to assume more than the
-binding gives:
+Per installation, four capabilities, each named area then relation as
+the guide's own groups are — `billing-viewer`, `secrets-admin` — so the
+name says what holding it lets you do. A capability named for a job
+(`operator`) or for the thing it acts on (`automation`) invites the
+reader to assume more, or less, than the binding gives:
 
-- **viewer** — read inside the folder. Populated.
-- **automationUser** — may assume the installation's automation
-  identities. Use them, not administer them. Empty.
+- **platformViewer** — read inside the folder. Populated.
+- **platformAdmin** — may assume the identity that runs the
+  installation. That identity holds the administrative rights GCP grants
+  a folder's creator, so this is administration of the whole folder,
+  arrived at by impersonation rather than by a standing role. Empty.
 - **clusterAdmin** — Kubernetes administration. Empty.
-- **secretAdmin** — secret contents. Empty.
+- **secretsAdmin** — secret contents. Empty.
 
 Roles bound to these are predefined and granular. Primitive roles —
-Owner, Editor, Viewer — are not used, including for the viewer
-capability, which despite the name is assembled from predefined viewer
-roles rather than granted `roles/viewer`.
+Owner, Editor, Viewer — are not used, including for `platformViewer`,
+which despite the name is assembled from predefined viewer roles rather
+than granted `roles/viewer`.
 
 ### Capabilities are logical, principals are configuration
 
@@ -149,10 +152,10 @@ configuration, mapped in the manifest:
 
 ```yaml
 access:
-  viewer: [group:grp-gcp-qw01-viewer@queenswood.io]
-  automationUser: [group:grp-gcp-qw01-automation-user@queenswood.io]
+  platformViewer: [group:grp-gcp-qw01-platform-viewer@queenswood.io]
+  platformAdmin: [group:grp-gcp-qw01-platform-admin@queenswood.io]
   clusterAdmin: [group:grp-gcp-qw01-cluster-admin@queenswood.io]
-  secretAdmin: [group:grp-gcp-qw01-secret-admin@queenswood.io]
+  secretsAdmin: [group:grp-gcp-qw01-secrets-admin@queenswood.io]
 ```
 
 A value is an IAM member string rather than a group name, because a

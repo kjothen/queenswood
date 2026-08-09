@@ -45,7 +45,7 @@ spec:
                     nothing is bound for it: an installation stands up
                     with no human bindings at all.
                   properties:
-                    viewer:
+                    platformViewer:
                       type: array
                       description: |
                         Read inside the folder, assembled from predefined
@@ -60,12 +60,14 @@ spec:
                           address: a capability may be answered by a
                           group, by a user in a small organisation, or by
                           a principalSet from a federated directory.
-                    automationUser:
+                    platformAdmin:
                       type: array
                       description: |
-                        May assume the installation's automation
-                        identities -- use them, not administer them.
-                        Break-glass, so normally nobody stands in it.
+                        May assume the identity that runs the
+                        installation, which holds the administrative
+                        rights GCP grants a folder's creator -- so this
+                        is administration of the whole folder, arrived at
+                        by impersonation. Break-glass.
                       items: *member
                     clusterAdmin:
                       type: array
@@ -73,7 +75,7 @@ spec:
                         container.admin on the folder. Break-glass: acting
                         on a cluster by hand bypasses what reconciles it.
                       items: *member
-                    secretAdmin:
+                    secretsAdmin:
                       type: array
                       description: |
                         secretmanager.admin on the management project.
