@@ -573,13 +573,13 @@ spec:
               # The account id is the external name, so it is stated
               # rather than generated: the Workload Identity member
               # string below has to spell the same address.
-              - fromFieldPath: spec.management.projectId
+              - fromFieldPath: metadata.name
                 toFieldPath: metadata.annotations[crossplane.io/external-name]
                 transforms:
                   - type: string
                     string:
                       type: Format
-                      fmt: "queenswood-platform"
+                      fmt: "%s-platform"
           - name: platform-identity-workload-identity
             base:
               apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
@@ -615,3 +615,106 @@ spec:
                     string:
                       type: Format
                       fmt: "serviceAccount:%s.svc.id.goog[crossplane-system/crossplane-provider-gcp]"
+          # ===================================================================
+          # What the groups may do inside the installation. Organisation
+          # scope is bound by gcp-groups-bind; these are folder and
+          # project scoped, so they belong beside the resources they
+          # apply to.
+          # ===================================================================
+          - name: access-operators-viewer
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: FolderIAMMember
+              metadata:
+                namespace: crossplane-system
+              spec:
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  role: roles/viewer
+            patches:
+              - fromFieldPath: metadata.name
+                toFieldPath: metadata.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "%s-access-operators"
+              - fromFieldPath: metadata.name
+                toFieldPath: spec.forProvider.folderRef.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "%s-folder"
+              - fromFieldPath: spec.access.operatorsGroup
+                toFieldPath: spec.forProvider.member
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "group:%s"
+          - name: access-cluster-admins
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: FolderIAMMember
+              metadata:
+                namespace: crossplane-system
+              spec:
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  role: roles/container.admin
+            patches:
+              - fromFieldPath: metadata.name
+                toFieldPath: metadata.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "%s-access-cluster-admins"
+              - fromFieldPath: metadata.name
+                toFieldPath: spec.forProvider.folderRef.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "%s-folder"
+              - fromFieldPath: spec.access.clusterAdminsGroup
+                toFieldPath: spec.forProvider.member
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "group:%s"
+          - name: access-secret-admins
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: ProjectIAMMember
+              metadata:
+                namespace: crossplane-system
+              spec:
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  role: roles/secretmanager.admin
+            patches:
+              - fromFieldPath: metadata.name
+                toFieldPath: metadata.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "%s-access-secret-admins"
+              - fromFieldPath: spec.management.projectId
+                toFieldPath: spec.forProvider.project
+              - fromFieldPath: spec.access.secretAdminsGroup
+                toFieldPath: spec.forProvider.member
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "group:%s"

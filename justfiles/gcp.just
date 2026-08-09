@@ -634,6 +634,8 @@ gcp-plane-apply parent name="" folder="" mgmt="" billing="":
       esac
     fi
 
+    DOMAIN=$(just _gcp-domain)
+
     FOLDER="{{ folder }}"
     if [[ -n "$FOLDER" && "$FOLDER" != folders/* ]]; then
       FOLDER="folders/$FOLDER"
@@ -652,6 +654,10 @@ gcp-plane-apply parent name="" folder="" mgmt="" billing="":
       namespace: crossplane-system
     spec:
       billingAccountId: "$BILLING"
+      access:
+        operatorsGroup: "{{ OPERATORS_GROUP }}@${DOMAIN}"
+        clusterAdminsGroup: "{{ CLUSTER_ADMINS_GROUP }}@${DOMAIN}"
+        secretAdminsGroup: "{{ SECRETS_GROUP }}@${DOMAIN}"
       management:
         projectId: "$MGMT"
         $MGMT_ADOPT

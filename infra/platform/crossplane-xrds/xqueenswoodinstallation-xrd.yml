@@ -23,6 +23,7 @@ spec:
               required:
                 - createFolder
                 - billingAccountId
+                - access
               properties:
                 # Folder only, for now. The management project, the
                 # durable tier and the instances join this spec as they
@@ -33,6 +34,29 @@ spec:
                     Billing account for every project in the
                     installation. The bootstrap identity holds
                     billing.user on it.
+                access:
+                  type: object
+                  description: |
+                    Groups that hold rights inside the installation. Named
+                    in full rather than derived from a domain, because a
+                    folder may be handed to you by an organisation whose
+                    groups are named nothing like these.
+                  required:
+                    - operatorsGroup
+                    - clusterAdminsGroup
+                    - secretAdminsGroup
+                  properties:
+                    operatorsGroup:
+                      type: string
+                      description: Viewer on the folder. Day-to-day.
+                    clusterAdminsGroup:
+                      type: string
+                      description: container.admin on the folder. Empty.
+                    secretAdminsGroup:
+                      type: string
+                      description: |
+                        secretmanager.admin on the management project.
+                        Empty.
                 region:
                   type: string
                   default: europe-west2
