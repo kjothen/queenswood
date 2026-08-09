@@ -57,34 +57,34 @@ members.
 Populated, because they are somebody's job:
 
 - **`gcp-platform-operators@`** — Organization Viewer and Browser, plus
-  the right to impersonate the bootstrap identity, plus Viewer on the
-  installation folder. *"Day-to-day operation. Reads the hierarchy, sees
-  inside the projects, and may act as the bootstrap identity."*
+  Viewer on the folder, plus the right to impersonate the automation
+  service account. *"Day-to-day platform operation. Reads the resource
+  hierarchy and the resources inside it, and may act as the automation
+  service account rather than holding its rights."*
 - **`gcp-security-reviewers@`** — `roles/iam.securityReviewer`.
-  *"Read-only view of who holds what, everywhere. Exists so that
-  auditing access never requires the power to change it."*
+  *"Read-only view of IAM policy across the organisation. Exists so that
+  auditing who holds what never requires the power to change it."*
 
 Empty, because they are capabilities you occasionally need:
 
 - **`gcp-organization-admins@`** — Organization Administrator.
   *"Break-glass for organisation IAM. Join to make a grant only an
-  organisation admin can make, then leave."* Note it cannot delete
-  folders.
+  organisation administrator can make, then leave."* Note it cannot
+  delete folders.
 - **`gcp-folder-admins@`** — Folder Administrator. *"Break-glass for
   creating, moving or deleting a folder. Organization Administrator does
   not carry folders.delete, which is why this is separate."*
-- **`gcp-cluster-admins@`** — `roles/container.admin` on the
-  installation. *"Break-glass for direct kubectl access to the
-  management plane — the way round every declarative guard, so joined
-  deliberately."*
-- **`gcp-secret-admins@`** — `roles/secretmanager.admin` on the
-  management project. *"Break-glass for the backup encryption key, the
-  HMAC key and database passwords. Reading these is not infrastructure
-  work."*
-- **`gcp-billing-admins@`** — Billing Account Administrator. *"Grants
-  billing administration to someone else. The operator holds it directly
-  as well, because a billing account has no recovery path outside its
-  own policy."*
+- **`gcp-cluster-admins@`** — `roles/container.admin`. *"Break-glass for
+  administering Kubernetes clusters directly. Acting on a cluster by
+  hand bypasses whatever reconciles it, so joined deliberately."*
+- **`gcp-secret-admins@`** — `roles/secretmanager.admin`.
+  *"Break-glass for reading and managing secrets. Handling the contents
+  of a secret store is a different job from running the infrastructure
+  that holds it."*
+- **`gcp-billing-admins@`** — Billing Account Administrator.
+  *"Administers the billing account: linking projects, budgets,
+  payment."* One person also holds this directly, because a billing
+  account has no recovery path outside its own IAM policy.
 
 Only the first four have organisation-scoped bindings, made by
 `gcp-groups-bind`. Viewer on the folder, `container.admin` and
