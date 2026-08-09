@@ -513,8 +513,14 @@ spec:
                     string:
                       type: Format
                       fmt: "%s-nodes"
+              # By value, not clusterRef. The reference extractor reads a
+              # field the provider never fills for Cluster -- there is no
+              # forProvider.name, and atProvider.name stays empty -- so it
+              # resolves to nothing forever. The cluster's name is its
+              # external name, which this composition sets, so the value
+              # is as deterministic as the reference would have been.
               - fromFieldPath: metadata.name
-                toFieldPath: spec.forProvider.clusterRef.name
+                toFieldPath: spec.forProvider.cluster
                 transforms:
                   - type: string
                     string:
