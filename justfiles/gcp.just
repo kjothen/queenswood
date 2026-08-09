@@ -16,6 +16,11 @@ BOOT_CTX := "kind-qw-boot"
 # The installation these recipes act on. Names derive from the code.
 CODE := "qw01"
 
+# The management cluster's kubectl context, added by
+# gcp-mgmt-cluster-ctx. Every recipe acting on a cluster names the
+# context on the command line rather than trusting the current one.
+MGMT_CTX := CODE + "-mgmt"
+
 # Access groups, named for the capability each carries. Roles bind to
 # these and never move; membership does. The organisation set outlives
 # every installation, the coded set dies with one. See ADR-0023.
@@ -768,7 +773,7 @@ gcp-plane-down:
 # the throwaway one above, which exists only long enough to create it.
 # =========================================================================
 
-# Add a kubectl context for the management cluster, as <code>-mgmt.
+# Add a kubectl context for the management cluster, named MGMT_CTX.
 gcp-mgmt-cluster-ctx project="":
     #!/usr/bin/env zsh
     set -e
@@ -812,15 +817,15 @@ gcp-mgmt-cluster-ctx project="":
     gcloud container clusters get-credentials "$CLUSTER" \
       --zone="$ZONE" --project="$PROJECT"
     kubectl config rename-context \
-      "gke_${PROJECT}_${ZONE}_${CLUSTER}" "{{ CODE }}-mgmt" >/dev/null 2>&1 || true
+      "gke_${PROJECT}_${ZONE}_${CLUSTER}" "{{ MGMT_CTX }}" >/dev/null 2>&1 || true
 
     if [[ -n "$WAS" && "$WAS" != "gke_${PROJECT}_${ZONE}_${CLUSTER}" ]]; then
       kubectl config use-context "$WAS" >/dev/null
     fi
 
     echo
-    echo ">>> context {{ CODE }}-mgmt -> $CLUSTER in $PROJECT ($ZONE)"
-    echo ">>> still on ${WAS:-none}; use --context {{ CODE }}-mgmt"
+    echo ">>> context {{ MGMT_CTX }} -> $CLUSTER in $PROJECT ($ZONE)"
+    echo ">>> still on ${WAS:-none}; use --context {{ MGMT_CTX }}"
     echo ">>> fetching credentials needs only container.viewer, which you"
     echo ">>> hold. Calling the API needs container.admin: join"
     echo ">>> grp-gcp-{{ CODE }}-cluster-admin for the task, and leave."
