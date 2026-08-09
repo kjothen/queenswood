@@ -615,106 +615,78 @@ spec:
                     string:
                       type: Format
                       fmt: "serviceAccount:%s.svc.id.goog[crossplane-system/crossplane-provider-gcp]"
-          # ===================================================================
-          # What the groups may do inside the installation. Organisation
-          # scope is bound by gcp-groups-bind; these are folder and
-          # project scoped, so they belong beside the resources they
-          # apply to.
-          # ===================================================================
-          - name: access-operators-viewer
-            base:
-              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
-              kind: FolderIAMMember
-              metadata:
-                namespace: crossplane-system
-              spec:
-                providerConfigRef:
-                  kind: ClusterProviderConfig
-                  name: default
-                forProvider:
-                  role: roles/viewer
-            patches:
-              - fromFieldPath: metadata.name
-                toFieldPath: metadata.name
-                transforms:
-                  - type: string
-                    string:
-                      type: Format
-                      fmt: "%s-access-operators"
-              - fromFieldPath: metadata.name
-                toFieldPath: spec.forProvider.folderRef.name
-                transforms:
-                  - type: string
-                    string:
-                      type: Format
-                      fmt: "%s-folder"
-              - fromFieldPath: spec.access.operatorsGroup
-                toFieldPath: spec.forProvider.member
-                transforms:
-                  - type: string
-                    string:
-                      type: Format
-                      fmt: "group:%s"
-          - name: access-cluster-admins
-            base:
-              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
-              kind: FolderIAMMember
-              metadata:
-                namespace: crossplane-system
-              spec:
-                providerConfigRef:
-                  kind: ClusterProviderConfig
-                  name: default
-                forProvider:
-                  role: roles/container.admin
-            patches:
-              - fromFieldPath: metadata.name
-                toFieldPath: metadata.name
-                transforms:
-                  - type: string
-                    string:
-                      type: Format
-                      fmt: "%s-access-cluster-admins"
-              - fromFieldPath: metadata.name
-                toFieldPath: spec.forProvider.folderRef.name
-                transforms:
-                  - type: string
-                    string:
-                      type: Format
-                      fmt: "%s-folder"
-              - fromFieldPath: spec.access.clusterAdminsGroup
-                toFieldPath: spec.forProvider.member
-                transforms:
-                  - type: string
-                    string:
-                      type: Format
-                      fmt: "group:%s"
-          - name: access-secret-admins
-            base:
-              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
-              kind: ProjectIAMMember
-              metadata:
-                namespace: crossplane-system
-              spec:
-                providerConfigRef:
-                  kind: ClusterProviderConfig
-                  name: default
-                forProvider:
-                  role: roles/secretmanager.admin
-            patches:
-              - fromFieldPath: metadata.name
-                toFieldPath: metadata.name
-                transforms:
-                  - type: string
-                    string:
-                      type: Format
-                      fmt: "%s-access-secret-admins"
-              - fromFieldPath: spec.management.projectId
-                toFieldPath: spec.forProvider.project
-              - fromFieldPath: spec.access.secretAdminsGroup
-                toFieldPath: spec.forProvider.member
-                transforms:
-                  - type: string
-                    string:
-                      type: Format
-                      fmt: "group:%s"
+    # =======================================================================
+    # What each capability may do inside the installation, and nothing
+    # about who holds it -- that is the manifest's access mapping, and
+    # the principals in it belong to whoever owns the directory.
+    # Organisation scope is bound by gcp-groups-bind; everything here is
+    # folder or project scoped, so it belongs beside what it applies to.
+    #
+    # A separate step because the resources vary: none for a capability
+    # the organisation does not provide, one per member per role where it
+    # does. Patch-and-transform composes a fixed set.
+    # =======================================================================
+    - step: access
+      functionRef:
+        name: function-go-templating
+      input:
+        apiVersion: gotemplating.fn.crossplane.io/v1beta1
+        kind: GoTemplate
+        source: Inline
+        inline:
+          template: |
+            {{- $xr := .observed.composite.resource }}
+            {{- $name := $xr.metadata.name }}
+            {{- $access := dig "access" dict $xr.spec }}
+            {{- $project := dig "management" "projectId" "" $xr.spec }}
+            {{- $capabilities := list
+                  (dict "key" "operator" "kind" "FolderIAMMember" "roles" (list
+                    "roles/browser"
+                    "roles/compute.viewer"
+                    "roles/container.viewer"
+                    "roles/iam.serviceAccountViewer"
+                    "roles/logging.viewer"
+                    "roles/monitoring.viewer"))
+                  (dict "key" "automation" "kind" "ServiceAccountIAMMember" "roles" (list
+                    "roles/iam.serviceAccountTokenCreator"))
+                  (dict "key" "clusterAdmin" "kind" "FolderIAMMember" "roles" (list
+                    "roles/container.admin"))
+                  (dict "key" "secretAdmin" "kind" "ProjectIAMMember" "roles" (list
+                    "roles/secretmanager.admin")) }}
+            {{- range $capability := $capabilities }}
+            {{- range $member := dig $capability.key list $access }}
+            {{- range $role := $capability.roles }}
+            {{- /* Hashed, not indexed: a member removed from the middle of
+                   the list would otherwise renumber the ones after it, and
+                   Crossplane would delete and recreate live bindings. */}}
+            {{- $slug := printf "%s-%s"
+                  ($role | trimPrefix "roles/" | replace "." "-" | lower)
+                  (sha256sum $member | trunc 8) }}
+            {{- $resource := printf "access-%s-%s" (kebabcase $capability.key) $slug }}
+            ---
+            apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+            kind: {{ $capability.kind }}
+            metadata:
+              name: {{ printf "%s-%s" $name $resource }}
+              namespace: crossplane-system
+              annotations:
+                gotemplating.fn.crossplane.io/composition-resource-name: {{ $resource }}
+            spec:
+              providerConfigRef:
+                kind: ClusterProviderConfig
+                name: default
+              forProvider:
+                role: {{ $role | quote }}
+                member: {{ $member | quote }}
+            {{- if eq $capability.kind "FolderIAMMember" }}
+                folderRef:
+                  name: {{ printf "%s-folder" $name | quote }}
+            {{- else if eq $capability.kind "ProjectIAMMember" }}
+                project: {{ $project | quote }}
+            {{- else if eq $capability.kind "ServiceAccountIAMMember" }}
+                serviceAccountIdRef:
+                  name: {{ printf "%s-platform" $name | quote }}
+            {{- end }}
+            {{- end }}
+            {{- end }}
+            {{- end }}

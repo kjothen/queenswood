@@ -55,3 +55,13 @@ metadata:
   name: function-patch-and-transform
 spec:
   package: xpkg.crossplane.io/crossplane-contrib/function-patch-and-transform:v0.8.2
+---
+# Patch-and-transform composes a fixed set of resources. The access
+# mapping needs a varying one: no binding at all for a capability the
+# organisation does not provide, and one per member where it does.
+apiVersion: pkg.crossplane.io/v1
+kind: Function
+metadata:
+  name: function-go-templating
+spec:
+  package: xpkg.crossplane.io/crossplane-contrib/function-go-templating:v0.12.3

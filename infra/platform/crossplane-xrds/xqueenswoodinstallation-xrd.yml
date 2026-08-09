@@ -23,7 +23,6 @@ spec:
               required:
                 - createFolder
                 - billingAccountId
-                - access
               properties:
                 # Folder only, for now. The management project, the
                 # durable tier and the instances join this spec as they
@@ -37,26 +36,48 @@ spec:
                 access:
                   type: object
                   description: |
-                    Groups that hold rights inside the installation. Named
-                    in full rather than derived from a domain, because a
-                    folder may be handed to you by an organisation whose
-                    groups are named nothing like these.
-                  required:
-                    - operatorsGroup
-                    - clusterAdminsGroup
-                    - secretAdminsGroup
+                    Which principals hold which capability inside the
+                    installation; see ADR-0023. The capability names are
+                    ours, the principals are the organisation's to create
+                    and to name, and a folder may be handed to you by one
+                    whose groups are named nothing like ours. A capability
+                    the organisation does not provide is left out, and
+                    nothing is bound for it: an installation stands up
+                    with no human bindings at all.
                   properties:
-                    operatorsGroup:
-                      type: string
-                      description: Viewer on the folder. Day-to-day.
-                    clusterAdminsGroup:
-                      type: string
-                      description: container.admin on the folder. Empty.
-                    secretAdminsGroup:
-                      type: string
+                    operator:
+                      type: array
+                      description: |
+                        Read inside the folder, assembled from predefined
+                        viewer roles. The populated one -- somebody's job
+                        rather than a capability they join for.
+                      items: &member
+                        type: string
+                        pattern: '^(user|group|serviceAccount|domain|principal|principalSet):'
+                        description: |
+                          A whole IAM member string, not a bare group
+                          address: a capability may be answered by a
+                          group, by a user in a small organisation, or by
+                          a principalSet from a federated directory.
+                    automation:
+                      type: array
+                      description: |
+                        May assume the installation's automation
+                        identities. Break-glass, so normally nobody
+                        stands in it.
+                      items: *member
+                    clusterAdmin:
+                      type: array
+                      description: |
+                        container.admin on the folder. Break-glass: acting
+                        on a cluster by hand bypasses what reconciles it.
+                      items: *member
+                    secretAdmin:
+                      type: array
                       description: |
                         secretmanager.admin on the management project.
-                        Empty.
+                        Break-glass.
+                      items: *member
                 region:
                   type: string
                   default: europe-west2

@@ -146,8 +146,8 @@ configuration, mapped in the manifest:
 access:
   operator: [group:grp-gcp-qw01-operator@queenswood.io]
   automation: [group:grp-gcp-qw01-automation@queenswood.io]
-  cluster-admin: [group:grp-gcp-qw01-cluster-admin@queenswood.io]
-  secret-admin: [group:grp-gcp-qw01-secret-admin@queenswood.io]
+  clusterAdmin: [group:grp-gcp-qw01-cluster-admin@queenswood.io]
+  secretAdmin: [group:grp-gcp-qw01-secret-admin@queenswood.io]
 ```
 
 A value is an IAM member string rather than a group name, because a

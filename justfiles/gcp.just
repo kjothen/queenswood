@@ -654,10 +654,14 @@ gcp-plane-apply parent name="" folder="" mgmt="" billing="":
       namespace: crossplane-system
     spec:
       billingAccountId: "$BILLING"
+      # Capability -> principal. Whole IAM member strings, because the
+      # principal need not be a group. No automation entry: assuming an
+      # identity is break-glass and this organisation has no group for
+      # it yet, and a capability left out binds nothing.
       access:
-        operatorsGroup: "{{ OPERATORS_GROUP }}@${DOMAIN}"
-        clusterAdminsGroup: "{{ CLUSTER_ADMINS_GROUP }}@${DOMAIN}"
-        secretAdminsGroup: "{{ SECRETS_GROUP }}@${DOMAIN}"
+        operator: ["group:{{ OPERATORS_GROUP }}@${DOMAIN}"]
+        clusterAdmin: ["group:{{ CLUSTER_ADMINS_GROUP }}@${DOMAIN}"]
+        secretAdmin: ["group:{{ SECRETS_GROUP }}@${DOMAIN}"]
       management:
         projectId: "$MGMT"
         $MGMT_ADOPT

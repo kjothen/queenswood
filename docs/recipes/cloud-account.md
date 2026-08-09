@@ -87,10 +87,13 @@ Empty, because they are capabilities you occasionally need:
   account has no recovery path outside its own IAM policy.
 
 Only the first four have organisation-scoped bindings, made by
-`gcp-groups-bind`. Viewer on the folder, `container.admin` and
-`secretmanager.admin` are scoped to the folder and the management
-project, so they belong in the installation manifest alongside the
-resources they apply to, rather than in a recipe.
+`gcp-groups-bind`. The rest are scoped to the folder and the management
+project — read access assembled from predefined viewer roles,
+`container.admin`, `secretmanager.admin` — so they belong in the
+installation manifest alongside the resources they apply to, rather than
+in a recipe. The manifest names them by capability and maps each to a
+principal, so which group answers is configuration; see
+[ADR-0023](../adr/0023-installation-naming-and-access.md).
 
 For each, in this order: **Access type: Restricted**, *then* **Who can
 join: Only invited users**. Reversing it discards the join rule, and the
