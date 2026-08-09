@@ -23,6 +23,9 @@ BOOT_CTX := "kind-qw-boot"
 
 ADMINS_GROUP := "gcp-organization-admins"
 FOLDER_ADMINS_GROUP := "gcp-folder-admins"
+SECURITY_GROUP := "gcp-security-reviewers"
+CLUSTER_ADMINS_GROUP := "gcp-cluster-admins"
+SECRETS_GROUP := "gcp-secret-admins"
 BILLING_GROUP := "gcp-billing-admins"
 OPERATORS_GROUP := "gcp-platform-operators"
 
@@ -353,13 +356,16 @@ gcp-groups-bind org="":
       "{{ FOLDER_ADMINS_GROUP }}:roles/resourcemanager.folderAdmin" \
       "{{ OPERATORS_GROUP }}:roles/resourcemanager.organizationViewer" \
       "{{ OPERATORS_GROUP }}:roles/browser" \
-      "{{ BILLING_GROUP }}:" ; do
+      "{{ SECURITY_GROUP }}:roles/iam.securityReviewer" \
+      "{{ BILLING_GROUP }}:" \
+      "{{ CLUSTER_ADMINS_GROUP }}:" \
+      "{{ SECRETS_GROUP }}:" ; do
       NAME="${spec%%:*}"
       ROLE="${spec#*:}"
       EMAIL="${NAME}@${DOMAIN}"
 
       if [[ -z "$ROLE" ]]; then
-        echo ">>> $EMAIL is bound on the billing account, not here"
+        echo ">>> $EMAIL is bound below the organisation, not here"
         continue
       fi
 
@@ -380,8 +386,9 @@ gcp-groups-bind org="":
     fi
 
     echo
-    echo ">>> bound. Nobody should stand in {{ ADMINS_GROUP }}@${DOMAIN}"
-    echo ">>> or in {{ FOLDER_ADMINS_GROUP }}@${DOMAIN}"
+    echo ">>> bound. These stay empty: {{ ADMINS_GROUP }},"
+    echo ">>> {{ FOLDER_ADMINS_GROUP }}, {{ CLUSTER_ADMINS_GROUP }},"
+    echo ">>> {{ SECRETS_GROUP }} -- each a capability, not a job."
     echo ">>> billing: as an administrator of the billing account, run"
     echo ">>>   gcloud billing accounts add-iam-policy-binding <account-id> \\"
     echo ">>>     --member=group:{{ BILLING_GROUP }}@${DOMAIN} --role=roles/billing.admin"
@@ -408,7 +415,9 @@ gcp-access-status org="":
     set -e
     DOMAIN=$(just _gcp-domain "{{ org }}")
     for NAME in {{ ADMINS_GROUP }} {{ FOLDER_ADMINS_GROUP }} \
-                {{ OPERATORS_GROUP }} {{ BILLING_GROUP }} ; do
+                {{ CLUSTER_ADMINS_GROUP }} {{ SECRETS_GROUP }} \
+                {{ SECURITY_GROUP }} {{ OPERATORS_GROUP }} \
+                {{ BILLING_GROUP }} ; do
       EMAIL="${NAME}@${DOMAIN}"
       echo "$EMAIL"
       if OUT=$(gcloud identity groups memberships list \

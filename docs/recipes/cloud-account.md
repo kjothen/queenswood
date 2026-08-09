@@ -49,23 +49,48 @@ action.
 
 ### 5. Create the access groups
 
-Four security groups, in `admin.google.com` under Directory then Groups:
+Seven security groups, in `admin.google.com` under Directory then
+Groups. Each carries one capability, and the descriptions below are
+worth pasting in — a group whose purpose is not written down acquires
+members.
 
-- `gcp-organization-admins@` — Organization Administrator. Empty in
-  steady state; joining it is the break-glass act.
-- `gcp-folder-admins@` — Folder Administrator, and also empty. A separate
-  group because Organization Administrator does **not** carry
-  `resourcemanager.folders.delete`: without this nobody can delete or
-  move a folder at all, and the only route would be granting a role that
-  appears nowhere in the policy. Note that deleting a folder is not
-  something reconciliation undoes — see
-  [cloud-foundation](cloud-foundation.md).
-- `gcp-platform-operators@` — Organization Viewer and Browser, and later
-  the right to impersonate the bootstrap identity. Without Browser a
-  folder is invisible in the console even to the account whose identity
-  created it.
-- `gcp-billing-admins@` — Billing Account Administrator, bound on the
-  billing account in step 7.
+Populated, because they are somebody's job:
+
+- **`gcp-platform-operators@`** — Organization Viewer and Browser, plus
+  the right to impersonate the bootstrap identity, plus Viewer on the
+  installation folder. *"Day-to-day operation. Reads the hierarchy, sees
+  inside the projects, and may act as the bootstrap identity."*
+- **`gcp-security-reviewers@`** — `roles/iam.securityReviewer`.
+  *"Read-only view of who holds what, everywhere. Exists so that
+  auditing access never requires the power to change it."*
+
+Empty, because they are capabilities you occasionally need:
+
+- **`gcp-organization-admins@`** — Organization Administrator.
+  *"Break-glass for organisation IAM. Join to make a grant only an
+  organisation admin can make, then leave."* Note it cannot delete
+  folders.
+- **`gcp-folder-admins@`** — Folder Administrator. *"Break-glass for
+  creating, moving or deleting a folder. Organization Administrator does
+  not carry folders.delete, which is why this is separate."*
+- **`gcp-cluster-admins@`** — `roles/container.admin` on the
+  installation. *"Break-glass for direct kubectl access to the
+  management plane — the way round every declarative guard, so joined
+  deliberately."*
+- **`gcp-secret-admins@`** — `roles/secretmanager.admin` on the
+  management project. *"Break-glass for the backup encryption key, the
+  HMAC key and database passwords. Reading these is not infrastructure
+  work."*
+- **`gcp-billing-admins@`** — Billing Account Administrator. *"Grants
+  billing administration to someone else. The operator holds it directly
+  as well, because a billing account has no recovery path outside its
+  own policy."*
+
+Only the first four have organisation-scoped bindings, made by
+`gcp-groups-bind`. Viewer on the folder, `container.admin` and
+`secretmanager.admin` are scoped to the folder and the management
+project, so they belong in the installation manifest alongside the
+resources they apply to, rather than in a recipe.
 
 For each, in this order: **Access type: Restricted**, *then* **Who can
 join: Only invited users**. Reversing it discards the join rule, and the
@@ -159,8 +184,9 @@ excludes `getIamPolicy`, and group-derived roles never appear there.
 
 **MUST NOT:**
 
-- Leave anybody standing in `gcp-organization-admins@` or
-  `gcp-folder-admins@`.
+- Leave anybody standing in a break-glass group:
+  `gcp-organization-admins@`, `gcp-folder-admins@`,
+  `gcp-cluster-admins@`, `gcp-secret-admins@`.
 - Give these groups an owner or a manager. Both are members.
 - Use `gcloud identity groups describe` to test whether a group exists.
 
