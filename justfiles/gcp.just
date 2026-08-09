@@ -53,8 +53,16 @@ _gcp-customer-id org="":
 _gcp-bootstrap-project:
     #!/usr/bin/env zsh
     set -e
-    ID=$(gcloud projects list --filter="labels.queenswood-tier=seed" \
-           --format='value(projectId)' 2>/dev/null | head -1 || true)
+    # Not silenced. A denial or an expired session exits non-zero with an
+    # empty stdout, and swallowing that reports "no seed project" for one
+    # that plainly exists.
+    if ! OUT=$(gcloud projects list --filter="labels.queenswood-tier=seed" \
+                 --format='value(projectId)' 2>&1); then
+      echo "cannot list projects:" >&2
+      printf '%s\n' "$OUT" | sed 's/^/  /' >&2
+      exit 1
+    fi
+    ID=$(printf '%s\n' "$OUT" | head -1)
     if [[ -z "$ID" ]]; then
       echo "no seed project; run 'just gcp-bootstrap-identity'" >&2
       exit 1
@@ -210,8 +218,15 @@ gcp-bootstrap-identity org="" billing="":
       exit 1
     fi
 
-    PROJECT=$(gcloud projects list --filter="labels.queenswood-tier=seed" \
-                --format='value(projectId)' 2>/dev/null | head -1 || true)
+    # Same reason, and worse here: a swallowed denial reads as "none
+    # exists" and mints a second seed project, consuming an id forever.
+    if ! OUT=$(gcloud projects list --filter="labels.queenswood-tier=seed" \
+                 --format='value(projectId)' 2>&1); then
+      echo "cannot list projects:" >&2
+      printf '%s\n' "$OUT" | sed 's/^/  /' >&2
+      exit 1
+    fi
+    PROJECT=$(printf '%s\n' "$OUT" | head -1)
     if [[ -n "$PROJECT" ]]; then
       echo ">>> reusing bootstrap project $PROJECT"
     else
