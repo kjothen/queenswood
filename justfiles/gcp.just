@@ -50,7 +50,7 @@ _gcp-customer-id org="":
 # holds the identity that creates installations, so it sits above every
 # folder and outlives all of them.
 [private]
-_gcp-bootstrap-project:
+_gcp-seed-project:
     #!/usr/bin/env zsh
     set -e
     # Not silenced. A denial or an expired session exits non-zero with an
@@ -64,15 +64,15 @@ _gcp-bootstrap-project:
     fi
     ID=$(printf '%s\n' "$OUT" | head -1)
     if [[ -z "$ID" ]]; then
-      echo "no seed project; run 'just gcp-bootstrap-identity'" >&2
+      echo "no seed project; run 'just gcp-boot-identity'" >&2
       exit 1
     fi
     printf '%s\n' "$ID"
 
 # Print the bootstrap service account's email.
 [private]
-_gcp-bootstrap-sa:
-    @printf 'sa-{{ CODE }}-boot@%s.iam.gserviceaccount.com\n' "$(just _gcp-bootstrap-project)"
+_gcp-boot-sa:
+    @printf 'sa-{{ CODE }}-boot@%s.iam.gserviceaccount.com\n' "$(just _gcp-seed-project)"
 
 # Print the organisation id, discovering it when only one is visible.
 [private]
@@ -202,7 +202,7 @@ gcp-preflight org="":
 # =========================================================================
 
 # Create the bootstrap identity and your right to impersonate it (as the operator).
-gcp-bootstrap-identity org="" billing="":
+gcp-boot-identity org="" billing="":
     #!/usr/bin/env zsh
     set -e
     ORG=$(just _gcp-org-id "{{ org }}")
@@ -302,14 +302,14 @@ gcp-bootstrap-identity org="" billing="":
     echo ">>> identity $SA"
     echo ">>> act as it by joining $PLATFORM_ADMIN, and leave after"
     echo ">>> if it holds no organization roles yet, an organization admin"
-    echo ">>> runs: just gcp-bootstrap-org-roles"
+    echo ">>> runs: just gcp-boot-org-roles"
 
 # Grant the bootstrap identity its organisation roles (as an org admin).
-gcp-bootstrap-org-roles org="":
+gcp-boot-org-roles org="":
     #!/usr/bin/env zsh
     set -e
     ORG=$(just _gcp-org-id "{{ org }}")
-    SA=$(just _gcp-bootstrap-sa)
+    SA=$(just _gcp-boot-sa)
 
     # folderCreator + folderIamAdmin rather than folderAdmin: together
     # they create a folder and grant roles inside it, and cannot delete
@@ -335,12 +335,12 @@ gcp-bootstrap-org-roles org="":
     echo ">>> $SA can now create the folder"
 
 # Show the bootstrap identity, its rights, and who may impersonate it.
-gcp-bootstrap-status org="":
+gcp-boot-status org="":
     #!/usr/bin/env zsh
     set -e
     ORG=$(just _gcp-org-id "{{ org }}")
-    PROJECT=$(just _gcp-bootstrap-project)
-    SA=$(just _gcp-bootstrap-sa)
+    PROJECT=$(just _gcp-seed-project)
+    SA=$(just _gcp-boot-sa)
     echo "project   $PROJECT"
     echo "identity  $SA"
     # Captured before printing: piping into sed takes sed's exit status,
@@ -483,10 +483,10 @@ gcp-access-status org="":
 # =========================================================================
 
 # Point ADC at the bootstrap identity (interactive, opens a browser).
-gcp-adc-impersonate:
+gcp-adc-boot:
     #!/usr/bin/env zsh
     set -e
-    SA=$(just _gcp-bootstrap-sa)
+    SA=$(just _gcp-boot-sa)
     echo ">>> ADC will impersonate $SA"
     gcloud auth application-default login --impersonate-service-account="$SA"
 
@@ -513,7 +513,7 @@ gcp-adc-status:
     if ERR=$(gcloud auth application-default print-access-token 2>&1 >/dev/null); then
       echo "token        mints"
     else
-      echo "token        FAILS -- run 'just gcp-adc-impersonate'"
+      echo "token        FAILS -- run 'just gcp-adc-boot'"
       printf '%s\n' "$ERR" | sed 's/^/  /'
       exit 1
     fi
@@ -532,12 +532,12 @@ gcp-plane-up:
     set -e
     F="$HOME/.config/gcloud/application_default_credentials.json"
     if [[ ! -f "$F" ]]; then
-      echo "no ADC -- run 'just gcp-adc-impersonate' first" >&2
+      echo "no ADC -- run 'just gcp-adc-boot' first" >&2
       exit 1
     fi
     if ! grep -q impersonated_service_account "$F"; then
       echo "ADC is not impersonating the bootstrap identity --" >&2
-      echo "run 'just gcp-adc-impersonate'" >&2
+      echo "run 'just gcp-adc-boot'" >&2
       exit 1
     fi
     # Before kind and Helm, not after. A credential that needs
@@ -545,7 +545,7 @@ gcp-plane-up:
     # which is ten minutes later and reported as a folder that cannot
     # be observed.
     if ! ERR=$(gcloud auth application-default print-access-token 2>&1 >/dev/null); then
-      echo "ADC cannot mint a token -- run 'just gcp-adc-impersonate'" >&2
+      echo "ADC cannot mint a token -- run 'just gcp-adc-boot'" >&2
       printf '%s\n' "$ERR" | sed 's/^/  /' >&2
       exit 1
     fi
@@ -609,7 +609,7 @@ gcp-plane-up:
 
     # projectID is required by the provider config and unused by a
     # Folder, which is parented by an organisation rather than a project.
-    PROJECT=$(just _gcp-bootstrap-project)
+    PROJECT=$(just _gcp-seed-project)
     kubectl --context {{ BOOT_CTX }} apply -f - <<YAML
     apiVersion: gcp.m.upbound.io/v1beta1
     kind: ClusterProviderConfig
@@ -760,3 +760,67 @@ gcp-plane-status:
 # Delete the throwaway plane. The folder is orphaned, not deleted.
 gcp-plane-down:
     @kind delete cluster --name {{ BOOT_CLUSTER }}
+
+# =========================================================================
+# The management cluster
+#
+# The durable plane, inside the installation's folder -- as opposed to
+# the throwaway one above, which exists only long enough to create it.
+# =========================================================================
+
+# Add a kubectl context for the management cluster, as <code>-mgmt.
+gcp-mgmt-cluster-ctx project="":
+    #!/usr/bin/env zsh
+    set -e
+    CLUSTER="gke-{{ CODE }}-c-mgmt"
+
+    PROJECT="{{ project }}"
+    if [[ -z "$PROJECT" ]]; then
+      # By id prefix: the suffix is random, so it is not derivable, and
+      # nothing labels the project. Not silenced -- an expired session
+      # exits non-zero with empty stdout, which would read as "no
+      # management project" for one that plainly exists.
+      if ! OUT=$(gcloud projects list \
+                   --filter="projectId ~ ^prj-{{ CODE }}-c-mgmt-" \
+                   --format='value(projectId)' 2>&1); then
+        echo "cannot list projects:" >&2
+        printf '%s\n' "$OUT" | sed 's/^/  /' >&2
+        exit 1
+      fi
+      PROJECT=$(printf '%s\n' "$OUT" | head -1)
+    fi
+    if [[ -z "$PROJECT" ]]; then
+      echo "no management project for {{ CODE }}; pass one" >&2
+      exit 1
+    fi
+
+    # Read from the cluster rather than stated here, so this cannot
+    # drift from the zone the installation manifest chose.
+    ZONE=$(gcloud container clusters list --project="$PROJECT" \
+             --filter="name=$CLUSTER" --format='value(location)' | head -1)
+    if [[ -z "$ZONE" ]]; then
+      echo "no cluster $CLUSTER in $PROJECT" >&2
+      exit 1
+    fi
+
+    # get-credentials makes its context current, which silently
+    # retargets a shell that was working against the throwaway plane.
+    # Captured and put back: this recipe adds a context, it does not
+    # choose one.
+    WAS=$(kubectl config current-context 2>/dev/null || true)
+
+    gcloud container clusters get-credentials "$CLUSTER" \
+      --zone="$ZONE" --project="$PROJECT"
+    kubectl config rename-context \
+      "gke_${PROJECT}_${ZONE}_${CLUSTER}" "{{ CODE }}-mgmt" >/dev/null 2>&1 || true
+
+    if [[ -n "$WAS" && "$WAS" != "gke_${PROJECT}_${ZONE}_${CLUSTER}" ]]; then
+      kubectl config use-context "$WAS" >/dev/null
+    fi
+
+    echo
+    echo ">>> context {{ CODE }}-mgmt -> $CLUSTER in $PROJECT ($ZONE)"
+    echo ">>> still on ${WAS:-none}; use --context {{ CODE }}-mgmt"
+    echo ">>> fetching credentials needs only container.viewer, which you"
+    echo ">>> hold. Calling the API needs container.admin: join"
+    echo ">>> grp-gcp-{{ CODE }}-cluster-admin for the task, and leave."
