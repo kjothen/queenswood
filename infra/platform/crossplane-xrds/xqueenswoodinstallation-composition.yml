@@ -617,7 +617,8 @@ spec:
               # Both cases are spelled, so setting the field to false is
               # as explicit as leaving it out. map takes a string key,
               # and the field is a boolean, so it is converted first.
-              - fromFieldPath: spec.management.bootstrap
+              - &plane-release-policies
+                fromFieldPath: spec.management.bootstrap
                 toFieldPath: spec.managementPolicies
                 transforms:
                   - type: convert
@@ -632,13 +633,54 @@ spec:
                         - LateInitialize
                       "false":
                         - Observe
-              - fromFieldPath: spec.code
+              - &plane-release-config
+                fromFieldPath: spec.code
                 toFieldPath: spec.providerConfigRef.name
                 transforms:
                   - type: string
                     string:
                       type: Format
                       fmt: "%s-mgmt"
+          # ===================================================================
+          # Argo CD on the management cluster, installed the same way and
+          # observed on the same terms. What it reconciles from is not
+          # here: this puts Argo on the cluster, and pointing it at a
+          # repository is its own step.
+          #
+          # argocd is the namespace and the release name everything else
+          # in this repository already assumes -- the chart derives
+          # argocd-server and the rest from it, and the bootstrap
+          # Applications name that namespace directly.
+          # ===================================================================
+          - name: management-argo
+            base:
+              apiVersion: helm.m.crossplane.io/v1beta1
+              kind: Release
+              metadata:
+                namespace: crossplane-system
+                annotations:
+                  crossplane.io/external-name: argocd
+              spec:
+                managementPolicies:
+                  - Observe
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                forProvider:
+                  namespace: argocd
+                  chart:
+                    repository: https://argoproj.github.io/argo-helm
+                    name: argo-cd
+                    version: "10.2.1"
+            patches:
+              - fromFieldPath: spec.code
+                toFieldPath: metadata.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "argocd-%s-c-mgmt"
+              - *plane-release-policies
+              - *plane-release-config
           # ===================================================================
           # The platform's own identity. Created here, assumed by pods on
           # the management cluster through Workload Identity, and never

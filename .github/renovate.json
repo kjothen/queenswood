@@ -79,13 +79,14 @@
       ]
     },
     {
-      "description": "Crossplane's version is pinned twice -- the xp-mp chart's dependency, and the helm Release the installation composition installs onto the management cluster -- and scripts/check-versions.sh holds the two equal. They also have to agree across the handover, where a composite created by the boot plane's Crossplane is adopted by the management plane's, so a bump is a decision about both planes at once rather than about one file. A control-plane upgrade has to be reconciled against the provider and function packages it runs, which Renovate bumps separately and which do not move in lockstep with it. Bump by hand, both copies in one change.",
+      "description": "The management plane's own charts are each pinned twice -- as the xp-mp chart's dependency, and as the helm Release the installation composition installs onto the management cluster -- and scripts/check-versions.sh holds the two equal. Renovate sees the dependency and not the Composition, so a bump it made alone would fail that check rather than land. Both copies move by hand, in one change. Crossplane carries a second reason: the boot plane and the management plane must agree across the handover, where a composite created by one is adopted by the other, and a control-plane version also has to be reconciled against the provider and function packages it runs, which Renovate bumps separately.",
       "matchDatasources": [
         "helm"
       ],
       "enabled": false,
       "matchPackageNames": [
-        "crossplane"
+        "crossplane",
+        "argo-cd"
       ]
     },
     {

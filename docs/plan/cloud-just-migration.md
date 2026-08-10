@@ -341,7 +341,9 @@ go-templated access step.
 
 Two `Release` resources of `provider-helm`, composed by
 `XQueenswoodInstallation` and applied from the boot plane: Crossplane
-and Argo CD. **The Crossplane half is written.**
+and Argo CD. **Both are written.** What Argo reconciles from is not
+part of them — putting Argo on the cluster and pointing it at a
+repository are separate, and only the first is a `Release`.
 
 This is what keeps the installer at four commands. `gcp-plane-apply`
 applies the composite, so anything the composite composes arrives in
@@ -357,15 +359,20 @@ in a cluster running Argo arrives: applied from the repository, as
 [infrastructure](../tdd/infrastructure.md) already has
 `crossplane-configs` do for the current deployment.
 
-**Who owns the Crossplane version.** It is pinned twice — the `xp-mp`
+**Who owns these chart versions.** Each is pinned twice — the `xp-mp`
 chart's dependency, which is what Renovate bumps, and the composed
-Release — and `scripts/check-versions.sh` holds the two equal. The
-second pin is why the bump stops being routine: the boot plane runs one
-Crossplane and the management plane runs the other, and step 5 hands a
-live composite from one to the other, so a skew surfaces exactly at the
-handover rather than at an upgrade. Renovate is turned off for it, and
-it moves by hand in one change, alongside the provider and function
-packages a control-plane version has to agree with.
+Release — and `scripts/check-versions.sh` holds the two equal. Renovate
+sees the dependency and not the Composition, so a bump it made alone
+would fail that check rather than land; both copies move by hand, in
+one change. Renovate is turned off for both charts rather than left to
+produce a PR that cannot go green.
+
+Crossplane carries a second reason, and it is the sharper one. The boot
+plane runs one Crossplane and the management plane runs the other, and
+step 5 hands a live composite from one to the other, so a skew surfaces
+at the handover rather than at an upgrade — and a control-plane version
+also has to agree with the provider and function packages it runs,
+which Renovate bumps separately.
 
 Declared rather than helm-installed by a recipe, because the management
 plane's own existence is part of what the manifest describes — and
