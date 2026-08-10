@@ -28,6 +28,10 @@ REGION_CODE := "euw2"
 SOURCE_REPO := "https://github.com/repldriven/queenswood"
 SOURCE_REVISION := "main"
 
+# Where this project sits inside that repository. "." for a fork, which
+# keeps the layout; a directory for a mirror that vendors it.
+SOURCE_PATH_PREFIX := "."
+
 # Where the installation manifests are checked out. A separate, private
 # repository holding data and nothing executable: this one is public,
 # and a manifest is identifiers. See docs/plan/cloud-just-migration.md.
@@ -809,6 +813,7 @@ gcp-plane-manifest parent name="" folder="" mgmt="" billing="":
         source:
           repoURL: "{{ SOURCE_REPO }}"
           targetRevision: "{{ SOURCE_REVISION }}"
+          pathPrefix: "{{ SOURCE_PATH_PREFIX }}"
       createFolder:
         parent: "{{ parent }}"
         displayName: "$NAME"
