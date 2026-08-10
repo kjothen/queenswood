@@ -319,7 +319,7 @@ The most sensitive of them, the billing account id, leaves the composite
 altogether rather than being hidden — see below. What remains is the
 project hierarchy: the organisation id in `createFolder.parent`, the
 folder id, and the management project id with its random suffix. So the
-manifests live in a private `queenswood-infra`, which Argo reconciles
+manifests live in a private `installations`, which Argo reconciles
 from with a deploy key. **Public is how, private is what**:
 the XRD, the Composition, `providers.yml`, the charts, the recipes and
 the ADRs stay here, because they are the part with value to a reader;
@@ -564,29 +564,36 @@ identifier rather than the most sensitive one.
 
 #### The layout
 
+The repository is `installations`, named for what it holds — an
+installation being the unit
+[ADR-0023](../adr/0023-installation-naming-and-access.md) settled, and
+naming a thing for what it acts on being the rule everything else here
+follows. No product in the name: a second product's installations sit
+beside Queenswood's without it lying, and the boundary that matters is
+the audience rather than the product, since access is per repository.
+One belonging to a different operator wants its own.
+
 ```
-queenswood-infra/
-├── README.md                     what this is, where the schema lives,
-│                                 and that it holds no credentials
-└── installations/
-    └── qw01/
-        └── installation.yaml     the XQueenswoodInstallation
+installations/
+├── README.md          what this is, where the schema lives, and
+│                      that it holds no credentials
+└── qw01/
+    └── installation.yaml     the XQueenswoodInstallation
 ```
 
 `just gcp-plane-manifest` prints that file, resolved, on stdout with
 every message on stderr, so it redirects straight into place. A second
-installation is `installations/qw02/`. `INFRA_REPO` in `gcp.just` says
-where the checkout is, defaulting beside this one.
+installation is `qw02/`. `INSTALLATIONS_REPO` in `gcp.just` says where
+the checkout is, defaulting beside this one.
 
 **Argo's wiring stays in this repository**, beside the XRD it depends
-on: one Application with `path: installations` and
-`directory.recurse: true`. That keeps the private repository purely
-data — not merely free of workflows but free of Argo configuration too.
-The Application names the private repository's URL, which is not
-sensitive.
+on: one Application with `path: .` and `directory.recurse: true`. That
+keeps the private repository purely data — not merely free of workflows
+but free of Argo configuration too. The Application names the private
+repository's URL, which is not sensitive.
 
-An ApplicationSet with a git generator over `installations/*` earns its
-place when installations need *different* sync policies, which
+An ApplicationSet with a git generator over `*/` earns its place when
+installations need *different* sync policies, which
 [ADR-0022](../adr/0022-cloud-foundation-and-environment-lifecycle.md)
 already anticipates in wanting manual rather than automatic sync for
 prod. Until then it is machinery for one directory.
@@ -666,7 +673,7 @@ these are identifiers, and the test is that if they *were* credentials a
 private repository would be insufficient by every source above, which is
 the whole reason for the distinction. It binds on what comes next.
 Instances bring database passwords, the FDB backup encryption key and
-the GCS HMAC key, and those must not enter `queenswood-infra` even
+the GCS HMAC key, and those must not enter `installations` even
 privately. They belong in Secret Manager, which is already
 [ADR-0022](../adr/0022-cloud-foundation-and-environment-lifecycle.md)'s
 answer, reached either by an external-secrets operator or by Crossplane
@@ -793,7 +800,7 @@ the management project either way.
 
 **Real secrets, at last.** An instance brings the first actual
 credentials — database passwords, the FDB backup encryption key, the GCS
-HMAC key — and none of them goes into `queenswood-infra`, private or
+HMAC key — and none of them goes into `installations`, private or
 not, because every source in the survey above rejects a repository as
 protection for a credential. They live in Secret Manager in the
 management project, which is already
@@ -880,7 +887,7 @@ stays a console step for the same reason, and only its capture changes.
   with defaults makes it rare rather than solved.
 - Whether a redacted worked example stays in
   [cloud-naming](../recipes/cloud-naming.md), or the whole example
-  follows the manifests into `queenswood-infra`. It is the one piece of
+  follows the manifests into `installations`. It is the one piece of
   this documentation that reads better with real values in it.
 - Whether the boot plane's `provider-helm` reaches `gke-qw01-c-mgmt`
   through a credentials secret or through the same impersonated ADC the

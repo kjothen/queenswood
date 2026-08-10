@@ -24,7 +24,7 @@ REGION_CODE := "euw2"
 # Where the installation manifests are checked out. A separate, private
 # repository holding data and nothing executable: this one is public,
 # and a manifest is identifiers. See docs/plan/cloud-just-migration.md.
-INFRA_REPO := "../queenswood-infra"
+INSTALLATIONS_REPO := "../installations"
 
 # The management cluster's kubectl context, added by
 # gcp-mgmt-cluster-ctx. Every recipe acting on a cluster names the
@@ -824,7 +824,7 @@ gcp-plane-apply parent name="" folder="" mgmt="" billing="":
     echo ">>> keep this installation reproducible by committing the"
     echo ">>> manifest, which is the whole record of what exists:"
     echo ">>>   just gcp-plane-manifest ... > \\"
-    echo ">>>     {{ INFRA_REPO }}/installations/{{ CODE }}/installation.yaml"
+    echo ">>>     {{ INSTALLATIONS_REPO }}/{{ CODE }}/installation.yaml"
     echo ">>> re-running this without those values mints a second"
     echo ">>> installation beside the first -- see the adopt fields."
     echo ">>> waiting for the folder and management project"
