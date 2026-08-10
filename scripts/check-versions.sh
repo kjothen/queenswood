@@ -126,6 +126,24 @@ check "keycloak-operator vendored CRD accepts server schema" "yes" \
       infra/helm/keycloak-operator/crds/crd-keycloakrealmimports.yaml \
       && echo yes || echo no)"
 
+# The management plane installs Crossplane onto its own cluster through a
+# composed helm Release, so the chart version is pinned in a Composition --
+# where Renovate cannot see it. Renovate does bump the xp-mp chart's
+# dependency, so that is the version this follows, and a bump that moves one
+# and not the other fails here rather than installing two Crossplanes a
+# release apart on the boot plane and the management plane.
+xpchart=infra/helm/xp-mp/Chart.yaml
+crossplane=$(awk '/^  - name: crossplane$/ {f = 1; next}
+                  f && /version:/ {gsub(/["]/, "", $2); print $2; exit}' "$xpchart")
+
+echo
+echo "Pinned copies of Crossplane $crossplane, against $xpchart:"
+
+check "installation composition (crossplane chart)" "$crossplane" \
+  "$(awk '/name: crossplane$/ {f = 1; next}
+          f && /version:/ {gsub(/["]/, "", $2); print $2; exit}' \
+       infra/platform/crossplane-xrds/xqueenswoodinstallation-composition.yml)"
+
 if [ "$fail" -ne 0 ]; then
   cat <<EOF
 
