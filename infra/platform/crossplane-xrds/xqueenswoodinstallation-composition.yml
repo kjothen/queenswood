@@ -461,6 +461,14 @@ spec:
                   ipAllocationPolicy:
                     clusterSecondaryRangeName: pods
                     servicesSecondaryRangeName: services
+                # A kubeconfig for this cluster, written by the provider
+                # on every reconcile and read by provider-helm's
+                # ProviderConfig. It carries the endpoint and the CA and
+                # no credential: the token comes from the identity block
+                # on that config. A v2 namespaced MR writes it into its
+                # own namespace, which is where the config looks.
+                writeConnectionSecretToRef:
+                  name: gke-kubeconfig
             patches:
               - fromFieldPath: spec.code
                 toFieldPath: metadata.name
@@ -469,6 +477,13 @@ spec:
                     string:
                       type: Format
                       fmt: "gke-%s-c-mgmt"
+              - fromFieldPath: spec.code
+                toFieldPath: spec.writeConnectionSecretToRef.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "gke-%s-c-mgmt-kubeconfig"
               - fromFieldPath: spec.code
                 toFieldPath: spec.forProvider.networkRef.name
                 transforms:

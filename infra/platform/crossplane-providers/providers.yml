@@ -40,6 +40,27 @@ metadata:
 spec:
   package: xpkg.upbound.io/upbound/provider-gcp-certificatemanager:v2.5.1
 ---
+# Bucket and BucketIAMMember, for the durable tier. No HMACKey: the
+# backup agents reach the bucket through an S3-to-GCS proxy that
+# authenticates by Workload Identity, so no key is minted. See
+# docs/plan/cloud-just-migration.md.
+apiVersion: pkg.crossplane.io/v1
+kind: Provider
+metadata:
+  name: provider-gcp-storage
+spec:
+  package: xpkg.upbound.io/upbound/provider-gcp-storage:v2.5.1
+---
+# Secret and SecretVersion, for the credentials an instance brings --
+# database passwords and the FDB backup encryption key -- which live in
+# the management project and outlive every cluster.
+apiVersion: pkg.crossplane.io/v1
+kind: Provider
+metadata:
+  name: provider-gcp-secretmanager
+spec:
+  package: xpkg.upbound.io/upbound/provider-gcp-secretmanager:v2.5.1
+---
 apiVersion: pkg.crossplane.io/v1
 kind: Provider
 metadata:
