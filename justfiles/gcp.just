@@ -569,13 +569,15 @@ gcp-plane-up:
 
     # Only what this plane needs: a folder, a project and its APIs
     # (cloudplatform), then a network and a GKE cluster to hand over to
-    # (compute, container). dns, sql and certificatemanager serve
-    # instances and belong to the management plane, not to a cluster
-    # that lives for minutes. Versions come from the manifest Argo
-    # applies, so only the set is narrowed.
+    # (compute, container), then helm to install onto that cluster once
+    # it exists. dns, sql, storage, secretmanager and certificatemanager
+    # serve instances and the durable tier, and belong to the management
+    # plane rather than to a cluster that lives for minutes. Versions
+    # come from the manifest Argo applies, so only the set is narrowed.
     MANIFEST=infra/platform/crossplane-providers/providers.yml
     for name in provider-gcp-cloudplatform provider-gcp-compute \
-                provider-gcp-container function-patch-and-transform \
+                provider-gcp-container provider-helm \
+                function-patch-and-transform \
                 function-go-templating function-auto-ready ; do
       PKG=$(grep -A2 "name: $name\$" "$MANIFEST" | grep 'package:' | awk '{print $2}')
       if [[ -z "$PKG" ]]; then
@@ -601,6 +603,8 @@ gcp-plane-up:
     kubectl --context {{ BOOT_CTX }} wait --for=condition=healthy --timeout=600s \
       provider.pkg.crossplane.io/provider-gcp-container
     kubectl --context {{ BOOT_CTX }} wait --for=condition=healthy --timeout=600s \
+      provider.pkg.crossplane.io/provider-helm
+    kubectl --context {{ BOOT_CTX }} wait --for=condition=healthy --timeout=600s \
       function.pkg.crossplane.io/function-patch-and-transform
     kubectl --context {{ BOOT_CTX }} wait --for=condition=healthy --timeout=600s \
       function.pkg.crossplane.io/function-go-templating
@@ -622,6 +626,37 @@ gcp-plane-up:
     spec:
       projectID: "$PROJECT"
       credentials:
+        source: Secret
+        secretRef:
+          namespace: crossplane-system
+          name: gcp-creds
+          key: creds
+    YAML
+
+    # How the boot plane installs onto the management cluster. Two
+    # halves, because a GKE kubeconfig carries no usable credential:
+    # `credentials` is the connection Secret the composed Cluster
+    # writes, holding the endpoint and the CA, and `identity` is the
+    # same impersonated ADC the GCP providers use, which is what mints
+    # the token. So the plane holds no key for the cluster either.
+    #
+    # Applied before the Secret exists, which is harmless: nothing reads
+    # this config until a Release names it, and by then gcp-plane-apply
+    # has reconciled the cluster.
+    kubectl --context {{ BOOT_CTX }} apply -f - <<YAML
+    apiVersion: helm.crossplane.io/v1beta1
+    kind: ProviderConfig
+    metadata:
+      name: {{ CODE }}-mgmt
+    spec:
+      credentials:
+        source: Secret
+        secretRef:
+          namespace: crossplane-system
+          name: gke-{{ CODE }}-c-mgmt-kubeconfig
+          key: kubeconfig
+      identity:
+        type: GoogleApplicationCredentials
         source: Secret
         secretRef:
           namespace: crossplane-system

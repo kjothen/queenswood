@@ -232,15 +232,31 @@ lost.
 
 ### 1. Widen the boot plane
 
-`gcp-plane-up` installs four packages, chosen when the composition
-stopped at a folder. It needs `provider-helm`, so the boot plane can
-install onto the management cluster, and a `ProviderConfig` for it
-holding credentials to `gke-qw01-c-mgmt`.
+`gcp-plane-up` installed a narrowed set of packages, chosen when the
+composition stopped at a folder. It now takes `provider-helm` as well,
+which is what lets the boot plane install onto the management cluster
+in step 3, and applies a `ProviderConfig` for it.
 
-`providers.yml` itself is short of two the durable tier will need:
+**How that config reaches the cluster without a key**, which was an
+open question and is not: `provider-helm` splits the problem in two.
+`credentials` is a kubeconfig Secret carrying the endpoint and the CA
+and no token, and `identity`, typed `GoogleApplicationCredentials`, is
+what actually authenticates — pointed at the same impersonated ADC the
+GCP providers already use. So the boot plane holds no key for the
+cluster either, and the pattern is not new: `helm-provider-config.yml`
+has used exactly this shape against the current deployment.
+
+The kubeconfig is the composed `Cluster`'s own connection Secret, which
+the provider writes on every reconcile, so nothing has to run
+`get-credentials` and no recipe holds the endpoint. That is one more
+reason a v2 namespaced MR suits this: it writes the Secret into its own
+namespace, which is where the config looks.
+
+`providers.yml` itself was short of two the durable tier will need:
 storage and secretmanager, for the `Bucket` and `BucketIAMMember`
-ADR-0022 names by hand. Adding them here rather than later keeps the
-package set one list.
+ADR-0022 names by hand. They are in the manifest rather than in the
+boot plane's install set, which stays narrow — the durable tier is the
+management plane's to run, not a cluster that lives for minutes.
 
 ADR-0022 names a third, orgpolicy, for the `Policy` that exempts a
 project from the key-creation ban and for `HMACKey` alongside it. Left
@@ -1074,9 +1090,6 @@ stays a console step for the same reason, and only its capture changes.
   [cloud-naming](../recipes/cloud-naming.md), or the whole example
   follows the manifests into `installations`. It is the one piece of
   this documentation that reads better with real values in it.
-- Whether the boot plane's `provider-helm` reaches `gke-qw01-c-mgmt`
-  through a credentials secret or through the same impersonated ADC the
-  GCP providers use. The second keeps the no-keys property intact.
 - Whether `pass` is retired at the pivot or kept for the boot path.
   Nothing in the durable design reads it, but `gcp-adc-boot` runs before
   any of it exists.
