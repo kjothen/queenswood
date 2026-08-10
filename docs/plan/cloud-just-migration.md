@@ -388,12 +388,40 @@ Two things the management cluster needs that the kind cluster did not:
 adopts the composite it owns the Release that installs it. A composition
 edit that removed or upgraded that Release would have Crossplane acting
 on itself mid-reconcile, and a delete would be unrecoverable without
-raising the boot plane again. So those two Releases carry
+raising the boot plane again. So those Releases carry
 `managementPolicies: [Observe]` on the management plane: it watches its
 own installation and never acts on it, and changing Crossplane or Argo
 becomes a deliberate act from the boot plane. That is
 [ADR-0022](../adr/0022-cloud-foundation-and-environment-lifecycle.md)'s
 "foundations are observed" applied one level up.
+
+**How one document does both**, since step 5 applies the same composite
+to both planes and a composition cannot ask which plane is running it.
+`management.bootstrap` is set by the plane installing the management
+plane and left out of the committed manifest — the same seam
+`billingAccountId` uses, and for the same reason: it is true of an act
+of creation rather than of the installation. The base carries
+`[Observe]`, because a patch whose source is absent is skipped, so the
+safe value is what a manifest without the field produces. Both cases
+are spelled in the patch, so setting it to `false` says what leaving it
+out says.
+
+`gcp-plane-apply` passes it, and nothing else does. That is what makes
+"the boot plane may install the management plane, and the management
+plane may not reinstall itself" a property of who is applying rather
+than a rule someone has to remember.
+
+**Both Releases are `helm.m.crossplane.io`, never `helm.crossplane.io`.**
+provider-helm installs both groups, and the composite is namespaced, so
+the legacy cluster-scoped kind fails the whole pipeline with `cannot
+apply cluster scoped composed resource ... for a namespaced composite
+resource` — every composed resource stops, not just the offending one.
+It also survives one reconcile before doing so, since a create and an
+apply are different paths, which makes a first green run no evidence at
+all. `kubectl api-resources | grep -i helm` distinguishes them: the
+NAMESPACED column, not the version. The rule generalises — prefer the
+`.m.` group for every provider, and treat an API group copied from
+`crossplane-configs/` as belonging to the previous generation.
 
 ### 4. The manifest in git — done
 

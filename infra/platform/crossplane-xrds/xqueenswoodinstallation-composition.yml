@@ -573,10 +573,18 @@ spec:
           # The chart version is pinned rather than floating, and
           # scripts/check-versions.sh holds it to the one the xp-mp
           # chart resolves, which is what Renovate bumps.
+          #
+          # Observe unless the applying plane says otherwise, which only
+          # the plane installing this one does. So the management plane,
+          # reconciling the composite that describes itself, watches the
+          # release that installed it and never acts on it. The base
+          # carries the safe value because a patch whose source is
+          # absent is skipped, and the committed manifest is what leaves
+          # it absent.
           # ===================================================================
           - name: management-crossplane
             base:
-              apiVersion: helm.crossplane.io/v1beta1
+              apiVersion: helm.m.crossplane.io/v1beta1
               kind: Release
               metadata:
                 namespace: crossplane-system
@@ -590,9 +598,8 @@ spec:
               spec:
                 managementPolicies:
                   - Observe
-                  - Create
-                  - Update
-                  - LateInitialize
+                providerConfigRef:
+                  kind: ClusterProviderConfig
                 forProvider:
                   namespace: crossplane-system
                   chart:
@@ -607,6 +614,24 @@ spec:
                     string:
                       type: Format
                       fmt: "crossplane-%s-c-mgmt"
+              # Both cases are spelled, so setting the field to false is
+              # as explicit as leaving it out. map takes a string key,
+              # and the field is a boolean, so it is converted first.
+              - fromFieldPath: spec.management.bootstrap
+                toFieldPath: spec.managementPolicies
+                transforms:
+                  - type: convert
+                    convert:
+                      toType: string
+                  - type: map
+                    map:
+                      "true":
+                        - Observe
+                        - Create
+                        - Update
+                        - LateInitialize
+                      "false":
+                        - Observe
               - fromFieldPath: spec.code
                 toFieldPath: spec.providerConfigRef.name
                 transforms:
