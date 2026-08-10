@@ -235,9 +235,21 @@ Adding them here rather than later keeps the package set one list.
 ### 2. The platform identity's rights
 
 The management plane runs as `sa-qw01-platform` through Workload
-Identity, and that identity currently holds nothing. Derived from what
-the composition creates now and what an instance adds — project,
-network, cluster, database, service accounts, address, certificate:
+Identity. **This is where the work now starts.**
+
+**Done: the billing account.** `roles/billing.user` is bound, by
+`gcp-platform-billing-role`. It could not come from the composition — a
+billing account sits above the folder, and `sa-qw01-boot` holds
+`billing.user` rather than `billing.admin`, so it cannot delegate what
+it was given. That made it the same seam as `gcp-boot-org-roles`: a
+recipe run once by a billing administrator, which is a person and
+deliberately so.
+
+**Outstanding: everything inside the folder**, where the identity holds
+nothing at all. `just gcp-platform-status` prints both halves. Derived
+from what the composition creates now and what an instance adds —
+project, network, cluster, database, service accounts, address,
+certificate:
 
 - On the folder — `projectCreator`, `folderIamAdmin`, and compute,
   container, storage, DNS and CloudSQL administration. Assembled from
@@ -245,20 +257,18 @@ network, cluster, database, service accounts, address, certificate:
   boot identity and is more than this should hold.
 - On the management project — `secretmanager.admin`, `storage.admin`,
   and `orgpolicy.policyAdmin`.
-- On the billing account — `billing.user`, so it can link the projects
-  it creates.
 
-The folder and project bindings are `FolderIAMMember` and
-`ProjectIAMMember`, which the access step has now proven against this
-provider version; the "unverified" note in the composition is stale.
-They are declared in the composition and applied by the boot plane,
-which holds `folderAdmin` and so can grant them.
+Both are `FolderIAMMember` and `ProjectIAMMember`, which the access step
+has proven against this provider version; the "unverified" note in the
+composition is stale. They are declared in the composition and applied
+by the boot plane, which holds `folderAdmin` and so can grant them.
 
-The billing binding cannot come from the composition: a billing account
-sits above the folder, and `sa-qw01-boot` holds `billing.user` rather
-than `billing.admin`, so it cannot delegate it. That makes it the same
-seam as `gcp-boot-org-roles` — a recipe run once by a billing
-administrator, which is a person and deliberately so.
+Note the shape this repeats: the composition's `access` step already
+emits exactly these kinds for the four human capabilities, keyed off
+`spec.access`. The platform identity is a fifth principal with a fixed
+role set rather than a configurable one, so it belongs in
+`patch-and-transform` beside `platform-identity` rather than in the
+go-templated access step.
 
 ### 3. Crossplane and Argo onto the management cluster, declared
 
