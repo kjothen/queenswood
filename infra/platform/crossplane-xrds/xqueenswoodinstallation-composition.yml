@@ -553,9 +553,8 @@ spec:
           # held by anyone -- the same property the bootstrap identity
           # has, arrived at differently.
           #
-          # What it is allowed to do is not here yet: folder-scoped
-          # bindings need FolderIAMMember, which is unverified against
-          # this provider version.
+          # What it may do follows below, folder-scoped and
+          # project-scoped.
           # ===================================================================
           - name: platform-identity
             base:
@@ -630,6 +629,251 @@ spec:
                     string:
                       type: Format
                       fmt: "serviceAccount:%s.svc.id.goog[crossplane-system/crossplane-provider-gcp]"
+          # ===================================================================
+          # What the platform identity may do inside the installation --
+          # which is everything this composition does, once the
+          # management plane is the thing running it rather than the
+          # boot plane.
+          #
+          # A fifth principal beside the four capabilities below, and
+          # the reason it is composed here rather than there: its role
+          # set is fixed and derived from what an installation builds,
+          # where a capability's is keyed off whoever the manifest
+          # names.
+          #
+          # Assembled from predefined roles rather than folderAdmin,
+          # which is what GCP granted the boot identity for creating the
+          # folder and is more than this should hold. Billing is not
+          # here at all: the account sits above the folder, so
+          # gcp-platform-billing-role binds it as a person.
+          #
+          # The member is spelled rather than referenced, as the
+          # Workload Identity binding above spells it, and for the same
+          # reason -- the account id is the identity's external name, so
+          # both addresses are derivable from the code and the project.
+          # ===================================================================
+          # Creating a project makes the identity its owner, so an
+          # instance project is administered by having built it rather
+          # than by a folder-wide grant for every kind it holds.
+          - name: platform-role-folder-project-creator
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: FolderIAMMember
+              metadata:
+                namespace: crossplane-system
+              spec:
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  role: roles/resourcemanager.projectCreator
+            patches:
+              - fromFieldPath: spec.code
+                toFieldPath: metadata.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "%s-platform-folder-project-creator"
+              - &platform-folder-ref
+                fromFieldPath: spec.code
+                toFieldPath: spec.forProvider.folderRef.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "fldr-%s"
+              # Two variables, so one patch: the account id is the
+              # identity's external name and the project is where it
+              # lives, and a second patch to the same field would
+              # overwrite the first rather than complete it.
+              - &platform-member
+                type: CombineFromComposite
+                combine:
+                  variables:
+                    - fromFieldPath: spec.code
+                    - fromFieldPath: spec.management.projectId
+                  strategy: string
+                  string:
+                    fmt: "serviceAccount:sa-%s-platform@%s.iam.gserviceaccount.com"
+                toFieldPath: spec.forProvider.member
+          # Binds the four capabilities the access step composes, which
+          # is the one role here that acts on people rather than on
+          # infrastructure. Folder-scoped, so nothing it can grant
+          # reaches outside the installation.
+          - name: platform-role-folder-iam-admin
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: FolderIAMMember
+              metadata:
+                namespace: crossplane-system
+              spec:
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  role: roles/resourcemanager.folderIamAdmin
+            patches:
+              - fromFieldPath: spec.code
+                toFieldPath: metadata.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "%s-platform-folder-iam-admin"
+              - *platform-folder-ref
+              - *platform-member
+          - name: platform-role-folder-compute-admin
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: FolderIAMMember
+              metadata:
+                namespace: crossplane-system
+              spec:
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  role: roles/compute.admin
+            patches:
+              - fromFieldPath: spec.code
+                toFieldPath: metadata.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "%s-platform-folder-compute-admin"
+              - *platform-folder-ref
+              - *platform-member
+          - name: platform-role-folder-container-admin
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: FolderIAMMember
+              metadata:
+                namespace: crossplane-system
+              spec:
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  role: roles/container.admin
+            patches:
+              - fromFieldPath: spec.code
+                toFieldPath: metadata.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "%s-platform-folder-container-admin"
+              - *platform-folder-ref
+              - *platform-member
+          - name: platform-role-folder-dns-admin
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: FolderIAMMember
+              metadata:
+                namespace: crossplane-system
+              spec:
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  role: roles/dns.admin
+            patches:
+              - fromFieldPath: spec.code
+                toFieldPath: metadata.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "%s-platform-folder-dns-admin"
+              - *platform-folder-ref
+              - *platform-member
+          - name: platform-role-folder-cloudsql-admin
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: FolderIAMMember
+              metadata:
+                namespace: crossplane-system
+              spec:
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  role: roles/cloudsql.admin
+            patches:
+              - fromFieldPath: spec.code
+                toFieldPath: metadata.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "%s-platform-folder-cloudsql-admin"
+              - *platform-folder-ref
+              - *platform-member
+          # Folder-scoped, though the durable bucket is in the
+          # management project: a folder binding inherits into every
+          # project under it, so one grant covers that bucket and
+          # whatever an instance later holds, where the project form
+          # would cover only the first.
+          - name: platform-role-folder-storage-admin
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: FolderIAMMember
+              metadata:
+                namespace: crossplane-system
+              spec:
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  role: roles/storage.admin
+            patches:
+              - fromFieldPath: spec.code
+                toFieldPath: metadata.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "%s-platform-folder-storage-admin"
+              - *platform-folder-ref
+              - *platform-member
+          # Org policy administration is not here, and cannot be: GCP
+          # answers "Role roles/orgpolicy.policyAdmin is not supported
+          # for this resource" at both folder and project scope, so it
+          # is granted at the organisation, by a person, alongside the
+          # billing role. See docs/plan/cloud-just-migration.md.
+          # ===================================================================
+          # Project-scoped, because what it governs is: Secret Manager
+          # holds the durable tier's secrets in the management project.
+          #
+          # Named by id rather than by a reference to the composed
+          # Project, as the access step's own project binding is -- the
+          # literal is the form proven against this provider version.
+          # ===================================================================
+          - name: platform-role-project-secretmanager-admin
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: ProjectIAMMember
+              metadata:
+                namespace: crossplane-system
+              spec:
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  role: roles/secretmanager.admin
+            patches:
+              - fromFieldPath: spec.code
+                toFieldPath: metadata.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "%s-platform-project-secretmanager-admin"
+              - fromFieldPath: spec.management.projectId
+                toFieldPath: spec.forProvider.project
+              - *platform-member
     # =======================================================================
     # What each capability may do inside the installation, and nothing
     # about who holds it -- that is the manifest's access mapping, and

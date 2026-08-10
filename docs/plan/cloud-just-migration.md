@@ -25,10 +25,11 @@ created. This plan is that, and what follows it.
 ## Picking this up cold
 
 **Where the work is: step 2 of [The pivot](#the-pivot)** — the folder
-and management-project bindings for `sa-qw01-platform`, which holds
-nothing inside the folder. Billing is done. Read that step, then verify
-against the live account rather than against this line, because a
-sentence naming a step is the first thing here to go stale.
+and management-project bindings for `sa-qw01-platform`, declared in the
+composition and not yet applied, so the identity still holds nothing
+inside the folder. Billing is done. Read that step, then verify against
+the live account rather than against this line, because a sentence
+naming a step is the first thing here to go stale.
 
 Read "How the machinery fits together" below before touching the
 composition. It is the hour that does not need spending twice.
@@ -167,7 +168,8 @@ provider packages.
 **The platform identity holds one role.** `sa-qw01-platform` has
 `roles/billing.user` on the billing account, granted by
 `gcp-platform-billing-role`, and nothing at all on the folder or the
-management project — those are step 2 below and are not written yet.
+management project — those are step 2 below, declared in the
+composition and waiting on a plane to apply them.
 `just gcp-platform-status` prints both. The only identity with real
 rights inside the installation is still `sa-qw01-boot`, which GCP
 granted `resourcemanager.folderAdmin` for having created the folder.
@@ -235,11 +237,19 @@ stopped at a folder. It needs `provider-helm`, so the boot plane can
 install onto the management cluster, and a `ProviderConfig` for it
 holding credentials to `gke-qw01-c-mgmt`.
 
-`providers.yml` itself is short of three the durable tier will need:
-storage, secretmanager and orgpolicy. ADR-0022 names all three by hand
-— `Bucket`, `BucketIAMMember` and `HMACKey` from the first, and the
-`Policy` that exempts a project from the key-creation ban from the last.
-Adding them here rather than later keeps the package set one list.
+`providers.yml` itself is short of two the durable tier will need:
+storage and secretmanager, for the `Bucket` and `BucketIAMMember`
+ADR-0022 names by hand. Adding them here rather than later keeps the
+package set one list.
+
+ADR-0022 names a third, orgpolicy, for the `Policy` that exempts a
+project from the key-creation ban and for `HMACKey` alongside it. Left
+out: the exemption needs a role granted only at the organisation, which
+[the durable tier](#the-key-ban-and-the-proxy-that-answers-it)
+takes as unavailable and designs around, and the other org policy in
+play — `skipDefaultNetworkCreation` — is already answered by the
+project's own `autoCreateNetwork: false`. A package the composition
+composes nothing from is a provider pod for nothing.
 
 ### 2. The platform identity's rights
 
@@ -254,23 +264,55 @@ it was given. That made it the same seam as `gcp-boot-org-roles`: a
 recipe run once by a billing administrator, which is a person and
 deliberately so.
 
-**Outstanding: everything inside the folder**, where the identity holds
-nothing at all. `just gcp-platform-status` prints both halves. Derived
-from what the composition creates now and what an instance adds —
-project, network, cluster, database, service accounts, address,
-certificate:
+**Declared: everything inside the folder**, which the identity does not
+hold until a plane applies it. `just gcp-platform-status` prints all
+three scopes. Derived from what the composition creates now and what an
+instance adds — project, network, cluster, database, service accounts,
+address, certificate:
 
 - On the folder — `projectCreator`, `folderIamAdmin`, and compute,
   container, storage, DNS and CloudSQL administration. Assembled from
   predefined roles rather than `folderAdmin`, which is what GCP gave the
   boot identity and is more than this should hold.
-- On the management project — `secretmanager.admin`, `storage.admin`,
-  and `orgpolicy.policyAdmin`.
+- On the management project — `secretmanager.admin`.
+
+Storage is bound once, on the folder, rather than at both scopes. A
+folder binding inherits into every project beneath it, so the
+project-scoped grant this plan first listed alongside it would have
+been a second copy of a right the identity already held — and the
+folder form is the one that also covers a bucket an instance turns out
+to want.
+
+`projectCreator` is what makes the rest narrower than it reads. GCP
+makes the creator of a project its owner, so an instance project is
+administered by having built it; the folder-scoped roles are what
+reach the projects this identity did not build.
+
+**`orgpolicy.policyAdmin` is not here at all, and cannot be.** It was
+written project-scoped, then folder-scoped, and GCP refused both with
+`Role roles/orgpolicy.policyAdmin is not supported for this resource` —
+a 400 declining the scope rather than a permission the boot identity
+was missing, so nothing granted upstream would have made it work. The
+role is organisation-only, which puts it on the same seam as
+`billing.user`: granted above the folder, by a person, and therefore a
+recipe rather than a composed resource.
+
+Nothing needs it until the durable tier, so it is settled there rather
+than guessed at here — see [After the pivot](#after-the-pivot). Note
+that `roles/owner` deliberately excludes org policy administration, so
+creating the project that needs the exemption does not confer the right
+to exempt it.
+
+The general form is worth carrying. A role has a set of resource types
+it may be granted on, that set is not the same as the set of resources
+the feature acts on, and a scope outside it fails at the API with a 400
+rather than by producing a binding that silently grants nothing. Loud,
+but only once something applies it — which is the argument for applying
+a composition change rather than reading it.
 
 Both are `FolderIAMMember` and `ProjectIAMMember`, which the access step
-has proven against this provider version; the "unverified" note in the
-composition is stale. They are declared in the composition and applied
-by the boot plane, which holds `folderAdmin` and so can grant them.
+has proven against this provider version. They are applied by the boot
+plane, which holds `folderAdmin` and so can grant them.
 
 Note the shape this repeats: the composition's `access` step already
 emits exactly these kinds for the four human capabilities, keyed off
@@ -700,9 +742,9 @@ Where this binds is not the manifest. Nothing in it is a credential:
 these are identifiers, and the test is that if they *were* credentials a
 private repository would be insufficient by every source above, which is
 the whole reason for the distinction. It binds on what comes next.
-Instances bring database passwords, the FDB backup encryption key and
-the GCS HMAC key, and those must not enter `installations` even
-privately. They belong in Secret Manager, which is already
+Instances bring database passwords and the FDB backup encryption key,
+and those must not enter `installations` even privately. They belong
+in Secret Manager, which is already
 [ADR-0022](../adr/0022-cloud-foundation-and-environment-lifecycle.md)'s
 answer, reached either by an external-secrets operator or by Crossplane
 writing connection details straight into a cluster Secret. Choosing
@@ -804,33 +846,142 @@ liens are what make safe.
 not the instance project — today the bucket is `<instance>-backups` and
 dies with the thing it protects, and moving it is the property this
 buys. With it: the per-prefix lifecycle rules from
-`gcp-backup-lifecycle-set` as `lifecycleRule`; Secret Manager entries
-for the FDB encryption key and database passwords; the `fdb-backup`
-identity, its HMAC key and the bucket binding.
+`gcp-backup-lifecycle-set` as `lifecycleRule`, and Secret Manager
+entries for the FDB encryption key and database passwords.
 
-FDB's prefixes stay unmanaged by age — a continuous backup's older
-objects are the log a restore reads through, and `fdbbackup expire`
-prunes them by version.
+How the data reaches that bucket is a redesign rather than a port of
+what exists, and the reason is a permission we should not expect to
+hold.
 
-Two decisions this forces. **Where the object path carries the
+#### The key ban, and the proxy that answers it
+
+FDB's backup agent speaks S3 rather than GCS, so it authenticates to
+the interop endpoint with an HMAC key, which GCP counts as a
+service-account key. The organisation bans those by default, so
+`_gcp-allow-sa-keys` exempts the instance project from
+`iam.disableServiceAccountKeyCreation` — and setting that exemption
+needs `orgpolicy.policyAdmin`.
+
+Step 2 established that GCP grants that role at the organisation and
+nowhere else: a project binding and a folder binding are both refused
+with `Role roles/orgpolicy.policyAdmin is not supported for this
+resource`, a 400 declining the scope rather than a permission the
+caller was missing. The old recipe worked by granting it to the
+operator on our own organisation and then applying a *project*-scoped
+override, which is the shape worth remembering — the grant is
+organisation-wide, the policy it sets is not, and it is the grant that
+is out of reach.
+
+Under [ADR-0023](../adr/0023-installation-naming-and-access.md)'s
+assumption, of a folder handed to us inside an organisation we do not
+own, that grant is not ours to make. Asking for it means asking to be
+able to weaken any constraint anywhere in that organisation, for the
+sake of one HMAC key, and it should be treated as unavailable rather
+than as a request that might succeed. `sa-qw01-boot` does hold the role
+today, from `gcp-boot-org-roles`, so the exemption is reachable for
+this installation — from the disposable plane only, which makes it a
+property of our own organisation rather than of the design.
+
+**So the transport changes, rather than the permission.** Run an
+S3-to-GCS proxy in the instance cluster, and point the backup agents at
+it instead of at `storage.googleapis.com`. The agents keep speaking
+the only protocol they know; the proxy speaks GCS's own API and
+authenticates through Workload Identity, so no exportable Google
+credential exists anywhere in the path and the exemption stops being
+needed at all.
+
+What FDB presents to the proxy is a locally generated pair that grants
+nothing in GCP. That is the point rather than a detail: a credential
+the organisation's key policy has no opinion about, whose blast radius
+is one proxy inside one cluster, and which can be rotated without
+asking anyone.
+
+**It also retires a compromise the chart currently documents.** FDB's
+blobstore client has no usable trust store — it statically links
+OpenSSL with an `OPENSSLDIR` absent from the image, so every public
+certificate verifies as self-signed, and only `--tls-ca-file` loads a
+CA, which the operator never passes and offers no way to add. So the
+backup runs plaintext to `storage.googleapis.com` today, over the
+public internet, with encrypted files and SigV4's promise that the
+secret is never transmitted standing in for the transport. With a
+proxy in the cluster the plaintext hop is pod to pod, and the leg that
+crosses a network is the proxy's own HTTPS to GCS, made by a client
+whose trust store works. The comment in
+`infra/helm/queenswood/templates/fdb-backup.yaml` explaining why this
+is tolerable stops needing to be true.
+
+Continuity is what makes this better than moving the data. The backup
+stays continuous and lands natively in GCS, so the object layout,
+`fdbbackup expire`, the bucket's lifecycle rules and the restore path
+are all exactly what
+[recovery-procedures](../recipes/recovery-procedures.md) already
+describes. The recovery point objective does not move, and restore
+gains no step.
+
+The encryption key is unaffected: FDB encrypts what it writes, the key
+is generated once and must outlive every cluster, and Secret Manager in
+the management project is still where it lives.
+
+**Prove the restore before trusting it.** A translation layer's
+failures live in the parts of the S3 API that GCS implements
+differently — multipart semantics and list behaviour especially — and
+they surface on read, not on write. A backup that writes cleanly and
+will not restore is the failure this design has to rule out early,
+against a real cluster, before the proxy is anywhere near a production
+instance.
+
+The proxy is also in the data path, so its failure stops backups
+without stopping anything else. What that wants is an alarm on backup
+staleness rather than on the pod: a healthy proxy that has written
+nothing for an hour is the condition worth waking someone for. Being
+stateless, it takes replicas at no cost beyond the pods.
+
+#### What was rejected, and why
+
+**MinIO as the store.** Trades GCS's durability and lifecycle rules for
+a storage system to operate and back up in its own right. Worth it only
+if MinIO is wanted for something else.
+
+**`fdbdr` to a second cluster.** Continuous replication is disaster
+recovery, not point-in-time restore, and
+[recovery-procedures](../recipes/recovery-procedures.md) is built on
+restoring to a recorded version. A second cluster running continuously
+also contradicts the disposable tier's whole reason for existing. It
+answers a different question, and could sit alongside a backup rather
+than replace one.
+
+**A scoped policy exception.** A dedicated backups project holding only
+the bucket, one HMAC key, rotation automated, and the exception
+written down. It does not reduce the ask: the override is already
+project-scoped — `_gcp-allow-sa-keys` applies exactly that — and what
+is out of reach is the organisation-level grant needed to set any
+override at all. Worth knowing that
+`constraints/storage.restrictAuthTypes` exists as a separate control on
+HMAC access to GCS, which an organisation may enforce independently and
+which the proxy also sidesteps.
+
+**Disk snapshots** are the one not rejected. FDB supports binary
+backups through volume snapshots, which involve no S3 protocol at all,
+and CSI `VolumeSnapshot` of the storage servers' disks is a plausible
+second line. Against it: the operator's support is thinner than for
+blobstore backups, recovery points are coarser than a continuous
+backup's, and quiescing has to be coordinated with FDB rather than
+taken underneath it. A second line, once the first one restores.
+
+Two decisions this leaves. **Where the object path carries the
 instance**: one durable bucket per installation means a prefix per
 instance, `<instance>/fdb/continuous/<generation>`, since the lifecycle
 rules already discriminate by prefix and a bucket per instance would put
-the durable tier back inside the disposable one. And **which project is
-exempted from the key ban**: an HMAC key counts as a service-account
-key, so whichever project holds the `fdb-backup` identity must be
-exempted from `iam.disableServiceAccountKeyCreation`. Keeping that
-identity in the instance project, with a cross-project `BucketIAMMember`
-on the durable bucket, exempts only the disposable project — and costs
-nothing on restore, because a rebuilt instance mints a fresh HMAC key.
-What must survive is the bucket and the encryption key, and both are in
-the management project either way.
+the durable tier back inside the disposable one. And **where the proxy
+runs**: in the instance cluster it is disposable with everything else
+and reaches the durable bucket across a project boundary, which is the
+same cross-project binding the design already needs.
 
 **Real secrets, at last.** An instance brings the first actual
-credentials — database passwords, the FDB backup encryption key, the GCS
-HMAC key — and none of them goes into `installations`, private or
-not, because every source in the survey above rejects a repository as
-protection for a credential. They live in Secret Manager in the
+credentials — database passwords and the FDB backup encryption key —
+and neither goes into `installations`, private or not, because every
+source in the survey above rejects a repository as protection for a
+credential. They live in Secret Manager in the
 management project, which is already
 [ADR-0022](../adr/0022-cloud-foundation-and-environment-lifecycle.md)'s
 answer, and reach the workloads one of two ways:
@@ -878,10 +1029,16 @@ durable one.
 
 **Becomes a managed resource.** `gcp-project-create`;
 `gcp-dns-zone-create`; `gcp-backup-bucket-create`;
-`gcp-backup-lifecycle-set`; `gcp-backup-hmac-create`;
-`_gcp-allow-sa-keys`; `gcp-keycloak-restore-sa-create`;
+`gcp-backup-lifecycle-set`; `gcp-keycloak-restore-sa-create`;
 `gcp-keycloak-backup-sa-create`; the `skipDefaultNetworkCreation` half
 of `gcp-org-create`.
+
+**Dies with the key.** `gcp-backup-hmac-create` and
+`_gcp-allow-sa-keys`, once the backup agents reach GCS through the
+proxy the durable tier proposes — there is then no HMAC key to mint and
+no exemption to apply. Both stay until that is built and a restore has
+been proven through it, because they are what the current backup runs
+on.
 
 **Becomes a field.** `gcp-up` and `gcp-down` become `state`.
 
@@ -927,6 +1084,9 @@ stays a console step for the same reason, and only its capture changes.
   [ADR-0022](../adr/0022-cloud-foundation-and-environment-lifecycle.md)
   leaves open and which interacts with putting a private network in
   front of the instances.
+- Whether an S3-to-GCS proxy restores as well as it backs up. The
+  design turns on it, and the answer comes from a real restore rather
+  than from the proxy's documentation.
 
 ## References
 
