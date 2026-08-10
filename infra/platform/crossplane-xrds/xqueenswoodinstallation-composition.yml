@@ -711,6 +711,17 @@ spec:
                             automated:
                               prune: true
                               selfHeal: true
+                            # Long enough to outlast a package install.
+                            # The provider configurations are of kinds
+                            # those packages register, and Argo reports
+                            # the packages applied well before they are
+                            # installed.
+                            retry:
+                              limit: 10
+                              backoff:
+                                duration: 30s
+                                factor: 2
+                                maxDuration: 10m
             patches:
               - fromFieldPath: spec.code
                 toFieldPath: metadata.name
@@ -729,13 +740,29 @@ spec:
               # and the chart's child Applications read the values it
               # passes them. One installation, one answer to where its
               # configuration comes from.
-              - fromFieldPath: spec.management.source.repoURL
+              #
+              # Required, unlike every other patch here. Absence is
+              # meaningful for billingAccountId and bootstrap, so those
+              # are skipped and the base wins -- there is no
+              # installation whose configuration comes from nowhere, so
+              # a missing source here is a schema that was never
+              # applied, and it should say so rather than compose an
+              # empty URL nothing complains about.
+              - policy:
+                  fromFieldPath: Required
+                fromFieldPath: spec.management.source.repoURL
                 toFieldPath: spec.forProvider.values.extraObjects[0].spec.source.repoURL
-              - fromFieldPath: spec.management.source.repoURL
+              - policy:
+                  fromFieldPath: Required
+                fromFieldPath: spec.management.source.repoURL
                 toFieldPath: spec.forProvider.values.extraObjects[0].spec.source.helm.valuesObject.repoURL
-              - fromFieldPath: spec.management.source.targetRevision
+              - policy:
+                  fromFieldPath: Required
+                fromFieldPath: spec.management.source.targetRevision
                 toFieldPath: spec.forProvider.values.extraObjects[0].spec.source.targetRevision
-              - fromFieldPath: spec.management.source.targetRevision
+              - policy:
+                  fromFieldPath: Required
+                fromFieldPath: spec.management.source.targetRevision
                 toFieldPath: spec.forProvider.values.extraObjects[0].spec.source.helm.valuesObject.targetRevision
               - *plane-release-policies
               - *plane-release-config

@@ -1,6 +1,8 @@
 {{- /*
-  The kinds this plane reconciles with. Wave 1: after the runtime and
-  provider configurations, before the API that uses them.
+  The kinds this plane reconciles with, and the CRDs everything after
+  this depends on. Wave 1: after the runtime configuration, which has
+  to beat the provider pods it names, and before the provider
+  configurations, which are resources of these kinds.
 */}}
 apiVersion: argoproj.io/v1alpha1
 kind: Application
@@ -34,8 +36,8 @@ spec:
   manifest naming one lives in a private repository and arrives
   separately.
 
-  Wave 2: a Composition composing kinds no package has installed yet
-  cannot be validated.
+  Wave 3: last, so the API arrives on a plane that can already
+  authenticate.
 */}}
 apiVersion: argoproj.io/v1alpha1
 kind: Application
@@ -43,7 +45,7 @@ metadata:
   name: crossplane-xrds
   namespace: argocd
   annotations:
-    argocd.argoproj.io/sync-wave: "2"
+    argocd.argoproj.io/sync-wave: "3"
     description: Installation XRD and Composition
 spec:
   project: default

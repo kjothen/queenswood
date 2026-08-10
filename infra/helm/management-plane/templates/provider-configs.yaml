@@ -3,13 +3,21 @@
   so no key and no ADC exist on this cluster. The boot plane runs
   outside any workload identity pool, which is why its equivalent is a
   secret.
+
+  Wave 2, after the packages: these are custom resources of the kinds
+  those packages install, so they cannot be validated -- or applied --
+  before them. SkipDryRunOnMissingResource is what stops Argo rejecting
+  the whole sync over a kind it cannot see yet, and a package install
+  is asynchronous, so the retry on the Application carries them until
+  the CRDs are registered.
 */}}
 apiVersion: gcp.m.upbound.io/v1beta1
 kind: ClusterProviderConfig
 metadata:
   name: default
   annotations:
-    argocd.argoproj.io/sync-wave: "0"
+    argocd.argoproj.io/sync-wave: "2"
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
 spec:
   projectID: {{ .Values.managementProjectId | quote }}
   credentials:
@@ -26,7 +34,8 @@ kind: ClusterProviderConfig
 metadata:
   name: {{ .Values.code }}-mgmt
   annotations:
-    argocd.argoproj.io/sync-wave: "0"
+    argocd.argoproj.io/sync-wave: "2"
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
 spec:
   credentials:
     source: InjectedIdentity
