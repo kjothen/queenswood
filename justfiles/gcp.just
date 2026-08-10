@@ -475,10 +475,33 @@ gcp-groups-bind org="":
     echo ">>>   gcloud billing accounts add-iam-policy-binding <account-id> \\"
     echo ">>>     --member=group:{{ BILLING_ADMIN_GROUP }}@${DOMAIN} --role=roles/billing.admin"
 
+# Fail naming the cause when no project can carry Cloud Identity quota.
+[private]
+_gcp-assert-quota-project:
+    #!/usr/bin/env zsh
+    set -e
+    # Every Cloud Identity call attributes quota to the active gcloud
+    # project, and with none set the API answers "there is no such a
+    # group" for a group that plainly exists -- so the failure reads as
+    # a missing group, or as a membership you have already left.
+    # Checked here so the message names the cause. See cloud-account.md,
+    # which bans testing a group's existence this way for the same
+    # reason.
+    P=$(gcloud config get-value project 2>/dev/null || true)
+    if [[ -n "$P" && "$P" != "(unset)" ]]; then
+      exit 0
+    fi
+    echo "no active project, and Cloud Identity attributes quota to one" >&2
+    echo "without it every group call reports 'there is no such a group'" >&2
+    echo "set any project you can use, e.g.:" >&2
+    echo "  gcloud config set project \$(just _gcp-seed-project)" >&2
+    exit 1
+
 # Add a member to an access group (needs an active project you can use).
 gcp-access-grant group member:
     #!/usr/bin/env zsh
     set -e
+    just _gcp-assert-quota-project
     DOMAIN=$(just _gcp-domain)
     gcloud identity groups memberships add \
       --group-email="{{ group }}@${DOMAIN}" --member-email="{{ member }}"
@@ -487,6 +510,7 @@ gcp-access-grant group member:
 gcp-access-revoke group member:
     #!/usr/bin/env zsh
     set -e
+    just _gcp-assert-quota-project
     DOMAIN=$(just _gcp-domain)
     gcloud identity groups memberships delete \
       --group-email="{{ group }}@${DOMAIN}" --member-email="{{ member }}"
@@ -495,6 +519,7 @@ gcp-access-revoke group member:
 gcp-access-status org="":
     #!/usr/bin/env zsh
     set -e
+    just _gcp-assert-quota-project
     DOMAIN=$(just _gcp-domain "{{ org }}")
     for NAME in {{ ORG_ADMIN_GROUP }} {{ FOLDER_ADMIN_GROUP }} \
                 {{ BILLING_ADMIN_GROUP }} {{ SECURITY_REVIEWER_GROUP }} \
