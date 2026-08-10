@@ -252,7 +252,9 @@ generations.
 - [infrastructure](../tdd/infrastructure.md) — the bootstrap chain, sync
   waves and existing compositions.
 - `justfiles/gcp.just` — `gcp-preflight`, `gcp-groups-bind`,
-  `gcp-access-*`, `gcp-bootstrap-*`, `gcp-adc-*`, `gcp-plane-up` /
-  `-apply` / `-status` / `-down`. `gcp-plane-pivot` is not written yet.
+  `gcp-boot-*`, `gcp-platform-*`, `gcp-adc-*`, `gcp-plane-up` /
+  `-manifest` / `-apply` / `-status` / `-down`. `gcp-plane-pivot` is
+  not written yet. Group membership is not among them: it is Admin
+  console work, for the reason the directory work above is.
 - `infra/platform/crossplane-xrds/xqueenswoodinstallation-*.yml` — the
   XRD and Composition. Folder only, so far.

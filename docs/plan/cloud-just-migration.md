@@ -54,8 +54,10 @@ The files this plan acts on:
 
 To re-read the live state rather than trusting this document:
 `just gcp-preflight`, `just gcp-boot-status`, `just gcp-platform-status`,
-`just gcp-access-status`, `kubectl --context qw01-mgmt get crd`, and
-`gcloud resource-manager folders get-iam-policy <folder-id>`.
+`kubectl --context qw01-mgmt get crd`, and
+`gcloud resource-manager folders get-iam-policy <folder-id>`. Who is in
+which access group is read in the Admin console, not here — see
+[cloud-account](../recipes/cloud-account.md).
 
 To get back to a working control plane from nothing, join
 `grp-gcp-qw01-platform-admin` and:
