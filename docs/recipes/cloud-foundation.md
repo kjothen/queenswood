@@ -51,7 +51,7 @@ spec:
     clusterAdmin: ["group:grp-gcp-qw01-cluster-admin@example.com"]
     secretsAdmin: ["group:grp-gcp-qw01-secrets-admin@example.com"]
   management:
-    projectId: prj-qw01-c-mgmt-0x0x0x
+    projectId: prj-qw01-c-mgmt-xxxxxx
   createFolder:
     parent: organizations/<org-id>
     displayName: fldr-qw01
