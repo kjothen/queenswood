@@ -144,6 +144,20 @@ check "installation composition (crossplane chart)" "$crossplane" \
           f && /version:/ {gsub(/["]/, "", $2); print $2; exit}' \
        infra/platform/crossplane-xrds/xqueenswoodinstallation-composition.yml)"
 
+# Argo is the same duplication for the same reason, minus the handover:
+# Renovate sees the chart's dependency and not the Composition, so the two
+# move together by hand or not at all.
+argocd=$(awk '/^  - name: argo-cd$/ {f = 1; next}
+              f && /version:/ {gsub(/["]/, "", $2); print $2; exit}' "$xpchart")
+
+echo
+echo "Pinned copies of Argo CD $argocd, against $xpchart:"
+
+check "installation composition (argo-cd chart)" "$argocd" \
+  "$(awk '/name: argo-cd$/ {f = 1; next}
+          f && /version:/ {gsub(/["]/, "", $2); print $2; exit}' \
+       infra/platform/crossplane-xrds/xqueenswoodinstallation-composition.yml)"
+
 if [ "$fail" -ne 0 ]; then
   cat <<EOF
 
