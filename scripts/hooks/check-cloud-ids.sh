@@ -60,12 +60,20 @@ hits=$(printf '%s\n' "$files" | xargs grep -nHE \
   | grep -v 'cloud-id-ok' || true)
 [ -n "$hits" ] && report "organization, folder or project number" "$hits"
 
-# A project id's random suffix: six hex characters closing a prj- name.
-# The checks above cannot see one -- it is neither a digit run nor
-# prefixed by projects/ -- which is how a live management project id sat
-# in this file's own header. The mask cannot match, x not being hex.
+# A project id's random suffix: six hex characters closing a name. The
+# checks above cannot see one -- it is neither a digit run nor prefixed
+# by projects/ -- which is how a live management project id sat in this
+# file's own header, and an older one in a chart's values.
+#
+# The leading [0-9a-z] is what makes this safe repo-wide. A suffix always
+# follows a name character, where a negative minor-unit amount follows
+# whitespace or a delimiter, so `-100000` in a balance fixture cannot
+# match and no tree has to be excluded. Naming schemes are not assumed
+# either: this predates prj- and would have caught it.
+#
+# The mask cannot match, x not being a hex digit.
 hits=$(printf '%s\n' "$files" | xargs grep -nHE \
-  'prj-[a-z0-9-]+-[0-9a-f]{6}([^0-9a-z-]|$)' 2>/dev/null \
+  '[0-9a-z]-[0-9a-f]{6}([^0-9a-z-]|$)' 2>/dev/null \
   | grep -v 'cloud-id-ok' || true)
 [ -n "$hits" ] && report "project id suffix" "$hits"
 
