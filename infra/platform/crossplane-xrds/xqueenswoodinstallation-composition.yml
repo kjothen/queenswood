@@ -563,6 +563,58 @@ spec:
               - fromFieldPath: spec.management.machineType
                 toFieldPath: spec.forProvider.nodeConfig.machineType
           # ===================================================================
+          # Crossplane on the management cluster, installed by the plane
+          # that built the cluster. This is the first thing composed
+          # here that acts on Kubernetes rather than on GCP, and it
+          # reaches the cluster through the helm ProviderConfig
+          # gcp-plane-up applies -- a kubeconfig for the endpoint and
+          # the CA, and the impersonated identity for the token.
+          #
+          # The chart version is pinned rather than floating, and
+          # scripts/check-versions.sh holds it to the one the xp-mp
+          # chart resolves, which is what Renovate bumps.
+          # ===================================================================
+          - name: management-crossplane
+            base:
+              apiVersion: helm.crossplane.io/v1beta1
+              kind: Release
+              metadata:
+                namespace: crossplane-system
+                # The Kubernetes name carries the installation, because
+                # the applying plane holds one per installation. The
+                # helm release name does not: it names a release inside
+                # one cluster, where there is only ever this one, and
+                # the chart derives every resource name from it.
+                annotations:
+                  crossplane.io/external-name: crossplane
+              spec:
+                managementPolicies:
+                  - Observe
+                  - Create
+                  - Update
+                  - LateInitialize
+                forProvider:
+                  namespace: crossplane-system
+                  chart:
+                    repository: https://charts.crossplane.io/stable
+                    name: crossplane
+                    version: "2.3.4"
+            patches:
+              - fromFieldPath: spec.code
+                toFieldPath: metadata.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "crossplane-%s-c-mgmt"
+              - fromFieldPath: spec.code
+                toFieldPath: spec.providerConfigRef.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "%s-mgmt"
+          # ===================================================================
           # The platform's own identity. Created here, assumed by pods on
           # the management cluster through Workload Identity, and never
           # held by anyone -- the same property the bootstrap identity

@@ -341,8 +341,31 @@ go-templated access step.
 
 Two `Release` resources of `provider-helm`, composed by
 `XQueenswoodInstallation` and applied from the boot plane: Crossplane
-(with the provider packages, the `DeploymentRuntimeConfig` and the
-`ClusterProviderConfig`) and Argo CD.
+and Argo CD. **The Crossplane half is written.**
+
+This is what keeps the installer at four commands. `gcp-plane-apply`
+applies the composite, so anything the composite composes arrives in
+that one step — where a recipe running `helm upgrade` against the new
+cluster would be a fifth, and an imperative one in the middle of the
+path [ADR-0016](../adr/0016-crossplane-over-terraform.md) exists to
+keep declarative.
+
+The `DeploymentRuntimeConfig` and the `ClusterProviderConfig` do not
+travel with that Release, because a `Release` installs a chart and
+neither is a value of Crossplane's. They arrive the way everything else
+in a cluster running Argo arrives: applied from the repository, as
+[infrastructure](../tdd/infrastructure.md) already has
+`crossplane-configs` do for the current deployment.
+
+**Who owns the Crossplane version.** It is pinned twice — the `xp-mp`
+chart's dependency, which is what Renovate bumps, and the composed
+Release — and `scripts/check-versions.sh` holds the two equal. The
+second pin is why the bump stops being routine: the boot plane runs one
+Crossplane and the management plane runs the other, and step 5 hands a
+live composite from one to the other, so a skew surfaces exactly at the
+handover rather than at an upgrade. Renovate is turned off for it, and
+it moves by hand in one change, alongside the provider and function
+packages a control-plane version has to agree with.
 
 Declared rather than helm-installed by a recipe, because the management
 plane's own existence is part of what the manifest describes — and

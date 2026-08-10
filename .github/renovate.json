@@ -79,6 +79,16 @@
       ]
     },
     {
+      "description": "Crossplane's version is pinned twice -- the xp-mp chart's dependency, and the helm Release the installation composition installs onto the management cluster -- and scripts/check-versions.sh holds the two equal. They also have to agree across the handover, where a composite created by the boot plane's Crossplane is adopted by the management plane's, so a bump is a decision about both planes at once rather than about one file. A control-plane upgrade has to be reconciled against the provider and function packages it runs, which Renovate bumps separately and which do not move in lockstep with it. Bump by hand, both copies in one change.",
+      "matchDatasources": [
+        "helm"
+      ],
+      "enabled": false,
+      "matchPackageNames": [
+        "crossplane"
+      ]
+    },
+    {
       "description": "The Keycloak Operator is expected to run the same version as the Keycloak it manages, and the two are pinned in different files -- the instance in queenswood-keycloak's values.yaml, the operator in the keycloak-operator chart's vendored templates/operator.yaml. Group them so they move in one PR. That PR only rewrites the operator's image tag: the chart is a vendored copy of upstream's kubernetes.yml, so its ClusterRoles and the CRDs under crds/ must be re-vendored from the matching release tag in the same change, and both Chart.yaml appVersions updated.",
       "groupName": "keycloak",
       "matchPackageNames": [
