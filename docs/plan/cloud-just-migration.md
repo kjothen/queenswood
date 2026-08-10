@@ -25,7 +25,7 @@ created. This plan is that, and what follows it.
 ## Picking this up cold
 
 The names, so a session starting fresh does not rediscover them.
-`XXXXXX` stands for a project id's random suffix, and the numeric
+`0x0x0x` stands for a project id's random suffix, and the numeric
 organisation and folder ids are not written down at all. Neither is
 withheld to be difficult: the recipes discover every one of them from
 whoever is logged in locally, so writing them here would add a second
@@ -37,8 +37,8 @@ pretexting a support call would want. `just gcp-preflight` and
 
 - domain `queenswood.io`
 - folder `fldr-qw01`, the installation
-- management project `prj-qw01-c-mgmt-XXXXXX`
-- seed project `prj-b-seed-XXXXXX`, holding `sa-qw01-boot`. Outside the
+- management project `prj-qw01-c-mgmt-0x0x0x`
+- seed project `prj-b-seed-0x0x0x`, holding `sa-qw01-boot`. Outside the
   folder, created by `gcloud` rather than by the composite, and not the
   composite's to adopt
 - kubectl context `qw01-mgmt`, added by `just gcp-mgmt-cluster-ctx`
