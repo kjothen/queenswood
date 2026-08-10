@@ -158,6 +158,24 @@ spec:
                         id you do not own, so an external name set before
                         the project exists makes the first observation
                         fail and creation never follows.
+                    bootstrap:
+                      type: boolean
+                      description: |
+                        Whether this plane may install the management
+                        plane's own Crossplane and Argo, rather than
+                        only watch them.
+
+                        Set by the plane that installs this one, and
+                        absent from the committed manifest, so the
+                        management plane reconciling itself observes
+                        what installed it and never acts on it -- a
+                        composition edit would otherwise have Crossplane
+                        upgrading itself mid-reconcile, and a delete
+                        would need a boot plane raised to recover.
+
+                        The same seam billingAccountId uses: supplied at
+                        creation by whoever is creating, and left out of
+                        the record afterwards.
                     displayName:
                       type: string
                       description: |

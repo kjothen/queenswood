@@ -644,8 +644,8 @@ gcp-plane-up:
     # this config until a Release names it, and by then gcp-plane-apply
     # has reconciled the cluster.
     kubectl --context {{ BOOT_CTX }} apply -f - <<YAML
-    apiVersion: helm.crossplane.io/v1beta1
-    kind: ProviderConfig
+    apiVersion: helm.m.crossplane.io/v1beta1
+    kind: ClusterProviderConfig
     metadata:
       name: {{ CODE }}-mgmt
     spec:
@@ -675,7 +675,7 @@ gcp-plane-up:
     echo ">>> plane ready. Next: just gcp-plane-apply <parent> [display-name]"
 
 # Print the installation manifest, resolved, e.g. just gcp-plane-manifest organizations/<org-id>
-gcp-plane-manifest parent name="" folder="" mgmt="" billing="":
+gcp-plane-manifest parent name="" folder="" mgmt="" billing="" bootstrap="":
     #!/usr/bin/env zsh
     set -e
     # stdout carries the manifest and nothing else, so this can be
@@ -726,6 +726,16 @@ gcp-plane-manifest parent name="" folder="" mgmt="" billing="":
     BILLING_LINE=""
     if [[ -n "{{ billing }}" ]]; then
       BILLING_LINE="billingAccountId: \"{{ billing }}\""
+    fi
+
+    # Set by the plane installing the management plane, and by nothing
+    # else. Left out, the composition observes the releases that install
+    # Crossplane and Argo rather than acting on them -- which is what
+    # the committed manifest wants, since the management plane
+    # reconciles itself from it.
+    BOOTSTRAP_LINE=""
+    if [[ -n "{{ bootstrap }}" ]]; then
+      BOOTSTRAP_LINE="bootstrap: true"
     fi
 
     # A project id is consumed permanently and cannot be undeleted into
@@ -799,6 +809,7 @@ gcp-plane-manifest parent name="" folder="" mgmt="" billing="":
       management:
         projectId: "$MGMT"
         $MGMT_ADOPT
+        $BOOTSTRAP_LINE
       createFolder:
         parent: "{{ parent }}"
         displayName: "$NAME"
@@ -821,8 +832,11 @@ gcp-plane-apply parent name="" folder="" mgmt="" billing="":
     # Built once and applied, rather than templated here a second time:
     # the manifest recipe mints the management project id when one is
     # not passed, so generating it twice would produce two.
+    #
+    # This recipe is the boot plane, and the boot plane is the only
+    # thing that may install the management plane onto its own cluster.
     MANIFEST=$(just gcp-plane-manifest '{{ parent }}' '{{ name }}' \
-                 '{{ folder }}' '{{ mgmt }}' "$BILLING")
+                 '{{ folder }}' '{{ mgmt }}' "$BILLING" true)
 
     printf '%s\n' "$MANIFEST" \
       | kubectl --context {{ BOOT_CTX }} apply -f -
