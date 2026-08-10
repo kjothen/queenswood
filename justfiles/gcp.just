@@ -930,6 +930,20 @@ gcp-platform-status:
       echo "  not readable by this account"
     fi
 
+    # Direct bindings only, so the folder roles above are not repeated
+    # here despite inheriting into this project.
+    echo "management project roles:"
+    if [[ -z "$PROJECT" ]]; then
+      echo "  no management project"
+    elif OUT=$(gcloud projects get-iam-policy "$PROJECT" \
+                 --flatten='bindings[].members' \
+                 --filter="bindings.members:serviceAccount:$SA" \
+                 --format='value(bindings.role)' 2>/dev/null); then
+      printf '%s\n' "${OUT:-  none}" | sed 's/^/  /'
+    else
+      echo "  not readable by this account"
+    fi
+
 # Add a kubectl context for the management cluster, named MGMT_CTX.
 gcp-mgmt-cluster-ctx project="":
     #!/usr/bin/env zsh
