@@ -24,6 +24,15 @@ created. This plan is that, and what follows it.
 
 ## Picking this up cold
 
+**Where the work is: step 2 of [The pivot](#the-pivot)** — the folder
+and management-project bindings for `sa-qw01-platform`, which holds
+nothing inside the folder. Billing is done. Read that step, then verify
+against the live account rather than against this line, because a
+sentence naming a step is the first thing here to go stale.
+
+Read "How the machinery fits together" below before touching the
+composition. It is the hour that does not need spending twice.
+
 The names, so a session starting fresh does not rediscover them.
 `xxxxxx` stands for a project id's random suffix, and the numeric
 organisation and folder ids are not written down at all. Neither is
