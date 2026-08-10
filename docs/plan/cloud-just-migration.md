@@ -414,11 +414,22 @@ carries it:
   in step 5, so this plane knows the shape of an installation and holds
   none.
 
-Waves order it: configurations at 0, packages at 1, the API at 2. A
-provider Deployment takes whatever service account exists when it
-starts, so the runtime config cannot arrive after the package that
-uses it — which is the reverse of the order the previous generation's
-bootstrap chart used.
+Waves order it, and the order is not the obvious one. The runtime
+config goes first, because a provider Deployment takes whatever service
+account exists when it starts — but the *provider* configurations have
+to go after the packages, because they are custom resources of the
+kinds those packages install. Put them first and Argo rejects the whole
+sync with `one or more synchronization tasks are not valid`, which is
+what it says when a kind is unknown to the cluster. So: runtime config
+0, packages 1, provider configurations 2, the API 3.
+
+Two further things that ordering alone does not fix. Argo validates
+every task before applying any, so a resource whose CRD arrives in an
+earlier wave still fails unless it carries
+`SkipDryRunOnMissingResource=true`. And a Crossplane package install is
+asynchronous — Argo reports the `Provider` applied long before its CRDs
+are registered — so the Application needs a retry that outlasts an
+image pull rather than the default handful of attempts.
 
 **Nothing applies that chart by hand.** The root `Application` is
 carried in the Argo release's own `values.extraObjects`, and the
