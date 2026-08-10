@@ -671,6 +671,46 @@ spec:
                     repository: https://argoproj.github.io/argo-helm
                     name: argo-cd
                     version: "10.2.1"
+                  # What tells Argo where git is, carried by the
+                  # release that installs Argo so that bringing up a
+                  # management plane stays one act. The public
+                  # repository: nothing here needs a credential.
+                  values:
+                    extraObjects:
+                      - apiVersion: argoproj.io/v1alpha1
+                        kind: Application
+                        metadata:
+                          name: management-plane
+                          namespace: argocd
+                          finalizers:
+                            - resources-finalizer.argocd.argoproj.io
+                        spec:
+                          project: default
+                          source:
+                            # Both patched from the composite. The
+                            # literals are what an unpatched render
+                            # shows and never reach a cluster.
+                            repoURL: ""
+                            targetRevision: ""
+                            path: infra/helm/management-plane
+                            helm:
+                              # valuesObject rather than parameters, so
+                              # the patches below address named keys.
+                              # Both are filled from the composite;
+                              # the values here are what an unpatched
+                              # render would show, and never reach a
+                              # cluster.
+                              valuesObject:
+                                code: ""
+                                managementProjectId: ""
+                                repoURL: ""
+                                targetRevision: ""
+                          destination:
+                            server: https://kubernetes.default.svc
+                          syncPolicy:
+                            automated:
+                              prune: true
+                              selfHeal: true
             patches:
               - fromFieldPath: spec.code
                 toFieldPath: metadata.name
@@ -679,6 +719,24 @@ spec:
                     string:
                       type: Format
                       fmt: "argocd-%s-c-mgmt"
+              # One index, because extraObjects is a list and this is
+              # its only member. Everything past it is a named key.
+              - fromFieldPath: spec.code
+                toFieldPath: spec.forProvider.values.extraObjects[0].spec.source.helm.valuesObject.code
+              - fromFieldPath: spec.management.projectId
+                toFieldPath: spec.forProvider.values.extraObjects[0].spec.source.helm.valuesObject.managementProjectId
+              # Twice each: the root Application reads its own source,
+              # and the chart's child Applications read the values it
+              # passes them. One installation, one answer to where its
+              # configuration comes from.
+              - fromFieldPath: spec.management.source.repoURL
+                toFieldPath: spec.forProvider.values.extraObjects[0].spec.source.repoURL
+              - fromFieldPath: spec.management.source.repoURL
+                toFieldPath: spec.forProvider.values.extraObjects[0].spec.source.helm.valuesObject.repoURL
+              - fromFieldPath: spec.management.source.targetRevision
+                toFieldPath: spec.forProvider.values.extraObjects[0].spec.source.targetRevision
+              - fromFieldPath: spec.management.source.targetRevision
+                toFieldPath: spec.forProvider.values.extraObjects[0].spec.source.helm.valuesObject.targetRevision
               - *plane-release-policies
               - *plane-release-config
           # ===================================================================

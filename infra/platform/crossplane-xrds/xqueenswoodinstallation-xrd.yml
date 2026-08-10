@@ -158,6 +158,35 @@ spec:
                         id you do not own, so an external name set before
                         the project exists makes the first observation
                         fail and creation never follows.
+                    source:
+                      type: object
+                      default:
+                        repoURL: https://github.com/repldriven/queenswood
+                        targetRevision: main
+                      description: |
+                        Where the management plane reconciles its own
+                        configuration from -- the provider packages, the
+                        installation API, and the runtime and provider
+                        configurations underneath them.
+
+                        Defaulted to this project, and meant to be set
+                        by anyone running a fork. The composition
+                        travels with the fork, so a hard-coded URL here
+                        would have a forked installation build its
+                        cluster and then reconcile upstream's manifests
+                        onto it. Pinning targetRevision to a tag is the
+                        other reason: main is a moving target for a
+                        plane that is meant to be durable.
+
+                        Not the manifest naming an installation, which
+                        is private and arrives separately.
+                      properties:
+                        repoURL:
+                          type: string
+                          default: https://github.com/repldriven/queenswood
+                        targetRevision:
+                          type: string
+                          default: main
                     bootstrap:
                       type: boolean
                       description: |

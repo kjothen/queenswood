@@ -1,0 +1,20 @@
+# The installation's four-character code. Every name derived from it
+# has to spell what the composition spelled -- the platform identity's
+# address in particular, which Workload Identity matches literally.
+code: ""
+
+# The management project. Both the identity's address and the GCP
+# provider configuration's projectID come from it.
+managementProjectId: ""
+
+# Where the child Applications read from. Set from the installation's
+# management.source, the same value the root Application carrying this
+# chart was given, so a fork reconciles itself rather than upstream.
+repoURL: https://github.com/repldriven/queenswood
+targetRevision: main
+
+# The Kubernetes service account Crossplane's GCP providers run as.
+# Workload Identity binds to this name, so it cannot be the generated
+# one -- and the XRD's management.providerServiceAccount already
+# assumes it.
+providerServiceAccount: crossplane-provider-gcp

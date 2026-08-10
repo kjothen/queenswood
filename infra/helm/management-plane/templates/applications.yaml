@@ -1,0 +1,65 @@
+{{- /*
+  The kinds this plane reconciles with. Wave 1: after the runtime and
+  provider configurations, before the API that uses them.
+*/}}
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: crossplane-providers
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+    description: Crossplane provider and function packages
+spec:
+  project: default
+  source:
+    repoURL: {{ .Values.repoURL | quote }}
+    targetRevision: {{ .Values.targetRevision | quote }}
+    path: infra/platform/crossplane-providers
+  destination:
+    server: https://kubernetes.default.svc
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      limit: 5
+      backoff:
+        duration: 15s
+        factor: 2
+        maxDuration: 5m
+---
+{{- /*
+  The installation API, and deliberately not any installation: the
+  manifest naming one lives in a private repository and arrives
+  separately.
+
+  Wave 2: a Composition composing kinds no package has installed yet
+  cannot be validated.
+*/}}
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: crossplane-xrds
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+    description: Installation XRD and Composition
+spec:
+  project: default
+  source:
+    repoURL: {{ .Values.repoURL | quote }}
+    targetRevision: {{ .Values.targetRevision | quote }}
+    path: infra/platform/crossplane-xrds
+  destination:
+    server: https://kubernetes.default.svc
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      limit: 5
+      backoff:
+        duration: 15s
+        factor: 2
+        maxDuration: 5m

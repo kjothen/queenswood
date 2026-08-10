@@ -21,6 +21,13 @@ CODE := "qw01"
 # from the root Justfile.
 REGION_CODE := "euw2"
 
+# Where a management plane reconciles its own configuration from: the
+# provider packages, the installation API, and the configurations under
+# them. A fork sets these; `just --set SOURCE_REVISION <branch> ...`
+# overrides one for a single run.
+SOURCE_REPO := "https://github.com/repldriven/queenswood"
+SOURCE_REVISION := "main"
+
 # Where the installation manifests are checked out. A separate, private
 # repository holding data and nothing executable: this one is public,
 # and a manifest is identifiers. See docs/plan/cloud-just-migration.md.
@@ -810,6 +817,9 @@ gcp-plane-manifest parent name="" folder="" mgmt="" billing="" bootstrap="":
         projectId: "$MGMT"
         $MGMT_ADOPT
         $BOOTSTRAP_LINE
+        source:
+          repoURL: "{{ SOURCE_REPO }}"
+          targetRevision: "{{ SOURCE_REVISION }}"
       createFolder:
         parent: "{{ parent }}"
         displayName: "$NAME"

@@ -1,0 +1,32 @@
+{{- /*
+  InjectedIdentity: the provider uses the identity its pod already has,
+  so no key and no ADC exist on this cluster. The boot plane runs
+  outside any workload identity pool, which is why its equivalent is a
+  secret.
+*/}}
+apiVersion: gcp.m.upbound.io/v1beta1
+kind: ClusterProviderConfig
+metadata:
+  name: default
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  projectID: {{ .Values.managementProjectId | quote }}
+  credentials:
+    source: InjectedIdentity
+---
+{{- /*
+  Same name as the boot plane's, deliberately different content: the
+  composed Releases name it by value, so it is <code>-mgmt on whichever
+  plane reconciles them. The boot plane reaches this cluster across a
+  network and needs a kubeconfig; this one is already inside it.
+*/}}
+apiVersion: helm.m.crossplane.io/v1beta1
+kind: ClusterProviderConfig
+metadata:
+  name: {{ .Values.code }}-mgmt
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  credentials:
+    source: InjectedIdentity

@@ -1,9 +1,14 @@
+# runtimeConfigRef names a DeploymentRuntimeConfig created by the
+# management-plane chart, so the GCP providers share a fixed service
+# account rather than a generated one.
 apiVersion: pkg.crossplane.io/v1
 kind: Provider
 metadata:
   name: provider-gcp-container
 spec:
   package: xpkg.upbound.io/upbound/provider-gcp-container:v2.5.1
+  runtimeConfigRef:
+    name: crossplane-provider-gcp
 ---
 apiVersion: pkg.crossplane.io/v1
 kind: Provider
@@ -11,6 +16,8 @@ metadata:
   name: provider-gcp-compute
 spec:
   package: xpkg.upbound.io/upbound/provider-gcp-compute:v2.5.1
+  runtimeConfigRef:
+    name: crossplane-provider-gcp
 ---
 apiVersion: pkg.crossplane.io/v1
 kind: Provider
@@ -18,6 +25,8 @@ metadata:
   name: provider-gcp-cloudplatform
 spec:
   package: xpkg.upbound.io/upbound/provider-gcp-cloudplatform:v2.5.1
+  runtimeConfigRef:
+    name: crossplane-provider-gcp
 ---
 apiVersion: pkg.crossplane.io/v1
 kind: Provider
@@ -25,6 +34,8 @@ metadata:
   name: provider-gcp-dns
 spec:
   package: xpkg.upbound.io/upbound/provider-gcp-dns:v2.5.1
+  runtimeConfigRef:
+    name: crossplane-provider-gcp
 ---
 apiVersion: pkg.crossplane.io/v1
 kind: Provider
@@ -32,6 +43,8 @@ metadata:
   name: provider-gcp-sql
 spec:
   package: xpkg.upbound.io/upbound/provider-gcp-sql:v2.5.1
+  runtimeConfigRef:
+    name: crossplane-provider-gcp
 ---
 apiVersion: pkg.crossplane.io/v1
 kind: Provider
@@ -39,27 +52,26 @@ metadata:
   name: provider-gcp-certificatemanager
 spec:
   package: xpkg.upbound.io/upbound/provider-gcp-certificatemanager:v2.5.1
+  runtimeConfigRef:
+    name: crossplane-provider-gcp
 ---
-# Bucket and BucketIAMMember, for the durable tier. No HMACKey: the
-# backup agents reach the bucket through an S3-to-GCS proxy that
-# authenticates by Workload Identity, so no key is minted. See
-# docs/plan/cloud-just-migration.md.
 apiVersion: pkg.crossplane.io/v1
 kind: Provider
 metadata:
   name: provider-gcp-storage
 spec:
   package: xpkg.upbound.io/upbound/provider-gcp-storage:v2.5.1
+  runtimeConfigRef:
+    name: crossplane-provider-gcp
 ---
-# Secret and SecretVersion, for the credentials an instance brings --
-# database passwords and the FDB backup encryption key -- which live in
-# the management project and outlive every cluster.
 apiVersion: pkg.crossplane.io/v1
 kind: Provider
 metadata:
   name: provider-gcp-secretmanager
 spec:
   package: xpkg.upbound.io/upbound/provider-gcp-secretmanager:v2.5.1
+  runtimeConfigRef:
+    name: crossplane-provider-gcp
 ---
 apiVersion: pkg.crossplane.io/v1
 kind: Provider
