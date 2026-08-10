@@ -1,0 +1,23 @@
+{{- /*
+  The Kubernetes half of Workload Identity. The GCP half --
+  roles/iam.workloadIdentityUser on the platform identity -- is bound by
+  the installation composition, which names this service account
+  literally, so it cannot be the generated one.
+
+  Wave 0: a provider Deployment takes whatever service account exists
+  when it starts.
+*/}}
+apiVersion: pkg.crossplane.io/v1beta1
+kind: DeploymentRuntimeConfig
+metadata:
+  name: {{ .Values.providerServiceAccount | quote }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  serviceAccountTemplate:
+    metadata:
+      name: {{ .Values.providerServiceAccount | quote }}
+      annotations:
+        # Without this a token minted for this account is
+        # exchangeable for nothing.
+        iam.gke.io/gcp-service-account: sa-{{ .Values.code }}-platform@{{ .Values.managementProjectId }}.iam.gserviceaccount.com

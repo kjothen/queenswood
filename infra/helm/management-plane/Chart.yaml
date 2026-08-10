@@ -1,0 +1,17 @@
+apiVersion: v2
+name: management-plane
+description: |
+  What a management plane needs before it can reconcile anything: the
+  runtime configuration that puts Crossplane's GCP providers on the
+  service account Workload Identity binds, the provider configurations
+  they authenticate with, and the Argo Applications that bring the
+  provider packages and the installation API itself.
+
+  Applied by the Argo installed onto the management cluster, from the
+  root Application that Argo's own Release carries. Holds nothing
+  installation-specific: the code and the management project arrive as
+  values, so a second installation runs the same chart.
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+kubeVersion: ">=1.27.0-0"

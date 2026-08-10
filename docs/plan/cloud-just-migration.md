@@ -379,17 +379,65 @@ plane's own existence is part of what the manifest describes — and
 because a rebuild then means applying the manifest rather than
 remembering a sequence.
 
-Two things the management cluster needs that the kind cluster did not:
+What the management cluster needs beyond those two releases does not
+travel in a release, because a `Release` installs a chart. It arrives
+the way everything in a cluster running Argo arrives — from a
+repository — and `infra/helm/management-plane/` is the chart that
+carries it:
 
 - A `DeploymentRuntimeConfig` pinning the GCP providers' Kubernetes
   service account to `crossplane-provider-gcp`. The XRD's
   `management.providerServiceAccount` field already assumes this and the
   Workload Identity binding already spells it, but nothing creates it.
   Left to Crossplane the name is generated, and the binding matches
-  nothing.
-- A `ClusterProviderConfig` with `credentials.source: InjectedIdentity`
-  rather than a secret. No key, and no ADC — which is the whole point of
-  the platform identity existing.
+  nothing. Each GCP provider names it through `runtimeConfigRef`.
+- **The annotation that binding is useless without.** Workload Identity
+  is two halves, and only one of them was ever written down here:
+  `roles/iam.workloadIdentityUser` on the GCP side, from step 2, and
+  `iam.gke.io/gcp-service-account` on the Kubernetes service account.
+  Without the second, a token minted for that account is exchangeable
+  for nothing. It goes on the runtime config's
+  `serviceAccountTemplate`.
+- A GCP `ClusterProviderConfig` with `credentials.source:
+  InjectedIdentity` rather than a secret. No key, and no ADC — which is
+  the whole point of the platform identity existing.
+- A helm `ClusterProviderConfig`, so this plane can observe the two
+  releases it inherits. It has the same name as the boot plane's,
+  because the composed releases name it by value, and deliberately not
+  the same content: the boot plane reaches this cluster across a
+  network with a kubeconfig and an impersonated identity, and this one
+  is already inside it.
+- Argo `Application`s for the provider packages and for the XRD and
+  Composition. That is what gives the plane the kinds it reconciles
+  with and the API it reconciles — and nothing else. The manifest
+  naming an actual installation is in a private repository and arrives
+  in step 5, so this plane knows the shape of an installation and holds
+  none.
+
+Waves order it: configurations at 0, packages at 1, the API at 2. A
+provider Deployment takes whatever service account exists when it
+starts, so the runtime config cannot arrive after the package that
+uses it — which is the reverse of the order the previous generation's
+bootstrap chart used.
+
+**Nothing applies that chart by hand.** The root `Application` is
+carried in the Argo release's own `values.extraObjects`, and the
+composition patches the installation's code and management project into
+it. So a management plane is still one act rather than a sequence, and
+the only repository involved is the public one — nothing here needs a
+credential.
+
+**Which repository is a manifest value, not a constant.**
+`management.source` carries the URL and the revision, defaulted to this
+project. A hard-coded URL would be a defect rather than an
+inconvenience for anyone running a fork: the composition travels with
+the fork, so their boot plane would build their cluster and then point
+Argo at *upstream's* manifests, and every change they had made would be
+invisible on it. The revision matters for a different reason — `main`
+is a moving target for a plane meant to be durable, and a tag is not
+expressible without this. Both are patched twice, into the root
+Application's own source and into the values it hands the chart, so an
+installation has one answer rather than two.
 
 **The self-management loop, and its answer.** Once the management plane
 adopts the composite it owns the Release that installs it. A composition
