@@ -25,7 +25,7 @@ created. This plan is that, and what follows it.
 ## Picking this up cold
 
 The names, so a session starting fresh does not rediscover them.
-`XXXXXX` stands for a project id's random suffix, and the numeric
+`xxxxxx` stands for a project id's random suffix, and the numeric
 organisation and folder ids are not written down at all. Neither is
 withheld to be difficult: the recipes discover every one of them from
 whoever is logged in locally, so writing them here would add a second
@@ -37,8 +37,8 @@ pretexting a support call would want. `just gcp-preflight` and
 
 - domain `queenswood.io`
 - folder `fldr-qw01`, the installation
-- management project `prj-qw01-c-mgmt-XXXXXX`
-- seed project `prj-b-seed-XXXXXX`, holding `sa-qw01-boot`. Outside the
+- management project `prj-qw01-c-mgmt-xxxxxx`
+- seed project `prj-b-seed-xxxxxx`, holding `sa-qw01-boot`. Outside the
   folder, created by `gcloud` rather than by the composite, and not the
   composite's to adopt
 - kubectl context `qw01-mgmt`, added by `just gcp-mgmt-cluster-ctx`
@@ -54,8 +54,10 @@ The files this plan acts on:
 
 To re-read the live state rather than trusting this document:
 `just gcp-preflight`, `just gcp-boot-status`, `just gcp-platform-status`,
-`just gcp-access-status`, `kubectl --context qw01-mgmt get crd`, and
-`gcloud resource-manager folders get-iam-policy <folder-id>`.
+`kubectl --context qw01-mgmt get crd`, and
+`gcloud resource-manager folders get-iam-policy <folder-id>`. Who is in
+which access group is read in the Admin console, not here — see
+[cloud-account](../recipes/cloud-account.md).
 
 To get back to a working control plane from nothing, join
 `grp-gcp-qw01-platform-admin` and:
@@ -142,11 +144,12 @@ so the composite exists nowhere. The GCP resources survived because
 deleting a cluster deletes nothing in GCP — the controllers simply
 stopped.
 
-**Nothing records it either.** The composite exists only as that
-heredoc, assembled from `gcp-plane-apply`'s arguments. The recipe prints
-the three values needed to reproduce it and asks for them to be
-committed, and nothing does — so the record of what exists is a terminal
-scrollback.
+**It is recorded, and nothing reads the record.** The private
+`installations` repository exists, with `qw01/installation.yaml` on main
+and a README stating the repository's rules. So what git says and what
+GCP holds agree, and the installation is reproducible from the file
+rather than from somebody's scrollback. Argo is not pointed at it yet —
+that waits on the management cluster having Argo at all, which is step 5.
 
 **The management cluster is stock.** `kubectl get crd` returns GKE's own
 CRDs and nothing else. No `crossplane-system` namespace, no Argo, no
@@ -292,13 +295,19 @@ becomes a deliberate act from the boot plane. That is
 [ADR-0022](../adr/0022-cloud-foundation-and-environment-lifecycle.md)'s
 "foundations are observed" applied one level up.
 
-### 4. The manifest in git
+### 4. The manifest in git — done
 
-One file per installation, carrying its own `createFolder.folderId` and
-`management.adopt`, in a directory Argo is pointed at. `gcp-plane-apply`
-stops assembling a composite from five arguments and instead applies
-that file — the same manifest the boot plane and Argo both consume, so
-the two appliers never disagree about what the installation is.
+The private `installations` repository holds
+`qw01/installation.yaml`, rendered by `gcp-plane-manifest` and carrying
+its own `createFolder.folderId` and `management.adopt`. What remains of
+this step is one change here: `gcp-plane-apply` should apply that file
+rather than assemble a composite from five arguments, so the boot plane
+and Argo consume the same document and cannot disagree about what the
+installation is.
+
+Branch protection requiring review is the control that repository has,
+deliberately, since it carries nothing executable — a direct push to its
+main changes infrastructure with nothing in the way.
 
 Note that the three values `gcp-plane-apply` prints are not the whole
 set that has to be frozen. The rest — the code, the domain the group

@@ -38,12 +38,25 @@ It ships as a Crossplane Configuration package, not a Helm chart.
 apiVersion: platform.queenswood.repldriven.com/v1alpha1
 kind: XQueenswoodInstallation
 metadata:
-  name: queenswood
+  name: qw01
   namespace: crossplane-system
 spec:
-  folderId: folders/<folder-id>
-  billingAccountId: 0X0X0X-0X0X0X-0X0X0X
+  code: "qw01"
   region: europe-west2
+  regionCode: euw2
+  zone: europe-west2-a
+  access:
+    platformViewer: ["group:grp-gcp-qw01-platform-viewer@example.com"]
+    platformAdmin: ["group:grp-gcp-qw01-platform-admin@example.com"]
+    clusterAdmin: ["group:grp-gcp-qw01-cluster-admin@example.com"]
+    secretsAdmin: ["group:grp-gcp-qw01-secrets-admin@example.com"]
+  management:
+    projectId: prj-qw01-c-mgmt-xxxxxx
+  createFolder:
+    parent: organizations/<org-id>
+    displayName: fldr-qw01
+  # Not built. Instances are where this goes -- see "Where this
+  # stands" -- and the fields below describe that rather than report it.
   instances:
     - name: test
       state: up
@@ -52,6 +65,12 @@ spec:
       domain: queenswood.example
       automatedDatabaseBackups: true
 ```
+
+Render one rather than writing it: `just gcp-plane-manifest` fills in
+what it can discover and prints the rest, and the file it produces is
+the installation's whole record. No billing account appears in it — the
+identity must hold `billing.user` on one before it can link a project,
+so that binding already settles which account is used.
 
 ```mermaid
 flowchart TD
@@ -134,8 +153,9 @@ No Google Cloud at all yet: start with
    kind cluster running Crossplane and the GCP provider, authenticating
    from ADC that impersonates the bootstrap identity. No key exists, and
    `just gcp-adc-revoke` ends it.
-5. Apply the manifest with `spec.createFolder` in place of
-   `spec.folderId`.
+5. Apply the manifest with `spec.createFolder.parent` naming where the
+   folder goes, and no `folderId` — that field adopts, and there is
+   nothing yet to adopt.
 6. Read the folder id, management project and platform identity from
    `status`.
 7. `just gcp-plane-pivot` — move the manifest onto the management cluster
@@ -164,10 +184,16 @@ Ask for:
   Workload Identity Federation binding from that identity to your
   repository.
 
-Then commit the manifest with `spec.folderId` set, and whoever holds the
-control plane applies it. There is no pivot: it already lives somewhere
-permanent. Break-glass is their organisation admin, so repair is a
-request rather than a command.
+Then commit the manifest with `spec.createFolder.folderId` set to the
+folder you were given, and whoever holds the control plane applies it.
+There is no pivot: it already lives somewhere permanent. Break-glass is
+their organisation admin, so repair is a request rather than a command.
+
+`spec.createFolder.parent` is required even on this path, where nothing
+is being created. Read it off the folder — `gcloud resource-manager
+folders describe` reports it — rather than asking for it. The field
+being mandatory here is a wart of the schema rather than a permission
+you need.
 
 ## Both paths
 
@@ -252,7 +278,9 @@ generations.
 - [infrastructure](../tdd/infrastructure.md) — the bootstrap chain, sync
   waves and existing compositions.
 - `justfiles/gcp.just` — `gcp-preflight`, `gcp-groups-bind`,
-  `gcp-access-*`, `gcp-bootstrap-*`, `gcp-adc-*`, `gcp-plane-up` /
-  `-apply` / `-status` / `-down`. `gcp-plane-pivot` is not written yet.
+  `gcp-boot-*`, `gcp-platform-*`, `gcp-adc-*`, `gcp-plane-up` /
+  `-manifest` / `-apply` / `-status` / `-down`. `gcp-plane-pivot` is
+  not written yet. Group membership is not among them: it is Admin
+  console work, for the reason the directory work above is.
 - `infra/platform/crossplane-xrds/xqueenswoodinstallation-*.yml` — the
   XRD and Composition. Folder only, so far.

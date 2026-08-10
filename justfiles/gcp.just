@@ -475,45 +475,6 @@ gcp-groups-bind org="":
     echo ">>>   gcloud billing accounts add-iam-policy-binding <account-id> \\"
     echo ">>>     --member=group:{{ BILLING_ADMIN_GROUP }}@${DOMAIN} --role=roles/billing.admin"
 
-# Add a member to an access group (needs an active project you can use).
-gcp-access-grant group member:
-    #!/usr/bin/env zsh
-    set -e
-    DOMAIN=$(just _gcp-domain)
-    gcloud identity groups memberships add \
-      --group-email="{{ group }}@${DOMAIN}" --member-email="{{ member }}"
-
-# Remove a member from an access group (needs an active project you can use).
-gcp-access-revoke group member:
-    #!/usr/bin/env zsh
-    set -e
-    DOMAIN=$(just _gcp-domain)
-    gcloud identity groups memberships delete \
-      --group-email="{{ group }}@${DOMAIN}" --member-email="{{ member }}"
-
-# List who is in each access group.
-gcp-access-status org="":
-    #!/usr/bin/env zsh
-    set -e
-    DOMAIN=$(just _gcp-domain "{{ org }}")
-    for NAME in {{ ORG_ADMIN_GROUP }} {{ FOLDER_ADMIN_GROUP }} \
-                {{ BILLING_ADMIN_GROUP }} {{ SECURITY_REVIEWER_GROUP }} \
-                {{ PLATFORM_VIEWER_GROUP }} {{ PLATFORM_ADMIN_GROUP }} \
-                {{ CLUSTER_ADMIN_GROUP }} {{ SECRETS_ADMIN_GROUP }} ; do
-      EMAIL="${NAME}@${DOMAIN}"
-      echo "$EMAIL"
-      if OUT=$(gcloud identity groups memberships list \
-                 --group-email="$EMAIL" \
-                 --format='value(preferredMemberKey.id)' 2>/dev/null); then
-        printf '%s\n' "${OUT:-  (empty)}" | sed 's/^/  /'
-      else
-        # Restricted groups show their members only to members, so this
-        # is the expected reading for a group you are rightly not in.
-        # Auditing them is a super admin's job, in the Admin console.
-        echo "  not readable, so you are not in it"
-      fi
-    done
-
 # =========================================================================
 # Acting as the bootstrap identity
 #
@@ -754,7 +715,17 @@ gcp-plane-manifest parent name="" folder="" mgmt="" billing="":
       esac
     fi
 
-    DOMAIN=$(just _gcp-domain)
+    # Resolved from the parent where that names an organisation, rather
+    # than rediscovered. An argument the caller supplied and the recipe
+    # then ignores is a run that fails on a question already answered --
+    # and discovery fails outright where more than one organisation is
+    # visible, or where a token has expired.
+    PARENT="{{ parent }}"
+    ORG_ARG=""
+    if [[ "$PARENT" == organizations/* ]]; then
+      ORG_ARG="${PARENT#organizations/}"
+    fi
+    DOMAIN=$(just _gcp-domain "$ORG_ARG")
 
     FOLDER="{{ folder }}"
     if [[ -n "$FOLDER" && "$FOLDER" != folders/* ]]; then

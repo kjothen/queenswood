@@ -7,12 +7,14 @@
 # sound like they already have access, and a document explaining how
 # things are named needs names rather than account numbers.
 #
-# Resource *names* are fine and wanted -- prj-qw01-c-mgmt-e32b34 says
-# something. Numeric account identifiers say nothing and cost something.
+# Resource *name shapes* are fine and wanted -- prj-qw01-c-mgmt-xxxxxx
+# says something about how things are named. The random suffix on a
+# realised one says nothing and identifies a project, so it is masked
+# like the rest.
 #
-# Write a placeholder instead: folders/<folder-id>, organizations/<org-id>.
-# Where a real one genuinely belongs, put `cloud-id-ok` in a comment on
-# the same line.
+# Write a placeholder instead: folders/<folder-id>, organizations/<org-id>,
+# and xxxxxx for a project id's suffix. Where a real one genuinely
+# belongs, put `cloud-id-ok` in a comment on the same line.
 #
 #   bash check-cloud-ids.sh           # every tracked file
 #   bash check-cloud-ids.sh --staged  # only staged changes (pre-commit)
@@ -57,6 +59,23 @@ hits=$(printf '%s\n' "$files" | xargs grep -nHE \
   '(organizations|folders|projects)/[0-9]{6,}' 2>/dev/null \
   | grep -v 'cloud-id-ok' || true)
 [ -n "$hits" ] && report "organization, folder or project number" "$hits"
+
+# A project id's random suffix: six hex characters closing a name. The
+# checks above cannot see one -- it is neither a digit run nor prefixed
+# by projects/ -- which is how a live management project id sat in this
+# file's own header, and an older one in a chart's values.
+#
+# The leading [0-9a-z] is what makes this safe repo-wide. A suffix always
+# follows a name character, where a negative minor-unit amount follows
+# whitespace or a delimiter, so `-100000` in a balance fixture cannot
+# match and no tree has to be excluded. Naming schemes are not assumed
+# either: this predates prj- and would have caught it.
+#
+# The mask cannot match, x not being a hex digit.
+hits=$(printf '%s\n' "$files" | xargs grep -nHE \
+  '[0-9a-z]-[0-9a-f]{6}([^0-9a-z-]|$)' 2>/dev/null \
+  | grep -v 'cloud-id-ok' || true)
+[ -n "$hits" ] && report "project id suffix" "$hits"
 
 # Bare digit runs, in the trees that describe infrastructure. Not
 # repo-wide: a minor-unit money amount in a UI fixture is the same shape

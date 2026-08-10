@@ -102,8 +102,10 @@ queenswoodKeycloak:
   # asking whoever rotated it to remember both.
   dbPassword: ""
   proxy:
-    connectionName: queenswood-820d84:europe-west2:queenswood-keycloak
-    gcpServiceAccount: keycloak-sql-proxy@queenswood-820d84.iam.gserviceaccount.com
+    # Pinned by gcp-cloudsql-wire from the DatabaseInstance's status.
+    # The committed project id is a placeholder.
+    connectionName: queenswood-xxxxxx:europe-west2:queenswood-keycloak
+    gcpServiceAccount: keycloak-sql-proxy@queenswood-xxxxxx.iam.gserviceaccount.com
   # Server-side Keycloak config consumed by the queenswood chart's
   # bank-api + bootstrap. baseUrl is derived from env.domain in the
   # Release template (https://keycloak.<env-domain>) -- the EXTERNAL

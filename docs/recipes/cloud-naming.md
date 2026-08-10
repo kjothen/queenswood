@@ -113,13 +113,13 @@ would want.
 
 Outside the folder, one per organisation:
 
-- seed project — `prj-b-seed-2033cc`
-- boot identity — `sa-qw01-boot@prj-b-seed-2033cc.iam.gserviceaccount.com`
+- seed project — `prj-b-seed-xxxxxx`
+- boot identity — `sa-qw01-boot@prj-b-seed-xxxxxx.iam.gserviceaccount.com`
 
 The installation itself:
 
 - folder — `fldr-qw01`
-- management project — `prj-qw01-c-mgmt-e32b34`
+- management project — `prj-qw01-c-mgmt-xxxxxx`
 - APIs — `svc-qw01-c-iam`, `svc-qw01-c-iamcredentials`,
   `svc-qw01-c-serviceusage`, `svc-qw01-c-resourcemanager`,
   `svc-qw01-c-compute`, `svc-qw01-c-container`
@@ -128,7 +128,7 @@ The installation itself:
 - cluster — `gke-qw01-c-mgmt`
 - node pool — `np-qw01-c-mgmt`
 - platform identity —
-  `sa-qw01-platform@prj-qw01-c-mgmt-e32b34.iam.gserviceaccount.com`
+  `sa-qw01-platform@prj-qw01-c-mgmt-xxxxxx.iam.gserviceaccount.com`
 
 Its capabilities, in a directory we happen to own:
 

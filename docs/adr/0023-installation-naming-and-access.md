@@ -21,7 +21,7 @@ Two failures show the cost. Rights were withheld from the automation
 that owns the folder in order to make the folder undeletable — which
 fights the very model that makes the folder safe, and failed anyway,
 because GCP grants a folder's creator administrative rights on it. And
-names were chosen per resource, so `queenswood-mgmt-42529f` spends 16 of
+names were chosen per resource, so `queenswood-mgmt-xxxxxx` spends 16 of
 the 30 characters a project id allows before saying anything specific.
 
 The Google Cloud security foundations guide answers both, and its
@@ -63,8 +63,8 @@ Environment codes are the guide's: `b` bootstrap, `c` common, `d` dev,
 `n` nonprod, `p` prod.
 
 - folder — `fldr-qw01`
-- project — `prj-qw01-<env>-<label>-<suffix>`, so `prj-qw01-c-mgmt-42529f`
-  for the management project and `prj-qw01-d-a1b2c3` for a dev instance
+- project — `prj-qw01-<env>-<label>-<suffix>`, so `prj-qw01-c-mgmt-xxxxxx`
+  for the management project and `prj-qw01-d-xxxxxx` for a dev instance
 - VPC — `vpc-qw01-c-mgmt`, subnet — `sb-qw01-c-mgmt-euw2`
 - service account — `sa-qw01-platform`, `sa-qw01-boot`
 - group — `grp-gcp-<label>` at the organisation,
@@ -196,7 +196,7 @@ organisation, who may not be us.
 ## Consequences
 
 **The first installation is rebuilt, and two project ids are
-abandoned.** `queenswood-mgmt-42529f` and `queenswood-bootstrap-defec2`
+abandoned.** `queenswood-mgmt-xxxxxx` and `queenswood-bootstrap-xxxxxx`
 cannot be renamed, and a project id is consumed permanently. Two ids is
 a cheap price for not having to explain which names are legacy.
 
