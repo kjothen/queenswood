@@ -35,7 +35,11 @@ SOURCE_PATH_PREFIX := "."
 # Where the installation manifests are checked out. A separate, private
 # repository holding data and nothing executable: this one is public,
 # and a manifest is identifiers. See docs/plan/cloud-just-migration.md.
-INSTALLATIONS_REPO := "../installations"
+#
+# The default is beside this checkout, which is not where it is from a
+# worktree, so it is overridable from the environment as well as with
+# --set.
+INSTALLATIONS_REPO := env_var_or_default("INSTALLATIONS_REPO", "../installations")
 
 # The management cluster's kubectl context, added by
 # gcp-mgmt-cluster-ctx. Every recipe acting on a cluster names the
