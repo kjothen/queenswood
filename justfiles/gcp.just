@@ -754,7 +754,17 @@ gcp-plane-manifest parent name="" folder="" mgmt="" billing="":
       esac
     fi
 
-    DOMAIN=$(just _gcp-domain)
+    # Resolved from the parent where that names an organisation, rather
+    # than rediscovered. An argument the caller supplied and the recipe
+    # then ignores is a run that fails on a question already answered --
+    # and discovery fails outright where more than one organisation is
+    # visible, or where a token has expired.
+    PARENT="{{ parent }}"
+    ORG_ARG=""
+    if [[ "$PARENT" == organizations/* ]]; then
+      ORG_ARG="${PARENT#organizations/}"
+    fi
+    DOMAIN=$(just _gcp-domain "$ORG_ARG")
 
     FOLDER="{{ folder }}"
     if [[ -n "$FOLDER" && "$FOLDER" != folders/* ]]; then
