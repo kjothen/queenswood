@@ -28,6 +28,10 @@ REGION_CODE := "euw2"
 SOURCE_REPO := "https://github.com/repldriven/queenswood"
 SOURCE_REVISION := "main"
 
+# Where this project sits inside that repository. "." for a fork, which
+# keeps the layout; a directory for a mirror that vendors it.
+SOURCE_PATH_PREFIX := "."
+
 # Where the installation manifests are checked out. A separate, private
 # repository holding data and nothing executable: this one is public,
 # and a manifest is identifiers. See docs/plan/cloud-just-migration.md.
@@ -682,7 +686,7 @@ gcp-plane-up:
     echo ">>> plane ready. Next: just gcp-plane-apply <parent> [display-name]"
 
 # Print the installation manifest, resolved, e.g. just gcp-plane-manifest organizations/<org-id>
-gcp-plane-manifest parent name="" folder="" mgmt="" billing="" bootstrap="":
+gcp-plane-manifest parent name="" folder="" mgmt="" billing="":
     #!/usr/bin/env zsh
     set -e
     # stdout carries the manifest and nothing else, so this can be
@@ -733,16 +737,6 @@ gcp-plane-manifest parent name="" folder="" mgmt="" billing="" bootstrap="":
     BILLING_LINE=""
     if [[ -n "{{ billing }}" ]]; then
       BILLING_LINE="billingAccountId: \"{{ billing }}\""
-    fi
-
-    # Set by the plane installing the management plane, and by nothing
-    # else. Left out, the composition observes the releases that install
-    # Crossplane and Argo rather than acting on them -- which is what
-    # the committed manifest wants, since the management plane
-    # reconciles itself from it.
-    BOOTSTRAP_LINE=""
-    if [[ -n "{{ bootstrap }}" ]]; then
-      BOOTSTRAP_LINE="bootstrap: true"
     fi
 
     # A project id is consumed permanently and cannot be undeleted into
@@ -816,10 +810,10 @@ gcp-plane-manifest parent name="" folder="" mgmt="" billing="" bootstrap="":
       management:
         projectId: "$MGMT"
         $MGMT_ADOPT
-        $BOOTSTRAP_LINE
         source:
           repoURL: "{{ SOURCE_REPO }}"
           targetRevision: "{{ SOURCE_REVISION }}"
+          pathPrefix: "{{ SOURCE_PATH_PREFIX }}"
       createFolder:
         parent: "{{ parent }}"
         displayName: "$NAME"
@@ -827,36 +821,45 @@ gcp-plane-manifest parent name="" folder="" mgmt="" billing="" bootstrap="":
     YAML
 
 # Create or adopt the folder, e.g. just gcp-plane-apply organizations/<org-id>
-gcp-plane-apply parent name="" folder="" mgmt="" billing="":
+gcp-plane-apply billing="":
     #!/usr/bin/env zsh
     set -e
+    # The committed manifest, not a composite assembled here. It carries
+    # the adopt values, so applying it twice adopts rather than building
+    # a second installation -- and it is the same document Argo
+    # reconciles from, so the two planes cannot disagree about what the
+    # installation is.
+    FILE={{ INSTALLATIONS_REPO }}/{{ CODE }}/installation.yml
+    if [[ ! -f "$FILE" ]]; then
+      echo "no manifest at $FILE" >&2
+      echo "a first installation is minted, then committed, then" >&2
+      echo "applied -- the ids it holds are consumed permanently:" >&2
+      echo "  just gcp-plane-manifest organizations/<org-id> > $FILE" >&2
+      exit 1
+    fi
+
     # Supplied here and not in the committed manifest, because creating
     # a project is the one moment it is needed. Discovered from the
     # identity's own binding, so applying does not depend on remembering
-    # it, and the file this repository holds never carries it.
+    # it, and the file never carries it.
     BILLING="{{ billing }}"
     if [[ -z "$BILLING" ]]; then
       BILLING=$(just _gcp-billing-account)
     fi
 
-    # Built once and applied, rather than templated here a second time:
-    # the manifest recipe mints the management project id when one is
-    # not passed, so generating it twice would produce two.
+    # Merged client-side rather than templated into the file: both are
+    # true of this act of creation rather than of the installation, and
+    # the file has to stay the thing Argo reads. --local needs no
+    # cluster and no yq.
     #
-    # This recipe is the boot plane, and the boot plane is the only
-    # thing that may install the management plane onto its own cluster.
-    MANIFEST=$(just gcp-plane-manifest '{{ parent }}' '{{ name }}' \
-                 '{{ folder }}' '{{ mgmt }}' "$BILLING" true)
-
-    printf '%s\n' "$MANIFEST" \
+    # bootstrap because this recipe is the boot plane, and the boot
+    # plane is the only thing that may install the management plane onto
+    # its own cluster.
+    kubectl patch --local -f "$FILE" --type merge -o yaml \
+      -p "{\"spec\":{\"billingAccountId\":\"$BILLING\",\"management\":{\"bootstrap\":true}}}" \
       | kubectl --context {{ BOOT_CTX }} apply -f -
 
-    echo ">>> keep this installation reproducible by committing the"
-    echo ">>> manifest, which is the whole record of what exists:"
-    echo ">>>   just gcp-plane-manifest ... > \\"
-    echo ">>>     {{ INSTALLATIONS_REPO }}/{{ CODE }}/installation.yaml"
-    echo ">>> re-running this without those values mints a second"
-    echo ">>> installation beside the first -- see the adopt fields."
+    echo ">>> applied $FILE"
     echo ">>> waiting for the folder and management project"
     kubectl --context {{ BOOT_CTX }} -n crossplane-system wait \
       --for=condition=ready --timeout=300s \

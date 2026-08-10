@@ -692,7 +692,7 @@ spec:
                             # shows and never reach a cluster.
                             repoURL: ""
                             targetRevision: ""
-                            path: infra/helm/management-plane
+                            path: ""
                             helm:
                               # valuesObject rather than parameters, so
                               # the patches below address named keys.
@@ -705,6 +705,7 @@ spec:
                                 managementProjectId: ""
                                 repoURL: ""
                                 targetRevision: ""
+                                pathPrefix: ""
                           destination:
                             server: https://kubernetes.default.svc
                           syncPolicy:
@@ -764,6 +765,25 @@ spec:
                   fromFieldPath: Required
                 fromFieldPath: spec.management.source.targetRevision
                 toFieldPath: spec.forProvider.values.extraObjects[0].spec.source.helm.valuesObject.targetRevision
+              - policy:
+                  fromFieldPath: Required
+                fromFieldPath: spec.management.source.pathPrefix
+                toFieldPath: spec.forProvider.values.extraObjects[0].spec.source.path
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "%s/infra/helm/management-plane"
+                  # A prefix of "." would otherwise hand Argo
+                  # ./infra/... and leave normalising it to Argo.
+                  - type: string
+                    string:
+                      type: TrimPrefix
+                      trim: "./"
+              - policy:
+                  fromFieldPath: Required
+                fromFieldPath: spec.management.source.pathPrefix
+                toFieldPath: spec.forProvider.values.extraObjects[0].spec.source.helm.valuesObject.pathPrefix
               - *plane-release-policies
               - *plane-release-config
           # ===================================================================
