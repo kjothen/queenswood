@@ -24,12 +24,16 @@ created. This plan is that, and what follows it.
 
 ## Picking this up cold
 
-**Where the work is: step 2 of [The pivot](#the-pivot)** — the folder
-and management-project bindings for `sa-qw01-platform`, declared in the
-composition and not yet applied, so the identity still holds nothing
-inside the folder. Billing is done. Read that step, then verify against
-the live account rather than against this line, because a sentence
-naming a step is the first thing here to go stale.
+**Where the work is: step 5 of [The pivot](#the-pivot)** — moving the
+composite onto the management plane and verifying the adoption resource
+by resource. Steps 1 to 4 are done and applied: the platform identity
+holds its rights, the management cluster runs Crossplane and Argo, and
+Argo reconciles the plane's own configuration from this repository.
+What blocks step 5 is a credential, since the composite lives in a
+private repository and an operator holding `platformViewer` cannot
+apply it by hand. Read that step, then verify against the live account
+rather than against this line, because a sentence naming a step is the
+first thing here to go stale.
 
 Read "How the machinery fits together" below before touching the
 composition. It is the hour that does not need spending twice.
@@ -58,7 +62,10 @@ The files this plan acts on:
 - `infra/platform/crossplane-xrds/xqueenswoodinstallation-xrd.yml` and
   `-composition.yml` — the API and what it builds
 - `infra/platform/crossplane-providers/providers.yml` — the package set
-- `infra/helm/xp-mp/` — Crossplane and Argo, as a chart
+- `infra/helm/xp-mp/` — Crossplane and Argo, as a chart, for the boot
+  plane
+- `infra/helm/management-plane/` — what the management plane reconciles
+  about itself, delivered by Argo
 - `justfiles/gcp.just` — the new recipes
 - `justfiles/cloud.just` — the ones being retired
 
@@ -75,15 +82,26 @@ To get back to a working control plane from nothing, join
 ```
 just gcp-adc-boot                 # interactive, opens a browser
 just gcp-plane-up
-just gcp-plane-apply \
-  organizations/<org-id> fldr-qw01 \
-  folders/<folder-id> <mgmt-project-id>
+just gcp-plane-apply
 ```
 
-The last two arguments are the adopt values, and they are what make
-that an adoption rather than a second installation. Then
+`gcp-plane-apply` takes no arguments because the committed manifest
+holds them: the folder and project it adopts, the parent, the code,
+the access mapping. Adoption rather than a second installation is a
+property of that file, not of what somebody remembered to type. Then
 `just gcp-plane-down`, `just gcp-adc-revoke`, and leave the group.
 Nothing reconciles between sessions, which is what the pivot is for.
+
+A *first* installation has no such file, and mints one:
+
+```
+just gcp-plane-manifest organizations/<org-id> \
+  > ../installations/qw01/installation.yml
+```
+
+Committed before it is applied, deliberately. The ids in it are
+consumed permanently, so a manifest generated and then lost strands
+them.
 
 ## How the machinery fits together
 
@@ -155,7 +173,7 @@ deleting a cluster deletes nothing in GCP — the controllers simply
 stopped.
 
 **It is recorded, and nothing reads the record.** The private
-`installations` repository exists, with `qw01/installation.yaml` on main
+`installations` repository exists, with `qw01/installation.yml` on main
 and a README stating the repository's rules. So what git says and what
 GCP holds agree, and the installation is reproducible from the file
 rather than from somebody's scrollback. Argo is not pointed at it yet —
@@ -439,16 +457,29 @@ the only repository involved is the public one — nothing here needs a
 credential.
 
 **Which repository is a manifest value, not a constant.**
-`management.source` carries the URL and the revision, defaulted to this
-project. A hard-coded URL would be a defect rather than an
-inconvenience for anyone running a fork: the composition travels with
+`management.source` carries the URL, the revision and where this
+project sits inside that repository, all defaulted. A hard-coded URL
+would be a defect rather than an inconvenience for anyone running a
+fork: the composition travels with
 the fork, so their boot plane would build their cluster and then point
 Argo at *upstream's* manifests, and every change they had made would be
 invisible on it. The revision matters for a different reason — `main`
 is a moving target for a plane meant to be durable, and a tag is not
-expressible without this. Both are patched twice, into the root
-Application's own source and into the values it hands the chart, so an
-installation has one answer rather than two.
+expressible without this. The path prefix is there for a mirror that
+vendors this project under a directory rather than forking it whole,
+which is the common corporate shape: three paths are hard-coded across the root
+Application and its two children, and one prefix moves all of them.
+
+Each is patched twice, into the root Application's own source and into
+the values it hands the chart, so an installation has one answer rather
+than two.
+
+The prefix earns its place now rather than later for a reason worth
+generalising: a field added to `management.source` after manifests
+exist leaves every one of them silently defaulted, and the record stops
+being the whole account of what exists. The one committed manifest
+already demonstrates it — written before `source` existed, it carries
+none, and the installation runs on XRD defaults.
 
 **The self-management loop, and its answer.** Once the management plane
 adopts the composite it owns the Release that installs it. A composition
@@ -492,12 +523,27 @@ NAMESPACED column, not the version. The rule generalises — prefer the
 ### 4. The manifest in git — done
 
 The private `installations` repository holds
-`qw01/installation.yaml`, rendered by `gcp-plane-manifest` and carrying
-its own `createFolder.folderId` and `management.adopt`. What remains of
-this step is one change here: `gcp-plane-apply` should apply that file
-rather than assemble a composite from five arguments, so the boot plane
-and Argo consume the same document and cannot disagree about what the
+`qw01/installation.yml`, rendered by `gcp-plane-manifest` and carrying
+its own `createFolder.folderId` and `management.adopt`. **This step is
+now complete**: `gcp-plane-apply` applies that file rather than
+assembling a composite from five arguments, so the boot plane and Argo
+consume the same document and cannot disagree about what the
 installation is.
+
+Two fields never enter it, and are merged client-side at apply time
+with `kubectl patch --local`, which needs neither a cluster nor a YAML
+processor: `billingAccountId`, because creating a project is the one
+moment it is needed, and `management.bootstrap`, because installing the
+management plane is something only the boot plane may do. Both are true
+of an act of creation rather than of an installation, which is why
+neither belongs in the record. `gcp-plane-manifest` cannot emit either
+of them at all — a manifest that carried `bootstrap` would hand the
+management plane the right to reinstall itself.
+
+Reading the file rather than taking arguments is also what makes the
+boot path credential-free: the operator has a checkout, so it is their
+own access to the private repository that is used. Argo needs a
+credential of its own, which is step 5's problem and not this one.
 
 Branch protection requiring review is the control that repository has,
 deliberately, since it carries nothing executable — a direct push to its
@@ -781,7 +827,7 @@ installations/
 ├── README.md          what this is, where the schema lives, and
 │                      that it holds no credentials
 └── qw01/
-    └── installation.yaml     the XQueenswoodInstallation
+    └── installation.yml     the XQueenswoodInstallation
 ```
 
 `just gcp-plane-manifest` prints that file, resolved, on stdout with

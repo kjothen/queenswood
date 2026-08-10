@@ -17,7 +17,7 @@ spec:
   source:
     repoURL: {{ .Values.repoURL | quote }}
     targetRevision: {{ .Values.targetRevision | quote }}
-    path: infra/platform/crossplane-providers
+    path: {{ printf "%s/infra/platform/crossplane-providers" .Values.pathPrefix | clean | quote }}
   destination:
     server: https://kubernetes.default.svc
   syncPolicy:
@@ -52,7 +52,7 @@ spec:
   source:
     repoURL: {{ .Values.repoURL | quote }}
     targetRevision: {{ .Values.targetRevision | quote }}
-    path: infra/platform/crossplane-xrds
+    path: {{ printf "%s/infra/platform/crossplane-xrds" .Values.pathPrefix | clean | quote }}
   destination:
     server: https://kubernetes.default.svc
   syncPolicy:

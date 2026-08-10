@@ -13,6 +13,11 @@ managementProjectId: ""
 repoURL: https://github.com/repldriven/queenswood
 targetRevision: main
 
+# Where this project sits inside that repository. A fork keeps the
+# layout; a mirror vendoring it under a directory sets this, and the
+# paths above are relative to it.
+pathPrefix: "."
+
 # The Kubernetes service account Crossplane's GCP providers run as.
 # Workload Identity binds to this name, so it cannot be the generated
 # one -- and the XRD's management.providerServiceAccount already

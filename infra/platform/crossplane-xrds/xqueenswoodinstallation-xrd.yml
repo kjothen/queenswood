@@ -187,6 +187,15 @@ spec:
                         targetRevision:
                           type: string
                           default: main
+                        pathPrefix:
+                          type: string
+                          default: "."
+                          description: |
+                            Where this project sits inside that
+                            repository. A fork keeps the layout and
+                            leaves this alone; a mirror that vendors
+                            the project under a directory sets it, and
+                            every path below is relative to it.
                     bootstrap:
                       type: boolean
                       description: |
