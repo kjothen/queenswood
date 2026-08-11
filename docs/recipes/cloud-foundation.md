@@ -205,13 +205,14 @@ you need.
   person can.
 - **The platform identity** is created by the manifest and used by the
   management cluster through Workload Identity. Nobody impersonates it.
-- **The secrets identity** reads Secret Manager and does nothing else,
-  for the operator that turns a stored credential into a cluster
-  Secret. Separate from the platform identity, which could do the same
-  reading but can also create projects and administer every cluster in
-  the folder.
-- **The node identity** is what the management cluster's nodes run as,
-  holding only what a GKE node needs to report itself. Never the
+- **The secrets identity** reads Secret Manager for one cluster and does
+  nothing else, for the operator that turns a stored credential into a
+  cluster Secret. Separate from the platform identity, which could do
+  the same reading but can also create projects and administer every
+  cluster in the folder. One per cluster rather than per installation,
+  so an instance's operator cannot read another instance's secrets.
+- **The node identity** is what one cluster's nodes run as, holding only
+  what a GKE node needs to report itself. Never the
   default compute service account: that one is shared by everything in
   the project that never chose an identity, and holds whatever the
   organisation's policy on automatic grants leaves it holding. A node

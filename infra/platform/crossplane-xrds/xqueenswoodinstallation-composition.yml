@@ -606,7 +606,7 @@ spec:
                     - fromFieldPath: spec.management.projectId
                   strategy: string
                   string:
-                    fmt: "sa-%s-nodes@%s.iam.gserviceaccount.com"
+                    fmt: "sa-%s-c-nodes@%s.iam.gserviceaccount.com"
                 toFieldPath: spec.forProvider.nodeConfig.serviceAccount
           # ===================================================================
           # Crossplane on the management cluster, installed by the plane
@@ -1244,6 +1244,33 @@ spec:
                       fmt: "%s-rl-pod-log-reader"
               - fromFieldPath: spec.management.projectId
                 toFieldPath: spec.forProvider.project
+          # The composition creates three service accounts in this
+          # project and could not do so on its own: no folder role it
+          # holds carries iam.serviceAccounts.create, and it works today
+          # only because the boot plane owns the project it built.
+          - name: platform-role-project-service-account-admin
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: ProjectIAMMember
+              metadata:
+                namespace: crossplane-system
+              spec:
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  role: roles/iam.serviceAccountAdmin
+            patches:
+              - fromFieldPath: spec.code
+                toFieldPath: metadata.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "%s-platform-project-service-account-admin"
+              - fromFieldPath: spec.management.projectId
+                toFieldPath: spec.forProvider.project
+              - *platform-member
           # The platform identity has to be able to maintain a role this
           # composition creates.
           - name: platform-role-project-role-admin
@@ -1295,7 +1322,7 @@ spec:
                   - type: string
                     string:
                       type: Format
-                      fmt: "sa-%s-nodes"
+                      fmt: "sa-%s-c-nodes"
               - &nodes-project
                 fromFieldPath: spec.management.projectId
                 toFieldPath: spec.forProvider.project
@@ -1336,7 +1363,7 @@ spec:
                     - fromFieldPath: spec.management.projectId
                   strategy: string
                   string:
-                    fmt: "serviceAccount:sa-%s-nodes@%s.iam.gserviceaccount.com"
+                    fmt: "serviceAccount:sa-%s-c-nodes@%s.iam.gserviceaccount.com"
                 toFieldPath: spec.forProvider.member
           - name: nodes-identity-platform-user
             base:
@@ -1357,14 +1384,14 @@ spec:
                   - type: string
                     string:
                       type: Format
-                      fmt: "sa-%s-nodes-user"
+                      fmt: "sa-%s-c-nodes-user"
               - fromFieldPath: spec.code
                 toFieldPath: spec.forProvider.serviceAccountIdRef.name
                 transforms:
                   - type: string
                     string:
                       type: Format
-                      fmt: "sa-%s-nodes"
+                      fmt: "sa-%s-c-nodes"
               - *platform-member
           - name: secrets-identity
             base:
@@ -1391,7 +1418,7 @@ spec:
                   - type: string
                     string:
                       type: Format
-                      fmt: "sa-%s-secrets"
+                      fmt: "sa-%s-c-secrets"
               - fromFieldPath: spec.management.projectId
                 toFieldPath: spec.forProvider.project
               - fromFieldPath: spec.code
@@ -1400,7 +1427,7 @@ spec:
                   - type: string
                     string:
                       type: Format
-                      fmt: "sa-%s-secrets"
+                      fmt: "sa-%s-c-secrets"
           - name: secrets-identity-workload-identity
             base:
               apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
@@ -1420,14 +1447,14 @@ spec:
                   - type: string
                     string:
                       type: Format
-                      fmt: "sa-%s-secrets-wi"
+                      fmt: "sa-%s-c-secrets-wi"
               - fromFieldPath: spec.code
                 toFieldPath: spec.forProvider.serviceAccountIdRef.name
                 transforms:
                   - type: string
                     string:
                       type: Format
-                      fmt: "sa-%s-secrets"
+                      fmt: "sa-%s-c-secrets"
               # The chart installs into its own namespace and names its
               # service account after itself.
               - fromFieldPath: spec.management.projectId
@@ -1511,7 +1538,7 @@ spec:
                     - fromFieldPath: spec.management.projectId
                   strategy: string
                   string:
-                    fmt: "serviceAccount:sa-%s-secrets@%s.iam.gserviceaccount.com"
+                    fmt: "serviceAccount:sa-%s-c-secrets@%s.iam.gserviceaccount.com"
                 toFieldPath: spec.forProvider.member
     # =======================================================================
     # What each capability may do inside the installation, and nothing

@@ -629,6 +629,37 @@ so a failing `ExternalSecret` means nobody has done the GitHub step yet
 rather than that something is broken. Worth knowing before it is
 debugged as a fault.
 
+#### An identity per cluster, not per installation
+
+`sa-qw01-nodes` and `sa-qw01-secrets` claimed names every instance would
+want. Service accounts otherwise carry no environment segment, and that
+holds for the ones above the folder — `platform` runs the whole
+installation, `boot` sits outside it — but a node identity and a
+secrets-reading identity belong to *a cluster*, and every cluster wants
+the same job done. So they take the environment the rest of the scheme
+already uses: `sa-qw01-c-nodes` and `sa-qw01-c-secrets` here,
+`sa-qw01-d-nodes` and `sa-qw01-p-secrets` for instances.
+
+The secrets identity matters more than the tidiness. One account shared
+by every cluster's external-secrets means an instance's operator can
+read another instance's credentials, which is the same split
+[ADR-0023](../adr/0023-installation-naming-and-access.md) records for
+capabilities, arriving at the identity layer.
+
+Renamed before the handover rather than after, because
+`nodeConfig.serviceAccount` is immutable: the rename replaces the node
+pool, and doing it while nothing depends on the old name costs one
+outage instead of a migration.
+
+#### What an instance repeats
+
+Its own node identity and its own secrets identity, for the reasons
+above, and permission to attach them. That last is free for an
+instance and was not for the management cluster: the plane that creates
+a project owns it, and an instance project is created by the plane that
+then runs it, where the management project was created by the boot
+plane and handed over.
+
 #### Rights the boot plane has by accident
 
 GCP makes whoever creates a project its owner, and the composite
@@ -646,7 +677,14 @@ so the first node pool rebuilt after the handover would fail with "does
 not have permission to act as service account", on a plane with no boot
 plane left to fix it.
 
-The binding is now composed. The general form is the thing to keep:
+Two are now composed: `iam.serviceAccountUser` on the node identity,
+and `iam.serviceAccountAdmin` on the management project — the
+composition creates three service accounts and no folder role it holds
+carries `iam.serviceAccounts.create`, so that worked only because the
+boot plane owns the project it built. Found by trying to delete a stray
+account and being refused, which is a thin thread to have found it on.
+
+The general form is the thing to keep:
 **a right the boot plane has by accident is a right the management
 plane will discover it lacks**, and it discovers it at the worst
 moment, because the boot plane is what would have fixed it. Worth
