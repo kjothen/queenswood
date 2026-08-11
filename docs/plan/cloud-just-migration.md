@@ -164,6 +164,159 @@ providers by manifest. It is the floor, and the design's aim is to keep
 it at a scratch cluster on a laptop rather than at anything inside the
 installation.
 
+## What the recipes are for
+
+`justfiles/gcp.just` is long, and the length reads as sprawl until you
+ask what each recipe is for. Almost none of it installs Queenswood.
+
+### The install is a merge, and the rest is a ladder
+
+Where an organisation already runs GitOps, installing anything is one
+act: a manifest lands in the repository a privileged control plane
+reads, and the plane installs it. The privilege is ambient — somebody
+established it before any of this, and it is simply there.
+
+Queenswood's install is that merge. One file in `installations`, one
+plane watching it, which is what
+[picking this up cold](#picking-this-up-cold) says from the other end:
+a change to the installation is a merge rather than a plane raised to
+apply it.
+
+The rest of `gcp.just` manufactures the ambient privilege for somebody
+who has not got it — a control plane, an identity for it to
+authenticate as, the rights that identity holds, and a repository it
+may read. [The pivot](#the-pivot) is where the manufactured capability
+becomes the durable one, and after it the installation is reconciled by
+a plane watching a repository, which is where a GitOps organisation
+starts.
+
+That privilege has to be of the right kind, which is what keeps the
+ladder from being a fallback for the under-equipped. A plane
+reconciling Terraform against AWS cannot apply an
+`XQueenswoodInstallation` at all: the manifest names a kind its API
+server has never heard of, so the capability that installs everything
+else in that organisation installs nothing here. Merging into a plane
+that already exists needs Crossplane, on GCP, with this XRD and
+composition loaded — and an organisation holding all three is the
+exception. Everyone else climbs the ladder, whatever they already run.
+
+What the climb leaves behind is not Queenswood-specific. A management
+plane in the folder, running Crossplane and Argo against a repository,
+reconciles whatever composite it is given: load another XRD and
+composition, and applying that is a merge too. An organisation climbs
+once and holds a general capability afterwards, which is the strongest
+argument for the durable plane over raising throwaway ones repeatedly.
+
+So every recipe answers one question: does this exist only because no
+privileged plane exists yet?
+
+- **Scaffolding**, if it does — `gcp-preflight`, the `gcp-boot-*`
+  recipes, `gcp-groups-bind`, the `gcp-adc-*` recipes and the
+  `gcp-plane-*` recipes. Most of the file.
+- **Durable**, if it does not — `gcp-mgmt-cluster-ctx`,
+  `gcp-platform-status`, `gcp-platform-billing-role`,
+  `gcp-github-app-secret`. What survives having a platform.
+
+Judge the scaffolding as scaffolding: it runs once and is discarded, so
+its bar is reaching parity reliably rather than being a surface worth
+polishing. The diagnostics among it — `gcp-adc-status`,
+`gcp-plane-status`, `gcp-boot-status` — inspect the ladder rather than
+the installation, which is why they sit oddly beside the recipes that
+operate one.
+
+### What the composite cannot build for itself
+
+The prerequisites are not a list somebody chose. They are what is left
+when you ask what an `XQueenswoodInstallation` reaches for and cannot
+create. Each is unbuildable for a different reason, and the reason is
+what says who satisfies it.
+
+- **Recursion.** A control plane that already knows the kind:
+  Crossplane, the XRD, the composition, a provider package for every
+  kind composed, and the functions the pipeline runs. The plane the
+  composite builds is where this eventually lives, so the first one
+  comes from outside — and a plane built on another toolchain is not a
+  weaker version of this one, it is not one at all.
+- **Authentication.** The identity the provider authenticates as, which
+  it cannot both be and create. With keys banned that means ADC
+  impersonating a service account, so the account exists, in a project
+  that exists, with the APIs impersonation calls enabled on it.
+- **Scope.** What is held above the folder: creating or adopting it,
+  `projectCreator`, `folderIamAdmin`, `browser`, `billing.user` on a
+  billing account whose id is supplied when the project is created, and
+  the org policies the design leans on. Granted by whoever holds them,
+  which is never the installation.
+- **No API.** The organisation, the billing account and the GitHub App.
+  Each is a person in a browser, with no create call to write against.
+- **Another directory.** The principals in `spec.access`. Nothing here
+  speaks Cloud Identity, and IAM rejects a binding naming a principal
+  that does not exist.
+- **Secrecy.** The App key's value. The composite composes the secret's
+  container, and what goes inside may never be in git.
+
+They divide by how often each is paid, which is what the two paths in
+[cloud-foundation](../recipes/cloud-foundation.md) are really
+distinguishing:
+
+- **Once per organisation** — the organisation, the billing account, the
+  GitHub App, the org policies, and whichever principals hold the
+  capabilities.
+- **Once per installation** — the folder, the identity, and the rights
+  it holds on that folder.
+- **Once per run** — the boot plane.
+
+### What is left to a person, per installation
+
+Against a plane that already exists, the residue is smaller than the
+recipes make it look.
+
+- **One decision.** Which principals hold `platformViewer`,
+  `platformAdmin`, `clusterAdmin` and `secretsAdmin`. `spec.access`
+  takes whole IAM member strings because the principal need not be a
+  group, let alone one named for the installation, so an organisation
+  with access groups already maps them straight in and creates nothing.
+  The coded groups are what to do when no suitable principal exists.
+- **One organisation-scoped binding.** `roles/browser` on the viewer
+  principal, because tooling cannot reach a folder without resolving the
+  organisation above it. Every other coded capability is folder- or
+  project-scoped and composed from `access`.
+- **The groups, only when minting them.** An Admin console act, because
+  Cloud Identity writes need a quota project and at foundation time none
+  exists. That blocker lifts once the management project does, so this
+  can move to after the install rather than before it: a capability
+  absent from `access` composes nothing, so an empty mapping installs
+  and adding the groups is a second merge.
+
+### Three ways this reports success and does not work
+
+Each leaves the composite Ready and every managed resource green.
+
+- **A manifest that was never pushed.** `gcp-plane-apply` checks that
+  the file is on disk, which is all a boot plane needs, but after the
+  pivot the manifest is read from GitHub — so a local-only file passes
+  every check in the ladder and then reconciles from nothing. Producing
+  it should know the destination applying it already knows:
+  `gcp-plane-apply` resolves `INSTALLATIONS_REPO`, while
+  `gcp-plane-manifest` prints to stdout for somebody to redirect there.
+- **A secret with no version.** The composite composes the container and
+  a person adds the version, so in between Argo holds no credential for
+  the repository it reconciles from. That secret is the link between the
+  plane and its directory, and it is the one piece the composite
+  deliberately cannot fill.
+- **An org policy nothing enforces.** Neither
+  `compute.skipDefaultNetworkCreation` nor
+  `iam.disableServiceAccountKeyCreation` is composed, and
+  `gcp-boot-org-roles` grants `orgpolicy.policyAdmin` to an identity
+  that never spends it — but only one of the two is exposed by that.
+  GCP enforces the key ban at the organisation by default, which is why
+  `_gcp-allow-sa-keys` reads the effective policy and does nothing where
+  it is already off, so the ban holds wherever a folder is handed over
+  and [cloud-foundation](../recipes/cloud-foundation.md) is imprecise
+  about where it comes from rather than wrong about it holding. The
+  default network has no such default: `cloud.just` set it at the
+  organisation, and a folder elsewhere gets a default VPC in every
+  project until somebody sets it again.
+
 ## Where this stands
 
 **The pivot is done.** `qw01` is reconciled by the management plane it
@@ -200,16 +353,19 @@ without `Delete`, `deletionProtection`, `deletionPolicy: PREVENT` —
 with nothing underneath them, which inverts
 [ADR-0022](../adr/0022-cloud-foundation-and-environment-lifecycle.md)'s
 own position that the lien matters more than the policy, because a
-policy is a convention a later edit can undo. It stays open because
-there is no `Lien` resource in the provider to compose, so it wants a
-recipe rather than a managed resource — see
-[what is left](#what-is-left).
+policy is a convention a later edit can undo. That is deliberate rather
+than outstanding, for the reason [what is left](#what-is-left) gives.
 
 ## What is left
 
 Small, and none of it blocking:
 
-- **Liens**, above. A recipe, run once, since nothing composes them.
+- **Liens**, above, deferred on purpose. A lien makes every teardown two
+  acts — lift it, then delete — which is the point of one, and the wrong
+  trade while the installation is still being rebuilt to test that it
+  can be. They go on when it stops being rebuilt, and until then the
+  `managementPolicies` are what protects the foundations. Nothing
+  composes a lien either, so it is a recipe when it comes.
 - **Labels** carrying the installation code on the folder and the
   management project, which is what would let a bare login find an
   installation without knowing a random suffix, and would retire the
