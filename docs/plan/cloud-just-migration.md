@@ -569,6 +569,19 @@ the chart renders no `ExternalSecret` without it — an installation
 applied only from a boot plane has nothing to read and needs no
 credential to read it with.
 
+**An API nobody enabled.** The management project enables the six APIs
+it needed when the composite stopped at a cluster, and composing a
+Secret Manager container added a seventh without adding the service to
+enable it. The container sat `Synced: False` for an hour with a 403
+saying the API had never been used — legible, but only to somebody
+looking at the managed resource rather than at the thing that depended
+on it three steps downstream.
+
+The rule is the same one the boot plane's provider set follows: what
+the composite composes decides what has to exist first. A provider for
+the kind, on the plane doing the composing, and an enabled API on the
+project being composed into.
+
 **A CRD large enough to break the apply.** external-secrets' own
 `SecretStore` and `ClusterSecretStore` definitions carry every
 provider's schema and exceed 256KB, and Argo's default client-side
