@@ -255,8 +255,8 @@ what says who satisfies it.
   container, and what goes inside may never be in git.
 
 They divide by how often each is paid, which is what the two paths in
-[cloud-foundation](../recipes/cloud-foundation.md) are really
-distinguishing:
+[crossplane-app-deployment](../recipes/crossplane-app-deployment.md) are
+really distinguishing:
 
 - **Once per organisation** — the organisation, the billing account, the
   GitHub App, the org policies, and whichever principals hold the
@@ -307,15 +307,16 @@ Each leaves the composite Ready and every managed resource green.
   `compute.skipDefaultNetworkCreation` nor
   `iam.disableServiceAccountKeyCreation` is composed, and
   `gcp-boot-org-roles` grants `orgpolicy.policyAdmin` to an identity
-  that never spends it — but only one of the two is exposed by that.
-  GCP enforces the key ban at the organisation by default, which is why
+  that never spends it — but only one of the two is exposed by that. GCP
+  enforces the key ban at the organisation by default, which is why
   `_gcp-allow-sa-keys` reads the effective policy and does nothing where
   it is already off, so the ban holds wherever a folder is handed over
-  and [cloud-foundation](../recipes/cloud-foundation.md) is imprecise
-  about where it comes from rather than wrong about it holding. The
-  default network has no such default: `cloud.just` set it at the
-  organisation, and a folder elsewhere gets a default VPC in every
-  project until somebody sets it again.
+  and
+  [crossplane-app-deployment](../recipes/crossplane-app-deployment.md)
+  is imprecise about where it comes from rather than wrong about it
+  holding. The default network has no such default: `cloud.just` set it
+  at the organisation, and a folder elsewhere gets a default VPC in
+  every project until somebody sets it again.
 
 ## Where this stands
 
@@ -738,11 +739,11 @@ GCP provider configuration has, reached the same way.
 **The credential itself is two human acts**, and they are the last two
 in the chain. The GitHub App is created by a person in a UI, because
 GitHub has no API that creates one — see
-[cloud-foundation](../recipes/cloud-foundation.md) — and
-`gcp-github-app-secret` writes its three values into Secret Manager as
-one JSON entry, run by a person holding `secretsAdmin`. The identifiers
-travel with the key rather than through a second channel, so nothing
-about an installation's GitHub App reaches either repository.
+[crossplane-app-deployment](../recipes/crossplane-app-deployment.md) —
+and `gcp-github-app-secret` writes its three values into Secret Manager
+as one JSON entry, run by a person holding `secretsAdmin`. The
+identifiers travel with the key rather than through a second channel, so
+nothing about an installation's GitHub App reaches either repository.
 
 The container is composed; only the version is placed. What exists is
 declared, and what it holds never touches git.
@@ -955,9 +956,9 @@ the cluster, and points outward. The only thing able to act on GCP is
 the management cluster.
 
 That is stronger than the rule
-[cloud-foundation](../recipes/cloud-foundation.md) states today. "A
-merge is the privileged action, so merged state applies and a
-`pull_request` trigger gets no cloud identity" exists because the
+[crossplane-app-deployment](../recipes/crossplane-app-deployment.md)
+states today. "A merge is the privileged action, so merged state applies
+and a `pull_request` trigger gets no cloud identity" exists because the
 alternative was push-based CI holding one. Pull-based and data-only
 means no cloud identity in GitHub at all, and the caveat stops needing
 to be remembered.
@@ -972,9 +973,9 @@ requiring review is the control that belongs there, a merge being what
 reaches production.
 
 This is a seam the design already has rather than a new one.
-[cloud-foundation](../recipes/cloud-foundation.md) says the manifest
-lives "in whichever repository the applier reconciles from", allowing
-that it is not this one, and
+[crossplane-app-deployment](../recipes/crossplane-app-deployment.md)
+says the manifest lives "in whichever repository the applier reconciles
+from", allowing that it is not this one, and
 [ADR-0023](../adr/0023-installation-naming-and-access.md) assumes
 installations built in organisations we do not own, from folders handed
 to us, with groups named nothing like ours. A manifest for one of those
@@ -1672,8 +1673,8 @@ stays a console step for the same reason, and only its capture changes.
   installation code, the naming scheme and the four capabilities.
 - [ADR-0016](../adr/0016-crossplane-over-terraform.md) — why
   infrastructure is declared rather than scripted.
-- [cloud-foundation](../recipes/cloud-foundation.md) — what a deployment
-  builds, and the two identities that build it.
+- [crossplane-app-deployment](../recipes/crossplane-app-deployment.md) —
+  what a deployment builds, and the two identities that build it.
 - [cloud-naming](../recipes/cloud-naming.md) — the inventory every new
   resource takes its name from.
 - [cloud-deployment](../recipes/cloud-deployment.md) — the tier model

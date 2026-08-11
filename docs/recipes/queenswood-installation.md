@@ -15,8 +15,8 @@ organisation is in it or named by it — and changing what exists
 afterwards is a merge.
 
 Building the plane that reads that file is
-[cloud-foundation](cloud-foundation.md). This recipe starts once you
-have one.
+[crossplane-app-deployment](crossplane-app-deployment.md). This recipe
+starts once you have one.
 
 ### An installation, in full
 
@@ -232,8 +232,8 @@ one piece the composite deliberately cannot fill.
 
 ## References
 
-- [cloud-foundation](cloud-foundation.md) — building the plane that
-  reads the manifest.
+- [crossplane-app-deployment](crossplane-app-deployment.md) — building
+  the plane that reads the manifest.
 - [argocd-github](argocd-github.md) — the App that reaches a private
   repository, and how it is rotated.
 - [cloud-account](cloud-account.md) — the organisation, access groups and

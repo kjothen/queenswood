@@ -143,9 +143,13 @@ those in full before non-trivial work on their topic.
   [tdd/infrastructure.md](docs/tdd/infrastructure.md) and
   [ADR-0016](docs/adr/0016-crossplane-over-terraform.md).
 - **Cloud foundation** — the folder/seed/hub-and-spoke project
-  layout, one management plane on GKE, foundations liened rather
+  layout, one management plane on GKE, foundations protected rather
   than deleted, and why "down" is a declared state. See
   [ADR-0022](docs/adr/0022-cloud-foundation-and-environment-lifecycle.md).
+- **Building the ability to deploy** — why a plane of the wrong kind
+  cannot install this at all, what the composite builds, the path from
+  a throwaway plane to a durable one, and the four identities. See
+  [crossplane-app-deployment.md](docs/recipes/crossplane-app-deployment.md).
 - **Installing Queenswood** — the two repositories a plane reads, the
   GitHub App that reaches the private one, the manifest's fields, and
   who holds which access capability. See
